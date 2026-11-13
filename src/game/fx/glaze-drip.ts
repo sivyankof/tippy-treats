@@ -3,7 +3,7 @@ import { ANIM } from '../../data/anim';
 import { DEPTH } from '../depth';
 import { easeFn } from './ease';
 import { FX_TEXTURES } from './fx-textures';
-import { TimedPool, type PoolEntry } from './timed-pool';
+import { hideItem, TimedPool, type PoolEntry } from './timed-pool';
 
 const dripEase = easeFn(ANIM.bite.dripEase);
 
@@ -18,9 +18,7 @@ export class GlazeDrip {
   constructor(scene: Phaser.Scene) {
     this.pool = new TimedPool(
       () => scene.add.image(0, 0, FX_TEXTURES.drop).setOrigin(0.5, 0).setDepth(DEPTH.drips),
-      (image) => {
-        image.setVisible(false);
-      },
+      hideItem,
     );
   }
 

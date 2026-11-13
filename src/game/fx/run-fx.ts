@@ -3,6 +3,7 @@ import type { FlyingLayer, SimEvent, TowerState } from '../../core/tower-sim';
 import type { RunResult } from '../../core/run-result';
 import { ANIM } from '../../data/anim';
 import { BALANCE } from '../../data/balance';
+import { services } from '../../services';
 import { pickInt } from '../../util/math';
 import { aimMouth } from '../objects/face-state';
 import { FlyingLayerView } from '../objects/flying-layer-view';
@@ -14,6 +15,8 @@ import { CameraKick } from './camera-kick';
 import { ComboGlow } from './combo-glow';
 import { FallingPieces } from './falling-piece';
 import { GlazeDrip } from './glaze-drip';
+import { LandingFx } from './landing-fx';
+import { cuesForEvents, playCues } from './run-cues';
 import { TowerCollapse } from './tower-collapse';
 
 /** The flying layer as it was before the sim step that just ran. */
@@ -41,6 +44,7 @@ export class RunFx {
   private readonly drips: GlazeDrip;
   private readonly kick = new CameraKick();
   private readonly glow: ComboGlow;
+  private readonly landingFx: LandingFx;
 
   private glowOn = false;
   private missPiece: LayerView | null = null;
@@ -57,6 +61,7 @@ export class RunFx {
     this.pieces = new FallingPieces(scene);
     this.drips = new GlazeDrip(scene);
     this.glow = new ComboGlow(scene);
+    this.landingFx = new LandingFx(scene);
   }
 
   /** The miss has played out: the run may be declined. */
@@ -94,6 +99,7 @@ export class RunFx {
     cam: CameraInfo,
   ): void {
     if (events.length === 0) return;
+    playCues(cuesForEvents(events, state, memo), services);
     const land = events.find((e): e is LandEvent => e.type === 'land');
     if (land) this.tower.noteCut(state.layers.length - 1, land.cutSide);
     // The sway of the frame before the sneeze is the one the tower holds.
@@ -114,6 +120,7 @@ export class RunFx {
           break;
         case 'wobble_sneeze':
           this.tower.squashTop();
+          this.onSneeze(state);
           break;
         case 'miss':
           this.onMiss(memo, land !== undefined);
@@ -138,6 +145,7 @@ export class RunFx {
 
     this.pieces.update(dtMs);
     this.drips.update(dtMs);
+    this.landingFx.update(dtMs);
     this.kick.update(dtMs);
     this.placeGlow(timeMs, cam);
   }
@@ -150,17 +158,29 @@ export class RunFx {
     const { drop, perfectBump, durationMs } = ANIM.cameraKick;
     this.kick.kick(perfect ? -perfectBump : drop, durationMs);
 
+    const index = state.layers.length - 1;
+    const pose = this.tower.layerPose(index);
+    if (pose) this.landingFx.landed(pose);
+
     if (perfect) {
+      if (pose) this.landingFx.perfect(pose, state.combo);
       top?.playGlossSweep();
       this.tower.reactAll('joy', ANIM.perfect.joyMs);
     } else if (event.cutSide && event.cutWidth > 0 && memo) {
       top?.faceView.react('ouch', ANIM.bite.ouchMs);
-      this.biteOff(event, event.cutSide, memo, state.layers.length - 1);
+      this.biteOff(event, event.cutSide, memo, index);
     }
 
     const glowing = state.combo >= ANIM.combo.glowFrom;
     if (perfect && glowing) this.glow.flash();
     this.setGlow(glowing);
+  }
+
+  /** Crumbs fly out of both sides of the top layer. */
+  private onSneeze(state: Readonly<TowerState>): void {
+    const index = state.layers.length - 1;
+    const pose = this.tower.layerPose(index);
+    if (pose) this.landingFx.sneezed(pose, layerColors(colorIndexFor(index + 1)).cake);
   }
 
   private onCombo(widened: number, state: Readonly<TowerState>): void {
@@ -210,14 +230,15 @@ export class RunFx {
 
     const pose = this.tower.layerPose(index);
     if (!pose) return;
-    const { dripSize, drips } = ANIM.bite;
     const edgeX = pose.x + side * (pose.width / 2);
+    const colors = layerColors(colorIndexFor(memo.index));
+    this.landingFx.bitten(edgeX, y, side, colors.cake);
+    const { dripSize, drips } = ANIM.bite;
     const startY = y - BALANCE.layer.height / 2 + BALANCE.layer.height * ANIM.layer.glazeDepth;
-    const glaze = layerColors(colorIndexFor(memo.index)).glaze;
     const count = pickInt(drips);
     for (let k = 0; k < count; k++) {
       const inset = Math.min(ANIM.layer.outline + dripSize / 2 + k * dripSize * 2, pose.width / 2);
-      this.drips.spawn(edgeX - side * inset, startY - dripSize, glaze);
+      this.drips.spawn(edgeX - side * inset, startY - dripSize, colors.glaze);
     }
   }
 
@@ -235,6 +256,7 @@ export class RunFx {
         count: state.layers.length,
         startScroll: cam.scrollY,
         endScroll: cam.trayScrollY,
+        onDrop: (seriesIndex) => services.audio.collapseThud(seriesIndex),
       });
     }
     if (!this.collapse) return;

@@ -15,6 +15,8 @@ export interface TowerCollapseOptions {
   /** Camera scroll at the start and the scroll that shows the tray at the end. */
   startScroll: number;
   endScroll: number;
+  /** Called for each layer that goes; `seriesIndex` counts from 0 for the first one. */
+  onDrop?: (seriesIndex: number) => void;
   random?: () => number;
 }
 
@@ -28,6 +30,7 @@ export class TowerCollapse {
   private elapsedMs = 0;
   /** 0-based index of the next layer to go; below 0 when all have gone. */
   private next: number;
+  private dropped = 0;
 
   constructor(private readonly opts: TowerCollapseOptions) {
     this.durationMs = opts.count > 0 ? collapseDurationMs(opts.count) : 0;
@@ -62,7 +65,9 @@ export class TowerCollapse {
   }
 
   private dropLayer(index: number): void {
-    const { tower, pieces, random } = this.opts;
+    const { tower, pieces, random, onDrop } = this.opts;
+    onDrop?.(this.dropped);
+    this.dropped += 1;
     const pose = tower.layerPose(index);
     if (pose) {
       pieces.spawn({

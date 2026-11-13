@@ -2,6 +2,7 @@ import * as Phaser from 'phaser';
 import { ANIM } from '../../data/anim';
 import { MENU_BUTTON } from '../../data/hud-layout';
 import { PALETTE } from '../../data/palette';
+import { services } from '../../services';
 import { bakeTexture } from './bake-texture';
 import { createOutlinedText } from './outlined-text';
 
@@ -24,16 +25,29 @@ export interface ButtonOptions {
   onClick: () => void;
 }
 
-/** The big text button of the pause and results screens. */
-export function createMenuButton(
+/** Size and look of a text button: the shape fields of MENU_BUTTON and TOGGLE_BUTTON. */
+export interface LabelButtonLayout {
+  width: number;
+  height: number;
+  radius: number;
+  shadowOffset: number;
+}
+
+/**
+ * A text button with a dark drop shadow. `keyPrefix` names the baked face together with the
+ * fill, so buttons of different sizes never share a texture.
+ */
+export function createLabelButton(
   scene: Phaser.Scene,
   x: number,
   y: number,
-  text: string,
+  label: Phaser.GameObjects.Text,
   fill: number,
+  layout: LabelButtonLayout,
+  keyPrefix: string,
   onClick: () => void,
 ): Button {
-  const { width, height, radius, shadowOffset, font } = MENU_BUTTON;
+  const { width, height, radius, shadowOffset } = layout;
   return new Button(scene, {
     x,
     y,
@@ -43,10 +57,23 @@ export function createMenuButton(
     fill,
     shadowColor: PALETTE.textDark,
     shadowOffset,
-    textureKey: `ui_menu_button_${fill.toString(16)}`,
-    content: createOutlinedText(scene, 0, 0, text, font),
+    textureKey: `${keyPrefix}_${fill.toString(16)}`,
+    content: label,
     onClick,
   });
+}
+
+/** The big text button of the pause and results screens. */
+export function createMenuButton(
+  scene: Phaser.Scene,
+  x: number,
+  y: number,
+  text: string,
+  fill: number,
+  onClick: () => void,
+): Button {
+  const label = createOutlinedText(scene, 0, 0, text, MENU_BUTTON.font);
+  return createLabelButton(scene, x, y, label, fill, MENU_BUTTON, 'ui_menu_button', onClick);
 }
 
 /**
@@ -97,6 +124,9 @@ export class Button extends Phaser.GameObjects.Container {
       this.pressed = false;
       this.release();
       options.onClick();
+      // After the action, so a toggle that was just switched on confirms itself.
+      services.audio.click();
+      services.haptics.play('selection');
     });
     scene.add.existing(this);
   }

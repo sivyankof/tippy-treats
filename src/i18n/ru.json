@@ -5,6 +5,14 @@
     "resume": "Продолжить",
     "restart": "Заново",
     "gameOver": "Высота башни",
-    "playAgain": "Ещё раз"
+    "playAgain": "Ещё раз",
+    "perfect": "Идеально!",
+    "combo": "×{n}",
+    "newRecord": "Новый рекорд!",
+    "sounds": "Звуки",
+    "vibration": "Вибрация",
+    "toggle": "{name}: {state}",
+    "on": "Вкл",
+    "off": "Выкл"
   }
 }

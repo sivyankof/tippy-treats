@@ -72,6 +72,16 @@ describe('TimedPool', () => {
     expect(pool.liveCount).toBe(1);
   });
 
+  it('clear retires every live entry', () => {
+    const { pool } = makePool();
+    const a = start(pool, 1000);
+    const b = start(pool, 1000);
+    pool.clear();
+    expect(a.hidden).toBe(true);
+    expect(b.hidden).toBe(true);
+    expect(pool.liveCount).toBe(0);
+  });
+
   it('retires the oldest entry at the cap and recycles its item', () => {
     const { pool, made } = makePool(2);
     const a = start(pool, 1000);

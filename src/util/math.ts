@@ -9,8 +9,14 @@ export function randomSeed(source: () => number = Math.random): number {
   return Math.floor(source() * UINT32_RANGE);
 }
 
+/** Multiply degrees by this to get radians. */
+export const DEG_TO_RAD = Math.PI / 180;
+
+/** Milliseconds in one second. */
+export const MS_PER_SECOND = 1000;
+
 /** Length of a 60 Hz frame: smoothing factors and spring constants are given per such frame. */
-export const REFERENCE_FRAME_MS = 1000 / 60;
+export const REFERENCE_FRAME_MS = MS_PER_SECOND / 60;
 
 /** Sine wave in -1..1 with the given period; `phase` shifts it in radians. */
 export function sineWave(timeMs: number, periodMs: number, phase = 0): number {

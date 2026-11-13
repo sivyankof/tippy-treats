@@ -2,9 +2,12 @@ import * as Phaser from 'phaser';
 import { ANIM } from '../../data/anim';
 import { PALETTE } from '../../data/palette';
 import { formatNumber, t } from '../../i18n';
+import { services } from '../../services';
+import { RecordCelebration } from '../fx/record-celebration';
 import { launchRun, SCENES, type ResultsData } from '../scene-keys';
 import { createMenuButton, type Button } from '../ui/button';
 import { createDimOverlay } from '../ui/dim-overlay';
+import { sessionRecord } from '../session-record';
 import { createOutlinedText } from '../ui/outlined-text';
 
 const TITLE_FONT = 72;
@@ -19,6 +22,7 @@ export class ResultsScene extends Phaser.Scene {
   private title!: Phaser.GameObjects.Text;
   private score!: Phaser.GameObjects.Text;
   private button!: Button;
+  private celebration: RecordCelebration | null = null;
 
   constructor() {
     super(SCENES.results);
@@ -50,11 +54,29 @@ export class ResultsScene extends Phaser.Scene {
       onComplete: () => this.button.setEnabled(true),
     });
 
+    this.celebration = null;
+    if (sessionRecord.noteRun(data.result.height)) this.celebrate(width, height);
+    if (import.meta.env.DEV) {
+      this.input.keyboard?.on('keydown-R', () => this.celebrate(width, height));
+    }
+
     this.scale.on(Phaser.Scale.Events.RESIZE, this.layout, this);
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       this.scale.off(Phaser.Scale.Events.RESIZE, this.layout, this);
     });
     this.layout();
+  }
+
+  override update(_time: number, delta: number): void {
+    this.celebration?.update(delta);
+  }
+
+  /** Confetti, the ribbon, the fanfare and the three-hit vibration of a new record. */
+  private celebrate(width: number, height: number): void {
+    this.celebration ??= new RecordCelebration(this);
+    this.celebration.play(width, height);
+    services.audio.record();
+    services.haptics.play('triple');
   }
 
   private layout(): void {

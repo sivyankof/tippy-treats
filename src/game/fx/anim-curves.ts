@@ -99,3 +99,9 @@ export function stepSpring(
     left -= SPRING_STEP_MS;
   }
 }
+
+/** Scale of the "Perfect!" text: 1 at combo 1, growing by one step per combo, up to the cap. */
+export function comboTextScale(combo: number): number {
+  const { comboScaleStep, maxScale } = ANIM.perfect.text;
+  return Math.min(maxScale, 1 + Math.max(0, combo - 1) * comboScaleStep);
+}

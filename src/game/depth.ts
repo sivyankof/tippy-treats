@@ -12,6 +12,10 @@ export const DEPTH = {
   /** Glaze drops running down a bitten edge, above the piece they fall from. */
   drips: 29,
   flying: 30,
+  /** Dust, crumbs and sparks, over the tower and the flying layer. */
+  particles: 40,
+  ring: 45,
+  floatText: 50,
   /** Full-screen flash, above everything in the scene. */
   flash: 100,
 } as const;

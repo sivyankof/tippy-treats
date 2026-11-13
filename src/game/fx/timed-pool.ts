@@ -1,3 +1,8 @@
+/** Retire callback for pooled display objects: hides the item. */
+export function hideItem(item: { setVisible(visible: boolean): unknown }): void {
+  item.setVisible(false);
+}
+
 /** A pooled item that lives for a while: `ageMs` runs up to `lifeMs`. */
 export interface PoolEntry<V> {
   item: V;
@@ -51,6 +56,11 @@ export class TimedPool<V, E extends PoolEntry<V>> {
       }
       step(entry, entry.ageMs / entry.lifeMs);
     }
+  }
+
+  /** Retires every live entry. */
+  clear(): void {
+    this.update(Infinity, () => undefined);
   }
 
   private release(item: V): void {

@@ -4,6 +4,7 @@ import {
   bump,
   collapseDelayMs,
   collapseDurationMs,
+  comboTextScale,
   driftMotion,
   stepSpring,
   waveSquash,
@@ -166,5 +167,20 @@ describe('driftMotion', () => {
   it('matches the shape of the bite and miss styles', () => {
     expect(driftMotion(ANIM.bite, 1, () => 0.7).lifeMs).toBe(ANIM.bite.lifeMs);
     expect(driftMotion(ANIM.miss, -1, () => 0.7).vx).toBe(-ANIM.miss.driftSpeed);
+  });
+});
+
+describe('comboTextScale', () => {
+  it('is 1 at combo 1 and below', () => {
+    expect(comboTextScale(1)).toBe(1);
+    expect(comboTextScale(0)).toBe(1);
+  });
+
+  it('grows by one step per combo', () => {
+    expect(comboTextScale(3)).toBeCloseTo(1 + 2 * ANIM.perfect.text.comboScaleStep, 10);
+  });
+
+  it('never exceeds the cap', () => {
+    expect(comboTextScale(1000)).toBe(ANIM.perfect.text.maxScale);
   });
 });

@@ -10,6 +10,19 @@ export const MENU_BUTTON = {
   font: 64,
 } as const;
 
+/** The narrower toggle button of the pause window (sound, vibration). */
+export const TOGGLE_BUTTON = {
+  width: 560,
+  height: 96,
+  radius: 36,
+  shadowOffset: 8,
+  font: 48,
+  /** Space between the toggle buttons and the button above them. */
+  gap: 40,
+  /** Alpha of a toggle that is switched off. */
+  offAlpha: 0.55,
+} as const;
+
 /** Layout of the run HUD in logical pixels (screen width 1080). */
 export const HUD_LAYOUT = {
   heightY: 130,

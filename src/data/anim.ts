@@ -1,3 +1,18 @@
+/** How a crumb falls; shared by the bite and the sneeze. */
+const CRUMB_FALL = {
+  gravity: 1600,
+  drag: 0.5,
+  spin: [-360, 360],
+  scale: [0.6, 1.1],
+  scaleTo: 0.6,
+  alpha: 1,
+  holdShare: 0.6,
+  lifeMs: [450, 700],
+} as const;
+
+/** Number of crumbs per bite or sneeze. */
+const CRUMB_COUNT = [10, 14] as const;
+
 /**
  * Durations, amplitudes and visual sizes from docs/06-art-animation-audio.md.
  * Distances are logical pixels, durations milliseconds, angles degrees.
@@ -119,6 +134,19 @@ export const ANIM = {
   dust: {
     perSide: [6, 8],
     lifeMs: 350,
+    /** Puffs thrown out from under the edges of the landed layer; life is `lifeMs`. */
+    style: {
+      speed: [50, 140],
+      gravity: 120,
+      drag: 3,
+      spin: [-90, 90],
+      scale: [0.5, 0.9],
+      scaleTo: 1.6,
+      alpha: 0.7,
+      holdShare: 0,
+      spreadDeg: 50,
+      tiltDeg: 25,
+    },
   },
   sway: {
     /** Rotation of the top layer at full sway amplitude. */
@@ -147,7 +175,14 @@ export const ANIM = {
     gravity: 2400,
     lifeMs: 900,
     driftSpeed: 60,
-    crumbs: [10, 14],
+    crumbs: CRUMB_COUNT,
+    /** Crumbs fly outwards from the cut line, on the side of the bitten-off edge. */
+    crumbStyle: {
+      ...CRUMB_FALL,
+      speed: [120, 320],
+      spreadDeg: 70,
+      tiltDeg: 15,
+    },
     /** Glaze drops running down the cut edge. */
     drips: [1, 2],
     dripMs: 500,
@@ -158,19 +193,58 @@ export const ANIM = {
     ouchMs: 400,
   },
   perfect: {
-    ring: { fromScale: 0.6, toScale: 1.6, fromAlpha: 0.9, durationMs: 380 },
+    ring: {
+      fromScale: 0.6,
+      toScale: 1.6,
+      fromAlpha: 0.9,
+      durationMs: 380,
+      /** Ring size at scale 1 relative to the layer width; the ring is an ellipse. */
+      widthRatio: 1.1,
+      heightRatio: 0.4,
+      ease: 'Quad.easeOut',
+      /** Cap of rings alive at once. */
+      maxLive: 4,
+    },
     /** White band running over the layer from left to right. */
     glossSweepMs: 260,
     glossSweepWidth: 34,
     glossSweepAlpha: 0.75,
     sparks: 12,
+    /** Star sparks fly out of the layer edges; they are green and white in turn. */
+    sparkStyle: {
+      speed: [260, 520],
+      gravity: 300,
+      drag: 2.5,
+      spin: [-360, 360],
+      scale: [0.6, 1],
+      scaleTo: 0.2,
+      alpha: 1,
+      holdShare: 0.4,
+      lifeMs: [350, 500],
+      spreadDeg: 60,
+      tiltDeg: 20,
+    },
     text: {
       appearMs: 160,
       appearEase: 'Back.easeOut',
       rise: 80,
       fadeMs: 500,
-      /** Text scale grows with the combo up to this. */
+      /** Text scale grows with the combo by `comboScaleStep` per combo step up to this. */
       maxScale: 1.6,
+      comboScaleStep: 0.1,
+      /** Whole life of the text; it fades during the last `fadeMs`. */
+      lifeMs: 900,
+      fontSize: 56,
+      comboFontSize: 44,
+      /** Scale at the start of the appear animation. */
+      fromScale: 0.2,
+      /** Distance between the two lines as a share of the first line's font size. */
+      lineGapRatio: 0.95,
+      /** Gap between the top of the landed layer and the first line (world px). */
+      liftY: 70,
+      /** Cap of texts alive at once (each combo step shows two). */
+      maxLive: 6,
+      riseEase: 'Quad.easeOut',
     },
     /** Every visible face is happy for this long. */
     joyMs: 300,
@@ -201,6 +275,14 @@ export const ANIM = {
     freezeMs: 150,
     /** After the freeze the sway catches up with the simulation: share of the gap closed per 60 Hz frame. */
     catchUpLerp: 0.15,
+    /** Crumbs fly out of both sides of the top layer. */
+    crumbs: CRUMB_COUNT,
+    crumbStyle: {
+      ...CRUMB_FALL,
+      speed: [200, 420],
+      spreadDeg: 60,
+      tiltDeg: 35,
+    },
   },
   miss: {
     spinDegPerSec: 160,
@@ -226,6 +308,40 @@ export const ANIM = {
   },
   record: {
     durationMs: 1500,
+    /** Full-screen confetti: spawned above the top edge, `spawnDepth` is the share of the screen height they start spread over. */
+    confetti: {
+      count: 120,
+      spawnDepth: 0.5,
+      style: {
+        speed: [500, 900],
+        gravity: 500,
+        drag: 0.3,
+        spin: [-540, 540],
+        scale: [0.7, 1.2],
+        scaleTo: 1,
+        alpha: 1,
+        holdShare: 0.7,
+        lifeMs: [1500, 2000],
+        spreadDeg: 40,
+        tiltDeg: 0,
+        sway: { amplitude: [10, 30], periodMs: [500, 900] },
+      },
+    },
+    /** "New record!" ribbon: pops in, holds, leaves at the end of `durationMs`. */
+    ribbon: {
+      width: 560,
+      height: 112,
+      radius: 40,
+      /** Vertical position as a share of the screen height. */
+      y: 0.3,
+      fromScale: 0.2,
+      inMs: 300,
+      inEase: 'Back.easeOut',
+      outMs: 250,
+      fontSize: 56,
+      /** Tilt of the ribbon in degrees. */
+      tiltDeg: -4,
+    },
   },
   ui: {
     pressScale: 0.92,
@@ -251,6 +367,15 @@ export const ANIM = {
     reducedParticleShare: 0.5,
     /** A long frame (tab in the background) is not simulated beyond this length. */
     maxSimMs: 100,
+    /** Sizes of the small particle textures, in texture pixels. */
+    textures: {
+      circle: 16,
+      star: 28,
+      crumb: 14,
+      spark: { width: 6, height: 28 },
+      confetti: { width: 12, height: 18 },
+      ring: { size: 256, stroke: 12 },
+    },
   },
   camera: {
     /** Share of the distance to the target covered per 60 Hz frame. */
