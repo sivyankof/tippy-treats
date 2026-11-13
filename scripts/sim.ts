@@ -11,6 +11,7 @@ import {
   isFullTeam,
   type SimTeamSet,
 } from '../src/data/sim-teams';
+import { WobbleStats, type WobbleRow } from './wobble-stats';
 
 /** Node global; the project does not pull in the Node type definitions. */
 declare const process: { argv: string[] };
@@ -48,8 +49,13 @@ function parseArgs(argv: string[]): CliOptions {
   return options;
 }
 
-/** One bot run. The bot never continues a run. */
-function playRun(config: RunConfig, timingSdMs: number, noise: Rng): RunResult {
+/** One bot run. The bot never continues a run. `wobble` collects tap statistics if given. */
+function playRun(
+  config: RunConfig,
+  timingSdMs: number,
+  noise: Rng,
+  wobble?: WobbleStats,
+): RunResult {
   const sim = new TowerSim(config);
   const bot = new TimingBot(timingSdMs, noise);
 
@@ -57,12 +63,16 @@ function playRun(config: RunConfig, timingSdMs: number, noise: Rng): RunResult {
     const events = sim.update(STEP_MS);
     if (sim.state.phase === 'await_continue') events.push(...sim.decline());
     bot.observe(events);
+    wobble?.noteEvents(events);
 
     for (const event of events) {
       if (event.type === 'run_over') return event.result;
     }
 
-    if (bot.shouldDrop(sim)) sim.drop();
+    if (bot.shouldDrop(sim)) {
+      wobble?.noteDrop(sim.state);
+      sim.drop();
+    }
   }
   throw new Error(`Run with seed ${config.seed} did not end`);
 }
@@ -93,6 +103,7 @@ function playProfile(
   target: DifficultyTarget,
   set: SimTeamSet,
   options: CliOptions,
+  wobble?: WobbleStats,
 ): { results: RunResult[]; heights: number[] } {
   const seeds = new Rng(BASE_SEED).fork(`seeds:${target.id}`);
   const noise = new Rng(BASE_SEED).fork(`noise:${target.id}`);
@@ -101,7 +112,7 @@ function playProfile(
   for (let i = 0; i < options.runs; i++) {
     const seed = seeds.int(0, 0xffffffff);
     results.push(
-      playRun({ seed, mode: 'classic', team, tutorial: false }, target.timingSdMs, noise),
+      playRun({ seed, mode: 'classic', team, tutorial: false }, target.timingSdMs, noise, wobble),
     );
   }
   const heights = results.map((r) => r.height).sort((a, b) => a - b);
@@ -194,7 +205,9 @@ function main(): void {
   const sets = SIM_TEAMS.filter(
     (set) => !options.team || set.name === options.team || set.name === NO_TEAM.name,
   );
-  if (sets.length === 1 && options.team) throw new Error(`Unknown team: ${options.team}`);
+  if (options.team && !sets.some((set) => set.name === options.team)) {
+    throw new Error(`Unknown team: ${options.team}`);
+  }
 
   console.log(
     `Runs per profile and team: ${options.runs}${options.runs === DIFFICULTY.runsPerProfile ? '' : ' (overridden)'}, ` +
@@ -202,9 +215,13 @@ function main(): void {
   );
 
   let anyDominant = false;
+  const wobbleRows: WobbleRow[] = [];
   for (const target of targets) {
     const rows = sets.map((set) => {
-      const { results, heights } = playProfile(target, set, options);
+      // Wobble is measured on the baseline only, where no ability changes it.
+      const wobble = set === NO_TEAM ? new WobbleStats() : undefined;
+      const { results, heights } = playProfile(target, set, options, wobble);
+      if (wobble) wobbleRows.push(wobble.row(target.id));
       return summarize(set, results, heights);
     });
     const base = rows.find((r) => r.team === NO_TEAM.name)?.median ?? 1;
@@ -219,6 +236,9 @@ function main(): void {
     console.table(rows, TABLE_COLUMNS);
     anyDominant = checkFullTeams(target.id, rows) || anyDominant;
   }
+
+  console.log(`\nWobble at the moment of the tap, no team (the first layer on the tray excluded)`);
+  console.table(wobbleRows);
 
   console.log(
     `\nverdict: ${anyDominant ? 'a full team leads in both height and coins, balance needs changes' : 'no full team leads in both height and coins'}`,
