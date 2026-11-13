@@ -1,0 +1,10 @@
+{
+  "run": {
+    "wobble": "Wobble",
+    "paused": "Paused",
+    "resume": "Continue",
+    "restart": "Restart",
+    "gameOver": "Tower height",
+    "playAgain": "Play again"
+  }
+}

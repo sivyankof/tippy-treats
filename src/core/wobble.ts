@@ -1,7 +1,7 @@
 import { BALANCE } from '../data/balance';
+import { TWO_PI } from '../util/math';
 
 const W = BALANCE.wobble;
-const TWO_PI = Math.PI * 2;
 
 const clamp = (value: number): number => Math.min(W.max, Math.max(0, value));
 

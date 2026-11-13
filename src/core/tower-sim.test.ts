@@ -1,4 +1,4 @@
-﻿import { describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import { BALANCE } from '../data/balance';
 import type { RunResult } from './run-result';
 import { TowerSim, type RunConfig, type SimEvent, type TowerState } from './tower-sim';
@@ -168,6 +168,37 @@ describe('TowerSim: flight', () => {
       pauseSteps++;
     }
     expect(pauseSteps).toBe(Math.ceil(BALANCE.layer.spawnPauseMs / STEP));
+  });
+});
+
+describe('TowerSim: startHeight', () => {
+  it('pre-places perfect full-width layers and spawns the next index', () => {
+    const sim = new TowerSim(config({ startHeight: 5 }));
+    expect(sim.state.height).toBe(5);
+    expect(sim.state.layers).toHaveLength(5);
+    for (const layer of sim.state.layers) {
+      expect(layer).toEqual({
+        x: BALANCE.tray.centerX,
+        width: BALANCE.layer.firstWidth,
+        kind: 'plain',
+        quality: 'perfect',
+      });
+    }
+    expect(sim.state.score).toBe(0);
+    expect(sim.state.combo).toBe(0);
+
+    untilFlying(sim);
+    const flying = sim.state.flying;
+    expect(flying?.index).toBe(6);
+    expect(flying?.dir).toBe(-1);
+    expect(flying?.x).toBe(BALANCE.layer.maxCenterX);
+    expect(flying?.width).toBe(BALANCE.layer.firstWidth);
+  });
+
+  it('floors fractions and clamps negatives to zero', () => {
+    expect(new TowerSim(config({ startHeight: 3.9 })).state.height).toBe(3);
+    expect(new TowerSim(config({ startHeight: -4 })).state.height).toBe(0);
+    expect(new TowerSim(config({ startHeight: 0 })).state.layers).toHaveLength(0);
   });
 });
 

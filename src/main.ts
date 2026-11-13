@@ -1,6 +1,8 @@
 import * as Phaser from 'phaser';
 import './style.css';
-import { bindLogicalResize, createGameConfig, FONT_FAMILY, FONT_WEIGHT } from './game/config';
+import { bindLogicalResize, createGameConfig } from './game/config';
+import { FONT_FAMILY, FONT_WEIGHT } from './game/ui/fonts';
+import { detectLang, setLang } from './i18n';
 
 // Sample covers both subsets so the Latin and Cyrillic font files are fetched up front.
 const FONT_SAMPLE = 'Tippy Treats Башня 0123456789';
@@ -22,9 +24,14 @@ async function start(): Promise<void> {
   if (!parent) {
     throw new Error('Missing #app container');
   }
+  setLang(detectLang(navigator.languages));
   await loadFonts();
   const game = new Phaser.Game(createGameConfig(parent));
   bindLogicalResize(game, parent);
+  if (import.meta.env.DEV) {
+    // Handle for browser automation and manual poking from the console.
+    (window as Window & { tippyGame?: Phaser.Game }).tippyGame = game;
+  }
 }
 
 void start();

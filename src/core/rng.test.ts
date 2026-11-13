@@ -48,6 +48,32 @@ describe('Rng', () => {
     expect(rng.chance(1)).toBe(true);
   });
 
+  describe('normal', () => {
+    const draw = (rng: Rng, count: number): number[] =>
+      Array.from({ length: count }, () => rng.normal());
+
+    it('is deterministic for the same seed', () => {
+      expect(draw(new Rng(3), 20)).toEqual(draw(new Rng(3), 20));
+    });
+
+    it('uses exactly two draws per value', () => {
+      const a = new Rng(8);
+      const b = new Rng(8);
+      a.normal();
+      b.next();
+      b.next();
+      expect(a.next()).toBe(b.next());
+    });
+
+    it('has mean near 0 and sd near 1', () => {
+      const values = draw(new Rng(20261113), 20000);
+      const mean = values.reduce((sum, v) => sum + v, 0) / values.length;
+      const variance = values.reduce((sum, v) => sum + (v - mean) ** 2, 0) / values.length;
+      expect(mean).toBeCloseTo(0, 1);
+      expect(Math.sqrt(variance)).toBeCloseTo(1, 1);
+    });
+  });
+
   describe('fork', () => {
     it('is stable for the same seed and name', () => {
       expect(take(new Rng(5).fork('zones'), 10)).toEqual(take(new Rng(5).fork('zones'), 10));

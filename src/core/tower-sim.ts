@@ -25,6 +25,8 @@ export interface RunConfig {
   mode: RunMode;
   team: Array<{ id: CreatureId; level: number } | null>;
   tutorial: boolean;
+  /** Debug: start with this many perfect full-width layers already placed. */
+  startHeight?: number;
 }
 
 export type SimPhase = 'flying' | 'falling' | 'pause' | 'await_continue' | 'over';
@@ -128,6 +130,16 @@ export class TowerSim {
       continuesUsed: 0,
       shield: 0,
     };
+    const startHeight = Math.max(0, Math.floor(config.startHeight ?? 0));
+    for (let i = 0; i < startHeight; i++) {
+      this.s.layers.push({
+        x: BALANCE.tray.centerX,
+        width: BALANCE.layer.firstWidth,
+        kind: 'plain',
+        quality: 'perfect',
+      });
+    }
+    this.s.height = startHeight;
   }
 
   get state(): Readonly<TowerState> {

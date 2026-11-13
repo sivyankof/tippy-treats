@@ -1,3 +1,4 @@
+import { TimingBot } from '../src/core/bot';
 import { Rng } from '../src/core/rng';
 import type { RunResult } from '../src/core/run-result';
 import { TowerSim } from '../src/core/tower-sim';
@@ -8,35 +9,21 @@ const BASE_SEED = 20261113;
 /** Safety net for a bot that never misses. */
 const MAX_RUN_MS = 60 * 60 * 1000;
 
-/** Standard normal value (Box–Muller). */
-function gaussian(rng: Rng): number {
-  const u = 1 - rng.next();
-  const v = rng.next();
-  return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v);
-}
-
-/**
- * Bot player: aims at the first pass over the tower top and taps with a
- * normally distributed timing error. It never continues a run.
- */
+/** One bot run. The bot never continues a run. */
 function playRun(seed: number, timingSdMs: number, noise: Rng): RunResult {
   const sim = new TowerSim({ seed, mode: 'classic', team: [null, null, null], tutorial: false });
-  let errorMs = 0;
+  const bot = new TimingBot(timingSdMs, noise);
 
   for (let elapsed = 0; elapsed < MAX_RUN_MS; elapsed += STEP_MS) {
     const events = sim.update(STEP_MS);
     if (sim.state.phase === 'await_continue') events.push(...sim.decline());
+    bot.observe(events);
 
     for (const event of events) {
-      if (event.type === 'spawn') errorMs = gaussian(noise) * timingSdMs;
       if (event.type === 'run_over') return event.result;
     }
 
-    const flying = sim.state.flying;
-    if (sim.state.phase === 'flying' && flying) {
-      const msToTarget = (((sim.topLayerX() - flying.x) * flying.dir) / flying.speed) * 1000;
-      if (msToTarget <= -errorMs) sim.drop();
-    }
+    if (bot.shouldDrop(sim)) sim.drop();
   }
   throw new Error(`Run with seed ${seed} did not end`);
 }

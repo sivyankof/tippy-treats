@@ -1,4 +1,5 @@
-const UINT32_RANGE = 0x1_0000_0000;
+import { TWO_PI, UINT32_RANGE } from '../util/math';
+
 const FNV_OFFSET = 0x811c9dc5;
 const FNV_PRIME = 0x01000193;
 
@@ -33,6 +34,13 @@ export class Rng {
 
   chance(probability: number): boolean {
     return this.next() < probability;
+  }
+
+  /** Standard normal value (Box-Muller, always two draws). */
+  normal(): number {
+    const u = 1 - this.next();
+    const v = this.next();
+    return Math.sqrt(-2 * Math.log(u)) * Math.cos(TWO_PI * v);
   }
 
   /**
