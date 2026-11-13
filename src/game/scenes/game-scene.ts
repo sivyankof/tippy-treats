@@ -1,6 +1,8 @@
 import * as Phaser from 'phaser';
 import { TimingBot } from '../../core/bot';
+import type { ActiveEffect } from '../../core/abilities/types';
 import { Rng } from '../../core/rng';
+import type { TeamSlot } from '../../core/sim-types';
 import { TowerSim, type SimPhase } from '../../core/tower-sim';
 import { ANIM } from '../../data/anim';
 import { BALANCE } from '../../data/balance';
@@ -9,6 +11,7 @@ import { readDebugParams } from '../../util/debug-params';
 import { frameLerp, randomSeed } from '../../util/math';
 import { RunFx, type CameraInfo, type FlyingMemo } from '../fx/run-fx';
 import { Background } from '../objects/background';
+import { getDebugTeam, toTeamSlots } from '../debug/debug-team';
 import { effectsMode } from '../effects-mode';
 import { SCENES, type ResultsData } from '../scene-keys';
 import { enterWorld, type WorldEntry } from '../ui/transition';
@@ -26,12 +29,19 @@ export interface RunInfo {
   phase: SimPhase;
   flyingSpeed: number | null;
   paused: boolean;
+  /** The team of the run; the same array for the whole run. */
+  team: readonly (TeamSlot | null)[];
+  /** Live list of the active effects: read it at once, do not keep it. */
+  effects: readonly ActiveEffect[];
+  /** Layers left on the brownie shield, 0 for none. */
+  shield: number;
 }
 
 export class GameScene extends Phaser.Scene {
   private sim!: TowerSim;
   private bot: TimingBot | null = null;
   private seed = 0;
+  private team: Array<TeamSlot | null> = [];
   private fx!: RunFx;
   private background!: Background;
   private lastFlying: FlyingMemo | null = null;
@@ -48,10 +58,12 @@ export class GameScene extends Phaser.Scene {
   create(): void {
     const debug = readDebugParams();
     this.seed = debug.seed ?? randomSeed();
+    // Until the Team screen (M6) the debug team is the team of every run.
+    this.team = toTeamSlots(getDebugTeam());
     this.sim = new TowerSim({
       seed: this.seed,
       mode: 'classic',
-      team: [null, null, null],
+      team: this.team,
       tutorial: false,
       startHeight: debug.start ?? 0,
     });
@@ -80,7 +92,15 @@ export class GameScene extends Phaser.Scene {
   override update(time: number, delta: number): void {
     effectsMode.noteFrame(delta);
     const flying = this.sim.state.flying;
-    this.lastFlying = flying ? { x: flying.x, width: flying.width, index: flying.index } : null;
+    this.lastFlying = flying
+      ? {
+          x: flying.x,
+          width: flying.width,
+          kind: flying.kind,
+          creature: flying.creature,
+          level: flying.level,
+        }
+      : null;
 
     const events = this.sim.update(delta);
     this.bot?.observe(events);
@@ -113,6 +133,9 @@ export class GameScene extends Phaser.Scene {
       phase: s.phase,
       flyingSpeed: s.flying?.speed ?? null,
       paused: this.sys.isPaused(),
+      team: this.team,
+      effects: s.effects,
+      shield: s.shield,
     };
   }
 

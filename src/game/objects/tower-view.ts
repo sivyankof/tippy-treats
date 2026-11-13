@@ -1,6 +1,6 @@
 import type * as Phaser from 'phaser';
 import type { CutSide } from '../../core/drop';
-import type { PlacedLayer, TowerState } from '../../core/tower-sim';
+import type { LayerPlan, PlacedLayer, TowerState } from '../../core/tower-sim';
 import { wobbleOffset } from '../../core/wobble';
 import { ANIM } from '../../data/anim';
 import { BALANCE } from '../../data/balance';
@@ -17,6 +17,7 @@ const TRAY_TEXTURE = 'tray';
 const TRAY_SHADOW_WIDTH_RATIO = 1.04;
 /** The frozen sway counts as caught up with the simulation below this share. */
 const HOLD_EPSILON = 0.01;
+const PLAIN_LOOK: LayerPlan = { kind: 'plain' };
 
 /** Where a placed layer is drawn: sway included. */
 export interface LayerPose {
@@ -27,6 +28,8 @@ export interface LayerPose {
   angle: number;
   /** Bitten edge, if the layer was cut when it landed. */
   cut: CutSide | null;
+  /** What the layer is (the placed layer itself: do not keep or change it). */
+  look: LayerPlan;
 }
 
 /**
@@ -48,7 +51,14 @@ export class TowerView {
     right: BALANCE.tray.centerX + BALANCE.tray.width / 2,
   };
   /** Reused by `sync` for every layer, so a frame allocates no poses. */
-  private readonly scratchPose: LayerPose = { x: 0, y: 0, width: 0, angle: 0, cut: null };
+  private readonly scratchPose: LayerPose = {
+    x: 0,
+    y: 0,
+    width: 0,
+    angle: 0,
+    cut: null,
+    look: PLAIN_LOOK,
+  };
 
   /** Sway shown last frame, per layer: the pose the tower holds while it is frozen. */
   private readonly shownOffsets = new Map<number, number>();
@@ -106,7 +116,7 @@ export class TowerView {
     const layer = this.state?.layers[index];
     if (!this.state || !layer) return null;
     return this.fillPose(
-      { x: 0, y: 0, width: 0, angle: 0, cut: null },
+      { x: 0, y: 0, width: 0, angle: 0, cut: null, look: PLAIN_LOOK },
       layer,
       index,
       this.swayOffset(this.state, index),
@@ -137,7 +147,7 @@ export class TowerView {
       const offset = this.swayOffset(state, i);
       this.shownOffsets.set(i, offset);
       const pose = this.fillPose(this.scratchPose, layer, i, offset);
-      view.setLayer(i + 1, pose.width, pose.cut);
+      view.setLayer(i + 1, pose.width, pose.cut).setLook(pose.look);
       view.setPosition(pose.x, pose.y).setAngle(pose.angle);
       if (i === count - 1) this.updateTopSpan(pose.x, pose.width);
     }
@@ -231,6 +241,7 @@ export class TowerView {
     out.width = layer.width;
     out.angle = ANIM.sway.maxRotationDeg * (offset / BALANCE.wobble.amplitudeMax);
     out.cut = this.cuts[index] ?? null;
+    out.look = layer;
     return out;
   }
 

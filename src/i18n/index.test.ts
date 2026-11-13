@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from 'vitest';
-import { detectLang, DICTIONARIES, formatNumber, keysOf, setLang, t } from './index';
+import { detectLang, DICTIONARIES, formatNumber, keysOf, setLang, t, tn } from './index';
 
 describe('i18n', () => {
   afterEach(() => setLang('en'));
@@ -42,5 +42,35 @@ describe('i18n', () => {
     setLang('ru');
     expect(formatNumber(3250)).toBe('3 250');
     expect(formatNumber(1250.4)).toBe('1 250');
+  });
+
+  it('picks the plural form of the language', () => {
+    DICTIONARIES.en['probe'] = 'one={n} layer|other={n} layers';
+    DICTIONARIES.ru['probe'] = 'one={n} слой|few={n} слоя|other={n} слоёв';
+    expect(tn('probe', 1)).toBe('1 layer');
+    expect(tn('probe', 2)).toBe('2 layers');
+    setLang('ru');
+    expect([1, 2, 4, 5, 11, 21, 22, 25].map((n) => tn('probe', n))).toEqual([
+      '1 слой',
+      '2 слоя',
+      '4 слоя',
+      '5 слоёв',
+      '11 слоёв',
+      '21 слой',
+      '22 слоя',
+      '25 слоёв',
+    ]);
+    delete DICTIONARIES.en['probe'];
+    delete DICTIONARIES.ru['probe'];
+  });
+
+  it('falls back to the other form, then to the last one, then to the plain text', () => {
+    DICTIONARIES.en['probe'] = 'one=a|other=b';
+    expect(tn('probe', 0)).toBe('b');
+    DICTIONARIES.en['probe'] = 'one=only';
+    expect(tn('probe', 5)).toBe('only');
+    DICTIONARIES.en['probe'] = 'plain {n}';
+    expect(tn('probe', 5)).toBe('plain 5');
+    delete DICTIONARIES.en['probe'];
   });
 });

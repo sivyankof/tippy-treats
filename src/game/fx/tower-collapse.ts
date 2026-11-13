@@ -83,6 +83,7 @@ export class TowerCollapse {
         lifeMs: ANIM.collapse.lifeMs,
         face: 'joy',
         angle: pose.angle,
+        look: pose.look,
       });
     }
     tower.hideFrom(index);

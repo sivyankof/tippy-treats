@@ -62,6 +62,8 @@ export const BALANCE = {
     perfectBoost: 1.5,
     /** A miss saved by the brownie shield brings the next layer back at least this wide. */
     shieldRestoreWidth: 250,
+    /** Level of the debug team (`?level=`) when none is given; the Team screen replaces it in M6. */
+    debugLevel: 3,
   },
   coins: {
     fromLayer: 5,

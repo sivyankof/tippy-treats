@@ -1,5 +1,5 @@
 import { BALANCE } from '../data/balance';
-import { clampLevel } from '../data/creatures';
+import { clampLevel, type CreatureId } from '../data/creatures';
 import type { LayerPlan, TeamSlot } from './sim-types';
 
 /** Memory of the planner between layers. */
@@ -49,4 +49,32 @@ export function planLayer(
     plan: { kind: due ? 'golden' : 'plain' },
     state: { lastIndex: index, goldenPending: false },
   };
+}
+
+/** The next creature layer of a run, as the HUD announces it. */
+export interface NextCreature {
+  id: CreatureId;
+  level: number;
+  /** Layers before the creature layer: 0 when the layer in the air is the creature layer. */
+  inLayers: number;
+}
+
+/**
+ * Next creature layer for a tower of `height` (layers placed plus the bonus height of twins):
+ * the flying layer has index `height + 1`. Empty slots are skipped, `null` without creatures.
+ */
+export function nextCreature(
+  height: number,
+  team: readonly (TeamSlot | null)[],
+): NextCreature | null {
+  if (!team.some((slot) => slot !== null)) return null;
+  const { creatureEvery } = BALANCE.team;
+  let index = Math.max(1, height + 1);
+  // Every slot comes up within `slots` creature layers, so the loop is short and always ends.
+  for (let tries = 0; tries <= BALANCE.team.slots; tries++, index++) {
+    index = Math.ceil(index / creatureEvery) * creatureEvery;
+    const slot = creatureSlotAt(index, team);
+    if (slot) return { id: slot.id, level: clampLevel(slot.level), inLayers: index - height - 1 };
+  }
+  return null;
 }

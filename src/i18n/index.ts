@@ -39,6 +39,29 @@ export function t(key: string, params: Record<string, string | number> = {}): st
   );
 }
 
+const pluralRules = new Map<Lang, Intl.PluralRules>();
+
+/**
+ * Translated string whose form depends on the number `n` (also filled in as `{n}`).
+ * The entry lists the forms as `category=text` separated by `|` (`one`, `few`, `many`, `other`
+ * from `Intl.PluralRules`): ru `one={n} слой|few=...|other=...`. A missing category falls back
+ * to `other`, then to the last form.
+ */
+export function tn(key: string, n: number, params: Record<string, string | number> = {}): string {
+  const entry = t(key, { ...params, n });
+  let rules = pluralRules.get(current);
+  if (!rules) {
+    rules = new Intl.PluralRules(current);
+    pluralRules.set(current, rules);
+  }
+  const forms = new Map<string, string>();
+  for (const form of entry.split('|')) {
+    const split = form.indexOf('=');
+    if (split > 0) forms.set(form.slice(0, split), form.slice(split + 1));
+  }
+  return forms.get(rules.select(n)) ?? forms.get('other') ?? [...forms.values()].at(-1) ?? entry;
+}
+
 const GROUP_SIZE_PATTERN = /\B(?=(\d{3})+(?!\d))/g;
 const separators = new Map<Lang, string>();
 

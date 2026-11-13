@@ -9,6 +9,8 @@
     "perfect": "Идеально!",
     "combo": "×{n}",
     "newRecord": "Новый рекорд!",
+    "nextCreatureIn": "one=через {n} слой|few=через {n} слоя|other=через {n} слоёв",
+    "nextCreatureNow": "сейчас",
     "sounds": "Звуки",
     "reducedFx": "Меньше эффектов",
     "vibration": "Вибрация",

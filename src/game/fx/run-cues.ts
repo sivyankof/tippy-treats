@@ -39,6 +39,12 @@ export function cuesForEvents(
         errorFelt = true;
         break;
       case 'miss':
+        // The shield catches the miss: the run goes on, so it is a thud, not the miss jingle.
+        if (event.shielded) {
+          cues.sounds.push({ kind: 'drop' });
+          cues.haptics.push('medium');
+          break;
+        }
         cues.sounds.push({ kind: 'miss' });
         if (!errorFelt) cues.haptics.push('error');
         break;

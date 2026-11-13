@@ -9,6 +9,8 @@ import { Button } from '../ui/button';
 import { NumberRoll } from '../ui/number-roll';
 import { createOutlinedText } from '../ui/outlined-text';
 import { PauseOverlay } from '../ui/pause-overlay';
+import { EffectBadges } from '../ui/effect-badges';
+import { NextCreatureBadge } from '../ui/next-creature-badge';
 import { enterScreen } from '../ui/transition';
 import { addUiRegion } from '../ui/ui-regions';
 import { WobbleBar } from '../ui/wobble-bar';
@@ -23,6 +25,8 @@ export class HudScene extends Phaser.Scene {
   private pauseButton!: Button;
   private overlay!: PauseOverlay;
   private debugPanel!: DebugPanel;
+  private nextBadge!: NextCreatureBadge;
+  private effectBadges!: EffectBadges;
   private heightRoll = new NumberRoll();
   private scoreRoll = new NumberRoll();
 
@@ -52,6 +56,8 @@ export class HudScene extends Phaser.Scene {
       PALETTE.gold,
     );
     this.wobbleBar = new WobbleBar(this);
+    this.nextBadge = new NextCreatureBadge(this);
+    this.effectBadges = new EffectBadges(this);
     this.pauseButton = this.createPauseButton();
     this.overlay = new PauseOverlay(this, {
       onResume: () => this.scene.resume(SCENES.game),
@@ -59,7 +65,7 @@ export class HudScene extends Phaser.Scene {
         launchRun(this);
       },
     });
-    this.debugPanel = new DebugPanel(this);
+    this.debugPanel = new DebugPanel(this, () => launchRun(this));
     this.debugPanel.setVisible(import.meta.env.DEV && readDebugParams().debug);
 
     const unregisterButton = addUiRegion(() =>
@@ -67,6 +73,7 @@ export class HudScene extends Phaser.Scene {
         ? null
         : { x: pauseMargin, y: pauseMargin, width: pauseSize, height: pauseSize },
     );
+    const unregisterPanel = addUiRegion(() => this.debugPanel.bounds());
     const unregisterOverlay = addUiRegion(() =>
       this.overlay.visible
         ? { x: 0, y: 0, width: this.scale.gameSize.width, height: this.scale.gameSize.height }
@@ -83,6 +90,7 @@ export class HudScene extends Phaser.Scene {
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       unregisterButton();
       unregisterOverlay();
+      unregisterPanel();
       this.game.events.off(Phaser.Core.Events.HIDDEN, this.pause, this);
       this.scale.off(Phaser.Scale.Events.RESIZE, this.layout, this);
     });
@@ -98,6 +106,8 @@ export class HudScene extends Phaser.Scene {
       this.heightText.setText(formatNumber(this.heightRoll.update(delta)));
       this.scoreText.setText(formatNumber(this.scoreRoll.update(delta)));
       this.wobbleBar.update(info.wobble, time, delta);
+      this.nextBadge.update(info.height, info.team);
+      this.effectBadges.update(info.effects, info.shield, time, delta);
     }
     this.pauseButton.setVisible(this.pauseEnabled());
     this.debugPanel.update(info, this.game.loop.actualFps);
@@ -153,6 +163,7 @@ export class HudScene extends Phaser.Scene {
     this.cameras.main.setSize(width, height);
     this.overlay.layout(width, height);
     this.wobbleBar.layout(width);
+    this.nextBadge.layout(width);
     this.debugPanel.layout(height);
   }
 }

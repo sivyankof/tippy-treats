@@ -60,6 +60,14 @@ describe('cuesForEvents', () => {
     expect(cues.haptics).toEqual(['light', 'error']);
   });
 
+  it('treats a shielded miss as a thud without the miss jingle or the error haptic', () => {
+    const shielded: SimEvent = { type: 'miss', shielded: true };
+    expect(cuesForEvents([shielded], { combo: 0 }, memo)).toEqual({
+      sounds: [{ kind: 'drop' }],
+      haptics: ['medium'],
+    });
+  });
+
   it('gives an error haptic for a plain miss', () => {
     expect(cuesForEvents([miss], { combo: 0 }, memo)).toEqual({
       sounds: [{ kind: 'miss' }],

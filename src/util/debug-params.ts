@@ -1,3 +1,5 @@
+import { isCreatureId, MAX_CREATURE_LEVEL, type CreatureId } from '../data/creatures';
+import { BALANCE } from '../data/balance';
 import { UINT32_RANGE } from './math';
 
 export interface DebugParams {
@@ -8,6 +10,10 @@ export interface DebugParams {
   bot?: number;
   /** Number of pre-placed layers at the start of a run. */
   start?: number;
+  /** Team of the run, one entry per slot (`null` is an empty slot); at most `BALANCE.team.slots`. */
+  team?: Array<CreatureId | null>;
+  /** Level of every creature of the team, 1..5. */
+  level?: number;
 }
 
 const UINT32_MAX = UINT32_RANGE - 1;
@@ -25,7 +31,27 @@ function parsePositive(raw: string | null): number | undefined {
   return Number.isFinite(value) && value > 0 ? value : undefined;
 }
 
-/** Reads `?debug`, `?seed=`, `?bot=` and `?start=` from a query string. Invalid values are ignored. */
+/** Entries of `?team=a,b,c`: `-` or nothing is an empty slot, unknown ids are dropped. */
+function parseTeam(raw: string | null): Array<CreatureId | null> | undefined {
+  if (raw === null) return undefined;
+  const slots: Array<CreatureId | null> = [];
+  for (const part of raw.split(',')) {
+    const id = part.trim();
+    if (id === '' || id === '-') slots.push(null);
+    else if (isCreatureId(id)) slots.push(id);
+  }
+  return slots.slice(0, BALANCE.team.slots);
+}
+
+function parseLevel(raw: string | null): number | undefined {
+  const level = parseUint(raw);
+  return level !== undefined && level >= 1 && level <= MAX_CREATURE_LEVEL ? level : undefined;
+}
+
+/**
+ * Reads `?debug`, `?seed=`, `?bot=`, `?start=`, `?team=` and `?level=` from a query string.
+ * Invalid values are ignored.
+ */
 export function parseDebugParams(search: string): DebugParams {
   const params = new URLSearchParams(search);
   const result: DebugParams = { debug: params.has('debug') && params.get('debug') !== '0' };
@@ -35,6 +61,10 @@ export function parseDebugParams(search: string): DebugParams {
   if (seed !== undefined) result.seed = seed;
   if (bot !== undefined) result.bot = bot;
   if (start !== undefined) result.start = start;
+  const team = parseTeam(params.get('team'));
+  const level = parseLevel(params.get('level'));
+  if (team !== undefined) result.team = team;
+  if (level !== undefined) result.level = level;
   return result;
 }
 

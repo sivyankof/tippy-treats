@@ -1,5 +1,6 @@
 import * as Phaser from 'phaser';
 import type { CutSide } from '../../core/drop';
+import type { LayerPlan } from '../../core/sim-types';
 import { ANIM } from '../../data/anim';
 import { BALANCE } from '../../data/balance';
 import { createGlossBand, sweepGloss } from '../fx/gloss-sweep';
@@ -28,6 +29,7 @@ export class LayerView extends Phaser.GameObjects.Container {
   private drawnWidth = -1;
   private drawnCut: CutSide | null = null;
   private faceEnabled = true;
+  private readonly lookPlan: LayerPlan = { kind: 'plain' };
 
   constructor(scene: Phaser.Scene) {
     super(scene);
@@ -43,6 +45,19 @@ export class LayerView extends Phaser.GameObjects.Container {
     this.squashRoot = new Phaser.GameObjects.Container(scene, 0, half, [this.content]);
     this.add(this.squashRoot);
     scene.add.existing(this);
+  }
+
+  /** What the layer is (plain, creature, golden); the picture of a creature layer is drawn from it. */
+  get look(): Readonly<LayerPlan> {
+    return this.lookPlan;
+  }
+
+  /** Tells the view what kind of layer it shows. Cheap: it copies three fields. */
+  setLook(plan: LayerPlan): this {
+    this.lookPlan.kind = plan.kind;
+    this.lookPlan.creature = plan.creature;
+    this.lookPlan.level = plan.level;
+    return this;
   }
 
   /** The face of this layer: mood, reactions, look target. */

@@ -30,4 +30,38 @@ describe('parseDebugParams', () => {
   it('keeps the largest uint32 seed', () => {
     expect(parseDebugParams('?seed=4294967295').seed).toBe(4294967295);
   });
+
+  it('reads the team with empty slots and drops unknown ids', () => {
+    expect(parseDebugParams('?team=honey,jelly,brownie').team).toEqual([
+      'honey',
+      'jelly',
+      'brownie',
+    ]);
+    expect(parseDebugParams('?team=honey,-,brownie').team).toEqual(['honey', null, 'brownie']);
+    expect(parseDebugParams('?team=,puff').team).toEqual([null, 'puff']);
+    expect(parseDebugParams('?team=honey,nope,jelly').team).toEqual(['honey', 'jelly']);
+    expect(parseDebugParams('?team= honey , jelly ').team).toEqual(['honey', 'jelly']);
+  });
+
+  it('keeps at most three slots', () => {
+    expect(parseDebugParams('?team=honey,puff,jelly,caramel').team).toEqual([
+      'honey',
+      'puff',
+      'jelly',
+    ]);
+  });
+
+  it('treats an empty team value as no creatures', () => {
+    expect(parseDebugParams('?team=').team).toEqual([null]);
+    expect(parseDebugParams('?debug=1').team).toBeUndefined();
+  });
+
+  it('reads the level only from 1 to 5', () => {
+    expect(parseDebugParams('?level=1').level).toBe(1);
+    expect(parseDebugParams('?level=5').level).toBe(5);
+    expect(parseDebugParams('?level=0').level).toBeUndefined();
+    expect(parseDebugParams('?level=6').level).toBeUndefined();
+    expect(parseDebugParams('?level=2.5').level).toBeUndefined();
+    expect(parseDebugParams('?level=x').level).toBeUndefined();
+  });
 });

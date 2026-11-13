@@ -9,6 +9,8 @@
     "perfect": "Perfect!",
     "combo": "×{n}",
     "newRecord": "New record!",
+    "nextCreatureIn": "one=in {n} layer|other=in {n} layers",
+    "nextCreatureNow": "now",
     "sounds": "Sounds",
     "reducedFx": "Fewer effects",
     "vibration": "Vibration",

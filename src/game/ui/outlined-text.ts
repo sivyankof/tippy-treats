@@ -24,3 +24,25 @@ export function createOutlinedText(
     .setStroke(cssColor(PALETTE.textDark), ANIM.hud.numberStroke)
     .setShadow(0, ANIM.hud.shadowOffset, cssColor(PALETTE.textDark), 0, true, true);
 }
+
+/** Small label with a light or dark outline for readability over the scene; origin is the centre. */
+export function createStrokedText(
+  scene: Phaser.Scene,
+  x: number,
+  y: number,
+  text: string,
+  fontSize: number,
+  color: number,
+  strokeColor: number,
+  strokeWidth: number,
+): Phaser.GameObjects.Text {
+  return scene.add
+    .text(x, y, text, {
+      fontFamily: FONT_FAMILY,
+      fontStyle: FONT_WEIGHT.black,
+      fontSize,
+      color: cssColor(color),
+    })
+    .setOrigin(0.5)
+    .setStroke(cssColor(strokeColor), strokeWidth);
+}

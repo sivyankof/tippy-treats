@@ -20,7 +20,7 @@ import { cuesForEvents, playCues } from './run-cues';
 import { TowerCollapse } from './tower-collapse';
 
 /** The flying layer as it was before the sim step that just ran. */
-export type FlyingMemo = Pick<FlyingLayer, 'x' | 'width' | 'index'>;
+export type FlyingMemo = Pick<FlyingLayer, 'x' | 'width' | 'kind' | 'creature' | 'level'>;
 type LandEvent = Extract<SimEvent, { type: 'land' }>;
 
 /** The camera as the effects need it: world scroll without the kick, and the screen size. */
@@ -123,7 +123,7 @@ export class RunFx {
           this.onSneeze(state);
           break;
         case 'miss':
-          this.onMiss(memo, land !== undefined);
+          this.onMiss(event.shielded, memo, land !== undefined, state);
           break;
         case 'run_over':
           this.result = event.result;
@@ -188,23 +188,36 @@ export class RunFx {
     if (widened > 0 && layer) this.tower.topView()?.playWiden(layer.width - widened);
   }
 
-  private onMiss(memo: FlyingMemo | null, followedLanding: boolean): void {
+  /**
+   * A shielded miss only drops the layer: the run goes on and the sim brings the layer back,
+   * so no miss wait starts and no result is expected. An unshielded one ends the run.
+   */
+  private onMiss(
+    shielded: boolean,
+    memo: FlyingMemo | null,
+    followedLanding: boolean,
+    state: Readonly<TowerState>,
+  ): void {
     this.setGlow(false);
     // A sneeze that leaves too little cake follows a landing: nothing falls past the tower.
     if (!memo || followedLanding) {
-      this.missWaitMs = ANIM.miss.reactMs;
+      if (!shielded) this.missWaitMs = ANIM.miss.reactMs;
       return;
     }
     const side = memo.x >= this.tower.topViewX() ? 1 : -1;
-    this.missPiece = this.pieces.spawn({
-      layerIndex: memo.index,
+    // The missed layer would have been the next one in the tower: twins do not shift it.
+    const piece = this.pieces.spawn({
+      layerIndex: state.layers.length + 1,
       x: memo.x,
-      y: this.tower.layerCenterY(memo.index - 1),
+      y: this.tower.layerCenterY(state.layers.length),
       width: memo.width,
       cut: null,
       ...driftMotion(ANIM.miss, side),
       face: 'horror',
+      look: memo,
     });
+    if (shielded) return;
+    this.missPiece = piece;
     this.missWaitMs = ANIM.miss.fallMs + ANIM.miss.reactMs;
   }
 
@@ -218,7 +231,7 @@ export class RunFx {
     const side = cutSide === 'right' ? 1 : -1;
     const y = this.tower.layerCenterY(index);
     this.pieces.spawn({
-      layerIndex: memo.index,
+      layerIndex: index + 1,
       x: memo.x + side * (memo.width / 2 - event.cutWidth / 2),
       y,
       width: event.cutWidth,
@@ -226,12 +239,13 @@ export class RunFx {
       cut: side === 1 ? 'left' : 'right',
       ...driftMotion(ANIM.bite, side),
       face: null,
+      look: memo,
     });
 
     const pose = this.tower.layerPose(index);
     if (!pose) return;
     const edgeX = pose.x + side * (pose.width / 2);
-    const colors = layerColors(colorIndexFor(memo.index));
+    const colors = layerColors(colorIndexFor(index + 1));
     this.landingFx.bitten(edgeX, y, side, colors.cake);
     const { dripSize, drips } = ANIM.bite;
     const startY = y - BALANCE.layer.height / 2 + BALANCE.layer.height * ANIM.layer.glazeDepth;

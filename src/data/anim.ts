@@ -426,6 +426,28 @@ export const ANIM = {
     countdownSteps: 3,
     countdownStepMs: 700,
   },
+  /** Creature badges of the run HUD: active effects and the next creature. */
+  badges: {
+    inMs: 280,
+    inEase: 'Back.easeOut',
+    outMs: 200,
+    /** Gentle pulse while the effect is active. */
+    pulseScale: 1.06,
+    pulsePeriodMs: 1200,
+    /** With one layer left the badge blinks between full and `blinkMinAlpha`. */
+    blinkPeriodMs: 400,
+    blinkMinAlpha: 0.35,
+    /** The counter pops when it changes. */
+    counterPopScale: 1.4,
+    counterPopMs: 180,
+    counterPopEase: 'Back.easeOut',
+    /** Badges slide to a new place: share of the distance per 60 Hz frame. */
+    slideLerp: 0.25,
+    /** The next-creature indicator pops when its text or creature changes. */
+    nextPopScale: 1.25,
+    nextPopMs: 200,
+    nextPopEase: 'Back.easeOut',
+  },
   results: {
     /** Pause between the end of the collapse and the results screen. */
     delayMs: 300,

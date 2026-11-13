@@ -1,6 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import type { TeamSlot } from './sim-types';
-import { creatureSlotAt, isCreatureIndex, planLayer, type PlanState } from './team-queue';
+import {
+  creatureSlotAt,
+  isCreatureIndex,
+  nextCreature,
+  planLayer,
+  type PlanState,
+} from './team-queue';
 
 const TEAM: TeamSlot[] = [
   { id: 'honey', level: 1 },
@@ -89,5 +95,52 @@ describe('planLayer', () => {
     const first = planLayer(150, team, { lastIndex: 149, goldenPending: false });
     expect(first.state.goldenPending).toBe(true);
     expect(planLayer(151, team, first.state).plan.kind).toBe('golden');
+  });
+});
+
+describe('nextCreature', () => {
+  it('is null for an empty team', () => {
+    expect(nextCreature(0, [null, null, null])).toBeNull();
+    expect(nextCreature(10, [])).toBeNull();
+  });
+
+  it('counts the layers before the first creature layer', () => {
+    expect(nextCreature(0, TEAM)).toEqual({ id: 'honey', level: 1, inLayers: 5 });
+    expect(nextCreature(3, TEAM)).toEqual({ id: 'honey', level: 1, inLayers: 2 });
+  });
+
+  it('is zero when the flying layer is the creature layer', () => {
+    expect(nextCreature(5, TEAM)).toEqual({ id: 'honey', level: 1, inLayers: 0 });
+    expect(nextCreature(11, TEAM)?.id).toBe('jelly');
+    expect(nextCreature(11, TEAM)?.inLayers).toBe(0);
+  });
+
+  it('moves on to the next slot after a creature layer', () => {
+    expect(nextCreature(6, TEAM)).toEqual({ id: 'jelly', level: 2, inLayers: 5 });
+    expect(nextCreature(17, TEAM)).toEqual({ id: 'caramel', level: 3, inLayers: 0 });
+    expect(nextCreature(18, TEAM)?.id).toBe('honey');
+  });
+
+  it('finds the only filled slot through empty ones', () => {
+    const single: (TeamSlot | null)[] = [null, TEAM[1] as TeamSlot, null];
+    expect(nextCreature(0, single)).toEqual({ id: 'jelly', level: 2, inLayers: 11 });
+    expect(nextCreature(12, single)).toEqual({ id: 'jelly', level: 2, inLayers: 5 + 12 });
+    const last: (TeamSlot | null)[] = [null, null, TEAM[2] as TeamSlot];
+    expect(nextCreature(0, last)).toEqual({ id: 'caramel', level: 3, inLayers: 17 });
+  });
+
+  it('skips an empty middle slot', () => {
+    const team: (TeamSlot | null)[] = [TEAM[0] as TeamSlot, null, TEAM[2] as TeamSlot];
+    expect(nextCreature(6, team)).toEqual({ id: 'caramel', level: 3, inLayers: 11 });
+  });
+
+  it('follows the height after the bonus of twins', () => {
+    // The tower has 4 layers and a height of 6: the flying layer is number 7, honey was passed.
+    expect(nextCreature(6, TEAM)?.id).toBe('jelly');
+    expect(nextCreature(6, TEAM)?.inLayers).toBe(5);
+  });
+
+  it('clamps the level like the layer plan does', () => {
+    expect(nextCreature(0, [{ id: 'puff', level: 9 }, null, null])?.level).toBe(5);
   });
 });

@@ -18,6 +18,10 @@ export const CREATURE_IDS = [
 
 export type CreatureId = (typeof CREATURE_IDS)[number];
 
+export function isCreatureId(value: string): value is CreatureId {
+  return (CREATURE_IDS as readonly string[]).includes(value);
+}
+
 export const MAX_CREATURE_LEVEL = 5;
 
 /** One value per creature level, level 1 first. */

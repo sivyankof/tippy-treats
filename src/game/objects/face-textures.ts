@@ -1,4 +1,3 @@
-import type * as Phaser from 'phaser';
 import type { EyeKind, MouthKind } from './face-state';
 
 /** Texture keys of the face parts. Each key is the name of an SVG file in assets/svg. */
@@ -34,33 +33,3 @@ export const MOUTH_TEXTURE: Readonly<Record<MouthKind, string>> = {
   scared: FACE_TEXTURES.mouthScared,
   yum: FACE_TEXTURES.mouthYum,
 };
-
-// The SVG sources are bundled as text. The Phaser loader fetches files by URL, and small files
-// would otherwise be inlined by Vite as data URIs, which its loader cannot read, so each
-// source is handed over as a short-lived blob URL. Pictures are drawn at the size written
-// in the file, in logical pixels.
-const FACE_SOURCES = import.meta.glob<string>('../../../assets/svg/face_*.svg', {
-  eager: true,
-  query: '?raw',
-  import: 'default',
-});
-
-function faceSource(key: string): string {
-  const source = FACE_SOURCES[`../../../assets/svg/${key}.svg`];
-  if (!source) throw new Error(`Missing face picture assets/svg/${key}.svg`);
-  return source;
-}
-
-/** Queues every face picture in the scene loader; call it from `preload`. */
-export function loadFaceTextures(scene: Phaser.Scene): void {
-  const urls: string[] = [];
-  for (const key of Object.values(FACE_TEXTURES)) {
-    const blob = new Blob([faceSource(key)], { type: 'image/svg+xml' });
-    const url = URL.createObjectURL(blob);
-    urls.push(url);
-    scene.load.svg(key, url);
-  }
-  scene.load.once('complete', () => {
-    for (const url of urls) URL.revokeObjectURL(url);
-  });
-}

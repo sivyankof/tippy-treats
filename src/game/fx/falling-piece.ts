@@ -1,5 +1,6 @@
 import type * as Phaser from 'phaser';
 import type { CutSide } from '../../core/drop';
+import type { LayerPlan } from '../../core/sim-types';
 import { ANIM } from '../../data/anim';
 import { DEPTH } from '../depth';
 import type { Reaction } from '../objects/face-state';
@@ -19,7 +20,11 @@ export interface PieceSpawn extends PieceMotion {
   face: Reaction | null;
   /** Starting rotation in degrees. */
   angle?: number;
+  /** What the layer is; plain when left out. */
+  look?: LayerPlan;
 }
+
+const PLAIN_LOOK: LayerPlan = { kind: 'plain' };
 
 interface Piece extends PoolEntry<LayerView> {
   vx: number;
@@ -52,6 +57,7 @@ export class FallingPieces {
       .resetAnim()
       .setFaceEnabled(opts.face !== null)
       .setDepth(DEPTH.pieces)
+      .setLook(opts.look ?? PLAIN_LOOK)
       .setLayer(opts.layerIndex, opts.width, opts.cut)
       .setPosition(opts.x, opts.y)
       .setAngle(opts.angle ?? 0)
