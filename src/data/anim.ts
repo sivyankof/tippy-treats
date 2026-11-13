@@ -67,6 +67,11 @@ export const ANIM = {
     /** Brows above the eyes; inner ends go up by `raiseDeg` ("домиком"). */
     browOffsetY: -28,
     browRaiseDeg: 20,
+    /** Eyelid of a sleepy or squinting creature: the eye picture is `eyeRadius` big, the lid picture `lidWidth` x `lidHeight`; `lidBleed` makes it a little larger than the eye so no rim shows. */
+    eyeRadius: 23,
+    lidWidth: 50,
+    lidHeight: 25,
+    lidBleed: 1.1,
     /** Sweat drop next to the right eye, slides down by `slide` every `periodMs`. */
     sweatX: 50,
     sweatY: -16,

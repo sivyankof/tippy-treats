@@ -147,7 +147,7 @@ export class TowerView {
       const offset = this.swayOffset(state, i);
       this.shownOffsets.set(i, offset);
       const pose = this.fillPose(this.scratchPose, layer, i, offset);
-      view.setLayer(i + 1, pose.width, pose.cut).setLook(pose.look);
+      view.setLook(pose.look).setLayer(i + 1, pose.width, pose.cut);
       view.setPosition(pose.x, pose.y).setAngle(pose.angle);
       if (i === count - 1) this.updateTopSpan(pose.x, pose.width);
     }

@@ -6,6 +6,7 @@ export const SCENES = {
   game: 'game',
   hud: 'hud',
   results: 'results',
+  lineup: 'lineup',
 } as const;
 
 /** Data handed to the results scene when it is launched. */

@@ -1,7 +1,8 @@
 import { ANIM } from '../../data/anim';
+import type { FaceRecipe, MouthKind } from '../../data/creature-looks';
 import { pickRange } from '../../util/math';
 
-export type MouthKind = 'smile' | 'open' | 'o' | 'flat' | 'scared' | 'yum';
+export type { MouthKind };
 export type EyeKind = 'open' | 'closed' | 'happy' | 'wide';
 export type Mood = 'calm' | 'nervous' | 'scared';
 /** Short-lived overrides, highest priority last: blink < joy < ouch < squint < horror. */
@@ -10,7 +11,12 @@ export type Reaction = 'blink' | 'joy' | 'ouch' | 'squint' | 'horror';
 export interface Expression {
   eyes: EyeKind;
   mouth: MouthKind;
+  /** Brows are shown (always for a creature, only in "ouch" and "horror" for a plain layer). */
   brows: boolean;
+  /** The brows take the creature's own pose; otherwise they are the worried "домиком" pair. */
+  ownBrows: boolean;
+  /** Half-closed eyes of a creature at rest (the recipe says how far). */
+  lids: boolean;
   sweat: boolean;
 }
 
@@ -40,39 +46,79 @@ export function aimMouth(dx: number, width: number): MouthKind {
   return 'smile';
 }
 
-function moodExpression(mood: Mood, mouthHint: MouthKind | undefined): Expression {
+const PLAIN: Pick<Expression, 'brows' | 'ownBrows' | 'lids'> = {
+  brows: false,
+  ownBrows: false,
+  lids: false,
+};
+const OWN: Pick<Expression, 'brows' | 'ownBrows' | 'lids'> = {
+  brows: true,
+  ownBrows: true,
+  lids: false,
+};
+
+/**
+ * The calm mouth: a hint that is not the plain smile (a grin, a worried `o`) wins, then the
+ * creature's own default mouth, then the smile.
+ */
+function calmMouth(mouthHint: MouthKind | undefined, recipe: FaceRecipe | null): MouthKind {
+  if (mouthHint && mouthHint !== 'smile') return mouthHint;
+  return recipe?.mouth ?? mouthHint ?? 'smile';
+}
+
+function moodExpression(
+  mood: Mood,
+  mouthHint: MouthKind | undefined,
+  recipe: FaceRecipe | null,
+): Expression {
+  const own = recipe ? OWN : PLAIN;
   switch (mood) {
     case 'nervous':
-      return { eyes: 'open', mouth: 'flat', brows: false, sweat: false };
+      return { eyes: 'open', mouth: 'flat', sweat: false, ...own };
     case 'scared':
-      return { eyes: 'open', mouth: 'scared', brows: false, sweat: true };
+      return { eyes: 'open', mouth: 'scared', sweat: true, ...own, ownBrows: false };
     case 'calm':
-      return { eyes: 'open', mouth: mouthHint ?? 'smile', brows: false, sweat: false };
+      return {
+        eyes: 'open',
+        mouth: calmMouth(mouthHint, recipe),
+        sweat: false,
+        ...own,
+        lids: recipe !== null && (recipe.lidLeft > 0 || recipe.lidRight > 0),
+      };
   }
 }
 
 /**
  * What a face shows. An active reaction overrides the mood; `mouthHint` replaces
- * the mouth of a calm face only (worried faces keep their worried mouth).
+ * the mouth of a calm face only (worried faces keep their worried mouth). A creature
+ * (`recipe`) always has brows, a mouth of its own and, for sleepy ones, half-closed eyes.
  */
 export function resolveExpression(
   mood: Mood,
   reaction: Reaction | null,
   mouthHint?: MouthKind,
+  recipe: FaceRecipe | null = null,
 ): Expression {
-  const base = moodExpression(mood, mouthHint);
+  const base = moodExpression(mood, mouthHint, recipe);
   switch (reaction) {
     case null:
       return base;
     case 'blink':
     case 'squint':
-      return { ...base, eyes: 'closed' };
+      return { ...base, eyes: 'closed', lids: false };
     case 'joy':
-      return { eyes: 'happy', mouth: 'smile', brows: false, sweat: false };
+      return { eyes: 'happy', mouth: 'smile', sweat: false, ...(recipe ? OWN : PLAIN) };
     case 'ouch':
-      return { ...base, mouth: 'o', brows: true };
+      return { ...base, mouth: 'o', brows: true, ownBrows: false, lids: false };
     case 'horror':
-      return { eyes: 'wide', mouth: 'scared', brows: true, sweat: true };
+      return {
+        eyes: 'wide',
+        mouth: 'scared',
+        brows: true,
+        ownBrows: false,
+        lids: false,
+        sweat: true,
+      };
   }
 }
 

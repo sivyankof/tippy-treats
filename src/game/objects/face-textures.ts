@@ -7,6 +7,8 @@ export const FACE_TEXTURES = {
   eyeHappy: 'face_eye_happy',
   pupil: 'face_pupil',
   brow: 'face_brow',
+  browLight: 'face_brow_light',
+  lid: 'face_lid',
   mouthSmile: 'face_mouth_smile',
   mouthOpen: 'face_mouth_open',
   mouthO: 'face_mouth_o',

@@ -1,5 +1,6 @@
 import * as Phaser from 'phaser';
 import { HUD_LAYOUT } from '../../data/hud-layout';
+import { readDebugParams } from '../../util/debug-params';
 import { services } from '../../services';
 import { bindAudioLifecycle } from '../audio-lifecycle';
 import { bindSystemReducedMotion, effectsMode } from '../effects-mode';
@@ -24,6 +25,10 @@ export class BootScene extends Phaser.Scene {
     createFxTextures(this);
     bindAudioLifecycle(this.game, services.audio);
     bindSystemReducedMotion(effectsMode);
+    if (readDebugParams().lineup) {
+      this.scene.start(SCENES.lineup);
+      return;
+    }
     this.scene.launch(SCENES.hud);
     this.scene.start(SCENES.game);
   }

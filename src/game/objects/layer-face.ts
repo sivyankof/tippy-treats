@@ -1,6 +1,9 @@
 import * as Phaser from 'phaser';
 import { ANIM } from '../../data/anim';
+import type { FaceRecipe } from '../../data/creature-looks';
 import { frameLerp } from '../../util/math';
+import { FaceParts } from './face-parts';
+import { faceLayout } from './face-recipe';
 import {
   FaceState,
   resolveExpression,
@@ -9,7 +12,6 @@ import {
   type MouthKind,
   type Reaction,
 } from './face-state';
-import { EYE_TEXTURE, FACE_TEXTURES, MOUTH_TEXTURE } from './face-textures';
 
 function sameExpression(a: Expression | null, b: Expression): boolean {
   return (
@@ -17,27 +19,25 @@ function sameExpression(a: Expression | null, b: Expression): boolean {
     a.eyes === b.eyes &&
     a.mouth === b.mouth &&
     a.brows === b.brows &&
+    a.ownBrows === b.ownBrows &&
+    a.lids === b.lids &&
     a.sweat === b.sweat
   );
 }
 
 /**
- * The face of a cake layer: eyes with pupils, brows, mouth, cheeks and a sweat drop.
+ * The face of a cake layer: eyes with pupils, brows, mouth, cheeks and a sweat drop. A creature
+ * layer gets its own recipe (brow pose, resting mouth, eyelids, blush); twins show two small faces.
  * Everything is driven from state and `tick`, there are no tweens to clean up.
  */
 export class LayerFace extends Phaser.GameObjects.Container {
   private readonly timers = new FaceState(Math.random);
-  private readonly cheekL: Phaser.GameObjects.Image;
-  private readonly cheekR: Phaser.GameObjects.Image;
-  private readonly mouth: Phaser.GameObjects.Image;
-  private readonly eyeL: Phaser.GameObjects.Image;
-  private readonly eyeR: Phaser.GameObjects.Image;
-  private readonly pupilL: Phaser.GameObjects.Image;
-  private readonly pupilR: Phaser.GameObjects.Image;
-  private readonly browL: Phaser.GameObjects.Image;
-  private readonly browR: Phaser.GameObjects.Image;
-  private readonly sweat: Phaser.GameObjects.Image;
+  /** The main face, and the second one of a pair (created when a pair recipe first arrives). */
+  private readonly mainFace: FaceParts;
+  private pairFace: FaceParts | null = null;
 
+  private recipe: FaceRecipe | null = null;
+  private lidColor = 0xffffff;
   private mood: Mood = 'calm';
   private mouthHint: MouthKind | undefined;
   private expression: Expression | null = null;
@@ -45,6 +45,7 @@ export class LayerFace extends Phaser.GameObjects.Container {
   private resolvedReaction: Reaction | null = null;
   private resolvedMood: Mood = 'calm';
   private resolvedHint: MouthKind | undefined;
+  private layerWidth = 0;
   /** The layer is wide enough for mouth, cheeks and sweat (eyes, pupils and brows always show). */
   private showRest = true;
   /** Pupil offset the pupils glide to, and the one they show now (face pixels). */
@@ -53,50 +54,52 @@ export class LayerFace extends Phaser.GameObjects.Container {
   private lookX = 0;
   private lookY = 0;
   private driftX = 0;
-  private sweatMs = 0;
 
   constructor(scene: Phaser.Scene) {
     super(scene, 0, ANIM.face.centerY);
-    const { eyeSpacing, mouthOffsetY, cheekOffsetY, cheekSpacing, browOffsetY, browRaiseDeg } =
-      ANIM.face;
-    const half = eyeSpacing / 2;
-    const image = (key: string, x: number, y: number): Phaser.GameObjects.Image =>
-      new Phaser.GameObjects.Image(scene, x, y, key);
-
-    this.cheekL = image(FACE_TEXTURES.cheek, -cheekSpacing / 2, cheekOffsetY);
-    this.cheekR = image(FACE_TEXTURES.cheek, cheekSpacing / 2, cheekOffsetY);
-    this.mouth = image(FACE_TEXTURES.mouthSmile, 0, mouthOffsetY);
-    this.eyeL = image(FACE_TEXTURES.eyeOpen, -half, 0);
-    this.eyeR = image(FACE_TEXTURES.eyeOpen, half, 0);
-    this.pupilL = image(FACE_TEXTURES.pupil, -half, 0);
-    this.pupilR = image(FACE_TEXTURES.pupil, half, 0);
-    // Inner ends go up: the left brow turns counter-clockwise, the right one clockwise.
-    this.browL = image(FACE_TEXTURES.brow, -half, browOffsetY).setAngle(-browRaiseDeg);
-    this.browR = image(FACE_TEXTURES.brow, half, browOffsetY).setAngle(browRaiseDeg);
-    this.sweat = image(FACE_TEXTURES.sweat, ANIM.face.sweatX, ANIM.face.sweatY);
-
-    this.add([
-      this.cheekL,
-      this.cheekR,
-      this.mouth,
-      this.eyeL,
-      this.eyeR,
-      this.pupilL,
-      this.pupilR,
-      this.browL,
-      this.browR,
-      this.sweat,
-    ]);
+    this.mainFace = new FaceParts(scene);
+    this.add(this.mainFace);
     this.refresh();
     this.placePupils();
   }
 
+  /**
+   * Gives the face the look of a creature (`null`: the plain face). `lidColor` is the colour of
+   * its eyelids. Call `layout` again after a change.
+   */
+  setRecipe(recipe: FaceRecipe | null, lidColor = 0xffffff): this {
+    if (recipe === this.recipe && lidColor === this.lidColor) return this;
+    this.recipe = recipe;
+    this.lidColor = lidColor;
+    this.expression = null;
+    this.setY(ANIM.face.centerY + (recipe?.offsetY ?? 0));
+    if (recipe?.pair && !this.pairFace) {
+      this.pairFace = new FaceParts(this.scene);
+      this.add(this.pairFace);
+    }
+    this.pairFace?.setVisible(recipe?.pair != null);
+    this.layout(this.layerWidth);
+    return this.refresh();
+  }
+
   /** Scales the face down on narrow layers; the narrowest keep only eyes, pupils and brows. */
   layout(width: number): this {
-    const { fullWidth, eyesOnlyWidth } = ANIM.face;
-    this.setScale(Math.min(1, width / fullWidth));
-    this.showRest = width >= eyesOnlyWidth;
+    this.layerWidth = width;
+    const { scale, showRest } = faceLayout(width, this.recipe);
+    this.setScale(scale);
+    this.showRest = showRest;
+    const pair = this.recipe?.pair;
+    if (pair) {
+      this.mainFace.setPosition(-pair.spread, 0).setScale(pair.scale);
+      this.mainFace.setGaze(pair.gaze);
+      this.pairFace?.setPosition(pair.spread, 0).setScale(pair.scale);
+      this.pairFace?.setGaze(-pair.gaze);
+    } else {
+      this.mainFace.setPosition(0, 0).setScale(1);
+      this.mainFace.setGaze(0);
+    }
     this.applyExpression();
+    this.placePupils();
     return this;
   }
 
@@ -154,7 +157,8 @@ export class LayerFace extends Phaser.GameObjects.Container {
     this.lookX += (this.targetX - this.lookX) * follow;
     this.lookY += (this.targetY - this.lookY) * follow;
     this.placePupils();
-    this.animateSweat(dtMs);
+    this.mainFace.animateSweat(dtMs);
+    this.pairFace?.animateSweat(dtMs);
   }
 
   /** Back to a calm face with open eyes, centred pupils and a fresh blink timer. */
@@ -163,8 +167,8 @@ export class LayerFace extends Phaser.GameObjects.Container {
     this.mood = 'calm';
     this.mouthHint = undefined;
     this.targetX = this.targetY = this.lookX = this.lookY = this.driftX = 0;
-    this.sweatMs = 0;
-    this.sweat.setPosition(ANIM.face.sweatX, ANIM.face.sweatY).setAlpha(1);
+    this.mainFace.resetSweat();
+    this.pairFace?.resetSweat();
     this.expression = null;
     this.refresh();
     this.placePupils();
@@ -185,7 +189,7 @@ export class LayerFace extends Phaser.GameObjects.Container {
     this.resolvedReaction = reaction;
     this.resolvedMood = this.mood;
     this.resolvedHint = this.mouthHint;
-    const next = resolveExpression(this.mood, reaction, this.mouthHint);
+    const next = resolveExpression(this.mood, reaction, this.mouthHint, this.recipe);
     if (sameExpression(this.expression, next)) return this;
     this.expression = next;
     this.applyExpression();
@@ -196,37 +200,14 @@ export class LayerFace extends Phaser.GameObjects.Container {
   private applyExpression(): void {
     const e = this.expression;
     if (!e) return;
-    const wide = e.eyes === 'wide';
-    const eyeTexture = EYE_TEXTURE[e.eyes];
-    const pupilsShown = e.eyes === 'open' || wide;
-    const eyeScale = wide ? ANIM.face.wideEyeScale : 1;
-    const pupilScale = wide ? ANIM.face.widePupilScale : 1;
-
-    for (const eye of [this.eyeL, this.eyeR]) eye.setTexture(eyeTexture).setScale(eyeScale);
-    for (const pupil of [this.pupilL, this.pupilR]) {
-      pupil.setVisible(pupilsShown).setScale(pupilScale);
-    }
-    for (const brow of [this.browL, this.browR]) brow.setVisible(e.brows);
-    this.mouth.setTexture(MOUTH_TEXTURE[e.mouth]).setVisible(this.showRest);
-    this.cheekL.setVisible(this.showRest);
-    this.cheekR.setVisible(this.showRest);
-    this.sweat.setVisible(e.sweat && this.showRest);
-    if (!e.sweat) this.sweatMs = 0;
+    const ctx = { recipe: this.recipe, lidColor: this.lidColor, showRest: this.showRest };
+    this.mainFace.apply(e, ctx);
+    if (this.recipe?.pair) this.pairFace?.apply(e, ctx);
   }
 
   private placePupils(): void {
-    const half = ANIM.face.eyeSpacing / 2;
     const x = this.lookX + this.driftX;
-    this.pupilL.setPosition(-half + x, this.lookY);
-    this.pupilR.setPosition(half + x, this.lookY);
-  }
-
-  /** The drop slides down and fades, then starts again at the top. */
-  private animateSweat(dtMs: number): void {
-    if (!this.sweat.visible) return;
-    const { sweatY, sweatSlide, sweatPeriodMs } = ANIM.face;
-    this.sweatMs = (this.sweatMs + dtMs) % sweatPeriodMs;
-    const phase = this.sweatMs / sweatPeriodMs;
-    this.sweat.setY(sweatY + sweatSlide * phase).setAlpha(1 - phase);
+    this.mainFace.placePupils(x, this.lookY);
+    this.pairFace?.placePupils(x, this.lookY);
   }
 }

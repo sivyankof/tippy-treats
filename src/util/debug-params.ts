@@ -14,6 +14,8 @@ export interface DebugParams {
   team?: Array<CreatureId | null>;
   /** Level of every creature of the team, 1..5. */
   level?: number;
+  /** Show the line-up of all 12 creature layers instead of a run (a temporary art-review tool). */
+  lineup?: boolean;
 }
 
 const UINT32_MAX = UINT32_RANGE - 1;
@@ -49,7 +51,7 @@ function parseLevel(raw: string | null): number | undefined {
 }
 
 /**
- * Reads `?debug`, `?seed=`, `?bot=`, `?start=`, `?team=` and `?level=` from a query string.
+ * Reads `?debug`, `?seed=`, `?bot=`, `?start=`, `?team=`, `?level=` and `?lineup=1` from a query string.
  * Invalid values are ignored.
  */
 export function parseDebugParams(search: string): DebugParams {
@@ -65,6 +67,7 @@ export function parseDebugParams(search: string): DebugParams {
   const level = parseLevel(params.get('level'));
   if (team !== undefined) result.team = team;
   if (level !== undefined) result.level = level;
+  if (params.get('lineup') === '1') result.lineup = true;
   return result;
 }
 

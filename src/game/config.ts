@@ -5,6 +5,7 @@ import { KITCHEN_COLORS } from '../data/palette';
 import { BootScene } from './scenes/boot-scene';
 import { GameScene } from './scenes/game-scene';
 import { HudScene } from './scenes/hud-scene';
+import { LineupScene } from './debug/lineup-scene';
 import { ResultsScene } from './scenes/results-scene';
 
 export function logicalSizeFor(parent: HTMLElement): LogicalSize {
@@ -27,7 +28,7 @@ export function createGameConfig(parent: HTMLElement): Phaser.Types.Core.GameCon
     // inside a user gesture; Phaser's own sound manager stays off.
     audio: { noAudio: true },
     // Order is draw order: the HUD sits above the run, results above both.
-    scene: [BootScene, GameScene, HudScene, ResultsScene],
+    scene: [BootScene, GameScene, HudScene, ResultsScene, LineupScene],
   };
 }
 

@@ -1,7 +1,7 @@
 const BAR_Y = 360;
 const BAR_HEIGHT = 30;
-const BADGE_ROW_Y = 452;
-const BADGE_SIZE = 76;
+const BADGE_ROW_Y = 456;
+const BADGE_SIZE = 108;
 
 /** The big rounded text button used on the pause and results screens. */
 export const MENU_BUTTON = {
@@ -49,15 +49,15 @@ export const HUD_LAYOUT = {
   badgeRowY: BADGE_ROW_Y,
   /** Side of a creature icon in the row. */
   badgeSize: BADGE_SIZE,
-  badgeGap: 14,
+  badgeGap: 16,
   badgeMargin: 24,
   /** Counter of an effect badge: font size, and how far it sits in from the icon's bottom right corner. */
-  badgeCounterFont: 34,
-  badgeCounterInset: 8,
-  badgeCounterStroke: 6,
+  badgeCounterFont: 52,
+  badgeCounterInset: 10,
+  badgeCounterStroke: 8,
   /** Text of the next-creature indicator. */
-  nextFont: 40,
-  nextStroke: 6,
+  nextFont: 56,
+  nextStroke: 8,
   /** The SVG icons are loaded at this multiple of their size so they stay crisp when shown larger. */
   iconTextureScale: 2,
   /** Lowest screen y the HUD (height, score, wobble bar, badge row) reaches. */

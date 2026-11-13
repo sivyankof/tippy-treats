@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { ANIM } from '../../data/anim';
+import { CREATURE_LOOKS } from '../../data/creature-looks';
 import {
   FaceState,
   aimMouth,
@@ -70,18 +71,24 @@ describe('resolveExpression', () => {
       eyes: 'open',
       mouth: 'smile',
       brows: false,
+      ownBrows: false,
+      lids: false,
       sweat: false,
     });
     expect(resolveExpression('nervous', null)).toEqual({
       eyes: 'open',
       mouth: 'flat',
       brows: false,
+      ownBrows: false,
+      lids: false,
       sweat: false,
     });
     expect(resolveExpression('scared', null)).toEqual({
       eyes: 'open',
       mouth: 'scared',
       brows: false,
+      ownBrows: false,
+      lids: false,
       sweat: true,
     });
   });
@@ -111,6 +118,8 @@ describe('resolveExpression', () => {
         eyes: 'happy',
         mouth: 'smile',
         brows: false,
+        ownBrows: false,
+        lids: false,
         sweat: false,
       });
     }
@@ -131,6 +140,8 @@ describe('resolveExpression', () => {
         eyes: 'wide',
         mouth: 'scared',
         brows: true,
+        ownBrows: false,
+        lids: false,
         sweat: true,
       });
     }
@@ -140,6 +151,76 @@ describe('resolveExpression', () => {
     const calm = resolveExpression('calm', null);
     for (const reaction of reactions) {
       expect(resolveExpression('calm', reaction)).not.toEqual(calm);
+    }
+  });
+});
+
+describe('resolveExpression for a creature face', () => {
+  const honey = CREATURE_LOOKS.honey.face;
+  const crumb = CREATURE_LOOKS.crumb.face;
+  const twins = CREATURE_LOOKS.twins.face;
+
+  it('always shows the creature brows, in its own pose when calm', () => {
+    const e = resolveExpression('calm', null, undefined, crumb);
+    expect(e.brows).toBe(true);
+    expect(e.ownBrows).toBe(true);
+    expect(e.mouth).toBe('yum');
+  });
+
+  it('the default mouth replaces the plain smile only', () => {
+    expect(resolveExpression('calm', null, undefined, twins).mouth).toBe('flat');
+    expect(resolveExpression('calm', null, 'smile', twins).mouth).toBe('flat');
+    expect(resolveExpression('calm', null, 'open', twins).mouth).toBe('open');
+    expect(resolveExpression('calm', null, 'o', crumb).mouth).toBe('o');
+  });
+
+  it('worried moods keep their mouth; nervous brows stay own, scared ones turn worried', () => {
+    expect(resolveExpression('nervous', null, 'open', crumb)).toMatchObject({
+      mouth: 'flat',
+      brows: true,
+      ownBrows: true,
+    });
+    expect(resolveExpression('scared', null, 'open', crumb)).toMatchObject({
+      mouth: 'scared',
+      brows: true,
+      ownBrows: false,
+    });
+  });
+
+  it('sleepy creatures show lids only on a calm open-eyed face', () => {
+    expect(resolveExpression('calm', null, undefined, honey).lids).toBe(true);
+    expect(resolveExpression('calm', null, undefined, crumb).lids).toBe(false);
+    expect(resolveExpression('nervous', null, undefined, honey).lids).toBe(false);
+    for (const reaction of ['blink', 'squint', 'ouch', 'horror'] as const) {
+      expect(resolveExpression('calm', reaction, undefined, honey).lids).toBe(false);
+    }
+  });
+
+  it('reactions work over the creature face', () => {
+    expect(resolveExpression('calm', 'joy', undefined, honey)).toMatchObject({
+      eyes: 'happy',
+      mouth: 'smile',
+      brows: true,
+      ownBrows: true,
+    });
+    expect(resolveExpression('calm', 'ouch', undefined, honey)).toMatchObject({
+      eyes: 'open',
+      mouth: 'o',
+      brows: true,
+      ownBrows: false,
+    });
+    expect(resolveExpression('calm', 'horror', undefined, honey)).toMatchObject({
+      eyes: 'wide',
+      mouth: 'scared',
+      ownBrows: false,
+    });
+    expect(resolveExpression('calm', 'blink', undefined, honey).eyes).toBe('closed');
+  });
+
+  it('every creature calm face differs from the plain one', () => {
+    const plain = resolveExpression('calm', null);
+    for (const look of Object.values(CREATURE_LOOKS)) {
+      expect(resolveExpression('calm', null, undefined, look.face)).not.toEqual(plain);
     }
   });
 });

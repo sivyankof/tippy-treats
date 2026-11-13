@@ -26,3 +26,8 @@ export function cssColor(color: number): string {
 export function shade(color: number, amount: number): number {
   return amount < 0 ? mixColor(color, 0x000000, -amount) : mixColor(color, 0xffffff, amount);
 }
+
+/** 0xRRGGBB number of a `#rrggbb` string (the form colours have in data files). */
+export function parseHex(css: string): number {
+  return Number.parseInt(css.replace('#', ''), 16);
+}

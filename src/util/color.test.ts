@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { cssColor, mixColor, shade } from './color';
+import { cssColor, mixColor, parseHex, shade } from './color';
 
 describe('color helpers', () => {
   it('mixes endpoints and the middle', () => {
@@ -18,5 +18,11 @@ describe('color helpers', () => {
     expect(shade(0x808080, -1)).toBe(0x000000);
     expect(shade(0x808080, 1)).toBe(0xffffff);
     expect(shade(0x808080, 0)).toBe(0x808080);
+  });
+
+  it('reads #rrggbb strings and round-trips with cssColor', () => {
+    expect(parseHex('#ff5c8a')).toBe(0xff5c8a);
+    expect(parseHex('#00000a')).toBe(0x00000a);
+    expect(cssColor(parseHex('#3b2a4a'))).toBe('#3b2a4a');
   });
 });

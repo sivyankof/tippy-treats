@@ -3,9 +3,19 @@ import type { CutSide } from '../../core/drop';
 import type { LayerPlan } from '../../core/sim-types';
 import { ANIM } from '../../data/anim';
 import { BALANCE } from '../../data/balance';
+import { faceRecipe } from '../../data/creature-looks';
+import type { CreatureId } from '../../data/creatures';
 import { createGlossBand, sweepGloss } from '../fx/gloss-sweep';
+import { creatureColors } from './creature-art/primitives';
 import { LayerFace } from './layer-face';
-import { acquireLayerArt, artWidth, colorIndexFor, releaseLayerArt } from './layer-art';
+import {
+  acquireLayerArt,
+  artAlpha,
+  artOriginY,
+  artWidth,
+  colorIndexFor,
+  releaseLayerArt,
+} from './layer-art';
 
 type ScaleStart = { scaleX?: number; scaleY?: number };
 
@@ -28,6 +38,7 @@ export class LayerView extends Phaser.GameObjects.Container {
   private drawnColor = -1;
   private drawnWidth = -1;
   private drawnCut: CutSide | null = null;
+  private drawnCreature: CreatureId | null = null;
   private faceEnabled = true;
   private readonly lookPlan: LayerPlan = { kind: 'plain' };
 
@@ -52,8 +63,18 @@ export class LayerView extends Phaser.GameObjects.Container {
     return this.lookPlan;
   }
 
-  /** Tells the view what kind of layer it shows. Cheap: it copies three fields. */
+  /**
+   * Tells the view what kind of layer it shows; call it before `setLayer`, which draws from it.
+   * Cheap: it copies three fields and hands the face recipe on only when the creature changes.
+   */
   setLook(plan: LayerPlan): this {
+    const creature = this.creatureOf(plan);
+    if (creature !== this.creatureOf(this.lookPlan)) {
+      this.face.setRecipe(
+        creature ? faceRecipe(creature) : null,
+        creature ? creatureColors(creature).body : undefined,
+      );
+    }
     this.lookPlan.kind = plan.kind;
     this.lookPlan.creature = plan.creature;
     this.lookPlan.level = plan.level;
@@ -66,20 +87,31 @@ export class LayerView extends Phaser.GameObjects.Container {
   }
 
   /**
-   * Shows the baked art for the colour, width and cut side (`null`: intact layer)
-   * and lays the face out for the width. Baking happens only for a new combination.
+   * Shows the baked art for the colour (or the creature of `look`), width and cut side
+   * (`null`: intact layer) and lays the face out for the width. Baking happens only for a
+   * new combination.
    */
   setLayer(index: number, width: number, cut: CutSide | null = null): this {
     const color = colorIndexFor(index);
     const w = artWidth(width);
-    if (color === this.drawnColor && w === this.drawnWidth && cut === this.drawnCut) return this;
-    const key = acquireLayerArt(this.scene, color, w, cut);
+    const creature = this.creatureOf(this.lookPlan);
+    if (
+      color === this.drawnColor &&
+      w === this.drawnWidth &&
+      cut === this.drawnCut &&
+      creature === this.drawnCreature
+    ) {
+      return this;
+    }
+    const key = acquireLayerArt(this.scene, color, w, cut, creature);
     if (this.artKey) releaseLayerArt(this.scene, this.artKey);
     this.artKey = key;
     this.drawnColor = color;
     this.drawnWidth = w;
     this.drawnCut = cut;
-    this.art.setTexture(key).setVisible(true);
+    this.drawnCreature = creature;
+    this.art.setTexture(key).setOrigin(0.5, artOriginY(creature)).setAlpha(artAlpha(creature));
+    this.art.setVisible(true);
     this.face.layout(w);
     this.face.setVisible(this.faceEnabled);
     return this;
@@ -92,6 +124,7 @@ export class LayerView extends Phaser.GameObjects.Container {
     this.drawnColor = -1;
     this.drawnWidth = -1;
     this.drawnCut = null;
+    this.drawnCreature = null;
     this.art.setVisible(false);
     return this;
   }
@@ -99,6 +132,10 @@ export class LayerView extends Phaser.GameObjects.Container {
   override destroy(fromScene?: boolean): void {
     this.releaseArt();
     super.destroy(fromScene);
+  }
+
+  private creatureOf(plan: Readonly<LayerPlan>): CreatureId | null {
+    return plan.kind === 'creature' && plan.creature ? plan.creature : null;
   }
 
   /** Pieces that fall off the tower have no face. */

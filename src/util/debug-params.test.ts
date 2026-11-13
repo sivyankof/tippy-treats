@@ -27,6 +27,13 @@ describe('parseDebugParams', () => {
     expect(parseDebugParams('?seed=4294967296')).toEqual({ debug: false });
   });
 
+  it('reads the line-up flag only when it is 1', () => {
+    expect(parseDebugParams('?lineup=1').lineup).toBe(true);
+    expect(parseDebugParams('?lineup=0').lineup).toBeUndefined();
+    expect(parseDebugParams('?lineup').lineup).toBeUndefined();
+    expect(parseDebugParams('')).toEqual({ debug: false });
+  });
+
   it('keeps the largest uint32 seed', () => {
     expect(parseDebugParams('?seed=4294967295').seed).toBe(4294967295);
   });
