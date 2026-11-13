@@ -137,8 +137,25 @@ export interface RunConfig {
 
 export type SimPhase = 'flying' | 'falling' | 'pause' | 'await_continue' | 'over';
 
+export interface FlyingLayer {
+  index: number;               // 1-based number the layer will have in the tower
+  x: number;                   // centre
+  width: number;
+  dir: 1 | -1;
+  speed: number;
+  kind: 'plain' | 'creature' | 'golden';
+}
+
+export interface PlacedLayer {
+  x: number;                   // resting centre, wobble not included
+  width: number;
+  kind: 'plain' | 'creature' | 'golden';
+  quality: 'perfect' | 'normal';
+}
+
 export interface TowerState {
   phase: SimPhase;
+  phaseMs: number;             // time spent in the current phase (drives the fall animation)
   height: number;
   score: number;
   coins: number;
@@ -179,6 +196,35 @@ export class TowerSim {
   topLayerX(): number;                // current x of top layer incl. wobble
 }
 ```
+
+Итог забега (`core/run-result.ts`):
+
+```ts
+export interface RunResult {
+  seed: number;
+  mode: 'classic' | 'daily';
+  height: number;
+  score: number;
+  coins: number;
+  berries: number;
+  perfects: number;
+  bestCombo: number;
+  continuesUsed: number;
+  zoneIndex: number;
+  durationMs: number;          // simulated time, the continue offer excluded
+  endReason: 'miss' | 'sneeze' | 'quit'; // 'quit' is set by the scene, not by the simulation
+}
+```
+
+Уточнения поведения:
+- Симуляция создаётся в фазе `pause` с истёкшим таймером: первый же шаг `update` выпускает первый слой и событие `spawn`.
+- Результат броска считается в конце падения (через 110 мс после касания) относительно положения верхушки в этот момент. Событие `land` приходит из `update`, а `drop` возвращает пустой список.
+- При обычном броске центр оставшейся части смещается на `dx / 2` от центра слоя под ней.
+- Событие `land.newWidth` — ширина до расширения за комбо и до чиха; расширение приходит в `combo.widened`, чих в `wobble_sneeze.newWidth`.
+- Если чих оставил слой уже 24, слой остаётся в башне и считается в высоту, а забег заканчивается промахом с причиной `sneeze`.
+- В фазах `await_continue` и `over` время не идёт: `update` ничего не делает. Таймер окна «Продолжить?» ведёт сцена и по его истечении вызывает `decline()`.
+- При продолжении комбо сброшено, качка 0, возвращается слой шириной `max(ширина промахнувшегося, 360)`.
+- Кадр длиннее 250 мс обрезается, чтобы свёрнутая вкладка не «проматывала» забег.
 
 Требования:
 - `update` работает с фиксированным шагом 1/120 с (накопитель времени внутри), чтобы поведение не зависело от частоты кадров.
@@ -339,3 +385,8 @@ export interface SaveV1 {
 | 2026-11-13 | Nunito лежит вариативными файлами woff2 (latin, latin-ext, cyrillic, cyrillic-ext), подключён через `@font-face` в `src/style.css`; `main.ts` ждёт `document.fonts.load` до создания игры | Один файл на набор символов покрывает ExtraBold и Black; текст Phaser не мигает системным шрифтом при старте |
 | 2026-11-13 | Отступы безопасных зон (раздел 6) пока не читаются | В браузере они нулевые; задача стоит в M7 |
 | 2026-11-13 | Юнит-тесты допускаются и в `src/util` | Там лежат чистые функции (расчёт логического размера) |
+| 2026-11-13 | Размеры логического экрана лежат в `data/screen.ts`, а не в `game/config.ts` | Центр подноса (540) нужен ядру, а `core` не может импортировать `game` |
+| 2026-11-13 | `npm run sim` запускается через `tsx` (dev-зависимость) | Vitest 5 больше не приносит `vite-node`, а встроенный запуск TypeScript в Node требует расширений `.ts` в импортах |
+| 2026-11-13 | `Modifiers`, `ActiveEffect` и `CreatureId` уже лежат в `core/abilities/types.ts`; `CreatureId` пока `string` | Точка расширения для M4: симуляция собирает модификаторы перед броском, сейчас возвращаются базовые |
+| 2026-11-13 | В M1 симуляция не реализует щит (`shield` всегда 0, `miss.shielded` всегда `false`), обучение (`RunConfig.tutorial` не читается), зоны и монеты | Щит появляется с Брауни (M4), остальное в M5. Поля состояния и типы событий уже заведены |
+| 2026-11-13 | Покрытие считает `@vitest/coverage-v8`, команда `npm run coverage`, порог 85% строк по `src/core` | Критерий готовности M1 |

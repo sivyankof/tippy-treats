@@ -13,7 +13,7 @@
 
 ## Команды
 
-`npm run sim` появится на этапе M1, `npx cap sync` на этапе M7. Остальные работают.
+`npx cap sync` появится на этапе M7. Остальные работают.
 
 | Команда | Что делает |
 |---|---|
@@ -21,6 +21,7 @@
 | `npm run dev` | Игра в браузере с горячей перезагрузкой |
 | `npm run build` | Продакшен-сборка в `dist/` |
 | `npm run test` | Юнит-тесты (Vitest) |
+| `npm run coverage` | Юнит-тесты с покрытием `src/core` (порог 85% строк) |
 | `npm run lint` | ESLint |
 | `npm run typecheck` | `tsc --noEmit` |
 | `npm run check` | typecheck + lint + test, запускать перед каждым коммитом |

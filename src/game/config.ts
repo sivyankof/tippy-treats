@@ -1,13 +1,7 @@
 import * as Phaser from 'phaser';
-import { computeLogicalSize, type LogicalSize, type LogicalSizeLimits } from '../util/logical-size';
+import { LOGICAL_SIZE } from '../data/screen';
+import { computeLogicalSize, type LogicalSize } from '../util/logical-size';
 import { BootScene } from './scenes/boot-scene';
-
-/** Logical screen: fixed width, height follows the device proportions. */
-export const LOGICAL_SIZE: LogicalSizeLimits = {
-  width: 1080,
-  minHeight: 1920,
-  maxHeight: 2520,
-};
 
 export const FONT_FAMILY = 'Nunito';
 export const FONT_WEIGHT = { extraBold: '800', black: '900' } as const;
