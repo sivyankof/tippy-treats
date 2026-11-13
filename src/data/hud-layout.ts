@@ -3,7 +3,7 @@ const BAR_HEIGHT = 30;
 
 /** The big rounded text button used on the pause and results screens. */
 export const MENU_BUTTON = {
-  width: 560,
+  width: 680,
   height: 128,
   radius: 44,
   shadowOffset: 10,
@@ -12,7 +12,8 @@ export const MENU_BUTTON = {
 
 /** The narrower toggle button of the pause window (sound, vibration). */
 export const TOGGLE_BUTTON = {
-  width: 560,
+  /** Wide enough for the longest label, "Меньше эффектов: Выкл". */
+  width: 680,
   height: 96,
   radius: 36,
   shadowOffset: 8,

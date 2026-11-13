@@ -1,5 +1,6 @@
 import * as Phaser from 'phaser';
 import { ANIM } from '../../data/anim';
+import { effectsMode } from '../effects-mode';
 import { hideItem, TimedPool, type PoolEntry } from './timed-pool';
 import { stepParticle, viewParticle, type ParticleState } from './particle-motion';
 
@@ -42,7 +43,7 @@ export class Particles {
    * the only knob that "fewer effects" turns, so all bursts go through here.
    */
   emit(count: number, generate: (count: number) => ParticleState[], look: ParticleLook): void {
-    const states = generate(this.scaledCount(count));
+    const states = generate(effectsMode.particleCount(count));
     states.forEach((state, i) => {
       const image = this.pool.take();
       const view = viewParticle(state, 0);
@@ -77,10 +78,5 @@ export class Particles {
   /** Retires every live particle. */
   clear(): void {
     this.pool.clear();
-  }
-
-  /** The place for a "fewer effects" share to apply later; for now every burst runs in full. */
-  private scaledCount(count: number): number {
-    return count;
   }
 }

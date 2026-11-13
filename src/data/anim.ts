@@ -352,11 +352,29 @@ export const ANIM = {
     /** The Play button breathes and a gloss runs over it. */
     breatheScale: 1.04,
     breathePeriodMs: 1600,
+    breatheEase: 'Sine.easeInOut',
     glossEveryMs: 3000,
-    transition: { outMs: 200, inMs: 280, inEase: 'Back.easeOut', cascadeMs: 40 },
+    glossMs: 420,
+    glossAlpha: 0.55,
+    /** Space kept between the gloss band and the top and bottom edges of the button. */
+    glossInset: 14,
+    /**
+     * The old screen slides down by `distance` and darkens, the new one drops in
+     * from `distance` above; its elements follow each other `cascadeMs` apart.
+     */
+    transition: {
+      outMs: 200,
+      outEase: 'Quad.easeIn',
+      inMs: 280,
+      inEase: 'Back.easeOut',
+      cascadeMs: 40,
+      distance: 180,
+    },
     popup: { dimMs: 150, fromScale: 0.7, durationMs: 240, ease: 'Back.easeOut' },
     /** Any number change rolls over this long, longer for bigger changes. */
     numberRollMs: [400, 800],
+    /** A change this big (or bigger) rolls for the longest time; the scale is logarithmic. */
+    numberRollBigChange: 1000,
   },
   fx: {
     /** Shared cap of live particles. */
@@ -364,6 +382,8 @@ export const ANIM = {
     /** "Fewer effects" turns on when the frame rate stays below this for the window. */
     lowFps: 50,
     lowFpsWindowMs: 2000,
+    /** A frame longer than this is a hitch (tab switch, loading), not a slow device: the window restarts. */
+    lowFpsHitchMs: 250,
     reducedParticleShare: 0.5,
     /** A long frame (tab in the background) is not simulated beyond this length. */
     maxSimMs: 100,

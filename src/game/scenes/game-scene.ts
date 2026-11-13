@@ -9,7 +9,9 @@ import { readDebugParams } from '../../util/debug-params';
 import { frameLerp, randomSeed } from '../../util/math';
 import { RunFx, type CameraInfo, type FlyingMemo } from '../fx/run-fx';
 import { Background } from '../objects/background';
+import { effectsMode } from '../effects-mode';
 import { SCENES, type ResultsData } from '../scene-keys';
+import { enterWorld, type WorldEntry } from '../ui/transition';
 import { isOverUi } from '../ui/ui-regions';
 
 /** World y of the tray surface; the tower grows towards negative y. */
@@ -35,6 +37,8 @@ export class GameScene extends Phaser.Scene {
   private lastFlying: FlyingMemo | null = null;
   /** Camera scroll before the landing kick is added. */
   private scrollBase = 0;
+  /** The world drops in from above when the run starts. */
+  private entry: WorldEntry = { offset: 0 };
   private readonly camInfo: CameraInfo = { scrollY: 0, trayScrollY: 0, width: 0, height: 0 };
 
   constructor() {
@@ -66,6 +70,7 @@ export class GameScene extends Phaser.Scene {
       this.scale.off(Phaser.Scale.Events.RESIZE, this.onResize, this);
     });
 
+    this.entry = enterWorld(this);
     // Sync once so the tower height is known, then jump the camera to its target.
     this.fx.update(0, 0, this.sim.state, this.cameraInfo());
     this.scrollBase = this.targetScrollY();
@@ -73,6 +78,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   override update(time: number, delta: number): void {
+    effectsMode.noteFrame(delta);
     const flying = this.sim.state.flying;
     this.lastFlying = flying ? { x: flying.x, width: flying.width, index: flying.index } : null;
 
@@ -151,10 +157,10 @@ export class GameScene extends Phaser.Scene {
     this.applyCamera();
   }
 
-  /** The kick pushes the view down, which means the camera moves up. */
+  /** The kick pushes the view down, which means the camera moves up; the entry lifts the world. */
   private applyCamera(): void {
     const camera = this.cameras.main;
-    camera.scrollY = this.scrollBase - this.fx.cameraOffset;
+    camera.scrollY = this.scrollBase - this.fx.cameraOffset + this.entry.offset;
     this.background.update(camera.scrollY);
   }
 

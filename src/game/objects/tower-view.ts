@@ -7,6 +7,7 @@ import { BALANCE } from '../../data/balance';
 import { KITCHEN_COLORS } from '../../data/palette';
 import { frameLerp } from '../../util/math';
 import { DEPTH } from '../depth';
+import { effectsMode } from '../effects-mode';
 import { waveSquash } from '../fx/anim-curves';
 import { bakeTexture } from '../ui/bake-texture';
 import { moodForWobble, type MouthKind, type Reaction } from './face-state';
@@ -178,9 +179,13 @@ export class TowerView {
     for (const view of this.active.values()) view.faceView.react(reaction, ms);
   }
 
-  /** The top layer squashes, then the layers below follow with a weaker, delayed wave. */
+  /**
+   * The top layer squashes, then the layers below follow with a weaker, delayed wave.
+   * "Fewer effects" keeps only the squash of the top layer.
+   */
   playLanding(): void {
     this.topView()?.playLanding();
+    if (effectsMode.reduced) return;
     for (let k = 1; k <= ANIM.wave.layers; k++) {
       const view = this.active.get(this.layerCount - 1 - k);
       if (!view) break;

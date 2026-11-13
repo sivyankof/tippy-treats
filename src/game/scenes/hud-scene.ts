@@ -6,8 +6,10 @@ import { readDebugParams } from '../../util/debug-params';
 import { DebugPanel } from '../debug/debug-panel';
 import { launchRun, SCENES } from '../scene-keys';
 import { Button } from '../ui/button';
+import { NumberRoll } from '../ui/number-roll';
 import { createOutlinedText } from '../ui/outlined-text';
 import { PauseOverlay } from '../ui/pause-overlay';
+import { enterScreen } from '../ui/transition';
 import { addUiRegion } from '../ui/ui-regions';
 import { WobbleBar } from '../ui/wobble-bar';
 import type { GameScene } from './game-scene';
@@ -21,6 +23,8 @@ export class HudScene extends Phaser.Scene {
   private pauseButton!: Button;
   private overlay!: PauseOverlay;
   private debugPanel!: DebugPanel;
+  private heightRoll = new NumberRoll();
+  private scoreRoll = new NumberRoll();
 
   constructor() {
     super(SCENES.hud);
@@ -28,6 +32,9 @@ export class HudScene extends Phaser.Scene {
 
   create(): void {
     const { width } = this.scale.gameSize;
+    // A restarted scene keeps its instance: the counters start over and show the new run at once.
+    this.heightRoll = new NumberRoll();
+    this.scoreRoll = new NumberRoll();
 
     this.heightText = createOutlinedText(
       this,
@@ -80,13 +87,16 @@ export class HudScene extends Phaser.Scene {
       this.scale.off(Phaser.Scale.Events.RESIZE, this.layout, this);
     });
     this.layout();
+    enterScreen(this, [this.pauseButton, this.heightText, this.scoreText, ...this.wobbleBar.parts]);
   }
 
   override update(time: number, delta: number): void {
     const info = this.gameScene()?.getRunInfo() ?? null;
     if (info) {
-      this.heightText.setText(formatNumber(info.height));
-      this.scoreText.setText(formatNumber(info.score));
+      this.heightRoll.set(info.height);
+      this.scoreRoll.set(info.score);
+      this.heightText.setText(formatNumber(this.heightRoll.update(delta)));
+      this.scoreText.setText(formatNumber(this.scoreRoll.update(delta)));
       this.wobbleBar.update(info.wobble, time, delta);
     }
     this.pauseButton.setVisible(this.pauseEnabled());

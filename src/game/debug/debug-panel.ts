@@ -1,6 +1,7 @@
 import type * as Phaser from 'phaser';
 import { PALETTE } from '../../data/palette';
 import { cssColor } from '../../util/color';
+import { effectsMode } from '../effects-mode';
 import { FONT_FAMILY, FONT_WEIGHT } from '../ui/fonts';
 import type { RunInfo } from '../scenes/game-scene';
 
@@ -50,6 +51,7 @@ export class DebugPanel {
         `wobble ${info.wobble.toFixed(WOBBLE_DECIMALS)}`,
         `height ${info.height}`,
         `phase ${info.phase}`,
+        `fx ${effectsMode.reason ?? 'full'}`,
       ].join('\n'),
     );
   }

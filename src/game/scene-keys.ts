@@ -13,8 +13,13 @@ export interface ResultsData {
   result: RunResult;
 }
 
-/** Starts a fresh run: launching a running scene restarts it. */
+/**
+ * Starts a fresh run: launching a running scene restarts it. A scene cannot launch
+ * itself (Phaser ignores it), so the calling scene restarts instead.
+ */
 export function launchRun(scene: Phaser.Scene): void {
-  scene.scene.launch(SCENES.game);
-  scene.scene.launch(SCENES.hud);
+  for (const key of [SCENES.game, SCENES.hud]) {
+    if (key === scene.scene.key) scene.scene.restart();
+    else scene.scene.launch(key);
+  }
 }

@@ -2,8 +2,7 @@ import * as Phaser from 'phaser';
 import type { CutSide } from '../../core/drop';
 import { ANIM } from '../../data/anim';
 import { BALANCE } from '../../data/balance';
-import { bump } from '../fx/anim-curves';
-import { FX_TEXTURES } from '../fx/fx-textures';
+import { createGlossBand, sweepGloss } from '../fx/gloss-sweep';
 import { LayerFace } from './layer-face';
 import { acquireLayerArt, artWidth, colorIndexFor, releaseLayerArt } from './layer-art';
 
@@ -34,9 +33,7 @@ export class LayerView extends Phaser.GameObjects.Container {
     super(scene);
     const half = BALANCE.layer.height / 2;
     this.art = new Phaser.GameObjects.Image(scene, 0, 0, '__DEFAULT').setVisible(false);
-    this.glossSweep = new Phaser.GameObjects.Image(scene, 0, 0, FX_TEXTURES.glossBand)
-      .setDisplaySize(ANIM.perfect.glossSweepWidth, BALANCE.layer.height - ANIM.layer.outline * 2)
-      .setVisible(false);
+    this.glossSweep = createGlossBand(scene, BALANCE.layer.height - ANIM.layer.outline * 2);
     this.face = new LayerFace(scene);
     this.content = new Phaser.GameObjects.Container(scene, 0, -half, [
       this.art,
@@ -145,18 +142,7 @@ export class LayerView extends Phaser.GameObjects.Container {
     const { outline } = ANIM.layer;
     const { glossSweepWidth, glossSweepMs, glossSweepAlpha } = ANIM.perfect;
     const travel = this.drawnWidth / 2 - outline - glossSweepWidth / 2;
-    if (travel <= 0) return;
-    this.scene.tweens.killTweensOf(this.glossSweep);
-    this.glossSweep.setPosition(-travel, 0).setAlpha(0).setVisible(true);
-    this.scene.tweens.add({
-      targets: this.glossSweep,
-      x: travel,
-      duration: glossSweepMs,
-      onUpdate: (tween) => {
-        this.glossSweep.setAlpha(glossSweepAlpha * bump(tween.progress));
-      },
-      onComplete: () => this.glossSweep.setVisible(false),
-    });
+    sweepGloss(this.glossSweep, travel, glossSweepMs, glossSweepAlpha);
   }
 
   /** Stops every animation of this layer and restores its shape, for reuse from a pool. */

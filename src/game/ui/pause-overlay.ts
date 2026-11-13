@@ -4,10 +4,12 @@ import { MENU_BUTTON, TOGGLE_BUTTON } from '../../data/hud-layout';
 import { PALETTE } from '../../data/palette';
 import { t } from '../../i18n';
 import { services } from '../../services';
+import { effectsMode } from '../effects-mode';
 import { createMenuButton, type Button } from './button';
 import { createDimOverlay } from './dim-overlay';
 import { createOutlinedText } from './outlined-text';
 import { ToggleButton } from './toggle-button';
+import { leaveScreen, openPopup } from './transition';
 
 const OVERLAY_DEPTH = 500;
 const TITLE_FONT = 120;
@@ -15,25 +17,29 @@ const COUNTDOWN_FONT = 320;
 const TITLE_OFFSET = -300;
 const CONTINUE_OFFSET = -20;
 const RESTART_OFFSET = CONTINUE_OFFSET + MENU_BUTTON.height + 40;
-const SOUND_OFFSET = RESTART_OFFSET + MENU_BUTTON.height + TOGGLE_BUTTON.gap;
-const VIBRATION_OFFSET = SOUND_OFFSET + TOGGLE_BUTTON.height + TOGGLE_BUTTON.gap / 2;
+const FIRST_TOGGLE_OFFSET = RESTART_OFFSET + MENU_BUTTON.height + TOGGLE_BUTTON.gap;
+const TOGGLE_STEP = TOGGLE_BUTTON.height + TOGGLE_BUTTON.gap / 2;
 
 export interface PauseHandlers {
   /** Called after the 3-2-1 countdown: the run may go on. */
   onResume: () => void;
+  /** Called once the window has left and the screen is dark. */
   onRestart: () => void;
 }
 
-/** Pause window: Continue (with a countdown), Restart and the sound and vibration switches. Home arrives with its scene. */
+/**
+ * Pause window: Continue (with a countdown), Restart and the sound, vibration and
+ * "fewer effects" switches. Home arrives with its scene. Everything but the dim veil
+ * sits in `panel`, centred on the screen, so the window pops open around its centre.
+ */
 export class PauseOverlay {
   private readonly root: Phaser.GameObjects.Container;
+  private readonly panel: Phaser.GameObjects.Container;
   private readonly dim: Phaser.GameObjects.Rectangle;
   private readonly title: Phaser.GameObjects.Text;
   private readonly countdown: Phaser.GameObjects.Text;
-  private readonly continueButton: Button;
-  private readonly restartButton: Button;
-  private readonly soundToggle: ToggleButton;
-  private readonly vibrationToggle: ToggleButton;
+  private readonly buttons: Button[];
+  private readonly toggles: ToggleButton[];
   private countdownTimer: Phaser.Time.TimerEvent | null = null;
 
   constructor(
@@ -41,43 +47,52 @@ export class PauseOverlay {
     private readonly handlers: PauseHandlers,
   ) {
     this.dim = createDimOverlay(scene, ANIM.hud.pauseOverlayAlpha, 1, 1);
-    this.title = createOutlinedText(scene, 0, 0, t('run.paused'), TITLE_FONT);
+    this.title = createOutlinedText(scene, 0, TITLE_OFFSET, t('run.paused'), TITLE_FONT);
     this.countdown = createOutlinedText(scene, 0, 0, '', COUNTDOWN_FONT, PALETTE.gold).setVisible(
       false,
     );
-    this.continueButton = createMenuButton(scene, 0, 0, t('run.resume'), PALETTE.accent, () =>
-      this.beginCountdown(),
-    );
-    this.restartButton = createMenuButton(
+    const continueButton = createMenuButton(
       scene,
       0,
+      CONTINUE_OFFSET,
+      t('run.resume'),
+      PALETTE.accent,
+      () => this.beginCountdown(),
+    );
+    const restartButton = createMenuButton(
+      scene,
       0,
+      RESTART_OFFSET,
       t('run.restart'),
       PALETTE.accentSecondary,
-      () => this.handlers.onRestart(),
+      () => this.restart(),
     );
-    this.soundToggle = new ToggleButton(
-      scene,
-      'run.sounds',
-      () => services.audio.enabled,
-      (on) => services.audio.setEnabled(on),
-    );
-    this.vibrationToggle = new ToggleButton(
-      scene,
-      'run.vibration',
-      () => services.haptics.enabled,
-      (on) => services.haptics.setEnabled(on),
-    );
+    this.toggles = [
+      new ToggleButton(
+        scene,
+        'run.sounds',
+        () => services.audio.enabled,
+        (on) => services.audio.setEnabled(on),
+      ),
+      new ToggleButton(
+        scene,
+        'run.vibration',
+        () => services.haptics.enabled,
+        (on) => services.haptics.setEnabled(on),
+      ),
+      new ToggleButton(
+        scene,
+        'run.reducedFx',
+        () => effectsMode.reduced,
+        (on) => effectsMode.setReduced(on),
+      ),
+    ];
+    this.toggles.forEach((toggle, i) => toggle.button.setY(FIRST_TOGGLE_OFFSET + i * TOGGLE_STEP));
+    this.buttons = [continueButton, restartButton, ...this.toggles.map((toggle) => toggle.button)];
+
+    this.panel = scene.add.container(0, 0, [this.title, this.countdown, ...this.buttons]);
     this.root = scene.add
-      .container(0, 0, [
-        this.dim,
-        this.title,
-        this.countdown,
-        this.continueButton,
-        this.restartButton,
-        this.soundToggle.button,
-        this.vibrationToggle.button,
-      ])
+      .container(0, 0, [this.dim, this.panel])
       .setDepth(OVERLAY_DEPTH)
       .setVisible(false);
   }
@@ -88,11 +103,11 @@ export class PauseOverlay {
 
   show(): void {
     this.cancelCountdown();
-    this.soundToggle.refresh();
-    this.vibrationToggle.refresh();
+    for (const toggle of this.toggles) toggle.refresh();
     this.showMenu(true);
     this.root.setVisible(true);
     this.dim.setInteractive();
+    openPopup(this.scene, this.dim, this.panel);
   }
 
   hide(): void {
@@ -102,24 +117,20 @@ export class PauseOverlay {
   }
 
   layout(width: number, height: number): void {
-    const cx = width / 2;
-    const cy = height / 2;
     this.dim.setSize(width, height);
-    this.title.setPosition(cx, cy + TITLE_OFFSET);
-    this.countdown.setPosition(cx, cy);
-    this.continueButton.setPosition(cx, cy + CONTINUE_OFFSET);
-    this.restartButton.setPosition(cx, cy + RESTART_OFFSET);
-    this.soundToggle.button.setPosition(cx, cy + SOUND_OFFSET);
-    this.vibrationToggle.button.setPosition(cx, cy + VIBRATION_OFFSET);
+    this.panel.setPosition(width / 2, height / 2);
   }
 
   private showMenu(menu: boolean): void {
     this.title.setVisible(menu);
-    this.continueButton.setVisible(menu).setEnabled(menu);
-    this.restartButton.setVisible(menu).setEnabled(menu);
-    this.soundToggle.button.setVisible(menu).setEnabled(menu);
-    this.vibrationToggle.button.setVisible(menu).setEnabled(menu);
+    for (const button of this.buttons) button.setVisible(menu).setEnabled(menu);
     this.countdown.setVisible(!menu);
+  }
+
+  /** The window slides away and the screen darkens before the new run starts. */
+  private restart(): void {
+    for (const button of this.buttons) button.setEnabled(false);
+    leaveScreen(this.scene, [this.panel], () => this.handlers.onRestart());
   }
 
   private beginCountdown(): void {

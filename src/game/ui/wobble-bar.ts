@@ -8,6 +8,7 @@ import { cssColor } from '../../util/color';
 import { oscillate01 } from '../../util/math';
 import { stepSpring, type SpringState } from '../fx/anim-curves';
 import { bakeTexture } from './bake-texture';
+import type { Movable } from './transition';
 import { FONT_FAMILY, FONT_WEIGHT } from './fonts';
 
 const TRACK_ALPHA = 0.35;
@@ -106,6 +107,11 @@ export class WobbleBar {
       .setAlpha(ANIM.wobbleBar.waveAlpha)
       .setVisible(false);
     this.gauge = scene.add.container(0, barY, [track, this.fillOk, this.fillDanger, this.wave]);
+  }
+
+  /** Label and gauge, for screen transitions. */
+  get parts(): Movable[] {
+    return [this.label, this.gauge];
   }
 
   /** Centres label and gauge as one row. Call on creation and on every resize. */

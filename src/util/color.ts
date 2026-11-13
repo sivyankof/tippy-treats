@@ -1,6 +1,7 @@
 const CHANNEL_MAX = 255;
 
-function channels(color: number): [number, number, number] {
+/** Red, green and blue (0..255) of a 0xRRGGBB colour. */
+export function channels(color: number): [number, number, number] {
   return [(color >> 16) & 0xff, (color >> 8) & 0xff, color & 0xff];
 }
 

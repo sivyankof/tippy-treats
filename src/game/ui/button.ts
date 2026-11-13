@@ -3,6 +3,7 @@ import { ANIM } from '../../data/anim';
 import { MENU_BUTTON } from '../../data/hud-layout';
 import { PALETTE } from '../../data/palette';
 import { services } from '../../services';
+import { createGlossBand, sweepGloss } from '../fx/gloss-sweep';
 import { bakeTexture } from './bake-texture';
 import { createOutlinedText } from './outlined-text';
 
@@ -79,12 +80,21 @@ export function createMenuButton(
 /**
  * Rounded button with a drop shadow and press feedback. A click counts only when
  * the press started on the button and the pointer is still over it on release.
+ *
+ * The press scales the button itself, the breathing scales `breatheRoot` inside it, and
+ * screen transitions move it: none of the three stops another.
  */
 export class Button extends Phaser.GameObjects.Container {
   private pressed = false;
   private readonly hitArea: Phaser.Geom.Rectangle;
+  private readonly breatheRoot: Phaser.GameObjects.Container;
+  private pressTween: Phaser.Tweens.Tween | null = null;
+  private breathing = false;
 
-  constructor(scene: Phaser.Scene, options: ButtonOptions) {
+  constructor(
+    scene: Phaser.Scene,
+    private readonly options: ButtonOptions,
+  ) {
     super(scene, options.x, options.y);
     const { width, height, shadowOffset } = options;
 
@@ -103,8 +113,9 @@ export class Button extends Phaser.GameObjects.Container {
       0.5,
       0,
     );
-    this.add(face);
-    if (options.content) this.add(options.content);
+    this.breatheRoot = new Phaser.GameObjects.Container(scene, 0, 0, [face]);
+    if (options.content) this.breatheRoot.add(options.content);
+    this.add(this.breatheRoot);
 
     // Container hit areas are measured from the top-left corner of its size.
     this.hitArea = new Phaser.Geom.Rectangle(0, 0, width, height);
@@ -139,20 +150,49 @@ export class Button extends Phaser.GameObjects.Container {
     return this;
   }
 
+  /**
+   * The main call to play: the button breathes all the time and a gloss runs
+   * over its face every few seconds.
+   */
+  breathe(): this {
+    if (this.breathing) return this;
+    this.breathing = true;
+    const { width, height, radius } = this.options;
+    const ui = ANIM.ui;
+    this.scene.tweens.add({
+      targets: this.breatheRoot,
+      scale: ui.breatheScale,
+      duration: ui.breathePeriodMs / 2,
+      ease: ui.breatheEase,
+      yoyo: true,
+      repeat: -1,
+    });
+    const band = createGlossBand(this.scene, height - ui.glossInset * 2);
+    // Over the face, under the label.
+    this.breatheRoot.addAt(band, 1);
+    const travel = width / 2 - radius - ANIM.perfect.glossSweepWidth / 2;
+    const timer = this.scene.time.addEvent({
+      delay: ui.glossEveryMs,
+      loop: true,
+      callback: () => sweepGloss(band, travel, ui.glossMs, ui.glossAlpha),
+    });
+    this.once(Phaser.GameObjects.Events.DESTROY, () => timer.remove(false));
+    return this;
+  }
+
   private pressTo(scale: number): void {
-    this.scene.tweens.killTweensOf(this);
-    this.scene.tweens.add({ targets: this, scale, duration: ANIM.ui.pressMs });
+    this.tweenScale(scale, ANIM.ui.pressMs);
   }
 
   /** A click pops the button slightly past its size and lets it settle back. */
   private release(): void {
-    this.scene.tweens.killTweensOf(this);
     this.setScale(ANIM.ui.releaseScale);
-    this.scene.tweens.add({
-      targets: this,
-      scale: 1,
-      duration: ANIM.ui.releaseMs,
-      ease: ANIM.ui.releaseEase,
-    });
+    this.tweenScale(1, ANIM.ui.releaseMs, ANIM.ui.releaseEase);
+  }
+
+  /** Only the press tween is replaced: a running screen transition keeps moving the button. */
+  private tweenScale(scale: number, duration: number, ease?: string): void {
+    this.pressTween?.stop();
+    this.pressTween = this.scene.tweens.add({ targets: this, scale, duration, ease });
   }
 }
