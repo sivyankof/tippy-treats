@@ -176,7 +176,7 @@ describe('TowerSim: landing', () => {
     expect(layer?.x).toBeCloseTo(540 + land.dx / 2);
     expect(layer?.width).toBeCloseTo(720 - land.dx);
     expect(sim.state).toMatchObject({ height: 1, score: 10, combo: 0 });
-    expect(sim.state.wobble).toBeCloseTo((60 * land.dx) / 720, 5);
+    expect(sim.state.wobble).toBeCloseTo((120 * land.dx) / 720, 5);
 
     const next = only(untilFlying(sim), 'spawn').layer;
     expect(next.width).toBeCloseTo(720 - land.dx);
@@ -224,7 +224,7 @@ describe('TowerSim: landing', () => {
     const sim = new TowerSim(config());
     dropAt(sim, 300);
     const start = sim.state.wobble;
-    expect(start).toBeGreaterThan(24);
+    expect(start).toBeGreaterThan(40);
     untilFlying(sim);
     const beforeWait = sim.state.wobble;
     for (let i = 0; i < 120; i++) sim.update(STEP);
@@ -232,7 +232,7 @@ describe('TowerSim: landing', () => {
 
     const beforePerfect = sim.state.wobble;
     dropAt(sim, 0);
-    expect(sim.state.wobble).toBeLessThan(beforePerfect - 14);
+    expect(sim.state.wobble).toBeLessThan(beforePerfect - 9);
   });
 });
 

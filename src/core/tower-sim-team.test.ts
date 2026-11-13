@@ -12,6 +12,7 @@ import {
   mutable,
   only,
   pick,
+  runUntil,
   untilFlying,
   untilSettled,
 } from './sim-test-utils';
@@ -156,9 +157,15 @@ describe('abilities in play', () => {
 
     const sim = crew('honey');
     drop(sim, 100);
-    expect(land(drop(sim, 22)).quality).toBe('perfect');
-    expect(land(drop(sim, 33)).quality).toBe('perfect');
-    expect(land(drop(sim, 37)).quality).toBe('normal');
+    // The sway from the creature layer would shift the target, so each drop starts calm.
+    const calmDrop = (offset: number): SimEvent[] => {
+      untilFlying(sim);
+      mutable(sim).wobble = 0;
+      return drop(sim, offset);
+    };
+    expect(land(calmDrop(22)).quality).toBe('perfect');
+    expect(land(calmDrop(33)).quality).toBe('perfect');
+    expect(land(calmDrop(37)).quality).toBe('normal');
   });
 
   it('puff widens the layer before the next one spawns', () => {
@@ -271,6 +278,31 @@ describe('brownie shield', () => {
   };
   const missNext = missNow;
 
+  /**
+   * Waits for a layer, makes it narrow and drops it 22 off-centre with the wobble loaded: a sneeze
+   * miss. The sway is timed to cross zero at the landing, so the offset is not shifted by it.
+   */
+  const sneezeDrop = (sim: TowerSim): SimEvent[] => {
+    untilFlying(sim);
+    const state = mutable(sim);
+    if (state.flying) {
+      state.flying.width = 50;
+      state.flying.speed = 120;
+    }
+    state.wobble = 0;
+    const events = untilFlying(sim);
+    const passed = (): boolean => {
+      const flying = sim.state.flying;
+      return !!flying && (flying.x - sim.topLayerX()) * flying.dir >= 22;
+    };
+    events.push(...runUntil(sim, () => !passed()), ...runUntil(sim, passed));
+    sim.drop();
+    state.wobble = 99;
+    const fallSteps = Math.ceil(BALANCE.layer.fallMs / STEP);
+    state.wobblePhase = -((fallSteps * 2 * Math.PI * STEP) / BALANCE.wobble.periodMs);
+    return [...events, ...untilSettled(sim)];
+  };
+
   it('starts with the creature layer and ticks down with every landed layer', () => {
     const sim = shielded();
     expect(sim.state.shield).toBe(6);
@@ -341,15 +373,8 @@ describe('brownie shield', () => {
 
   it('also saves a sneeze miss: the narrow layer stays and the next one is restored', () => {
     const sim = new TowerSim(config({ mode: 'daily' }));
-    untilFlying(sim);
-    const state = mutable(sim);
-    state.wobble = 99;
-    state.shield = 3;
-    if (state.flying) {
-      state.flying.width = 50;
-      state.flying.speed = 120;
-    }
-    const events = dropAt(sim, 22);
+    mutable(sim).shield = 3;
+    const events = sneezeDrop(sim);
     expect(only(events, 'wobble_sneeze').newWidth).toBeLessThan(BALANCE.drop.missMargin);
     expect(only(events, 'miss')).toEqual({ type: 'miss', shielded: true });
     expect(pick(events, 'run_over')).toHaveLength(0);
@@ -361,18 +386,6 @@ describe('brownie shield', () => {
     expect(next).toMatchObject({ index: 2, width: 250 });
     expect(BALANCE.team.shieldRestoreWidth).toBe(250);
   });
-
-  /** Waits for a layer, makes it narrow, loads the wobble and drops it off-centre: a sneeze miss. */
-  const sneezeDrop = (sim: TowerSim): SimEvent[] => {
-    untilFlying(sim);
-    const state = mutable(sim);
-    state.wobble = 99;
-    if (state.flying) {
-      state.flying.width = 50;
-      state.flying.speed = 120;
-    }
-    return dropAt(sim, 22);
-  };
 
   /** Drops the creature layer at offset 100 and then `n` more normal layers. */
   const shieldedAfter = (n: number): TowerSim => {

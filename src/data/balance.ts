@@ -44,10 +44,10 @@ export const BALANCE = {
   wobble: {
     max: 100,
     /** Gain for a normal drop is `gainFactor * abs(dx) / width`. */
-    gainFactor: 60,
-    perfectRelief: 15,
-    decayPerSec: 2,
-    amplitudeMax: 90,
+    gainFactor: 120,
+    perfectRelief: 10,
+    decayPerSec: 1,
+    amplitudeMax: 130,
     amplitudeExponent: 1.5,
     periodMs: 2400,
     depthFalloffLayers: 10,
