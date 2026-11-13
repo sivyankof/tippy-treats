@@ -37,12 +37,20 @@ export function resolveDrop(input: DropInput): DropOutcome {
   const dx = input.flyingX - input.targetX;
   const distance = Math.abs(dx);
 
-  if (input.autoPerfect || distance <= input.perfectTolerance) {
-    return { quality: 'perfect', dx, newWidth: width, centerOffset: 0, cutWidth: 0, cutSide: null };
-  }
+  const perfect: DropOutcome = {
+    quality: 'perfect',
+    dx,
+    newWidth: width,
+    centerOffset: 0,
+    cutWidth: 0,
+    cutSide: null,
+  };
+  if (distance <= input.perfectTolerance) return perfect;
+  // A complete miss stays a miss even when every landed drop would be made perfect.
   if (distance >= width - BALANCE.drop.missMargin) {
     return { quality: 'miss', dx, newWidth: 0, centerOffset: 0, cutWidth: 0, cutSide: null };
   }
+  if (input.autoPerfect) return perfect;
   return {
     quality: 'normal',
     dx,

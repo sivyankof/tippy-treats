@@ -138,26 +138,33 @@ export interface RunConfig {
 
 export type SimPhase = 'flying' | 'falling' | 'pause' | 'await_continue' | 'over';
 
-export interface FlyingLayer {
+export type LayerKind = 'plain' | 'creature' | 'golden';
+
+export interface LayerPlan {   // what a layer is, decided at spawn (core/team-queue.ts)
+  kind: LayerKind;
+  creature?: CreatureId;       // only for kind 'creature'
+  level?: number;              // team slot level, clamped to 1..5
+}
+
+export interface FlyingLayer extends LayerPlan {
   index: number;               // 1-based number the layer will have in the tower
   x: number;                   // centre
   width: number;
   dir: 1 | -1;
   speed: number;
-  kind: 'plain' | 'creature' | 'golden';
 }
 
-export interface PlacedLayer {
+export interface PlacedLayer extends LayerPlan {
   x: number;                   // resting centre, wobble not included
   width: number;
-  kind: 'plain' | 'creature' | 'golden';
   quality: 'perfect' | 'normal';
 }
 
 export interface TowerState {
   phase: SimPhase;
   phaseMs: number;             // time spent in the current phase (drives the fall animation)
-  height: number;
+  height: number;              // layers.length + bonusHeight
+  bonusHeight: number;         // extra height that is not a layer (twins count as two)
   score: number;
   coins: number;
   berries: number;
@@ -167,6 +174,7 @@ export interface TowerState {
   wobblePhase: number;         // radians
   layers: PlacedLayer[];       // bottom → top
   flying: FlyingLayer | null;  // x, width, dir, speed, kind
+  floatingCoinX: number | null; // centre x of the floating coin at the current layer height
   effects: ActiveEffect[];     // ability effects with remaining layers
   zoneIndex: number;
   continuesUsed: number;
@@ -181,7 +189,7 @@ export type SimEvent =
   | { type: 'wobble_sneeze'; newWidth: number }
   | { type: 'coin_spawn'; x: number }
   | { type: 'coin_collect'; amount: number }
-  | { type: 'ability'; creature: CreatureId; boosted: boolean; payload: unknown }
+  | { type: 'ability'; creature: CreatureId; boosted: boolean; payload: AbilityPayload }
   | { type: 'effect_end'; effect: string }
   | { type: 'zone_change'; zoneIndex: number }
   | { type: 'golden'; perfect: boolean }
@@ -238,16 +246,20 @@ export interface RunResult {
 ```ts
 // core/abilities/types.ts
 export interface AbilityContext {
+  creature: CreatureId;
   state: TowerState;        // mutable inside sim
   level: number;            // 1..5
   boosted: boolean;         // perfect drop
+  layer: PlacedLayer;       // the creature layer that has just landed
   emit(e: SimEvent): void;
+  addEffect(layers: number, value: number): void; // starts or extends the effect of this creature
 }
 
 export interface Ability {
-  id: string;
+  id: CreatureId;
   onLand(ctx: AbilityContext): void;                 // when creature layer lands
   modifiers?(effect: ActiveEffect): Partial<Modifiers>; // while effect is active
+  lowerValueIsStronger?: boolean;                    // frosty, crumb: extension keeps the smaller value
 }
 
 export interface Modifiers {
@@ -258,6 +270,7 @@ export interface Modifiers {
   autoPerfect: boolean;
   guides: boolean;
   crumbToCoinsPx: number | null;
+  perfectCoinAdd: number;   // lemon: coins per perfect drop, summed, not multiplied
 }
 ```
 
@@ -426,3 +439,20 @@ export interface SaveV1 {
 | 2026-11-13 | Числа HUD (высота, очки) и высота на экране результатов прокручиваются через `ui/number-roll.ts`: длительность 400 мс для изменения на 1 и растёт по логарифму до 800 мс при изменении от `ANIM.ui.numberRollBigChange` (1000), кривая cubic-out; новое значение посреди прокрутки продолжает от показанного. Первое значение забега показывается сразу (`?start=96` не прокручивается с нуля), высота на экране результатов прокручивается с 0. Панель отладки и отсчёт 3-2-1 не прокручиваются | Раздел 6 документа 06: «прокручивается за 400–800 мс» |
 | 2026-11-13 | `launchRun` перезапускает вызывающую сцену через `scene.restart()`, остальные через `scene.launch()` | Phaser игнорирует `launch` своей же сцены: «Заново» из паузы перезапускал забег, но HUD оставался со старым окном паузы |
 | 2026-11-13 | Кнопки окна паузы и результатов шире: 560 → 680 | Надпись «Меньше эффектов: Выкл» не помещалась |
+| 2026-11-14 | Ядро монет (парящая монета, монеты за комбо, золотой слой, бонус высоты в конце забега) перенесено из M5 в M4 | Решение владельца: без монет нельзя проверить баланс бригад в `npm run sim`. На экране монеты и счётчик в HUD остаются в M5 |
+| 2026-11-14 | `CreatureId` теперь объединение 12 строк из `data/creatures.ts` (`CREATURE_IDS`), а не `string`; id эффекта равен id существа | Реестр `Record<CreatureId, Ability>` проверяет компилятор: тринадцатое существо не пройдёт без способности |
+| 2026-11-14 | Усиленные целые значения (N слоёв) округляются через `Math.round` (3 × 1,5 → 5, 5 × 1,5 → 8, 7 × 1,5 → 11) | В документе 03 округление не указано; флага для переключения нет |
+| 2026-11-14 | Продление эффекта: `layersLeft` берётся максимальный, `value` берётся более сильный (у Морозко и Крохи сильнее меньшее значение, флаг `Ability.lowerValueIsStronger`), `boosted` = старый или новый | Правило «заменяется, если больше» из документа 03 не годится для значений, где меньше значит сильнее |
+| 2026-11-14 | Высота башни больше не равна `layers.length`: `height = layers.length + bonusHeight`, следующий слой получает индекс `height + 1` | Двойняшки считаются за 2 слоя высоты, но кладут один слой |
+| 2026-11-14 | Полный промах не спасает ни «Радужка», ни допуск: проверка промаха (`distance >= width - missMargin`) идёт раньше `autoPerfect`; порядок в `drop.ts`: допуск `perfectTolerance`, промах, `autoPerfect`, обычный | В документе 03 «кроме полного промаха». Допуск `distance <= perfectTolerance` по-прежнему главнее, в том числе на узком слое |
+| 2026-11-14 | Щит Брауни спасает и от «чиха» (ширина после откусывания меньше `missMargin`): щит сгорает, `miss {shielded: true}`, забег идёт дальше, узкий слой остаётся в башне, ширина следующего слоя `max(текущая, team.shieldRestoreWidth)` = `max(текущая, 250)` (и для промаха броском, и для «чиха»; продолжение после рекламы остаётся `continues.restoreWidth` = 360) | Решение владельца (прежние значения: промах броском держал ширину, «чих» давал 360). При промахе мимо слоя слой возвращается с тем же индексом и видом, новая монета не бросается |
+| 2026-11-14 | Щит, потраченный на промах, не шлёт `effect_end`: сигналом служит `miss {shielded: true}`; `effect_end 'shield'` приходит только когда щит истёк по слоям | Иначе одно и то же событие дублировалось бы |
+| 2026-11-14 | Эффекты тикают после начисления очков приземлившегося слоя; способность существа запускается после тика, поэтому новый эффект начинается с полным N. Промахи (в том числе со щитом) эффекты не тикают | Правило «N слоёв считает слои после существа» |
+| 2026-11-14 | Парящая монета проверяется по слою после откусывания, до расширения за комбо и до «Пышки»: центр монеты внутри `x ± width / 2`. Монета не ограничена краями экрана. Бросается один раз при появлении нового индекса слоя из потока `rng.fork('coins')`; после промаха монета пропадает, повторное появление слоя (щит, продолжение) новую не бросает | Раздел 7 документа 02 не уточняет момент проверки и судьбу монеты |
+| 2026-11-14 | Золотой слой и бонус высоты платятся фиксированно: золотая монетка/очки не умножаются на «Карамельку» и «Искорку». Золотой слой каждые 25 слоёв; если этот индекс занимает существо, золотым становится следующий слой без существа; если индекс перепрыгнули двойняшки, золотой слой переносится на следующий индекс. Монеты за комбо с 5-го идеального умножаются на `1 + coinMultAdd`, монеты Кислинки и Крохи не умножаются | Раздел 7 документа 02 и раздел 2 документа 05 не описывают столкновения золотого слоя с существом и двойняшками |
+| 2026-11-14 | Бот под «Безешкой» (`ghost`, `guides`): стандартное отклонение тайминга умножается на `DIFFICULTY.guidesSdMult` = 0,7. Это допущение модели бота, а не правило игры | Решение владельца: реальный эффект направляющих на человека бот измерить не может. Ровно одна выборка `rng.normal()` на слой сохраняется, базовые результаты без бригады не меняются |
+| 2026-11-14 | `npm run sim` печатает таблицу на каждый профиль и набор бригад (все на 3-м уровне, `data/sim-teams.ts`) и проверки полных бригад: попадание в +30…+50% к медиане и «лидер и по высоте, и по монетам». Параметры `--runs`, `--profile`, `--team`, `--level`. Базовый набор `none` играется всегда | Критерии готовности M4. Зёрна и шум бота общие для всех наборов, дельта считается парно |
+| 2026-11-14 | Окно щита «Брауни»: тик щита и запуск способности идут до проверки «чиха», поэтому слой Брауни и слой N+1 не защищены, а слои 1..N защищены и от промаха броском, и от «чиха». В `resolveLanding` признак `shieldedLanding = s.shield > 0` берётся до `tickRunEffects` и передаётся в `miss(events, 'sneeze', shieldedLanding)`; на слое N щит истекает (`effect_end 'shield'`), но слой ещё прикрыт. Собственный «чих» слоя «Брауни» новым щитом не прикрыт | Решение владельца: окно ровно N слоёв после существа для обоих видов промаха |
+| 2026-11-14 | Баланс существ после M1 пересчитан симуляцией (набор B, утверждён владельцем): «Медок» R 34/38/42/46/52 (было 28/32/36/40/46); «Пышка» X 50/60/70/80/100 (было 60/75/90/105/130); «Безешка» N 3/3/4/5/6 (было 4/5/6/7/9); «Радужка» N 1/1/2/2/3 (было 2/2/3/3/4, усиление по-прежнему +1); «Карамелька» N 8/10/12/14/18 (было 5/6/7/8/10); «Кроха» K 24/20/16/13/10 (было 40/34/28/24/18); новая `BALANCE.team.shieldRestoreWidth` = 250 | После M1 допуск идеального 20 и расширение за комбо усилили игрока: значения из документа 03 давали полным бригадам до +95% к медиане на обычном профиле, а одна бригада лидировала и по высоте, и по монетам; щит Брауни возвращал слишком узкий слой (+3%) |
+| 2026-11-14 | Уровень существа ограничивается 1..5 один раз в `planLayer` и ещё раз в `runAbility`; в `PlacedLayer.level` и `ActiveEffect.level` попадает ограниченное значение | Экран не должен показывать уровень, которого способность не использует |
+| 2026-11-14 | Альтернативные цены в `UnlockDef` — отдельные записи (`lemon`: 2500 монет и 250 ягод это два варианта, а не одна цена из двух валют); `shop` держит ровно одну валюту | Однозначность для магазина (M6) |

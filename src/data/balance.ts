@@ -58,12 +58,23 @@ export const BALANCE = {
   team: {
     slots: 3,
     creatureEvery: 6,
+    /** Perfect landing of a creature layer multiplies the boosted ability value by this; boosted layer counts are rounded with Math.round. */
     perfectBoost: 1.5,
+    /** A miss saved by the brownie shield brings the next layer back at least this wide. */
+    shieldRestoreWidth: 250,
   },
   coins: {
     fromLayer: 5,
     spawnChance: 0.35,
     maxOffset: 260,
+    /** Coins for one collected floating coin before the caramel multiplier. */
+    collectAmount: 1,
+    /** A perfect drop from this combo on pays `comboAmount` coins (multiplied by caramel). */
+    comboFrom: 5,
+    comboAmount: 1,
+    /** At run end: `heightBonusCoins` coins for every full `heightBonusEvery` layers. */
+    heightBonusEvery: 10,
+    heightBonusCoins: 2,
   },
   golden: {
     every: 25,
@@ -111,6 +122,11 @@ export interface DifficultyTarget {
 /** Expectations for `npm run sim` (docs/02-gameplay.md, section 12). */
 export const DIFFICULTY = {
   runsPerProfile: 2000,
+  /**
+   * Bot-model assumption, not a game rule: the ghost guides make the bot's timing error this
+   * much smaller (the real effect on a human player is not measurable by a bot).
+   */
+  guidesSdMult: 0.7,
   /** Allowed relative deviation from the expected range before balance must change. */
   tolerance: 0.25,
   targets: [

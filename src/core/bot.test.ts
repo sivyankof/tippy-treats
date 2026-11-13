@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { BALANCE } from '../data/balance';
+import { BALANCE, DIFFICULTY } from '../data/balance';
 import { TimingBot } from './bot';
 import { Rng } from './rng';
+import { mutable } from './sim-test-utils';
 import { TowerSim, type RunConfig, type SimEvent } from './tower-sim';
 
 const STEP = BALANCE.sim.stepMs;
@@ -44,8 +45,17 @@ function play(bot: TimingBot, maxLayers: number, maxSteps = MAX_STEPS) {
 }
 
 /** Distance (towards the flying direction) from the target at the first tap of the first layer. */
-function firstTapOffset(errorMs: number): { offset: number; speed: number } {
+function firstTapOffset(errorMs: number, guides = false): { offset: number; speed: number } {
   const sim = new TowerSim(config());
+  if (guides) {
+    mutable(sim).effects.push({
+      id: 'ghost',
+      layersLeft: 4,
+      level: 1,
+      boosted: false,
+      value: 0,
+    });
+  }
   const bot = new TimingBot(1, new FixedRng(errorMs));
   for (let i = 0; i < MAX_STEPS; i++) {
     bot.observe(sim.update(STEP));
@@ -86,6 +96,15 @@ describe('TimingBot', () => {
     const tolerance = (early.speed * STEP) / 1000 + 1e-6;
     expect(Math.abs(early.offset + (100 * early.speed) / 1000)).toBeLessThanOrEqual(tolerance);
     expect(Math.abs(late.offset - (100 * late.speed) / 1000)).toBeLessThanOrEqual(tolerance);
+  });
+
+  it('shrinks the timing error while the ghost guides are active', () => {
+    const plain = firstTapOffset(100);
+    const guided = firstTapOffset(100, true);
+    const tolerance = (plain.speed * STEP) / 1000 + 1e-6;
+    expect(Math.abs(plain.offset - (100 * plain.speed) / 1000)).toBeLessThanOrEqual(tolerance);
+    const expected = (100 * DIFFICULTY.guidesSdMult * guided.speed) / 1000;
+    expect(Math.abs(guided.offset - expected)).toBeLessThanOrEqual(tolerance);
   });
 
   it('rolls exactly one error per spawn event and ignores other events', () => {

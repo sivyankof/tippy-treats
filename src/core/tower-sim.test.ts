@@ -1,73 +1,21 @@
 import { describe, expect, it } from 'vitest';
 import { BALANCE } from '../data/balance';
 import type { RunResult } from './run-result';
-import { TowerSim, type RunConfig, type SimEvent, type TowerState } from './tower-sim';
+import {
+  MAX_STEPS,
+  STEP,
+  config,
+  dropAt,
+  dropNow,
+  mutable,
+  only,
+  pick,
+  untilFlying,
+  untilSettled,
+} from './sim-test-utils';
+import { TowerSim, type SimEvent } from './tower-sim';
 
-const STEP = BALANCE.sim.stepMs;
 const SPEED = BALANCE.speed;
-const MAX_STEPS = 120 * 60;
-
-const config = (overrides: Partial<RunConfig> = {}): RunConfig => ({
-  seed: 12345,
-  mode: 'classic',
-  team: [null, null, null],
-  tutorial: false,
-  ...overrides,
-});
-
-type EventOf<T extends SimEvent['type']> = Extract<SimEvent, { type: T }>;
-
-const pick = <T extends SimEvent['type']>(events: SimEvent[], type: T): EventOf<T>[] =>
-  events.filter((e): e is EventOf<T> => e.type === type);
-
-const only = <T extends SimEvent['type']>(events: SimEvent[], type: T): EventOf<T> => {
-  const found = pick(events, type);
-  expect(found).toHaveLength(1);
-  return found[0] as EventOf<T>;
-};
-
-/** Test-only access to tweak the state the simulation exposes as read-only. */
-const mutable = (sim: TowerSim): TowerState => sim.state as TowerState;
-
-/** Steps until the predicate holds; returns every event seen on the way. */
-function runUntil(sim: TowerSim, done: () => boolean): SimEvent[] {
-  const events: SimEvent[] = [];
-  for (let i = 0; i < MAX_STEPS && !done(); i++) {
-    events.push(...sim.update(STEP));
-  }
-  expect(done()).toBe(true);
-  return events;
-}
-
-const untilFlying = (sim: TowerSim): SimEvent[] =>
-  runUntil(sim, () => sim.state.phase === 'flying');
-
-const untilSettled = (sim: TowerSim): SimEvent[] =>
-  runUntil(sim, () => sim.state.phase !== 'falling');
-
-/**
- * Waits for a layer, drops it once it has travelled `offset` past the target
- * (in its direction of travel) and returns the events up to the landing.
- */
-function dropAt(sim: TowerSim, offset: number): SimEvent[] {
-  const events = untilFlying(sim);
-  const passed = (): boolean => {
-    const flying = sim.state.flying;
-    return !!flying && (flying.x - sim.topLayerX()) * flying.dir >= offset;
-  };
-  // A layer that is already past the point has to come round again.
-  events.push(...runUntil(sim, () => !passed()));
-  events.push(...runUntil(sim, passed));
-  sim.drop();
-  events.push(...untilSettled(sim));
-  return events;
-}
-
-const dropNow = (sim: TowerSim): SimEvent[] => {
-  const events = untilFlying(sim);
-  sim.drop();
-  return [...events, ...untilSettled(sim)];
-};
 
 /** Two instant drops: the first leaves a 320-wide layer on the left, the second misses it. */
 function missOnSecondLayer(sim: TowerSim): SimEvent[] {
@@ -461,6 +409,8 @@ describe('TowerSim: determinism', () => {
 
   it('records the seed of the run', () => {
     expect(play(1, taps, 1).seed).toBe(1);
-    expect(play(2, taps, 1)).toEqual({ ...play(1, taps, 1), seed: 2 });
+    const first = play(1, taps, 1);
+    // The floating coins follow the seed, everything else does not.
+    expect(play(2, taps, 1)).toEqual({ ...first, seed: 2, coins: play(2, taps, 1).coins });
   });
 });

@@ -83,12 +83,26 @@ describe('resolveDrop', () => {
     expect(drop(31, { perfectTolerance: 30 }).quality).toBe('normal');
   });
 
-  it('auto-perfect lands anything, even a would-be miss', () => {
-    expect(drop(390, { autoPerfect: true })).toMatchObject({
+  it('auto-perfect turns a normal drop into a perfect one', () => {
+    expect(drop(100, { autoPerfect: true })).toMatchObject({
       quality: 'perfect',
-      dx: 390,
+      dx: 100,
       newWidth: 400,
+      centerOffset: 0,
+      cutWidth: 0,
     });
+    expect(drop(-375, { autoPerfect: true }).quality).toBe('perfect');
+  });
+
+  it('auto-perfect does not save a complete miss', () => {
+    const edge = 400 - BALANCE.drop.missMargin;
+    expect(drop(edge, { autoPerfect: true }).quality).toBe('miss');
+    expect(drop(-900, { autoPerfect: true })).toMatchObject({ quality: 'miss', newWidth: 0 });
+  });
+
+  it('auto-perfect keeps the tolerance rule on narrow layers', () => {
+    expect(drop(20, { width: 40, autoPerfect: true }).quality).toBe('perfect');
+    expect(drop(21, { width: 40, autoPerfect: true }).quality).toBe('miss');
   });
 });
 

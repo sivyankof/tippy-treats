@@ -5,14 +5,18 @@ export function nextCombo(combo: number, perfect: boolean): number {
   return perfect ? combo + 1 : 0;
 }
 
+/** How much a layer of this width can still grow: `amount`, capped at the maximum width. */
+export function cappedWidening(width: number, amount: number): number {
+  return Math.min(amount, Math.max(0, BALANCE.layer.maxWidth - width));
+}
+
 /**
  * How much a perfect drop widens the layer at the given combo
  * (the combo value already includes this drop).
  */
 export function comboWidening(combo: number, width: number): number {
   if (combo < BALANCE.combo.widenFrom) return 0;
-  const room = Math.max(0, BALANCE.layer.maxWidth - width);
-  return Math.min(BALANCE.combo.widenBy, room);
+  return cappedWidening(width, BALANCE.combo.widenBy);
 }
 
 export function normalScore(scoreMult: number): number {

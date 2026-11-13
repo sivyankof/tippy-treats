@@ -15,5 +15,55 @@
     "toggle": "{name}: {state}",
     "on": "On",
     "off": "Off"
+  },
+  "creature": {
+    "honey": {
+      "name": "Honey",
+      "desc": "Sticky: for the next {value} layers a drop this close counts as perfect."
+    },
+    "puff": {
+      "name": "Puff",
+      "desc": "Puffs up and widens this layer by {value}."
+    },
+    "jelly": {
+      "name": "Jelly",
+      "desc": "Shock absorber: calms the wobble by {value}."
+    },
+    "caramel": {
+      "name": "Caramel",
+      "desc": "Sweet vein: coins are doubled for the next {value} layers."
+    },
+    "frosty": {
+      "name": "Frosty",
+      "desc": "Freeze: layers fly {value}% slower for the next 3 layers."
+    },
+    "brownie": {
+      "name": "Brownie",
+      "desc": "Sturdy: a shield saves you from the next miss. It lasts {value} layers."
+    },
+    "sprinkle": {
+      "name": "Sprinkle",
+      "desc": "Fireworks: score is multiplied by {value} for the next 5 layers."
+    },
+    "crumb": {
+      "name": "Crumb",
+      "desc": "Not a crumb wasted: for the next 6 layers every {value} px of a bitten-off edge becomes a coin."
+    },
+    "ghost": {
+      "name": "Meringue",
+      "desc": "See-through: guides show the perfect spot for the next {value} layers."
+    },
+    "twins": {
+      "name": "Twins",
+      "desc": "Double portion: counts as 2 layers of height and gives {value} points."
+    },
+    "lemon": {
+      "name": "Zesty",
+      "desc": "Risk: for the next 4 layers the speed is +20%, score is multiplied by {value} and every perfect drop gives +1 coin."
+    },
+    "rainbow": {
+      "name": "Rainbow",
+      "desc": "Miracle: the next {value} drops are perfect automatically, unless you miss completely."
+    }
   }
 }
