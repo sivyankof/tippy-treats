@@ -95,7 +95,7 @@ export class Button extends Phaser.GameObjects.Container {
     this.on(Phaser.Input.Events.POINTER_UP, () => {
       if (!this.pressed) return;
       this.pressed = false;
-      this.pressTo(1);
+      this.release();
       options.onClick();
     });
     scene.add.existing(this);
@@ -112,5 +112,17 @@ export class Button extends Phaser.GameObjects.Container {
   private pressTo(scale: number): void {
     this.scene.tweens.killTweensOf(this);
     this.scene.tweens.add({ targets: this, scale, duration: ANIM.ui.pressMs });
+  }
+
+  /** A click pops the button slightly past its size and lets it settle back. */
+  private release(): void {
+    this.scene.tweens.killTweensOf(this);
+    this.setScale(ANIM.ui.releaseScale);
+    this.scene.tweens.add({
+      targets: this,
+      scale: 1,
+      duration: ANIM.ui.releaseMs,
+      ease: ANIM.ui.releaseEase,
+    });
   }
 }

@@ -5,15 +5,23 @@ import { HUD_LAYOUT } from '../../data/hud-layout';
 import { PALETTE } from '../../data/palette';
 import { t } from '../../i18n';
 import { cssColor } from '../../util/color';
+import { oscillate01 } from '../../util/math';
+import { stepSpring, type SpringState } from '../fx/anim-curves';
 import { bakeTexture } from './bake-texture';
 import { FONT_FAMILY, FONT_WEIGHT } from './fonts';
 
 const TRACK_ALPHA = 0.35;
-const TEXTURES = { track: 'ui_bar_track', ok: 'ui_bar_ok', danger: 'ui_bar_danger' } as const;
+const TEXTURES = {
+  track: 'ui_bar_track',
+  ok: 'ui_bar_ok',
+  danger: 'ui_bar_danger',
+  wave: 'ui_bar_wave',
+} as const;
 const { barWidth, barHeight, barPad, labelGap, labelFont, barY } = HUD_LAYOUT;
 const FILL_HEIGHT = barHeight - barPad * 2;
 const FILL_RADIUS = FILL_HEIGHT / 2;
 const TRACK_RADIUS = barHeight / 2;
+const FILL_MAX_WIDTH = barWidth - barPad * 2;
 
 function bakePill(
   scene: Phaser.Scene,
@@ -32,9 +40,13 @@ function bakePill(
 /** Wobble label and gauge: baked pill textures, nothing is re-tessellated per frame. */
 export class WobbleBar {
   private readonly label: Phaser.GameObjects.Text;
-  private readonly track: Phaser.GameObjects.Image;
+  /** Track, fills and wave band: scaled together for the danger pulse. */
+  private readonly gauge: Phaser.GameObjects.Container;
   private readonly fillOk: Phaser.GameObjects.NineSlice;
   private readonly fillDanger: Phaser.GameObjects.NineSlice;
+  private readonly wave: Phaser.GameObjects.Image;
+  /** Fill width in pixels as a spring: it overshoots on a jump and settles. */
+  private readonly spring: SpringState = { value: 0, velocity: 0 };
   private fillWidth = -1;
   private danger: boolean | null = null;
 
@@ -51,6 +63,15 @@ export class WobbleBar {
     const minFill = FILL_HEIGHT;
     bakePill(scene, TEXTURES.ok, minFill * 2, FILL_HEIGHT, FILL_RADIUS, PALETTE.success, 1);
     bakePill(scene, TEXTURES.danger, minFill * 2, FILL_HEIGHT, FILL_RADIUS, PALETTE.danger, 1);
+    bakePill(
+      scene,
+      TEXTURES.wave,
+      ANIM.wobbleBar.waveWidth,
+      FILL_HEIGHT,
+      FILL_RADIUS,
+      PALETTE.textLight,
+      1,
+    );
 
     this.label = scene.add
       .text(0, barY, t('run.wobble'), {
@@ -60,12 +81,13 @@ export class WobbleBar {
         color: cssColor(PALETTE.textDark),
       })
       .setOrigin(1, 0.5);
-    this.track = scene.add.image(0, barY, TEXTURES.track).setOrigin(0, 0.5);
+    // The container sits on the centre of the track so that scaling pulses around it.
+    const track = scene.add.image(-barWidth / 2, 0, TEXTURES.track).setOrigin(0, 0.5);
     const fill = (key: string): Phaser.GameObjects.NineSlice =>
       scene.add
         .nineslice(
+          barPad - barWidth / 2,
           0,
-          barY,
           key,
           undefined,
           FILL_HEIGHT,
@@ -78,25 +100,38 @@ export class WobbleBar {
         .setOrigin(0, 0.5);
     this.fillOk = fill(TEXTURES.ok);
     this.fillDanger = fill(TEXTURES.danger);
+    this.wave = scene.add
+      .image(0, 0, TEXTURES.wave)
+      .setOrigin(0, 0.5)
+      .setAlpha(ANIM.wobbleBar.waveAlpha)
+      .setVisible(false);
+    this.gauge = scene.add.container(0, barY, [track, this.fillOk, this.fillDanger, this.wave]);
   }
 
   /** Centres label and gauge as one row. Call on creation and on every resize. */
   layout(screenWidth: number): void {
     const left = (screenWidth - barWidth) / 2 + (this.label.width + labelGap) / 2;
-    this.track.setX(left);
-    this.fillOk.setX(left + barPad);
-    this.fillDanger.setX(left + barPad);
+    this.gauge.setX(left + barWidth / 2);
     this.label.setX(left - labelGap);
   }
 
-  update(wobble: number): void {
-    const ratio = Phaser.Math.Clamp(wobble / BALANCE.wobble.max, 0, 1);
-    const danger = wobble > ANIM.hud.wobbleDangerAt;
+  /** `timeMs` drives the running band and the pulse, `deltaMs` the spring. */
+  update(wobble: number, timeMs: number, deltaMs: number): void {
+    const target = FILL_MAX_WIDTH * Phaser.Math.Clamp(wobble / BALANCE.wobble.max, 0, 1);
+    stepSpring(
+      this.spring,
+      target,
+      ANIM.wobbleBar.fillStiffness,
+      ANIM.wobbleBar.fillDamping,
+      deltaMs,
+    );
+
+    const danger = wobble > ANIM.wobble.dangerFrom;
     if (danger !== this.danger) {
       this.danger = danger;
       this.label.setColor(cssColor(danger ? PALETTE.danger : PALETTE.textDark));
     }
-    const width = Math.round((barWidth - barPad * 2) * ratio);
+    const width = Math.round(Phaser.Math.Clamp(this.spring.value, 0, FILL_MAX_WIDTH));
     const shown = width > 0;
     this.fillOk.setVisible(shown && !danger);
     this.fillDanger.setVisible(shown && danger);
@@ -106,5 +141,25 @@ export class WobbleBar {
       this.fillOk.setSize(size, FILL_HEIGHT);
       this.fillDanger.setSize(size, FILL_HEIGHT);
     }
+    this.updateWave(timeMs, width);
+    this.updatePulse(timeMs, danger);
+  }
+
+  /** The lighter band eases back and forth along the fill and never leaves it. */
+  private updateWave(timeMs: number, fillWidth: number): void {
+    const bandWidth = Math.min(ANIM.wobbleBar.waveWidth, fillWidth);
+    const visible = fillWidth >= FILL_HEIGHT;
+    this.wave.setVisible(visible);
+    if (!visible) return;
+    // Starts at the left end of the fill (a quarter turn behind the sine).
+    const phase = oscillate01(timeMs, ANIM.wobbleBar.wavePeriodMs, -Math.PI / 2);
+    this.wave
+      .setDisplaySize(bandWidth, FILL_HEIGHT)
+      .setX(barPad - barWidth / 2 + (fillWidth - bandWidth) * phase);
+  }
+
+  private updatePulse(timeMs: number, danger: boolean): void {
+    const pulse = oscillate01(timeMs, ANIM.wobbleBar.pulsePeriodMs);
+    this.gauge.setScale(danger ? 1 + (ANIM.wobbleBar.pulseScale - 1) * pulse : 1);
   }
 }

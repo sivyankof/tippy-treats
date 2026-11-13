@@ -1,84 +1,85 @@
 import type * as Phaser from 'phaser';
+import type { CutSide } from '../../core/drop';
+import { ANIM } from '../../data/anim';
 import { DEPTH } from '../depth';
+import type { Reaction } from '../objects/face-state';
 import { LayerView } from '../objects/layer-view';
+import type { PieceMotion } from './anim-curves';
+import { TimedPool, type PoolEntry } from './timed-pool';
 
-export interface PieceStyle {
-  spinDegPerSec: number;
-  gravity: number;
-  lifeMs: number;
-  driftSpeed: number;
+export interface PieceSpawn extends PieceMotion {
+  /** 1-based layer number: picks the colours. */
+  layerIndex: number;
+  x: number;
+  y: number;
+  width: number;
+  /** Bitten edge (sponge); `null` for an intact piece. */
+  cut: CutSide | null;
+  /** Held expression of the piece's face; `null` for a faceless piece. */
+  face: Reaction | null;
+  /** Starting rotation in degrees. */
+  angle?: number;
 }
 
-interface Piece {
-  view: LayerView;
+interface Piece extends PoolEntry<LayerView> {
   vx: number;
   vy: number;
   spin: number;
-  ageMs: number;
-  lifeMs: number;
   gravity: number;
 }
 
-/** Pooled debris: the bitten-off overhang and whole missed layers. */
+/**
+ * Pooled debris: the bitten-off overhang, whole missed layers and collapsing layers.
+ * At most `ANIM.pool.maxLivePieces` are alive; a pooled piece lets go of its baked art.
+ */
 export class FallingPieces {
-  private readonly live: Piece[] = [];
-  private readonly free: LayerView[] = [];
+  private readonly pool: TimedPool<LayerView, Piece>;
 
-  constructor(private readonly scene: Phaser.Scene) {}
+  constructor(scene: Phaser.Scene) {
+    this.pool = new TimedPool(
+      () => new LayerView(scene),
+      (view) => {
+        view.setVisible(false).releaseArt();
+      },
+      ANIM.pool.maxLivePieces,
+    );
+  }
 
-  /**
-   * Spawns a piece that looks like a layer of `width`. `side` (-1 left, 1 right)
-   * sets the drift direction. Cosmetic randomness only, so Math.random is fine.
-   */
-  spawn(
-    layerIndex: number,
-    x: number,
-    y: number,
-    width: number,
-    side: -1 | 1,
-    style: PieceStyle,
-  ): void {
-    const view = this.free.pop() ?? new LayerView(this.scene).setFaceEnabled(false);
+  /** Spawns a piece that looks like a layer. Returns its view so callers can follow it. */
+  spawn(opts: PieceSpawn): LayerView {
+    const view = this.pool.take();
     view
+      .resetAnim()
+      .setFaceEnabled(opts.face !== null)
       .setDepth(DEPTH.pieces)
-      .setLayer(layerIndex, width)
-      .setPosition(x, y)
-      .setAngle(0)
+      .setLayer(opts.layerIndex, opts.width, opts.cut)
+      .setPosition(opts.x, opts.y)
+      .setAngle(opts.angle ?? 0)
       .setAlpha(1)
       .setVisible(true);
-    const spinSign = Math.random() < 0.5 ? -1 : 1;
-    this.live.push({
-      view,
-      vx: side * style.driftSpeed,
-      vy: 0,
-      spin: spinSign * style.spinDegPerSec,
+    if (opts.face) view.faceView.react(opts.face, Infinity);
+    this.pool.add({
+      item: view,
+      vx: opts.vx,
+      vy: opts.vy,
+      spin: opts.spin,
       ageMs: 0,
-      lifeMs: style.lifeMs,
-      gravity: style.gravity,
+      lifeMs: opts.lifeMs,
+      gravity: opts.gravity,
     });
+    return view;
   }
 
   update(dtMs: number): void {
     const dt = dtMs / 1000;
-    for (let i = this.live.length - 1; i >= 0; i--) {
-      const piece = this.live[i];
-      if (!piece) continue;
-      piece.ageMs += dtMs;
-      if (piece.ageMs >= piece.lifeMs) {
-        this.recycle(piece);
-        this.live.splice(i, 1);
-        continue;
-      }
+    this.pool.update(dtMs, (piece, progress) => {
+      const view = piece.item;
       piece.vy += piece.gravity * dt;
-      piece.view.x += piece.vx * dt;
-      piece.view.y += piece.vy * dt;
-      piece.view.angle += piece.spin * dt;
-      piece.view.setAlpha(1 - piece.ageMs / piece.lifeMs);
-    }
-  }
-
-  private recycle(piece: Piece): void {
-    piece.view.setVisible(false);
-    this.free.push(piece.view);
+      view.x += piece.vx * dt;
+      view.y += piece.vy * dt;
+      view.angle += piece.spin * dt;
+      view.setAlpha(1 - progress);
+      view.tick(dtMs);
+    });
   }
 }

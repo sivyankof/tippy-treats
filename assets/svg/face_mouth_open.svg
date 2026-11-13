@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="36" height="26" viewBox="0 0 36 26">
+  <defs>
+    <clipPath id="mouth"><path d="M2 2 H34 C34 18 26 24 18 24 C10 24 2 18 2 2 Z"/></clipPath>
+  </defs>
+  <path d="M2 2 H34 C34 18 26 24 18 24 C10 24 2 18 2 2 Z" fill="#3B2A4A" stroke="#3B2A4A" stroke-width="3" stroke-linejoin="round"/>
+  <ellipse cx="18" cy="23" rx="10" ry="8" fill="#E8334A" clip-path="url(#mouth)"/>
+</svg>

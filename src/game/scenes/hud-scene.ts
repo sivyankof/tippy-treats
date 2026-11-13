@@ -82,12 +82,12 @@ export class HudScene extends Phaser.Scene {
     this.layout();
   }
 
-  override update(): void {
+  override update(time: number, delta: number): void {
     const info = this.gameScene()?.getRunInfo() ?? null;
     if (info) {
       this.heightText.setText(formatNumber(info.height));
       this.scoreText.setText(formatNumber(info.score));
-      this.wobbleBar.update(info.wobble);
+      this.wobbleBar.update(info.wobble, time, delta);
     }
     this.pauseButton.setVisible(this.pauseEnabled());
     this.debugPanel.update(info, this.game.loop.actualFps);

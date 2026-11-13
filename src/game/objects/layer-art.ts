@@ -1,4 +1,5 @@
 import type * as Phaser from 'phaser';
+import type { CutSide } from '../../core/drop';
 import { ANIM } from '../../data/anim';
 import { BALANCE } from '../../data/balance';
 import { LAYER_COLORS, PALETTE, type LayerColors } from '../../data/palette';
@@ -7,6 +8,12 @@ import { bakeTexture } from '../ui/bake-texture';
 
 const DARK_OUTLINE = -0.38;
 const GLAZE_OUTLINE = -0.22;
+const PORE_SHADE = -0.3;
+/** Pores sit between these shares of the sponge strip width, measured from the cut edge. */
+const PORE_NEAR = 0.3;
+const PORE_FAR = 0.7;
+/** Golden ratio step: spreads the pores evenly without a random generator. */
+const PORE_STEP = 0.618;
 const DRIP_WIDTH = 22;
 const DRIP_MIN_LAYER_WIDTH = 120;
 const DRIP_SHORT_RATIO = 0.65;
@@ -25,6 +32,11 @@ const SHADOW_MARGIN = Math.ceil(SHADOW_DROP + ANIM.layer.shadowHeight / 2) + 1;
 export function colorIndexFor(layerIndex: number): number {
   const n = LAYER_COLORS.length;
   return (((layerIndex - 1) % n) + n) % n;
+}
+
+/** Colours of the layers with this colour-table index (see `colorIndexFor`). */
+export function layerColors(colorIndex: number): LayerColors {
+  return LAYER_COLORS[colorIndex] ?? LAYER_COLORS[0]!;
 }
 
 /** Whole-pixel width the art is baked at. */
@@ -105,8 +117,43 @@ function drawGlaze(
   }
 }
 
+/**
+ * Porous sponge on the cut side: a lighter strip along the inner side of the edge,
+ * over the glaze too, with a few darker pores. Drawn inside the outline.
+ */
+function drawSponge(
+  g: Phaser.GameObjects.Graphics,
+  cut: CutSide,
+  colors: LayerColors,
+  box: { innerLeft: number; innerTop: number; innerW: number; innerH: number; innerRadius: number },
+): void {
+  const { width, lift, poreCount, poreRadius, poreAlpha } = ANIM.layer.sponge;
+  const stripW = Math.min(width, box.innerW / 2);
+  if (stripW <= 0) return;
+  const sign = cut === 'left' ? 1 : -1;
+  const edgeX = cut === 'left' ? box.innerLeft : box.innerLeft + box.innerW;
+  const stripLeft = cut === 'left' ? edgeX : edgeX - stripW;
+  const r = box.innerRadius;
+  const corners = cut === 'left' ? { tl: r, tr: 0, bl: r, br: 0 } : { tl: 0, tr: r, bl: 0, br: r };
+
+  g.fillStyle(shade(colors.cake, lift), 1);
+  g.fillRoundedRect(stripLeft, box.innerTop, stripW, box.innerH, corners);
+
+  g.fillStyle(shade(colors.cake, PORE_SHADE), poreAlpha);
+  for (let i = 0; i < poreCount; i++) {
+    const y = box.innerTop + (box.innerH * (i + 0.5)) / poreCount;
+    const along = PORE_NEAR + (PORE_FAR - PORE_NEAR) * ((i * PORE_STEP) % 1);
+    g.fillCircle(edgeX + sign * stripW * along, y, poreRadius);
+  }
+}
+
 /** Draws shadow, body, glaze with drips and gloss around the origin of `g`. */
-function drawLayer(g: Phaser.GameObjects.Graphics, width: number, colors: LayerColors): void {
+function drawLayer(
+  g: Phaser.GameObjects.Graphics,
+  width: number,
+  colors: LayerColors,
+  cut: CutSide | null,
+): void {
   const h = BALANCE.layer.height;
   const { outline, cornerRadius, bodyBands, gradientLift } = ANIM.layer;
   const left = -width / 2;
@@ -136,6 +183,7 @@ function drawLayer(g: Phaser.GameObjects.Graphics, width: number, colors: LayerC
   );
 
   drawGlaze(g, width, colors, { left, innerLeft, innerTop, innerW, innerRadius });
+  if (cut) drawSponge(g, cut, colors, { innerLeft, innerTop, innerW, innerH, innerRadius });
 
   const glossW = Math.max(0, width * GLOSS_LENGTH_RATIO - GLOSS_INSET);
   if (glossW > 0) {
@@ -155,16 +203,26 @@ function drawLayer(g: Phaser.GameObjects.Graphics, width: number, colors: LayerC
 // the oldest are removed beyond ANIM.pool.idleLayerTextures. Map order is use order.
 const refs = new Map<string, number>();
 
-/** Bakes (or finds) the art for a colour and width and counts one more user of it. */
-export function acquireLayerArt(scene: Phaser.Scene, colorIndex: number, width: number): string {
+const CUT_SUFFIX: Readonly<Record<CutSide | 'none', string>> = { none: 'n', left: 'l', right: 'r' };
+
+/**
+ * Bakes (or finds) the art for a colour, width and cut side (`null`: an intact layer)
+ * and counts one more user of it.
+ */
+export function acquireLayerArt(
+  scene: Phaser.Scene,
+  colorIndex: number,
+  width: number,
+  cut: CutSide | null,
+): string {
   const w = artWidth(width);
-  const key = `layer_${colorIndex}_${w}`;
+  const key = `layer_${colorIndex}_${w}_${CUT_SUFFIX[cut ?? 'none']}`;
   const texW = 2 * Math.ceil((w + SIDE_PAD * 2) / 2);
   const texH = BALANCE.layer.height + SHADOW_MARGIN * 2;
-  const colors = LAYER_COLORS[colorIndex] ?? LAYER_COLORS[0]!;
+  const colors = layerColors(colorIndex);
   bakeTexture(scene, key, texW, texH, (g) => {
     g.translateCanvas(texW / 2, texH / 2);
-    drawLayer(g, w, colors);
+    drawLayer(g, w, colors, cut);
   });
   const users = refs.get(key) ?? 0;
   refs.delete(key);

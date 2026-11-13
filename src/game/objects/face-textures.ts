@@ -1,71 +1,66 @@
 import type * as Phaser from 'phaser';
-import { ANIM } from '../../data/anim';
-import { PALETTE } from '../../data/palette';
-import { bakeTexture } from '../ui/bake-texture';
+import type { EyeKind, MouthKind } from './face-state';
 
+/** Texture keys of the face parts. Each key is the name of an SVG file in assets/svg. */
 export const FACE_TEXTURES = {
-  eye: 'face_eye',
+  eyeOpen: 'face_eye_open',
+  eyeClosed: 'face_eye_closed',
+  eyeHappy: 'face_eye_happy',
   pupil: 'face_pupil',
+  brow: 'face_brow',
   mouthSmile: 'face_mouth_smile',
+  mouthOpen: 'face_mouth_open',
   mouthO: 'face_mouth_o',
+  mouthFlat: 'face_mouth_flat',
+  mouthScared: 'face_mouth_scared',
+  mouthYum: 'face_mouth_yum',
   cheek: 'face_cheek',
+  sweat: 'face_sweat',
 } as const;
 
-const EYE_OUTLINE = 3;
-const MOUTH_LINE = 5;
-const CHEEK_COLOR = 0xff8fa8;
-const CHEEK_ALPHA = 0.55;
-const CHEEK_WIDTH_RATIO = 1.6;
-const CHEEK_HEIGHT_RATIO = 1;
-const SMILE_WIDTH_RATIO = 1.5;
-const SMILE_HALF_ANGLE = 0.38 * Math.PI;
-const O_RADIUS_RATIO = 0.6;
+/** Eye picture per eye kind; wide eyes are the open eye drawn larger. */
+export const EYE_TEXTURE: Readonly<Record<EyeKind, string>> = {
+  open: FACE_TEXTURES.eyeOpen,
+  closed: FACE_TEXTURES.eyeClosed,
+  happy: FACE_TEXTURES.eyeHappy,
+  wide: FACE_TEXTURES.eyeOpen,
+};
 
-/** Draws the small shared face parts once; every layer view reuses them. */
-export function createFaceTextures(scene: Phaser.Scene): void {
-  const { eyeRadius, pupilRadius } = ANIM.face;
+export const MOUTH_TEXTURE: Readonly<Record<MouthKind, string>> = {
+  smile: FACE_TEXTURES.mouthSmile,
+  open: FACE_TEXTURES.mouthOpen,
+  o: FACE_TEXTURES.mouthO,
+  flat: FACE_TEXTURES.mouthFlat,
+  scared: FACE_TEXTURES.mouthScared,
+  yum: FACE_TEXTURES.mouthYum,
+};
 
-  const eyeSize = (eyeRadius + EYE_OUTLINE) * 2;
-  bakeTexture(scene, FACE_TEXTURES.eye, eyeSize, eyeSize, (g) => {
-    const c = eyeSize / 2;
-    g.fillStyle(PALETTE.textDark, 1).fillCircle(c, c, eyeRadius + EYE_OUTLINE);
-    g.fillStyle(PALETTE.textLight, 1).fillCircle(c, c, eyeRadius);
-  });
+// The SVG sources are bundled as text. The Phaser loader fetches files by URL, and small files
+// would otherwise be inlined by Vite as data URIs, which its loader cannot read, so each
+// source is handed over as a short-lived blob URL. Pictures are drawn at the size written
+// in the file, in logical pixels.
+const FACE_SOURCES = import.meta.glob<string>('../../../assets/svg/face_*.svg', {
+  eager: true,
+  query: '?raw',
+  import: 'default',
+});
 
-  const pupilSize = pupilRadius * 2 + 2;
-  bakeTexture(scene, FACE_TEXTURES.pupil, pupilSize, pupilSize, (g) => {
-    const c = pupilSize / 2;
-    g.fillStyle(PALETTE.textDark, 1).fillCircle(c, c, pupilRadius);
-    g.fillStyle(PALETTE.textLight, 1).fillCircle(c - pupilRadius * 0.3, c - pupilRadius * 0.3, 3);
-  });
+function faceSource(key: string): string {
+  const source = FACE_SOURCES[`../../../assets/svg/${key}.svg`];
+  if (!source) throw new Error(`Missing face picture assets/svg/${key}.svg`);
+  return source;
+}
 
-  const smileInner = pupilRadius * 2 * SMILE_WIDTH_RATIO;
-  const smileR = smileInner / 2 / Math.sin(SMILE_HALF_ANGLE);
-  const smileDepth = smileR * (1 - Math.cos(SMILE_HALF_ANGLE));
-  const smileW = smileInner + MOUTH_LINE * 2;
-  const smileH = smileDepth + MOUTH_LINE * 2;
-  bakeTexture(scene, FACE_TEXTURES.mouthSmile, smileW, smileH, (g) => {
-    g.lineStyle(MOUTH_LINE, PALETTE.textDark, 1);
-    g.beginPath();
-    g.arc(
-      smileW / 2,
-      MOUTH_LINE - smileR * Math.cos(SMILE_HALF_ANGLE),
-      smileR,
-      Math.PI / 2 - SMILE_HALF_ANGLE,
-      Math.PI / 2 + SMILE_HALF_ANGLE,
-    );
-    g.strokePath();
-  });
-
-  const oSize = pupilRadius * O_RADIUS_RATIO * 2 + 8;
-  bakeTexture(scene, FACE_TEXTURES.mouthO, oSize, oSize, (g) => {
-    g.fillStyle(PALETTE.textDark, 1).fillCircle(oSize / 2, oSize / 2, oSize / 2 - 2);
-    g.fillStyle(PALETTE.berry, 1).fillCircle(oSize / 2, oSize / 2 + 2, oSize / 2 - 6);
-  });
-
-  const cheekW = pupilRadius * CHEEK_WIDTH_RATIO * 2;
-  const cheekH = pupilRadius * CHEEK_HEIGHT_RATIO * 2;
-  bakeTexture(scene, FACE_TEXTURES.cheek, cheekW, cheekH, (g) => {
-    g.fillStyle(CHEEK_COLOR, CHEEK_ALPHA).fillEllipse(cheekW / 2, cheekH / 2, cheekW, cheekH);
+/** Queues every face picture in the scene loader; call it from `preload`. */
+export function loadFaceTextures(scene: Phaser.Scene): void {
+  const urls: string[] = [];
+  for (const key of Object.values(FACE_TEXTURES)) {
+    const blob = new Blob([faceSource(key)], { type: 'image/svg+xml' });
+    const url = URL.createObjectURL(blob);
+    urls.push(url);
+    scene.load.svg(key, url);
+  }
+  scene.load.once('complete', () => {
+    for (const url of urls) URL.revokeObjectURL(url);
   });
 }

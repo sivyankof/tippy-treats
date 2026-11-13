@@ -1,16 +1,14 @@
 import * as Phaser from 'phaser';
 import { TimingBot } from '../../core/bot';
 import { Rng } from '../../core/rng';
-import { TowerSim, type FlyingLayer, type SimEvent, type SimPhase } from '../../core/tower-sim';
+import { TowerSim, type SimPhase } from '../../core/tower-sim';
 import { ANIM } from '../../data/anim';
 import { BALANCE } from '../../data/balance';
 import { HUD_LAYOUT } from '../../data/hud-layout';
 import { readDebugParams } from '../../util/debug-params';
-import { randomSeed } from '../../util/math';
-import { FallingPieces } from '../fx/falling-piece';
+import { frameLerp, randomSeed } from '../../util/math';
+import { RunFx, type CameraInfo, type FlyingMemo } from '../fx/run-fx';
 import { Background } from '../objects/background';
-import { FlyingLayerView } from '../objects/flying-layer-view';
-import { TowerView } from '../objects/tower-view';
 import { SCENES, type ResultsData } from '../scene-keys';
 import { isOverUi } from '../ui/ui-regions';
 
@@ -28,18 +26,16 @@ export interface RunInfo {
   paused: boolean;
 }
 
-type FlyingMemo = Pick<FlyingLayer, 'x' | 'width' | 'index'>;
-
 export class GameScene extends Phaser.Scene {
   private sim!: TowerSim;
   private bot: TimingBot | null = null;
   private seed = 0;
-  private tower!: TowerView;
-  private flyingView!: FlyingLayerView;
-  private pieces!: FallingPieces;
+  private fx!: RunFx;
   private background!: Background;
   private lastFlying: FlyingMemo | null = null;
-  private resultsQueued = false;
+  /** Camera scroll before the landing kick is added. */
+  private scrollBase = 0;
+  private readonly camInfo: CameraInfo = { scrollY: 0, trayScrollY: 0, width: 0, height: 0 };
 
   constructor() {
     super(SCENES.game);
@@ -57,13 +53,11 @@ export class GameScene extends Phaser.Scene {
     });
     this.bot = debug.bot ? new TimingBot(debug.bot, new Rng(this.seed).fork('bot')) : null;
     this.lastFlying = null;
-    this.resultsQueued = false;
+    this.scrollBase = 0;
 
     const { width, height } = this.scale.gameSize;
     this.background = new Background(this, TRAY_TOP_Y, width, height);
-    this.tower = new TowerView(this, TRAY_TOP_Y);
-    this.flyingView = new FlyingLayerView(this, this.tower);
-    this.pieces = new FallingPieces(this);
+    this.fx = new RunFx(this, TRAY_TOP_Y);
 
     this.input.on(Phaser.Input.Events.POINTER_DOWN, this.onPointerDown, this);
     this.input.keyboard?.on('keydown-SPACE', this.onDropKey, this);
@@ -73,9 +67,9 @@ export class GameScene extends Phaser.Scene {
     });
 
     // Sync once so the tower height is known, then jump the camera to its target.
-    this.render(0, 0);
-    this.cameras.main.setScroll(0, this.targetScrollY());
-    this.background.update(this.cameras.main.scrollY);
+    this.fx.update(0, 0, this.sim.state, this.cameraInfo());
+    this.scrollBase = this.targetScrollY();
+    this.applyCamera();
   }
 
   override update(time: number, delta: number): void {
@@ -85,12 +79,21 @@ export class GameScene extends Phaser.Scene {
     const events = this.sim.update(delta);
     this.bot?.observe(events);
     if (this.bot?.shouldDrop(this.sim)) events.push(...this.sim.drop());
-    // The continue offer arrives in a later stage: for now the run simply ends.
-    if (this.sim.state.phase === 'await_continue') events.push(...this.sim.decline());
+    // The continue offer arrives in a later stage: until then the run ends once the miss has played.
+    if (this.sim.state.phase === 'await_continue' && this.fx.canDecline) {
+      events.push(...this.sim.decline());
+    }
 
-    this.handleEvents(events);
-    this.pieces.update(delta);
-    this.render(time, delta);
+    const cam = this.cameraInfo();
+    this.fx.handleEvents(events, this.sim.state, this.lastFlying, cam);
+    this.fx.update(delta, time, this.sim.state, cam);
+    this.followCamera(delta);
+
+    const result = this.fx.takeResult();
+    if (result) {
+      const data: ResultsData = { result };
+      this.scene.launch(SCENES.results, data);
+    }
   }
 
   getRunInfo(): RunInfo | null {
@@ -122,77 +125,42 @@ export class GameScene extends Phaser.Scene {
     const { width, height } = this.scale.gameSize;
     this.cameras.main.setSize(width, height);
     this.background.resize(width, height);
+    this.fx.resize(width, height);
   }
 
-  private handleEvents(events: readonly SimEvent[]): void {
-    const memo = this.lastFlying;
-    let landed = false;
-    for (const event of events) {
-      switch (event.type) {
-        case 'land':
-          landed = true;
-          if (memo && event.cutSide && event.cutWidth > 0) {
-            const side = event.cutSide === 'right' ? 1 : -1;
-            const x = memo.x + side * (memo.width / 2 - event.cutWidth / 2);
-            this.pieces.spawn(
-              memo.index,
-              x,
-              this.tower.layerCenterY(memo.index - 1),
-              event.cutWidth,
-              side,
-              ANIM.bite,
-            );
-          }
-          break;
-        case 'miss':
-          // A sneeze that leaves too little cake follows a landing: nothing falls past the tower.
-          if (memo && !landed) {
-            const side = memo.x >= this.tower.topViewX() ? 1 : -1;
-            this.pieces.spawn(
-              memo.index,
-              memo.x,
-              this.tower.layerCenterY(memo.index - 1),
-              memo.width,
-              side,
-              ANIM.miss,
-            );
-          }
-          break;
-        case 'wobble_sneeze':
-          this.tower.sync(this.sim.state, this.cameraBottomY());
-          this.tower.squashTop();
-          break;
-        case 'run_over':
-          this.queueResults(event.result);
-          break;
-        default:
-          break;
-      }
+  /** The camera as the effects need it. One object is reused: it is refreshed on every call. */
+  private cameraInfo(): CameraInfo {
+    const { width, height } = this.scale.gameSize;
+    const info = this.camInfo;
+    info.scrollY = this.scrollBase;
+    info.trayScrollY = this.trayScrollY();
+    info.width = width;
+    info.height = height;
+    return info;
+  }
+
+  /** Follows the target, or the collapse scroll while the tower falls apart. */
+  private followCamera(delta: number): void {
+    const collapseScroll = this.fx.collapseScroll;
+    if (collapseScroll !== null) {
+      this.scrollBase = collapseScroll;
+    } else {
+      const k = frameLerp(ANIM.camera.followLerp, delta);
+      this.scrollBase += (this.targetScrollY() - this.scrollBase) * k;
     }
+    this.applyCamera();
   }
 
-  private queueResults(result: ResultsData['result']): void {
-    if (this.resultsQueued) return;
-    this.resultsQueued = true;
-    this.time.delayedCall(ANIM.results.delayMs, () => {
-      const data: ResultsData = { result };
-      this.scene.launch(SCENES.results, data);
-    });
-  }
-
-  private render(timeMs: number, deltaMs: number): void {
-    this.tower.sync(this.sim.state, this.cameraBottomY());
-    this.flyingView.sync(this.sim.state, timeMs);
+  /** The kick pushes the view down, which means the camera moves up. */
+  private applyCamera(): void {
     const camera = this.cameras.main;
-    // Frame-rate independent smoothing towards the target.
-    const k = 1 - Math.pow(1 - ANIM.camera.followLerp, deltaMs / ANIM.camera.referenceFrameMs);
-    camera.scrollY += (this.targetScrollY() - camera.scrollY) * k;
+    camera.scrollY = this.scrollBase - this.fx.cameraOffset;
     this.background.update(camera.scrollY);
   }
 
-  /** World y of the bottom edge of the screen. */
-  private cameraBottomY(): number {
-    return this.cameras.main.scrollY + this.scale.gameSize.height;
+  /** Scroll that shows the tray low on the screen: the start of a run and the end of the collapse. */
+  private trayScrollY(): number {
+    return TRAY_TOP_Y - (this.scale.gameSize.height - ANIM.camera.trayBottomOffset);
   }
 
   /**
@@ -201,13 +169,12 @@ export class GameScene extends Phaser.Scene {
    */
   private targetScrollY(): number {
     const screenH = this.scale.gameSize.height;
-    const start = TRAY_TOP_Y - (screenH - ANIM.camera.trayBottomOffset);
     const flyingReach =
       BALANCE.layer.gapAboveTower + BALANCE.layer.height + ANIM.flying.bobAmplitude;
     const surfaceScreenY = Math.max(
       screenH - ANIM.camera.visibleLayers * BALANCE.layer.height,
       HUD_LAYOUT.bottomEdge + ANIM.camera.hudClearance + flyingReach,
     );
-    return Math.min(start, this.tower.topY() - surfaceScreenY);
+    return Math.min(this.trayScrollY(), this.fx.tower.topY() - surfaceScreenY);
   }
 }
