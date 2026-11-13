@@ -116,6 +116,13 @@ export class WebAudioService implements AudioService {
     });
   }
 
+  shieldPop(): void {
+    this.play((s) => {
+      s.tone(SFX.shieldPop.blip);
+      s.noise(SFX.shieldPop.pop);
+    });
+  }
+
   sneeze(): void {
     this.play((s) => {
       s.tone(SFX.sneeze.squeak);

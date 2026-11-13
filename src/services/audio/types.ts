@@ -18,6 +18,8 @@ export interface AudioService {
   coin(): void;
   berry(): void;
   ability(rarity: Rarity): void;
+  /** The brownie's shield bursts and eats a miss. */
+  shieldPop(): void;
   sneeze(): void;
   miss(): void;
   /** One slap of a collapsing tower; `index` is the position in the series (0 = first). */

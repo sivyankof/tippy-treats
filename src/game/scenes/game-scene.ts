@@ -1,6 +1,6 @@
 import * as Phaser from 'phaser';
 import { TimingBot } from '../../core/bot';
-import type { ActiveEffect } from '../../core/abilities/types';
+import type { ActiveEffect, Modifiers } from '../../core/abilities/types';
 import { Rng } from '../../core/rng';
 import type { TeamSlot } from '../../core/sim-types';
 import { TowerSim, type SimPhase } from '../../core/tower-sim';
@@ -44,7 +44,30 @@ export class GameScene extends Phaser.Scene {
   private team: Array<TeamSlot | null> = [];
   private fx!: RunFx;
   private background!: Background;
+  /** The flying layer before the latest step, or `null`; `flyingMemo` is the one object behind it. */
   private lastFlying: FlyingMemo | null = null;
+  private readonly flyingMemo: FlyingMemo = {
+    x: 0,
+    width: 0,
+    kind: 'plain',
+    creature: undefined,
+    level: undefined,
+  };
+  /** Handed out by `getRunInfo` every frame: one object, refilled each time. */
+  private readonly runInfo: RunInfo = {
+    height: 0,
+    score: 0,
+    wobble: 0,
+    seed: 0,
+    phase: 'flying',
+    flyingSpeed: null,
+    paused: false,
+    team: [],
+    effects: [],
+    shield: 0,
+  };
+  /** Drop modifiers as the sim last reported them; refreshed whenever a step had events. */
+  private mods!: Readonly<Modifiers>;
   /** Camera scroll before the landing kick is added. */
   private scrollBase = 0;
   /** The world drops in from above when the run starts. */
@@ -67,6 +90,7 @@ export class GameScene extends Phaser.Scene {
       tutorial: false,
       startHeight: debug.start ?? 0,
     });
+    this.mods = this.sim.currentModifiers();
     this.bot = debug.bot ? new TimingBot(debug.bot, new Rng(this.seed).fork('bot')) : null;
     this.lastFlying = null;
     this.scrollBase = 0;
@@ -84,7 +108,7 @@ export class GameScene extends Phaser.Scene {
 
     this.entry = enterWorld(this);
     // Sync once so the tower height is known, then jump the camera to its target.
-    this.fx.update(0, 0, this.sim.state, this.cameraInfo());
+    this.fx.update(0, 0, this.sim.state, this.mods, this.cameraInfo());
     this.scrollBase = this.targetScrollY();
     this.applyCamera();
   }
@@ -92,15 +116,17 @@ export class GameScene extends Phaser.Scene {
   override update(time: number, delta: number): void {
     effectsMode.noteFrame(delta);
     const flying = this.sim.state.flying;
-    this.lastFlying = flying
-      ? {
-          x: flying.x,
-          width: flying.width,
-          kind: flying.kind,
-          creature: flying.creature,
-          level: flying.level,
-        }
-      : null;
+    if (flying) {
+      const memo = this.flyingMemo;
+      memo.x = flying.x;
+      memo.width = flying.width;
+      memo.kind = flying.kind;
+      memo.creature = flying.creature;
+      memo.level = flying.level;
+      this.lastFlying = memo;
+    } else {
+      this.lastFlying = null;
+    }
 
     const events = this.sim.update(delta);
     this.bot?.observe(events);
@@ -111,8 +137,9 @@ export class GameScene extends Phaser.Scene {
     }
 
     const cam = this.cameraInfo();
-    this.fx.handleEvents(events, this.sim.state, this.lastFlying, cam);
-    this.fx.update(delta, time, this.sim.state, cam);
+    this.fx.handleEvents(events, this.sim.state, this.lastFlying, this.mods, cam);
+    if (events.length > 0) this.mods = this.sim.currentModifiers();
+    this.fx.update(delta, time, this.sim.state, this.mods, cam);
     this.followCamera(delta);
 
     const result = this.fx.takeResult();
@@ -122,21 +149,22 @@ export class GameScene extends Phaser.Scene {
     }
   }
 
-  getRunInfo(): RunInfo | null {
+  /** The state of the run for the HUD. The object is reused: read it at once, do not keep it. */
+  getRunInfo(): Readonly<RunInfo> | null {
     if (!this.sim) return null;
     const s = this.sim.state;
-    return {
-      height: s.height,
-      score: s.score,
-      wobble: s.wobble,
-      seed: this.seed,
-      phase: s.phase,
-      flyingSpeed: s.flying?.speed ?? null,
-      paused: this.sys.isPaused(),
-      team: this.team,
-      effects: s.effects,
-      shield: s.shield,
-    };
+    const info = this.runInfo;
+    info.height = s.height;
+    info.score = s.score;
+    info.wobble = s.wobble;
+    info.seed = this.seed;
+    info.phase = s.phase;
+    info.flyingSpeed = s.flying?.speed ?? null;
+    info.paused = this.sys.isPaused();
+    info.team = this.team;
+    info.effects = s.effects;
+    info.shield = s.shield;
+    return info;
   }
 
   private onPointerDown(pointer: Phaser.Input.Pointer): void {

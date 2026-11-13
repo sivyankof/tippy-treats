@@ -15,7 +15,15 @@ interface Ring extends PoolEntry<Phaser.GameObjects.Image> {
   baseScaleY: number;
 }
 
-/** Pooled rings that spread from a perfectly landed layer and fade out. */
+/** Colour, size and start delay of a ring; a perfect landing uses the defaults. */
+export interface RingOptions {
+  tint?: number;
+  /** Multiplies the size of the ring. */
+  scale?: number;
+  delayMs?: number;
+}
+
+/** Pooled rings that spread from a landed layer and fade out. */
 export class PerfectRing {
   private readonly pool: TimedPool<Phaser.GameObjects.Image, Ring>;
 
@@ -33,20 +41,24 @@ export class PerfectRing {
   }
 
   /** Starts a ring around (x, y) for a layer of `layerWidth`. */
-  play(x: number, y: number, layerWidth: number): void {
+  play(x: number, y: number, layerWidth: number, options: RingOptions = {}): void {
+    const { tint = PALETTE.textLight, scale = 1, delayMs = 0 } = options;
     const item = this.pool.take();
-    const baseScaleX = (layerWidth * ring.widthRatio) / RING_DIAMETER;
-    const baseScaleY = (layerWidth * ring.heightRatio) / RING_DIAMETER;
+    const baseScaleX = (layerWidth * ring.widthRatio * scale) / RING_DIAMETER;
+    const baseScaleY = (layerWidth * ring.heightRatio * scale) / RING_DIAMETER;
     item
       .setPosition(x, y)
+      .setTint(tint)
       .setScale(baseScaleX * ring.fromScale, baseScaleY * ring.fromScale)
       .setAlpha(ring.fromAlpha)
-      .setVisible(true);
-    this.pool.add({ item, baseScaleX, baseScaleY, ageMs: 0, lifeMs: ring.durationMs });
+      .setVisible(delayMs <= 0);
+    this.pool.add({ item, baseScaleX, baseScaleY, ageMs: -delayMs, lifeMs: ring.durationMs });
   }
 
   update(dtMs: number): void {
     this.pool.update(dtMs, (entry, progress) => {
+      if (progress < 0) return;
+      entry.item.setVisible(true);
       const scale = ring.fromScale + (ring.toScale - ring.fromScale) * ringEase(progress);
       entry.item
         .setScale(entry.baseScaleX * scale, entry.baseScaleY * scale)

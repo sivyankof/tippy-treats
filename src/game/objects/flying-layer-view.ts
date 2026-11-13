@@ -39,6 +39,11 @@ export class FlyingLayerView {
     return this.hasPos ? this.pos : null;
   }
 
+  /** A white band runs over the flying layer (the rainbow's sheen). */
+  sweepGloss(): void {
+    this.view.playGlossSweep();
+  }
+
   sync(state: Readonly<TowerState>, nowMs: number, dtMs: number): void {
     const flying = state.flying;
     if (!flying) {

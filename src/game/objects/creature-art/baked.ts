@@ -34,14 +34,40 @@ const SPRINKLE_WIDTH = 4;
 const SPRINKLE_CAP = 2;
 const ICING_DEPTH = 0.46;
 const SIDE_MARGIN = 14;
+/** Honey stripes: gap under the glaze and above the bottom edge. */
+const STRIPE_TOP_GAP = 6;
+const STRIPE_BOTTOM_GAP = 10;
+/** Brownie cracks: start below the crust edge and zigzag down by these steps (x lean, y). */
+const CRUST_TOP_GAP = 4;
+const CRACK_ZIGZAG: ReadonlyArray<readonly [number, number]> = [
+  [0, 0],
+  [6, 10],
+  [-4, 20],
+  [3, 28],
+];
+/** Gap between the crust and the first nut, and between the last nut and the bottom edge. */
+const NUT_TOP_GAP = 8;
+const NUT_BOTTOM_GAP = 8;
+/** Cookie chips keep this far from the top edge and this much from the bottom (total). */
+const CHIP_TOP_GAP = 16;
+const CHIP_VERTICAL_MARGIN = 34;
+const CHIP_CORNER = 3;
+/** The highlight on a chip: inset from its left and top, height and corner. */
+const CHIP_SHINE_INSET_X = 2;
+const CHIP_SHINE_INSET_Y = 1.5;
+const CHIP_SHINE_HEIGHT = 2.5;
+const CHIP_SHINE_CORNER = 1;
+const CHIP_SHINE_ALPHA = 0.8;
+/** Sprinkles stay this far from the top edge and from the bottom of the icing. */
+const SPRINKLE_GAP = 8;
 
 /** Honey cake: thin cream layers between sponge, dark honey glaze with long drips. */
 export function drawHoney(ctx: ArtContext, r: Recipe<'honey'>): void {
   const { g, box, colors } = ctx;
   drawBase(ctx);
-  const first = box.top + box.height * ANIM.layer.glazeDepth + 6;
+  const first = box.top + box.height * ANIM.layer.glazeDepth + STRIPE_TOP_GAP;
   for (let i = 0; i < r.stripes; i++) {
-    const y = spread(i, r.stripes, first, box.innerBottom - 10);
+    const y = spread(i, r.stripes, first, box.innerBottom - STRIPE_BOTTOM_GAP);
     fillBand(g, box, y - STRIPE_HALF, y + STRIPE_HALF, colors.accent);
     fillBand(
       g,
@@ -63,23 +89,24 @@ export function drawBrownie(ctx: ArtContext, r: Recipe<'brownie'>): void {
   drawGlaze(g, box, colors.glaze, { depth: CRUST_DEPTH, dripCount: 0 });
 
   const cracks = countFor(box.width, r.cracks);
-  const crustTop = box.innerTop + 4;
+  const crustTop = box.innerTop + CRUST_TOP_GAP;
   for (let i = 0; i < cracks; i++) {
     const x = spread(i, cracks, box.innerLeft + SIDE_MARGIN, box.innerRight - SIDE_MARGIN);
     const lean = i % 2 === 0 ? 1 : -1;
-    stroke(g, CRACK_WIDTH, colors.accent, CRACK_ALPHA, [
-      [x, crustTop],
-      [x + 6 * lean, crustTop + 10],
-      [x - 4 * lean, crustTop + 20],
-      [x + 3 * lean, crustTop + 28],
-    ]);
+    stroke(
+      g,
+      CRACK_WIDTH,
+      colors.accent,
+      CRACK_ALPHA,
+      CRACK_ZIGZAG.map(([dx, dy]) => [x + dx * lean, crustTop + dy] as const),
+    );
   }
 
   const nuts = countFor(box.width, r.nuts);
-  const bodyTop = box.top + box.height * CRUST_DEPTH + 8;
+  const bodyTop = box.top + box.height * CRUST_DEPTH + NUT_TOP_GAP;
   for (let i = 0; i < nuts; i++) {
     const x = box.innerLeft + SIDE_MARGIN + scatter(i, 0.1) * (box.innerW - SIDE_MARGIN * 2);
-    const y = bodyTop + scatter(i, 0.45) * (box.innerBottom - 8 - bodyTop);
+    const y = bodyTop + scatter(i, 0.45) * (box.innerBottom - NUT_BOTTOM_GAP - bodyTop);
     g.fillStyle(outlineOf(colors.detail), 1);
     g.fillEllipse(x, y, NUT_WIDTH + NUT_OUTLINE * 2, NUT_HEIGHT + NUT_OUTLINE * 2);
     g.fillStyle(colors.detail, 1);
@@ -107,11 +134,17 @@ export function drawCrumb(ctx: ArtContext, r: Recipe<'crumb'>): void {
   for (let i = 0; i < chips; i++) {
     const w = CHIP_MIN_WIDTH + CHIP_WIDTH_RANGE * scatter(i, 0.7);
     const x = box.innerLeft + SIDE_MARGIN + scatter(i, 0.1) * (box.innerW - SIDE_MARGIN * 2);
-    const y = box.innerTop + 16 + scatter(i, 0.5) * (box.innerH - 34);
+    const y = box.innerTop + CHIP_TOP_GAP + scatter(i, 0.5) * (box.innerH - CHIP_VERTICAL_MARGIN);
     g.fillStyle(colors.accent, 1);
-    g.fillRoundedRect(x - w / 2, y - CHIP_HEIGHT / 2, w, CHIP_HEIGHT, 3);
-    g.fillStyle(shade(colors.accent, CHIP_LIGHT), 0.8);
-    g.fillRoundedRect(x - w / 2 + 2, y - CHIP_HEIGHT / 2 + 1.5, w / 2, 2.5, 1);
+    g.fillRoundedRect(x - w / 2, y - CHIP_HEIGHT / 2, w, CHIP_HEIGHT, CHIP_CORNER);
+    g.fillStyle(shade(colors.accent, CHIP_LIGHT), CHIP_SHINE_ALPHA);
+    g.fillRoundedRect(
+      x - w / 2 + CHIP_SHINE_INSET_X,
+      y - CHIP_HEIGHT / 2 + CHIP_SHINE_INSET_Y,
+      w / 2,
+      CHIP_SHINE_HEIGHT,
+      CHIP_SHINE_CORNER,
+    );
   }
   drawFinish(ctx);
 }
@@ -128,10 +161,11 @@ export function drawSprinkle(ctx: ArtContext, r: Recipe<'sprinkle'>): void {
 
   const palette = r.sprinkleColors.map(parseHex);
   const count = countFor(box.width, r.sprinkles);
-  const bottom = box.top + box.height * ICING_DEPTH - 8;
+  const bottom = box.top + box.height * ICING_DEPTH - SPRINKLE_GAP;
   for (let i = 0; i < count; i++) {
     const x = box.innerLeft + SIDE_MARGIN + scatter(i, 0.2) * (box.innerW - SIDE_MARGIN * 2);
-    const y = box.innerTop + 8 + scatter(i, 0.6) * (bottom - box.innerTop - 8);
+    const y =
+      box.innerTop + SPRINKLE_GAP + scatter(i, 0.6) * (bottom - box.innerTop - SPRINKLE_GAP);
     const angle = scatter(i, 0.9) * Math.PI;
     const dx = (Math.cos(angle) * SPRINKLE_LENGTH) / 2;
     const dy = (Math.sin(angle) * SPRINKLE_LENGTH) / 2;

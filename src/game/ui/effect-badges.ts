@@ -5,7 +5,7 @@ import { PALETTE } from '../../data/palette';
 import { formatNumber } from '../../i18n';
 import { frameLerp } from '../../util/math';
 import { easeFn } from '../fx/ease';
-import { CREATURE_ICON_KEYS } from './creature-icons';
+import { createCreatureIcon, setCreatureIcon } from './creature-icons';
 import {
   badgeCreature,
   BadgeTracker,
@@ -34,9 +34,7 @@ class BadgeSlot {
   private shownCount = -1;
 
   constructor(scene: Phaser.Scene) {
-    this.icon = scene.add
-      .image(0, 0, CREATURE_ICON_KEYS.honey)
-      .setDisplaySize(badgeSize, badgeSize);
+    this.icon = createCreatureIcon(scene, 0, 0);
     this.counter = createStrokedText(
       scene,
       COUNTER_OFFSET,
@@ -54,9 +52,7 @@ class BadgeSlot {
   show(badge: Readonly<BadgeState>, visual: Readonly<BadgeVisual>): void {
     if (badge.key !== this.key) {
       this.key = badge.key;
-      this.icon
-        .setTexture(CREATURE_ICON_KEYS[badgeCreature(badge.key)])
-        .setDisplaySize(badgeSize, badgeSize);
+      setCreatureIcon(this.icon, badgeCreature(badge.key));
     }
     if (badge.layersLeft !== this.shownCount) {
       this.shownCount = badge.layersLeft;

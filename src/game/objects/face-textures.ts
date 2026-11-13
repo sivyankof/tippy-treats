@@ -25,6 +25,7 @@ export const EYE_TEXTURE: Readonly<Record<EyeKind, string>> = {
   closed: FACE_TEXTURES.eyeClosed,
   happy: FACE_TEXTURES.eyeHappy,
   wide: FACE_TEXTURES.eyeOpen,
+  wink: FACE_TEXTURES.eyeOpen,
 };
 
 export const MOUTH_TEXTURE: Readonly<Record<MouthKind, string>> = {

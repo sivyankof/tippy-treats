@@ -76,20 +76,22 @@ export class FaceParts extends Phaser.GameObjects.Container {
   apply(e: Expression, ctx: PartsContext): void {
     const { recipe, showRest } = ctx;
     const wide = e.eyes === 'wide';
-    const pupilsShown = e.eyes === 'open' || wide;
+    const winking = e.eyes === 'wink';
+    const pupilsShown = e.eyes === 'open' || wide || winking;
     const eyeScale = wide ? ANIM.face.wideEyeScale : 1;
     const pupilScale = wide ? ANIM.face.widePupilScale : 1;
 
     for (const eye of [this.eyeL, this.eyeR])
       eye.setTexture(EYE_TEXTURE[e.eyes]).setScale(eyeScale);
-    for (const pupil of [this.pupilL, this.pupilR]) {
-      pupil.setVisible(pupilsShown).setScale(pupilScale);
-    }
+    // A wink shuts the right eye only.
+    if (winking) this.eyeR.setTexture(EYE_TEXTURE.closed);
+    this.pupilL.setVisible(pupilsShown).setScale(pupilScale);
+    this.pupilR.setVisible(pupilsShown && !winking).setScale(pupilScale);
     this.applyLids(e.lids ? recipe : null, ctx.lidColor);
     for (const brow of [this.browL, this.browR]) brow.setVisible(e.brows);
     this.setBrowPose(recipe, e.ownBrows);
     this.mouth.setTexture(MOUTH_TEXTURE[e.mouth]).setVisible(showRest);
-    this.applyCheeks(recipe, showRest);
+    this.applyCheeks(recipe, showRest, e.puffed === true);
     this.sweat.setVisible(e.sweat && showRest);
     if (!e.sweat) this.sweatMs = 0;
   }
@@ -147,8 +149,8 @@ export class FaceParts extends Phaser.GameObjects.Container {
     }
   }
 
-  private applyCheeks(recipe: FaceRecipe | null, showRest: boolean): void {
-    const scale = recipe?.cheekScale ?? 1;
+  private applyCheeks(recipe: FaceRecipe | null, showRest: boolean, puffed: boolean): void {
+    const scale = (recipe?.cheekScale ?? 1) * (puffed ? ANIM.face.puffCheekScale : 1);
     const spread = recipe?.cheekSpread ?? 1;
     const half = (ANIM.face.cheekSpacing / 2) * spread;
     this.cheekL

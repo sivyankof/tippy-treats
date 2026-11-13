@@ -3,10 +3,25 @@ import type { FaceRecipe, MouthKind } from '../../data/creature-looks';
 import { pickRange } from '../../util/math';
 
 export type { MouthKind };
-export type EyeKind = 'open' | 'closed' | 'happy' | 'wide';
+/** `wink`: the left eye is open, the right one shut. */
+export type EyeKind = 'open' | 'closed' | 'happy' | 'wide' | 'wink';
 export type Mood = 'calm' | 'nervous' | 'scared';
-/** Short-lived overrides, highest priority last: blink < joy < ouch < squint < horror. */
-export type Reaction = 'blink' | 'joy' | 'ouch' | 'squint' | 'horror';
+/**
+ * Short-lived overrides, highest priority last: blink < joy < ouch < the faces of the abilities
+ * (wink, scrunch, gape, blow, puffed, strain) < squint < horror.
+ */
+export type Reaction =
+  | 'blink'
+  | 'joy'
+  | 'ouch'
+  | 'wink'
+  | 'scrunch'
+  | 'gape'
+  | 'blow'
+  | 'puffed'
+  | 'strain'
+  | 'squint'
+  | 'horror';
 
 export interface Expression {
   eyes: EyeKind;
@@ -18,10 +33,24 @@ export interface Expression {
   /** Half-closed eyes of a creature at rest (the recipe says how far). */
   lids: boolean;
   sweat: boolean;
+  /** The cheeks are blown up (a puffed creature); absent means normal. */
+  puffed?: boolean;
 }
 
 /** Reactions from the weakest to the strongest. */
-const REACTION_ORDER: readonly Reaction[] = ['blink', 'joy', 'ouch', 'squint', 'horror'];
+const REACTION_ORDER: readonly Reaction[] = [
+  'blink',
+  'joy',
+  'ouch',
+  'wink',
+  'scrunch',
+  'gape',
+  'blow',
+  'puffed',
+  'strain',
+  'squint',
+  'horror',
+];
 
 function priority(reaction: Reaction): number {
   return REACTION_ORDER.indexOf(reaction);
@@ -88,6 +117,13 @@ function moodExpression(
   }
 }
 
+/** The calm frame of the ability faces: brows as for the layer, no lids, no sweat. */
+function abilityFace(
+  recipe: FaceRecipe | null,
+): Pick<Expression, 'brows' | 'ownBrows' | 'lids' | 'sweat'> {
+  return { ...(recipe ? OWN : PLAIN), sweat: false };
+}
+
 /**
  * What a face shows. An active reaction overrides the mood; `mouthHint` replaces
  * the mouth of a calm face only (worried faces keep their worried mouth). A creature
@@ -110,6 +146,26 @@ export function resolveExpression(
       return { eyes: 'happy', mouth: 'smile', sweat: false, ...(recipe ? OWN : PLAIN) };
     case 'ouch':
       return { ...base, mouth: 'o', brows: true, ownBrows: false, lids: false };
+    case 'wink':
+      return { ...abilityFace(recipe), eyes: 'wink', mouth: 'smile' };
+    case 'scrunch':
+      // Sour: eyes squeezed shut, a wavy mouth, worried brows.
+      return {
+        eyes: 'closed',
+        mouth: 'scared',
+        brows: true,
+        ownBrows: false,
+        lids: false,
+        sweat: false,
+      };
+    case 'gape':
+      return { ...abilityFace(recipe), eyes: 'open', mouth: 'open' };
+    case 'blow':
+      return { ...abilityFace(recipe), eyes: 'open', mouth: 'o' };
+    case 'puffed':
+      return { ...abilityFace(recipe), eyes: 'closed', mouth: 'flat', puffed: true };
+    case 'strain':
+      return { ...abilityFace(recipe), eyes: 'closed', mouth: 'flat' };
     case 'horror':
       return {
         eyes: 'wide',

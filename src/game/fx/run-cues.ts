@@ -1,12 +1,16 @@
 import type { SimEvent, TowerState } from '../../core/tower-sim';
+import { CREATURES } from '../../data/creatures';
+import type { Rarity } from '../../data/rarity';
 import type { HapticKind } from '../../services/haptics/types';
 import { isBigBite } from '../../services/haptics/bite';
 import type { Services } from '../../services';
 import type { FlyingMemo } from './run-fx';
 
-/** A sound of one sim step; `perfect` carries the step of the combo ladder. */
+/** A sound of one sim step; `perfect` carries the step of the combo ladder, `ability` the rarity. */
 export type SoundCue =
-  { kind: 'drop' | 'bite' | 'sneeze' | 'miss' } | { kind: 'perfect'; step: number };
+  | { kind: 'drop' | 'bite' | 'sneeze' | 'miss' | 'shieldPop' }
+  | { kind: 'perfect'; step: number }
+  | { kind: 'ability'; rarity: Rarity };
 
 /** What the player should hear and feel after one sim step. */
 export interface RunCues {
@@ -39,14 +43,18 @@ export function cuesForEvents(
         errorFelt = true;
         break;
       case 'miss':
-        // The shield catches the miss: the run goes on, so it is a thud, not the miss jingle.
+        // The shield catches the miss: the run goes on, so it is a bubble pop, not the miss jingle.
         if (event.shielded) {
-          cues.sounds.push({ kind: 'drop' });
+          cues.sounds.push({ kind: 'shieldPop' });
           cues.haptics.push('medium');
           break;
         }
         cues.sounds.push({ kind: 'miss' });
         if (!errorFelt) cues.haptics.push('error');
+        break;
+      case 'ability':
+        cues.sounds.push({ kind: 'ability', rarity: CREATURES[event.creature].rarity });
+        cues.haptics.push('success');
         break;
       default:
         break;
@@ -77,6 +85,7 @@ function addLanding(
 export function playCues(cues: RunCues, services: Services): void {
   for (const sound of cues.sounds) {
     if (sound.kind === 'perfect') services.audio.perfect(sound.step);
+    else if (sound.kind === 'ability') services.audio.ability(sound.rarity);
     else services.audio[sound.kind]();
   }
   for (const kind of cues.haptics) services.haptics.play(kind);

@@ -43,6 +43,17 @@ export class FloatText {
     }
   }
 
+  /** Shows a short label of the given colour above (x, y); `depth` defaults to the text depth. */
+  showLabel(
+    x: number,
+    y: number,
+    content: string,
+    color: number,
+    depth: number = DEPTH.floatText,
+  ): void {
+    this.spawn(x, y, content, text.fontSize, 1, color, depth);
+  }
+
   update(dtMs: number): void {
     this.pool.update(dtMs, (entry, progress) => {
       const appear = Math.min(1, progress / appearShare);
@@ -62,9 +73,11 @@ export class FloatText {
     fontSize: number,
     scale: number,
     color: number,
+    depth: number = DEPTH.floatText,
   ): void {
     const item = this.pool.take();
     item
+      .setDepth(depth)
       .setText(content)
       .setFontSize(fontSize)
       .setColor(cssColor(color))

@@ -17,10 +17,10 @@ export interface LandedLayer {
 
 /** Particles, the perfect ring and the floating text of a run, driven by intention. */
 export class LandingFx {
-  private readonly particles: Particles;
+  readonly particles: Particles;
   private readonly particleFx: ParticleFx;
-  private readonly ring: PerfectRing;
-  private readonly text: FloatText;
+  readonly ring: PerfectRing;
+  readonly text: FloatText;
 
   constructor(scene: Phaser.Scene) {
     this.particles = new Particles(scene);

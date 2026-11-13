@@ -7,6 +7,7 @@
     "gameOver": "Tower height",
     "playAgain": "Play again",
     "perfect": "Perfect!",
+    "boosted": "Boosted!",
     "combo": "×{n}",
     "newRecord": "New record!",
     "nextCreatureIn": "one=in {n} layer|other=in {n} layers",

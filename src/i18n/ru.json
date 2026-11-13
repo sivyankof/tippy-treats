@@ -7,6 +7,7 @@
     "gameOver": "Высота башни",
     "playAgain": "Ещё раз",
     "perfect": "Идеально!",
+    "boosted": "Усилено!",
     "combo": "×{n}",
     "newRecord": "Новый рекорд!",
     "nextCreatureIn": "one=через {n} слой|few=через {n} слоя|other=через {n} слоёв",

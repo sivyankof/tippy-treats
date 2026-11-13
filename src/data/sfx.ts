@@ -191,6 +191,27 @@ export const SFX = {
     } satisfies Record<Rarity, AbilityRecipe>,
   },
 
+  /** The brownie's chocolate bubble bursts: a short rising blip and a bright pop of noise. */
+  shieldPop: {
+    blip: {
+      wave: 'sine',
+      freq: 280,
+      endFreq: 940,
+      attack: 0.003,
+      duration: 0.1,
+      gain: 0.45,
+    } satisfies ToneRecipe,
+    pop: {
+      filter: 'highpass',
+      cutoff: 2600,
+      endCutoff: 900,
+      q: 0.6,
+      attack: 0.002,
+      duration: 0.09,
+      gain: 0.35,
+    } satisfies NoiseRecipe,
+  },
+
   /** "Чих": a comic squeak sliding down. */
   sneeze: {
     squeak: {

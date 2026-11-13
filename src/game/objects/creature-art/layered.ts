@@ -2,6 +2,7 @@ import { ANIM } from '../../../data/anim';
 import { parseHex, shade } from '../../../util/color';
 import { PALETTE } from '../../../data/palette';
 import { drawGlaze, drawGloss, drawShadow } from '../layer-draw';
+import { twinsSeam } from './twins-seam';
 import {
   countFor,
   drawBase,
@@ -161,20 +162,23 @@ export function drawFrosty(ctx: ArtContext, r: Recipe<'frosty'>): void {
   drawFinish(ctx);
 }
 
-/** Macaron: lilac top shell, cream strip, darker bottom shell, ruffled "skirts" on both shells. */
+/**
+ * Macaron: a lilac top shell, a darker bottom shell and a cream strip in the middle. Along the
+ * strip both shells have "feet": a thin rough band of small bumps.
+ */
 export function drawTwins(ctx: ArtContext, r: Recipe<'twins'>): void {
   const { g, box, colors } = ctx;
   const { outline } = ANIM.layer;
   drawBase(ctx);
-  const seamTop = box.innerTop + box.innerH * r.topShare;
-  const seamBottom = seamTop + box.innerH * r.creamShare;
-  fillBand(g, box, seamTop, seamBottom, colors.accent);
-  fillBand(g, box, seamBottom, box.innerBottom, colors.glaze);
+  const seam = twinsSeam(box, r);
+  fillBand(g, box, seam.bottom, box.innerBottom, colors.glaze);
+  // The feet sit on the seam; the cream drawn next hides their halves on its side.
   const x0 = box.innerLeft + box.innerRadius;
   const x1 = box.innerRight - box.innerRadius;
-  const step = r.skirtRadius * 2;
-  scallops(g, x0, x1, seamTop, r.skirtRadius, step, colors.detail, outline);
-  scallops(g, x0, x1, seamBottom, r.skirtRadius, step, shade(colors.glaze, 0.1), outline);
+  const step = r.feetRadius * r.feetStep;
+  scallops(g, x0, x1, seam.top, r.feetRadius, step, shade(colors.body, r.feetShade), outline);
+  scallops(g, x0, x1, seam.bottom, r.feetRadius, step, shade(colors.glaze, r.feetShade), outline);
+  fillBand(g, box, seam.top, seam.bottom, colors.accent);
   drawFinish(ctx);
 }
 

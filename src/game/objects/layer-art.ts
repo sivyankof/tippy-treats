@@ -7,6 +7,7 @@ import { BALANCE } from '../../data/balance';
 import { LAYER_COLORS, type LayerColors } from '../../data/palette';
 import { bakeTexture } from '../ui/bake-texture';
 import { drawCreatureLayer } from './creature-art';
+import { creatureColors } from './creature-art/primitives';
 import {
   drawBody,
   drawGloss,
@@ -16,6 +17,9 @@ import {
   layerBox,
   SHADOW_DROP,
 } from './layer-draw';
+
+/** The two colours a crumb or a glaze drip of a layer takes. */
+export type CakeColors = Pick<LayerColors, 'cake' | 'glaze'>;
 
 /** Empty pixels around the art so antialiased edges are not cut. */
 const SIDE_PAD = 2;
@@ -31,6 +35,18 @@ export function colorIndexFor(layerIndex: number): number {
 /** Colours of the layers with this colour-table index (see `colorIndexFor`). */
 export function layerColors(colorIndex: number): LayerColors {
   return LAYER_COLORS[colorIndex] ?? LAYER_COLORS[0]!;
+}
+
+/**
+ * Cake and glaze colours of the layer with this 1-based number: the creature's own sponge and
+ * glaze for a creature layer, the plain colour table otherwise. Crumbs and drips take them.
+ */
+export function cakeColorsFor(creature: CreatureId | null, layerIndex: number): CakeColors {
+  if (creature) {
+    const { sponge, glaze } = creatureColors(creature);
+    return { cake: sponge, glaze };
+  }
+  return layerColors(colorIndexFor(layerIndex));
 }
 
 /** Whole-pixel width the art is baked at. */

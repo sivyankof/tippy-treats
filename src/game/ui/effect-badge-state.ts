@@ -74,7 +74,7 @@ export class BadgeTracker {
   }
 
   private note(key: BadgeKey, layersLeft: number): void {
-    const badge = this.items.find((b) => b.key === key);
+    const badge = this.findBadge(key);
     if (!badge) {
       this.items.push({
         key,
@@ -94,6 +94,13 @@ export class BadgeTracker {
       badge.layersLeft = layersLeft;
       badge.counterAgeMs = 0;
     }
+  }
+
+  private findBadge(key: BadgeKey): BadgeState | undefined {
+    for (const badge of this.items) {
+      if (badge.key === key) return badge;
+    }
+    return undefined;
   }
 
   private setPhase(badge: BadgeState, phase: BadgePhase): void {

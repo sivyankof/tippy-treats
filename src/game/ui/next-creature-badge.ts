@@ -4,16 +4,11 @@ import type { TeamSlot } from '../../core/sim-types';
 import { ANIM } from '../../data/anim';
 import { HUD_LAYOUT } from '../../data/hud-layout';
 import { PALETTE } from '../../data/palette';
-import { t, tn } from '../../i18n';
-import { CREATURE_ICON_KEYS } from './creature-icons';
+import { createCreatureIcon, setCreatureIcon } from './creature-icons';
+import { nextCreatureLabel } from './next-creature-label';
 import { createStrokedText } from './outlined-text';
 
 const { badgeSize, badgeGap, badgeMargin, badgeRowY, nextFont, nextStroke } = HUD_LAYOUT;
-
-/** The words of the indicator: "now" on the creature layer, "in N layers" before it. */
-export function nextCreatureLabel(next: Pick<NextCreature, 'inLayers'>): string {
-  return next.inLayers === 0 ? t('run.nextCreatureNow') : tn('run.nextCreatureIn', next.inLayers);
-}
 
 /**
  * "Next creature" at the right of the badge row: the creature icon and how many layers away
@@ -30,10 +25,7 @@ export class NextCreatureBadge {
   private visible = false;
 
   constructor(private readonly scene: Phaser.Scene) {
-    this.icon = scene.add
-      .image(0, badgeRowY, CREATURE_ICON_KEYS.honey)
-      .setDisplaySize(badgeSize, badgeSize)
-      .setVisible(false);
+    this.icon = createCreatureIcon(scene, 0, badgeRowY).setVisible(false);
     this.label = createStrokedText(
       scene,
       0,
@@ -79,7 +71,7 @@ export class NextCreatureBadge {
     const textChanged = creatureChanged || next.inLayers !== this.shown?.inLayers;
     if (!textChanged) return;
     if (creatureChanged) {
-      this.icon.setTexture(CREATURE_ICON_KEYS[next.id]).setDisplaySize(badgeSize, badgeSize);
+      setCreatureIcon(this.icon, next.id);
     }
     this.label.setText(nextCreatureLabel(next));
     this.place();

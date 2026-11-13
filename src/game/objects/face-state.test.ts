@@ -392,3 +392,60 @@ describe('FaceState blinking', () => {
     expect(face.reaction()).toBe('blink');
   });
 });
+
+describe('ability reactions', () => {
+  const honey = CREATURE_LOOKS.honey.face;
+
+  it('wink shuts one eye and smiles, whatever the mood', () => {
+    for (const mood of ['calm', 'nervous', 'scared'] as const) {
+      const e = resolveExpression(mood, 'wink', undefined, honey);
+      expect(e.eyes).toBe('wink');
+      expect(e.mouth).toBe('smile');
+      expect(e.sweat).toBe(false);
+    }
+  });
+
+  it('scrunch squeezes the eyes and draws a wavy mouth with worried brows', () => {
+    const e = resolveExpression('calm', 'scrunch', undefined, honey);
+    expect(e).toMatchObject({ eyes: 'closed', mouth: 'scared', brows: true, ownBrows: false });
+  });
+
+  it('gape opens the mouth wide and blow rounds it', () => {
+    expect(resolveExpression('calm', 'gape', undefined, honey)).toMatchObject({
+      eyes: 'open',
+      mouth: 'open',
+    });
+    expect(resolveExpression('calm', 'blow', undefined, honey)).toMatchObject({
+      eyes: 'open',
+      mouth: 'o',
+    });
+  });
+
+  it('puffed blows the cheeks up, strain does not', () => {
+    expect(resolveExpression('calm', 'puffed', undefined, honey).puffed).toBe(true);
+    expect(resolveExpression('calm', 'strain', undefined, honey).puffed).toBeUndefined();
+    expect(resolveExpression('calm', null, undefined, honey).puffed).toBeUndefined();
+  });
+
+  it('keeps the creature brows for the ability faces and none on a plain layer', () => {
+    expect(resolveExpression('calm', 'gape', undefined, honey).ownBrows).toBe(true);
+    expect(resolveExpression('calm', 'gape').brows).toBe(false);
+  });
+
+  it('ranks above joy and ouch but below squint and horror', () => {
+    const face = new FaceState(() => 0.5);
+    const order: Reaction[] = ['joy', 'ouch', 'wink', 'strain', 'squint', 'horror'];
+    for (let i = 1; i < order.length; i++) {
+      const lower = order[i - 1] as Reaction;
+      const higher = order[i] as Reaction;
+      face.reset();
+      face.react(higher, 1000);
+      face.react(lower, 1000);
+      expect(face.reaction()).toBe(higher);
+      face.reset();
+      face.react(lower, 1000);
+      face.react(higher, 1000);
+      expect(face.reaction()).toBe(higher);
+    }
+  });
+});

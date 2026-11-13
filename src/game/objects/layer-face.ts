@@ -21,7 +21,8 @@ function sameExpression(a: Expression | null, b: Expression): boolean {
     a.brows === b.brows &&
     a.ownBrows === b.ownBrows &&
     a.lids === b.lids &&
-    a.sweat === b.sweat
+    a.sweat === b.sweat &&
+    a.puffed === b.puffed
   );
 }
 
@@ -54,6 +55,8 @@ export class LayerFace extends Phaser.GameObjects.Container {
   private lookX = 0;
   private lookY = 0;
   private driftX = 0;
+  /** The two faces of a pair rise by this much (the top shell of the twins lifting). */
+  private pairLift = 0;
 
   constructor(scene: Phaser.Scene) {
     super(scene, 0, ANIM.face.centerY);
@@ -88,19 +91,31 @@ export class LayerFace extends Phaser.GameObjects.Container {
     const { scale, showRest } = faceLayout(width, this.recipe);
     this.setScale(scale);
     this.showRest = showRest;
+    this.placeFaces();
+    this.applyExpression();
+    this.placePupils();
+    return this;
+  }
+
+  /** The faces of a pair move `dy` pixels up together; no effect on a single face. */
+  setPairLift(dy: number): this {
+    if (dy === this.pairLift) return this;
+    this.pairLift = dy;
+    this.placeFaces();
+    return this;
+  }
+
+  private placeFaces(): void {
     const pair = this.recipe?.pair;
     if (pair) {
-      this.mainFace.setPosition(-pair.spread, 0).setScale(pair.scale);
+      this.mainFace.setPosition(-pair.spread, -this.pairLift).setScale(pair.scale);
       this.mainFace.setGaze(pair.gaze);
-      this.pairFace?.setPosition(pair.spread, 0).setScale(pair.scale);
+      this.pairFace?.setPosition(pair.spread, -this.pairLift).setScale(pair.scale);
       this.pairFace?.setGaze(-pair.gaze);
     } else {
       this.mainFace.setPosition(0, 0).setScale(1);
       this.mainFace.setGaze(0);
     }
-    this.applyExpression();
-    this.placePupils();
-    return this;
   }
 
   setMood(mood: Mood): this {
@@ -167,6 +182,7 @@ export class LayerFace extends Phaser.GameObjects.Container {
     this.mood = 'calm';
     this.mouthHint = undefined;
     this.targetX = this.targetY = this.lookX = this.lookY = this.driftX = 0;
+    this.setPairLift(0);
     this.mainFace.resetSweat();
     this.pairFace?.resetSweat();
     this.expression = null;

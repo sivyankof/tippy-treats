@@ -4,6 +4,7 @@ import { readDebugParams } from '../../util/debug-params';
 import { services } from '../../services';
 import { bindAudioLifecycle } from '../audio-lifecycle';
 import { bindSystemReducedMotion, effectsMode } from '../effects-mode';
+import { createAbilityTextures } from '../fx/abilities/ability-textures';
 import { createFxTextures } from '../fx/fx-textures';
 import { FACE_TEXTURES } from '../objects/face-textures';
 import { loadSvgTextures } from '../objects/svg-textures';
@@ -23,6 +24,7 @@ export class BootScene extends Phaser.Scene {
 
   create(): void {
     createFxTextures(this);
+    createAbilityTextures(this);
     bindAudioLifecycle(this.game, services.audio);
     bindSystemReducedMotion(effectsMode);
     if (readDebugParams().lineup) {

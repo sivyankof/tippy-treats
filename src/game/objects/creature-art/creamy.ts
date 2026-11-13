@@ -16,6 +16,21 @@ import {
 } from './primitives';
 
 const SIDE_MARGIN = 16;
+/** Marshmallow puffs: room per puff as a multiple of its radius. */
+const PUFF_ROOM = 2.2;
+/** Grooves keep this far from the top and bottom edge (both together: 2x). */
+const GROOVE_GAP = 10;
+/** Ghost swirls: gaps to the edges, the sideways swing of the curl and its vertical reach. */
+const SWIRL_BOTTOM_GAP = 8;
+const SWIRL_TOP_GAP = 10;
+const SWIRL_SWING_FAR = 9;
+const SWIRL_SWING_NEAR = 4;
+const SWIRL_MID_SHIFT = 8;
+/** The shine line of the caramel sits this far under the top edge. */
+const CARAMEL_SHINE_GAP = 3;
+/** Lemon ribs start this far above the cream edge and stop this far above the bottom edge. */
+const RIB_TOP_OVERLAP = 6;
+const RIB_BOTTOM_GAP = 4;
 const PUFF_MIN_SCALE = 0.8;
 const PUFF_ICING_DEPTH = 0.3;
 const GROOVE_WIDTH = 4;
@@ -44,7 +59,7 @@ export function drawPuff(ctx: ArtContext, r: Recipe<'puff'>): void {
   const { g, box, colors } = ctx;
   const { outline } = ANIM.layer;
   const count = box.width >= r.wideFrom ? r.puffsWide : r.puffsNarrow;
-  const maxRadius = Math.min(r.puffRadius, box.width / (count * 2.2));
+  const maxRadius = Math.min(r.puffRadius, box.width / (count * PUFF_ROOM));
   const y = box.top - r.topPad + maxRadius + outline;
   drawShadow(g, box);
   for (let i = 0; i < count; i++) {
@@ -63,9 +78,9 @@ export function drawPuff(ctx: ArtContext, r: Recipe<'puff'>): void {
     g.fillStyle(colors.accent, GROOVE_ALPHA);
     g.fillRoundedRect(
       x - GROOVE_WIDTH / 2,
-      box.innerTop + 10,
+      box.innerTop + GROOVE_GAP,
       GROOVE_WIDTH,
-      box.innerH - 20,
+      box.innerH - GROOVE_GAP * 2,
       GROOVE_WIDTH / 2,
     );
   }
@@ -105,15 +120,15 @@ export function drawGhost(ctx: ArtContext, r: Recipe<'ghost'>): void {
   drawGlaze(g, box, colors.glaze, { depth: MERINGUE_CAP_DEPTH, dripCount: 0 });
 
   const swirls = Math.max(1, Math.floor(box.innerW / r.swirlStep));
-  const bottom = box.innerBottom - 8;
-  const top = box.innerTop + 10;
+  const bottom = box.innerBottom - SWIRL_BOTTOM_GAP;
+  const top = box.innerTop + SWIRL_TOP_GAP;
   for (let i = 0; i < swirls; i++) {
     const x = spread(i, swirls, box.innerLeft + SIDE_MARGIN, box.innerRight - SIDE_MARGIN);
     stroke(g, SWIRL_WIDTH, colors.accent, SWIRL_ALPHA, [
-      [x - 9, bottom],
-      [x + 4, (bottom + top) / 2 + 8],
-      [x - 4, (bottom + top) / 2 - 8],
-      [x + 9, top],
+      [x - SWIRL_SWING_FAR, bottom],
+      [x + SWIRL_SWING_NEAR, (bottom + top) / 2 + SWIRL_MID_SHIFT],
+      [x - SWIRL_SWING_NEAR, (bottom + top) / 2 - SWIRL_MID_SHIFT],
+      [x + SWIRL_SWING_FAR, top],
     ]);
   }
   drawFinish(ctx);
@@ -131,8 +146,8 @@ export function drawCaramel(ctx: ArtContext, r: Recipe<'caramel'>): void {
   fillBand(
     g,
     box,
-    box.innerTop + 3,
-    box.innerTop + 3 + CARAMEL_SHINE_DEPTH,
+    box.innerTop + CARAMEL_SHINE_GAP,
+    box.innerTop + CARAMEL_SHINE_GAP + CARAMEL_SHINE_DEPTH,
     colors.detail,
     CARAMEL_SHINE_ALPHA,
   );
@@ -171,8 +186,8 @@ export function drawLemon(ctx: ArtContext, r: Recipe<'lemon'>): void {
   for (let i = 0; i < ribs; i++) {
     const x = spread(i, ribs, box.innerLeft + SIDE_MARGIN / 2, box.innerRight - SIDE_MARGIN / 2);
     stroke(g, RIB_WIDTH, colors.detail, RIB_ALPHA, [
-      [x, box.innerTop + box.height * r.creamShare - 6],
-      [x, box.innerBottom - 4],
+      [x, box.innerTop + box.height * r.creamShare - RIB_TOP_OVERLAP],
+      [x, box.innerBottom - RIB_BOTTOM_GAP],
     ]);
   }
   drawGlaze(g, box, colors.glaze, {

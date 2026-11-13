@@ -8,6 +8,7 @@ import type { CreatureId } from '../../data/creatures';
 import { createGlossBand, sweepGloss } from '../fx/gloss-sweep';
 import { creatureColors } from './creature-art/primitives';
 import { LayerFace } from './layer-face';
+import { LayerRig } from './layer-rig';
 import {
   acquireLayerArt,
   artAlpha,
@@ -34,6 +35,10 @@ export class LayerView extends Phaser.GameObjects.Container {
   private readonly art: Phaser.GameObjects.Image;
   private readonly glossSweep: Phaser.GameObjects.Image;
   private readonly face: LayerFace;
+  /** Extra animations for the abilities: flash, hop, fade, split. */
+  readonly rig: LayerRig;
+  /** Sideways offset the tower adds to the position (a spring landing slides in from it). */
+  slideX = 0;
   private artKey: string | null = null;
   private drawnColor = -1;
   private drawnWidth = -1;
@@ -48,12 +53,15 @@ export class LayerView extends Phaser.GameObjects.Container {
     this.art = new Phaser.GameObjects.Image(scene, 0, 0, '__DEFAULT').setVisible(false);
     this.glossSweep = createGlossBand(scene, BALANCE.layer.height - ANIM.layer.outline * 2);
     this.face = new LayerFace(scene);
+    this.rig = new LayerRig(scene, this.art, this.face);
     this.content = new Phaser.GameObjects.Container(scene, 0, -half, [
       this.art,
+      ...this.rig.parts,
       this.glossSweep,
       this.face,
     ]);
     this.squashRoot = new Phaser.GameObjects.Container(scene, 0, half, [this.content]);
+    this.rig.attach(this.content, this.squashRoot);
     this.add(this.squashRoot);
     scene.add.existing(this);
   }
@@ -70,9 +78,10 @@ export class LayerView extends Phaser.GameObjects.Container {
   setLook(plan: LayerPlan): this {
     const creature = this.creatureOf(plan);
     if (creature !== this.creatureOf(this.lookPlan)) {
+      const recipe = creature ? faceRecipe(creature) : null;
       this.face.setRecipe(
-        creature ? faceRecipe(creature) : null,
-        creature ? creatureColors(creature).body : undefined,
+        recipe,
+        creature && recipe ? creatureColors(creature)[recipe.lidTint] : undefined,
       );
     }
     this.lookPlan.kind = plan.kind;
@@ -156,14 +165,9 @@ export class LayerView extends Phaser.GameObjects.Container {
     scaleX: number = ANIM.land.scaleX,
     scaleY: number = ANIM.land.scaleY,
     delayMs = 0,
+    durationMs: number = ANIM.land.durationMs,
   ): void {
-    this.springBack(
-      this.squashRoot,
-      { scaleX, scaleY },
-      ANIM.land.durationMs,
-      ANIM.land.ease,
-      delayMs,
-    );
+    this.springBack(this.squashRoot, { scaleX, scaleY }, durationMs, ANIM.land.ease, delayMs);
   }
 
   /** Quick vertical squash (a sneeze) that springs back. */
@@ -197,9 +201,18 @@ export class LayerView extends Phaser.GameObjects.Container {
     sweepGloss(this.glossSweep, travel, glossSweepMs, glossSweepAlpha);
   }
 
+  /** The layer slides in from `fromX` pixels off its place and settles with a spring. */
+  playSlide(fromX: number, durationMs: number, ease: string): void {
+    this.scene.tweens.killTweensOf(this);
+    this.slideX = fromX;
+    this.scene.tweens.add({ targets: this, slideX: 0, duration: durationMs, ease });
+  }
+
   /** Stops every animation of this layer and restores its shape, for reuse from a pool. */
   resetAnim(): this {
     this.scene.tweens.killTweensOf([this, this.squashRoot, this.content, this.glossSweep]);
+    this.rig.reset();
+    this.slideX = 0;
     this.setScale(1).setAngle(0).setAlpha(1);
     this.squashRoot.setScale(1);
     this.content.setScale(1);
@@ -210,6 +223,7 @@ export class LayerView extends Phaser.GameObjects.Container {
 
   /** Advances the face (blinks, reactions, pupils); a hidden face stands still. */
   tick(dtMs: number): void {
+    this.rig.apply();
     if (this.face.visible) this.face.tick(dtMs);
   }
 

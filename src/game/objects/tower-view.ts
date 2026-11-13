@@ -4,19 +4,14 @@ import type { LayerPlan, PlacedLayer, TowerState } from '../../core/tower-sim';
 import { wobbleOffset } from '../../core/wobble';
 import { ANIM } from '../../data/anim';
 import { BALANCE } from '../../data/balance';
-import { KITCHEN_COLORS } from '../../data/palette';
-import { frameLerp } from '../../util/math';
 import { DEPTH } from '../depth';
 import { effectsMode } from '../effects-mode';
 import { waveSquash } from '../fx/anim-curves';
-import { bakeTexture } from '../ui/bake-texture';
 import { moodForWobble, type MouthKind, type Reaction } from './face-state';
 import { LayerView } from './layer-view';
+import { SwayHold } from './sway-hold';
+import { createTray } from './tray';
 
-const TRAY_TEXTURE = 'tray';
-const TRAY_SHADOW_WIDTH_RATIO = 1.04;
-/** The frozen sway counts as caught up with the simulation below this share. */
-const HOLD_EPSILON = 0.01;
 const PLAIN_LOOK: LayerPlan = { kind: 'plain' };
 
 /** Where a placed layer is drawn: sway included. */
@@ -60,12 +55,8 @@ export class TowerView {
     look: PLAIN_LOOK,
   };
 
-  /** Sway shown last frame, per layer: the pose the tower holds while it is frozen. */
-  private readonly shownOffsets = new Map<number, number>();
-  private heldOffsets: Map<number, number> | null = null;
-  private holdMs = 0;
-  /** 1 while frozen, then fades to 0 as the sway catches up with the simulation. */
-  private holdBlend = 0;
+  /** The sway the tower holds during a freeze. */
+  private readonly sway = new SwayHold();
 
   private lookTarget: { x: number; y: number } | null = null;
   private topMouthHint: MouthKind | undefined;
@@ -75,7 +66,7 @@ export class TowerView {
     /** World y of the tray surface. */
     readonly trayTopY: number,
   ) {
-    this.drawTray();
+    createTray(scene, trayTopY);
   }
 
   /** World centre y of the layer with the given 0-based index. */
@@ -104,6 +95,11 @@ export class TowerView {
   /** The view of the top layer, if it is drawn. */
   topView(): LayerView | null {
     return this.active.get(this.layerCount - 1) ?? null;
+  }
+
+  /** The view of a placed layer (0-based index), if it is drawn. */
+  viewAt(index: number): LayerView | null {
+    return this.active.get(index) ?? null;
   }
 
   /** Remembers which edge of the layer (0-based) was bitten; `null` for an intact one. */
@@ -139,16 +135,16 @@ export class TowerView {
       if (index < first || index >= count) this.release(index, view);
     }
 
-    this.shownOffsets.clear();
+    this.sway.beginFrame();
     for (let i = Math.max(first, 0); i < count; i++) {
       const layer = state.layers[i];
       if (!layer) continue;
       const view = this.active.get(i) ?? this.acquire(i);
       const offset = this.swayOffset(state, i);
-      this.shownOffsets.set(i, offset);
+      this.sway.note(i, offset);
       const pose = this.fillPose(this.scratchPose, layer, i, offset);
       view.setLook(pose.look).setLayer(i + 1, pose.width, pose.cut);
-      view.setPosition(pose.x, pose.y).setAngle(pose.angle);
+      view.setPosition(pose.x + view.slideX, pose.y).setAngle(pose.angle);
       if (i === count - 1) this.updateTopSpan(pose.x, pose.width);
     }
     if (count === 0) this.updateTopSpan(BALANCE.tray.centerX, BALANCE.tray.width);
@@ -158,13 +154,13 @@ export class TowerView {
   tick(dtMs: number): void {
     const state = this.state;
     if (!state) return;
-    this.advanceFreeze(dtMs);
+    this.sway.advance(dtMs);
     const mood = moodForWobble(state.wobble);
     const top = this.layerCount - 1;
     const { swayEyeLag, swayEyeMax } = ANIM.face;
     for (const [index, view] of this.active) {
       const face = view.faceView;
-      const drift = mood === 'calm' ? 0 : -(this.shownOffsets.get(index) ?? 0) * swayEyeLag;
+      const drift = mood === 'calm' ? 0 : -this.sway.shownOffset(index) * swayEyeLag;
       face.setMood(mood);
       face.setMouthHint(index === top ? this.topMouthHint : undefined);
       face.setPupilDrift(Math.max(-swayEyeMax, Math.min(swayEyeMax, drift)));
@@ -214,10 +210,8 @@ export class TowerView {
    * The sway stands still for `ms` (a sneeze), using the pose of the last frame.
    * Call it before the `sync` that follows the sim step that caused it.
    */
-  freeze(ms: number): void {
-    this.heldOffsets = new Map(this.shownOffsets);
-    this.holdMs = ms;
-    this.holdBlend = 1;
+  freeze(ms: number, catchUpLerp: number = ANIM.sneeze.catchUpLerp): void {
+    this.sway.freeze(ms, catchUpLerp);
   }
 
   /** Stops drawing the layers from this 0-based index up. */
@@ -227,11 +221,7 @@ export class TowerView {
 
   private swayOffset(state: Readonly<TowerState>, index: number): number {
     const live = wobbleOffset(state.wobble, state.wobblePhase, state.layers.length - 1 - index);
-    if (this.holdBlend <= 0 || !this.heldOffsets) return live;
-    // A layer that landed in the frozen step has no held pose of its own: it rides on the layer below.
-    const held = this.heldOffsets.get(index) ?? this.heldOffsets.get(index - 1);
-    if (held === undefined) return live;
-    return live + (held - live) * this.holdBlend;
+    return this.sway.apply(index, live);
   }
 
   /** Fills `out` with where a placed layer is drawn; returns it. */
@@ -251,19 +241,6 @@ export class TowerView {
     this.span.right = x + width / 2;
   }
 
-  private advanceFreeze(dtMs: number): void {
-    if (this.holdMs > 0) {
-      this.holdMs -= dtMs;
-      return;
-    }
-    if (this.holdBlend <= 0) return;
-    this.holdBlend *= 1 - frameLerp(ANIM.sneeze.catchUpLerp, dtMs);
-    if (this.holdBlend < HOLD_EPSILON) {
-      this.holdBlend = 0;
-      this.heldOffsets = null;
-    }
-  }
-
   private acquire(index: number): LayerView {
     const view = this.pool.pop() ?? new LayerView(this.scene);
     // The depth follows the index, so a view acquired for a lower layer (during the collapse)
@@ -281,31 +258,5 @@ export class TowerView {
     view.resetAnim().setVisible(false).setActive(false);
     this.active.delete(index);
     this.pool.push(view);
-  }
-
-  private drawTray(): void {
-    const { thickness, radius, outline, shadowHeight, shadowAlpha } = ANIM.tray;
-    const w = BALANCE.tray.width;
-    const texW = 2 * Math.ceil((w * TRAY_SHADOW_WIDTH_RATIO) / 2);
-    const texH = thickness + shadowHeight;
-    const left = (texW - w) / 2;
-    bakeTexture(this.scene, TRAY_TEXTURE, texW, texH, (g) => {
-      g.fillStyle(KITCHEN_COLORS.trayShadow, shadowAlpha);
-      g.fillEllipse(texW / 2, thickness + shadowHeight / 3, texW, shadowHeight);
-      g.fillStyle(KITCHEN_COLORS.trayShadow, 1);
-      g.fillRoundedRect(left, 0, w, thickness, radius);
-      g.fillStyle(KITCHEN_COLORS.tray, 1);
-      g.fillRoundedRect(
-        left + outline / 2,
-        outline / 2,
-        w - outline,
-        thickness - outline * 1.5,
-        radius - outline / 2,
-      );
-    });
-    this.scene.add
-      .image(BALANCE.tray.centerX, this.trayTopY, TRAY_TEXTURE)
-      .setOrigin(0.5, 0)
-      .setDepth(DEPTH.tray);
   }
 }

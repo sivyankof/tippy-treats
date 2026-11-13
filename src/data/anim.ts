@@ -77,6 +77,8 @@ export const ANIM = {
     sweatY: -16,
     sweatSlide: 14,
     sweatPeriodMs: 900,
+    /** Blown-up cheeks of a puffed creature: blush scale multiplier. */
+    puffCheekScale: 1.7,
     /** Eyes of a horrified face grow, pupils shrink. */
     wideEyeScale: 1.2,
     widePupilScale: 0.6,
@@ -207,8 +209,8 @@ export const ANIM = {
       widthRatio: 1.1,
       heightRatio: 0.4,
       ease: 'Quad.easeOut',
-      /** Cap of rings alive at once. */
-      maxLive: 4,
+      /** Cap of rings alive at once (a perfect ability landing shows three). */
+      maxLive: 6,
     },
     /** White band running over the layer from left to right. */
     glossSweepMs: 260,

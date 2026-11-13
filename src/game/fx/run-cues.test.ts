@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import type { SimEvent } from '../../core/tower-sim';
+import { CREATURE_IDS, CREATURES, type CreatureId } from '../../data/creatures';
 import { HAPTICS } from '../../data/haptics';
 import type { Services } from '../../services';
 import { cuesForEvents, playCues } from './run-cues';
@@ -60,12 +61,28 @@ describe('cuesForEvents', () => {
     expect(cues.haptics).toEqual(['light', 'error']);
   });
 
-  it('treats a shielded miss as a thud without the miss jingle or the error haptic', () => {
+  it('treats a shielded miss as a bubble pop without the miss jingle or the error haptic', () => {
     const shielded: SimEvent = { type: 'miss', shielded: true };
     expect(cuesForEvents([shielded], { combo: 0 }, memo)).toEqual({
-      sounds: [{ kind: 'drop' }],
+      sounds: [{ kind: 'shieldPop' }],
       haptics: ['medium'],
     });
+  });
+
+  it('plays the sound of the creature rarity and a success haptic for an ability', () => {
+    const ability = (creature: CreatureId): SimEvent => ({
+      type: 'ability',
+      creature,
+      boosted: false,
+      payload: { layers: 3, value: 1 },
+    });
+    expect(cuesForEvents([ability('honey')], { combo: 0 }, memo)).toEqual({
+      sounds: [{ kind: 'ability', rarity: CREATURES.honey.rarity }],
+      haptics: ['success'],
+    });
+    const rarities = CREATURE_IDS.map((id) => cuesForEvents([ability(id)], { combo: 0 }, memo));
+    expect(rarities.every((c) => c.sounds.length === 1 && c.haptics[0] === 'success')).toBe(true);
+    expect(new Set(rarities.map((c) => JSON.stringify(c.sounds))).size).toBeGreaterThan(1);
   });
 
   it('gives an error haptic for a plain miss', () => {
@@ -91,12 +108,20 @@ describe('playCues', () => {
       sneeze: vi.fn(),
       miss: vi.fn(),
       perfect: vi.fn(),
+      ability: vi.fn(),
+      shieldPop: vi.fn(),
     };
     const haptics = { play: vi.fn() };
     const services = { audio, haptics } as unknown as Services;
     playCues(
       {
-        sounds: [{ kind: 'drop' }, { kind: 'bite' }, { kind: 'perfect', step: 4 }],
+        sounds: [
+          { kind: 'drop' },
+          { kind: 'bite' },
+          { kind: 'perfect', step: 4 },
+          { kind: 'ability', rarity: 'epic' },
+          { kind: 'shieldPop' },
+        ],
         haptics: ['heavy'],
       },
       services,
@@ -104,6 +129,8 @@ describe('playCues', () => {
     expect(audio.drop).toHaveBeenCalledOnce();
     expect(audio.bite).toHaveBeenCalledOnce();
     expect(audio.perfect).toHaveBeenCalledWith(4);
+    expect(audio.ability).toHaveBeenCalledWith('epic');
+    expect(audio.shieldPop).toHaveBeenCalledOnce();
     expect(haptics.play).toHaveBeenCalledWith('heavy');
   });
 });

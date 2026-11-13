@@ -105,3 +105,14 @@ export function comboTextScale(combo: number): number {
   const { comboScaleStep, maxScale } = ANIM.perfect.text;
   return Math.min(maxScale, 1 + Math.max(0, combo - 1) * comboScaleStep);
 }
+
+/** A combined widening never starts narrower than this share of the layer. */
+const MIN_WIDEN_SCALE = 0.1;
+
+/**
+ * Start scale of a widening that begins while the layer is already widening (`current` is its
+ * scale now): both gaps to 1 add up, so neither animation is swallowed. Never below `floor`.
+ */
+export function combineWiden(from: number, current: number, floor = MIN_WIDEN_SCALE): number {
+  return Math.max(floor, from + current - 1);
+}

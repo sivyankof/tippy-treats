@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { ANIM } from '../../data/anim';
 import {
   bump,
+  combineWiden,
   collapseDelayMs,
   collapseDurationMs,
   comboTextScale,
@@ -182,5 +183,21 @@ describe('comboTextScale', () => {
 
   it('never exceeds the cap', () => {
     expect(comboTextScale(1000)).toBe(ANIM.perfect.text.maxScale);
+  });
+});
+
+describe('combineWiden', () => {
+  it('adds the gaps of two widenings that start in the same step', () => {
+    expect(combineWiden(0.9, 0.95)).toBeCloseTo(0.85, 10);
+  });
+
+  it('keeps a single widening as it is', () => {
+    expect(combineWiden(0.8, 1)).toBeCloseTo(0.8, 10);
+    expect(combineWiden(1, 0.8)).toBeCloseTo(0.8, 10);
+  });
+
+  it('never starts narrower than the floor', () => {
+    expect(combineWiden(0.2, 0.2)).toBe(0.1);
+    expect(combineWiden(0.2, 0.2, 0.3)).toBe(0.3);
   });
 });

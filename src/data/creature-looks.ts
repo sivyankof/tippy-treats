@@ -43,6 +43,8 @@ export interface FaceRecipe {
   offsetY: number;
   /** Light brows for a dark body. */
   lightBrows: boolean;
+  /** Which colour of the creature's palette the eyelids take (the body, unless it clashes with the art). */
+  lidTint: 'body' | 'glaze' | 'accent' | 'detail' | 'sponge';
   /** `null`: one face in the middle. */
   pair: PairLayout | null;
 }
@@ -58,6 +60,7 @@ const FACE_DEFAULTS = {
   cheekSpread: 1,
   offsetY: 0,
   lightBrows: false,
+  lidTint: 'body',
   pair: null,
 } as const;
 
@@ -104,7 +107,18 @@ export type ArtRecipe =
       peakWidth: number;
       swirlStep: number;
     }
-  | { kind: 'twins'; topPad: number; topShare: number; creamShare: number; skirtRadius: number }
+  | {
+      kind: 'twins';
+      topPad: number;
+      /** Share of the body height above the cream strip. */
+      topShare: number;
+      creamShare: number;
+      /** The "feet" of the shells: radius of the bumps along the edge next to the cream. */
+      feetRadius: number;
+      /** Distance between feet as a multiple of their radius, and how much darker they are. */
+      feetStep: number;
+      feetShade: number;
+    }
   | { kind: 'lemon'; topPad: number; creamShare: number; sliceRadius: number; ribStep: number }
   | {
       kind: 'rainbow';
@@ -210,15 +224,23 @@ export const CREATURE_LOOKS: Readonly<Record<CreatureId, CreatureLook>> = {
     },
   },
   twins: {
-    art: { kind: 'twins', topPad: 0, topShare: 0.66, creamShare: 0.12, skirtRadius: 13 },
+    art: {
+      kind: 'twins',
+      topPad: 0,
+      topShare: 0.44,
+      creamShare: 0.12,
+      feetRadius: 5,
+      feetStep: 1.5,
+      feetShade: -0.14,
+    },
     face: {
       ...FACE_DEFAULTS,
       browLeft: brow(-22, 0, 0.9),
       browRight: brow(-22, 0, 0.9),
       mouth: 'flat',
       cheekScale: 0,
-      offsetY: -10,
-      pair: { spread: 100, scale: 0.62, gaze: 4, fullWidth: 320, eyesOnlyWidth: 150 },
+      offsetY: -26,
+      pair: { spread: 100, scale: 0.52, gaze: 4, fullWidth: 320, eyesOnlyWidth: 150 },
     },
   },
   lemon: {
@@ -247,6 +269,8 @@ export const CREATURE_LOOKS: Readonly<Record<CreatureId, CreatureLook>> = {
       mouth: 'smile',
       lidLeft: 0.45,
       lidRight: 0.45,
+      // The body is pink and would show as blobs over the stripes: the lids take the cream.
+      lidTint: 'glaze',
     },
   },
 };
