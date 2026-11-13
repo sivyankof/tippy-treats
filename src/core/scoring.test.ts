@@ -8,10 +8,10 @@ describe('combo', () => {
     expect(nextCombo(6, false)).toBe(0);
   });
 
-  it('widens the layer by 20 from the fourth perfect drop in a row', () => {
-    expect(comboWidening(3, 400)).toBe(0);
-    expect(comboWidening(4, 400)).toBe(20);
-    expect(comboWidening(12, 400)).toBe(20);
+  it('widens the layer by 30 from the second perfect drop in a row', () => {
+    expect(comboWidening(1, 400)).toBe(0);
+    expect(comboWidening(2, 400)).toBe(30);
+    expect(comboWidening(12, 400)).toBe(30);
   });
 
   it('never widens past the tray width', () => {

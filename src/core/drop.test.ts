@@ -15,7 +15,7 @@ const drop = (dx: number, overrides: Partial<DropInput> = {}) =>
   });
 
 describe('resolveDrop', () => {
-  it.each([0, 10, -10, 4.5])('is perfect at dx = %d and keeps the width', (dx) => {
+  it.each([0, 20, -20, 4.5])('is perfect at dx = %d and keeps the width', (dx) => {
     expect(drop(dx)).toEqual({
       quality: 'perfect',
       dx,
@@ -49,8 +49,8 @@ describe('resolveDrop', () => {
   });
 
   it('turns normal just outside the perfect tolerance', () => {
-    expect(drop(10.5).quality).toBe('normal');
-    expect(drop(-10.5).quality).toBe('normal');
+    expect(drop(20.5).quality).toBe('normal');
+    expect(drop(-20.5).quality).toBe('normal');
   });
 
   it('misses once the remainder would be narrower than the margin', () => {
@@ -63,9 +63,14 @@ describe('resolveDrop', () => {
   });
 
   it('does not depend on width for the perfect tolerance', () => {
-    expect(drop(10, { width: 40 }).quality).toBe('perfect');
-    expect(drop(12, { width: 40 }).quality).toBe('normal');
-    expect(drop(16, { width: 40 }).quality).toBe('miss');
+    expect(drop(20, { width: 60 }).quality).toBe('perfect');
+    expect(drop(22, { width: 60 }).quality).toBe('normal');
+    expect(drop(36, { width: 60 }).quality).toBe('miss');
+  });
+
+  it('checks the perfect tolerance before the miss margin on very narrow layers', () => {
+    expect(drop(20, { width: 40 }).quality).toBe('perfect');
+    expect(drop(21, { width: 40 }).quality).toBe('miss');
   });
 
   it('forgives a small offset with a wider (sticky) tolerance', () => {
@@ -89,15 +94,15 @@ describe('resolveDrop', () => {
 
 describe('layerSpeed', () => {
   it('grows with height and is capped', () => {
-    expect(layerSpeed(0, 1)).toBe(520);
-    expect(layerSpeed(10, 1)).toBe(610);
-    expect(layerSpeed(97, 1)).toBe(1393);
-    expect(layerSpeed(98, 1)).toBe(1400);
+    expect(layerSpeed(0, 1)).toBe(600);
+    expect(layerSpeed(10, 1)).toBe(690);
+    expect(layerSpeed(88, 1)).toBe(1392);
+    expect(layerSpeed(89, 1)).toBe(1400);
     expect(layerSpeed(500, 1)).toBe(1400);
   });
 
   it('applies the zone multiplier after the cap', () => {
-    expect(layerSpeed(0, 1.05)).toBeCloseTo(546);
+    expect(layerSpeed(0, 1.05)).toBeCloseTo(630);
     expect(layerSpeed(500, 1.1)).toBeCloseTo(1540);
   });
 });

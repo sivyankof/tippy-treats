@@ -21,18 +21,18 @@ export const BALANCE = {
     spawnPauseMs: 220,
   },
   speed: {
-    base: 520,
+    base: 600,
     perLayer: 9,
     max: 1400,
   },
   drop: {
-    perfectTolerance: 10,
+    perfectTolerance: 20,
     /** A drop that would leave less than this is a miss. */
     missMargin: 24,
   },
   combo: {
-    widenFrom: 4,
-    widenBy: 20,
+    widenFrom: 2,
+    widenBy: 30,
     scoreCap: 10,
   },
   score: {

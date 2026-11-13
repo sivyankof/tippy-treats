@@ -4,6 +4,7 @@ import type { RunResult } from './run-result';
 import { TowerSim, type RunConfig, type SimEvent, type TowerState } from './tower-sim';
 
 const STEP = BALANCE.sim.stepMs;
+const SPEED = BALANCE.speed;
 const MAX_STEPS = 120 * 60;
 
 const config = (overrides: Partial<RunConfig> = {}): RunConfig => ({
@@ -83,7 +84,7 @@ describe('TowerSim: flight', () => {
       x: 140,
       width: 720,
       dir: 1,
-      speed: 520,
+      speed: SPEED.base,
       kind: 'plain',
     });
     expect(sim.state.phase).toBe('flying');
@@ -94,8 +95,8 @@ describe('TowerSim: flight', () => {
     const sim = new TowerSim(config());
     untilFlying(sim);
     sim.update(1000);
-    // maxFrameMs caps a long frame at 250 ms: 30 steps of 520 px/s.
-    expect(sim.state.flying?.x).toBeCloseTo(140 + 520 * 0.25, 5);
+    // maxFrameMs caps a long frame at 250 ms: 30 steps at the base speed.
+    expect(sim.state.flying?.x).toBeCloseTo(140 + SPEED.base * 0.25, 5);
 
     const xs: number[] = [];
     let turns = 0;
@@ -119,10 +120,15 @@ describe('TowerSim: flight', () => {
     const sim = new TowerSim(config());
     dropAt(sim, 0);
     const second = only(untilFlying(sim), 'spawn').layer;
-    expect(second).toMatchObject({ index: 2, x: 940, dir: -1, speed: 529 });
+    expect(second).toMatchObject({ index: 2, x: 940, dir: -1, speed: SPEED.base + SPEED.perLayer });
     dropAt(sim, 0);
     const third = only(untilFlying(sim), 'spawn').layer;
-    expect(third).toMatchObject({ index: 3, x: 140, dir: 1, speed: 538 });
+    expect(third).toMatchObject({
+      index: 3,
+      x: 140,
+      dir: 1,
+      speed: SPEED.base + SPEED.perLayer * 2,
+    });
   });
 
   it('ignores taps while the layer is falling or the next one is not out yet', () => {
@@ -183,7 +189,7 @@ describe('TowerSim: landing', () => {
     expect(land.quality).toBe('normal');
     expect(land.cutSide).toBe('right');
     expect(land.dx).toBeGreaterThanOrEqual(100);
-    expect(land.dx).toBeLessThan(105);
+    expect(land.dx).toBeLessThan(106);
     expect(land.cutWidth).toBeCloseTo(land.dx);
     expect(land.newWidth).toBeCloseTo(720 - land.dx);
 
@@ -214,7 +220,7 @@ describe('TowerSim: landing', () => {
     expect(sim.state.layers[1]?.x).toBe(rest);
   });
 
-  it('resets the combo on a normal drop and widens from the fourth perfect in a row', () => {
+  it('resets the combo on a normal drop and widens from the second perfect in a row', () => {
     const sim = new TowerSim(config());
     dropAt(sim, 200);
     const widthAfterCut = sim.state.layers[0]?.width ?? 0;
@@ -226,8 +232,8 @@ describe('TowerSim: landing', () => {
       widened.push(combo.widened);
     }
     expect(combos).toEqual([1, 2, 3, 4, 5]);
-    expect(widened).toEqual([0, 0, 0, 20, 20]);
-    expect(sim.state.layers.at(-1)?.width).toBeCloseTo(widthAfterCut + 40);
+    expect(widened).toEqual([0, 30, 30, 30, 30]);
+    expect(sim.state.layers.at(-1)?.width).toBeCloseTo(widthAfterCut + 120);
     expect(sim.state.score).toBe(10 + 30 + 35 + 40 + 45 + 50);
 
     dropAt(sim, 60);
@@ -272,10 +278,10 @@ describe('TowerSim: sneeze', () => {
     const state = mutable(sim);
     state.wobble = 99;
     if (state.flying) {
-      state.flying.width = 40;
+      state.flying.width = 50;
       state.flying.speed = 120;
     }
-    const events = dropAt(sim, 12);
+    const events = dropAt(sim, 22);
     expect(only(events, 'land').quality).toBe('normal');
     expect(only(events, 'wobble_sneeze').newWidth).toBeLessThan(BALANCE.drop.missMargin);
     expect(only(events, 'miss')).toEqual({ type: 'miss', shielded: false });
