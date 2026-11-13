@@ -1,0 +1,30 @@
+node_modules/
+dist/
+coverage/
+
+# Secrets: ad and purchase identifiers live only in .env
+.env
+.env.*
+!.env.example
+
+# Editors and OS
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/*
+!.vscode/extensions.json
+*.log
+*.local
+.claude/settings.local.json
+
+# Native build output (projects appear on M7 / M9)
+ios/App/build/
+ios/App/Pods/
+ios/DerivedData/
+android/.gradle/
+android/build/
+android/app/build/
+android/local.properties
+
+# Browser automation output
+.playwright-mcp/
