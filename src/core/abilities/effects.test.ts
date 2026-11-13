@@ -82,6 +82,12 @@ describe('collectModifiers', () => {
     expect(collect(effect('honey', 5)).perfectTolerance).toBe(BALANCE.drop.perfectTolerance);
   });
 
+  it('takes the largest spring share', () => {
+    expect(collect().springShare).toBe(0);
+    expect(collect(effect('jelly', 0.35)).springShare).toBe(0.35);
+    expect(collect(effect('jelly', 0.35), effect('jelly', 0.6)).springShare).toBe(0.6);
+  });
+
   it('takes the smallest crumb size and or-s the flags', () => {
     expect(collect().crumbToCoinsPx).toBeNull();
     expect(collect(effect('crumb', 28)).crumbToCoinsPx).toBe(28);

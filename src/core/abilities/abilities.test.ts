@@ -9,6 +9,8 @@ import { runAbility, tickRunEffects } from './run';
 import type { ActiveEffect } from './types';
 
 const LEVELS = [1, 2, 3, 4, 5] as const;
+/** Jelly spring share per level, as written in docs/03-creatures.md. */
+const SPRING = [0.3, 0.35, 0.4, 0.45, 0.55] as const;
 
 interface Fired {
   state: TowerState;
@@ -67,18 +69,18 @@ describe('abilities: effects of every level', () => {
   checkEffect(
     'honey',
     [
+      [3, 30],
       [3, 34],
       [3, 38],
       [3, 42],
-      [3, 46],
-      [3, 52],
+      [3, 48],
     ],
     [
+      [5, 30],
       [5, 34],
       [5, 38],
       [5, 42],
-      [5, 46],
-      [5, 52],
+      [5, 48],
     ],
   );
   checkEffect(
@@ -218,23 +220,35 @@ describe('abilities: instant ones', () => {
     expect(abilityEvent(plain.events).payload).toEqual({
       wobbleBefore: 100,
       wobbleAfter: 100 - normal,
+      layers: 4,
+      value: SPRING[level - 1],
     });
     const boosted = fire('jelly', level, true, start);
     expect(boosted.state.wobble).toBe(Math.max(0, 100 - perfect));
   });
 
+  it.each(LEVELS)('jelly level %i starts a spring effect: 4 layers, 6 when perfect', (level) => {
+    const plain = fire('jelly', level, false);
+    expect(plain.effect).toMatchObject({ id: 'jelly', layersLeft: 4, level, boosted: false });
+    expect(plain.effect?.value).toBeCloseTo(SPRING[level - 1] as number, 10);
+    const boosted = fire('jelly', level, true);
+    expect(boosted.effect).toMatchObject({ layersLeft: 6, level, boosted: true });
+    expect(boosted.effect?.value).toBeCloseTo(SPRING[level - 1] as number, 10);
+    expect(abilityEvent(boosted.events).payload).toMatchObject({ layers: 6 });
+  });
+
   it('jelly never takes the wobble below zero', () => {
     const { state, events } = fire('jelly', 5, true, (s) => void (s.wobble = 10));
     expect(state.wobble).toBe(0);
-    expect(abilityEvent(events).payload).toEqual({ wobbleBefore: 10, wobbleAfter: 0 });
+    expect(abilityEvent(events).payload).toMatchObject({ wobbleBefore: 10, wobbleAfter: 0 });
   });
 
   it.each([
-    [1, 50, 75],
-    [2, 60, 90],
-    [3, 70, 105],
-    [4, 80, 120],
-    [5, 100, 150],
+    [1, 45, 67.5],
+    [2, 55, 82.5],
+    [3, 65, 97.5],
+    [4, 75, 112.5],
+    [5, 90, 135],
   ])('puff level %i widens by %d, %d when perfect', (level, normal, perfect) => {
     const plain = fire('puff', level, false);
     expect(plain.layer.width).toBe(300 + normal);
@@ -254,11 +268,11 @@ describe('abilities: instant ones', () => {
   });
 
   it.each([
-    [1, 6, 9],
-    [2, 8, 12],
-    [3, 10, 15],
-    [4, 12, 18],
-    [5, 15, 23],
+    [1, 5, 8],
+    [2, 7, 11],
+    [3, 9, 14],
+    [4, 11, 17],
+    [5, 13, 20],
   ])('brownie level %i gives a shield of %d layers, %d when perfect', (level, normal, perfect) => {
     const plain = fire('brownie', level, false);
     expect(plain.state.shield).toBe(normal);
@@ -269,7 +283,7 @@ describe('abilities: instant ones', () => {
 
   it('brownie keeps a longer shield that is still running', () => {
     expect(fire('brownie', 1, false, (s) => void (s.shield = 12)).state.shield).toBe(12);
-    expect(fire('brownie', 1, false, (s) => void (s.shield = 2)).state.shield).toBe(6);
+    expect(fire('brownie', 1, false, (s) => void (s.shield = 2)).state.shield).toBe(5);
   });
 
   it.each([
@@ -301,9 +315,9 @@ describe('abilities: instant ones', () => {
 
 describe('abilities: levels', () => {
   it('clamps a level outside 1..5', () => {
-    expect(fire('honey', 0, false).effect?.value).toBe(34);
-    expect(fire('honey', 99, false).effect?.value).toBe(52);
-    expect(fire('honey', 2.9, false).effect?.value).toBe(38);
+    expect(fire('honey', 0, false).effect?.value).toBe(30);
+    expect(fire('honey', 99, false).effect?.value).toBe(48);
+    expect(fire('honey', 2.9, false).effect?.value).toBe(34);
     expect(fire('honey', 0, false).effect?.level).toBe(1);
     expect(fire('honey', 99, false).effect?.level).toBe(5);
     expect(fire('honey', 2.9, false).effect?.level).toBe(2);
@@ -321,7 +335,8 @@ describe('abilities: modifiers of one effect', () => {
   };
 
   it('maps each effect to its modifier', () => {
-    expect(mods('honey', 3)).toEqual({ perfectTolerance: 42 });
+    expect(mods('honey', 3)).toEqual({ perfectTolerance: 38 });
+    expect(mods('jelly', 5)).toEqual({ springShare: 0.55 });
     expect(mods('caramel')).toEqual({ coinMultAdd: 1 });
     expect(mods('frosty', 1)?.speedMult).toBeCloseTo(0.8);
     expect(mods('sprinkle', 5)).toEqual({ scoreMult: 3 });
@@ -332,7 +347,7 @@ describe('abilities: modifiers of one effect', () => {
   });
 
   it('has no modifiers for the instant abilities', () => {
-    for (const id of ['puff', 'jelly', 'brownie', 'twins'] as const) {
+    for (const id of ['puff', 'brownie', 'twins'] as const) {
       expect(ABILITIES[id].modifiers).toBeUndefined();
     }
   });

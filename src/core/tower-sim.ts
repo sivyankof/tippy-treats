@@ -254,6 +254,7 @@ export class TowerSim {
       targetX: this.topLayerX(),
       perfectTolerance: mods.perfectTolerance,
       autoPerfect: mods.autoPerfect,
+      springShare: mods.springShare,
     });
     s.flying = null;
     // The floating coin is lost on a miss; a retried layer rolls no new one.

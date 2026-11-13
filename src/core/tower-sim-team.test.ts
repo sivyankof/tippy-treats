@@ -110,7 +110,7 @@ describe('effect timing', () => {
     const first = drop(sim, 100);
     expect(abilityOf(first)).toMatchObject({ creature: 'honey', boosted: false });
     expect(sim.state.effects).toEqual([
-      { id: 'honey', layersLeft: 3, level: 1, boosted: false, value: 34 },
+      { id: 'honey', layersLeft: 3, level: 1, boosted: false, value: 30 },
     ]);
     expect(pick(first, 'effect_end')).toHaveLength(0);
 
@@ -164,17 +164,17 @@ describe('abilities in play', () => {
       return drop(sim, offset);
     };
     expect(land(calmDrop(22)).quality).toBe('perfect');
-    expect(land(calmDrop(33)).quality).toBe('perfect');
-    expect(land(calmDrop(37)).quality).toBe('normal');
+    expect(land(calmDrop(28)).quality).toBe('perfect');
+    expect(land(calmDrop(33)).quality).toBe('normal');
   });
 
   it('puff widens the layer before the next one spawns', () => {
     const sim = crew('puff');
     const events = drop(sim, 100);
     const landed = land(events);
-    expect(abilityOf(events).payload).toEqual({ widened: 50 });
-    expect(sim.state.layers.at(-1)?.width).toBeCloseTo(landed.newWidth + 50);
-    expect(only(untilFlying(sim), 'spawn').layer.width).toBeCloseTo(landed.newWidth + 50);
+    expect(abilityOf(events).payload).toEqual({ widened: 45 });
+    expect(sim.state.layers.at(-1)?.width).toBeCloseTo(landed.newWidth + 45);
+    expect(only(untilFlying(sim), 'spawn').layer.width).toBeCloseTo(landed.newWidth + 45);
   });
 
   it('jelly calms the tower before the sneeze check', () => {
@@ -187,13 +187,43 @@ describe('abilities in play', () => {
     expect(sim.state.wobble).toBeLessThan(61);
   });
 
+  it('jelly springs the next normal drops to the centre: smaller cut, less wobble', () => {
+    const jelly = crew('jelly');
+    const control = crew(null);
+    for (const sim of [jelly, control]) drop(sim, 150);
+    const spring = land(drop(jelly, 100));
+    const plain = land(drop(control, 100));
+    // Level 1 springs 30% of the offset back, so about 70% of it is cut.
+    expect(spring.cutWidth).toBeGreaterThan(plain.cutWidth * 0.6);
+    expect(spring.cutWidth).toBeLessThan(plain.cutWidth * 0.8);
+    expect(spring.newWidth).toBeGreaterThan(plain.newWidth);
+    expect(Math.abs(spring.dx)).toBeCloseTo(plain.cutWidth * 0.7, -1);
+    expect(jelly.state.wobble).toBeLessThan(control.state.wobble);
+  });
+
+  it.each([
+    ['a normal landing', 150, 4],
+    ['a perfect landing', 0, 6],
+  ])('jelly spring lasts exactly its layers after %s', (_name, offset, layers) => {
+    const sim = crew('jelly');
+    drop(sim, offset);
+    const left = () => sim.state.effects.find((e) => e.id === 'jelly')?.layersLeft;
+    expect(left()).toBe(layers);
+    for (let i = 1; i < layers; i++) {
+      drop(sim, 30);
+      expect(left()).toBe(layers - i);
+    }
+    drop(sim, 30);
+    expect(left()).toBeUndefined();
+  });
+
   it('puff cannot save a sneeze, but the sneeze happens after it', () => {
     const sim = crew('puff');
     untilFlying(sim);
     mutable(sim).wobble = 99;
     const events = drop(sim, 100);
     const sneeze = only(events, 'wobble_sneeze');
-    expect(sneeze.newWidth).toBeCloseTo((land(events).newWidth + 50) * 0.85);
+    expect(sneeze.newWidth).toBeCloseTo((land(events).newWidth + 45) * 0.85);
   });
 
   it('sprinkle multiplies the score of the following layers', () => {
@@ -305,9 +335,9 @@ describe('brownie shield', () => {
 
   it('starts with the creature layer and ticks down with every landed layer', () => {
     const sim = shielded();
-    expect(sim.state.shield).toBe(6);
-    drop(sim);
     expect(sim.state.shield).toBe(5);
+    drop(sim);
+    expect(sim.state.shield).toBe(4);
   });
 
   it('eats a drop miss: the run goes on and the same layer comes back', () => {
@@ -357,7 +387,7 @@ describe('brownie shield', () => {
 
   it('still saves a drop miss on the last layer it covers', () => {
     const sim = shielded();
-    for (let i = 0; i < 5; i++) drop(sim, 30);
+    for (let i = 0; i < 4; i++) drop(sim, 30);
     expect(sim.state.shield).toBe(1);
     expect(only(missNext(sim), 'miss').shielded).toBe(true);
   });
@@ -365,7 +395,7 @@ describe('brownie shield', () => {
   it('expires after its layers and says so', () => {
     const sim = shielded();
     let ended: SimEvent[] = [];
-    for (let i = 0; i < 6; i++) ended = ended.concat(drop(sim, 30));
+    for (let i = 0; i < 5; i++) ended = ended.concat(drop(sim, 30));
     expect(sim.state.shield).toBe(0);
     expect(pick(ended, 'effect_end')).toEqual([{ type: 'effect_end', effect: 'shield' }]);
     expect(only(missNext(sim), 'miss').shielded).toBe(false);
@@ -422,7 +452,7 @@ describe('brownie shield', () => {
   });
 
   it('protects the layer N (the last one) against a sneeze, the next layer 250 wide', () => {
-    const sim = shieldedAfter(5);
+    const sim = shieldedAfter(4);
     expect(sim.state.shield).toBe(1);
     const events = sneezeDrop(sim);
     expect(only(events, 'miss')).toEqual({ type: 'miss', shielded: true });
@@ -444,11 +474,11 @@ describe('brownie shield', () => {
   });
 
   it('does not protect layer N+1 against a drop miss or a sneeze', () => {
-    const dropMiss = shieldedAfter(6);
+    const dropMiss = shieldedAfter(5);
     expect(dropMiss.state.shield).toBe(0);
     expect(only(missNow(dropMiss), 'miss').shielded).toBe(false);
 
-    const sneeze = shieldedAfter(6);
+    const sneeze = shieldedAfter(5);
     expect(only(sneezeDrop(sneeze), 'miss').shielded).toBe(false);
   });
 

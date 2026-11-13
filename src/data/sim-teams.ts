@@ -30,3 +30,18 @@ export const SIM_TEAMS: readonly SimTeamSet[] = [NO_TEAM, ...SOLO_TEAMS, ...FULL
 
 /** A set counts as a full team when all three slots are filled. */
 export const isFullTeam = (set: SimTeamSet): boolean => set.creatures.length === 3;
+
+/** Every combination of three different creatures, slot order following `CREATURE_IDS`. */
+export function allFullTeams(): SimTeamSet[] {
+  const teams: SimTeamSet[] = [];
+  const count = CREATURE_IDS.length;
+  for (let a = 0; a < count; a++) {
+    for (let b = a + 1; b < count; b++) {
+      for (let c = b + 1; c < count; c++) {
+        const creatures = [CREATURE_IDS[a], CREATURE_IDS[b], CREATURE_IDS[c]] as CreatureId[];
+        teams.push({ name: creatures.join('+'), creatures });
+      }
+    }
+  }
+  return teams;
+}

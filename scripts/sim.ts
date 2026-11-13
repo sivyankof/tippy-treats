@@ -6,6 +6,7 @@ import { TowerSim } from '../src/core/tower-sim';
 import { BALANCE, DIFFICULTY, type DifficultyTarget } from '../src/data/balance';
 import {
   NO_TEAM,
+  allFullTeams,
   SIM_TEAMS,
   SIM_TEAM_LEVEL,
   isFullTeam,
@@ -22,25 +23,34 @@ const BASE_SEED = 20261113;
 const MAX_RUN_MS = 60 * 60 * 1000;
 /** Median height gain of a full level-3 team expected by the M4 exit criteria, in percent. */
 const GAIN_RANGE_PCT = [30, 50] as const;
+/** Owner's acceptance criteria for the creature balance. */
+const JELLY_PROFILE = 'regular';
+const JELLY_SOLO_RANGE_PCT = [8, 14] as const;
+const TOP_COUNT = 5;
+const RAINBOW = 'rainbow';
+const GHOST = 'ghost';
 
 interface CliOptions {
   runs: number;
   profile: string | null;
   team: string | null;
   level: number;
+  allTeams: boolean;
 }
 
-/** Reads `--runs=N --profile=id --team=name --level=N`; anything else is an error. */
+/** Reads `--runs=N --profile=id --team=name --level=N --all-teams`; anything else is an error. */
 function parseArgs(argv: string[]): CliOptions {
   const options: CliOptions = {
     runs: DIFFICULTY.runsPerProfile,
     profile: null,
     team: null,
     level: SIM_TEAM_LEVEL,
+    allTeams: false,
   };
   for (const arg of argv) {
     const [key, value = ''] = arg.replace(/^--/, '').split('=');
-    if (key === 'runs' && Number(value) > 0) options.runs = Math.floor(Number(value));
+    if (key === 'all-teams' && !value) options.allTeams = true;
+    else if (key === 'runs' && Number(value) > 0) options.runs = Math.floor(Number(value));
     else if (key === 'level' && Number(value) > 0) options.level = Math.floor(Number(value));
     else if (key === 'profile' && value) options.profile = value;
     else if (key === 'team' && value) options.team = value;
@@ -159,20 +169,21 @@ function summarize(set: SimTeamSet, results: RunResult[], heights: number[]): Te
 const deltaPct = (median: number, base: number): number =>
   Number(((100 * (median - base)) / Math.max(1, base)).toFixed(1));
 
-/** Prints the check over the full teams of one profile and returns whether any team dominates. */
-function checkFullTeams(profile: string, rows: TeamRow[]): boolean {
-  const full = rows.filter((r) => r.full);
-  if (full.length === 0) return false;
+const gainOf = (row: TeamRow): number => Number(row['delta median, %']);
+const hasCreature = (row: TeamRow, id: string): boolean => row.team.split('+').includes(id);
+const describeRow = (row: TeamRow): string =>
+  `${row.team} (median ${row.median}, ${gainOf(row)}%, coins ${row['avg coins']})`;
+const names = (rows: TeamRow[]): string =>
+  rows.length ? rows.map(describeRow).join('; ') : 'none';
+
+/** Prints the check over the given full teams of one profile and returns the dominant ones. */
+function checkFullTeams(profile: string, full: TeamRow[]): TeamRow[] {
+  if (full.length === 0) return [];
   const [lo, hi] = GAIN_RANGE_PCT;
-  const inRange = full.filter((r) => {
-    const gain = Number(r['delta median, %']);
-    return gain >= lo && gain <= hi;
-  });
+  const inRange = full.filter((r) => gainOf(r) >= lo && gainOf(r) <= hi);
   console.log(
     `[${profile}] full teams within +${lo}..+${hi}% median height: ` +
-      (inRange.length
-        ? inRange.map((r) => `${r.team} (${r['delta median, %']}%)`).join(', ')
-        : 'none'),
+      (inRange.length ? inRange.map((r) => `${r.team} (${gainOf(r)}%)`).join(', ') : 'none'),
   );
 
   const bestMedian = Math.max(...full.map((r) => r.median));
@@ -193,8 +204,32 @@ function checkFullTeams(profile: string, rows: TeamRow[]): boolean {
         ? `FAIL, ${dominant.map((r) => r.team).join(', ')} leads in height and coins`
         : 'ok, no full team leads in both height and coins'),
   );
-  return dominant.length > 0;
+  return dominant;
 }
+
+/** Summary of all 3-creature teams of one profile; returns those over the upper gain bound without rainbow and ghost. */
+function summarizeAllTeams(profile: string, rows: TeamRow[]): TeamRow[] {
+  const [lo, hi] = GAIN_RANGE_PCT;
+  const top = (key: 'median' | 'avg coins') =>
+    [...rows].sort((a, b) => b[key] - a[key]).slice(0, TOP_COUNT);
+  const over = rows.filter((r) => gainOf(r) > hi);
+  const withRainbow = over.filter((r) => hasCreature(r, RAINBOW));
+  const withGhost = over.filter((r) => !hasCreature(r, RAINBOW) && hasCreature(r, GHOST));
+  const plain = over.filter((r) => !hasCreature(r, RAINBOW) && !hasCreature(r, GHOST));
+  console.log(`\n[${profile}] summary of ${rows.length} full teams`);
+  console.log(`  top ${TOP_COUNT} by median: ${names(top('median'))}`);
+  console.log(`  top ${TOP_COUNT} by avg coins: ${names(top('avg coins'))}`);
+  console.log(
+    `  within +${lo}..+${hi}%: ${rows.filter((r) => gainOf(r) >= lo && gainOf(r) <= hi).length}, ` +
+      `over +${hi}%: ${over.length}`,
+  );
+  console.log(`  over +${hi}% with ${RAINBOW}: ${names(withRainbow)}`);
+  console.log(`  over +${hi}% without ${RAINBOW}, with ${GHOST}: ${names(withGhost)}`);
+  console.log(`  over +${hi}% without ${RAINBOW} and ${GHOST}: ${names(plain)}`);
+  return plain;
+}
+
+const status = (ok: boolean): string => (ok ? 'ok' : 'FAIL');
 
 function main(): void {
   const options = parseArgs(process.argv.slice(2));
@@ -208,44 +243,94 @@ function main(): void {
   if (options.team && !sets.some((set) => set.name === options.team)) {
     throw new Error(`Unknown team: ${options.team}`);
   }
+  const everyTeam = options.allTeams ? allFullTeams() : [];
 
   console.log(
     `Runs per profile and team: ${options.runs}${options.runs === DIFFICULTY.runsPerProfile ? '' : ' (overridden)'}, ` +
-      `team level: ${options.level}, team sets: ${sets.length}, continues: declined`,
+      `team level: ${options.level}, team sets: ${sets.length}${options.allTeams ? ` + ${everyTeam.length} full teams (--all-teams)` : ''}, continues: declined`,
   );
 
-  let anyDominant = false;
   const wobbleRows: WobbleRow[] = [];
+  const dominantTeams: string[] = [];
+  const plainOverTeams: string[] = [];
+  let jellySolo: number | null = null;
   for (const target of targets) {
+    const play = (set: SimTeamSet, wobble?: WobbleStats): TeamRow => {
+      const { results, heights } = playProfile(target, set, options, wobble);
+      return summarize(set, results, heights);
+    };
     const rows = sets.map((set) => {
       // Wobble is measured on the baseline only, where no ability changes it.
       const wobble = set === NO_TEAM ? new WobbleStats() : undefined;
-      const { results, heights } = playProfile(target, set, options, wobble);
+      const row = play(set, wobble);
       if (wobble) wobbleRows.push(wobble.row(target.id));
-      return summarize(set, results, heights);
+      return row;
     });
     const base = rows.find((r) => r.team === NO_TEAM.name)?.median ?? 1;
-    for (const row of rows) {
+    const fillDelta = (row: TeamRow): void => {
       row['delta median, %'] = row.team === NO_TEAM.name ? '-' : deltaPct(row.median, base);
-    }
+    };
+    rows.forEach(fillDelta);
 
     console.log(
       `\nProfile ${target.id} (sd ${target.timingSdMs} ms), target median ${target.medianHeight.join('-')}, ` +
         `baseline status: ${verdict(base, target.medianHeight)}`,
     );
     console.table(rows, TABLE_COLUMNS);
-    anyDominant = checkFullTeams(target.id, rows) || anyDominant;
+
+    const jelly = rows.find((r) => r.team === 'jelly');
+    if (jelly) {
+      console.log(`[${target.id}] jelly solo: ${gainOf(jelly) > 0 ? '+' : ''}${gainOf(jelly)}%`);
+      if (target.id === JELLY_PROFILE) jellySolo = gainOf(jelly);
+    }
+
+    if (options.allTeams) {
+      const full = everyTeam.map((set) => {
+        const row = play(set);
+        fillDelta(row);
+        return row;
+      });
+      dominantTeams.push(...checkFullTeams(target.id, full).map((r) => `${target.id}: ${r.team}`));
+      plainOverTeams.push(
+        ...summarizeAllTeams(target.id, full).map((r) => `${target.id}: ${describeRow(r)}`),
+      );
+    } else {
+      const named = rows.filter((r) => r.full);
+      dominantTeams.push(...checkFullTeams(target.id, named).map((r) => `${target.id}: ${r.team}`));
+      console.log(
+        `[${target.id}] the criterion check over every 3-creature team needs --all-teams`,
+      );
+    }
   }
 
   console.log(`\nWobble at the moment of the tap, no team (the first layer on the tray excluded)`);
   console.table(wobbleRows);
 
   console.log(
-    `\nverdict: ${anyDominant ? 'a full team leads in both height and coins, balance needs changes' : 'no full team leads in both height and coins'}`,
+    `\nverdict: ${dominantTeams.length ? 'a full team leads in both height and coins, balance needs changes' : 'no full team leads in both height and coins'}`,
   );
   console.log(
     `status of the baseline: ok = median inside the target range, near = within ${DIFFICULTY.tolerance * 100}% of it, OFF = balance needs changes`,
   );
+
+  const [jLo, jHi] = JELLY_SOLO_RANGE_PCT;
+  console.log(`\nAcceptance criteria${options.allTeams ? '' : ' (2 and 3 need --all-teams)'}`);
+  console.log(
+    `(1) jelly solo at ${JELLY_PROFILE} within +${jLo}..+${jHi}%: ` +
+      (jellySolo === null
+        ? `n/a (profile ${JELLY_PROFILE} was not played)`
+        : `${status(jellySolo >= jLo && jellySolo <= jHi)} (${jellySolo}%)`),
+  );
+  if (options.allTeams) {
+    console.log(
+      `(2) no dominant team on any profile (${everyTeam.length} teams): ${status(dominantTeams.length === 0)}` +
+        (dominantTeams.length ? ` (${dominantTeams.join(', ')})` : ''),
+    );
+    console.log(
+      `(3) no full team without ${RAINBOW} and ${GHOST} over +${GAIN_RANGE_PCT[1]}% on any profile: ${status(plainOverTeams.length === 0)}` +
+        (plainOverTeams.length ? ` (${plainOverTeams.join('; ')})` : ''),
+    );
+  }
 }
 
 main();

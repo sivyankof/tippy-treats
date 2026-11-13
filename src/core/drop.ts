@@ -12,11 +12,16 @@ export interface DropInput {
   targetX: number;
   perfectTolerance: number;
   autoPerfect: boolean;
+  /** Share (0..1) of the offset of a normal drop that springs back to the centre; 0 for none. */
+  springShare: number;
 }
 
 export interface DropOutcome {
   quality: DropQuality;
-  /** Offset of the falling layer from the target; positive means to the right. */
+  /**
+   * Offset of the falling layer from the target; positive means to the right. For a normal drop
+   * it is the offset after the spring (the raw offset times one minus the spring share).
+   */
   dx: number;
   /** Width that stays on the tower; 0 on a miss. */
   newWidth: number;
@@ -51,12 +56,15 @@ export function resolveDrop(input: DropInput): DropOutcome {
     return { quality: 'miss', dx, newWidth: 0, centerOffset: 0, cutWidth: 0, cutSide: null };
   }
   if (input.autoPerfect) return perfect;
+  // Perfect and miss were decided by the raw offset; the spring only softens a normal drop.
+  const settled = dx * (1 - input.springShare);
+  const cut = Math.abs(settled);
   return {
     quality: 'normal',
-    dx,
-    newWidth: width - distance,
-    centerOffset: dx / 2,
-    cutWidth: distance,
+    dx: settled,
+    newWidth: width - cut,
+    centerOffset: settled / 2,
+    cutWidth: cut,
     cutSide: dx > 0 ? 'right' : 'left',
   };
 }

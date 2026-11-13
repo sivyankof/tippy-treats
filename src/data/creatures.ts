@@ -31,7 +31,7 @@ export type LevelValues = readonly [number, number, number, number, number];
 export type AbilityDef =
   | { kind: 'honey'; layers: number; tolerance: LevelValues }
   | { kind: 'puff'; widen: LevelValues }
-  | { kind: 'jelly'; relief: LevelValues }
+  | { kind: 'jelly'; relief: LevelValues; springLayers: number; springPercent: LevelValues }
   | { kind: 'caramel'; layers: LevelValues; coinMultAdd: number }
   | { kind: 'frosty'; layers: number; slowPercent: LevelValues }
   | { kind: 'brownie'; layers: LevelValues }
@@ -83,21 +83,26 @@ export const CREATURES: Record<CreatureId, CreatureDef> = {
   honey: {
     ...keys('honey'),
     rarity: 'common',
-    ability: { kind: 'honey', layers: 3, tolerance: [34, 38, 42, 46, 52] },
+    ability: { kind: 'honey', layers: 3, tolerance: [30, 34, 38, 42, 48] },
     unlock: [{ kind: 'tutorial' }],
     palette: { body: '#e8b04a', glaze: '#c9822b', accent: '#fff3c4' },
   },
   puff: {
     ...keys('puff'),
     rarity: 'common',
-    ability: { kind: 'puff', widen: [50, 60, 70, 80, 100] },
+    ability: { kind: 'puff', widen: [45, 55, 65, 75, 90] },
     unlock: [{ kind: 'bakerLevel', level: 2 }],
     palette: { body: '#fff0f5', glaze: '#ffc2d9', accent: '#ff8fb8' },
   },
   jelly: {
     ...keys('jelly'),
     rarity: 'common',
-    ability: { kind: 'jelly', relief: [40, 50, 60, 75, 100] },
+    ability: {
+      kind: 'jelly',
+      relief: [40, 50, 60, 75, 100],
+      springLayers: 4,
+      springPercent: [30, 35, 40, 45, 55],
+    },
     unlock: [{ kind: 'shop', coins: 300 }],
     palette: { body: '#7fd6c2', glaze: '#4fb39e', accent: '#d8fff4' },
   },
@@ -118,7 +123,7 @@ export const CREATURES: Record<CreatureId, CreatureDef> = {
   brownie: {
     ...keys('brownie'),
     rarity: 'rare',
-    ability: { kind: 'brownie', layers: [6, 8, 10, 12, 15] },
+    ability: { kind: 'brownie', layers: [5, 7, 9, 11, 13] },
     unlock: [{ kind: 'streak', day: 7 }],
     palette: { body: '#7a4a32', glaze: '#4e2c1c', accent: '#d9a679' },
   },

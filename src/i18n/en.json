@@ -27,7 +27,7 @@
     },
     "jelly": {
       "name": "Jelly",
-      "desc": "Shock absorber: calms the wobble by {value}."
+      "desc": "Shock absorber: calms the wobble by {value}, and for the next {layers} layers a normal drop springs back to the centre: the offset shrinks by {percent}%."
     },
     "caramel": {
       "name": "Caramel",

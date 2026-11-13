@@ -14,7 +14,7 @@ export interface ActiveEffect {
   /**
    * The strength already resolved for level and boost: tolerance px (honey), coin multiplier
    * add (caramel), speed multiplier (frosty), score multiplier (sprinkle, lemon), pixels per
-   * coin (crumb). Unused (0) for ghost and rainbow.
+   * coin (crumb), spring share (jelly). Unused (0) for ghost and rainbow.
    */
   value: number;
 }
@@ -33,6 +33,8 @@ export interface Modifiers {
   perfectTolerance: number;
   autoPerfect: boolean;
   guides: boolean;
+  /** Share (0..1) of the offset of a normal drop that the layer springs back to the centre. The largest of the effects. */
+  springShare: number;
   /** The smallest of the effects that set it. */
   crumbToCoinsPx: number | null;
 }
@@ -45,6 +47,7 @@ export const BASE_MODIFIERS: Readonly<Modifiers> = {
   perfectTolerance: BALANCE.drop.perfectTolerance,
   autoPerfect: false,
   guides: false,
+  springShare: 0,
   crumbToCoinsPx: null,
 };
 
@@ -62,6 +65,10 @@ export interface PuffPayload {
 export interface JellyPayload {
   wobbleBefore: number;
   wobbleAfter: number;
+  /** Layers the spring effect lasts. */
+  layers: number;
+  /** Share of the offset that springs back (0..1). */
+  value: number;
 }
 export interface TwinsPayload {
   bonusScore: number;
