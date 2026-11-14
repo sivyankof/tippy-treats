@@ -217,7 +217,9 @@ export class TowerSim {
       events.push({ type: 'zone_change', zoneIndex });
     }
     const rules = layerRules(this.zonesRng, index);
-    const speed = nominalSpeed(s.height, zoneIndex, this.currentModifiers().speedMult);
+    const speed =
+      nominalSpeed(s.height, zoneIndex, this.currentModifiers().speedMult) *
+      this.tutorialSpeedMult(index);
     const layer = newFlyingLayer(this.attempt.plan, rules, this.nextWidth, speed);
     this.flight = new Flight(layer, rules.fakeoutX, (pass) =>
       cloudRoll(this.zonesRng, rules, pass),
@@ -225,6 +227,23 @@ export class TowerSim {
     s.flying = layer;
     this.enter('flying');
     events.push({ type: 'spawn', layer: { ...layer } });
+  }
+
+  /** Tutorial run: the first layers fly slower. */
+  private tutorialSpeedMult(index: number): number {
+    const { slowLayers, slowSpeedMult } = BALANCE.tutorial;
+    return this.config.tutorial && index <= slowLayers ? slowSpeedMult : 1;
+  }
+
+  /**
+   * Perfect tolerance of the next drop. A tutorial run that has placed `assistAfterLayers`
+   * layers without a perfect one widens it until the first perfect drop.
+   */
+  private perfectTolerance(mods: Readonly<Modifiers>): number {
+    const { assistAfterLayers, assistTolerance } = BALANCE.tutorial;
+    const assist =
+      this.config.tutorial && this.perfects === 0 && this.s.layers.length >= assistAfterLayers;
+    return assist ? Math.max(mods.perfectTolerance, assistTolerance) : mods.perfectTolerance;
   }
 
   private spawnCoin(events: SimEvent[], index: number): void {
@@ -249,7 +268,7 @@ export class TowerSim {
       flyingX: flying.x,
       width: flying.width,
       targetX: this.topLayerX(),
-      perfectTolerance: mods.perfectTolerance,
+      perfectTolerance: this.perfectTolerance(mods),
       autoPerfect: mods.autoPerfect,
       springShare: mods.springShare,
     });

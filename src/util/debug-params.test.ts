@@ -34,6 +34,14 @@ describe('parseDebugParams', () => {
     expect(parseDebugParams('')).toEqual({ debug: false });
   });
 
+  it('reads the tutorial switch only as 1 or 0', () => {
+    expect(parseDebugParams('?tutorial=1').tutorial).toBe(true);
+    expect(parseDebugParams('?tutorial=0').tutorial).toBe(false);
+    expect(parseDebugParams('?tutorial=yes').tutorial).toBeUndefined();
+    expect(parseDebugParams('?tutorial').tutorial).toBeUndefined();
+    expect(parseDebugParams('')).toEqual({ debug: false });
+  });
+
   it('keeps the largest uint32 seed', () => {
     expect(parseDebugParams('?seed=4294967295').seed).toBe(4294967295);
   });
