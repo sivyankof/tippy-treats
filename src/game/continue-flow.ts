@@ -82,7 +82,8 @@ export class ContinueFlow {
 
   /** The "No thanks" button. Ignored before the guard time has passed. */
   decline(): void {
-    if (this.current && !this.adShowing && this.declineReady) this.pending = 'decline';
+    if (this.current && !this.adShowing && !this.pending && this.declineReady)
+      this.pending = 'decline';
   }
 
   /** Pays the berry price from the wallet; false when there is no such offer or not enough. */
@@ -101,7 +102,7 @@ export class ContinueFlow {
   async watchAd(): Promise<void> {
     if (this.current?.ad !== 'ready' || this.adShowing || this.pending) return;
     this.adShowing = true;
-    this.deps.audio.suspend();
+    this.deps.audio.suspend('ad');
     let result: RewardedResult;
     try {
       result = await this.deps.ads.showRewarded('continue');
@@ -109,7 +110,7 @@ export class ContinueFlow {
       result = 'unavailable';
     }
     this.adShowing = false;
-    this.deps.audio.resume();
+    this.deps.audio.resume('ad');
     if (this.disposed || !this.current) return;
     if (result === 'rewarded') this.pending = 'continue';
     else if (result === 'unavailable') this.current = { ...this.current, ad: 'unavailable' };

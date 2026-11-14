@@ -8,7 +8,12 @@ export const CONTINUE_ANIM = {
   declineDelayMs: 1000,
   /** The last seconds of the timer get a tick and turn orange. */
   urgentFromMs: 2000,
+  /** Easing names shared by the window and the flag. */
+  ease: { sine: 'Sine.easeInOut', pop: 'Back.easeOut' },
   window: {
+    depth: 400,
+    /** Title and height text breathe between 1 and this scale. */
+    titlePulse: { scale: 1.05, ms: 1100 },
     width: 900,
     height: 1060,
     radius: 56,
@@ -35,7 +40,10 @@ export const CONTINUE_ANIM = {
   timer: {
     radius: 128,
     ringWidth: 26,
-    trackAlpha: 0.25,
+    /** Opacity of the grey ring behind the arc. */
+    trackAlpha: 0.65,
+    /** The arc is redrawn at most this often. */
+    redrawStepMs: 40,
     digitFont: 150,
     /** The digit pops when the second changes. */
     popScale: 1.25,
@@ -79,6 +87,11 @@ export const CONTINUE_ANIM = {
     /** Distance of the pennant from the right edge of the screen. */
     labelInset: 30,
     waveDeg: 4,
+    /** The pennant stretches by this share of the wave. */
+    waveStretch: 0.04,
+    pennantDarken: -0.3,
+    /** Border width of the pennant. */
+    outline: 6,
     wavePeriodMs: 1700,
     bobDistance: 6,
     bobPeriodMs: 2100,

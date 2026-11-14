@@ -19,8 +19,6 @@ import { playCues } from './run-cues';
 const flag = CONTINUE_ANIM.flag;
 const LINE_TEXTURE = 'fx_record_line';
 const PENNANT_TEXTURE = 'fx_record_pennant';
-const PENNANT_DARKEN = -0.3;
-const OUTLINE = 6;
 const TWO_PI = Math.PI * 2;
 
 /**
@@ -51,15 +49,15 @@ export class RecordMoment {
       }
     });
     bakeTexture(scene, PENNANT_TEXTURE, flag.labelWidth, flag.labelHeight, (g) => {
-      g.fillStyle(shade(PALETTE.accent, PENNANT_DARKEN), 1);
+      g.fillStyle(shade(PALETTE.accent, flag.pennantDarken), 1);
       g.fillRoundedRect(0, 0, flag.labelWidth, flag.labelHeight, flag.labelRadius);
       g.fillStyle(PALETTE.accent, 1);
       g.fillRoundedRect(
-        OUTLINE,
-        OUTLINE,
-        flag.labelWidth - OUTLINE * 2,
-        flag.labelHeight - OUTLINE * 2,
-        flag.labelRadius - OUTLINE,
+        flag.outline,
+        flag.outline,
+        flag.labelWidth - flag.outline * 2,
+        flag.labelHeight - flag.outline * 2,
+        flag.labelRadius - flag.outline,
       );
     });
     this.line = scene.add.image(0, 0, LINE_TEXTURE).setOrigin(0, 0.5);
@@ -116,7 +114,7 @@ export class RecordMoment {
       .setAlpha(1 - fade)
       .setVisible(true);
     this.line.setAlpha(low + (high - low) * pulse);
-    this.pennant.setAngle(wave * flag.waveDeg).setScale(1, 1 + 0.04 * wave);
+    this.pennant.setAngle(wave * flag.waveDeg).setScale(1, 1 + flag.waveStretch * wave);
     this.pennant.y = -flag.labelHeight / 2 - flag.lineHeight + bob * flag.bobDistance;
   }
 

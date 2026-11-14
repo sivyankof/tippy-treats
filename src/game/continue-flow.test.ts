@@ -54,6 +54,19 @@ describe('ContinueFlow', () => {
     expect(flow.takeAction()).toBe('decline');
   });
 
+  it('keeps a paid continue when "No thanks" follows in the same frame', () => {
+    const { flow, wallet } = setup('rewarded', true, 100);
+    flow.open('classic', 0);
+    flow.update(CONTINUE_ANIM.declineDelayMs);
+    const before = wallet.berries;
+    const cost = flow.offer?.berryCost ?? 0;
+    expect(cost).toBeGreaterThan(0);
+    expect(flow.payWithBerries()).toBe(true);
+    flow.decline();
+    expect(flow.takeAction()).toBe('continue');
+    expect(wallet.berries).toBe(before - cost);
+  });
+
   it('continues after a rewarded ad, with the audio suspended around it', async () => {
     const { flow, audio } = setup('rewarded');
     flow.open('classic', 0);

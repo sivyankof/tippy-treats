@@ -1,15 +1,18 @@
 import type { Rarity } from '../../data/rarity';
 
+/** Why sound is held back; the audio runs again only when none is left. */
+export type AudioSuspendReason = 'app' | 'ad';
+
 /** Game sound effects. Every method is a silent no-op when sound is off, locked or unsupported. */
 export interface AudioService {
   readonly enabled: boolean;
   setEnabled(on: boolean): void;
   /** Call from a user gesture: creates or resumes the audio context. */
   unlock(): void;
-  /** The app went to the background. */
-  suspend(): void;
-  /** The app is visible again. */
-  resume(): void;
+  /** Sound stops for `reason` (the app went to the background, an ad shows). */
+  suspend(reason: AudioSuspendReason): void;
+  /** `reason` is over; sound returns once no other reason holds. */
+  resume(reason: AudioSuspendReason): void;
   /** Regular drop. */
   drop(): void;
   /** Perfect drop; `comboStep` is 1 for the first perfect in a row. */

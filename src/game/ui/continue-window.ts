@@ -1,26 +1,20 @@
 import * as Phaser from 'phaser';
-import { BALANCE } from '../../data/balance';
 import { CONTINUE_ANIM } from '../../data/continue-anim';
 import { PALETTE } from '../../data/palette';
 import { formatNumber, t } from '../../i18n';
-import { cssColor } from '../../util/color';
 import { services } from '../../services';
 import type { ContinueFlow } from '../continue-flow';
 import { cuesForMoment } from '../fx/moment-cues';
 import { playCues } from '../fx/run-cues';
-import { createTreasureTextures, TREASURE_TEXTURES } from '../fx/treasure-textures';
+import { createTreasureTextures } from '../fx/treasure-textures';
 import { bakeTexture } from './bake-texture';
-import { Button, createLabelButton } from './button';
+import { ContinueButtons } from './continue-buttons';
+import { ContinueTimer } from './continue-timer';
 import { createOutlinedText } from './outlined-text';
 import type { UiRegion } from './ui-regions';
 
-const { window: win, timer, button: btn, decline } = CONTINUE_ANIM;
+const { window: win, decline, ease } = CONTINUE_ANIM;
 const PANEL_TEXTURE = 'ui_continue_panel';
-const DEPTH = 400;
-const BERRY_BUTTON_TEXTURE = 'ui_continue_berry_button';
-const TITLE_PULSE = { scale: 1.05, ms: 1100 };
-const FULL_TURN = Math.PI * 2;
-const START_ANGLE = -Math.PI / 2;
 
 /**
  * The "Continue?" window: slides in from the bottom, shows the tower height, a ring timer
@@ -31,19 +25,12 @@ export class ContinueWindow {
   private readonly bob: Phaser.GameObjects.Container;
   private readonly title: Phaser.GameObjects.Text;
   private readonly heightText: Phaser.GameObjects.Text;
-  private readonly ring: Phaser.GameObjects.Graphics;
-  private readonly digit: Phaser.GameObjects.Text;
-  private readonly adButton: Button;
-  private readonly adLabel: Phaser.GameObjects.Text;
-  private readonly berryButton: Button;
-  private readonly berryLabel: Phaser.GameObjects.Text;
+  private readonly timer: ContinueTimer;
+  private readonly buttons: ContinueButtons;
   private readonly declineText: Phaser.GameObjects.Text;
   private flow: ContinueFlow | null = null;
   private shown = false;
   private declineShown = false;
-  /** Last enabled state given to a button: `setEnabled` resets a press, so only changes are passed on. */
-  private readonly enabledNow = new Map<Button, boolean>();
-  private lastDigit = -1;
   private screenH = 0;
   private slide: Phaser.Tweens.Tween | null = null;
   private bobTween: Phaser.Tweens.Tween | null = null;
@@ -63,22 +50,11 @@ export class ContinueWindow {
     const face = scene.add.image(0, 0, PANEL_TEXTURE).setOrigin(0.5, 0);
     this.title = createOutlinedText(scene, 0, win.titleY, t('continue.title'), win.titleFont);
     this.heightText = createOutlinedText(scene, 0, win.heightY, '', win.heightFont, PALETTE.gold);
-    this.ring = scene.add.graphics({ x: 0, y: win.timerY });
-    this.digit = createOutlinedText(scene, 0, win.timerY, '', timer.digitFont);
-
-    this.adLabel = createOutlinedText(scene, 0, 0, t('continue.watchAd'), btn.font);
-    this.adButton = createLabelButton(
-      scene,
-      0,
-      win.adButtonY,
-      this.adLabel,
-      PALETTE.accent,
-      btn,
-      'ui_continue_button',
-      () => void this.flow?.watchAd(),
-    ).breathe();
-    this.berryLabel = createOutlinedText(scene, 0, 0, '', btn.font);
-    this.berryButton = this.createBerryButton();
+    this.timer = new ContinueTimer(scene, win.timerY);
+    this.buttons = new ContinueButtons(scene, {
+      onWatchAd: () => void this.flow?.watchAd(),
+      onPayBerries: () => void this.flow?.payWithBerries(),
+    });
     this.declineText = createOutlinedText(
       scene,
       0,
@@ -93,14 +69,12 @@ export class ContinueWindow {
       face,
       this.title,
       this.heightText,
-      this.ring,
-      this.digit,
-      this.adButton,
-      this.berryButton,
+      this.timer.root,
+      this.buttons.ad,
+      this.buttons.berry,
       this.declineText,
     ]);
-    this.panel = scene.add.container(0, 0, [this.bob]).setDepth(DEPTH).setVisible(false);
-    this.setButtonsEnabled(false);
+    this.panel = scene.add.container(0, 0, [this.bob]).setDepth(win.depth).setVisible(false);
   }
 
   /** Screen area of the window while it is on screen, so taps on it do not drop a layer. */
@@ -128,14 +102,15 @@ export class ContinueWindow {
       return;
     }
     if (!this.shown) this.show(runHeight);
-    this.drawTimer(flow);
-    this.syncButtons(flow);
+    this.timer.update(flow);
+    if (flow.offer) this.buttons.sync(flow.offer, flow.adBusy);
+    this.syncDecline(flow);
   }
 
   private show(runHeight: number): void {
     this.shown = true;
     this.declineShown = false;
-    this.lastDigit = -1;
+    this.timer.reset();
     this.heightText.setText(t('continue.height', { n: formatNumber(runHeight) }));
     this.scene.tweens.killTweensOf(this.declineText);
     this.declineText.setAlpha(0);
@@ -143,13 +118,13 @@ export class ContinueWindow {
     this.slideTo(this.targetY(), win.slideInMs, win.slideInEase);
     this.startBob();
     this.pulse(this.title, 0);
-    this.pulse(this.heightText, TITLE_PULSE.ms / 2);
+    this.pulse(this.heightText, win.titlePulse.ms / 2);
     playCues(cuesForMoment('offerOpened'), services);
   }
 
   private hide(): void {
     this.shown = false;
-    this.setButtonsEnabled(false);
+    this.buttons.disable();
     this.slideTo(this.screenH, win.slideOutMs, win.slideOutEase, () => {
       if (!this.shown) this.panel.setVisible(false);
     });
@@ -173,7 +148,7 @@ export class ContinueWindow {
       targets: this.bob,
       y: { from: 0, to: -win.bobDistance },
       duration: win.bobPeriodMs / 2,
-      ease: 'Sine.easeInOut',
+      ease: ease.sine,
       yoyo: true,
       repeat: -1,
     });
@@ -185,68 +160,13 @@ export class ContinueWindow {
     target.setScale(1);
     this.scene.tweens.add({
       targets: target,
-      scale: TITLE_PULSE.scale,
-      duration: TITLE_PULSE.ms,
+      scale: win.titlePulse.scale,
+      duration: win.titlePulse.ms,
       delay,
-      ease: 'Sine.easeInOut',
+      ease: ease.sine,
       yoyo: true,
       repeat: -1,
     });
-  }
-
-  /** The ring of the remaining time and the seconds in its middle. */
-  private drawTimer(flow: ContinueFlow): void {
-    const left = flow.remainingMs;
-    const urgent = left <= CONTINUE_ANIM.urgentFromMs;
-    const share = Math.min(1, left / BALANCE.continues.offerMs);
-    const color = urgent ? timer.urgentColor : timer.color;
-    const g = this.ring.clear();
-    g.lineStyle(timer.ringWidth, PALETTE.panelShadow, timer.trackAlpha + 0.4);
-    g.beginPath().arc(0, 0, timer.radius, 0, FULL_TURN).strokePath();
-    if (share > 0) {
-      g.lineStyle(timer.ringWidth, color, 1);
-      g.beginPath()
-        .arc(0, 0, timer.radius, START_ANGLE, START_ANGLE + FULL_TURN * share)
-        .strokePath();
-    }
-    const digit = Math.ceil(left / 1000);
-    if (digit === this.lastDigit) return;
-    if (this.lastDigit !== -1 && urgent) playCues(cuesForMoment('timerTick'), services);
-    this.lastDigit = digit;
-    this.digit.setText(String(digit)).setColor(cssColor(color));
-    this.scene.tweens.add({
-      targets: this.digit,
-      scale: { from: timer.popScale, to: 1 },
-      duration: timer.popMs,
-      ease: 'Back.easeOut',
-    });
-  }
-
-  /** Which buttons show, what they say and whether they react. */
-  private syncButtons(flow: ContinueFlow): void {
-    const offer = flow.offer;
-    if (!offer) return;
-    const busy = flow.adBusy;
-    const rows: Button[] = [];
-    this.adButton.setVisible(offer.ad !== null);
-    if (offer.ad !== null) {
-      const ready = offer.ad === 'ready';
-      this.adLabel.setText(t(ready ? 'continue.watchAd' : 'continue.adUnavailable'));
-      this.adButton.setAlpha(ready ? 1 : btn.disabledAlpha);
-      this.enable(this.adButton, ready && !busy);
-      rows.push(this.adButton);
-    }
-    this.berryButton.setVisible(offer.berryCost !== null);
-    if (offer.berryCost !== null) {
-      this.berryLabel.setText(formatNumber(offer.berryCost));
-      this.enable(this.berryButton, !busy);
-      rows.push(this.berryButton);
-    } else {
-      this.enable(this.berryButton, false);
-    }
-    const step = win.berryButtonY - win.adButtonY;
-    rows.forEach((row, i) => row.setY(win.adButtonY + i * step));
-    this.syncDecline(flow);
   }
 
   private syncDecline(flow: ContinueFlow): void {
@@ -271,49 +191,11 @@ export class ContinueWindow {
           targets: this.declineText,
           alpha: low,
           duration: decline.pulseMs / 2,
-          ease: 'Sine.easeInOut',
+          ease: ease.sine,
           yoyo: true,
           repeat: -1,
         });
       },
     });
-  }
-
-  private setButtonsEnabled(enabled: boolean): void {
-    this.enable(this.adButton, enabled);
-    this.enable(this.berryButton, enabled);
-  }
-
-  private enable(button: Button, enabled: boolean): void {
-    if (this.enabledNow.get(button) === enabled) return;
-    this.enabledNow.set(button, enabled);
-    button.setEnabled(enabled);
-  }
-
-  /** Price on a button: the number and the drawn berry next to it. */
-  private createBerryButton(): Button {
-    const icon = this.scene.add.image(0, 0, TREASURE_TEXTURES.berry);
-    icon.setDisplaySize(btn.berryIconSize, btn.berryIconSize);
-    const content = this.scene.add.container(0, 0, [this.berryLabel, icon]);
-    // The label is a placeholder wide enough for two digits; the icon sits after the number.
-    this.berryLabel.setText('30');
-    const half = (this.berryLabel.width + btn.berryGap + btn.berryIconSize) / 2;
-    this.berryLabel.setX(-half + this.berryLabel.width / 2);
-    icon.setX(half - btn.berryIconSize / 2);
-    return new Button(this.scene, {
-      x: 0,
-      y: win.berryButtonY,
-      width: btn.width,
-      height: btn.height,
-      radius: btn.radius,
-      fill: PALETTE.accentSecondary,
-      shadowColor: PALETTE.textDark,
-      shadowOffset: btn.shadowOffset,
-      textureKey: BERRY_BUTTON_TEXTURE,
-      content,
-      onClick: () => {
-        this.flow?.payWithBerries();
-      },
-    }).breathe();
   }
 }

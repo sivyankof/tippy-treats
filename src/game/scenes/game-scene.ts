@@ -93,6 +93,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   create(): void {
+    this.tweens.timeScale = 1;
     const debug = readDebugParams();
     this.seed = debug.seed ?? randomSeed();
     // Until the Team screen (M6) the debug team is the team of every run.
