@@ -4,7 +4,7 @@ import type { FaceRecipe } from '../../data/creature-looks';
 import type { Expression } from './face-state';
 import { browTransform, lidShape, WORRIED_BROW } from './face-recipe';
 import { LICK } from '../../data/lick';
-import { tongueTransform } from './lick-plan';
+import type { EyeLook, LickFace, LipsTongue } from './lick-plan';
 import { EYE_TEXTURE, FACE_TEXTURES, MOUTH_TEXTURE } from './face-textures';
 
 /** What the parts need to know about the layer besides the expression. */
@@ -58,15 +58,11 @@ export class FaceParts extends Phaser.GameObjects.Container {
     this.browL = image(FACE_TEXTURES.brow, -half, browOffsetY);
     this.browR = image(FACE_TEXTURES.brow, half, browOffsetY);
     this.sweat = image(FACE_TEXTURES.sweat, ANIM.face.sweatX, ANIM.face.sweatY);
-    this.tongue = image(FACE_TEXTURES.tongue, 0, mouthOffsetY + LICK.tongueOriginDy)
-      .setOrigin(0.5, 0)
-      .setVisible(false);
-    this.tongueTip = image(FACE_TEXTURES.tongueTip, 0, mouthOffsetY + LICK.tongueOriginDy)
-      .setOrigin(0.5, 0)
-      .setVisible(false);
+    this.tongue = image(FACE_TEXTURES.tongue, 0, 0).setOrigin(0.5, 1).setVisible(false);
+    this.tongueTip = image(FACE_TEXTURES.tongueTip, 0, 0).setOrigin(0.5, 1).setVisible(false);
     this.setBrowPose(null, false);
 
-    // The tongue comes out under the eyes: they cover it where it passes.
+    // The short tongue that licks the lips lies over the mouth, under the eyes.
     this.add([
       this.cheekL,
       this.cheekR,
@@ -104,11 +100,11 @@ export class FaceParts extends Phaser.GameObjects.Container {
     for (const brow of [this.browL, this.browR]) brow.setVisible(e.brows);
     this.setBrowPose(recipe, e.ownBrows);
     this.mouth.setTexture(MOUTH_TEXTURE[e.mouth]).setVisible(showRest);
+    this.mouth.setOrigin(0.5).setPosition(0, ANIM.face.mouthOffsetY).setScale(1);
     this.applyCheeks(recipe, showRest, e.puffed === true);
     this.sweat.setVisible(e.sweat && showRest);
-    const tongueOut = e.tongue === true && showRest;
-    this.tongue.setVisible(tongueOut);
-    this.tongueTip.setVisible(tongueOut);
+    this.tongue.setVisible(false);
+    this.tongueTip.setVisible(false);
     if (!e.sweat) this.sweatMs = 0;
   }
 
@@ -125,19 +121,116 @@ export class FaceParts extends Phaser.GameObjects.Container {
   }
 
   /**
-   * Points the tongue from the mouth at (`dx`, `dy`) in face pixels, `reach` (0..1) of the way
-   * out, swung by `swingDeg`. Whether it shows is decided by the expression.
+   * The face of a lick over the current expression: raised brows, the mouth from a small "oh"
+   * through pursed lips to gaping open (it opens down from the upper lip), the eyes open, squinted
+   * or blissfully shut, warmer or puffed cheeks. Call `apply` again to go back to the expression.
    */
-  placeTongue(dx: number, dy: number, reach: number, swingDeg: number): void {
-    const t = tongueTransform(dx, dy - (ANIM.face.mouthOffsetY + LICK.tongueOriginDy), reach);
-    const angle = t.angleDeg + swingDeg;
-    this.tongue.setAngle(angle).setScale(1, t.scaleY);
-    // The tip rides at the end of the stem, turned the same way (clockwise from straight down).
-    const turn = (angle * Math.PI) / 180;
-    const originY = ANIM.face.mouthOffsetY + LICK.tongueOriginDy;
+  poseLick(face: Readonly<LickFace>): void {
+    const f = LICK.face;
+    if (face.brow > 0) {
+      const pose = {
+        angleDeg: f.brows.angleDeg,
+        offsetY: f.brows.liftPx * face.brow,
+        scaleX: 1,
+        scaleY: 1,
+      };
+      for (const [brow, side, sign] of [
+        [this.browL, 'left', -1],
+        [this.browR, 'right', 1],
+      ] as const) {
+        const shown = face.browSide === 0 || face.browSide === sign;
+        brow.setVisible(shown);
+        if (!shown) continue;
+        const t = browTransform(pose, side);
+        FaceParts.show(brow, FACE_TEXTURES.brow).setAngle(t.angle).setY(t.y).setScale(1);
+      }
+    }
+    this.poseMouth(face);
+    this.poseEye(this.eyeL, this.pupilL, face.eyeL);
+    this.poseEye(this.eyeR, this.pupilR, face.eyeR);
+    const swell = face.blush > 0 ? 1 + (LICK.happy.blushScale - 1) * face.blush : 1;
+    const puff = 1 + (f.puff.scale - 1) * face.puff;
+    if (face.blush > 0 || face.puff > 0) {
+      for (const cheek of [this.cheekL, this.cheekR]) {
+        if (face.blush > 0) FaceParts.show(cheek, FACE_TEXTURES.cheekHot);
+        cheek.setScale(swell * puff);
+      }
+    }
+  }
+
+  /** Sets a texture only when it changes (a pose is laid every frame). */
+  private static show(image: Phaser.GameObjects.Image, key: string): Phaser.GameObjects.Image {
+    return image.texture.key === key ? image : image.setTexture(key);
+  }
+
+  private poseMouth(face: Readonly<LickFace>): void {
+    const { mouthOffsetY } = ANIM.face;
+    const f = LICK.face;
+    switch (face.mouth) {
+      case 'oh':
+      case 'purse':
+        FaceParts.show(this.mouth, FACE_TEXTURES.mouthO)
+          .setOrigin(0.5)
+          .setPosition(0, mouthOffsetY)
+          .setScale(Math.max(0, (face.mouth === 'oh' ? f.ohScale : 1) * face.open));
+        return;
+      case 'gape':
+        FaceParts.show(this.mouth, FACE_TEXTURES.mouthGape)
+          .setOrigin(0.5, 0)
+          .setPosition(0, f.gapeLipY)
+          .setScale(Math.max(0.3, Math.min(1.15, 0.6 + 0.4 * face.open)), Math.max(0, face.open));
+        return;
+      case 'wide':
+        FaceParts.show(this.mouth, FACE_TEXTURES.mouthOpen)
+          .setOrigin(0.5, 0)
+          .setPosition(0, f.gapeLipY)
+          .setScale(1, Math.max(0, face.open));
+        return;
+      default:
+        return;
+    }
+  }
+
+  private poseEye(
+    eye: Phaser.GameObjects.Image,
+    pupil: Phaser.GameObjects.Image,
+    look: EyeLook,
+  ): void {
+    if (look === 'expr') return;
+    const texture =
+      look === 'bliss'
+        ? FACE_TEXTURES.eyeHappy
+        : look === 'shut'
+          ? FACE_TEXTURES.eyeClosed
+          : FACE_TEXTURES.eyeOpen;
+    FaceParts.show(eye, texture).setScale(1);
+    pupil.setVisible(look === 'open').setScale(1);
+  }
+
+  /** The short tongue licking the lips (`null`: none). */
+  placeLipsTongue(pose: Readonly<LipsTongue> | null): void {
+    if (!pose || !pose.shown || pose.length <= 0) {
+      this.tongue.setVisible(false);
+      this.tongueTip.setVisible(false);
+      return;
+    }
+    const { tipPx: tipHeight, stemTexturePx: stemTexture } = LICK.lips;
+    const w = pose.widthScale;
+    const tip = tipHeight * w;
+    const stem = Math.max(0, pose.length - tip);
+    const turn = (pose.angleDeg * Math.PI) / 180;
+    this.tongue
+      .setVisible(stem > 0)
+      .setPosition(pose.x, pose.y)
+      .setAngle(pose.angleDeg)
+      .setScale(w, stem / stemTexture);
+    // The tip rides at the end of the stem, turned the same way; a shorter tongue is the tip alone, smaller.
+    const tipScale = w * Math.min(1, pose.length / tip);
     this.tongueTip
-      .setAngle(angle)
-      .setPosition(-Math.sin(turn) * t.tipDistance, originY + Math.cos(turn) * t.tipDistance);
+      .setVisible(true)
+      .setAngle(pose.angleDeg)
+      .setScale(tipScale)
+      .setPosition(pose.x + Math.sin(turn) * stem, pose.y - Math.cos(turn) * stem);
   }
 
   /** The drop slides down and fades, then starts again at the top. */
@@ -186,10 +279,12 @@ export class FaceParts extends Phaser.GameObjects.Container {
     const spread = recipe?.cheekSpread ?? 1;
     const half = (ANIM.face.cheekSpacing / 2) * spread;
     this.cheekL
+      .setTexture(FACE_TEXTURES.cheek)
       .setVisible(showRest && scale > 0)
       .setScale(scale)
       .setX(-half);
     this.cheekR
+      .setTexture(FACE_TEXTURES.cheek)
       .setVisible(showRest && scale > 0)
       .setScale(scale)
       .setX(half);

@@ -198,11 +198,16 @@ describe('WebAudioService', () => {
     expect(ctx.oscillators).toHaveLength(SFX.recordBlip.notes.length);
   });
 
-  it('plays the lick as two notes over a hiss', () => {
+  it('plays the slurp as a note over a hiss with a pop, and the hum as its notes', () => {
     const { ctx, service } = setup();
     service.unlock();
-    service.lick();
+    service.lickSlurp();
     expect(ctx.oscillators).toHaveLength(2);
+    service.lickHum();
+    expect(ctx.oscillators).toHaveLength(2 + SFX.lick.mmm.length);
+    service.lickSlurpLong();
+    service.lickSmack();
+    expect(ctx.oscillators).toHaveLength(2 + SFX.lick.mmm.length + SFX.lick.long.notes.length + 1);
   });
 
   it('disconnects nodes when a sound ends', () => {

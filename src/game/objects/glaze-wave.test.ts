@@ -106,8 +106,22 @@ describe('waveDripSpots', () => {
     }
   });
 
-  it('gives at most one drip per tongue on a narrow layer', () => {
-    const wave = waveFor(150);
-    expect(waveDripSpots(wave, 3, 14).length).toBe(Math.min(3, wave.tongues.length));
+  it('keeps every drip off the face and fills the count with pairs on the outer tongues', () => {
+    const wave = waveFor(720);
+    const clear = 90;
+    const spots = waveDripSpots(wave, 5, 14, clear);
+    expect(spots).toHaveLength(5);
+    for (const spot of spots) {
+      expect(Math.abs(spot.x)).toBeGreaterThanOrEqual(clear);
+      expect(spot.tipY).toBeCloseTo(waveY(wave, spot.x));
+    }
+    for (let i = 1; i < spots.length; i++) expect(spots[i]!.x).toBeGreaterThan(spots[i - 1]!.x);
+  });
+
+  it('gives a narrow layer only the drips that fit beside its face', () => {
+    const wave = waveFor(300);
+    const spots = waveDripSpots(wave, 3, 14, 90);
+    expect(spots.length).toBeLessThanOrEqual(3);
+    for (const spot of spots) expect(Math.abs(spot.x)).toBeGreaterThanOrEqual(90);
   });
 });

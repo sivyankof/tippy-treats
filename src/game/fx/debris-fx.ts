@@ -34,8 +34,6 @@ export class DebrisFx {
   ) {
     this.pieces = new FallingPieces(scene);
     this.drips = new GlazeDrip(scene);
-    tower.setGlazeDropHandler((x, y, color) => this.drips.spawn(x, y, color));
-    tower.licks.onEatDrop = (x, y, radius) => this.drips.eatNear(x, y, radius);
   }
 
   update(dtMs: number): void {

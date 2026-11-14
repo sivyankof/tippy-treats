@@ -15,7 +15,11 @@ export const FACE_TEXTURES = {
   mouthFlat: 'face_mouth_flat',
   mouthScared: 'face_mouth_scared',
   mouthYum: 'face_mouth_yum',
+  /** The mouth gaping to half the face, teeth and the dark depth showing (the big lick). */
+  mouthGape: 'face_mouth_gape',
   cheek: 'face_cheek',
+  /** The warmer blush of a happy lick. */
+  cheekHot: 'face_cheek_hot',
   sweat: 'face_sweat',
   tongue: 'face_tongue',
   tongueTip: 'face_tongue_tip',

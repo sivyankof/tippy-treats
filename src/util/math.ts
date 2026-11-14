@@ -66,6 +66,18 @@ export function stepToward(value: number, target: number, maxStep: number): numb
   return Math.abs(delta) <= maxStep ? target : value + Math.sign(delta) * maxStep;
 }
 
+/** Standard overshoot of the "back" easing curves. */
+export const BACK_OVERSHOOT = 1.70158;
+
+/**
+ * "Back out" easing for `t` in 0..1: it rises past 1 by a little and settles back on 1 (the
+ * springy motion of the game's animations); `overshoot` sets how far.
+ */
+export function backOut(t: number, overshoot: number = BACK_OVERSHOOT): number {
+  const u = clamp01(t) - 1;
+  return 1 + u * u * ((overshoot + 1) * u + overshoot);
+}
+
 /** Smooth start and end: 0 to 1 over `t` in 0..1, flat at both ends. */
 export function smoothstep(t: number): number {
   const c = clamp01(t);

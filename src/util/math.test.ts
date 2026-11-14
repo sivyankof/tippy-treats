@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  backOut,
   clamp01,
   frameLerp,
   oscillate01,
@@ -82,5 +83,15 @@ describe('stepToward', () => {
     expect(stepToward(1, 0, 0.25)).toBe(0.75);
     expect(stepToward(0.9, 1, 0.25)).toBe(1);
     expect(stepToward(0.5, 0.5, 0.25)).toBe(0.5);
+  });
+
+  it('overshoots with backOut and settles on 1', () => {
+    expect(backOut(0)).toBeCloseTo(0);
+    expect(backOut(1)).toBe(1);
+    let peak = 0;
+    for (let t = 0; t <= 1; t += 0.01) peak = Math.max(peak, backOut(t));
+    expect(peak).toBeGreaterThan(1);
+    expect(backOut(2)).toBe(1);
+    expect(backOut(0.5, 3)).toBeGreaterThan(backOut(0.5));
   });
 });

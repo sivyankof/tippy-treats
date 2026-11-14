@@ -1,4 +1,5 @@
 import type { CutSide } from '../../core/drop';
+import { GLAZE_DRIPS } from '../../data/glaze-drips';
 import { PLAIN_LAYER } from '../../data/plain-layers';
 import { GOLDEN } from '../../util/math';
 import type { LayerBox } from './layer-draw';
@@ -91,7 +92,7 @@ export function waveEdge(wave: GlazeWave): number[] {
   return out;
 }
 
-/** Where a growing drip leaves the glaze: the middle of a tongue and its lowest point. */
+/** Where a growing drip leaves the glaze: a low point of a tongue. */
 export interface WaveDripSpot {
   x: number;
   tipY: number;
@@ -99,30 +100,78 @@ export interface WaveDripSpot {
   rootY: number;
 }
 
+function spotAt(wave: GlazeWave, tongue: GlazeTongue, x: number, halfWidth: number): WaveDripSpot {
+  const rootY = Math.max(
+    tongueY(tongue, wave.crestY, x - halfWidth),
+    tongueY(tongue, wave.crestY, x + halfWidth),
+  );
+  return { x, tipY: tongueY(tongue, wave.crestY, x), rootY };
+}
+
 /**
- * The tongues the growing drips come out of: the ones nearest to `count` evenly spread points,
- * each tongue at most once.
+ * The low points of the tongues the growing drips come out of, at most `count`, none nearer to
+ * the centre than `faceClear` (the face of the layer). Each tongue gives its middle; when that
+ * is not enough, the outermost tongues give two drips each instead (at `pairShares` of their
+ * width, still on the broad round bottom), so a layer gets its drips without any in front of the face.
+ * `rightFirst` splits the right one of two equally far tongues first (neighbouring layers differ).
  */
-export function waveDripSpots(wave: GlazeWave, count: number, halfWidth: number): WaveDripSpot[] {
-  const spots: WaveDripSpot[] = [];
-  const used = new Set<GlazeTongue>();
-  const span = wave.right - wave.left;
-  for (let i = 0; i < count; i++) {
-    const target = wave.left + (span * (i + 1)) / (count + 1);
-    let best: GlazeTongue | null = null;
-    for (const tongue of wave.tongues) {
-      if (used.has(tongue)) continue;
-      const d = Math.abs((tongue.x0 + tongue.x1) / 2 - target);
-      if (!best || d < Math.abs((best.x0 + best.x1) / 2 - target)) best = tongue;
-    }
-    if (!best) break;
-    used.add(best);
-    const x = (best.x0 + best.x1) / 2;
-    const rootY = Math.max(
-      tongueY(best, wave.crestY, x - halfWidth),
-      tongueY(best, wave.crestY, x + halfWidth),
-    );
-    spots.push({ x, tipY: wave.crestY + best.depth, rootY });
+export function waveDripSpots(
+  wave: GlazeWave,
+  count: number,
+  halfWidth: number,
+  faceClear = 0,
+  rightFirst = false,
+): WaveDripSpot[] {
+  const clear = (x: number): boolean => Math.abs(x) >= faceClear;
+  const middle = (t: GlazeTongue): number => (t.x0 + t.x1) / 2;
+  const singles = wave.tongues.filter((t) => clear(middle(t)));
+  const pairs = new Set<GlazeTongue>();
+  let total = singles.length;
+  // Outermost first: the tongues by the sides are the farthest from the face.
+  const outermost = [...(rightFirst ? [...wave.tongues].reverse() : wave.tongues)].sort(
+    (a, b) => Math.abs(middle(b)) - Math.abs(middle(a)),
+  );
+  for (const tongue of outermost) {
+    if (total >= count) break;
+    const extra = GLAZE_DRIPS.pairShares
+      .map((share) => tongue.x0 + (tongue.x1 - tongue.x0) * share)
+      .filter(clear).length;
+    const before = clear(middle(tongue)) ? 1 : 0;
+    if (extra <= before) continue;
+    pairs.add(tongue);
+    total += extra - before;
   }
-  return spots.sort((a, b) => a.x - b.x);
+  const spots: WaveDripSpot[] = [];
+  for (const tongue of wave.tongues) {
+    if (pairs.has(tongue)) {
+      for (const share of GLAZE_DRIPS.pairShares) {
+        const x = tongue.x0 + (tongue.x1 - tongue.x0) * share;
+        if (clear(x)) spots.push(spotAt(wave, tongue, x, halfWidth));
+      }
+    } else if (clear(middle(tongue))) {
+      spots.push(spotAt(wave, tongue, middle(tongue), halfWidth));
+    }
+  }
+  return pickSpread(spots, count, wave.left, wave.right);
+}
+
+/** `count` of the spots (sorted by x) nearest to evenly spread points over the stretch, each at most once. */
+function pickSpread(
+  spots: WaveDripSpot[],
+  count: number,
+  left: number,
+  right: number,
+): WaveDripSpot[] {
+  if (spots.length <= count) return spots;
+  const picked = new Set<WaveDripSpot>();
+  for (let i = 0; i < count; i++) {
+    const target = left + ((right - left) * (i + 0.5)) / count;
+    let best: WaveDripSpot | null = null;
+    for (const spot of spots) {
+      if (picked.has(spot)) continue;
+      if (!best || Math.abs(spot.x - target) < Math.abs(best.x - target)) best = spot;
+    }
+    if (best) picked.add(best);
+  }
+  return spots.filter((s) => picked.has(s));
 }

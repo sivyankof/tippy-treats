@@ -1,3 +1,4 @@
+import { LICK } from '../../data/lick';
 import { TREASURE } from '../../data/treasure-anim';
 import { DEPTH } from '../depth';
 import { FX_TEXTURES } from './fx-textures';
@@ -30,4 +31,14 @@ export function starBurst(
     tints,
     depth: DEPTH.particles,
   });
+}
+
+/** A heart pops at the world point (x, y), floats up and fades: a layer is happy. */
+export function heartPop(particles: Particles, x: number, y: number): void {
+  particles.emit(1, (n) => coneBurst(x, y, -90, n, LICK.heart.style), {
+    texture: FX_TEXTURES.heart,
+    tints: [0xffffff],
+    depth: DEPTH.particles,
+  });
+  twinkle(particles, x, y);
 }

@@ -1,24 +1,34 @@
 import { Rng } from '../../core/rng';
-import { ANIM } from '../../data/anim';
 import { BALANCE } from '../../data/balance';
-import { LICK } from '../../data/lick';
+import type { CreatureId } from '../../data/creatures';
+import { GLAZE_DRIPS } from '../../data/glaze-drips';
+import { LICK, type LickStyle } from '../../data/lick';
 import { effectsMode } from '../effects-mode';
-import { easeFn } from '../fx/ease';
-import type { LickableDrip } from './glaze-drip-layer';
+import { faceHalfSpan } from '../fx/glaze-growth';
+import { dropOuter } from './glaze-drip-textures';
+import { glazeWave, waveY } from './glaze-wave';
+import { layerBox } from './layer-draw';
 import type { LayerView } from './layer-view';
 import {
-  clearsEyes,
-  dropCenter,
-  inReach,
+  beatStartMs,
+  dropPoint,
   lickAllowed,
+  lickDurationMs,
+  lickGlaze,
+  lickStyleFor,
   LickScheduler,
-  type FallenDrop,
+  loopShape,
+  type LickGlaze,
+  type LickKind,
+  type LickScene,
+  type LickStage,
+  type LoopShape,
 } from './lick-plan';
-
-const dropEase = easeFn(ANIM.bite.dripEase);
 
 /** Name of the stream the licks draw from, forked from the cosmetic seed of the run. */
 const LICK_STREAM = 'lick';
+/** Radius of the round part of the lick drop at scale 1 (its centre sits this far above its bottom). */
+const DROP_RADIUS = dropOuter(GLAZE_DRIPS.lickLook).width / 2;
 
 /** What the director needs to know about the tower this frame. */
 export interface LickContext {
@@ -31,63 +41,49 @@ export interface LickContext {
   /** Visible band of the screen in world y. */
   bandTop: number;
   bandBottom: number;
-  nowMs: number;
-}
-
-/** The drip being lapped: its owner, slot, what was licked off before and what this lick takes. */
-interface DripTarget {
-  owner: LayerView;
-  slot: number;
-  startLicked: number;
-  cutPx: number;
-}
-
-/** What a layer is going to lick, with the target in its face coordinates. */
-interface Pick {
-  index: number;
-  view: LayerView;
-  dx: number;
-  dy: number;
-  drip: DripTarget | null;
-  drop: FallenDrop | null;
 }
 
 /** A lick under way. */
 interface ActiveLick {
   index: number;
   view: LayerView;
-  drip: DripTarget | null;
-  drop: FallenDrop | null;
-  eaten: boolean;
-  /** Clock time the tongue comes out, for the sound (-1: played). */
-  soundAtMs: number;
+  scene: LickScene;
+  kind: LickKind;
+  style: LickStyle;
+  shape: LoopShape;
+  /** Where the drop leaves the glaze edge, in face pixels, and its colour. */
+  rootY: number;
+  color: number;
+  stage: LickStage | null;
+  /** Neighbours that glance at the lucky one. */
+  glancers: LayerView[];
 }
 
 /**
- * The rare lick: a plain layer on screen sticks out its tongue and laps a glaze drip (its own, or
- * one of the layer above that runs onto it) or a drop that has just fallen. At most one lick for
- * the whole tower per interval; the time between them comes from the cosmetic stream of the run.
+ * The lick, the main joke of the tower at rest (docs/06, "Слизывание глазури"): a layer on screen
+ * gets a drop of glaze on its face and licks it off, in the big scene or the short one. At most
+ * one lick for the whole tower per interval; the timing, the scene, the layer, how the drop comes
+ * and the direction come from the cosmetic stream of the run. The face plays the scene, the drop
+ * is drawn by the layer's drips; this keeps them together and cues the sounds and the heart.
  */
 export class LickDirector {
   private readonly scheduler: LickScheduler;
   private readonly random: Rng;
   private run: ActiveLick | null = null;
-  private fresh: FallenDrop | null = null;
-  private readonly scratch: LickableDrip[] = [];
+  private readonly glaze: LickGlaze = { kind: 'none', x: 0, y: 0, squash: 1, scale: 1 };
   private readonly spot = { x: 0, y: 0 };
-  /** The tongue comes out: the sound plays. */
-  onLick: (() => void) | null = null;
-  /** The tongue laps up the drop near this world point (radius in pixels). */
-  onEatDrop: ((x: number, y: number, radius: number) => void) | null = null;
+  /** The short scene's stroke takes the drop: a short slurp. */
+  onSlurp: (() => void) | null = null;
+  /** The big scene's tongue shoots out: a long slurp through its whole motion. */
+  onSlurpLong: (() => void) | null = null;
+  /** The tongue snaps back in: a smack. */
+  onSmack: (() => void) | null = null;
+  /** The happy end of the big scene: a contented "mmm" and a heart over the head (world point). */
+  onHappy: ((x: number, y: number) => void) | null = null;
 
   constructor(cosmeticSeed: number) {
     this.random = new Rng(cosmeticSeed).fork(LICK_STREAM);
     this.scheduler = new LickScheduler(() => this.random.next());
-  }
-
-  /** A glaze drop has just started to fall from (x, y). */
-  noteDrop(x: number, y: number, nowMs: number): void {
-    this.fresh = { x, y, bornMs: nowMs };
   }
 
   /** Advances the lick and, when it is time, starts a new one. */
@@ -101,88 +97,171 @@ export class LickDirector {
       return;
     }
     this.scheduler.tick(dtMs);
-    if (this.scheduler.ready) this.startAny(ctx, false);
+    if (this.scheduler.ready) this.start(ctx, false);
   }
 
-  /** Starts a lick at once if anything can be licked (a dev tool); returns whether it did. */
-  lickNow(ctx: LickContext): boolean {
+  /** Starts a lick at once if a layer can lick (a dev tool); returns whether it did. */
+  lickNow(ctx: LickContext, scene?: LickScene, kind?: LickKind): boolean {
     if (this.run || effectsMode.reduced) return false;
-    return this.startAny(ctx, true);
+    return this.start(ctx, true, scene, kind);
   }
 
-  /** Drops the lick that is going on and the drop waiting to be licked. */
+  /** Drops the lick that is going on. */
   stop(): void {
-    this.run?.view.faceView.cancelLick();
+    if (!this.run) return;
+    this.run.view.faceView.cancelLick();
+    this.run.view.glazeDrips.hideLick();
     this.run = null;
-    this.fresh = null;
   }
 
-  private startAny(ctx: LickContext, forced: boolean): boolean {
-    const pick = this.pickDrop(ctx) ?? this.pickDrip(ctx);
-    if (!pick) {
+  private start(ctx: LickContext, forced: boolean, scene?: LickScene, kind?: LickKind): boolean {
+    const candidates: Array<[number, LayerView]> = [];
+    for (const [index, view] of ctx.views) {
+      if (this.allowed(index, view, ctx)) candidates.push([index, view]);
+    }
+    const picked = candidates[this.random.int(0, candidates.length - 1)];
+    if (!picked) {
       if (!forced) this.scheduler.retry();
       return false;
     }
-    const glance = pick.drop ? LICK.dropGlanceMs : LICK.glanceMs;
-    pick.view.faceView.startLick(pick.dx, pick.dy, glance);
+    const [index, view] = picked;
+    const face = view.faceView;
+    const creature = view.look.kind === 'creature' ? (view.look.creature ?? null) : null;
+    const lickScene = scene ?? this.scheduler.nextScene();
+    const random = this.random.next();
+    // Creatures (and the short scene) lick only a drop that fell from above.
+    const lickKind: LickKind =
+      lickScene === 'short' || creature
+        ? 'fall'
+        : (kind ?? (random < LICK.runShare ? 'run' : 'fall'));
+    const dir: 1 | -1 = this.random.next() < 0.5 ? -1 : 1;
+    const style = lickStyleFor(creature);
+    const shape = loopShape(view.drawnWidth, face.faceScale, dir, style);
+    const own = view.glazeDrips.ownGlaze;
+    const above = ctx.views.get(index + 1)?.glazeDrips.ownGlaze ?? -1;
+    face.startLick(lickScene, lickKind, shape, style);
     this.run = {
-      index: pick.index,
-      view: pick.view,
-      drip: pick.drip,
-      drop: pick.drop,
-      eaten: false,
-      soundAtMs: ctx.nowMs + glance,
+      index,
+      view,
+      scene: lickScene,
+      kind: lickKind,
+      style,
+      shape,
+      rootY: this.rootY(view, lickScene, lickKind, shape, creature),
+      color: lickKind === 'fall' && above >= 0 ? above : own,
+      stage: null,
+      glancers: [],
     };
-    this.fresh = null;
     this.scheduler.started();
+    this.follow(this.run, ctx);
     return true;
   }
 
-  /** Keeps the tongue on the target and laps the drip shorter. */
+  /** Where the drop leaves the glaze above it, in face pixels: the wavy edge, or a creature's top edge. */
+  private rootY(
+    view: LayerView,
+    scene: LickScene,
+    kind: LickKind,
+    shape: LoopShape,
+    creature: CreatureId | null,
+  ): number {
+    const face = view.faceView;
+    const scale = face.faceScale || 1;
+    if (creature) return (-BALANCE.layer.height / 2 - face.y) / scale;
+    dropPoint(scene, kind, shape, this.spot);
+    const width = view.drawnWidth;
+    const wave = glazeWave(layerBox(width), view.cutSide, faceHalfSpan(width, null));
+    return (waveY(wave, face.x + this.spot.x * scale) - LICK.glazeInsetPx - face.y) / scale;
+  }
+
+  /** Keeps the drop with the face and cues the sounds, the heart and the neighbours. */
   private follow(run: ActiveLick, ctx: LickContext): void {
     const face = run.view.faceView;
-    if (ctx.views.get(run.index) !== run.view || !face.licking) {
-      face.cancelLick();
-      this.run = null;
-      return;
-    }
-    if (run.soundAtMs >= 0 && ctx.nowMs >= run.soundAtMs) {
-      run.soundAtMs = -1;
-      this.onLick?.();
-    }
-    // The player started aiming at the top layer: the tongue goes in at once.
-    if (run.index === ctx.topIndex && ctx.aiming) {
+    const drips = run.view.glazeDrips;
+    const aimingAtTop = run.index === ctx.topIndex && ctx.aiming;
+    if (ctx.views.get(run.index) !== run.view || !face.licking || aimingAtTop) {
+      // The player started aiming at the top layer, or the face got busy: the lick is off.
       this.stop();
       return;
     }
     const frame = face.lickFrameNow;
-    if (run.drop) {
-      dropCenter(run.drop, ctx.nowMs - run.drop.bornMs, dropEase, this.spot);
-      if (!run.eaten && (frame.stage === 'lap' || frame.stage === 'retract')) {
-        run.eaten = true;
-        this.onEatDrop?.(this.spot.x, this.spot.y, ANIM.bite.dripSize * 2);
-      }
-      if (!run.eaten) this.aimAt(run.view, this.spot.x, this.spot.y);
-    } else if (run.drip) {
-      const { owner, slot, startLicked, cutPx } = run.drip;
-      const drips = owner.glazeDrips;
-      this.aimAt(run.view, owner.x + drips.slotX(slot), owner.y + drips.tipY(slot));
-      drips.setLicked(slot, startLicked + frame.lap * cutPx);
+    if (frame.stage !== run.stage) {
+      run.stage = frame.stage;
+      this.cue(run, frame.stage, ctx);
+    }
+    const scale = face.faceScale || 1;
+    this.lickDrips(run, ctx, scale);
+    const g = lickGlaze(run.scene, run.kind, run.style, run.shape, frame, run.rootY, this.glaze);
+    const x = face.x + g.x * scale;
+    const y = face.y + g.y * scale;
+    if (g.kind === 'drip') {
+      drips.showLickDrip(x, face.y + run.rootY * scale, y, scale, run.color);
+    } else if (g.kind === 'drop' && g.scale > 0) {
+      const s = scale * g.scale * LICK.drop.dropScale;
+      drips.showLickDrop(x, y + DROP_RADIUS * s * g.squash, s, g.squash, run.color);
+    } else {
+      drips.hideLick();
     }
   }
 
-  /** Points the tongue at a world point. */
-  private aimAt(view: LayerView, worldX: number, worldY: number): void {
-    const scale = view.faceView.faceScale || 1;
-    view.faceView.setLickTarget(
-      (worldX - view.x) / scale,
-      (worldY - view.y - ANIM.face.centerY) / scale,
-    );
+  /** The tongue licks the growing drips it passes over: the layer's own and those running onto it from above. */
+  private lickDrips(run: ActiveLick, ctx: LickContext, scale: number): void {
+    const face = run.view.faceView;
+    const points = face.tonguePoints;
+    if (!points) return;
+    const count = LICK.tongue.segments + 1;
+    const reach = LICK.tongue.width / 2 + LICK.drip.touchPx;
+    run.view.glazeDrips.touch(points, count, face.x, face.y, scale, reach);
+    const above = ctx.views.get(run.index + 1);
+    if (!above) return;
+    const ox = face.x + run.view.x - above.x;
+    const oy = face.y + run.view.y - above.y;
+    above.glazeDrips.touch(points, count, ox, oy, scale, reach);
+  }
+
+  /** Sounds, the heart and the neighbours, each at the start of its beat. */
+  private cue(run: ActiveLick, stage: LickStage, ctx: LickContext): void {
+    if (run.scene === 'short') {
+      if (stage === 'sly') this.glanceNeighbours(run, ctx);
+      if (stage === 'stroke') this.onSlurp?.();
+      return;
+    }
+    if (stage === 'notice') this.glanceNeighbours(run, ctx);
+    if (stage === 'shoot') this.onSlurpLong?.();
+    if (stage === 'lips') this.onSmack?.();
+    if (stage === 'happy') {
+      const face = run.view.faceView;
+      const y = run.view.y + face.y + LICK.happy.heartY * face.faceScale;
+      this.onHappy?.(run.view.x + face.x, y);
+      const envious = run.glancers[0];
+      if (envious && this.random.next() < LICK.envyChance) {
+        envious.faceView.lickLipsEnviously(this.random.next() < 0.5 ? -1 : 1);
+      }
+    }
+  }
+
+  /** The layer above and the one below may glance at the lucky one while it licks. */
+  private glanceNeighbours(run: ActiveLick, ctx: LickContext): void {
+    const face = run.view.faceView;
+    const fx = run.view.x + face.x;
+    const fy = run.view.y + face.y;
+    const left =
+      lickDurationMs(run.scene, run.style) -
+      beatStartMs(run.scene, run.stage ?? 'arrive', run.style);
+    for (const index of [run.index - 1, run.index + 1]) {
+      const other = ctx.views.get(index);
+      if (!other || !other.visible) continue;
+      if (this.random.next() >= LICK.neighbourGlanceChance) continue;
+      const otherFace = other.faceView;
+      if (otherFace.licking) continue;
+      const s = otherFace.faceScale || 1;
+      otherFace.glanceAt((fx - other.x - otherFace.x) / s, (fy - other.y - otherFace.y) / s, left);
+      run.glancers.push(other);
+    }
   }
 
   private allowed(index: number, view: LayerView, ctx: LickContext): boolean {
     return lickAllowed({
-      plain: view.look.kind !== 'creature',
       faceFree: view.visible && view.faceView.canLick,
       index,
       topIndex: ctx.topIndex,
@@ -191,81 +270,5 @@ export class LickDirector {
       bandTop: ctx.bandTop,
       bandBottom: ctx.bandBottom,
     });
-  }
-
-  /** A drop that has just fallen, within reach of a layer's mouth by the time the tongue gets there. */
-  private pickDrop(ctx: LickContext): Pick | null {
-    const drop = this.fresh;
-    if (!drop) return null;
-    const age = ctx.nowMs - drop.bornMs;
-    if (age > LICK.dropFreshMs) {
-      this.fresh = null;
-      return null;
-    }
-    dropCenter(drop, age + LICK.dropGlanceMs + LICK.reachMs, dropEase, this.spot);
-    let best: Pick | null = null;
-    let bestDistance = Infinity;
-    for (const [index, view] of ctx.views) {
-      if (!this.allowed(index, view, ctx)) continue;
-      const scale = view.faceView.faceScale || 1;
-      const dx = (this.spot.x - view.x) / scale;
-      const dy = (this.spot.y - view.y - ANIM.face.centerY) / scale;
-      if (!inReach(dx, dy) || !clearsEyes(dx, dy)) continue;
-      const distance = Math.hypot(dx, dy - ANIM.face.mouthOffsetY);
-      if (distance < bestDistance) {
-        bestDistance = distance;
-        best = { index, view, dx, dy, drip: null, drop };
-      }
-    }
-    return best;
-  }
-
-  /** A grown drip of a layer, or of the layer above that runs onto it, within reach of the mouth. */
-  private pickDrip(ctx: LickContext): Pick | null {
-    const found: Pick[] = [];
-    const topEdge = -BALANCE.layer.height / 2 + LICK.aboveOverlapPx;
-    for (const [index, view] of ctx.views) {
-      if (!this.allowed(index, view, ctx)) continue;
-      this.collectPicks(view, view, index, found, -Infinity);
-      const above = ctx.views.get(index + 1);
-      if (above) this.collectPicks(view, above, index, found, topEdge);
-    }
-    if (found.length === 0) return null;
-    return found[this.random.int(0, found.length - 1)] ?? null;
-  }
-
-  /** Adds the drips of `owner` that `view` can reach; `minTipY` is how low a tip must hang in `view`. */
-  private collectPicks(
-    view: LayerView,
-    owner: LayerView,
-    index: number,
-    out: Pick[],
-    minTipY: number,
-  ): void {
-    if (!owner.glazeDrips.hasDrips) return;
-    this.scratch.length = 0;
-    owner.glazeDrips.collectLickable(LICK.minDripPx, this.scratch);
-    const scale = view.faceView.faceScale || 1;
-    for (const d of this.scratch) {
-      const wx = owner.x + d.x;
-      const wy = owner.y + d.tipY;
-      if (wy - view.y < minTipY) continue;
-      const dx = (wx - view.x) / scale;
-      const dy = (wy - view.y - ANIM.face.centerY) / scale;
-      if (!inReach(dx, dy) || !clearsEyes(dx, dy)) continue;
-      out.push({
-        index,
-        view,
-        dx,
-        dy,
-        drip: {
-          owner,
-          slot: d.slot,
-          startLicked: owner.glazeDrips.lickedOf(d.slot),
-          cutPx: Math.min(LICK.shortenPx, d.length),
-        },
-        drop: null,
-      });
-    }
   }
 }

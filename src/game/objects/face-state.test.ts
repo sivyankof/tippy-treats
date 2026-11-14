@@ -451,11 +451,11 @@ describe('ability reactions', () => {
 });
 
 describe('the lick reaction', () => {
-  it('shows an open mouth with the tongue out, and no sweat', () => {
-    const e = resolveExpression('calm', 'lick');
-    expect(e.tongue).toBe(true);
-    expect(e.mouth).toBe('open');
+  it('keeps the eyes open and drops the sweat even on a worried face', () => {
+    const e = resolveExpression('scared', 'lick');
+    expect(e.sweat).toBe(false);
     expect(e.eyes).toBe('open');
+    expect(e.lids).toBe(false);
   });
 
   it('is weaker than joy but stronger than a blink', () => {

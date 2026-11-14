@@ -10,6 +10,7 @@ import { gameState } from '../../state';
 import { aimMouth } from '../objects/face-state';
 import { FlyingLayerView } from '../objects/flying-layer-view';
 import type { LayerView } from '../objects/layer-view';
+import type { LickKind, LickScene } from '../objects/lick-plan';
 import { TowerView } from '../objects/tower-view';
 import { AbilityFx } from './abilities/ability-fx';
 import { CameraKick } from './camera-kick';
@@ -20,6 +21,7 @@ import { FlyingFx } from './flying-fx';
 import { LandingFx } from './landing-fx';
 import { MaterialFx } from './material-fx';
 import { RecordMoment } from './record-moment';
+import { heartPop } from './sparkle-fx';
 import { cuesForEvents, playCues } from './run-cues';
 import { isCovered } from './rule-state';
 import { TowerCollapse } from './tower-collapse';
@@ -83,10 +85,19 @@ export class RunFx {
       this.glow,
       gameState.recordHeight,
     );
-    this.tower.licks.onLick = () => services.audio.lick();
+    const licks = this.tower.licks;
+    licks.onSlurp = () => services.audio.lickSlurp();
+    licks.onSlurpLong = () => services.audio.lickSlurpLong();
+    licks.onSmack = () => services.audio.lickSmack();
+    licks.onHappy = (x, y) => {
+      services.audio.lickHum();
+      heartPop(this.landingFx.particles, x, y);
+    };
     if (import.meta.env.DEV) {
-      // window.tippyLick(): a plain layer licks a drip right away; true when one could.
-      (window as Window & { tippyLick?: () => boolean }).tippyLick = () => this.tower.lickNow();
+      // window.tippyLick('big' | 'short', 'run' | 'fall'): a layer licks right away; true when one could.
+      (
+        window as Window & { tippyLick?: (scene?: LickScene, kind?: LickKind) => boolean }
+      ).tippyLick = (scene, kind) => this.tower.lickNow(scene, kind);
     }
   }
 

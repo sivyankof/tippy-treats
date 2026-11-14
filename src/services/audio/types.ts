@@ -31,8 +31,14 @@ export interface AudioService {
   /** A short blip: the run crossed the session record (the fanfare is for the results screen). */
   recordBlip(): void;
   click(): void;
-  /** A layer licks a drip of glaze: a short wet slurp and a happy hum. */
-  lick(): void;
+  /** A layer licks a drop of glaze off its cheek in one stroke: a short juicy slurp. */
+  lickSlurp(): void;
+  /** The tongue goes round the whole face: a long "slu-u-urp". */
+  lickSlurpLong(): void;
+  /** The tongue snaps back into the mouth: a smack. */
+  lickSmack(): void;
+  /** The licked layer is happy: a short contented "mmm". */
+  lickHum(): void;
   /** Creature squeak; `pitch` is a multiplier (1 = base pitch). */
   squeak(pitch: number): void;
 }

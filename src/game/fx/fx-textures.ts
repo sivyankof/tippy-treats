@@ -1,10 +1,11 @@
 import type * as Phaser from 'phaser';
 import { ANIM } from '../../data/anim';
 import { PALETTE } from '../../data/palette';
+import { LICK } from '../../data/lick';
 import { DEG_TO_RAD, TWO_PI } from '../../util/math';
 import { bakeTexture } from '../ui/bake-texture';
 
-/** Keys of the small shared effect textures. All are white and meant to be tinted. */
+/** Keys of the small shared effect textures. All are white and meant to be tinted, except the heart. */
 export const FX_TEXTURES = {
   glossBand: 'fx_gloss_band',
   drop: 'fx_drop',
@@ -15,7 +16,14 @@ export const FX_TEXTURES = {
   spark: 'fx_spark',
   confetti: 'fx_confetti',
   ring: 'fx_ring',
+  /** A pink heart with a dark outline and a shine, drawn in its own colours. */
+  heart: 'fx_heart',
 } as const;
+
+/** The heart: two round lobes over a point, as shares of its size. */
+const HEART_LOBE = { x: 0.28, y: 0.33, r: 0.25 } as const;
+const HEART_TIP_Y = 0.92;
+const HEART_SHINE = { x: 0.27, y: 0.3, w: 0.16, h: 0.12 } as const;
 
 /** Geometry of the baked shapes, in texture pixels. */
 const GLOSS_HEIGHT = 128;
@@ -144,5 +152,35 @@ export function createFxTextures(scene: Phaser.Scene): void {
     for (const { widthScale, alpha } of RING_GLOW) {
       g.lineStyle(stroke * widthScale, white, alpha).strokeCircle(ringHalf, ringHalf, radius);
     }
+  });
+
+  const { size: heartSize, outline: heartOutline } = LICK.heart;
+  bakeTexture(scene, FX_TEXTURES.heart, heartSize, heartSize, (g) => {
+    const shape = (inset: number): void => {
+      const r = heartSize * HEART_LOBE.r - inset;
+      const lx = heartSize * HEART_LOBE.x;
+      const ly = heartSize * HEART_LOBE.y;
+      g.fillCircle(lx, ly, r).fillCircle(heartSize - lx, ly, r);
+      const side = lx - r * Math.SQRT1_2;
+      g.fillTriangle(
+        side,
+        ly + r * Math.SQRT1_2,
+        heartSize - side,
+        ly + r * Math.SQRT1_2,
+        heartSize / 2,
+        heartSize * HEART_TIP_Y - inset * Math.SQRT2,
+      );
+      g.fillRect(lx, ly - r * 0.2, heartSize - lx * 2, r);
+    };
+    g.fillStyle(PALETTE.textDark, 1);
+    shape(0);
+    g.fillStyle(PALETTE.accent, 1);
+    shape(heartOutline);
+    g.fillStyle(white, 0.85).fillEllipse(
+      heartSize * HEART_SHINE.x,
+      heartSize * HEART_SHINE.y,
+      heartSize * HEART_SHINE.w,
+      heartSize * HEART_SHINE.h,
+    );
   });
 }

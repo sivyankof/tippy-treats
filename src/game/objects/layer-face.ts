@@ -5,7 +5,9 @@ import { LICK } from '../../data/lick';
 import { frameLerp } from '../../util/math';
 import { FaceParts } from './face-parts';
 import { faceLayout } from './face-recipe';
-import { lickFrame, type LickFrame, type LickStage } from './lick-plan';
+import { FaceLick } from './face-lick';
+import type { LickFrame, LickKind, LickScene, LoopShape } from './lick-plan';
+import type { LickStyle } from '../../data/lick';
 import {
   FaceState,
   resolveExpression,
@@ -59,18 +61,23 @@ export class LayerFace extends Phaser.GameObjects.Container {
   private driftX = 0;
   /** The two faces of a pair rise by this much (the top shell of the twins lifting). */
   private pairLift = 0;
-  /** Time since the lick started (-1: not licking), how long the eyes look first, and its target. */
-  private lickMs = -1;
-  private lickGlanceMs: number = LICK.glanceMs;
-  private lickDx = 0;
-  private lickDy = 0;
-  private lickStage: LickStage | null = null;
-  private lickNow: LickFrame = lickFrame(0);
+  /** The lick played on this face, a glance at a neighbour's, an envious lick of the lips. */
+  private readonly lick: FaceLick;
 
   constructor(scene: Phaser.Scene) {
     super(scene, 0, ANIM.face.centerY);
     this.mainFace = new FaceParts(scene);
     this.add(this.mainFace);
+    this.lick = new FaceLick({
+      parts: this.mainFace,
+      container: this,
+      reaction: () => this.timers.reaction(),
+      react: (reaction, ms) => this.timers.react(reaction, ms),
+      clearReaction: () => this.timers.clearReaction(),
+      lookFull: (dx, dy) => this.lookFull(dx, dy),
+      restore: () => this.restore(),
+      showRest: () => this.showRest,
+    });
     this.refresh();
     this.placePupils();
   }
@@ -153,8 +160,8 @@ export class LayerFace extends Phaser.GameObjects.Container {
    * The farther the target, the farther the pupils move, up to the full offset.
    */
   lookAt(dx: number, dy: number, snap = false): this {
-    // A licking face keeps its eyes on the drip.
-    if (this.lickMs >= 0) return this;
+    // A licking face keeps its eyes on the drop, a glancing one on the neighbour.
+    if (this.lick.busy) return this;
     return this.aim(dx, dy, snap);
   }
 
@@ -172,25 +179,46 @@ export class LayerFace extends Phaser.GameObjects.Container {
     return this;
   }
 
-  /** A plain face with a mouth that is not busy: it may lick. */
+  /** The pupils go all the way towards (dx, dy), however near it is. */
+  private lookFull(dx: number, dy: number): void {
+    const length = Math.hypot(dx, dy) || 1;
+    const range = ANIM.face.lookRange / length;
+    this.aim(dx * range, dy * range);
+  }
+
+  /** Back to the plain expression and layout, under the pose of a lick. */
+  private restore(): void {
+    this.expression = null;
+    this.refresh();
+    this.placeFaces();
+    this.placePupils();
+  }
+
+  /** A single face with a mouth, big enough and not busy: it may lick. */
   get canLick(): boolean {
     const busy = this.timers.reaction();
     return (
       this.visible &&
-      this.recipe === null &&
+      !this.recipe?.pair &&
       this.showRest &&
-      this.lickMs < 0 &&
+      this.scaleX >= LICK.minFaceScale &&
+      !this.lick.busy &&
       (busy === null || busy === 'blink')
     );
   }
 
   get licking(): boolean {
-    return this.lickMs >= 0;
+    return this.lick.active;
   }
 
-  /** The current moment of the lick running (how far the tongue is out, how much is lapped). */
+  /** The current moment of the lick running. */
   get lickFrameNow(): Readonly<LickFrame> {
-    return this.lickNow;
+    return this.lick.frameNow;
+  }
+
+  /** The points of the tongue (face pixels) while it is out, else `null`. */
+  get tonguePoints(): readonly number[] | null {
+    return this.lick.tonguePoints;
   }
 
   /** Face scale (the layer width scales the face down). */
@@ -198,71 +226,26 @@ export class LayerFace extends Phaser.GameObjects.Container {
     return this.scaleX;
   }
 
-  /**
-   * Starts a lick at the target (`dx`, `dy` in face pixels): the eyes glance at it for
-   * `glanceMs`, then the tongue comes out, laps, goes back and the face squints happily.
-   */
-  startLick(dx: number, dy: number, glanceMs: number = LICK.glanceMs): void {
-    this.lickMs = 0;
-    this.lickGlanceMs = glanceMs;
-    this.lickStage = null;
-    this.setLickTarget(dx, dy);
-    this.lickNow = lickFrame(0, glanceMs);
+  /** Starts a lick (docs/06, "Слизывание глазури"). */
+  startLick(scene: LickScene, kind: LickKind, shape: LoopShape, style: LickStyle): void {
+    this.lick.start(scene, kind, shape, style);
+    this.refresh();
   }
 
-  /** The target moves (the drip gets shorter, the drop falls). */
-  setLickTarget(dx: number, dy: number): void {
-    this.lickDx = dx;
-    this.lickDy = dy;
+  /** Glances at (`dx`, `dy`) (face pixels) for `ms`, whatever the look target is meanwhile. */
+  glanceAt(dx: number, dy: number, ms: number): void {
+    this.lick.glance(dx, dy, ms);
+  }
+
+  /** Licks its lips enviously (a neighbour is licking). */
+  lickLipsEnviously(side: 1 | -1): void {
+    this.lick.envy(side);
+    this.refresh();
   }
 
   /** Stops the lick at once (the tower got worried, the view was recycled). */
   cancelLick(): void {
-    if (this.lickMs < 0) return;
-    // The tongue and the happy squint are reactions of this lick; a blink or a glance are not.
-    const own = this.lickStage !== null && this.lickStage !== 'glance';
-    this.lickMs = -1;
-    this.lickStage = null;
-    if (own && this.timers.reaction() === 'lick') this.timers.clearReaction();
-    this.refresh();
-  }
-
-  private advanceLick(dtMs: number): void {
-    this.lickMs += dtMs;
-    const frame = lickFrame(this.lickMs, this.lickGlanceMs);
-    this.lickNow = frame;
-    if (frame.stage !== this.lickStage) {
-      this.lickStage = frame.stage;
-      if (frame.stage === 'reach') {
-        this.timers.react('lick', LICK.reachMs + LICK.lapMs + LICK.retractMs);
-      } else if (frame.stage === 'happy') {
-        if (this.timers.reaction() === 'lick') this.timers.clearReaction();
-        this.timers.react('joy', LICK.happyMs);
-      }
-    }
-    // A stronger face took over (ouch, an ability, horror): no tongue, so nothing is lapped.
-    const shown = this.timers.reaction();
-    const tongueStage =
-      frame.stage === 'reach' || frame.stage === 'lap' || frame.stage === 'retract';
-    if (tongueStage && shown !== 'lick' && shown !== null && shown !== 'blink') {
-      this.cancelLick();
-      return;
-    }
-    if (frame.stage === 'reach' && shown !== 'lick') {
-      this.cancelLick();
-      return;
-    }
-    if (frame.stage === 'done') {
-      this.lickMs = -1;
-      this.lickStage = null;
-      return;
-    }
-    // The eyes look all the way at the drip, however near it is.
-    const length = Math.hypot(this.lickDx, this.lickDy) || 1;
-    const range = ANIM.face.lookRange / length;
-    this.aim(this.lickDx * range, this.lickDy * range);
-    if (frame.reach > 0)
-      this.mainFace.placeTongue(this.lickDx, this.lickDy, frame.reach, frame.swingDeg);
+    this.lick.cancel();
   }
 
   /** Extra pupil offset in face pixels (nervous eyes trailing the sway). */
@@ -274,9 +257,10 @@ export class LayerFace extends Phaser.GameObjects.Container {
 
   /** Advances blinking and reactions, the pupils and the sweat drop. */
   tick(dtMs: number): void {
-    if (this.lickMs >= 0) this.advanceLick(dtMs);
     this.timers.update(dtMs);
     this.refresh();
+    // Last, so the pose of the lick lies over the expression of this frame.
+    this.lick.tick(dtMs);
     const follow = frameLerp(ANIM.face.lookLerp, dtMs);
     this.lookX += (this.targetX - this.lookX) * follow;
     this.lookY += (this.targetY - this.lookY) * follow;
@@ -288,8 +272,7 @@ export class LayerFace extends Phaser.GameObjects.Container {
   /** Back to a calm face with open eyes, centred pupils and a fresh blink timer. */
   reset(): this {
     this.timers.reset();
-    this.lickMs = -1;
-    this.lickStage = null;
+    this.lick.reset();
     this.mood = 'calm';
     this.mouthHint = undefined;
     this.targetX = this.targetY = this.lookX = this.lookY = this.driftX = 0;

@@ -100,6 +100,11 @@ export class LayerView extends Phaser.GameObjects.Container {
     return this;
   }
 
+  /** Width the picture was baked for; -1 while it shows none. */
+  get drawnWidth(): number {
+    return this.artSlot.drawnWidth;
+  }
+
   /** Bitten edge of the picture shown (`null`: intact). */
   get cutSide(): CutSide | null {
     return this.artSlot.drawnCut;

@@ -8,9 +8,9 @@ import { DEPTH } from '../depth';
 import { effectsMode } from '../effects-mode';
 import { waveStep } from '../fx/anim-curves';
 import { moodForWobble, type MouthKind, type Reaction } from './face-state';
-import { GlazeDripGrowth, type DropHandler } from './glaze-drip-growth';
+import { GlazeDripGrowth } from './glaze-drip-growth';
 import { LickDirector, type LickContext } from './lick-director';
-import { isAiming } from './lick-plan';
+import { isAiming, type LickKind, type LickScene } from './lick-plan';
 import { plainLooks } from './plain-look';
 import { LayerView } from './layer-view';
 import { SwayHold } from './sway-hold';
@@ -70,8 +70,8 @@ export class TowerView {
   private readonly motion = { timeMs: 0, swayShare: 0, phase: 0 };
 
   private readonly tray: Tray;
-  private readonly glazeGrowth = new GlazeDripGrowth();
-  /** The rare lick of a plain layer; it draws from the cosmetic stream of the run. */
+  private readonly glazeGrowth: GlazeDripGrowth;
+  /** The rare lick of a layer; it draws from the cosmetic stream of the run. */
   readonly licks = new LickDirector(plainLooks.cosmeticSeed);
   private bandTop = -Infinity;
   private bandBottom = Infinity;
@@ -85,6 +85,7 @@ export class TowerView {
     readonly trayTopY: number,
   ) {
     this.tray = new Tray(scene, trayTopY);
+    this.glazeGrowth = new GlazeDripGrowth(scene);
   }
 
   /** World centre y of the layer with the given 0-based index. */
@@ -110,25 +111,15 @@ export class TowerView {
     return this.span;
   }
 
-  /** Where the drops that fall from grown glaze drips go (`null`: none fall). */
-  setGlazeDropHandler(handler: DropHandler | null): void {
-    this.glazeGrowth.onDrop = handler
-      ? (x, y, color) => {
-          handler(x, y, color);
-          this.licks.noteDrop(x, y, this.clockMs);
-        }
-      : null;
-  }
-
   /** The part of the world the screen shows (world y): only layers inside it lick. */
   setScreenBand(top: number, bottom: number): void {
     this.bandTop = top;
     this.bandBottom = bottom;
   }
 
-  /** Makes a plain layer lick a drip right away (a dev tool); returns whether one could. */
-  lickNow(): boolean {
-    return this.licks.lickNow(this.lickContext());
+  /** Makes a layer lick right away (a dev tool); returns whether one could. */
+  lickNow(scene?: LickScene, kind?: LickKind): boolean {
+    return this.licks.lickNow(this.lickContext(), scene, kind);
   }
 
   private lickContext(): LickContext {
@@ -139,7 +130,6 @@ export class TowerView {
       aiming: this.state !== null && isAiming(this.state.phase, this.state.flying !== null),
       bandTop: this.bandTop,
       bandBottom: this.bandBottom,
-      nowMs: this.clockMs,
     };
   }
 
@@ -236,6 +226,7 @@ export class TowerView {
       this.licks.update(dtMs, this.lickContext());
     } else {
       this.licks.stop();
+      this.glazeGrowth.clearFalls();
     }
   }
 

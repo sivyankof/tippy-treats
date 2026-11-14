@@ -36,8 +36,6 @@ export interface Expression {
   sweat: boolean;
   /** The cheeks are blown up (a puffed creature); absent means normal. */
   puffed?: boolean;
-  /** The tongue is out (a plain layer licking glaze). */
-  tongue?: boolean;
 }
 
 /** Reactions from the weakest to the strongest. */
@@ -147,7 +145,8 @@ export function resolveExpression(
     case 'squint':
       return { ...base, eyes: 'closed', lids: false };
     case 'lick':
-      return { ...base, eyes: 'open', mouth: 'open', sweat: false, lids: false, tongue: true };
+      // A licking face: open eyes, no sweat; the brows, mouth and tongue are posed by the lick.
+      return { ...base, eyes: 'open', sweat: false, lids: false };
     case 'joy':
       return { eyes: 'happy', mouth: 'smile', sweat: false, ...(recipe ? OWN : PLAIN) };
     case 'ouch':
