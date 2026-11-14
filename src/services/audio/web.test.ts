@@ -93,8 +93,8 @@ describe('WebAudioService', () => {
       service.drop();
       service.perfect(3);
       service.collapseThud(0);
-      service.suspend();
-      service.resume();
+      service.suspend('app');
+      service.resume('app');
     }).not.toThrow();
   });
 
@@ -138,15 +138,37 @@ describe('WebAudioService', () => {
   it('forwards suspend and resume, ignoring rejections, and is silent while hidden', async () => {
     const { ctx, service } = setup();
     service.unlock();
-    service.suspend();
+    service.suspend('app');
     expect(ctx.suspends).toBe(1);
     service.click();
     expect(ctx.oscillators).toHaveLength(0);
-    service.resume();
+    service.resume('app');
     expect(ctx.resumes).toBe(2);
     service.click();
     expect(ctx.oscillators).toHaveLength(1);
     await Promise.resolve();
+  });
+
+  it('stays silent until every suspend reason is lifted', () => {
+    const { ctx, service } = setup();
+    service.unlock();
+    service.suspend('ad');
+    service.suspend('app');
+    service.resume('app');
+    expect(ctx.resumes).toBe(1);
+    service.click();
+    expect(ctx.oscillators).toHaveLength(0);
+    service.resume('ad');
+    expect(ctx.resumes).toBe(2);
+    service.click();
+    expect(ctx.oscillators).toHaveLength(1);
+  });
+
+  it('does not resume on unlock while a reason holds', () => {
+    const { ctx, service } = setup();
+    service.suspend('ad');
+    service.unlock();
+    expect(ctx.resumes).toBe(0);
   });
 
   it('throttles the collapse series', () => {

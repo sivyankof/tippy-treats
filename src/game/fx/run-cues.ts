@@ -8,7 +8,10 @@ import type { FlyingMemo } from './run-fx';
 
 /** A sound of one sim step; `perfect` carries the step of the combo ladder, `ability` the rarity. */
 export type SoundCue =
-  | { kind: 'drop' | 'bite' | 'sneeze' | 'miss' | 'shieldPop' | 'coin' | 'berry' }
+  | {
+      kind:
+        'drop' | 'bite' | 'sneeze' | 'miss' | 'shieldPop' | 'coin' | 'click' | 'berry' | 'record';
+    }
   | { kind: 'perfect'; step: number }
   | { kind: 'ability'; rarity: Rarity };
 

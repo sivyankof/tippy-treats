@@ -2,7 +2,7 @@ import type { Rarity } from '../../data/rarity';
 import { SFX } from '../../data/sfx';
 import { collapseThudGain, comboGainScale, comboNoteFreq, jitterRatio, noteFreq } from './notes';
 import { Synth } from './synth';
-import type { AudioService } from './types';
+import type { AudioService, AudioSuspendReason } from './types';
 
 /** Creates an audio context, or returns null when Web Audio is not available. */
 export type AudioContextFactory = () => AudioContext | null;
@@ -25,7 +25,7 @@ export function createBrowserAudioContext(): AudioContext | null {
  */
 export class WebAudioService implements AudioService {
   private on = true;
-  private hidden = false;
+  private readonly holds = new Set<AudioSuspendReason>();
   private ctx: AudioContext | null = null;
   private synth: Synth | null = null;
   private lastThudAt = -Infinity;
@@ -56,17 +56,17 @@ export class WebAudioService implements AudioService {
         return;
       }
     }
-    if (!this.hidden) this.run((ctx) => ctx.resume());
+    if (this.holds.size === 0) this.run((ctx) => ctx.resume());
   }
 
-  suspend(): void {
-    this.hidden = true;
+  suspend(reason: AudioSuspendReason): void {
+    this.holds.add(reason);
     this.run((ctx) => ctx.suspend());
   }
 
-  resume(): void {
-    this.hidden = false;
-    this.run((ctx) => ctx.resume());
+  resume(reason: AudioSuspendReason): void {
+    this.holds.delete(reason);
+    if (this.holds.size === 0) this.run((ctx) => ctx.resume());
   }
 
   drop(): void {
@@ -180,7 +180,7 @@ export class WebAudioService implements AudioService {
 
   /** Plays through the synth if sound is on, unlocked and visible; never throws. */
   private play(sound: (synth: Synth) => void): void {
-    if (!this.on || this.hidden || !this.synth) return;
+    if (!this.on || this.holds.size > 0 || !this.synth) return;
     try {
       sound(this.synth);
     } catch {

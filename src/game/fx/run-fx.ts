@@ -4,7 +4,9 @@ import type { FlyingLayer, SimEvent, TowerState } from '../../core/tower-sim';
 import type { RunResult } from '../../core/run-result';
 import { ANIM } from '../../data/anim';
 import { BALANCE } from '../../data/balance';
+import { CONTINUE_ANIM } from '../../data/continue-anim';
 import { services } from '../../services';
+import { sessionRecord } from '../session-record';
 import { aimMouth } from '../objects/face-state';
 import { FlyingLayerView } from '../objects/flying-layer-view';
 import type { LayerView } from '../objects/layer-view';
@@ -17,6 +19,7 @@ import { DebrisFx } from './debris-fx';
 import { FlyingFx } from './flying-fx';
 import { LandingFx } from './landing-fx';
 import { MaterialFx } from './material-fx';
+import { RecordMoment } from './record-moment';
 import { cuesForEvents, playCues } from './run-cues';
 import { isCovered } from './rule-state';
 import { TowerCollapse } from './tower-collapse';
@@ -50,11 +53,14 @@ export class RunFx {
   private readonly materialFx: MaterialFx;
   private readonly coinFx: CoinFx;
   private readonly flyingFx: FlyingFx;
+  private readonly recordMoment: RecordMoment;
 
   private glowOn = false;
   private missPiece: LayerView | null = null;
   /** Time left of the miss reaction; `null` when no miss is waiting. */
   private missWaitMs: number | null = null;
+  /** Real time left of the slow motion that plays the missed layer falling past. */
+  private slowMoMs = 0;
   private result: RunResult | null = null;
   private collapse: TowerCollapse | null = null;
   private resultsWaitMs: number = ANIM.results.delayMs;
@@ -70,11 +76,17 @@ export class RunFx {
     this.materialFx = new MaterialFx(this.tower, this.landingFx.particles);
     this.coinFx = new CoinFx(scene, this.tower, this.landingFx.particles);
     this.flyingFx = new FlyingFx(scene, this.tower, this.flyingView, this.landingFx.particles);
+    this.recordMoment = new RecordMoment(scene, this.tower, this.landingFx, sessionRecord.best);
   }
 
   /** The miss has played out: the run may be declined. */
   get canDecline(): boolean {
     return this.missWaitMs !== null && this.missWaitMs <= 0;
+  }
+
+  /** Share of real time that the visuals run at: below 1 during the slow-motion miss. */
+  get timeScale(): number {
+    return this.slowMoMs > 0 ? CONTINUE_ANIM.slowMoScale : 1;
   }
 
   /** Scroll the collapse wants the camera to have; `null` outside of it. */
@@ -124,6 +136,7 @@ export class RunFx {
       switch (event.type) {
         case 'spawn':
           this.missWaitMs = null;
+          this.slowMoMs = 0;
           break;
         case 'land':
           this.onLand(event, state, memo);
@@ -158,20 +171,25 @@ export class RunFx {
     mods: Readonly<Modifiers>,
     cam: CameraInfo,
   ): void {
-    this.advanceEnd(dtMs, state, cam);
+    // Waits and the collapse run on real time, everything that moves on visual time.
+    const realMs = dtMs;
+    const visualMs = realMs * this.timeScale;
+    this.slowMoMs = Math.max(0, this.slowMoMs - realMs);
+    this.advanceEnd(realMs, state, cam);
 
     this.tower.sync(state, cam.scrollY + cam.height);
-    this.flyingView.sync(state, timeMs, dtMs);
-    this.flyingFx.update(dtMs, timeMs, state);
-    this.coinFx.update(dtMs, timeMs, state);
+    this.flyingView.sync(state, timeMs, visualMs);
+    this.flyingFx.update(visualMs, timeMs, state);
+    this.coinFx.update(visualMs, timeMs, state);
     this.pointFaces(state);
-    this.tower.tick(dtMs);
+    this.tower.tick(visualMs);
 
-    this.debris.update(dtMs);
-    this.landingFx.update(dtMs);
-    this.materialFx.update(dtMs, state.wobble);
-    this.abilityFx.update(dtMs, timeMs, state, mods, cam, this.runIsOn(state));
-    this.kick.update(dtMs);
+    this.debris.update(visualMs);
+    this.landingFx.update(visualMs);
+    this.materialFx.update(visualMs, state.wobble);
+    this.abilityFx.update(visualMs, timeMs, state, mods, cam, this.runIsOn(state));
+    this.kick.update(visualMs);
+    this.recordMoment.update(visualMs, timeMs, state, cam);
     this.placeGlow(timeMs, cam);
   }
 
@@ -226,7 +244,8 @@ export class RunFx {
     const piece = this.debris.dropMissed(memo, state);
     if (shielded) return;
     this.missPiece = piece;
-    this.missWaitMs = ANIM.miss.fallMs + ANIM.miss.reactMs;
+    this.slowMoMs = BALANCE.continues.missSlowMoMs;
+    this.missWaitMs = BALANCE.continues.missSlowMoMs + ANIM.miss.reactMs;
   }
 
   /** The miss wait, then the collapse, then the pause before the results. */

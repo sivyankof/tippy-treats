@@ -3,6 +3,7 @@ import { HUD_LAYOUT } from '../../data/hud-layout';
 import { PALETTE } from '../../data/palette';
 import { formatNumber } from '../../i18n';
 import { readDebugParams } from '../../util/debug-params';
+import { ContinueWindow } from '../ui/continue-window';
 import { DebugPanel } from '../debug/debug-panel';
 import { launchRun, SCENES } from '../scene-keys';
 import { Button } from '../ui/button';
@@ -30,6 +31,7 @@ export class HudScene extends Phaser.Scene {
   private pauseButton!: Button;
   private overlay!: PauseOverlay;
   private debugPanel!: DebugPanel;
+  private continueWindow!: ContinueWindow;
   private nextBadge!: NextCreatureBadge;
   private effectBadges!: EffectBadges;
   private zoneBanner!: ZoneBanner;
@@ -81,6 +83,7 @@ export class HudScene extends Phaser.Scene {
         launchRun(this);
       },
     });
+    this.continueWindow = new ContinueWindow(this);
     this.debugPanel = new DebugPanel(this, () => launchRun(this));
     this.debugPanel.setVisible(import.meta.env.DEV && readDebugParams().debug);
 
@@ -90,6 +93,7 @@ export class HudScene extends Phaser.Scene {
         : { x: pauseMargin, y: pauseMargin, width: pauseSize, height: pauseSize },
     );
     const unregisterPanel = addUiRegion(() => this.debugPanel.bounds());
+    const unregisterContinue = addUiRegion(() => this.continueWindow.bounds());
     const unregisterOverlay = addUiRegion(() =>
       this.overlay.visible
         ? { x: 0, y: 0, width: this.scale.gameSize.width, height: this.scale.gameSize.height }
@@ -108,6 +112,7 @@ export class HudScene extends Phaser.Scene {
       unregisterOverlay();
       unregisterPanel();
       this.treasure.destroy();
+      unregisterContinue();
       this.game.events.off(Phaser.Core.Events.HIDDEN, this.pause, this);
       this.scale.off(Phaser.Scale.Events.RESIZE, this.layout, this);
     });
@@ -135,7 +140,7 @@ export class HudScene extends Phaser.Scene {
       this.nextBadge.update(info.height, info.team);
       this.nextBadge.idle(time);
       this.effectBadges.update(info.effects, info.shield, time, delta);
-      this.treasure.update(info, time, delta);
+      this.treasure.update(info, time, delta, this.gameScene()?.continueFlow?.isOpen === true);
     }
     this.numbersIdle.update(time);
     this.tutorialHints.update(
@@ -144,6 +149,7 @@ export class HudScene extends Phaser.Scene {
       this.gameScene()?.tutorial ?? null,
       info?.paused ?? false,
     );
+    this.continueWindow.update(this.gameScene()?.continueFlow ?? null, info?.height ?? 0);
     this.pauseButton.setVisible(this.pauseEnabled());
     this.debugPanel.update(info, this.game.loop.actualFps);
   }
@@ -155,7 +161,8 @@ export class HudScene extends Phaser.Scene {
 
   private pauseEnabled(): boolean {
     const info = this.gameScene()?.getRunInfo();
-    return !!info && info.phase !== 'over' && !this.scene.isActive(SCENES.results);
+    const offerOpen = this.gameScene()?.continueFlow?.isOpen ?? false;
+    return !!info && info.phase !== 'over' && !offerOpen && !this.scene.isActive(SCENES.results);
   }
 
   private pause(): void {
@@ -197,6 +204,7 @@ export class HudScene extends Phaser.Scene {
     const { width, height } = this.scale.gameSize;
     this.cameras.main.setSize(width, height);
     this.overlay.layout(width, height);
+    this.continueWindow.layout(width, height);
     this.wobbleBar.layout(width);
     this.nextBadge.layout(width);
     this.zoneBanner.layout(width);

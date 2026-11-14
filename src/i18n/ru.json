@@ -17,7 +17,19 @@
     "vibration": "Вибрация",
     "toggle": "{name}: {state}",
     "on": "Вкл",
-    "off": "Выкл"
+    "off": "Выкл",
+    "record": "Рекорд",
+    "recordPop": "Рекорд!"
+  },
+  "continue": {
+    "title": "Ещё попытка?",
+    "height": "Высота {n}",
+    "watchAd": "Смотреть рекламу",
+    "adUnavailable": "Реклама недоступна",
+    "decline": "Нет, спасибо"
+  },
+  "ads": {
+    "stub": "Реклама (заглушка)"
   },
   "tutorial": {
     "tap": "Нажми!",

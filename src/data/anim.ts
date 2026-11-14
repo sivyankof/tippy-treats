@@ -296,8 +296,7 @@ export const ANIM = {
     gravity: 2400,
     lifeMs: 1400,
     driftSpeed: 120,
-    /** The missed layer falls past (section 4, "Замедление"; slow motion comes in M5). */
-    fallMs: 400,
+    /** The slow-motion fall lasts BALANCE.continues.missSlowMoMs (CONTINUE_ANIM.slowMoScale). */
     /** Then every face looks after it. */
     reactMs: 300,
   },

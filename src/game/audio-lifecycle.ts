@@ -12,6 +12,6 @@ const GESTURE_EVENTS = ['pointerdown', 'pointerup', 'touchend', 'keydown'] as co
 export function bindAudioLifecycle(game: Phaser.Game, audio: AudioService): void {
   const unlock = (): void => audio.unlock();
   for (const type of GESTURE_EVENTS) window.addEventListener(type, unlock, { passive: true });
-  game.events.on(Phaser.Core.Events.HIDDEN, () => audio.suspend());
-  game.events.on(Phaser.Core.Events.VISIBLE, () => audio.resume());
+  game.events.on(Phaser.Core.Events.HIDDEN, () => audio.suspend('app'));
+  game.events.on(Phaser.Core.Events.VISIBLE, () => audio.resume('app'));
 }
