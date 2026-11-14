@@ -30,12 +30,12 @@ describe('near miss text', () => {
     expect(nearMissText({ kind: 'coins', coins: 40, creature: 'jelly' })).toBe(
       `Just 40 coins to buy ${t('creature.jelly.name')}`,
     );
-    expect(nearMissText({ kind: 'best', record: 31 })).toBe('Your record: 31');
+    expect(nearMissText({ kind: 'best', record: 31, today: 12 })).toBe('Record: 31 · today: 12');
   });
 
   it('speaks Russian too', () => {
     setLang('ru');
-    expect(nearMissText({ kind: 'best', record: 31 })).not.toBe('Your record: 31');
+    expect(nearMissText({ kind: 'best', record: 31, today: 12 })).toBe('Рекорд: 31 · сегодня: 12');
   });
 });
 

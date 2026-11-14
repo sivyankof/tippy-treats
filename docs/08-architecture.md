@@ -384,8 +384,9 @@ export interface Modifiers {
 
 ```ts
 // core/save/schema.ts
-export interface SaveV1 {
-  version: 1;
+// Текущая версия 2. Отличия от версии 1: streak.claimedToday заменён на claimedDay, добавлено today.
+export interface SaveV2 {
+  version: 2;
   installId: string;             // random uuid, for mission seed & support
   createdAt: number;             // epoch ms
   lastSeenAt: number;
@@ -397,7 +398,8 @@ export interface SaveV1 {
   team: [CreatureId | null, CreatureId | null, CreatureId | null];
   records: { classicHeight: number; classicScore: number; bestCombo: number };
   stats: { runs: number; totalLayers: number; perfects: number; adsWatched: number };
-  streak: { count: number; best: number; lastDay: string; cycle: number; claimedToday: boolean };
+  streak: { count: number; best: number; lastDay: string; cycle: number; claimedDay: string };
+  today: { day: string; bestHeight: number };   // лучшая высота Классики за местный день
   missions: { day: string; items: MissionProgress[]; rerollUsed: boolean; chestClaimed: boolean };
   daily: { day: string; attemptsUsed: number; extraAttemptUsed: boolean; best: number; claimedTiers: number[] };
   gift: { nextAt: number };
@@ -700,3 +702,4 @@ interface MissionProgress { id: string; group: 'easy' | 'medium' | 'hard'; targe
 | 2026-11-14 | Первые результаты, ведущие к Медку и Home, держатся флагом подсказки `firstResults` (отмечается кнопкой «Дальше»), а не счётчиком забегов: обучающий забег, брошенный через «Заново» или «Домой» в паузе, не съедает этот шаг. Выход из обычного забега через паузу «Домой» сразу записывает забег, и если уровни дали существ, перед Home показывается сцена нового существа (`game/run-exit.ts`). Демо уходит в карточку с затемнением, выход из забега срабатывает один раз. «×2 за рекламу» не показывается после забега, который не пишется в сохранение (`ResultsData.recorded`) | Сквозное ревью сессии 2: награды уровня не должны пропадать без показа, а отладочные забеги не должны давать монеты |
 | 2026-11-14 | «×2 за рекламу» на результатах показывается, только если забег записан в сохранение и принёс не меньше 10 монет (`canOfferDoubleCoins` в `core/video-policy.ts`, порог `REWARDED_OFFERS.doubleCoinsMin` в `data/rewarded-video.ts`). Раньше кнопка была при любых монетах больше нуля | Документ 05, раздел 6: «Если заработано ≥ 10 монет»; ошибка найдена владельцем на снимке результатов с 3 монетами |
 | 2026-11-14 | `state/game-state.ts` разделён по областям до добавления серии, заданий и башни дня: `GameState` остался единственным владельцем сохранения с прежним API, запись и загрузка ушли в `state/save-store.ts` (`SaveStore`), правила стали чистыми функциями над сохранением: `run-record.ts` (итог забега, награды уровней), `creatures.ts` (бригада, покупка, прокачка), `wallet.ts`, `hints.ts`. Новые области добавляются так же: чистая функция в своём файле и тонкий метод `GameState` | Файл вырос до 466 строк; правило «сцена и модуль не длиннее ~300 строк» и разделение логики по областям |
+| 2026-11-14 | Сохранение версии 2 (одна миграция на всю сессию 3 этапа M6): `streak.claimedToday` (флаг без дня, к утру неверный) заменён на `streak.claimedDay` (местный день полученной награды календаря; при миграции флаг становится днём `lastDay`), добавлено `today: { day, bestHeight }` — лучшая высота Классики за местный день для строки «почти получилось». Задания, башня дня и подарок оставлены в форме версии 1: её хватает. Миграция `migrateV1` в `core/save/migrations.ts` с тестами; у `GameState` появилась необязательная зависимость `now` (игровые часы с `?dayOffset`, по умолчанию `util/clock.now`) | Решение владельца: «лучший результат сегодня» в той же новой версии, что серия, задания и башня дня |

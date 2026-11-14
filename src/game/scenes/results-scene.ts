@@ -56,6 +56,7 @@ export class ResultsScene extends Phaser.Scene {
       bakerXp: gameState.data.bakerXp,
       coins: gameState.coins,
       owned: gameState.data.creatures,
+      todayBest: gameState.todayBest,
     });
     this.hint = createOutlinedText(this, 0, 0, nearMissText(miss), cfg.nearMissFont, PALETTE.gold);
     fitText(this.hint, cfg.nearMissWidth);

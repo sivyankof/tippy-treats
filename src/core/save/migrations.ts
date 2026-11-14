@@ -20,12 +20,27 @@ export type Migration = (raw: RawSave) => RawSave;
 
 export type MigrationChain = Readonly<Record<number, Migration>>;
 
-/** Migrations keyed by the version they upgrade from. Version 1 is the first, so the chain is empty. */
-export const MIGRATIONS: MigrationChain = {};
-
 function isRecord(value: unknown): value is RawSave {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
+
+/**
+ * 1 → 2: `streak.claimedToday` (a flag without a day) becomes `streak.claimedDay`: a claim is
+ * kept for the day the streak last counted, the only day it can belong to; `today` starts empty.
+ */
+export function migrateV1(raw: RawSave): RawSave {
+  const streak = isRecord(raw.streak) ? raw.streak : {};
+  const { claimedToday, ...rest } = streak;
+  const lastDay = typeof rest.lastDay === 'string' ? rest.lastDay : '';
+  return {
+    ...raw,
+    streak: { ...rest, claimedDay: claimedToday === true ? lastDay : '' },
+    today: { day: '', bestHeight: 0 },
+  };
+}
+
+/** Migrations keyed by the version they upgrade from. */
+export const MIGRATIONS: MigrationChain = { 1: migrateV1 };
 
 /**
  * Runs the migration chain up to `target`. The result has the right version but is not

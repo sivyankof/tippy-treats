@@ -649,3 +649,30 @@ describe('team and creatures', () => {
     expect(state.coins).toBe(12);
   });
 });
+
+describe('best height of the day', () => {
+  const DAY = 86_400_000;
+
+  it('keeps the best classic height of the local day and starts over on a new day', async () => {
+    const storage = new MemoryStorage();
+    const clock = { ms: T0 };
+    const state = new GameState({
+      storage,
+      realNow: () => T0,
+      now: () => clock.ms,
+      makeInstallId: () => 'id',
+      scheduler: new ManualScheduler(),
+    });
+    await state.load();
+    expect(state.todayBest).toBe(0);
+    state.recordRun(run({ height: 14 }));
+    state.recordRun(run({ height: 9 }));
+    state.recordRun(run({ mode: 'daily', height: 60 }));
+    expect(state.todayBest).toBe(14);
+    clock.ms += DAY;
+    expect(state.todayBest).toBe(0);
+    state.recordRun(run({ height: 5 }));
+    expect(state.todayBest).toBe(5);
+    expect(state.data.records.classicHeight).toBe(14);
+  });
+});

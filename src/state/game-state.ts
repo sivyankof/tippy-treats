@@ -12,7 +12,7 @@ import type { TeamSlot } from '../core/sim-types';
 import { runTeam, type TeamIds } from '../core/team';
 import type { HintId, Save } from '../core/save/schema';
 import type { CreatureId } from '../data/creatures';
-import { clockWentBack } from '../util/clock';
+import { clockWentBack, localDay, now } from '../util/clock';
 import { withCreatureBought, withCreatureUpgraded, withTeam } from './creatures';
 import { Hints } from './hints';
 import { applyRun, type RunSummary } from './run-record';
@@ -73,6 +73,12 @@ export class GameState {
     return clockWentBack(this.deps.realNow(), this.store.save.lastSeenAt);
   }
 
+  /** Best classic height of the current local day; 0 before the first classic run of the day. */
+  get todayBest(): number {
+    const today = this.store.save.today;
+    return today.day === localDay((this.deps.now ?? now)()) ? today.bestHeight : 0;
+  }
+
   /** Best classic height to beat in the current run; `null` before the first run ever ends. */
   get recordHeight(): number | null {
     const save = this.store.save;
@@ -88,7 +94,8 @@ export class GameState {
    */
   recordRun(result: RunResult, startHeight = 0): RunSummary {
     const firstRun = !this.hasHint('firstResults');
-    const { save, summary } = applyRun(this.store.save, result, startHeight, firstRun);
+    const day = localDay((this.deps.now ?? now)());
+    const { save, summary } = applyRun(this.store.save, result, startHeight, firstRun, day);
     this.store.replace(save);
     return summary;
   }

@@ -203,7 +203,7 @@
     "record": "one=Only {n} layer to your record!|other=Only {n} layers to your record!",
     "xp": "one={n} XP to level {level}|other={n} XP to level {level}",
     "coins": "one=Just {n} coin to buy {name}|other=Just {n} coins to buy {name}",
-    "best": "Your record: {n}"
+    "best": "Record: {n} · today: {today}"
   },
   "levelUp": {
     "title": "Level {n}!",

@@ -1,6 +1,6 @@
 import type { CreatureId } from '../../data/creatures';
 
-export const SAVE_VERSION = 1;
+export const SAVE_VERSION = 2;
 
 export type MissionGroup = 'easy' | 'medium' | 'hard';
 
@@ -74,5 +74,21 @@ export interface SaveV1 {
   consent: { attAsked: boolean; notifAsked: boolean };
 }
 
+/**
+ * Version 2 (M6, session 3): the streak keeps the day its calendar reward was claimed instead of
+ * a flag that went stale overnight, and `today` keeps the best classic height of the local day
+ * (the "so close" line of the results). Missions, the daily tower and the gift keep their V1 shape.
+ */
+export interface SaveV2 extends Omit<SaveV1, 'version' | 'streak'> {
+  version: 2;
+  /**
+   * `lastDay`: the last local day that counted for the streak (a run finished that day);
+   * `claimedDay`: the local day whose calendar reward was claimed; `cycle`: finished 7-day rounds.
+   */
+  streak: { count: number; best: number; lastDay: string; cycle: number; claimedDay: string };
+  /** Best classic height of the local day `day`; it starts over with a new day. */
+  today: { day: string; bestHeight: number };
+}
+
 /** The current save version. */
-export type Save = SaveV1;
+export type Save = SaveV2;

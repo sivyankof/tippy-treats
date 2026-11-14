@@ -38,7 +38,7 @@ export function nearMissText(miss: NearMiss): string {
     case 'coins':
       return tn('nearMiss.coins', miss.coins, { name: t(CREATURES[miss.creature].nameKey) });
     case 'best':
-      return t('nearMiss.best', { n: miss.record });
+      return t('nearMiss.best', { n: miss.record, today: miss.today });
   }
 }
 

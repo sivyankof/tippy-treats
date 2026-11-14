@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { createDefaultSave } from './defaults';
 import { loadSave, serializeSave } from './load';
-import { migrate, SaveError, type Migration } from './migrations';
+import { migrate, migrateV1, SaveError, type Migration } from './migrations';
 import { MAX_BAKER_LEVEL } from '../../data/progression';
 import { xpToNext } from '../progression';
 import { SAVE_VERSION, type Save } from './schema';
@@ -52,7 +52,7 @@ describe('migrate', () => {
   });
 
   it('throws a typed error for a future version', () => {
-    expect(() => migrate({ version: 2 })).toThrow(SaveError);
+    expect(() => migrate({ version: SAVE_VERSION + 1 })).toThrow(SaveError);
     try {
       migrate({ version: 99 });
     } catch (error) {
@@ -192,7 +192,7 @@ describe('loadSave', () => {
   });
 
   it('treats a future version as unusable and keeps its text', () => {
-    const text = JSON.stringify({ version: 2, coins: 10 });
+    const text = JSON.stringify({ version: SAVE_VERSION + 1, coins: 10 });
     const result = load(text);
     expect(result.source).toBe('new');
     expect(result.corrupt).toEqual([{ key: 'save', text }]);
@@ -265,5 +265,54 @@ describe('loadSave', () => {
     expect(tampered.bakerXp).toBe(xpToNext(3) - 1);
     const huge = load(JSON.stringify({ ...fresh(), bakerLevel: 1e12, bakerXp: 0 })).save;
     expect(huge.bakerLevel).toBe(MAX_BAKER_LEVEL);
+  });
+});
+
+describe('migration 1 -> 2', () => {
+  const v1 = {
+    version: 1,
+    coins: 120,
+    berries: 4,
+    bakerLevel: 3,
+    bakerXp: 10,
+    creatures: { honey: { level: 2 } },
+    records: { classicHeight: 33, classicScore: 900, bestCombo: 4 },
+    stats: { runs: 5, totalLayers: 80, perfects: 9, adsWatched: 0 },
+    streak: { count: 3, best: 4, lastDay: '2026-11-13', cycle: 0, claimedToday: true },
+  };
+
+  it('turns the claim flag into the day it belongs to and starts today empty', () => {
+    const raw = migrateV1(v1);
+    expect(raw.streak).toEqual({
+      count: 3,
+      best: 4,
+      lastDay: '2026-11-13',
+      cycle: 0,
+      claimedDay: '2026-11-13',
+    });
+    expect(raw.today).toEqual({ day: '', bestHeight: 0 });
+  });
+
+  it('keeps no claim when the flag was off or the streak was missing', () => {
+    const off = migrateV1({ ...v1, streak: { ...v1.streak, claimedToday: false } });
+    expect((off.streak as Record<string, unknown>).claimedDay).toBe('');
+    const none = migrateV1({ version: 1 });
+    expect(none.streak).toEqual({ claimedDay: '' });
+  });
+
+  it('loads a version 1 text into the current save without losing progress', () => {
+    const result = load(JSON.stringify(v1));
+    expect(result.source).toBe('primary');
+    expect(result.save.version).toBe(SAVE_VERSION);
+    expect(result.save.coins).toBe(120);
+    expect(result.save.records.classicHeight).toBe(33);
+    expect(result.save.streak).toEqual({
+      count: 3,
+      best: 4,
+      lastDay: '2026-11-13',
+      cycle: 0,
+      claimedDay: '2026-11-13',
+    });
+    expect(result.save.today).toEqual({ day: '', bestHeight: 0 });
   });
 });

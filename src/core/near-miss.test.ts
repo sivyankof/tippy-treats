@@ -9,6 +9,7 @@ const input = (over: Partial<NearMissInput> = {}): NearMissInput => ({
   bakerXp: 0,
   coins: 0,
   owned: { honey: { level: 1 } },
+  todayBest: 0,
   ...over,
 });
 
@@ -40,10 +41,12 @@ describe('near miss line', () => {
   });
 
   it('falls back to the personal record', () => {
-    expect(nearMiss(input())).toEqual({ kind: 'best', record: 40 });
+    expect(nearMiss(input())).toEqual({ kind: 'best', record: 40, today: 20 });
+    expect(nearMiss(input({ todayBest: 31 }))).toEqual({ kind: 'best', record: 40, today: 31 });
     expect(nearMiss(input({ previousRecord: null, height: 9 }))).toEqual({
       kind: 'best',
       record: 9,
+      today: 9,
     });
   });
 });

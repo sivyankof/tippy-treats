@@ -126,6 +126,7 @@ function normalize(raw: Obj, d: Save): Save {
   const records = obj(raw.records);
   const stats = obj(raw.stats);
   const streak = obj(raw.streak);
+  const today = obj(raw.today);
   const missions = obj(raw.missions);
   const daily = obj(raw.daily);
   const shop = obj(raw.shop);
@@ -166,8 +167,9 @@ function normalize(raw: Obj, d: Save): Save {
       best: uint(streak.best, 0),
       lastDay: day(streak.lastDay),
       cycle: uint(streak.cycle, 0),
-      claimedToday: bool(streak.claimedToday, false),
+      claimedDay: day(streak.claimedDay),
     },
+    today: { day: day(today.day), bestHeight: uint(today.bestHeight, 0) },
     missions: {
       day: day(missions.day),
       items: normalizeMissions(missions.items),

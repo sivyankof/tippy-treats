@@ -13,6 +13,8 @@ export interface NearMissInput {
   bakerXp: number;
   coins: number;
   owned: OwnedCreatures;
+  /** Best classic height of the day, this run included. */
+  todayBest: number;
 }
 
 /** The closest goal the run fell short of (docs/04-meta-retention.md, section 6). */
@@ -20,11 +22,12 @@ export type NearMiss =
   | { kind: 'record'; layers: number }
   | { kind: 'xp'; xp: number; level: number }
   | { kind: 'coins'; coins: number; creature: CreatureId }
-  | { kind: 'best'; record: number };
+  | { kind: 'best'; record: number; today: number };
 
 /**
  * The first goal that fits: the record a few layers away, the next baker level a little XP
- * away, a creature for coins a few coins away; otherwise the personal record. The goal "a
+ * away, a creature for coins a few coins away; otherwise the personal record and the best of
+ * the day. The goal "a
  * mission is nearly done" joins the list with the missions.
  */
 export function nearMiss(input: NearMissInput): NearMiss {
@@ -37,7 +40,11 @@ export function nearMiss(input: NearMissInput): NearMiss {
   if (xp > 0 && xp <= NEAR_MISS.xp) return { kind: 'xp', xp, level: input.bakerLevel + 1 };
   const creature = nearestCoinCreature(input);
   if (creature && creature.coins <= NEAR_MISS.coins) return { kind: 'coins', ...creature };
-  return { kind: 'best', record: Math.max(previousRecord ?? 0, height) };
+  return {
+    kind: 'best',
+    record: Math.max(previousRecord ?? 0, height),
+    today: Math.max(input.todayBest, height),
+  };
 }
 
 /** The unowned creature the shop sells for coins right now that is the fewest coins away. */

@@ -18,6 +18,11 @@ export interface GameStateDeps {
    * check must not follow a dev time shift. Game features read the shifted `util/clock.now`.
    */
   realNow: () => number;
+  /**
+   * The game clock (`util/clock.now`, shifted by `?dayOffset=` in dev): the local day of a run,
+   * the streak, the missions. Tests pass their own; the game uses the default.
+   */
+  now?: () => number;
   makeInstallId: () => string;
   scheduler: Scheduler;
 }

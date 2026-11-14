@@ -52,6 +52,8 @@ export function applyRun(
   result: RunResult,
   startHeight: number,
   firstRun: boolean,
+  /** Local day the run ended on (`YYYY-MM-DD`), for the best height of the day. */
+  day: string,
 ): { save: Save; summary: RunSummary } {
   const isRecord =
     result.mode === 'classic' &&
@@ -73,8 +75,10 @@ export function applyRun(
     tutorial: { ...before.tutorial, firstRunDone: true },
   };
   if (result.mode === 'classic') {
+    const todayBest = before.today.day === day ? before.today.bestHeight : 0;
     next = {
       ...next,
+      today: { day, bestHeight: Math.max(todayBest, result.height) },
       records: {
         classicHeight: Math.max(before.records.classicHeight, result.height),
         classicScore: Math.max(before.records.classicScore, result.score),
