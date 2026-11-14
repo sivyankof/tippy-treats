@@ -1,4 +1,4 @@
-import { STUB_ADS } from '../../data/ads';
+import { STUB_ADS } from '../../data/rewarded-video';
 import { t } from '../../i18n';
 import type { AdsDevControl, AdsService, RewardedResult, StubAdMode } from './types';
 

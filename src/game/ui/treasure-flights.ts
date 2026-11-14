@@ -16,7 +16,7 @@ import { easeFn } from '../fx/ease';
 import { FX_TEXTURES } from '../fx/fx-textures';
 import { createTreasureTextures, TREASURE_TEXTURES } from '../fx/treasure-textures';
 import { TREASURE_EVENTS, type CoinFlyPayload } from '../treasure-events';
-import type { ResourceCounter } from './resource-counter';
+import type { ResourceCounter } from './resource-tally';
 
 const flight = TREASURE.flight;
 const berryCfg = TREASURE.berry;

@@ -11,7 +11,7 @@ import { NumberRoll } from '../ui/number-roll';
 import { createOutlinedText } from '../ui/outlined-text';
 import { PauseOverlay } from '../ui/pause-overlay';
 import { EffectBadges } from '../ui/effect-badges';
-import { ZoneBanner } from '../ui/zone-banner';
+import { ZoneBanner } from '../ui/zone-plate';
 import { ZoneChangeWatch } from '../ui/zone-change-watch';
 import { HudNumbersIdle } from '../ui/hud-idle';
 import { NextCreatureBadge } from '../ui/next-creature-badge';

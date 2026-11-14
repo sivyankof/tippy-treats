@@ -5,7 +5,7 @@ import {
   effectiveStillMs,
   isOnScreen,
   toScreenRect,
-} from './still-tracker';
+} from './still-watch';
 
 /** One frame: observe every given key, then forget the unseen. */
 function frame(

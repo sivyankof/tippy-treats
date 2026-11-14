@@ -8,7 +8,7 @@ import {
   isOnScreen,
   toScreenRect,
   type ScreenRect,
-} from './still-tracker';
+} from './still-watch';
 
 /** Scenes of the run screen. */
 const AUDITED_SCENES = [SCENES.game, SCENES.hud];

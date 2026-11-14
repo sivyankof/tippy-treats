@@ -2,7 +2,7 @@ import { continueOffer, type ContinueOffer } from '../core/continue-offer';
 import type { RunMode } from '../core/run-result';
 import { BALANCE } from '../data/balance';
 import { CONTINUE_ANIM } from '../data/continue-anim';
-import type { AdsService, RewardedResult } from '../services/ads/types';
+import type { AdsService, RewardedResult } from '../services/rewarded-video/types';
 import type { AudioService } from '../services/audio/types';
 import type { GameState } from '../state/game-state';
 

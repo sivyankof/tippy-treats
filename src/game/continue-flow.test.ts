@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { BALANCE } from '../data/balance';
 import { CONTINUE_ANIM } from '../data/continue-anim';
-import type { RewardedResult } from '../services/ads/types';
+import type { RewardedResult } from '../services/rewarded-video/types';
 import { ContinueFlow } from './continue-flow';
 import { createTestState } from '../state/test-state';
 

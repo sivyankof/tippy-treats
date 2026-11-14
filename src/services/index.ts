@@ -1,5 +1,5 @@
-import { WebAds } from './ads/web';
-import type { AdsDevControl, AdsService } from './ads/types';
+import { WebAds } from './rewarded-video/web';
+import type { AdsDevControl, AdsService } from './rewarded-video/types';
 import { WebAudioService } from './audio/web';
 import type { AudioService } from './audio/types';
 import type { HapticsService } from './haptics/types';

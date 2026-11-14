@@ -1,6 +1,6 @@
 import * as Phaser from 'phaser';
 import { PALETTE } from '../../data/palette';
-import { ZONE_BANNER } from '../../data/zone-banner';
+import { ZONE_BANNER } from '../../data/zone-plate';
 import { ZONES } from '../../data/zones';
 import { t } from '../../i18n';
 import { DEG_TO_RAD, sineWave } from '../../util/math';

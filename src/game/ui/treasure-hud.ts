@@ -1,6 +1,6 @@
 import type * as Phaser from 'phaser';
 import { TREASURE_TEXTURES } from '../fx/treasure-textures';
-import { ResourceCounter } from './resource-counter';
+import { ResourceCounter } from './resource-tally';
 import { TreasureFlights } from './treasure-flights';
 
 /** What the treasure HUD reads of the run. */

@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { STUB_ADS } from '../../data/ads';
+import { STUB_ADS } from '../../data/rewarded-video';
 import { WebAds } from './web';
 
 describe('WebAds', () => {

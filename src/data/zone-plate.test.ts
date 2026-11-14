@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { ZONE_BANNER } from './zone-banner';
+import { ZONE_BANNER } from './zone-plate';
 
 describe('ZONE_BANNER', () => {
   it('keeps the hanging plate above the flying layer', () => {

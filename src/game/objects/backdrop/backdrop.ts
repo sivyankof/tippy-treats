@@ -6,7 +6,7 @@ import { DEPTH } from '../../depth';
 import { collectBakeSteps, type BakeStep } from '../../ui/bake-texture';
 import { bakeSharedArt } from './art-kit';
 import { cloudsArt } from './clouds-zone';
-import { Counter } from './counter';
+import { Counter } from './worktop';
 import { kitchenArt } from './kitchen-zone';
 import type { FrameCtx } from './life';
 import { roofArt } from './roof-zone';
