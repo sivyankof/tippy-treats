@@ -96,7 +96,9 @@ export interface AnalyticsService {
 |---|---|---|
 | `tutorial_step` | `step` | Каждый шаг обучения |
 | `tutorial_complete` | `height` | Конец первого забега |
-| `run_start` | `mode`, `team` (ид. через запятую), `run_index` | Начало забега |
+| `run_start` | `mode`, `team` (ид. через запятую), `run_index`, `start_height` (0 или контрольная точка) | Начало забега |
+| `checkpoint_offer` | `max_height` | Открыто окно выбора старта (после M6b) |
+| `checkpoint_start` | `height`, `method` (`ad`/`berries`), `price` | Начат забег с контрольной точки |
 | `run_end` | `mode`, `height`, `score`, `duration_s`, `perfects`, `best_combo`, `coins`, `abilities_used`, `continues`, `zone`, `end_reason` (`miss`/`sneeze`/`quit`) | Конец забега |
 | `new_record` | `height`, `prev` | Побит рекорд |
 | `continue_offer` | `height`, `option` (`ad`/`berries`) | Показано окно продолжения |
