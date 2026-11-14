@@ -1,3 +1,4 @@
+import { canOfferDoubleCoins } from '../../../core/video-policy';
 import * as Phaser from 'phaser';
 import { MENU } from '../../../data/menu-layout';
 import { PALETTE } from '../../../data/palette';
@@ -50,7 +51,7 @@ export class ResultsCoins {
     const grid = this.breakdown(lines);
     if (grid) rows.push(grid);
     this.button = null;
-    if (earned > 0 && canDouble) {
+    if (canOfferDoubleCoins(earned, canDouble)) {
       const { button, label } = createTextButton(scene, {
         text: t('results.double'),
         font: cfg.adButton.font,
