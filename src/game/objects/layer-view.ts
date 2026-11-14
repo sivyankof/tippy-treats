@@ -3,11 +3,14 @@ import type { CutSide } from '../../core/drop';
 import type { LayerPlan } from '../../core/sim-types';
 import { ANIM } from '../../data/anim';
 import { BALANCE } from '../../data/balance';
+import { ABILITY_ANIM } from '../../data/ability-anim';
 import { faceRecipe } from '../../data/creature-looks';
 import type { CreatureId } from '../../data/creatures';
+import { effectsMode } from '../effects-mode';
 import { createGlossBand, sweepGloss } from '../fx/gloss-sweep';
 import { creatureColors } from './creature-art/primitives';
 import { LayerFace } from './layer-face';
+import { LayerMaterial, type MaterialMotion } from './layer-material';
 import { LayerRig } from './layer-rig';
 import {
   acquireLayerArt,
@@ -24,10 +27,11 @@ type ScaleStart = { scaleX?: number; scaleY?: number };
  * One cake layer: a baked picture (shadow, body, glaze, gloss) and a face on top.
  *
  * The container sits on the centre of the layer and carries the sway rotation.
- * Inside it, `squashRoot` is pinned to the bottom edge (squash and stretch pivot there)
- * and `content` to the centre of the layer (widening pivots there):
+ * Inside it, `squashRoot` is pinned to the bottom edge (squash and stretch pivot there),
+ * `shapeRoot` too (the material's jiggle) and `content` to the centre of the layer
+ * (widening pivots there):
  *
- *   LayerView > squashRoot (y = +H/2) > content (y = -H/2) > art, glossSweep, face
+ *   LayerView > squashRoot (y = +H/2) > shapeRoot > content (y = -H/2) > art, glossSweep, face
  */
 export class LayerView extends Phaser.GameObjects.Container {
   private readonly squashRoot: Phaser.GameObjects.Container;
@@ -37,6 +41,8 @@ export class LayerView extends Phaser.GameObjects.Container {
   private readonly face: LayerFace;
   /** Extra animations for the abilities: flash, hop, fade, split. */
   readonly rig: LayerRig;
+  /** How the material of a creature layer lands, jiggles and rests. */
+  readonly material: LayerMaterial;
   /** Sideways offset the tower adds to the position (a spring landing slides in from it). */
   slideX = 0;
   private artKey: string | null = null;
@@ -60,7 +66,9 @@ export class LayerView extends Phaser.GameObjects.Container {
       this.glossSweep,
       this.face,
     ]);
-    this.squashRoot = new Phaser.GameObjects.Container(scene, 0, half, [this.content]);
+    const shapeRoot = new Phaser.GameObjects.Container(scene, 0, 0, [this.content]);
+    this.material = new LayerMaterial(shapeRoot);
+    this.squashRoot = new Phaser.GameObjects.Container(scene, 0, half, [shapeRoot]);
     this.rig.attach(this.content, this.squashRoot);
     this.add(this.squashRoot);
     scene.add.existing(this);
@@ -83,6 +91,7 @@ export class LayerView extends Phaser.GameObjects.Container {
         recipe,
         creature && recipe ? creatureColors(creature)[recipe.lidTint] : undefined,
       );
+      this.material.setCreature(creature);
     }
     this.lookPlan.kind = plan.kind;
     this.lookPlan.creature = plan.creature;
@@ -170,6 +179,29 @@ export class LayerView extends Phaser.GameObjects.Container {
     this.springBack(this.squashRoot, { scaleX, scaleY }, durationMs, ANIM.land.ease, delayMs);
   }
 
+  /**
+   * The landing of this layer's material, or (`strength` below 1, `delayMs` later) the squash
+   * wave passing through it. The top shell of the twins lags when the wave passes.
+   */
+  playImpact(strength = 1, delayMs = 0): void {
+    const land = this.material.landing(strength);
+    this.springBack(this.squashRoot, land, land.durationMs, land.ease, delayMs);
+    const lag = this.material.current?.shellLag;
+    if (lag && delayMs > 0 && !effectsMode.reduced) {
+      const { creamColor, creamAlpha } = ABILITY_ANIM.twins;
+      this.rig.lagShell({
+        width: this.drawnWidth,
+        liftPx: lag.liftPx * strength,
+        liftMs: lag.liftMs,
+        holdMs: 0,
+        delayMs,
+        ease: ABILITY_ANIM.rig.hopEase,
+        creamColor,
+        creamAlpha,
+      });
+    }
+  }
+
   /** Quick vertical squash (a sneeze) that springs back. */
   playSqueeze(scaleY: number, durationMs: number): void {
     this.springBack(this.squashRoot, { scaleY }, durationMs, ANIM.sneeze.ease, 0);
@@ -212,6 +244,7 @@ export class LayerView extends Phaser.GameObjects.Container {
   resetAnim(): this {
     this.scene.tweens.killTweensOf([this, this.squashRoot, this.content, this.glossSweep]);
     this.rig.reset();
+    this.material.reset();
     this.slideX = 0;
     this.setScale(1).setAngle(0).setAlpha(1);
     this.squashRoot.setScale(1);
@@ -221,9 +254,13 @@ export class LayerView extends Phaser.GameObjects.Container {
     return this;
   }
 
-  /** Advances the face (blinks, reactions, pupils); a hidden face stands still. */
-  tick(dtMs: number): void {
+  /**
+   * Advances the face (blinks, reactions, pupils; a hidden face stands still) and the material.
+   * Without `motion` the material stays still (a flying or falling layer).
+   */
+  tick(dtMs: number, motion?: MaterialMotion): void {
     this.rig.apply();
+    this.material.tick(dtMs, motion);
     if (this.face.visible) this.face.tick(dtMs);
   }
 

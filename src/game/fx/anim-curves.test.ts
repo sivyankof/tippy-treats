@@ -8,37 +8,43 @@ import {
   comboTextScale,
   driftMotion,
   stepSpring,
-  waveSquash,
+  landSquash,
+  waveStep,
   type SpringState,
 } from './anim-curves';
 
-describe('waveSquash', () => {
-  it('starts at the landing squash scaled by the falloff', () => {
-    const first = waveSquash(1);
-    const s = ANIM.wave.falloff;
-    expect(first.scaleX).toBeCloseTo(1 + (ANIM.land.scaleX - 1) * s, 10);
-    expect(first.scaleY).toBeCloseTo(1 - (1 - ANIM.land.scaleY) * s, 10);
-    expect(first.delayMs).toBe(ANIM.wave.delayMs);
+describe('landSquash', () => {
+  it('is the full landing squash at strength 1 and no squash at 0', () => {
+    expect(landSquash(1).scaleX).toBeCloseTo(ANIM.land.scaleX, 10);
+    expect(landSquash(1).scaleY).toBeCloseTo(ANIM.land.scaleY, 10);
+    expect(landSquash(0)).toEqual({ scaleX: 1, scaleY: 1 });
+  });
+
+  it('squashes deeper with more strength', () => {
+    expect(landSquash(1.5).scaleY).toBeLessThan(landSquash(1).scaleY);
+    expect(landSquash(1.5).scaleX).toBeGreaterThan(landSquash(1).scaleX);
+  });
+});
+
+describe('waveStep', () => {
+  it('starts at the falloff with one delay step', () => {
+    expect(waveStep(1).strength).toBeCloseTo(ANIM.wave.falloff, 10);
+    expect(waveStep(1).delayMs).toBe(ANIM.wave.delayMs);
   });
 
   it('weakens and delays further down', () => {
-    let prev = waveSquash(1);
+    let prev = waveStep(1);
     for (let k = 2; k <= ANIM.wave.layers; k++) {
-      const next = waveSquash(k);
-      expect(next.scaleX).toBeLessThan(prev.scaleX);
-      expect(next.scaleX).toBeGreaterThan(1);
-      expect(next.scaleY).toBeGreaterThan(prev.scaleY);
-      expect(next.scaleY).toBeLessThan(1);
+      const next = waveStep(k);
+      expect(next.strength).toBeLessThan(prev.strength);
+      expect(next.strength).toBeGreaterThan(0);
       expect(next.delayMs).toBeGreaterThan(prev.delayMs);
       prev = next;
     }
   });
 
-  it('has the full landing squash and no delay at k = 0', () => {
-    const zero = waveSquash(0);
-    expect(zero.scaleX).toBeCloseTo(ANIM.land.scaleX, 10);
-    expect(zero.scaleY).toBeCloseTo(ANIM.land.scaleY, 10);
-    expect(zero.delayMs).toBe(0);
+  it('is the full landing with no delay at k = 0', () => {
+    expect(waveStep(0)).toEqual({ strength: 1, delayMs: 0 });
   });
 });
 

@@ -3,6 +3,7 @@ import { ABILITY_ANIM } from '../../../data/ability-anim';
 import { ANIM } from '../../../data/anim';
 import { BALANCE } from '../../../data/balance';
 import { PALETTE } from '../../../data/palette';
+import { DEG_TO_RAD } from '../../../util/math';
 import { bakeTexture } from '../../ui/bake-texture';
 
 /** Keys of the textures the ability effects share. All but the bubble are white and meant to be tinted. */
@@ -65,28 +66,60 @@ export function createAbilityTextures(scene: Phaser.Scene): void {
     }
   });
 
-  // The dome in front of the tower is only the upper arc and the highlight; the lower arc and
-  // the chocolate lie behind the tower, so the rim does not cut across the layers.
+  // The back half lies behind the tower: the faint fill, the edge glow and the lower rim.
+  // The front half is the upper rim, the film and the highlight, so no line cuts across the layers.
   const half = bubble.size / 2;
   const radius = half - bubble.rimWidth / 2;
   bakeTexture(scene, ABILITY_TEXTURES.bubbleFill, bubble.size, bubble.size, (g) => {
-    g.fillStyle(bubble.fill, bubble.fillAlpha).fillCircle(half, half, half - bubble.rimWidth);
-    g.lineStyle(bubble.rimWidth, bubble.rim, bubble.rimAlpha);
-    g.beginPath();
-    g.arc(half, half, radius, 0, Math.PI);
-    g.strokePath();
+    g.fillStyle(bubble.fill, bubble.fillAlpha).fillCircle(half, half, radius);
+    const glowDepth = radius * bubble.glowShare;
+    const step = glowDepth / bubble.glowSteps;
+    for (let i = 0; i < bubble.glowSteps; i++) {
+      // Rings nearer the edge are stronger.
+      const share = (i + 1) / bubble.glowSteps;
+      g.lineStyle(step, bubble.glow, (bubble.glowAlpha * share * share) / 2);
+      g.strokeCircle(half, half, radius - glowDepth + step * (i + 0.5));
+    }
+    strokeRim(g, half, radius, 0, Math.PI);
   });
   bakeTexture(scene, ABILITY_TEXTURES.bubbleRim, bubble.size, bubble.size, (g) => {
-    g.lineStyle(bubble.rimWidth, bubble.rim, bubble.rimAlpha);
+    strokeRim(g, half, radius, Math.PI, Math.PI * 2);
+    g.lineStyle(bubble.shineWidth, bubble.shine, bubble.shineAlpha);
     g.beginPath();
-    g.arc(half, half, radius, Math.PI, Math.PI * 2);
+    g.arc(
+      half,
+      half,
+      radius - bubble.shineInset,
+      bubble.shineFromDeg * DEG_TO_RAD,
+      bubble.shineToDeg * DEG_TO_RAD,
+    );
     g.strokePath();
-    g.fillStyle(bubble.shine, bubble.shineAlpha);
-    g.fillEllipse(
-      bubble.size * bubble.shineX,
-      bubble.size * bubble.shineY,
-      bubble.size * bubble.shineW,
-      bubble.size * bubble.shineH,
+    g.fillStyle(bubble.shine, bubble.sparkAlpha);
+    g.fillCircle(
+      bubble.size * bubble.sparkX,
+      bubble.size * bubble.sparkY,
+      bubble.size * bubble.sparkR,
     );
   });
+}
+
+/** The light rim of the bubble and the rainbow film just inside it, between two angles (radians). */
+function strokeRim(
+  g: Phaser.GameObjects.Graphics,
+  half: number,
+  radius: number,
+  from: number,
+  to: number,
+): void {
+  const { bubble } = ABILITY_ANIM.textures;
+  bubble.film.forEach((color, i) => {
+    g.lineStyle(bubble.filmWidth, color, bubble.filmAlpha);
+    g.beginPath();
+    g.arc(half, half, radius - bubble.filmGap * (i + 1), from, to);
+    g.strokePath();
+  });
+  g.lineStyle(bubble.rimWidth, bubble.rim, bubble.rimAlpha);
+  g.beginPath();
+  g.arc(half, half, radius, from, to);
+  g.strokePath();
 }

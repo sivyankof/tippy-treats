@@ -14,6 +14,7 @@ import { CameraKick } from './camera-kick';
 import { ComboGlow } from './combo-glow';
 import { DebrisFx } from './debris-fx';
 import { LandingFx } from './landing-fx';
+import { MaterialFx } from './material-fx';
 import { cuesForEvents, playCues } from './run-cues';
 import { TowerCollapse } from './tower-collapse';
 
@@ -43,6 +44,7 @@ export class RunFx {
   private readonly glow: ComboGlow;
   private readonly landingFx: LandingFx;
   private readonly abilityFx: AbilityFx;
+  private readonly materialFx: MaterialFx;
 
   private glowOn = false;
   private missPiece: LayerView | null = null;
@@ -60,6 +62,7 @@ export class RunFx {
     this.landingFx = new LandingFx(scene);
     this.debris = new DebrisFx(scene, this.tower, this.landingFx);
     this.abilityFx = new AbilityFx(scene, this.tower, this.flyingView, this.landingFx);
+    this.materialFx = new MaterialFx(this.tower, this.landingFx.particles);
   }
 
   /** The miss has played out: the run may be declined. */
@@ -155,6 +158,7 @@ export class RunFx {
 
     this.debris.update(dtMs);
     this.landingFx.update(dtMs);
+    this.materialFx.update(dtMs, state.wobble);
     this.abilityFx.update(dtMs, timeMs, state, mods, cam, this.runIsOn(state));
     this.kick.update(dtMs);
     this.placeGlow(timeMs, cam);
@@ -163,12 +167,13 @@ export class RunFx {
   private onLand(event: LandEvent, state: Readonly<TowerState>, memo: FlyingMemo | null): void {
     const perfect = event.quality === 'perfect';
     const top = this.tower.topView();
-    this.tower.playLanding();
+    const index = state.layers.length - 1;
+    const impact = this.materialFx.landed(index);
+    this.tower.playLanding(impact.wave);
     top?.faceView.react('blink', ANIM.face.blinkMs);
     const { drop, perfectBump, durationMs } = ANIM.cameraKick;
-    this.kick.kick(perfect ? -perfectBump : drop, durationMs);
+    this.kick.kick(perfect ? -perfectBump : drop * impact.kick, durationMs);
 
-    const index = state.layers.length - 1;
     const pose = this.tower.layerPose(index);
     if (pose) this.landingFx.landed(pose);
 

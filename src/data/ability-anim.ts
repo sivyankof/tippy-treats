@@ -11,9 +11,10 @@ const ICE_PALE = 0xe6f6ff;
 const LEMON = parseHex(CREATURES.lemon.palette.glaze);
 const LEMON_PALE = 0xfff3a0;
 const CHOCOLATE = parseHex(CREATURES.brownie.palette.body);
-const CHOCOLATE_DARK = parseHex(CREATURES.brownie.palette.glaze);
 const CHOCOLATE_LIGHT = parseHex(CREATURES.brownie.palette.sponge);
 const CHOCOLATE_CRUST = parseHex(CREATURES.brownie.palette.accent);
+const CHOCOLATE_GLOW = parseHex(CREATURES.brownie.palette.detail);
+const BUBBLE_CREAM = 0xfff4e4;
 /** Width of the dashes of the ghost's guides: the texture and the guide are this wide. */
 const GUIDE_WIDTH = 14;
 
@@ -86,20 +87,39 @@ export const ABILITY_ANIM = {
     coatWidth: 256,
     dash: { width: GUIDE_WIDTH, height: 256, period: 44, length: 26 },
     vignette: { width: 128, height: 228, steps: 12, stepPx: 4, alpha: 0.9 },
+    /**
+     * A soap bubble with a warm chocolate sheen: a faint fill, a glow that thickens towards the
+     * edge, a thin light rim with a rainbow film, a crescent highlight and a spark.
+     */
     bubble: {
       size: 256,
-      fill: CHOCOLATE,
-      fillAlpha: 0.3,
-      rim: CHOCOLATE_DARK,
-      rimWidth: 10,
+      fill: BUBBLE_CREAM,
+      fillAlpha: 0.12,
+      /** The edge glow: `glowSteps` rings over the outer `glowShare` of the radius, alpha up to `glowAlpha`. */
+      glow: CHOCOLATE_GLOW,
+      glowAlpha: 0.3,
+      glowShare: 0.22,
+      glowSteps: 8,
+      rim: PALETTE.textLight,
+      rimWidth: 4,
       rimAlpha: 0.85,
+      /** Thin film colours just inside the rim, each `filmWidth` wide and `filmGap` apart. */
+      film: [0xffb8dc, 0xa8e2ff],
+      filmWidth: 3,
+      filmGap: 5,
+      filmAlpha: 0.45,
       shine: PALETTE.textLight,
-      shineAlpha: 0.55,
-      /** The highlight ellipse: centre and size as shares of the picture. */
-      shineX: 0.3,
-      shineY: 0.24,
-      shineW: 0.2,
-      shineH: 0.1,
+      /** The crescent highlight: an arc near the upper left edge (degrees, screen y down). */
+      shineAlpha: 0.75,
+      shineWidth: 12,
+      shineFromDeg: 195,
+      shineToDeg: 245,
+      shineInset: 16,
+      /** A small round spark under the crescent: centre and radius as shares of the picture. */
+      sparkX: 0.3,
+      sparkY: 0.36,
+      sparkR: 0.03,
+      sparkAlpha: 0.8,
     },
   },
 
@@ -300,11 +320,11 @@ export const ABILITY_ANIM = {
     },
     shield: {
       /** Extra width on both sides of the top layer, and height in layers. */
-      padX: 70,
-      heightLayers: 2.3,
+      padX: 80,
+      heightLayers: 2.5,
       /** Centre of the bubble below the top surface, in layers. */
       centerLayers: 0.45,
-      alpha: 0.95,
+      alpha: 1,
       popInMs: 260,
       popInEase: 'Back.easeOut',
       pulse: 0.025,

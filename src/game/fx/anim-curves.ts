@@ -40,14 +40,17 @@ export function driftMotion(
   };
 }
 
-/** Squash of the k-th layer below the landed one (k >= 1): scale and start delay. */
-export function waveSquash(k: number): { scaleX: number; scaleY: number; delayMs: number } {
-  const strength = Math.pow(ANIM.wave.falloff, k);
+/** Squash scales of a landing of the given strength (1: the full landing of `ANIM.land`). */
+export function landSquash(strength: number): { scaleX: number; scaleY: number } {
   return {
     scaleX: 1 + (ANIM.land.scaleX - 1) * strength,
     scaleY: 1 - (1 - ANIM.land.scaleY) * strength,
-    delayMs: k * ANIM.wave.delayMs,
   };
+}
+
+/** Strength and start delay of the squash wave in the k-th layer below the landed one (k >= 1). */
+export function waveStep(k: number): { strength: number; delayMs: number } {
+  return { strength: Math.pow(ANIM.wave.falloff, k), delayMs: k * ANIM.wave.delayMs };
 }
 
 /** Length of the tower collapse for a tower of `height` layers, clamped to the configured range. */

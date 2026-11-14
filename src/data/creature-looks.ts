@@ -53,6 +53,9 @@ function brow(angleDeg: number, offsetY = 0, scaleX = 1, scaleY = 1): BrowPose {
   return { angleDeg, offsetY, scaleX, scaleY };
 }
 
+/** Colours of the sprinkles on the donut (the art and the landing burst share them). */
+export const SPRINKLE_COLORS = ['#7fd1ff', '#fff27a', '#7dffb0', '#ffffff', '#b78cff'] as const;
+
 const FACE_DEFAULTS = {
   lidLeft: 0,
   lidRight: 0,
@@ -197,7 +200,7 @@ export const CREATURE_LOOKS: Readonly<Record<CreatureId, CreatureLook>> = {
       kind: 'sprinkle',
       topPad: 0,
       sprinkles: 26,
-      sprinkleColors: ['#7fd1ff', '#fff27a', '#7dffb0', '#ffffff', '#b78cff'],
+      sprinkleColors: SPRINKLE_COLORS,
       scallopRadius: 14,
     },
     face: { ...FACE_DEFAULTS, browLeft: brow(0, -12), browRight: brow(0, -12), mouth: 'open' },
@@ -227,8 +230,8 @@ export const CREATURE_LOOKS: Readonly<Record<CreatureId, CreatureLook>> = {
     art: {
       kind: 'twins',
       topPad: 0,
-      topShare: 0.44,
-      creamShare: 0.12,
+      topShare: 0.6,
+      creamShare: 0.1,
       feetRadius: 5,
       feetStep: 1.5,
       feetShade: -0.14,
@@ -239,8 +242,8 @@ export const CREATURE_LOOKS: Readonly<Record<CreatureId, CreatureLook>> = {
       browRight: brow(-22, 0, 0.9),
       mouth: 'flat',
       cheekScale: 0,
-      offsetY: -26,
-      pair: { spread: 100, scale: 0.52, gaze: 4, fullWidth: 320, eyesOnlyWidth: 150 },
+      offsetY: -32,
+      pair: { spread: 112, scale: 0.72, gaze: 5, fullWidth: 360, eyesOnlyWidth: 170 },
     },
   },
   lemon: {

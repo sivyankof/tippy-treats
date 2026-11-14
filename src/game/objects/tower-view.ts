@@ -1,18 +1,21 @@
 import type * as Phaser from 'phaser';
 import type { CutSide } from '../../core/drop';
 import type { LayerPlan, PlacedLayer, TowerState } from '../../core/tower-sim';
-import { wobbleOffset } from '../../core/wobble';
+import { wobbleAmplitude, wobbleOffset } from '../../core/wobble';
 import { ANIM } from '../../data/anim';
 import { BALANCE } from '../../data/balance';
 import { DEPTH } from '../depth';
 import { effectsMode } from '../effects-mode';
-import { waveSquash } from '../fx/anim-curves';
+import { waveStep } from '../fx/anim-curves';
 import { moodForWobble, type MouthKind, type Reaction } from './face-state';
 import { LayerView } from './layer-view';
 import { SwayHold } from './sway-hold';
 import { createTray } from './tray';
 
 const PLAIN_LOOK: LayerPlan = { kind: 'plain' };
+
+/** Phase step between neighbouring layers, so their material motion does not run in step (radians). */
+const MATERIAL_PHASE_STEP = 2.4;
 
 /** Where a placed layer is drawn: sway included. */
 export interface LayerPose {
@@ -58,6 +61,10 @@ export class TowerView {
   /** The sway the tower holds during a freeze. */
   private readonly sway = new SwayHold();
 
+  /** Clock of the material motion. */
+  private clockMs = 0;
+  private readonly motion = { timeMs: 0, swayShare: 0, phase: 0 };
+
   private lookTarget: { x: number; y: number } | null = null;
   private topMouthHint: MouthKind | undefined;
 
@@ -95,6 +102,11 @@ export class TowerView {
   /** The view of the top layer, if it is drawn. */
   topView(): LayerView | null {
     return this.active.get(this.layerCount - 1) ?? null;
+  }
+
+  /** Every drawn layer view with its 0-based index. */
+  views(): IterableIterator<[number, LayerView]> {
+    return this.active.entries();
   }
 
   /** The view of a placed layer (0-based index), if it is drawn. */
@@ -144,7 +156,7 @@ export class TowerView {
       this.sway.note(i, offset);
       const pose = this.fillPose(this.scratchPose, layer, i, offset);
       view.setLook(pose.look).setLayer(i + 1, pose.width, pose.cut);
-      view.setPosition(pose.x + view.slideX, pose.y).setAngle(pose.angle);
+      view.setPosition(pose.x + view.slideX, pose.y).setAngle(pose.angle * view.material.tilt);
       if (i === count - 1) this.updateTopSpan(pose.x, pose.width);
     }
     if (count === 0) this.updateTopSpan(BALANCE.tray.centerX, BALANCE.tray.width);
@@ -155,6 +167,9 @@ export class TowerView {
     const state = this.state;
     if (!state) return;
     this.sway.advance(dtMs);
+    this.clockMs += dtMs;
+    this.motion.timeMs = this.clockMs;
+    this.motion.swayShare = wobbleAmplitude(state.wobble) / BALANCE.wobble.amplitudeMax;
     const mood = moodForWobble(state.wobble);
     const top = this.layerCount - 1;
     const { swayEyeLag, swayEyeMax } = ANIM.face;
@@ -166,7 +181,8 @@ export class TowerView {
       face.setPupilDrift(Math.max(-swayEyeMax, Math.min(swayEyeMax, drift)));
       const target = this.lookTarget;
       face.lookAt(target ? target.x - view.x : 0, target ? target.y - view.y : 0);
-      view.tick(dtMs);
+      this.motion.phase = index * MATERIAL_PHASE_STEP;
+      view.tick(dtMs, this.motion);
     }
   }
 
@@ -186,17 +202,18 @@ export class TowerView {
   }
 
   /**
-   * The top layer squashes, then the layers below follow with a weaker, delayed wave.
+   * The top layer squashes, then the layers below follow with a weaker, delayed wave; each one
+   * squashes the way its material does, `waveMul` makes the wave stronger (a heavy layer).
    * "Fewer effects" keeps only the squash of the top layer.
    */
-  playLanding(): void {
-    this.topView()?.playLanding();
+  playLanding(waveMul = 1): void {
+    this.topView()?.playImpact();
     if (effectsMode.reduced) return;
     for (let k = 1; k <= ANIM.wave.layers; k++) {
       const view = this.active.get(this.layerCount - 1 - k);
       if (!view) break;
-      const wave = waveSquash(k);
-      view.playLanding(wave.scaleX, wave.scaleY, wave.delayMs);
+      const wave = waveStep(k);
+      view.playImpact(wave.strength * waveMul, wave.delayMs);
     }
   }
 

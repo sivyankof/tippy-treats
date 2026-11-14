@@ -21,6 +21,8 @@ export interface SplitOptions {
   /** Each way (up, down) takes this long; the shell holds `holdMs` at the top. */
   liftMs: number;
   holdMs: number;
+  /** The lift starts this much later. */
+  delayMs?: number;
   ease: string;
   /** The cream that shows in the gap. */
   creamColor: number;
@@ -190,10 +192,20 @@ export class LayerRig {
       split: o.liftPx,
       duration: o.liftMs,
       hold: o.holdMs,
+      delay: o.delayMs ?? 0,
       yoyo: true,
       ease: o.ease,
       onComplete: () => this.endSplit(),
     });
+  }
+
+  /**
+   * A small split for the squash wave: the top shell lags behind and settles. It never cuts
+   * into a split that is already playing (the twins' ability).
+   */
+  lagShell(o: SplitOptions): void {
+    if (this.artHidden) return;
+    this.splitApart(o);
   }
 
   /** Puts the tweened values onto the containers and the faces. */

@@ -7,10 +7,11 @@ describe('twinsSeam', () => {
   const recipe = CREATURE_LOOKS.twins.art;
   if (recipe.kind !== 'twins') throw new Error('twins recipe expected');
 
-  it('puts the cream strip in the middle of the layer', () => {
+  it('puts the cream strip a little below the middle: the top shell carries the faces', () => {
     const box = layerBox(400);
     const seam = twinsSeam(box, recipe);
-    expect(Math.abs(seam.mid)).toBeLessThan(box.innerH * 0.1);
+    expect(seam.mid).toBeGreaterThan(0);
+    expect(seam.mid).toBeLessThan(box.innerH * 0.25);
     expect(seam.bottom - seam.top).toBeCloseTo(box.innerH * recipe.creamShare, 10);
   });
 
