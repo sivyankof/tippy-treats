@@ -1,241 +1,82 @@
-import {
-  buyCreature,
-  earn,
-  grantCreature,
-  spend,
-  upgradeCreature,
-  type BuyError,
-  type Cost,
-  type Currency,
-  type EconomyResult,
-  type UpgradeError,
-  type Wallet,
+import type {
+  BuyError,
+  Cost,
+  Currency,
+  EconomyResult,
+  UpgradeError,
+  Wallet,
 } from '../core/economy';
-import { addXp, levelReward, xpForRun } from '../core/progression';
+import { spend } from '../core/economy';
 import type { RunResult } from '../core/run-result';
 import type { TeamSlot } from '../core/sim-types';
 import { runTeam, type TeamIds } from '../core/team';
-import { createDefaultSave } from '../core/save/defaults';
-import { loadSave, serializeSave, type SaveSource } from '../core/save/load';
-import type { HintId, Save, TeamSlots } from '../core/save/schema';
+import type { HintId, Save } from '../core/save/schema';
 import type { CreatureId } from '../data/creatures';
-import type { LevelReward } from '../data/progression';
-import { SAVE_RETRY_MS, SAVE_WRITE_DEBOUNCE_MS, STORAGE_KEYS } from '../data/storage';
-import type { StorageService } from '../services/storage/types';
 import { clockWentBack } from '../util/clock';
+import { withCreatureBought, withCreatureUpgraded, withTeam } from './creatures';
+import { Hints } from './hints';
+import { applyRun, type RunSummary } from './run-record';
+import { SaveStore, type GameStateDeps, type LoadOptions, type LoadOutcome } from './save-store';
+import { withAdWatched, withBerries, withCoins } from './wallet';
 
-/** Starts and stops the delayed write; the page uses timers, the tests a manual one. */
-export interface Scheduler {
-  set(callback: () => void, delayMs: number): unknown;
-  clear(handle: unknown): void;
-}
-
-export interface GameStateDeps {
-  storage: StorageService;
-  /**
-   * The real system clock, never shifted by `?dayOffset=`: `lastSeenAt` and the clock-back
-   * check must not follow a dev time shift. Game features read the shifted `util/clock.now`.
-   */
-  realNow: () => number;
-  makeInstallId: () => string;
-  scheduler: Scheduler;
-}
-
-/** One level reached by a run, with what it paid. */
-export interface LevelUp {
-  level: number;
-  reward: LevelReward;
-  /** The reward creature was already owned: what was paid instead of it. */
-  duplicate: Cost | null;
-}
-
-/** What a finished run changed, for the results screen. */
-export interface RunSummary {
-  /** A new best classic height; the very first run of a player is never a record. */
-  isRecord: boolean;
-  /**
-   * The results of this run are the first the player gets to see: they lead to the Honey
-   * presentation and Home. Kept by the `firstResults` hint, so a tutorial run left through the
-   * pause does not use it up.
-   */
-  firstRun: boolean;
-  /** Best classic height before this run; `null` before the first run. */
-  previousRecord: number | null;
-  /** Baker level and XP before the run, so the results can fill the bar from there. */
-  before: { level: number; xp: number };
-  xpGained: number;
-  levelUps: LevelUp[];
-}
-
-/** The summary of a run that did not reach the save (dev runs, the creature demo). */
-export const EMPTY_SUMMARY: RunSummary = {
-  isRecord: false,
-  firstRun: false,
-  previousRecord: null,
-  before: { level: 1, xp: 0 },
-  xpGained: 0,
-  levelUps: [],
-};
-
-/** How the save was found at start-up. */
-export interface LoadInfo {
-  source: SaveSource;
-  /** An unreadable text was kept under `save_corrupt_<time>`. */
-  corruptKept: boolean;
-  /** `lastSeenAt` before this launch, for the clock check. */
-  previousSeenAt: number;
-}
-
-/**
- * `timeout`: the save was not read in time; `read_failed`: the storage failed to answer. Both
- * run the game on a new in-memory save that is never written, so the real one stays untouched.
- */
-export type LoadOutcome =
-  (LoadInfo & { status: 'loaded' }) | { status: 'timeout' } | { status: 'read_failed' };
-
-export interface LoadOptions {
-  /** Dev `?reset=1`: start from a new save and overwrite the old one. */
-  reset?: boolean;
-  /** Longest wait for the storage; no limit when omitted. */
-  timeoutMs?: number;
-}
+export { EMPTY_SUMMARY, type LevelUp, type RunSummary } from './run-record';
+export type { GameStateDeps, LoadInfo, LoadOptions, LoadOutcome, Scheduler } from './save-store';
 
 export type SettingsPatch = Partial<
   Pick<Save['settings'], 'music' | 'sfx' | 'haptics' | 'reducedFx' | 'lang'>
 >;
 
 /**
- * Debug override of the hints, for the current page load only (never saved):
- * `fresh` shows every hint again, `off` counts every hint as shown.
- */
-type HintOverride = 'fresh' | 'off' | null;
-
-/**
  * The only owner of the save while the game runs (docs/08-architecture.md, section 5): the
- * rest of the game reads it here and changes it through these methods. Every change marks it
- * dirty; the write follows `SAVE_WRITE_DEBOUNCE_MS` later, or at once on `flush()`.
+ * rest of the game reads it here and changes it through these methods. Each method calls a pure
+ * rule over the save and stores the result; the `SaveStore` marks it dirty and writes it
+ * `SAVE_WRITE_DEBOUNCE_MS` later, or at once on `flush()`.
  */
 export class GameState {
-  private save: Save;
-  private dirty = false;
-  private timer: unknown = null;
-  /** The text last written to `save`; it becomes the backup of the next write. */
-  private lastWritten: string | null = null;
-  private previousSeenAt: number;
-  /** False after a load timeout: nothing goes to the storage, so the unread save cannot be overwritten. */
-  private persist = true;
-  private hintOverride: HintOverride = null;
-  private readonly overrideSeen = new Set<HintId>();
+  private readonly store: SaveStore;
+  private readonly hints = new Hints();
 
   constructor(private readonly deps: GameStateDeps) {
-    const nowMs = deps.realNow();
-    this.save = createDefaultSave(nowMs, deps.makeInstallId());
-    this.previousSeenAt = nowMs;
+    this.store = new SaveStore(deps);
   }
 
-  /**
-   * Reads the save: `save`, then `save_backup`, then a new one. An unreadable text is kept as
-   * `save_corrupt_<time>`. Never throws. A key that cannot be read (as opposed to one that is
-   * missing) means a new save for this session that is never written: the real one may be fine.
-   * When `timeoutMs` passes first the result is `timeout`: the state stays a new in-memory save,
-   * nothing is written for the rest of this page load, and a read that ends later is dropped.
-   */
-  async load({ reset = false, timeoutMs }: LoadOptions = {}): Promise<LoadOutcome> {
-    if (timeoutMs === undefined) return this.readSave(reset);
-    let handle: unknown = null;
-    const timeout = new Promise<'timeout'>((resolve) => {
-      handle = this.deps.scheduler.set(() => resolve('timeout'), timeoutMs);
-    });
-    const outcome = await Promise.race([this.readSave(reset), timeout]);
-    if (outcome === 'timeout') {
-      this.persist = false;
-      this.clearTimer();
-      console.warn(`Save not read after ${timeoutMs} ms: playing without saving this session`);
-      return { status: 'timeout' };
-    }
-    this.deps.scheduler.clear(handle);
-    return outcome;
-  }
-
-  private async readSave(reset: boolean): Promise<LoadOutcome> {
-    const nowMs = this.deps.realNow();
-    const { storage } = this.deps;
-    let primary: string | null = null;
-    let backup: string | null = null;
-    if (!reset) {
-      try {
-        [primary, backup] = await Promise.all([
-          storage.get(STORAGE_KEYS.save),
-          storage.get(STORAGE_KEYS.backup),
-        ]);
-      } catch (error) {
-        if (!this.persist) return { status: 'timeout' };
-        this.persist = false;
-        this.clearTimer();
-        console.warn('Save could not be read: playing without saving this session', error);
-        return { status: 'read_failed' };
-      }
-    }
-    // A read that finished after the timeout must not swap the state or touch the storage.
-    if (!this.persist) return { status: 'timeout' };
-    const result = loadSave(primary, backup, nowMs, this.deps.makeInstallId);
-    let corruptKept = result.corrupt.length > 0;
-    for (const { key, text } of result.corrupt) {
-      const suffix = key === 'backup' ? STORAGE_KEYS.corruptBackupSuffix : '';
-      const kept = await storage
-        .set(`${STORAGE_KEYS.corruptPrefix}${nowMs}${suffix}`, text)
-        .then(() => true)
-        .catch(() => false);
-      corruptKept &&= kept;
-    }
-    if (reset) await storage.remove(STORAGE_KEYS.backup).catch(() => undefined);
-    if (!this.persist) return { status: 'timeout' };
-    this.save = result.save;
-    this.previousSeenAt = result.save.lastSeenAt;
-    this.lastWritten =
-      result.source === 'primary' ? primary : result.source === 'backup' ? backup : null;
-    this.touch(nowMs);
-    this.markDirty();
-    if (reset) this.flush();
-    return {
-      status: 'loaded',
-      source: result.source,
-      corruptKept,
-      previousSeenAt: this.previousSeenAt,
-    };
+  /** Reads the save from the storage; see `SaveStore.load`. Never throws. */
+  load(options: LoadOptions = {}): Promise<LoadOutcome> {
+    return this.store.load(options);
   }
 
   // --- Reading ---
 
   /** Read-only view of the save; do not keep it, it is replaced on every change. */
   get data(): Readonly<Save> {
-    return this.save;
+    return this.store.save;
   }
 
   get coins(): number {
-    return this.save.coins;
+    return this.store.save.coins;
   }
 
   get berries(): number {
-    return this.save.berries;
+    return this.store.save.berries;
   }
 
   get wallet(): Wallet {
-    return { coins: this.save.coins, berries: this.save.berries };
+    return { coins: this.store.save.coins, berries: this.store.save.berries };
   }
 
   get settings(): Readonly<Save['settings']> {
-    return this.save.settings;
+    return this.store.save.settings;
   }
 
   /** The clock is behind the last launch by more than the tolerance (docs/09-services-analytics.md, section 9). */
   get clockBehind(): boolean {
-    return clockWentBack(this.deps.realNow(), this.save.lastSeenAt);
+    return clockWentBack(this.deps.realNow(), this.store.save.lastSeenAt);
   }
 
   /** Best classic height to beat in the current run; `null` before the first run ever ends. */
   get recordHeight(): number | null {
-    return this.save.stats.runs === 0 ? null : this.save.records.classicHeight;
+    const save = this.store.save;
+    return save.stats.runs === 0 ? null : save.records.classicHeight;
   }
 
   // --- Runs ---
@@ -246,111 +87,63 @@ export class GameState {
    * `startHeight` is the checkpoint a run began from; those layers earn no XP.
    */
   recordRun(result: RunResult, startHeight = 0): RunSummary {
-    const before = this.save;
-    const isRecord =
-      result.mode === 'classic' &&
-      before.stats.runs > 0 &&
-      result.height > before.records.classicHeight;
     const firstRun = !this.hasHint('firstResults');
-    const previousRecord = before.stats.runs === 0 ? null : before.records.classicHeight;
-    const xpGained = xpForRun(result.height, startHeight);
-    const progress = addXp(before.bakerLevel, before.bakerXp, xpGained);
-    let next: Save = {
-      ...earn(before, { coins: result.coins }),
-      bakerLevel: progress.level,
-      bakerXp: progress.xp,
-      stats: {
-        ...before.stats,
-        runs: before.stats.runs + 1,
-        totalLayers: before.stats.totalLayers + xpGained,
-        perfects: before.stats.perfects + Math.max(0, Math.floor(result.perfects)),
-      },
-      tutorial: { ...before.tutorial, firstRunDone: true },
-    };
-    if (result.mode === 'classic') {
-      next = {
-        ...next,
-        records: {
-          classicHeight: Math.max(before.records.classicHeight, result.height),
-          classicScore: Math.max(before.records.classicScore, result.score),
-          bestCombo: Math.max(before.records.bestCombo, result.bestCombo),
-        },
-      };
-    }
-    const levelUps: LevelUp[] = [];
-    for (const level of progress.levelsGained) {
-      const reward = levelReward(level);
-      const applied = applyLevelReward(next, reward);
-      next = applied.value;
-      levelUps.push({ level, reward, duplicate: applied.duplicate });
-    }
-    this.replace(next);
-    const beforeXp = { level: before.bakerLevel, xp: before.bakerXp };
-    return { isRecord, firstRun, previousRecord, before: beforeXp, xpGained, levelUps };
+    const { save, summary } = applyRun(this.store.save, result, startHeight, firstRun);
+    this.store.replace(save);
+    return summary;
   }
 
   // --- Team and creatures ---
 
   /** The team of a normal run: owned creatures at their levels, in the open slots. */
   runTeam(): Array<TeamSlot | null> {
-    return runTeam(this.save.team, this.save.creatures, this.save.bakerLevel);
+    const save = this.store.save;
+    return runTeam(save.team, save.creatures, save.bakerLevel);
   }
 
   /** Saves the team; creatures the player does not own and repeats become empty slots. */
   setTeam(team: TeamIds): void {
-    const seen = new Set<CreatureId>();
-    const slots = [0, 1, 2].map((i) => {
-      const id = team[i] ?? null;
-      if (id === null || this.save.creatures[id] === undefined || seen.has(id)) return null;
-      seen.add(id);
-      return id;
-    }) as TeamSlots;
-    this.replace({ ...this.save, team: slots });
+    this.store.replace(withTeam(this.store.save, team));
   }
 
   buyCreature(id: CreatureId, currency: Currency): EconomyResult<null, BuyError> {
-    const result = buyCreature(this.save, id, currency);
+    const result = withCreatureBought(this.store.save, id, currency);
     if (!result.ok) return result;
-    this.replace({ ...this.save, ...result.value });
+    this.store.replace(result.value);
     return { ok: true, value: null };
   }
 
   upgradeCreature(id: CreatureId): EconomyResult<number, UpgradeError> {
-    const result = upgradeCreature(this.save, id);
+    const result = withCreatureUpgraded(this.store.save, id);
     if (!result.ok) return result;
-    this.replace({ ...this.save, ...result.value });
-    return { ok: true, value: result.value.creatures[id]?.level ?? 1 };
+    this.store.replace(result.value.save);
+    return { ok: true, value: result.value.level };
   }
 
   // --- Wallet ---
 
   /** Coins of a reward outside a run (the doubled coins of a rewarded ad, gifts). */
   addCoins(coins: number): void {
-    const whole = Math.floor(coins);
-    if (!(whole > 0)) return;
-    this.replace({ ...this.save, coins: this.save.coins + whole });
+    const next = withCoins(this.store.save, coins);
+    if (next !== this.store.save) this.store.replace(next);
   }
 
   /** A rewarded ad was watched to the end. */
   countAdWatched(): void {
-    this.replace({
-      ...this.save,
-      stats: { ...this.save.stats, adsWatched: this.save.stats.adsWatched + 1 },
-    });
+    this.store.replace(withAdWatched(this.store.save));
   }
 
   /** Berries go in the moment they are earned, so they can pay for the continue of the same run. */
   addBerries(berries: number): void {
-    const whole = Math.floor(berries);
-    if (!(whole > 0)) return;
-    this.replace({ ...this.save, berries: this.save.berries + whole });
+    const next = withBerries(this.store.save, berries);
+    if (next !== this.store.save) this.store.replace(next);
   }
 
   /** Pays `cost`; false (nothing taken) when the wallet is not enough. A balance never goes below zero. */
   spend(cost: Cost): boolean {
-    const paid = spend(this.save, cost);
+    const paid = spend(this.store.save, cost);
     if (!paid) return false;
-    this.replace(paid);
+    this.store.replace(paid);
     return true;
   }
 
@@ -359,7 +152,7 @@ export class GameState {
   }
 
   canAffordBerries(berries: number): boolean {
-    return berries >= 0 && this.save.berries >= berries;
+    return berries >= 0 && this.store.save.berries >= berries;
   }
 
   // --- Hints ---
@@ -371,96 +164,30 @@ export class GameState {
    * every run, `false` counts every hint as shown.
    */
   beginRun(force?: boolean): boolean {
-    if (force === true) {
-      this.hintOverride = 'fresh';
-      this.overrideSeen.clear();
-    } else if (force === false) {
-      this.hintOverride = 'off';
-    }
+    this.hints.force(force);
     return !this.hasHint('tutorial');
   }
 
   hasHint(id: HintId): boolean {
-    if (this.hintOverride === 'off') return true;
-    if (this.hintOverride === 'fresh') return this.overrideSeen.has(id);
-    return this.save.tutorial.hintsShown.includes(id);
+    return this.hints.has(this.store.save, id);
   }
 
   markHint(id: HintId): void {
-    if (this.hintOverride === 'fresh') {
-      this.overrideSeen.add(id);
-      return;
-    }
-    if (this.hintOverride === 'off' || this.save.tutorial.hintsShown.includes(id)) return;
-    this.replace({
-      ...this.save,
-      tutorial: { ...this.save.tutorial, hintsShown: [...this.save.tutorial.hintsShown, id] },
-    });
+    const next = this.hints.mark(this.store.save, id);
+    if (next !== null) this.store.replace(next);
   }
 
   // --- Settings ---
 
   updateSettings(patch: SettingsPatch): void {
-    this.replace({ ...this.save, settings: { ...this.save.settings, ...patch } });
+    const save = this.store.save;
+    this.store.replace({ ...save, settings: { ...save.settings, ...patch } });
   }
 
   // --- Writing ---
 
   /** Writes now if anything changed. Also called when the page goes to the background. */
   flush(): void {
-    this.clearTimer();
-    if (!this.dirty || !this.persist) return;
-    this.dirty = false;
-    this.touch(this.deps.realNow());
-    const text = serializeSave(this.save);
-    const previous = this.lastWritten;
-    this.lastWritten = text;
-    const { storage } = this.deps;
-    // Both calls start at once (no await in between): a page that is closing still gets them out.
-    const writes = [
-      previous === null ? Promise.resolve() : storage.set(STORAGE_KEYS.backup, previous),
-      storage.set(STORAGE_KEYS.save, text),
-    ];
-    Promise.all(writes).catch((error: unknown) => {
-      console.warn('Saving failed', error);
-      if (this.lastWritten === text) this.lastWritten = previous;
-      // Try again later, but not in a tight loop while the storage keeps failing.
-      this.markDirty(SAVE_RETRY_MS);
-    });
+    this.store.flush();
   }
-
-  private replace(next: Save): void {
-    this.save = next;
-    this.markDirty();
-  }
-
-  private markDirty(delayMs: number = SAVE_WRITE_DEBOUNCE_MS): void {
-    this.dirty = true;
-    if (!this.persist) return;
-    this.timer ??= this.deps.scheduler.set(() => {
-      this.timer = null;
-      this.flush();
-    }, delayMs);
-  }
-
-  private clearTimer(): void {
-    if (this.timer === null) return;
-    this.deps.scheduler.clear(this.timer);
-    this.timer = null;
-  }
-
-  /** `lastSeenAt` only moves forward: a clock set back must not hide the set-back. */
-  private touch(nowMs: number): void {
-    if (nowMs > this.save.lastSeenAt) this.save = { ...this.save, lastSeenAt: nowMs };
-  }
-}
-
-/** Coins and berries of a level reward, and the creature it hands over (or its compensation). */
-function applyLevelReward(
-  save: Save,
-  reward: LevelReward,
-): { value: Save; duplicate: Cost | null } {
-  const paid = earn(save, { coins: reward.coins, berries: reward.berries });
-  if (reward.creature === undefined) return { value: paid, duplicate: null };
-  return grantCreature(paid, reward.creature);
 }
