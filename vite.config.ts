@@ -12,8 +12,8 @@ const PHASER_MIN = '/node_modules/phaser/dist/phaser.esm.min.js';
 /**
  * Dev only: the dev server sends Phaser as its minified build without any source map. By
  * default Vite pre-bundles Phaser and inlines its source map as base64, about 21 MB for one
- * module, which iPhone Safari over Wi-Fi does not load at all (a blank page). Production
- * builds and tests are not affected; the game's own files keep their maps.
+ * module, which makes the first load on a phone over Wi-Fi slow. Production builds and tests
+ * are not affected; the game's own files keep their maps.
  */
 function leanDevPhaser(): Plugin {
   return {
