@@ -3,16 +3,21 @@ import { TimingBot } from '../../core/bot';
 import type { ActiveEffect, Modifiers } from '../../core/abilities/types';
 import { Rng } from '../../core/rng';
 import type { TeamSlot } from '../../core/sim-types';
-import { TowerSim, type SimPhase } from '../../core/tower-sim';
+import { TowerSim, type SimEvent, type SimPhase } from '../../core/tower-sim';
 import { ANIM } from '../../data/anim';
 import { BALANCE } from '../../data/balance';
 import { HUD_LAYOUT } from '../../data/hud-layout';
+import { services } from '../../services';
 import { readDebugParams } from '../../util/debug-params';
 import { frameLerp, randomSeed } from '../../util/math';
 import { RunFx, type CameraInfo, type FlyingMemo } from '../fx/run-fx';
 import { Backdrop } from '../objects/backdrop/backdrop';
 import { getDebugTeam, toTeamSlots } from '../debug/debug-team';
+import { ContinueFlow } from '../continue-flow';
 import { effectsMode } from '../effects-mode';
+import { cuesForMoment } from '../fx/moment-cues';
+import { playCues } from '../fx/run-cues';
+import { sessionWallet } from '../session-wallet';
 import { SCENES, type ResultsData } from '../scene-keys';
 import { enterWorld, type WorldEntry } from '../ui/transition';
 import { isOverUi } from '../ui/ui-regions';
@@ -47,6 +52,8 @@ export class GameScene extends Phaser.Scene {
   private seed = 0;
   private team: Array<TeamSlot | null> = [];
   private fx!: RunFx;
+  /** The "Continue?" offer after a miss; the HUD draws its window. */
+  continueFlow: ContinueFlow | null = null;
   private background!: Backdrop;
   /** The flying layer before the latest step, or `null`; `flyingMemo` is the one object behind it. */
   private lastFlying: FlyingMemo | null = null;
@@ -101,6 +108,12 @@ export class GameScene extends Phaser.Scene {
     this.bot = debug.bot ? new TimingBot(debug.bot, new Rng(this.seed).fork('bot')) : null;
     this.lastFlying = null;
     this.scrollBase = 0;
+    this.continueFlow?.dispose();
+    this.continueFlow = new ContinueFlow({
+      ads: services.ads,
+      audio: services.audio,
+      wallet: sessionWallet,
+    });
 
     const { width, height } = this.scale.gameSize;
     this.background = new Backdrop(this, TRAY_TOP_Y, width, height, this.sim.state.zoneIndex);
@@ -111,6 +124,7 @@ export class GameScene extends Phaser.Scene {
     this.scale.on(Phaser.Scale.Events.RESIZE, this.onResize, this);
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       this.scale.off(Phaser.Scale.Events.RESIZE, this.onResize, this);
+      this.continueFlow?.dispose();
     });
 
     this.entry = enterWorld(this);
@@ -138,22 +152,45 @@ export class GameScene extends Phaser.Scene {
     const events = this.sim.update(delta);
     this.bot?.observe(events);
     if (this.bot?.shouldDrop(this.sim)) events.push(...this.sim.drop());
-    // The continue offer arrives in a later stage: until then the run ends once the miss has played.
-    if (this.sim.state.phase === 'await_continue' && this.fx.canDecline) {
-      events.push(...this.sim.decline());
-    }
+    this.driveContinue(delta, events);
 
     const cam = this.cameraInfo();
     this.fx.handleEvents(events, this.sim.state, this.lastFlying, this.mods, cam);
     if (events.length > 0) this.mods = this.sim.currentModifiers();
     this.fx.update(delta, time, this.sim.state, this.mods, cam);
     this.background.setZone(this.sim.state.zoneIndex);
-    this.followCamera(delta);
+    // Slow motion slows the tweens and the camera too; the HUD scene keeps its own clock.
+    this.tweens.timeScale = this.fx.timeScale;
+    this.followCamera(delta * this.fx.timeScale);
 
     const result = this.fx.takeResult();
     if (result) {
+      sessionWallet.add(result.berries);
       const data: ResultsData = { result };
       this.scene.launch(SCENES.results, data);
+    }
+  }
+
+  /**
+   * After the miss has played: opens the "Continue?" offer, or ends the run when no window must
+   * show (and always under a bot, which has nobody to press the buttons). Then runs the offer.
+   */
+  private driveContinue(delta: number, events: SimEvent[]): void {
+    const flow = this.continueFlow;
+    if (!flow || this.sim.state.phase !== 'await_continue') return;
+    if (!flow.isOpen) {
+      if (!this.fx.canDecline) return;
+      const opened = !this.bot && flow.open('classic', this.sim.state.continuesUsed);
+      if (!opened) events.push(...this.sim.decline());
+      return;
+    }
+    flow.update(delta);
+    const action = flow.takeAction();
+    if (action === 'continue') {
+      events.push(...this.sim.continueRun());
+      playCues(cuesForMoment('continued'), services);
+    } else if (action === 'decline') {
+      events.push(...this.sim.decline());
     }
   }
 

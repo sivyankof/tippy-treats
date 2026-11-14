@@ -3,12 +3,17 @@
  * The first run of a session is never a record.
  */
 export class SessionRecord {
-  private best: number | null = null;
+  private bestHeight: number | null = null;
+
+  /** Best height so far, `null` before the first run ends. */
+  get best(): number | null {
+    return this.bestHeight;
+  }
 
   /** Registers a finished run; true when an earlier run exists and `height` beats the best. */
   noteRun(height: number): boolean {
-    const previous = this.best;
-    if (previous === null || height > previous) this.best = height;
+    const previous = this.bestHeight;
+    if (previous === null || height > previous) this.bestHeight = height;
     return previous !== null && height > previous;
   }
 }

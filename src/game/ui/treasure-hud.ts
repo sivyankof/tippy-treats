@@ -43,10 +43,12 @@ export class TreasureHud {
     this.berries.layout(screenWidth);
   }
 
-  update(info: Readonly<TreasureInfo>, timeMs: number, dtMs: number): void {
-    // A paused run stands still: coins in flight wait for it.
-    this.flights.setPaused(info.paused);
-    this.flights.update(info.paused ? 0 : dtMs);
+  /** `covered`: a window (pause, "Continue?") is over the run; the flights hide and wait. */
+  update(info: Readonly<TreasureInfo>, timeMs: number, dtMs: number, covered = false): void {
+    // A covered run stands still: coins in flight wait for it.
+    const still = info.paused || covered;
+    this.flights.setPaused(still);
+    this.flights.update(still ? 0 : dtMs);
     this.coins.update(info.coins, timeMs, dtMs);
     this.berries.update(info.berries, timeMs, dtMs);
   }

@@ -17,7 +17,19 @@
     "vibration": "Vibration",
     "toggle": "{name}: {state}",
     "on": "On",
-    "off": "Off"
+    "off": "Off",
+    "record": "Record",
+    "recordPop": "Record!"
+  },
+  "continue": {
+    "title": "One more try?",
+    "height": "Height {n}",
+    "watchAd": "Watch an ad",
+    "adUnavailable": "Ad unavailable",
+    "decline": "No thanks"
+  },
+  "ads": {
+    "stub": "Ad (stub)"
   },
   "zone": {
     "kitchen": { "name": "Kitchen" },

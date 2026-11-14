@@ -6,6 +6,8 @@ export const DEPTH = {
   /** Soft glow behind the tower at a high combo. */
   halo: 5,
   tray: 10,
+  /** The record line of the session: behind the tower, over the tray. */
+  recordFlag: 12,
   /** The translucent chocolate of the brownie's bubble: behind the tower, so it does not muddy the top layer. */
   bubbleBack: 15,
   tower: 20,

@@ -6,6 +6,8 @@ import { effectsMode } from '../effects-mode';
 import { FONT_FAMILY, FONT_WEIGHT } from '../ui/fonts';
 import type { UiRegion } from '../ui/ui-regions';
 import type { RunInfo } from '../scenes/game-scene';
+import { adsDev } from '../../services';
+import { sessionWallet } from '../session-wallet';
 import { cycleDebugLevel, cycleDebugSlot, getDebugTeam } from './debug-team';
 
 const FONT_SIZE = 30;
@@ -18,6 +20,8 @@ const ENTRY_GAP = 12;
 const ROW_GAP = 14;
 const NO_CREATURE = '-';
 const APPLY_LABEL = 'restart';
+const BERRIES_LABEL = '+50 berries';
+const DEBUG_BERRIES = 50;
 
 /** Dev-only overlay with the run numbers and the temporary team picker (until M6's Team screen). */
 export class DebugPanel {
@@ -25,6 +29,8 @@ export class DebugPanel {
   private readonly slotEntries: Phaser.GameObjects.Text[] = [];
   private readonly levelEntry: Phaser.GameObjects.Text;
   private readonly applyEntry: Phaser.GameObjects.Text;
+  private readonly berriesEntry: Phaser.GameObjects.Text;
+  private readonly adsEntry: Phaser.GameObjects.Text;
   private readonly entries: Phaser.GameObjects.Text[];
   private teamKey = '';
 
@@ -68,7 +74,22 @@ export class DebugPanel {
     }
     this.levelEntry = entry(() => this.change(cycleDebugLevel), PALETTE.panel);
     this.applyEntry = entry(onApply, PALETTE.gold).setText(APPLY_LABEL);
-    this.entries = [...this.slotEntries, this.levelEntry, this.applyEntry];
+    this.berriesEntry = entry(() => sessionWallet.add(DEBUG_BERRIES), PALETTE.panel).setText(
+      BERRIES_LABEL,
+    );
+    this.adsEntry = entry(() => {
+      adsDev.cycleMode();
+      this.showAdsMode();
+      this.relayout();
+    }, PALETTE.panel);
+    this.showAdsMode();
+    this.entries = [
+      ...this.slotEntries,
+      this.levelEntry,
+      this.berriesEntry,
+      this.adsEntry,
+      this.applyEntry,
+    ];
   }
 
   get visible(): boolean {
@@ -120,8 +141,13 @@ export class DebugPanel {
         `phase ${info.phase}`,
         `team ${info.team.map((slot) => (slot ? `${slot.id}:${slot.level}` : NO_CREATURE)).join(' ')}`,
         `fx ${effectsMode.reason ?? 'full'}`,
+        `berries ${sessionWallet.berries}`,
       ].join('\n'),
     );
+  }
+
+  private showAdsMode(): void {
+    this.adsEntry.setText(`ads ${adsDev.mode}`);
   }
 
   private change(apply: () => void): void {

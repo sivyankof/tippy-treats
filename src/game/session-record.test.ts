@@ -20,4 +20,12 @@ describe('SessionRecord', () => {
     rec.noteRun(0);
     expect(rec.noteRun(1)).toBe(true);
   });
+
+  it('exposes the best height', () => {
+    const rec = new SessionRecord();
+    expect(rec.best).toBeNull();
+    rec.noteRun(7);
+    rec.noteRun(3);
+    expect(rec.best).toBe(7);
+  });
 });

@@ -389,6 +389,17 @@ describe('brownie shield', () => {
     expect(sim.state.phase).toBe('await_continue');
   });
 
+  it('never waits for a continue while the shield holds, then offers it and restores 360', () => {
+    const sim = shielded();
+    missNext(sim);
+    expect(sim.state.phase).not.toBe('await_continue');
+    missNext(sim);
+    expect(sim.state.phase).toBe('await_continue');
+    expect(only(sim.continueRun(), 'spawn').layer.width).toBeGreaterThanOrEqual(
+      BALANCE.continues.restoreWidth,
+    );
+  });
+
   it('still saves a drop miss on the last layer it covers', () => {
     const sim = shielded();
     for (let i = 0; i < 4; i++) drop(sim, 30);
