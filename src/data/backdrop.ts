@@ -132,7 +132,7 @@ export const COUNTER = {
   /** The body is a tall rectangle so it never ends above the bottom of the screen. */
   bodyDepth: 6000,
   /** Barely visible breathing of the whole counter (alpha). */
-  breathe: { lo: 0.965, hi: 1, periodMs: 1900 },
+  breathe: { lo: 0.93, hi: 1, periodMs: 1900 },
   /** A soft highlight running along the worktop and resting for `restShare` of each trip. */
   sheen: { width: 240, alpha: 0.5, periodMs: 4600, restShare: 0.25 },
   sheenHeight: 40,

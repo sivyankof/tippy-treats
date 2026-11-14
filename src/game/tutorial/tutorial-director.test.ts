@@ -117,6 +117,22 @@ describe('TutorialDirector: Honey intro', () => {
     expect(other.holding).toBe(false);
   });
 
+  it('plays the whole intro again in the next run when the hold was cut short', () => {
+    const hints = new SessionHints();
+    const first = new TutorialDirector(hints, true);
+    first.observe([land('normal')], state(layers()));
+    first.tick(BALANCE.tutorial.creaturePauseMs / 2);
+    expect(hints.has('honey')).toBe(false);
+    expect(hints.beginRun()).toBe(true);
+
+    const second = new TutorialDirector(hints, true);
+    second.observe([land('normal')], state(layers()));
+    expect(second.holding).toBe(true);
+    second.tick(BALANCE.tutorial.creaturePauseMs);
+    expect(hints.has('honey')).toBe(true);
+    expect(hints.has('tutorial')).toBe(true);
+  });
+
   it('does not trigger for another creature or a plain layer', () => {
     const { dir } = director();
     dir.observe([land('normal')], state([plain()]));

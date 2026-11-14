@@ -97,7 +97,7 @@ export const CONTINUE_ANIM = {
     bobPeriodMs: 2100,
     /** After the record is beaten the flag fades out. */
     fadeMs: 800,
-    /** The "Record!" text pops this far above the line. */
-    popLiftY: 70,
+    /** The "Record!" text pops this far above the line, over the "Perfect! xN" text of the same landing. */
+    popLiftY: 320,
   },
 } as const;

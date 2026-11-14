@@ -55,8 +55,12 @@ export class TutorialDirector {
     const wasHolding = this.holding;
     this.holdLeftMs = Math.max(0, this.holdLeftMs - dtMs);
     if (this.holdLeftMs === 0) this.target.valid = false;
-    // The Honey intro has played: the tutorial is done.
-    if (wasHolding && !this.holding) this.hints.mark('tutorial');
+    // The Honey intro has played to its end: only now it and the tutorial count as shown, so a
+    // run restarted in the middle of the hold gets the whole intro again.
+    if (wasHolding && !this.holding) {
+      this.hints.mark('honey');
+      this.hints.mark('tutorial');
+    }
   }
 
   setTarget(x: number, y: number): void {
@@ -96,8 +100,8 @@ export class TutorialDirector {
     if (state.layers.length > BALANCE.team.creatureEvery) this.hints.mark('tutorial');
     const index = state.layers.length - 1;
     const layer = state.layers[index];
-    if (this.tutorialRun && layer?.creature === 'honey' && !this.hints.has('honey')) {
-      this.hints.mark('honey');
+    const introDue = this.creatureLayerIndex < 0 && !this.hints.has('honey');
+    if (this.tutorialRun && layer?.creature === 'honey' && introDue) {
       this.holdLeftMs = BALANCE.tutorial.creaturePauseMs;
       this.creatureLayerIndex = index;
       this.cues.push({ type: 'creature_intro', layerIndex: index });

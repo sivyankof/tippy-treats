@@ -62,8 +62,11 @@ export const TUTORIAL_ANIM = {
   arrow: {
     width: 120,
     height: 150,
-    /** Gap between the arrow tip and the top edge of the layer. */
-    gap: 12,
+    /**
+     * Gap between the arrow tip and the top edge of the layer: the arrow stands above the
+     * landing texts ("Perfect!", "Boosted!") that rise from the Honey layer.
+     */
+    gap: 230,
     bobPx: 18,
     periodMs: 600,
     /** Gap between the arrow and the caption plate above it. */
