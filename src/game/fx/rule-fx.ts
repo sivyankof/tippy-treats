@@ -6,7 +6,7 @@ import { ZONE_RULES } from '../../data/zones';
 import { clamp01 } from '../../util/math';
 import { effectsMode } from '../effects-mode';
 import type { FlyingLayerView } from '../objects/flying-layer-view';
-import { approachShare, CloudCover } from './cloud-cover';
+import { cloudEtaMs, CloudCover, type CloudInput } from './cloud-cover';
 import { flyingSpeed } from '../../core/flight';
 import { hopHeight, type Point } from './coin-flight-math';
 import { FLYING_FX_DEPTH } from './flying-fx-depth';
@@ -45,6 +45,14 @@ export class RuleFx {
   private readonly cloud: CloudCover;
   private readonly visual: RuleVisual = idleVisual();
   private readonly spot: Spot = { x: 0, y: 0, width: 0, dir: 1 };
+  /** What the cloud is told each frame; one object, refilled. */
+  private readonly cloudInput: CloudInput = {
+    covering: false,
+    flying: false,
+    etaMs: Infinity,
+    y: 0,
+    dir: 1,
+  };
   private readonly windup = new RushWindup();
   /** What the layer is drawn like this frame (the squash is dropped in "fewer effects"). */
   private readonly pose: RushPose = restPose();
@@ -118,17 +126,16 @@ export class RuleFx {
       pose.scaleY,
     );
     this.streaks.update(shown ? v.streaks : 0, v.streakKind, at.x, at.y, at.width, at.dir, timeMs);
-    this.cloud.update(
-      dtMs,
-      timeMs,
-      shown && v.covered,
-      !shown || state.phase !== 'flying',
-      at.y,
-      at.dir,
-      layer && state.phase === 'flying'
-        ? approachShare(layer.cloudAheadPx, flyingSpeed(layer), layer.speed)
-        : 0,
-    );
+    const flying = shown && state.phase === 'flying';
+    const input = this.cloudInput;
+    input.covering = shown && v.covered;
+    input.flying = flying;
+    input.etaMs = flying
+      ? cloudEtaMs(layer.cloudAheadPx, flyingSpeed(layer), layer.speed)
+      : Infinity;
+    input.y = at.y;
+    input.dir = at.dir;
+    this.cloud.update(dtMs, timeMs, input);
     return v.covered || this.cloud.amount > 0;
   }
 

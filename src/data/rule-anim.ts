@@ -126,44 +126,53 @@ export const RULE_ANIM = {
    * It is fixed in the world while it hangs there (it does not follow the layer) and drifts on.
    */
   cloud: {
-    /** Baked puff size. */
+    /** Baked puff size, without the soft halo margin. */
     puff: { width: 320, height: 260 },
     /** Width of the pale edge baked around a puff. */
     edge: 6,
+    /** Soft halo around a puff: rings this far apart, each fainter, inside a margin of the texture. */
+    halo: { margin: 44, step: 13, alphas: [0.22, 0.12, 0.05] },
     /** Distance between neighbouring puffs. */
     spacing: 130,
-    /** The bank reaches this far past both screen edges, so that its drift never opens a gap. */
+    /** The bank reaches this far past both screen edges, so that it covers the row while it hangs. */
     pad: 80,
     /** Upper cap of puffs: covers the screen width plus the padding. */
     maxPuffs: 11,
     scale: [0.9, 1.15],
+    /** Every puff bobs, sways and breathes on its own phase: the bank billows. */
     bobPx: 7,
     bobPeriodMs: 1100,
+    swayPx: 6,
+    swayPeriodMs: 1900,
+    breathe: 0.035,
+    breathePeriodMs: 2300,
     /** Phase step between neighbouring puffs, radians. */
     bobPhaseStep: 1.3,
-    /** The bank sways a little while it hangs there ... */
+    /** The whole bank sways a little ... */
     driftPx: 26,
     driftPeriodMs: 1700,
-    /** ... and drifts on in the direction the layer flew when the cloud came. */
+    /** ... and drifts on, in the direction the layer flew, while it hangs and leaves. */
     driftSpeed: 60,
-    /** Time to cover the layer, to leave on its own and to leave when the layer is dropped. */
-    inMs: 100,
-    outMs: 520,
-    dropOutMs: 220,
-    /** A leaving bank rises this far while it fades. */
-    slidePx: 80,
-    /** The puffs start this small and swell to full size while the cloud arrives. */
-    enterScale: 0.9,
     /**
-     * The cloud floats in ahead of time: this long before it hides the layer it starts sliding
-     * in from behind the layer, see-through, reaching `approachAlpha`; it turns solid only when
-     * the sim cover starts, so the hidden time stays the rolled one.
+     * The cloud floats in ahead of time: once it is `leadMs` of flight away it comes in from
+     * behind the layer, `enterPx` to the side, see-through up to `approachAlpha`, swelling from
+     * `enterScale`. Its progress only moves forward and reaches 1 when the cloud arrives.
      */
-    leadMs: 420,
-    approachAlpha: 0.5,
-    approachSlidePx: 260,
-    /** A cloud that was floating in but never came (the layer was dropped) fades this fast. */
-    approachFadeMs: 250,
+    leadMs: 650,
+    enterPx: 420,
+    approachAlpha: 0.55,
+    enterScale: 0.88,
+    /** From the arrival it turns solid over this time while the sim hides the layer. */
+    inMs: 110,
+    /** Leaving: it speeds up along its drift, rises, grows a little and fades. */
+    outMs: 560,
+    /** Leaving after the layer was dropped under it. */
+    dropOutMs: 300,
+    /** A cloud that was floating in but never came (the layer was dropped) leaves this fast. */
+    abortMs: 320,
+    leaveAccel: 520,
+    slidePx: 70,
+    leaveGrow: 0.06,
   },
 
   /** Stars fake-out: the layer freezes, looks surprised and a few stars fly off. */

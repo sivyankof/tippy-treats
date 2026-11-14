@@ -255,8 +255,13 @@ describe('Flight: clouds', () => {
     flight.step(STEP, events);
     expect(layer.cloudAheadPx).toBeCloseTo(0.3 * TRACK - (layer.x - minCenterX));
     while (layer.coverMs === 0) flight.step(STEP, events);
-    // The cloud has come: nothing more is due in this pass.
+    // The cloud has come and pass 2 has none: nothing more is due until pass 3 is in sight.
     expect(layer.cloudAheadPx).toBe(-1);
+    // Pass 2 flies back from the right wall; from then on the cloud of pass 3 is counted ahead.
+    while (layer.pass < 2) flight.step(STEP, events);
+    flight.step(STEP, events);
+    const toWall = layer.x - minCenterX;
+    expect(layer.cloudAheadPx).toBeCloseTo(toWall + 0.2 * TRACK);
     const none = layerOf(rules({ rule: 'clouds', zoneIndex: 3 }));
     new Flight(none, null, () => null);
     expect(none.cloudAheadPx).toBe(-1);

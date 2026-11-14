@@ -52,9 +52,14 @@ function bakeCoin(scene: Phaser.Scene): void {
   });
 }
 
-/** One cloud puff: a few overlapping blobs on a flat base, with a pale edge and a shaded belly. */
+/**
+ * One cloud puff: a few overlapping blobs on a flat base, with a pale edge, a shaded belly and a
+ * soft halo of fainter rings around it, so the bank has soft edges. The halo lives in a margin
+ * around the puff; the texture is centred on the puff all the same.
+ */
 function bakeCloud(scene: Phaser.Scene): void {
   const { width, height } = RULE_ANIM.cloud.puff;
+  const { margin, step, alphas } = RULE_ANIM.cloud.halo;
   const blobs = [
     { x: 0.34, y: 0.5, r: 0.24 },
     { x: 0.53, y: 0.45, r: 0.29 },
@@ -65,23 +70,30 @@ function bakeCloud(scene: Phaser.Scene): void {
   const draw = (
     g: Phaser.GameObjects.Graphics,
     color: number,
+    alpha: number,
     grow: number,
     dropY: number,
   ): void => {
-    g.fillStyle(color, 1);
-    for (const b of blobs) g.fillCircle(b.x * width, b.y * height + dropY, b.r * width + grow);
+    g.fillStyle(color, alpha);
+    for (const b of blobs) {
+      g.fillCircle(margin + b.x * width, margin + b.y * height + dropY, b.r * width + grow);
+    }
     g.fillRoundedRect(
-      0.2 * width - grow,
-      0.5 * height - grow + dropY,
+      margin + 0.2 * width - grow,
+      margin + 0.5 * height - grow + dropY,
       0.62 * width + grow * 2,
       0.3 * height + grow * 2,
-      0.14 * height,
+      0.14 * height + grow,
     );
   };
-  bakeTexture(scene, TREASURE_TEXTURES.cloud, width, height, (g) => {
-    draw(g, RULE_ANIM.colors.cloudEdge, edge, 0);
-    draw(g, RULE_ANIM.colors.cloudShade, 0, 0);
-    draw(g, RULE_ANIM.colors.cloud, 0, -height * 0.04);
+  bakeTexture(scene, TREASURE_TEXTURES.cloud, width + margin * 2, height + margin * 2, (g) => {
+    // Outermost ring first: each ring is fainter and wider, so the edge fades out softly.
+    for (let i = alphas.length - 1; i >= 0; i--) {
+      draw(g, RULE_ANIM.colors.cloud, alphas[i] ?? 0, edge + step * (i + 1), 0);
+    }
+    draw(g, RULE_ANIM.colors.cloudEdge, 1, edge, 0);
+    draw(g, RULE_ANIM.colors.cloudShade, 1, 0, 0);
+    draw(g, RULE_ANIM.colors.cloud, 1, 0, -height * 0.04);
   });
 }
 

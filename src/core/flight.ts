@@ -74,6 +74,8 @@ export class Flight {
   private passStartX: number;
   private cloud: CloudRoll | null;
   private cloudStarted = false;
+  /** The cloud of the next pass, read ahead for `cloudAheadPx`; cached per pass. */
+  private nextCloud: { pass: number; roll: CloudRoll | null } = { pass: 0, roll: null };
   private fakeoutDone = false;
 
   /** `rollCloud(pass)` is the pure cloud schedule of the layer (core/zones.ts). */
@@ -111,17 +113,34 @@ export class Flight {
     this.updateCloudAhead();
   }
 
-  /** Track left before the cloud of this pass arrives, or -1 when none is due. */
+  /**
+   * Track left before the next cloud arrives, or -1 when none is due: the cloud of this pass,
+   * or, once that one has come (or none was rolled), the cloud of the next pass after the
+   * bounce, so the view can show it coming early even when it arrives right after a wall.
+   * The schedule is pure per pass, so reading the next one ahead changes nothing.
+   */
   private updateCloudAhead(): void {
     const layer = this.layer;
+    const { minCenterX, maxCenterX } = BALANCE.layer;
+    const track = maxCenterX - minCenterX;
     const roll = this.cloud;
-    if (!roll || this.cloudStarted) {
+    if (roll && !this.cloudStarted) {
+      layer.cloudAheadPx = Math.max(
+        0,
+        roll.startProgress * track - Math.abs(layer.x - this.passStartX),
+      );
+      return;
+    }
+    if (this.nextCloud.pass !== layer.pass + 1) {
+      this.nextCloud = { pass: layer.pass + 1, roll: this.rollCloud(layer.pass + 1) };
+    }
+    const next = this.nextCloud.roll;
+    if (!next) {
       layer.cloudAheadPx = -1;
       return;
     }
-    const { minCenterX, maxCenterX } = BALANCE.layer;
-    const due = roll.startProgress * (maxCenterX - minCenterX);
-    layer.cloudAheadPx = Math.max(0, due - Math.abs(layer.x - this.passStartX));
+    const toWall = layer.dir === 1 ? maxCenterX - layer.x : layer.x - minCenterX;
+    layer.cloudAheadPx = Math.max(0, toWall) + next.startProgress * track;
   }
 
   private crossesFakeout(from: number, to: number): boolean {
@@ -158,7 +177,9 @@ export class Flight {
     if (wall === null) return;
     layer.pass += 1;
     this.passStartX = wall;
-    this.cloud = this.rollCloud(layer.pass);
+    // The cloud of the new pass may have been read ahead already: the schedule is asked once per pass.
+    this.cloud =
+      this.nextCloud.pass === layer.pass ? this.nextCloud.roll : this.rollCloud(layer.pass);
     this.cloudStarted = false;
   }
 
