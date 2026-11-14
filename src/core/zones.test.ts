@@ -30,9 +30,9 @@ describe('zone table', () => {
     expect(ZONES.map((z) => [z.id, z.speedMult, z.scoreMult])).toEqual([
       ['kitchen', 1, 1],
       ['showcase', 1, 1.2],
-      ['roof', 1.05, 1.5],
-      ['clouds', 1.05, 1.8],
-      ['stars', 1.1, 2.2],
+      ['roof', 1, 1.5],
+      ['clouds', 1, 1.8],
+      ['stars', 1.05, 2.2],
       ['space', 1.15, 2.5],
     ]);
     expect(ZONES.map((z) => z.rule)).toEqual([
@@ -77,16 +77,16 @@ describe('nominalSpeed', () => {
 
   it('multiplies by the zone and does not cap outside Space', () => {
     expect(nominalSpeed(30, 1, 1)).toBeCloseTo(layerSpeed(30, 1));
-    expect(nominalSpeed(50, 2, 1)).toBeCloseTo(layerSpeed(50, 1) * 1.05);
-    // 1392 * 1.1 is above the Space cap of 1400 and still allowed in the stars zone.
-    expect(nominalSpeed(88, 4, 1)).toBeCloseTo(1392 * 1.1);
+    expect(nominalSpeed(50, 2, 1)).toBeCloseTo(layerSpeed(50, 1) * (ZONES[2]?.speedMult ?? 0));
+    // 1392 * 1.05 is above the Space cap of 1400 and still allowed in the stars zone.
+    expect(nominalSpeed(88, 4, 1)).toBeCloseTo(1392 * 1.05);
   });
 
   it('caps the base at 1400 in every zone, so Space is slower than late Stars', () => {
     expect(layerSpeed(89, 1)).toBe(BALANCE.speed.max);
     // Stars: the base is already at 1400 from height 89 and the zone multiplier lifts it above.
-    expect(nominalSpeed(95, 4, 1)).toBeCloseTo(BALANCE.speed.max * 1.1);
-    expect(nominalSpeed(99, 4, 1)).toBeCloseTo(1540);
+    expect(nominalSpeed(95, 4, 1)).toBeCloseTo(BALANCE.speed.max * 1.05);
+    expect(nominalSpeed(99, 4, 1)).toBeCloseTo(1470);
     // Space: base times 1.15 is capped back to 1400, so its multiplier changes nothing.
     expect(nominalSpeed(100, SPACE_ZONE_INDEX, 1)).toBe(1400);
     expect(nominalSpeed(100, SPACE_ZONE_INDEX, 1)).toBeLessThan(nominalSpeed(99, 4, 1));
@@ -266,7 +266,7 @@ describe('cloudRoll', () => {
     }
   });
 
-  it('comes in 50% of the passes with 300-500 ms of cover starting 15-60% into the pass', () => {
+  it('comes in the share of passes, cover length and start window of the data', () => {
     const [coverMin, coverMax] = ZONE_RULES.clouds.coverMs;
     const [startMin, startMax] = ZONE_RULES.clouds.startProgress;
     const rolls = SEEDS.flatMap((seed) =>
@@ -276,8 +276,9 @@ describe('cloudRoll', () => {
       }),
     );
     const clouds = rolls.filter((r) => r !== null);
-    expect(clouds.length / rolls.length).toBeGreaterThan(0.46);
-    expect(clouds.length / rolls.length).toBeLessThan(0.54);
+    const { chance } = ZONE_RULES.clouds;
+    expect(clouds.length / rolls.length).toBeGreaterThan(chance - 0.04);
+    expect(clouds.length / rolls.length).toBeLessThan(chance + 0.04);
     for (const cloud of clouds) {
       expect(cloud.coverMs).toBeGreaterThanOrEqual(coverMin);
       expect(cloud.coverMs).toBeLessThanOrEqual(coverMax);
@@ -298,7 +299,7 @@ describe('cloudRoll', () => {
     expect(covers.size).toBeGreaterThan(SEEDS.length / 2);
   });
 
-  it('guarantees a cloud on the first pass of a Space cloud layer, 50% on later passes', () => {
+  it('guarantees a cloud on the first pass of a Space cloud layer, the usual chance on later passes', () => {
     let later = 0;
     let laterClouds = 0;
     for (const seed of SEEDS) {
@@ -313,7 +314,8 @@ describe('cloudRoll', () => {
         }
       }
     }
-    expect(laterClouds / later).toBeGreaterThan(0.44);
-    expect(laterClouds / later).toBeLessThan(0.56);
+    const { chance } = ZONE_RULES.clouds;
+    expect(laterClouds / later).toBeGreaterThan(chance - 0.06);
+    expect(laterClouds / later).toBeLessThan(chance + 0.06);
   });
 });

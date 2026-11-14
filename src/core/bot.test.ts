@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { BALANCE, DIFFICULTY } from '../data/balance';
 import { TimingBot } from './bot';
+import { roofFactor } from './flight';
 import { Rng } from './rng';
 import { mutable } from './sim-test-utils';
 import type { FlyingLayer } from './sim-types';
@@ -166,14 +167,18 @@ describe('TimingBot with zone rules', () => {
       layer.x = TARGET - 100;
       layer.dir = 1;
     };
-    // 100 px before the target at the roof speed there (about 1185 px/s) is 84 ms away.
-    expect(botFor(flyingSim(place), -90).shouldDrop(flyingSim(place))).toBe(true);
     const plain = (layer: FlyingLayer): void => {
       place(layer);
       layer.rule = 'none';
     };
-    // At the plain 1000 px/s it is 100 ms away: too early for a tap 90 ms before the target.
-    expect(botFor(flyingSim(plain), -90).shouldDrop(flyingSim(plain))).toBe(false);
+    // 100 px before the target: 100 ms at the plain 1000 px/s, another time at the roof speed there.
+    const plainMs = 100;
+    const roofMs = (100 / (1000 * roofFactor(TARGET - 100))) * 1000;
+    expect(roofMs).not.toBeCloseTo(plainMs);
+    // A tap planned halfway between the two times happens for exactly one of them.
+    const error = -(plainMs + roofMs) / 2;
+    expect(botFor(flyingSim(place), error).shouldDrop(flyingSim(place))).toBe(roofMs <= -error);
+    expect(botFor(flyingSim(plain), error).shouldDrop(flyingSim(plain))).toBe(plainMs <= -error);
   });
 
   it('never taps while the layer holds still, whatever the error', () => {

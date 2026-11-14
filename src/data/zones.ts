@@ -23,9 +23,9 @@ export interface ZoneDef {
 export const ZONES: readonly ZoneDef[] = [
   { id: 'kitchen', speedMult: 1, scoreMult: 1, rule: 'none', speedCap: null },
   { id: 'showcase', speedMult: 1, scoreMult: 1.2, rule: 'showcase', speedCap: null },
-  { id: 'roof', speedMult: 1.05, scoreMult: 1.5, rule: 'roof', speedCap: null },
-  { id: 'clouds', speedMult: 1.05, scoreMult: 1.8, rule: 'clouds', speedCap: null },
-  { id: 'stars', speedMult: 1.1, scoreMult: 2.2, rule: 'stars', speedCap: null },
+  { id: 'roof', speedMult: 1, scoreMult: 1.5, rule: 'roof', speedCap: null },
+  { id: 'clouds', speedMult: 1, scoreMult: 1.8, rule: 'clouds', speedCap: null },
+  { id: 'stars', speedMult: 1.05, scoreMult: 2.2, rule: 'stars', speedCap: null },
   { id: 'space', speedMult: 1.15, scoreMult: 2.5, rule: 'random', speedCap: BALANCE.speed.max },
 ];
 
@@ -59,14 +59,14 @@ export const ZONE_RULES = {
   /** Roof: speed is `edge` at the walls and `centre` in the middle of the track (sine profile). */
   roof: {
     edgeMult: 0.8,
-    centreMult: 1.2,
+    centreMult: 1,
   },
   /** Clouds: per pass of the layer across the screen. */
   clouds: {
-    chance: 0.5,
-    coverMs: [300, 500],
+    chance: 0.35,
+    coverMs: [200, 350],
     /** Where in the pass (share of the track from where the pass started) the cloud arrives. */
-    startProgress: [0.15, 0.6],
+    startProgress: [0.05, 0.3],
     /** Space: a cloud on the first pass is guaranteed. */
     spaceFirstPassChance: 1,
   },

@@ -26,6 +26,13 @@ const BASE_SEED = 20261113;
 const MAX_RUN_MS = 60 * 60 * 1000;
 /** Median height gain of a full level-3 team expected by the M4 exit criteria, in percent. */
 const GAIN_RANGE_PCT = [30, 50] as const;
+/**
+ * Owner's rule: a team counts as "over +50%" only past the upper bound plus this many percentage
+ * points, so the noise of 2000 runs (one layer is about 3 points for the regular profile) does
+ * not stop the check.
+ */
+const GAIN_OVER_TOLERANCE_PP = 3;
+const OVER_LIMIT_PCT = GAIN_RANGE_PCT[1] + GAIN_OVER_TOLERANCE_PP;
 /** Owner's acceptance criteria for the creature balance. */
 const JELLY_PROFILE = 'regular';
 const JELLY_SOLO_RANGE_PCT = [8, 14] as const;
@@ -238,7 +245,7 @@ function summarizeAllTeams(profile: string, rows: TeamRow[]): TeamRow[] {
   const [lo, hi] = GAIN_RANGE_PCT;
   const top = (key: 'median' | 'avg coins') =>
     [...rows].sort((a, b) => b[key] - a[key]).slice(0, TOP_COUNT);
-  const over = rows.filter((r) => gainOf(r) > hi);
+  const over = rows.filter((r) => gainOf(r) > OVER_LIMIT_PCT);
   const withRainbow = over.filter((r) => hasCreature(r, RAINBOW));
   const withGhost = over.filter((r) => !hasCreature(r, RAINBOW) && hasCreature(r, GHOST));
   const plain = over.filter((r) => !hasCreature(r, RAINBOW) && !hasCreature(r, GHOST));
@@ -247,11 +254,11 @@ function summarizeAllTeams(profile: string, rows: TeamRow[]): TeamRow[] {
   console.log(`  top ${TOP_COUNT} by avg coins: ${names(top('avg coins'))}`);
   console.log(
     `  within +${lo}..+${hi}%: ${rows.filter((r) => gainOf(r) >= lo && gainOf(r) <= hi).length}, ` +
-      `over +${hi}%: ${over.length}`,
+      `over +${hi}% (beyond +${OVER_LIMIT_PCT}%): ${over.length}`,
   );
-  console.log(`  over +${hi}% with ${RAINBOW}: ${names(withRainbow)}`);
-  console.log(`  over +${hi}% without ${RAINBOW}, with ${GHOST}: ${names(withGhost)}`);
-  console.log(`  over +${hi}% without ${RAINBOW} and ${GHOST}: ${names(plain)}`);
+  console.log(`  over +${OVER_LIMIT_PCT}% with ${RAINBOW}: ${names(withRainbow)}`);
+  console.log(`  over +${OVER_LIMIT_PCT}% without ${RAINBOW}, with ${GHOST}: ${names(withGhost)}`);
+  console.log(`  over +${OVER_LIMIT_PCT}% without ${RAINBOW} and ${GHOST}: ${names(plain)}`);
   return plain;
 }
 
@@ -376,7 +383,7 @@ Rule on the layer the run was lost on, % of runs, no team ` +
         (dominantTeams.length ? ` (${dominantTeams.join(', ')})` : ''),
     );
     console.log(
-      `(3) no full team without ${RAINBOW} and ${GHOST} over +${GAIN_RANGE_PCT[1]}% on any profile: ${status(plainOverTeams.length === 0)}` +
+      `(3) no full team without ${RAINBOW} and ${GHOST} over +${GAIN_RANGE_PCT[1]}% (beyond +${OVER_LIMIT_PCT}% with the owner's noise tolerance) on any profile: ${status(plainOverTeams.length === 0)}` +
         (plainOverTeams.length ? ` (${plainOverTeams.join('; ')})` : ''),
     );
   }
