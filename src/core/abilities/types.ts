@@ -19,7 +19,7 @@ export interface ActiveEffect {
   value: number;
 }
 
-/** Everything abilities and zone rules can change about a drop. */
+/** Everything abilities can change about a drop. Zone multipliers are applied separately (core/zones.ts). */
 export interface Modifiers {
   /** Multiplied. */
   speedMult: number;

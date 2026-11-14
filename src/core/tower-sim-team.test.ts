@@ -242,7 +242,11 @@ describe('abilities in play', () => {
     const events = drop(sim, 0);
     expect(sim.state.score - score).toBe(Math.round((25 + 5) * 3));
     expect(sim.state.coins - coins).toBe(1);
-    expect(only(events, 'coin_collect')).toEqual({ type: 'coin_collect', amount: 1 });
+    expect(only(events, 'coin_collect')).toEqual({
+      type: 'coin_collect',
+      amount: 1,
+      source: 'perfect',
+    });
   });
 
   it('rainbow makes drops perfect, but not a complete miss', () => {
@@ -532,7 +536,11 @@ describe('coins', () => {
     const sim = new TowerSim(config({ startHeight: 5 }));
     // Layer 6 comes from the right: a 100 px cut on the left leaves 620 px centred on 490, covering 180..800.
     const events = drop(sim, 100, 790);
-    expect(only(events, 'coin_collect')).toEqual({ type: 'coin_collect', amount: 1 });
+    expect(only(events, 'coin_collect')).toEqual({
+      type: 'coin_collect',
+      amount: 1,
+      source: 'floating',
+    });
     expect(sim.state.coins).toBe(1);
     expect(sim.state.floatingCoinX).toBeNull();
   });
@@ -597,13 +605,18 @@ describe('coins', () => {
   it('adds a height bonus of 2 coins per 10 layers when the run ends', () => {
     const sim = new TowerSim(config({ mode: 'daily', startHeight: 24 }));
     const events = missNow(sim);
-    expect(only(events, 'coin_collect')).toEqual({ type: 'coin_collect', amount: 4 });
+    expect(only(events, 'coin_collect')).toEqual({
+      type: 'coin_collect',
+      amount: 4,
+      source: 'height',
+    });
     const result = only(events, 'run_over').result;
     expect(result.coins).toBe(4);
     expect(sim.state.coins).toBe(4);
   });
 });
 
+// Layer 25 is in the showcase zone: its score multiplier is 1.2.
 describe('golden layers', () => {
   const goldenSim = (startHeight = 24, teamSetup: RunConfig['team'] = [null, null, null]) =>
     new TowerSim(config({ startHeight, team: teamSetup }));
@@ -613,7 +626,7 @@ describe('golden layers', () => {
     expect(only(untilFlying(sim), 'spawn').layer).toMatchObject({ index: 25, kind: 'golden' });
     const events = drop(sim, 0);
     expect(only(events, 'golden')).toEqual({ type: 'golden', perfect: true });
-    expect(sim.state).toMatchObject({ berries: 1, score: 30 + 100, coins: 0 });
+    expect(sim.state).toMatchObject({ berries: 1, score: 36 + 100, coins: 0 });
     expect(sim.state.layers.at(-1)?.kind).toBe('golden');
   });
 
@@ -622,7 +635,7 @@ describe('golden layers', () => {
     const events = drop(sim, 100);
     expect(only(events, 'golden')).toEqual({ type: 'golden', perfect: false });
     expect(only(events, 'coin_collect').amount).toBe(10);
-    expect(sim.state).toMatchObject({ berries: 0, score: 10, coins: 10 });
+    expect(sim.state).toMatchObject({ berries: 0, score: 12, coins: 10 });
   });
 
   it('does not multiply the golden coins or the golden score', () => {
@@ -633,7 +646,7 @@ describe('golden layers', () => {
     );
     drop(sim, 100);
     expect(sim.state.coins).toBe(10);
-    expect(sim.state.score).toBe(20);
+    expect(sim.state.score).toBe(24);
   });
 
   it('moves to the next layer when layer 25 would be a creature slot', () => {

@@ -1,4 +1,5 @@
 import type { CreatureId } from '../data/creatures';
+import type { LayerRuleKind } from '../data/zones';
 import type { ActiveEffect, AbilityPayload } from './abilities/types';
 import type { CutSide } from './drop';
 import type { RunEndReason, RunMode, RunResult } from './run-result';
@@ -38,7 +39,26 @@ export interface FlyingLayer extends LayerPlan {
   x: number;
   width: number;
   dir: 1 | -1;
+  /**
+   * Nominal speed in px/s: base speed times the zone multiplier (capped in Space) times the
+   * ability multiplier. What the layer really does each moment is `flyingSpeed(layer)`
+   * (core/flight.ts): rush, the roof profile and holds are applied there.
+   */
   speed: number;
+  /** Zone of this layer (index into `ZONES`). */
+  zoneIndex: number;
+  /** Rule this layer follows; `none` in the kitchen. */
+  rule: LayerRuleKind;
+  /** Rush layer: holds still for the wind-up, then flies faster. */
+  rush: boolean;
+  /** Wind-up left, ms; the layer does not move while it is above 0. */
+  windupMs: number;
+  /** Fake-out stop left, ms; the layer does not move while it is above 0 and reverses at 0. */
+  stopMs: number;
+  /** Cloud cover left, ms; the layer is hidden while it is above 0. */
+  coverMs: number;
+  /** 1-based pass across the screen: starts at spawn and at every wall bounce. */
+  pass: number;
 }
 
 export interface PlacedLayer extends LayerPlan {
@@ -74,6 +94,9 @@ export interface TowerState {
   shield: number;
 }
 
+/** Where a collected coin came from (the scene animates it, the results screen sums it up). */
+export type CoinSource = 'floating' | 'combo' | 'perfect' | 'crumb' | 'golden' | 'height';
+
 export type SimEvent =
   | { type: 'spawn'; layer: FlyingLayer }
   | {
@@ -88,9 +111,11 @@ export type SimEvent =
   | { type: 'combo'; value: number; widened: number }
   | { type: 'wobble_sneeze'; newWidth: number }
   | { type: 'coin_spawn'; x: number }
-  | { type: 'coin_collect'; amount: number }
+  | { type: 'coin_collect'; amount: number; source: CoinSource }
   | { type: 'ability'; creature: CreatureId; boosted: boolean; payload: AbilityPayload }
   | { type: 'effect_end'; effect: string }
   | { type: 'zone_change'; zoneIndex: number }
+  | { type: 'cloud'; coverMs: number; pass: number }
+  | { type: 'fakeout'; x: number; stopMs: number }
   | { type: 'golden'; perfect: boolean }
   | { type: 'run_over'; result: RunResult };

@@ -129,6 +129,11 @@ export const DIFFICULTY = {
    * much smaller (the real effect on a human player is not measurable by a bot).
    */
   guidesSdMult: 0.7,
+  /**
+   * Bot-model assumption, not a game rule: while a cloud covers the flying layer the bot's
+   * timing error is this many times larger (the player cannot see the layer).
+   */
+  cloudSdMult: 1.5,
   /** Allowed relative deviation from the expected range before balance must change. */
   tolerance: 0.25,
   targets: [

@@ -1,4 +1,5 @@
 import { BALANCE } from '../data/balance';
+import { ZONES } from '../data/zones';
 import { collectModifiers } from './abilities/modifiers';
 import { runAbility, tickRunEffects } from './abilities/run';
 import type { Modifiers } from './abilities/types';
@@ -10,12 +11,13 @@ import {
   heightBonusCoins,
   rollFloatingCoin,
 } from './coins';
-import { layerSpeed, resolveDrop } from './drop';
+import { resolveDrop } from './drop';
+import { Flight, newFlyingLayer } from './flight';
 import { Rng } from './rng';
 import type { RunEndReason, RunResult } from './run-result';
 import { comboWidening, nextCombo, normalScore, perfectScore } from './scoring';
 import type {
-  FlyingLayer,
+  CoinSource,
   LayerPlan,
   PlacedLayer,
   RunConfig,
@@ -24,6 +26,7 @@ import type {
   TowerState,
 } from './sim-types';
 import { planLayer, type PlanState } from './team-queue';
+import { cloudRoll, layerRules, nominalSpeed, zoneIndexOf } from './zones';
 import {
   advanceWobblePhase,
   decayWobble,
@@ -36,6 +39,7 @@ import {
 } from './wobble';
 
 export type {
+  CoinSource,
   FlyingLayer,
   LandQuality,
   LayerKind,
@@ -56,6 +60,7 @@ const STEP_EPSILON_MS = 1e-6;
 export class TowerSim {
   protected readonly rng: Rng;
   private readonly coinRng: Rng;
+  private readonly zonesRng: Rng;
   private readonly config: RunConfig;
   private readonly s: TowerState;
   private accumulatorMs = 0;
@@ -67,11 +72,14 @@ export class TowerSim {
   private planState: PlanState;
   /** The layer being attempted; a retry (shield, continue) of the same index keeps it. */
   private attempt: { index: number; plan: LayerPlan } | null = null;
+  /** Motion of the flying layer; `null` outside the flying phase. */
+  private flight: Flight | null = null;
 
   constructor(config: RunConfig) {
     this.config = config;
     this.rng = new Rng(config.seed);
     this.coinRng = this.rng.fork('coins');
+    this.zonesRng = this.rng.fork('zones');
     this.s = {
       // The first step spawns the first layer, so the scene gets its `spawn` event.
       phase: 'pause',
@@ -103,6 +111,8 @@ export class TowerSim {
       });
     }
     this.s.height = startHeight;
+    // A debug start lands straight in its zone, without a zone_change event.
+    this.s.zoneIndex = zoneIndexOf(startHeight + 1);
     this.planState = { lastIndex: startHeight, goldenPending: false };
   }
 
@@ -183,7 +193,7 @@ export class TowerSim {
     s.wobblePhase = advanceWobblePhase(s.wobblePhase, STEP_MS);
 
     if (s.phase === 'flying') {
-      this.moveFlying();
+      this.flight?.step(STEP_MS, events);
     } else if (s.phase === 'falling') {
       if (s.phaseMs >= BALANCE.layer.fallMs) this.resolveLanding(events);
     } else if (s.phase === 'pause') {
@@ -201,45 +211,32 @@ export class TowerSim {
       this.attempt = { index, plan: planned.plan };
       this.spawnCoin(events, index);
     }
-    const fromLeft = index % 2 === 1;
-    const layer: FlyingLayer = {
-      ...this.attempt.plan,
-      index,
-      x: fromLeft ? BALANCE.layer.minCenterX : BALANCE.layer.maxCenterX,
-      width: this.nextWidth,
-      dir: fromLeft ? 1 : -1,
-      speed: layerSpeed(s.height, this.currentModifiers().speedMult),
-    };
+    const zoneIndex = zoneIndexOf(index);
+    if (zoneIndex !== s.zoneIndex) {
+      s.zoneIndex = zoneIndex;
+      events.push({ type: 'zone_change', zoneIndex });
+    }
+    const rules = layerRules(this.zonesRng, index);
+    const speed = nominalSpeed(s.height, zoneIndex, this.currentModifiers().speedMult);
+    const layer = newFlyingLayer(this.attempt.plan, rules, this.nextWidth, speed);
+    this.flight = new Flight(layer, rules.fakeoutX, (pass) =>
+      cloudRoll(this.zonesRng, rules, pass),
+    );
     s.flying = layer;
     this.enter('flying');
     events.push({ type: 'spawn', layer: { ...layer } });
   }
 
   private spawnCoin(events: SimEvent[], index: number): void {
-    const x = rollFloatingCoin(this.coinRng, index, this.topRestX());
+    const x = rollFloatingCoin(this.coinRng.fork(`layer:${index}`), index, this.topRestX());
     this.s.floatingCoinX = x;
     if (x !== null) events.push({ type: 'coin_spawn', x });
   }
 
-  private moveFlying(): void {
-    const layer = this.s.flying;
-    if (!layer) return;
-    const { minCenterX, maxCenterX } = BALANCE.layer;
-    let x = layer.x + (layer.dir * layer.speed * STEP_MS) / 1000;
-    if (x > maxCenterX) {
-      x = maxCenterX - (x - maxCenterX);
-      layer.dir = -1;
-    } else if (x < minCenterX) {
-      x = minCenterX + (minCenterX - x);
-      layer.dir = 1;
-    }
-    layer.x = x;
-  }
-
-  private gainCoins(events: SimEvent[], amount: number): void {
+  private gainCoins(events: SimEvent[], amount: number, source: CoinSource): void {
     if (amount <= 0) return;
     this.s.coins += amount;
-    events.push({ type: 'coin_collect', amount });
+    events.push({ type: 'coin_collect', amount, source });
   }
 
   private resolveLanding(events: SimEvent[]): void {
@@ -257,6 +254,7 @@ export class TowerSim {
       springShare: mods.springShare,
     });
     s.flying = null;
+    this.flight = null;
     // The floating coin is lost on a miss; a retried layer rolls no new one.
     const coinX = s.floatingCoinX;
     s.floatingCoinX = null;
@@ -288,9 +286,11 @@ export class TowerSim {
     });
 
     if (coinX !== null && coinCovered(coinX, layer.x, layer.width)) {
-      this.gainCoins(events, floatingCoinAmount(mods));
+      this.gainCoins(events, floatingCoinAmount(mods), 'floating');
     }
-    this.score(events, layer, outcome.dx, flying.width, perfect, mods);
+    // Zone and ability multipliers multiply together; the zone is that of the landing layer.
+    const scoreMult = mods.scoreMult * (ZONES[flying.zoneIndex]?.scoreMult ?? 1);
+    this.score(events, layer, outcome.dx, flying.width, perfect, scoreMult);
     this.payLanding(events, flying.kind === 'golden', perfect, outcome.cutWidth, mods);
 
     const emit = (event: SimEvent): number => events.push(event);
@@ -322,7 +322,7 @@ export class TowerSim {
     dx: number,
     flyingWidth: number,
     perfect: boolean,
-    mods: Readonly<Modifiers>,
+    scoreMult: number,
   ): void {
     const s = this.s;
     s.combo = nextCombo(s.combo, perfect);
@@ -332,11 +332,11 @@ export class TowerSim {
       const widened = comboWidening(s.combo, layer.width);
       layer.width += widened;
       s.wobble = wobbleAfterPerfect(s.wobble);
-      s.score += perfectScore(s.combo, mods.scoreMult);
+      s.score += perfectScore(s.combo, scoreMult);
       events.push({ type: 'combo', value: s.combo, widened });
     } else {
       s.wobble = wobbleAfterNormal(s.wobble, dx, flyingWidth);
-      s.score += normalScore(mods.scoreMult);
+      s.score += normalScore(scoreMult);
     }
   }
 
@@ -350,10 +350,10 @@ export class TowerSim {
   ): void {
     const s = this.s;
     if (perfect) {
-      this.gainCoins(events, comboCoinAmount(s.combo, mods));
-      this.gainCoins(events, mods.perfectCoinAdd);
+      this.gainCoins(events, comboCoinAmount(s.combo, mods), 'combo');
+      this.gainCoins(events, mods.perfectCoinAdd, 'perfect');
     } else {
-      this.gainCoins(events, crumbCoinAmount(cutWidth, mods.crumbToCoinsPx));
+      this.gainCoins(events, crumbCoinAmount(cutWidth, mods.crumbToCoinsPx), 'crumb');
     }
     if (!golden) return;
     events.push({ type: 'golden', perfect });
@@ -361,7 +361,7 @@ export class TowerSim {
       s.berries += BALANCE.golden.perfectBerries;
       s.score += BALANCE.score.goldenPerfectBonus;
     } else {
-      this.gainCoins(events, BALANCE.golden.normalCoins);
+      this.gainCoins(events, BALANCE.golden.normalCoins, 'golden');
     }
   }
 
@@ -390,7 +390,7 @@ export class TowerSim {
 
   private finish(events: SimEvent[]): void {
     const s = this.s;
-    this.gainCoins(events, heightBonusCoins(s.height));
+    this.gainCoins(events, heightBonusCoins(s.height), 'height');
     this.enter('over');
     const result: RunResult = {
       seed: this.config.seed,

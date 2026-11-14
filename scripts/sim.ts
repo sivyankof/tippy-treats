@@ -4,6 +4,7 @@ import type { RunResult } from '../src/core/run-result';
 import type { RunConfig } from '../src/core/sim-types';
 import { TowerSim } from '../src/core/tower-sim';
 import { BALANCE, DIFFICULTY, type DifficultyTarget } from '../src/data/balance';
+import { ZONES } from '../src/data/zones';
 import {
   NO_TEAM,
   allFullTeams,
@@ -134,6 +135,7 @@ interface TeamRow {
   full: boolean;
   median: number;
   p90: number;
+  'median zone': string;
   'delta median, %': number | string;
   'avg coins': number;
   'avg score': number;
@@ -145,6 +147,7 @@ const TABLE_COLUMNS: Array<keyof TeamRow> = [
   'team',
   'median',
   'p90',
+  'median zone',
   'delta median, %',
   'avg coins',
   'avg score',
@@ -152,12 +155,19 @@ const TABLE_COLUMNS: Array<keyof TeamRow> = [
   'avg time, s',
 ];
 
+/** Id of the zone the median run ended in. */
+function medianZone(results: RunResult[]): string {
+  const zones = results.map((r) => r.zoneIndex).sort((a, b) => a - b);
+  return ZONES[percentile(zones, 0.5)]?.id ?? '-';
+}
+
 function summarize(set: SimTeamSet, results: RunResult[], heights: number[]): TeamRow {
   return {
     team: set.name,
     full: isFullTeam(set),
     median: percentile(heights, 0.5),
     p90: percentile(heights, 0.9),
+    'median zone': medianZone(results),
     'delta median, %': 0,
     'avg coins': Number(mean(results.map((r) => r.coins)).toFixed(1)),
     'avg score': Math.round(mean(results.map((r) => r.score))),
@@ -176,8 +186,12 @@ const describeRow = (row: TeamRow): string =>
 const names = (rows: TeamRow[]): string =>
   rows.length ? rows.map(describeRow).join('; ') : 'none';
 
-/** Prints the check over the given full teams of one profile and returns the dominant ones. */
-function checkFullTeams(profile: string, full: TeamRow[]): TeamRow[] {
+/**
+ * Prints the check over the given full teams of one profile and returns the dominant ones.
+ * Dominance is only judged over every 3-creature team (`judgeDominance`); the six named
+ * teams are too few for it, so without `--all-teams` it is reported as not checked.
+ */
+function checkFullTeams(profile: string, full: TeamRow[], judgeDominance: boolean): TeamRow[] {
   if (full.length === 0) return [];
   const [lo, hi] = GAIN_RANGE_PCT;
   const inRange = full.filter((r) => gainOf(r) >= lo && gainOf(r) <= hi);
@@ -198,6 +212,10 @@ function checkFullTeams(profile: string, full: TeamRow[]): TeamRow[] {
       .map((r) => r.team)
       .join(', ')}`,
   );
+  if (!judgeDominance) {
+    console.log(`[${profile}] dominance: not checked, the check needs --all-teams`);
+    return [];
+  }
   console.log(
     `[${profile}] dominance: ` +
       (dominant.length
@@ -290,15 +308,16 @@ function main(): void {
         fillDelta(row);
         return row;
       });
-      dominantTeams.push(...checkFullTeams(target.id, full).map((r) => `${target.id}: ${r.team}`));
+      dominantTeams.push(
+        ...checkFullTeams(target.id, full, true).map((r) => `${target.id}: ${r.team}`),
+      );
       plainOverTeams.push(
         ...summarizeAllTeams(target.id, full).map((r) => `${target.id}: ${describeRow(r)}`),
       );
     } else {
       const named = rows.filter((r) => r.full);
-      dominantTeams.push(...checkFullTeams(target.id, named).map((r) => `${target.id}: ${r.team}`));
-      console.log(
-        `[${target.id}] the criterion check over every 3-creature team needs --all-teams`,
+      dominantTeams.push(
+        ...checkFullTeams(target.id, named, false).map((r) => `${target.id}: ${r.team}`),
       );
     }
   }
@@ -307,10 +326,16 @@ function main(): void {
   console.table(wobbleRows);
 
   console.log(
-    `\nverdict: ${dominantTeams.length ? 'a full team leads in both height and coins, balance needs changes' : 'no full team leads in both height and coins'}`,
+    `\nverdict: ${
+      !options.allTeams
+        ? 'the dominance check needs --all-teams'
+        : dominantTeams.length
+          ? 'a full team leads in both height and coins, balance needs changes'
+          : 'no full team leads in both height and coins'
+    }`,
   );
   console.log(
-    `status of the baseline: ok = median inside the target range, near = within ${DIFFICULTY.tolerance * 100}% of it, OFF = balance needs changes`,
+    `status of the baseline: ok = median inside the target range, near = within ${DIFFICULTY.tolerance * 100}% of it, OFF = median outside the target range by more than the tolerance`,
   );
 
   const [jLo, jHi] = JELLY_SOLO_RANGE_PCT;
