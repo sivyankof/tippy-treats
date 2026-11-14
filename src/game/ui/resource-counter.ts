@@ -1,4 +1,5 @@
 import * as Phaser from 'phaser';
+import { BERRY_LOOK } from '../../data/berry-look';
 import { TREASURE } from '../../data/treasure-anim';
 import { formatNumber } from '../../i18n';
 import { MS_PER_SECOND, oscillate01, sineWave } from '../../util/math';
@@ -11,6 +12,7 @@ import { NumberRoll } from './number-roll';
 
 const cfg = TREASURE.counter;
 const revealEase = easeFn(cfg.revealEase);
+const idle = BERRY_LOOK.idle;
 
 export interface CounterOptions {
   /** Texture of the icon. */
@@ -19,12 +21,14 @@ export interface CounterOptions {
   row: number;
   /** The counter stays hidden until its value is above zero, then pops in. */
   hiddenUntilFirst: boolean;
+  /** The icon sways and gives a spark now and then instead of turning like a coin. */
+  sway?: boolean;
 }
 
 /**
  * An icon and a number in the top right corner (coins, berries). The number rolls to the run
  * total minus whatever is still flying towards the counter, so it rises as each coin arrives.
- * At rest the counter breathes, the icon turns and a glint twinkles on it.
+ * At rest the counter breathes, the icon turns (or sways) and a glint twinkles on it.
  */
 export class ResourceCounter {
   /** The whole counter, for screen transitions. */
@@ -117,6 +121,10 @@ export class ResourceCounter {
     this.root.setScale(breathe * hop * reveal);
 
     const iconScale = cfg.iconSize / this.icon.width;
+    if (this.options.sway) {
+      this.animateSway(timeMs, iconScale, phase);
+      return;
+    }
     this.icon.setScale(
       iconScale * spinScale(timeMs, cfg.spinPeriodMs, cfg.spinMinScale),
       iconScale,
@@ -128,5 +136,21 @@ export class ResourceCounter {
       .setScale(minScale + (maxScale - minScale) * glint)
       .setAlpha(minAlpha + (maxAlpha - minAlpha) * glint)
       .setAngle((timeMs * cfg.glintSpinDegPerSec) / MS_PER_SECOND);
+  }
+
+  /** The berry: it swings on its stalk, bobs a little and flashes a spark every couple of seconds. */
+  private animateSway(timeMs: number, iconScale: number, phase: number): void {
+    this.icon
+      .setScale(iconScale)
+      .setAngle(sineWave(timeMs, idle.swayPeriodMs, phase) * idle.swayDeg)
+      .setY(sineWave(timeMs, idle.bobPeriodMs, phase) * idle.bobPx);
+    const cycle = ((timeMs + phase * idle.sparkEveryMs) % idle.sparkEveryMs) / idle.sparkEveryMs;
+    // A flash rises and falls inside the lit share of the period.
+    const lit = cycle < idle.sparkShare ? Math.sin((Math.PI * cycle) / idle.sparkShare) : 0;
+    this.glint
+      .setPosition(cfg.iconSize * idle.sparkX, cfg.iconSize * idle.sparkY)
+      .setScale(idle.sparkScale * lit)
+      .setAlpha(idle.sparkAlpha * lit)
+      .setAngle(lit * idle.sparkTurnDeg);
   }
 }

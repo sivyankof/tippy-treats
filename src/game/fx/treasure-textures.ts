@@ -4,12 +4,13 @@ import { BALANCE } from '../../data/balance';
 import { RULE_ANIM } from '../../data/rule-anim';
 import { TREASURE } from '../../data/treasure-anim';
 import { bakeTexture } from '../ui/bake-texture';
+import { bakeBerry } from './berry-texture';
 
 /** Keys of the pictures of coins, berries and the zone rules. */
 export const TREASURE_TEXTURES = {
   /** A gold coin; not meant for tinting. */
   coin: 'tr_coin',
-  /** A berry with a leaf; not meant for tinting. */
+  /** A glossy strawberry with a glow; not meant for tinting. */
   berry: 'tr_berry',
   /** One puff of a cloud bank; not meant for tinting. */
   cloud: 'tr_cloud',
@@ -48,62 +49,6 @@ function bakeCoin(scene: Phaser.Scene): void {
     g.fillTriangle(c, c - reach, c + reach * 0.7, c, c - reach * 0.7, c);
     g.fillTriangle(c, c + reach, c + reach * 0.7, c, c - reach * 0.7, c);
     g.fillStyle(colors.coinShine, shineAlpha).fillCircle(c * 0.62, c * 0.6, c * 0.14);
-  });
-}
-
-function bakeBerry(scene: Phaser.Scene): void {
-  const size = TREASURE.textures.berry;
-  const c = size / 2;
-  const bodyY = size * 0.58;
-  const radius = size * 0.34;
-  bakeTexture(scene, TREASURE_TEXTURES.berry, size, size, (g) => {
-    g.fillStyle(colors.berryDark, 1).fillCircle(c, bodyY, radius + size * 0.03);
-    g.fillStyle(colors.berry, 1).fillCircle(c, bodyY, radius);
-    // Seeds.
-    g.fillStyle(colors.berryShine, 0.55);
-    for (const [dx, dy] of [
-      [-0.45, -0.1],
-      [0.1, -0.5],
-      [0.5, 0],
-      [-0.1, 0.25],
-      [0.3, 0.45],
-      [-0.5, 0.45],
-    ] as const) {
-      g.fillCircle(c + dx * radius, bodyY + dy * radius, size * 0.028);
-    }
-    g.fillStyle(colors.coinShine, shineAlpha).fillCircle(
-      c - radius * 0.45,
-      bodyY - radius * 0.5,
-      size * 0.06,
-    );
-    // A leaf star on top.
-    const top = bodyY - radius;
-    g.fillStyle(colors.leafDark, 1);
-    g.fillTriangle(
-      c,
-      top + size * 0.04,
-      c - size * 0.2,
-      top - size * 0.1,
-      c - size * 0.05,
-      top - size * 0.06,
-    );
-    g.fillTriangle(
-      c,
-      top + size * 0.04,
-      c + size * 0.2,
-      top - size * 0.1,
-      c + size * 0.05,
-      top - size * 0.06,
-    );
-    g.fillStyle(colors.leaf, 1);
-    g.fillTriangle(
-      c,
-      top + size * 0.02,
-      c - size * 0.14,
-      top - size * 0.2,
-      c + size * 0.14,
-      top - size * 0.2,
-    );
   });
 }
 
@@ -174,7 +119,7 @@ function bakeOutline(scene: Phaser.Scene): void {
 /** Bakes the pictures of this track. Safe to call again: existing keys are kept. */
 export function createTreasureTextures(scene: Phaser.Scene): void {
   bakeCoin(scene);
-  bakeBerry(scene);
+  bakeBerry(scene, TREASURE_TEXTURES.berry);
   bakeCloud(scene);
   bakeStreak(scene);
   bakeOutline(scene);

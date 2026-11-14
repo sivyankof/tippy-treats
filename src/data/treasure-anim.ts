@@ -29,11 +29,6 @@ export const TREASURE = {
     coinRim: 0xd48a10,
     coinInner: 0xffe98a,
     coinShine: 0xfffbe0,
-    berry: PALETTE.berry,
-    berryDark: 0xa5202f,
-    berryShine: 0xffb3bd,
-    leaf: PALETTE.success,
-    leafDark: 0x249a68,
     /** Cake and glaze of the golden layer. */
     goldCake: 0xf0aa2c,
     goldLight: GOLD_LIGHT,
@@ -44,8 +39,7 @@ export const TREASURE = {
   /** Baked picture sizes, in texture pixels. */
   textures: {
     coin: 96,
-    berry: 112,
-    /** Alpha of the shine dots (coin and berry) and of the ring stamped on a coin. */
+    /** Alpha of the coin shine dot and of the ring stamped on a coin. */
     shineAlpha: 0.85,
     coinRingAlpha: 0.6,
   },

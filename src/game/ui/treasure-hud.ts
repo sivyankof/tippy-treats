@@ -29,6 +29,7 @@ export class TreasureHud {
       texture: TREASURE_TEXTURES.berry,
       row: 1,
       hiddenUntilFirst: true,
+      sway: true,
     });
     this.flights = new TreasureFlights(scene, this.coins, this.berries);
   }
