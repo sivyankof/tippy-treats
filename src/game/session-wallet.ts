@@ -1,6 +1,10 @@
+import type { SimEvent } from '../core/tower-sim';
+import { BALANCE } from '../data/balance';
+
 /**
  * Berries of this browser session, kept in memory (saving arrives with the save system, M6).
- * Berries earned in a run are added when the run ends; a continue spends them.
+ * Berries are added the moment a run earns them (see `berriesFromEvents`), so they can pay for
+ * the continue of the same run; a continue spends them. Whatever the outcome of a run, they stay.
  */
 export class SessionWallet {
   private amount = 0;
@@ -29,3 +33,16 @@ export class SessionWallet {
 
 /** The wallet of the running session. */
 export const sessionWallet = new SessionWallet();
+
+/**
+ * Berries the events of one sim step earn: a perfect landing on a golden layer. Every event is
+ * reported by the sim exactly once, so crediting this per step counts each berry once, whatever
+ * restarts or continues follow.
+ */
+export function berriesFromEvents(events: readonly SimEvent[]): number {
+  let total = 0;
+  for (const event of events) {
+    if (event.type === 'golden' && event.perfect) total += BALANCE.golden.perfectBerries;
+  }
+  return total;
+}

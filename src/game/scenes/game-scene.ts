@@ -17,7 +17,7 @@ import { ContinueFlow } from '../continue-flow';
 import { effectsMode } from '../effects-mode';
 import { cuesForMoment } from '../fx/moment-cues';
 import { playCues } from '../fx/run-cues';
-import { sessionWallet } from '../session-wallet';
+import { berriesFromEvents, sessionWallet } from '../session-wallet';
 import { SCENES, type ResultsData } from '../scene-keys';
 import { enterWorld, type WorldEntry } from '../ui/transition';
 import { isOverUi } from '../ui/ui-regions';
@@ -167,6 +167,8 @@ export class GameScene extends Phaser.Scene {
     if (!held && this.bot?.shouldDrop(this.sim)) events.push(...this.sim.drop());
     this.tutorial?.observe(events, this.sim.state);
     this.driveContinue(delta, events);
+    // Berries go to the wallet the moment they are earned: they can pay for this run's continue.
+    sessionWallet.add(berriesFromEvents(events));
 
     const cam = this.cameraInfo();
     this.fx.handleEvents(events, this.sim.state, this.lastFlying, this.mods, cam);
@@ -180,7 +182,6 @@ export class GameScene extends Phaser.Scene {
 
     const result = this.fx.takeResult();
     if (result) {
-      sessionWallet.add(result.berries);
       const data: ResultsData = { result };
       this.scene.launch(SCENES.results, data);
     }

@@ -168,6 +168,10 @@ export class WebAudioService implements AudioService {
     });
   }
 
+  recordBlip(): void {
+    this.play((s) => s.sequence(SFX.recordBlip.notes));
+  }
+
   click(): void {
     this.play((s) => s.tone(SFX.click));
   }

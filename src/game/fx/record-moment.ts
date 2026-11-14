@@ -11,6 +11,7 @@ import { DEPTH } from '../depth';
 import type { TowerView } from '../objects/tower-view';
 import { bakeTexture } from '../ui/bake-texture';
 import { createOutlinedText } from '../ui/outlined-text';
+import type { ComboGlow } from './combo-glow';
 import type { LandingFx } from './landing-fx';
 import { cuesForMoment } from './moment-cues';
 import { ParticleFx } from './particle-fx';
@@ -23,8 +24,9 @@ const TWO_PI = Math.PI * 2;
 
 /**
  * The record of this session inside a run: a waving dashed line with a "Record" pennant at
- * the height of the best tower. When the run first rises above it, confetti, "Record!" and a
- * fanfare go off, the run is not interrupted, and the flag fades away.
+ * the height of the best tower. When the run first rises above it, a short flash, confetti and
+ * "Record!" go off with a short blip (the fanfare belongs to the results screen), the run is not
+ * interrupted, and the flag fades away.
  */
 export class RecordMoment {
   private readonly root: Phaser.GameObjects.Container;
@@ -39,6 +41,7 @@ export class RecordMoment {
     scene: Phaser.Scene,
     private readonly tower: TowerView,
     private readonly landing: LandingFx,
+    private readonly glow: ComboGlow,
     private readonly best: number | null,
   ) {
     this.particleFx = new ParticleFx(landing.particles);
@@ -120,6 +123,7 @@ export class RecordMoment {
 
   private celebrate(state: Readonly<TowerState>, cam: { width: number; height: number }): void {
     this.beatenMs = 0;
+    this.glow.flash();
     this.particleFx.confetti(cam.width, cam.height);
     this.landing.text.showLabel(
       BALANCE.tray.centerX,
@@ -127,6 +131,6 @@ export class RecordMoment {
       t('run.recordPop'),
       PALETTE.gold,
     );
-    playCues(cuesForMoment('recordBeaten'), services);
+    playCues(cuesForMoment('recordCrossed'), services);
   }
 }

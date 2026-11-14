@@ -191,6 +191,13 @@ describe('WebAudioService', () => {
     expect(ctx.oscillators).toHaveLength(5);
   });
 
+  it('plays the record blip as two short notes', () => {
+    const { ctx, service } = setup();
+    service.unlock();
+    service.recordBlip();
+    expect(ctx.oscillators).toHaveLength(SFX.recordBlip.notes.length);
+  });
+
   it('disconnects nodes when a sound ends', () => {
     const { ctx, service } = setup();
     service.unlock();

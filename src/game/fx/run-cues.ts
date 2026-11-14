@@ -10,7 +10,16 @@ import type { FlyingMemo } from './run-fx';
 export type SoundCue =
   | {
       kind:
-        'drop' | 'bite' | 'sneeze' | 'miss' | 'shieldPop' | 'coin' | 'click' | 'berry' | 'record';
+        | 'drop'
+        | 'bite'
+        | 'sneeze'
+        | 'miss'
+        | 'shieldPop'
+        | 'coin'
+        | 'click'
+        | 'berry'
+        | 'record'
+        | 'recordBlip';
     }
   | { kind: 'perfect'; step: number }
   | { kind: 'ability'; rarity: Rarity };

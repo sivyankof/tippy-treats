@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { SessionWallet } from './session-wallet';
+import type { SimEvent } from '../core/tower-sim';
+import { BALANCE } from '../data/balance';
+import { berriesFromEvents, SessionWallet } from './session-wallet';
 
 describe('SessionWallet', () => {
   it('starts empty and adds whole berries', () => {
@@ -20,5 +22,23 @@ describe('SessionWallet', () => {
     expect(wallet.canAfford(6)).toBe(false);
     expect(wallet.spend(6)).toBe(false);
     expect(wallet.berries).toBe(5);
+  });
+});
+
+describe('berriesFromEvents', () => {
+  const perfectGolden: SimEvent = { type: 'golden', perfect: true };
+
+  it('pays a berry only for a perfect golden landing', () => {
+    expect(berriesFromEvents([])).toBe(0);
+    expect(berriesFromEvents([{ type: 'golden', perfect: false }])).toBe(0);
+    expect(berriesFromEvents([perfectGolden])).toBe(BALANCE.golden.perfectBerries);
+  });
+
+  it('credits each berry once, so a berry can pay for the continue of the same run', () => {
+    const wallet = new SessionWallet();
+    wallet.add(berriesFromEvents([perfectGolden]));
+    expect(wallet.berries).toBe(BALANCE.golden.perfectBerries);
+    wallet.add(berriesFromEvents([]));
+    expect(wallet.berries).toBe(BALANCE.golden.perfectBerries);
   });
 });

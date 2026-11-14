@@ -76,7 +76,13 @@ export class RunFx {
     this.materialFx = new MaterialFx(this.tower, this.landingFx.particles);
     this.coinFx = new CoinFx(scene, this.tower, this.landingFx.particles);
     this.flyingFx = new FlyingFx(scene, this.tower, this.flyingView, this.landingFx.particles);
-    this.recordMoment = new RecordMoment(scene, this.tower, this.landingFx, sessionRecord.best);
+    this.recordMoment = new RecordMoment(
+      scene,
+      this.tower,
+      this.landingFx,
+      this.glow,
+      sessionRecord.best,
+    );
   }
 
   /** The miss has played out: the run may be declined. */

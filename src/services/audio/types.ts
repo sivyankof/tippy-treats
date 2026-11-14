@@ -28,6 +28,8 @@ export interface AudioService {
   /** One slap of a collapsing tower; `index` is the position in the series (0 = first). */
   collapseThud(index: number): void;
   record(): void;
+  /** A short blip: the run crossed the session record (the fanfare is for the results screen). */
+  recordBlip(): void;
   click(): void;
   /** Creature squeak; `pitch` is a multiplier (1 = base pitch). */
   squeak(pitch: number): void;

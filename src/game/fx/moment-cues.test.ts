@@ -4,10 +4,10 @@ import { cuesForMoment } from './moment-cues';
 import { playCues } from './run-cues';
 
 describe('cuesForMoment', () => {
-  it('plays the record fanfare with the three-hit vibration', () => {
-    expect(cuesForMoment('recordBeaten')).toEqual({
-      sounds: [{ kind: 'record' }],
-      haptics: ['triple'],
+  it('crossing the record plays a short blip with a light tap, no fanfare', () => {
+    expect(cuesForMoment('recordCrossed')).toEqual({
+      sounds: [{ kind: 'recordBlip' }],
+      haptics: ['light'],
     });
   });
 
@@ -22,15 +22,15 @@ describe('cuesForMoment', () => {
   });
 
   it('hands the new sound kinds to the audio service', () => {
-    const audio = { click: vi.fn(), berry: vi.fn(), record: vi.fn() };
+    const audio = { click: vi.fn(), berry: vi.fn(), recordBlip: vi.fn() };
     const haptics = { play: vi.fn() };
     const services = { audio, haptics } as unknown as Services;
     playCues(cuesForMoment('offerOpened'), services);
     playCues(cuesForMoment('continued'), services);
-    playCues(cuesForMoment('recordBeaten'), services);
+    playCues(cuesForMoment('recordCrossed'), services);
     expect(audio.click).toHaveBeenCalledOnce();
     expect(audio.berry).toHaveBeenCalledOnce();
-    expect(audio.record).toHaveBeenCalledOnce();
+    expect(audio.recordBlip).toHaveBeenCalledOnce();
     expect(haptics.play).toHaveBeenCalledTimes(3);
   });
 });

@@ -296,6 +296,14 @@ export const SFX = {
     gain: 0.32,
   },
 
+  /** "Рекорд в забеге": two quick rising notes, much shorter than the fanfare. */
+  recordBlip: {
+    notes: [
+      { delay: 0, wave: 'triangle', freq: C5_HZ * 2, attack: 0.003, duration: 0.09, gain: 0.26 },
+      { delay: 0.07, wave: 'triangle', freq: C5_HZ * 3, attack: 0.003, duration: 0.16, gain: 0.26 },
+    ] satisfies readonly TimedTone[],
+  },
+
   /** "Кнопки": a short click. */
   click: {
     wave: 'triangle',
