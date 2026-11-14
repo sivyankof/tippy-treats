@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import type { PlacedLayer, SimEvent } from '../../core/tower-sim';
 import { BALANCE } from '../../data/balance';
-import { SessionHints } from '../session-hints';
+import { createTestState } from '../../state/test-state';
+import type { GameState } from '../../state/game-state';
 import { TutorialDirector, type TutorialState } from './tutorial-director';
 
 const plain = (): PlacedLayer => ({ x: 540, width: 700, kind: 'plain', quality: 'normal' });
@@ -31,8 +32,8 @@ const state = (
   wobble,
 });
 
-function director(tutorialRun = true): { hints: SessionHints; dir: TutorialDirector } {
-  const hints = new SessionHints();
+function director(tutorialRun = true): { hints: GameState; dir: TutorialDirector } {
+  const hints = createTestState();
   return { hints, dir: new TutorialDirector(hints, tutorialRun) };
 }
 
@@ -80,18 +81,18 @@ describe('TutorialDirector: Honey intro', () => {
     expect(dir.introLayerIndex).toBe(5);
     dir.tick(BALANCE.tutorial.creaturePauseMs - 1);
     expect(dir.holding).toBe(true);
-    expect(hints.has('tutorial')).toBe(false);
+    expect(hints.hasHint('tutorial')).toBe(false);
     dir.tick(1);
     expect(dir.holding).toBe(false);
-    expect(hints.has('tutorial')).toBe(true);
+    expect(hints.hasHint('tutorial')).toBe(true);
   });
 
   it('finishes the tutorial when a run goes past the Honey layer without the intro', () => {
     const { hints, dir } = director();
     dir.observe([land('normal')], state(Array.from({ length: 6 }, plain)));
-    expect(hints.has('tutorial')).toBe(false);
+    expect(hints.hasHint('tutorial')).toBe(false);
     dir.observe([land('normal')], state(Array.from({ length: 7 }, plain)));
-    expect(hints.has('tutorial')).toBe(true);
+    expect(hints.hasHint('tutorial')).toBe(true);
   });
 
   it('forgets the arrow target when the hold ends', () => {
@@ -118,19 +119,19 @@ describe('TutorialDirector: Honey intro', () => {
   });
 
   it('plays the whole intro again in the next run when the hold was cut short', () => {
-    const hints = new SessionHints();
+    const hints = createTestState();
     const first = new TutorialDirector(hints, true);
     first.observe([land('normal')], state(layers()));
     first.tick(BALANCE.tutorial.creaturePauseMs / 2);
-    expect(hints.has('honey')).toBe(false);
+    expect(hints.hasHint('honey')).toBe(false);
     expect(hints.beginRun()).toBe(true);
 
     const second = new TutorialDirector(hints, true);
     second.observe([land('normal')], state(layers()));
     expect(second.holding).toBe(true);
     second.tick(BALANCE.tutorial.creaturePauseMs);
-    expect(hints.has('honey')).toBe(true);
-    expect(hints.has('tutorial')).toBe(true);
+    expect(hints.hasHint('honey')).toBe(true);
+    expect(hints.hasHint('tutorial')).toBe(true);
   });
 
   it('does not trigger for another creature or a plain layer', () => {
@@ -151,8 +152,8 @@ describe('TutorialDirector: wobble hint', () => {
     expect(dir.takeCues()).toEqual([]);
   });
 
-  it('stays quiet in a later run of the session', () => {
-    const hints = new SessionHints();
+  it('stays quiet in a later run of the game', () => {
+    const hints = createTestState();
     new TutorialDirector(hints, true).observe([], state([], 50));
     const next = new TutorialDirector(hints, false);
     next.observe([], state([], 60));
@@ -173,13 +174,13 @@ describe('TutorialDirector: berry hint', () => {
     expect(dir.takeCues()).toEqual([]);
   });
 
-  it('stays quiet in a later run of the session, and when switched off', () => {
-    const hints = new SessionHints();
+  it('stays quiet in a later run of the game, and when switched off', () => {
+    const hints = createTestState();
     new TutorialDirector(hints, true).observe([berryEvent], state([plain()]));
     const next = new TutorialDirector(hints, false);
     next.observe([berryEvent], state([plain()]));
     expect(next.takeCues()).toEqual([]);
-    const off = new SessionHints();
+    const off = createTestState();
     off.beginRun(false);
     const quiet = new TutorialDirector(off, false);
     quiet.observe([berryEvent], state([plain()]));

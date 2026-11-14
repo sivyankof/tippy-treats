@@ -6,7 +6,7 @@ import { ANIM } from '../../data/anim';
 import { BALANCE } from '../../data/balance';
 import { CONTINUE_ANIM } from '../../data/continue-anim';
 import { services } from '../../services';
-import { sessionRecord } from '../session-record';
+import { gameState } from '../../state';
 import { aimMouth } from '../objects/face-state';
 import { FlyingLayerView } from '../objects/flying-layer-view';
 import type { LayerView } from '../objects/layer-view';
@@ -81,7 +81,7 @@ export class RunFx {
       this.tower,
       this.landingFx,
       this.glow,
-      sessionRecord.best,
+      gameState.recordHeight,
     );
   }
 

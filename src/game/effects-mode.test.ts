@@ -18,7 +18,7 @@ describe('EffectsMode', () => {
 
   it('halves particles when reduced, keeping at least one', () => {
     const mode = new EffectsMode();
-    mode.setReduced(true);
+    mode.setChoice('on');
     expect(mode.particleCount(12)).toBe(6);
     expect(mode.particleCount(7)).toBe(4);
     expect(mode.particleCount(1)).toBe(1);
@@ -45,16 +45,25 @@ describe('EffectsMode', () => {
     const mode = new EffectsMode();
     mode.setSystemReducedMotion(true);
     slowDown(mode);
-    mode.setReduced(false);
+    mode.setChoice('off');
     expect(mode.reduced).toBe(false);
   });
 
   it('does not overrule a player who switched it off', () => {
     const mode = new EffectsMode();
-    mode.setReduced(false);
+    mode.setChoice('off');
     slowDown(mode);
     expect(mode.reduced).toBe(false);
-    mode.setReduced(true);
+    mode.setChoice('on');
     expect(mode.reason).toBe('user');
+  });
+
+  it('hands the decision back to the system and the frame rate on auto', () => {
+    const mode = new EffectsMode();
+    mode.setSystemReducedMotion(true);
+    mode.setChoice('off');
+    expect(mode.reduced).toBe(false);
+    mode.setChoice('auto');
+    expect(mode.reason).toBe('system');
   });
 });

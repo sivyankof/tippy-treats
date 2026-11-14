@@ -1,3 +1,4 @@
+import type { ReducedFxSetting } from '../core/save/schema';
 import { ANIM } from '../data/anim';
 import { LowFpsWatch } from './fx/low-fps-watch';
 
@@ -9,7 +10,7 @@ export type ReducedFxReason = 'user' | 'system' | 'low_fps';
  *
  * The player's switch always wins. Without it the mode follows the system
  * "reduce motion" setting and turns on by itself once the frame rate stays low
- * (it then stays on for the session). Kept in memory until settings are saved.
+ * (it then stays on for the session). The choice itself is saved in the settings.
  */
 export class EffectsMode {
   private userChoice: boolean | null = null;
@@ -32,9 +33,9 @@ export class EffectsMode {
     return this.lowFps ? 'low_fps' : null;
   }
 
-  /** The player's switch. */
-  setReduced(on: boolean): void {
-    this.userChoice = on;
+  /** The player's choice from the settings: `auto` hands the decision back to the system and the frame rate. */
+  setChoice(setting: ReducedFxSetting): void {
+    this.userChoice = setting === 'auto' ? null : setting === 'on';
   }
 
   setSystemReducedMotion(on: boolean): void {

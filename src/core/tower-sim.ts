@@ -146,6 +146,15 @@ export class TowerSim {
     return events;
   }
 
+  /**
+   * The result of a run the player leaves before it ends: the state as it is, `endReason`
+   * `quit`, `null` when the run is already over. The run is not changed. The height bonus
+   * coins are paid only when a run ends by itself, so a quit run does not get them.
+   */
+  quitResult(): RunResult | null {
+    return this.s.phase === 'over' ? null : this.buildResult('quit');
+  }
+
   /** Current centre of the drop target: the top layer with wobble, or the tray. */
   topLayerX(): number {
     return this.topRestX() + this.topSway();
@@ -337,10 +346,14 @@ export class TowerSim {
   }
 
   private finish(events: SimEvent[]): void {
-    const s = this.s;
-    payHeightBonus(s, events);
+    payHeightBonus(this.s, events);
     this.enter('over');
-    const result: RunResult = {
+    events.push({ type: 'run_over', result: this.buildResult(this.endReason) });
+  }
+
+  private buildResult(endReason: RunEndReason): RunResult {
+    const s = this.s;
+    return {
       seed: this.config.seed,
       mode: this.config.mode,
       height: s.height,
@@ -352,8 +365,7 @@ export class TowerSim {
       continuesUsed: s.continuesUsed,
       zoneIndex: s.zoneIndex,
       durationMs: Math.round(this.elapsedMs),
-      endReason: this.endReason,
+      endReason,
     };
-    events.push({ type: 'run_over', result });
   }
 }

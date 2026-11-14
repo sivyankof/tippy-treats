@@ -414,3 +414,34 @@ describe('TowerSim: determinism', () => {
     expect(play(2, taps, 1)).toEqual({ ...first, seed: 2, coins: play(2, taps, 1).coins });
   });
 });
+
+describe('TowerSim: quitResult', () => {
+  it('reports the state as it is with endReason quit, without changing it', () => {
+    const sim = new TowerSim(config());
+    untilFlying(sim);
+    dropNow(sim);
+    const before = JSON.stringify(sim.state);
+    const result = sim.quitResult();
+    expect(result).toMatchObject({
+      endReason: 'quit',
+      height: sim.state.height,
+      score: sim.state.score,
+      coins: sim.state.coins,
+      berries: sim.state.berries,
+      continuesUsed: 0,
+      seed: config().seed,
+      mode: 'classic',
+    });
+    expect(JSON.stringify(sim.state)).toBe(before);
+    expect(sim.state.phase).not.toBe('over');
+  });
+
+  it('is null once the run is over', () => {
+    const sim = new TowerSim(config());
+    untilFlying(sim);
+    missOnSecondLayer(sim);
+    sim.decline();
+    expect(sim.state.phase).toBe('over');
+    expect(sim.quitResult()).toBeNull();
+  });
+});

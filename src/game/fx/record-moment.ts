@@ -39,7 +39,7 @@ export class RecordMoment {
   /** Side of the screen the pennant stands at: 1 right, -1 left. */
   private side: 1 | -1 = 1;
 
-  /** `best` is the session best before this run, or `null` for no flag at all. */
+  /** `best` is the saved best height before this run, or `null` for no flag at all. */
   constructor(
     scene: Phaser.Scene,
     private readonly tower: TowerView,

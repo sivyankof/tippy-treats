@@ -18,6 +18,10 @@ export interface DebugParams {
   lineup?: boolean;
   /** `?tutorial=1` forces the tutorial run with every hint fresh, `?tutorial=0` turns all hints off. */
   tutorial?: boolean;
+  /** Shifts the game clock by whole days (may be negative) to test the streak, missions and daily tower. */
+  dayOffset?: number;
+  /** `?reset=1` makes the state layer start from a fresh save. */
+  reset?: boolean;
 }
 
 const UINT32_MAX = UINT32_RANGE - 1;
@@ -27,6 +31,14 @@ function parseUint(raw: string | null, max = Number.MAX_SAFE_INTEGER): number | 
   if (raw === null || !/^\d+$/.test(raw)) return undefined;
   const value = Number(raw);
   return value <= max ? value : undefined;
+}
+
+const MAX_DAY_OFFSET = 3650;
+
+function parseDayOffset(raw: string | null): number | undefined {
+  if (raw === null || !/^-?\d+$/.test(raw)) return undefined;
+  const value = Number(raw);
+  return Math.abs(value) <= MAX_DAY_OFFSET ? value : undefined;
 }
 
 function parsePositive(raw: string | null): number | undefined {
@@ -53,7 +65,7 @@ function parseLevel(raw: string | null): number | undefined {
 }
 
 /**
- * Reads `?debug`, `?seed=`, `?bot=`, `?start=`, `?team=`, `?level=`, `?lineup=1` and `?tutorial=` from a query string.
+ * Reads `?debug`, `?seed=`, `?bot=`, `?start=`, `?team=`, `?level=`, `?lineup=1`, `?tutorial=`, `?dayOffset=` and `?reset=1` from a query string.
  * Invalid values are ignored.
  */
 export function parseDebugParams(search: string): DebugParams {
@@ -73,6 +85,9 @@ export function parseDebugParams(search: string): DebugParams {
   const tutorial = params.get('tutorial');
   if (tutorial === '1') result.tutorial = true;
   else if (tutorial === '0') result.tutorial = false;
+  const dayOffset = parseDayOffset(params.get('dayOffset'));
+  if (dayOffset !== undefined) result.dayOffset = dayOffset;
+  if (params.get('reset') === '1') result.reset = true;
   return result;
 }
 
@@ -93,4 +108,20 @@ export function skipsTutorial(params: DebugParams): boolean {
     params.bot !== undefined ||
     params.start !== undefined
   );
+}
+
+/**
+ * Whether a run goes into the save. `?bot=` and `?start=` runs are artificial (a bot plays, or
+ * the tower begins part-way up), so they leave the save alone; `?team=` and `?level=` runs are
+ * real play with a hand-picked team and count.
+ */
+export function savesRun(params: DebugParams): boolean {
+  return params.bot === undefined && params.start === undefined;
+}
+
+/** The address with `?reset=1` taken out, so a reload does not reset the save again. */
+export function withoutReset(href: string): string {
+  const url = new URL(href);
+  url.searchParams.delete('reset');
+  return url.toString();
 }

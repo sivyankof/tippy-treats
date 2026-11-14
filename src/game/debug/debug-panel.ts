@@ -7,7 +7,7 @@ import { FONT_FAMILY, FONT_WEIGHT } from '../ui/fonts';
 import type { UiRegion } from '../ui/ui-regions';
 import type { RunInfo } from '../scenes/game-scene';
 import { adsDev } from '../../services';
-import { sessionWallet } from '../session-wallet';
+import { gameState } from '../../state';
 import { cycleDebugLevel, cycleDebugSlot, getDebugTeam } from './debug-team';
 
 const FONT_SIZE = 30;
@@ -74,7 +74,7 @@ export class DebugPanel {
     }
     this.levelEntry = entry(() => this.change(cycleDebugLevel), PALETTE.panel);
     this.applyEntry = entry(onApply, PALETTE.gold).setText(APPLY_LABEL);
-    this.berriesEntry = entry(() => sessionWallet.add(DEBUG_BERRIES), PALETTE.panel).setText(
+    this.berriesEntry = entry(() => gameState.addBerries(DEBUG_BERRIES), PALETTE.panel).setText(
       BERRIES_LABEL,
     );
     this.adsEntry = entry(() => {
@@ -141,7 +141,7 @@ export class DebugPanel {
         `phase ${info.phase}`,
         `team ${info.team.map((slot) => (slot ? `${slot.id}:${slot.level}` : NO_CREATURE)).join(' ')}`,
         `fx ${effectsMode.reason ?? 'full'}`,
-        `berries ${sessionWallet.berries}`,
+        `berries ${gameState.berries}`,
       ].join('\n'),
     );
   }

@@ -17,7 +17,7 @@ const restrictImports = (files, group, message) => ({
 
 export default tseslint.config(
   // `.claude` holds temporary git worktrees with their own tsconfig files.
-  { ignores: ['dist', 'coverage', 'node_modules', 'ios', 'android', '.claude'] },
+  { ignores: ['dist', 'coverage', 'node_modules', 'ios', 'android', '.claude', '.playwright-mcp'] },
   js.configs.recommended,
   ...tseslint.configs.recommended,
   {

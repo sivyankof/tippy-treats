@@ -7,7 +7,6 @@ import { RecordCelebration } from '../fx/record-celebration';
 import { launchRun, SCENES, type ResultsData } from '../scene-keys';
 import { createMenuButton, type Button } from '../ui/button';
 import { createDimOverlay } from '../ui/dim-overlay';
-import { sessionRecord } from '../session-record';
 import { NumberRoll } from '../ui/number-roll';
 import { createOutlinedText } from '../ui/outlined-text';
 import { enterScreen, leaveScreen, type Movable } from '../ui/transition';
@@ -47,7 +46,7 @@ export class ResultsScene extends Phaser.Scene {
       .breathe();
 
     this.celebration = null;
-    if (sessionRecord.noteRun(data.result.height)) this.celebrate(width, height);
+    if (data.summary.isRecord) this.celebrate(width, height);
     if (import.meta.env.DEV) {
       this.input.keyboard?.on('keydown-R', () => this.celebrate(width, height));
     }

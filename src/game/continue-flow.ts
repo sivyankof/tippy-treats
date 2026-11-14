@@ -4,7 +4,7 @@ import { BALANCE } from '../data/balance';
 import { CONTINUE_ANIM } from '../data/continue-anim';
 import type { AdsService, RewardedResult } from '../services/ads/types';
 import type { AudioService } from '../services/audio/types';
-import type { SessionWallet } from './session-wallet';
+import type { GameState } from '../state/game-state';
 
 export type ContinueAction = 'continue' | 'decline';
 
@@ -12,7 +12,8 @@ export interface ContinueFlowDeps {
   ads: AdsService;
   /** Suspended while an ad shows. */
   audio: Pick<AudioService, 'suspend' | 'resume'>;
-  wallet: SessionWallet;
+  /** The save: the berry balance and the payment. */
+  wallet: Pick<GameState, 'berries' | 'spendBerries'>;
 }
 
 /**
@@ -90,7 +91,7 @@ export class ContinueFlow {
   payWithBerries(): boolean {
     const cost = this.current?.berryCost ?? null;
     if (cost === null || this.adShowing || this.pending) return false;
-    if (!this.deps.wallet.spend(cost)) return false;
+    if (!this.deps.wallet.spendBerries(cost)) return false;
     this.pending = 'continue';
     return true;
   }

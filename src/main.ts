@@ -3,7 +3,11 @@ import './style.css';
 import { BOOT } from './data/boot';
 import { bindLogicalResize, createGameConfig } from './game/config';
 import { FONT_FAMILY, FONT_WEIGHT } from './game/ui/fonts';
+import { applySavedSettings } from './game/apply-settings';
 import { detectLang, setLang } from './i18n';
+import { gameState } from './state';
+import { bindSaveFlush } from './state/page-lifecycle';
+import { readDebugParams, withoutReset } from './util/debug-params';
 
 // Sample covers both subsets so the Latin and Cyrillic font files are fetched up front.
 const FONT_SAMPLE = 'Tippy Treats Башня 0123456789';
@@ -31,6 +35,22 @@ async function loadFonts(): Promise<void> {
   }
 }
 
+/** Reads the save; a storage that fails or stalls never blocks the start (a new save is used, and a stalled one is never written). */
+async function loadSave(): Promise<void> {
+  try {
+    const reset = readDebugParams().reset === true;
+    const result = await gameState.load({ reset, timeoutMs: BOOT.saveWaitMs });
+    if (result.status === 'loaded' && result.source !== 'primary')
+      console.warn(`Save loaded from: ${result.source}`);
+    // The reset is done: a reload (or a dev server full reload) must not wipe the save again.
+    if (reset) window.history.replaceState(window.history.state, '', withoutReset(location.href));
+  } catch (error) {
+    console.warn('Save loading failed', error);
+  }
+  bindSaveFlush(gameState);
+  applySavedSettings();
+}
+
 async function start(): Promise<void> {
   const parent = document.getElementById('app');
   if (!parent) {
@@ -38,6 +58,8 @@ async function start(): Promise<void> {
   }
   bootStage('main');
   setLang(detectLang(navigator.languages));
+  bootStage('save');
+  await loadSave();
   bootStage('fonts');
   await loadFonts();
   bootStage('game');

@@ -1,5 +1,6 @@
 import type * as Phaser from 'phaser';
 import type { RunResult } from '../core/run-result';
+import type { RunSummary } from '../state/game-state';
 
 export const SCENES = {
   boot: 'boot',
@@ -12,6 +13,8 @@ export const SCENES = {
 /** Data handed to the results scene when it is launched. */
 export interface ResultsData {
   result: RunResult;
+  /** What the run changed in the save; the run is already recorded when the screen opens. */
+  summary: RunSummary;
 }
 
 /**

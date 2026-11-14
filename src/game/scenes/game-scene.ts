@@ -7,22 +7,28 @@ import { TowerSim, type SimEvent, type SimPhase } from '../../core/tower-sim';
 import { ANIM } from '../../data/anim';
 import { BALANCE } from '../../data/balance';
 import { services } from '../../services';
-import { readDebugParams, skipsTutorial } from '../../util/debug-params';
+import { readDebugParams, savesRun, skipsTutorial } from '../../util/debug-params';
 import { frameLerp, randomSeed } from '../../util/math';
 import { RunFx, type CameraInfo, type FlyingMemo } from '../fx/run-fx';
 import { Backdrop } from '../objects/backdrop/backdrop';
 import { getDebugTeam, toTeamSlots } from '../debug/debug-team';
 import { targetScrollY, trayScrollY } from '../camera-layout';
 import { ContinueFlow } from '../continue-flow';
+import { RunRecorder } from '../run-recorder';
 import { effectsMode } from '../effects-mode';
 import { cuesForMoment } from '../fx/moment-cues';
 import { playCues } from '../fx/run-cues';
-import { berriesFromEvents, sessionWallet } from '../session-wallet';
-import { SCENES, type ResultsData } from '../scene-keys';
+import { berriesFromEvents } from '../../core/berries';
+import { gameState } from '../../state';
+import type { RunSummary } from '../../state/game-state';
+import { bindPageLeave } from '../../state/page-lifecycle';
+import { launchRun, SCENES, type ResultsData } from '../scene-keys';
 import { enterWorld, type WorldEntry } from '../ui/transition';
 import { isOverUi } from '../ui/ui-regions';
-import { sessionHints, TUTORIAL_TEAM } from '../session-hints';
+import { TUTORIAL_TEAM } from '../tutorial/tutorial-team';
 import { TutorialDirector } from '../tutorial/tutorial-director';
+
+const EMPTY_SUMMARY: RunSummary = { isRecord: false, xpGained: 0, levelUps: [] };
 
 /** World y of the tray surface; the tower grows towards negative y. */
 const TRAY_TOP_Y = 0;
@@ -52,6 +58,11 @@ export class GameScene extends Phaser.Scene {
   private sim!: TowerSim;
   private bot: TimingBot | null = null;
   private seed = 0;
+  private startHeight = 0;
+  /** False for `?bot=` and `?start=` runs: nothing of them reaches the save. */
+  private writesSave = true;
+  /** Puts the run into the save once: when it ends or when the player leaves it. */
+  private recorder = new RunRecorder(gameState, 0);
   private team: Array<TeamSlot | null> = [];
   private fx!: RunFx;
   /** The one-time hints of the run; the HUD draws them. */
@@ -100,11 +111,14 @@ export class GameScene extends Phaser.Scene {
     this.tweens.timeScale = 1;
     const debug = readDebugParams();
     this.seed = debug.seed ?? randomSeed();
+    this.startHeight = debug.start ?? 0;
+    this.writesSave = savesRun(debug);
+    this.recorder = new RunRecorder(gameState, this.startHeight, this.writesSave);
     // A run with a hand-picked team, level, bot or start is a normal run: it neither shows the
     // hints nor uses up the tutorial.
     const normalRun = skipsTutorial(debug);
-    const tutorialRun = !normalRun && sessionHints.beginRun(debug.tutorial);
-    this.tutorial = normalRun ? null : new TutorialDirector(sessionHints, tutorialRun);
+    const tutorialRun = !normalRun && gameState.beginRun(debug.tutorial);
+    this.tutorial = normalRun ? null : new TutorialDirector(gameState, tutorialRun);
     // Until the Team screen (M6) the debug team is the team of every run; the tutorial run has its own.
     this.team = tutorialRun ? [...TUTORIAL_TEAM] : toTeamSlots(getDebugTeam());
     this.sim = new TowerSim({
@@ -112,7 +126,7 @@ export class GameScene extends Phaser.Scene {
       mode: 'classic',
       team: this.team,
       tutorial: tutorialRun,
-      startHeight: debug.start ?? 0,
+      startHeight: this.startHeight,
     });
     this.mods = this.sim.currentModifiers();
     this.bot = debug.bot ? new TimingBot(debug.bot, new Rng(this.seed).fork('bot')) : null;
@@ -122,7 +136,7 @@ export class GameScene extends Phaser.Scene {
     this.continueFlow = new ContinueFlow({
       ads: services.ads,
       audio: services.audio,
-      wallet: sessionWallet,
+      wallet: gameState,
     });
 
     const { width, height } = this.scale.gameSize;
@@ -132,9 +146,20 @@ export class GameScene extends Phaser.Scene {
     this.input.on(Phaser.Input.Events.POINTER_DOWN, this.onPointerDown, this);
     this.input.keyboard?.on('keydown-SPACE', this.onDropKey, this);
     this.scale.on(Phaser.Scale.Events.RESIZE, this.onResize, this);
+    // Closing or reloading the page mid-run is a quit: the coins of the run stay with the player.
+    const unbindLeave = bindPageLeave(
+      () => {
+        this.recorder.recordQuit(this.sim);
+        gameState.flush();
+      },
+      // Back from the page cache: that run is already recorded, so start a new one.
+      () => launchRun(this),
+    );
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      unbindLeave();
       this.scale.off(Phaser.Scale.Events.RESIZE, this.onResize, this);
       this.continueFlow?.dispose();
+      this.recorder.recordQuit(this.sim);
     });
 
     this.entry = enterWorld(this);
@@ -167,8 +192,9 @@ export class GameScene extends Phaser.Scene {
     if (!held && this.bot?.shouldDrop(this.sim)) events.push(...this.sim.drop());
     this.tutorial?.observe(events, this.sim.state);
     this.driveContinue(delta, events);
-    // Berries go to the wallet the moment they are earned: they can pay for this run's continue.
-    sessionWallet.add(berriesFromEvents(events));
+    // Berries go to the save the moment they are earned: they can pay for this run's continue.
+    if (this.writesSave) gameState.addBerries(berriesFromEvents(events));
+    this.recordFinishedRun(events);
 
     const cam = this.cameraInfo();
     this.fx.handleEvents(events, this.sim.state, this.lastFlying, this.mods, cam);
@@ -182,7 +208,7 @@ export class GameScene extends Phaser.Scene {
 
     const result = this.fx.takeResult();
     if (result) {
-      const data: ResultsData = { result };
+      const data: ResultsData = { result, summary: this.recorder.summary ?? EMPTY_SUMMARY };
       this.scene.launch(SCENES.results, data);
     }
   }
@@ -207,6 +233,16 @@ export class GameScene extends Phaser.Scene {
       playCues(cuesForMoment('continued'), services);
     } else if (action === 'decline') {
       events.push(...this.sim.decline());
+    }
+  }
+
+  /** The run is over: its coins, XP and record go into the save, once. */
+  private recordFinishedRun(events: readonly SimEvent[]): void {
+    for (const event of events) {
+      if (event.type === 'run_over') {
+        this.recorder.recordOver(event.result);
+        return;
+      }
     }
   }
 

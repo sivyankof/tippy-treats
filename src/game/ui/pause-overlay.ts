@@ -4,6 +4,7 @@ import { MENU_BUTTON, TOGGLE_BUTTON } from '../../data/hud-layout';
 import { PALETTE } from '../../data/palette';
 import { t } from '../../i18n';
 import { services } from '../../services';
+import { setReducedFxOn, setSoundOn, setVibrationOn } from '../apply-settings';
 import { effectsMode } from '../effects-mode';
 import { createMenuButton, type Button } from './button';
 import { createDimOverlay } from './dim-overlay';
@@ -68,24 +69,9 @@ export class PauseOverlay {
       () => this.restart(),
     );
     this.toggles = [
-      new ToggleButton(
-        scene,
-        'run.sounds',
-        () => services.audio.enabled,
-        (on) => services.audio.setEnabled(on),
-      ),
-      new ToggleButton(
-        scene,
-        'run.vibration',
-        () => services.haptics.enabled,
-        (on) => services.haptics.setEnabled(on),
-      ),
-      new ToggleButton(
-        scene,
-        'run.reducedFx',
-        () => effectsMode.reduced,
-        (on) => effectsMode.setReduced(on),
-      ),
+      new ToggleButton(scene, 'run.sounds', () => services.audio.enabled, setSoundOn),
+      new ToggleButton(scene, 'run.vibration', () => services.haptics.enabled, setVibrationOn),
+      new ToggleButton(scene, 'run.reducedFx', () => effectsMode.reduced, setReducedFxOn),
     ];
     this.toggles.forEach((toggle, i) => toggle.button.setY(FIRST_TOGGLE_OFFSET + i * TOGGLE_STEP));
     this.buttons = [continueButton, restartButton, ...this.toggles.map((toggle) => toggle.button)];

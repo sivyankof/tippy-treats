@@ -18,3 +18,10 @@ export interface RunResult {
   durationMs: number;
   endReason: RunEndReason;
 }
+
+/** A run left before anything was earned: nothing to keep, so it is not counted as a run. */
+export function isEmptyRun(result: RunResult, startHeight = 0): boolean {
+  return (
+    result.height <= startHeight && result.score <= 0 && result.coins <= 0 && result.berries <= 0
+  );
+}

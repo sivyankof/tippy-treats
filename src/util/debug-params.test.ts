@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { parseDebugParams, skipsTutorial } from './debug-params';
+import { parseDebugParams, savesRun, skipsTutorial, withoutReset } from './debug-params';
 
 describe('parseDebugParams', () => {
   it('is off for an empty query', () => {
@@ -40,6 +40,22 @@ describe('parseDebugParams', () => {
     expect(parseDebugParams('?tutorial=yes').tutorial).toBeUndefined();
     expect(parseDebugParams('?tutorial').tutorial).toBeUndefined();
     expect(parseDebugParams('')).toEqual({ debug: false });
+  });
+
+  it('reads a signed whole day offset', () => {
+    expect(parseDebugParams('?dayOffset=3').dayOffset).toBe(3);
+    expect(parseDebugParams('?dayOffset=-2').dayOffset).toBe(-2);
+    expect(parseDebugParams('?dayOffset=0').dayOffset).toBe(0);
+    expect(parseDebugParams('?dayOffset=1.5').dayOffset).toBeUndefined();
+    expect(parseDebugParams('?dayOffset=x').dayOffset).toBeUndefined();
+    expect(parseDebugParams('?dayOffset=99999').dayOffset).toBeUndefined();
+    expect(parseDebugParams('?dayOffset').dayOffset).toBeUndefined();
+  });
+
+  it('reads the reset flag only when it is 1', () => {
+    expect(parseDebugParams('?reset=1').reset).toBe(true);
+    expect(parseDebugParams('?reset=0').reset).toBeUndefined();
+    expect(parseDebugParams('?reset').reset).toBeUndefined();
   });
 
   it('keeps the largest uint32 seed', () => {
@@ -97,5 +113,25 @@ describe('skipsTutorial', () => {
   it('lets ?tutorial= win over the other parameters', () => {
     expect(skipsTutorial(parseDebugParams('?team=honey&tutorial=1'))).toBe(false);
     expect(skipsTutorial(parseDebugParams('?start=10&tutorial=0'))).toBe(false);
+  });
+});
+
+describe('savesRun', () => {
+  it('skips the save for bot and start runs only', () => {
+    expect(savesRun(parseDebugParams(''))).toBe(true);
+    expect(savesRun(parseDebugParams('?debug&seed=1'))).toBe(true);
+    expect(savesRun(parseDebugParams('?team=honey&level=3'))).toBe(true);
+    expect(savesRun(parseDebugParams('?bot=50'))).toBe(false);
+    expect(savesRun(parseDebugParams('?start=20'))).toBe(false);
+    expect(savesRun(parseDebugParams('?team=honey&bot=50'))).toBe(false);
+  });
+});
+
+describe('withoutReset', () => {
+  it('drops only the reset parameter', () => {
+    expect(withoutReset('http://localhost:5173/?debug&reset=1&seed=3#top')).toBe(
+      'http://localhost:5173/?debug=&seed=3#top',
+    );
+    expect(withoutReset('http://localhost:5173/?reset=1')).toBe('http://localhost:5173/');
   });
 });

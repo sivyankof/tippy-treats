@@ -3,11 +3,11 @@ import { BALANCE } from '../data/balance';
 import { CONTINUE_ANIM } from '../data/continue-anim';
 import type { RewardedResult } from '../services/ads/types';
 import { ContinueFlow } from './continue-flow';
-import { SessionWallet } from './session-wallet';
+import { createTestState } from '../state/test-state';
 
 function setup(adResult: RewardedResult | 'never' = 'rewarded', ready = true, berries = 0) {
-  const wallet = new SessionWallet();
-  wallet.add(berries);
+  const wallet = createTestState();
+  wallet.addBerries(berries);
   const audio = { suspend: vi.fn(), resume: vi.fn() };
   let release: (r: RewardedResult) => void = () => {};
   const ads = {
@@ -28,6 +28,13 @@ function setup(adResult: RewardedResult | 'never' = 'rewarded', ready = true, be
 }
 
 describe('ContinueFlow', () => {
+  it('does not open with too few berries and the ad unavailable, so the run declines at once', () => {
+    const { flow } = setup('unavailable', false, 1);
+    expect(flow.open('classic', 0)).toBe(false);
+    expect(flow.isOpen).toBe(false);
+    expect(flow.takeAction()).toBeNull();
+  });
+
   it('does not open when there is no way to pay', () => {
     const { flow } = setup('rewarded', false, 3);
     expect(flow.open('classic', 0)).toBe(false);
