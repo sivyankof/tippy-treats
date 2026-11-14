@@ -2,12 +2,15 @@ import * as Phaser from 'phaser';
 import { ANIM } from '../../data/anim';
 import { BALANCE } from '../../data/balance';
 import { HUD_LAYOUT } from '../../data/hud-layout';
+import { IDLE_MOTION, IDLE_PHASE } from '../../data/idle-motion';
 import { PALETTE } from '../../data/palette';
 import { t } from '../../i18n';
 import { cssColor } from '../../util/color';
 import { oscillate01 } from '../../util/math';
 import { stepSpring, type SpringState } from '../fx/anim-curves';
 import { bakeTexture } from './bake-texture';
+import { BarPlate } from './bar-plate';
+import { applyIdlePose, idlePose, type IdlePose } from './idle-motion';
 import type { Movable } from './transition';
 import { FONT_FAMILY, FONT_WEIGHT } from './fonts';
 
@@ -18,7 +21,8 @@ const TEXTURES = {
   danger: 'ui_bar_danger',
   wave: 'ui_bar_wave',
 } as const;
-const { barWidth, barHeight, barPad, labelGap, labelFont, barY } = HUD_LAYOUT;
+const { barWidth, barHeight, barPad, labelGap, labelFont, barY, barPlate, barDangerText } =
+  HUD_LAYOUT;
 const FILL_HEIGHT = barHeight - barPad * 2;
 const FILL_RADIUS = FILL_HEIGHT / 2;
 const TRACK_RADIUS = barHeight / 2;
@@ -38,9 +42,14 @@ function bakePill(
   });
 }
 
-/** Wobble label and gauge: baked pill textures, nothing is re-tessellated per frame. */
+/**
+ * Wobble label and gauge on a backing plate: baked textures, nothing is re-tessellated per
+ * frame. All three sway a little (`IDLE_MOTION`), so the bar never stands still.
+ */
 export class WobbleBar {
+  private readonly plate: BarPlate;
   private readonly label: Phaser.GameObjects.Text;
+  private readonly pose: IdlePose = { scaleX: 1, scaleY: 1, angle: 0, bob: 0 };
   /** Track, fills and wave band: scaled together for the danger pulse. */
   private readonly gauge: Phaser.GameObjects.Container;
   private readonly fillOk: Phaser.GameObjects.NineSlice;
@@ -74,6 +83,8 @@ export class WobbleBar {
       1,
     );
 
+    // Created first: it draws under the label and the gauge.
+    this.plate = new BarPlate(scene);
     this.label = scene.add
       .text(0, barY, t('run.wobble'), {
         fontFamily: FONT_FAMILY,
@@ -109,16 +120,24 @@ export class WobbleBar {
     this.gauge = scene.add.container(0, barY, [track, this.fillOk, this.fillDanger, this.wave]);
   }
 
-  /** Label and gauge, for screen transitions. */
+  /** Plate, label and gauge, for screen transitions. */
   get parts(): Movable[] {
-    return [this.label, this.gauge];
+    return [this.plate.image, this.label, this.gauge];
   }
 
-  /** Centres label and gauge as one row. Call on creation and on every resize. */
+  /** Centres label and gauge as one row on the plate. Call on creation and on every resize. */
   layout(screenWidth: number): void {
     const left = (screenWidth - barWidth) / 2 + (this.label.width + labelGap) / 2;
     this.gauge.setX(left + barWidth / 2);
     this.label.setX(left - labelGap);
+    const rowWidth = this.label.width + labelGap + barWidth;
+    const rowHeight = Math.max(this.label.height, barHeight);
+    this.plate.place(
+      screenWidth / 2,
+      barY,
+      rowWidth + barPlate.padX * 2,
+      rowHeight + barPlate.padY * 2,
+    );
   }
 
   /** `timeMs` drives the running band and the pulse, `deltaMs` the spring. */
@@ -135,7 +154,7 @@ export class WobbleBar {
     const danger = wobble > ANIM.wobble.dangerFrom;
     if (danger !== this.danger) {
       this.danger = danger;
-      this.label.setColor(cssColor(danger ? PALETTE.danger : PALETTE.textDark));
+      this.label.setColor(cssColor(danger ? barDangerText : PALETTE.textDark));
     }
     const width = Math.round(Phaser.Math.Clamp(this.spring.value, 0, FILL_MAX_WIDTH));
     const shown = width > 0;
@@ -149,6 +168,19 @@ export class WobbleBar {
     }
     this.updateWave(timeMs, width);
     this.updatePulse(timeMs, danger);
+    this.updateIdle(timeMs);
+  }
+
+  /** The label and the plate breathe a little; the gauge's own breath is folded into its pulse. */
+  private updateIdle(timeMs: number): void {
+    applyIdlePose(
+      this.label,
+      idlePose(IDLE_MOTION.wobbleLabel, timeMs, IDLE_PHASE.label, this.pose),
+    );
+    applyIdlePose(
+      this.plate.image,
+      idlePose(IDLE_MOTION.wobblePlate, timeMs, IDLE_PHASE.plate, this.pose),
+    );
   }
 
   /** The lighter band eases back and forth along the fill and never leaves it. */
@@ -166,6 +198,8 @@ export class WobbleBar {
 
   private updatePulse(timeMs: number, danger: boolean): void {
     const pulse = oscillate01(timeMs, ANIM.wobbleBar.pulsePeriodMs);
-    this.gauge.setScale(danger ? 1 + (ANIM.wobbleBar.pulseScale - 1) * pulse : 1);
+    const grow = danger ? 1 + (ANIM.wobbleBar.pulseScale - 1) * pulse : 1;
+    const idle = idlePose(IDLE_MOTION.wobbleGauge, timeMs, IDLE_PHASE.gauge, this.pose);
+    this.gauge.setScale(grow * idle.scaleX, grow * idle.scaleY);
   }
 }

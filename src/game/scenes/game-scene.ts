@@ -10,7 +10,7 @@ import { HUD_LAYOUT } from '../../data/hud-layout';
 import { readDebugParams } from '../../util/debug-params';
 import { frameLerp, randomSeed } from '../../util/math';
 import { RunFx, type CameraInfo, type FlyingMemo } from '../fx/run-fx';
-import { Background } from '../objects/background';
+import { Backdrop } from '../objects/backdrop/backdrop';
 import { getDebugTeam, toTeamSlots } from '../debug/debug-team';
 import { effectsMode } from '../effects-mode';
 import { SCENES, type ResultsData } from '../scene-keys';
@@ -35,6 +35,10 @@ export interface RunInfo {
   effects: readonly ActiveEffect[];
   /** Layers left on the brownie shield, 0 for none. */
   shield: number;
+  /** Index of the zone of the run (the banner announces a change). */
+  zoneIndex: number;
+  coins: number;
+  berries: number;
 }
 
 export class GameScene extends Phaser.Scene {
@@ -43,7 +47,7 @@ export class GameScene extends Phaser.Scene {
   private seed = 0;
   private team: Array<TeamSlot | null> = [];
   private fx!: RunFx;
-  private background!: Background;
+  private background!: Backdrop;
   /** The flying layer before the latest step, or `null`; `flyingMemo` is the one object behind it. */
   private lastFlying: FlyingMemo | null = null;
   private readonly flyingMemo: FlyingMemo = {
@@ -65,6 +69,9 @@ export class GameScene extends Phaser.Scene {
     team: [],
     effects: [],
     shield: 0,
+    zoneIndex: 0,
+    coins: 0,
+    berries: 0,
   };
   /** Drop modifiers as the sim last reported them; refreshed whenever a step had events. */
   private mods!: Readonly<Modifiers>;
@@ -96,7 +103,7 @@ export class GameScene extends Phaser.Scene {
     this.scrollBase = 0;
 
     const { width, height } = this.scale.gameSize;
-    this.background = new Background(this, TRAY_TOP_Y, width, height);
+    this.background = new Backdrop(this, TRAY_TOP_Y, width, height, this.sim.state.zoneIndex);
     this.fx = new RunFx(this, TRAY_TOP_Y);
 
     this.input.on(Phaser.Input.Events.POINTER_DOWN, this.onPointerDown, this);
@@ -140,6 +147,7 @@ export class GameScene extends Phaser.Scene {
     this.fx.handleEvents(events, this.sim.state, this.lastFlying, this.mods, cam);
     if (events.length > 0) this.mods = this.sim.currentModifiers();
     this.fx.update(delta, time, this.sim.state, this.mods, cam);
+    this.background.setZone(this.sim.state.zoneIndex);
     this.followCamera(delta);
 
     const result = this.fx.takeResult();
@@ -164,6 +172,9 @@ export class GameScene extends Phaser.Scene {
     info.team = this.team;
     info.effects = s.effects;
     info.shield = s.shield;
+    info.zoneIndex = s.zoneIndex;
+    info.coins = s.coins;
+    info.berries = s.berries;
     return info;
   }
 

@@ -1,5 +1,6 @@
 import { parseHex } from '../util/color';
 import { ANIM } from './anim';
+import { BALANCE } from './balance';
 import { CREATURES } from './creatures';
 import { PALETTE } from './palette';
 import { RARITY_COLORS } from './rarity';
@@ -15,6 +16,8 @@ const CHOCOLATE_LIGHT = parseHex(CREATURES.brownie.palette.sponge);
 const CHOCOLATE_CRUST = parseHex(CREATURES.brownie.palette.accent);
 const CHOCOLATE_GLOW = parseHex(CREATURES.brownie.palette.detail);
 const BUBBLE_CREAM = 0xfff4e4;
+/** How long before the next layer spawns the jelly's slide has to be over. */
+const SLIDE_MARGIN_MS = 40;
 /** Width of the dashes of the ghost's guides: the texture and the guide are this wide. */
 const GUIDE_WIDTH = 14;
 
@@ -160,9 +163,15 @@ export const ABILITY_ANIM = {
     joyMs: 600,
     /** The sway calms smoothly: share of the gap closed per 60 Hz frame (slower than after a sneeze). */
     calmLerp: 0.06,
-    /** A spring landing slides this long, with this easing, from the raw landing spot to the placed one. */
-    slideMs: 520,
-    slideEase: 'Elastic.easeOut',
+    /**
+     * A spring landing slides from the raw landing spot to the placed one. The slide has to be
+     * over before the next layer spawns (`BALANCE.layer.spawnPauseMs` after the landing), so the
+     * target stops moving before the player aims at it: it ends `slideMarginMs` early. The ease
+     * overshoots once and settles within that time.
+     */
+    slideMarginMs: SLIDE_MARGIN_MS,
+    slideMs: BALANCE.layer.spawnPauseMs - SLIDE_MARGIN_MS,
+    slideEase: 'Back.easeOut',
   },
   caramel: {
     sparkles: { count: 14, style: SPARKLE },

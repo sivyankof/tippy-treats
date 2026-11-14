@@ -1,6 +1,8 @@
+import { PALETTE } from './palette';
+
 const BAR_Y = 360;
 const BAR_HEIGHT = 30;
-const BADGE_ROW_Y = 456;
+const BADGE_ROW_Y = 468;
 const BADGE_SIZE = 108;
 
 /** The big rounded text button used on the pause and results screens. */
@@ -35,6 +37,27 @@ export const HUD_LAYOUT = {
   barHeight: BAR_HEIGHT,
   barPad: 5,
   labelGap: 14,
+  /**
+   * The plate under the wobble label and gauge: a rounded panel with a soft shadow, `padX` and
+   * `padY` around the row. `alpha` is baked into the picture; the shadow is `shadowSteps`
+   * rounded rectangles that grow by `shadowBlur` in all, dropped `shadowOffset` down.
+   */
+  barPlate: {
+    padX: 30,
+    padY: 10,
+    radius: 30,
+    color: PALETTE.panel,
+    alpha: 0.8,
+    shadowColor: PALETTE.textDark,
+    shadowAlpha: 0.28,
+    shadowOffset: 4,
+    shadowBlur: 8,
+    shadowSteps: 6,
+  },
+  /** Colour of the wobble label in the danger state: dark enough to read on the plate (the gauge fill keeps `PALETTE.danger`). */
+  barDangerText: 0xa8320a,
+  /** Line height of the label font, as a share of its size (what the plate wraps around). */
+  labelLineHeight: 1.4,
   heightFont: 150,
   scoreFont: 60,
   labelFont: 36,

@@ -41,7 +41,8 @@ export class DebrisFx {
     const index = state.layers.length - 1;
     const pose = this.tower.layerPose(index);
     if (!pose) return;
-    const colors = cakeColorsFor(state.layers[index]?.creature ?? null, index + 1);
+    const layer = state.layers[index];
+    const colors = cakeColorsFor(layer?.creature ?? null, index + 1, layer?.kind === 'golden');
     this.landing.sneezed(pose, colors.cake);
   }
 
@@ -82,7 +83,7 @@ export class DebrisFx {
     const pose = this.tower.layerPose(index);
     if (!pose) return;
     const edgeX = pose.x + side * (pose.width / 2);
-    const colors = cakeColorsFor(memo.creature ?? null, index + 1);
+    const colors = cakeColorsFor(memo.creature ?? null, index + 1, memo.kind === 'golden');
     this.landing.bitten(edgeX, y, side, colors.cake);
     const { dripSize, drips } = ANIM.bite;
     const startY = y - BALANCE.layer.height / 2 + BALANCE.layer.height * ANIM.layer.glazeDepth;

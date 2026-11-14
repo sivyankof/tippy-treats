@@ -10,7 +10,11 @@ import { NumberRoll } from '../ui/number-roll';
 import { createOutlinedText } from '../ui/outlined-text';
 import { PauseOverlay } from '../ui/pause-overlay';
 import { EffectBadges } from '../ui/effect-badges';
+import { ZoneBanner } from '../ui/zone-banner';
+import { ZoneChangeWatch } from '../ui/zone-change-watch';
+import { HudNumbersIdle } from '../ui/hud-idle';
 import { NextCreatureBadge } from '../ui/next-creature-badge';
+import { TreasureHud } from '../ui/treasure-hud';
 import { enterScreen } from '../ui/transition';
 import { addUiRegion } from '../ui/ui-regions';
 import { WobbleBar } from '../ui/wobble-bar';
@@ -27,6 +31,10 @@ export class HudScene extends Phaser.Scene {
   private debugPanel!: DebugPanel;
   private nextBadge!: NextCreatureBadge;
   private effectBadges!: EffectBadges;
+  private zoneBanner!: ZoneBanner;
+  private zoneWatch = new ZoneChangeWatch();
+  private treasure!: TreasureHud;
+  private numbersIdle!: HudNumbersIdle;
   private heightRoll = new NumberRoll();
   private scoreRoll = new NumberRoll();
 
@@ -55,10 +63,15 @@ export class HudScene extends Phaser.Scene {
       HUD_LAYOUT.scoreFont,
       PALETTE.gold,
     );
+    this.numbersIdle = new HudNumbersIdle(this.heightText, this.scoreText);
     this.wobbleBar = new WobbleBar(this);
     this.nextBadge = new NextCreatureBadge(this);
     this.effectBadges = new EffectBadges(this);
-    this.pauseButton = this.createPauseButton();
+    this.zoneBanner = new ZoneBanner(this);
+    this.zoneWatch = new ZoneChangeWatch();
+    this.treasure = new TreasureHud(this);
+    // Breathing only: a gloss band has nowhere to run on a button this small.
+    this.pauseButton = this.createPauseButton().breathe(false);
     this.overlay = new PauseOverlay(this, {
       onResume: () => this.scene.resume(SCENES.game),
       onRestart: () => {
@@ -91,15 +104,25 @@ export class HudScene extends Phaser.Scene {
       unregisterButton();
       unregisterOverlay();
       unregisterPanel();
+      this.treasure.destroy();
       this.game.events.off(Phaser.Core.Events.HIDDEN, this.pause, this);
       this.scale.off(Phaser.Scale.Events.RESIZE, this.layout, this);
     });
     this.layout();
-    enterScreen(this, [this.pauseButton, this.heightText, this.scoreText, ...this.wobbleBar.parts]);
+    enterScreen(this, [
+      this.pauseButton,
+      this.heightText,
+      this.scoreText,
+      ...this.wobbleBar.parts,
+      ...this.treasure.parts,
+    ]);
   }
 
   override update(time: number, delta: number): void {
     const info = this.gameScene()?.getRunInfo() ?? null;
+    const announced = this.zoneWatch.observe(info && info.phase !== 'over' ? info.zoneIndex : null);
+    if (announced !== null) this.zoneBanner.show(announced);
+    this.zoneBanner.update(time);
     if (info) {
       this.heightRoll.set(info.height);
       this.scoreRoll.set(info.score);
@@ -107,8 +130,11 @@ export class HudScene extends Phaser.Scene {
       this.scoreText.setText(formatNumber(this.scoreRoll.update(delta)));
       this.wobbleBar.update(info.wobble, time, delta);
       this.nextBadge.update(info.height, info.team);
+      this.nextBadge.idle(time);
       this.effectBadges.update(info.effects, info.shield, time, delta);
+      this.treasure.update(info, time, delta);
     }
+    this.numbersIdle.update(time);
     this.pauseButton.setVisible(this.pauseEnabled());
     this.debugPanel.update(info, this.game.loop.actualFps);
   }
@@ -164,6 +190,8 @@ export class HudScene extends Phaser.Scene {
     this.overlay.layout(width, height);
     this.wobbleBar.layout(width);
     this.nextBadge.layout(width);
+    this.zoneBanner.layout(width);
+    this.treasure.layout(width);
     this.debugPanel.layout(height);
   }
 }

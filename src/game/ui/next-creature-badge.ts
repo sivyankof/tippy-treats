@@ -3,8 +3,10 @@ import { nextCreature, type NextCreature } from '../../core/team-queue';
 import type { TeamSlot } from '../../core/sim-types';
 import { ANIM } from '../../data/anim';
 import { HUD_LAYOUT } from '../../data/hud-layout';
+import { IDLE_MOTION, IDLE_PHASE } from '../../data/idle-motion';
 import { PALETTE } from '../../data/palette';
 import { createCreatureIcon, setCreatureIcon } from './creature-icons';
+import { idlePose, type IdlePose } from './idle-motion';
 import { nextCreatureLabel } from './next-creature-label';
 import { createStrokedText } from './outlined-text';
 
@@ -23,6 +25,7 @@ export class NextCreatureBadge {
   private team: readonly (TeamSlot | null)[] | null = null;
   private shown: NextCreature | null = null;
   private visible = false;
+  private readonly pose: IdlePose = { scaleX: 1, scaleY: 1, angle: 0, bob: 0 };
 
   constructor(private readonly scene: Phaser.Scene) {
     this.icon = createCreatureIcon(scene, 0, badgeRowY).setVisible(false);
@@ -48,6 +51,18 @@ export class NextCreatureBadge {
   layout(screenWidth: number): void {
     this.screenWidth = screenWidth;
     this.place();
+  }
+
+  /**
+   * The icon and the text rock and bob a little while they are shown. Only angle and y are
+   * driven: the pop tweens own the scale.
+   */
+  idle(timeMs: number): void {
+    if (!this.visible) return;
+    const icon = idlePose(IDLE_MOTION.nextIcon, timeMs, IDLE_PHASE.next, this.pose);
+    this.icon.setAngle(icon.angle).setY(badgeRowY + icon.bob);
+    const label = idlePose(IDLE_MOTION.nextLabel, timeMs, IDLE_PHASE.nextLabel, this.pose);
+    this.label.setAngle(label.angle).setY(badgeRowY + label.bob);
   }
 
   /** `height` is the tower height (twins count double); recomputed only when it or the team changes. */

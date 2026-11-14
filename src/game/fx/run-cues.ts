@@ -8,7 +8,7 @@ import type { FlyingMemo } from './run-fx';
 
 /** A sound of one sim step; `perfect` carries the step of the combo ladder, `ability` the rarity. */
 export type SoundCue =
-  | { kind: 'drop' | 'bite' | 'sneeze' | 'miss' | 'shieldPop' }
+  | { kind: 'drop' | 'bite' | 'sneeze' | 'miss' | 'shieldPop' | 'coin' | 'berry' }
   | { kind: 'perfect'; step: number }
   | { kind: 'ability'; rarity: Rarity };
 
@@ -51,6 +51,13 @@ export function cuesForEvents(
         }
         cues.sounds.push({ kind: 'miss' });
         if (!errorFelt) cues.haptics.push('error');
+        break;
+      case 'coin_collect':
+        // Several payouts of one step ring once.
+        if (!cues.sounds.some((s) => s.kind === 'coin')) cues.sounds.push({ kind: 'coin' });
+        break;
+      case 'golden':
+        if (event.perfect) cues.sounds.push({ kind: 'berry' });
         break;
       case 'ability':
         cues.sounds.push({ kind: 'ability', rarity: CREATURES[event.creature].rarity });

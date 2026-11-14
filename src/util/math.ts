@@ -9,6 +9,9 @@ export function randomSeed(source: () => number = Math.random): number {
   return Math.floor(source() * UINT32_RANGE);
 }
 
+/** Golden ratio conjugate: stepping by it spreads values evenly over 0..1. */
+export const GOLDEN = 0.618034;
+
 /** Multiply degrees by this to get radians. */
 export const DEG_TO_RAD = Math.PI / 180;
 
@@ -50,4 +53,15 @@ export function pickInt(
   random: () => number = Math.random,
 ): number {
   return Math.min(range[1], range[0] + Math.floor((range[1] - range[0] + 1) * random()));
+}
+
+/** `t` limited to 0..1. */
+export function clamp01(t: number): number {
+  return Math.min(1, Math.max(0, t));
+}
+
+/** Smooth start and end: 0 to 1 over `t` in 0..1, flat at both ends. */
+export function smoothstep(t: number): number {
+  const c = clamp01(t);
+  return c * c * (3 - 2 * c);
 }

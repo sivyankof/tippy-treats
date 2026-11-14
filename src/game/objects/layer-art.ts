@@ -5,6 +5,7 @@ import { artRecipe } from '../../data/creature-looks';
 import type { CreatureId } from '../../data/creatures';
 import { BALANCE } from '../../data/balance';
 import { LAYER_COLORS, type LayerColors } from '../../data/palette';
+import { TREASURE } from '../../data/treasure-anim';
 import { bakeTexture } from '../ui/bake-texture';
 import { drawCreatureLayer } from './creature-art';
 import { creatureColors } from './creature-art/primitives';
@@ -32,16 +33,31 @@ export function colorIndexFor(layerIndex: number): number {
   return (((layerIndex - 1) % n) + n) % n;
 }
 
+/** Colour-table index of the golden layer: one past the end of the table, so it has art of its own. */
+export const GOLDEN_COLOR_INDEX = LAYER_COLORS.length;
+
+const GOLDEN_COLORS: LayerColors = {
+  cake: TREASURE.colors.goldCake,
+  glaze: TREASURE.colors.goldGlaze,
+};
+
 /** Colours of the layers with this colour-table index (see `colorIndexFor`). */
 export function layerColors(colorIndex: number): LayerColors {
+  if (colorIndex === GOLDEN_COLOR_INDEX) return GOLDEN_COLORS;
   return LAYER_COLORS[colorIndex] ?? LAYER_COLORS[0]!;
 }
 
 /**
  * Cake and glaze colours of the layer with this 1-based number: the creature's own sponge and
- * glaze for a creature layer, the plain colour table otherwise. Crumbs and drips take them.
+ * glaze for a creature layer, gold for a golden one, the plain colour table otherwise.
+ * Crumbs and drips take them.
  */
-export function cakeColorsFor(creature: CreatureId | null, layerIndex: number): CakeColors {
+export function cakeColorsFor(
+  creature: CreatureId | null,
+  layerIndex: number,
+  golden = false,
+): CakeColors {
+  if (golden) return GOLDEN_COLORS;
   if (creature) {
     const { sponge, glaze } = creatureColors(creature);
     return { cake: sponge, glaze };

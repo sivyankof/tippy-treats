@@ -1,3 +1,4 @@
+import { clamp01 } from '../../../util/math';
 import type { EaseFn } from '../ease';
 
 /** How a value travels from its start to its end: straight, out and back, or up and a sharp snap back. */
@@ -5,8 +6,6 @@ export type Shape = 'linear' | 'bump' | 'snap';
 
 /** Share of the life at which a `snap` shape reaches its peak. */
 const SNAP_PEAK = 0.6;
-
-const clamp01 = (t: number): number => Math.min(1, Math.max(0, t));
 
 /** 0..1 curve of a shape at progress `t`; `bump` and `snap` return to 0 at the end. */
 export function shapeAt(shape: Shape, t: number): number {

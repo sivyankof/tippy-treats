@@ -92,6 +92,24 @@ describe('cuesForEvents', () => {
     });
   });
 
+  it('rings the coin once per step however many payouts there are', () => {
+    const collect = (source: 'floating' | 'combo' | 'crumb'): SimEvent => ({
+      type: 'coin_collect',
+      amount: 1,
+      source,
+    });
+    expect(
+      cuesForEvents([land(), collect('floating'), collect('combo')], { combo: 5 }, memo),
+    ).toEqual({ sounds: [{ kind: 'drop' }, { kind: 'coin' }], haptics: ['light'] });
+  });
+
+  it('plays the berry chord for a perfect golden layer, not for a normal one', () => {
+    const berry = cuesForEvents([{ type: 'golden', perfect: true }], { combo: 1 }, memo);
+    expect(berry.sounds).toEqual([{ kind: 'berry' }]);
+    const normal = cuesForEvents([{ type: 'golden', perfect: false }], { combo: 0 }, memo);
+    expect(normal.sounds).toEqual([]);
+  });
+
   it('is silent for steps without feedback events', () => {
     expect(cuesForEvents([{ type: 'effect_end', effect: 'x' }], { combo: 0 }, memo)).toEqual({
       sounds: [],
@@ -110,6 +128,8 @@ describe('playCues', () => {
       perfect: vi.fn(),
       ability: vi.fn(),
       shieldPop: vi.fn(),
+      coin: vi.fn(),
+      berry: vi.fn(),
     };
     const haptics = { play: vi.fn() };
     const services = { audio, haptics } as unknown as Services;
@@ -121,6 +141,8 @@ describe('playCues', () => {
           { kind: 'perfect', step: 4 },
           { kind: 'ability', rarity: 'epic' },
           { kind: 'shieldPop' },
+          { kind: 'coin' },
+          { kind: 'berry' },
         ],
         haptics: ['heavy'],
       },
@@ -131,6 +153,8 @@ describe('playCues', () => {
     expect(audio.perfect).toHaveBeenCalledWith(4);
     expect(audio.ability).toHaveBeenCalledWith('epic');
     expect(audio.shieldPop).toHaveBeenCalledOnce();
+    expect(audio.coin).toHaveBeenCalledOnce();
+    expect(audio.berry).toHaveBeenCalledOnce();
     expect(haptics.play).toHaveBeenCalledWith('heavy');
   });
 });

@@ -1,11 +1,13 @@
 import * as Phaser from 'phaser';
 import { ANIM } from '../../data/anim';
 import { HUD_LAYOUT } from '../../data/hud-layout';
+import { IDLE_MOTION, IDLE_PHASE } from '../../data/idle-motion';
 import { PALETTE } from '../../data/palette';
 import { formatNumber } from '../../i18n';
 import { frameLerp } from '../../util/math';
 import { easeFn } from '../fx/ease';
 import { createCreatureIcon, setCreatureIcon } from './creature-icons';
+import { idlePose, type IdlePose } from './idle-motion';
 import {
   badgeCreature,
   BadgeTracker,
@@ -32,6 +34,7 @@ class BadgeSlot {
   private readonly counter: Phaser.GameObjects.Text;
   private key: BadgeState['key'] | null = null;
   private shownCount = -1;
+  private readonly pose: IdlePose = { scaleX: 1, scaleY: 1, angle: 0, bob: 0 };
 
   constructor(scene: Phaser.Scene) {
     this.icon = createCreatureIcon(scene, 0, 0);
@@ -68,6 +71,12 @@ class BadgeSlot {
       .setScale(visual.scale)
       .setAlpha(visual.alpha)
       .setVisible(visual.scale > 0);
+  }
+
+  /** The badge rocks and bobs a little: angle and y only, the pop owns the scale. */
+  idle(timeMs: number, phase: number): void {
+    const pose = idlePose(IDLE_MOTION.badge, timeMs, phase, this.pose);
+    this.root.setAngle(pose.angle).setY(badgeRowY + pose.bob);
   }
 
   hide(): void {
@@ -107,6 +116,7 @@ export class EffectBadges {
       badge.x = Math.abs(target - x) < SETTLE_EPSILON ? target : x;
       slot.root.setX(badge.x);
       slot.show(badge, badgeVisual(badge, timeMs, inEase, this.visual));
+      slot.idle(timeMs, i * IDLE_PHASE.badgeStep);
     }
     for (let i = items.length; i < this.slots.length; i++) {
       this.slots[i]?.hide();

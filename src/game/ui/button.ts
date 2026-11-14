@@ -152,9 +152,9 @@ export class Button extends Phaser.GameObjects.Container {
 
   /**
    * The main call to play: the button breathes all the time and a gloss runs
-   * over its face every few seconds.
+   * over its face every few seconds (`gloss: false` for a small button: breathing only).
    */
-  breathe(): this {
+  breathe(gloss = true): this {
     if (this.breathing) return this;
     this.breathing = true;
     const { width, height, radius } = this.options;
@@ -167,6 +167,7 @@ export class Button extends Phaser.GameObjects.Container {
       yoyo: true,
       repeat: -1,
     });
+    if (!gloss) return this;
     const band = createGlossBand(this.scene, height - ui.glossInset * 2);
     // Over the face, under the label.
     this.breatheRoot.addAt(band, 1);

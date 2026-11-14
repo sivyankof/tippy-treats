@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  clamp01,
   frameLerp,
   oscillate01,
   pickInt,
@@ -7,6 +8,7 @@ import {
   randomSeed,
   REFERENCE_FRAME_MS,
   sineWave,
+  smoothstep,
   TWO_PI,
   UINT32_RANGE,
 } from './math';
@@ -54,5 +56,21 @@ describe('math helpers', () => {
     expect(pickInt([6, 8], () => 0.999)).toBe(8);
     expect(pickInt([6, 8], () => 1)).toBe(8);
     expect(pickInt([10, 14], () => 0.5)).toBe(12);
+  });
+});
+
+describe('clamp01 and smoothstep', () => {
+  it('limits a value to 0..1', () => {
+    expect(clamp01(-3)).toBe(0);
+    expect(clamp01(0.4)).toBe(0.4);
+    expect(clamp01(7)).toBe(1);
+  });
+
+  it('eases in and out', () => {
+    expect(smoothstep(0)).toBe(0);
+    expect(smoothstep(1)).toBe(1);
+    expect(smoothstep(0.5)).toBeCloseTo(0.5);
+    expect(smoothstep(0.1)).toBeLessThan(0.1);
+    expect(smoothstep(2)).toBe(1);
   });
 });

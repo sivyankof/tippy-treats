@@ -19,6 +19,14 @@
     "on": "On",
     "off": "Off"
   },
+  "zone": {
+    "kitchen": { "name": "Kitchen" },
+    "showcase": { "name": "Shop Window" },
+    "roof": { "name": "Rooftop" },
+    "clouds": { "name": "Clouds" },
+    "stars": { "name": "Stars" },
+    "space": { "name": "Space" }
+  },
   "creature": {
     "honey": {
       "name": "Honey",

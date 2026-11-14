@@ -31,6 +31,8 @@ async function start(): Promise<void> {
   if (import.meta.env.DEV) {
     // Handle for browser automation and manual poking from the console.
     (window as Window & { tippyGame?: Phaser.Game }).tippyGame = game;
+    // window.tippyIdleAudit(seconds): lists objects of the run screen that stand still for over 2 s.
+    void import('./game/debug/idle-audit').then((audit) => audit.registerIdleAudit(game));
   }
 }
 

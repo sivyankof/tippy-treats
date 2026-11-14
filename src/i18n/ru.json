@@ -19,6 +19,14 @@
     "on": "Вкл",
     "off": "Выкл"
   },
+  "zone": {
+    "kitchen": { "name": "Кухня" },
+    "showcase": { "name": "Витрина" },
+    "roof": { "name": "Крыша" },
+    "clouds": { "name": "Облака" },
+    "stars": { "name": "Звёзды" },
+    "space": { "name": "Космос" }
+  },
   "creature": {
     "honey": {
       "name": "Медок",

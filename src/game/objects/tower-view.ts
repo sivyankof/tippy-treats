@@ -10,7 +10,7 @@ import { waveStep } from '../fx/anim-curves';
 import { moodForWobble, type MouthKind, type Reaction } from './face-state';
 import { LayerView } from './layer-view';
 import { SwayHold } from './sway-hold';
-import { createTray } from './tray';
+import { Tray } from './tray';
 
 const PLAIN_LOOK: LayerPlan = { kind: 'plain' };
 
@@ -65,6 +65,7 @@ export class TowerView {
   private clockMs = 0;
   private readonly motion = { timeMs: 0, swayShare: 0, phase: 0 };
 
+  private readonly tray: Tray;
   private lookTarget: { x: number; y: number } | null = null;
   private topMouthHint: MouthKind | undefined;
 
@@ -73,7 +74,7 @@ export class TowerView {
     /** World y of the tray surface. */
     readonly trayTopY: number,
   ) {
-    createTray(scene, trayTopY);
+    this.tray = new Tray(scene, trayTopY);
   }
 
   /** World centre y of the layer with the given 0-based index. */
@@ -168,6 +169,7 @@ export class TowerView {
     if (!state) return;
     this.sway.advance(dtMs);
     this.clockMs += dtMs;
+    this.tray.tick(this.clockMs);
     this.motion.timeMs = this.clockMs;
     this.motion.swayShare = wobbleAmplitude(state.wobble) / BALANCE.wobble.amplitudeMax;
     const mood = moodForWobble(state.wobble);

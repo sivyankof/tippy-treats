@@ -27,6 +27,24 @@ export function shade(color: number, amount: number): number {
   return amount < 0 ? mixColor(color, 0x000000, -amount) : mixColor(color, 0xffffff, amount);
 }
 
+function linearChannel(value: number): number {
+  const v = value / CHANNEL_MAX;
+  return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4);
+}
+
+/** Relative luminance (WCAG) of a 0xRRGGBB colour, 0..1. */
+export function luminance(color: number): number {
+  const [r, g, b] = channels(color);
+  return 0.2126 * linearChannel(r) + 0.7152 * linearChannel(g) + 0.0722 * linearChannel(b);
+}
+
+/** WCAG contrast ratio of two colours, 1..21. */
+export function contrastRatio(a: number, b: number): number {
+  const la = luminance(a);
+  const lb = luminance(b);
+  return (Math.max(la, lb) + 0.05) / (Math.min(la, lb) + 0.05);
+}
+
 /** 0xRRGGBB number of a `#rrggbb` string (the form colours have in data files). */
 export function parseHex(css: string): number {
   return Number.parseInt(css.replace('#', ''), 16);

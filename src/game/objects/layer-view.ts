@@ -6,8 +6,10 @@ import { BALANCE } from '../../data/balance';
 import { ABILITY_ANIM } from '../../data/ability-anim';
 import { faceRecipe } from '../../data/creature-looks';
 import type { CreatureId } from '../../data/creatures';
+import { IDLE_MOTION } from '../../data/idle-motion';
 import { effectsMode } from '../effects-mode';
 import { createGlossBand, sweepGloss } from '../fx/gloss-sweep';
+import { idlePose, type IdlePose } from '../ui/idle-motion';
 import { creatureColors } from './creature-art/primitives';
 import { LayerFace } from './layer-face';
 import { LayerMaterial, type MaterialMotion } from './layer-material';
@@ -18,6 +20,7 @@ import {
   artOriginY,
   artWidth,
   colorIndexFor,
+  GOLDEN_COLOR_INDEX,
   releaseLayerArt,
 } from './layer-art';
 
@@ -28,13 +31,16 @@ type ScaleStart = { scaleX?: number; scaleY?: number };
  *
  * The container sits on the centre of the layer and carries the sway rotation.
  * Inside it, `squashRoot` is pinned to the bottom edge (squash and stretch pivot there),
- * `shapeRoot` too (the material's jiggle) and `content` to the centre of the layer
- * (widening pivots there):
+ * `breathRoot` (the idle breathing) and `shapeRoot` (the material's jiggle) too, and `content`
+ * to the centre of the layer (widening pivots there):
  *
- *   LayerView > squashRoot (y = +H/2) > shapeRoot > content (y = -H/2) > art, glossSweep, face
+ *   LayerView > squashRoot (y = +H/2) > breathRoot > shapeRoot > content (y = -H/2) > art, glossSweep, face
  */
 export class LayerView extends Phaser.GameObjects.Container {
   private readonly squashRoot: Phaser.GameObjects.Container;
+  /** Idle breathing of a placed layer: it only ever grows upwards, so no gap opens above it. */
+  private readonly breathRoot: Phaser.GameObjects.Container;
+  private readonly breath: IdlePose = { scaleX: 1, scaleY: 1, angle: 0, bob: 0 };
   private readonly content: Phaser.GameObjects.Container;
   private readonly art: Phaser.GameObjects.Image;
   private readonly glossSweep: Phaser.GameObjects.Image;
@@ -68,7 +74,8 @@ export class LayerView extends Phaser.GameObjects.Container {
     ]);
     const shapeRoot = new Phaser.GameObjects.Container(scene, 0, 0, [this.content]);
     this.material = new LayerMaterial(shapeRoot);
-    this.squashRoot = new Phaser.GameObjects.Container(scene, 0, half, [shapeRoot]);
+    this.breathRoot = new Phaser.GameObjects.Container(scene, 0, 0, [shapeRoot]);
+    this.squashRoot = new Phaser.GameObjects.Container(scene, 0, half, [this.breathRoot]);
     this.rig.attach(this.content, this.squashRoot);
     this.add(this.squashRoot);
     scene.add.existing(this);
@@ -110,7 +117,7 @@ export class LayerView extends Phaser.GameObjects.Container {
    * new combination.
    */
   setLayer(index: number, width: number, cut: CutSide | null = null): this {
-    const color = colorIndexFor(index);
+    const color = this.lookPlan.kind === 'golden' ? GOLDEN_COLOR_INDEX : colorIndexFor(index);
     const w = artWidth(width);
     const creature = this.creatureOf(this.lookPlan);
     if (
@@ -248,6 +255,7 @@ export class LayerView extends Phaser.GameObjects.Container {
     this.slideX = 0;
     this.setScale(1).setAngle(0).setAlpha(1);
     this.squashRoot.setScale(1);
+    this.breathRoot.setScale(1);
     this.content.setScale(1);
     this.glossSweep.setVisible(false);
     this.face.reset();
@@ -261,7 +269,18 @@ export class LayerView extends Phaser.GameObjects.Container {
   tick(dtMs: number, motion?: MaterialMotion): void {
     this.rig.apply();
     this.material.tick(dtMs, motion);
+    if (motion) this.breathe(motion);
     if (this.face.visible) this.face.tick(dtMs);
+  }
+
+  /**
+   * The quiet breathing of a placed layer, whatever its material and the effects mode (ambient
+   * motion stays): a hair wider and taller, never narrower or lower, so no gap opens above it.
+   */
+  private breathe(motion: MaterialMotion): void {
+    const spec = IDLE_MOTION.layer;
+    const pose = idlePose(spec, motion.timeMs, motion.phase, this.breath);
+    this.breathRoot.setScale(pose.scaleX, pose.scaleY + spec.scaleY);
   }
 
   /** Sets the scale to `from` (after `delayMs`) and tweens it back to 1. */

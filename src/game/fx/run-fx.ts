@@ -11,11 +11,14 @@ import type { LayerView } from '../objects/layer-view';
 import { TowerView } from '../objects/tower-view';
 import { AbilityFx } from './abilities/ability-fx';
 import { CameraKick } from './camera-kick';
+import { CoinFx } from './coin-fx';
 import { ComboGlow } from './combo-glow';
 import { DebrisFx } from './debris-fx';
+import { FlyingFx } from './flying-fx';
 import { LandingFx } from './landing-fx';
 import { MaterialFx } from './material-fx';
 import { cuesForEvents, playCues } from './run-cues';
+import { isCovered } from './rule-state';
 import { TowerCollapse } from './tower-collapse';
 
 /** The flying layer as it was before the sim step that just ran. */
@@ -45,6 +48,8 @@ export class RunFx {
   private readonly landingFx: LandingFx;
   private readonly abilityFx: AbilityFx;
   private readonly materialFx: MaterialFx;
+  private readonly coinFx: CoinFx;
+  private readonly flyingFx: FlyingFx;
 
   private glowOn = false;
   private missPiece: LayerView | null = null;
@@ -63,6 +68,8 @@ export class RunFx {
     this.debris = new DebrisFx(scene, this.tower, this.landingFx);
     this.abilityFx = new AbilityFx(scene, this.tower, this.flyingView, this.landingFx);
     this.materialFx = new MaterialFx(this.tower, this.landingFx.particles);
+    this.coinFx = new CoinFx(scene, this.tower, this.landingFx.particles);
+    this.flyingFx = new FlyingFx(scene, this.tower, this.flyingView, this.landingFx.particles);
   }
 
   /** The miss has played out: the run may be declined. */
@@ -139,6 +146,8 @@ export class RunFx {
       }
     }
     this.abilityFx.handleEvents(events, state, memo, mods, cam);
+    this.coinFx.handleEvents(events, state, cam);
+    this.flyingFx.handleEvents(events);
   }
 
   /** Per frame: places everything and advances the effects. */
@@ -153,6 +162,8 @@ export class RunFx {
 
     this.tower.sync(state, cam.scrollY + cam.height);
     this.flyingView.sync(state, timeMs, dtMs);
+    this.flyingFx.update(dtMs, timeMs, state);
+    this.coinFx.update(dtMs, timeMs, state);
     this.pointFaces(state);
     this.tower.tick(dtMs);
 
@@ -242,13 +253,16 @@ export class RunFx {
 
   /** Where every face looks, and which top mouth to make. */
   private pointFaces(state: Readonly<TowerState>): void {
-    const flying = this.flyingView.position();
+    // A layer hidden by a cloud gives nothing away: the faces do not follow it, the top one does not smile at the aim.
+    const covered = isCovered(state.flying, state.phase);
+    const flying = covered ? null : this.flyingView.position();
     if (flying) this.tower.setLookTarget(flying.x, flying.y);
     else if (this.missPiece) this.tower.setLookTarget(this.missPiece.x, this.missPiece.y);
     else this.tower.setLookTarget();
 
     const span = this.tower.topSpan();
     const aimed =
+      !covered &&
       state.flying !== null &&
       this.tower.topView() !== null &&
       aimMouth(state.flying.x - this.tower.topViewX(), span.right - span.left) === 'open';

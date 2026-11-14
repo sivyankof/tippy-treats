@@ -2,11 +2,13 @@ import type * as Phaser from 'phaser';
 import type { TowerState } from '../../core/tower-sim';
 import { ANIM } from '../../data/anim';
 import { BALANCE } from '../../data/balance';
+import { HINT_PULSE } from '../../data/idle-motion';
 import { PALETTE } from '../../data/palette';
-import { sineWave } from '../../util/math';
+import { oscillate01, sineWave } from '../../util/math';
 import { DEPTH } from '../depth';
 import { easeFn } from '../fx/ease';
-import { aimMouth } from './face-state';
+import { isCovered } from '../fx/rule-state';
+import { aimMouth, type Reaction } from './face-state';
 import { LayerView } from './layer-view';
 import type { TowerView } from './tower-view';
 
@@ -21,6 +23,7 @@ export class FlyingLayerView {
   /** Reused every frame; `hasPos` tells whether it holds a layer. */
   private readonly pos = { x: 0, y: 0 };
   private hasPos = false;
+  private stretched = false;
 
   constructor(
     scene: Phaser.Scene,
@@ -44,7 +47,33 @@ export class FlyingLayerView {
     this.view.playGlossSweep();
   }
 
+  /**
+   * Shifts the picture for this frame (a pull-back, a jolt): call it after `sync`, which puts it
+   * back. `position()` moves with it, so what is laid around the layer stays on the picture.
+   */
+  nudge(dx: number, dy: number): void {
+    this.view.x += dx;
+    this.view.y += dy;
+    this.pos.x += dx;
+    this.pos.y += dy;
+  }
+
+  /** Squeezes or swells the whole picture around its centre for this frame; `sync` puts it back. */
+  stretch(scaleX: number, scaleY: number): void {
+    this.view.setScale(scaleX, scaleY);
+    this.stretched = true;
+  }
+
+  /** The face of the flying layer makes a short face. */
+  react(reaction: Reaction, ms: number): void {
+    this.view.faceView.react(reaction, ms);
+  }
+
   sync(state: Readonly<TowerState>, nowMs: number, dtMs: number): void {
+    if (this.stretched) {
+      this.view.setScale(1);
+      this.stretched = false;
+    }
     const flying = state.flying;
     if (!flying) {
       this.view.setVisible(false);
@@ -92,11 +121,18 @@ export class FlyingLayerView {
     this.pos.y = y;
     this.hasPos = true;
 
-    this.placeHint(flying.x, flying.width, surface, state.phase === 'flying');
+    // A cloud over the layer hides its shadow as well.
+    this.placeHint(
+      flying.x,
+      flying.width,
+      surface,
+      state.phase === 'flying' && !isCovered(flying, state.phase),
+      nowMs,
+    );
   }
 
   /** Shadow of the flying layer on the top layer of the tower (or on the tray). */
-  private placeHint(x: number, width: number, surface: number, show: boolean): void {
+  private placeHint(x: number, width: number, surface: number, show: boolean, nowMs: number): void {
     const span = this.tower.topSpan();
     const inset = Math.min(ANIM.layer.cornerRadius / 2, (span.right - span.left) / 4);
     const left = Math.max(x - width / 2, span.left + inset);
@@ -105,9 +141,12 @@ export class FlyingLayerView {
       this.hint.setVisible(false);
       return;
     }
+    // The shadow breathes, so it never stands still even when the layer holds still (a wind-up).
+    const pulse = 1 - HINT_PULSE.amount * oscillate01(nowMs, HINT_PULSE.periodMs);
     this.hint
       .setPosition(left, surface + ANIM.layer.outline)
       .setSize(right - left, ANIM.flying.hintHeight)
+      .setAlpha(pulse)
       .setVisible(true);
   }
 }

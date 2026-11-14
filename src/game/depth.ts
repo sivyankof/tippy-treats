@@ -1,6 +1,8 @@
 /** Draw order inside the game scene, back to front. */
 export const DEPTH = {
   background: 0,
+  /** The worktop under the tray, its mug and steam: behind the combo halo. */
+  counter: 4,
   /** Soft glow behind the tower at a high combo. */
   halo: 5,
   tray: 10,
