@@ -148,12 +148,22 @@ export const RULE_ANIM = {
     driftSpeed: 60,
     /** Time to cover the layer, to leave on its own and to leave when the layer is dropped. */
     inMs: 100,
-    outMs: 280,
-    dropOutMs: 110,
+    outMs: 520,
+    dropOutMs: 220,
     /** A leaving bank rises this far while it fades. */
     slidePx: 80,
     /** The puffs start this small and swell to full size while the cloud arrives. */
     enterScale: 0.9,
+    /**
+     * The cloud floats in ahead of time: this long before it hides the layer it starts sliding
+     * in from behind the layer, see-through, reaching `approachAlpha`; it turns solid only when
+     * the sim cover starts, so the hidden time stays the rolled one.
+     */
+    leadMs: 420,
+    approachAlpha: 0.5,
+    approachSlidePx: 260,
+    /** A cloud that was floating in but never came (the layer was dropped) fades this fast. */
+    approachFadeMs: 250,
   },
 
   /** Stars fake-out: the layer freezes, looks surprised and a few stars fly off. */

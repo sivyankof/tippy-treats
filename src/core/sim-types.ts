@@ -57,6 +57,11 @@ export interface FlyingLayer extends LayerPlan {
   stopMs: number;
   /** Cloud cover left, ms; the layer is hidden while it is above 0. */
   coverMs: number;
+  /**
+   * Track left, px, before the cloud of this pass arrives; -1 when no cloud is due in this pass
+   * (none rolled, or it has already come). Lets the view float the cloud in ahead of time.
+   */
+  cloudAheadPx: number;
   /** 1-based pass across the screen: starts at spawn and at every wall bounce. */
   pass: number;
 }

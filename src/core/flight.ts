@@ -60,6 +60,7 @@ export function newFlyingLayer(
     windupMs: rules.rush ? ZONE_RULES.rush.windupMs : 0,
     stopMs: 0,
     coverMs: 0,
+    cloudAheadPx: -1,
     pass: 1,
   };
 }
@@ -83,6 +84,7 @@ export class Flight {
   ) {
     this.passStartX = layer.x;
     this.cloud = rollCloud(layer.pass);
+    this.updateCloudAhead();
   }
 
   step(dtMs: number, events: SimEvent[]): void {
@@ -106,6 +108,20 @@ export class Flight {
     }
     this.bounce(to);
     this.arriveCloud(events);
+    this.updateCloudAhead();
+  }
+
+  /** Track left before the cloud of this pass arrives, or -1 when none is due. */
+  private updateCloudAhead(): void {
+    const layer = this.layer;
+    const roll = this.cloud;
+    if (!roll || this.cloudStarted) {
+      layer.cloudAheadPx = -1;
+      return;
+    }
+    const { minCenterX, maxCenterX } = BALANCE.layer;
+    const due = roll.startProgress * (maxCenterX - minCenterX);
+    layer.cloudAheadPx = Math.max(0, due - Math.abs(layer.x - this.passStartX));
   }
 
   private crossesFakeout(from: number, to: number): boolean {

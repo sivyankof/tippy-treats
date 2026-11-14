@@ -6,7 +6,8 @@ import { ZONE_RULES } from '../../data/zones';
 import { clamp01 } from '../../util/math';
 import { effectsMode } from '../effects-mode';
 import type { FlyingLayerView } from '../objects/flying-layer-view';
-import { CloudCover } from './cloud-cover';
+import { approachShare, CloudCover } from './cloud-cover';
+import { flyingSpeed } from '../../core/flight';
 import { hopHeight, type Point } from './coin-flight-math';
 import { FLYING_FX_DEPTH } from './flying-fx-depth';
 import { FX_TEXTURES } from './fx-textures';
@@ -124,6 +125,9 @@ export class RuleFx {
       !shown || state.phase !== 'flying',
       at.y,
       at.dir,
+      layer && state.phase === 'flying'
+        ? approachShare(layer.cloudAheadPx, flyingSpeed(layer), layer.speed)
+        : 0,
     );
     return v.covered || this.cloud.amount > 0;
   }

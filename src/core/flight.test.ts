@@ -88,6 +88,7 @@ describe('newFlyingLayer', () => {
       windupMs: 0,
       stopMs: 0,
       coverMs: 0,
+      cloudAheadPx: -1,
       kind: 'creature',
       creature: 'honey',
       width: 360,
@@ -244,6 +245,21 @@ describe('Flight: clouds', () => {
     expect(layer.coverMs).toBeCloseTo(left - STEP);
     fly(flight, 450);
     expect(layer.coverMs).toBe(0);
+  });
+
+  it('tells how much track is left before the cloud of the pass comes', () => {
+    const layer = layerOf(rules({ rule: 'clouds', zoneIndex: 3 }));
+    const flight = new Flight(layer, null, rollCloud);
+    expect(layer.cloudAheadPx).toBeCloseTo(0.3 * TRACK);
+    const events: SimEvent[] = [];
+    flight.step(STEP, events);
+    expect(layer.cloudAheadPx).toBeCloseTo(0.3 * TRACK - (layer.x - minCenterX));
+    while (layer.coverMs === 0) flight.step(STEP, events);
+    // The cloud has come: nothing more is due in this pass.
+    expect(layer.cloudAheadPx).toBe(-1);
+    const none = layerOf(rules({ rule: 'clouds', zoneIndex: 3 }));
+    new Flight(none, null, () => null);
+    expect(none.cloudAheadPx).toBe(-1);
   });
 
   it('brings at most one cloud per pass and rolls again after every bounce', () => {

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { RULE_ANIM } from '../../data/rule-anim';
-import { coverAlpha, coverRise, coverSwell, stepCover } from './cloud-cover';
+import { approachShare, coverAlpha, coverRise, coverSwell, stepCover } from './cloud-cover';
 
 const { inMs, outMs, dropOutMs } = RULE_ANIM.cloud;
 
@@ -43,5 +43,22 @@ describe('cover look', () => {
   it('swells from the entry size to full size', () => {
     expect(coverSwell(0)).toBe(RULE_ANIM.cloud.enterScale);
     expect(coverSwell(1)).toBe(1);
+  });
+});
+
+describe('approachShare', () => {
+  const { leadMs } = RULE_ANIM.cloud;
+
+  it('floats the cloud in over the last leadMs of flight before it comes', () => {
+    const speed = 600;
+    const far = (speed * (leadMs + 100)) / 1000;
+    expect(approachShare(far, speed, speed)).toBe(0);
+    expect(approachShare((speed * leadMs) / 2000, speed, speed)).toBeCloseTo(0.5);
+    expect(approachShare(0, speed, speed)).toBe(1);
+  });
+
+  it('is 0 when no cloud is due and keeps going while the layer stands still', () => {
+    expect(approachShare(-1, 600, 600)).toBe(0);
+    expect(approachShare(30, 0, 600)).toBeGreaterThan(0);
   });
 });
