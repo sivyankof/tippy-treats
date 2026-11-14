@@ -3,7 +3,12 @@ import type { SimEvent, TowerState } from '../../core/tower-sim';
 import { ANIM } from '../../data/anim';
 import { BALANCE } from '../../data/balance';
 import { pickInt } from '../../util/math';
-import { cakeColorsFor } from '../objects/layer-art';
+import { decorTints } from '../objects/decor-draw';
+import { decorItems } from '../objects/decor-layout';
+import { glazeCrestY } from '../objects/glaze-wave';
+import { cakeColorsFor, lookCodeFor } from '../objects/layer-art';
+import { layerBox } from '../objects/layer-draw';
+import { lookOfCode } from '../objects/plain-look';
 import type { LayerView } from '../objects/layer-view';
 import type { TowerView } from '../objects/tower-view';
 import { driftMotion } from './anim-curves';
@@ -30,6 +35,7 @@ export class DebrisFx {
     this.pieces = new FallingPieces(scene);
     this.drips = new GlazeDrip(scene);
     tower.setGlazeDropHandler((x, y, color) => this.drips.spawn(x, y, color));
+    tower.licks.onEatDrop = (x, y, radius) => this.drips.eatNear(x, y, radius);
   }
 
   update(dtMs: number): void {
@@ -69,13 +75,14 @@ export class DebrisFx {
   biteOff(event: LandEvent, cutSide: 'left' | 'right', memo: FlyingMemo, index: number): void {
     const side = cutSide === 'right' ? 1 : -1;
     const y = this.tower.layerCenterY(index);
+    // The sponge faces the tower, which is the opposite side of the cut.
+    const pieceCut = side === 1 ? 'left' : 'right';
     this.pieces.spawn({
       layerIndex: index + 1,
       x: memo.x + side * (memo.width / 2 - event.cutWidth / 2),
       y,
       width: event.cutWidth,
-      // The sponge faces the tower, which is the opposite side of the cut.
-      cut: side === 1 ? 'left' : 'right',
+      cut: pieceCut,
       ...driftMotion(ANIM.bite, side),
       face: null,
       look: memo,
@@ -86,12 +93,40 @@ export class DebrisFx {
     const edgeX = pose.x + side * (pose.width / 2);
     const colors = cakeColorsFor(memo.creature ?? null, index + 1, memo.kind === 'golden');
     this.landing.bitten(edgeX, y, side, colors.cake);
+    const plain = memo.kind === 'plain';
+    if (plain) this.decorBits(index + 1, event.cutWidth, pieceCut, edgeX, y, side);
     const { dripSize, drips } = ANIM.bite;
-    const startY = y - BALANCE.layer.height / 2 + BALANCE.layer.height * ANIM.layer.glazeDepth;
+    const box = layerBox(pose.width);
+    const startY = plain
+      ? y + glazeCrestY(box)
+      : y - BALANCE.layer.height / 2 + BALANCE.layer.height * ANIM.layer.glazeDepth;
     const count = pickInt(drips);
     for (let k = 0; k < count; k++) {
       const inset = Math.min(ANIM.layer.outline + dripSize / 2 + k * dripSize * 2, pose.width / 2);
       this.drips.spawn(edgeX - side * inset, startY - dripSize, colors.glaze);
     }
+  }
+
+  /** Bits of the decorations fly off when the bitten-off part carries some. */
+  private decorBits(
+    layerIndex: number,
+    pieceWidth: number,
+    pieceCut: 'left' | 'right',
+    edgeX: number,
+    y: number,
+    side: 1 | -1,
+  ): void {
+    const { decor } = lookOfCode(lookCodeFor(layerIndex, false));
+    if (!decor) return;
+    const box = layerBox(pieceWidth);
+    if (decorItems(decor, box, pieceCut, null).length === 0) return;
+    const crest = glazeCrestY(box);
+    this.landing.decorBitten(
+      edgeX,
+      y + (box.innerTop + crest) / 2,
+      crest - box.innerTop,
+      side,
+      decorTints(decor),
+    );
   }
 }

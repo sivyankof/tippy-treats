@@ -17,6 +17,8 @@ export const FACE_TEXTURES = {
   mouthYum: 'face_mouth_yum',
   cheek: 'face_cheek',
   sweat: 'face_sweat',
+  tongue: 'face_tongue',
+  tongueTip: 'face_tongue_tip',
 } as const;
 
 /** Eye picture per eye kind; wide eyes are the open eye drawn larger. */

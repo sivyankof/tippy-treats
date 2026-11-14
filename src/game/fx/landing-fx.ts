@@ -39,6 +39,11 @@ export class LandingFx {
     this.particleFx.crumbs(cutX, centerY, side, cakeColor);
   }
 
+  /** Bits of the decorations fly off the cut line with the bitten-off part (none in "Fewer effects"). */
+  decorBitten(cutX: number, centerY: number, height: number, side: 1 | -1, tints: number[]): void {
+    this.particleFx.decorBits(cutX, centerY, height, side, tints);
+  }
+
   /** Ring, sparks and "Perfect!" around a perfectly landed layer. */
   perfect(layer: LandedLayer, combo: number): void {
     this.ring.play(layer.x, layer.y, layer.width);

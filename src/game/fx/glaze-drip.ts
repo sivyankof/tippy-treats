@@ -29,6 +29,19 @@ export class GlazeDrip {
     this.pool.add({ item, startY: y, ageMs: 0, lifeMs: ANIM.bite.dripMs });
   }
 
+  /** A layer licks up the drop near (x, y): it goes at once. Returns whether there was one. */
+  eatNear(x: number, y: number, radius: number): boolean {
+    let eaten = false;
+    this.pool.eachLive((drip) => {
+      const cx = drip.item.x;
+      const cy = drip.item.y + ANIM.bite.dripSize / 2;
+      if (Math.hypot(cx - x, cy - y) > radius) return;
+      drip.ageMs = drip.lifeMs;
+      eaten = true;
+    });
+    return eaten;
+  }
+
   update(dtMs: number): void {
     this.pool.update(dtMs, (drip, progress) => {
       drip.item.setY(drip.startY + ANIM.bite.dripSlide * dripEase(progress)).setAlpha(1 - progress);

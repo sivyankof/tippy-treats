@@ -1,8 +1,10 @@
 import { ANIM } from '../../data/anim';
 import { BALANCE } from '../../data/balance';
 import { PALETTE } from '../../data/palette';
+import { PLAIN_LAYER } from '../../data/plain-layers';
 import { pickInt } from '../../util/math';
 import { DEPTH } from '../depth';
+import { effectsMode } from '../effects-mode';
 import { FX_TEXTURES } from './fx-textures';
 import { confettiRain, edgeBurst, lineBurst, type ParticleStyle } from './particle-motion';
 import type { Particles } from './particles';
@@ -42,6 +44,19 @@ export class ParticleFx {
       pickInt(ANIM.bite.crumbs),
       (n) => lineBurst(cutX, centerY, BALANCE.layer.height, side, n, ANIM.bite.crumbStyle),
       { texture: FX_TEXTURES.crumb, tints: [color], depth: DEPTH.particles },
+    );
+  }
+
+  /**
+   * Bits of the decorations of a bitten-off part: they fly out of the glaze band (`centerY`,
+   * `height`) at the cut line towards the bitten-off side. None in "Fewer effects".
+   */
+  decorBits(cutX: number, centerY: number, height: number, side: 1 | -1, tints: number[]): void {
+    if (effectsMode.reduced || tints.length === 0) return;
+    this.particles.emit(
+      pickInt(PLAIN_LAYER.decor.bits.count),
+      (n) => lineBurst(cutX, centerY, height, side, n, ANIM.bite.crumbStyle),
+      { texture: FX_TEXTURES.crumb, tints, depth: DEPTH.particles },
     );
   }
 

@@ -9,6 +9,7 @@ import { BALANCE } from '../../data/balance';
 import { services } from '../../services';
 import { RunFx, type FlyingMemo } from '../fx/run-fx';
 import { Backdrop } from '../objects/backdrop/backdrop';
+import { plainLooks } from '../objects/plain-look';
 import { RunCamera } from '../run-camera';
 import { ContinueFlow } from '../continue-flow';
 import { RunRecorder } from '../run-recorder';
@@ -83,6 +84,7 @@ export class GameScene extends Phaser.Scene {
     this.request = data && 'kind' in data ? (data as RunRequest) : CLASSIC_RUN;
     const setup = setupRun(this.request);
     this.seed = setup.seed;
+    plainLooks.setRunSeed(this.seed);
     this.startHeight = setup.startHeight;
     this.writesSave = setup.writesSave;
     this.noContinue = setup.noContinue;

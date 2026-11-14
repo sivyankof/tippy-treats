@@ -9,6 +9,9 @@ import { effectsMode } from '../effects-mode';
 import { waveStep } from '../fx/anim-curves';
 import { moodForWobble, type MouthKind, type Reaction } from './face-state';
 import { GlazeDripGrowth, type DropHandler } from './glaze-drip-growth';
+import { LickDirector, type LickContext } from './lick-director';
+import { isAiming } from './lick-plan';
+import { plainLooks } from './plain-look';
 import { LayerView } from './layer-view';
 import { SwayHold } from './sway-hold';
 import { Tray } from './tray';
@@ -68,6 +71,11 @@ export class TowerView {
 
   private readonly tray: Tray;
   private readonly glazeGrowth = new GlazeDripGrowth();
+  /** The rare lick of a plain layer; it draws from the cosmetic stream of the run. */
+  readonly licks = new LickDirector(plainLooks.cosmeticSeed);
+  private bandTop = -Infinity;
+  private bandBottom = Infinity;
+  private calm = true;
   private lookTarget: { x: number; y: number } | null = null;
   private topMouthHint: MouthKind | undefined;
 
@@ -104,7 +112,35 @@ export class TowerView {
 
   /** Where the drops that fall from grown glaze drips go (`null`: none fall). */
   setGlazeDropHandler(handler: DropHandler | null): void {
-    this.glazeGrowth.onDrop = handler;
+    this.glazeGrowth.onDrop = handler
+      ? (x, y, color) => {
+          handler(x, y, color);
+          this.licks.noteDrop(x, y, this.clockMs);
+        }
+      : null;
+  }
+
+  /** The part of the world the screen shows (world y): only layers inside it lick. */
+  setScreenBand(top: number, bottom: number): void {
+    this.bandTop = top;
+    this.bandBottom = bottom;
+  }
+
+  /** Makes a plain layer lick a drip right away (a dev tool); returns whether one could. */
+  lickNow(): boolean {
+    return this.licks.lickNow(this.lickContext());
+  }
+
+  private lickContext(): LickContext {
+    return {
+      views: this.active,
+      topIndex: this.layerCount - 1,
+      calm: this.calm,
+      aiming: this.state !== null && isAiming(this.state.phase, this.state.flying !== null),
+      bandTop: this.bandTop,
+      bandBottom: this.bandBottom,
+      nowMs: this.clockMs,
+    };
   }
 
   /** The view of the top layer, if it is drawn. */
@@ -181,6 +217,7 @@ export class TowerView {
     this.motion.timeMs = this.clockMs;
     this.motion.swayShare = wobbleAmplitude(state.wobble) / BALANCE.wobble.amplitudeMax;
     const mood = moodForWobble(state.wobble);
+    this.calm = mood === 'calm';
     const top = this.layerCount - 1;
     const { swayEyeLag, swayEyeMax } = ANIM.face;
     for (const [index, view] of this.active) {
@@ -194,7 +231,12 @@ export class TowerView {
       this.motion.phase = index * MATERIAL_PHASE_STEP;
       view.tick(dtMs, this.motion);
     }
-    if (this.hiddenFrom === Infinity) this.glazeGrowth.tick(this.active, state, this.clockMs, dtMs);
+    if (this.hiddenFrom === Infinity) {
+      this.glazeGrowth.tick(this.active, state, this.clockMs, dtMs);
+      this.licks.update(dtMs, this.lickContext());
+    } else {
+      this.licks.stop();
+    }
   }
 
   /** Every drawn face looks at the world point; `undefined` makes them look straight ahead. */

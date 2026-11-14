@@ -58,6 +58,11 @@ export class TimedPool<V, E extends PoolEntry<V>> {
     }
   }
 
+  /** Visits every live entry. */
+  eachLive(visit: (entry: E) => void): void {
+    for (const entry of this.live) visit(entry);
+  }
+
   /** Retires every live entry. */
   clear(): void {
     this.update(Infinity, () => undefined);

@@ -47,7 +47,7 @@ export class GlazeDripGrowth {
       const creature = layer.kind === 'creature' && layer.creature ? layer.creature : null;
       const glaze = cakeColorsFor(creature, index + 1, layer.kind === 'golden').glaze;
       const drips = view.glazeDrips;
-      drips.configure(creature, artWidth(layer.width), glaze, index);
+      drips.configure(creature, artWidth(layer.width), glaze, index, view.cutSide);
       if (!drips.hasDrips) continue;
       const age = nowMs - (this.landedAt[index] ?? -Infinity);
       drips.grow(age, this.exclusionBelow(state, index), reduced);

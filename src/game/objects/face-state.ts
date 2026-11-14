@@ -7,11 +7,12 @@ export type { MouthKind };
 export type EyeKind = 'open' | 'closed' | 'happy' | 'wide' | 'wink';
 export type Mood = 'calm' | 'nervous' | 'scared';
 /**
- * Short-lived overrides, highest priority last: blink < joy < ouch < the faces of the abilities
+ * Short-lived overrides, highest priority last: blink < lick < joy < ouch < the faces of the abilities
  * (wink, scrunch, gape, blow, puffed, strain) < squint < horror.
  */
 export type Reaction =
   | 'blink'
+  | 'lick'
   | 'joy'
   | 'ouch'
   | 'wink'
@@ -35,11 +36,14 @@ export interface Expression {
   sweat: boolean;
   /** The cheeks are blown up (a puffed creature); absent means normal. */
   puffed?: boolean;
+  /** The tongue is out (a plain layer licking glaze). */
+  tongue?: boolean;
 }
 
 /** Reactions from the weakest to the strongest. */
 const REACTION_ORDER: readonly Reaction[] = [
   'blink',
+  'lick',
   'joy',
   'ouch',
   'wink',
@@ -142,6 +146,8 @@ export function resolveExpression(
     case 'blink':
     case 'squint':
       return { ...base, eyes: 'closed', lids: false };
+    case 'lick':
+      return { ...base, eyes: 'open', mouth: 'open', sweat: false, lids: false, tongue: true };
     case 'joy':
       return { eyes: 'happy', mouth: 'smile', sweat: false, ...(recipe ? OWN : PLAIN) };
     case 'ouch':

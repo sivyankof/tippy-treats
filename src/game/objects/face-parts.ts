@@ -3,6 +3,8 @@ import { ANIM } from '../../data/anim';
 import type { FaceRecipe } from '../../data/creature-looks';
 import type { Expression } from './face-state';
 import { browTransform, lidShape, WORRIED_BROW } from './face-recipe';
+import { LICK } from '../../data/lick';
+import { tongueTransform } from './lick-plan';
 import { EYE_TEXTURE, FACE_TEXTURES, MOUTH_TEXTURE } from './face-textures';
 
 /** What the parts need to know about the layer besides the expression. */
@@ -31,6 +33,8 @@ export class FaceParts extends Phaser.GameObjects.Container {
   private readonly browL: Phaser.GameObjects.Image;
   private readonly browR: Phaser.GameObjects.Image;
   private readonly sweat: Phaser.GameObjects.Image;
+  private readonly tongue: Phaser.GameObjects.Image;
+  private readonly tongueTip: Phaser.GameObjects.Image;
   private sweatMs = 0;
   /** Sideways pupil shift of this face (twins look at each other). */
   private gaze = 0;
@@ -54,12 +58,21 @@ export class FaceParts extends Phaser.GameObjects.Container {
     this.browL = image(FACE_TEXTURES.brow, -half, browOffsetY);
     this.browR = image(FACE_TEXTURES.brow, half, browOffsetY);
     this.sweat = image(FACE_TEXTURES.sweat, ANIM.face.sweatX, ANIM.face.sweatY);
+    this.tongue = image(FACE_TEXTURES.tongue, 0, mouthOffsetY + LICK.tongueOriginDy)
+      .setOrigin(0.5, 0)
+      .setVisible(false);
+    this.tongueTip = image(FACE_TEXTURES.tongueTip, 0, mouthOffsetY + LICK.tongueOriginDy)
+      .setOrigin(0.5, 0)
+      .setVisible(false);
     this.setBrowPose(null, false);
 
+    // The tongue comes out under the eyes: they cover it where it passes.
     this.add([
       this.cheekL,
       this.cheekR,
       this.mouth,
+      this.tongue,
+      this.tongueTip,
       this.eyeL,
       this.eyeR,
       this.pupilL,
@@ -93,6 +106,9 @@ export class FaceParts extends Phaser.GameObjects.Container {
     this.mouth.setTexture(MOUTH_TEXTURE[e.mouth]).setVisible(showRest);
     this.applyCheeks(recipe, showRest, e.puffed === true);
     this.sweat.setVisible(e.sweat && showRest);
+    const tongueOut = e.tongue === true && showRest;
+    this.tongue.setVisible(tongueOut);
+    this.tongueTip.setVisible(tongueOut);
     if (!e.sweat) this.sweatMs = 0;
   }
 
@@ -106,6 +122,22 @@ export class FaceParts extends Phaser.GameObjects.Container {
     const half = ANIM.face.eyeSpacing / 2;
     this.pupilL.setPosition(-half + x + this.gaze, y);
     this.pupilR.setPosition(half + x + this.gaze, y);
+  }
+
+  /**
+   * Points the tongue from the mouth at (`dx`, `dy`) in face pixels, `reach` (0..1) of the way
+   * out, swung by `swingDeg`. Whether it shows is decided by the expression.
+   */
+  placeTongue(dx: number, dy: number, reach: number, swingDeg: number): void {
+    const t = tongueTransform(dx, dy - (ANIM.face.mouthOffsetY + LICK.tongueOriginDy), reach);
+    const angle = t.angleDeg + swingDeg;
+    this.tongue.setAngle(angle).setScale(1, t.scaleY);
+    // The tip rides at the end of the stem, turned the same way (clockwise from straight down).
+    const turn = (angle * Math.PI) / 180;
+    const originY = ANIM.face.mouthOffsetY + LICK.tongueOriginDy;
+    this.tongueTip
+      .setAngle(angle)
+      .setPosition(-Math.sin(turn) * t.tipDistance, originY + Math.cos(turn) * t.tipDistance);
   }
 
   /** The drop slides down and fades, then starts again at the top. */

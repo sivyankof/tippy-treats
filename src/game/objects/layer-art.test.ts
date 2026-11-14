@@ -13,7 +13,12 @@ describe('layerArtKey', () => {
     expect(layerArtKey(5, null, 90, 'right')).toBe('layer_5_90_r');
   });
 
-  it('puts the creature id into a creature key and ignores the colour index', () => {
+  it('gives a faceless bitten-off piece of a plain layer its own picture, not a creature', () => {
+    expect(layerArtKey(7, null, 160, 'left', true)).toBe('layer_7_160_l_f');
+    expect(layerArtKey(7, 'honey', 160, 'left', true)).toBe(layerArtKey(7, 'honey', 160, 'left'));
+  });
+
+  it('puts the creature id into a creature key and ignores the plain look', () => {
     expect(layerArtKey(3, 'honey', 400, null)).toBe('layer_c_honey_400_n');
     expect(layerArtKey(0, 'honey', 400, null)).toBe(layerArtKey(4, 'honey', 400, null));
     expect(layerArtKey(0, 'puff', 400, 'left')).toBe('layer_c_puff_400_l');

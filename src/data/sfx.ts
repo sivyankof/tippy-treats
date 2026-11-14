@@ -314,6 +314,36 @@ export const SFX = {
     gain: 0.3,
   } satisfies ToneRecipe,
 
+  /** "Слизывание": a wet slurp, a quick rising note over a soft hiss, then a small happy hum. */
+  lick: {
+    slurp: {
+      wave: 'sine',
+      freq: 380,
+      endFreq: 980,
+      attack: 0.01,
+      duration: 0.14,
+      gain: 0.26,
+    } satisfies ToneRecipe,
+    wet: {
+      filter: 'bandpass',
+      cutoff: 1500,
+      endCutoff: 3400,
+      q: 2.2,
+      attack: 0.01,
+      duration: 0.16,
+      gain: 0.22,
+    } satisfies NoiseRecipe,
+    hum: {
+      delay: 0.3,
+      wave: 'triangle',
+      freq: 520,
+      endFreq: 640,
+      attack: 0.02,
+      duration: 0.22,
+      gain: 0.2,
+    } satisfies TimedTone,
+  },
+
   /** "Существо на главном экране": a squeak; `pitch` scales it per creature. */
   squeak: {
     wave: 'sine',

@@ -6,14 +6,15 @@ import { acquireLayerArt, artAlpha, artOriginY, releaseLayerArt } from './layer-
 /**
  * The baked picture of one layer view: which shared texture it holds and what it was drawn
  * for. A new texture is taken (and the old one given back) only for a new combination of
- * colour, width, cut side and creature.
+ * plain look, width, cut side and creature.
  */
 export class LayerArtSlot {
   private key: string | null = null;
-  private color = -1;
+  private look = -1;
   private width = -1;
   private cut: CutSide | null = null;
   private creature: CreatureId | null = null;
+  private faceless = false;
 
   constructor(
     private readonly scene: Phaser.Scene,
@@ -25,23 +26,36 @@ export class LayerArtSlot {
     return this.width;
   }
 
+  /** Bitten edge of the picture shown; `null` for an intact layer or none. */
+  get drawnCut(): CutSide | null {
+    return this.cut;
+  }
+
   /** Shows the picture for this combination; true when it changed (the face then needs a new layout). */
-  show(color: number, width: number, cut: CutSide | null, creature: CreatureId | null): boolean {
+  show(
+    look: number,
+    width: number,
+    cut: CutSide | null,
+    creature: CreatureId | null,
+    faceless = false,
+  ): boolean {
     if (
-      color === this.color &&
+      look === this.look &&
+      faceless === this.faceless &&
       width === this.width &&
       cut === this.cut &&
       creature === this.creature
     ) {
       return false;
     }
-    const key = acquireLayerArt(this.scene, color, width, cut, creature);
+    const key = acquireLayerArt(this.scene, look, width, cut, creature, faceless);
     if (this.key) releaseLayerArt(this.scene, this.key);
     this.key = key;
-    this.color = color;
+    this.look = look;
     this.width = width;
     this.cut = cut;
     this.creature = creature;
+    this.faceless = faceless;
     this.image.setTexture(key).setOrigin(0.5, artOriginY(creature)).setAlpha(artAlpha(creature));
     this.image.setVisible(true);
     return true;
@@ -51,10 +65,11 @@ export class LayerArtSlot {
   release(): void {
     if (this.key) releaseLayerArt(this.scene, this.key);
     this.key = null;
-    this.color = -1;
+    this.look = -1;
     this.width = -1;
     this.cut = null;
     this.creature = null;
+    this.faceless = false;
     this.image.setVisible(false);
   }
 }

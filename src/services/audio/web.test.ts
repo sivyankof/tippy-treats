@@ -198,6 +198,13 @@ describe('WebAudioService', () => {
     expect(ctx.oscillators).toHaveLength(SFX.recordBlip.notes.length);
   });
 
+  it('plays the lick as two notes over a hiss', () => {
+    const { ctx, service } = setup();
+    service.unlock();
+    service.lick();
+    expect(ctx.oscillators).toHaveLength(2);
+  });
+
   it('disconnects nodes when a sound ends', () => {
     const { ctx, service } = setup();
     service.unlock();

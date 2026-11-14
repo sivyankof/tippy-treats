@@ -83,6 +83,11 @@ export class RunFx {
       this.glow,
       gameState.recordHeight,
     );
+    this.tower.licks.onLick = () => services.audio.lick();
+    if (import.meta.env.DEV) {
+      // window.tippyLick(): a plain layer licks a drip right away; true when one could.
+      (window as Window & { tippyLick?: () => boolean }).tippyLick = () => this.tower.lickNow();
+    }
   }
 
   /** The miss has played out: the run may be declined. */
@@ -188,6 +193,7 @@ export class RunFx {
     this.flyingFx.update(visualMs, timeMs, state);
     this.coinFx.update(visualMs, timeMs, state);
     this.pointFaces(state);
+    this.tower.setScreenBand(cam.scrollY, cam.scrollY + cam.height);
     this.tower.tick(visualMs);
 
     this.debris.update(visualMs);

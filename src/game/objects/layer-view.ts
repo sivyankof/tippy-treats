@@ -15,7 +15,7 @@ import { creatureColors } from './creature-art/primitives';
 import { LayerFace } from './layer-face';
 import { LayerMaterial, type MaterialMotion } from './layer-material';
 import { LayerRig } from './layer-rig';
-import { artWidth, colorIndexFor, GOLDEN_COLOR_INDEX } from './layer-art';
+import { artWidth, lookCodeFor } from './layer-art';
 import { LayerArtSlot } from './layer-art-slot';
 import { GlazeDripLayer } from './glaze-drip-layer';
 
@@ -100,20 +100,27 @@ export class LayerView extends Phaser.GameObjects.Container {
     return this;
   }
 
+  /** Bitten edge of the picture shown (`null`: intact). */
+  get cutSide(): CutSide | null {
+    return this.artSlot.drawnCut;
+  }
+
   /** The face of this layer: mood, reactions, look target. */
   get faceView(): LayerFace {
     return this.face;
   }
 
   /**
-   * Shows the baked art for the colour (or the creature of `look`), width and cut side
-   * (`null`: intact layer) and lays the face out for the width. Baking happens only for a
-   * new combination.
+   * Shows the baked art for the plain look of layer `index` (1-based; or the creature of `look`),
+   * width and cut side (`null`: intact layer) and lays the face out for the width. A view with
+   * its face off (a bitten-off piece) gets the faceless picture. Baking happens only for a new
+   * combination.
    */
   setLayer(index: number, width: number, cut: CutSide | null = null): this {
-    const color = this.lookPlan.kind === 'golden' ? GOLDEN_COLOR_INDEX : colorIndexFor(index);
+    const look = lookCodeFor(index, this.lookPlan.kind === 'golden');
     const w = artWidth(width);
-    if (!this.artSlot.show(color, w, cut, this.creatureOf(this.lookPlan))) return this;
+    const creature = this.creatureOf(this.lookPlan);
+    if (!this.artSlot.show(look, w, cut, creature, !this.faceEnabled)) return this;
     this.face.layout(w);
     this.face.setVisible(this.faceEnabled);
     return this;

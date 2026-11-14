@@ -176,6 +176,14 @@ export class WebAudioService implements AudioService {
     this.play((s) => s.tone(SFX.click));
   }
 
+  lick(): void {
+    this.play((s) => {
+      s.tone(SFX.lick.slurp);
+      s.noise(SFX.lick.wet);
+      s.tone(SFX.lick.hum, { delay: SFX.lick.hum.delay });
+    });
+  }
+
   squeak(pitch: number): void {
     this.play((s) =>
       s.tone(SFX.squeak, { pitch: Number.isFinite(pitch) && pitch > 0 ? pitch : 1 }),

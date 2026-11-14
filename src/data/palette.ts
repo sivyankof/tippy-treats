@@ -12,20 +12,11 @@ export const PALETTE = {
   panelShadow: 0xe9d5c3,
 } as const;
 
+/** Sponge and glaze colours of a layer; the plain pairs are in `data/plain-layers.ts`. */
 export interface LayerColors {
   cake: number;
   glaze: number;
 }
-
-/** Plain layers take these "cake + glaze" pairs in turn. */
-export const LAYER_COLORS: readonly LayerColors[] = [
-  { cake: 0xf4c58f, glaze: 0xffb3c7 },
-  { cake: 0xe8a873, glaze: 0xfff0d6 },
-  { cake: 0xf7d9a8, glaze: 0xb9e4ff },
-  { cake: 0xd99a6c, glaze: 0xcdb8ff },
-  { cake: 0xf2c48d, glaze: 0xb6f0d2 },
-  { cake: 0xe9b380, glaze: 0xffe08a },
-];
 
 /** Kitchen zone backdrop, back to front. */
 export const KITCHEN_COLORS = {

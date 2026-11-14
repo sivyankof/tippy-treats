@@ -449,3 +449,21 @@ describe('ability reactions', () => {
     }
   });
 });
+
+describe('the lick reaction', () => {
+  it('shows an open mouth with the tongue out, and no sweat', () => {
+    const e = resolveExpression('calm', 'lick');
+    expect(e.tongue).toBe(true);
+    expect(e.mouth).toBe('open');
+    expect(e.eyes).toBe('open');
+  });
+
+  it('is weaker than joy but stronger than a blink', () => {
+    const timers = new FaceState(() => 0.5);
+    timers.react('lick', 500);
+    timers.react('blink', 100);
+    expect(timers.reaction()).toBe('lick');
+    timers.react('joy', 500);
+    expect(timers.reaction()).toBe('joy');
+  });
+});

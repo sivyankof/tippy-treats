@@ -4,20 +4,16 @@ import { ANIM } from '../../data/anim';
 import { artRecipe } from '../../data/creature-looks';
 import type { CreatureId } from '../../data/creatures';
 import { BALANCE } from '../../data/balance';
-import { LAYER_COLORS, type LayerColors } from '../../data/palette';
+import type { LayerColors } from '../../data/palette';
+import { PLAIN_LAYER, PLAIN_PAIRS, SPONGES } from '../../data/plain-layers';
 import { TREASURE } from '../../data/treasure-anim';
+import { shade } from '../../util/color';
 import { bakeTexture } from '../ui/bake-texture';
 import { drawCreatureLayer } from './creature-art';
 import { creatureColors } from './creature-art/primitives';
-import {
-  drawBody,
-  drawGloss,
-  drawGlaze,
-  drawShadow,
-  drawSponge,
-  layerBox,
-  SHADOW_DROP,
-} from './layer-draw';
+import { DARK_OUTLINE, SHADOW_DROP } from './layer-draw';
+import { drawPlainLayer, type PlainArt } from './plain-layer-draw';
+import { GOLDEN_LOOK, lookOfCode, pairColors, plainLooks } from './plain-look';
 
 /** The two colours a crumb or a glaze drip of a layer takes. */
 export type CakeColors = Pick<LayerColors, 'cake' | 'glaze'>;
@@ -27,29 +23,39 @@ const SIDE_PAD = 2;
 /** Space under the layer for its shadow. */
 const SHADOW_MARGIN = Math.ceil(SHADOW_DROP + ANIM.layer.shadowHeight / 2) + 1;
 
-/** Index into the colour table for a 1-based layer number. */
-export function colorIndexFor(layerIndex: number): number {
-  const n = LAYER_COLORS.length;
-  return (((layerIndex - 1) % n) + n) % n;
-}
-
-/** Colour-table index of the golden layer: one past the end of the table, so it has art of its own. */
-export const GOLDEN_COLOR_INDEX = LAYER_COLORS.length;
-
 const GOLDEN_COLORS: LayerColors = {
   cake: TREASURE.colors.goldCake,
   glaze: TREASURE.colors.goldGlaze,
 };
 
-/** Colours of the layers with this colour-table index (see `colorIndexFor`). */
-export function layerColors(colorIndex: number): LayerColors {
-  if (colorIndex === GOLDEN_COLOR_INDEX) return GOLDEN_COLORS;
-  return LAYER_COLORS[colorIndex] ?? LAYER_COLORS[0]!;
+/** Pores and outline of the golden layer: its own cake colour, darker. */
+const GOLDEN_PORE_SHADE = -0.3;
+const GOLDEN_ART: PlainArt = {
+  colors: GOLDEN_COLORS,
+  sponge: {
+    cake: GOLDEN_COLORS.cake,
+    pore: shade(GOLDEN_COLORS.cake, GOLDEN_PORE_SHADE),
+    outline: shade(GOLDEN_COLORS.cake, DARK_OUTLINE),
+  },
+  decor: null,
+};
+
+/** What the plain (or golden) layer with this look code is drawn from. */
+export function plainArt(look: number): PlainArt {
+  if (look === GOLDEN_LOOK) return GOLDEN_ART;
+  const { pair, decor } = lookOfCode(look);
+  const p = PLAIN_PAIRS[pair] ?? PLAIN_PAIRS[0]!;
+  return { colors: pairColors(pair), sponge: SPONGES[p.sponge], decor };
+}
+
+/** Look code of a layer view: gold for a golden layer, the run's plain look otherwise. */
+export function lookCodeFor(layerIndex: number, golden: boolean): number {
+  return golden ? GOLDEN_LOOK : plainLooks.codeFor(layerIndex);
 }
 
 /**
  * Cake and glaze colours of the layer with this 1-based number: the creature's own sponge and
- * glaze for a creature layer, gold for a golden one, the plain colour table otherwise.
+ * glaze for a creature layer, gold for a golden one, the run's plain look otherwise.
  * Crumbs and drips take them.
  */
 export function cakeColorsFor(
@@ -62,7 +68,7 @@ export function cakeColorsFor(
     const { sponge, glaze } = creatureColors(creature);
     return { cake: sponge, glaze };
   }
-  return layerColors(colorIndexFor(layerIndex));
+  return plainLooks.colorsFor(layerIndex);
 }
 
 /** Whole-pixel width the art is baked at. */
@@ -71,24 +77,32 @@ export function artWidth(width: number): number {
 }
 
 const CUT_SUFFIX: Readonly<Record<CutSide | 'none', string>> = { none: 'n', left: 'l', right: 'r' };
+const FACELESS_SUFFIX = '_f';
 
 /**
- * Texture key of a baked layer: `layer_<colour>_<width>_<cut>` for a plain layer and
- * `layer_c_<creature>_<width>_<cut>` for a creature (its look does not depend on the colour table).
+ * Texture key of a baked layer: `layer_<look>_<width>_<cut>` for a plain or golden layer (the
+ * look code holds the pair and the decoration; `_f` is added for a faceless bitten-off piece)
+ * and `layer_c_<creature>_<width>_<cut>` for a creature (its look does not depend on the plain
+ * look or the face).
  */
 export function layerArtKey(
-  colorIndex: number,
+  look: number,
   creature: CreatureId | null,
   width: number,
   cut: CutSide | null,
+  faceless = false,
 ): string {
-  const who = creature ? `c_${creature}` : String(colorIndex);
-  return `layer_${who}_${artWidth(width)}_${CUT_SUFFIX[cut ?? 'none']}`;
+  const who = creature ? `c_${creature}` : String(look);
+  const face = !creature && faceless ? FACELESS_SUFFIX : '';
+  return `layer_${who}_${artWidth(width)}_${CUT_SUFFIX[cut ?? 'none']}${face}`;
 }
 
-/** Pixels the picture reaches above the top edge of the layer (never less than the shadow margin). */
+/**
+ * Pixels the picture reaches above the top edge of the layer (never less than the shadow
+ * margin): the creature's detail, or the decorations of a plain layer.
+ */
 export function artTopPad(creature: CreatureId | null): number {
-  return Math.max(SHADOW_MARGIN, creature ? artRecipe(creature).topPad : 0);
+  return Math.max(SHADOW_MARGIN, creature ? artRecipe(creature).topPad : PLAIN_LAYER.decor.maxRise);
 }
 
 /** Height of the baked picture: the room above the layer, the layer, the room for its shadow. */
@@ -108,46 +122,33 @@ export function artAlpha(creature: CreatureId | null): number {
   return 'alpha' in recipe ? recipe.alpha : 1;
 }
 
-/** Shadow, body, glaze with drips, cut sponge and gloss around the origin of `g`. */
-function drawPlainLayer(
-  g: Phaser.GameObjects.Graphics,
-  width: number,
-  colors: LayerColors,
-  cut: CutSide | null,
-): void {
-  const box = layerBox(width);
-  drawShadow(g, box);
-  drawBody(g, box, colors.cake);
-  drawGlaze(g, box, colors.glaze);
-  if (cut) drawSponge(g, cut, colors.cake, box);
-  drawGloss(g, box);
-}
-
 // Baked layer textures are shared by every view. A texture is kept while any view
 // shows it; unused ones stay for a while (widths repeat after perfect landings) and
 // the oldest are removed beyond ANIM.pool.idleLayerTextures. Map order is use order.
 const refs = new Map<string, number>();
 
 /**
- * Bakes (or finds) the art for a colour (or a creature), width and cut side (`null`: an intact
- * layer) and counts one more user of it. The layer body sits at `artOriginY(creature)` of the picture.
+ * Bakes (or finds) the art for a plain look code (or a creature), width and cut side (`null`: an
+ * intact layer), with or without room for a face, and counts one more user of it. The layer body
+ * sits at `artOriginY(creature)` of the picture.
  */
 export function acquireLayerArt(
   scene: Phaser.Scene,
-  colorIndex: number,
+  look: number,
   width: number,
   cut: CutSide | null,
   creature: CreatureId | null = null,
+  faceless = false,
 ): string {
   const w = artWidth(width);
-  const key = layerArtKey(colorIndex, creature, w, cut);
+  const key = layerArtKey(look, creature, w, cut, faceless);
   const top = artTopPad(creature);
   const texW = 2 * Math.ceil((w + SIDE_PAD * 2) / 2);
   const texH = artHeight(creature);
   bakeTexture(scene, key, texW, texH, (g) => {
     g.translateCanvas(texW / 2, top + BALANCE.layer.height / 2);
     if (creature) drawCreatureLayer(g, creature, w, cut);
-    else drawPlainLayer(g, w, layerColors(colorIndex), cut);
+    else drawPlainLayer(g, w, plainArt(look), cut, faceless);
   });
   const users = refs.get(key) ?? 0;
   refs.delete(key);
