@@ -138,7 +138,12 @@ export class HudScene extends Phaser.Scene {
       this.treasure.update(info, time, delta);
     }
     this.numbersIdle.update(time);
-    this.tutorialHints.update(time, delta, this.gameScene()?.tutorial ?? null);
+    this.tutorialHints.update(
+      time,
+      delta,
+      this.gameScene()?.tutorial ?? null,
+      info?.paused ?? false,
+    );
     this.pauseButton.setVisible(this.pauseEnabled());
     this.debugPanel.update(info, this.game.loop.actualFps);
   }

@@ -2,9 +2,12 @@ import { describe, expect, it } from 'vitest';
 import { HINT_IDS, SessionHints, TUTORIAL_TEAM } from './session-hints';
 
 describe('SessionHints', () => {
-  it('makes only the first run of a session a tutorial run', () => {
+  it('keeps the tutorial pending until it is marked done', () => {
     const hints = new SessionHints();
+    // A restart before the first drop (or any early end) leaves the tutorial to the next run.
     expect(hints.beginRun()).toBe(true);
+    expect(hints.beginRun()).toBe(true);
+    hints.mark('tutorial');
     expect(hints.beginRun()).toBe(false);
     expect(hints.beginRun()).toBe(false);
   });

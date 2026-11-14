@@ -80,3 +80,17 @@ export function parseDebugParams(search: string): DebugParams {
 export function readDebugParams(): DebugParams {
   return import.meta.env.DEV ? parseDebugParams(window.location.search) : NO_PARAMS;
 }
+
+/**
+ * True when the query asks for a hand-picked run (`?team=`, `?level=`, `?bot=` or `?start=`)
+ * without `?tutorial=`: such a run is a normal one, with no tutorial and no hints.
+ */
+export function skipsTutorial(params: DebugParams): boolean {
+  if (params.tutorial !== undefined) return false;
+  return (
+    params.team !== undefined ||
+    params.level !== undefined ||
+    params.bot !== undefined ||
+    params.start !== undefined
+  );
+}

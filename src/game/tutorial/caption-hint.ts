@@ -60,6 +60,6 @@ export class CaptionHint {
     this.root
       .setAlpha(alpha * cfg.maxAlpha)
       .setAngle(cfg.swayDeg * wave)
-      .setScale(1 + cfg.breathe * sineWave(timeMs, cfg.swayMs, this.phase + 1.4));
+      .setScale(1 + cfg.breathe * sineWave(timeMs, cfg.swayMs, this.phase + cfg.breathePhase));
   }
 }

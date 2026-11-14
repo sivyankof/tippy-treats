@@ -23,7 +23,9 @@ export class SessionHints {
   }
 
   /**
-   * Called when a run starts: true when it is the tutorial run. `force` comes from `?tutorial=`:
+   * Called when a run starts: true when it is the tutorial run. The tutorial stays pending
+   * (restarts included) until the director marks it done: the Honey intro has played, or a run
+   * went past the Honey layer. `force` comes from `?tutorial=`:
    * `true` makes every run a tutorial run with all hints fresh, `false` turns every hint off.
    */
   beginRun(force?: boolean): boolean {
@@ -32,9 +34,7 @@ export class SessionHints {
     } else if (force === false) {
       for (const id of HINT_IDS) this.seen.add(id);
     }
-    if (this.seen.has('tutorial')) return false;
-    this.seen.add('tutorial');
-    return true;
+    return !this.seen.has('tutorial');
   }
 }
 

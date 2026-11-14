@@ -21,6 +21,8 @@ export class TutorialDirector {
   private creatureLayerIndex = -1;
   /** Screen position of the creature layer's top centre, set by the scene while it is held. */
   readonly target = { x: 0, y: 0, valid: false };
+  /** Screen y where the top of the tower settles (the flying row is above it), set by the scene. */
+  towerTopY = 0;
 
   constructor(
     private readonly hints: SessionHints,
@@ -50,8 +52,11 @@ export class TutorialDirector {
 
   /** Advances the hold by a real frame time. */
   tick(dtMs: number): void {
+    const wasHolding = this.holding;
     this.holdLeftMs = Math.max(0, this.holdLeftMs - dtMs);
     if (this.holdLeftMs === 0) this.target.valid = false;
+    // The Honey intro has played: the tutorial is done.
+    if (wasHolding && !this.holding) this.hints.mark('tutorial');
   }
 
   setTarget(x: number, y: number): void {
@@ -87,6 +92,8 @@ export class TutorialDirector {
       this.hints.mark('firstPerfect');
       this.cues.push({ type: 'first_perfect' });
     }
+    // A run that went past the Honey layer without the intro (a lost team, say) is done too.
+    if (state.layers.length > BALANCE.team.creatureEvery) this.hints.mark('tutorial');
     const index = state.layers.length - 1;
     const layer = state.layers[index];
     if (this.tutorialRun && layer?.creature === 'honey' && !this.hints.has('honey')) {

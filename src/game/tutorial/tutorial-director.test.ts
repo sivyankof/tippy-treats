@@ -73,15 +73,25 @@ describe('TutorialDirector: Honey intro', () => {
   const layers = (): PlacedLayer[] => [...Array.from({ length: 5 }, plain), honey()];
 
   it('holds the sim for the pause and then lets go', () => {
-    const { dir } = director();
+    const { hints, dir } = director();
     dir.observe([land('normal')], state(layers()));
     expect(dir.takeCues()).toEqual([{ type: 'creature_intro', layerIndex: 5 }]);
     expect(dir.holding).toBe(true);
     expect(dir.introLayerIndex).toBe(5);
     dir.tick(BALANCE.tutorial.creaturePauseMs - 1);
     expect(dir.holding).toBe(true);
+    expect(hints.has('tutorial')).toBe(false);
     dir.tick(1);
     expect(dir.holding).toBe(false);
+    expect(hints.has('tutorial')).toBe(true);
+  });
+
+  it('finishes the tutorial when a run goes past the Honey layer without the intro', () => {
+    const { hints, dir } = director();
+    dir.observe([land('normal')], state(Array.from({ length: 6 }, plain)));
+    expect(hints.has('tutorial')).toBe(false);
+    dir.observe([land('normal')], state(Array.from({ length: 7 }, plain)));
+    expect(hints.has('tutorial')).toBe(true);
   });
 
   it('forgets the arrow target when the hold ends', () => {

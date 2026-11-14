@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { parseDebugParams } from './debug-params';
+import { parseDebugParams, skipsTutorial } from './debug-params';
 
 describe('parseDebugParams', () => {
   it('is off for an empty query', () => {
@@ -78,5 +78,24 @@ describe('parseDebugParams', () => {
     expect(parseDebugParams('?level=6').level).toBeUndefined();
     expect(parseDebugParams('?level=2.5').level).toBeUndefined();
     expect(parseDebugParams('?level=x').level).toBeUndefined();
+  });
+});
+
+describe('skipsTutorial', () => {
+  it('is false for a plain query and for the tutorial switch', () => {
+    expect(skipsTutorial(parseDebugParams(''))).toBe(false);
+    expect(skipsTutorial(parseDebugParams('?debug=1&seed=7'))).toBe(false);
+    expect(skipsTutorial(parseDebugParams('?tutorial=1'))).toBe(false);
+  });
+
+  it('is true when a team, level, bot or start is given without ?tutorial=', () => {
+    for (const query of ['?team=honey', '?level=3', '?bot=35', '?start=10']) {
+      expect(skipsTutorial(parseDebugParams(query))).toBe(true);
+    }
+  });
+
+  it('lets ?tutorial= win over the other parameters', () => {
+    expect(skipsTutorial(parseDebugParams('?team=honey&tutorial=1'))).toBe(false);
+    expect(skipsTutorial(parseDebugParams('?start=10&tutorial=0'))).toBe(false);
   });
 });

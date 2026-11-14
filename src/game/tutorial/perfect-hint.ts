@@ -1,8 +1,10 @@
 import * as Phaser from 'phaser';
+import { HUD_LAYOUT } from '../../data/hud-layout';
 import { TUTORIAL_ANIM } from '../../data/tutorial-anim';
 import { PALETTE } from '../../data/palette';
 import { t } from '../../i18n';
 import { sineWave } from '../../util/math';
+import { FLYING_REACH } from '../camera-layout';
 import { easeFn } from '../fx/ease';
 import { createOutlinedText } from '../ui/outlined-text';
 import { HintClock } from './timeline';
@@ -40,10 +42,17 @@ export class PerfectHint {
 
   layout(screenWidth: number, screenHeight: number): void {
     this.flash.setSize(screenWidth, screenHeight);
-    this.label.setPosition(screenWidth / 2, screenHeight * cfg.y);
+    this.label.setX(screenWidth / 2);
   }
 
-  show(reducedFx: boolean): void {
+  /**
+   * `towerTopY` is the screen y of the tower top: the label hangs above the flying row over it
+   * (and under the HUD), so the next layer never flies through it.
+   */
+  show(reducedFx: boolean, towerTopY: number): void {
+    const half = (this.label.height * cfg.popOvershoot) / 2;
+    const lowest = towerTopY - FLYING_REACH - cfg.gapAboveFlight - half;
+    this.label.setY(Math.max(HUD_LAYOUT.bottomEdge + TUTORIAL_ANIM.caption.hudGap + half, lowest));
     this.clock.start(TOTAL_MS);
     this.flashMs = reducedFx ? 0 : cfg.flashMs;
     this.label.setText(t('run.perfect'));

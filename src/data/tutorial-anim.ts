@@ -6,8 +6,8 @@
 export const TUTORIAL_ANIM = {
   /** The hand and "Tap!" over the play area while the first layers fly. */
   tap: {
-    /** Centre of the group, as a share of the screen height. */
-    y: 0.42,
+    /** Gap between the lowest point of the hand and the top of the flying row. */
+    gapAboveFlight: 40,
     fontSize: 110,
     textGap: 40,
     /** The hand taps down and back up with this period. */
@@ -22,7 +22,8 @@ export const TUTORIAL_ANIM = {
   },
   /** The first perfect drop of a session. */
   firstPerfect: {
-    y: 0.42,
+    /** Gap between the bottom of the text and the top of the flying row. */
+    gapAboveFlight: 40,
     fontSize: 150,
     popMs: 280,
     popFromScale: 0.4,
@@ -50,6 +51,12 @@ export const TUTORIAL_ANIM = {
     swayMs: 1500,
     breathe: 0.012,
     maxAlpha: 0.97,
+    /** Sway phase offset of the second caption, radians. */
+    secondPhase: 2.2,
+    /** Phase offset of the breathing against the sway, radians. */
+    breathePhase: 1.4,
+    /** Least gap between the HUD and a plate. */
+    hudGap: 30,
   },
   /** The arrow that points at the creature layer. */
   arrow: {
@@ -61,11 +68,23 @@ export const TUTORIAL_ANIM = {
     periodMs: 600,
     /** Gap between the arrow and the caption plate above it. */
     captionGap: 16,
+    /** Outline around the arrow picture, logical pixels. */
+    outline: 7,
+    /** Stem of the arrow: left edge and width as shares of the arrow width. */
+    stemX: 0.3,
+    stemWidth: 0.4,
+    /** Where the head starts, as a share of the arrow height. */
+    headY: 0.45,
+    /** How far the stem runs under the head, and its corner radius. */
+    stemOverlap: 10,
+    stemRadius: 14,
   },
-  /** The wobble hint sits under the HUD row, centred. */
+  /** The wobble hint sits on the tower, just under its top surface, centred: never in the flying row. */
   wobbleHint: {
-    /** Gap between the lowest HUD edge and the top of the plate. */
-    gapBelowHud: 30,
+    /** Gap between the top surface of the tower and the top of the plate. */
+    gapBelowTop: 40,
+    /** Least gap between the plate and the bottom of the screen. */
+    screenMargin: 40,
     holdMs: 3400,
   },
 } as const;

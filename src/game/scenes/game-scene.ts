@@ -7,11 +7,12 @@ import { TowerSim, type SimPhase } from '../../core/tower-sim';
 import { ANIM } from '../../data/anim';
 import { BALANCE } from '../../data/balance';
 import { HUD_LAYOUT } from '../../data/hud-layout';
-import { readDebugParams } from '../../util/debug-params';
+import { readDebugParams, skipsTutorial } from '../../util/debug-params';
 import { frameLerp, randomSeed } from '../../util/math';
 import { RunFx, type CameraInfo, type FlyingMemo } from '../fx/run-fx';
 import { Backdrop } from '../objects/backdrop/backdrop';
 import { getDebugTeam, toTeamSlots } from '../debug/debug-team';
+import { FLYING_REACH } from '../camera-layout';
 import { effectsMode } from '../effects-mode';
 import { SCENES, type ResultsData } from '../scene-keys';
 import { enterWorld, type WorldEntry } from '../ui/transition';
@@ -92,8 +93,11 @@ export class GameScene extends Phaser.Scene {
   create(): void {
     const debug = readDebugParams();
     this.seed = debug.seed ?? randomSeed();
-    const tutorialRun = sessionHints.beginRun(debug.tutorial);
-    this.tutorial = new TutorialDirector(sessionHints, tutorialRun);
+    // A run with a hand-picked team, level, bot or start is a normal run: it neither shows the
+    // hints nor uses up the tutorial.
+    const normalRun = skipsTutorial(debug);
+    const tutorialRun = !normalRun && sessionHints.beginRun(debug.tutorial);
+    this.tutorial = normalRun ? null : new TutorialDirector(sessionHints, tutorialRun);
     // Until the Team screen (M6) the debug team is the team of every run; the tutorial run has its own.
     this.team = tutorialRun ? [...TUTORIAL_TEAM] : toTeamSlots(getDebugTeam());
     this.sim = new TowerSim({
@@ -200,10 +204,13 @@ export class GameScene extends Phaser.Scene {
     this.sim.drop();
   }
 
-  /** Tells the director where the creature layer is on the screen, so the arrow can point at it. */
+  /** Tells the director where the tower top and the creature layer are on the screen, so hints can be placed. */
   private placeTutorialTarget(): void {
     const tutorial = this.tutorial;
-    if (!tutorial?.holding) return;
+    if (!tutorial) return;
+    // Where the top of the tower settles on the screen: hints keep out of the flying row above it.
+    tutorial.towerTopY = this.fx.tower.topY() - this.targetScrollY();
+    if (!tutorial.holding) return;
     const pose = this.fx.tower.layerPose(tutorial.introLayerIndex);
     if (!pose) return;
     const camera = this.cameras.main;
@@ -258,11 +265,9 @@ export class GameScene extends Phaser.Scene {
    */
   private targetScrollY(): number {
     const screenH = this.scale.gameSize.height;
-    const flyingReach =
-      BALANCE.layer.gapAboveTower + BALANCE.layer.height + ANIM.flying.bobAmplitude;
     const surfaceScreenY = Math.max(
       screenH - ANIM.camera.visibleLayers * BALANCE.layer.height,
-      HUD_LAYOUT.bottomEdge + ANIM.camera.hudClearance + flyingReach,
+      HUD_LAYOUT.bottomEdge + ANIM.camera.hudClearance + FLYING_REACH,
     );
     return Math.min(this.trayScrollY(), this.fx.tower.topY() - surfaceScreenY);
   }
