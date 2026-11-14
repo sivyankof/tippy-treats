@@ -7,15 +7,17 @@ import { mixColor, shade } from '../../util/color';
 
 /** Outline of a body: its fill darkened by this much. */
 export const DARK_OUTLINE = -0.38;
-const GLAZE_OUTLINE = -0.22;
+/** Outline of the glaze and its drips: the glaze darkened by this much. */
+export const GLAZE_OUTLINE = -0.22;
 const PORE_SHADE = -0.3;
 /** Pores sit between these shares of the sponge strip width, measured from the cut edge. */
 const PORE_NEAR = 0.3;
 const PORE_FAR = 0.7;
 /** Golden ratio step: spreads the pores evenly without a random generator. */
 export const GOLDEN_STEP = 0.618;
-const DRIP_WIDTH = 22;
-const DRIP_MIN_LAYER_WIDTH = 120;
+/** Width of a glaze drip and the narrowest layer that gets drips. */
+export const DRIP_WIDTH = 22;
+export const DRIP_MIN_LAYER_WIDTH = 120;
 const DRIP_SHORT_RATIO = 0.65;
 const GLOSS_HEIGHT = 10;
 const GLOSS_INSET = 26;
@@ -98,6 +100,30 @@ export interface GlazeOptions {
   scallop?: { radius: number; step: number };
 }
 
+/** One drip hanging from the glaze: its centre x and the length of the baked part below the glaze. */
+export interface DripSpot {
+  x: number;
+  length: number;
+}
+
+/** Where the baked drips of a layer hang (none on a narrow layer): evenly spread, long and short in turn. */
+export function dripSpots(box: LayerBox, count: number, length: number): DripSpot[] {
+  if (box.width < DRIP_MIN_LAYER_WIDTH || count <= 0) return [];
+  const spots: DripSpot[] = [];
+  for (let i = 0; i < count; i++) {
+    spots.push({
+      x: box.left + (box.width * (i + 1)) / (count + 1),
+      length: i % 2 === 0 ? length : length * DRIP_SHORT_RATIO,
+    });
+  }
+  return spots;
+}
+
+/** Y of the lower edge of the glaze (the top of every drip), around the layer centre. */
+export function glazeBottomY(box: LayerBox, depth: number = ANIM.layer.glazeDepth): number {
+  return box.innerTop + box.height * depth;
+}
+
 /** Glaze on the top of the layer with drips hanging from its lower edge. */
 export function drawGlaze(
   g: Phaser.GameObjects.Graphics,
@@ -107,10 +133,8 @@ export function drawGlaze(
 ): void {
   const { outline, glazeDepth, dripCount, dripLength, gradientLift, glazeBands } = ANIM.layer;
   const depth = options.depth ?? glazeDepth;
-  const drips = options.dripCount ?? dripCount;
-  const length = options.dripLength ?? dripLength;
+  const drips = dripSpots(box, options.dripCount ?? dripCount, options.dripLength ?? dripLength);
   const glazeH = box.height * depth;
-  const withDrips = box.width >= DRIP_MIN_LAYER_WIDTH && drips > 0;
   const topCorners = { tl: box.innerRadius, tr: box.innerRadius, bl: 0, br: 0 };
 
   // Two passes so every outline sits under every fill.
@@ -145,17 +169,14 @@ export function drawGlaze(
         g.fillCircle(x0 + ((x1 - x0) * (i + 0.5)) / count, box.innerTop + glazeH, radius + grow);
       }
     }
-    if (!withDrips) continue;
     g.fillStyle(pass === 'outline' ? shade(glaze, GLAZE_OUTLINE) : glaze, 1);
-    for (let i = 0; i < drips; i++) {
-      const cx = box.left + (box.width * (i + 1)) / (drips + 1);
-      const dripH = i % 2 === 0 ? length : length * DRIP_SHORT_RATIO;
+    for (const drip of drips) {
       const w = DRIP_WIDTH + grow * 2;
       g.fillRoundedRect(
-        cx - w / 2,
+        drip.x - w / 2,
         box.innerTop + glazeH - DRIP_WIDTH / 2,
         w,
-        dripH + DRIP_WIDTH / 2 + grow,
+        drip.length + DRIP_WIDTH / 2 + grow,
         w / 2,
       );
     }

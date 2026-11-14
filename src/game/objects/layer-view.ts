@@ -17,6 +17,7 @@ import { LayerMaterial, type MaterialMotion } from './layer-material';
 import { LayerRig } from './layer-rig';
 import { artWidth, colorIndexFor, GOLDEN_COLOR_INDEX } from './layer-art';
 import { LayerArtSlot } from './layer-art-slot';
+import { GlazeDripLayer } from './glaze-drip-layer';
 
 /**
  * One cake layer: a baked picture (shadow, body, glaze, gloss) and a face on top.
@@ -26,7 +27,7 @@ import { LayerArtSlot } from './layer-art-slot';
  * `breathRoot` (the idle breathing) and `shapeRoot` (the material's jiggle) too, and `content`
  * to the centre of the layer (widening pivots there):
  *
- *   LayerView > squashRoot (y = +H/2) > breathRoot > shapeRoot > content (y = -H/2) > art, glossSweep, face
+ *   LayerView > squashRoot (y = +H/2) > breathRoot > shapeRoot > content (y = -H/2) > art, glazeDrips, glossSweep, face
  */
 export class LayerView extends Phaser.GameObjects.Container {
   private readonly squashRoot: Phaser.GameObjects.Container;
@@ -36,6 +37,8 @@ export class LayerView extends Phaser.GameObjects.Container {
   private readonly content: Phaser.GameObjects.Container;
   private readonly art: Phaser.GameObjects.Image;
   private readonly artSlot: LayerArtSlot;
+  /** Glaze drips that keep growing after the layer has landed, drawn over the baked ones. */
+  readonly glazeDrips: GlazeDripLayer;
   private readonly glossSweep: Phaser.GameObjects.Image;
   private readonly face: LayerFace;
   /** Extra animations for the abilities: flash, hop, fade, split. */
@@ -52,11 +55,13 @@ export class LayerView extends Phaser.GameObjects.Container {
     const half = BALANCE.layer.height / 2;
     this.art = new Phaser.GameObjects.Image(scene, 0, 0, '__DEFAULT').setVisible(false);
     this.artSlot = new LayerArtSlot(scene, this.art);
+    this.glazeDrips = new GlazeDripLayer(scene);
     this.glossSweep = createGlossBand(scene, BALANCE.layer.height - ANIM.layer.outline * 2);
     this.face = new LayerFace(scene);
     this.rig = new LayerRig(scene, this.art, this.face);
     this.content = new Phaser.GameObjects.Container(scene, 0, -half, [
       this.art,
+      this.glazeDrips,
       ...this.rig.parts,
       this.glossSweep,
       this.face,
@@ -224,6 +229,7 @@ export class LayerView extends Phaser.GameObjects.Container {
     this.breathRoot.setScale(1);
     this.content.setScale(1);
     this.glossSweep.setVisible(false);
+    this.glazeDrips.clear();
     this.face.reset();
     return this;
   }
@@ -234,6 +240,7 @@ export class LayerView extends Phaser.GameObjects.Container {
    */
   tick(dtMs: number, motion?: MaterialMotion): void {
     this.rig.apply();
+    this.glazeDrips.setAlpha(this.art.alpha);
     this.material.tick(dtMs, motion);
     if (motion) this.breathe(motion);
     if (this.face.visible) this.face.tick(dtMs);

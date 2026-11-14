@@ -29,6 +29,7 @@ export class DebrisFx {
   ) {
     this.pieces = new FallingPieces(scene);
     this.drips = new GlazeDrip(scene);
+    tower.setGlazeDropHandler((x, y, color) => this.drips.spawn(x, y, color));
   }
 
   update(dtMs: number): void {

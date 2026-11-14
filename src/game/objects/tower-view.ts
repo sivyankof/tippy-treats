@@ -8,6 +8,7 @@ import { DEPTH } from '../depth';
 import { effectsMode } from '../effects-mode';
 import { waveStep } from '../fx/anim-curves';
 import { moodForWobble, type MouthKind, type Reaction } from './face-state';
+import { GlazeDripGrowth, type DropHandler } from './glaze-drip-growth';
 import { LayerView } from './layer-view';
 import { SwayHold } from './sway-hold';
 import { Tray } from './tray';
@@ -66,6 +67,7 @@ export class TowerView {
   private readonly motion = { timeMs: 0, swayShare: 0, phase: 0 };
 
   private readonly tray: Tray;
+  private readonly glazeGrowth = new GlazeDripGrowth();
   private lookTarget: { x: number; y: number } | null = null;
   private topMouthHint: MouthKind | undefined;
 
@@ -98,6 +100,11 @@ export class TowerView {
    */
   topSpan(): Readonly<{ left: number; right: number }> {
     return this.span;
+  }
+
+  /** Where the drops that fall from grown glaze drips go (`null`: none fall). */
+  setGlazeDropHandler(handler: DropHandler | null): void {
+    this.glazeGrowth.onDrop = handler;
   }
 
   /** The view of the top layer, if it is drawn. */
@@ -138,6 +145,7 @@ export class TowerView {
    */
   sync(state: Readonly<TowerState>, cameraBottomY: number): void {
     this.state = state;
+    this.glazeGrowth.noteLayers(state.layers.length, this.clockMs);
     const count = Math.min(state.layers.length, this.hiddenFrom);
     this.layerCount = count;
     const offscreen = Math.floor((this.trayTopY - cameraBottomY) / BALANCE.layer.height);
@@ -186,6 +194,7 @@ export class TowerView {
       this.motion.phase = index * MATERIAL_PHASE_STEP;
       view.tick(dtMs, this.motion);
     }
+    if (this.hiddenFrom === Infinity) this.glazeGrowth.tick(this.active, state, this.clockMs, dtMs);
   }
 
   /** Every drawn face looks at the world point; `undefined` makes them look straight ahead. */

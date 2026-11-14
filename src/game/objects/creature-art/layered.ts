@@ -40,8 +40,9 @@ const CROWN_SPREAD = 46;
 const CROWN_SPREAD_SHARE = 0.2;
 const CROWN_OVERLAP = 12;
 const CROWN_JEWEL = 4;
-const CREAM_DRIP_LENGTH = 14;
-const CREAM_DRIPS = 3;
+/** The cream drips of the rainbow layer (the growing drips continue them). */
+export const CREAM_DRIP_LENGTH = 14;
+export const CREAM_DRIPS = 3;
 
 /** Jelly: see-through teal body with bubbles, a wavy top edge and a strong shine. */
 export function drawJelly(ctx: ArtContext, r: Recipe<'jelly'>): void {
