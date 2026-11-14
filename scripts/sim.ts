@@ -13,6 +13,8 @@ import {
   isFullTeam,
   type SimTeamSet,
 } from '../src/data/sim-teams';
+import { EndStats, type EndRow } from './end-stats';
+import type { RunObserver } from './run-observer';
 import { WobbleStats, type WobbleRow } from './wobble-stats';
 
 /** Node global; the project does not pull in the Node type definitions. */
@@ -60,28 +62,29 @@ function parseArgs(argv: string[]): CliOptions {
   return options;
 }
 
-/** One bot run. The bot never continues a run. `wobble` collects tap statistics if given. */
+/** One bot run. The bot never continues a run. `observers` collect statistics without changing it. */
 function playRun(
   config: RunConfig,
   timingSdMs: number,
   noise: Rng,
-  wobble?: WobbleStats,
+  observers: readonly RunObserver[],
 ): RunResult {
   const sim = new TowerSim(config);
   const bot = new TimingBot(timingSdMs, noise);
 
   for (let elapsed = 0; elapsed < MAX_RUN_MS; elapsed += STEP_MS) {
+    for (const observer of observers) observer.beforeStep?.(sim.state);
     const events = sim.update(STEP_MS);
     if (sim.state.phase === 'await_continue') events.push(...sim.decline());
     bot.observe(events);
-    wobble?.noteEvents(events);
+    for (const observer of observers) observer.noteEvents?.(events, sim.state);
 
     for (const event of events) {
       if (event.type === 'run_over') return event.result;
     }
 
     if (bot.shouldDrop(sim)) {
-      wobble?.noteDrop(sim.state);
+      for (const observer of observers) observer.noteDrop?.(sim.state);
       sim.drop();
     }
   }
@@ -114,7 +117,7 @@ function playProfile(
   target: DifficultyTarget,
   set: SimTeamSet,
   options: CliOptions,
-  wobble?: WobbleStats,
+  observers: readonly RunObserver[] = [],
 ): { results: RunResult[]; heights: number[] } {
   const seeds = new Rng(BASE_SEED).fork(`seeds:${target.id}`);
   const noise = new Rng(BASE_SEED).fork(`noise:${target.id}`);
@@ -123,7 +126,12 @@ function playProfile(
   for (let i = 0; i < options.runs; i++) {
     const seed = seeds.int(0, 0xffffffff);
     results.push(
-      playRun({ seed, mode: 'classic', team, tutorial: false }, target.timingSdMs, noise, wobble),
+      playRun(
+        { seed, mode: 'classic', team, tutorial: false },
+        target.timingSdMs,
+        noise,
+        observers,
+      ),
     );
   }
   const heights = results.map((r) => r.height).sort((a, b) => a - b);
@@ -269,19 +277,25 @@ function main(): void {
   );
 
   const wobbleRows: WobbleRow[] = [];
+  const zoneRows: EndRow[] = [];
+  const missRows: EndRow[] = [];
   const dominantTeams: string[] = [];
   const plainOverTeams: string[] = [];
   let jellySolo: number | null = null;
   for (const target of targets) {
-    const play = (set: SimTeamSet, wobble?: WobbleStats): TeamRow => {
-      const { results, heights } = playProfile(target, set, options, wobble);
+    const play = (set: SimTeamSet, observers: readonly RunObserver[] = []): TeamRow => {
+      const { results, heights } = playProfile(target, set, options, observers);
       return summarize(set, results, heights);
     };
     const rows = sets.map((set) => {
-      // Wobble is measured on the baseline only, where no ability changes it.
-      const wobble = set === NO_TEAM ? new WobbleStats() : undefined;
-      const row = play(set, wobble);
-      if (wobble) wobbleRows.push(wobble.row(target.id));
+      // Wobble and run ends are measured on the baseline only, where no ability changes them.
+      if (set !== NO_TEAM) return play(set);
+      const wobble = new WobbleStats();
+      const ends = new EndStats();
+      const row = play(set, [wobble, ends]);
+      wobbleRows.push(wobble.row(target.id));
+      zoneRows.push(ends.zoneRow(target.id));
+      missRows.push(ends.missRow(target.id));
       return row;
     });
     const base = rows.find((r) => r.team === NO_TEAM.name)?.median ?? 1;
@@ -324,6 +338,16 @@ function main(): void {
 
   console.log(`\nWobble at the moment of the tap, no team (the first layer on the tray excluded)`);
   console.table(wobbleRows);
+
+  console.log(`
+Zone the run ended in, % of runs, no team`);
+  console.table(zoneRows);
+  console.log(
+    `
+Rule on the layer the run was lost on, % of runs, no team ` +
+      `(space layers by the rule they drew; "cloud at tap": the layer was covered when the bot tapped)`,
+  );
+  console.table(missRows);
 
   console.log(
     `\nverdict: ${
