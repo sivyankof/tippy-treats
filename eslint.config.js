@@ -16,10 +16,14 @@ const restrictImports = (files, group, message) => ({
 });
 
 export default tseslint.config(
-  { ignores: ['dist', 'coverage', 'node_modules', 'ios', 'android'] },
+  // `.claude` holds temporary git worktrees with their own tsconfig files.
+  { ignores: ['dist', 'coverage', 'node_modules', 'ios', 'android', '.claude'] },
   js.configs.recommended,
   ...tseslint.configs.recommended,
   {
+    languageOptions: {
+      parserOptions: { tsconfigRootDir: import.meta.dirname },
+    },
     rules: {
       '@typescript-eslint/no-explicit-any': 'error',
     },
