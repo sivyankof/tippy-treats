@@ -25,6 +25,7 @@
 | 9 | [docs/09-services-analytics.md](docs/09-services-analytics.md) | Сохранения, реклама, покупки, аналитика, уведомления |
 | 10 | [docs/10-roadmap.md](docs/10-roadmap.md) | Этапы разработки M0–M9 с критериями готовности |
 | 11 | [docs/11-release-store.md](docs/11-release-store.md) | Ревью Apple и Google, чек-листы, страница в сторе |
+| 12 | [docs/12-ideas-backlog.md](docs/12-ideas-backlog.md) | Копилка идей владельца: не задание, без просьбы владельца не реализуется |
 
 `CLAUDE.md` в корне содержит правила для Claude Code: порядок работы, команды, соглашения по коду.
 
