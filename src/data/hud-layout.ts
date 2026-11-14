@@ -60,6 +60,9 @@ export const HUD_LAYOUT = {
   labelLineHeight: 1.4,
   heightFont: 150,
   scoreFont: 60,
+  /** "Demo: <name>" label of a creature demo, this far above the bottom of the screen. */
+  demoLabelBottom: 150,
+  demoLabelFont: 52,
   labelFont: 36,
   pauseSize: 96,
   pauseMargin: 24,

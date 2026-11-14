@@ -45,3 +45,13 @@ export const ALTERNATING_REWARDS = {
 /** Every level above the last explicit one gives this, endlessly. */
 export const ENDLESS_REWARD: LevelReward = { coins: 200 };
 export const ENDLESS_FROM_LEVEL = 21;
+
+/** "So close" line of the results screen (docs/04-meta-retention.md, section 6). */
+export const NEAR_MISS = {
+  /** The record is at most this many layers above the run. */
+  recordLayers: 10,
+  /** The next baker level is at most this much XP away. */
+  xp: 30,
+  /** The nearest creature the shop sells for coins is at most this many coins away. */
+  coins: 100,
+} as const;

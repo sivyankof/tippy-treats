@@ -4,12 +4,13 @@ import { CREATURE_IDS, MAX_CREATURE_LEVEL, type CreatureId } from '../../data/cr
 import { readDebugParams } from '../../util/debug-params';
 
 /**
- * Temporary: the team of the next run, chosen with `?team=` / `?level=` or in the debug panel.
- * Kept in memory for the session. The Team screen of M6 replaces it.
+ * Dev override of the team of the next run, from `?team=` / `?level=` or the debug panel. It
+ * wins over the team of the save. `slots: null` keeps the save team, `level: null` keeps the
+ * owned levels. Kept in memory for the page load.
  */
 export interface DebugTeam {
-  slots: Array<CreatureId | null>;
-  level: number;
+  slots: Array<CreatureId | null> | null;
+  level: number | null;
 }
 
 /** The creature that follows `current` when a slot is tapped: none, then each creature, then none. */
@@ -29,9 +30,12 @@ export function fillSlots(ids: readonly (CreatureId | null)[]): Array<CreatureId
   return Array.from({ length: BALANCE.team.slots }, (_, i) => ids[i] ?? null);
 }
 
-/** The sim team of a debug team. */
-export function toTeamSlots(team: Readonly<DebugTeam>): Array<TeamSlot | null> {
-  return team.slots.map((id) => (id ? { id, level: team.level } : null));
+/** The sim team of a debug team whose slots are known. */
+export function toTeamSlots(
+  slots: readonly (CreatureId | null)[],
+  level: number,
+): Array<TeamSlot | null> {
+  return slots.map((id) => (id ? { id, level } : null));
 }
 
 let current: DebugTeam | null = null;
@@ -40,27 +44,50 @@ function teamState(): DebugTeam {
   if (!current) {
     const params = readDebugParams();
     current = {
-      slots: fillSlots(params.team ?? []),
-      level: params.level ?? BALANCE.team.debugLevel,
+      slots: params.team ? fillSlots(params.team) : null,
+      level: params.level ?? null,
     };
   }
   return current;
 }
 
-/** The team of the session; the URL parameters give its first value. */
+/** The override of the page; both fields `null` when nothing is overridden. */
 export function getDebugTeam(): Readonly<DebugTeam> {
   return teamState();
 }
 
-export function cycleDebugSlot(index: number): void {
+/** True when the URL or the debug panel chose the team or the level. */
+export function hasDebugTeam(): boolean {
   const team = teamState();
-  if (index < 0 || index >= team.slots.length) return;
-  team.slots[index] = nextSlotValue(team.slots[index] ?? null);
+  return team.slots !== null || team.level !== null;
+}
+
+/**
+ * The team of a normal run with the override applied: a chosen team without a level plays at
+ * `BALANCE.team.debugLevel`; a level alone lifts the save team to it. `saveTeam` is null-safe:
+ * the save slots, `saveRun` the save team as the sim plays it.
+ */
+export function resolveRunTeam(
+  saveTeam: readonly (CreatureId | null)[],
+  saveRun: Array<TeamSlot | null>,
+): Array<TeamSlot | null> {
+  const { slots, level } = teamState();
+  if (slots === null && level === null) return saveRun;
+  return toTeamSlots(slots ?? fillSlots(saveTeam), level ?? BALANCE.team.debugLevel);
+}
+
+/** `base` is the team shown before the first change (the save team). */
+export function cycleDebugSlot(index: number, base: readonly (CreatureId | null)[]): void {
+  const team = teamState();
+  const slots = team.slots ?? fillSlots(base);
+  if (index < 0 || index >= slots.length) return;
+  slots[index] = nextSlotValue(slots[index] ?? null);
+  team.slots = slots;
 }
 
 export function cycleDebugLevel(): void {
   const team = teamState();
-  team.level = nextLevel(team.level);
+  team.level = nextLevel(team.level ?? BALANCE.team.debugLevel);
 }
 
 /** Forgets the chosen team so the next read starts from the URL again (tests). */

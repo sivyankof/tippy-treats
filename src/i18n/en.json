@@ -19,7 +19,9 @@
     "on": "On",
     "off": "Off",
     "record": "Record",
-    "recordPop": "Record!"
+    "recordPop": "Record!",
+    "home": "Home",
+    "demo": "Demo: {name}"
   },
   "continue": {
     "title": "One more try?",
@@ -38,61 +40,178 @@
     "berry": "A berry! Spend it to continue a run after a miss"
   },
   "zone": {
-    "kitchen": { "name": "Kitchen" },
-    "showcase": { "name": "Shop Window" },
-    "roof": { "name": "Rooftop" },
-    "clouds": { "name": "Clouds" },
-    "stars": { "name": "Stars" },
-    "space": { "name": "Space" }
+    "kitchen": {
+      "name": "Kitchen"
+    },
+    "showcase": {
+      "name": "Shop Window"
+    },
+    "roof": {
+      "name": "Rooftop"
+    },
+    "clouds": {
+      "name": "Clouds"
+    },
+    "stars": {
+      "name": "Stars"
+    },
+    "space": {
+      "name": "Space"
+    }
   },
   "creature": {
     "honey": {
       "name": "Honey",
-      "desc": "Sticky: for the next {value} layers a drop this close counts as perfect."
+      "desc": "Sticky: for the next {value} layers a drop this close counts as perfect.",
+      "trait": "A sleepy sweetheart"
     },
     "puff": {
       "name": "Puff",
-      "desc": "Puffs up and widens this layer by {value}."
+      "desc": "Puffs up and widens this layer by {value}.",
+      "trait": "Always delighted"
     },
     "jelly": {
       "name": "Jelly",
-      "desc": "Shock absorber: calms the wobble by {value}, and for the next {layers} layers a normal drop springs back to the centre: the offset shrinks by {percent}%."
+      "desc": "Shock absorber: calms the wobble by {value}, and for the next {layers} layers a normal drop springs back to the centre: the offset shrinks by {percent}%.",
+      "trait": "Never ruffled"
     },
     "caramel": {
       "name": "Caramel",
-      "desc": "Sweet vein: coins are doubled for the next {value} layers."
+      "desc": "Sweet vein: coins are doubled for the next {value} layers.",
+      "trait": "Sly one"
     },
     "frosty": {
       "name": "Frosty",
-      "desc": "Freeze: layers fly {value}% slower for the next 3 layers."
+      "desc": "Freeze: layers fly {value}% slower for the next 3 layers.",
+      "trait": "Cool and calm"
     },
     "brownie": {
       "name": "Brownie",
-      "desc": "Sturdy: a shield saves you from the next miss. It lasts {value} layers."
+      "desc": "Sturdy: a shield saves you from the next miss. It lasts {value} layers.",
+      "trait": "A stern defender"
     },
     "sprinkle": {
       "name": "Sprinkle",
-      "desc": "Fireworks: score is multiplied by {value} for the next 5 layers."
+      "desc": "Fireworks: score is multiplied by {value} for the next 5 layers.",
+      "trait": "Can't sit still"
     },
     "crumb": {
       "name": "Crumb",
-      "desc": "Not a crumb wasted: for the next 6 layers every {value} px of a bitten-off edge becomes a coin."
+      "desc": "Not a crumb wasted: for the next 6 layers every {value} px of a bitten-off edge becomes a coin.",
+      "trait": "A greedy little hamster"
     },
     "ghost": {
       "name": "Meringue",
-      "desc": "See-through: guides show the perfect spot for the next {value} layers."
+      "desc": "See-through: guides show the perfect spot for the next {value} layers.",
+      "trait": "A shy ghost"
     },
     "twins": {
       "name": "Twins",
-      "desc": "Double portion: counts as 2 layers of height and gives {value} points."
+      "desc": "Double portion: counts as 2 layers of height and gives {value} points.",
+      "trait": "Always arguing"
     },
     "lemon": {
       "name": "Zesty",
-      "desc": "Risk: for the next 4 layers the speed is +20%, score is multiplied by {value} and every perfect drop gives +1 coin."
+      "desc": "Risk: for the next 4 layers the speed is +20%, score is multiplied by {value} and every perfect drop gives +1 coin.",
+      "trait": "Bold and sour"
     },
     "rainbow": {
       "name": "Rainbow",
-      "desc": "Miracle: the next {value} drops are perfect automatically, unless you miss completely."
+      "desc": "Miracle: the next {value} drops are perfect automatically, unless you miss completely.",
+      "trait": "Majestic"
     }
+  },
+  "meta": {
+    "levelShort": "Lv {n}",
+    "soon": "Soon"
+  },
+  "rarity": {
+    "common": "Common",
+    "rare": "Rare",
+    "epic": "Epic",
+    "legendary": "Legendary"
+  },
+  "unlock": {
+    "bakerLevel": "Baker lv {n}",
+    "record": "Record {n}",
+    "streak": "Streak day {n}",
+    "starterPack": "Starter pack",
+    "tutorial": "Tutorial"
+  },
+  "home": {
+    "play": "Play",
+    "record": "Record: {n}",
+    "noRecord": "Build your first tower!",
+    "teamHint": "Add a creature to your team!",
+    "nav": {
+      "shop": "Shop",
+      "collection": "Collection",
+      "play": "Play",
+      "daily": "Daily",
+      "missions": "Missions"
+    }
+  },
+  "team": {
+    "title": "Team",
+    "order": "Layers {a} → {b} → {c}",
+    "slotLocked": "Lv {n}",
+    "empty": "Empty",
+    "help": "Tap: add · Hold: card"
+  },
+  "collection": {
+    "title": "Collection",
+    "count": "{owned} / {total}"
+  },
+  "detail": {
+    "buy": "Buy for {price}",
+    "upgrade": "Upgrade for {price}",
+    "short": "{price} short",
+    "maxLevel": "Max level",
+    "try": "Try it",
+    "toTeam": "To team",
+    "inTeam": "In team",
+    "teamFull": "Team is full",
+    "nextLevel": "Lv {n}: {change}",
+    "noChange": "Lv {n}: no change",
+    "shopFrom": "In the shop from baker lv {n}",
+    "howTo": "How to get: {way}"
+  },
+  "newCreature": {
+    "title": "New creature!",
+    "ok": "Great!"
+  },
+  "results": {
+    "score": "Score",
+    "bestCombo": "Best combo",
+    "abilities": "Abilities",
+    "coins": "Coins",
+    "source": {
+      "floating": "Floating",
+      "combo": "Combo",
+      "perfect": "Perfect drops",
+      "crumb": "Crumbs",
+      "golden": "Golden layers",
+      "height": "Height bonus"
+    },
+    "double": "×2 for an ad",
+    "doubled": "Doubled!",
+    "xp": "+{n} XP",
+    "home": "Home",
+    "next": "Next"
+  },
+  "nearMiss": {
+    "record": "one=Only {n} layer to your record!|other=Only {n} layers to your record!",
+    "xp": "one={n} XP to level {level}|other={n} XP to level {level}",
+    "coins": "one=Just {n} coin to buy {name}|other=Just {n} coins to buy {name}",
+    "best": "Your record: {n}"
+  },
+  "levelUp": {
+    "title": "Level {n}!",
+    "owned": "already have",
+    "instead": "instead:",
+    "slot": "Third team slot",
+    "shop": "{name} in the shop",
+    "daily": "Daily tower opens",
+    "ok": "Great!"
   }
 }

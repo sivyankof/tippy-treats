@@ -81,6 +81,8 @@ export interface CreatureDef {
   nameKey: string;
   /** i18n key `creature.<id>.desc`. */
   descKey: string;
+  /** i18n key `creature.<id>.trait`: the character in a few words. */
+  traitKey: string;
   rarity: Rarity;
   ability: AbilityDef;
   /** Every way to get the creature; any one is enough. */
@@ -89,7 +91,12 @@ export interface CreatureDef {
 }
 
 const keys = <T extends CreatureId>(id: T) =>
-  ({ id, nameKey: `creature.${id}.name`, descKey: `creature.${id}.desc` }) as const;
+  ({
+    id,
+    nameKey: `creature.${id}.name`,
+    descKey: `creature.${id}.desc`,
+    traitKey: `creature.${id}.trait`,
+  }) as const;
 
 export const CREATURES: Record<CreatureId, CreatureDef> = {
   honey: {

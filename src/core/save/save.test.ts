@@ -186,6 +186,11 @@ describe('loadSave', () => {
     expect(unowned.save.team).toEqual(['honey', null, null]);
   });
 
+  it('keeps a team the player emptied empty', () => {
+    const result = load(JSON.stringify({ version: 1, team: [null, null, null] }));
+    expect(result.save.team).toEqual([null, null, null]);
+  });
+
   it('treats a future version as unusable and keeps its text', () => {
     const text = JSON.stringify({ version: 2, coins: 10 });
     const result = load(text);
@@ -246,14 +251,12 @@ describe('loadSave', () => {
     });
   });
 
-  it('always owns the starter creature and never leaves the team empty', () => {
+  it('always owns the starter creature', () => {
     const noHoney = load(
       JSON.stringify({ ...fresh(), creatures: { puff: { level: 2 } }, team: ['puff', null, null] }),
     );
     expect(noHoney.save.creatures).toEqual({ puff: { level: 2 }, honey: { level: 1 } });
     expect(noHoney.save.team).toEqual(['puff', null, null]);
-    const emptyTeam = load(JSON.stringify({ ...fresh(), team: [null, null, null] }));
-    expect(emptyTeam.save.team).toEqual(['honey', null, null]);
   });
 
   it('clamps baker XP below the next level and the level to the maximum', () => {

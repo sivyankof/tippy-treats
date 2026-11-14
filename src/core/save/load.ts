@@ -75,12 +75,12 @@ function normalizeCreatures(value: unknown): Save['creatures'] {
   return result;
 }
 
-/** Three slots of owned creatures; a team with nobody in it gets the first starter creature in slot 0. */
+/**
+ * Three slots of owned creatures. An empty team is the player's choice (a run may start without
+ * creatures) and stays empty; a team that is not a list at all becomes the default one.
+ */
 function normalizeTeam(value: unknown, owned: Save['creatures'], fallback: TeamSlots): TeamSlots {
-  const slots = pickTeam(value, owned, fallback);
-  const first = SAVE_DEFAULTS.startCreatures[0];
-  if (slots.every((slot) => slot === null) && first !== undefined) slots[0] = first;
-  return slots;
+  return pickTeam(value, owned, fallback);
 }
 
 function pickTeam(value: unknown, owned: Save['creatures'], fallback: TeamSlots): TeamSlots {

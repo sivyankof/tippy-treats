@@ -602,3 +602,50 @@ describe('GameState.load timeout', () => {
     expect(storage.writes).toContain('save');
   });
 });
+
+describe('team and creatures', () => {
+  it('saves the team and drops creatures the player does not own', async () => {
+    const { state } = setup();
+    await state.load();
+    state.setTeam(['jelly', 'honey', 'honey']);
+    expect(state.data.team).toEqual([null, 'honey', null]);
+    expect(state.runTeam()).toEqual([null, { id: 'honey', level: 1 }, null]);
+  });
+
+  it('buys a creature for coins once and upgrades it', async () => {
+    const { state } = setup();
+    await state.load();
+    expect(state.buyCreature('jelly', 'coins')).toEqual({ ok: false, reason: 'not_enough' });
+    state.addCoins(700);
+    expect(state.buyCreature('jelly', 'coins')).toEqual({ ok: true, value: null });
+    expect(state.coins).toBe(400);
+    expect(state.buyCreature('jelly', 'coins')).toEqual({ ok: false, reason: 'owned' });
+    expect(state.upgradeCreature('jelly')).toEqual({ ok: true, value: 2 });
+    expect(state.coins).toBe(250);
+    expect(state.data.creatures.jelly).toEqual({ level: 2 });
+  });
+
+  it('marks the first run and the record before the run', async () => {
+    const { state } = setup();
+    await state.load();
+    const first = state.recordRun(run({ height: 12 }));
+    expect(first.firstRun).toBe(true);
+    expect(first.previousRecord).toBeNull();
+    // The first results stay first until they lead on to Home.
+    expect(state.recordRun(run({ height: 5 })).firstRun).toBe(true);
+    state.markHint('firstResults');
+    const second = state.recordRun(run({ height: 5 }));
+    expect(second.firstRun).toBe(false);
+    expect(second.previousRecord).toBe(12);
+  });
+
+  it('counts watched ads and adds reward coins', async () => {
+    const { state } = setup();
+    await state.load();
+    state.countAdWatched();
+    state.addCoins(-5);
+    state.addCoins(12.7);
+    expect(state.data.stats.adsWatched).toBe(1);
+    expect(state.coins).toBe(12);
+  });
+});

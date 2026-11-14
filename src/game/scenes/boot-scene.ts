@@ -9,9 +9,15 @@ import { createFxTextures } from '../fx/fx-textures';
 import { FACE_TEXTURES } from '../objects/face-textures';
 import { loadSvgTextures } from '../objects/svg-textures';
 import { CREATURE_ICON_KEYS } from '../ui/creature-icons';
-import { SCENES } from '../scene-keys';
+import { SCENES, startRunFrom } from '../scene-keys';
+import { createTreasureTextures } from '../fx/treasure-textures';
+import { opensWithRun } from '../run-setup';
+import { gameState } from '../../state';
 
-/** Prepares shared textures, then starts the run and its HUD. */
+/**
+ * Prepares shared textures, then opens the first screen: the tutorial run on the very first
+ * launch (and any run asked for by dev parameters), Home otherwise.
+ */
 export class BootScene extends Phaser.Scene {
   constructor() {
     super(SCENES.boot);
@@ -31,7 +37,11 @@ export class BootScene extends Phaser.Scene {
       this.scene.start(SCENES.lineup);
       return;
     }
-    this.scene.launch(SCENES.hud);
-    this.scene.start(SCENES.game);
+    createTreasureTextures(this);
+    if (opensWithRun() || !gameState.hasHint('tutorial')) {
+      startRunFrom(this);
+      return;
+    }
+    this.scene.start(SCENES.home);
   }
 }

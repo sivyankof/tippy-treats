@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import type { RunResult } from '../core/run-result';
 import { RunRecorder } from './run-recorder';
+import { EMPTY_SUMMARY } from '../state/game-state';
 
 function run(over: Partial<RunResult> = {}): RunResult {
   return {
@@ -21,7 +22,7 @@ function run(over: Partial<RunResult> = {}): RunResult {
 }
 
 function setup(result: RunResult | null) {
-  const summary = { isRecord: false, xpGained: 4, levelUps: [] };
+  const summary = { ...EMPTY_SUMMARY, xpGained: 4 };
   const sink = { recordRun: vi.fn(() => summary) };
   return { sink, summary, sim: { quitResult: () => result } };
 }

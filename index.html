@@ -74,13 +74,21 @@
           }
           // A module that fails to load only fires a bare "error" on its <script> tag; a dynamic
           // import of the same entry rejects with the real reason (which file, what went wrong).
+          // It imports the exact address of the tag: after a hot update the dev server adds
+          // `?t=...` there, and a bare '/src/main.ts' would be a second module starting a second game.
           window.__showDevError = show;
-          var probe = document.createElement('script');
-          probe.type = 'module';
-          probe.textContent =
-            "import('/src/main.ts').catch(function (e) { window.__showDevError('Import failed: ' + " +
-            "(e && (e.stack || e.message) ? (e.message + '\\n' + (e.stack || '')) : String(e))); });";
-          document.head.appendChild(probe);
+          document.addEventListener('DOMContentLoaded', function () {
+            var entry = document.querySelector('script[type="module"][src*="/src/main.ts"]');
+            if (!entry) return;
+            var probe = document.createElement('script');
+            probe.type = 'module';
+            probe.textContent =
+              'import(' +
+              JSON.stringify(entry.src) +
+              ").catch(function (e) { window.__showDevError('Import failed: ' + " +
+              "(e && (e.stack || e.message) ? (e.message + '\\n' + (e.stack || '')) : String(e))); });";
+            document.head.appendChild(probe);
+          });
           setTimeout(function () {
             report(8);
           }, 8000);

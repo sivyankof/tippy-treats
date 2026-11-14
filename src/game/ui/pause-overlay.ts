@@ -15,10 +15,12 @@ import { leaveScreen, openPopup } from './transition';
 const OVERLAY_DEPTH = 500;
 const TITLE_FONT = 120;
 const COUNTDOWN_FONT = 320;
-const TITLE_OFFSET = -300;
-const CONTINUE_OFFSET = -20;
-const RESTART_OFFSET = CONTINUE_OFFSET + MENU_BUTTON.height + 40;
-const FIRST_TOGGLE_OFFSET = RESTART_OFFSET + MENU_BUTTON.height + TOGGLE_BUTTON.gap;
+const TITLE_OFFSET = -440;
+const CONTINUE_OFFSET = -160;
+const MENU_STEP = MENU_BUTTON.height + 40;
+const RESTART_OFFSET = CONTINUE_OFFSET + MENU_STEP;
+const HOME_OFFSET = RESTART_OFFSET + MENU_STEP;
+const FIRST_TOGGLE_OFFSET = HOME_OFFSET + MENU_BUTTON.height + TOGGLE_BUTTON.gap;
 const TOGGLE_STEP = TOGGLE_BUTTON.height + TOGGLE_BUTTON.gap / 2;
 
 export interface PauseHandlers {
@@ -26,11 +28,13 @@ export interface PauseHandlers {
   onResume: () => void;
   /** Called once the window has left and the screen is dark. */
   onRestart: () => void;
+  /** Leave the run for the screen it came from; called once the screen is dark. */
+  onHome: () => void;
 }
 
 /**
- * Pause window: Continue (with a countdown), Restart and the sound, vibration and
- * "fewer effects" switches. Home arrives with its scene. Everything but the dim veil
+ * Pause window: Continue (with a countdown), Restart, Home and the sound, vibration and
+ * "fewer effects" switches. Everything but the dim veil
  * sits in `panel`, centred on the screen, so the window pops open around its centre.
  */
 export class PauseOverlay {
@@ -66,7 +70,10 @@ export class PauseOverlay {
       RESTART_OFFSET,
       t('run.restart'),
       PALETTE.accentSecondary,
-      () => this.restart(),
+      () => this.leave(this.handlers.onRestart),
+    );
+    const homeButton = createMenuButton(scene, 0, HOME_OFFSET, t('run.home'), PALETTE.success, () =>
+      this.leave(this.handlers.onHome),
     );
     this.toggles = [
       new ToggleButton(scene, 'run.sounds', () => services.audio.enabled, setSoundOn),
@@ -74,7 +81,12 @@ export class PauseOverlay {
       new ToggleButton(scene, 'run.reducedFx', () => effectsMode.reduced, setReducedFxOn),
     ];
     this.toggles.forEach((toggle, i) => toggle.button.setY(FIRST_TOGGLE_OFFSET + i * TOGGLE_STEP));
-    this.buttons = [continueButton, restartButton, ...this.toggles.map((toggle) => toggle.button)];
+    this.buttons = [
+      continueButton,
+      restartButton,
+      homeButton,
+      ...this.toggles.map((toggle) => toggle.button),
+    ];
 
     this.panel = scene.add.container(0, 0, [this.title, this.countdown, ...this.buttons]);
     this.root = scene.add
@@ -113,10 +125,10 @@ export class PauseOverlay {
     this.countdown.setVisible(!menu);
   }
 
-  /** The window slides away and the screen darkens before the new run starts. */
-  private restart(): void {
+  /** The window slides away and the screen darkens before the new run (or the next screen) starts. */
+  private leave(then: () => void): void {
     for (const button of this.buttons) button.setEnabled(false);
-    leaveScreen(this.scene, [this.panel], () => this.handlers.onRestart());
+    leaveScreen(this.scene, [this.panel], then);
   }
 
   private beginCountdown(): void {

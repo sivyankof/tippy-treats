@@ -7,6 +7,11 @@ import { GameScene } from './scenes/game-scene';
 import { HudScene } from './scenes/hud-scene';
 import { LineupScene } from './debug/lineup-scene';
 import { ResultsScene } from './scenes/results-scene';
+import { HomeScene } from './scenes/home-scene';
+import { TeamScene } from './scenes/team-scene';
+import { CollectionScene } from './scenes/collection-scene';
+import { CreatureDetailScene } from './scenes/creature-detail-scene';
+import { NewCreatureScene } from './scenes/new-creature-scene';
 
 export function logicalSizeFor(parent: HTMLElement): LogicalSize {
   return computeLogicalSize(parent.clientWidth, parent.clientHeight, LOGICAL_SIZE);
@@ -27,8 +32,20 @@ export function createGameConfig(parent: HTMLElement): Phaser.Types.Core.GameCon
     // Sound effects go through src/services/audio, which creates its only AudioContext
     // inside a user gesture; Phaser's own sound manager stays off.
     audio: { noAudio: true },
-    // Order is draw order: the HUD sits above the run, results above both.
-    scene: [BootScene, GameScene, HudScene, ResultsScene, LineupScene],
+    // Order is draw order: the HUD sits above the run, results above both. Menu screens
+    // replace the run, the new creature scene shows over everything.
+    scene: [
+      BootScene,
+      HomeScene,
+      TeamScene,
+      CollectionScene,
+      CreatureDetailScene,
+      GameScene,
+      HudScene,
+      ResultsScene,
+      NewCreatureScene,
+      LineupScene,
+    ],
   };
 }
 

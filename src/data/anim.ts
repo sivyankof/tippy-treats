@@ -457,7 +457,7 @@ export const ANIM = {
   results: {
     /** Pause between the end of the collapse and the results screen. */
     delayMs: 300,
-    overlayAlpha: 0.62,
+    overlayAlpha: 0.78,
     fadeMs: 220,
   },
 } as const;

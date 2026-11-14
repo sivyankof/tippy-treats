@@ -1,7 +1,8 @@
 import * as Phaser from 'phaser';
 import { HUD_LAYOUT } from '../../data/hud-layout';
 import { PALETTE } from '../../data/palette';
-import { formatNumber } from '../../i18n';
+import { formatNumber, t } from '../../i18n';
+import { CREATURES } from '../../data/creatures';
 import { readDebugParams } from '../../util/debug-params';
 import { ContinueWindow } from '../ui/continue-window';
 import { DebugPanel } from '../debug/debug-panel';
@@ -35,6 +36,8 @@ export class HudScene extends Phaser.Scene {
   private nextBadge!: NextCreatureBadge;
   private effectBadges!: EffectBadges;
   private zoneBanner!: ZoneBanner;
+  /** "Demo: <name>" during a creature demo. */
+  private demoLabel!: Phaser.GameObjects.Text;
   private zoneWatch = new ZoneChangeWatch();
   private treasure!: TreasureHud;
   private numbersIdle!: HudNumbersIdle;
@@ -72,6 +75,7 @@ export class HudScene extends Phaser.Scene {
     this.nextBadge = new NextCreatureBadge(this);
     this.effectBadges = new EffectBadges(this);
     this.zoneBanner = new ZoneBanner(this);
+    this.demoLabel = createOutlinedText(this, 0, 0, '', HUD_LAYOUT.demoLabelFont, PALETTE.gold);
     this.zoneWatch = new ZoneChangeWatch();
     this.treasure = new TreasureHud(this);
     this.tutorialHints = new TutorialHints(this);
@@ -80,11 +84,12 @@ export class HudScene extends Phaser.Scene {
     this.overlay = new PauseOverlay(this, {
       onResume: () => this.scene.resume(SCENES.game),
       onRestart: () => {
-        launchRun(this);
+        launchRun(this, this.gameScene()?.request);
       },
+      onHome: () => this.gameScene()?.leaveRun(true),
     });
     this.continueWindow = new ContinueWindow(this);
-    this.debugPanel = new DebugPanel(this, () => launchRun(this));
+    this.debugPanel = new DebugPanel(this, () => launchRun(this, this.gameScene()?.request));
     this.debugPanel.setVisible(import.meta.env.DEV && readDebugParams().debug);
 
     const unregisterButton = addUiRegion(() =>
@@ -151,6 +156,7 @@ export class HudScene extends Phaser.Scene {
     );
     this.continueWindow.update(this.gameScene()?.continueFlow ?? null, info?.height ?? 0);
     this.pauseButton.setVisible(this.pauseEnabled());
+    this.showDemoLabel();
     this.debugPanel.update(info, this.game.loop.actualFps);
   }
 
@@ -200,8 +206,19 @@ export class HudScene extends Phaser.Scene {
     });
   }
 
+  private showDemoLabel(): void {
+    const request = this.gameScene()?.request;
+    const demo = request?.kind === 'demo';
+    this.demoLabel.setVisible(demo);
+    if (demo) {
+      const text = t('run.demo', { name: t(CREATURES[request.creature].nameKey) });
+      if (this.demoLabel.text !== text) this.demoLabel.setText(text);
+    }
+  }
+
   private layout(): void {
     const { width, height } = this.scale.gameSize;
+    this.demoLabel.setPosition(width / 2, height - HUD_LAYOUT.demoLabelBottom);
     this.cameras.main.setSize(width, height);
     this.overlay.layout(width, height);
     this.continueWindow.layout(width, height);

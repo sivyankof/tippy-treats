@@ -1,5 +1,14 @@
 import { afterEach, describe, expect, it } from 'vitest';
-import { detectLang, DICTIONARIES, formatNumber, keysOf, setLang, t, tn } from './index';
+import {
+  detectLang,
+  DICTIONARIES,
+  formatDecimal,
+  formatNumber,
+  keysOf,
+  setLang,
+  t,
+  tn,
+} from './index';
 
 describe('i18n', () => {
   afterEach(() => setLang('en'));
@@ -42,6 +51,13 @@ describe('i18n', () => {
     setLang('ru');
     expect(formatNumber(3250)).toBe('3 250');
     expect(formatNumber(1250.4)).toBe('1 250');
+  });
+
+  it('writes decimals with the comma of the language', () => {
+    expect(formatDecimal(2.5)).toBe('2.5');
+    expect(formatDecimal(1250)).toBe('1,250');
+    setLang('ru');
+    expect(formatDecimal(2.25)).toBe('2,25');
   });
 
   it('picks the plural form of the language', () => {

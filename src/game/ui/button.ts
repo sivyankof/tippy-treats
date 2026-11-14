@@ -5,6 +5,7 @@ import { PALETTE } from '../../data/palette';
 import { services } from '../../services';
 import { createGlossBand, sweepGloss } from '../fx/gloss-sweep';
 import { bakeTexture } from './bake-texture';
+import { fitText } from './menu/fit-text';
 import { createOutlinedText } from './outlined-text';
 
 export interface ButtonOptions {
@@ -42,7 +43,7 @@ export function createLabelButton(
   scene: Phaser.Scene,
   x: number,
   y: number,
-  label: Phaser.GameObjects.Text,
+  label: Phaser.GameObjects.GameObject,
   fill: number,
   layout: LabelButtonLayout,
   keyPrefix: string,
@@ -64,6 +65,42 @@ export function createLabelButton(
   });
 }
 
+export interface TextButtonOptions {
+  text: string;
+  font: number;
+  /** The label shrinks (see `fitText`) to fit this width. */
+  maxLabelWidth: number;
+  fill: number;
+  layout: LabelButtonLayout;
+  keyPrefix: string;
+  onClick: () => void;
+  /** Centre of the button; (0, 0) when left out. */
+  x?: number;
+  y?: number;
+}
+
+/** A label button whose outlined text shrinks to fit, so long Russian labels stay inside. */
+export function createTextButton(
+  scene: Phaser.Scene,
+  options: TextButtonOptions,
+): { button: Button; label: Phaser.GameObjects.Text } {
+  const label = fitText(
+    createOutlinedText(scene, 0, 0, options.text, options.font),
+    options.maxLabelWidth,
+  );
+  const button = createLabelButton(
+    scene,
+    options.x ?? 0,
+    options.y ?? 0,
+    label,
+    options.fill,
+    options.layout,
+    options.keyPrefix,
+    options.onClick,
+  );
+  return { button, label };
+}
+
 /** The big text button of the pause and results screens. */
 export function createMenuButton(
   scene: Phaser.Scene,
@@ -77,6 +114,69 @@ export function createMenuButton(
   return createLabelButton(scene, x, y, label, fill, MENU_BUTTON, 'ui_menu_button', onClick);
 }
 
+export interface PressFeedbackOptions {
+  /** Resting scale of the target (default 1). */
+  baseScale?: () => number;
+  /** A press that moves farther than this is cancelled (default: no limit). */
+  tolerancePx?: number;
+  onTap: () => void;
+}
+
+export interface PressFeedback {
+  /** Drops a press in progress and lets the target settle back. */
+  cancel(): void;
+}
+
+/**
+ * Press feedback shared by buttons and tappable cards: a press shrinks the target, a release on
+ * it pops it past its size, plays the click and haptics and calls `onTap`. The target must be
+ * interactive. Only the press tween is replaced: a running screen transition keeps moving it.
+ */
+export function attachPressFeedback(
+  target: Phaser.GameObjects.GameObject & Phaser.GameObjects.Components.Transform,
+  options: PressFeedbackOptions,
+): PressFeedback {
+  const { pressScale, pressMs, releaseScale, releaseMs, releaseEase } = ANIM.ui;
+  const base = (): number => options.baseScale?.() ?? 1;
+  let start: { x: number; y: number } | null = null;
+  let tween: Phaser.Tweens.Tween | null = null;
+  const tweenScale = (scale: number, duration: number, ease?: string): void => {
+    tween?.stop();
+    tween = target.scene.tweens.add({ targets: target, scale, duration, ease });
+  };
+  const cancel = (): void => {
+    if (!start) return;
+    start = null;
+    tweenScale(base(), pressMs);
+  };
+
+  target.on(Phaser.Input.Events.POINTER_DOWN, (pointer: Phaser.Input.Pointer) => {
+    start = { x: pointer.x, y: pointer.y };
+    tweenScale(base() * pressScale, pressMs);
+  });
+  target.on(Phaser.Input.Events.POINTER_OUT, cancel);
+  target.on(Phaser.Input.Events.POINTER_MOVE, (pointer: Phaser.Input.Pointer) => {
+    const limit = options.tolerancePx;
+    if (
+      start &&
+      limit !== undefined &&
+      Math.hypot(pointer.x - start.x, pointer.y - start.y) > limit
+    )
+      cancel();
+  });
+  target.on(Phaser.Input.Events.POINTER_UP, () => {
+    if (!start) return;
+    start = null;
+    target.setScale(base() * releaseScale);
+    tweenScale(base(), releaseMs, releaseEase);
+    options.onTap();
+    // After the action, so a toggle that was just switched on confirms itself.
+    services.audio.click();
+    services.haptics.play('selection');
+  });
+  return { cancel };
+}
+
 /**
  * Rounded button with a drop shadow and press feedback. A click counts only when
  * the press started on the button and the pointer is still over it on release.
@@ -85,10 +185,9 @@ export function createMenuButton(
  * screen transitions move it: none of the three stops another.
  */
 export class Button extends Phaser.GameObjects.Container {
-  private pressed = false;
+  private readonly press: PressFeedback;
   private readonly hitArea: Phaser.Geom.Rectangle;
   private readonly breatheRoot: Phaser.GameObjects.Container;
-  private pressTween: Phaser.Tweens.Tween | null = null;
   private breathing = false;
 
   constructor(
@@ -122,29 +221,13 @@ export class Button extends Phaser.GameObjects.Container {
     this.setSize(width, height);
     this.setInteractive(this.hitArea, Phaser.Geom.Rectangle.Contains);
 
-    this.on(Phaser.Input.Events.POINTER_DOWN, () => {
-      this.pressed = true;
-      this.pressTo(ANIM.ui.pressScale);
-    });
-    this.on(Phaser.Input.Events.POINTER_OUT, () => {
-      this.pressed = false;
-      this.pressTo(1);
-    });
-    this.on(Phaser.Input.Events.POINTER_UP, () => {
-      if (!this.pressed) return;
-      this.pressed = false;
-      this.release();
-      options.onClick();
-      // After the action, so a toggle that was just switched on confirms itself.
-      services.audio.click();
-      services.haptics.play('selection');
-    });
+    this.press = attachPressFeedback(this, { onTap: options.onClick });
     scene.add.existing(this);
   }
 
   /** A disabled button ignores the pointer. */
   setEnabled(enabled: boolean): this {
-    this.pressed = false;
+    this.press.cancel();
     if (enabled) this.setInteractive(this.hitArea, Phaser.Geom.Rectangle.Contains);
     else this.disableInteractive();
     return this;
@@ -179,21 +262,5 @@ export class Button extends Phaser.GameObjects.Container {
     });
     this.once(Phaser.GameObjects.Events.DESTROY, () => timer.remove(false));
     return this;
-  }
-
-  private pressTo(scale: number): void {
-    this.tweenScale(scale, ANIM.ui.pressMs);
-  }
-
-  /** A click pops the button slightly past its size and lets it settle back. */
-  private release(): void {
-    this.setScale(ANIM.ui.releaseScale);
-    this.tweenScale(1, ANIM.ui.releaseMs, ANIM.ui.releaseEase);
-  }
-
-  /** Only the press tween is replaced: a running screen transition keeps moving the button. */
-  private tweenScale(scale: number, duration: number, ease?: string): void {
-    this.pressTween?.stop();
-    this.pressTween = this.scene.tweens.add({ targets: this, scale, duration, ease });
   }
 }

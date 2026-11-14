@@ -1,18 +1,15 @@
 import * as Phaser from 'phaser';
 import { TimingBot } from '../../core/bot';
-import type { ActiveEffect, Modifiers } from '../../core/abilities/types';
+import type { Modifiers } from '../../core/abilities/types';
 import { Rng } from '../../core/rng';
+import { emptyTally, tallyEvents, type RunTally } from '../../core/run-tally';
 import type { TeamSlot } from '../../core/sim-types';
-import { TowerSim, type SimEvent, type SimPhase } from '../../core/tower-sim';
-import { ANIM } from '../../data/anim';
+import { TowerSim, type SimEvent } from '../../core/tower-sim';
 import { BALANCE } from '../../data/balance';
 import { services } from '../../services';
-import { readDebugParams, savesRun, skipsTutorial } from '../../util/debug-params';
-import { frameLerp, randomSeed } from '../../util/math';
-import { RunFx, type CameraInfo, type FlyingMemo } from '../fx/run-fx';
+import { RunFx, type FlyingMemo } from '../fx/run-fx';
 import { Backdrop } from '../objects/backdrop/backdrop';
-import { getDebugTeam, toTeamSlots } from '../debug/debug-team';
-import { targetScrollY, trayScrollY } from '../camera-layout';
+import { RunCamera } from '../run-camera';
 import { ContinueFlow } from '../continue-flow';
 import { RunRecorder } from '../run-recorder';
 import { effectsMode } from '../effects-mode';
@@ -20,47 +17,38 @@ import { cuesForMoment } from '../fx/moment-cues';
 import { playCues } from '../fx/run-cues';
 import { berriesFromEvents } from '../../core/berries';
 import { gameState } from '../../state';
-import type { RunSummary } from '../../state/game-state';
+import { EMPTY_SUMMARY } from '../../state/game-state';
+import { emptyRunInfo, fillRunInfo, type RunInfo } from '../run-info';
 import { bindPageLeave } from '../../state/page-lifecycle';
-import { launchRun, SCENES, type ResultsData } from '../scene-keys';
-import { enterWorld, type WorldEntry } from '../ui/transition';
+import { launchRun, openScreen, SCENES, type ResultsData } from '../scene-keys';
+import { exitTarget } from '../run-exit';
+import { CLASSIC_RUN, demoFinished, type RunRequest } from '../run-request';
+import { setupRun } from '../run-setup';
+import { DEMO } from '../../data/demo';
+import { enterWorld, leaveScreen } from '../ui/transition';
 import { isOverUi } from '../ui/ui-regions';
-import { TUTORIAL_TEAM } from '../tutorial/tutorial-team';
 import { TutorialDirector } from '../tutorial/tutorial-director';
-
-const EMPTY_SUMMARY: RunSummary = { isRecord: false, xpGained: 0, levelUps: [] };
 
 /** World y of the tray surface; the tower grows towards negative y. */
 const TRAY_TOP_Y = 0;
-
-/** Read-only snapshot of the run for the HUD and the debug panel. */
-export interface RunInfo {
-  height: number;
-  score: number;
-  wobble: number;
-  seed: number;
-  phase: SimPhase;
-  flyingSpeed: number | null;
-  paused: boolean;
-  /** The team of the run; the same array for the whole run. */
-  team: readonly (TeamSlot | null)[];
-  /** Live list of the active effects: read it at once, do not keep it. */
-  effects: readonly ActiveEffect[];
-  /** Layers left on the brownie shield, 0 for none. */
-  shield: number;
-  /** Index of the zone of the run (the banner announces a change). */
-  zoneIndex: number;
-  coins: number;
-  berries: number;
-}
 
 export class GameScene extends Phaser.Scene {
   private sim!: TowerSim;
   private bot: TimingBot | null = null;
   private seed = 0;
   private startHeight = 0;
-  /** False for `?bot=` and `?start=` runs: nothing of them reaches the save. */
+  /** What kind of run this is: a normal one or a creature demo. */
+  request: RunRequest = CLASSIC_RUN;
+  /** False for `?bot=`, `?start=` and demo runs: nothing of them reaches the save. */
   private writesSave = true;
+  /** The run ends without the "Continue?" window (bot, demo). */
+  private noContinue = false;
+  /** Coins by source and abilities, for the results screen. */
+  private tally: RunTally = emptyTally();
+  /** The demo has placed its layers and leaves after a short pause. */
+  private demoLeaving = false;
+  /** The run is being left for another screen: only once. */
+  private exiting = false;
   /** Puts the run into the save once: when it ends or when the player leaves it. */
   private recorder = new RunRecorder(gameState, 0);
   private team: Array<TeamSlot | null> = [];
@@ -80,58 +68,40 @@ export class GameScene extends Phaser.Scene {
     level: undefined,
   };
   /** Handed out by `getRunInfo` every frame: one object, refilled each time. */
-  private readonly runInfo: RunInfo = {
-    height: 0,
-    score: 0,
-    wobble: 0,
-    seed: 0,
-    phase: 'flying',
-    flyingSpeed: null,
-    paused: false,
-    team: [],
-    effects: [],
-    shield: 0,
-    zoneIndex: 0,
-    coins: 0,
-    berries: 0,
-  };
+  private readonly runInfo: RunInfo = emptyRunInfo();
   /** Drop modifiers as the sim last reported them; refreshed whenever a step had events. */
   private mods!: Readonly<Modifiers>;
-  /** Camera scroll before the landing kick is added. */
-  private scrollBase = 0;
-  /** The world drops in from above when the run starts. */
-  private entry: WorldEntry = { offset: 0 };
-  private readonly camInfo: CameraInfo = { scrollY: 0, trayScrollY: 0, width: 0, height: 0 };
+  private camera!: RunCamera;
 
   constructor() {
     super(SCENES.game);
   }
 
-  create(): void {
+  /** `data` is the run request; Phaser hands an empty object when there is none. */
+  create(data?: Partial<RunRequest>): void {
     this.tweens.timeScale = 1;
-    const debug = readDebugParams();
-    this.seed = debug.seed ?? randomSeed();
-    this.startHeight = debug.start ?? 0;
-    this.writesSave = savesRun(debug);
+    this.request = data && 'kind' in data ? (data as RunRequest) : CLASSIC_RUN;
+    const setup = setupRun(this.request);
+    this.seed = setup.seed;
+    this.startHeight = setup.startHeight;
+    this.writesSave = setup.writesSave;
+    this.noContinue = setup.noContinue;
+    this.tally = emptyTally();
+    this.demoLeaving = false;
+    this.exiting = false;
     this.recorder = new RunRecorder(gameState, this.startHeight, this.writesSave);
-    // A run with a hand-picked team, level, bot or start is a normal run: it neither shows the
-    // hints nor uses up the tutorial.
-    const normalRun = skipsTutorial(debug);
-    const tutorialRun = !normalRun && gameState.beginRun(debug.tutorial);
-    this.tutorial = normalRun ? null : new TutorialDirector(gameState, tutorialRun);
-    // Until the Team screen (M6) the debug team is the team of every run; the tutorial run has its own.
-    this.team = tutorialRun ? [...TUTORIAL_TEAM] : toTeamSlots(getDebugTeam());
+    this.tutorial = setup.hints ? new TutorialDirector(gameState, setup.tutorialRun) : null;
+    this.team = setup.team;
     this.sim = new TowerSim({
       seed: this.seed,
       mode: 'classic',
       team: this.team,
-      tutorial: tutorialRun,
+      tutorial: setup.tutorialRun,
       startHeight: this.startHeight,
     });
     this.mods = this.sim.currentModifiers();
-    this.bot = debug.bot ? new TimingBot(debug.bot, new Rng(this.seed).fork('bot')) : null;
+    this.bot = setup.bot ? new TimingBot(setup.bot, new Rng(this.seed).fork('bot')) : null;
     this.lastFlying = null;
-    this.scrollBase = 0;
     this.continueFlow?.dispose();
     this.continueFlow = new ContinueFlow({
       ads: services.ads,
@@ -142,6 +112,7 @@ export class GameScene extends Phaser.Scene {
     const { width, height } = this.scale.gameSize;
     this.background = new Backdrop(this, TRAY_TOP_Y, width, height, this.sim.state.zoneIndex);
     this.fx = new RunFx(this, TRAY_TOP_Y);
+    this.camera = new RunCamera(this, this.fx, this.background, TRAY_TOP_Y);
 
     this.input.on(Phaser.Input.Events.POINTER_DOWN, this.onPointerDown, this);
     this.input.keyboard?.on('keydown-SPACE', this.onDropKey, this);
@@ -153,7 +124,7 @@ export class GameScene extends Phaser.Scene {
         gameState.flush();
       },
       // Back from the page cache: that run is already recorded, so start a new one.
-      () => launchRun(this),
+      () => launchRun(this, this.request),
     );
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       unbindLeave();
@@ -162,11 +133,10 @@ export class GameScene extends Phaser.Scene {
       this.recorder.recordQuit(this.sim);
     });
 
-    this.entry = enterWorld(this);
+    this.camera.setEntry(enterWorld(this));
     // Sync once so the tower height is known, then jump the camera to its target.
-    this.fx.update(0, 0, this.sim.state, this.mods, this.cameraInfo());
-    this.scrollBase = this.targetScrollY();
-    this.applyCamera();
+    this.fx.update(0, 0, this.sim.state, this.mods, this.camera.cameraInfo());
+    this.camera.snap();
   }
 
   override update(time: number, delta: number): void {
@@ -195,22 +165,53 @@ export class GameScene extends Phaser.Scene {
     // Berries go to the save the moment they are earned: they can pay for this run's continue.
     if (this.writesSave) gameState.addBerries(berriesFromEvents(events));
     this.recordFinishedRun(events);
+    tallyEvents(this.tally, events);
+    this.watchDemo();
 
-    const cam = this.cameraInfo();
+    const cam = this.camera.cameraInfo();
     this.fx.handleEvents(events, this.sim.state, this.lastFlying, this.mods, cam);
     if (events.length > 0) this.mods = this.sim.currentModifiers();
     this.fx.update(delta, time, this.sim.state, this.mods, cam);
     this.background.setZone(this.sim.state.zoneIndex);
     // Slow motion slows the tweens and the camera too; the HUD scene keeps its own clock.
     this.tweens.timeScale = this.fx.timeScale;
-    this.followCamera(delta * this.fx.timeScale);
+    this.camera.follow(delta * this.fx.timeScale);
     this.placeTutorialTarget();
 
     const result = this.fx.takeResult();
-    if (result) {
-      const data: ResultsData = { result, summary: this.recorder.summary ?? EMPTY_SUMMARY };
-      this.scene.launch(SCENES.results, data);
+    if (!result) return;
+    if (this.request.kind === 'demo') {
+      this.leaveRun();
+      return;
     }
+    // A run that did not reach the save (dev bot, start height) keeps the bar where it is.
+    const { bakerLevel: level, bakerXp: xp } = gameState.data;
+    const summary = this.recorder.summary ?? { ...EMPTY_SUMMARY, before: { level, xp } };
+    const data: ResultsData = { result, summary, tally: this.tally, recorded: this.writesSave };
+    this.scene.launch(SCENES.results, data);
+  }
+
+  /**
+   * Leaves the run for the screen it came from (`exitTarget`): a normal run is recorded first, so
+   * the creatures its level-ups handed out can be presented. The screen darkens first, unless the
+   * caller has already darkened it (the pause window).
+   */
+  leaveRun(alreadyDark = false): void {
+    if (this.exiting) return;
+    this.exiting = true;
+    this.recorder.recordQuit(this.sim);
+    const target = exitTarget(this.request, this.recorder.summary);
+    const go = (): void => openScreen(this, target.key, target.data);
+    if (alreadyDark) go();
+    else leaveScreen(this.scene.get(SCENES.hud), [], go);
+  }
+
+  /** A demo that has placed its layers stops taking taps and goes back to the card. */
+  private watchDemo(): void {
+    if (this.request.kind !== 'demo' || this.demoLeaving) return;
+    if (!demoFinished(this.sim.state.layers.length)) return;
+    this.demoLeaving = true;
+    this.time.delayedCall(DEMO.endDelayMs, () => this.leaveRun());
   }
 
   /**
@@ -222,7 +223,7 @@ export class GameScene extends Phaser.Scene {
     if (!flow || this.sim.state.phase !== 'await_continue') return;
     if (!flow.isOpen) {
       if (!this.fx.canDecline) return;
-      const opened = !this.bot && flow.open('classic', this.sim.state.continuesUsed);
+      const opened = !this.noContinue && flow.open('classic', this.sim.state.continuesUsed);
       if (!opened) events.push(...this.sim.decline());
       return;
     }
@@ -249,32 +250,17 @@ export class GameScene extends Phaser.Scene {
   /** The state of the run for the HUD. The object is reused: read it at once, do not keep it. */
   getRunInfo(): Readonly<RunInfo> | null {
     if (!this.sim) return null;
-    const s = this.sim.state;
-    const info = this.runInfo;
-    info.height = s.height;
-    info.score = s.score;
-    info.wobble = s.wobble;
-    info.seed = this.seed;
-    info.phase = s.phase;
-    info.flyingSpeed = s.flying?.speed ?? null;
-    info.paused = this.sys.isPaused();
-    info.team = this.team;
-    info.effects = s.effects;
-    info.shield = s.shield;
-    info.zoneIndex = s.zoneIndex;
-    info.coins = s.coins;
-    info.berries = s.berries;
-    return info;
+    return fillRunInfo(this.runInfo, this.sim.state, this.seed, this.team, this.sys.isPaused());
   }
 
   private onPointerDown(pointer: Phaser.Input.Pointer): void {
-    if (isOverUi(pointer.x, pointer.y) || this.tutorial?.holding) return;
+    if (isOverUi(pointer.x, pointer.y) || this.tutorial?.holding || this.demoLeaving) return;
     this.sim.drop();
   }
 
   private onDropKey(event: KeyboardEvent): void {
     // Holding the key must not drop every new layer the moment it appears.
-    if (event.repeat || this.tutorial?.holding) return;
+    if (event.repeat || this.tutorial?.holding || this.demoLeaving) return;
     this.sim.drop();
   }
 
@@ -283,7 +269,7 @@ export class GameScene extends Phaser.Scene {
     const tutorial = this.tutorial;
     if (!tutorial) return;
     // Where the top of the tower settles on the screen: hints keep out of the flying row above it.
-    tutorial.towerTopY = this.fx.tower.topY() - this.targetScrollY();
+    tutorial.towerTopY = this.fx.tower.topY() - this.camera.targetScrollY();
     if (!tutorial.holding) return;
     const pose = this.fx.tower.layerPose(tutorial.introLayerIndex);
     if (!pose) return;
@@ -296,39 +282,5 @@ export class GameScene extends Phaser.Scene {
     this.cameras.main.setSize(width, height);
     this.background.resize(width, height);
     this.fx.resize(width, height);
-  }
-
-  /** The camera as the effects need it. One object is reused: it is refreshed on every call. */
-  private cameraInfo(): CameraInfo {
-    const { width, height } = this.scale.gameSize;
-    const info = this.camInfo;
-    info.scrollY = this.scrollBase;
-    info.trayScrollY = trayScrollY(TRAY_TOP_Y, height);
-    info.width = width;
-    info.height = height;
-    return info;
-  }
-
-  /** Follows the target, or the collapse scroll while the tower falls apart. */
-  private followCamera(delta: number): void {
-    const collapseScroll = this.fx.collapseScroll;
-    if (collapseScroll !== null) {
-      this.scrollBase = collapseScroll;
-    } else {
-      const k = frameLerp(ANIM.camera.followLerp, delta);
-      this.scrollBase += (this.targetScrollY() - this.scrollBase) * k;
-    }
-    this.applyCamera();
-  }
-
-  /** The kick pushes the view down, which means the camera moves up; the entry lifts the world. */
-  private applyCamera(): void {
-    const camera = this.cameras.main;
-    camera.scrollY = this.scrollBase - this.fx.cameraOffset + this.entry.offset;
-    this.background.update(camera.scrollY);
-  }
-
-  private targetScrollY(): number {
-    return targetScrollY(TRAY_TOP_Y, this.scale.gameSize.height, this.fx.tower.topY());
   }
 }

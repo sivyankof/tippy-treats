@@ -84,6 +84,18 @@ export function formatNumber(value: number): string {
   return String(Math.round(value)).replace(GROUP_SIZE_PATTERN, groupSeparator(current));
 }
 
+const decimalFormats = new Map<Lang, Intl.NumberFormat>();
+
+/** A number with up to two decimals in the style of the language: `2,5` or `2.5`. */
+export function formatDecimal(value: number): string {
+  let format = decimalFormats.get(current);
+  if (!format) {
+    format = new Intl.NumberFormat(current, { maximumFractionDigits: 2 });
+    decimalFormats.set(current, format);
+  }
+  return Number.isInteger(value) ? formatNumber(value) : format.format(value);
+}
+
 /** Every dotted key of a dictionary, sorted. */
 export function keysOf(dictionary: Dictionary, prefix = ''): string[] {
   return Object.entries(dictionary)

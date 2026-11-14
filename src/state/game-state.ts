@@ -1,9 +1,24 @@
-import { earn, grantCreature, spend, type Cost, type Wallet } from '../core/economy';
+import {
+  buyCreature,
+  earn,
+  grantCreature,
+  spend,
+  upgradeCreature,
+  type BuyError,
+  type Cost,
+  type Currency,
+  type EconomyResult,
+  type UpgradeError,
+  type Wallet,
+} from '../core/economy';
 import { addXp, levelReward, xpForRun } from '../core/progression';
 import type { RunResult } from '../core/run-result';
+import type { TeamSlot } from '../core/sim-types';
+import { runTeam, type TeamIds } from '../core/team';
 import { createDefaultSave } from '../core/save/defaults';
 import { loadSave, serializeSave, type SaveSource } from '../core/save/load';
-import type { HintId, Save } from '../core/save/schema';
+import type { HintId, Save, TeamSlots } from '../core/save/schema';
+import type { CreatureId } from '../data/creatures';
 import type { LevelReward } from '../data/progression';
 import { SAVE_RETRY_MS, SAVE_WRITE_DEBOUNCE_MS, STORAGE_KEYS } from '../data/storage';
 import type { StorageService } from '../services/storage/types';
@@ -38,9 +53,29 @@ export interface LevelUp {
 export interface RunSummary {
   /** A new best classic height; the very first run of a player is never a record. */
   isRecord: boolean;
+  /**
+   * The results of this run are the first the player gets to see: they lead to the Honey
+   * presentation and Home. Kept by the `firstResults` hint, so a tutorial run left through the
+   * pause does not use it up.
+   */
+  firstRun: boolean;
+  /** Best classic height before this run; `null` before the first run. */
+  previousRecord: number | null;
+  /** Baker level and XP before the run, so the results can fill the bar from there. */
+  before: { level: number; xp: number };
   xpGained: number;
   levelUps: LevelUp[];
 }
+
+/** The summary of a run that did not reach the save (dev runs, the creature demo). */
+export const EMPTY_SUMMARY: RunSummary = {
+  isRecord: false,
+  firstRun: false,
+  previousRecord: null,
+  before: { level: 1, xp: 0 },
+  xpGained: 0,
+  levelUps: [],
+};
 
 /** How the save was found at start-up. */
 export interface LoadInfo {
@@ -216,6 +251,8 @@ export class GameState {
       result.mode === 'classic' &&
       before.stats.runs > 0 &&
       result.height > before.records.classicHeight;
+    const firstRun = !this.hasHint('firstResults');
+    const previousRecord = before.stats.runs === 0 ? null : before.records.classicHeight;
     const xpGained = xpForRun(result.height, startHeight);
     const progress = addXp(before.bakerLevel, before.bakerXp, xpGained);
     let next: Save = {
@@ -248,10 +285,59 @@ export class GameState {
       levelUps.push({ level, reward, duplicate: applied.duplicate });
     }
     this.replace(next);
-    return { isRecord, xpGained, levelUps };
+    const beforeXp = { level: before.bakerLevel, xp: before.bakerXp };
+    return { isRecord, firstRun, previousRecord, before: beforeXp, xpGained, levelUps };
+  }
+
+  // --- Team and creatures ---
+
+  /** The team of a normal run: owned creatures at their levels, in the open slots. */
+  runTeam(): Array<TeamSlot | null> {
+    return runTeam(this.save.team, this.save.creatures, this.save.bakerLevel);
+  }
+
+  /** Saves the team; creatures the player does not own and repeats become empty slots. */
+  setTeam(team: TeamIds): void {
+    const seen = new Set<CreatureId>();
+    const slots = [0, 1, 2].map((i) => {
+      const id = team[i] ?? null;
+      if (id === null || this.save.creatures[id] === undefined || seen.has(id)) return null;
+      seen.add(id);
+      return id;
+    }) as TeamSlots;
+    this.replace({ ...this.save, team: slots });
+  }
+
+  buyCreature(id: CreatureId, currency: Currency): EconomyResult<null, BuyError> {
+    const result = buyCreature(this.save, id, currency);
+    if (!result.ok) return result;
+    this.replace({ ...this.save, ...result.value });
+    return { ok: true, value: null };
+  }
+
+  upgradeCreature(id: CreatureId): EconomyResult<number, UpgradeError> {
+    const result = upgradeCreature(this.save, id);
+    if (!result.ok) return result;
+    this.replace({ ...this.save, ...result.value });
+    return { ok: true, value: result.value.creatures[id]?.level ?? 1 };
   }
 
   // --- Wallet ---
+
+  /** Coins of a reward outside a run (the doubled coins of a rewarded ad, gifts). */
+  addCoins(coins: number): void {
+    const whole = Math.floor(coins);
+    if (!(whole > 0)) return;
+    this.replace({ ...this.save, coins: this.save.coins + whole });
+  }
+
+  /** A rewarded ad was watched to the end. */
+  countAdWatched(): void {
+    this.replace({
+      ...this.save,
+      stats: { ...this.save.stats, adsWatched: this.save.stats.adsWatched + 1 },
+    });
+  }
 
   /** Berries go in the moment they are earned, so they can pay for the continue of the same run. */
   addBerries(berries: number): void {

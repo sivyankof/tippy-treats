@@ -14,7 +14,15 @@ export interface MissionProgress {
 }
 
 /** One-time hints of the first run; `tutorial` itself means the Honey intro has played. */
-export const HINT_IDS = ['tutorial', 'tap', 'firstPerfect', 'honey', 'wobble', 'berry'] as const;
+export const HINT_IDS = [
+  'tutorial',
+  'tap',
+  'firstPerfect',
+  'honey',
+  'wobble',
+  'berry',
+  'firstResults',
+] as const;
 export type HintId = (typeof HINT_IDS)[number];
 
 export type Lang = 'en' | 'ru' | 'auto';
@@ -52,7 +60,7 @@ export interface SaveV1 {
   gift: { nextAt: number };
   shop: { freeCoinsDay: string; freeCoinsUsed: number; starterPackUntil: number };
   purchases: { removeAds: boolean; starterPack: boolean };
-  /** Ids of shown hints: 'tutorial', 'tap', 'firstPerfect', 'honey', 'wobble', 'berry'. */
+  /** Ids of shown hints (`HINT_IDS`); `firstResults` means the first results screen led to Home. */
   tutorial: { firstRunDone: boolean; hintsShown: string[] };
   settings: {
     music: boolean;

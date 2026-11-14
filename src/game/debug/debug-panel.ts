@@ -5,7 +5,7 @@ import { cssColor } from '../../util/color';
 import { effectsMode } from '../effects-mode';
 import { FONT_FAMILY, FONT_WEIGHT } from '../ui/fonts';
 import type { UiRegion } from '../ui/ui-regions';
-import type { RunInfo } from '../scenes/game-scene';
+import type { RunInfo } from '../run-info';
 import { adsDev } from '../../services';
 import { gameState } from '../../state';
 import { cycleDebugLevel, cycleDebugSlot, getDebugTeam } from './debug-team';
@@ -21,15 +21,20 @@ const ROW_GAP = 14;
 const NO_CREATURE = '-';
 const APPLY_LABEL = 'restart';
 const BERRIES_LABEL = '+50 berries';
+/** The level entry before a level is chosen: the owned levels of the save. */
+const SAVE_LEVEL = 'save';
 const DEBUG_BERRIES = 50;
+const COINS_LABEL = '+500 coins';
+const DEBUG_COINS = 500;
 
-/** Dev-only overlay with the run numbers and the temporary team picker (until M6's Team screen). */
+/** Dev-only overlay with the run numbers and the team override picker. */
 export class DebugPanel {
   private readonly text: Phaser.GameObjects.Text;
   private readonly slotEntries: Phaser.GameObjects.Text[] = [];
   private readonly levelEntry: Phaser.GameObjects.Text;
   private readonly applyEntry: Phaser.GameObjects.Text;
   private readonly berriesEntry: Phaser.GameObjects.Text;
+  private readonly coinsEntry: Phaser.GameObjects.Text;
   private readonly adsEntry: Phaser.GameObjects.Text;
   private readonly entries: Phaser.GameObjects.Text[];
   private teamKey = '';
@@ -70,12 +75,17 @@ export class DebugPanel {
         .on('pointerdown', onTap);
 
     for (let slot = 0; slot < BALANCE.team.slots; slot++) {
-      this.slotEntries.push(entry(() => this.change(() => cycleDebugSlot(slot)), PALETTE.panel));
+      this.slotEntries.push(
+        entry(() => this.change(() => cycleDebugSlot(slot, gameState.data.team)), PALETTE.panel),
+      );
     }
     this.levelEntry = entry(() => this.change(cycleDebugLevel), PALETTE.panel);
     this.applyEntry = entry(onApply, PALETTE.gold).setText(APPLY_LABEL);
     this.berriesEntry = entry(() => gameState.addBerries(DEBUG_BERRIES), PALETTE.panel).setText(
       BERRIES_LABEL,
+    );
+    this.coinsEntry = entry(() => gameState.addCoins(DEBUG_COINS), PALETTE.panel).setText(
+      COINS_LABEL,
     );
     this.adsEntry = entry(() => {
       adsDev.cycleMode();
@@ -87,6 +97,7 @@ export class DebugPanel {
       ...this.slotEntries,
       this.levelEntry,
       this.berriesEntry,
+      this.coinsEntry,
       this.adsEntry,
       this.applyEntry,
     ];
@@ -158,11 +169,13 @@ export class DebugPanel {
   /** The entries follow the team picked for the next run; only a changed team is laid out again. */
   private showTeamPicker(): void {
     const team = getDebugTeam();
-    const key = `${team.slots.join(',')}|${team.level}`;
+    const slots = team.slots ?? gameState.data.team;
+    const level = team.level === null ? SAVE_LEVEL : String(team.level);
+    const key = `${slots.join(',')}|${level}`;
     if (key === this.teamKey) return;
     this.teamKey = key;
-    this.slotEntries.forEach((entry, i) => entry.setText(team.slots[i] ?? NO_CREATURE));
-    this.levelEntry.setText(`lv ${team.level}`);
+    this.slotEntries.forEach((entry, i) => entry.setText(slots[i] ?? NO_CREATURE));
+    this.levelEntry.setText(`lv ${level}`);
     this.relayout();
   }
 
