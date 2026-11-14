@@ -2,25 +2,24 @@ import * as Phaser from 'phaser';
 import { collectionCount } from '../../core/collection';
 import { CREATURE_IDS } from '../../data/creatures';
 import { MENU } from '../../data/menu-layout';
-import { PALETTE } from '../../data/palette';
 import { formatNumber, t } from '../../i18n';
 import { gameState } from '../../state';
 import { pickInt, pickRange } from '../../util/math';
 import { openScreen, SCENES, type CreatureDetailData } from '../scene-keys';
-import { createOutlinedText } from '../ui/outlined-text';
 import { enterScreen, leaveScreen } from '../ui/transition';
 import { collectionGrid } from '../ui/menu/collection-grid';
+import { CollectionCount } from '../ui/menu/collection-count';
 import { CollectionTile } from '../ui/menu/collection-tile';
-import { MenuBackground } from '../ui/menu/menu-background';
+import { MenuScenery } from '../ui/style/menu-scenery';
 import { ScreenHeader } from '../ui/menu/screen-header';
 
 const cfg = MENU.collection;
 
 /** Every creature of the game as a card: the owned ones alive, the locked ones as silhouettes. */
 export class CollectionScene extends Phaser.Scene {
-  private background!: MenuBackground;
+  private background!: MenuScenery;
   private header!: ScreenHeader;
-  private count!: Phaser.GameObjects.Text;
+  private count!: CollectionCount;
   private tiles: CollectionTile[] = [];
   private pokeInMs = 0;
   private leaving = false;
@@ -32,16 +31,12 @@ export class CollectionScene extends Phaser.Scene {
   create(): void {
     this.leaving = false;
     const { creatures, bakerLevel } = gameState.data;
-    this.background = new MenuBackground(this);
+    this.background = new MenuScenery(this, 'list');
     this.header = new ScreenHeader(this, t('collection.title'), () => this.leave(SCENES.home));
     const { owned, total } = collectionCount(creatures);
-    this.count = createOutlinedText(
+    this.count = new CollectionCount(
       this,
-      0,
-      cfg.countY,
       t('collection.count', { owned: formatNumber(owned), total: formatNumber(total) }),
-      cfg.countFont,
-      PALETTE.gold,
     );
     this.tiles = CREATURE_IDS.map(
       (id) =>
@@ -97,7 +92,7 @@ export class CollectionScene extends Phaser.Scene {
     this.cameras.main.setSize(width, height);
     this.background.resize(width, height);
     this.header.layout(width);
-    this.count.setPosition(width / 2, cfg.countY);
+    this.count.setX(width / 2);
     const grid = collectionGrid(width, height, this.tiles.length);
     this.tiles.forEach((tile, i) => {
       const cell = grid.cells[i];

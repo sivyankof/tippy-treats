@@ -81,6 +81,11 @@ export class ResourceCounter {
     );
   }
 
+  /** How far the left end of the number lies from the icon centre, in the counter's own pixels. */
+  get numberReach(): number {
+    return cfg.iconSize / 2 + cfg.gap + this.text.width;
+  }
+
   /** `amount` is on its way: the number waits for it. */
   addPending(amount: number): void {
     this.pending += amount;

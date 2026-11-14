@@ -61,7 +61,7 @@ export function drawIcon(
   }
 }
 
-/** A round button with an icon drawn on it; the shadow and the corners follow the size. */
+/** A rounded square menu button with an icon drawn on it; the bevel and the corners follow the size. */
 export function createIconButton(
   scene: Phaser.Scene,
   x: number,
@@ -83,5 +83,6 @@ export function createIconButton(
     textureKey: `ui_icon_${icon}_${size}_${fill.toString(16)}`,
     decorate: (g, w, h) => drawIcon(g, icon, w / 2, h / 2, size * 0.5),
     onClick,
+    look: 'volume',
   });
 }

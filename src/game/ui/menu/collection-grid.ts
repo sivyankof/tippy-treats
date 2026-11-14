@@ -1,6 +1,7 @@
 import { MENU } from '../../../data/menu-layout';
 
-const { card, collection } = MENU;
+const { collection } = MENU;
+const card = collection.card;
 
 export interface GridCell {
   x: number;

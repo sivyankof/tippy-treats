@@ -3,6 +3,7 @@ import type { TeamIds } from '../../../core/team';
 import { CREATURE_IDS, type CreatureId } from '../../../data/creatures';
 import { MENU } from '../../../data/menu-layout';
 import { PALETTE } from '../../../data/palette';
+import { VolumePlate } from '../style/volume';
 import { CreatureCard } from './creature-card';
 import { cellAt, layoutGrid, type GridCell } from './team-layout';
 
@@ -14,11 +15,12 @@ export function ownedIds(owned: Partial<Record<CreatureId, unknown>>): CreatureI
   return CREATURE_IDS.filter((id) => owned[id] !== undefined);
 }
 
-/** The grid of owned creatures: cards that are in the team are faded and carry a tick. */
+/** The grid of owned creatures: cards that are in the team are veiled and carry a tick. */
 export class TeamGrid {
-  /** Outer containers carry position, scale and the entry cascade; the card inside carries the fade. */
+  /** Outer containers carry position, scale and the entry cascade; the veil carries the fade. */
   private slotsOf: Phaser.GameObjects.Container[] = [];
   private cards: CreatureCard[] = [];
+  private veils = new Map<CreatureId, VolumePlate>();
   private ticks = new Map<CreatureId, Phaser.GameObjects.Graphics>();
   private cells: GridCell[] = [];
   private scale = 1;
@@ -34,13 +36,23 @@ export class TeamGrid {
     );
     this.slotsOf = this.cards.map((c, i) => {
       const outer = scene.add.container(0, 0);
-      outer.add([c, this.createTick(ids[i] as CreatureId)]);
+      const id = ids[i] as CreatureId;
+      outer.add([c, this.createVeil(id), this.createTick(id)]);
       return outer;
     });
   }
 
   get parts(): Phaser.GameObjects.Container[] {
     return this.slotsOf;
+  }
+
+  /** A light veil over a card that is in the team: the card stays opaque, the creature looks set aside. */
+  private createVeil(id: CreatureId): VolumePlate {
+    const veil = new VolumePlate(this.scene, 'card', card.height, { fill: PALETTE.panel })
+      .setBodyWidth(card.width)
+      .setAlpha(0);
+    this.veils.set(id, veil);
+    return veil;
   }
 
   private createTick(id: CreatureId): Phaser.GameObjects.Graphics {
@@ -63,7 +75,7 @@ export class TeamGrid {
   layout(width: number, height: number, top: number): void {
     const layout = layoutGrid({
       count: this.cards.length,
-      columns: cfg.columns,
+      columns: this.ids.length <= cfg.fewCount ? cfg.fewColumns : cfg.columns,
       cardWidth: card.width,
       cardHeight: card.height,
       gapX: card.gapX,
@@ -73,6 +85,7 @@ export class TeamGrid {
       maxWidth: width - cfg.gridSideMargin * 2,
       maxHeight: height - top - cfg.gridBottom,
       spareShare: cfg.gridSpareShare,
+      maxScale: cfg.maxCardScale,
     });
     this.cells = layout.cells;
     this.scale = layout.scale;
@@ -88,20 +101,21 @@ export class TeamGrid {
     return this.ids[i] ?? null;
   }
 
-  /** Fades the cards of creatures that are in the team and shows their tick. */
+  /** Veils the cards of creatures that are in the team and shows their tick. */
   refresh(team: TeamIds, animate = true): void {
-    this.cards.forEach((c, i) => {
-      const id = this.ids[i];
+    this.ids.forEach((id) => {
       if (id === undefined) return;
       const inTeam = team.includes(id);
       this.ticks.get(id)?.setVisible(inTeam);
-      const alpha = inTeam ? card.inTeamAlpha : 1;
+      const veil = this.veils.get(id);
+      if (!veil) return;
+      const alpha = inTeam ? card.inTeamVeil : 0;
       if (!animate) {
-        c.setAlpha(alpha);
+        veil.setAlpha(alpha);
         return;
       }
-      this.scene.tweens.killTweensOf(c);
-      this.scene.tweens.add({ targets: c, alpha, duration: cfg.fadeMs });
+      this.scene.tweens.killTweensOf(veil);
+      this.scene.tweens.add({ targets: veil, alpha, duration: cfg.fadeMs });
     });
   }
 

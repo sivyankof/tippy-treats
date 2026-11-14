@@ -8,20 +8,28 @@ import { RARITY_COLORS } from '../../../data/rarity';
 import { t } from '../../../i18n';
 import { CreaturePortrait } from '../../objects/creature-portrait';
 import { createOutlinedText } from '../outlined-text';
+import { faceOffsetY, lookOf, VolumePlate } from '../style/volume';
 import { fitText } from './fit-text';
 
 const cfg = MENU.team;
 const SLOTS = BALANCE.team.slots;
 
 /** Strokes a rounded rectangle as dashes on the straight edges and solid corner arcs. */
-function dashedRoundRect(g: Phaser.GameObjects.Graphics, size: number, radius: number): void {
-  const half = size / 2;
-  const inner = half - radius;
+function dashedRoundRect(
+  g: Phaser.GameObjects.Graphics,
+  width: number,
+  height: number,
+  radius: number,
+): void {
+  const halfW = width / 2;
+  const halfH = height / 2;
+  const innerW = halfW - radius;
+  const innerH = halfH - radius;
   const arcs: Array<[number, number, number]> = [
-    [-inner, -inner, Math.PI],
-    [inner, -inner, Math.PI * 1.5],
-    [inner, inner, 0],
-    [-inner, inner, Math.PI * 0.5],
+    [-innerW, -innerH, Math.PI],
+    [innerW, -innerH, Math.PI * 1.5],
+    [innerW, innerH, 0],
+    [-innerW, innerH, Math.PI * 0.5],
   ];
   for (const [cx, cy, start] of arcs) {
     g.beginPath()
@@ -29,11 +37,22 @@ function dashedRoundRect(g: Phaser.GameObjects.Graphics, size: number, radius: n
       .strokePath();
   }
   const step = cfg.slotDash + cfg.slotDashGap;
-  for (let p = -inner; p < inner; p += step) {
-    const end = Math.min(p + cfg.slotDash, inner);
-    g.lineBetween(p, -half, end, -half).lineBetween(p, half, end, half);
-    g.lineBetween(-half, p, -half, end).lineBetween(half, p, half, end);
+  for (let p = -innerW; p < innerW; p += step) {
+    const end = Math.min(p + cfg.slotDash, innerW);
+    g.lineBetween(p, -halfH, end, -halfH).lineBetween(p, halfH, end, halfH);
   }
+  for (let p = -innerH; p < innerH; p += step) {
+    const end = Math.min(p + cfg.slotDash, innerH);
+    g.lineBetween(-halfW, p, -halfW, end).lineBetween(halfW, p, halfW, end);
+  }
+}
+
+/** A plus sign drawn in code, centred on (0, y). */
+function drawPlus(g: Phaser.GameObjects.Graphics): void {
+  const { arm, line, y } = cfg.plus;
+  g.lineStyle(line, cfg.slotEmptyColor, 1)
+    .lineBetween(-arm, y, arm, y)
+    .lineBetween(0, y - arm, 0, y + arm);
 }
 
 /** A padlock drawn in code, centred on (0, 0). */
@@ -69,21 +88,14 @@ class TeamSlot extends Phaser.GameObjects.Container {
     this.shown = key;
     this.removeAll(true);
     this.portrait = null;
-    const size = cfg.slotSize;
-    const frame = this.scene.add.graphics();
-    this.add(frame);
+    const { slotWidth: w, slotHeight: h } = cfg;
+    const face = faceOffsetY('card');
+    const colors =
+      view.kind === 'filled'
+        ? { rim: RARITY_COLORS[CREATURES[view.id].rarity] }
+        : { fill: view.kind === 'empty' ? cfg.slotEmptyFill : cfg.slotLockedFill };
+    this.add(new VolumePlate(this.scene, 'card', h, colors).setBodyWidth(w));
     if (view.kind === 'filled') {
-      const color = RARITY_COLORS[CREATURES[view.id].rarity];
-      frame.fillStyle(color, 1).fillRoundedRect(-size / 2, -size / 2, size, size, cfg.slotRadius);
-      frame
-        .fillStyle(PALETTE.panel, 1)
-        .fillRoundedRect(
-          -size / 2 + cfg.slotBorder,
-          -size / 2 + cfg.slotBorder,
-          size - cfg.slotBorder * 2,
-          size - cfg.slotBorder * 2,
-          cfg.slotRadius - cfg.slotBorder,
-        );
       this.portrait = new CreaturePortrait(
         this.scene,
         0,
@@ -94,30 +106,56 @@ class TeamSlot extends Phaser.GameObjects.Container {
         cfg.slotLayerScale,
       );
       this.add(this.portrait);
-    } else if (view.kind === 'empty') {
-      frame.lineStyle(cfg.slotBorder, cfg.slotEmptyColor, 1);
-      dashedRoundRect(frame, size - cfg.slotBorder, cfg.slotRadius);
-      this.add(
-        fitText(
-          createOutlinedText(this.scene, 0, 0, t('team.empty'), cfg.lockFont),
-          size - cfg.slotTextPad,
-        ),
-      );
-    } else {
-      frame
-        .fillStyle(PALETTE.panelShadow, cfg.slotLockedAlpha)
-        .fillRoundedRect(-size / 2, -size / 2, size, size, cfg.slotRadius);
-      drawLock(frame);
       this.add(
         fitText(
           createOutlinedText(
             this.scene,
             0,
-            size / 2 - cfg.lockTextLift,
+            h / 2 - cfg.slotNameLift,
+            t(CREATURES[view.id].nameKey),
+            cfg.slotNameFont,
+          ),
+          w - cfg.slotTextPad,
+        ),
+      );
+    } else if (view.kind === 'empty') {
+      const frame = this.scene.add.graphics();
+      frame.lineStyle(cfg.slotBorder, cfg.slotEmptyColor, 1);
+      dashedRoundRect(
+        frame,
+        w - cfg.slotDashInset * 2,
+        h - cfg.slotDashInset * 2 - lookOf('card').bevel,
+        lookOf('card').radius - cfg.slotDashInset / 2,
+      );
+      frame.setY(face);
+      drawPlus(frame);
+      this.add(frame);
+      this.add(
+        fitText(
+          createOutlinedText(
+            this.scene,
+            0,
+            h / 2 - cfg.lockTextLift,
+            t('team.empty'),
+            cfg.lockFont,
+          ),
+          w - cfg.slotTextPad,
+        ),
+      );
+    } else {
+      const lock = this.scene.add.graphics({ y: face });
+      drawLock(lock);
+      this.add(lock);
+      this.add(
+        fitText(
+          createOutlinedText(
+            this.scene,
+            0,
+            h / 2 - cfg.lockTextLift,
             t('team.slotLocked', { n: slotOpensAt(this.index) }),
             cfg.lockFont,
           ),
-          size - cfg.slotTextPad,
+          w - cfg.slotTextPad,
         ),
       );
     }
@@ -146,10 +184,10 @@ export class TeamSlots {
     return this.slots;
   }
 
-  layout(width: number): void {
-    const step = cfg.slotSize + cfg.slotGap;
+  layout(width: number, y: number): void {
+    const step = cfg.slotWidth + cfg.slotGap;
     this.slots.forEach((slot, i) => {
-      slot.setPosition(width / 2 + (i - (SLOTS - 1) / 2) * step, cfg.slotsY);
+      slot.setPosition(width / 2 + (i - (SLOTS - 1) / 2) * step, y);
     });
   }
 
@@ -171,9 +209,10 @@ export class TeamSlots {
 
   /** The slot index under the point, or -1. */
   slotAt(x: number, y: number): number {
-    const half = cfg.slotSize / 2;
+    const halfW = cfg.slotWidth / 2;
+    const halfH = cfg.slotHeight / 2;
     return this.slots.findIndex(
-      (s) => Math.abs(x - s.x) <= half && Math.abs(y - s.y) <= half + cfg.slotGap / 2,
+      (s) => Math.abs(x - s.x) <= halfW && Math.abs(y - s.y) <= halfH + cfg.slotGap / 2,
     );
   }
 

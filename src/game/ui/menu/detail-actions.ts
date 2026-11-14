@@ -5,7 +5,7 @@ import { MENU } from '../../../data/menu-layout';
 import { PALETTE } from '../../../data/palette';
 import { formatNumber, t } from '../../../i18n';
 import { Button, createLabelButton, createTextButton, type LabelButtonLayout } from '../button';
-import { createStrokedText } from '../outlined-text';
+import { createTextPlate } from './detail-info';
 import { mainAction, missingAmount, type MainAction } from './detail-model';
 import { PriceTag } from './price-tag';
 import { unlockText } from './unlock-text';
@@ -79,13 +79,14 @@ function priceButton(
     wideButton,
     'ui_detail_wide',
     onClick,
+    'volume',
   ).setEnabled(!short);
 }
 
 /** The main and the secondary buttons of a creature card, and where they stand. */
 export class DetailActions {
   /** Top to bottom: price buttons, or one line of text for a creature that cannot be bought now. */
-  readonly main: Array<Button | Phaser.GameObjects.Text> = [];
+  readonly main: Array<Button | Phaser.GameObjects.Container> = [];
   readonly secondary: Button[] = [];
 
   constructor(scene: Phaser.Scene, ctx: ActionContext, handlers: ActionHandlers) {
@@ -161,23 +162,12 @@ export class DetailActions {
     }
   }
 
-  private infoLine(scene: Phaser.Scene, text: string): Phaser.GameObjects.Text {
-    return createStrokedText(
-      scene,
-      0,
-      0,
-      text,
-      cfg.abilityFont,
-      PALETTE.textDark,
-      PALETTE.panel,
-      cfg.bodyStroke,
-    )
-      .setWordWrapWidth(cfg.abilityWrap)
-      .setAlign('center');
+  private infoLine(scene: Phaser.Scene, text: string): Phaser.GameObjects.Container {
+    return createTextPlate(scene, text, wideButton.height);
   }
 
   /** Everything the screen slides in. */
-  get parts(): Array<Button | Phaser.GameObjects.Text> {
+  get parts(): Array<Button | Phaser.GameObjects.Container> {
     return [...this.main, ...this.secondary];
   }
 
@@ -185,6 +175,15 @@ export class DetailActions {
     for (const button of [...this.main, ...this.secondary]) {
       if (button instanceof Button) button.setEnabled(enabled);
     }
+  }
+
+  /** Top edge of the button stack on a screen of this height. */
+  topY(height: number): number {
+    const rowY = height - cfg.buttonsBottom - smallButton.height / 2;
+    const baseY = rowY - smallButton.height / 2 - cfg.buttonGap - wideButton.height / 2;
+    return (
+      baseY - (this.main.length - 1) * (wideButton.height + cfg.buttonGap) - wideButton.height / 2
+    );
   }
 
   /** Stands the buttons from the bottom of the screen up. */

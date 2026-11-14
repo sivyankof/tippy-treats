@@ -11,7 +11,8 @@ import { CreaturePortrait } from '../objects/creature-portrait';
 import { goNext, SCENES, type NewCreatureData } from '../scene-keys';
 import { createTextButton, type Button } from '../ui/button';
 import { fitText } from '../ui/menu/fit-text';
-import { MenuBackground } from '../ui/menu/menu-background';
+import { TitleRibbon } from '../ui/style/title-ribbon';
+import { MenuScenery } from '../ui/style/menu-scenery';
 import { GiftBox } from '../ui/menu/new-creature-box';
 import { LightRays } from '../ui/menu/new-creature-rays';
 import { NewCreatureSequence } from '../ui/menu/new-creature-sequence';
@@ -24,9 +25,9 @@ const BUTTON = MENU.wideButton;
 /** Presents the creature of a reward: a gift box shakes, opens and the creature jumps out. */
 export class NewCreatureScene extends Phaser.Scene {
   private params!: NewCreatureData;
-  private background!: MenuBackground;
+  private background!: MenuScenery;
   private particles!: Particles;
-  private title!: Phaser.GameObjects.Text;
+  private title!: TitleRibbon;
   private rays!: LightRays;
   private box!: GiftBox;
   private portrait!: CreaturePortrait;
@@ -55,7 +56,7 @@ export class NewCreatureScene extends Phaser.Scene {
     }
     this.ready = true;
     this.leaving = false;
-    this.background = new MenuBackground(this);
+    this.background = new MenuScenery(this, 'list');
     this.veil = this.add.rectangle(0, 0, 1, 1, 0, 0).setOrigin(0).setInteractive();
     this.veil.on(Phaser.Input.Events.POINTER_DOWN, () => this.skip());
     this.particles = new Particles(this);
@@ -86,10 +87,8 @@ export class NewCreatureScene extends Phaser.Scene {
     const maxWidth = this.scale.gameSize.width - cfg.sideMargin * 2;
     this.names = [t(def.nameKey), t(`rarity.${def.rarity}`)];
     this.rays = new LightRays(this, color);
-    this.title = fitText(
-      createOutlinedText(this, 0, 0, t('newCreature.title'), cfg.titleFont),
-      maxWidth,
-    );
+    this.title = new TitleRibbon(this, 0, 0, t('newCreature.title'));
+    this.title.setMaxWidth(maxWidth);
     this.box = new GiftBox(this, 0, 0).setVisible(false);
     this.portrait = new CreaturePortrait(this, 0, 0, id, 1, cfg.layerWidth).setVisible(false);
     const hit = new Phaser.Geom.Rectangle(0, 0, cfg.layerWidth, cfg.layerWidth * cfg.portraitHit);

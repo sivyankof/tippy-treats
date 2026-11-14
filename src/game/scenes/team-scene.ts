@@ -1,17 +1,16 @@
 import * as Phaser from 'phaser';
-import { addToTeam, removeFromTeam, slotLayers, type TeamIds } from '../../core/team';
+import { addToTeam, removeFromTeam, type TeamIds } from '../../core/team';
 import { placeInSlot } from '../../core/team-place';
 import { clampLevel, type CreatureId } from '../../data/creatures';
 import { MENU } from '../../data/menu-layout';
-import { formatNumber, t } from '../../i18n';
+import { t } from '../../i18n';
 import { services } from '../../services';
 import { gameState } from '../../state';
 import { CreaturePortrait } from '../objects/creature-portrait';
 import { openScreen, SCENES } from '../scene-keys';
-import { createOutlinedText } from '../ui/outlined-text';
-import { MenuBackground } from '../ui/menu/menu-background';
+import { MenuScenery } from '../ui/style/menu-scenery';
 import { ScreenHeader } from '../ui/menu/screen-header';
-import { fitText } from '../ui/menu/fit-text';
+import { TeamOrderPlate } from '../ui/menu/team-order-plate';
 import { PressGesture } from '../ui/menu/team-gesture';
 import { ownedIds, TeamGrid } from '../ui/menu/team-grid';
 import { TeamSlots } from '../ui/menu/team-slots';
@@ -28,12 +27,11 @@ interface PressSource {
 
 /** Team screen: three slots on top, the owned creatures below (docs/07-ui-screens.md, section 3). */
 export class TeamScene extends Phaser.Scene {
-  private bg!: MenuBackground;
+  private bg!: MenuScenery;
   private header!: ScreenHeader;
   private slots!: TeamSlots;
   private grid!: TeamGrid;
-  private order!: Phaser.GameObjects.Text;
-  private help!: Phaser.GameObjects.Text;
+  private order!: TeamOrderPlate;
   private team: TeamIds = [];
   private gesture: PressGesture | null = null;
   private source: PressSource | null = null;
@@ -53,19 +51,11 @@ export class TeamScene extends Phaser.Scene {
     const levelOf = (id: CreatureId): number => this.levelOf(id);
     this.team = save.team;
 
-    this.bg = new MenuBackground(this);
+    this.bg = new MenuScenery(this, 'list');
     this.header = new ScreenHeader(this, t('team.title'), () => this.leave(SCENES.home));
     this.slots = new TeamSlots(this);
     this.slots.refresh(this.team, levelOf, save.bakerLevel, false);
-    const [a = '', b = '', c = ''] = slotLayers().map((n) => formatNumber(n));
-    this.order = createOutlinedText(
-      this,
-      0,
-      cfg.orderY,
-      t('team.order', { a, b, c }),
-      cfg.orderFont,
-    );
-    this.help = createOutlinedText(this, 0, cfg.orderY + cfg.helpGap, t('team.help'), cfg.helpFont);
+    this.order = new TeamOrderPlate(this);
     this.grid = new TeamGrid(this, ownedIds(save.creatures), levelOf, save.bakerLevel);
     this.grid.refresh(this.team, false);
 
@@ -101,7 +91,7 @@ export class TeamScene extends Phaser.Scene {
   }
 
   private content(): Movable[] {
-    return [...this.header.parts, ...this.slots.parts, this.order, this.help, ...this.grid.parts];
+    return [...this.header.parts, ...this.slots.parts, ...this.order.parts, ...this.grid.parts];
   }
 
   private layout(): void {
@@ -109,12 +99,10 @@ export class TeamScene extends Phaser.Scene {
     this.cameras.main.setSize(width, height);
     this.bg.resize(width, height);
     this.header.layout(width);
-    this.slots.layout(width);
-    this.order.setX(width / 2);
-    this.help.setX(width / 2);
-    fitText(this.order, width - cfg.slotGap * 2);
-    fitText(this.help, width - cfg.slotGap * 2);
-    this.grid.layout(width, height, cfg.gridTop);
+    const extra = Math.max(0, height - cfg.baseHeight);
+    this.slots.layout(width, cfg.slotsY + extra * cfg.slotsExtra);
+    this.order.layout(width, cfg.orderY + extra * cfg.orderExtra);
+    this.grid.layout(width, height, cfg.gridTop + extra * cfg.gridExtra);
   }
 
   // --- Input: tap, long press and drag are told apart by one gesture per press ---

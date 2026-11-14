@@ -25,18 +25,24 @@ export interface GridSpec {
   maxHeight: number;
   /** Share of the spare height put above the grid (0 = flush to the top). */
   spareShare: number;
+  /** Largest card scale; 1 when left out. */
+  maxScale?: number;
 }
 
 /**
  * Places `count` cards in rows of `columns`. The cards (and the gaps) shrink uniformly when the
- * grid would not fit `maxWidth` x `maxHeight`; never above scale 1.
+ * grid would not fit `maxWidth` x `maxHeight`; never above `maxScale` (1 by default).
  */
 export function layoutGrid(spec: GridSpec): GridLayout {
   const { count, columns, cardWidth, cardHeight, gapX, gapY } = spec;
   const rows = Math.max(1, Math.ceil(count / columns));
   const fullWidth = columns * cardWidth + (columns - 1) * gapX;
   const fullHeight = rows * cardHeight + (rows - 1) * gapY;
-  const scale = Math.min(1, spec.maxWidth / fullWidth, spec.maxHeight / fullHeight);
+  const scale = Math.min(
+    spec.maxScale ?? 1,
+    spec.maxWidth / fullWidth,
+    spec.maxHeight / fullHeight,
+  );
   const stepX = (cardWidth + gapX) * scale;
   const stepY = (cardHeight + gapY) * scale;
   const height = fullHeight * scale;

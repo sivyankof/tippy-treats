@@ -2,28 +2,30 @@ import * as Phaser from 'phaser';
 import { canFillTeam } from '../../core/team';
 import { MENU } from '../../data/menu-layout';
 import { PALETTE } from '../../data/palette';
-import { formatNumber, t } from '../../i18n';
+import { t } from '../../i18n';
 import { gameState } from '../../state';
 import { startRunFrom, openScreen, SCENES, type HomeData } from '../scene-keys';
 import { createTextButton, type Button } from '../ui/button';
 import { createHintBubble } from '../ui/menu/home-hint';
 import { HomeNav } from '../ui/menu/home-nav';
+import { createLevelPlate, createRecordPlate } from '../ui/menu/home-plates';
 import { HomeShelf } from '../ui/menu/home-shelf';
-import { MenuBackground } from '../ui/menu/menu-background';
 import { ScreenHeader } from '../ui/menu/screen-header';
-import { XpBar } from '../ui/menu/xp-bar';
-import { createOutlinedText } from '../ui/outlined-text';
+import { MenuScenery } from '../ui/style/menu-scenery';
 import { enterScreen, leaveScreen, type Movable } from '../ui/transition';
 
 const cfg = MENU.home;
 
-/** The main screen: the team on its shelf, the record, the big Play button and the bottom bar. */
+/**
+ * The main screen, in the kitchen of the run: the level and the wallet on top, the team on its
+ * shelf under a warm light, the record, the big Play button and the bottom bar.
+ */
 export class HomeScene extends Phaser.Scene {
-  private background!: MenuBackground;
+  private scenery!: MenuScenery;
   private header!: ScreenHeader;
-  private level!: XpBar;
+  private level!: Phaser.GameObjects.Container;
   private shelf!: HomeShelf;
-  private record!: Phaser.GameObjects.Text;
+  private record!: Phaser.GameObjects.Container;
   private play!: Button;
   private nav!: HomeNav;
   private hint: ReturnType<typeof createHintBubble> | null = null;
@@ -38,19 +40,15 @@ export class HomeScene extends Phaser.Scene {
     this.leaving = false;
     this.hint = null;
     this.ring = null;
-    this.background = new MenuBackground(this);
-    this.header = new ScreenHeader(this, '', null);
-    this.header.title.setVisible(false);
-    this.level = new XpBar(this, 0, cfg.levelY).show(
-      gameState.data.bakerLevel,
-      gameState.data.bakerXp,
-    );
+    this.scenery = new MenuScenery(this, 'home');
     this.shelf = new HomeShelf(this, () => this.goTo(() => openScreen(this, SCENES.team)));
-
-    const best = gameState.recordHeight;
-    const recordText =
-      best === null ? t('home.noRecord') : t('home.record', { n: formatNumber(best) });
-    this.record = createOutlinedText(this, 0, 0, recordText, cfg.recordFont, PALETTE.gold);
+    this.record = createRecordPlate(this);
+    this.nav = new HomeNav(this, {
+      collection: () => this.goTo(() => openScreen(this, SCENES.collection)),
+      play: () => this.startRun(),
+    });
+    this.level = createLevelPlate(this);
+    this.header = new ScreenHeader(this, '', null);
 
     this.play = createTextButton(this, {
       text: t('home.play'),
@@ -66,10 +64,6 @@ export class HomeScene extends Phaser.Scene {
       keyPrefix: 'ui_home_play',
       onClick: () => this.startRun(),
     }).button.breathe();
-    this.nav = new HomeNav(this, {
-      collection: () => this.goTo(() => openScreen(this, SCENES.collection)),
-      play: () => this.startRun(),
-    });
 
     const { team, creatures, bakerLevel } = gameState.data;
     if (canFillTeam(team, creatures, bakerLevel)) {
@@ -89,19 +83,14 @@ export class HomeScene extends Phaser.Scene {
   }
 
   override update(time: number, delta: number): void {
-    this.background.update(delta);
+    this.scenery.update(delta);
     this.header.update(time, delta);
     this.shelf.update(delta);
   }
 
-  /** Everything that slides with the screen; the background stays. */
+  /** Everything that slides with the screen; the scenery stays. */
   private content(): Movable[] {
-    const items: Movable[] = [
-      ...this.header.parts.filter((part) => part !== this.header.title),
-      this.level,
-      this.shelf.root,
-      this.record,
-    ];
+    const items: Movable[] = [this.level, ...this.header.parts, this.shelf.root, this.record];
     if (this.hint) items.push(this.hint.root);
     if (this.ring) items.push(this.ring);
     items.push(this.play, ...this.nav.parts);
@@ -136,21 +125,16 @@ export class HomeScene extends Phaser.Scene {
   private layout(): void {
     const { width, height } = this.scale.gameSize;
     const cx = width / 2;
-    const extra = Math.max(0, height - MENU.home.baseHeight) * cfg.extraShare;
+    const extra = Math.max(0, height - cfg.baseHeight) * cfg.extraShare;
     this.cameras.main.setSize(width, height);
-    this.background.resize(width, height);
+    this.scenery.resize(width, height);
     this.header.layout(width);
-    this.level.setX(cx);
-    this.shelf.root.setPosition(cx, cfg.shelfY + extra);
-    this.record.setPosition(cx, cfg.recordY + extra);
-    const navY =
-      height -
-      cfg.navBottomPad -
-      cfg.navPlaySize / 2 -
-      cfg.navCaptionGap -
-      cfg.navFont * cfg.navLineHeight;
-    this.nav.layout(width, navY);
-    const playY = navY - cfg.navPlaySize / 2 - cfg.playAboveNav;
+    this.level.setPosition(cfg.levelPlate.left + cfg.levelPlate.width / 2, cfg.levelPlate.y);
+    const shelfY = cfg.shelf.y + extra;
+    this.shelf.root.setPosition(cx, shelfY);
+    this.record.setPosition(cx, cfg.record.y + extra * cfg.record.extraShare);
+    const navTop = this.nav.layout(width, height);
+    const playY = navTop - cfg.playAboveNav - cfg.playHeight / 2;
     this.play.setPosition(cx, playY);
     this.ring?.setPosition(cx, playY);
     this.hint?.root.setPosition(cx, playY - cfg.hintAbovePlay);

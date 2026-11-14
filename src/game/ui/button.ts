@@ -7,6 +7,13 @@ import { createGlossBand, sweepGloss } from '../fx/gloss-sweep';
 import { bakeTexture } from './bake-texture';
 import { fitText } from './menu/fit-text';
 import { createOutlinedText } from './outlined-text';
+import { bakeVolume, lookOf } from './style/volume';
+
+/**
+ * 'flat': the run look, a face over a hard dark shadow. 'volume': the menu look of
+ * `style/volume.ts`, a glossy gradient face over a darker bevel, outlined, with a soft shadow.
+ */
+export type ButtonLook = 'flat' | 'volume';
 
 export interface ButtonOptions {
   /** Centre of the button on screen. */
@@ -25,6 +32,8 @@ export interface ButtonOptions {
   /** Label or icon placed on the centre of the face. */
   content?: Phaser.GameObjects.GameObject;
   onClick: () => void;
+  /** 'flat' when left out. In the 'volume' look `shadowOffset` is the bevel under the face. */
+  look?: ButtonLook;
 }
 
 /** Size and look of a text button: the shape fields of MENU_BUTTON and TOGGLE_BUTTON. */
@@ -48,6 +57,7 @@ export function createLabelButton(
   layout: LabelButtonLayout,
   keyPrefix: string,
   onClick: () => void,
+  look: ButtonLook = 'flat',
 ): Button {
   const { width, height, radius, shadowOffset } = layout;
   return new Button(scene, {
@@ -62,6 +72,7 @@ export function createLabelButton(
     textureKey: `${keyPrefix}_${fill.toString(16)}`,
     content: label,
     onClick,
+    look,
   });
 }
 
@@ -77,6 +88,8 @@ export interface TextButtonOptions {
   /** Centre of the button; (0, 0) when left out. */
   x?: number;
   y?: number;
+  /** The menu look ('volume') when left out. */
+  look?: ButtonLook;
 }
 
 /** A label button whose outlined text shrinks to fit, so long Russian labels stay inside. */
@@ -97,6 +110,7 @@ export function createTextButton(
     options.layout,
     options.keyPrefix,
     options.onClick,
+    options.look ?? 'volume',
   );
   return { button, label };
 }
@@ -195,23 +209,8 @@ export class Button extends Phaser.GameObjects.Container {
     private readonly options: ButtonOptions,
   ) {
     super(scene, options.x, options.y);
-    const { width, height, shadowOffset } = options;
-
-    bakeTexture(scene, options.textureKey, width, height + shadowOffset, (g) => {
-      g.fillStyle(options.shadowColor, 1).fillRoundedRect(
-        0,
-        shadowOffset,
-        width,
-        height,
-        options.radius,
-      );
-      g.fillStyle(options.fill, 1).fillRoundedRect(0, 0, width, height, options.radius);
-      options.decorate?.(g, width, height);
-    });
-    const face = new Phaser.GameObjects.Image(scene, 0, -height / 2, options.textureKey).setOrigin(
-      0.5,
-      0,
-    );
+    const { width, height } = options;
+    const face = Button.createFace(scene, options);
     this.breatheRoot = new Phaser.GameObjects.Container(scene, 0, 0, [face]);
     if (options.content) this.breatheRoot.add(options.content);
     this.add(this.breatheRoot);
@@ -223,6 +222,35 @@ export class Button extends Phaser.GameObjects.Container {
 
     this.press = attachPressFeedback(this, { onTap: options.onClick });
     scene.add.existing(this);
+  }
+
+  /** The baked face, placed so that (0, 0) is the centre of the face (not of its shadow). */
+  private static createFace(scene: Phaser.Scene, options: ButtonOptions): Phaser.GameObjects.Image {
+    const { width, height, shadowOffset, radius, fill } = options;
+    if (options.look === 'volume') {
+      const art = bakeVolume(
+        scene,
+        `${options.textureKey}_vol`,
+        width,
+        height + shadowOffset,
+        lookOf('button', radius, shadowOffset),
+        { fill },
+        options.decorate ? (g) => options.decorate?.(g, width, height) : undefined,
+      );
+      return new Phaser.GameObjects.Image(scene, 0, 0, art.key).setOrigin(
+        (art.left + width / 2) / art.textureWidth,
+        (art.top + height / 2) / art.textureHeight,
+      );
+    }
+    bakeTexture(scene, options.textureKey, width, height + shadowOffset, (g) => {
+      g.fillStyle(options.shadowColor, 1).fillRoundedRect(0, shadowOffset, width, height, radius);
+      g.fillStyle(fill, 1).fillRoundedRect(0, 0, width, height, radius);
+      options.decorate?.(g, width, height);
+    });
+    return new Phaser.GameObjects.Image(scene, 0, -height / 2, options.textureKey).setOrigin(
+      0.5,
+      0,
+    );
   }
 
   /** A disabled button ignores the pointer. */

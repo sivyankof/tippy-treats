@@ -11,9 +11,9 @@ import { CreaturePortrait } from '../../objects/creature-portrait';
 import { createTextButton } from '../button';
 import { createDimOverlay } from '../dim-overlay';
 import { createOutlinedText } from '../outlined-text';
+import { faceOffsetY, VolumePlate } from '../style/volume';
 import { openPopup } from '../transition';
 import { fitText } from './fit-text';
-import { drawFramedPanel } from './framed-panel';
 import { PriceTag } from './price-tag';
 import { rewardLines, type RewardLine } from './results-text';
 import { stackRows, type Row } from './results-layout';
@@ -84,14 +84,9 @@ export class LevelUpPanel {
     const total = stackRows(body, rows, cfg.gap);
     const w = cfg.width;
     const h = total + cfg.padding * 2;
-    const bg = this.scene.add.graphics();
-    drawFramedPanel(bg, -w / 2, -h / 2, w, h, {
-      radius: cfg.radius,
-      border: cfg.border,
-      borderColor: PALETTE.textDark,
-      fill: cfg.fill,
-    });
-    this.panel.add([bg, body]);
+    const plate = new VolumePlate(this.scene, 'window', h, { fill: cfg.fill }).setBodyWidth(w);
+    body.setY(faceOffsetY('window'));
+    this.panel.add([plate, body]);
   }
 
   /** The rows of one reward; a creature that was already owned adds a row for the refund. */

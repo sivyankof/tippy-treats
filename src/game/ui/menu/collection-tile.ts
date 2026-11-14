@@ -1,7 +1,10 @@
 import * as Phaser from 'phaser';
 import { MENU } from '../../../data/menu-layout';
 import { attachPressFeedback, type PressFeedback } from '../../ui/button';
-import { CreatureCard, type CardState } from './creature-card';
+import { CreatureCard, type CardLayout, type CardState } from './creature-card';
+
+/** The card numbers of the collection: the shared card with the collection's own sizes on top. */
+export const COLLECTION_CARD: CardLayout = { ...MENU.card, ...MENU.collection.card };
 
 /**
  * A creature card of the collection that can be tapped: press and release on the same card
@@ -19,7 +22,7 @@ export class CollectionTile extends CreatureCard {
     card: CardState,
     onTap: (tile: CollectionTile) => void,
   ) {
-    super(scene, x, y, card);
+    super(scene, x, y, card, COLLECTION_CARD);
     this.hit = new Phaser.Geom.Rectangle(0, 0, this.width, this.height);
     this.setInteractive(this.hit, Phaser.Geom.Rectangle.Contains);
     this.press = attachPressFeedback(this, {

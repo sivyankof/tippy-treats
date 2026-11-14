@@ -4,6 +4,7 @@ import { PALETTE } from '../../../data/palette';
 import { t } from '../../../i18n';
 import type { Button } from '../button';
 import { createOutlinedText } from '../outlined-text';
+import { faceOffsetY, VolumePlate } from '../style/volume';
 import { fitText } from './fit-text';
 import { createIconButton, type IconKind } from './icon-button';
 
@@ -42,27 +43,24 @@ class NavItem {
     const parts: Phaser.GameObjects.GameObject[] = [this.button, caption];
     if (!this.live) {
       this.button.setEnabled(false);
-      const { width, height, radius, font, offsetY } = cfg.navBadge;
+      const { width, height, font, offsetY, fill } = cfg.navBadge;
       const y = -spec.size / 2 - offsetY;
-      const g = scene.add.graphics();
-      g.fillStyle(PALETTE.accentSecondary, 1).fillRoundedRect(
-        -width / 2,
-        y - height / 2,
+      const badge = new VolumePlate(scene, 'chip', height, { fill }).setBodyWidth(width).setY(y);
+      const text = fitText(
+        createOutlinedText(scene, 0, y + faceOffsetY('chip'), t('meta.soon'), font),
         width,
-        height,
-        radius,
       );
-      const text = fitText(createOutlinedText(scene, 0, y, t('meta.soon'), font), width);
-      parts.push(g, text);
+      parts.push(badge, text);
     }
     this.root = scene.add.container(0, 0, parts);
     if (!this.live) this.button.setAlpha(cfg.navDisabledAlpha);
   }
 }
 
-/** The bottom navigation bar of Home: Shop, Collection, Play, Daily, Missions. */
+/** The bottom navigation bar of Home: Shop, Collection, Play, Daily, Missions on a glossy bar. */
 export class HomeNav {
   private readonly items: NavItem[];
+  private readonly bar: VolumePlate;
 
   constructor(scene: Phaser.Scene, handlers: { collection: () => void; play: () => void }) {
     const slotWidth = cfg.navSlotWidth;
@@ -103,18 +101,30 @@ export class HomeNav {
         onClick: null,
       },
     ];
+    const { height, overhang } = cfg.navBar;
+    this.bar = new VolumePlate(scene, 'bar', height + overhang);
     this.items = specs.map((spec) => new NavItem(scene, spec, slotWidth));
   }
 
   /** What slides in with the screen. */
-  get parts(): Phaser.GameObjects.Container[] {
-    return this.items.map((item) => item.root);
+  get parts(): Array<Phaser.GameObjects.Container | VolumePlate> {
+    return [this.bar, ...this.items.map((item) => item.root)];
   }
 
-  /** Five equal columns, the buttons sitting on the line `y`. */
-  layout(width: number, y: number): void {
+  /**
+   * The bar along the bottom of a `width` x `height` screen (its ends and bottom run past the
+   * edges) and five equal columns of buttons on it. Returns the top of the bar.
+   */
+  layout(width: number, height: number): number {
+    const { height: barHeight, overhang, padTop } = cfg.navBar;
+    const top = height - barHeight;
+    this.bar
+      .setBodyWidth(width + overhang * 2)
+      .setPosition(width / 2, top + (barHeight + overhang) / 2);
+    const y = top + padTop + cfg.navSize / 2;
     const step = width / this.items.length;
     this.items.forEach((item, i) => item.root.setPosition(step * (i + 0.5), y));
+    return top;
   }
 
   setEnabled(enabled: boolean): void {
