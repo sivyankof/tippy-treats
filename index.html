@@ -8,6 +8,79 @@
     />
     <link rel="icon" href="data:," />
     <title>Tippy Treats</title>
+    <script>
+      // Dev builds print start-up errors on the screen: a phone shows no console, and a module
+      // the browser cannot parse fails before any code of the game runs. Plain script on purpose.
+      if ('%MODE%' === 'development') {
+        (function () {
+          function show(text) {
+            var box = document.getElementById('dev-errors');
+            if (!box) {
+              box = document.createElement('pre');
+              box.id = 'dev-errors';
+              box.style.cssText =
+                'position:fixed;left:0;right:0;top:0;z-index:99999;margin:0;padding:12px;' +
+                'max-height:60vh;overflow:auto;white-space:pre-wrap;font:12px/1.4 monospace;' +
+                'background:#fff3f3;color:#8a0010;border-bottom:2px solid #c00;';
+              (document.body || document.documentElement).appendChild(box);
+            }
+            box.textContent += text + '\n\n';
+          }
+          // Capture phase: a script or stylesheet that fails to load reports its error here too.
+          window.addEventListener(
+            'error',
+            function (event) {
+              var target = event.target;
+              if (target && target !== window && (target.src || target.href)) {
+                show('Failed to load: ' + (target.src || target.href));
+              }
+            },
+            true,
+          );
+          window.addEventListener('error', function (event) {
+            var where = event.filename ? ' (' + event.filename + ':' + event.lineno + ')' : '';
+            show(
+              'Error: ' +
+                event.message +
+                where +
+                (event.error && event.error.stack ? '\n' + event.error.stack : ''),
+            );
+          });
+          window.addEventListener('unhandledrejection', function (event) {
+            var reason = event.reason;
+            show('Unhandled: ' + (reason && reason.stack ? reason.stack : String(reason)));
+          });
+          // A start that hangs without an error (say, a promise that never settles) shows up too.
+          function report(seconds) {
+            if (document.querySelector('#app canvas')) return;
+            var loaded = performance.getEntriesByType('resource');
+            var last = loaded.slice(-4).map(function (entry) {
+              var kb = Math.round((entry.transferSize || entry.encodedBodySize || 0) / 1024);
+              var name = entry.name.replace(location.origin, '');
+              return '  ' + name + ' ' + kb + ' KB ' + Math.round(entry.duration) + ' ms';
+            });
+            show(
+              'The game did not start within ' +
+                seconds +
+                ' s. Last stage: ' +
+                (window.__bootStage || 'main.ts not running') +
+                '. Files loaded: ' +
+                loaded.length +
+                ', last ones:\n' +
+                last.join('\n') +
+                '\n' +
+                navigator.userAgent,
+            );
+          }
+          setTimeout(function () {
+            report(8);
+          }, 8000);
+          setTimeout(function () {
+            report(30);
+          }, 30000);
+        })();
+      }
+    </script>
   </head>
   <body>
     <div id="app"></div>
