@@ -3,29 +3,15 @@ import { ZONES } from '../data/zones';
 import { collectModifiers } from './abilities/modifiers';
 import { runAbility, tickRunEffects } from './abilities/run';
 import type { Modifiers } from './abilities/types';
-import {
-  coinCovered,
-  comboCoinAmount,
-  crumbCoinAmount,
-  floatingCoinAmount,
-  heightBonusCoins,
-  rollFloatingCoin,
-} from './coins';
 import { resolveDrop } from './drop';
 import { Flight, newFlyingLayer } from './flight';
+import { applyContinue, applyMiss } from './miss';
 import { Rng } from './rng';
+import { collectFloatingCoin, payHeightBonus, payLanding, spawnFloatingCoin } from './run-coins';
 import type { RunEndReason, RunResult } from './run-result';
 import { comboWidening, nextCombo, normalScore, perfectScore } from './scoring';
-import type {
-  CoinSource,
-  LayerPlan,
-  PlacedLayer,
-  RunConfig,
-  SimEvent,
-  SimPhase,
-  TowerState,
-} from './sim-types';
-import { planLayer, type PlanState } from './team-queue';
+import type { PlacedLayer, RunConfig, SimEvent, SimPhase, TowerState } from './sim-types';
+import { attemptLayer, type LayerAttempt, type PlanState } from './team-queue';
 import { cloudRoll, layerRules, nominalSpeed, zoneIndexOf } from './zones';
 import {
   advanceWobblePhase,
@@ -71,7 +57,7 @@ export class TowerSim {
   private endReason: RunEndReason = 'miss';
   private planState: PlanState;
   /** The layer being attempted; a retry (shield, continue) of the same index keeps it. */
-  private attempt: { index: number; plan: LayerPlan } | null = null;
+  private attempt: LayerAttempt | null = null;
   /** Motion of the flying layer; `null` outside the flying phase. */
   private flight: Flight | null = null;
 
@@ -149,9 +135,7 @@ export class TowerSim {
   continueRun(): SimEvent[] {
     const events: SimEvent[] = [];
     if (this.s.phase !== 'await_continue') return events;
-    this.s.continuesUsed += 1;
-    this.s.wobble = 0;
-    this.nextWidth = Math.max(this.nextWidth, BALANCE.continues.restoreWidth);
+    this.nextWidth = applyContinue(this.s, this.nextWidth);
     this.spawn(events);
     return events;
   }
@@ -204,13 +188,11 @@ export class TowerSim {
   private spawn(events: SimEvent[]): void {
     const s = this.s;
     const index = s.height + 1;
-    if (this.attempt?.index !== index) {
-      // A new index: plan the layer and roll its coin. A retry of the same index does neither.
-      const planned = planLayer(index, this.config.team, this.planState);
-      this.planState = planned.state;
-      this.attempt = { index, plan: planned.plan };
-      this.spawnCoin(events, index);
-    }
+    // A new index plans the layer and rolls its coin. A retry of the same index does neither.
+    const planned = attemptLayer(this.attempt, index, this.config.team, this.planState);
+    this.planState = planned.state;
+    this.attempt = planned.attempt;
+    if (planned.fresh) spawnFloatingCoin(s, events, this.coinRng, index, this.topRestX());
     const zoneIndex = zoneIndexOf(index);
     if (zoneIndex !== s.zoneIndex) {
       s.zoneIndex = zoneIndex;
@@ -220,7 +202,7 @@ export class TowerSim {
     const speed =
       nominalSpeed(s.height, zoneIndex, this.currentModifiers().speedMult) *
       this.tutorialSpeedMult(index);
-    const layer = newFlyingLayer(this.attempt.plan, rules, this.nextWidth, speed);
+    const layer = newFlyingLayer(planned.attempt.plan, rules, this.nextWidth, speed);
     this.flight = new Flight(layer, rules.fakeoutX, (pass) =>
       cloudRoll(this.zonesRng, rules, pass),
     );
@@ -244,18 +226,6 @@ export class TowerSim {
     const assist =
       this.config.tutorial && this.perfects === 0 && this.s.layers.length >= assistAfterLayers;
     return assist ? Math.max(mods.perfectTolerance, assistTolerance) : mods.perfectTolerance;
-  }
-
-  private spawnCoin(events: SimEvent[], index: number): void {
-    const x = rollFloatingCoin(this.coinRng.fork(`layer:${index}`), index, this.topRestX());
-    this.s.floatingCoinX = x;
-    if (x !== null) events.push({ type: 'coin_spawn', x });
-  }
-
-  private gainCoins(events: SimEvent[], amount: number, source: CoinSource): void {
-    if (amount <= 0) return;
-    this.s.coins += amount;
-    events.push({ type: 'coin_collect', amount, source });
   }
 
   private resolveLanding(events: SimEvent[]): void {
@@ -304,13 +274,11 @@ export class TowerSim {
       newWidth: outcome.newWidth,
     });
 
-    if (coinX !== null && coinCovered(coinX, layer.x, layer.width)) {
-      this.gainCoins(events, floatingCoinAmount(mods), 'floating');
-    }
+    collectFloatingCoin(s, events, coinX, layer, mods);
     // Zone and ability multipliers multiply together; the zone is that of the landing layer.
     const scoreMult = mods.scoreMult * (ZONES[flying.zoneIndex]?.scoreMult ?? 1);
     this.score(events, layer, outcome.dx, flying.width, perfect, scoreMult);
-    this.payLanding(events, flying.kind === 'golden', perfect, outcome.cutWidth, mods);
+    payLanding(s, events, flying.kind === 'golden', perfect, outcome.cutWidth, mods);
 
     const emit = (event: SimEvent): number => events.push(event);
     // The shield covers the N layers after the brownie, so this layer counts with the shield
@@ -359,57 +327,18 @@ export class TowerSim {
     }
   }
 
-  /** Coins and berries a landing pays besides the floating coin. */
-  private payLanding(
-    events: SimEvent[],
-    golden: boolean,
-    perfect: boolean,
-    cutWidth: number,
-    mods: Readonly<Modifiers>,
-  ): void {
-    const s = this.s;
-    if (perfect) {
-      this.gainCoins(events, comboCoinAmount(s.combo, mods), 'combo');
-      this.gainCoins(events, mods.perfectCoinAdd, 'perfect');
-    } else {
-      this.gainCoins(events, crumbCoinAmount(cutWidth, mods.crumbToCoinsPx), 'crumb');
-    }
-    if (!golden) return;
-    events.push({ type: 'golden', perfect });
-    if (perfect) {
-      s.berries += BALANCE.golden.perfectBerries;
-      s.score += BALANCE.score.goldenPerfectBonus;
-    } else {
-      this.gainCoins(events, BALANCE.golden.normalCoins, 'golden');
-    }
-  }
-
   /** `shielded` defaults to the live shield; a sneeze passes the shield of its landing. */
   private miss(events: SimEvent[], reason: RunEndReason, shielded = this.s.shield > 0): void {
-    const s = this.s;
-    s.combo = 0;
-    if (shielded) {
-      // The shield eats the miss: the run goes on and the same layer (drop miss) comes back,
-      // or the narrow layer stays and the next one is restored (sneeze miss). Either way the
-      // next layer is at least `shieldRestoreWidth` wide.
-      s.shield = 0;
-      this.nextWidth = Math.max(this.nextWidth, BALANCE.team.shieldRestoreWidth);
-      events.push({ type: 'miss', shielded: true });
-      this.enter('pause');
-      return;
-    }
-    this.endReason = reason;
-    events.push({ type: 'miss', shielded: false });
-    if (this.config.mode === 'classic' && s.continuesUsed < BALANCE.continues.max) {
-      this.enter('await_continue');
-    } else {
-      this.finish(events);
-    }
+    if (!shielded) this.endReason = reason;
+    const outcome = applyMiss(this.s, events, this.config.mode, this.nextWidth, shielded);
+    this.nextWidth = outcome.nextWidth;
+    if (outcome.next === 'over') this.finish(events);
+    else this.enter(outcome.next);
   }
 
   private finish(events: SimEvent[]): void {
     const s = this.s;
-    this.gainCoins(events, heightBonusCoins(s.height), 'height');
+    payHeightBonus(s, events);
     this.enter('over');
     const result: RunResult = {
       seed: this.config.seed,

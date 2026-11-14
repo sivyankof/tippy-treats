@@ -78,3 +78,24 @@ export function nextCreature(
   }
   return null;
 }
+
+/** The layer being attempted; a retry (shield, continue) of the same index keeps it. */
+export interface LayerAttempt {
+  index: number;
+  plan: LayerPlan;
+}
+
+/**
+ * Plan for the layer at `index`: a retry of the attempted index reuses its plan, a new index
+ * is planned and advances the planner state. `fresh` tells the caller it is a new index.
+ */
+export function attemptLayer(
+  attempt: LayerAttempt | null,
+  index: number,
+  team: readonly (TeamSlot | null)[],
+  state: PlanState,
+): { attempt: LayerAttempt; state: PlanState; fresh: boolean } {
+  if (attempt?.index === index) return { attempt, state, fresh: false };
+  const planned = planLayer(index, team, state);
+  return { attempt: { index, plan: planned.plan }, state: planned.state, fresh: true };
+}
