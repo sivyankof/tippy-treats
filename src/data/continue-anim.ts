@@ -84,8 +84,13 @@ export const CONTINUE_ANIM = {
     labelWidth: 230,
     labelHeight: 78,
     labelRadius: 24,
-    /** Distance of the pennant from the right edge of the screen. */
+    /** Distance of the pennant from the screen edge it stands at. */
     labelInset: 30,
+    /**
+     * The pennant stands on the side with more free room next to the tower at its height and
+     * moves to the other side only when that one has this much more room (no flip-flopping).
+     */
+    sideHysteresis: 60,
     waveDeg: 4,
     /** The pennant stretches by this share of the wave. */
     waveStretch: 0.04,

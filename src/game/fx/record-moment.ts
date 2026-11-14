@@ -15,6 +15,7 @@ import type { ComboGlow } from './combo-glow';
 import type { LandingFx } from './landing-fx';
 import { cuesForMoment } from './moment-cues';
 import { ParticleFx } from './particle-fx';
+import { freeRoom, pennantSide } from './pennant-side';
 import { playCues } from './run-cues';
 
 const flag = CONTINUE_ANIM.flag;
@@ -35,6 +36,8 @@ export class RecordMoment {
   private readonly particleFx: ParticleFx;
   private beatenMs = -1;
   private known = false;
+  /** Side of the screen the pennant stands at: 1 right, -1 left. */
+  private side: 1 | -1 = 1;
 
   /** `best` is the session best before this run, or `null` for no flag at all. */
   constructor(
@@ -64,19 +67,19 @@ export class RecordMoment {
       );
     });
     this.line = scene.add.image(0, 0, LINE_TEXTURE).setOrigin(0, 0.5);
-    this.pennant = scene.add.container(
-      LOGICAL_SIZE.width - flag.labelInset - flag.labelWidth / 2,
-      -flag.labelHeight / 2 - flag.lineHeight,
-      [
+    // The pennant is its own object: the line stays behind the tower, the pennant reads over it.
+    this.pennant = scene.add
+      .container(0, 0, [
         scene.add.image(0, 0, PENNANT_TEXTURE),
         createOutlinedText(scene, 0, 0, t('run.record'), flag.labelFont),
-      ],
-    );
-    this.root = scene.add
-      .container(0, 0, [this.line, this.pennant])
-      .setDepth(DEPTH.recordFlag)
+      ])
+      .setDepth(DEPTH.recordPennant)
       .setVisible(false);
-    scene.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.root.destroy());
+    this.root = scene.add.container(0, 0, [this.line]).setDepth(DEPTH.recordFlag).setVisible(false);
+    scene.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      this.root.destroy();
+      this.pennant.destroy();
+    });
   }
 
   /** `dtMs` is visual time; `cam` gives the screen size for the confetti. */
@@ -96,6 +99,7 @@ export class RecordMoment {
     if (this.beatenMs < 0 && state.height > best) this.celebrate(state, cam);
     if (this.beatenMs >= flag.fadeMs) {
       this.root.setVisible(false);
+      this.pennant.setVisible(false);
       return;
     }
     if (this.beatenMs >= 0) this.beatenMs += dtMs;
@@ -112,13 +116,24 @@ export class RecordMoment {
     const bob = Math.sin((timeMs / flag.bobPeriodMs) * TWO_PI);
     const pulse = Math.sin((timeMs / flag.pulseMs) * TWO_PI) / 2 + 0.5;
     const [low, high] = flag.lineAlpha;
+    const y = this.flagY(state);
     this.root
-      .setPosition(0, this.flagY(state))
+      .setPosition(0, y)
       .setAlpha(1 - fade)
       .setVisible(true);
     this.line.setAlpha(low + (high - low) * pulse);
-    this.pennant.setAngle(wave * flag.waveDeg).setScale(1, 1 + flag.waveStretch * wave);
-    this.pennant.y = -flag.labelHeight / 2 - flag.lineHeight + bob * flag.bobDistance;
+    this.side = pennantSide(this.side, freeRoom(state, this.best ?? 0));
+    const halfWidth = flag.labelWidth / 2;
+    const x =
+      this.side === 1
+        ? LOGICAL_SIZE.width - flag.labelInset - halfWidth
+        : flag.labelInset + halfWidth;
+    this.pennant
+      .setPosition(x, y - flag.labelHeight / 2 - flag.lineHeight + bob * flag.bobDistance)
+      .setAngle(wave * flag.waveDeg * this.side)
+      .setScale(1, 1 + flag.waveStretch * wave)
+      .setAlpha(1 - fade)
+      .setVisible(true);
   }
 
   private celebrate(state: Readonly<TowerState>, cam: { width: number; height: number }): void {

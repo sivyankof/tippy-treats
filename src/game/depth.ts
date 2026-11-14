@@ -8,6 +8,8 @@ export const DEPTH = {
   tray: 10,
   /** The record line of the session: behind the tower, over the tray. */
   recordFlag: 12,
+  /** The "Record" pennant: over the tower so it always reads, under the aim hint and the flying layer. */
+  recordPennant: 22,
   /** The translucent chocolate of the brownie's bubble: behind the tower, so it does not muddy the top layer. */
   bubbleBack: 15,
   tower: 20,
