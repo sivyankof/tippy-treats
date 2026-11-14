@@ -12,3 +12,10 @@ export const BERRY_PACKS: readonly BerryPack[] = [
   { berries: 50, coins: 600 },
   { berries: 100, coins: 1400 },
 ];
+
+/**
+ * A creature reward the player already owns pays this share of its shop price instead, in the
+ * currency it sells for, coins first (docs/03-creatures.md, "Получение существ"). The starter
+ * pack has its own rule (docs/05-economy-monetization.md, section 5).
+ */
+export const DUPLICATE_CREATURE_SHARE = 0.5;

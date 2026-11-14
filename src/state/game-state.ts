@@ -1,4 +1,4 @@
-import { earn, spend, type Cost, type Wallet } from '../core/economy';
+import { earn, grantCreature, spend, type Cost, type Wallet } from '../core/economy';
 import { addXp, levelReward, xpForRun } from '../core/progression';
 import type { RunResult } from '../core/run-result';
 import { createDefaultSave } from '../core/save/defaults';
@@ -30,6 +30,8 @@ export interface GameStateDeps {
 export interface LevelUp {
   level: number;
   reward: LevelReward;
+  /** The reward creature was already owned: what was paid instead of it. */
+  duplicate: Cost | null;
 }
 
 /** What a finished run changed, for the results screen. */
@@ -241,8 +243,9 @@ export class GameState {
     const levelUps: LevelUp[] = [];
     for (const level of progress.levelsGained) {
       const reward = levelReward(level);
-      next = applyLevelReward(next, reward);
-      levelUps.push({ level, reward });
+      const applied = applyLevelReward(next, reward);
+      next = applied.value;
+      levelUps.push({ level, reward, duplicate: applied.duplicate });
     }
     this.replace(next);
     return { isRecord, xpGained, levelUps };
@@ -366,11 +369,12 @@ export class GameState {
   }
 }
 
-/** Coins and berries of a level reward, and the creature it hands over. */
-function applyLevelReward(save: Save, reward: LevelReward): Save {
-  let next = earn(save, { coins: reward.coins, berries: reward.berries });
-  if (reward.creature !== undefined && next.creatures[reward.creature] === undefined) {
-    next = { ...next, creatures: { ...next.creatures, [reward.creature]: { level: 1 } } };
-  }
-  return next;
+/** Coins and berries of a level reward, and the creature it hands over (or its compensation). */
+function applyLevelReward(
+  save: Save,
+  reward: LevelReward,
+): { value: Save; duplicate: Cost | null } {
+  const paid = earn(save, { coins: reward.coins, berries: reward.berries });
+  if (reward.creature === undefined) return { value: paid, duplicate: null };
+  return grantCreature(paid, reward.creature);
 }

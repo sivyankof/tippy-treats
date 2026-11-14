@@ -391,6 +391,35 @@ describe('GameState runs', () => {
     expect(state.berries).toBe(10);
   });
 
+  it('pays 300 berries at level 20 when the Rainbow was already bought', async () => {
+    const { state, storage } = setup();
+    const saved: Save = {
+      ...createDefaultSave(T0, 'a'),
+      bakerLevel: 19,
+      bakerXp: 0,
+      creatures: { honey: { level: 1 }, rainbow: { level: 2 } },
+    };
+    await storage.set(STORAGE_KEYS.save, serializeSave(saved));
+    await loaded(state);
+    const summary = state.recordRun(run({ height: xpToNext(19), coins: 0 }));
+    expect(summary.levelUps).toEqual([
+      { level: 20, reward: { creature: 'rainbow' }, duplicate: { berries: 300 } },
+    ]);
+    expect(state.berries).toBe(300);
+    expect(state.data.creatures.rainbow).toEqual({ level: 2 });
+  });
+
+  it('hands over the Rainbow at level 20 to a player without it', async () => {
+    const { state, storage } = setup();
+    const saved: Save = { ...createDefaultSave(T0, 'a'), bakerLevel: 19, bakerXp: 0 };
+    await storage.set(STORAGE_KEYS.save, serializeSave(saved));
+    await loaded(state);
+    const [up] = state.recordRun(run({ height: xpToNext(19), coins: 0 })).levelUps;
+    expect(up?.duplicate).toBeNull();
+    expect(state.data.creatures.rainbow).toEqual({ level: 1 });
+    expect(state.berries).toBe(0);
+  });
+
   it('does not give XP for the checkpoint a run started from', async () => {
     const { state } = setup();
     await state.load();

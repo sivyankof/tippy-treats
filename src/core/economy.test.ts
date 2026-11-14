@@ -5,8 +5,10 @@ import {
   buyCreature,
   canAfford,
   creaturePrice,
+  duplicateCompensation,
   earn,
   exchangeBerries,
+  grantCreature,
   spend,
   upgradeCost,
   upgradeCreature,
@@ -199,5 +201,35 @@ describe('exchangeBerries', () => {
       ok: false,
       reason: 'not_enough',
     });
+  });
+});
+
+describe('creature reward the player already owns', () => {
+  it('pays half the price in the currency the creature sells for, coins first', () => {
+    expect(duplicateCompensation('rainbow')).toEqual({ berries: 300 });
+    expect(duplicateCompensation('lemon')).toEqual({ coins: 1250 });
+    expect(duplicateCompensation('crumb')).toEqual({ coins: 600 });
+    expect(duplicateCompensation('jelly')).toEqual({ coins: 150 });
+  });
+
+  it('pays nothing for a creature the shop never sells', () => {
+    expect(duplicateCompensation('puff')).toEqual({});
+    expect(duplicateCompensation('brownie')).toEqual({});
+  });
+
+  it('hands over a new creature at level 1', () => {
+    const grant = grantCreature(slice(), 'rainbow');
+    expect(grant.duplicate).toBeNull();
+    expect(grant.value.creatures.rainbow).toEqual({ level: 1 });
+    expect(grant.value.berries).toBe(0);
+  });
+
+  it('keeps the owned creature and its level, and pays the compensation', () => {
+    const owned = slice({ berries: 5, creatures: { honey: { level: 1 }, rainbow: { level: 3 } } });
+    const grant = grantCreature(owned, 'rainbow');
+    expect(grant.duplicate).toEqual({ berries: 300 });
+    expect(grant.value.creatures.rainbow).toEqual({ level: 3 });
+    expect(grant.value.berries).toBe(305);
+    expect(grant.value.coins).toBe(0);
   });
 });

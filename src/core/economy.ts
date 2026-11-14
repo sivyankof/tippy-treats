@@ -1,5 +1,5 @@
 import { CREATURES, MAX_CREATURE_LEVEL, type CreatureId } from '../data/creatures';
-import { BERRY_PACKS, UPGRADE_COSTS } from '../data/economy';
+import { BERRY_PACKS, DUPLICATE_CREATURE_SHARE, UPGRADE_COSTS } from '../data/economy';
 
 export interface Wallet {
   coins: number;
@@ -83,6 +83,41 @@ export function creaturePrice(id: CreatureId, bakerLevel: number): PriceOption[]
   return shopEntries(id)
     .filter((entry) => bakerLevel >= entry.minBakerLevel)
     .map(({ currency, price }) => ({ currency, price }));
+}
+
+/**
+ * What a creature reward pays when the player already owns the creature: half its shop price in
+ * the currency it sells for, coins when it sells for both. Empty for a creature the shop never sells.
+ */
+export function duplicateCompensation(id: CreatureId): Cost {
+  const entries = shopEntries(id);
+  const entry = entries.find((option) => option.currency === 'coins') ?? entries[0];
+  if (!entry) return {};
+  return { [entry.currency]: Math.floor(entry.price * DUPLICATE_CREATURE_SHARE) };
+}
+
+/** The part of the save a creature reward changes. */
+export type CreatureHolder = Wallet & Pick<EconomySlice, 'creatures'>;
+
+export interface CreatureGrant<S extends CreatureHolder> {
+  value: S;
+  /** Set when the creature was already owned: what was paid instead of it. */
+  duplicate: Cost | null;
+}
+
+/** Hands over a creature reward at level 1, or its compensation when it is already owned. */
+export function grantCreature<S extends CreatureHolder>(
+  slice: S,
+  id: CreatureId,
+): CreatureGrant<S> {
+  if (slice.creatures[id] === undefined) {
+    return {
+      value: { ...slice, creatures: { ...slice.creatures, [id]: { level: 1 } } },
+      duplicate: null,
+    };
+  }
+  const duplicate = duplicateCompensation(id);
+  return { value: earn(slice, duplicate), duplicate };
 }
 
 export type BuyError = 'owned' | 'locked' | 'not_enough';
