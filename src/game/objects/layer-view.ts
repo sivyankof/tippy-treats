@@ -9,22 +9,14 @@ import type { CreatureId } from '../../data/creatures';
 import { IDLE_MOTION } from '../../data/idle-motion';
 import { effectsMode } from '../effects-mode';
 import { createGlossBand, sweepGloss } from '../fx/gloss-sweep';
+import { springScaleBack, type ScaleStart } from '../fx/spring-back';
 import { idlePose, type IdlePose } from '../ui/idle-motion';
 import { creatureColors } from './creature-art/primitives';
 import { LayerFace } from './layer-face';
 import { LayerMaterial, type MaterialMotion } from './layer-material';
 import { LayerRig } from './layer-rig';
-import {
-  acquireLayerArt,
-  artAlpha,
-  artOriginY,
-  artWidth,
-  colorIndexFor,
-  GOLDEN_COLOR_INDEX,
-  releaseLayerArt,
-} from './layer-art';
-
-type ScaleStart = { scaleX?: number; scaleY?: number };
+import { artWidth, colorIndexFor, GOLDEN_COLOR_INDEX } from './layer-art';
+import { LayerArtSlot } from './layer-art-slot';
 
 /**
  * One cake layer: a baked picture (shadow, body, glaze, gloss) and a face on top.
@@ -43,6 +35,7 @@ export class LayerView extends Phaser.GameObjects.Container {
   private readonly breath: IdlePose = { scaleX: 1, scaleY: 1, angle: 0, bob: 0 };
   private readonly content: Phaser.GameObjects.Container;
   private readonly art: Phaser.GameObjects.Image;
+  private readonly artSlot: LayerArtSlot;
   private readonly glossSweep: Phaser.GameObjects.Image;
   private readonly face: LayerFace;
   /** Extra animations for the abilities: flash, hop, fade, split. */
@@ -51,11 +44,6 @@ export class LayerView extends Phaser.GameObjects.Container {
   readonly material: LayerMaterial;
   /** Sideways offset the tower adds to the position (a spring landing slides in from it). */
   slideX = 0;
-  private artKey: string | null = null;
-  private drawnColor = -1;
-  private drawnWidth = -1;
-  private drawnCut: CutSide | null = null;
-  private drawnCreature: CreatureId | null = null;
   private faceEnabled = true;
   private readonly lookPlan: LayerPlan = { kind: 'plain' };
 
@@ -63,6 +51,7 @@ export class LayerView extends Phaser.GameObjects.Container {
     super(scene);
     const half = BALANCE.layer.height / 2;
     this.art = new Phaser.GameObjects.Image(scene, 0, 0, '__DEFAULT').setVisible(false);
+    this.artSlot = new LayerArtSlot(scene, this.art);
     this.glossSweep = createGlossBand(scene, BALANCE.layer.height - ANIM.layer.outline * 2);
     this.face = new LayerFace(scene);
     this.rig = new LayerRig(scene, this.art, this.face);
@@ -119,24 +108,7 @@ export class LayerView extends Phaser.GameObjects.Container {
   setLayer(index: number, width: number, cut: CutSide | null = null): this {
     const color = this.lookPlan.kind === 'golden' ? GOLDEN_COLOR_INDEX : colorIndexFor(index);
     const w = artWidth(width);
-    const creature = this.creatureOf(this.lookPlan);
-    if (
-      color === this.drawnColor &&
-      w === this.drawnWidth &&
-      cut === this.drawnCut &&
-      creature === this.drawnCreature
-    ) {
-      return this;
-    }
-    const key = acquireLayerArt(this.scene, color, w, cut, creature);
-    if (this.artKey) releaseLayerArt(this.scene, this.artKey);
-    this.artKey = key;
-    this.drawnColor = color;
-    this.drawnWidth = w;
-    this.drawnCut = cut;
-    this.drawnCreature = creature;
-    this.art.setTexture(key).setOrigin(0.5, artOriginY(creature)).setAlpha(artAlpha(creature));
-    this.art.setVisible(true);
+    if (!this.artSlot.show(color, w, cut, this.creatureOf(this.lookPlan))) return this;
     this.face.layout(w);
     this.face.setVisible(this.faceEnabled);
     return this;
@@ -144,13 +116,7 @@ export class LayerView extends Phaser.GameObjects.Container {
 
   /** Gives the baked art back so a pooled view does not keep its texture alive; `setLayer` brings it back. */
   releaseArt(): this {
-    if (this.artKey) releaseLayerArt(this.scene, this.artKey);
-    this.artKey = null;
-    this.drawnColor = -1;
-    this.drawnWidth = -1;
-    this.drawnCut = null;
-    this.drawnCreature = null;
-    this.art.setVisible(false);
+    this.artSlot.release();
     return this;
   }
 
@@ -166,7 +132,7 @@ export class LayerView extends Phaser.GameObjects.Container {
   /** Pieces that fall off the tower have no face. */
   setFaceEnabled(enabled: boolean): this {
     this.faceEnabled = enabled;
-    this.face.setVisible(enabled && this.drawnWidth > 0);
+    this.face.setVisible(enabled && this.artSlot.drawnWidth > 0);
     return this;
   }
 
@@ -197,7 +163,7 @@ export class LayerView extends Phaser.GameObjects.Container {
     if (lag && delayMs > 0 && !effectsMode.reduced) {
       const { creamColor, creamAlpha } = ABILITY_ANIM.twins;
       this.rig.lagShell({
-        width: this.drawnWidth,
+        width: this.artSlot.drawnWidth,
         liftPx: lag.liftPx * strength,
         liftMs: lag.liftMs,
         holdMs: 0,
@@ -216,10 +182,10 @@ export class LayerView extends Phaser.GameObjects.Container {
 
   /** The layer was `fromWidth` wide a moment ago: it puffs up from there to its width. */
   playWiden(fromWidth: number): void {
-    if (this.drawnWidth <= 0) return;
+    if (this.artSlot.drawnWidth <= 0) return;
     this.springBack(
       this.content,
-      { scaleX: fromWidth / this.drawnWidth },
+      { scaleX: fromWidth / this.artSlot.drawnWidth },
       ANIM.perfect.widenMs,
       ANIM.perfect.widenEase,
       0,
@@ -236,7 +202,7 @@ export class LayerView extends Phaser.GameObjects.Container {
   playGlossSweep(): void {
     const { outline } = ANIM.layer;
     const { glossSweepWidth, glossSweepMs, glossSweepAlpha } = ANIM.perfect;
-    const travel = this.drawnWidth / 2 - outline - glossSweepWidth / 2;
+    const travel = this.artSlot.drawnWidth / 2 - outline - glossSweepWidth / 2;
     sweepGloss(this.glossSweep, travel, glossSweepMs, glossSweepAlpha);
   }
 
@@ -283,7 +249,6 @@ export class LayerView extends Phaser.GameObjects.Container {
     this.breathRoot.setScale(pose.scaleX, pose.scaleY + spec.scaleY);
   }
 
-  /** Sets the scale to `from` (after `delayMs`) and tweens it back to 1. */
   private springBack(
     target: Phaser.GameObjects.Container,
     from: ScaleStart,
@@ -291,20 +256,6 @@ export class LayerView extends Phaser.GameObjects.Container {
     ease: string,
     delayMs: number,
   ): void {
-    this.scene.tweens.killTweensOf(target);
-    const props: Record<string, { from: number; to: number }> = {};
-    for (const key of ['scaleX', 'scaleY'] as const) {
-      const start = from[key];
-      if (start !== undefined) props[key] = { from: start, to: 1 };
-    }
-    if (delayMs <= 0) target.setScale(from.scaleX ?? 1, from.scaleY ?? 1);
-    else target.setScale(1);
-    this.scene.tweens.add({
-      targets: target,
-      ...props,
-      duration: durationMs,
-      ease,
-      delay: delayMs,
-    });
+    springScaleBack(this.scene, target, from, durationMs, ease, delayMs);
   }
 }
