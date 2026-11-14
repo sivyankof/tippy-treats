@@ -7,15 +7,18 @@ import { TowerSim, type SimPhase } from '../../core/tower-sim';
 import { ANIM } from '../../data/anim';
 import { BALANCE } from '../../data/balance';
 import { HUD_LAYOUT } from '../../data/hud-layout';
-import { readDebugParams } from '../../util/debug-params';
+import { readDebugParams, skipsTutorial } from '../../util/debug-params';
 import { frameLerp, randomSeed } from '../../util/math';
 import { RunFx, type CameraInfo, type FlyingMemo } from '../fx/run-fx';
 import { Backdrop } from '../objects/backdrop/backdrop';
 import { getDebugTeam, toTeamSlots } from '../debug/debug-team';
+import { FLYING_REACH } from '../camera-layout';
 import { effectsMode } from '../effects-mode';
 import { SCENES, type ResultsData } from '../scene-keys';
 import { enterWorld, type WorldEntry } from '../ui/transition';
 import { isOverUi } from '../ui/ui-regions';
+import { sessionHints, TUTORIAL_TEAM } from '../session-hints';
+import { TutorialDirector } from '../tutorial/tutorial-director';
 
 /** World y of the tray surface; the tower grows towards negative y. */
 const TRAY_TOP_Y = 0;
@@ -47,6 +50,8 @@ export class GameScene extends Phaser.Scene {
   private seed = 0;
   private team: Array<TeamSlot | null> = [];
   private fx!: RunFx;
+  /** The one-time hints of the run; the HUD draws them. */
+  tutorial: TutorialDirector | null = null;
   private background!: Backdrop;
   /** The flying layer before the latest step, or `null`; `flyingMemo` is the one object behind it. */
   private lastFlying: FlyingMemo | null = null;
@@ -88,13 +93,18 @@ export class GameScene extends Phaser.Scene {
   create(): void {
     const debug = readDebugParams();
     this.seed = debug.seed ?? randomSeed();
-    // Until the Team screen (M6) the debug team is the team of every run.
-    this.team = toTeamSlots(getDebugTeam());
+    // A run with a hand-picked team, level, bot or start is a normal run: it neither shows the
+    // hints nor uses up the tutorial.
+    const normalRun = skipsTutorial(debug);
+    const tutorialRun = !normalRun && sessionHints.beginRun(debug.tutorial);
+    this.tutorial = normalRun ? null : new TutorialDirector(sessionHints, tutorialRun);
+    // Until the Team screen (M6) the debug team is the team of every run; the tutorial run has its own.
+    this.team = tutorialRun ? [...TUTORIAL_TEAM] : toTeamSlots(getDebugTeam());
     this.sim = new TowerSim({
       seed: this.seed,
       mode: 'classic',
       team: this.team,
-      tutorial: false,
+      tutorial: tutorialRun,
       startHeight: debug.start ?? 0,
     });
     this.mods = this.sim.currentModifiers();
@@ -135,9 +145,13 @@ export class GameScene extends Phaser.Scene {
       this.lastFlying = null;
     }
 
-    const events = this.sim.update(delta);
+    // The tutorial holds the sim for a moment while it explains the creature layer.
+    this.tutorial?.tick(delta);
+    const held = this.tutorial?.holding ?? false;
+    const events = held ? [] : this.sim.update(delta);
     this.bot?.observe(events);
-    if (this.bot?.shouldDrop(this.sim)) events.push(...this.sim.drop());
+    if (!held && this.bot?.shouldDrop(this.sim)) events.push(...this.sim.drop());
+    this.tutorial?.observe(events, this.sim.state);
     // The continue offer arrives in a later stage: until then the run ends once the miss has played.
     if (this.sim.state.phase === 'await_continue' && this.fx.canDecline) {
       events.push(...this.sim.decline());
@@ -149,6 +163,7 @@ export class GameScene extends Phaser.Scene {
     this.fx.update(delta, time, this.sim.state, this.mods, cam);
     this.background.setZone(this.sim.state.zoneIndex);
     this.followCamera(delta);
+    this.placeTutorialTarget();
 
     const result = this.fx.takeResult();
     if (result) {
@@ -179,14 +194,27 @@ export class GameScene extends Phaser.Scene {
   }
 
   private onPointerDown(pointer: Phaser.Input.Pointer): void {
-    if (isOverUi(pointer.x, pointer.y)) return;
+    if (isOverUi(pointer.x, pointer.y) || this.tutorial?.holding) return;
     this.sim.drop();
   }
 
   private onDropKey(event: KeyboardEvent): void {
     // Holding the key must not drop every new layer the moment it appears.
-    if (event.repeat) return;
+    if (event.repeat || this.tutorial?.holding) return;
     this.sim.drop();
+  }
+
+  /** Tells the director where the tower top and the creature layer are on the screen, so hints can be placed. */
+  private placeTutorialTarget(): void {
+    const tutorial = this.tutorial;
+    if (!tutorial) return;
+    // Where the top of the tower settles on the screen: hints keep out of the flying row above it.
+    tutorial.towerTopY = this.fx.tower.topY() - this.targetScrollY();
+    if (!tutorial.holding) return;
+    const pose = this.fx.tower.layerPose(tutorial.introLayerIndex);
+    if (!pose) return;
+    const camera = this.cameras.main;
+    tutorial.setTarget(pose.x - camera.scrollX, pose.y - BALANCE.layer.height / 2 - camera.scrollY);
   }
 
   private onResize(): void {
@@ -237,11 +265,9 @@ export class GameScene extends Phaser.Scene {
    */
   private targetScrollY(): number {
     const screenH = this.scale.gameSize.height;
-    const flyingReach =
-      BALANCE.layer.gapAboveTower + BALANCE.layer.height + ANIM.flying.bobAmplitude;
     const surfaceScreenY = Math.max(
       screenH - ANIM.camera.visibleLayers * BALANCE.layer.height,
-      HUD_LAYOUT.bottomEdge + ANIM.camera.hudClearance + flyingReach,
+      HUD_LAYOUT.bottomEdge + ANIM.camera.hudClearance + FLYING_REACH,
     );
     return Math.min(this.trayScrollY(), this.fx.tower.topY() - surfaceScreenY);
   }

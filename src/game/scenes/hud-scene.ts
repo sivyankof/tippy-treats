@@ -18,6 +18,7 @@ import { TreasureHud } from '../ui/treasure-hud';
 import { enterScreen } from '../ui/transition';
 import { addUiRegion } from '../ui/ui-regions';
 import { WobbleBar } from '../ui/wobble-bar';
+import { TutorialHints } from '../tutorial/tutorial-hints';
 import type { GameScene } from './game-scene';
 
 const { pauseSize, pauseMargin, pauseBarWidth, pauseBarHeight, pauseBarGap } = HUD_LAYOUT;
@@ -35,6 +36,7 @@ export class HudScene extends Phaser.Scene {
   private zoneWatch = new ZoneChangeWatch();
   private treasure!: TreasureHud;
   private numbersIdle!: HudNumbersIdle;
+  private tutorialHints!: TutorialHints;
   private heightRoll = new NumberRoll();
   private scoreRoll = new NumberRoll();
 
@@ -70,6 +72,7 @@ export class HudScene extends Phaser.Scene {
     this.zoneBanner = new ZoneBanner(this);
     this.zoneWatch = new ZoneChangeWatch();
     this.treasure = new TreasureHud(this);
+    this.tutorialHints = new TutorialHints(this);
     // Breathing only: a gloss band has nowhere to run on a button this small.
     this.pauseButton = this.createPauseButton().breathe(false);
     this.overlay = new PauseOverlay(this, {
@@ -135,6 +138,12 @@ export class HudScene extends Phaser.Scene {
       this.treasure.update(info, time, delta);
     }
     this.numbersIdle.update(time);
+    this.tutorialHints.update(
+      time,
+      delta,
+      this.gameScene()?.tutorial ?? null,
+      info?.paused ?? false,
+    );
     this.pauseButton.setVisible(this.pauseEnabled());
     this.debugPanel.update(info, this.game.loop.actualFps);
   }
@@ -192,6 +201,7 @@ export class HudScene extends Phaser.Scene {
     this.nextBadge.layout(width);
     this.zoneBanner.layout(width);
     this.treasure.layout(width);
+    this.tutorialHints.layout(width, height);
     this.debugPanel.layout(height);
   }
 }

@@ -19,6 +19,11 @@
     "on": "On",
     "off": "Off"
   },
+  "tutorial": {
+    "tap": "Tap!",
+    "honey": "{name} is sticky and forgives a small miss",
+    "wobble": "The tower is wobbling. Drop more precisely and it will calm down"
+  },
   "zone": {
     "kitchen": { "name": "Kitchen" },
     "showcase": { "name": "Shop Window" },

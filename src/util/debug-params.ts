@@ -16,6 +16,8 @@ export interface DebugParams {
   level?: number;
   /** Show the line-up of all 12 creature layers instead of a run (a temporary art-review tool). */
   lineup?: boolean;
+  /** `?tutorial=1` forces the tutorial run with every hint fresh, `?tutorial=0` turns all hints off. */
+  tutorial?: boolean;
 }
 
 const UINT32_MAX = UINT32_RANGE - 1;
@@ -51,7 +53,7 @@ function parseLevel(raw: string | null): number | undefined {
 }
 
 /**
- * Reads `?debug`, `?seed=`, `?bot=`, `?start=`, `?team=`, `?level=` and `?lineup=1` from a query string.
+ * Reads `?debug`, `?seed=`, `?bot=`, `?start=`, `?team=`, `?level=`, `?lineup=1` and `?tutorial=` from a query string.
  * Invalid values are ignored.
  */
 export function parseDebugParams(search: string): DebugParams {
@@ -68,10 +70,27 @@ export function parseDebugParams(search: string): DebugParams {
   if (team !== undefined) result.team = team;
   if (level !== undefined) result.level = level;
   if (params.get('lineup') === '1') result.lineup = true;
+  const tutorial = params.get('tutorial');
+  if (tutorial === '1') result.tutorial = true;
+  else if (tutorial === '0') result.tutorial = false;
   return result;
 }
 
 /** Debug parameters of the current page. They only apply to dev builds. */
 export function readDebugParams(): DebugParams {
   return import.meta.env.DEV ? parseDebugParams(window.location.search) : NO_PARAMS;
+}
+
+/**
+ * True when the query asks for a hand-picked run (`?team=`, `?level=`, `?bot=` or `?start=`)
+ * without `?tutorial=`: such a run is a normal one, with no tutorial and no hints.
+ */
+export function skipsTutorial(params: DebugParams): boolean {
+  if (params.tutorial !== undefined) return false;
+  return (
+    params.team !== undefined ||
+    params.level !== undefined ||
+    params.bot !== undefined ||
+    params.start !== undefined
+  );
 }
