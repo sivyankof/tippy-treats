@@ -16,11 +16,13 @@ import {
   reachedPhase,
   tongueBody,
   type LickFrame,
+  type LickFace,
   type LickKind,
   type LickScene,
   type LickStage,
   type LoopShape,
 } from './lick-plan';
+import { eyesUnderTongue, type EyesCovered } from './tongue-shape';
 import { TongueView } from './tongue-view';
 
 /** What a lick needs from the face it plays on. */
@@ -40,6 +42,7 @@ export interface LickHost {
 }
 
 const MOUTH_Y = LICK.loop.centerY + LICK.loop.ry;
+const TONGUE_POINTS = LICK.tongue.segments + 1;
 /** One tongue per scene, shared by every face: it is only ever out on one face at a time. */
 const SHARED_TONGUES = new WeakMap<Phaser.Scene, TongueView>();
 
@@ -69,6 +72,11 @@ export class FaceLick {
   private stretchX = 0;
   private stretchY = 0;
   private glanceMs = 0;
+  /** Time since the tongue last lay over each eye (an eye under it is shut). */
+  private sinceCoverL = Infinity;
+  private sinceCoverR = Infinity;
+  private readonly covered: EyesCovered = { left: false, right: false };
+  private tongueWidth = 0;
   private envyMs = -1;
   private envySide: 1 | -1 = 1;
 
@@ -103,6 +111,7 @@ export class FaceLick {
     this.stage = null;
     this.glanceMs = 0;
     this.envyMs = -1;
+    this.sinceCoverL = this.sinceCoverR = Infinity;
     lickFrame(scene, 0, style, this.frame);
     const until = scene === 'big' ? 'happy' : 'done';
     this.host.react('lick', beatStartMs(scene, until, style));
@@ -153,16 +162,51 @@ export class FaceLick {
     }
     const parts = this.host.parts;
     const face = lickFace(scene, frame, style, this.shape.dir, this.pose);
+    this.tongueWidth = this.host.showRest()
+      ? tongueBody(scene, frame, style, this.shape, this.points)
+      : 0;
+    if (scene === 'big') this.shutCoveredEyes(face, dtMs);
     parts.poseLick(face);
     const lipsStroke = scene === 'big' && frame.stage === 'lips' && style.lips;
     parts.placeLipsTongue(lipsStroke ? lipsTongue(frame.p, this.shape.dir, this.lips) : null);
     if (face.look) {
       dropPoint(scene, this.kind, this.shape, this.drop);
       this.host.lookFull(this.drop.x, this.drop.y);
+    } else if (scene === 'big' && this.tongueWidth > 0) {
+      // The open eyes follow the tip of the tongue.
+      const n = LICK.tongue.segments;
+      this.host.lookFull(this.points[n * 2]! - this.dentX, this.points[n * 2 + 1]! - this.dentY);
     }
     this.layTongue(frame, face.dent, dtMs);
     parts.setScale(face.scaleX * (1 + this.stretchX), face.scaleY * (1 + this.stretchY));
     parts.setPosition(this.dentX, this.dentY);
+  }
+
+  /**
+   * The tongue of the big scene goes over the eyes: an open eye it lies over shuts as an arc and
+   * opens again a moment after the tongue has gone.
+   */
+  private shutCoveredEyes(face: LickFace, dtMs: number): void {
+    this.sinceCoverL += dtMs;
+    this.sinceCoverR += dtMs;
+    if (this.tongueWidth > 0) {
+      const sx = face.scaleX * (1 + this.stretchX);
+      const eyeY = -LICK.face.gape.eyesUpPx * face.eyesUp * face.scaleY;
+      const c = eyesUnderTongue(
+        this.points,
+        TONGUE_POINTS,
+        this.dentX,
+        this.dentY,
+        sx,
+        eyeY,
+        this.covered,
+      );
+      if (c.left) this.sinceCoverL = 0;
+      if (c.right) this.sinceCoverR = 0;
+    }
+    const { openDelayMs } = LICK.face.eyeCover;
+    if (face.eyeL === 'open' && this.sinceCoverL < openDelayMs) face.eyeL = 'bliss';
+    if (face.eyeR === 'open' && this.sinceCoverR < openDelayMs) face.eyeR = 'bliss';
   }
 
   /** Forgets everything (a pooled face). */
@@ -193,12 +237,10 @@ export class FaceLick {
   /** The long tongue, its saliva and trail, and the face denting after its tip. */
   private layTongue(frame: Readonly<LickFrame>, dent: boolean, dtMs: number): void {
     const view = this.tongueView();
-    const width = this.host.showRest()
-      ? tongueBody(this.scene, frame, this.style, this.shape, this.points)
-      : 0;
+    const width = this.tongueWidth;
     this.tongueOut = width > 0;
     if (width > 0) {
-      view.layTongue(this.points, width);
+      view.layTongue(this.points, this.scene, width);
       const n = LICK.tongue.segments;
       const dx = this.points[n * 2]!;
       const dy = this.points[n * 2 + 1]! - MOUTH_Y;

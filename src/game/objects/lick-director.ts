@@ -24,6 +24,7 @@ import {
   type LickStage,
   type LoopShape,
 } from './lick-plan';
+import { tongueOuterWidth } from './tongue-shape';
 
 /** Name of the stream the licks draw from, forked from the cosmetic seed of the run. */
 const LICK_STREAM = 'lick';
@@ -210,7 +211,7 @@ export class LickDirector {
     const points = face.tonguePoints;
     if (!points) return;
     const count = LICK.tongue.segments + 1;
-    const reach = LICK.tongue.width / 2 + LICK.drip.touchPx;
+    const reach = tongueOuterWidth(run.scene) / 2 + LICK.drip.touchPx;
     run.view.glazeDrips.touch(points, count, face.x, face.y, scale, reach);
     const above = ctx.views.get(run.index + 1);
     if (!above) return;

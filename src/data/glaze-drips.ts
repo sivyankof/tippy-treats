@@ -10,8 +10,10 @@ export const GLAZE_DRIPS = {
   /** A plain layer grows one drip per this much of its width, within `count`. */
   widthPerDrip: 150,
   count: [3, 5] as readonly [number, number],
-  /** A tongue that carries two drips holds them at these shares of its width. */
+  /** A tongue that carries two drips holds them at these shares of its width (one off its middle: either of them). */
   pairShares: [0.32, 0.68] as readonly [number, number],
+  /** Name of the stream the layout of a layer's drips is picked from (`fork('<name>:<layer>')` of the cosmetic seed). */
+  layoutStream: 'drips',
   /** A drip takes a time in this range to reach its full length; each drip has its own. */
   growMs: [8000, 12000] as readonly [number, number],
   /** Nothing grows for this long after the layer lands (the squash settles first). */

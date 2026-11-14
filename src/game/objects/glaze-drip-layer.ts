@@ -29,6 +29,7 @@ import {
   type DripTextureSet,
 } from './glaze-drip-textures';
 import { glazeWave, waveDripSpots, type WaveDripSpot } from './glaze-wave';
+import { plainLooks } from './plain-look';
 import { chainDistance, lickedDripShare } from './lick-plan';
 import { DRIP_MIN_LAYER_WIDTH, dripSpots, glazeBottomY, layerBox } from './layer-draw';
 
@@ -101,7 +102,8 @@ function growthSpots(
   if (!creature) {
     const wave = glazeWave(box, cut, faceHalfSpan(width, null));
     const clear = faceClearance(width, null, half);
-    return waveDripSpots(wave, dripCountFor(width), half, clear, layerIndex % 2 === 1);
+    const seed = plainLooks.cosmeticSeed;
+    return waveDripSpots(wave, dripCountFor(width), half, clear, seed, layerIndex);
   }
   const recipe = dripRecipe(creature);
   if (!recipe) return [];
@@ -178,6 +180,8 @@ export class GlazeDripLayer extends Phaser.GameObjects.Container {
   private layerWidth = -1;
   private glaze = -1;
   private layerIndex = -1;
+  /** The cosmetic seed of the run the layout was picked for. */
+  private seed = -1;
   /** Frosty thaws: a meltwater drop may leave the bottom edge now (its own schedule, not `readyCount`). */
   private thawReady = false;
   private readonly below: BelowSpan = { left: 0, right: 0, faceFrom: 0, faceTo: 0 };
@@ -238,7 +242,8 @@ export class GlazeDripLayer extends Phaser.GameObjects.Container {
       cut === this.cut &&
       width === this.layerWidth &&
       glaze === this.glaze &&
-      layerIndex === this.layerIndex
+      layerIndex === this.layerIndex &&
+      plainLooks.cosmeticSeed === this.seed
     ) {
       return;
     }
@@ -248,6 +253,7 @@ export class GlazeDripLayer extends Phaser.GameObjects.Container {
     this.layerWidth = width;
     this.glaze = glaze;
     this.layerIndex = layerIndex;
+    this.seed = plainLooks.cosmeticSeed;
     this.size = sizeFor(creature);
     this.textures = dripTextures(this.scene, glaze, this.size);
     this.thawReady = false;

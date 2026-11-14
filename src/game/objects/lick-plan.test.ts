@@ -91,7 +91,7 @@ describe('scene timing', () => {
 describe('the big scene', () => {
   const shape = loopShape(720, 1, 1);
 
-  it('takes the tip round the whole face: both cheeks and over the brows', () => {
+  it('takes the tip round the whole face: both cheeks and across the eyes, not above the brows', () => {
     const tip = { x: 0, y: 0 };
     let top = Infinity;
     let left = Infinity;
@@ -104,7 +104,9 @@ describe('the big scene', () => {
       right = Math.max(right, tip.x);
     });
     const eyeOuter = ANIM.face.eyeSpacing / 2 + ANIM.face.eyeRadius;
-    expect(top).toBeLessThan(ANIM.face.browOffsetY);
+    const eyesUp = -LICK.face.gape.eyesUpPx;
+    expect(top).toBeGreaterThan(ANIM.face.browOffsetY);
+    expect(top).toBeLessThan(eyesUp + ANIM.face.eyeRadius / 2);
     expect(right).toBeGreaterThan(eyeOuter);
     expect(left).toBeLessThan(-eyeOuter);
   });
@@ -174,13 +176,16 @@ describe('the big scene', () => {
     }
   });
 
-  it('squeezes the face in the wind-up, shuts the eyes in bliss for the stroke and blushes at the end', () => {
+  it('squeezes the face in the wind-up, gapes with the eyes open for the stroke and blushes at the end', () => {
     const face = newLickFace();
+    // The wind-up lasts a few frames.
+    expect(beatMs('big', 'windup')).toBeGreaterThanOrEqual(150);
     lickFace('big', lickFrame('big', beatStartMs('big', 'windup') + 60), PLAIN, 1, face);
     expect(face.scaleY).toBeLessThan(1);
     expect(face.mouth).toBe('purse');
     lickFace('big', lickFrame('big', beatStartMs('big', 'loop') + 100), PLAIN, 1, face);
-    expect(face).toMatchObject({ eyeL: 'bliss', eyeR: 'bliss', mouth: 'gape', dent: true });
+    expect(face).toMatchObject({ eyeL: 'open', eyeR: 'open', mouth: 'gape', dent: true });
+    expect(face.eyesUp).toBe(1);
     expect(face.brow).toBe(1);
     lickFace('big', lickFrame('big', beatStartMs('big', 'snap') + 30), PLAIN, 1, face);
     expect(face.puff).toBeGreaterThan(0);

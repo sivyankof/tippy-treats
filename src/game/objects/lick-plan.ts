@@ -217,7 +217,7 @@ function shortPoints(side: 1 | -1): {
   sy: number;
 } {
   const s = LICK.shortPath;
-  const my = LICK.loop.centerY + LICK.loop.ry;
+  const my = s.mouthY;
   return {
     mx: side * s.mouthX,
     my,
@@ -297,15 +297,23 @@ export function tongueBody(
     my = k.my;
     w = 1;
   }
-  // The bow bulges out from the middle of the face (the short one downwards).
+  // The bow bulges out from the middle of the face; the short one bends at a low knee under the eye.
   const midX = (mx + tip.x) / 2;
   const midY = (my + tip.y) / 2;
   const bulge = LICK.loop.bulge;
-  const cx = scene === 'big' ? midX * (1 + bulge) : midX;
-  const cy =
-    scene === 'big' ? midY + (midY - LICK.loop.centerY) * bulge : midY + LICK.shortPath.bow;
+  let cx = midX * (1 + bulge);
+  let cy = midY + (midY - LICK.loop.centerY) * bulge;
+  if (scene === 'short') {
+    const k = shortPoints(shape.dir);
+    const { knee } = LICK.shortPath;
+    const reach = clamp01(Math.hypot(tip.x - mx, tip.y - my) / Math.hypot(k.ox - mx, k.oy - my));
+    cx = midX + (shape.dir * knee.x - midX) * reach;
+    cy = midY + (knee.y - midY) * reach;
+  }
+  // The short tongue goes back in along its own bow, so it never swings over the eye.
+  const keep = stage === 'back' ? 1 - p * p : 1;
   for (let i = 0; i <= n; i++) {
-    const t = i / n;
+    const t = (i / n) * keep;
     let wx = 0;
     let wy = 0;
     if (w < 1) {
@@ -369,7 +377,7 @@ function curlAndSnap(
 ): void {
   const { stage, p } = frame;
   const curl = stage === 'curl' ? backOut(p) : stage === 'snap' ? 1 : 0;
-  const shrink = stage === 'snap' || stage === 'back' ? 1 - p * p : 1;
+  const shrink = stage === 'snap' ? 1 - p * p : 1;
   if ((scene !== 'big' || curl === 0) && shrink === 1) return;
   const { curlDeg, curlShare } = LICK.tongue;
   const from = Math.floor(n * (1 - curlShare));
@@ -411,6 +419,17 @@ export function lickedDripShare(sinceMs: number): number {
   return shortenTo + (1 - shortenTo) * smoothstep((sinceMs - shrinkMs) / regrowMs);
 }
 
+/** Distance from (x, y) to the piece `i` (from point `i - 1` to point `i`) of a chain of points (flat `[x0, y0, ...]`). */
+export function pieceDistance(points: readonly number[], i: number, x: number, y: number): number {
+  const ax = points[i * 2 - 2]!;
+  const ay = points[i * 2 - 1]!;
+  const vx = points[i * 2]! - ax;
+  const vy = points[i * 2 + 1]! - ay;
+  const lengthSq = vx * vx + vy * vy;
+  const t = lengthSq === 0 ? 0 : clamp01(((x - ax) * vx + (y - ay) * vy) / lengthSq);
+  return Math.hypot(x - ax - vx * t, y - ay - vy * t);
+}
+
 /** Distance from (x, y) to a chain of `count` points (flat `[x0, y0, ...]`). */
 export function chainDistance(
   points: readonly number[],
@@ -419,15 +438,7 @@ export function chainDistance(
   y: number,
 ): number {
   let best = Infinity;
-  for (let i = 1; i < count; i++) {
-    const ax = points[i * 2 - 2]!;
-    const ay = points[i * 2 - 1]!;
-    const vx = points[i * 2]! - ax;
-    const vy = points[i * 2 + 1]! - ay;
-    const lengthSq = vx * vx + vy * vy;
-    const t = lengthSq === 0 ? 0 : clamp01(((x - ax) * vx + (y - ay) * vy) / lengthSq);
-    best = Math.min(best, Math.hypot(x - ax - vx * t, y - ay - vy * t));
-  }
+  for (let i = 1; i < count; i++) best = Math.min(best, pieceDistance(points, i, x, y));
   return best;
 }
 
@@ -546,6 +557,8 @@ export interface LickFace {
   /** The mouth: as the expression says, a small "oh", pursed, gaping (by `open`), or open. */
   mouth: 'expr' | 'oh' | 'purse' | 'gape' | 'wide';
   open: number;
+  /** The eyes and brows go up to make room for the gaping mouth (0..1 of `LICK.face.gape.eyesUpPx`). */
+  eyesUp: number;
   eyeL: EyeLook;
   eyeR: EyeLook;
   /** The pupils look at the drop. */
@@ -568,6 +581,7 @@ export function newLickFace(): LickFace {
     browSide: 0,
     mouth: 'expr',
     open: 0,
+    eyesUp: 0,
     eyeL: 'expr',
     eyeR: 'expr',
     look: false,
@@ -606,9 +620,15 @@ export function lickFace(
   if (scene === 'short') return shortFace(frame, side, out);
   const { stage, p } = frame;
   const sinceSnap = frame.tMs - beatStartMs('big', 'snap', style);
-  const bliss = (): void => {
-    out.eyeL = 'bliss';
-    out.eyeR = 'bliss';
+  const eyes = (look: EyeLook): void => {
+    out.eyeL = look;
+    out.eyeR = look;
+  };
+  // While the tongue is out the eyes are open (the face shuts the one it lies over).
+  const gape = (open: number): void => {
+    out.mouth = 'gape';
+    out.open = open;
+    out.eyesUp = Math.min(1, Math.max(0, open));
   };
   switch (stage) {
     case 'arrive':
@@ -633,10 +653,9 @@ export function lickFace(
     }
     case 'shoot': {
       const { scaleX, scaleY } = LICK.face.windup;
-      bliss();
+      eyes('open');
       out.brow = 1;
-      out.mouth = 'gape';
-      out.open = backOut(p, LICK.face.gapeOvershoot);
+      gape(backOut(p, LICK.face.gape.overshoot));
       out.scaleX = 1 + (scaleX - 1) * (1 - p);
       out.scaleY = 1 + (scaleY - 1) * (1 - p);
       out.dent = true;
@@ -646,21 +665,19 @@ export function lickFace(
     case 'stretch':
     case 'hold':
     case 'curl':
-      bliss();
+      eyes('open');
       out.brow = 1;
-      out.mouth = 'gape';
-      out.open = 1;
+      gape(1);
       out.dent = true;
       return out;
     case 'snap':
-      bliss();
+      eyes('bliss');
       out.brow = 1 - p;
-      out.mouth = 'gape';
-      out.open = 1 - p;
+      gape(1 - p);
       out.puff = puffAt(sinceSnap);
       return out;
     case 'lips':
-      bliss();
+      eyes('bliss');
       out.mouth = style.lips ? 'wide' : 'expr';
       out.open = LICK.face.wideScale;
       out.puff = puffAt(sinceSnap);

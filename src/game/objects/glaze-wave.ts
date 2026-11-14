@@ -1,4 +1,5 @@
 import type { CutSide } from '../../core/drop';
+import { Rng } from '../../core/rng';
 import { GLAZE_DRIPS } from '../../data/glaze-drips';
 import { PLAIN_LAYER } from '../../data/plain-layers';
 import { GOLDEN } from '../../util/math';
@@ -108,70 +109,80 @@ function spotAt(wave: GlazeWave, tongue: GlazeTongue, x: number, halfWidth: numb
   return { x, tipY: tongueY(tongue, wave.crestY, x), rootY };
 }
 
+/** The places one tongue may give drips at: none, the middle, one side of it, or a pair. */
+function tongueOptions(tongue: GlazeTongue, clear: (x: number) => boolean): number[][] {
+  const [near, far] = GLAZE_DRIPS.pairShares.map(
+    (share) => tongue.x0 + (tongue.x1 - tongue.x0) * share,
+  );
+  const middle = (tongue.x0 + tongue.x1) / 2;
+  const options: number[][] = [[]];
+  for (const x of [middle, near!, far!]) if (clear(x)) options.push([x]);
+  if (clear(near!) && clear(far!)) options.push([near!, far!]);
+  return options;
+}
+
 /**
- * The low points of the tongues the growing drips come out of, at most `count`, none nearer to
- * the centre than `faceClear` (the face of the layer). Each tongue gives its middle; when that
- * is not enough, the outermost tongues give two drips each instead (at `pairShares` of their
- * width, still on the broad round bottom), so a layer gets its drips without any in front of the face.
- * `rightFirst` splits the right one of two equally far tongues first (neighbouring layers differ).
+ * Every way the drips of a layer may be laid out (each a list of x from left to right), none
+ * nearer to the centre than `faceClear` (the face of the layer): each tongue gives no drip, one
+ * in its middle, one to a side of it, or a pair (`GLAZE_DRIPS.pairShares`); there is a drip on
+ * each side of the face that has a tongue for one. A layout holds from `GLAZE_DRIPS.count[0]` up
+ * to `most` drips; when that leaves fewer than two layouts (a narrow layer), fewer drips are let
+ * in until there are two (or it is down to one drip). Always in the same order for a wave.
+ */
+export function dripLayouts(wave: GlazeWave, most: number, faceClear = 0): number[][] {
+  const clear = (x: number): boolean => Math.abs(x) >= faceClear;
+  const options = wave.tongues.map((t) => tongueOptions(t, clear)).filter((o) => o.length > 1);
+  const sides = new Set(options.flat(2).map((x) => Math.sign(x)));
+  const all: number[][] = [];
+  const walk = (i: number, picked: number[]): void => {
+    if (picked.length > most) return;
+    if (i === options.length) {
+      if (picked.length > 0) all.push(picked);
+      return;
+    }
+    for (const option of options[i]!) walk(i + 1, option.length ? [...picked, ...option] : picked);
+  };
+  walk(0, []);
+  const twoSided = (layout: number[]): boolean =>
+    layout.length === 1 || [...sides].every((side) => layout.some((x) => Math.sign(x) === side));
+  const fair = all.filter(twoSided);
+  const fewest = fair.reduce((n, layout) => Math.min(n, layout.length), Infinity);
+  let least = Math.max(fewest, Math.min(GLAZE_DRIPS.count[0], most));
+  const within = (): number[][] => fair.filter((layout) => layout.length >= least);
+  while (within().length < 2 && least > fewest) least--;
+  return within();
+}
+
+/**
+ * The layout of the drips of the layer with this 1-based number, out of `layouts`, picked from
+ * the cosmetic stream `seed` like the look of the layer. Odd layers take the layouts at odd
+ * places of the list, even layers those at even places, so two neighbouring layers of one width
+ * never share a layout (unless there is only one).
+ */
+export function pickDripLayout(layouts: number[][], seed: number, layerIndex: number): number[] {
+  const own = layouts.filter((_, i) => i % 2 === layerIndex % 2);
+  const pool = own.length > 0 ? own : layouts;
+  const rng = new Rng(seed).fork(`${GLAZE_DRIPS.layoutStream}:${layerIndex}`);
+  return pool[rng.int(0, pool.length - 1)] ?? [];
+}
+
+/**
+ * The places of the tongues the growing drips of the layer `layerIndex` come out of (see
+ * `dripLayouts` and `pickDripLayout`): at most `most`, none nearer to the centre than `faceClear`.
  */
 export function waveDripSpots(
   wave: GlazeWave,
-  count: number,
+  most: number,
   halfWidth: number,
-  faceClear = 0,
-  rightFirst = false,
+  faceClear: number,
+  seed: number,
+  layerIndex: number,
 ): WaveDripSpot[] {
-  const clear = (x: number): boolean => Math.abs(x) >= faceClear;
-  const middle = (t: GlazeTongue): number => (t.x0 + t.x1) / 2;
-  const singles = wave.tongues.filter((t) => clear(middle(t)));
-  const pairs = new Set<GlazeTongue>();
-  let total = singles.length;
-  // Outermost first: the tongues by the sides are the farthest from the face.
-  const outermost = [...(rightFirst ? [...wave.tongues].reverse() : wave.tongues)].sort(
-    (a, b) => Math.abs(middle(b)) - Math.abs(middle(a)),
-  );
-  for (const tongue of outermost) {
-    if (total >= count) break;
-    const extra = GLAZE_DRIPS.pairShares
-      .map((share) => tongue.x0 + (tongue.x1 - tongue.x0) * share)
-      .filter(clear).length;
-    const before = clear(middle(tongue)) ? 1 : 0;
-    if (extra <= before) continue;
-    pairs.add(tongue);
-    total += extra - before;
-  }
+  const layout = pickDripLayout(dripLayouts(wave, most, faceClear), seed, layerIndex);
   const spots: WaveDripSpot[] = [];
-  for (const tongue of wave.tongues) {
-    if (pairs.has(tongue)) {
-      for (const share of GLAZE_DRIPS.pairShares) {
-        const x = tongue.x0 + (tongue.x1 - tongue.x0) * share;
-        if (clear(x)) spots.push(spotAt(wave, tongue, x, halfWidth));
-      }
-    } else if (clear(middle(tongue))) {
-      spots.push(spotAt(wave, tongue, middle(tongue), halfWidth));
-    }
+  for (const x of layout) {
+    const tongue = wave.tongues.find((t) => x > t.x0 && x < t.x1);
+    if (tongue) spots.push(spotAt(wave, tongue, x, halfWidth));
   }
-  return pickSpread(spots, count, wave.left, wave.right);
-}
-
-/** `count` of the spots (sorted by x) nearest to evenly spread points over the stretch, each at most once. */
-function pickSpread(
-  spots: WaveDripSpot[],
-  count: number,
-  left: number,
-  right: number,
-): WaveDripSpot[] {
-  if (spots.length <= count) return spots;
-  const picked = new Set<WaveDripSpot>();
-  for (let i = 0; i < count; i++) {
-    const target = left + ((right - left) * (i + 0.5)) / count;
-    let best: WaveDripSpot | null = null;
-    for (const spot of spots) {
-      if (picked.has(spot)) continue;
-      if (!best || Math.abs(spot.x - target) < Math.abs(best.x - target)) best = spot;
-    }
-    if (best) picked.add(best);
-  }
-  return spots.filter((s) => picked.has(s));
+  return spots;
 }

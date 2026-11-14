@@ -1,9 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import { BALANCE } from '../../data/balance';
 import { PLAIN_LAYER } from '../../data/plain-layers';
-import { faceHalfSpan } from '../fx/glaze-growth';
+import { dripCountFor, faceClearance, faceHalfSpan } from '../fx/glaze-growth';
 import {
   cutStripWidth,
+  dripLayouts,
   glazeWave,
   tongueY,
   waveDripSpots,
@@ -93,35 +94,97 @@ describe('glazeWave', () => {
   });
 });
 
+const SEEDS = [1, 2, 3, 7, 42, 99, 1234, 98765];
+const LAYERS = 120;
+
+function clearFor(width: number): number {
+  return faceClearance(width, null, 14);
+}
+
+describe('dripLayouts', () => {
+  it('keeps every drip off the face, on a tongue, with one on each side', () => {
+    for (const width of [720, 600, 450, 333]) {
+      const wave = waveFor(width);
+      const clear = clearFor(width);
+      const layouts = dripLayouts(wave, dripCountFor(width), clear);
+      expect(layouts.length).toBeGreaterThanOrEqual(2);
+      for (const layout of layouts) {
+        expect(layout.length).toBeLessThanOrEqual(dripCountFor(width));
+        for (const x of layout) expect(Math.abs(x)).toBeGreaterThanOrEqual(clear);
+        for (let i = 1; i < layout.length; i++) expect(layout[i]!).toBeGreaterThan(layout[i - 1]!);
+        if (layout.length > 1) {
+          expect(layout.some((x) => x < 0)).toBe(true);
+          expect(layout.some((x) => x > 0)).toBe(true);
+        }
+      }
+    }
+  });
+
+  it('grows 3 to 5 drips on a wide layer, in different counts and with split tongues', () => {
+    const wave = waveFor(720);
+    const layouts = dripLayouts(wave, dripCountFor(720), clearFor(720));
+    const counts = new Set(layouts.map((l) => l.length));
+    expect([...counts].sort()).toEqual([3, 4, 5]);
+    const step = wave.tongues[0]!.x1 - wave.tongues[0]!.x0;
+    // Some layouts put two drips on one tongue.
+    expect(layouts.some((l) => l.some((x, i) => i > 0 && x - l[i - 1]! < step * 0.5))).toBe(true);
+  });
+
+  it('lets fewer drips in on a narrow layer so it still has two layouts', () => {
+    const layouts = dripLayouts(waveFor(300), dripCountFor(300), clearFor(300));
+    expect(layouts.length).toBeGreaterThanOrEqual(2);
+  });
+});
+
 describe('waveDripSpots', () => {
-  it('lets each drip grow from the lowest point of its own tongue', () => {
+  it('grows each drip from the edge of its own tongue', () => {
     const wave = waveFor(720);
-    const spots = waveDripSpots(wave, 3, 14);
-    expect(spots).toHaveLength(3);
-    expect(new Set(spots.map((s) => s.x)).size).toBe(3);
+    const spots = waveDripSpots(wave, 5, 14, clearFor(720), 3, 5);
+    expect(spots.length).toBeGreaterThanOrEqual(3);
     for (const spot of spots) {
       expect(spot.tipY).toBeCloseTo(waveY(wave, spot.x));
-      expect(spot.rootY).toBeLessThanOrEqual(spot.tipY);
       expect(spot.rootY).toBeGreaterThanOrEqual(wave.crestY);
+      expect(spot.rootY).toBeLessThanOrEqual(wave.crestY + H * PLAIN_LAYER.glaze.tongueShare);
     }
   });
 
-  it('keeps every drip off the face and fills the count with pairs on the outer tongues', () => {
+  it('is the same for the same seed and layer', () => {
+    const wave = waveFor(600);
+    const a = waveDripSpots(wave, 4, 14, clearFor(600), 42, 17);
+    const b = waveDripSpots(wave, 4, 14, clearFor(600), 42, 17);
+    expect(a).toEqual(b);
+  });
+
+  it('never gives two neighbouring layers of one width the same layout', () => {
+    for (const width of [720, 600, 450, 333, 300]) {
+      for (const cut of [null, 'left', 'right'] as const) {
+        const wave = waveFor(width, cut);
+        const clear = clearFor(width);
+        if (dripLayouts(wave, dripCountFor(width), clear).length < 2) continue;
+        for (const seed of SEEDS) {
+          let before = '';
+          for (let layer = 1; layer <= LAYERS; layer++) {
+            const xs = waveDripSpots(wave, dripCountFor(width), 14, clear, seed, layer)
+              .map((spot) => spot.x.toFixed(2))
+              .join(',');
+            expect(xs).not.toBe(before);
+            before = xs;
+          }
+        }
+      }
+    }
+  });
+
+  it('varies the count and the places of the drips from layer to layer', () => {
     const wave = waveFor(720);
-    const clear = 90;
-    const spots = waveDripSpots(wave, 5, 14, clear);
-    expect(spots).toHaveLength(5);
-    for (const spot of spots) {
-      expect(Math.abs(spot.x)).toBeGreaterThanOrEqual(clear);
-      expect(spot.tipY).toBeCloseTo(waveY(wave, spot.x));
+    const seen = new Set<string>();
+    const counts = new Set<number>();
+    for (let layer = 1; layer <= 40; layer++) {
+      const spots = waveDripSpots(wave, 5, 14, clearFor(720), 7, layer);
+      seen.add(spots.map((s) => s.x.toFixed(2)).join(','));
+      counts.add(spots.length);
     }
-    for (let i = 1; i < spots.length; i++) expect(spots[i]!.x).toBeGreaterThan(spots[i - 1]!.x);
-  });
-
-  it('gives a narrow layer only the drips that fit beside its face', () => {
-    const wave = waveFor(300);
-    const spots = waveDripSpots(wave, 3, 14, 90);
-    expect(spots.length).toBeLessThanOrEqual(3);
-    for (const spot of spots) expect(Math.abs(spot.x)).toBeGreaterThanOrEqual(90);
+    expect(seen.size).toBeGreaterThan(15);
+    expect(counts.size).toBeGreaterThan(1);
   });
 });

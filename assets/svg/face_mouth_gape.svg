@@ -1,13 +1,12 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="64" height="36" viewBox="0 0 64 36">
+<svg xmlns="http://www.w3.org/2000/svg" width="72" height="46" viewBox="0 0 72 46">
   <defs>
-    <clipPath id="gape"><path d="M2.5 2.5 H61.5 C61.5 22 48 33.5 32 33.5 C16 33.5 2.5 22 2.5 2.5 Z"/></clipPath>
+    <clipPath id="gape"><path d="M2.5 2.5 H69.5 C69.5 28 54 43.5 36 43.5 C18 43.5 2.5 28 2.5 2.5 Z"/></clipPath>
   </defs>
-  <path d="M2.5 2.5 H61.5 C61.5 22 48 33.5 32 33.5 C16 33.5 2.5 22 2.5 2.5 Z" fill="#3B2A4A"/>
+  <path d="M2.5 2.5 H69.5 C69.5 28 54 43.5 36 43.5 C18 43.5 2.5 28 2.5 2.5 Z" fill="#3B2A4A"/>
   <g clip-path="url(#gape)">
-    <ellipse cx="32" cy="22" rx="22" ry="12" fill="#5A1F35"/>
-    <ellipse cx="32" cy="35" rx="17" ry="9" fill="#C8435F"/>
-    <path d="M6 2.5 H58 V8 Q58 11 55 11 H9 Q6 11 6 8 Z" fill="#FFFFFF"/>
-    <path d="M19 3 V10.5 M32 3 V10.5 M45 3 V10.5" fill="none" stroke="#D9CFE3" stroke-width="1.5"/>
+    <ellipse cx="36" cy="30" rx="25" ry="14" fill="#5A1F35"/>
+    <ellipse cx="36" cy="47" rx="20" ry="10" fill="#C8435F"/>
+    <path d="M8 2.5 V9.5 Q8 13.5 14.25 13.5 Q20.5 13.5 20.5 9.5 V2.5 Z M22.5 2.5 V9.5 Q22.5 13.5 28.75 13.5 Q35 13.5 35 9.5 V2.5 Z M37 2.5 V9.5 Q37 13.5 43.25 13.5 Q49.5 13.5 49.5 9.5 V2.5 Z M51.5 2.5 V9.5 Q51.5 13.5 57.75 13.5 Q64 13.5 64 9.5 V2.5 Z" fill="#FFFFFF" stroke="#D9CFE3" stroke-width="1.2" stroke-linejoin="round"/>
   </g>
-  <path d="M2.5 2.5 H61.5 C61.5 22 48 33.5 32 33.5 C16 33.5 2.5 22 2.5 2.5 Z" fill="none" stroke="#3B2A4A" stroke-width="3" stroke-linejoin="round"/>
+  <path d="M2.5 2.5 H69.5 C69.5 28 54 43.5 36 43.5 C18 43.5 2.5 28 2.5 2.5 Z" fill="none" stroke="#3B2A4A" stroke-width="3" stroke-linejoin="round"/>
 </svg>

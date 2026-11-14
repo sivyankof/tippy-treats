@@ -35,6 +35,8 @@ export class FaceParts extends Phaser.GameObjects.Container {
   private readonly sweat: Phaser.GameObjects.Image;
   private readonly tongue: Phaser.GameObjects.Image;
   private readonly tongueTip: Phaser.GameObjects.Image;
+  /** Eyes, pupils, lids, brows and the sweat drop: they go up together when the mouth gapes. */
+  private readonly upper: Phaser.GameObjects.Container;
   private sweatMs = 0;
   /** Sideways pupil shift of this face (twins look at each other). */
   private gaze = 0;
@@ -62,13 +64,7 @@ export class FaceParts extends Phaser.GameObjects.Container {
     this.tongueTip = image(FACE_TEXTURES.tongueTip, 0, 0).setOrigin(0.5, 1).setVisible(false);
     this.setBrowPose(null, false);
 
-    // The short tongue that licks the lips lies over the mouth, under the eyes.
-    this.add([
-      this.cheekL,
-      this.cheekR,
-      this.mouth,
-      this.tongue,
-      this.tongueTip,
+    this.upper = new Phaser.GameObjects.Container(scene, 0, 0, [
       this.eyeL,
       this.eyeR,
       this.pupilL,
@@ -79,6 +75,8 @@ export class FaceParts extends Phaser.GameObjects.Container {
       this.browR,
       this.sweat,
     ]);
+    // The short tongue that licks the lips lies over the mouth, under the eyes.
+    this.add([this.cheekL, this.cheekR, this.mouth, this.tongue, this.tongueTip, this.upper]);
   }
 
   /** Pushes an expression onto the parts. */
@@ -105,12 +103,18 @@ export class FaceParts extends Phaser.GameObjects.Container {
     this.sweat.setVisible(e.sweat && showRest);
     this.tongue.setVisible(false);
     this.tongueTip.setVisible(false);
+    this.upper.setY(0);
     if (!e.sweat) this.sweatMs = 0;
   }
 
   /** Sideways pupil shift of this face for good. */
   setGaze(gaze: number): void {
     this.gaze = gaze;
+  }
+
+  /** Y of the eyes now (they go up when the mouth gapes). */
+  get eyesY(): number {
+    return this.upper.y;
   }
 
   /** Pupil position: `x`, `y` is the glide towards the look target plus the sway drift. */
@@ -146,6 +150,7 @@ export class FaceParts extends Phaser.GameObjects.Container {
       }
     }
     this.poseMouth(face);
+    this.upper.setY(-f.gape.eyesUpPx * face.eyesUp);
     this.poseEye(this.eyeL, this.pupilL, face.eyeL);
     this.poseEye(this.eyeR, this.pupilR, face.eyeR);
     const swell = face.blush > 0 ? 1 + (LICK.happy.blushScale - 1) * face.blush : 1;
@@ -174,16 +179,19 @@ export class FaceParts extends Phaser.GameObjects.Container {
           .setPosition(0, mouthOffsetY)
           .setScale(Math.max(0, (face.mouth === 'oh' ? f.ohScale : 1) * face.open));
         return;
-      case 'gape':
+      case 'gape': {
+        const { lipY, widthFrom, minWidth, maxWidth } = f.gape;
+        const width = widthFrom + (1 - widthFrom) * face.open;
         FaceParts.show(this.mouth, FACE_TEXTURES.mouthGape)
           .setOrigin(0.5, 0)
-          .setPosition(0, f.gapeLipY)
-          .setScale(Math.max(0.3, Math.min(1.15, 0.6 + 0.4 * face.open)), Math.max(0, face.open));
+          .setPosition(0, lipY)
+          .setScale(Math.max(minWidth, Math.min(maxWidth, width)), Math.max(0, face.open));
         return;
+      }
       case 'wide':
         FaceParts.show(this.mouth, FACE_TEXTURES.mouthOpen)
           .setOrigin(0.5, 0)
-          .setPosition(0, f.gapeLipY)
+          .setPosition(0, f.wideLipY)
           .setScale(1, Math.max(0, face.open));
         return;
       default:
