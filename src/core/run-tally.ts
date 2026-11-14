@@ -5,12 +5,15 @@ export interface RunTally {
   coins: Record<CoinSource, number>;
   /** Abilities that went off during the run. */
   abilities: number;
+  /** Highest wobble the tower reached during the run. */
+  maxWobble: number;
 }
 
 export function emptyTally(): RunTally {
   return {
     coins: { floating: 0, combo: 0, perfect: 0, crumb: 0, golden: 0, height: 0 },
     abilities: 0,
+    maxWobble: 0,
   };
 }
 

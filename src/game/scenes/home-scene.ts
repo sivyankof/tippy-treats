@@ -7,10 +7,15 @@ import { gameState } from '../../state';
 import { startRunFrom, openScreen, SCENES, type HomeData } from '../scene-keys';
 import { createTextButton, type Button } from '../ui/button';
 import { createHintBubble } from '../ui/menu/home-hint';
+import { HomeBadges } from '../ui/menu/home-badges';
 import { HomeNav } from '../ui/menu/home-nav';
 import { createLevelPlate, createRecordPlate } from '../ui/menu/home-plates';
 import { HomeShelf } from '../ui/menu/home-shelf';
+import { openGiftWindow } from '../ui/menu/gift-window';
+import { openMissionsWindow } from '../ui/menu/missions-window';
 import { ScreenHeader } from '../ui/menu/screen-header';
+import { openStreakCalendar, openStreakEntry } from '../ui/menu/streak-windows';
+import type { StreakClaim } from '../../state/game-state';
 import { MenuScenery } from '../ui/style/menu-scenery';
 import { enterScreen, leaveScreen, type Movable } from '../ui/transition';
 
@@ -28,6 +33,7 @@ export class HomeScene extends Phaser.Scene {
   private record!: Phaser.GameObjects.Container;
   private play!: Button;
   private nav!: HomeNav;
+  private badges!: HomeBadges;
   private hint: ReturnType<typeof createHintBubble> | null = null;
   private ring: Phaser.GameObjects.Container | null = null;
   private leaving = false;
@@ -38,6 +44,7 @@ export class HomeScene extends Phaser.Scene {
 
   create(data?: HomeData): void {
     this.leaving = false;
+    gameState.refreshDay();
     this.hint = null;
     this.ring = null;
     this.scenery = new MenuScenery(this, 'home');
@@ -46,6 +53,13 @@ export class HomeScene extends Phaser.Scene {
     this.nav = new HomeNav(this, {
       collection: () => this.goTo(() => openScreen(this, SCENES.collection)),
       play: () => this.startRun(),
+      daily: () => this.goTo(() => openScreen(this, SCENES.daily)),
+      missions: () => openMissionsWindow(this, () => this.refreshMarks(), this.header.wallet),
+    });
+    this.badges = new HomeBadges(this, {
+      streak: () =>
+        openStreakCalendar(this, (claim) => this.afterStreak(claim), this.header.wallet),
+      gift: () => openGiftWindow(this, () => this.refreshMarks(), this.header.wallet),
     });
     this.level = createLevelPlate(this);
     this.header = new ScreenHeader(this, '', null);
@@ -79,18 +93,28 @@ export class HomeScene extends Phaser.Scene {
     });
     this.layout();
     this.setEnabled(false);
-    enterScreen(this, this.content(), () => this.setEnabled(true));
+    enterScreen(this, this.content(), () => {
+      this.setEnabled(true);
+      this.showDayEntry();
+    });
   }
 
   override update(time: number, delta: number): void {
     this.scenery.update(delta);
     this.header.update(time, delta);
     this.shelf.update(delta);
+    this.badges.update();
   }
 
   /** Everything that slides with the screen; the scenery stays. */
   private content(): Movable[] {
-    const items: Movable[] = [this.level, ...this.header.parts, this.shelf.root, this.record];
+    const items: Movable[] = [
+      this.level,
+      ...this.badges.parts,
+      ...this.header.parts,
+      this.shelf.root,
+      this.record,
+    ];
     if (this.hint) items.push(this.hint.root);
     if (this.ring) items.push(this.ring);
     items.push(this.play, ...this.nav.parts);
@@ -129,6 +153,7 @@ export class HomeScene extends Phaser.Scene {
     this.cameras.main.setSize(width, height);
     this.scenery.resize(width, height);
     this.header.layout(width);
+    this.badges.layout(width);
     this.level.setPosition(cfg.levelPlate.left + cfg.levelPlate.width / 2, cfg.levelPlate.y);
     const shelfY = cfg.shelf.y + extra;
     this.shelf.root.setPosition(cx, shelfY);
@@ -143,6 +168,7 @@ export class HomeScene extends Phaser.Scene {
   private setEnabled(enabled: boolean): void {
     this.play.setEnabled(enabled);
     this.nav.setEnabled(enabled);
+    this.badges.setEnabled(enabled);
     this.shelf.setEnabled(enabled);
     this.hint?.setEnabled(enabled);
   }
@@ -153,6 +179,31 @@ export class HomeScene extends Phaser.Scene {
     this.leaving = true;
     this.setEnabled(false);
     leaveScreen(this, this.content(), next);
+  }
+
+  /** The badges and the dots of the nav bar follow the save again. */
+  private refreshMarks(): void {
+    this.badges.refreshStreak();
+    this.nav.refresh();
+  }
+
+  /** The first entry of the day: the threat window and the streak calendar. */
+  private showDayEntry(): void {
+    if (this.leaving) return;
+    openStreakEntry(this, this.header.wallet, (claim) => this.afterStreak(claim));
+  }
+
+  /** A creature of the calendar (day 7) is shown on its own screen, then Home comes back. */
+  private afterStreak(claim: StreakClaim | null): void {
+    this.refreshMarks();
+    if (claim?.reward.kind !== 'creature' || claim.duplicate) return;
+    const { id } = claim.reward;
+    this.goTo(() =>
+      openScreen(this, SCENES.newCreature, {
+        creatures: [id],
+        then: { kind: 'screen', key: SCENES.home },
+      }),
+    );
   }
 
   private startRun(): void {

@@ -3,11 +3,10 @@ import { xpToNext } from '../../../core/progression';
 import { MENU } from '../../../data/menu-layout';
 import { PALETTE } from '../../../data/palette';
 import { formatNumber, t } from '../../../i18n';
-import { shade } from '../../../util/color';
 import { createOutlinedText } from '../outlined-text';
+import { drawProgressBar } from './progress-bar';
 
-const { width, height, radius, font, labelGap, back, border, numbersScale, groove, gloss } =
-  MENU.xpBar;
+const { width, height, radius, font, labelGap, border, numbersScale } = MENU.xpBar;
 
 /**
  * Baker level and the XP bar: "Lv 6 [████░░] 120 / 165". `setProgress` takes a fractional
@@ -45,32 +44,12 @@ export class XpBar extends Phaser.GameObjects.Container {
     const need = xpToNext(level);
     this.level.setText(t('meta.levelShort', { n: level }));
     this.numbers.setText(`${formatNumber(Math.round(share * need))} / ${formatNumber(need)}`);
-    const g = this.bar.clear();
-    g.fillStyle(PALETTE.textDark, 1).fillRoundedRect(
-      -this.barWidth / 2 - border,
-      -height / 2 - border,
-      this.barWidth + border * 2,
-      height + border * 2,
-      radius + border,
+    drawProgressBar(
+      this.bar,
+      { width: this.barWidth, height, radius, border },
+      share,
+      PALETTE.success,
     );
-    const left = -this.barWidth / 2;
-    const top = -height / 2;
-    g.fillStyle(back, 1).fillRoundedRect(left, top, this.barWidth, height, radius);
-    // A groove: the upper part of the empty bar is in the shade of its rim.
-    g.fillStyle(shade(back, groove), 1).fillRoundedRect(left, top, this.barWidth, height / 2, {
-      tl: radius,
-      tr: radius,
-      bl: 0,
-      br: 0,
-    });
-    const fill = Math.max(0, Math.min(1, share)) * this.barWidth;
-    if (fill > 0) {
-      const w = Math.max(fill, radius * 2);
-      g.fillStyle(PALETTE.success, 1).fillRoundedRect(left, top, w, height, radius);
-      const h = height * gloss.share;
-      g.fillStyle(PALETTE.textLight, gloss.alpha);
-      g.fillRoundedRect(left + radius / 2, top + gloss.inset, w - radius, h, h / 2);
-    }
     return this;
   }
 }

@@ -142,6 +142,25 @@ export const MENU = {
     /** Content of a screen starts this far from the top. */
     contentTop: 230,
   },
+  /** The popup window of the menus (missions, streak, gift). */
+  popup: {
+    depth: 700,
+    dimAlpha: 0.62,
+    /** Width of the window body. */
+    width: 900,
+    /** Room above the content: the ribbon title sits on the top edge. */
+    titleSpace: 150,
+    padX: 48,
+    padBottom: 56,
+    /** The window never gets lower than this. */
+    minContentHeight: 120,
+    /** Keep this much air between the window and the screen edges. */
+    screenMargin: 40,
+    close: { size: 88, inset: 14 },
+    /** How long the window takes to shrink and fade when it closes. */
+    closeMs: 160,
+    closeScale: 0.85,
+  },
   /** Small text buttons of the menus (in team, buy, try). */
   smallButton: { width: 420, height: 104, radius: 36, shadowOffset: 8, font: 44 },
   /** The wide main buttons of a card (buy, upgrade). */
@@ -216,7 +235,7 @@ export const MENU = {
     /** Baker level and XP on a plate in the top-left corner; the bar is placed from the plate centre. */
     levelPlate: { left: 24, y: 100, width: 600, height: 140, barWidth: 340, barX: 74, barY: -20 },
     /** The record line on a plate under the top bar; it moves down by `extraShare` of the extra height. */
-    record: { y: 330, extraShare: 0.25, font: 50, height: 96, padX: 48, fill: 0x7c5cff },
+    record: { y: 396, extraShare: 0.25, font: 50, height: 96, padX: 48, fill: 0x7c5cff },
     /** The team shelf: a thick plank on two brackets, with up to three creatures standing on it. */
     shelf: {
       /** Top of the plank. */
@@ -304,6 +323,111 @@ export const MENU = {
     },
     navCaptionGap: 16,
     navBadge: { width: 110, height: 44, font: 24, offsetY: 12, fill: 0x7c5cff },
+    /** Progress dots of the Missions button and the red dots that say "something is waiting". */
+    navDots: { size: 20, gap: 12, offsetY: 18, off: 0xe9d5c3, on: 0x3ddc97, outline: 4 },
+    navAlert: { size: 40, offsetX: 6, offsetY: 6, fill: 0xe8334a, outline: 6 },
+    /** The streak and the gift plates in a row under the level plate and the wallet. */
+    badges: {
+      y: 268,
+      height: 100,
+      edge: 24,
+      streak: { fill: 0xff7a2f, font: 46, padX: 36, flame: 74, gap: 10 },
+      gift: { fill: 0x7c5cff, width: 400, font: 36, box: 0.3, boxInset: 52, padRight: 28 },
+      /** The flame stretches and sways all the time. */
+      flicker: { ms: 380, scaleY: 1.1, scaleX: 0.94, swayDeg: 4 },
+      /** A ready gift box shakes for `shakeMs` every `everyMs`. */
+      shake: { everyMs: 2600, shakeMs: 90, repeat: 5, deg: 9 },
+      /** The timer text is redrawn when the whole second changes. */
+      readyColor: 0xffc93c,
+    },
+  },
+  /** Coins and berries of a menu reward flying from where they were won into the wallet counters. */
+  rewardFlight: {
+    depth: 800,
+    /** At most this many pictures per reward; a reward of 100 coins is split between them. */
+    maxIcons: 8,
+    iconSize: 64,
+    /** The pictures first pop out of the source by up to `scatter` pixels, then fly away. */
+    scatter: 160,
+    scatterMs: 260,
+    flyMs: 620,
+    staggerMs: 70,
+    arc: 160,
+    /** Without a wallet to fly into the pictures just float up and fade. */
+    floatUp: 140,
+  },
+  /** The streak windows: the calendar and the threat window. */
+  streak: {
+    cellGap: 16,
+    columns: 4,
+    cellHeight: 250,
+    /** Today's cell: rim colour and the pulse. */
+    todayRim: 0xffc93c,
+    todayPulse: { scale: 1.06, ms: 520 },
+    doneFill: 0xcdeedd,
+    dayFont: 34,
+    amountFont: 44,
+    nameFont: 36,
+    iconSize: 96,
+    /** The tick of a passed day: a green disc on the cell corner. */
+    tick: { size: 56, color: 0x3ddc97, offset: -22, halo: 4 },
+    /** A passed day: the cell art fades to this alpha. */
+    doneAlpha: 0.55,
+    /** The reward picture sits this much above the middle; the amount this far above the bottom edge. */
+    iconLift: 3,
+    amountInset: 48,
+    infoFont: 38,
+    infoGap: 28,
+    /** The flame beside the info line, the shift of the text from the middle and the side margins of the line. */
+    infoFlame: 61,
+    infoShift: 30,
+    infoMargin: 76,
+    buttonGap: 36,
+    /** The window stays this long after the claim, so the tick and the flying reward are seen. */
+    closeDelayMs: 700,
+    button: { width: 520, height: 120, radius: 44, shadowOffset: 10, font: 56 },
+    /** Reward of day 7 of the first round is a creature: its icon is shown this big. */
+    creatureIcon: 150,
+    threat: {
+      textFont: 44,
+      textGap: 40,
+      flame: 200,
+      buttonWidth: 760,
+      buttonHeight: 120,
+      buttonRadius: 44,
+      buttonShadow: 10,
+      buttonFont: 46,
+      buttonGap: 28,
+      declineFont: 40,
+      declineGap: 40,
+      /** The decline text takes taps in a zone this tall. */
+      declineHit: 88,
+      disabledAlpha: 0.6,
+      /** Fill of the berries button when the berries are short. */
+      shortFill: 0x9a8fa8,
+    },
+  },
+  /** The free gift window. */
+  gift: {
+    /** The box on the window, by its centre from the top of the content, and its scale. */
+    boxY: 190,
+    boxScale: 1,
+    /** The coins line ("+30 coins") and the "next gift in" line, centred at this y. */
+    coinsY: 440,
+    coinsFont: 96,
+    textY: 440,
+    textFont: 50,
+    buttonY: 570,
+    button: { width: 640, height: 124, radius: 44, shadowOffset: 10, font: 52 },
+    contentHeight: 640,
+    /** Shaking before the opening: how long, the waves and the swing. */
+    shakeMs: 700,
+    shakeWaves: 28,
+    shakeDeg: 9,
+    /** The coins line pops in at this scale and settles. */
+    pop: { scale: 1.3, ms: 280 },
+    /** The "next gift in" timer is redrawn this often. */
+    tickMs: 250,
   },
   team: {
     /** The design height the layout numbers are made for; a taller screen shifts the blocks down by these shares of the extra height. */
@@ -582,11 +706,49 @@ export const MENU = {
       },
     },
   },
+  /** Rewards flying from a window to the counters of the screen. */
+  /** The progress bar of missions (window and results); the look follows `xpBar`. */
+  progressBar: { radius: 18, border: 3 },
+  /** The missions window (docs/07-ui-screens.md, section 11). Positions are relative to a card centre. */
+  missions: {
+    cardHeight: 210,
+    cardGap: 18,
+    sectionGap: 26,
+    padX: 30,
+    textFont: 40,
+    textY: -54,
+    barY: 38,
+    barWidth: 400,
+    barHeight: 46,
+    barFont: 30,
+    /** Colour of the card rim and of the bar by group. */
+    groupColors: { easy: 0x3ddc97, medium: 0xffc93c, hard: 0xff5c8a },
+    rewardFont: 40,
+    rewardX: 100,
+    actionX: 272,
+    actionY: 38,
+    actionButton: { width: 200, height: 88, radius: 30, shadowOffset: 7, font: 38 },
+    actionTextPadding: 28,
+    noteFont: 28,
+    chestHeight: 260,
+    chestTitleFont: 44,
+    chestTitleY: -84,
+    chestBarY: -12,
+    chestBarFont: 32,
+    chestButtonY: 68,
+    chestButton: { width: 560, height: 88, radius: 32, shadowOffset: 8, font: 42 },
+    chestButtonPadding: 40,
+    disabledAlpha: 0.5,
+    timerFont: 36,
+    timerHeight: 48,
+    timerTickMs: 1000,
+    tickFont: 36,
+  },
   results: {
     /** Free space above the first block. */
     top: 40,
     /** The blocks keep at least this much air between them; on a taller screen they spread out. */
-    sectionGap: 30,
+    sectionGap: 16,
     titleFont: 60,
     heightFont: 200,
     recordFont: 48,
@@ -612,8 +774,26 @@ export const MENU = {
     xpFont: 52,
     nearMissFont: 40,
     nearMissWidth: 960,
-    /** Room kept for the mission progress block (session 3). */
-    missionsHeight: 0,
+    /** The missions block: a title and compact rows of the missions this run moved. */
+    missions: {
+      /** At most this many rows are shown. */
+      maxRows: 3,
+      titleFont: 40,
+      rowHeight: 64,
+      rowGap: 8,
+      textFont: 34,
+      textWidth: 540,
+      barWidth: 360,
+      barHeight: 44,
+      barFont: 28,
+      width: 940,
+      fillMs: 900,
+      delayMs: 500,
+      doneScale: 1.18,
+      doneMs: 220,
+    },
+    /** The daily tiers paid by a daily run: one compact row each. */
+    tiers: { rowHeight: 56, rowGap: 6, font: 36, width: 940, rewardFont: 40 },
     /** The XP bar fills this long per whole level, at least `xpMinMs` per piece. */
     xpFillMs: 1400,
     xpMinMs: 350,
@@ -643,6 +823,96 @@ export const MENU = {
       okButton: { width: 520, height: 112, radius: 40, shadowOffset: 8, font: 52 },
       depth: 600,
       dimAlpha: 0.62,
+    },
+  },
+  /** The daily tower screen: a stack of blocks that spreads out on a taller screen. */
+  daily: {
+    /** Free space under the last block. */
+    bottom: 70,
+    /** Gap between blocks: at least `minGap`, grows with the spare height up to `maxGap`. */
+    minGap: 24,
+    maxGap: 64,
+    /** Section captions ("Team of the day"): font, height of the row, and the right-hand text. */
+    caption: { font: 42, height: 70, sideFont: 36, width: 960, color: 0xffffff },
+    /** Date and timer on one plate. */
+    date: {
+      width: 960,
+      height: 150,
+      fill: 0x7c5cff,
+      font: 50,
+      timerFont: 38,
+      dateY: 52,
+      timerY: 108,
+      timerColor: 0xffc93c,
+      /** The timer text is rebuilt this often. */
+      tickMs: 250,
+    },
+    /** Team cards use `MENU.card`; the creatures are drawn at this level. */
+    team: { gapX: 28 },
+    /** Zone chips: a grid of `cols` columns. */
+    rules: {
+      cols: 3,
+      width: 960,
+      chipHeight: 124,
+      gap: 20,
+      zoneFont: 36,
+      ruleFont: 30,
+      zoneY: 42,
+      ruleY: 86,
+      padX: 16,
+      ruleColor: 0xfff6ec,
+      fills: {
+        kitchen: 0xe8964a,
+        showcase: 0xe85a9a,
+        roof: 0x7c5cff,
+        clouds: 0x4aa3e8,
+        stars: 0x3a3a8c,
+        space: 0x5a3a8c,
+      },
+    },
+    /** Reward tiers: five cells in a row. */
+    rewards: {
+      width: 960,
+      cellHeight: 230,
+      gap: 14,
+      heightFont: 54,
+      heightY: 54,
+      priceFont: 34,
+      priceFirstY: 120,
+      priceStep: 48,
+      /** Tinted fills: reached, not reached yet. */
+      reachedFill: 0x2fb97f,
+      openFill: 0x7c5cff,
+      bestRim: 0xffc93c,
+      tick: { size: 52, inset: 10 },
+      sideFont: 36,
+    },
+    /** Attempts: icons on the left, the ad button on the right. */
+    attempts: {
+      width: 960,
+      rowHeight: 104,
+      iconSize: 84,
+      iconGap: 16,
+      freeColor: 0x3ddc97,
+      usedColor: 0xb9a9c6,
+      ad: { width: 560, height: 104, radius: 36, shadowOffset: 8, font: 38 },
+      adPadding: 40,
+      adDisabledAlpha: 0.55,
+    },
+    play: { width: 760, height: 150, radius: 48, shadowOffset: 10, font: 64 },
+    playPadding: 60,
+    playDisabledAlpha: 0.6,
+    /** The padlock panel that replaces the attempts and the Play button before level 5. */
+    lock: {
+      width: 960,
+      height: 330,
+      fill: 0x7c5cff,
+      font: 46,
+      padlockSize: 130,
+      padlockY: 100,
+      textY: 238,
+      textPadding: 60,
+      color: 0xffc93c,
     },
   },
 } as const;

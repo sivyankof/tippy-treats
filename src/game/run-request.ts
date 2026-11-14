@@ -8,12 +8,16 @@ import { DEMO } from '../data/demo';
  * creature card (a short run with that creature in every slot, no rewards, back to the card).
  */
 export type RunRequest =
-  { kind: 'classic' } | { kind: 'demo'; creature: CreatureId; level: number; back: DemoBack };
+  | { kind: 'classic' }
+  | { kind: 'daily' }
+  | { kind: 'demo'; creature: CreatureId; level: number; back: DemoBack };
 
 /** The screen the creature card was opened from; the card goes back there after a demo. */
 export type DemoBack = 'collection' | 'team';
 
 export const CLASSIC_RUN: RunRequest = { kind: 'classic' };
+
+export const DAILY_RUN: RunRequest = { kind: 'daily' };
 
 export function demoRun(creature: CreatureId, level: number, back: DemoBack): RunRequest {
   return { kind: 'demo', creature, level, back };

@@ -3,6 +3,16 @@ import { TWO_PI, UINT32_RANGE } from '../util/math';
 const FNV_OFFSET = 0x811c9dc5;
 const FNV_PRIME = 0x01000193;
 
+/** FNV-1a hash of a string, optionally started from a custom state. */
+export function hashString(text: string, seed = FNV_OFFSET): number {
+  let hash = seed >>> 0;
+  for (let i = 0; i < text.length; i++) {
+    hash ^= text.charCodeAt(i);
+    hash = Math.imul(hash, FNV_PRIME) >>> 0;
+  }
+  return hash;
+}
+
 /** Seeded generator (mulberry32). The only source of randomness in src/core. */
 export class Rng {
   readonly seed: number;
@@ -48,11 +58,7 @@ export class Rng {
    * name, so drawing from one stream never shifts another.
    */
   fork(name: string): Rng {
-    let hash = (FNV_OFFSET ^ this.seed) >>> 0;
-    for (let i = 0; i < name.length; i++) {
-      hash ^= name.charCodeAt(i);
-      hash = Math.imul(hash, FNV_PRIME) >>> 0;
-    }
+    const hash = hashString(name, (FNV_OFFSET ^ this.seed) >>> 0);
     return new Rng(hash);
   }
 }

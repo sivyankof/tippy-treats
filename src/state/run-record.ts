@@ -1,8 +1,9 @@
 // Run bookkeeping as pure functions over the save: stats, records, XP and level rewards.
 import { earn, grantCreature, type Cost } from '../core/economy';
+import type { DailyPayout } from '../core/daily';
 import { addXp, levelReward, xpForRun } from '../core/progression';
 import type { RunResult } from '../core/run-result';
-import type { Save } from '../core/save/schema';
+import type { MissionProgress, Save } from '../core/save/schema';
 import type { LevelReward } from '../data/progression';
 
 /** One level reached by a run, with what it paid. */
@@ -29,6 +30,10 @@ export interface RunSummary {
   before: { level: number; xp: number };
   xpGained: number;
   levelUps: LevelUp[];
+  /** The missions of the day before and after this run, for the progress lines of the results. */
+  missions: { before: MissionProgress[]; after: MissionProgress[] };
+  /** Daily tower tiers this run reached and paid (empty outside the daily tower). */
+  dailyTiers: DailyPayout[];
 }
 
 /** The summary of a run that did not reach the save (dev runs, the creature demo). */
@@ -39,6 +44,8 @@ export const EMPTY_SUMMARY: RunSummary = {
   before: { level: 1, xp: 0 },
   xpGained: 0,
   levelUps: [],
+  missions: { before: [], after: [] },
+  dailyTiers: [],
 };
 
 /**
@@ -96,7 +103,16 @@ export function applyRun(
   const beforeXp = { level: before.bakerLevel, xp: before.bakerXp };
   return {
     save: next,
-    summary: { isRecord, firstRun, previousRecord, before: beforeXp, xpGained, levelUps },
+    summary: {
+      isRecord,
+      firstRun,
+      previousRecord,
+      before: beforeXp,
+      xpGained,
+      levelUps,
+      missions: EMPTY_SUMMARY.missions,
+      dailyTiers: EMPTY_SUMMARY.dailyTiers,
+    },
   };
 }
 

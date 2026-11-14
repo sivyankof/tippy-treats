@@ -3,6 +3,7 @@ import { TimingBot } from '../../core/bot';
 import type { Modifiers } from '../../core/abilities/types';
 import { Rng } from '../../core/rng';
 import { emptyTally, tallyEvents, type RunTally } from '../../core/run-tally';
+import type { RunMode } from '../../core/run-result';
 import type { TeamSlot } from '../../core/sim-types';
 import { TowerSim, type SimEvent } from '../../core/tower-sim';
 import { BALANCE } from '../../data/balance';
@@ -12,7 +13,7 @@ import { Backdrop } from '../objects/backdrop/backdrop';
 import { plainLooks } from '../objects/plain-look';
 import { RunCamera } from '../run-camera';
 import { ContinueFlow } from '../continue-flow';
-import { RunRecorder } from '../run-recorder';
+import { extrasOf, RunRecorder } from '../run-recorder';
 import { effectsMode } from '../effects-mode';
 import { cuesForMoment } from '../fx/moment-cues';
 import { playCues } from '../fx/run-cues';
@@ -44,6 +45,8 @@ export class GameScene extends Phaser.Scene {
   private writesSave = true;
   /** The run ends without the "Continue?" window (bot, demo). */
   private noContinue = false;
+  /** The mode of the run: a classic tower or the daily tower. */
+  private mode: RunMode = 'classic';
   /** Coins by source and abilities, for the results screen. */
   private tally: RunTally = emptyTally();
   /** The demo has placed its layers and leaves after a short pause. */
@@ -84,19 +87,23 @@ export class GameScene extends Phaser.Scene {
     this.request = data && 'kind' in data ? (data as RunRequest) : CLASSIC_RUN;
     const setup = setupRun(this.request);
     this.seed = setup.seed;
+    // The plain layers take their look from the cosmetic stream of the seed.
     plainLooks.setRunSeed(this.seed);
     this.startHeight = setup.startHeight;
     this.writesSave = setup.writesSave;
     this.noContinue = setup.noContinue;
+    this.mode = setup.mode;
     this.tally = emptyTally();
     this.demoLeaving = false;
     this.exiting = false;
-    this.recorder = new RunRecorder(gameState, this.startHeight, this.writesSave);
+    this.recorder = new RunRecorder(gameState, this.startHeight, this.writesSave, () =>
+      extrasOf(this.tally),
+    );
     this.tutorial = setup.hints ? new TutorialDirector(gameState, setup.tutorialRun) : null;
     this.team = setup.team;
     this.sim = new TowerSim({
       seed: this.seed,
-      mode: 'classic',
+      mode: setup.mode,
       team: this.team,
       tutorial: setup.tutorialRun,
       startHeight: this.startHeight,
@@ -166,8 +173,9 @@ export class GameScene extends Phaser.Scene {
     this.driveContinue(delta, events);
     // Berries go to the save the moment they are earned: they can pay for this run's continue.
     if (this.writesSave) gameState.addBerries(berriesFromEvents(events));
-    this.recordFinishedRun(events);
     tallyEvents(this.tally, events);
+    this.tally.maxWobble = Math.max(this.tally.maxWobble, this.sim.state.wobble);
+    this.recordFinishedRun(events);
     this.watchDemo();
 
     const cam = this.camera.cameraInfo();
@@ -225,7 +233,7 @@ export class GameScene extends Phaser.Scene {
     if (!flow || this.sim.state.phase !== 'await_continue') return;
     if (!flow.isOpen) {
       if (!this.fx.canDecline) return;
-      const opened = !this.noContinue && flow.open('classic', this.sim.state.continuesUsed);
+      const opened = !this.noContinue && flow.open(this.mode, this.sim.state.continuesUsed);
       if (!opened) events.push(...this.sim.decline());
       return;
     }

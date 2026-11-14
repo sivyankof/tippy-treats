@@ -3,7 +3,7 @@ import type { NearMiss } from '../../../core/near-miss';
 import type { RunTally } from '../../../core/run-tally';
 import type { CoinSource } from '../../../core/sim-types';
 import { CREATURES, type CreatureId } from '../../../data/creatures';
-import { t, tn } from '../../../i18n';
+import { formatNumber, t, tn } from '../../../i18n';
 import type { LevelUp } from '../../../state/game-state';
 
 /** Order of the sources in the coin breakdown. */
@@ -33,6 +33,10 @@ export function nearMissText(miss: NearMiss): string {
   switch (miss.kind) {
     case 'record':
       return tn('nearMiss.record', miss.layers);
+    case 'mission':
+      return tn('nearMiss.mission', miss.remaining, {
+        name: t(`mission.${miss.id}`, { n: formatNumber(miss.target) }),
+      });
     case 'xp':
       return tn('nearMiss.xp', miss.xp, { level: miss.level });
     case 'coins':
@@ -40,6 +44,11 @@ export function nearMissText(miss: NearMiss): string {
     case 'best':
       return t('nearMiss.best', { n: miss.record, today: miss.today });
   }
+}
+
+/** The line under a daily run: the best height of the day. */
+export function dailyBestText(best: number): string {
+  return best > 0 ? t('daily.best', { n: best }) : t('daily.bestNone');
 }
 
 /** Creatures to present after the results: the free ones that are new to the player. */

@@ -7,6 +7,7 @@ import { createOutlinedText } from '../outlined-text';
 import { faceOffsetY, VolumePlate } from '../style/volume';
 import { fitText } from './fit-text';
 import { createIconButton, type IconKind } from './icon-button';
+import { dailyWaiting, missionDots, missionsWaiting, NavMarks } from './home-nav-marks';
 
 const cfg = MENU.home;
 
@@ -24,6 +25,7 @@ class NavItem {
   readonly root: Phaser.GameObjects.Container;
   readonly button: Button;
   readonly live: boolean;
+  readonly marks: NavMarks;
 
   constructor(scene: Phaser.Scene, spec: NavSpec, slotWidth: number) {
     this.live = spec.onClick !== null;
@@ -53,6 +55,7 @@ class NavItem {
       parts.push(badge, text);
     }
     this.root = scene.add.container(0, 0, parts);
+    this.marks = new NavMarks(scene, this.root, spec.size);
     if (!this.live) this.button.setAlpha(cfg.navDisabledAlpha);
   }
 }
@@ -62,7 +65,10 @@ export class HomeNav {
   private readonly items: NavItem[];
   private readonly bar: VolumePlate;
 
-  constructor(scene: Phaser.Scene, handlers: { collection: () => void; play: () => void }) {
+  constructor(
+    scene: Phaser.Scene,
+    handlers: { collection: () => void; play: () => void; daily: () => void; missions: () => void },
+  ) {
     const slotWidth = cfg.navSlotWidth;
     const specs: NavSpec[] = [
       {
@@ -91,19 +97,28 @@ export class HomeNav {
         label: t('home.nav.daily'),
         fill: PALETTE.accentSecondary,
         size: cfg.navSize,
-        onClick: null,
+        onClick: handlers.daily,
       },
       {
         icon: 'missions',
         label: t('home.nav.missions'),
         fill: PALETTE.accentSecondary,
         size: cfg.navSize,
-        onClick: null,
+        onClick: handlers.missions,
       },
     ];
     const { height, overhang } = cfg.navBar;
     this.bar = new VolumePlate(scene, 'bar', height + overhang);
     this.items = specs.map((spec) => new NavItem(scene, spec, slotWidth));
+    this.refresh();
+  }
+
+  /** The progress dots of Missions and the red dots of Missions and Daily follow the save. */
+  refresh(): void {
+    const [, , , daily, missions] = this.items;
+    missions?.marks.setDots(missionDots());
+    missions?.marks.setAlert(missionsWaiting());
+    daily?.marks.setAlert(dailyWaiting());
   }
 
   /** What slides in with the screen. */

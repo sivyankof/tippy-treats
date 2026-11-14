@@ -11,6 +11,7 @@ export const SCENES = {
   team: 'team',
   collection: 'collection',
   creatureDetail: 'creature_detail',
+  daily: 'daily',
   newCreature: 'new_creature',
   game: 'game',
   hud: 'hud',

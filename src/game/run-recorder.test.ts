@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import type { RunResult } from '../core/run-result';
-import { RunRecorder } from './run-recorder';
+import { emptyTally } from '../core/run-tally';
+import { extrasOf, RunRecorder } from './run-recorder';
 import { EMPTY_SUMMARY } from '../state/game-state';
 
 function run(over: Partial<RunResult> = {}): RunResult {
@@ -43,8 +44,27 @@ describe('RunRecorder', () => {
     recorder.recordQuit(sim);
     recorder.recordQuit(sim);
     expect(sink.recordRun).toHaveBeenCalledTimes(1);
-    expect(sink.recordRun).toHaveBeenCalledWith(expect.objectContaining({ endReason: 'quit' }), 0);
+    expect(sink.recordRun).toHaveBeenCalledWith(
+      expect.objectContaining({ endReason: 'quit' }),
+      0,
+      undefined,
+    );
     expect(recorder.summary).toBe(summary);
+  });
+
+  it('passes the counters of the tally along with the result', () => {
+    const { sink } = setup(run());
+    const tally = emptyTally();
+    tally.coins.floating = 7;
+    tally.abilities = 2;
+    tally.maxWobble = 31;
+    const recorder = new RunRecorder(sink, 0, true, () => extrasOf(tally));
+    recorder.recordOver(run({ endReason: 'miss' }));
+    expect(sink.recordRun).toHaveBeenCalledWith(expect.anything(), 0, {
+      floatingCoins: 7,
+      abilities: 2,
+      maxWobble: 31,
+    });
   });
 
   it('does not record a quit after the run ended and was recorded', () => {

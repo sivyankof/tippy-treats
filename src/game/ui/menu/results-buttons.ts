@@ -7,6 +7,12 @@ import { stackRows, type Row } from './results-layout';
 
 const cfg = MENU.results;
 
+/** Label keys of the two buttons; the classic results use "Play again" and "Home". */
+export interface ResultsButtonLabels {
+  primary: string;
+  home: string;
+}
+
 export interface ResultsButtonHandlers {
   /** "Play again", or "Next" after the tutorial run. */
   primary: () => void;
@@ -20,7 +26,12 @@ export class ResultsButtons {
   readonly height: number;
   private readonly buttons: Button[] = [];
 
-  constructor(scene: Phaser.Scene, firstRun: boolean, handlers: ResultsButtonHandlers) {
+  constructor(
+    scene: Phaser.Scene,
+    firstRun: boolean,
+    handlers: ResultsButtonHandlers,
+    labels: ResultsButtonLabels = { primary: 'run.playAgain', home: 'results.home' },
+  ) {
     this.container = scene.add.container(0, 0);
     const make = (
       text: string,
@@ -42,7 +53,7 @@ export class ResultsButtons {
       return button;
     };
     const primary = make(
-      t(firstRun ? 'results.next' : 'run.playAgain'),
+      t(firstRun ? 'results.next' : labels.primary),
       PALETTE.accent,
       cfg.playButton,
       'ui_results_play',
@@ -51,7 +62,7 @@ export class ResultsButtons {
     const rows: Row[] = [{ obj: primary, height: cfg.playButton.height }];
     if (!firstRun) {
       const home = make(
-        t('results.home'),
+        t(labels.home),
         PALETTE.accentSecondary,
         cfg.homeButton,
         'ui_results_home',

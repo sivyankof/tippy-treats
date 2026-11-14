@@ -9,6 +9,7 @@ import { ResourceCounter } from '../resource-tally';
 import { TitleRibbon } from '../style/title-ribbon';
 import { VolumePlate } from '../style/volume';
 import { createIconButton } from './icon-button';
+import type { WalletTargets } from './reward-flight';
 
 const { backSize, margin } = MENU.header;
 const ribbon = MENU.style.ribbon;
@@ -74,6 +75,11 @@ export class ScreenHeader {
     this.title = this.ribbon?.label ?? null;
     this.coins = new WalletRow(scene, TREASURE_TEXTURES.coin, 0, false);
     this.berries = new WalletRow(scene, TREASURE_TEXTURES.berry, 1, true);
+  }
+
+  /** The two counters, where menu rewards fly to. */
+  get wallet(): WalletTargets {
+    return { coins: this.coins.counter, berries: this.berries.counter };
   }
 
   /** What slides in with the screen. */

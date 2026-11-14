@@ -149,7 +149,9 @@
       "play": "Play",
       "daily": "Daily",
       "missions": "Missions"
-    }
+    },
+    "streakDays": "one={n} day|other={n} days",
+    "giftReady": "Gift ready!"
   },
   "team": {
     "title": "Team",
@@ -203,7 +205,8 @@
     "record": "one=Only {n} layer to your record!|other=Only {n} layers to your record!",
     "xp": "one={n} XP to level {level}|other={n} XP to level {level}",
     "coins": "one=Just {n} coin to buy {name}|other=Just {n} coins to buy {name}",
-    "best": "Record: {n} · today: {today}"
+    "best": "Record: {n} · today: {today}",
+    "mission": "one={n} more for the mission: {name}|other={n} more for the mission: {name}"
   },
   "levelUp": {
     "title": "Level {n}!",
@@ -213,5 +216,100 @@
     "shop": "{name} in the shop",
     "daily": "Daily tower opens",
     "ok": "Great!"
+  },
+  "time": {
+    "hm": "{h} h {m} min",
+    "ms": "{m} min {s} s",
+    "s": "{s} s"
+  },
+  "mission": {
+    "runs_3": "Finish runs: {n}",
+    "runs_5": "Finish runs: {n}",
+    "floating_coins_15": "Catch floating coins: {n}",
+    "floating_coins_40": "Catch floating coins: {n}",
+    "perfects_10": "Perfect drops: {n}",
+    "perfects_25": "Perfect drops: {n}",
+    "abilities_3": "Use abilities: {n}",
+    "coins_150": "Earn coins: {n}",
+    "coins_600": "Earn coins: {n}",
+    "height_half": "Build a tower {n} layers high",
+    "height_high": "Build a tower {n} layers high",
+    "combo_5": "Reach a combo of {n}",
+    "combo_8": "Reach a combo of {n}",
+    "score_3000": "Score {n} in one run",
+    "score_8000": "Score {n} in one run",
+    "daily_play_1": "Play the daily tower",
+    "abilities_run_3": "Use {n} abilities in one run",
+    "abilities_run_6": "Use {n} abilities in one run",
+    "calm_run_15": "Build {n} layers without a big wobble",
+    "calm_run_30": "Build {n} layers without a big wobble"
+  },
+  "missions": {
+    "title": "Missions",
+    "claim": "Claim",
+    "claimed": "Claimed",
+    "reroll": "Swap",
+    "rerollUsed": "Swapped today",
+    "chest": "Chest of the day",
+    "chestClaim": "Open the chest",
+    "chestClaimed": "Chest opened",
+    "chestProgress": "{n}/{total}",
+    "newIn": "New missions in {time}",
+    "done": "Done!",
+    "progress": "{n}/{total}"
+  },
+  "streak": {
+    "title": "Streak",
+    "day": "Day {n}",
+    "claim": "Claim",
+    "claimed": "Claimed",
+    "best": "Best: {n}"
+  },
+  "streakThreat": {
+    "title": "Streak in danger",
+    "text": "one=You missed a day. Your streak of {n} day is about to end.|other=You missed a day. Your streak of {n} days is about to end.",
+    "restoreAd": "Save it for an ad",
+    "restoreBerries": "one=Save it for {price} berry|other=Save it for {price} berries",
+    "decline": "Start over",
+    "restoreShort": "Need {n} more berries"
+  },
+  "gift": {
+    "title": "Free gift",
+    "open": "Open",
+    "ready": "A gift is ready!",
+    "nextIn": "Next gift in {time}",
+    "double": "×2 for an ad",
+    "doubled": "Doubled!",
+    "coins": "one=+{amount} coin|other=+{amount} coins"
+  },
+  "daily": {
+    "title": "Daily tower",
+    "date": "Tower of {date}",
+    "team": "Team of the day",
+    "rules": "Rules of the day",
+    "rewards": "Rewards",
+    "attempts": "Attempts left: {n}",
+    "extraAttempt": "+1 attempt for an ad",
+    "play": "Play",
+    "locked": "Opens at baker level {n}",
+    "nextIn": "Next tower in {time}",
+    "best": "Best today: {n}",
+    "bestNone": "Best today: none yet",
+    "noAttempts": "No attempts left",
+    "rule": {
+      "none": "No tricks",
+      "showcase": "Rush layers",
+      "roof": "Wind gusts",
+      "clouds": "Hidden layers",
+      "stars": "Fake-outs",
+      "space": "Random rule"
+    }
+  },
+  "resultsDaily": {
+    "tier": "Daily reward for {n} layers",
+    "back": "Back to daily"
+  },
+  "resultsMissions": {
+    "title": "Missions"
   }
 }

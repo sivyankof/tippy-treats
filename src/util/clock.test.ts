@@ -1,6 +1,14 @@
 import { describe, expect, it } from 'vitest';
 import { CLOCK_BACK_TOLERANCE_MS, MS_PER_DAY } from '../data/clock';
-import { applyDayOffset, clockWentBack, localDay, now, utcDay } from './clock';
+import {
+  applyDayOffset,
+  clockWentBack,
+  daysBetween,
+  localDay,
+  msUntilLocalMidnight,
+  now,
+  utcDay,
+} from './clock';
 
 describe('applyDayOffset', () => {
   it('shifts by whole days in both directions', () => {
@@ -52,5 +60,44 @@ describe('clockWentBack', () => {
   it('accepts a custom tolerance', () => {
     expect(clockWentBack(last - 5, last, 4)).toBe(true);
     expect(clockWentBack(last - 5, last, 5)).toBe(false);
+  });
+});
+
+describe('daysBetween', () => {
+  it('counts days forward, backward and zero', () => {
+    expect(daysBetween('2026-11-14', '2026-11-14')).toBe(0);
+    expect(daysBetween('2026-11-14', '2026-11-15')).toBe(1);
+    expect(daysBetween('2026-11-14', '2026-11-12')).toBe(-2);
+  });
+
+  it('crosses month and year boundaries', () => {
+    expect(daysBetween('2026-01-31', '2026-02-01')).toBe(1);
+    expect(daysBetween('2026-12-31', '2027-01-01')).toBe(1);
+    expect(daysBetween('2026-01-01', '2027-01-01')).toBe(365);
+  });
+
+  it('knows leap years', () => {
+    expect(daysBetween('2028-02-28', '2028-03-01')).toBe(2);
+    expect(daysBetween('2027-02-28', '2027-03-01')).toBe(1);
+  });
+
+  it('is not shifted by daylight saving', () => {
+    expect(daysBetween('2026-03-28', '2026-03-30')).toBe(2);
+    expect(daysBetween('2026-10-24', '2026-10-26')).toBe(2);
+  });
+
+  it('is NaN for an empty or malformed day', () => {
+    expect(daysBetween('', '2026-11-14')).toBeNaN();
+    expect(daysBetween('2026-11-14', '')).toBeNaN();
+    expect(daysBetween('14.11.2026', '2026-11-15')).toBeNaN();
+  });
+});
+
+describe('msUntilLocalMidnight', () => {
+  it('counts down to the next local midnight', () => {
+    const noon = new Date(2026, 5, 10, 12, 0, 0).getTime();
+    expect(msUntilLocalMidnight(noon)).toBe(12 * 3600 * 1000);
+    const late = new Date(2026, 5, 10, 23, 59, 59).getTime();
+    expect(msUntilLocalMidnight(late)).toBe(1000);
   });
 });

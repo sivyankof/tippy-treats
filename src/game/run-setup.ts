@@ -1,6 +1,9 @@
+import { dailySeed, dailyTeam } from '../core/daily';
+import type { RunMode } from '../core/run-result';
 import type { TeamSlot } from '../core/sim-types';
 import { DEMO } from '../data/demo';
 import { gameState } from '../state';
+import { now, utcDay } from '../util/clock';
 import { readDebugParams, savesRun, skipsTutorial } from '../util/debug-params';
 import { randomSeed } from '../util/math';
 import { resolveRunTeam } from './debug/debug-team';
@@ -10,6 +13,7 @@ import { TUTORIAL_TEAM } from './tutorial/tutorial-team';
 /** Everything the game scene needs to start a run. */
 export interface RunSetup {
   request: RunRequest;
+  mode: RunMode;
   seed: number;
   startHeight: number;
   team: Array<TeamSlot | null>;
@@ -26,16 +30,32 @@ export interface RunSetup {
 }
 
 /**
- * Decides the run: a demo plays its creature in every slot without rewards; the tutorial run
+ * Decides the run: the daily tower plays the seed and the team of the UTC day with no hints and no continue; a demo plays its creature in every slot without rewards; the tutorial run
  * has its own team; otherwise the team of the save, which `?team=` / `?level=` (or the debug
  * panel) override in dev builds.
  */
 export function setupRun(request: RunRequest): RunSetup {
   const debug = readDebugParams();
   const seed = debug.seed ?? randomSeed();
+  if (request.kind === 'daily') {
+    const day = utcDay(now());
+    return {
+      request,
+      mode: 'daily',
+      seed: dailySeed(day),
+      startHeight: 0,
+      team: dailyTeam(day),
+      tutorialRun: false,
+      hints: false,
+      writesSave: true,
+      noContinue: true,
+      bot: undefined,
+    };
+  }
   if (request.kind === 'demo') {
     return {
       request,
+      mode: 'classic',
       seed,
       startHeight: DEMO.startHeight,
       team: demoTeam(request.creature, request.level),
@@ -55,6 +75,7 @@ export function setupRun(request: RunRequest): RunSetup {
     : resolveRunTeam(gameState.data.team, gameState.runTeam());
   return {
     request,
+    mode: 'classic',
     seed,
     startHeight: debug.start ?? 0,
     team,

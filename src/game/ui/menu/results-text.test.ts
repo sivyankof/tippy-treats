@@ -27,6 +27,9 @@ describe('near miss text', () => {
     expect(nearMissText({ kind: 'record', layers: 1 })).toBe('Only 1 layer to your record!');
     expect(nearMissText({ kind: 'record', layers: 4 })).toBe('Only 4 layers to your record!');
     expect(nearMissText({ kind: 'xp', xp: 12, level: 5 })).toBe('12 XP to level 5');
+    expect(nearMissText({ kind: 'mission', id: 'score_3000', target: 3000, remaining: 400 })).toBe(
+      '400 more for the mission: Score 3,000 in one run',
+    );
     expect(nearMissText({ kind: 'coins', coins: 40, creature: 'jelly' })).toBe(
       `Just 40 coins to buy ${t('creature.jelly.name')}`,
     );

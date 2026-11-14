@@ -11,6 +11,7 @@ import { HomeScene } from './scenes/home-scene';
 import { TeamScene } from './scenes/team-scene';
 import { CollectionScene } from './scenes/collection-scene';
 import { CreatureDetailScene } from './scenes/creature-detail-scene';
+import { DailyScene } from './scenes/daily-scene';
 import { NewCreatureScene } from './scenes/new-creature-scene';
 
 export function logicalSizeFor(parent: HTMLElement): LogicalSize {
@@ -40,6 +41,7 @@ export function createGameConfig(parent: HTMLElement): Phaser.Types.Core.GameCon
       TeamScene,
       CollectionScene,
       CreatureDetailScene,
+      DailyScene,
       GameScene,
       HudScene,
       ResultsScene,

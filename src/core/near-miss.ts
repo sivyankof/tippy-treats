@@ -1,7 +1,9 @@
 import { CREATURE_IDS, type CreatureId } from '../data/creatures';
 import { NEAR_MISS } from '../data/progression';
 import { creaturePrice } from './economy';
+import { closestMission } from './missions';
 import { xpToNext } from './progression';
+import type { MissionProgress } from './save/schema';
 import type { OwnedCreatures } from './team';
 
 /** What the player has right after the run was recorded. */
@@ -15,26 +17,33 @@ export interface NearMissInput {
   owned: OwnedCreatures;
   /** Best classic height of the day, this run included. */
   todayBest: number;
+  /** The missions of the day after this run; leave out to skip the mission goal. */
+  missions?: readonly MissionProgress[];
 }
 
 /** The closest goal the run fell short of (docs/04-meta-retention.md, section 6). */
 export type NearMiss =
   | { kind: 'record'; layers: number }
+  | { kind: 'mission'; id: string; target: number; remaining: number }
   | { kind: 'xp'; xp: number; level: number }
   | { kind: 'coins'; coins: number; creature: CreatureId }
   | { kind: 'best'; record: number; today: number };
 
 /**
- * The first goal that fits: the record a few layers away, the next baker level a little XP
- * away, a creature for coins a few coins away; otherwise the personal record and the best of
- * the day. The goal "a
- * mission is nearly done" joins the list with the missions.
+ * The first goal that fits: the record a few layers away, a mission nearly done, the next
+ * baker level a little XP away, a creature for coins a few coins away; otherwise the personal
+ * record and the best of the day.
  */
 export function nearMiss(input: NearMissInput): NearMiss {
   const { previousRecord, height } = input;
   if (previousRecord !== null) {
     const layers = previousRecord - height;
     if (layers > 0 && layers <= NEAR_MISS.recordLayers) return { kind: 'record', layers };
+  }
+  const mission = closestMission(input.missions ?? []);
+  if (mission) {
+    const { id, target } = mission;
+    return { kind: 'mission', id, target, remaining: target - mission.progress };
   }
   const xp = xpToNext(input.bakerLevel) - input.bakerXp;
   if (xp > 0 && xp <= NEAR_MISS.xp) return { kind: 'xp', xp, level: input.bakerLevel + 1 };

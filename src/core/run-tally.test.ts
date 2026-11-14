@@ -14,4 +14,8 @@ describe('run tally', () => {
     expect(tally.coins.height).toBe(10);
     expect(tally.abilities).toBe(1);
   });
+
+  it('starts with no wobble', () => {
+    expect(emptyTally().maxWobble).toBe(0);
+  });
 });
