@@ -129,6 +129,15 @@ export class CloudMotion {
     return this.phase === 'leave' ? this.pose.alpha : 0;
   }
 
+  /**
+   * How dense the cloud is over the layer, 0..1: the opacity it is drawn with. Unlike `amount`
+   * it never steps: it grows while the cloud floats in, reaches 1 as it turns solid and fades
+   * as it leaves.
+   */
+  get density(): number {
+    return this.phase === 'idle' ? 0 : this.pose.alpha;
+  }
+
   get visible(): boolean {
     return this.phase !== 'idle' && this.pose.alpha > 0;
   }
@@ -273,6 +282,11 @@ export class CloudCover {
   /** How much a cloud hides the layer, 0..1. */
   get amount(): number {
     return Math.max(...this.banks.map((bank) => bank.motion.amount));
+  }
+
+  /** Smooth 0..1 density of the densest bank (see `CloudMotion.density`). */
+  get density(): number {
+    return Math.max(...this.banks.map((bank) => bank.motion.density));
   }
 
   /**

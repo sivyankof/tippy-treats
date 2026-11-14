@@ -280,6 +280,12 @@ export class GameScene extends Phaser.Scene {
     if (!tutorial) return;
     // Where the top of the tower settles on the screen: hints keep out of the flying row above it.
     tutorial.towerTopY = this.fx.tower.topY() - this.camera.targetScrollY();
+    const shadow = this.fx.shadowAnchor();
+    tutorial.shadow.valid = shadow.visible;
+    if (shadow.visible) {
+      tutorial.shadow.x = shadow.x - this.cameras.main.scrollX;
+      tutorial.shadow.y = shadow.y - this.cameras.main.scrollY;
+    }
     if (!tutorial.holding) return;
     const pose = this.fx.tower.layerPose(tutorial.introLayerIndex);
     if (!pose) return;

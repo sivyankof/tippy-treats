@@ -12,7 +12,7 @@ import { TapHint } from './tap-hint';
 import { fadeAlpha, HintClock } from './timeline';
 import type { TutorialDirector } from './tutorial-director';
 
-const { caption, arrow, wobbleHint, berryHint } = TUTORIAL_ANIM;
+const { caption, arrow, wobbleHint, berryHint, cloudHint } = TUTORIAL_ANIM;
 
 /**
  * Everything the first-run hints draw, in the HUD scene: the tap hint, the first-perfect
@@ -28,6 +28,20 @@ export class TutorialHints {
   private readonly wobbleClock = new HintClock();
   private readonly berry: CaptionHint;
   private readonly berryClock = new HintClock();
+  private readonly cloud: CaptionHint;
+  private readonly cloudClock = new HintClock();
+  private readonly cloudArrow: Phaser.GameObjects.Image;
+  /** Last screen place of the shadow the cloud arrow pointed at. */
+  private readonly cloudSpot = {
+    x: 0,
+    y: 0,
+    known: false,
+    set(x: number, y: number): void {
+      this.x = x;
+      this.y = y;
+      this.known = true;
+    },
+  };
   private director: TutorialDirector | null = null;
   private screenWidth = 0;
   private screenHeight = 0;
@@ -40,6 +54,14 @@ export class TutorialHints {
     this.arrow = scene.add.image(0, 0, HINT_TEXTURES.arrow).setOrigin(0.5, 1).setVisible(false);
     this.wobble = new CaptionHint(scene, caption.secondPhase);
     this.berry = new CaptionHint(scene, caption.thirdPhase);
+    this.cloud = new CaptionHint(scene, caption.fourthPhase);
+    this.cloudArrow = scene.add
+      .image(0, 0, HINT_TEXTURES.arrow)
+      .setOrigin(0.5, 0)
+      .setFlipY(true)
+      .setScale(cloudHint.arrowScale)
+      .setVisible(false);
+    this.cloud.setText(t('tutorial.cloud'));
     this.honey.setText(t('tutorial.honey', { name: t('creature.honey.name') }));
     this.wobble.setText(t('tutorial.wobble'));
     this.berry.setText(t('tutorial.berry'));
@@ -67,6 +89,8 @@ export class TutorialHints {
       this.director = director;
       this.wobbleClock.stop();
       this.berryClock.stop();
+      this.cloudClock.stop();
+      this.cloudSpot.known = false;
     }
     this.tap.update(director?.tapHintVisible ?? false, timeMs, deltaMs, director?.towerTopY ?? 0);
     if (director) {
@@ -75,11 +99,13 @@ export class TutorialHints {
           this.perfect.show(effectsMode.reduced, director.towerTopY);
         else if (cue.type === 'wobble') this.startWobble(director.towerTopY);
         else if (cue.type === 'berry') this.startBerry(director.towerTopY);
+        else if (cue.type === 'cloud') this.cloudClock.start(cloudHint.holdMs);
       }
     }
     this.perfect.update(timeMs, deltaMs);
     this.updateWobble(timeMs, deltaMs);
     this.updateBerry(timeMs, deltaMs);
+    this.updateCloud(timeMs, deltaMs, director);
     this.updateHoney(timeMs, director);
   }
 
@@ -107,6 +133,29 @@ export class TutorialHints {
   private updateBerry(timeMs: number, deltaMs: number): void {
     this.berryClock.tick(deltaMs);
     this.berry.render(this.berryClock.alpha(caption.fadeInMs, caption.fadeOutMs), timeMs);
+  }
+
+  /**
+   * The arrow stands under the shadow of the hidden layer and follows it; the plate hangs under
+   * the arrow, on the tower, so the flying row stays clear.
+   */
+  private updateCloud(timeMs: number, deltaMs: number, director: TutorialDirector | null): void {
+    this.cloudClock.tick(deltaMs);
+    // The plate follows the clock alone; while the shadow is gone (the layer was dropped) the
+    // arrow and the plate keep their last place, so nothing blinks.
+    const alpha = this.cloudClock.alpha(caption.fadeInMs, caption.fadeOutMs);
+    const shadow = director?.shadow;
+    if (shadow?.valid) this.cloudSpot.set(shadow.x, shadow.y);
+    this.cloudArrow.setVisible(alpha > 0 && this.cloudSpot.known);
+    this.cloud.render(this.cloudSpot.known ? alpha : 0, timeMs);
+    if (alpha <= 0 || !this.cloudSpot.known) return;
+    const bob = arrow.bobPx * oscillate01(timeMs, arrow.periodMs);
+    const tipY = this.cloudSpot.y + cloudHint.arrowGap + bob;
+    this.cloudArrow.setPosition(this.cloudSpot.x, tipY).setAlpha(alpha);
+    const plateHalf = this.cloud.height / 2;
+    const wanted = tipY + this.cloudArrow.displayHeight + cloudHint.plateGap + plateHalf;
+    const lowest = this.screenHeight - cloudHint.screenMargin - plateHalf;
+    this.cloud.place(this.screenWidth / 2, Math.min(wanted, lowest));
   }
 
   /** The caption and the arrow above the Honey layer, for as long as the sim is held. */

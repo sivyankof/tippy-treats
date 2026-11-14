@@ -60,6 +60,12 @@ export function clamp01(t: number): number {
   return Math.min(1, Math.max(0, t));
 }
 
+/** Moves `value` towards `target` by at most `maxStep`, never past it. */
+export function stepToward(value: number, target: number, maxStep: number): number {
+  const delta = target - value;
+  return Math.abs(delta) <= maxStep ? target : value + Math.sign(delta) * maxStep;
+}
+
 /** Smooth start and end: 0 to 1 over `t` in 0..1, flat at both ends. */
 export function smoothstep(t: number): number {
   const c = clamp01(t);

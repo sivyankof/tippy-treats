@@ -95,6 +95,11 @@ export class RunFx {
     return this.missWaitMs !== null && this.missWaitMs <= 0;
   }
 
+  /** The drawn shadow of the flying layer (world space), for the hints that point at it. */
+  shadowAnchor(): Readonly<{ x: number; y: number; visible: boolean }> {
+    return this.flyingView.shadowAnchor();
+  }
+
   /** Share of real time that the visuals run at: below 1 during the slow-motion miss. */
   get timeScale(): number {
     return this.slowMoMs > 0 ? CONTINUE_ANIM.slowMoScale : 1;

@@ -187,3 +187,19 @@ describe('TutorialDirector: berry hint', () => {
     expect(quiet.takeCues()).toEqual([]);
   });
 });
+
+describe('TutorialDirector: cloud hint', () => {
+  const hidden = { ...state([plain()], 0, 'flying'), flying: { coverMs: 200 } } as TutorialState;
+  const clear = { ...state([plain()], 0, 'flying'), flying: { coverMs: 0 } } as TutorialState;
+
+  it('cues once, the first time a cloud hides the layer', () => {
+    const { dir, hints } = director(false);
+    dir.observe([], clear);
+    expect(dir.takeCues()).toEqual([]);
+    dir.observe([], hidden);
+    expect(dir.takeCues()).toEqual([{ type: 'cloud' }]);
+    expect(hints.hasHint('cloud')).toBe(true);
+    dir.observe([], hidden);
+    expect(dir.takeCues()).toEqual([]);
+  });
+});

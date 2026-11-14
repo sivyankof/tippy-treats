@@ -173,6 +173,22 @@ export const RULE_ANIM = {
     leaveAccel: 520,
     slidePx: 70,
     leaveGrow: 0.06,
+    /**
+     * The shadow of the hidden layer on the tower grows clearer with the density of the cloud:
+     * from its normal strength to `shadowAlpha` at full cover, and back as the cloud leaves. It
+     * also gets a light outline and a gentle pulse (both dropped in "fewer effects").
+     */
+    shadow: {
+      /** The drawn density follows the cloud's at most this fast: 0 to 1 takes this long. */
+      rampMs: 380,
+      shadowAlpha: 0.85,
+      outlineWidth: 3,
+      outlineColor: 0xfff0a8,
+      outlineAlpha: 0.95,
+      /** Share of the emphasised strength the pulse takes away at its low point. */
+      pulse: 0.35,
+      pulsePeriodMs: 620,
+    },
   },
 
   /** Stars fake-out: the layer freezes, looks surprised and a few stars fly off. */

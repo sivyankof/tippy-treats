@@ -4,10 +4,12 @@ import { ANIM } from '../../data/anim';
 import { BALANCE } from '../../data/balance';
 import { HINT_PULSE } from '../../data/idle-motion';
 import { PALETTE } from '../../data/palette';
-import { oscillate01, sineWave } from '../../util/math';
+import { RULE_ANIM } from '../../data/rule-anim';
+import { oscillate01, sineWave, stepToward } from '../../util/math';
 import { DEPTH } from '../depth';
 import { easeFn } from '../fx/ease';
-import { isCovered } from '../fx/rule-state';
+import { effectsMode } from '../effects-mode';
+import { shadowLook } from '../fx/shadow-emphasis';
 import { aimMouth, type Reaction } from './face-state';
 import { LayerView } from './layer-view';
 import type { TowerView } from './tower-view';
@@ -24,6 +26,10 @@ export class FlyingLayerView {
   private readonly pos = { x: 0, y: 0 };
   private hasPos = false;
   private stretched = false;
+  /** Cloud density the shadow is drawn with, 0..1; it follows `CloudCover.density` smoothly. */
+  private shadowDensity = 0;
+  /** Centre and top of the drawn shadow, reused every frame. */
+  private readonly anchor = { x: 0, y: 0, visible: false };
 
   constructor(
     scene: Phaser.Scene,
@@ -40,6 +46,11 @@ export class FlyingLayerView {
   /** World position of the layer centre, `null` while no layer flies. The object is reused: read it at once. */
   position(): Readonly<{ x: number; y: number }> | null {
     return this.hasPos ? this.pos : null;
+  }
+
+  /** Where the shadow is drawn now (world space): centre of its clamped rectangle and its top. */
+  shadowAnchor(): Readonly<{ x: number; y: number; visible: boolean }> {
+    return this.anchor;
   }
 
   /** A white band runs over the flying layer (the rainbow's sheen). */
@@ -78,6 +89,7 @@ export class FlyingLayerView {
     if (!flying) {
       this.view.setVisible(false);
       this.hint.setVisible(false);
+      this.anchor.visible = false;
       this.shownIndex = -1;
       this.hasPos = false;
       return;
@@ -121,14 +133,26 @@ export class FlyingLayerView {
     this.pos.y = y;
     this.hasPos = true;
 
-    // A cloud over the layer hides its shadow as well.
-    this.placeHint(
-      flying.x,
-      flying.width,
-      surface,
-      state.phase === 'flying' && !isCovered(flying, state.phase),
-      nowMs,
-    );
+    // A cloud over the layer does not hide the shadow: it gets clearer (`emphasizeShadow`).
+    this.placeHint(flying.x, flying.width, surface, state.phase === 'flying', nowMs);
+  }
+
+  /**
+   * Makes the shadow clearer under a cloud (`density` 0..1, see `CloudCover.density`): call it
+   * after `sync` every frame. The shadow is only restyled, never hidden or moved.
+   */
+  emphasizeShadow(density: number, nowMs: number, dtMs: number): void {
+    const cfg = RULE_ANIM.cloud.shadow;
+    // The drawn density follows the cloud's at a limited speed, so the shadow never darkens or
+    // clears in a single frame whatever the cloud does.
+    this.shadowDensity = stepToward(this.shadowDensity, density, dtMs / cfg.rampMs);
+    const look = shadowLook(this.shadowDensity, nowMs, effectsMode.reduced);
+    this.hint.setFillStyle(PALETTE.textDark, look.fillAlpha);
+    if (look.outlineAlpha > 0) {
+      this.hint.setStrokeStyle(cfg.outlineWidth, cfg.outlineColor, look.outlineAlpha);
+    } else {
+      this.hint.setStrokeStyle();
+    }
   }
 
   /** Shadow of the flying layer on the top layer of the tower (or on the tray). */
@@ -139,8 +163,12 @@ export class FlyingLayerView {
     const right = Math.min(x + width / 2, span.right - inset);
     if (!show || right <= left) {
       this.hint.setVisible(false);
+      this.anchor.visible = false;
       return;
     }
+    this.anchor.x = (left + right) / 2;
+    this.anchor.y = surface + ANIM.layer.outline;
+    this.anchor.visible = true;
     // The shadow breathes, so it never stands still even when the layer holds still (a wind-up).
     const pulse = 1 - HINT_PULSE.amount * oscillate01(nowMs, HINT_PULSE.periodMs);
     this.hint

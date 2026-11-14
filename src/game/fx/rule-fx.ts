@@ -136,6 +136,7 @@ export class RuleFx {
     input.y = at.y;
     input.dir = at.dir;
     this.cloud.update(dtMs, timeMs, input);
+    this.flying.emphasizeShadow(this.cloud.density, timeMs, dtMs);
     return v.covered || this.cloud.amount > 0;
   }
 

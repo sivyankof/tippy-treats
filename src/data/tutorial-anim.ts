@@ -55,6 +55,8 @@ export const TUTORIAL_ANIM = {
     secondPhase: 2.2,
     /** Sway phase offset of the third caption, radians. */
     thirdPhase: 4.1,
+    /** Sway phase offset of the fourth caption, radians. */
+    fourthPhase: 5.3,
     /** Phase offset of the breathing against the sway, radians. */
     breathePhase: 1.4,
     /** Least gap between the HUD and a plate. */
@@ -89,6 +91,20 @@ export const TUTORIAL_ANIM = {
     gapBelowTop: 40,
     screenMargin: 40,
     holdMs: 3500,
+  },
+  /**
+   * The cloud hint: an arrow under the shadow of the hidden layer (it follows the shadow) and a
+   * plate under the arrow, on the tower.
+   */
+  cloudHint: {
+    /** Gap between the shadow and the tip of the arrow. */
+    arrowGap: 12,
+    /** The arrow is the shared one, smaller. */
+    arrowScale: 0.55,
+    /** Gap between the arrow and the plate. */
+    plateGap: 10,
+    screenMargin: 40,
+    holdMs: 3800,
   },
   /** The wobble hint sits on the tower, just under its top surface, centred: never in the flying row. */
   wobbleHint: {

@@ -9,6 +9,7 @@ import {
   REFERENCE_FRAME_MS,
   sineWave,
   smoothstep,
+  stepToward,
   TWO_PI,
   UINT32_RANGE,
 } from './math';
@@ -72,5 +73,14 @@ describe('clamp01 and smoothstep', () => {
     expect(smoothstep(0.5)).toBeCloseTo(0.5);
     expect(smoothstep(0.1)).toBeLessThan(0.1);
     expect(smoothstep(2)).toBe(1);
+  });
+});
+
+describe('stepToward', () => {
+  it('moves by at most the step and never past the target', () => {
+    expect(stepToward(0, 1, 0.25)).toBe(0.25);
+    expect(stepToward(1, 0, 0.25)).toBe(0.75);
+    expect(stepToward(0.9, 1, 0.25)).toBe(1);
+    expect(stepToward(0.5, 0.5, 0.25)).toBe(0.5);
   });
 });

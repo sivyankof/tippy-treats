@@ -2,13 +2,15 @@ import type { SimEvent, TowerState } from '../../core/tower-sim';
 import { BALANCE } from '../../data/balance';
 import { berriesFromEvents } from '../../core/berries';
 import type { GameState } from '../../state/game-state';
+import { isCovered } from '../fx/rule-state';
 
 /** Something the hint screen has to show now. */
 export type TutorialCue =
   | { type: 'first_perfect' }
   | { type: 'creature_intro'; layerIndex: number }
   | { type: 'wobble' }
-  | { type: 'berry' };
+  | { type: 'berry' }
+  | { type: 'cloud' };
 
 const NO_CUES: readonly TutorialCue[] = [];
 
@@ -16,7 +18,8 @@ const NO_CUES: readonly TutorialCue[] = [];
 export type HintStore = Pick<GameState, 'hasHint' | 'markHint'>;
 
 /** The part of the run state the director reads. */
-export type TutorialState = Pick<TowerState, 'phase' | 'layers' | 'wobble'>;
+export type TutorialState = Pick<TowerState, 'phase' | 'layers' | 'wobble'> &
+  Partial<Pick<TowerState, 'flying'>>;
 
 /**
  * Decides which one-time hints a run shows and when. It owns no pictures: the scene asks it
@@ -30,6 +33,8 @@ export class TutorialDirector {
   readonly target = { x: 0, y: 0, valid: false };
   /** Screen y where the top of the tower settles (the flying row is above it), set by the scene. */
   towerTopY = 0;
+  /** Screen position of the shadow of the flying layer on the tower, set by the scene every frame. */
+  readonly shadow = { x: 0, y: 0, valid: false };
 
   constructor(
     private readonly hints: HintStore,
@@ -87,6 +92,11 @@ export class TutorialDirector {
         this.hints.markHint('berry');
         this.cues.push({ type: 'berry' });
       }
+    }
+    // The first cloud that hides the layer: point at the shadow, which stays in sight.
+    if (!this.hints.hasHint('cloud') && isCovered(state.flying ?? null, state.phase)) {
+      this.hints.markHint('cloud');
+      this.cues.push({ type: 'cloud' });
     }
     if (!this.hints.hasHint('wobble') && state.wobble > BALANCE.tutorial.wobbleHintAt) {
       this.hints.markHint('wobble');
