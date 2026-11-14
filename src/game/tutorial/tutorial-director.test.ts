@@ -159,3 +159,30 @@ describe('TutorialDirector: wobble hint', () => {
     expect(next.takeCues()).toEqual([]);
   });
 });
+
+describe('TutorialDirector: berry hint', () => {
+  const berryEvent: SimEvent = { type: 'golden', perfect: true };
+
+  it('cues once, on the first berry, in any run', () => {
+    const { dir } = director(false);
+    dir.observe([{ type: 'golden', perfect: false }], state([plain()]));
+    expect(dir.takeCues()).toEqual([]);
+    dir.observe([berryEvent], state([plain()]));
+    expect(dir.takeCues()).toEqual([{ type: 'berry' }]);
+    dir.observe([berryEvent], state([plain()]));
+    expect(dir.takeCues()).toEqual([]);
+  });
+
+  it('stays quiet in a later run of the session, and when switched off', () => {
+    const hints = new SessionHints();
+    new TutorialDirector(hints, true).observe([berryEvent], state([plain()]));
+    const next = new TutorialDirector(hints, false);
+    next.observe([berryEvent], state([plain()]));
+    expect(next.takeCues()).toEqual([]);
+    const off = new SessionHints();
+    off.beginRun(false);
+    const quiet = new TutorialDirector(off, false);
+    quiet.observe([berryEvent], state([plain()]));
+    expect(quiet.takeCues()).toEqual([]);
+  });
+});

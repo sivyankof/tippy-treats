@@ -34,7 +34,8 @@
   "tutorial": {
     "tap": "Tap!",
     "honey": "{name} is sticky and forgives a small miss",
-    "wobble": "The tower is wobbling. Drop more precisely and it will calm down"
+    "wobble": "The tower is wobbling. Drop more precisely and it will calm down",
+    "berry": "A berry! Spend it to continue a run after a miss"
   },
   "zone": {
     "kitchen": { "name": "Kitchen" },

@@ -37,7 +37,7 @@ export const TUTORIAL_ANIM = {
     flashAlpha: 0.55,
     flashMs: 450,
   },
-  /** A caption on a plate: the Honey intro and the wobble hint. */
+  /** A caption on a plate: the Honey intro, the wobble hint and the berry hint. */
   caption: {
     width: 780,
     padX: 36,
@@ -53,6 +53,8 @@ export const TUTORIAL_ANIM = {
     maxAlpha: 0.97,
     /** Sway phase offset of the second caption, radians. */
     secondPhase: 2.2,
+    /** Sway phase offset of the third caption, radians. */
+    thirdPhase: 4.1,
     /** Phase offset of the breathing against the sway, radians. */
     breathePhase: 1.4,
     /** Least gap between the HUD and a plate. */
@@ -81,6 +83,12 @@ export const TUTORIAL_ANIM = {
     /** How far the stem runs under the head, and its corner radius. */
     stemOverlap: 10,
     stemRadius: 14,
+  },
+  /** The berry hint sits where the wobble hint does: on the tower, under its top surface. */
+  berryHint: {
+    gapBelowTop: 40,
+    screenMargin: 40,
+    holdMs: 3500,
   },
   /** The wobble hint sits on the tower, just under its top surface, centred: never in the flying row. */
   wobbleHint: {

@@ -1,7 +1,7 @@
 import type { TeamSlot } from '../core/sim-types';
 
 /** One-time hints of the first run. */
-export const HINT_IDS = ['tutorial', 'tap', 'firstPerfect', 'honey', 'wobble'] as const;
+export const HINT_IDS = ['tutorial', 'tap', 'firstPerfect', 'honey', 'wobble', 'berry'] as const;
 export type HintId = (typeof HINT_IDS)[number];
 
 /** The team of the tutorial run: the starter creature alone in the first slot. */

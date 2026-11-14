@@ -12,7 +12,7 @@ import { TapHint } from './tap-hint';
 import { fadeAlpha, HintClock } from './timeline';
 import type { TutorialDirector } from './tutorial-director';
 
-const { caption, arrow, wobbleHint } = TUTORIAL_ANIM;
+const { caption, arrow, wobbleHint, berryHint } = TUTORIAL_ANIM;
 
 /**
  * Everything the first-run hints draw, in the HUD scene: the tap hint, the first-perfect
@@ -26,6 +26,8 @@ export class TutorialHints {
   private readonly arrow: Phaser.GameObjects.Image;
   private readonly wobble: CaptionHint;
   private readonly wobbleClock = new HintClock();
+  private readonly berry: CaptionHint;
+  private readonly berryClock = new HintClock();
   private director: TutorialDirector | null = null;
   private screenWidth = 0;
   private screenHeight = 0;
@@ -37,8 +39,10 @@ export class TutorialHints {
     this.honey = new CaptionHint(scene);
     this.arrow = scene.add.image(0, 0, HINT_TEXTURES.arrow).setOrigin(0.5, 1).setVisible(false);
     this.wobble = new CaptionHint(scene, caption.secondPhase);
+    this.berry = new CaptionHint(scene, caption.thirdPhase);
     this.honey.setText(t('tutorial.honey', { name: t('creature.honey.name') }));
     this.wobble.setText(t('tutorial.wobble'));
+    this.berry.setText(t('tutorial.berry'));
   }
 
   layout(screenWidth: number, screenHeight: number): void {
@@ -62,6 +66,7 @@ export class TutorialHints {
     if (director !== this.director) {
       this.director = director;
       this.wobbleClock.stop();
+      this.berryClock.stop();
     }
     this.tap.update(director?.tapHintVisible ?? false, timeMs, deltaMs, director?.towerTopY ?? 0);
     if (director) {
@@ -69,10 +74,12 @@ export class TutorialHints {
         if (cue.type === 'first_perfect')
           this.perfect.show(effectsMode.reduced, director.towerTopY);
         else if (cue.type === 'wobble') this.startWobble(director.towerTopY);
+        else if (cue.type === 'berry') this.startBerry(director.towerTopY);
       }
     }
     this.perfect.update(timeMs, deltaMs);
     this.updateWobble(timeMs, deltaMs);
+    this.updateBerry(timeMs, deltaMs);
     this.updateHoney(timeMs, director);
   }
 
@@ -87,6 +94,19 @@ export class TutorialHints {
   private updateWobble(timeMs: number, deltaMs: number): void {
     this.wobbleClock.tick(deltaMs);
     this.wobble.render(this.wobbleClock.alpha(caption.fadeInMs, caption.fadeOutMs), timeMs);
+  }
+
+  /** Same place as the wobble hint: on the tower under its top surface, never in the flying row. */
+  private startBerry(towerTopY: number): void {
+    const lowest = this.screenHeight - berryHint.screenMargin - this.berry.height / 2;
+    const y = Math.min(towerTopY + berryHint.gapBelowTop + this.berry.height / 2, lowest);
+    this.berry.place(this.screenWidth / 2, y);
+    this.berryClock.start(berryHint.holdMs);
+  }
+
+  private updateBerry(timeMs: number, deltaMs: number): void {
+    this.berryClock.tick(deltaMs);
+    this.berry.render(this.berryClock.alpha(caption.fadeInMs, caption.fadeOutMs), timeMs);
   }
 
   /** The caption and the arrow above the Honey layer, for as long as the sim is held. */

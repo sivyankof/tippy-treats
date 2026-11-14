@@ -1,10 +1,14 @@
 import type { SimEvent, TowerState } from '../../core/tower-sim';
 import { BALANCE } from '../../data/balance';
 import type { SessionHints } from '../session-hints';
+import { berriesFromEvents } from '../session-wallet';
 
 /** Something the hint screen has to show now. */
 export type TutorialCue =
-  { type: 'first_perfect' } | { type: 'creature_intro'; layerIndex: number } | { type: 'wobble' };
+  | { type: 'first_perfect' }
+  | { type: 'creature_intro'; layerIndex: number }
+  | { type: 'wobble' }
+  | { type: 'berry' };
 
 const NO_CUES: readonly TutorialCue[] = [];
 
@@ -76,6 +80,10 @@ export class TutorialDirector {
     for (const event of events) {
       if (event.type === 'land' || event.type === 'miss') this.hints.mark('tap');
       if (event.type === 'land') this.onLand(event, state);
+      if (berriesFromEvents([event]) > 0 && !this.hints.has('berry')) {
+        this.hints.mark('berry');
+        this.cues.push({ type: 'berry' });
+      }
     }
     if (!this.hints.has('wobble') && state.wobble > BALANCE.tutorial.wobbleHintAt) {
       this.hints.mark('wobble');

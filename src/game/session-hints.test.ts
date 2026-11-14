@@ -12,6 +12,14 @@ describe('SessionHints', () => {
     expect(hints.beginRun()).toBe(false);
   });
 
+  it('tutorial=0 marks the berry hint shown, tutorial=1 resets it', () => {
+    const hints = new SessionHints();
+    hints.beginRun(false);
+    expect(hints.has('berry')).toBe(true);
+    hints.beginRun(true);
+    expect(hints.has('berry')).toBe(false);
+  });
+
   it('remembers marked hints', () => {
     const hints = new SessionHints();
     expect(hints.has('wobble')).toBe(false);
