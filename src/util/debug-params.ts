@@ -91,7 +91,7 @@ export function parseDebugParams(search: string): DebugParams {
   return result;
 }
 
-/** `?fps=1` shows the small frame counter. It is the one parameter that also works in production builds. */
+/** `?fps=1` shows the small frame counter. It works in dev and production builds alike, unlike the other debug parameters. */
 export function showsFpsMeter(search: string): boolean {
   return new URLSearchParams(search).get('fps') === '1';
 }

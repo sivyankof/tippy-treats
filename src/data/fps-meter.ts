@@ -1,7 +1,7 @@
-/** The small frame counter of `?fps=1` (it works in production builds too): the frame rate and the average work time. */
+/** The small frame counter of `?fps=1` (it works in the dev server and in production builds): the frame rate and the average work time. */
 export const FPS_METER = {
   refreshMs: 500,
-  /** Distance from the corner, in CSS pixels (the safe area comes on top). */
+  /** Gap under the pause button, in CSS pixels. */
   insetPx: 4,
   fontPx: 11,
   zIndex: 99998,
