@@ -5,6 +5,8 @@ import { LICK } from '../../data/lick';
  * travel and the half width at each one. Filled by `sampleRibbon`, drawn by `tongue-draw.ts`.
  */
 export interface Ribbon {
+  /** Samples per piece of the body (more is smoother). */
+  readonly sub: number;
   count: number;
   x: number[];
   y: number[];
@@ -15,11 +17,11 @@ export interface Ribbon {
   half: number[];
 }
 
-/** An empty ribbon with room for the samples of a tongue of `LICK.tongue.segments` pieces. */
-export function newRibbon(): Ribbon {
-  const size = LICK.tongue.segments * LICK.tongue.draw.sub + 1;
+/** An empty ribbon with room for the samples (`sub` per piece) of a tongue of `LICK.tongue.segments` pieces. */
+export function newRibbon(sub: number = LICK.tongue.draw.sub): Ribbon {
+  const size = LICK.tongue.segments * sub + 1;
   const zeros = (): number[] => new Array<number>(size).fill(0);
-  return { count: 0, x: zeros(), y: zeros(), tx: zeros(), ty: zeros(), half: zeros() };
+  return { sub, count: 0, x: zeros(), y: zeros(), tx: zeros(), ty: zeros(), half: zeros() };
 }
 
 /** A point of the Catmull-Rom curve through `p1` and `p2` at `t` (0..1), on one axis. */
@@ -45,7 +47,7 @@ const MIN_STEP = 1e-6;
 
 /**
  * Smooths the body `points` (flat `[x0, y0, ...]`, `LICK.tongue.segments + 1` of them, from the
- * mouth to the tip) into `out`: `LICK.tongue.draw.sub` samples per piece with the directions of
+ * mouth to the tip) into `out`: `out.sub` samples per piece with the directions of
  * travel and `halfAt(i)` (half width at the fractional point index `i`). False when the body
  * has no length (nothing to draw).
  */
@@ -55,7 +57,7 @@ export function sampleRibbon(
   out: Ribbon,
 ): boolean {
   const n = LICK.tongue.segments;
-  const { sub } = LICK.tongue.draw;
+  const { sub } = out;
   const count = n * sub + 1;
   out.count = count;
   for (let j = 0; j < count; j++) {

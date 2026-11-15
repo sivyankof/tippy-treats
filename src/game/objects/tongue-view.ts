@@ -3,11 +3,12 @@ import { LICK } from '../../data/lick';
 import { PALETTE } from '../../data/palette';
 import { bakeTexture } from '../ui/bake-texture';
 import { loopPoint, type LickScene, type LoopShape } from './lick-plan';
-import { drawTongueBody, drawTongueTip } from './tongue-draw';
-import { newRibbon, sampleRibbon } from './tongue-ribbon';
+import type { TongueParts } from './tongue-graphics';
+import { newRibbon, sampleRibbon, type Ribbon } from './tongue-ribbon';
 import { tongueWidthAt } from './tongue-shape';
+import { createTongueParts } from './tongue-strip';
 
-/** Texture keys of the saliva drop and the wet trail; the ribbon itself is drawn, not baked. */
+/** Texture keys of the saliva drop and the wet trail; the pictures of the ribbon are baked in `tongue-strip-texture.ts`. */
 const TONGUE_TEXTURES = {
   /** A drop of saliva hanging from the tip. */
   saliva: 'lick_tongue_saliva',
@@ -28,8 +29,8 @@ const SALIVA = { tall: 1.4, outline: 2, outlineShade: 0x6fa3c6, shine: 0.3 } as 
 /** The white of the saliva shine and of the wet trail. */
 const WHITE = PALETTE.textLight;
 
-/** Bakes the saliva and trail pictures once. */
-function bakeTongue(scene: Phaser.Scene): void {
+/** Bakes the saliva and trail pictures once (the pictures of the ribbon are baked with its strips). */
+export function bakeTongue(scene: Phaser.Scene): void {
   const white = WHITE;
   const s = LICK.saliva;
   const sh = s.size * SALIVA.tall;
@@ -72,19 +73,19 @@ const RAD_TO_DEG = 180 / Math.PI;
 const TANGENT_STEP = 0.002;
 
 /**
- * The long tongue of a lick, drawn over the face: one ribbon redrawn every frame by `Graphics`
- * (smoothed along the points of `tongueBody`, outline under fill, the light stripe and the groove
- * as continuous lines, a rounded tip on top), a drop of saliva at the tip and the wet trail the
- * tip leaves round the loop, drying fast. Lives in the face container, in face pixels.
+ * The long tongue of a lick, drawn over the face: one ribbon smoothed along the points of
+ * `tongueBody` and shown as baked strips that only bend (`tongue-strip.ts`: the outline under the
+ * fill, the light stripe and the groove baked into it, a rounded tip on top), a drop of saliva at
+ * the tip and the wet trail the tip leaves round the loop, drying fast. Lives in the face
+ * container, in face pixels.
  */
 export class TongueView extends Phaser.GameObjects.Container {
-  private readonly trunk: Phaser.GameObjects.Graphics;
-  private readonly tip: Phaser.GameObjects.Graphics;
+  private readonly parts: TongueParts;
+  private readonly ribbon: Ribbon;
   private readonly saliva: Phaser.GameObjects.Image;
   private readonly wet: Phaser.GameObjects.Image[] = [];
   /** Lick time each trail blob was laid at (-1: not yet). */
   private readonly wetAt: number[] = [];
-  private readonly ribbon = newRibbon();
   /** The scene and width share of the tongue being laid, read by `width`. */
   private laying: LickScene | null = null;
   private layingMul = 1;
@@ -103,11 +104,11 @@ export class TongueView extends Phaser.GameObjects.Container {
       this.wet.push(image(TONGUE_TEXTURES.wet, 0.5));
       this.wetAt.push(-1);
     }
-    this.trunk = new Phaser.GameObjects.Graphics(scene).setVisible(false);
-    this.tip = new Phaser.GameObjects.Graphics(scene).setVisible(false);
+    this.parts = createTongueParts(scene);
+    this.ribbon = newRibbon(this.parts.sub);
     this.saliva = image(TONGUE_TEXTURES.saliva, 0);
-    // Trail under the tongue; the tip and its saliva on top of the body.
-    this.add([...this.wet, this.trunk, this.saliva, this.tip]);
+    // Trail under the tongue; the tip over the saliva that hangs on the body.
+    this.add([...this.wet, ...this.parts.under, this.saliva, ...this.parts.over]);
   }
 
   /**
@@ -119,11 +120,8 @@ export class TongueView extends Phaser.GameObjects.Container {
     this.layingMul = widthMul;
     const drawn = sampleRibbon(points, this.widthAt, this.ribbon);
     this.laying = null;
-    this.trunk.setVisible(drawn);
-    this.tip.setVisible(drawn);
-    if (!drawn) return;
-    drawTongueBody(this.trunk, this.ribbon);
-    drawTongueTip(this.tip, this.ribbon);
+    if (drawn) this.parts.lay(this.ribbon);
+    else this.parts.hide();
   }
 
   /** A drop of saliva hangs under the tip, `grow` (0..1) of its size; 0 hides it. */
@@ -142,8 +140,7 @@ export class TongueView extends Phaser.GameObjects.Container {
 
   /** The tongue is in. */
   hideTongue(): void {
-    this.trunk.setVisible(false);
-    this.tip.setVisible(false);
+    this.parts.hide();
     this.saliva.setVisible(false);
   }
 

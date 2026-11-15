@@ -93,7 +93,7 @@ export const LICK = {
   /** After the loop the tongue stretches sideways out of the cheek to its peak: `px` from the mouth (at most half the layer width), `y` below the eyes. */
   peak: { px: 190, y: 26, overshoot: 1.6 },
 
-  /** The tongue drawn over the face (and over the eyes): a flat wide ribbon, drawn every frame as one smooth shape. */
+  /** The tongue drawn over the face (and over the eyes): a flat wide ribbon: a baked picture on a strip that only bends (Graphics redraw on Canvas). */
   tongue: {
     segments: 20,
     /**
@@ -135,6 +135,14 @@ export const LICK = {
       tipStripeShare: 0.55,
       tipShine: { across: 0.2, along: 0.7, w: 0.26, h: 0.2, alpha: 0.85, steps: 12 },
     },
+    /**
+     * The strip the WebGL renderer bends instead of redrawing the ribbon: its picture is baked
+     * once, `texPx` across the whole width of the body (the body is `sub` samples per piece: a
+     * strip bends between its rows in straight steps, so it needs more than the pieces drawn by
+     * hand did). Down the picture: `plainPx` rows of plain
+     * fill (the round root), `bandPx` rows of body with the stripe and the groove, then the tip.
+     */
+    strip: { sub: 4, texPx: 384, plainPx: 8, bandPx: 16 },
   },
   /** A drop of saliva hangs from the tip at the peak and swells. */
   saliva: { size: 20, color: 0xeaf7ff, alpha: 0.9, hangPx: 8 },

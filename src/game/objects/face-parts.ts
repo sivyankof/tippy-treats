@@ -37,6 +37,13 @@ export class FaceParts extends Phaser.GameObjects.Container {
   private readonly tongueTip: Phaser.GameObjects.Image;
   /** Eyes, pupils, lids, brows and the sweat drop: they go up together when the mouth gapes. */
   private readonly upper: Phaser.GameObjects.Container;
+  /** The raised brows of a lick, refilled every frame of it. */
+  private readonly lickBrowPose = {
+    angleDeg: LICK.face.brows.angleDeg,
+    offsetY: 0,
+    scaleX: 1,
+    scaleY: 1,
+  };
   private sweatMs = 0;
   /** Sideways pupil shift of this face (twins look at each other). */
   private gaze = 0;
@@ -132,22 +139,10 @@ export class FaceParts extends Phaser.GameObjects.Container {
   poseLick(face: Readonly<LickFace>): void {
     const f = LICK.face;
     if (face.brow > 0) {
-      const pose = {
-        angleDeg: f.brows.angleDeg,
-        offsetY: f.brows.liftPx * face.brow,
-        scaleX: 1,
-        scaleY: 1,
-      };
-      for (const [brow, side, sign] of [
-        [this.browL, 'left', -1],
-        [this.browR, 'right', 1],
-      ] as const) {
-        const shown = face.browSide === 0 || face.browSide === sign;
-        brow.setVisible(shown);
-        if (!shown) continue;
-        const t = browTransform(pose, side);
-        FaceParts.show(brow, FACE_TEXTURES.brow).setAngle(t.angle).setY(t.y).setScale(1);
-      }
+      const pose = this.lickBrowPose;
+      pose.offsetY = f.brows.liftPx * face.brow;
+      this.poseLickBrow(this.browL, 'left', face.browSide === 0 || face.browSide === -1, pose);
+      this.poseLickBrow(this.browR, 'right', face.browSide === 0 || face.browSide === 1, pose);
     }
     this.poseMouth(face);
     this.upper.setY(-f.gape.eyesUpPx * face.eyesUp);
@@ -161,6 +156,18 @@ export class FaceParts extends Phaser.GameObjects.Container {
         cheek.setScale(swell * puff);
       }
     }
+  }
+
+  private poseLickBrow(
+    brow: Phaser.GameObjects.Image,
+    side: 'left' | 'right',
+    shown: boolean,
+    pose: Parameters<typeof browTransform>[0],
+  ): void {
+    brow.setVisible(shown);
+    if (!shown) return;
+    const t = browTransform(pose, side);
+    FaceParts.show(brow, FACE_TEXTURES.brow).setAngle(t.angle).setY(t.y).setScale(1);
   }
 
   /** Sets a texture only when it changes (a pose is laid every frame). */

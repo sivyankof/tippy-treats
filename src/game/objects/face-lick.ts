@@ -46,6 +46,22 @@ const TONGUE_POINTS = LICK.tongue.segments + 1;
 /** One tongue per scene, shared by every face: it is only ever out on one face at a time. */
 const SHARED_TONGUES = new WeakMap<Phaser.Scene, TongueView>();
 
+/** The tongue of the scene; made (and its pictures baked) on the first call. */
+function sharedTongue(scene: Phaser.Scene): TongueView {
+  let view = SHARED_TONGUES.get(scene);
+  // A view destroyed with the scene of an earlier run has no scene any more.
+  if (!view || !view.scene) {
+    view = new TongueView(scene);
+    SHARED_TONGUES.set(scene, view);
+  }
+  return view;
+}
+
+/** Makes the tongue and bakes its pictures while the run is set up, so the first lick does not. */
+export function prepareTongue(scene: Phaser.Scene): void {
+  sharedTongue(scene);
+}
+
 /**
  * The lick played on one face (docs/06, "Слизывание глазури"): the beats of the scene, the pose
  * of the face over its expression, the long tongue and its trail, and the face denting after the
@@ -310,12 +326,7 @@ export class FaceLick {
   /** The tongue of the scene, moved into this face (one lick plays at a time). */
   private tongueView(): TongueView {
     const container = this.host.container;
-    let view = SHARED_TONGUES.get(container.scene);
-    // A view destroyed with the scene of an earlier run has no scene any more.
-    if (!view || !view.scene) {
-      view = new TongueView(container.scene);
-      SHARED_TONGUES.set(container.scene, view);
-    }
+    const view = sharedTongue(container.scene);
     // Adding it moves it out of the face that licked before, on top of this face's parts.
     if (view.parentContainer !== container) container.add(view);
     this.tongue = view;
