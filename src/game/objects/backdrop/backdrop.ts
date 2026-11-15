@@ -5,6 +5,7 @@ import { ZONES, type ZoneId } from '../../../data/zones';
 import { DEPTH } from '../../depth';
 import { collectBakeSteps, type BakeStep } from '../../ui/bake-texture';
 import { bakeSharedArt } from './art-kit';
+import { bakeFarArt } from './far-plane';
 import { cloudsArt } from './clouds-zone';
 import { Counter } from './worktop';
 import { kitchenArt } from './kitchen-zone';
@@ -125,6 +126,7 @@ export class Backdrop {
 
   private bake(id: ZoneId): void {
     bakeSharedArt(this.scene);
+    bakeFarArt(this.scene, id);
     ZONE_ART[id].bake(this.scene);
   }
 

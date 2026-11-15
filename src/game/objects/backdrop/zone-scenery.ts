@@ -1,11 +1,13 @@
 import * as Phaser from 'phaser';
 import { ANIM } from '../../../data/anim';
+import { BACKDROP_FAR } from '../../../data/backdrop-far';
 import { BACKDROP } from '../../../data/backdrop';
 import { ZONE_SKY } from '../../../data/backdrop-colors';
 import type { ZoneId } from '../../../data/zones';
 import { mixColor } from '../../../util/color';
 import { MS_PER_SECOND, oscillate01, sineWave } from '../../../util/math';
 import { bakeTexture } from '../../ui/bake-texture';
+import { FarPlane } from './far-plane';
 import type { GuestSource } from './guest-source';
 import type { FrameCtx, Life } from './life';
 import { gradientBands } from './sky-gradient';
@@ -39,7 +41,7 @@ function bakeSky(scene: Phaser.Scene, zone: ZoneId): void {
 }
 
 /**
- * One zone's backdrop: a sky gradient, four parallax layers and the living elements,
+ * One zone's backdrop: a sky gradient, the far plane, four parallax layers and the living elements,
  * all in screen space under one container so the whole zone can fade as one.
  */
 export class ZoneScenery {
@@ -47,6 +49,7 @@ export class ZoneScenery {
   /** The creature that may leave for the tower. */
   readonly guest: GuestSource | null;
   private readonly sky: Phaser.GameObjects.Image;
+  private readonly far: FarPlane;
   private readonly layers: Phaser.GameObjects.TileSprite[];
   private readonly lives: Life[];
   private readonly drift: readonly number[];
@@ -66,6 +69,7 @@ export class ZoneScenery {
     this.tints = BACKDROP.layerTint[zone] ?? null;
     this.breathePhase = depth;
     this.sky = new Phaser.GameObjects.Image(scene, width / 2, height / 2, skyKey(zone));
+    this.far = new FarPlane(scene, zone, width, height);
     this.layers = def.layers.map((key, i) =>
       new Phaser.GameObjects.TileSprite(scene, 0, 0, width, height, key)
         .setOrigin(0)
@@ -74,8 +78,11 @@ export class ZoneScenery {
     this.lives = def.lives.map(({ life }) => life);
     this.guest = def.guest ?? null;
     const children: Phaser.GameObjects.GameObject[] = [this.sky];
+    const farSlot = BACKDROP_FAR.slot[zone];
+    if (farSlot < 0) children.push(...this.far.objects);
     this.layers.forEach((layer, i) => {
       children.push(layer);
+      if (i === farSlot) children.push(...this.far.objects);
       for (const { slot, life } of def.lives) {
         if (slot === i) children.push(...life.objects);
       }
@@ -90,6 +97,7 @@ export class ZoneScenery {
   resize(width: number, height: number): void {
     for (const layer of this.layers) layer.setSize(width, height);
     this.sky.setPosition(width / 2, height / 2);
+    this.far.resize(width, height);
   }
 
   /** Sets how visible the whole zone is; a zone that is fully faded out is not drawn at all. */
@@ -100,6 +108,7 @@ export class ZoneScenery {
 
   update(ctx: FrameCtx, scrollY: number): void {
     this.fitSky(ctx.width, ctx.height, ctx.timeMs);
+    this.far.update(ctx, scrollY);
     this.layers.forEach((layer, i) => {
       layer.tilePositionY = scrollY * (ANIM.parallax[i] ?? 1);
       layer.tilePositionX = ((this.drift[i] ?? 0) * ctx.timeMs) / MS_PER_SECOND;
