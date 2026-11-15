@@ -5,7 +5,7 @@ import type { HopMotion } from '../../../data/hop-motion';
 export function startSwayTween(
   scene: Phaser.Scene,
   target: Phaser.GameObjects.Container,
-  motion: HopMotion,
+  motion: Pick<HopMotion, 'sway'>,
   ready: boolean,
 ): Phaser.Tweens.Tween {
   const deg = ready ? motion.sway.readyDeg : motion.sway.idleDeg;

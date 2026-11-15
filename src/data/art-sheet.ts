@@ -14,6 +14,8 @@ export const ART_SHEET = {
   captionColor: '#3b2a4a',
   background: 0x9a8cb4,
   cellColor: 0xcdbfe0,
+  /** Size a picture with no texture (a drawn container) is built at. */
+  liveSize: 120,
   /** Width of the layer the sleeping silhouettes are primed at. */
   sleepLayerWidth: 420,
 } as const;

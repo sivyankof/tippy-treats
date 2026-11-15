@@ -9,6 +9,7 @@ import { gameState } from '../../../state';
 import { cssColor } from '../../../util/color';
 import { createTextButton, type Button } from '../button';
 import { CREATURE_ICON_KEYS } from '../creature-icons';
+import { CreaturePortrait } from '../../objects/creature-portrait';
 import { createOutlinedText } from '../outlined-text';
 import { faceOffsetY, VolumePlate } from '../style/volume';
 import type { DailySection } from './daily-section';
@@ -36,6 +37,7 @@ export class ShopStarter implements DailySection {
   readonly button: Button;
   private readonly timer: Phaser.GameObjects.Text;
   private readonly timerRoom: number;
+  private readonly portrait: CreaturePortrait | null;
   private lastText = '';
 
   constructor(scene: Phaser.Scene, price: string | null, onBuy: () => void) {
@@ -68,10 +70,20 @@ export class ShopStarter implements DailySection {
 
     const contents = starterPackContents(gameState.data.creatures);
     // Crumb himself, or a big pile of coins when he is owned already.
-    const art =
+    this.portrait =
       creatureId && contents.creature !== null
-        ? shopIcon(scene, CREATURE_ICON_KEYS[creatureId], cfg.iconSize)
-        : pileIcon(scene, 'coins', contents.coins, cfg.iconSize, cfg.ownedPileStep);
+        ? new CreaturePortrait(
+            scene,
+            0,
+            0,
+            creatureId,
+            1,
+            cfg.portraitLayerWidth,
+            cfg.iconSize / cfg.portraitLayerWidth,
+          )
+        : null;
+    const art =
+      this.portrait ?? pileIcon(scene, 'coins', contents.coins, cfg.iconSize, cfg.ownedPileStep);
     art.setPosition(-half + cfg.iconX, cfg.iconY);
     parts.push(art);
     const lines: Line[] = [];
@@ -136,6 +148,11 @@ export class ShopStarter implements DailySection {
     parts.push(this.button);
     this.root = scene.add.container(0, 0, parts);
     this.refreshTimer();
+  }
+
+  /** The creature blinks and breathes. */
+  tick(dtMs: number): void {
+    this.portrait?.tick(dtMs);
   }
 
   /** The countdown follows the clock. */

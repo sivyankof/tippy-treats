@@ -32,6 +32,14 @@ export const OVEN_LOOK = {
   },
   /** The round window: middle below the centre of the body, radius, ring thickness. */
   window: { y: 0.2, radius: 0.26, ring: 0.055 },
+  /** The door around the window (shares of the body size from the middle): half width, top, bottom, corner. */
+  door: { halfWidth: 0.42, top: -0.14, bottom: 0.46, round: 0.12 },
+  /** The door handle: x of its middle (share of the width), half height, thickness (shares of the height). */
+  handle: { x: 0.34, halfHeight: 0.09, thick: 0.05 },
+  /** The legs: x of each from the middle (share of the width), width, how far they reach under the body (shares of the height). */
+  legs: { x: 0.3, width: 0.17, height: 0.1, round: 0.04 },
+  /** The chimney on top: x of its middle (share of the width), width, height above the body, lip overhang and height. */
+  chimney: { x: -0.26, width: 0.14, height: 0.15, lipOver: 0.015, lipHeight: 0.04 },
   /** The face above the window (shares of the body height from its middle). */
   face: {
     eyeY: -0.32,
@@ -59,8 +67,8 @@ export const OVEN_LOOK = {
   /** The ember of the spent oven: radius share of the window radius, colours. */
   ember: { radius: 0.2, drop: 0.45, color: 0xff8a3c, core: 0xffd27a },
   motion: {
-    /** The living oven bobs and stretches a little. */
-    bob: { rise: 5, ms: 700, stretch: 0.03 },
+    /** The living oven rocks from side to side. */
+    sway: { sway: { idleDeg: 3, readyDeg: 3, ms: 1800 } },
     /** The sleeping oven breathes slowly. */
     breath: { scaleX: 0.012, scaleY: 0.03, ms: 2400 },
     emberPulse: { alpha: 0.45, ms: 900 },

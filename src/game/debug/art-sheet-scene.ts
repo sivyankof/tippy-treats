@@ -1,6 +1,7 @@
 import * as Phaser from 'phaser';
 import { ART_SHEET, isSheetPicture } from '../../data/art-sheet';
 import { SCENES } from '../scene-keys';
+import { LIVE_PICTURES } from './art-sheet-live';
 import { primeArtTextures } from './art-sheet-prime';
 
 /**
@@ -22,7 +23,9 @@ export class ArtSheetScene extends Phaser.Scene {
     const { columns, cellWidth, cellHeight, gap, margin } = ART_SHEET;
     const width = margin * 2 + columns * cellWidth + (columns - 1) * gap;
     const rows = Math.ceil(keys.length / columns);
-    const height = margin * 2 + rows * cellHeight + (rows - 1) * gap;
+    const liveRows = Math.ceil(LIVE_PICTURES.length / columns);
+    const gridHeight = rows * (cellHeight + gap);
+    const height = margin * 2 + gridHeight + liveRows * (cellHeight + gap) - gap;
     this.scale.setGameSize(width, height);
     this.cameras.main.setBackgroundColor(ART_SHEET.background);
     keys.forEach((key, i) => {
@@ -30,6 +33,36 @@ export class ArtSheetScene extends Phaser.Scene {
       const y = margin + Math.floor(i / columns) * (cellHeight + gap);
       this.drawCell(key, x, y);
     });
+    LIVE_PICTURES.forEach((picture, i) => {
+      const x = margin + (i % columns) * (cellWidth + gap);
+      const y = margin + gridHeight + Math.floor(i / columns) * (cellHeight + gap);
+      this.drawLiveCell(picture.name, picture.create(this, ART_SHEET.liveSize), x, y);
+    });
+  }
+
+  private drawLiveCell(
+    name: string,
+    picture: Phaser.GameObjects.Container,
+    x: number,
+    y: number,
+  ): void {
+    const { cellWidth, cellHeight, captionHeight } = ART_SHEET;
+    this.add.rectangle(x, y, cellWidth, cellHeight, ART_SHEET.cellColor).setOrigin(0, 0);
+    this.children.bringToTop(picture);
+    picture.setPosition(x + cellWidth / 2, y + (cellHeight - captionHeight) / 2);
+    this.add
+      .text(
+        x + cellWidth / 2,
+        y + cellHeight - 2,
+        `${name}
+(drawn)`,
+        {
+          font: ART_SHEET.captionFont,
+          color: ART_SHEET.captionColor,
+          align: 'center',
+        },
+      )
+      .setOrigin(0.5, 1);
   }
 
   private drawCell(key: string, x: number, y: number): void {
