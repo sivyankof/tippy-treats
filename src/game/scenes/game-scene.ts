@@ -5,18 +5,18 @@ import { Rng } from '../../core/rng';
 import { emptyTally, tallyEvents, type RunTally } from '../../core/run-tally';
 import type { RunMode } from '../../core/run-result';
 import type { TeamSlot } from '../../core/sim-types';
-import { TowerSim, type SimEvent } from '../../core/tower-sim';
-import { BALANCE } from '../../data/balance';
+import { TowerSim } from '../../core/tower-sim';
 import { services } from '../../services';
-import { RunFx, type FlyingMemo } from '../fx/run-fx';
+import { RunFx } from '../fx/run-fx';
 import { Backdrop } from '../objects/backdrop/backdrop';
 import { plainLooks } from '../objects/plain-look';
 import { RunCamera } from '../run-camera';
 import { ContinueFlow } from '../continue-flow';
 import { extrasOf, RunRecorder } from '../run-recorder';
 import { effectsMode } from '../effects-mode';
-import { cuesForMoment } from '../fx/moment-cues';
-import { playCues } from '../fx/run-cues';
+import { FlyingTracker } from '../fx/flying-tracker';
+import { placeTutorialTarget } from '../fx/tutorial-target';
+import { driveContinue } from '../objects/continue-driver';
 import { berriesFromEvents } from '../../core/berries';
 import { gameState } from '../../state';
 import { EMPTY_SUMMARY } from '../../state/game-state';
@@ -62,15 +62,8 @@ export class GameScene extends Phaser.Scene {
   /** The "Continue?" offer after a miss; the HUD draws its window. */
   continueFlow: ContinueFlow | null = null;
   private background!: Backdrop;
-  /** The flying layer before the latest step, or `null`; `flyingMemo` is the one object behind it. */
-  private lastFlying: FlyingMemo | null = null;
-  private readonly flyingMemo: FlyingMemo = {
-    x: 0,
-    width: 0,
-    kind: 'plain',
-    creature: undefined,
-    level: undefined,
-  };
+  /** The flying layer before each step, for the sound and effect cues. */
+  private readonly flying = new FlyingTracker();
   /** Handed out by `getRunInfo` every frame: one object, refilled each time. */
   private readonly runInfo: RunInfo = emptyRunInfo();
   /** Drop modifiers as the sim last reported them; refreshed whenever a step had events. */
@@ -110,7 +103,7 @@ export class GameScene extends Phaser.Scene {
     });
     this.mods = this.sim.currentModifiers();
     this.bot = setup.bot ? new TimingBot(setup.bot, new Rng(this.seed).fork('bot')) : null;
-    this.lastFlying = null;
+    this.flying.reset();
     this.continueFlow?.dispose();
     this.continueFlow = new ContinueFlow({
       ads: services.ads,
@@ -151,18 +144,7 @@ export class GameScene extends Phaser.Scene {
 
   override update(time: number, delta: number): void {
     effectsMode.noteFrame(delta);
-    const flying = this.sim.state.flying;
-    if (flying) {
-      const memo = this.flyingMemo;
-      memo.x = flying.x;
-      memo.width = flying.width;
-      memo.kind = flying.kind;
-      memo.creature = flying.creature;
-      memo.level = flying.level;
-      this.lastFlying = memo;
-    } else {
-      this.lastFlying = null;
-    }
+    this.flying.note(this.sim.state);
 
     // The tutorial holds the sim for a moment while it explains the creature layer.
     this.tutorial?.tick(delta);
@@ -171,23 +153,35 @@ export class GameScene extends Phaser.Scene {
     this.bot?.observe(events);
     if (!held && this.bot?.shouldDrop(this.sim)) events.push(...this.sim.drop());
     this.tutorial?.observe(events, this.sim.state);
-    this.driveContinue(delta, events);
+    driveContinue(
+      {
+        flow: this.continueFlow,
+        sim: this.sim,
+        mode: this.mode,
+        noContinue: this.noContinue,
+        canDecline: this.fx.canDecline,
+      },
+      delta,
+      events,
+    );
     // Berries go to the save the moment they are earned: they can pay for this run's continue.
     if (this.writesSave) gameState.addBerries(berriesFromEvents(events));
     tallyEvents(this.tally, events);
     this.tally.maxWobble = Math.max(this.tally.maxWobble, this.sim.state.wobble);
-    this.recordFinishedRun(events);
+    this.recorder.recordFinished(events);
     this.watchDemo();
 
     const cam = this.camera.cameraInfo();
-    this.fx.handleEvents(events, this.sim.state, this.lastFlying, this.mods, cam);
+    this.fx.handleEvents(events, this.sim.state, this.flying.current, this.mods, cam);
     if (events.length > 0) this.mods = this.sim.currentModifiers();
     this.fx.update(delta, time, this.sim.state, this.mods, cam);
     this.background.setZone(this.sim.state.zoneIndex);
     // Slow motion slows the tweens and the camera too; the HUD scene keeps its own clock.
     this.tweens.timeScale = this.fx.timeScale;
     this.camera.follow(delta * this.fx.timeScale);
-    this.placeTutorialTarget();
+    if (this.tutorial) {
+      placeTutorialTarget(this.tutorial, this.fx, this.camera, this.cameras.main);
+    }
 
     const result = this.fx.takeResult();
     if (!result) return;
@@ -225,39 +219,6 @@ export class GameScene extends Phaser.Scene {
     this.time.delayedCall(DEMO.endDelayMs, () => this.leaveRun());
   }
 
-  /**
-   * After the miss has played: opens the "Continue?" offer, or ends the run when no window must
-   * show (and always under a bot, which has nobody to press the buttons). Then runs the offer.
-   */
-  private driveContinue(delta: number, events: SimEvent[]): void {
-    const flow = this.continueFlow;
-    if (!flow || this.sim.state.phase !== 'await_continue') return;
-    if (!flow.isOpen) {
-      if (!this.fx.canDecline) return;
-      const opened = !this.noContinue && flow.open(this.mode, this.sim.state.continuesUsed);
-      if (!opened) events.push(...this.sim.decline());
-      return;
-    }
-    flow.update(delta);
-    const action = flow.takeAction();
-    if (action === 'continue') {
-      events.push(...this.sim.continueRun());
-      playCues(cuesForMoment('continued'), services);
-    } else if (action === 'decline') {
-      events.push(...this.sim.decline());
-    }
-  }
-
-  /** The run is over: its coins, XP and record go into the save, once. */
-  private recordFinishedRun(events: readonly SimEvent[]): void {
-    for (const event of events) {
-      if (event.type === 'run_over') {
-        this.recorder.recordOver(event.result);
-        return;
-      }
-    }
-  }
-
   /** The state of the run for the HUD. The object is reused: read it at once, do not keep it. */
   getRunInfo(): Readonly<RunInfo> | null {
     if (!this.sim) return null;
@@ -273,25 +234,6 @@ export class GameScene extends Phaser.Scene {
     // Holding the key must not drop every new layer the moment it appears.
     if (event.repeat || this.tutorial?.holding || this.demoLeaving) return;
     this.sim.drop();
-  }
-
-  /** Tells the director where the tower top and the creature layer are on the screen, so hints can be placed. */
-  private placeTutorialTarget(): void {
-    const tutorial = this.tutorial;
-    if (!tutorial) return;
-    // Where the top of the tower settles on the screen: hints keep out of the flying row above it.
-    tutorial.towerTopY = this.fx.tower.topY() - this.camera.targetScrollY();
-    const shadow = this.fx.shadowAnchor();
-    tutorial.shadow.valid = shadow.visible;
-    if (shadow.visible) {
-      tutorial.shadow.x = shadow.x - this.cameras.main.scrollX;
-      tutorial.shadow.y = shadow.y - this.cameras.main.scrollY;
-    }
-    if (!tutorial.holding) return;
-    const pose = this.fx.tower.layerPose(tutorial.introLayerIndex);
-    if (!pose) return;
-    const camera = this.cameras.main;
-    tutorial.setTarget(pose.x - camera.scrollX, pose.y - BALANCE.layer.height / 2 - camera.scrollY);
   }
 
   private onResize(): void {

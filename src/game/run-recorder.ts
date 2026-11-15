@@ -1,4 +1,5 @@
 import { isEmptyRun, type RunResult } from '../core/run-result';
+import type { SimEvent } from '../core/tower-sim';
 import type { RunTally } from '../core/run-tally';
 import type { RunExtras, RunSummary } from '../state/game-state';
 
@@ -39,6 +40,16 @@ export class RunRecorder {
   /** What the run changed in the save; `null` until it is recorded. */
   get summary(): RunSummary | null {
     return this.recorded;
+  }
+
+  /** The run is over when the step reports `run_over`: its coins, XP and record go into the save, once. */
+  recordFinished(events: readonly SimEvent[]): void {
+    for (const event of events) {
+      if (event.type === 'run_over') {
+        this.recordOver(event.result);
+        return;
+      }
+    }
   }
 
   /** The `run_over` result of the simulation. */
