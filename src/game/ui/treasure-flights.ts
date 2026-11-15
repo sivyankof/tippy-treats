@@ -134,7 +134,7 @@ export class TreasureFlights {
     const stars = Array.from({ length: effectsMode.particleCount(berryCfg.sparkles) }, () =>
       this.take(FX_TEXTURES.star).setTint(PALETTE.gold).setAlpha(0),
     );
-    const image = this.take(TREASURE_TEXTURES.berry).setScale(0);
+    const image = this.take(TREASURE_TEXTURES.berryFace).setScale(0);
     this.berries.push({ image, stars, ageMs: 0 });
     this.berryCounter.addPending(1);
   }
@@ -163,12 +163,16 @@ export class TreasureFlights {
       const at = this.scratch;
       at.x = centre.x;
       at.y = centre.y + Math.sin((TWO_PI * age) / berryCfg.holdBobPeriodMs) * berryCfg.holdBobPx;
-      if (age > popMs + holdMs) {
+      const flying = age > popMs + holdMs;
+      if (flying) {
         const t = smoothstep((age - popMs - holdMs) / flightMs);
         arcPoint(centre, target, t, berryCfg.arcPx, at);
         size += (berryCfg.endSize - berryCfg.popSize) * t;
       }
-      berry.image.setPosition(at.x, at.y).setScale(size / berry.image.width);
+      berry.image
+        .setTexture(flying ? TREASURE_TEXTURES.berry : TREASURE_TEXTURES.berryFace)
+        .setPosition(at.x, at.y)
+        .setScale(size / berry.image.width);
       this.placeStars(berry, centre, popT);
     }
   }

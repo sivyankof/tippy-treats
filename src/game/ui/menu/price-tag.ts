@@ -35,9 +35,10 @@ export class PriceTag extends Phaser.GameObjects.Container {
   /** Shows `text` with the price filled in and the icon of `currency` after it. */
   show(text: string, price: number, currency: Currency): this {
     this.label.setText(text.replace('{price}', formatNumber(price)));
+    const iconSize = this.fontSize * ICON_SCALE;
     this.icon
       .setTexture(currency === 'coins' ? TREASURE_TEXTURES.coin : TREASURE_TEXTURES.berry)
-      .setDisplaySize(this.fontSize * ICON_SCALE, this.fontSize * ICON_SCALE);
+      .setDisplaySize(iconSize, iconSize);
     const gap = this.fontSize * GAP_SCALE;
     const total = this.label.width + gap + this.icon.displayWidth;
     this.label.setX(-total / 2 + this.label.width / 2);

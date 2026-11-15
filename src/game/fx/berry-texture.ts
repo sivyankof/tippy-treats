@@ -1,30 +1,21 @@
 import type * as Phaser from 'phaser';
 import { BERRY_LOOK } from '../../data/berry-look';
-import { DEG_TO_RAD, TWO_PI } from '../../util/math';
-import { mixColor } from '../../util/color';
+import { DEG_TO_RAD } from '../../util/math';
 import { bakeTexture } from '../ui/bake-texture';
+import {
+  OUTLINE_SHARE,
+  drawGlossMark,
+  ellipsePoints,
+  fillPolygon,
+  outlineColor,
+  type Pt,
+} from './plain-style';
 
-const { colors, body, gradient, gloss, seeds, calyx, glow } = BERRY_LOOK;
-
-interface Pt {
-  x: number;
-  y: number;
-}
+const { colors, body, gloss, seeds, calyx, face } = BERRY_LOOK;
 
 /** Half width of the body at `u` (0 top .. 1 bottom), as a share of the full half width. */
 function bodyHalfWidth(u: number): number {
   return Math.pow(Math.sin(Math.PI * Math.pow(u, body.profileLift)), body.profileRound);
-}
-
-/** Fills a closed outline of points with one path. */
-function fillPolygon(g: Phaser.GameObjects.Graphics, points: readonly Pt[]): void {
-  const [first, ...rest] = points;
-  if (!first) return;
-  g.beginPath();
-  g.moveTo(first.x, first.y);
-  for (const p of rest) g.lineTo(p.x, p.y);
-  g.closePath();
-  g.fillPath();
 }
 
 /** The strawberry outline around (cx, cy) with half sizes `rx`, `ry`. */
@@ -39,21 +30,6 @@ function bodyOutline(cx: number, cy: number, rx: number, ry: number): Pt[] {
   for (let i = steps; i >= 0; i--) {
     const u = i / steps;
     points.push({ x: cx - rx * bodyHalfWidth(u), y: cy - ry + 2 * ry * u });
-  }
-  return points;
-}
-
-/** A rotated ellipse as points. */
-function ellipsePoints(cx: number, cy: number, rx: number, ry: number, rad: number): Pt[] {
-  const points: Pt[] = [];
-  const cos = Math.cos(rad);
-  const sin = Math.sin(rad);
-  const steps = 20;
-  for (let i = 0; i < steps; i++) {
-    const a = (TWO_PI * i) / steps;
-    const ex = Math.cos(a) * rx;
-    const ey = Math.sin(a) * ry;
-    points.push({ x: cx + ex * cos - ey * sin, y: cy + ex * sin + ey * cos });
   }
   return points;
 }
@@ -78,86 +54,49 @@ function leafPoints(from: Pt, rad: number, length: number, width: number): Pt[] 
   ];
 }
 
-function drawGlow(g: Phaser.GameObjects.Graphics, size: number, cx: number): void {
-  const cy = size * glow.centerY;
-  const inner = size * body.halfWidth;
-  const outer = (size / 2) * glow.reach;
-  for (let i = 0; i < glow.steps; i++) {
-    const t = i / (glow.steps - 1);
-    g.fillStyle(colors.glow, glow.alpha);
-    g.fillCircle(cx, cy, outer - (outer - inner) * t);
-  }
-}
-
 function drawBody(g: Phaser.GameObjects.Graphics, size: number, cx: number, cy: number): void {
   const rx = size * body.halfWidth;
   const ry = size * body.halfHeight;
-  const grow = size * body.rimGrow;
-  g.fillStyle(colors.rim, 1);
-  fillPolygon(g, bodyOutline(cx, cy + grow * 0.4, rx + grow, ry + grow));
-  const n = gradient.layers;
-  for (let i = 0; i < n; i++) {
-    const f = i / (n - 1);
-    const t = Math.pow(f, gradient.curve);
-    const color =
-      t < 0.5
-        ? mixColor(colors.deep, colors.base, t * 2)
-        : mixColor(colors.base, colors.light, (t - 0.5) * 2);
-    g.fillStyle(color, 1);
-    fillPolygon(
-      g,
-      bodyOutline(
-        cx - rx * gradient.shiftX * f,
-        cy - ry * gradient.shiftY * f,
-        rx * (1 - gradient.shrinkX * f),
-        ry * (1 - gradient.shrinkY * f),
-      ),
-    );
-  }
+  const grow = 2 * ry * OUTLINE_SHARE;
+  g.fillStyle(outlineColor(colors.base), 1);
+  fillPolygon(g, bodyOutline(cx, cy, rx + grow, ry + grow));
+  g.fillStyle(colors.shadow, 1);
+  fillPolygon(g, bodyOutline(cx, cy, rx, ry));
+  // The lit body is a smaller copy pushed to the top left: what stays visible is the flat band.
+  const band = body.bandShare;
+  g.fillStyle(colors.base, 1);
+  fillPolygon(g, bodyOutline(cx - rx * band, cy - ry * band, rx * (1 - band), ry * (1 - band)));
 }
 
 function drawGloss(g: Phaser.GameObjects.Graphics, size: number, cx: number, cy: number): void {
-  const rx = size * body.halfWidth;
-  const ry = size * body.halfHeight;
-  const tilt = gloss.tiltDeg * DEG_TO_RAD;
-  for (const patch of [gloss.soft, gloss.bright]) {
-    g.fillStyle(colors.gloss, patch.alpha);
-    fillPolygon(
-      g,
-      ellipsePoints(cx + patch.x * rx, cy + patch.y * ry, patch.rx * rx, patch.ry * ry, tilt),
-    );
-  }
-  g.fillStyle(colors.gloss, gloss.dot.alpha);
-  g.fillCircle(cx + gloss.dot.x * rx, cy + gloss.dot.y * ry, gloss.dot.r * size);
-  // A thin lit rim on the lower right, where light bounces back.
-  g.lineStyle(size * 0.014, colors.light, gloss.rimAlpha);
-  g.beginPath();
-  g.arc(cx, cy + ry * 0.05, rx * 0.88, 20 * DEG_TO_RAD, 70 * DEG_TO_RAD);
-  g.strokePath();
+  drawGlossMark(g, {
+    x: cx + gloss.x * size * body.halfWidth,
+    y: cy + gloss.y * size * body.halfHeight,
+    length: size * gloss.length,
+    thick: size * gloss.thick,
+    tilt: gloss.tiltDeg * DEG_TO_RAD,
+    dotGap: size * gloss.dotGap,
+    dotRadius: size * gloss.dotRadius,
+    color: colors.gloss,
+    alpha: gloss.alpha,
+  });
 }
 
 function drawSeeds(g: Phaser.GameObjects.Graphics, size: number, cx: number, cy: number): void {
   const rx = size * body.halfWidth;
   const ry = size * body.halfHeight;
-  const bright = gloss.bright;
+  g.fillStyle(colors.seed, 1);
   for (const row of seeds.rows) {
     const half = bodyHalfWidth(row.at) * rx * seeds.spread;
     const y = cy - ry + 2 * ry * row.at;
     for (let k = 0; k < row.count; k++) {
       const share = row.count < 2 ? 0 : (2 * k) / (row.count - 1) - 1;
       const x = cx + share * half;
-      if (Math.hypot((x - cx) / rx - bright.x, (y - cy) / ry - bright.y) < seeds.glossClearance) {
+      if (Math.hypot((x - cx) / rx - gloss.x, (y - cy) / ry - gloss.y) < seeds.glossClearance) {
         continue;
       }
       // Seeds on the sides lean outward: they sit on a round body.
-      const tilt = share * 0.35;
-      g.fillStyle(colors.seedShadow, seeds.shadowAlpha);
-      fillPolygon(
-        g,
-        ellipsePoints(x, y + size * seeds.shadowDrop, size * seeds.rx, size * seeds.ry, tilt),
-      );
-      g.fillStyle(colors.seed, 1);
-      fillPolygon(g, ellipsePoints(x, y, size * seeds.rx, size * seeds.ry, tilt));
+      fillPolygon(g, ellipsePoints(x, y, size * seeds.rx, size * seeds.ry, share * 0.35));
     }
   }
 }
@@ -167,45 +106,66 @@ function drawCalyx(g: Phaser.GameObjects.Graphics, size: number, cx: number, cy:
   const hub: Pt = { x: cx, y: cy - ry + 2 * ry * calyx.sinkShare };
   const stemW = size * calyx.stemWidth;
   const stemH = size * calyx.stemHeight;
-  const leaves = calyx.leaves;
+  const grow = 2 * ry * OUTLINE_SHARE;
+  const leafWidth = size * calyx.leafWidth;
   // Back to front: the leaves that stand up go first, the ones draped on the body after.
-  const order = [...leaves].sort((a, b) => Math.abs(a.deg) - Math.abs(b.deg));
-  for (const pass of [colors.leafDark, colors.leaf] as const) {
-    for (const leaf of order) {
-      const rad = leaf.deg * DEG_TO_RAD;
-      const grow = pass === colors.leafDark ? size * calyx.outline : 0;
-      g.fillStyle(pass, 1);
-      fillPolygon(
-        g,
-        leafPoints(hub, rad, size * leaf.length + grow, size * calyx.leafWidth + grow),
-      );
-    }
-  }
-  // A lighter strip down the middle of each leaf.
-  g.fillStyle(colors.leafLight, 0.55);
+  const order = [...calyx.leaves].sort((a, b) => Math.abs(a.deg) - Math.abs(b.deg));
+  // The outline of the whole calyx first, so the leaves share one silhouette.
+  g.fillStyle(outlineColor(colors.leaf), 1);
   for (const leaf of order) {
-    const rad = leaf.deg * DEG_TO_RAD;
-    fillPolygon(g, leafPoints(hub, rad, size * leaf.length * 0.7, size * calyx.leafWidth * 0.28));
+    const length = size * leaf.length + grow;
+    fillPolygon(g, leafPoints(hub, leaf.deg * DEG_TO_RAD, length, leafWidth + grow));
+  }
+  g.fillRoundedRect(
+    hub.x - stemW / 2 - grow,
+    hub.y - stemH - grow,
+    stemW + grow * 2,
+    stemH + stemW * 0.4 + grow,
+    stemW * 0.45,
+  );
+  g.fillStyle(colors.leaf, 1);
+  for (const leaf of order) {
+    fillPolygon(g, leafPoints(hub, leaf.deg * DEG_TO_RAD, size * leaf.length, leafWidth));
+  }
+  // The second tone: a lighter strip down the middle of each leaf.
+  g.fillStyle(colors.leafLight, 1);
+  for (const leaf of order) {
+    const length = size * leaf.length * calyx.lightLength;
+    fillPolygon(g, leafPoints(hub, leaf.deg * DEG_TO_RAD, length, leafWidth * calyx.lightWidth));
   }
   g.fillStyle(colors.stem, 1);
   g.fillRoundedRect(hub.x - stemW / 2, hub.y - stemH, stemW, stemH + stemW * 0.4, stemW * 0.45);
-  g.fillStyle(colors.leafLight, 0.6);
-  g.fillRoundedRect(hub.x - stemW * 0.28, hub.y - stemH * 0.92, stemW * 0.26, stemH * 0.7, 2);
+}
+
+/** Two dot eyes and a smile in the lower middle of the body. */
+function drawFace(g: Phaser.GameObjects.Graphics, size: number, cx: number, cy: number): void {
+  const half = (size * face.eyeSpacing) / 2;
+  g.fillStyle(colors.face, 1);
+  g.fillCircle(cx - half, cy + size * face.eyeY, size * face.eyeRadius);
+  g.fillCircle(cx + half, cy + size * face.eyeY, size * face.eyeRadius);
+  const span = (face.smileSpanDeg * DEG_TO_RAD) / 2;
+  const down = Math.PI / 2;
+  const radius = size * face.smileRadius;
+  g.lineStyle(size * face.smileThick, colors.face, 1);
+  g.beginPath();
+  g.arc(cx, cy + size * face.smileY - radius, radius, down - span, down + span);
+  g.strokePath();
 }
 
 /**
- * Bakes the berry: a glossy strawberry with a light top and a deep bottom, seeds, a green calyx
- * and a soft glow. Not meant for tinting.
+ * Bakes the berry in the manner of the plain layers: flat two-tone fill, thick outline, a
+ * highlight stroke and dot, big seeds and a two-tone calyx. `withFace` adds the small face of
+ * the large picture. Not meant for tinting.
  */
-export function bakeBerry(scene: Phaser.Scene, key: string): void {
+export function bakeBerry(scene: Phaser.Scene, key: string, withFace: boolean): void {
   const size = BERRY_LOOK.textureSize;
   const cx = size / 2;
   const cy = size * body.centerY;
   bakeTexture(scene, key, size, size, (g) => {
-    drawGlow(g, size, cx);
     drawBody(g, size, cx, cy);
     drawSeeds(g, size, cx, cy);
     drawGloss(g, size, cx, cy);
+    if (withFace) drawFace(g, size, cx, cy);
     drawCalyx(g, size, cx, cy);
   });
 }

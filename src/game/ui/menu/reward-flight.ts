@@ -32,7 +32,8 @@ export function flyReward(scene: Phaser.Scene, flight: RewardFlight): void {
   createTreasureTextures(scene);
   const shares = splitAmount(flight.amount, cfg.maxIcons);
   const counter = flight.wallet?.[flight.currency];
-  const texture = flight.currency === 'coins' ? TREASURE_TEXTURES.coin : TREASURE_TEXTURES.berry;
+  const texture =
+    flight.currency === 'coins' ? TREASURE_TEXTURES.coin : TREASURE_TEXTURES.berryFace;
   if (shares.length === 0) {
     flight.onDone?.();
     return;

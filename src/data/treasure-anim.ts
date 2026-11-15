@@ -29,6 +29,8 @@ export const TREASURE = {
     coinRim: 0xd48a10,
     coinInner: 0xffe98a,
     coinShine: 0xfffbe0,
+    /** The flat shadow band on the lower right of the coin face. */
+    coinShade: 0xe8a424,
     /** Cake and glaze of the golden layer. */
     goldCake: 0xf0aa2c,
     goldLight: GOLD_LIGHT,
@@ -39,9 +41,23 @@ export const TREASURE = {
   /** Baked picture sizes, in texture pixels. */
   textures: {
     coin: 96,
-    /** Alpha of the coin shine dot and of the ring stamped on a coin. */
+    /** Alpha of the coin highlight (a stroke and a dot, as on the glaze). */
     shineAlpha: 0.85,
-    coinRingAlpha: 0.6,
+    /** Coin face and its shadow band, as shares of the coin radius; the ring stamped on the face. */
+    coinFaceShare: 0.84,
+    coinBandShare: 0.14,
+    coinRingShare: 0.62,
+    coinRingWidth: 0.04,
+    /** The highlight on the coin: stroke centre (unit offsets), length, thickness, tilt, dot. */
+    coinShine: {
+      x: -0.42,
+      y: -0.5,
+      length: 0.34,
+      thick: 0.1,
+      tiltDeg: -32,
+      dotGap: 0.1,
+      dotRadius: 0.06,
+    },
   },
   twinkle: TWINKLE_STYLE,
 

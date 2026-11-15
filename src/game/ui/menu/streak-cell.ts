@@ -50,7 +50,8 @@ export class StreakCell extends Phaser.GameObjects.Container {
         .setDisplaySize(cfg.creatureIcon, cfg.creatureIcon);
       amount = t(CREATURES[reward.id].nameKey);
     } else {
-      const texture = reward.kind === 'coins' ? TREASURE_TEXTURES.coin : TREASURE_TEXTURES.berry;
+      const texture =
+        reward.kind === 'coins' ? TREASURE_TEXTURES.coin : TREASURE_TEXTURES.berryFace;
       image = scene.add.image(0, -cfg.iconLift, texture).setDisplaySize(cfg.iconSize, cfg.iconSize);
       amount = `+${formatNumber(reward.amount)}`;
     }

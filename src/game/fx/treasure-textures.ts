@@ -4,14 +4,18 @@ import { BALANCE } from '../../data/balance';
 import { RULE_ANIM } from '../../data/rule-anim';
 import { TREASURE } from '../../data/treasure-anim';
 import { bakeTexture } from '../ui/bake-texture';
+import { DEG_TO_RAD } from '../../util/math';
 import { bakeBerry } from './berry-texture';
+import { OUTLINE_SHARE, drawGlossMark, outlineColor } from './plain-style';
 
 /** Keys of the pictures of coins, berries and the zone rules. */
 export const TREASURE_TEXTURES = {
   /** A gold coin; not meant for tinting. */
   coin: 'tr_coin',
-  /** A glossy strawberry with a glow; not meant for tinting. */
+  /** A plain-layer style strawberry without a face: counters and price buttons; not meant for tinting. */
   berry: 'tr_berry',
+  /** The same strawberry with the small face: reward windows, the Continue flight, the shop. */
+  berryFace: 'tr_berry_face',
   /** One puff of a cloud bank; not meant for tinting. */
   cloud: 'tr_cloud',
   /** A speed streak: solid at the right end, gone at the left; white, for tinting. */
@@ -21,7 +25,7 @@ export const TREASURE_TEXTURES = {
 } as const;
 
 const colors = TREASURE.colors;
-const { shineAlpha, coinRingAlpha } = TREASURE.textures;
+const coinLook = TREASURE.textures;
 const OUTLINE_GLOW = RULE_ANIM.outline.glow;
 const { slice: STREAK_SLICE, fadePower: STREAK_FADE_POWER } = RULE_ANIM.streaks;
 
@@ -37,18 +41,36 @@ const OUTLINE_MIDDLE = 8;
 export const OUTLINE_WIDTH = RULE_ANIM.outline.slice * 2 + OUTLINE_MIDDLE;
 
 function bakeCoin(scene: Phaser.Scene): void {
-  const size = TREASURE.textures.coin;
+  const size = coinLook.coin;
   const c = size / 2;
+  const outline = size * OUTLINE_SHARE;
+  const faceR = c * coinLook.coinFaceShare;
+  const band = faceR * coinLook.coinBandShare;
   bakeTexture(scene, TREASURE_TEXTURES.coin, size, size, (g) => {
-    g.fillStyle(colors.coinRim, 1).fillCircle(c, c, c - 1);
-    g.fillStyle(colors.coinFace, 1).fillCircle(c, c, c * 0.84);
-    g.lineStyle(size * 0.04, colors.coinRim, coinRingAlpha).strokeCircle(c, c, c * 0.62);
+    g.fillStyle(outlineColor(colors.coinRim), 1).fillCircle(c, c, c);
+    g.fillStyle(colors.coinRim, 1).fillCircle(c, c, c - outline);
+    // The face: a flat shadow band, with the lit disc pushed to the top left over it.
+    g.fillStyle(colors.coinShade, 1).fillCircle(c, c, faceR);
+    g.fillStyle(colors.coinFace, 1).fillCircle(c - band, c - band, faceR - band);
+    g.lineStyle(size * coinLook.coinRingWidth, colors.coinRim, 1);
+    g.strokeCircle(c - band / 2, c - band / 2, c * coinLook.coinRingShare);
     // A diamond stamped in the middle.
     const reach = c * 0.42;
     g.fillStyle(colors.coinInner, 1);
     g.fillTriangle(c, c - reach, c + reach * 0.7, c, c - reach * 0.7, c);
     g.fillTriangle(c, c + reach, c + reach * 0.7, c, c - reach * 0.7, c);
-    g.fillStyle(colors.coinShine, shineAlpha).fillCircle(c * 0.62, c * 0.6, c * 0.14);
+    const shine = coinLook.coinShine;
+    drawGlossMark(g, {
+      x: c + shine.x * c,
+      y: c + shine.y * c,
+      length: shine.length * c,
+      thick: shine.thick * c,
+      tilt: shine.tiltDeg * DEG_TO_RAD,
+      dotGap: shine.dotGap * c,
+      dotRadius: shine.dotRadius * c,
+      color: colors.coinShine,
+      alpha: coinLook.shineAlpha,
+    });
   });
 }
 
@@ -131,7 +153,8 @@ function bakeOutline(scene: Phaser.Scene): void {
 /** Bakes the pictures of this track. Safe to call again: existing keys are kept. */
 export function createTreasureTextures(scene: Phaser.Scene): void {
   bakeCoin(scene);
-  bakeBerry(scene, TREASURE_TEXTURES.berry);
+  bakeBerry(scene, TREASURE_TEXTURES.berry, false);
+  bakeBerry(scene, TREASURE_TEXTURES.berryFace, true);
   bakeCloud(scene);
   bakeStreak(scene);
   bakeOutline(scene);

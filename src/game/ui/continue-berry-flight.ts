@@ -19,7 +19,7 @@ export function flyBerries(
   const n = Math.min(count, cfg.maxFlying);
   for (let i = 0; i < n; i++) {
     const berry = scene.add
-      .image(from.x, from.y, TREASURE_TEXTURES.berry)
+      .image(from.x, from.y, TREASURE_TEXTURES.berryFace)
       .setDisplaySize(cfg.size, cfg.size);
     parent.add(berry);
     scene.tweens.add({
