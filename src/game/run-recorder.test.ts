@@ -64,6 +64,7 @@ describe('RunRecorder', () => {
       floatingCoins: 7,
       abilities: 2,
       maxWobble: 31,
+      coinSources: expect.objectContaining({ floating: 7 }),
     });
   });
 

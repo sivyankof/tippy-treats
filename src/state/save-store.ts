@@ -1,4 +1,5 @@
 // Persistence of the save: load with timeout, debounced write, backup, retry and the clock touch.
+import type { SessionTally } from './session-tally';
 import { createDefaultSave } from '../core/save/defaults';
 import { loadSave, serializeSave, type SaveSource } from '../core/save/load';
 import type { Save } from '../core/save/schema';
@@ -25,6 +26,8 @@ export interface GameStateDeps {
   now?: () => number;
   makeInstallId: () => string;
   scheduler: Scheduler;
+  /** Dev only: counts what is credited, by source. Never part of the save. */
+  tally?: SessionTally;
 }
 
 /** How the save was found at start-up. */

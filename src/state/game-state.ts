@@ -61,6 +61,7 @@ import {
   type StreakClaim,
 } from './streak';
 import { withProgressReset } from './reset';
+import { runCoinCredits, type CreditSource } from './session-tally';
 import { SaveStore, type GameStateDeps, type LoadOptions, type LoadOutcome } from './save-store';
 import { withAdWatched, withBerries, withCoins } from './wallet';
 
@@ -160,7 +161,9 @@ export class GameState {
       this.clockBehind,
       this.dailyAttemptDay,
     );
-    this.store.replace(withRunCounted(progress.save));
+    const next = withRunCounted(progress.save);
+    this.noteRun(this.store.save, next, applied.summary, extras);
+    this.store.replace(next);
     return { ...applied.summary, missions: progress.missions, dailyTiers: progress.dailyTiers };
   }
 
@@ -229,7 +232,7 @@ export class GameState {
   claimStreak(): StreakClaim | null {
     const claimed = withStreakClaimed(this.store.save, this.today(), this.clockBehind);
     if (!claimed) return null;
-    this.store.replace(claimed.save);
+    this.commit(claimed.save, 'streak');
     return claimed.claim;
   }
 
@@ -262,7 +265,7 @@ export class GameState {
   claimMission(index: number): number {
     const claimed = withMissionClaimed(this.store.save, index);
     if (!claimed) return 0;
-    this.store.replace(claimed.save);
+    this.commit(claimed.save, 'mission');
     return claimed.coins;
   }
 
@@ -278,7 +281,7 @@ export class GameState {
   claimChest(): number {
     const claimed = withChestClaimed(this.store.save);
     if (!claimed) return 0;
-    this.store.replace(claimed.save);
+    this.commit(claimed.save, 'chest');
     return claimed.berries;
   }
 
@@ -321,7 +324,7 @@ export class GameState {
   openGift(): number | null {
     const opened = withGiftOpened(this.store.save, (this.deps.now ?? now)(), this.clockBehind);
     if (!opened) return null;
-    this.store.replace(opened.save);
+    this.commit(opened.save, 'gift');
     return opened.coins;
   }
 
@@ -354,10 +357,13 @@ export class GameState {
 
   // --- Wallet ---
 
-  /** Coins of a reward outside a run (the doubled coins of a rewarded ad, gifts). */
-  addCoins(coins: number): void {
+  /**
+   * Coins of a reward outside a run (the doubled coins of a rewarded ad, gifts). `source` is for
+   * the dev tally only; the default is the debug panel button.
+   */
+  addCoins(coins: number, source: CreditSource = 'debug'): void {
     const next = withCoins(this.store.save, coins);
-    if (next !== this.store.save) this.store.replace(next);
+    if (next !== this.store.save) this.commit(next, source);
   }
 
   /** A rewarded ad was watched to the end. */
@@ -366,9 +372,9 @@ export class GameState {
   }
 
   /** Berries go in the moment they are earned, so they can pay for the continue of the same run. */
-  addBerries(berries: number): void {
+  addBerries(berries: number, source: CreditSource = 'run_berries'): void {
     const next = withBerries(this.store.save, berries);
-    if (next !== this.store.save) this.store.replace(next);
+    if (next !== this.store.save) this.commit(next, source);
   }
 
   /** Pays `cost`; false (nothing taken) when the wallet is not enough. A balance never goes below zero. */
@@ -417,7 +423,7 @@ export class GameState {
   claimFreeCoins(): boolean {
     const next = withFreeCoinsClaimed(this.store.save, this.today());
     if (!next) return false;
-    this.store.replace(next);
+    this.commit(next, 'shop_free');
     return true;
   }
 
@@ -425,7 +431,7 @@ export class GameState {
   exchangeBerries(berries: number): boolean {
     const result = exchangeBerries(this.store.save, berries);
     if (!result.ok) return false;
-    this.store.replace({ ...this.store.save, ...result.value });
+    this.commit({ ...this.store.save, ...result.value }, 'berry_exchange');
     return true;
   }
 
@@ -433,7 +439,7 @@ export class GameState {
   grantProduct(key: ProductKey): boolean {
     const next = withProductGranted(this.store.save, key);
     if (!next) return false;
-    this.store.replace(next);
+    this.commit(next, 'purchase');
     return true;
   }
 
@@ -478,6 +484,38 @@ export class GameState {
   resetProgress(): void {
     this.store.replace(withProgressReset(this.store.save, this.deps.realNow()));
     this.store.flush();
+  }
+
+  /**
+   * The one place where credits are told to the dev tally: swaps in `next` and counts what the
+   * wallet gained by it for `source`. Without a tally (production) it is a plain `replace`.
+   */
+  private commit(next: Save, source: CreditSource): void {
+    this.deps.tally?.addWalletChange(source, this.store.save, next);
+    this.store.replace(next);
+  }
+
+  /** Splits what a finished run paid: its own coins by source, level rewards, daily tiers, XP. */
+  private noteRun(before: Save, after: Save, summary: RunSummary, extras: RunExtras): void {
+    const tally = this.deps.tally;
+    if (!tally) return;
+    let levelCoins = 0;
+    for (const up of summary.levelUps) {
+      levelCoins += (up.reward.coins ?? 0) + (up.duplicate?.coins ?? 0);
+      tally.add('berries', 'level_reward', (up.reward.berries ?? 0) + (up.duplicate?.berries ?? 0));
+    }
+    tally.add('coins', 'level_reward', levelCoins);
+    let tierCoins = 0;
+    for (const tier of summary.dailyTiers) {
+      tierCoins += tier.cost.coins ?? 0;
+      tally.add('berries', 'daily_tier', tier.cost.berries ?? 0);
+    }
+    tally.add('coins', 'daily_tier', tierCoins);
+    const runCoins = after.coins - before.coins - levelCoins - tierCoins;
+    for (const [source, amount] of runCoinCredits(runCoins, extras.coinSources)) {
+      tally.add('coins', source, amount);
+    }
+    tally.add('xp', 'run_xp', summary.xpGained);
   }
 
   /** Local day of the game clock (streak, missions). */

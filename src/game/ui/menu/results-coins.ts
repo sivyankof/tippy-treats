@@ -129,7 +129,7 @@ export class ResultsCoins {
     const result = await showRewarded('double_coins');
     if (!this.container.active) return;
     if (result === 'rewarded') {
-      gameState.addCoins(this.earned);
+      gameState.addCoins(this.earned, 'ad_double');
       this.roll.set(this.earned * 2);
       this.buttonLabel?.setText(t('results.doubled'));
       if (this.buttonLabel) fitText(this.buttonLabel, cfg.adButton.width - cfg.adTextPadding);

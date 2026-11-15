@@ -22,6 +22,7 @@ export function extrasOf(tally: RunTally): RunExtras {
     floatingCoins: tally.coins.floating,
     abilities: tally.abilities,
     maxWobble: tally.maxWobble,
+    coinSources: { ...tally.coins },
   };
 }
 

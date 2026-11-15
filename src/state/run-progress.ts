@@ -1,6 +1,7 @@
 // What a finished run adds beyond XP and records: streak day, mission progress and daily tiers.
 import type { DailyPayout } from '../core/daily';
 import type { RunStats } from '../core/missions';
+import type { CoinSource } from '../core/sim-types';
 import type { RunResult } from '../core/run-result';
 import type { MissionProgress, Save } from '../core/save/schema';
 import { withDailyRun } from './daily';
@@ -12,6 +13,8 @@ export interface RunExtras {
   floatingCoins: number;
   abilities: number;
   maxWobble: number;
+  /** Coins of the run by source, for the dev tally only. */
+  coinSources?: Partial<Record<CoinSource, number>>;
 }
 
 export const NO_EXTRAS: RunExtras = { floatingCoins: 0, abilities: 0, maxWobble: 0 };

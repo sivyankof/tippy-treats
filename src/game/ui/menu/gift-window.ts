@@ -146,7 +146,7 @@ export function openGiftWindow(
       const result = await showRewarded('gift_double');
       if (!button.active) return;
       if (result === 'rewarded') {
-        gameState.addCoins(coins);
+        gameState.addCoins(coins, 'gift_double');
         const m = button.getWorldTransformMatrix();
         flyReward(scene, { currency: 'coins', amount: coins, from: { x: m.tx, y: m.ty }, wallet });
         label.setText(t('gift.doubled'));

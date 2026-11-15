@@ -8,7 +8,7 @@ import { FONT_FAMILY, FONT_WEIGHT } from '../ui/fonts';
 import type { UiRegion } from '../ui/ui-regions';
 import type { RunInfo } from '../run-info';
 import { adsDev } from '../../services';
-import { gameState } from '../../state';
+import { gameState, sessionTally } from '../../state';
 import { cycleDebugLevel, cycleDebugSlot, getDebugTeam } from './debug-team';
 
 const FONT_SIZE = 30;
@@ -89,10 +89,11 @@ export class DebugPanel {
     }
     this.levelEntry = entry(() => this.change(cycleDebugLevel), PALETTE.panel);
     this.applyEntry = entry(onApply, PALETTE.gold).setText(APPLY_LABEL);
-    this.berriesEntry = entry(() => gameState.addBerries(DEBUG_BERRIES), PALETTE.panel).setText(
-      BERRIES_LABEL,
-    );
-    this.coinsEntry = entry(() => gameState.addCoins(DEBUG_COINS), PALETTE.panel).setText(
+    this.berriesEntry = entry(
+      () => gameState.addBerries(DEBUG_BERRIES, 'debug'),
+      PALETTE.panel,
+    ).setText(BERRIES_LABEL);
+    this.coinsEntry = entry(() => gameState.addCoins(DEBUG_COINS, 'debug'), PALETTE.panel).setText(
       COINS_LABEL,
     );
     this.adsEntry = entry(() => {
@@ -162,6 +163,7 @@ export class DebugPanel {
         `work ${frameWorkStats.average.toFixed(WORK_DECIMALS)} ms, p95 ${frameWorkStats.percentile.toFixed(WORK_DECIMALS)} ms`,
         `fx ${fxLabel()}`,
         `berries ${gameState.berries}`,
+        ...(sessionTally?.lines() ?? []),
       ].join('\n'),
     );
   }
