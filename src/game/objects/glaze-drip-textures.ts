@@ -50,8 +50,8 @@ export function dropOuter(size: DripSize): { width: number; height: number } {
   return { width, height: width * DROP_TALL };
 }
 
-function keyOf(kind: string, size: DripSize, color: number): string {
-  return `glaze_drip_${kind}_${Math.round(size.stem * 10)}_${color.toString(16)}`;
+function keyOf(kind: string, size: DripSize, color: number, outline: number): string {
+  return `glaze_drip_${kind}_${Math.round(size.stem * 10)}_${color.toString(16)}_${outline.toString(16)}`;
 }
 
 /** The highlight stripe of the stem and the neck: x of its left edge and its width, from the left of a picture `outer` wide. */
@@ -64,14 +64,18 @@ function stripe(size: DripSize, outer: number): { x: number; w: number } {
  * Bakes (once) the pictures of drips of this glaze colour and size, in the real colours: the
  * outline is the glaze darkened like the baked glaze edge, the stripe the glaze lightened.
  */
-export function dripTextures(scene: Phaser.Scene, color: number, size: DripSize): DripTextureSet {
+export function dripTextures(
+  scene: Phaser.Scene,
+  color: number,
+  size: DripSize,
+  outline: number = shade(color, GLAZE_OUTLINE),
+): DripTextureSet {
   const set: DripTextureSet = {
-    stem: keyOf('stem', size, color),
-    bulb: keyOf('bulb', size, color),
-    drop: keyOf('drop', size, color),
-    spot: keyOf('spot', size, color),
+    stem: keyOf('stem', size, color, outline),
+    bulb: keyOf('bulb', size, color, outline),
+    drop: keyOf('drop', size, color, outline),
+    spot: keyOf('spot', size, color, outline),
   };
-  const outline = shade(color, GLAZE_OUTLINE);
   const light = shade(color, look.stripeLift);
   const white = PALETTE.textLight;
   const o = size.outline;

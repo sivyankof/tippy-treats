@@ -1,12 +1,11 @@
 import { ANIM } from '../../../data/anim';
 import { parseHex, shade } from '../../../util/color';
-import { drawGlaze } from '../layer-draw';
+import { drawGlaze } from './flat-draw';
 import {
   countFor,
   drawBase,
   drawFinish,
   fillBand,
-  outlineOf,
   outlinedCircle,
   scatter,
   spread,
@@ -78,7 +77,7 @@ export function drawHoney(ctx: ArtContext, r: Recipe<'honey'>): void {
       STRIPE_SHADOW_ALPHA,
     );
   }
-  drawGlaze(g, box, colors.glaze, { dripCount: r.dripCount, dripLength: r.dripLength });
+  drawGlaze(g, box, colors, { dripCount: r.dripCount, dripLength: r.dripLength });
   drawFinish(ctx);
 }
 
@@ -86,7 +85,7 @@ export function drawHoney(ctx: ArtContext, r: Recipe<'honey'>): void {
 export function drawBrownie(ctx: ArtContext, r: Recipe<'brownie'>): void {
   const { g, box, colors } = ctx;
   drawBase(ctx);
-  drawGlaze(g, box, colors.glaze, { depth: CRUST_DEPTH, dripCount: 0 });
+  drawGlaze(g, box, colors, { depth: CRUST_DEPTH, dripCount: 0 });
 
   const cracks = countFor(box.width, r.cracks);
   const crustTop = box.innerTop + CRUST_TOP_GAP;
@@ -107,7 +106,7 @@ export function drawBrownie(ctx: ArtContext, r: Recipe<'brownie'>): void {
   for (let i = 0; i < nuts; i++) {
     const x = box.innerLeft + SIDE_MARGIN + scatter(i, 0.1) * (box.innerW - SIDE_MARGIN * 2);
     const y = bodyTop + scatter(i, 0.45) * (box.innerBottom - NUT_BOTTOM_GAP - bodyTop);
-    g.fillStyle(outlineOf(colors.detail), 1);
+    g.fillStyle(colors.outline, 1);
     g.fillEllipse(x, y, NUT_WIDTH + NUT_OUTLINE * 2, NUT_HEIGHT + NUT_OUTLINE * 2);
     g.fillStyle(colors.detail, 1);
     g.fillEllipse(x, y, NUT_WIDTH, NUT_HEIGHT);
@@ -119,16 +118,15 @@ export function drawBrownie(ctx: ArtContext, r: Recipe<'brownie'>): void {
 export function drawCrumb(ctx: ArtContext, r: Recipe<'crumb'>): void {
   const { g, box, colors } = ctx;
   const { outline } = ANIM.layer;
-  const lighter = shade(colors.body, ANIM.layer.gradientLift);
   const bumps = countFor(box.width, r.bumps);
   // Bumps first: the body covers their lower halves.
   for (let i = 0; i < bumps; i++) {
     const x = spread(i, bumps, box.left + box.radius, box.right - box.radius);
     const radius = r.bumpRadius * (0.85 + 0.3 * scatter(i, 0.2));
-    outlinedCircle(g, x, box.top + outline, radius, lighter, outlineOf(colors.body), outline);
+    outlinedCircle(g, x, box.top + outline, radius, colors.body, colors.outline, outline);
   }
   drawBase(ctx);
-  drawGlaze(g, box, colors.glaze, { depth: RIM_DEPTH, dripCount: 0 });
+  drawGlaze(g, box, colors, { depth: RIM_DEPTH, dripCount: 0 });
 
   const chips = countFor(box.width, r.chips);
   for (let i = 0; i < chips; i++) {
@@ -153,7 +151,7 @@ export function drawCrumb(ctx: ArtContext, r: Recipe<'crumb'>): void {
 export function drawSprinkle(ctx: ArtContext, r: Recipe<'sprinkle'>): void {
   const { g, box, colors } = ctx;
   drawBase(ctx);
-  drawGlaze(g, box, colors.glaze, {
+  drawGlaze(g, box, colors, {
     depth: ICING_DEPTH,
     dripCount: 0,
     scallop: { radius: r.scallopRadius, step: r.scallopRadius * 2 },

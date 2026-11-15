@@ -18,6 +18,8 @@ export const FACE_TEXTURES = {
   /** The mouth gaping to half the face, teeth and the dark depth showing (the big lick). */
   mouthGape: 'face_mouth_gape',
   cheek: 'face_cheek',
+  /** A blush that stays pink over a dark or teal body (Jelly, Brownie). */
+  cheekSolid: 'face_cheek_solid',
   /** The warmer blush of a happy lick. */
   cheekHot: 'face_cheek_hot',
   sweat: 'face_sweat',

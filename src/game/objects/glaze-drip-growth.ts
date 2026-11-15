@@ -145,7 +145,7 @@ export class GlazeDripGrowth {
     const target = views.get(index - 1);
     if (!target) return false;
     const drips = view.glazeDrips;
-    const set = dripTextures(view.scene, drips.glazeColor, drips.dropSize);
+    const set = dripTextures(view.scene, drips.glazeColor, drips.dropSize, drips.dripOutline);
     const landY = target.y + pickRange(GLAZE_DRIPS.drop.landY);
     if (landY <= this.tip.y) return false;
     const { caramel, frosty } = GLAZE_DRIPS;

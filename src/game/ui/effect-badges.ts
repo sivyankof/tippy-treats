@@ -20,12 +20,20 @@ import { createStrokedText } from './outlined-text';
 import { HudPlate } from './style/hud-plate';
 import type { ActiveEffect } from '../../core/abilities/types';
 
-const { badgeSize, badgeGap, badgeMargin, badgeRowY, badgeCounterFont, badgeCounterInset } =
-  HUD_LAYOUT;
+const {
+  badgeSize,
+  badgeGap,
+  badgeMargin,
+  badgeRowY,
+  badgeCounterFont,
+  badgeCounterInset,
+  badgeCounterDrop,
+} = HUD_LAYOUT;
 const { badges } = ANIM;
 const inEase = easeFn(badges.inEase);
 const counterEase = easeFn(badges.counterPopEase);
-const COUNTER_OFFSET = badgeSize / 2 - badgeCounterInset;
+const COUNTER_OFFSET_X = badgeSize / 2 - badgeCounterInset;
+const COUNTER_OFFSET_Y = badgeSize / 2 - badgeCounterInset + badgeCounterDrop;
 /** A slot that is within this many pixels of its place counts as there. */
 const SETTLE_EPSILON = 0.5;
 
@@ -46,8 +54,8 @@ class BadgeSlot {
     this.icon = createCreatureIcon(scene, 0, 0);
     this.counter = createStrokedText(
       scene,
-      COUNTER_OFFSET,
-      COUNTER_OFFSET,
+      COUNTER_OFFSET_X,
+      COUNTER_OFFSET_Y,
       '',
       badgeCounterFont,
       PALETTE.textLight,
@@ -71,7 +79,7 @@ class BadgeSlot {
       this.counter.setText(formatNumber(badge.layersLeft));
       const { height, padX } = HUD_LAYOUT.badgeChip;
       const width = Math.max(height, this.counter.width + padX * 2);
-      this.chip.place(COUNTER_OFFSET, COUNTER_OFFSET, width, height);
+      this.chip.place(COUNTER_OFFSET_X, COUNTER_OFFSET_Y, width, height);
     }
     const pop =
       badge.counterAgeMs < badges.counterPopMs

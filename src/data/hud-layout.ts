@@ -48,6 +48,8 @@ export const HUD_LAYOUT = {
   /** Counter of an effect badge: font size, and how far it sits in from the icon's bottom right corner. */
   badgeCounterFont: 52,
   badgeCounterInset: 10,
+  /** How far the counter hangs below the icon's bottom edge, so it clears the face. */
+  badgeCounterDrop: 22,
   badgeCounterStroke: 8,
   /** The see-through wallet chip under that counter: its height and the room beside the digits. */
   badgeChip: { height: 58, padX: 12 },

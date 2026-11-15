@@ -21,6 +21,7 @@ import {
   type BelowSpan,
 } from '../fx/glaze-growth';
 import { CREAM_DRIPS, CREAM_DRIP_LENGTH } from './creature-art/layered';
+import { creatureColors } from './creature-art/primitives';
 import {
   bulbOuter,
   dripTextures,
@@ -204,6 +205,11 @@ export class GlazeDripLayer extends Phaser.GameObjects.Container {
     return thaws(this.creature) ? GLAZE_DRIPS.frosty.color : this.glaze;
   }
 
+  /** Outline of the drips of a creature layer (none for a plain layer: the default tone). */
+  get dripOutline(): number | undefined {
+    return this.creature ? creatureColors(this.creature).glazeOutline : undefined;
+  }
+
   /** The glaze colour of the layer itself. */
   get ownGlaze(): number {
     return this.glaze;
@@ -255,7 +261,7 @@ export class GlazeDripLayer extends Phaser.GameObjects.Container {
     this.layerIndex = layerIndex;
     this.seed = plainLooks.cosmeticSeed;
     this.size = sizeFor(creature);
-    this.textures = dripTextures(this.scene, glaze, this.size);
+    this.textures = dripTextures(this.scene, glaze, this.size, this.dripOutline);
     this.thawReady = false;
     this.dripSpotsNow = growsDrips(creature)
       ? growthSpots(creature, width, cut, this.size, layerIndex)

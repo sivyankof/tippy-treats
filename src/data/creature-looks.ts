@@ -39,6 +39,8 @@ export interface FaceRecipe {
   /** Blush size; 0 hides it. `cheekSpread` widens the distance between the cheeks. */
   cheekScale: number;
   cheekSpread: number;
+  /** An almost opaque blush, for bodies where the usual one turns grey. */
+  solidCheek: boolean;
   /** Shifts the whole face (negative: up). */
   offsetY: number;
   /** Light brows for a dark body. */
@@ -61,6 +63,7 @@ const FACE_DEFAULTS = {
   lidRight: 0,
   cheekScale: 1,
   cheekSpread: 1,
+  solidCheek: false,
   offsetY: 0,
   lightBrows: false,
   lidTint: 'body',
@@ -175,7 +178,13 @@ export const CREATURE_LOOKS: Readonly<Record<CreatureId, CreatureLook>> = {
       scallopRadius: 15,
       scallopStep: 34,
     },
-    face: { ...FACE_DEFAULTS, browLeft: brow(0), browRight: brow(0), mouth: 'flat' },
+    face: {
+      ...FACE_DEFAULTS,
+      browLeft: brow(0),
+      browRight: brow(0),
+      mouth: 'flat',
+      solidCheek: true,
+    },
   },
   caramel: {
     art: { kind: 'caramel', topPad: 0, capDepth: 0.5, dripCount: 4, dripLength: 30 },
@@ -193,6 +202,7 @@ export const CREATURE_LOOKS: Readonly<Record<CreatureId, CreatureLook>> = {
       browRight: brow(-26, 2, 1.3, 1.6),
       mouth: 'flat',
       lightBrows: true,
+      solidCheek: true,
     },
   },
   sprinkle: {

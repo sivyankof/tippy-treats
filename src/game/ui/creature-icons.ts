@@ -2,7 +2,7 @@ import type * as Phaser from 'phaser';
 import { CREATURE_IDS, type CreatureId } from '../../data/creatures';
 import { HUD_LAYOUT } from '../../data/hud-layout';
 
-/** Texture key of the icon of each creature; the key is the name of `assets/svg/icon_<id>.svg`. */
+/** Texture key of the icon of each creature, baked at start-up from its layer picture (`creature-icon-textures.ts`). */
 export const CREATURE_ICON_KEYS = Object.fromEntries(
   CREATURE_IDS.map((id) => [id, `icon_${id}`]),
 ) as Readonly<Record<CreatureId, string>>;

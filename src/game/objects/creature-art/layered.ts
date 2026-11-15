@@ -1,14 +1,19 @@
 import { ANIM } from '../../../data/anim';
+import { CREATURE_STYLE } from '../../../data/creature-style';
 import { parseHex, shade } from '../../../util/color';
 import { PALETTE } from '../../../data/palette';
-import { drawGlaze, drawGloss, drawShadow } from '../layer-draw';
+import { faceRecipe } from '../../../data/creature-looks';
+import { faceHalfSpan } from '../../fx/glaze-growth';
+import { faceLayout } from '../face-recipe';
+import { drawShadow } from '../layer-draw';
+import { drawGlaze, type GlossSpot } from './flat-draw';
 import { twinsSeam } from './twins-seam';
 import {
   countFor,
   drawBase,
   drawFinish,
   fillBand,
-  outlineOf,
+  shadeBottom,
   scallops,
   scatter,
   spread,
@@ -47,7 +52,7 @@ export const CREAM_DRIPS = 3;
 /** Jelly: see-through teal body with bubbles, a wavy top edge and a strong shine. */
 export function drawJelly(ctx: ArtContext, r: Recipe<'jelly'>): void {
   const { g, box, colors } = ctx;
-  const { outline, gradientLift } = ANIM.layer;
+  const { outline } = ANIM.layer;
   drawShadow(g, box);
   const y = box.top - r.topPad + r.scallopRadius + outline;
   scallops(
@@ -57,7 +62,8 @@ export function drawJelly(ctx: ArtContext, r: Recipe<'jelly'>): void {
     y,
     r.scallopRadius,
     r.scallopStep,
-    shade(colors.body, gradientLift),
+    colors.body,
+    colors.outline,
     outline,
   );
   drawBase(ctx);
@@ -88,9 +94,8 @@ export function drawJelly(ctx: ArtContext, r: Recipe<'jelly'>): void {
     box.innerH * 0.5,
     JELLY_STREAK_WIDTH / 2,
   );
-  drawFinish(ctx);
-  // A second pass of the gloss: jelly shines more than the rest.
-  drawGloss(g, box);
+  // Jelly shines more than the rest: a bigger gloss.
+  drawFinish(ctx, CREATURE_STYLE.gloss.jellyScale);
 }
 
 /** Pointed ice crystal standing on the top edge, outline first. */
@@ -101,11 +106,12 @@ function drawCrystal(
   height: number,
   lean: number,
   fill: number,
+  outlineColor: number,
 ): void {
   const { outline } = ANIM.layer;
   for (const pass of ['outline', 'fill'] as const) {
     const grow = pass === 'outline' ? outline / 2 : 0;
-    g.fillStyle(pass === 'outline' ? outlineOf(fill) : fill, 1);
+    g.fillStyle(pass === 'outline' ? outlineColor : fill, 1);
     g.fillTriangle(
       x - CRYSTAL_WIDTH / 2 - grow,
       baseY,
@@ -125,15 +131,31 @@ export function drawFrosty(ctx: ArtContext, r: Recipe<'frosty'>): void {
   for (let k = 0; k < r.crystals; k++) {
     const height = r.topPad - 6 - k * CRYSTAL_HEIGHT_STEP;
     const base = box.top + 8;
-    drawCrystal(g, box.left + edge + k * CRYSTAL_STEP, base, height, -1, colors.accent);
-    drawCrystal(g, box.right - edge - k * CRYSTAL_STEP, base, height, 1, colors.accent);
+    drawCrystal(
+      g,
+      box.left + edge + k * CRYSTAL_STEP,
+      base,
+      height,
+      -1,
+      colors.accent,
+      colors.outline,
+    );
+    drawCrystal(
+      g,
+      box.right - edge - k * CRYSTAL_STEP,
+      base,
+      height,
+      1,
+      colors.accent,
+      colors.outline,
+    );
   }
   drawBase(ctx);
 
   const wafer = box.innerH * r.waferShare;
   const topFill = colors.glaze;
   const bottomFill = shade(colors.glaze, WAFER_BOTTOM_SHADE);
-  const seam = outlineOf(colors.glaze);
+  const seam = colors.outline;
   const rad = box.innerRadius;
   g.fillStyle(topFill, 1);
   g.fillRoundedRect(box.innerLeft, box.innerTop, box.innerW, wafer, {
@@ -152,6 +174,7 @@ export function drawFrosty(ctx: ArtContext, r: Recipe<'frosty'>): void {
   g.fillStyle(seam, 1);
   g.fillRect(box.innerLeft, box.innerTop + wafer - WAFER_SEAM / 2, box.innerW, WAFER_SEAM);
   g.fillRect(box.innerLeft, box.innerBottom - wafer - WAFER_SEAM / 2, box.innerW, WAFER_SEAM);
+  shadeBottom(ctx);
 
   const holes = Math.floor((box.innerW - rad * 2) / r.holeStep);
   g.fillStyle(colors.detail, 1);
@@ -164,6 +187,24 @@ export function drawFrosty(ctx: ArtContext, r: Recipe<'frosty'>): void {
 }
 
 /**
+ * Where the Twins gloss goes: at the far left clear of the left face; where that leaves too
+ * little room (a narrow layer) it moves down onto the upper shell below the face row.
+ */
+export function twinsGlossSpot(width: number): GlossSpot {
+  const faceLeft = -faceHalfSpan(width, faceRecipe('twins')) - CREATURE_STYLE.gloss.faceGap;
+  const room = faceLeft - (-width / 2 + CREATURE_STYLE.gloss.minInset);
+  if (room >= CREATURE_STYLE.gloss.length) return { clearTo: faceLeft };
+  // Below the eyes the left mouth is the obstacle (eyes-only faces have none): stop short of the
+  // middle of the left face and start nearer the edge.
+  const low = { y: CREATURE_STYLE.gloss.twinsLowY, inset: CREATURE_STYLE.gloss.minInset };
+  const layout = faceLayout(width, faceRecipe('twins'));
+  const pair = faceRecipe('twins').pair;
+  // A shrunk face is too small a target to be worth the room it would cost.
+  if (!layout.showRest || !pair || layout.scale < CREATURE_STYLE.gloss.twinsClearScale) return low;
+  return { ...low, clearTo: -layout.scale * pair.spread - CREATURE_STYLE.gloss.faceGap };
+}
+
+/**
  * Macaron: a lilac top shell, a darker bottom shell and a cream strip in the middle. Along the
  * strip both shells have "feet": a thin rough band of small bumps.
  */
@@ -173,14 +214,35 @@ export function drawTwins(ctx: ArtContext, r: Recipe<'twins'>): void {
   drawBase(ctx);
   const seam = twinsSeam(box, r);
   fillBand(g, box, seam.bottom, box.innerBottom, colors.glaze);
+  shadeBottom(ctx);
   // The feet sit on the seam; the cream drawn next hides their halves on its side.
   const x0 = box.innerLeft + box.innerRadius;
   const x1 = box.innerRight - box.innerRadius;
   const step = r.feetRadius * r.feetStep;
-  scallops(g, x0, x1, seam.top, r.feetRadius, step, shade(colors.body, r.feetShade), outline);
-  scallops(g, x0, x1, seam.bottom, r.feetRadius, step, shade(colors.glaze, r.feetShade), outline);
+  scallops(
+    g,
+    x0,
+    x1,
+    seam.top,
+    r.feetRadius,
+    step,
+    shade(colors.body, r.feetShade),
+    colors.outline,
+    outline,
+  );
+  scallops(
+    g,
+    x0,
+    x1,
+    seam.bottom,
+    r.feetRadius,
+    step,
+    shade(colors.glaze, r.feetShade),
+    colors.outline,
+    outline,
+  );
   fillBand(g, box, seam.top, seam.bottom, colors.accent);
-  drawFinish(ctx);
+  drawFinish(ctx, 1, twinsGlossSpot(box.width));
 }
 
 /** Rainbow cake: six thin bands under white cream, a small cream crown on top. */
@@ -194,7 +256,7 @@ export function drawRainbow(ctx: ArtContext, r: Recipe<'rainbow'>): void {
   const peaks = r.crown;
   for (const pass of ['outline', 'fill'] as const) {
     const grow = pass === 'outline' ? outline / 2 : 0;
-    g.fillStyle(pass === 'outline' ? outlineOf(colors.glaze) : colors.glaze, 1);
+    g.fillStyle(pass === 'outline' ? colors.outline : colors.glaze, 1);
     for (let i = 0; i < peaks; i++) {
       const offset = i - (peaks - 1) / 2;
       const height = offset === 0 ? r.topPad - outline / 2 : CROWN_SIDE_HEIGHT;
@@ -220,10 +282,13 @@ export function drawRainbow(ctx: ArtContext, r: Recipe<'rainbow'>): void {
     const y1 = start + ((box.innerBottom - start) * (i + 1)) / bands.length;
     fillBand(g, box, y0, y1, bands[i] ?? colors.body);
   }
-  drawGlaze(g, box, colors.glaze, {
+  shadeBottom(ctx);
+  drawGlaze(g, box, colors, {
     depth: r.creamShare,
     dripCount: CREAM_DRIPS,
     dripLength: CREAM_DRIP_LENGTH,
   });
-  drawFinish(ctx);
+  // The cream on top is nearly white: the gloss lies on the first coloured band.
+  const bandH = (box.innerBottom - start) / bands.length;
+  drawFinish(ctx, 1, { y: start + bandH / 2 - box.top });
 }

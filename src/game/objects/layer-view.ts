@@ -156,6 +156,12 @@ export class LayerView extends Phaser.GameObjects.Container {
     return this;
   }
 
+  /** Draws the art fully opaque (a see-through creature baked into an icon keeps its face parts opaque too). */
+  setArtOpaque(): this {
+    this.art.setAlpha(1);
+    return this;
+  }
+
   /** Gives the baked art back so a pooled view does not keep its texture alive; `setLayer` brings it back. */
   releaseArt(): this {
     this.artSlot.release();

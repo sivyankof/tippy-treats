@@ -27,15 +27,8 @@ export const ANIM = {
     glazeDepth: 0.36,
     dripCount: 3,
     dripLength: 22,
-    glossAlpha: 0.35,
     shadowAlpha: 0.22,
     shadowHeight: 18,
-    /** Darker rim at the bottom of the cake. */
-    rimAlpha: 0.18,
-    /** Top-to-bottom gradient: how much lighter the top is, and the number of bands. */
-    gradientLift: 0.14,
-    bodyBands: 6,
-    glazeBands: 2,
     /** Lighter porous sponge strip on a bitten edge (section 4, "Линия среза"). */
     sponge: {
       width: 16,

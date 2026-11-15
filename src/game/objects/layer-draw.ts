@@ -19,12 +19,8 @@ export const GOLDEN_STEP = 0.618;
 export const DRIP_WIDTH = 22;
 export const DRIP_MIN_LAYER_WIDTH = 120;
 const DRIP_SHORT_RATIO = 0.65;
-const GLOSS_HEIGHT = 10;
-const GLOSS_INSET = 26;
-const GLOSS_LENGTH_RATIO = 0.5;
 export const SHADOW_DROP = 6;
 const SHADOW_WIDTH_RATIO = 0.96;
-const RIM_SHARE = 0.26;
 
 /** Geometry of one layer around its centre (0, 0): outer shape and the area inside the outline. */
 export interface LayerBox {
@@ -124,65 +120,6 @@ export function glazeBottomY(box: LayerBox, depth: number = ANIM.layer.glazeDept
   return box.innerTop + box.height * depth;
 }
 
-/** Glaze on the top of the layer with drips hanging from its lower edge. */
-export function drawGlaze(
-  g: Phaser.GameObjects.Graphics,
-  box: LayerBox,
-  glaze: number,
-  options: GlazeOptions = {},
-): void {
-  const { outline, glazeDepth, dripCount, dripLength, gradientLift, glazeBands } = ANIM.layer;
-  const depth = options.depth ?? glazeDepth;
-  const drips = dripSpots(box, options.dripCount ?? dripCount, options.dripLength ?? dripLength);
-  const glazeH = box.height * depth;
-  const topCorners = { tl: box.innerRadius, tr: box.innerRadius, bl: 0, br: 0 };
-
-  // Two passes so every outline sits under every fill.
-  for (const pass of ['outline', 'fill'] as const) {
-    const grow = pass === 'outline' ? outline / 2 : 0;
-    if (pass === 'outline') {
-      g.fillStyle(shade(glaze, GLAZE_OUTLINE), 1);
-      g.fillRoundedRect(
-        box.innerLeft - grow,
-        box.innerTop - grow,
-        box.innerW + grow * 2,
-        glazeH + grow,
-        topCorners,
-      );
-    } else {
-      fillGradient(
-        g,
-        { x: box.innerLeft, y: box.innerTop, width: box.innerW, height: glazeH },
-        box.innerRadius,
-        glaze,
-        shade(glaze, gradientLift),
-        glazeBands,
-      );
-    }
-    if (options.scallop) {
-      const { radius, step } = options.scallop;
-      const x0 = box.innerLeft + box.innerRadius;
-      const x1 = box.innerRight - box.innerRadius;
-      const count = Math.max(1, Math.round((x1 - x0) / step));
-      g.fillStyle(pass === 'outline' ? shade(glaze, GLAZE_OUTLINE) : glaze, 1);
-      for (let i = 0; i < count; i++) {
-        g.fillCircle(x0 + ((x1 - x0) * (i + 0.5)) / count, box.innerTop + glazeH, radius + grow);
-      }
-    }
-    g.fillStyle(pass === 'outline' ? shade(glaze, GLAZE_OUTLINE) : glaze, 1);
-    for (const drip of drips) {
-      const w = DRIP_WIDTH + grow * 2;
-      g.fillRoundedRect(
-        drip.x - w / 2,
-        box.innerTop + glazeH - DRIP_WIDTH / 2,
-        w,
-        drip.length + DRIP_WIDTH / 2 + grow,
-        w / 2,
-      );
-    }
-  }
-}
-
 /**
  * Porous sponge on the cut side: a lighter strip along the inner side of the edge,
  * over the glaze too, with a few darker pores. Drawn inside the outline.
@@ -221,36 +158,5 @@ export function drawShadow(g: Phaser.GameObjects.Graphics, box: LayerBox): void 
     box.bottom + SHADOW_DROP,
     box.width * SHADOW_WIDTH_RATIO,
     ANIM.layer.shadowHeight,
-  );
-}
-
-/** Dark outline, darker rim at the bottom and a gradient of `cake` above it. */
-export function drawBody(g: Phaser.GameObjects.Graphics, box: LayerBox, cake: number): void {
-  const { rimAlpha, bodyBands, gradientLift } = ANIM.layer;
-  g.fillStyle(shade(cake, DARK_OUTLINE), 1);
-  g.fillRoundedRect(box.left, box.top, box.width, box.height, box.radius);
-  g.fillStyle(shade(cake, -rimAlpha), 1);
-  g.fillRoundedRect(box.innerLeft, box.innerTop, box.innerW, box.innerH, box.innerRadius);
-  fillGradient(
-    g,
-    { x: box.innerLeft, y: box.innerTop, width: box.innerW, height: box.innerH * (1 - RIM_SHARE) },
-    box.innerRadius,
-    cake,
-    shade(cake, gradientLift),
-    bodyBands,
-  );
-}
-
-/** The white highlight in the upper third. */
-export function drawGloss(g: Phaser.GameObjects.Graphics, box: LayerBox): void {
-  const glossW = Math.max(0, box.width * GLOSS_LENGTH_RATIO - GLOSS_INSET);
-  if (glossW <= 0) return;
-  g.fillStyle(PALETTE.textLight, ANIM.layer.glossAlpha);
-  g.fillRoundedRect(
-    box.left + GLOSS_INSET,
-    box.top + ANIM.layer.outline + GLOSS_HEIGHT,
-    glossW,
-    GLOSS_HEIGHT,
-    GLOSS_HEIGHT / 2,
   );
 }

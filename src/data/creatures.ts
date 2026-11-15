@@ -73,6 +73,10 @@ export interface CreaturePalette {
   detail: string;
   /** The cut side of the layer (the sponge) before it is lightened. */
   sponge: string;
+  /** Outline of the layer and its details: a dark warm tone of the creature's own colour, never grey. */
+  outline: string;
+  /** Overrides the body shadow tone (default: the body mixed with the outline); for a near-white body. */
+  shadow?: string;
 }
 
 export interface CreatureDef {
@@ -110,6 +114,7 @@ export const CREATURES: Record<CreatureId, CreatureDef> = {
       accent: '#fff3c4',
       detail: '#8a4e12',
       sponge: '#f6d58a',
+      outline: '#96601a',
     },
   },
   puff: {
@@ -123,6 +128,7 @@ export const CREATURES: Record<CreatureId, CreatureDef> = {
       accent: '#ff8fb8',
       detail: '#ffffff',
       sponge: '#fffafc',
+      outline: '#b83a6e',
     },
   },
   jelly: {
@@ -141,6 +147,7 @@ export const CREATURES: Record<CreatureId, CreatureDef> = {
       accent: '#d8fff4',
       detail: '#7fe6d2',
       sponge: '#7fe6d2',
+      outline: '#14705f',
     },
   },
   caramel: {
@@ -154,6 +161,7 @@ export const CREATURES: Record<CreatureId, CreatureDef> = {
       accent: '#ffe2a8',
       detail: '#e0983e',
       sponge: '#fff7e0',
+      outline: '#8a4e14',
     },
   },
   frosty: {
@@ -167,6 +175,8 @@ export const CREATURES: Record<CreatureId, CreatureDef> = {
       accent: '#9fd8ff',
       detail: '#6e4521',
       sponge: '#ffffff',
+      outline: '#6b4220',
+      shadow: '#c6dcee',
     },
   },
   brownie: {
@@ -180,6 +190,7 @@ export const CREATURES: Record<CreatureId, CreatureDef> = {
       accent: '#d9a679',
       detail: '#c68e5a',
       sponge: '#8d5a3c',
+      outline: '#3a1e12',
     },
   },
   sprinkle: {
@@ -193,6 +204,7 @@ export const CREATURES: Record<CreatureId, CreatureDef> = {
       accent: '#7fd1ff',
       detail: '#d6a96a',
       sponge: '#fbe6c0',
+      outline: '#a8602e',
     },
   },
   crumb: {
@@ -209,6 +221,7 @@ export const CREATURES: Record<CreatureId, CreatureDef> = {
       accent: '#4a2c14',
       detail: '#c8903f',
       sponge: '#f0c987',
+      outline: '#8e5a20',
     },
   },
   ghost: {
@@ -222,6 +235,7 @@ export const CREATURES: Record<CreatureId, CreatureDef> = {
       accent: '#9b8cdc',
       detail: '#ffffff',
       sponge: '#ffffff',
+      outline: '#7662b8',
     },
   },
   twins: {
@@ -238,6 +252,7 @@ export const CREATURES: Record<CreatureId, CreatureDef> = {
       accent: '#fff2c9',
       detail: '#d9c9ff',
       sponge: '#cdbcf7',
+      outline: '#5c43b0',
     },
   },
   lemon: {
@@ -260,6 +275,7 @@ export const CREATURES: Record<CreatureId, CreatureDef> = {
       accent: '#fffbe0',
       detail: '#c99a45',
       sponge: '#f3d99a',
+      outline: '#a8761a',
     },
   },
   rainbow: {
@@ -276,6 +292,7 @@ export const CREATURES: Record<CreatureId, CreatureDef> = {
       accent: '#ffe76b',
       detail: '#ffffff',
       sponge: '#fff0f8',
+      outline: '#a8447a',
     },
   },
 };

@@ -286,13 +286,14 @@ export class FaceParts extends Phaser.GameObjects.Container {
     const scale = (recipe?.cheekScale ?? 1) * (puffed ? ANIM.face.puffCheekScale : 1);
     const spread = recipe?.cheekSpread ?? 1;
     const half = (ANIM.face.cheekSpacing / 2) * spread;
+    const key = recipe?.solidCheek ? FACE_TEXTURES.cheekSolid : FACE_TEXTURES.cheek;
     this.cheekL
-      .setTexture(FACE_TEXTURES.cheek)
+      .setTexture(key)
       .setVisible(showRest && scale > 0)
       .setScale(scale)
       .setX(-half);
     this.cheekR
-      .setTexture(FACE_TEXTURES.cheek)
+      .setTexture(key)
       .setVisible(showRest && scale > 0)
       .setScale(scale)
       .setX(half);

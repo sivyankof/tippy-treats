@@ -6,18 +6,13 @@ import { t } from '../../../i18n';
 import { mixColor } from '../../../util/color';
 import { LayerView } from '../../objects/layer-view';
 import type { TowerSnapshot } from '../../objects/tower-snapshot';
+import { offList } from '../bake-texture';
 import { createOutlinedText } from '../outlined-text';
 import { fitText } from './fit-text';
 import { fitTower } from './share-card-layout';
 
 const cfg = SHARE_CARD;
 const CARD_KEY = 'share_card';
-
-/** A game object that only exists to be drawn into the picture: it leaves the scene's display list. */
-function offList<T extends Phaser.GameObjects.GameObject>(object: T): T {
-  object.removeFromDisplayList();
-  return object;
-}
 
 function fillSky(card: Phaser.Textures.DynamicTexture): void {
   const bandHeight = cfg.height / cfg.skyBands;

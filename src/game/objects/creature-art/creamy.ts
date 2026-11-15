@@ -1,12 +1,12 @@
 import { ANIM } from '../../../data/anim';
 import { shade } from '../../../util/color';
-import { drawGlaze, drawShadow } from '../layer-draw';
+import { drawShadow } from '../layer-draw';
+import { drawGlaze } from './flat-draw';
 import {
   countFor,
   drawBase,
   drawFinish,
   fillBand,
-  outlineOf,
   outlinedCircle,
   spread,
   stroke,
@@ -66,7 +66,7 @@ export function drawPuff(ctx: ArtContext, r: Recipe<'puff'>): void {
     const middle = Math.abs(i - (count - 1) / 2) / ((count - 1) / 2 || 1);
     const radius = maxRadius * (1 - (1 - PUFF_MIN_SCALE) * middle);
     const x = spread(i, count, box.left + box.radius, box.right - box.radius);
-    outlinedCircle(g, x, y, radius, colors.glaze, outlineOf(colors.glaze), outline);
+    outlinedCircle(g, x, y, radius, colors.glaze, colors.outline, outline);
   }
   drawBase(ctx);
 
@@ -84,7 +84,7 @@ export function drawPuff(ctx: ArtContext, r: Recipe<'puff'>): void {
       GROOVE_WIDTH / 2,
     );
   }
-  drawGlaze(g, box, colors.glaze, { depth: PUFF_ICING_DEPTH, dripCount: 0 });
+  drawGlaze(g, box, colors, { depth: PUFF_ICING_DEPTH, dripCount: 0 });
   drawFinish(ctx);
 }
 
@@ -97,13 +97,14 @@ function drawPeak(
   height: number,
   lean: number,
   fill: number,
+  outlineColor: number,
 ): void {
   const { outline } = ANIM.layer;
   const tipX = x + lean * PEAK_CURL_RADIUS;
   const tipY = baseY - height;
   for (const pass of ['outline', 'fill'] as const) {
     const grow = pass === 'outline' ? outline / 2 : 0;
-    g.fillStyle(pass === 'outline' ? outlineOf(fill) : fill, 1);
+    g.fillStyle(pass === 'outline' ? outlineColor : fill, 1);
     g.fillTriangle(x - width / 2 - grow, baseY, x + width / 2 + grow, baseY, tipX, tipY - grow * 2);
     g.fillCircle(tipX, tipY + PEAK_CURL_RADIUS / 2, PEAK_CURL_RADIUS + grow);
   }
@@ -114,10 +115,28 @@ export function drawGhost(ctx: ArtContext, r: Recipe<'ghost'>): void {
   const { g, box, colors } = ctx;
   const reach = box.width * PEAK_SPREAD;
   drawShadow(g, box);
-  drawPeak(g, -reach, box.top + PEAK_OVERLAP, r.peakWidth, r.peakHeight, 1, colors.body);
-  drawPeak(g, reach, box.top + PEAK_OVERLAP, r.peakWidth, r.peakHeight, -1, colors.body);
+  drawPeak(
+    g,
+    -reach,
+    box.top + PEAK_OVERLAP,
+    r.peakWidth,
+    r.peakHeight,
+    1,
+    colors.body,
+    colors.outline,
+  );
+  drawPeak(
+    g,
+    reach,
+    box.top + PEAK_OVERLAP,
+    r.peakWidth,
+    r.peakHeight,
+    -1,
+    colors.body,
+    colors.outline,
+  );
   drawBase(ctx);
-  drawGlaze(g, box, colors.glaze, { depth: MERINGUE_CAP_DEPTH, dripCount: 0 });
+  drawGlaze(g, box, colors, { depth: MERINGUE_CAP_DEPTH, dripCount: 0 });
 
   const swirls = Math.max(1, Math.floor(box.innerW / r.swirlStep));
   const bottom = box.innerBottom - SWIRL_BOTTOM_GAP;
@@ -138,7 +157,7 @@ export function drawGhost(ctx: ArtContext, r: Recipe<'ghost'>): void {
 export function drawCaramel(ctx: ArtContext, r: Recipe<'caramel'>): void {
   const { g, box, colors } = ctx;
   drawBase(ctx);
-  drawGlaze(g, box, colors.glaze, {
+  drawGlaze(g, box, colors, {
     depth: r.capDepth,
     dripCount: r.dripCount,
     dripLength: r.dripLength,
@@ -159,7 +178,7 @@ function drawSlice(g: Graphics, x: number, y: number, radius: number, ctx: ArtCo
   const { colors } = ctx;
   const { outline } = ANIM.layer;
   const rind = shade(colors.glaze, SLICE_RIND_SHADE);
-  outlinedCircle(g, x, y, radius, rind, outlineOf(rind), outline);
+  outlinedCircle(g, x, y, radius, rind, colors.outline, outline);
   g.fillStyle(colors.accent, 1);
   g.fillCircle(x, y, radius - SLICE_RING / 2);
   g.fillStyle(colors.glaze, 1);
@@ -190,7 +209,7 @@ export function drawLemon(ctx: ArtContext, r: Recipe<'lemon'>): void {
       [x, box.innerBottom - RIB_BOTTOM_GAP],
     ]);
   }
-  drawGlaze(g, box, colors.glaze, {
+  drawGlaze(g, box, colors, {
     depth: r.creamShare,
     dripCount: 0,
     scallop: { radius: CREAM_SCALLOP_RADIUS, step: CREAM_SCALLOP_RADIUS * 2 },

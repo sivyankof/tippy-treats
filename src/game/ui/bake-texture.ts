@@ -55,3 +55,9 @@ export function bakeTexture(
     g.destroy();
   }
 }
+
+/** A game object that only exists to be drawn into a texture: it leaves the scene's display list. */
+export function offList<T extends Phaser.GameObjects.GameObject>(object: T): T {
+  object.removeFromDisplayList();
+  return object;
+}
