@@ -1,3 +1,4 @@
+import { overhangSide } from '../../../core/drop';
 import type { SimEvent, TowerState } from '../../../core/tower-sim';
 import { ABILITY_ANIM } from '../../../data/ability-anim';
 import { DEPTH } from '../../depth';
@@ -17,7 +18,7 @@ export class CrumbFlight {
 
   fly(event: Extract<SimEvent, { type: 'land' }>, state: Readonly<TowerState>): void {
     const { tower, sprites } = this.kit;
-    if (!event.cutSide) return;
+    const cutSide = event.cutSide ?? overhangSide(event.dx);
     let target = -1;
     for (let i = state.layers.length - 2; i >= 0; i--) {
       if (state.layers[i]?.creature === 'crumb') {
@@ -29,7 +30,7 @@ export class CrumbFlight {
     const index = state.layers.length - 1;
     const cut = tower.layerPose(index);
     if (!eater || !cut) return;
-    const side = event.cutSide === 'right' ? 1 : -1;
+    const side = cutSide === 'right' ? 1 : -1;
     const color = cakeColorsFor(state.layers[index]?.creature ?? null, index + 1).cake;
     const count = effectsMode.particleCount(cfg.cutCrumbs);
     for (let i = 0; i < count; i++) {

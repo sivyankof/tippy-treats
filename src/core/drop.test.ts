@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { BALANCE } from '../data/balance';
-import { layerSpeed, resolveDrop, type DropInput } from './drop';
+import { layerSpeed, overhangSide, resolveDrop, type DropInput } from './drop';
 
 const TARGET = 540;
 
@@ -170,6 +170,15 @@ describe('resolveDrop with a spring', () => {
       savedWidth: 40,
     });
     expect(drop(100, { springShare: 0 })).toMatchObject({ dx: 100, newWidth: 300 });
+  });
+});
+
+describe('overhangSide', () => {
+  it('names the side of the would-be cut, also for a layer the protection saved', () => {
+    expect(overhangSide(40)).toBe('right');
+    expect(overhangSide(-40)).toBe('left');
+    expect(overhangSide(drop(100, { protectCut: true }).dx)).toBe('right');
+    expect(overhangSide(drop(-100, { protectCut: true }).dx)).toBe('left');
   });
 });
 

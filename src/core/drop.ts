@@ -40,6 +40,11 @@ export function layerSpeed(height: number, speedMult: number): number {
   return Math.min(max, base + perLayer * height) * speedMult;
 }
 
+/** Side a layer thrown with offset `dx` overhangs, so the side its cut would be on. */
+export function overhangSide(dx: number): CutSide {
+  return dx > 0 ? 'right' : 'left';
+}
+
 export function resolveDrop(input: DropInput): DropOutcome {
   const { width } = input;
   const dx = input.flyingX - input.targetX;
@@ -80,7 +85,7 @@ export function resolveDrop(input: DropInput): DropOutcome {
     newWidth: width - cut,
     centerOffset: settled / 2,
     cutWidth: cut,
-    cutSide: dx > 0 ? 'right' : 'left',
+    cutSide: overhangSide(dx),
     savedWidth: 0,
   };
 }

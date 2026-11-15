@@ -108,7 +108,8 @@ export class AbilityFx {
       this.tower.topView()?.playSlide((event.dx * share) / (1 - share), slideMs, slideEase);
     }
     if (event.savedWidth > 0) this.active.markSaved(state.layers.length - 1);
-    if (this.active.flags.crumb && event.cutWidth > 0 && event.cutSide && memo) {
+    // A layer the rainbow saved pays the crumb coins of its would-be cut, so the crumbs fly too.
+    if (this.active.flags.crumb && event.cutWidth + event.savedWidth > 0 && memo) {
       this.crumbs.fly(event, state);
     }
   }
