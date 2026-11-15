@@ -95,7 +95,7 @@ export class AbilityFx {
     this.kit.sprites.update(dtMs);
   }
 
-  /** A normal landing during the spring effect slides in from where the layer really came down. */
+  /** A normal (cut) landing during the spring effect slides in from where the layer really came down. */
   private onLand(
     event: LandEvent,
     state: Readonly<TowerState>,
@@ -103,7 +103,7 @@ export class AbilityFx {
     mods: Readonly<Modifiers>,
   ): void {
     const share = mods.springShare;
-    if (event.quality === 'normal' && share > 0 && share < 1) {
+    if (event.quality === 'normal' && event.savedWidth === 0 && share > 0 && share < 1) {
       const { slideMs, slideEase } = ABILITY_ANIM.jelly;
       this.tower.topView()?.playSlide((event.dx * share) / (1 - share), slideMs, slideEase);
     }

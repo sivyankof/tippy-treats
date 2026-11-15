@@ -49,21 +49,30 @@ function applySets(spec: string): void {
     const field = TUNABLE[id as keyof typeof TUNABLE];
     const ability = CREATURES[id as CreatureId]?.ability as unknown as Record<string, number[]>;
     const values = field ? ability[field] : undefined;
-    if (!values || !Number.isInteger(Number(level)) || !Number.isFinite(Number(value))) {
+    const index = Number(level) - 1;
+    if (
+      !values ||
+      !Number.isInteger(index) ||
+      index < 0 ||
+      index >= values.length ||
+      !Number.isFinite(Number(value))
+    ) {
       throw new Error(`Invalid --set item: ${item}`);
     }
-    values[Number(level) - 1] = Number(value);
+    values[index] = Number(value);
   }
 }
 
 function parseTeams(): SimTeamSet[] {
   const named = textArg('team');
   if (named === undefined) return allFullTeams();
-  return named
-    .split(';')
-    .map((name) =>
-      name === 'none' ? NO_TEAM : { name, creatures: name.split('+') as CreatureId[] },
-    );
+  return named.split(';').map((name) => {
+    if (name === 'none') return NO_TEAM;
+    const creatures = name.split('+');
+    const unknown = creatures.find((id) => !(id in CREATURES));
+    if (unknown) throw new Error(`Unknown creature in --team: ${unknown}`);
+    return { name, creatures: creatures as CreatureId[] };
+  });
 }
 
 function sweep(): void {
@@ -73,6 +82,15 @@ function sweep(): void {
   const level = intArg(args, 'level', 5);
   const runs = intArg(args, 'runs', DEFAULT_RUNS);
   const [partIndex = 0, partCount = 1] = (textArg('part') ?? '0/1').split('/').map(Number);
+  if (
+    !Number.isInteger(partIndex) ||
+    !Number.isInteger(partCount) ||
+    partCount < 1 ||
+    partIndex < 0 ||
+    partIndex >= partCount
+  ) {
+    throw new Error('Invalid --part, expected i/n with 0 <= i < n');
+  }
   applySets(textArg('set') ?? '');
 
   for (const [i, set] of parseTeams().entries()) {
