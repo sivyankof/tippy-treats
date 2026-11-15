@@ -29,6 +29,33 @@ export function fillPolygon(g: Phaser.GameObjects.Graphics, points: readonly Pt[
   g.fillPath();
 }
 
+/**
+ * Fills the band between two polylines of equal length as triangles. Same picture as
+ * `fillPolygon` of one edge followed by the other reversed, without the per-frame
+ * triangulation of a long thin outline that a path fill does.
+ */
+export function fillRibbon(
+  g: Phaser.GameObjects.Graphics,
+  edgeA: readonly Pt[],
+  edgeB: readonly Pt[],
+): void {
+  const count = Math.min(edgeA.length, edgeB.length);
+  for (let i = 1; i < count; i++) {
+    const a0 = edgeA[i - 1] as Pt;
+    const a1 = edgeA[i] as Pt;
+    const b0 = edgeB[i - 1] as Pt;
+    const b1 = edgeB[i] as Pt;
+    g.fillTriangle(a0.x, a0.y, b0.x, b0.y, a1.x, a1.y);
+    g.fillTriangle(a1.x, a1.y, b0.x, b0.y, b1.x, b1.y);
+  }
+}
+
+/** Fills a convex quadrilateral (corners in order) as two triangles. */
+export function fillQuad(g: Phaser.GameObjects.Graphics, a: Pt, b: Pt, c: Pt, d: Pt): void {
+  g.fillTriangle(a.x, a.y, b.x, b.y, c.x, c.y);
+  g.fillTriangle(a.x, a.y, c.x, c.y, d.x, d.y);
+}
+
 /** Directions the outline of a small shape is pushed in to make it thicker all round. */
 const OUTLINE_DIRECTIONS = 8;
 

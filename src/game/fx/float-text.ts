@@ -75,12 +75,16 @@ export class FloatText {
     color: number,
     depth: number = DEPTH.floatText,
   ): void {
-    const item = this.pool.take();
+    const css = cssColor(color);
+    const size = `${fontSize}px`;
+    // A text that already has this size and colour only changes its words: every restyle
+    // measures the font and re-uploads the canvas.
+    const item = this.pool.take((free) => free.style.fontSize === size && free.style.color === css);
+    if (item.style.fontSize !== size) item.setFontSize(fontSize);
+    if (item.style.color !== css) item.setColor(css);
     item
       .setDepth(depth)
       .setText(content)
-      .setFontSize(fontSize)
-      .setColor(cssColor(color))
       .setPosition(x, y)
       .setScale(scale * text.fromScale)
       .setAlpha(1)

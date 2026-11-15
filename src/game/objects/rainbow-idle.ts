@@ -12,7 +12,7 @@ import { mixColor } from '../../util/color';
 import { DEG_TO_RAD, TWO_PI } from '../../util/math';
 import { DEPTH } from '../depth';
 import { effectsMode } from '../effects-mode';
-import { fillPolygon, type Pt } from '../fx/plain-style';
+import { fillPolygon, fillQuad, type Pt } from '../fx/plain-style';
 import { paintStar, rainbowGlaze } from './creature-art/rainbow';
 import { bodySpan, spongeRows, starPoints, waveAt } from './creature-art/rainbow-geometry';
 import {
@@ -287,7 +287,7 @@ export class RainbowIdle {
         const a = column(x, row, idle.bulgePx * humpAt(x, center, idle.halfPx));
         const b = column(x2, row, idle.bulgePx * humpAt(x2, center, idle.halfPx));
         this.g.fillStyle(mixColor(color, PALETTE.textLight, idle.brighten * mid), 1);
-        fillPolygon(this.g, [a[0]!, b[0]!, b[1]!, a[1]!]);
+        fillQuad(this.g, a[0]!, b[0]!, b[1]!, a[1]!);
       }
     });
   }

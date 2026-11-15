@@ -26,6 +26,8 @@ describe('SegmentSamples', () => {
     expect(stats.p95Ms).toBe(95);
     expect(stats.worstMs).toBe(100);
     expect(stats.drawCallsMean).toBe(10);
+    expect(stats.intervalMeanMs).toBeCloseTo(10);
+    expect(stats.intervalP95Ms).toBe(10);
     expect(stats.wallMs).toBe(990);
     expect(stats.fps).toBeCloseTo(100);
   });
@@ -45,9 +47,31 @@ describe('SegmentSamples', () => {
     expect(samples.summary('x', 0.95).drawCallsMean).toBeNull();
   });
 
+  it('measures the gaps between frames, not the first frame', () => {
+    const samples = new SegmentSamples();
+    for (const at of [100, 116, 132, 200]) samples.add(1, null, at);
+    const stats = samples.summary('x', 0.95);
+    expect(stats.intervalMeanMs).toBeCloseTo(100 / 3);
+    expect(stats.intervalP95Ms).toBe(68);
+  });
+
+  it('keeps the gaps when the capacity grows', () => {
+    const samples = new SegmentSamples();
+    for (let i = 0; i < 5000; i++) samples.add(1, null, i * 2);
+    expect(samples.summary('x', 0.95).intervalMeanMs).toBe(2);
+  });
+
   it('is all zeros for an empty window', () => {
     const stats = new SegmentSamples().summary('x', 0.95);
-    expect(stats).toMatchObject({ frames: 0, meanMs: 0, p95Ms: 0, worstMs: 0, fps: 0 });
+    expect(stats).toMatchObject({
+      frames: 0,
+      meanMs: 0,
+      p95Ms: 0,
+      worstMs: 0,
+      intervalMeanMs: 0,
+      intervalP95Ms: 0,
+      fps: 0,
+    });
     expect(stats.drawCallsMean).toBeNull();
   });
 });
@@ -60,6 +84,6 @@ describe('formatTable', () => {
     const text = formatTable([row.summary('calm', 0.95, 'ok')], 2);
     const lines = text.split('\n');
     expect(lines).toHaveLength(3);
-    expect(lines[2]).toBe('| calm | 3.00 | 4.00 | 4.00 | 2 | 13.0 | 62.5 | ok |');
+    expect(lines[2]).toBe('| calm | 3.00 | 4.00 | 4.00 | 16.00 | 16.00 | 2 | 13.0 | 62.5 | ok |');
   });
 });
