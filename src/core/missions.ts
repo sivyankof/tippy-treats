@@ -2,7 +2,7 @@ import { MISSION_POOL, MISSIONS } from '../data/missions';
 import type { MissionGroup, MissionTemplate } from '../data/missions';
 import { daysBetween } from '../util/clock';
 import { dailyUnlocked } from './daily';
-import { Rng } from './rng';
+import { hashString, Rng } from './rng';
 import type { MissionProgress, Save } from './save/schema';
 
 export type Missions = Save['missions'];
@@ -20,17 +20,9 @@ export interface RunStats {
   coins: number;
 }
 
-const FNV_OFFSET = 0x811c9dc5;
-const FNV_PRIME = 0x01000193;
-
 /** FNV-1a hash of a string as a uint32 seed. */
 export function seedFromText(text: string): number {
-  let hash = FNV_OFFSET;
-  for (let i = 0; i < text.length; i++) {
-    hash ^= text.charCodeAt(i);
-    hash = Math.imul(hash, FNV_PRIME) >>> 0;
-  }
-  return hash >>> 0;
+  return hashString(text);
 }
 
 export function missionTemplate(id: string): MissionTemplate | undefined {

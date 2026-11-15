@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { Rng } from './rng';
+import { hashString, Rng } from './rng';
+import { seedFromText } from './missions';
 
 const take = (rng: Rng, count: number): number[] => Array.from({ length: count }, () => rng.next());
 
@@ -98,5 +99,13 @@ describe('Rng', () => {
       take(forked.fork('zones'), 50);
       expect(take(forked, 10)).toEqual(take(plain, 10));
     });
+  });
+});
+
+describe('seedFromText', () => {
+  it('is the FNV-1a hash of the text', () => {
+    expect(seedFromText('2026-11-14|abc')).toBe(hashString('2026-11-14|abc'));
+    expect(seedFromText('')).toBe(0x811c9dc5);
+    expect(seedFromText('a')).toBe(0xe40c292c);
   });
 });
