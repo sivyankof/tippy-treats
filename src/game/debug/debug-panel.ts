@@ -7,7 +7,7 @@ import { frameWorkStats } from '../frame-work';
 import { FONT_FAMILY, FONT_WEIGHT } from '../ui/fonts';
 import type { UiRegion } from '../ui/ui-regions';
 import type { RunInfo } from '../run-info';
-import { adsDev } from '../../services';
+import { adsDev, iapDev } from '../../services';
 import { gameState, sessionTally } from '../../state';
 import { openCheckpointDemo } from './checkpoint-demo';
 import { cycleDebugLevel, cycleDebugSlot, getDebugTeam } from './debug-team';
@@ -31,6 +31,7 @@ const DEBUG_BERRIES = 50;
 const COINS_LABEL = '+500 coins';
 const DEBUG_COINS = 500;
 const CHECKPOINT_LABEL = 'Checkpoint window';
+const RESET_PURCHASES_LABEL = 'Reset stub purchases';
 
 function fxLabel(): string {
   const reason = effectsMode.reason;
@@ -47,6 +48,7 @@ export class DebugPanel {
   private readonly coinsEntry: Phaser.GameObjects.Text;
   private readonly adsEntry: Phaser.GameObjects.Text;
   private readonly checkpointEntry: Phaser.GameObjects.Text;
+  private readonly purchasesEntry: Phaser.GameObjects.Text;
   private readonly entries: Phaser.GameObjects.Text[];
   private teamKey = '';
 
@@ -110,6 +112,9 @@ export class DebugPanel {
     this.checkpointEntry = entry(() => openCheckpointDemo(scene), PALETTE.panel).setText(
       CHECKPOINT_LABEL,
     );
+    this.purchasesEntry = entry(() => iapDev?.resetPurchases(), PALETTE.panel).setText(
+      RESET_PURCHASES_LABEL,
+    );
     this.showAdsMode();
     this.entries = [
       ...this.slotEntries,
@@ -118,6 +123,7 @@ export class DebugPanel {
       this.coinsEntry,
       this.adsEntry,
       this.checkpointEntry,
+      this.purchasesEntry,
       this.applyEntry,
     ];
   }

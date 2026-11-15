@@ -7,3 +7,8 @@ export interface IapService {
   restore(): Promise<string[]>;
   ownedNonConsumables(): Promise<string[]>;
 }
+
+/** Debug-panel control of the browser store stub; null outside the development build. */
+export interface IapDevControl {
+  resetPurchases(): void;
+}
