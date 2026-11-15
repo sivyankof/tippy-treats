@@ -14,6 +14,13 @@ import { HudPlate } from './style/hud-plate';
 import type { Movable } from './transition';
 import { FONT_FAMILY, FONT_WEIGHT } from './fonts';
 
+/** The right end of the wobble plate, its centre line and its height. */
+export interface PlateEdge {
+  right: number;
+  y: number;
+  height: number;
+}
+
 const TRACK_ALPHA = 0.35;
 const TEXTURES = {
   track: 'ui_bar_track',
@@ -58,6 +65,8 @@ export class WobbleBar {
   /** Fill width in pixels as a spring: it overshoots on a jump and settles. */
   private readonly spring: SpringState = { value: 0, velocity: 0 };
   private fillWidth = -1;
+  /** Right end and height of the plate at rest, for what docks to it. */
+  private edge: PlateEdge = { right: 0, y: barY, height: 0 };
   private danger: boolean | null = null;
 
   constructor(scene: Phaser.Scene) {
@@ -132,12 +141,15 @@ export class WobbleBar {
     this.label.setX(left - labelGap);
     const rowWidth = this.label.width + labelGap + barWidth;
     const rowHeight = Math.max(this.label.height, barHeight);
-    this.plate.place(
-      screenWidth / 2,
-      barY,
-      rowWidth + barPlate.padX * 2,
-      rowHeight + barPlate.padY * 2,
-    );
+    const plateWidth = rowWidth + barPlate.padX * 2;
+    const plateHeight = rowHeight + barPlate.padY * 2;
+    this.plate.place(screenWidth / 2, barY, plateWidth, plateHeight);
+    this.edge = { right: (screenWidth + plateWidth) / 2, y: barY, height: plateHeight };
+  }
+
+  /** Where the plate ends, for the tempo chip that docks to it. */
+  get plateEdge(): Readonly<PlateEdge> {
+    return this.edge;
   }
 
   /** `timeMs` drives the running band and the pulse, `deltaMs` the spring. */

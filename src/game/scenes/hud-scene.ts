@@ -13,6 +13,7 @@ import { NumberRoll } from '../ui/number-roll';
 import { createOutlinedText } from '../ui/outlined-text';
 import { PauseOverlay } from '../ui/pause-overlay';
 import { EffectBadges } from '../ui/effect-badges';
+import { TempoChip } from '../ui/tempo-chip';
 import { ZoneBanner } from '../ui/zone-plate';
 import { ZoneChangeWatch } from '../ui/zone-change-watch';
 import { HudNumbersIdle } from '../ui/hud-idle';
@@ -36,6 +37,7 @@ export class HudScene extends Phaser.Scene {
   private continueWindow!: ContinueWindow;
   private nextBadge!: NextCreatureBadge;
   private effectBadges!: EffectBadges;
+  private tempoChip!: TempoChip;
   private zoneBanner!: ZoneBanner;
   /** "Demo: <name>" during a creature demo. */
   private demoLabel!: Phaser.GameObjects.Text;
@@ -75,6 +77,7 @@ export class HudScene extends Phaser.Scene {
     this.wobbleBar = new WobbleBar(this);
     this.nextBadge = new NextCreatureBadge(this);
     this.effectBadges = new EffectBadges(this);
+    this.tempoChip = new TempoChip(this);
     this.zoneBanner = new ZoneBanner(this);
     this.demoLabel = createOutlinedText(this, 0, 0, '', HUD_LAYOUT.demoLabelFont, PALETTE.gold);
     this.zoneWatch = new ZoneChangeWatch();
@@ -143,7 +146,8 @@ export class HudScene extends Phaser.Scene {
       this.wobbleBar.update(info.wobble, time, delta);
       this.nextBadge.update(info.height, info.team);
       this.nextBadge.idle(time);
-      this.effectBadges.update(info.effects, info.shield, info.tempoLeft, time, delta);
+      this.effectBadges.update(info.effects, info.shield, time, delta);
+      this.tempoChip.update(info.tempoLeft, time, delta);
       this.treasure.update(info, time, delta, this.gameScene()?.continueFlow?.isOpen === true);
     }
     this.numbersIdle.update(time);
@@ -207,6 +211,7 @@ export class HudScene extends Phaser.Scene {
     this.overlay.layout(width, height);
     this.continueWindow.layout(width, height);
     this.wobbleBar.layout(width);
+    this.tempoChip.layout(width, this.wobbleBar.plateEdge);
     this.nextBadge.layout(width);
     this.zoneBanner.layout(width);
     this.treasure.layout(width);

@@ -30,6 +30,8 @@ export const IDLE_PHASE = {
   next: 0.9,
   nextLabel: 5.1,
   tray: 2.7,
+  /** The tempo chip sways with the wobble plate, a little behind it. */
+  tempoChip: 1.6,
   /** Added per effect badge slot. */
   badgeStep: 1.9,
 } as const;

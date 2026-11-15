@@ -7,7 +7,7 @@ import { PALETTE } from '../../data/palette';
 import { formatNumber } from '../../i18n';
 import { frameLerp } from '../../util/math';
 import { easeFn } from '../fx/ease';
-import { createCreatureIcon, setCreatureIcon, TEMPO_ICON_KEY } from './creature-icons';
+import { createCreatureIcon, setCreatureIcon } from './creature-icons';
 import { idlePose, type IdlePose } from './idle-motion';
 import {
   badgeCreature,
@@ -64,9 +64,7 @@ class BadgeSlot {
   show(badge: Readonly<BadgeState>, visual: Readonly<BadgeVisual>): void {
     if (badge.key !== this.key) {
       this.key = badge.key;
-      const creature = badgeCreature(badge.key);
-      if (creature) setCreatureIcon(this.icon, creature);
-      else this.icon.setTexture(TEMPO_ICON_KEY).setDisplaySize(badgeSize, badgeSize);
+      setCreatureIcon(this.icon, badgeCreature(badge.key));
     }
     if (badge.layersLeft !== this.shownCount) {
       this.shownCount = badge.layersLeft;
@@ -102,7 +100,7 @@ class BadgeSlot {
 
 /**
  * The row of active effects: a creature icon with the layers left for every effect and for the
- * brownie shield. Slots are pooled and updated in place, so a frame allocates nothing.
+ * brownie shield (the tempo ease has its own chip by the wobble plate). Slots are pooled and updated in place, so a frame allocates nothing.
  */
 export class EffectBadges {
   private readonly tracker = new BadgeTracker();
@@ -115,14 +113,8 @@ export class EffectBadges {
     return badgeMargin + badgeSize / 2 + index * (badgeSize + badgeGap);
   }
 
-  update(
-    effects: readonly ActiveEffect[],
-    shield: number,
-    tempo: number,
-    timeMs: number,
-    deltaMs: number,
-  ): void {
-    this.tracker.sync(effects, shield, tempo);
+  update(effects: readonly ActiveEffect[], shield: number, timeMs: number, deltaMs: number): void {
+    this.tracker.sync(effects, shield);
     this.tracker.step(deltaMs);
     const items = this.tracker.items;
     const k = frameLerp(badges.slideLerp, deltaMs);
