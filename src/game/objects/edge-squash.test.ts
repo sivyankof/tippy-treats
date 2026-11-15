@@ -754,4 +754,26 @@ describe('crown of a soft layer under the wedge', () => {
     }
     expect(crownCover(s, 300)).toBe(0);
   });
+
+  it('grows smoothly with the depth of the squash', () => {
+    const f = feel.soft;
+    const at = (depth: number): number => {
+      const s = fitShape(140, depth, 0, f, flatShape(), 1);
+      s.ribs = BUBBLE_RIBS;
+      return crownCover(s, -140 + depth / 2);
+    };
+    expect(at(0)).toBe(0);
+    expect(at(2)).toBeGreaterThan(0);
+    expect(at(2)).toBeLessThan(0.1);
+    expect(at(EDGE_SQUASH.wedge.fullDepthPx)).toBeCloseTo(1, 5);
+  });
+
+  it('shows the single bubble of a soft layer at slow speed', () => {
+    const s = shapeAt(140, 720, feel.soft, 0.2);
+    s.ribs = BUBBLE_RIBS;
+    const out = { up: 0, down: 0 };
+    ribReach(s, s.left, 0, out);
+    expect(out.up).toBeGreaterThan(0);
+    expect(out.down).toBeGreaterThan(0);
+  });
 });

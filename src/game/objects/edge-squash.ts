@@ -372,7 +372,7 @@ export function ribReach(
 
 /**
  * How much of what stands above the body (the wavy crown of a soft layer) is cut away at offset
- * `u` because of the wedge: all of it along the wedge of a side that has ribs or a bubble, letting
+ * `u` because of the wedge: as much of it as the squash is deep along the wedge of a side that has ribs or a bubble, letting
  * go smoothly over `crownCut.releaseShare` of its length past the end, so the outline of the
  * silhouette never ends in a step against an uncut crown (0..1).
  */
@@ -388,7 +388,9 @@ export function crownCover(shape: Readonly<EdgeShape>, u: number): number {
 function coverOf(side: Readonly<SideSquash>, d: number): number {
   if (side.ribUp <= 0 || side.len <= 0) return 0;
   const release = EDGE_SQUASH.crownCut.releaseShare * side.len;
-  return 1 - smoothstep((Math.max(0, d) - side.len) / release);
+  // Grows with the squash like the ribs do, so the crown is not cut in one frame at the first touch.
+  const grow = smoothstep(side.depth / EDGE_SQUASH.wedge.fullDepthPx);
+  return grow * (1 - smoothstep((Math.max(0, d) - side.len) / release));
 }
 
 /**

@@ -67,7 +67,7 @@ export function ribLayoutFor(seed: number, layerIndex: number): RibLayout {
  * plump round bump per slot, its crest leaning towards the wall, smaller and smaller along the
  * wedge and gone at its end. The first rib starts at its crest, so it is full height right at the
  * wall. `last` (0..1) is how much of the farthest rib shows (the row's own number of ribs is its
- * `start.length`: 4 on top, 3 at the bottom).
+ * `start.length`: 4 on top, 3 at the bottom; a row of a single rib always shows it).
  */
 export function ribHeight(row: Readonly<RibRow>, t: number, last: number): number {
   if (t < 0 || t >= 1) return 0;
@@ -83,7 +83,8 @@ export function ribHeight(row: Readonly<RibRow>, t: number, last: number): numbe
     // A plump dome with a soft foot: the foot eases in, so the hollow is a crease, not a spike.
     const foot = (i === 0 ? 1 : smoothstep(along / cfg.foot)) * smoothstep((1 - along) / cfg.foot);
     const bump = Math.pow(Math.sin(Math.PI * Math.pow(x, cfg.lean)), cfg.plump) * foot;
-    const reveal = i === n - 1 ? last : 1;
+    // A row of one rib (the bubble of a soft layer) has no "farthest" rib to fade in.
+    const reveal = n > 1 && i === n - 1 ? last : 1;
     return row.height[i]! * bump * reveal * Math.pow(1 - t, cfg.fade);
   }
   return 0;
