@@ -15,7 +15,7 @@ export const BASE_SEED = 20261113;
 const MAX_RUN_MS = 60 * 60 * 1000;
 
 /** The part of a difficulty target that decides how the bot plays. */
-export type BotProfile = Pick<DifficultyTarget, 'timingSdMs' | 'coinChase'>;
+export type BotProfile = Pick<DifficultyTarget, 'timingSdMs'>;
 
 /**
  * One bot run. The bot never continues a run. `observers` collect statistics without changing it.
@@ -29,7 +29,7 @@ export function playRun(
   maxHeight = Infinity,
 ): RunResult {
   const sim = new TowerSim(config);
-  const bot = new TimingBot(profile.timingSdMs, noise, { coinChase: profile.coinChase });
+  const bot = new TimingBot(profile.timingSdMs, noise);
 
   for (let elapsed = 0; elapsed < MAX_RUN_MS; elapsed += STEP_MS) {
     for (const observer of observers) observer.beforeStep?.(sim.state);

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { BALANCE, DIFFICULTY } from '../data/balance';
-import { TimingBot, type BotSkills } from './bot';
+import { TimingBot } from './bot';
 import { roofFactor } from './flight';
 import { Rng } from './rng';
 import { mutable } from './sim-test-utils';
@@ -304,68 +304,5 @@ describe('TimingBot over the zones', () => {
     }
     expect(drops).toBeGreaterThan(40);
     expect(sim.state.height).toBeGreaterThan(30);
-  });
-});
-
-describe('TimingBot coin chase skill', () => {
-  const TARGET = BALANCE.tray.centerX;
-  const CHASE = { shiftPx: 15, riskMarginPx: 40, minWidthPx: 200 };
-  const WIDTH: number = BALANCE.layer.firstWidth;
-
-  /** Zero-error bot; the layer flies right towards the tray top with the coin at `coinOffset`. */
-  function chaseSetup(
-    coinOffset: number | null,
-    width = WIDTH,
-    skills: BotSkills = { coinChase: CHASE },
-  ) {
-    const sim = flyingSim((layer) => {
-      layer.speed = 1000;
-      layer.dir = 1;
-      layer.x = TARGET - 50;
-      layer.width = width;
-    });
-    mutable(sim).floatingCoinX = coinOffset === null ? null : TARGET + coinOffset;
-    const bot = new TimingBot(1, new FixedRng(0), skills);
-    bot.observe([{ type: 'spawn', layer: { ...(sim.state.flying as FlyingLayer) } }]);
-    expect(bot.shouldDrop(sim)).toBe(false);
-    return { sim, layer: mutable(sim).flying as FlyingLayer, bot };
-  }
-
-  it('aims towards a coin near the edge of the tower top', () => {
-    const edge = WIDTH / 2 - 20;
-    for (const [offset, sign] of [
-      [edge, 1],
-      [-edge, -1],
-    ] as const) {
-      const { sim, layer, bot } = chaseSetup(offset);
-      layer.dir = sign;
-      layer.x = TARGET - sign * 50;
-      expect(bot.shouldDrop(sim)).toBe(false);
-      layer.x = TARGET + sign * 5;
-      expect(bot.shouldDrop(sim)).toBe(false);
-      layer.x = TARGET + sign * (CHASE.shiftPx + 1);
-      expect(bot.shouldDrop(sim)).toBe(true);
-    }
-  });
-
-  it('is off by default and for coins that need no help or cannot be caught', () => {
-    const edge = WIDTH / 2 - 20;
-    const cases = [
-      chaseSetup(edge, WIDTH, {}),
-      chaseSetup(null),
-      chaseSetup(100),
-      chaseSetup(WIDTH / 2 + 10),
-    ];
-    for (const { sim, layer, bot } of cases) {
-      layer.x = TARGET + 5;
-      expect(bot.shouldDrop(sim)).toBe(true);
-    }
-  });
-
-  it('does not narrow a layer that is already narrow', () => {
-    const narrow = CHASE.minWidthPx + CHASE.shiftPx - 1;
-    const { sim, layer, bot } = chaseSetup(narrow / 2 - 5, narrow);
-    layer.x = TARGET + 5;
-    expect(bot.shouldDrop(sim)).toBe(true);
   });
 });

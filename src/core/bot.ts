@@ -1,17 +1,8 @@
-import { BALANCE, DIFFICULTY, type CoinChase } from '../data/balance';
+import { DIFFICULTY } from '../data/balance';
 import { flyingSpeed } from './flight';
 import { MS_PER_SECOND } from '../util/math';
 import type { Rng } from './rng';
-import type { SimEvent, TowerSim, TowerState } from './tower-sim';
-
-/**
- * Optional bot skills, all off by default. `coinChase`: while the floating coin lies inside the
- * tower top but close to its edge, the aim moves a few pixels towards the coin so that a cut on
- * that side does not slice it off. A coin outside the top can no longer be caught and is ignored.
- */
-export interface BotSkills {
-  coinChase?: CoinChase;
-}
+import type { SimEvent, TowerSim } from './tower-sim';
 
 /**
  * Bot player: aims at the first pass over the tower top and taps with a
@@ -24,7 +15,6 @@ export interface BotSkills {
  * no estimate and is never tapped, and a fake-out reversal resets the aim so it is not
  * mistaken for a wall bounce. A tap needs the target to have been approached first, so a
  * layer that flies away from it after the reversal is aimed only after its next bounce.
- * The optional `skills` change how it aims; with none (the default) the bot plays as always.
  */
 export class TimingBot {
   /** Standard normal draw of the current layer; scaled by the standard deviation on every tap check. */
@@ -37,7 +27,6 @@ export class TimingBot {
   constructor(
     private readonly timingSdMs: number,
     private readonly rng: Rng,
-    private readonly skills: BotSkills = {},
   ) {}
 
   /** Feed every event batch from the sim so the bot can roll a new error per layer. */
@@ -54,17 +43,6 @@ export class TimingBot {
     this.approached = false;
   }
 
-  /** Pixels the aim moves towards the floating coin (`coinChase` skill); 0 when it does not chase. */
-  private coinShift(state: Readonly<TowerState>, width: number): number {
-    const chase = this.skills.coinChase;
-    if (!chase || state.floatingCoinX === null || width - chase.shiftPx < chase.minWidthPx)
-      return 0;
-    const offset = state.floatingCoinX - (state.layers.at(-1)?.x ?? BALANCE.tray.centerX);
-    const margin = width / 2 - Math.abs(offset);
-    if (margin < 0 || margin >= chase.riskMarginPx) return 0;
-    return Math.sign(offset) * chase.shiftPx;
-  }
-
   /** True when the bot taps right now. */
   shouldDrop(sim: Pick<TowerSim, 'state' | 'topLayerX' | 'currentModifiers'>): boolean {
     const flying = sim.state.flying;
@@ -78,10 +56,7 @@ export class TimingBot {
     let sdMult = sim.currentModifiers().guides ? DIFFICULTY.guidesSdMult : 1;
     if (flying.coverMs > 0) sdMult *= DIFFICULTY.cloudSdMult;
     const errorMs = this.unitError * this.timingSdMs * sdMult;
-    const msToTarget =
-      (((sim.topLayerX() + this.coinShift(sim.state, flying.width) - flying.x) * flying.dir) /
-        speed) *
-      MS_PER_SECOND;
+    const msToTarget = (((sim.topLayerX() - flying.x) * flying.dir) / speed) * MS_PER_SECOND;
     // After a fake-out reversal the target may lie behind the layer: no tap until it has
     // actually been approached in the current direction (it then flies on to the wall and back).
     if (msToTarget >= 0) this.approached = true;
