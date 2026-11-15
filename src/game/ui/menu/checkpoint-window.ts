@@ -105,6 +105,7 @@ export function openCheckpointWindow(
     const row = rows.find((candidate) => candidate.height === selected);
     if (!row) return;
     const wanted = buttonsFor(row);
+    if (wanted.main.kind === 'none') return;
     const place = (made: Button, index: number): Button => {
       made.setY(buttonsTop + button.height / 2 + index * (button.height + cfg.buttonGap));
       if (busy) made.setEnabled(false);

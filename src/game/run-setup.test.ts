@@ -44,6 +44,15 @@ describe('setupRun', () => {
     expect(setup.tutorialRun).toBe(false);
   });
 
+  it('exposes the ad payment only for a run that really starts at the checkpoint', () => {
+    playedState();
+    expect(setupRun(checkpointRun(40, true)).paidByAd).toBe(true);
+    expect(setupRun(checkpointRun(40)).paidByAd).toBe(false);
+    expect(setupRun(CLASSIC_RUN).paidByAd).toBe(false);
+    h.state = createTestState(); // the tutorial run: the checkpoint is dropped, so is the payment
+    expect(setupRun(checkpointRun(40, true)).paidByAd).toBe(false);
+  });
+
   it('a classic run without a checkpoint starts from zero', () => {
     playedState();
     for (const request of [CLASSIC_RUN, { kind: 'classic' as const }]) {

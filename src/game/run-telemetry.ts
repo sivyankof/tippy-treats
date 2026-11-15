@@ -12,7 +12,11 @@ export function runStartParams(setup: RunSetup, runsBefore: number): EventParams
   };
 }
 
-/** Logs the start of a real run (not the creature demo). `runsBefore`: finished runs in the save. */
+/**
+ * Logs the start of a run that will reach the save (not the creature demo, a bot or a dev start).
+ * `runsBefore`: finished runs in the save.
+ */
 export function logRunStart(setup: RunSetup, runsBefore: number): void {
+  if (!setup.writesSave) return;
   services.telemetry.logEvent('run_start', runStartParams(setup, runsBefore));
 }

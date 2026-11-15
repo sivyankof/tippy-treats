@@ -26,6 +26,8 @@ export interface RunSetup {
   startWidth?: number;
   /** The checkpoint the player chose to start from; null for the zero start, `?start=`, the daily tower and demos. */
   checkpoint: CheckpointHeight | null;
+  /** A rewarded ad paid for the checkpoint start of this run (true only when it really starts there). */
+  paidByAd: boolean;
   team: Array<TeamSlot | null>;
   /** The run is the tutorial run (the hints director decides what it shows). */
   tutorialRun: boolean;
@@ -55,6 +57,7 @@ export function setupRun(request: RunRequest): RunSetup {
       seed: dailySeed(day),
       startHeight: 0,
       checkpoint: null,
+      paidByAd: false,
       team: dailyTeam(day),
       tutorialRun: false,
       hints: false,
@@ -70,6 +73,7 @@ export function setupRun(request: RunRequest): RunSetup {
       seed,
       startHeight: DEMO.startHeight,
       checkpoint: null,
+      paidByAd: false,
       team: demoTeam(request.creature, request.level),
       tutorialRun: false,
       hints: false,
@@ -95,6 +99,7 @@ export function setupRun(request: RunRequest): RunSetup {
     startWidth:
       checkpoint === null ? debugStartWidth(debug.start) : checkpointStartWidth(checkpoint),
     checkpoint,
+    paidByAd: checkpoint !== null && request.kind === 'classic' && request.paidByAd === true,
     team,
     tutorialRun,
     hints,

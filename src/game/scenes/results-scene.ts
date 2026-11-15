@@ -1,7 +1,6 @@
 import * as Phaser from 'phaser';
 import { nearMiss } from '../../core/near-miss';
 import { ANIM } from '../../data/anim';
-import type { CreatureId } from '../../data/creatures';
 import { MENU } from '../../data/menu-layout';
 import { PALETTE } from '../../data/palette';
 import { t } from '../../i18n';
@@ -28,7 +27,7 @@ import { ResultsMissions } from '../ui/menu/results-missions';
 import { resultsFlow } from '../ui/menu/results-flow';
 import { ResultsTiers } from '../ui/menu/results-tiers';
 import { dailyResultsText } from '../ui/menu/daily-text';
-import { coinLines, nearMissText, newCreaturesOf } from '../ui/menu/results-text';
+import { coinLines, nearMissText, presentedCreatures } from '../ui/menu/results-text';
 import { ResultsXp } from '../ui/menu/results-xp';
 
 const cfg = MENU.results;
@@ -125,10 +124,7 @@ export class ResultsScene extends Phaser.Scene {
     fitText(this.hint, cfg.nearMissWidth);
     this.hint.setVisible(this.recorded);
     // The creatures the levels handed out are presented before anything else.
-    const levelCreatures = newCreaturesOf(summary.levelUps, summary.recordCreatures);
-    const fresh: CreatureId[] = summary.firstRun
-      ? ['honey', ...levelCreatures.filter((id) => id !== 'honey')]
-      : levelCreatures;
+    const fresh = presentedCreatures(summary);
     this.runExit = {
       runMs: result.durationMs,
       recorded: data.recorded,
@@ -151,10 +147,12 @@ export class ResultsScene extends Phaser.Scene {
     const start = createResultsStart(this, data, this.header, {
       start: flow.start,
       leaving: () => this.leaving,
+      busy: (on) => {
+        if (!this.leaving) this.lock(on);
+      },
     });
     this.buttons = new ResultsButtons(this, summary.firstRun, handlers, flow.labels, start);
-    this.buttons.setEnabled(false);
-    this.coins.setEnabled(false);
+    this.lock(true);
     this.spacing = this.fitSpacing(height);
     this.plate = createPlate(this, 'window', 0, 0, cfg.panel.width, this.panelHeight());
     // Under the blocks, over the veil.
@@ -276,6 +274,12 @@ export class ResultsScene extends Phaser.Scene {
     this.buttons.container.setPosition(cx, buttonsY);
   }
 
+  /** Every way out and the doubling answer no taps (while a start is paid for, while leaving). */
+  private lock(on: boolean): void {
+    this.buttons.setEnabled(!on);
+    this.coins.setEnabled(!on);
+  }
+
   /** Makes the picture of the tower and shares it; taps during the making are ignored. */
   private share(data: ResultsData): void {
     if (this.sharing || this.leaving) return;
@@ -293,8 +297,7 @@ export class ResultsScene extends Phaser.Scene {
     if (this.leaving) return;
     this.leaving = true;
     this.xp.stop();
-    this.buttons.setEnabled(false);
-    this.coins.setEnabled(false);
+    this.lock(true);
     const slideAway = (): void => leaveScreen(this, this.content(), then);
     void leaveResultsAds(this.runExit).then(slideAway, slideAway);
   }

@@ -547,6 +547,11 @@ export class GameState {
    */
   beginRun(force?: boolean): boolean {
     this.hints.force(force);
+    return this.tutorialRunPending;
+  }
+
+  /** The next classic run would be the tutorial run (nothing is changed by asking). */
+  get tutorialRunPending(): boolean {
     return !this.hasHint('tutorial');
   }
 

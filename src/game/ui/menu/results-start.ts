@@ -9,16 +9,19 @@ import type { ResultsData } from '../../scene-keys';
 import { createTextButton, type Button } from '../button';
 import { BalanceChip, followBalance } from '../style/balance-chip';
 import { createPriceButton } from '../style/price-button';
+import { fitText } from './fit-text';
 import { createAdsSpentNote } from './no-more-starts-note';
 import { markAdUnavailable } from './ad-unavailable';
 import type { ResultsHeader } from './results-header';
 import type { Row } from './results-layout';
-import { resultsStartPlan, type ResultsStartPlan } from './results-start-model';
-import { openStartChoice, payAndStart, type StartRun } from './start-choice';
+import { adGreyAfter, resultsStartPlan, type ResultsStartPlan } from './results-start-model';
+import { openStartChoice } from './start-choice';
+import { payAndStart, type PayGuard, type StartRun } from '../../checkpoint-start';
 import { createStartFromButton } from './start-from-button';
 
 const cfg = MENU.results;
 const pair = cfg.pairButton;
+const NO_START: StartRun = () => undefined;
 const pairLabelWidth = pair.width - cfg.buttonTextPadding;
 
 /** Buttons that sit between "Play again" and "Home" and the rows they make. */
@@ -27,11 +30,9 @@ export interface ExtraButtons {
   setEnabled(enabled: boolean): void;
 }
 
-export interface ResultsStartHooks {
+export interface ResultsStartHooks extends PayGuard {
   /** Leaves the results into a run (the same way "Play again" does). */
   start: StartRun;
-  /** The screen is leaving: nothing starts. */
-  leaving: () => boolean;
 }
 
 /**
@@ -44,8 +45,8 @@ export class ResultsStart implements ExtraButtons {
   private readonly buttons: Button[] = [];
   private ad: { button: Button; label: Phaser.GameObjects.Text } | null = null;
   private adGrey = false;
+  private adHeight: CheckpointHeight = 20;
   private chip: BalanceChip | null = null;
-  private paying = false;
 
   constructor(
     private readonly scene: Phaser.Scene,
@@ -59,12 +60,11 @@ export class ResultsStart implements ExtraButtons {
 
   setEnabled(enabled: boolean): void {
     for (const button of this.buttons) button.setEnabled(enabled);
-    if (this.ad && this.adGrey) this.ad.button.setEnabled(false);
   }
 
   private addChoose(): void {
     const button = createStartFromButton(this.scene, cfg.startFrom, 'ui_results_from', () => {
-      if (!this.hooks.leaving()) openStartChoice(this.scene, this.hooks.start);
+      if (!this.hooks.leaving()) openStartChoice(this.scene, this.hooks.start, this.hooks);
     });
     this.buttons.push(button);
     this.rows.push({ obj: button, height: cfg.startFrom.height });
@@ -75,6 +75,7 @@ export class ResultsStart implements ExtraButtons {
     header: ResultsHeader,
   ): void {
     const { height, main } = plan;
+    this.adHeight = height;
     // The balance stands on the ribbon row, so the player sees what the start costs them.
     this.chip = header.addBalance();
     followBalance(this.scene, this.chip, this.chip.root, () => gameState.berries);
@@ -126,19 +127,27 @@ export class ResultsStart implements ExtraButtons {
     this.rows.push({ obj: this.scene.add.container(0, 0, [price, button]), height: pair.height });
   }
 
+  /** The ad button looks unavailable but takes a tap: the payment looks at the ad again. */
   private greyAd(): void {
     if (!this.ad) return;
     this.adGrey = true;
-    markAdUnavailable(this.ad.button, this.ad.label, pairLabelWidth, cfg.adDisabledAlpha);
+    markAdUnavailable(this.ad.button, this.ad.label, pairLabelWidth, cfg.adDisabledAlpha, false);
+  }
+
+  private unGreyAd(): void {
+    if (!this.ad || !this.adGrey) return;
+    this.adGrey = false;
+    this.ad.label.setText(t('results.fromPointAd', { n: this.adHeight }));
+    fitText(this.ad.label, pairLabelWidth);
+    this.ad.button.setAlpha(1);
   }
 
   private async pay(height: CheckpointHeight, method: CheckpointMethod): Promise<void> {
-    if (this.paying || this.hooks.leaving()) return;
-    this.paying = true;
-    const result = await payAndStart(height, method, this.hooks.start);
-    this.paying = false;
+    const result = await payAndStart(height, method, this.hooks.start, this.hooks);
     if (result === 'short') this.chip?.shake();
-    if (method === 'ad' && (result === 'unavailable' || result === 'refused')) this.greyAd();
+    if (method !== 'ad') return;
+    if (adGreyAfter(result, this.adGrey)) this.greyAd();
+    else this.unGreyAd();
   }
 }
 
@@ -147,15 +156,19 @@ export function createResultsStart(
   scene: Phaser.Scene,
   data: ResultsData,
   header: ResultsHeader,
-  hooks: ResultsStartHooks,
+  hooks: Omit<ResultsStartHooks, 'start'> & { start?: StartRun },
 ): ResultsStart {
-  const plan = resultsStartPlan({
-    daily: data.result.mode === 'daily',
-    firstRun: data.summary.firstRun,
-    recorded: data.recorded,
-    checkpoint: data.checkpoint,
-    opened: gameState.checkpoints,
-    rows: gameState.checkpointRows(services.ads.isRewardedReady()),
-  });
-  return new ResultsStart(scene, plan, header, hooks);
+  const { start } = hooks;
+  // No way to start a run from here (the daily tower): no start buttons.
+  const plan: ResultsStartPlan = !start
+    ? { kind: 'none' }
+    : resultsStartPlan({
+        daily: data.result.mode === 'daily',
+        firstRun: data.summary.firstRun,
+        recorded: data.recorded,
+        checkpoint: data.checkpoint,
+        opened: gameState.checkpoints,
+        rows: gameState.checkpointRows(services.ads.isRewardedReady()),
+      });
+  return new ResultsStart(scene, plan, header, { ...hooks, start: start ?? NO_START });
 }

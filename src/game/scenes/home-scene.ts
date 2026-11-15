@@ -13,7 +13,6 @@ import type { PopupWindow } from '../ui/style/dialog-window';
 import { createTextButton, type Button } from '../ui/button';
 import { HomeStarterOffer } from '../ui/menu/home-starter';
 import { HomeStartFrom } from '../ui/menu/home-start-from';
-import { openStartChoice } from '../ui/menu/start-choice';
 import { createHintBubble } from '../ui/menu/home-hint';
 import { HomeBadges } from '../ui/menu/home-badges';
 import { HomeNav } from '../ui/menu/home-nav';
@@ -123,7 +122,11 @@ export class HomeScene extends Phaser.Scene {
         this.goTo(() => openScreen(this, SCENES.team)),
       );
     }
-    this.startFrom = new HomeStartFrom(this, () => this.chooseStart());
+    this.startFrom = new HomeStartFrom(
+      this,
+      (request) => this.startRun(request),
+      () => this.leaving,
+    );
     if (this.highlightPlay) this.ring = createPlayRing(this);
     if (this.starter.room) void this.starter.start();
 
@@ -198,14 +201,7 @@ export class HomeScene extends Phaser.Scene {
     const playY = navTop - cfg.playAboveNav - cfg.playHeight / 2;
     this.play.setPosition(cx, playY);
     this.ring?.setPosition(cx, playY);
-    const fromRoom = this.startFrom.room;
-    const offerRoom = (this.starter.room ? cfg.starter.height + cfg.starter.gap : 0) + fromRoom;
-    const playTop = playY - cfg.playHeight / 2;
-    this.startFrom.layout(cx, playTop);
-    this.starter.button?.setPosition(
-      cx,
-      playTop - fromRoom - cfg.starter.gap - cfg.starter.height / 2,
-    );
+    const offerRoom = this.startFrom.layoutOffers(cx, playY - cfg.playHeight / 2, this.starter);
     this.hint?.root.setPosition(cx, playY - cfg.hintAbovePlay - offerRoom);
   }
 
@@ -300,10 +296,5 @@ export class HomeScene extends Phaser.Scene {
     this.ring?.destroy();
     this.ring = null;
     this.goTo(() => startRunFrom(this, request));
-  }
-
-  /** The "Where from?" window; a chosen start leaves Home like Play does. */
-  private chooseStart(): void {
-    if (!this.leaving) openStartChoice(this, (request) => this.startRun(request));
   }
 }

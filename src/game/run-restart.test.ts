@@ -24,6 +24,8 @@ describe('decideRestart', () => {
 describe('restartRequest', () => {
   it('restarts a run from a checkpoint from zero, for free', () => {
     expect(restartRequest(checkpointRun(40))).toEqual(CLASSIC_RUN);
+    // The ad that paid for the start is dropped with the checkpoint.
+    expect(restartRequest(checkpointRun(40, true))).toEqual(CLASSIC_RUN);
   });
 
   it('keeps every other request', () => {

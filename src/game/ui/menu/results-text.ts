@@ -4,7 +4,7 @@ import type { RunTally } from '../../../core/run-tally';
 import type { CoinSource } from '../../../core/sim-types';
 import { CREATURES, type CreatureId } from '../../../data/creatures';
 import { formatNumber, t, tn } from '../../../i18n';
-import type { LevelUp } from '../../../state/game-state';
+import type { LevelUp, RunSummary } from '../../../state/game-state';
 
 /** Order of the sources in the coin breakdown. */
 const SOURCE_ORDER: readonly CoinSource[] = [
@@ -58,6 +58,14 @@ export function newCreaturesOf(
   }
   for (const id of recordCreatures) if (!ids.includes(id)) ids.push(id);
   return ids;
+}
+
+/** The creatures the results present before the way on: Honey first after the tutorial run, then the new ones. */
+export function presentedCreatures(
+  summary: Pick<RunSummary, 'firstRun' | 'levelUps' | 'recordCreatures'>,
+): CreatureId[] {
+  const fresh = newCreaturesOf(summary.levelUps, summary.recordCreatures);
+  return summary.firstRun ? ['honey', ...fresh.filter((id) => id !== 'honey')] : fresh;
 }
 
 export interface Amount {

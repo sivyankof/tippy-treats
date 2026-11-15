@@ -1,4 +1,5 @@
 import type { CheckpointHeight, CheckpointRow } from '../../../core/checkpoints';
+import type { CheckpointPayResult } from '../../checkpoint-start';
 import { buttonsFor, type CheckpointButtons } from './checkpoint-model';
 
 /** What the results offer besides "Play again" (which always starts from zero for free). */
@@ -47,6 +48,16 @@ export function resultsStartPlan(input: ResultsStartInput): ResultsStartPlan {
     ad: wanted.ad,
     adSpent: wanted.adSpent,
   };
+}
+
+/**
+ * Whether the ad button of the results looks unavailable after a tap. A grey button stays
+ * tappable (the payment looks at the ad again), so an ad that has loaded since lights it up; a
+ * tap that did nothing because another payment was going leaves it as it was.
+ */
+export function adGreyAfter(result: CheckpointPayResult, wasGrey: boolean): boolean {
+  if (result === 'unavailable' || result === 'refused') return true;
+  return result === 'busy' ? wasGrey : false;
 }
 
 /** Numbers of the "Started at layer N · placed M" line; the layers below the start were not placed. */

@@ -39,7 +39,12 @@ const exit = {
 async function player() {
   const base = createDefaultSave(T0, 'test');
   const state = await loadTestState(
-    { ...base, checkpoints: [20, 40, 60, 80, 100], berries: 100 },
+    {
+      ...base,
+      checkpoints: [20, 40, 60, 80, 100],
+      berries: 100,
+      tutorial: { ...base.tutorial, hintsShown: ['tutorial'] },
+    },
     { ms: T0 },
   );
   vi.spyOn(state, 'canShowInterstitial').mockImplementation((facts) => !facts.rewardedInRun);
@@ -53,33 +58,39 @@ describe('interstitial after a run from a checkpoint', () => {
     h.ads.showRewarded.mockReset();
   });
 
-  it('does not come after a run whose start an ad paid for', async () => {
+  it('does not come after a run whose start an ad paid for, only that run', async () => {
     await player();
     h.ads.showRewarded.mockResolvedValue('rewarded');
     const { payForCheckpoint } = await import('./checkpoint-start');
     const { beginRunRewardedMemo } = await import('./rewarded');
     const { leaveResultsAds } = await import('./interstitial-flow');
+    const { checkpointRun, CLASSIC_RUN } = await import('./run-request');
 
     expect(await payForCheckpoint(20, 'ad')).toBe('paid');
-    beginRunRewardedMemo(); // the run from the checkpoint begins
+    const request = checkpointRun(20, true);
+    beginRunRewardedMemo(request.kind === 'classic' && request.paidByAd === true);
     await leaveResultsAds(exit);
     expect(h.ads.showInterstitial).not.toHaveBeenCalled();
 
     // The next run (from zero, no ad) follows the usual rules again.
-    beginRunRewardedMemo();
+    beginRunRewardedMemo(CLASSIC_RUN.kind === 'classic' && CLASSIC_RUN.paidByAd === true);
     await leaveResultsAds(exit);
     expect(h.ads.showInterstitial).toHaveBeenCalledTimes(1);
   });
 
-  it('follows the usual rules after a run whose start berries paid for', async () => {
+  it('follows the usual rules after a run whose start berries paid for, and after the next', async () => {
     await player();
     const { payForCheckpoint } = await import('./checkpoint-start');
     const { beginRunRewardedMemo } = await import('./rewarded');
     const { leaveResultsAds } = await import('./interstitial-flow');
 
     expect(await payForCheckpoint(40, 'berries')).toBe('paid');
-    beginRunRewardedMemo();
+    beginRunRewardedMemo(false);
     await leaveResultsAds(exit);
     expect(h.ads.showInterstitial).toHaveBeenCalledTimes(1);
+
+    beginRunRewardedMemo(false);
+    await leaveResultsAds(exit);
+    expect(h.ads.showInterstitial).toHaveBeenCalledTimes(2);
   });
 });

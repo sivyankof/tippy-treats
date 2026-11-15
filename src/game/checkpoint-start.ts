@@ -10,7 +10,8 @@ import type { RewardedResult } from '../services/rewarded-video/types';
 import type { AnalyticsService } from '../services/telemetry/types';
 import { gameState } from '../state';
 import type { GameState } from '../state/game-state';
-import { carryRewardedIntoNextRun, showRewarded } from './rewarded';
+import { showRewarded } from './rewarded';
+import { checkpointRun, type RunRequest } from './run-request';
 
 /**
  * How paying for a start from a checkpoint ended:
@@ -19,18 +20,21 @@ import { carryRewardedIntoNextRun, showRewarded } from './rewarded';
  * `dismissed`: the ad was closed without a reward, nothing counted or spent;
  * `unavailable`: no ad is ready;
  * `refused`: not allowed (locked checkpoint, no ad for this height, today's ad starts used up,
- * or another payment is still going).
+ * the tutorial run is next);
+ * `busy`: another payment is still going, this tap did nothing.
  */
-export type CheckpointPayResult = 'paid' | 'short' | 'dismissed' | 'unavailable' | 'refused';
+export type CheckpointPayResult =
+  'paid' | 'short' | 'dismissed' | 'unavailable' | 'refused' | 'busy';
 
 export interface CheckpointStartDeps {
-  state: Pick<GameState, 'checkpoints' | 'berries' | 'checkpointAdsLeft' | 'payCheckpoint'>;
+  state: Pick<
+    GameState,
+    'checkpoints' | 'berries' | 'checkpointAdsLeft' | 'payCheckpoint' | 'tutorialRunPending'
+  >;
   /** Whether a rewarded ad is loaded. */
   adReady: () => boolean;
   showRewarded: (placement: 'checkpoint_start') => Promise<RewardedResult>;
   telemetry: Pick<AnalyticsService, 'logEvent'>;
-  /** The ad paid for the run that starts next: it counts as a rewarded ad of that run. */
-  carryReward?: () => void;
 }
 
 function liveDeps(): CheckpointStartDeps {
@@ -39,7 +43,6 @@ function liveDeps(): CheckpointStartDeps {
     adReady: () => services.ads.isRewardedReady(),
     showRewarded,
     telemetry: services.telemetry,
-    carryReward: carryRewardedIntoNextRun,
   };
 }
 
@@ -56,7 +59,7 @@ export async function payForCheckpoint(
   method: CheckpointMethod,
   deps: CheckpointStartDeps = liveDeps(),
 ): Promise<CheckpointPayResult> {
-  if (inFlight) return 'refused';
+  if (inFlight) return 'busy';
   inFlight = true;
   try {
     return await pay(height, method, deps);
@@ -65,12 +68,50 @@ export async function payForCheckpoint(
   }
 }
 
+/** Starts the run of `request` through the way the calling screen already leaves by. */
+export type StartRun = (request: RunRequest) => void;
+
+/** What a screen lends to a payment: whether it is leaving, and a lock for its other buttons. */
+export interface PayGuard {
+  /** The screen is already on its way out: nothing is paid. */
+  leaving: () => boolean;
+  /** A payment begins (`true`) or ends without a run (`false`): the other ways out are locked meanwhile. */
+  busy: (on: boolean) => void;
+}
+
+/**
+ * Pays for a start from `height` and, once it is paid, starts that run (`start` gets the request;
+ * an ad payment is on it). Nothing is spent when the result is not `paid`. With a `guard` a
+ * leaving screen pays nothing and the other buttons are locked while the payment is going.
+ */
+export async function payAndStart(
+  height: CheckpointHeight,
+  method: CheckpointMethod,
+  start: StartRun,
+  guard?: PayGuard,
+  deps?: CheckpointStartDeps,
+): Promise<CheckpointPayResult> {
+  if (guard?.leaving()) return 'refused';
+  guard?.busy(true);
+  let result: CheckpointPayResult = 'refused';
+  try {
+    result = await payForCheckpoint(height, method, deps);
+  } finally {
+    // A paid start leaves the screen through `start`, so the buttons stay locked.
+    if (result !== 'paid') guard?.busy(false);
+  }
+  if (result === 'paid') start(checkpointRun(height, method === 'ad'));
+  return result;
+}
+
 async function pay(
   height: CheckpointHeight,
   method: CheckpointMethod,
   deps: CheckpointStartDeps,
 ): Promise<CheckpointPayResult> {
   const { state } = deps;
+  // The tutorial run never starts from a checkpoint: paying for it would waste the payment.
+  if (state.tutorialRunPending) return 'refused';
   if (!state.checkpoints.includes(height)) return 'refused';
   const price = checkpointBerryPrice(height);
   if (method === 'berries') {
@@ -89,7 +130,6 @@ async function pay(
   const shown = await deps.showRewarded('checkpoint_start');
   if (shown !== 'rewarded') return shown;
   if (!state.payCheckpoint(height, 'ad')) return 'refused';
-  deps.carryReward?.();
   logStart(deps, height, method, 0);
   return 'paid';
 }

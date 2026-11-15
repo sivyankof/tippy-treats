@@ -1,6 +1,6 @@
-import { checkpointsReached } from '../checkpoints';
 import { recordCreaturesReached } from '../record-unlocks';
 import { legacyXpToNext, V5_RECORD_UNLOCKS, v5XpToNext } from './frozen-v5';
+import { v7CheckpointsReached } from './frozen-v7';
 import { SAVE_VERSION, type Save } from './schema';
 
 export type SaveErrorCode = 'not_object' | 'bad_version' | 'future_version' | 'missing_migration';
@@ -96,7 +96,7 @@ export function migrateV6(raw: RawSave): RawSave {
   const height = typeof records.classicHeight === 'number' ? records.classicHeight : 0;
   return {
     ...raw,
-    checkpoints: checkpointsReached(Number.isFinite(height) ? height : 0),
+    checkpoints: v7CheckpointsReached(Number.isFinite(height) ? height : 0),
     checkpointAds: { day: '', used: 0 },
   };
 }

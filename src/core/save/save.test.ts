@@ -15,6 +15,7 @@ import {
 import { MAX_BAKER_LEVEL } from '../../data/progression';
 import { xpToNext } from '../progression';
 import { legacyXpToNext, V5_RECORD_UNLOCKS, v5XpToNext } from './frozen-v5';
+import { V7_CHECKPOINT_HEIGHTS, v7CheckpointsReached } from './frozen-v7';
 import { SAVE_VERSION, type Save } from './schema';
 
 const NOW = 1_700_000_000_000;
@@ -548,6 +549,11 @@ describe('migration 6 to 7', () => {
     expect(migrateV6(withRecord(19)).checkpoints).toEqual([]);
     expect(migrateV6({ ...v6, records: 'oops' }).checkpoints).toEqual([]);
     expect(migrateV6({ ...v6, records: { classicHeight: Number.NaN } }).checkpoints).toEqual([]);
+  });
+
+  it('uses the frozen heights of version 7, not the live data', () => {
+    expect(V7_CHECKPOINT_HEIGHTS).toEqual([20, 40, 60, 80, 100]);
+    expect(v7CheckpointsReached(79.9)).toEqual([20, 40, 60]);
   });
 
   it('loads a version 6 text into the current save without losing progress', () => {

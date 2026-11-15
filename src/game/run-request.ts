@@ -9,7 +9,7 @@ import { DEMO } from '../data/demo';
  * creature card (a short run with that creature in every slot, no rewards, back to the card).
  */
 export type RunRequest =
-  | { kind: 'classic'; checkpoint?: CheckpointHeight }
+  | { kind: 'classic'; checkpoint?: CheckpointHeight; paidByAd?: boolean }
   | { kind: 'daily' }
   | { kind: 'demo'; creature: CreatureId; level: number; back: DemoBack };
 
@@ -18,9 +18,14 @@ export type DemoBack = 'collection' | 'team';
 
 export const CLASSIC_RUN: RunRequest = { kind: 'classic' };
 
-/** A classic run that starts from an opened checkpoint (paid for by the caller). */
-export function checkpointRun(height: CheckpointHeight): RunRequest {
-  return { kind: 'classic', checkpoint: height };
+/**
+ * A classic run that starts from an opened checkpoint (paid for by the caller). `paidByAd`: a
+ * rewarded ad paid for it, so it counts as a run with a rewarded ad (no interstitial after it).
+ */
+export function checkpointRun(height: CheckpointHeight, paidByAd = false): RunRequest {
+  return paidByAd
+    ? { kind: 'classic', checkpoint: height, paidByAd }
+    : { kind: 'classic', checkpoint: height };
 }
 
 export const DAILY_RUN: RunRequest = { kind: 'daily' };

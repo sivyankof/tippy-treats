@@ -20,4 +20,9 @@ describe('checkpointRun', () => {
     expect(checkpointRun(60)).toEqual({ kind: 'classic', checkpoint: 60 });
     expect(CLASSIC_RUN).toEqual({ kind: 'classic' });
   });
+
+  it('carries the ad payment only when an ad paid', () => {
+    expect(checkpointRun(60, true)).toEqual({ kind: 'classic', checkpoint: 60, paidByAd: true });
+    expect(checkpointRun(60, false)).toEqual({ kind: 'classic', checkpoint: 60 });
+  });
 });

@@ -3,7 +3,14 @@ import { emptyTally } from '../../../core/run-tally';
 import { MISSION_POOL, MISSIONS } from '../../../data/missions';
 import { setLang, t } from '../../../i18n';
 import type { LevelUp } from '../../../state/game-state';
-import { coinLines, nearMissText, newCreaturesOf, rewardLines, xpSegments } from './results-text';
+import {
+  coinLines,
+  nearMissText,
+  newCreaturesOf,
+  presentedCreatures,
+  rewardLines,
+  xpSegments,
+} from './results-text';
 
 afterEach(() => setLang('en'));
 
@@ -92,6 +99,17 @@ describe('level-up lines', () => {
       up({ level: 3, reward: { thirdTeamSlot: true } }),
     ];
     expect(newCreaturesOf(list)).toEqual(['puff']);
+  });
+
+  it('puts Honey first after the tutorial run, once', () => {
+    const levelUps = [up({ level: 2, reward: { creature: 'puff' } })];
+    const base = { levelUps, recordCreatures: [] };
+    expect(presentedCreatures({ ...base, firstRun: true })).toEqual(['honey', 'puff']);
+    expect(presentedCreatures({ ...base, firstRun: false })).toEqual(['puff']);
+    const twice = [up({ level: 2, reward: { creature: 'honey' } })];
+    expect(presentedCreatures({ levelUps: twice, recordCreatures: [], firstRun: true })).toEqual([
+      'honey',
+    ]);
   });
 
   it('adds the creatures a record opened after the level rewards, once', () => {

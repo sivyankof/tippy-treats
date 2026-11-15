@@ -31,6 +31,14 @@ describe('buttonsFor', () => {
     });
   });
 
+  it('a locked step has no way to start', () => {
+    expect(buttonsFor(rowAt(rows([20], 30), 40))).toEqual({
+      main: { kind: 'none' },
+      ad: 'hidden',
+      adSpent: false,
+    });
+  });
+
   it('a paid step shows the price, the shortfall and the ad state', () => {
     const list = rows([20, 80], 3);
     const short = buttonsFor(rowAt(list, 20));

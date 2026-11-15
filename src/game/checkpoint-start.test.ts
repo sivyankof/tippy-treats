@@ -3,7 +3,13 @@ import { BALANCE } from '../data/balance';
 import type { RewardedResult } from '../services/rewarded-video/types';
 import { createDefaultSave } from '../core/save/defaults';
 import { createTestState, loadTestState } from '../state/test-state';
-import { logCheckpointOffer, payForCheckpoint, type CheckpointStartDeps } from './checkpoint-start';
+import {
+  logCheckpointOffer,
+  payAndStart,
+  payForCheckpoint,
+  type CheckpointStartDeps,
+} from './checkpoint-start';
+import { checkpointRun } from './run-request';
 
 vi.mock('../services', () => ({ services: {} }));
 vi.mock('../state', () => ({ gameState: {} }));
@@ -19,7 +25,13 @@ async function setup(
 ) {
   const base = createDefaultSave(T0, 'test');
   const state = await loadTestState(
-    { ...base, checkpoints: [20, 40, 60, 80, 100], berries: 100, ...over },
+    {
+      ...base,
+      checkpoints: [20, 40, 60, 80, 100],
+      berries: 100,
+      tutorial: { ...base.tutorial, hintsShown: ['tutorial'] },
+      ...over,
+    },
     { ms: T0 },
   );
   let release: (() => void) | null = null;
@@ -131,12 +143,26 @@ describe('payForCheckpoint with an ad', () => {
   });
 });
 
+describe('payForCheckpoint before the tutorial run', () => {
+  it('refuses both ways and spends nothing while the tutorial run is next', async () => {
+    const { state, deps, showRewarded, telemetry } = await setup({
+      tutorial: { ...createDefaultSave(T0, 'test').tutorial, hintsShown: [] },
+    });
+    expect(state.tutorialRunPending).toBe(true);
+    expect(await payForCheckpoint(40, 'berries', deps)).toBe('refused');
+    expect(await payForCheckpoint(20, 'ad', deps)).toBe('refused');
+    expect(showRewarded).not.toHaveBeenCalled();
+    expect(state.berries).toBe(100);
+    expect(telemetry.logEvent).not.toHaveBeenCalled();
+  });
+});
+
 describe('payForCheckpoint taps', () => {
   it('a second tap while the ad shows pays nothing and shows nothing', async () => {
     const { state, deps, showRewarded, finishAd } = await setup();
     const first = payForCheckpoint(20, 'ad', deps);
-    expect(await payForCheckpoint(20, 'ad', deps)).toBe('refused');
-    expect(await payForCheckpoint(40, 'berries', deps)).toBe('refused');
+    expect(await payForCheckpoint(20, 'ad', deps)).toBe('busy');
+    expect(await payForCheckpoint(40, 'berries', deps)).toBe('busy');
     finishAd();
     expect(await first).toBe('paid');
     expect(showRewarded).toHaveBeenCalledTimes(1);
@@ -150,7 +176,7 @@ describe('payForCheckpoint taps', () => {
       payForCheckpoint(40, 'berries', deps),
       payForCheckpoint(40, 'berries', deps),
     ]);
-    expect(results).toEqual(['paid', 'refused']);
+    expect(results).toEqual(['paid', 'busy']);
     expect(state.berries).toBe(100 - PRICE_40);
   });
 
@@ -158,6 +184,53 @@ describe('payForCheckpoint taps', () => {
     const { deps } = await setup();
     expect(await payForCheckpoint(40, 'berries', deps)).toBe('paid');
     expect(await payForCheckpoint(40, 'berries', deps)).toBe('paid');
+  });
+});
+
+describe('payAndStart', () => {
+  const guardOf = (leaving = false) => ({ leaving: () => leaving, busy: vi.fn() });
+
+  it('starts the run on payment, with the ad flag only for an ad', async () => {
+    const { deps, finishAd } = await setup();
+    const start = vi.fn();
+    expect(await payAndStart(40, 'berries', start, undefined, deps)).toBe('paid');
+    expect(start).toHaveBeenLastCalledWith(checkpointRun(40));
+    const pending = payAndStart(20, 'ad', start, undefined, deps);
+    finishAd();
+    expect(await pending).toBe('paid');
+    expect(start).toHaveBeenLastCalledWith(checkpointRun(20, true));
+  });
+
+  it('locks the screen while paying and unlocks it when no run starts', async () => {
+    const { deps, finishAd } = await setup({}, 'dismissed');
+    const guard = guardOf();
+    const start = vi.fn();
+    const pending = payAndStart(20, 'ad', start, guard, deps);
+    expect(guard.busy).toHaveBeenCalledWith(true);
+    finishAd();
+    expect(await pending).toBe('dismissed');
+    expect(guard.busy).toHaveBeenLastCalledWith(false);
+    expect(start).not.toHaveBeenCalled();
+  });
+
+  it('keeps the screen locked after a paid start (it is leaving)', async () => {
+    const { deps } = await setup();
+    const guard = guardOf();
+    await payAndStart(40, 'berries', vi.fn(), guard, deps);
+    expect(guard.busy).toHaveBeenCalledTimes(1);
+    expect(guard.busy).toHaveBeenCalledWith(true);
+  });
+
+  it('pays nothing when the screen is already leaving', async () => {
+    const { state, deps, showRewarded } = await setup();
+    const guard = guardOf(true);
+    const start = vi.fn();
+    expect(await payAndStart(40, 'berries', start, guard, deps)).toBe('refused');
+    expect(await payAndStart(20, 'ad', start, guard, deps)).toBe('refused');
+    expect(state.berries).toBe(100);
+    expect(showRewarded).not.toHaveBeenCalled();
+    expect(start).not.toHaveBeenCalled();
+    expect(guard.busy).not.toHaveBeenCalled();
   });
 });
 

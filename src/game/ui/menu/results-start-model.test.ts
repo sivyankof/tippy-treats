@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import { checkpointRows, type CheckpointHeight } from '../../../core/checkpoints';
-import { resultsStartPlan, startedLine, type ResultsStartInput } from './results-start-model';
+import {
+  adGreyAfter,
+  resultsStartPlan,
+  startedLine,
+  type ResultsStartInput,
+} from './results-start-model';
 
 function input(over: Partial<ResultsStartInput> & { berries?: number; adReady?: boolean }) {
   const { berries, adReady, ...rest } = over;
@@ -66,6 +71,24 @@ describe('resultsStartPlan', () => {
       kind: 'again',
       ad: 'hidden',
     });
+  });
+});
+
+describe('adGreyAfter', () => {
+  it('greys the button when no ad is ready or the ad start is not allowed', () => {
+    expect(adGreyAfter('unavailable', false)).toBe(true);
+    expect(adGreyAfter('refused', false)).toBe(true);
+  });
+
+  it('a tap that met another payment leaves the look as it was', () => {
+    expect(adGreyAfter('busy', false)).toBe(false);
+    expect(adGreyAfter('busy', true)).toBe(true);
+  });
+
+  it('lights a grey button up once a tap got through to the ad', () => {
+    expect(adGreyAfter('dismissed', true)).toBe(false);
+    expect(adGreyAfter('short', true)).toBe(false);
+    expect(adGreyAfter('paid', true)).toBe(false);
   });
 });
 

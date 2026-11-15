@@ -5,15 +5,15 @@ import type { RunSummary } from '../../../state/game-state';
 import { CLASSIC_RUN, DAILY_RUN } from '../../run-request';
 import { decideRestart } from '../../run-restart';
 import { goNext, openScreen, SCENES, type NextStep } from '../../scene-keys';
-import type { StartRun } from './start-choice';
+import type { StartRun } from '../../checkpoint-start';
 import type { ResultsButtonHandlers, ResultsButtonLabels } from './results-buttons';
 
 /** What the two buttons of the results do and say. */
 export interface ResultsFlow {
   handlers: ResultsButtonHandlers;
   labels: ResultsButtonLabels;
-  /** Leaves the results into the run of a request (a paid start from a checkpoint). */
-  start: StartRun;
+  /** Leaves the results into the run of a request (a paid start from a checkpoint); the daily tower has none. */
+  start?: StartRun;
 }
 
 interface FlowInput {
@@ -38,11 +38,18 @@ function proceed(scene: Phaser.Scene, fresh: readonly CreatureId[], next: NextSt
   }
 }
 
+/** Leaves the results into the run of `request`, after the presentation of the new creatures. */
+function runStarter(input: FlowInput): StartRun {
+  const { scene, fresh, leave } = input;
+  return (request) => leave(() => proceed(scene, fresh, { kind: 'run', request }));
+}
+
 /** The way on from the results of a classic run: the tutorial hands over to Home, else play again or Home. */
 function classicFlow(input: FlowInput): ResultsFlow {
   const { scene, summary, fresh, leave } = input;
+  const start = runStarter(input);
   return {
-    start: (request) => leave(() => proceed(scene, fresh, { kind: 'run', request })),
+    start,
     labels: { primary: 'run.playAgain', home: 'results.home' },
     handlers: {
       primary: () =>
@@ -55,7 +62,7 @@ function classicFlow(input: FlowInput): ResultsFlow {
                 firstHome: true,
               });
             })
-          : leave(() => proceed(scene, fresh, { kind: 'run', request: CLASSIC_RUN })),
+          : start(CLASSIC_RUN),
       home: () => leave(() => proceed(scene, fresh, HOME)),
     },
   };
@@ -73,10 +80,8 @@ function dailyFlow(input: FlowInput): ResultsFlow {
     decideRestart(DAILY_RUN, () => gameState.startDailyAttempt()) === 'run'
       ? { kind: 'run', request: DAILY_RUN }
       : DAILY_SCREEN;
-  const start: StartRun = (request) => leave(() => proceed(scene, fresh, { kind: 'run', request }));
   return again
     ? {
-        start,
         labels: { primary: 'run.playAgain', home: 'resultsDaily.back' },
         handlers: {
           primary: () => leave(() => proceed(scene, fresh, replay())),
@@ -84,7 +89,6 @@ function dailyFlow(input: FlowInput): ResultsFlow {
         },
       }
     : {
-        start,
         labels: { primary: 'resultsDaily.back', home: 'results.home' },
         handlers: {
           primary: () => leave(() => proceed(scene, fresh, DAILY_SCREEN)),

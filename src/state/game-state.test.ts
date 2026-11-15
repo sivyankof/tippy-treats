@@ -459,11 +459,13 @@ describe('GameState hints', () => {
   it('keeps the tutorial pending until it is marked done, and keeps hints across a reload', async () => {
     const { state, create, scheduler } = setup();
     await state.load();
+    expect(state.tutorialRunPending).toBe(true);
     expect(state.beginRun()).toBe(true);
     expect(state.beginRun()).toBe(true);
     state.markHint('wobble');
     state.markHint('wobble');
     state.markHint('tutorial');
+    expect(state.tutorialRunPending).toBe(false);
     expect(state.beginRun()).toBe(false);
     expect(state.data.tutorial.hintsShown).toEqual(['wobble', 'tutorial']);
     state.flush();

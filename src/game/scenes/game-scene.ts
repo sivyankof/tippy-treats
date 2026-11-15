@@ -95,7 +95,7 @@ export class GameScene extends Phaser.Scene {
     this.noContinue = setup.noContinue;
     this.mode = setup.mode;
     this.tally = emptyTally();
-    beginRunRewardedMemo();
+    beginRunRewardedMemo(setup.paidByAd);
     this.demoLeaving = false;
     this.exiting = false;
     this.recorder = new RunRecorder(gameState, this.startHeight, this.writesSave, () =>
@@ -112,7 +112,7 @@ export class GameScene extends Phaser.Scene {
       startWidth: setup.startWidth,
     });
     this.mods = this.sim.currentModifiers();
-    if (this.request.kind !== 'demo') logRunStart(setup, gameState.data.stats.runs);
+    logRunStart(setup, gameState.data.stats.runs);
     this.bot = setup.bot ? new TimingBot(setup.bot, new Rng(this.seed).fork('bot')) : null;
     this.flying.reset();
     this.continueFlow?.dispose();
