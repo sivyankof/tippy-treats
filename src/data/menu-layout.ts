@@ -528,6 +528,9 @@ export const MENU = {
     /** "Restore purchases" and "Reset progress". */
     wideButton: { width: 680, height: 100, radius: 36, shadowOffset: 8, font: 42 },
     restoreFill: 0x7c5cff,
+    /** "No ads" with its price above "Restore purchases": the button, and the gap under it. */
+    noAdsFill: 0x2fbf71,
+    noAdsGap: 24,
     /** The result line under "Restore purchases": its room and font. */
     resultHeight: 56,
     resultFont: 38,

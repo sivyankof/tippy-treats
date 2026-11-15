@@ -398,6 +398,7 @@
       "daily": "Daily tower",
       "comeback": "Come back"
     },
+    "noAds": "No ads · {price}",
     "version": "Version {version}",
     "installId": "ID {id}",
     "reset": "Reset progress",

@@ -398,6 +398,7 @@
       "daily": "Башня дня",
       "comeback": "Возвращение"
     },
+    "noAds": "Без рекламы · {price}",
     "version": "Версия {version}",
     "installId": "ID {id}",
     "reset": "Сбросить прогресс",

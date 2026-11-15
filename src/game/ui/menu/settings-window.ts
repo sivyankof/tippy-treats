@@ -12,7 +12,8 @@ import {
   setNotificationOn,
   type NotificationKind,
 } from '../../apply-settings';
-import { restorePurchases } from '../../purchases';
+import { productOwned } from '../../../core/shop';
+import { buyProduct, loadPrices, restorePurchases } from '../../purchases';
 import { createTextButton } from '../button';
 import { createOutlinedText } from '../outlined-text';
 import { PopupWindow } from '../style/dialog-window';
@@ -94,6 +95,10 @@ export function openSettingsWindow(scene: Phaser.Scene, handlers: SettingsHandle
     '',
     cfg.resultFont,
   );
+  // The price comes from the store a moment later: its place is kept, the button joins when it is known.
+  const noAdsTop = y;
+  const noAdsRoom = cfg.wideButton.height + cfg.noAdsGap;
+  y += noAdsRoom;
   const restore = wide(t('shop.restore'), cfg.restoreFill, y, () => {
     if (busy) return;
     busy = true;
@@ -133,6 +138,33 @@ export function openSettingsWindow(scene: Phaser.Scene, handlers: SettingsHandle
     reset,
   ]);
   popup.setContentHeight(y);
+
+  /** "No ads · {price}": only while it is not bought and the store gave a price; otherwise the place stays empty. */
+  const addNoAdsButton = async (): Promise<void> => {
+    if (productOwned(gameState.data, 'remove_ads')) return;
+    const price = (await loadPrices()).remove_ads;
+    if (price === undefined || !result.active) return;
+    const button = wide(t('settings.noAds', { price }), cfg.noAdsFill, noAdsTop, () => {
+      if (busy) return;
+      busy = true;
+      button.setEnabled(false);
+      void buyProduct('remove_ads').then((outcome) => {
+        busy = false;
+        if (!result.active) return;
+        if (outcome === 'purchased') {
+          button.setVisible(false);
+          result.setText(t('shop.owned'));
+        } else {
+          button.setEnabled(true);
+          if (outcome === 'pending') result.setText(t('shop.pending'));
+          else if (outcome !== 'cancelled') result.setText(t('shop.failed'));
+        }
+        fitText(result, width);
+      });
+    });
+    popup.content.add(button);
+  };
+  void addNoAdsButton();
   return popup;
 }
 
