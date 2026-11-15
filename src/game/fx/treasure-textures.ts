@@ -6,7 +6,8 @@ import { TREASURE } from '../../data/treasure-anim';
 import { bakeTexture } from '../ui/bake-texture';
 import { DEG_TO_RAD } from '../../util/math';
 import { bakeBerry } from './berry-texture';
-import { OUTLINE_SHARE, drawGlossMark, outlineColor } from './plain-style';
+import { shade } from '../../util/color';
+import { OUTLINE_SHARE, drawGlossMark } from './plain-style';
 
 /** Keys of the pictures of coins, berries and the zone rules. */
 export const TREASURE_TEXTURES = {
@@ -47,7 +48,7 @@ function bakeCoin(scene: Phaser.Scene): void {
   const faceR = c * coinLook.coinFaceShare;
   const band = faceR * coinLook.coinBandShare;
   bakeTexture(scene, TREASURE_TEXTURES.coin, size, size, (g) => {
-    g.fillStyle(outlineColor(colors.coinRim), 1).fillCircle(c, c, c);
+    g.fillStyle(shade(colors.coinRim, coinLook.coinOutlineShade), 1).fillCircle(c, c, c);
     g.fillStyle(colors.coinRim, 1).fillCircle(c, c, c - outline);
     // The face: a flat shadow band, with the lit disc pushed to the top left over it.
     g.fillStyle(colors.coinShade, 1).fillCircle(c, c, faceR);

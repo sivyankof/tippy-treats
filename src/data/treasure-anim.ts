@@ -41,6 +41,8 @@ export const TREASURE = {
   /** Baked picture sizes, in texture pixels. */
   textures: {
     coin: 96,
+    /** Darkening of the coin outline: one step lighter than the layers' (`DARK_OUTLINE`), so it does not eat the coin at counter size. */
+    coinOutlineShade: -0.26,
     /** Alpha of the coin highlight (a stroke and a dot, as on the glaze). */
     shineAlpha: 0.85,
     /** Coin face and its shadow band, as shares of the coin radius; the ring stamped on the face. */
