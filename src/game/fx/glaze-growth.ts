@@ -1,7 +1,7 @@
 import { GLAZE_DRIPS } from '../../data/glaze-drips';
 import type { CreatureId } from '../../data/creatures';
 import type { FaceRecipe } from '../../data/creature-looks';
-import { GOLDEN, MS_PER_SECOND } from '../../util/math';
+import { easeOutQuad, GOLDEN, MS_PER_SECOND } from '../../util/math';
 import { faceLayout } from '../objects/face-recipe';
 
 /** How a creature changes the growth of its drips and how often they let a drop go. */
@@ -66,7 +66,7 @@ export function growthProgress(ageMs: number, durationMs: number): number {
   const t = (ageMs - GLAZE_DRIPS.startDelayMs) / durationMs;
   if (!(t > 0)) return 0;
   if (t >= 1) return 1;
-  return 1 - (1 - t) * (1 - t);
+  return easeOutQuad(t);
 }
 
 /**

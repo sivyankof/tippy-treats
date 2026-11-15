@@ -6,6 +6,7 @@ import type { ZoneId } from '../../../data/zones';
 import { mixColor } from '../../../util/color';
 import { MS_PER_SECOND, oscillate01, sineWave } from '../../../util/math';
 import { bakeTexture } from '../../ui/bake-texture';
+import type { GuestSource } from './guest-source';
 import type { FrameCtx, Life } from './life';
 import { gradientBands } from './sky-gradient';
 
@@ -14,6 +15,8 @@ export interface SceneryDef {
   layers: readonly string[];
   /** `slot` is the parallax layer the element is drawn right above (0..3). */
   lives: readonly { slot: number; life: Life }[];
+  /** The creature of the zone that may leave for the tower, when there is one. */
+  guest?: GuestSource;
 }
 
 /** One zone's art: baking is separate so the next zone can be prepared ahead of the change. */
@@ -41,6 +44,8 @@ function bakeSky(scene: Phaser.Scene, zone: ZoneId): void {
  */
 export class ZoneScenery {
   readonly root: Phaser.GameObjects.Container;
+  /** The creature that may leave for the tower. */
+  readonly guest: GuestSource | null;
   private readonly sky: Phaser.GameObjects.Image;
   private readonly layers: Phaser.GameObjects.TileSprite[];
   private readonly lives: Life[];
@@ -67,6 +72,7 @@ export class ZoneScenery {
         .setAlpha(BACKDROP.layerAlpha[zone][i] ?? 1),
     );
     this.lives = def.lives.map(({ life }) => life);
+    this.guest = def.guest ?? null;
     const children: Phaser.GameObjects.GameObject[] = [this.sky];
     this.layers.forEach((layer, i) => {
       children.push(layer);

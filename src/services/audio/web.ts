@@ -205,6 +205,21 @@ export class WebAudioService implements AudioService {
     this.play((s) => s.sequence(SFX.lick.mmm));
   }
 
+  guestSplat(): void {
+    this.play((s) => {
+      s.tone(SFX.guest.splat.thump);
+      s.noise(SFX.guest.splat.wet);
+    });
+  }
+
+  guestSqueak(): void {
+    this.play((s) => s.sequence(SFX.guest.squeak));
+  }
+
+  guestBuzz(): void {
+    this.play((s) => s.sequence(SFX.guest.buzz));
+  }
+
   squeak(pitch: number): void {
     this.play((s) =>
       s.tone(SFX.squeak, { pitch: Number.isFinite(pitch) && pitch > 0 ? pitch : 1 }),

@@ -189,6 +189,7 @@ export const kitchenArt: ZoneArt = {
   build(scene) {
     const life = BACKDROP_LIFE.kitchen;
     const steam = new PuffColumn(scene, life.steam, life.steamAt, life.steamOffset);
+    const fly = new Traveler(scene, life.fly);
     return {
       layers: [K.wallpaper, K.tiles, K.shelves, K.utensils],
       lives: [
@@ -197,8 +198,9 @@ export const kitchenArt: ZoneArt = {
         { slot: 1, life: new Hover(scene, life.ladles) },
         { slot: 1, life: new Hover(scene, [life.lid]) },
         { slot: 1, life: steam },
-        { slot: 3, life: new Traveler(scene, life.fly) },
+        { slot: 3, life: fly },
       ],
+      guest: fly,
     };
   },
 };

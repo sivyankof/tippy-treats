@@ -1,4 +1,5 @@
 import * as Phaser from 'phaser';
+import { easeInQuad } from '../../util/math';
 import { DEPTH } from '../depth';
 import { fallTimeMs } from './glaze-growth';
 
@@ -33,11 +34,6 @@ interface FallingDrop {
   ageMs: number;
   fallMs: number;
   landing: DropLanding;
-}
-
-/** The thread stretches with an ease-in: slow at first, then it gives way. */
-function threadSink(t: number): number {
-  return t * t;
 }
 
 /**
@@ -113,7 +109,7 @@ export class GlazeDropFall {
 
   /** The drop sinks on its thread, which runs from where it left to the middle of the drop. */
   private stretch(drop: FallingDrop, spec: DropThread, t: number): void {
-    const y = drop.originY + spec.px * threadSink(t);
+    const y = drop.originY + spec.px * easeInQuad(t);
     drop.image.setY(y);
     const line = drop.thread;
     if (!line) return;

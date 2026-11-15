@@ -83,3 +83,26 @@ export function smoothstep(t: number): number {
   const c = clamp01(t);
   return c * c * (3 - 2 * c);
 }
+
+/** The value `t` of the way from `a` to `b` (`t` is not limited to 0..1). */
+export function lerp(a: number, b: number, t: number): number {
+  return a + (b - a) * t;
+}
+
+/** Slow start, fast finish: `t` in 0..1 squared. */
+export function easeInQuad(t: number): number {
+  return t * t;
+}
+
+/** Fast start, slow finish: the mirror of `easeInQuad`. */
+export function easeOutQuad(t: number): number {
+  return 1 - (1 - t) * (1 - t);
+}
+
+/**
+ * Height factor of a wing beat: `min` to 1 and back every `ms` (a flatten of the picture);
+ * `phase` shifts the beat in radians.
+ */
+export function flapScale(timeMs: number, flap: { ms: number; min: number }, phase = 0): number {
+  return lerp(flap.min, 1, oscillate01(timeMs, flap.ms, phase));
+}

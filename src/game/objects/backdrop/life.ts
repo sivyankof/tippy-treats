@@ -6,6 +6,7 @@ import type {
   TravelSpec,
   TwinkleSpec,
 } from '../../../data/backdrop-life';
+import type { GuestSource, SourcePoint } from './guest-source';
 import { PassTimer } from './pass-timer';
 import {
   hoverPose,
@@ -105,12 +106,13 @@ export class PuffColumn implements Life {
 }
 
 /** Something that crosses the screen now and then, alone or as a flock. */
-export class Traveler implements Life {
+export class Traveler implements Life, GuestSource {
   readonly objects: Phaser.GameObjects.Image[];
-  private readonly timer: PassTimer;
+  private timer: PassTimer;
   private readonly pass: TravelPass = { shiftX: 0, shiftY: 0, direction: 1 };
   private readonly pose = newPose();
   private shown = true;
+  private held = false;
 
   constructor(
     scene: Phaser.Scene,
@@ -130,7 +132,28 @@ export class Traveler implements Life {
     this.pass.direction = bothWays && this.random() < 0.5 ? -1 : 1;
   }
 
+  peek(out: SourcePoint): boolean {
+    const image = this.objects[0];
+    if (this.held || !this.shown || !image) return false;
+    out.x = image.x;
+    out.y = image.y;
+    out.scale = this.spec.scale;
+    return true;
+  }
+
+  suspend(on: boolean): void {
+    if (this.held === on) return;
+    this.held = on;
+    // Back from the tower the creature waits for a fresh pass instead of popping in mid-screen.
+    if (!on) this.timer = new PassTimer(this.spec, this.random);
+    if (on && this.shown) {
+      this.shown = false;
+      for (const image of this.objects) image.setVisible(false);
+    }
+  }
+
   update(ctx: FrameCtx): void {
+    if (this.held) return;
     this.timer.update(ctx.deltaMs);
     if (this.timer.started) this.newPass();
     if (this.timer.active !== this.shown) {

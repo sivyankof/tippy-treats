@@ -9,7 +9,9 @@ import {
 import { mixColor } from '../../../util/color';
 import {
   DEG_TO_RAD,
+  flapScale,
   GOLDEN,
+  lerp,
   MS_PER_SECOND,
   oscillate01,
   sineWave,
@@ -39,10 +41,6 @@ export function newPose(): Pose {
 
 function frac(value: number): number {
   return value - Math.floor(value);
-}
-
-function lerp(a: number, b: number, t: number): number {
-  return a + (b - a) * t;
 }
 
 /** Height factor of a blinking eyelid: 1 most of the time, `min` at the middle of the blink. */
@@ -152,9 +150,7 @@ export function travelPose(
   out.y = y;
   out.rotation = rotation;
   out.scaleX = flip && !spec.alongPath ? -spec.scale : spec.scale;
-  out.scaleY = spec.flap
-    ? spec.scale * lerp(spec.flap.min, 1, oscillate01(timeMs, spec.flap.ms, memberPhase))
-    : spec.scale;
+  out.scaleY = spec.flap ? spec.scale * flapScale(timeMs, spec.flap, memberPhase) : spec.scale;
   out.alpha = spec.alpha * edgeFade(progress, spec.fadeEdge);
   out.tint = null;
   return out;

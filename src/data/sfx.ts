@@ -467,4 +467,99 @@ export const SFX = {
     duration: 0.16,
     gain: 0.35,
   } satisfies ToneRecipe,
+
+  /**
+   * "Гость на башне": a layer lands on the fly. A soft wet splat (a low thump over a lowpass
+   * burst), a comic squeak when the fly peels off (up, then a little back down), and the offended
+   * buzz as it bolts: a harsh note that wobbles and falls, three times, each shorter.
+   */
+  guest: {
+    splat: {
+      thump: {
+        wave: 'sine',
+        freq: 190,
+        endFreq: 60,
+        attack: 0.002,
+        duration: 0.12,
+        gain: 0.4,
+      } satisfies ToneRecipe,
+      wet: {
+        filter: 'lowpass',
+        cutoff: 1400,
+        endCutoff: 260,
+        q: 0.9,
+        attack: 0.002,
+        duration: 0.14,
+        gain: 0.34,
+      } satisfies NoiseRecipe,
+    },
+    squeak: [
+      {
+        delay: 0,
+        wave: 'sine',
+        freq: 1000,
+        endFreq: 2100,
+        attack: 0.006,
+        duration: 0.1,
+        gain: 0.26,
+      },
+      {
+        delay: 0.09,
+        wave: 'sine',
+        freq: 2100,
+        endFreq: 1500,
+        attack: 0.004,
+        duration: 0.07,
+        gain: 0.22,
+      },
+    ] satisfies readonly TimedTone[],
+    buzz: [
+      {
+        delay: 0,
+        wave: 'sawtooth',
+        freq: 260,
+        endFreq: 190,
+        attack: 0.01,
+        duration: 0.2,
+        gain: 0.1,
+      },
+      {
+        delay: 0.24,
+        wave: 'sawtooth',
+        freq: 250,
+        endFreq: 180,
+        attack: 0.01,
+        duration: 0.17,
+        gain: 0.1,
+      },
+      {
+        delay: 0.46,
+        wave: 'sawtooth',
+        freq: 240,
+        endFreq: 150,
+        attack: 0.01,
+        duration: 0.3,
+        gain: 0.1,
+      },
+      { delay: 0, wave: 'square', freq: 131, endFreq: 95, attack: 0.01, duration: 0.2, gain: 0.04 },
+      {
+        delay: 0.24,
+        wave: 'square',
+        freq: 125,
+        endFreq: 90,
+        attack: 0.01,
+        duration: 0.17,
+        gain: 0.04,
+      },
+      {
+        delay: 0.46,
+        wave: 'square',
+        freq: 120,
+        endFreq: 75,
+        attack: 0.01,
+        duration: 0.3,
+        gain: 0.04,
+      },
+    ] satisfies readonly TimedTone[],
+  },
 } as const;

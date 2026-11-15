@@ -8,6 +8,7 @@ import { bakeSharedArt } from './art-kit';
 import { cloudsArt } from './clouds-zone';
 import { Counter } from './worktop';
 import { kitchenArt } from './kitchen-zone';
+import type { GuestSource } from './guest-source';
 import type { FrameCtx } from './life';
 import { roofArt } from './roof-zone';
 import { showcaseArt } from './showcase-zone';
@@ -67,6 +68,11 @@ export class Backdrop {
     this.ensure(zoneIndex);
     this.fade.goTo(zoneIndex);
     this.prepareNext(zoneIndex);
+  }
+
+  /** The creature of the current zone that may leave for the tower; `null` when it has none. */
+  guestSource(): GuestSource | null {
+    return this.sceneries.get(this.fade.current)?.guest ?? null;
   }
 
   /** Call when the logical screen size changes. */

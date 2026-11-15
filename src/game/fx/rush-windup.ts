@@ -1,5 +1,5 @@
 import { RULE_ANIM } from '../../data/rule-anim';
-import { clamp01, smoothstep } from '../../util/math';
+import { clamp01, lerp, smoothstep } from '../../util/math';
 
 const cfg = RULE_ANIM.windup;
 
@@ -19,10 +19,6 @@ export function restPose(): RushPose {
 /** Ease-out of `t` (0..1) with the given power: fast at the start, flat at the end. */
 export function easeOutPower(t: number, power: number): number {
   return 1 - Math.pow(1 - clamp01(t), power);
-}
-
-function lerp(from: number, to: number, t: number): number {
-  return from + (to - from) * t;
 }
 
 /**

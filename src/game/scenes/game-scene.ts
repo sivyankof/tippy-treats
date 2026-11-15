@@ -121,6 +121,7 @@ export class GameScene extends Phaser.Scene {
     const { width, height } = this.scale.gameSize;
     this.background = new Backdrop(this, TRAY_TOP_Y, width, height, this.sim.state.zoneIndex);
     this.fx = new RunFx(this, TRAY_TOP_Y);
+    this.fx.setGuestSource(() => this.background.guestSource());
     this.camera = new RunCamera(this, this.fx, this.background, TRAY_TOP_Y);
 
     this.input.on(Phaser.Input.Events.POINTER_DOWN, this.onPointerDown, this);

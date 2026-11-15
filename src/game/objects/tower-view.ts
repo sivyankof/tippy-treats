@@ -155,14 +155,22 @@ export class TowerView {
 
   /** Pose of a placed layer as of the last `sync`. */
   layerPose(index: number): LayerPose | null {
+    return this.layerPoseInto(
+      { x: 0, y: 0, width: 0, angle: 0, cut: null, look: PLAIN_LOOK },
+      index,
+    );
+  }
+
+  /** Like `layerPose`, but fills `out` (a caller that asks every frame keeps one and allocates nothing). */
+  layerPoseInto(out: LayerPose, index: number): LayerPose | null {
     const layer = this.state?.layers[index];
     if (!this.state || !layer) return null;
-    return this.fillPose(
-      { x: 0, y: 0, width: 0, angle: 0, cut: null, look: PLAIN_LOOK },
-      layer,
-      index,
-      this.swayOffset(this.state, index),
-    );
+    return this.fillPose(out, layer, index, this.swayOffset(this.state, index));
+  }
+
+  /** The tower has no wobble worries, so a guest may land on it. */
+  get isCalm(): boolean {
+    return this.calm;
   }
 
   /**

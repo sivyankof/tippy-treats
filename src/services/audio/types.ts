@@ -39,6 +39,12 @@ export interface AudioService {
   lickSmack(): void;
   /** The licked layer is happy: a short contented "mmm". */
   lickHum(): void;
+  /** A layer lands on the guest of the tower (the fly): a soft wet splat. */
+  guestSplat(): void;
+  /** The flattened guest peels off the layer: a comic squeak. */
+  guestSqueak(): void;
+  /** The guest bolts, offended: an angry buzz that falls away. */
+  guestBuzz(): void;
   /** Creature squeak; `pitch` is a multiplier (1 = base pitch). */
   squeak(pitch: number): void;
 }

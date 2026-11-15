@@ -1,4 +1,4 @@
-import { clamp01 } from '../../../util/math';
+import { clamp01, lerp } from '../../../util/math';
 import type { EaseFn } from '../ease';
 
 /** How a value travels from its start to its end: straight, out and back, or up and a sharp snap back. */
@@ -103,8 +103,6 @@ export function makeSpec(
     scaleY1: base.scaleY1 ?? sx1,
   };
 }
-
-const lerp = (a: number, b: number, k: number): number => a + (b - a) * k;
 
 /** Pose of the sprite at progress `t` (0..1) of its life. */
 export function sampleSprite(spec: SpriteSpec, t: number, out: SpriteFrame): SpriteFrame {

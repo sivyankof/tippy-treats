@@ -11,6 +11,8 @@ import { aimMouth } from '../objects/face-state';
 import { FlyingLayerView } from '../objects/flying-layer-view';
 import type { LayerView } from '../objects/layer-view';
 import type { LickKind, LickScene } from '../objects/lick-plan';
+import type { GuestSource } from '../objects/backdrop/guest-source';
+import { TowerGuest } from '../objects/tower-guest';
 import { TowerView } from '../objects/tower-view';
 import { AbilityFx } from './abilities/ability-fx';
 import { CameraKick } from './camera-kick';
@@ -56,6 +58,7 @@ export class RunFx {
   private readonly coinFx: CoinFx;
   private readonly flyingFx: FlyingFx;
   private readonly recordMoment: RecordMoment;
+  private readonly guest: TowerGuest;
 
   private glowOn = false;
   private missPiece: LayerView | null = null;
@@ -85,6 +88,11 @@ export class RunFx {
       this.glow,
       gameState.recordHeight,
     );
+    this.guest = new TowerGuest(scene, this.tower, this.landingFx.particles, {
+      splat: () => services.audio.guestSplat(),
+      squeak: () => services.audio.guestSqueak(),
+      buzz: () => services.audio.guestBuzz(),
+    });
     const licks = this.tower.licks;
     licks.onSlurp = () => services.audio.lickSlurp();
     licks.onSlurpLong = () => services.audio.lickSlurpLong();
@@ -98,7 +106,14 @@ export class RunFx {
       (
         window as Window & { tippyLick?: (scene?: LickScene, kind?: LickKind) => boolean }
       ).tippyLick = (scene, kind) => this.tower.lickNow(scene, kind);
+      // window.tippyFly(): the guest of the zone sits on the top layer right away; true when it could.
+      (window as Window & { tippyFly?: () => boolean }).tippyFly = () => this.guest.landNow();
     }
+  }
+
+  /** The backdrop creature the tower's guest flies out of (it is hidden there while the guest is out). */
+  setGuestSource(get: () => GuestSource | null): void {
+    this.guest.setSource(get);
   }
 
   /** The miss has played out: the run may be declined. */
@@ -188,6 +203,7 @@ export class RunFx {
     this.abilityFx.handleEvents(events, state, memo, mods, cam);
     this.coinFx.handleEvents(events, state, cam);
     this.flyingFx.handleEvents(events);
+    this.guest.handleEvents(events, state);
   }
 
   /** Per frame: places everything and advances the effects. */
@@ -211,6 +227,11 @@ export class RunFx {
     this.pointFaces(state);
     this.tower.setScreenBand(cam.scrollY, cam.scrollY + cam.height);
     this.tower.tick(visualMs);
+    this.guest.update(visualMs, {
+      state,
+      cam,
+      shadow: this.flyingView.shadowAnchor(),
+    });
 
     this.debris.update(visualMs);
     this.landingFx.update(visualMs);
