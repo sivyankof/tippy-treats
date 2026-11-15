@@ -213,7 +213,7 @@
     "xp": "one={n} XP to level {level}|other={n} XP to level {level}",
     "coins": "one=Just {n} coin to buy {name}|other=Just {n} coins to buy {name}",
     "best": "Record: {n} · today: {today}",
-    "mission": "one={n} more for the mission: {name}|other={n} more for the mission: {name}"
+    "mission": "{left} more for the mission: {name}"
   },
   "levelUp": {
     "title": "Level {n}!",

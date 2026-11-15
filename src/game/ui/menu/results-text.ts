@@ -36,6 +36,7 @@ export function nearMissText(miss: NearMiss): string {
     case 'mission':
       return tn('nearMiss.mission', miss.remaining, {
         name: t(`mission.${miss.id}`, { n: formatNumber(miss.target) }),
+        left: formatNumber(miss.remaining),
       });
     case 'xp':
       return tn('nearMiss.xp', miss.xp, { level: miss.level });

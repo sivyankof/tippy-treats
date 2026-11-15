@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import { emptyTally } from '../../../core/run-tally';
+import { MISSION_POOL, MISSIONS } from '../../../data/missions';
 import { setLang, t } from '../../../i18n';
 import type { LevelUp } from '../../../state/game-state';
 import { coinLines, nearMissText, newCreaturesOf, rewardLines, xpSegments } from './results-text';
@@ -39,6 +40,18 @@ describe('near miss text', () => {
   it('speaks Russian too', () => {
     setLang('ru');
     expect(nearMissText({ kind: 'best', record: 31, today: 12 })).toBe('Рекорд: 31 · сегодня: 12');
+  });
+
+  it('keeps the Russian mission line short enough for the results panel at 80% of its size', () => {
+    // 900 px of the line at the 40 px font fit about 54 Russian characters once shrunk to 80%.
+    const longest = 54;
+    setLang('ru');
+    for (const template of MISSION_POOL) {
+      const target = 'target' in template ? template.target : template.max;
+      const remaining = Math.ceil(target * (1 - MISSIONS.closeShare));
+      const line = nearMissText({ kind: 'mission', id: template.id, target, remaining });
+      expect(line.length, line).toBeLessThanOrEqual(longest);
+    }
   });
 });
 
