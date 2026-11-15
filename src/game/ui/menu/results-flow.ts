@@ -3,6 +3,7 @@ import type { CreatureId } from '../../../data/creatures';
 import { gameState } from '../../../state';
 import type { RunSummary } from '../../../state/game-state';
 import { CLASSIC_RUN, DAILY_RUN } from '../../run-request';
+import { decideRestart } from '../../run-restart';
 import { goNext, openScreen, SCENES, type NextStep } from '../../scene-keys';
 import type { ResultsButtonHandlers, ResultsButtonLabels } from './results-buttons';
 
@@ -65,7 +66,9 @@ function dailyFlow(input: FlowInput): ResultsFlow {
   const { scene, fresh, leave } = input;
   const again = gameState.dailyInfo().attemptsLeft > 0;
   const replay = (): NextStep =>
-    gameState.startDailyAttempt() ? { kind: 'run', request: DAILY_RUN } : DAILY_SCREEN;
+    decideRestart(DAILY_RUN, () => gameState.startDailyAttempt()) === 'run'
+      ? { kind: 'run', request: DAILY_RUN }
+      : DAILY_SCREEN;
   return again
     ? {
         labels: { primary: 'run.playAgain', home: 'resultsDaily.back' },

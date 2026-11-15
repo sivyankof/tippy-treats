@@ -22,7 +22,7 @@ import { gameState } from '../../state';
 import { emptyRunInfo, fillRunInfo, type RunInfo } from '../run-info';
 import { bindPageLeave } from '../../state/page-lifecycle';
 import { buildResultsData } from '../results-data';
-import { launchRun, openScreen, SCENES } from '../scene-keys';
+import { openScreen, restartRun, SCENES } from '../scene-keys';
 import { exitTarget } from '../run-exit';
 import { CLASSIC_RUN, demoFinished, type RunRequest } from '../run-request';
 import { setupRun } from '../run-setup';
@@ -128,7 +128,7 @@ export class GameScene extends Phaser.Scene {
         gameState.flush();
       },
       // Back from the page cache: that run is already recorded, so start a new one.
-      () => launchRun(this, this.request),
+      () => restartRun(this, this.request),
     );
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       unbindLeave();

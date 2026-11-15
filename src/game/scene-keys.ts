@@ -4,7 +4,9 @@ import type { RunTally } from '../core/run-tally';
 import type { CreatureId } from '../data/creatures';
 import type { RunSummary } from '../state/game-state';
 import type { TowerSnapshot } from './objects/tower-snapshot';
+import { gameState } from '../state';
 import { CLASSIC_RUN, type DemoBack, type RunRequest } from './run-request';
+import { decideRestart } from './run-restart';
 
 export const SCENES = {
   boot: 'boot',
@@ -74,6 +76,18 @@ export function launchRun(scene: Phaser.Scene, request: RunRequest = CLASSIC_RUN
   for (const key of [SCENES.game, SCENES.hud]) {
     if (key === scene.scene.key) scene.scene.restart(request);
     else scene.scene.launch(key, request);
+  }
+}
+
+/**
+ * Restarts the current run (pause, page cache restore): a daily run spends an attempt first, and
+ * with none left the daily screen opens instead.
+ */
+export function restartRun(scene: Phaser.Scene, request: RunRequest = CLASSIC_RUN): void {
+  if (decideRestart(request, () => gameState.startDailyAttempt()) === 'run') {
+    launchRun(scene, request);
+  } else {
+    openScreen(scene, SCENES.daily);
   }
 }
 

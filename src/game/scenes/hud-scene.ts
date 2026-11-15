@@ -6,7 +6,7 @@ import { CREATURES } from '../../data/creatures';
 import { readDebugParams } from '../../util/debug-params';
 import { ContinueWindow } from '../ui/continue-window';
 import { DebugPanel } from '../debug/debug-panel';
-import { launchRun, SCENES } from '../scene-keys';
+import { launchRun, restartRun, SCENES } from '../scene-keys';
 import type { Button } from '../ui/button';
 import { createIconButton } from '../ui/menu/icon-button';
 import { NumberRoll } from '../ui/number-roll';
@@ -84,9 +84,7 @@ export class HudScene extends Phaser.Scene {
     this.pauseButton = this.createPauseButton().breathe(false);
     this.overlay = new PauseOverlay(this, {
       onResume: () => this.scene.resume(SCENES.game),
-      onRestart: () => {
-        launchRun(this, this.gameScene()?.request);
-      },
+      onRestart: () => restartRun(this, this.gameScene()?.request),
       onHome: () => this.gameScene()?.leaveRun(true),
     });
     this.continueWindow = new ContinueWindow(this);
