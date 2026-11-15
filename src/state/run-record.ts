@@ -102,8 +102,9 @@ export function applyRun(
     next = {
       ...next,
       today: { day, bestHeight: Math.max(todayBest, result.height) },
-      // Reaching a height opens its checkpoints for good; the full height counts, not the placed layers.
-      checkpoints: withReached(before.checkpoints, result.height),
+      // Only a tower built from zero opens checkpoints (its full height); a run from a checkpoint
+      // opens nothing new, though its height still counts for the record below.
+      checkpoints: withReached(before.checkpoints, startHeight === 0 ? result.height : 0),
       records: {
         classicHeight: Math.max(before.records.classicHeight, result.height),
         classicScore: Math.max(before.records.classicScore, result.score),

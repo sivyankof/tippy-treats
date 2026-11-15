@@ -374,7 +374,7 @@ export const MENU = {
     playShadow: 16,
     /** The "Starter pack $1.99" button above Play, for the first days (docs/07, section 2). */
     starter: { width: 700, height: 108, radius: 38, shadowOffset: 8, font: 44, gap: 44, pad: 40 },
-    /** The small "Start from ▸" button right above Play, shown once a checkpoint is open. */
+    /** The small "Choose start" button right above Play, shown once a checkpoint is open. */
     startFrom: { width: 380, height: 84, radius: 30, shadowOffset: 8, font: 40, gap: 28, pad: 40 },
     /** The hint bubble about a free team slot, above Play. */
     hintAbovePlay: 220,
@@ -1031,7 +1031,7 @@ export const MENU = {
     /** "Home" and "Share" side by side in one row as wide as the big button. */
     pairButton: { width: 366, height: 104, radius: 36, shadowOffset: 8, font: 40 },
     pairGap: 28,
-    /** The small "Start from ▸" row under the big button after a zero start. */
+    /** The small "Choose start" row under the big button after a zero start. */
     startFrom: { width: 440, height: 88, radius: 32, shadowOffset: 8, font: 38, pad: 40 },
     /** "Started at layer N · placed M" under the height of a run from a checkpoint. */
     startedFont: 40,

@@ -54,10 +54,25 @@ describe('opening checkpoints by a run', () => {
     expect(state.checkpoints).toEqual([20, 40]);
   });
 
-  it('a checkpoint run opens by the full height it ended at, not the placed layers', async () => {
+  it('a checkpoint run opens nothing new, however high it climbs', async () => {
     const { state } = await veteran(50, { checkpoints: [20, 40] });
     state.recordRun(run({ height: 65 }), 40);
+    expect(state.checkpoints).toEqual([20, 40]);
+    state.recordRun(run({ height: 105 }), 20);
+    expect(state.checkpoints).toEqual([20, 40]);
+  });
+
+  it('a run from zero opens by the full height it reached', async () => {
+    const { state } = await veteran(50, { checkpoints: [20, 40] });
+    state.recordRun(run({ height: 65 }), 0);
     expect(state.checkpoints).toEqual([20, 40, 60]);
+  });
+
+  it('a checkpoint run still raises the classic record', async () => {
+    const { state } = await veteran(45, { checkpoints: [20, 40] });
+    state.recordRun(run({ height: 90 }), 40);
+    expect(state.data.records.classicHeight).toBe(90);
+    expect(state.checkpoints).toEqual([20, 40]);
   });
 
   it('a daily run never opens a checkpoint', async () => {

@@ -42,7 +42,7 @@ function drawAdMark(g: Phaser.GameObjects.Graphics, x: number, y: number): void 
 
 /**
  * One step of the climb: the zone picture, the zone name over "Layer N" and the price on the right
- * (a lock and "reach layer N" while it is not reached). An open step selects on a tap.
+ * (a lock and "reach layer N from scratch" until a run from zero reaches it). An open step selects on a tap.
  */
 export function createCheckpointStep(
   scene: Phaser.Scene,

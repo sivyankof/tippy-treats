@@ -332,6 +332,8 @@ export function walk(
   let level = 1;
   let xp = 0;
   let record = 0;
+  /** Best height of a run from zero: only such a run opens checkpoints. */
+  let zeroBest = 0;
   const levelDay: Record<number, number | null> = {};
   for (const m of LEVEL_MARKS) levelDay[m] = null;
   const ownDay: number[] = [];
@@ -476,8 +478,8 @@ export function walk(
       let r: RunSample | null = null;
       let cost = RESULTS_SEC;
       if (player.checkpoints && cp) {
-        // Checkpoints open when the best height reaches them.
-        const opened = CHECKPOINT_HEIGHTS.filter((h) => h <= record);
+        // Checkpoints open when a run from zero reaches them.
+        const opened = CHECKPOINT_HEIGHTS.filter((h) => h <= zeroBest);
         const adHeight = [...opened].reverse().find(checkpointHasAd);
         const top = opened[opened.length - 1];
         if (player.ads && adHeight !== undefined && adStarts < BALANCE.checkpoints.adsPerDay) {
@@ -505,6 +507,7 @@ export function walk(
       berries += eco.runBerries(r);
       runXp(r);
       record = Math.max(record, r.top ?? r.h);
+      if (r.top === undefined) zeroBest = Math.max(zeroBest, r.h);
       totalRuns += 1;
       budget -= cost;
     }

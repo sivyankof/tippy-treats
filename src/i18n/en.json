@@ -29,11 +29,11 @@
   },
   "checkpoint": {
     "adsSpent": "No more ad starts today",
-    "from": "Start from ▸",
+    "from": "Choose start",
     "window": {
       "title": "Where from?",
       "layer": "Layer {n}",
-      "locked": "Reach layer {n}",
+      "locked": "Reach layer {n} from scratch",
       "free": "free",
       "play": "Play",
       "playFor": "Play · {price}",

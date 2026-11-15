@@ -13,7 +13,7 @@ const starterCfg = MENU.home.starter;
 /** What Home needs to know of the starter pack offer to stand it above Play. */
 type StarterSpot = Pick<HomeStarterOffer, 'button' | 'room'>;
 
-/** The small "Start from ▸" button right above Play; it exists only once a checkpoint is open. */
+/** The small "Choose start" button right above Play; it exists only once a checkpoint is open. */
 export class HomeStartFrom {
   readonly button: Button | null;
 

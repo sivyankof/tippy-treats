@@ -586,11 +586,30 @@ describe('checkpoint fields of the loader', () => {
     expect(load(JSON.stringify(raw)).save.checkpoints).toEqual([20, 40]);
   });
 
-  it('keeps the list in line with the record', () => {
+  it('derives the list from the record only when the field is missing or invalid', () => {
     const raw = { ...fresh(), records: record(85) };
     const all = [20, 40, 60, 80];
-    expect(load(JSON.stringify({ ...raw, checkpoints: [] })).save.checkpoints).toEqual(all);
+    const noField: Record<string, unknown> = { ...raw };
+    delete noField.checkpoints;
+    expect(load(JSON.stringify(noField)).save.checkpoints).toEqual(all);
     expect(load(JSON.stringify({ ...raw, checkpoints: 'oops' })).save.checkpoints).toEqual(all);
+    // A damaged list (not only checkpoint heights) is derived too, not emptied.
+    for (const damaged of [[null], ['20', '40'], [25], [20, 'x']]) {
+      expect(load(JSON.stringify({ ...raw, checkpoints: damaged })).save.checkpoints).toEqual(all);
+    }
+  });
+
+  it('keeps a present list even when the record is higher (it may come from a checkpoint run)', () => {
+    const raw = { ...fresh(), records: record(85) };
+    expect(load(JSON.stringify({ ...raw, checkpoints: [] })).save.checkpoints).toEqual([]);
+    expect(load(JSON.stringify({ ...raw, checkpoints: [20, 40] })).save.checkpoints).toEqual([
+      20, 40,
+    ]);
+  });
+
+  it('keeps the prefix: an opened checkpoint implies the lower ones', () => {
+    const raw = { ...fresh(), checkpoints: [60] };
+    expect(load(JSON.stringify(raw)).save.checkpoints).toEqual([20, 40, 60]);
   });
 
   it('keeps an opened checkpoint above a lowered record', () => {

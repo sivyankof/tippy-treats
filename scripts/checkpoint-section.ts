@@ -1,4 +1,6 @@
+import { checkpointBerryPrice, checkpointHasAd } from '../src/core/checkpoints';
 import { CHECKPOINT_HEIGHTS, CHECKPOINT_START_WIDTH } from '../src/data/checkpoints';
+import { BERRY_PACKS } from '../src/data/economy';
 import { NO_TEAM, type SimTeamSet } from '../src/data/sim-teams';
 import {
   START_HEIGHTS,
@@ -31,6 +33,19 @@ const SECTION_PLAYERS: ReadonlyArray<{ profile: string; team: SimTeamSet; level:
 /** Owner's noise tolerance: about one layer for the regular profile. */
 const TOLERANCE_PP = 3;
 
+/** Coins one berry is worth at the worst exchange rate of the data (the strictest price of a berry start). */
+const COINS_PER_BERRY = Math.min(...BERRY_PACKS.map((pack) => pack.coins / pack.berries));
+if (!Number.isFinite(COINS_PER_BERRY)) throw new Error('no berry exchange pack');
+
+/**
+ * Coins per minute of play with the berries the run earned valued in coins, minus the berry price of
+ * the start, over the run, the results screen and `extraSec` (the ad of an ad start).
+ */
+function valuePerPlayMin(stats: Stats, priceBerries: number, extraSec: number): number {
+  const coins = stats.meanCoins + (stats.meanBerries - priceBerries) * COINS_PER_BERRY;
+  return (coins / (stats.meanSeconds + SESSION_TIME.resultsSec + extraSec)) * 60;
+}
+
 const medianOf = (values: number[]): number =>
   percentile(
     [...values].sort((a, b) => a - b),
@@ -54,6 +69,7 @@ interface Stats {
   /** Per minute of play with the results screen after the run (a berry start, no ad). */
   coinsPerPlayMin: number;
   layersPerPlayMin: number;
+  /** Mean coins over mean seconds with the results screen and an ad of the start (no price). */
 }
 
 function statsOf(samples: CheckpointSample[]): Stats {
@@ -83,10 +99,15 @@ export function printCheckpointSection(runs: number, profile: string | null): vo
   );
   console.log(
     'Duration is the sim clock of the run (placed layers only). A start from a checkpoint must not beat the run from zero by more than ' +
-      `${TOLERANCE_PP} percentage points on (a) median placed layers vs median height from zero, (b) median coins per run, (c) coins per minute, (d) placed layers per minute; (e) and (f) are (c) and (d) per minute of play with the ${SESSION_TIME.resultsSec} s results screen after every run.`,
+      `${TOLERANCE_PP} percentage points on (a) median placed layers vs median height from zero, (b) median coins per run, (c) coins per minute, (d) placed layers per minute; (e) and (f) are (c) and (d) per minute of play with the ${SESSION_TIME.resultsSec} s results screen after every run; (g) and (h) count the price of the start, with berries at the worst exchange rate (${COINS_PER_BERRY} coins per berry): value = mean coins + (mean berries earned - berry price) x rate, per minute of run + ${SESSION_TIME.resultsSec} s results; (g) a berry start, (h) an ad start (heights with an ad only: no berry price, + ${SESSION_TIME.adSec} s ad). Both are compared with the same value of the run from zero (its berries counted, no price).`,
   );
   const widthRows: string[] = [];
   const failures: string[] = [];
+  const verdictOf = (d: number, label: string): string => {
+    const text = verdict(d);
+    if (text.endsWith('FAIL')) failures.push(`${label}: ${text}`);
+    return text;
+  };
   for (const player of players) {
     const widths = new WidthAtHeights();
     const rows = START_HEIGHTS.map((start) => ({
@@ -107,29 +128,40 @@ export function printCheckpointSection(runs: number, profile: string | null): vo
     const title = `${player.profile}, team ${player.team.name}${player.team === NO_TEAM ? '' : ` (level ${player.level})`}`;
     console.log(`\n### ${title}`);
     console.log(
-      '| start | runs | median height | median placed | median coins | mean coins | mean berries | mean s | coins/min | placed/min | (a) placed vs zero height | (b) median coins | (c) coins/min | (d) placed/min | coins/play min | placed/play min | (e) coins/play min | (f) placed/play min |',
+      '| start | runs | median height | median placed | median coins | mean coins | mean berries | mean s | coins/min | placed/min | (a) placed vs zero height | (b) median coins | (c) coins/min | (d) placed/min | coins/play min | placed/play min | (e) coins/play min | (f) placed/play min | berry start value/play min | ad start value/play min | (g) berry start vs zero | (h) ad start vs zero |',
     );
-    console.log('|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|');
+    console.log(
+      '|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|',
+    );
+    const zeroValue = valuePerPlayMin(zero, 0, 0);
     for (const { start, stats } of rows) {
-      const checks =
-        start === 0
-          ? ['-', '-', '-', '-', '-', '-']
-          : [
-              deltaPct(stats.medPlaced, zero.medFull),
-              deltaPct(stats.medCoins, zero.medCoins),
-              deltaPct(stats.coinsPerMin, zero.coinsPerMin),
-              deltaPct(stats.layersPerMin, zero.layersPerMin),
-              deltaPct(stats.coinsPerPlayMin, zero.coinsPerPlayMin),
-              deltaPct(stats.layersPerPlayMin, zero.layersPerPlayMin),
-            ].map((d, i) => {
-              const text = verdict(d);
-              if (text.endsWith('FAIL')) {
-                failures.push(`${title}, start ${start}, (${'abcdef'[i]}): ${text}`);
-              }
-              return text;
-            });
+      const label = (check: string): string => `${title}, start ${start}, (${check})`;
+      let cells: string[];
+      if (start === 0) {
+        cells = Array.from({ length: 10 }, () => '-');
+      } else {
+        const berryValue = valuePerPlayMin(stats, checkpointBerryPrice(start), 0);
+        const adValue = checkpointHasAd(start)
+          ? valuePerPlayMin(stats, 0, SESSION_TIME.adSec)
+          : null;
+        const deltas: Array<[string, number]> = [
+          ['a', deltaPct(stats.medPlaced, zero.medFull)],
+          ['b', deltaPct(stats.medCoins, zero.medCoins)],
+          ['c', deltaPct(stats.coinsPerMin, zero.coinsPerMin)],
+          ['d', deltaPct(stats.layersPerMin, zero.layersPerMin)],
+          ['e', deltaPct(stats.coinsPerPlayMin, zero.coinsPerPlayMin)],
+          ['f', deltaPct(stats.layersPerPlayMin, zero.layersPerPlayMin)],
+        ];
+        cells = [
+          ...deltas.map(([check, d]) => verdictOf(d, label(check))),
+          berryValue.toFixed(1),
+          adValue === null ? '-' : adValue.toFixed(1),
+          verdictOf(deltaPct(berryValue, zeroValue), label('g')),
+          adValue === null ? '-' : verdictOf(deltaPct(adValue, zeroValue), label('h')),
+        ];
+      }
       console.log(
-        `| ${start} | ${stats.runs} | ${stats.medFull} | ${stats.medPlaced} | ${stats.medCoins} | ${stats.meanCoins.toFixed(1)} | ${stats.meanBerries.toFixed(2)} | ${stats.meanSeconds.toFixed(1)} | ${stats.coinsPerMin.toFixed(1)} | ${stats.layersPerMin.toFixed(1)} | ${stats.coinsPerPlayMin.toFixed(1)} | ${stats.layersPerPlayMin.toFixed(1)} | ${checks.join(' | ')} |`,
+        `| ${start} | ${stats.runs} | ${stats.medFull} | ${stats.medPlaced} | ${stats.medCoins} | ${stats.meanCoins.toFixed(1)} | ${stats.meanBerries.toFixed(2)} | ${stats.meanSeconds.toFixed(1)} | ${stats.coinsPerMin.toFixed(1)} | ${stats.layersPerMin.toFixed(1)} | ${stats.coinsPerPlayMin.toFixed(1)} | ${stats.layersPerPlayMin.toFixed(1)} | ${cells.join(' | ')} |`,
       );
     }
     if (player.team === NO_TEAM) {

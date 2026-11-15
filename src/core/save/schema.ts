@@ -136,11 +136,11 @@ export interface SaveV6 extends Omit<SaveV5, 'version'> {
 
 /**
  * Version 7 (start from a checkpoint): `checkpoints` lists the opened checkpoint heights (a classic
- * run that reached one opens it for good) and `checkpointAds` counts the ad starts of the local day.
+ * run started from zero that reached one opens it for good) and `checkpointAds` counts the ad starts of the local day.
  */
 export interface SaveV7 extends Omit<SaveV6, 'version'> {
   version: 7;
-  /** Opened checkpoint heights (`CHECKPOINT_HEIGHTS`), ascending; always include those of `records.classicHeight`. */
+  /** Opened checkpoint heights (`CHECKPOINT_HEIGHTS`), ascending; derived from `records.classicHeight` only when missing. */
   checkpoints: number[];
   /** Checkpoint starts paid with a rewarded ad on the local day `day`. */
   checkpointAds: { day: string; used: number };

@@ -1,7 +1,7 @@
 import { CREATURE_IDS, MAX_CREATURE_LEVEL } from '../../data/creatures';
 import { MAX_BAKER_LEVEL, OVEN } from '../../data/progression';
 import { SAVE_DEFAULTS } from '../../data/save-defaults';
-import { withReached } from '../checkpoints';
+import { isCheckpointHeight, withReached, type CheckpointHeight } from '../checkpoints';
 import { xpToNext } from '../progression';
 import { pickTeam } from '../team';
 import { createDefaultSave } from './defaults';
@@ -204,11 +204,9 @@ function normalize(raw: Obj, d: Save): Save {
       carry: Math.min(uint(oven.carry, 0), OVEN.layersPerXp - 1),
     },
     doubles: { day: day(doubles.day), used: uint(doubles.used, 0) },
-    // Valid heights only, ascending, and never fewer than the record has reached.
-    checkpoints: withReached(
-      Array.isArray(raw.checkpoints) ? (raw.checkpoints as unknown[]).filter(isNumber) : [],
-      classicHeight,
-    ),
+    // Ascending, each height implying the lower ones. A valid list is kept as is (the record may
+    // come from a checkpoint run); a missing or damaged one is derived from the record.
+    checkpoints: normalizeCheckpoints(raw.checkpoints, classicHeight),
     checkpointAds: { day: day(checkpointAds.day), used: uint(checkpointAds.used, 0) },
     consent: {
       attAsked: bool(consent.attAsked, false),
@@ -278,4 +276,16 @@ export function loadSave(
 
 export function serializeSave(save: Save): string {
   return JSON.stringify(save);
+}
+
+/**
+ * The opened checkpoints of a save. A clean list is kept as is (the record may come from a
+ * checkpoint run, so it must not open anything); a missing or damaged one is not trusted: its
+ * valid heights are kept and the record of the save opens the rest, as the migration does.
+ */
+function normalizeCheckpoints(value: unknown, classicHeight: number): CheckpointHeight[] {
+  if (!Array.isArray(value)) return withReached([], classicHeight);
+  const list: unknown[] = value;
+  const heights = list.filter((h): h is CheckpointHeight => isNumber(h) && isCheckpointHeight(h));
+  return withReached(heights, heights.length === list.length ? 0 : classicHeight);
 }

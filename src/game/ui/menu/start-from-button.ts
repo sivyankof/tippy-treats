@@ -3,7 +3,7 @@ import { PALETTE } from '../../../data/palette';
 import { t } from '../../../i18n';
 import { createTextButton, type Button, type LabelButtonLayout } from '../button';
 
-/** The small "Start from ▸" button that opens the "Where from?" window (Home and the results). */
+/** The small "Choose start" button that opens the "Where from?" window (Home and the results). */
 export function createStartFromButton(
   scene: Phaser.Scene,
   layout: LabelButtonLayout & { font: number; pad: number },
