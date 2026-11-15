@@ -48,6 +48,34 @@ export interface AbilityRecipe {
   notes: readonly TimedTone[];
 }
 
+/** Attack of every note of a rattle, seconds. */
+const RATTLE_ATTACK = 0.004;
+
+/** A rattle: `count` short notes `step` apart, the pitch going from `from` to `to`, each note bending down to `bend` of it. */
+function rattle(o: {
+  wave: SynthWave;
+  count: number;
+  step: number;
+  duration: number;
+  from: number;
+  to: number;
+  bend: number;
+  gain: number;
+}): TimedTone[] {
+  return Array.from({ length: o.count }, (_, i) => {
+    const freq = o.from + ((o.to - o.from) * i) / Math.max(1, o.count - 1);
+    return {
+      delay: i * o.step,
+      wave: o.wave,
+      freq,
+      endFreq: freq * o.bend,
+      attack: RATTLE_ATTACK,
+      duration: o.duration,
+      gain: o.gain,
+    };
+  });
+}
+
 export const SFX = {
   /** Gain floor: exponential ramps never go to 0, they end here and the node is stopped. */
   silence: 0.0001,
@@ -469,96 +497,122 @@ export const SFX = {
   } satisfies ToneRecipe,
 
   /**
-   * "Гость на башне": a layer lands on the fly. A soft wet splat (a low thump over a lowpass
-   * burst), a comic squeak when the fly peels off (up, then a little back down), and the offended
-   * buzz as it bolts: a harsh note that wobbles and falls, three times, each shorter.
+   * "Гость на башне" (the kitchen fly, docs/06, section 7): a low dense splat when a layer lands
+   * on it, a stretchy pop as it peels off, a giggle from a neighbour layer and the rattling buzz
+   * as it staggers away.
    */
   guest: {
+    /** "Шмяк": lower and denser than a drop, a thump over a deeper hum and a wet burst. */
     splat: {
       thump: {
         wave: 'sine',
-        freq: 190,
-        endFreq: 60,
+        freq: 130,
+        endFreq: 42,
         attack: 0.002,
-        duration: 0.12,
-        gain: 0.4,
+        duration: 0.2,
+        gain: 0.6,
+      } satisfies ToneRecipe,
+      sub: {
+        wave: 'triangle',
+        freq: 72,
+        endFreq: 30,
+        attack: 0.004,
+        duration: 0.26,
+        gain: 0.42,
       } satisfies ToneRecipe,
       wet: {
         filter: 'lowpass',
-        cutoff: 1400,
-        endCutoff: 260,
-        q: 0.9,
+        cutoff: 1100,
+        endCutoff: 160,
+        q: 1.1,
         attack: 0.002,
-        duration: 0.14,
-        gain: 0.34,
+        duration: 0.2,
+        gain: 0.42,
       } satisfies NoiseRecipe,
     },
-    squeak: [
-      {
-        delay: 0,
-        wave: 'sine',
-        freq: 1000,
-        endFreq: 2100,
-        attack: 0.006,
-        duration: 0.1,
-        gain: 0.26,
-      },
-      {
-        delay: 0.09,
-        wave: 'sine',
-        freq: 2100,
-        endFreq: 1500,
-        attack: 0.004,
-        duration: 0.07,
-        gain: 0.22,
-      },
-    ] satisfies readonly TimedTone[],
+    /** The stretchy "чпок" of the peel: a note pulled up, then a short pop and a click. */
+    peel: {
+      notes: [
+        {
+          delay: 0,
+          wave: 'sine',
+          freq: 240,
+          endFreq: 760,
+          attack: 0.01,
+          duration: 0.16,
+          gain: 0.18,
+        },
+        {
+          delay: 0.16,
+          wave: 'sine',
+          freq: 980,
+          endFreq: 360,
+          attack: 0.002,
+          duration: 0.06,
+          gain: 0.34,
+        },
+      ] satisfies readonly TimedTone[],
+      click: {
+        delay: 0.16,
+        filter: 'bandpass',
+        cutoff: 2600,
+        q: 1.4,
+        attack: 0.001,
+        duration: 0.025,
+        gain: 0.28,
+      } satisfies TimedNoise,
+    },
+    /** The rattling buzz of the staggering flight away: short notes in a row, the pitch falling. */
     buzz: [
+      ...rattle({
+        wave: 'sawtooth',
+        count: 12,
+        step: 0.065,
+        duration: 0.045,
+        from: 270,
+        to: 170,
+        bend: 0.8,
+        gain: 0.1,
+      }),
+      ...rattle({
+        wave: 'square',
+        count: 12,
+        step: 0.065,
+        duration: 0.045,
+        from: 135,
+        to: 85,
+        bend: 0.8,
+        gain: 0.04,
+      }),
+    ] satisfies readonly TimedTone[],
+    /** A neighbour giggles: "хи-хи-хи", three short notes going down. */
+    giggle: [
       {
         delay: 0,
-        wave: 'sawtooth',
-        freq: 260,
-        endFreq: 190,
-        attack: 0.01,
-        duration: 0.2,
-        gain: 0.1,
+        wave: 'triangle',
+        freq: 1180,
+        endFreq: 1020,
+        attack: 0.005,
+        duration: 0.07,
+        gain: 0.14,
       },
       {
-        delay: 0.24,
-        wave: 'sawtooth',
-        freq: 250,
-        endFreq: 180,
-        attack: 0.01,
-        duration: 0.17,
-        gain: 0.1,
+        delay: 0.1,
+        wave: 'triangle',
+        freq: 1080,
+        endFreq: 930,
+        attack: 0.005,
+        duration: 0.07,
+        gain: 0.13,
       },
       {
-        delay: 0.46,
-        wave: 'sawtooth',
-        freq: 240,
-        endFreq: 150,
-        attack: 0.01,
-        duration: 0.3,
-        gain: 0.1,
-      },
-      { delay: 0, wave: 'square', freq: 131, endFreq: 95, attack: 0.01, duration: 0.2, gain: 0.04 },
-      {
-        delay: 0.24,
-        wave: 'square',
-        freq: 125,
-        endFreq: 90,
-        attack: 0.01,
-        duration: 0.17,
-        gain: 0.04,
-      },
-      {
-        delay: 0.46,
-        wave: 'square',
-        freq: 120,
-        endFreq: 75,
-        attack: 0.01,
-        duration: 0.3,
-        gain: 0.04,
+        delay: 0.2,
+        wave: 'triangle',
+        freq: 980,
+        endFreq: 820,
+        attack: 0.005,
+        duration: 0.09,
+        gain: 0.12,
       },
     ] satisfies readonly TimedTone[],
   },

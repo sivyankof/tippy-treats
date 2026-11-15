@@ -1,50 +1,85 @@
 import type * as Phaser from 'phaser';
 import type { GuestLook } from '../../data/tower-guest';
 import { TOWER_GUEST } from '../../data/tower-guest';
-import { sineWave } from '../../util/math';
+import { DEG_TO_RAD, sineWave } from '../../util/math';
+import { ellipsePoints, fillPolygon } from '../fx/plain-style';
 import { bakeTexture } from '../ui/bake-texture';
+import { trembleAngle } from './tower-guest-plan';
 
 /**
- * Bakes the flat picture of a guest: a pancake with splayed wings, little feet at its sides
- * and two big round eyes bulging up, their pupils crossed. Nothing but the guest's own colours.
+ * Bakes the flat picture of a guest: a pancake much wider than the guest, one wing pressed flat
+ * under it and two big round eyes crossed out. The legs and the other wing that stick out of it
+ * are drawn live by `drawFlatLimbs`. Nothing but the guest's own colours.
  */
 export function bakeGuestFlat(scene: Phaser.Scene, look: GuestLook): void {
-  const {
-    texture,
-    width: w,
-    height: h,
-    body,
-    wing,
-    wingAlpha,
-    eyeWhite,
-    pupil,
-    outline,
-    eyeRadiusShare,
-    eyeRingPx,
-  } = look.flat;
-  bakeTexture(scene, texture, w, h, (g) => {
+  const f = look.flat;
+  const { width: w, height: h } = f;
+  bakeTexture(scene, f.texture, w, h, (g) => {
     const cx = w / 2;
-    const cy = h * 0.7;
-    const eye = h * eyeRadiusShare;
-    g.fillStyle(wing, wingAlpha);
-    g.fillEllipse(cx - w * 0.3, cy - h * 0.06, w * 0.3, h * 0.2);
-    g.fillEllipse(cx + w * 0.3, cy - h * 0.06, w * 0.3, h * 0.2);
-    g.fillStyle(body, 1);
-    g.fillEllipse(cx, cy, w * 0.5, h * 0.3);
+    const cy = h * f.bodyY;
+    const eye = h * f.eyeRadiusShare;
+    const wing = f.flatWing;
+    g.fillStyle(f.wing, f.wingAlpha);
+    g.fillEllipse(cx - w * wing.x, h * wing.y, w * wing.width, h * wing.height);
+    g.fillStyle(f.body, 1);
+    g.fillEllipse(cx, cy, w * f.bodyWidth, h * f.bodyHeight);
+    const arm = eye * f.crossShare;
     for (const side of [-1, 1]) {
-      for (const step of [0, 1, 2]) {
-        g.fillEllipse(cx + side * (w * 0.2 + step * w * 0.07), cy + h * 0.14, w * 0.06, h * 0.09);
-      }
-    }
-    for (const side of [-1, 1]) {
-      const ex = cx + side * w * 0.12;
-      const ey = cy - h * 0.3;
-      g.fillStyle(outline, 1);
-      g.fillCircle(ex, ey, eye + eyeRingPx);
-      g.fillStyle(eyeWhite, 1);
+      const ex = cx + side * w * f.eyeX;
+      const ey = h * f.eyeY;
+      g.fillStyle(f.outline, 1);
+      g.fillCircle(ex, ey, eye + f.eyeRingPx);
+      g.fillStyle(f.eyeWhite, 1);
       g.fillCircle(ex, ey, eye);
-      g.fillStyle(pupil, 1);
-      g.fillCircle(ex - side * eye * 0.32, ey + eye * 0.12, eye * 0.38);
+      g.lineStyle(f.crossPx, f.pupil, 1);
+      g.lineBetween(ex - arm, ey - arm, ex + arm, ey + arm);
+      g.lineBetween(ex - arm, ey + arm, ex + arm, ey - arm);
+    }
+  });
+}
+
+/**
+ * Draws the legs and the wing that stick out of the pancake into `g` (flat picture pixels): three
+ * legs fanning out on each side and one wing standing up, all shivering when `trembling`.
+ */
+export function drawFlatLimbs(
+  g: Phaser.GameObjects.Graphics,
+  look: GuestLook,
+  timeMs: number,
+  trembling: boolean,
+): void {
+  const f = look.flat;
+  const { legs, wingOut } = f;
+  const { tremble } = TOWER_GUEST.splat;
+  const shiver = (index: number, deg: number): number =>
+    trembling ? trembleAngle(index, timeMs, deg) : 0;
+  const cx = f.width / 2;
+  const y = f.height * legs.y;
+  g.clear();
+  g.fillStyle(f.wing, f.wingAlpha);
+  const wingRad = wingOut.angleDeg * DEG_TO_RAD + shiver(legs.fanDeg.length * 2, tremble.wingDeg);
+  const half = wingOut.lengthPx / 2;
+  fillPolygon(
+    g,
+    ellipsePoints(
+      cx + f.width * wingOut.x + Math.cos(wingRad) * half,
+      f.height * wingOut.y + Math.sin(wingRad) * half,
+      half,
+      wingOut.widthPx / 2,
+      wingRad,
+    ),
+  );
+  g.lineStyle(look.legs.widthPx, look.legs.color, 1);
+  legs.fanDeg.forEach((deg, i) => {
+    for (const side of [-1, 1]) {
+      const rad = deg * DEG_TO_RAD + shiver(i * 2 + (side > 0 ? 1 : 0), tremble.legDeg);
+      const x = cx + side * f.width * legs.x;
+      g.lineBetween(
+        x,
+        y,
+        x + side * Math.cos(rad) * legs.lengthPx,
+        y + Math.sin(rad) * legs.lengthPx,
+      );
     }
   });
 }

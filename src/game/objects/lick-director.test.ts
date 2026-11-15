@@ -129,6 +129,7 @@ function playRun(dripsPerLayer: number): { starts: number[]; licks: number; regr
       cutSide: null,
       look: { kind: 'plain' },
       faceView: face,
+      glanceAtWorld: (): void => {},
       glazeDrips: glaze,
     };
     views.set(i, view as unknown as LayerView);

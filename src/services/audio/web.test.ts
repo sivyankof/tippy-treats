@@ -210,15 +210,20 @@ describe('WebAudioService', () => {
     expect(ctx.oscillators).toHaveLength(2 + SFX.lick.mmm.length + SFX.lick.long.notes.length + 1);
   });
 
-  it('plays the guest sounds: the splat as a thump over a burst, the squeak and the buzz as their notes', () => {
+  it('plays the guest sounds: the splat as two tones over a burst, the peel, the buzz and the giggle as their notes', () => {
     const { ctx, service } = setup();
     service.unlock();
     service.guestSplat();
-    expect(ctx.oscillators).toHaveLength(1);
-    service.guestSqueak();
-    expect(ctx.oscillators).toHaveLength(1 + SFX.guest.squeak.length);
+    expect(ctx.oscillators).toHaveLength(2);
+    service.guestPeel();
+    const peel = SFX.guest.peel.notes.length;
+    expect(ctx.oscillators).toHaveLength(2 + peel);
     service.guestBuzz();
-    expect(ctx.oscillators).toHaveLength(1 + SFX.guest.squeak.length + SFX.guest.buzz.length);
+    expect(ctx.oscillators).toHaveLength(2 + peel + SFX.guest.buzz.length);
+    service.guestGiggle();
+    expect(ctx.oscillators).toHaveLength(
+      2 + peel + SFX.guest.buzz.length + SFX.guest.giggle.length,
+    );
   });
 
   it('disconnects nodes when a sound ends', () => {

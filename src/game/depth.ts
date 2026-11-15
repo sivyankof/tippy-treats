@@ -20,6 +20,11 @@ export const DEPTH = {
   guides: 26,
   bubble: 27,
   pieces: 28,
+  /** Stars circling over the splatted guest of the tower: behind it and in front of it. */
+  guestStarsBack: 27.9,
+  /** A guest pressed under a layer sits half a layer step below that layer, over the layer under it. */
+  guestPressedStep: 0.5,
+  guestStarsFront: 28.1,
   /** Glaze drops running down a bitten edge, above the piece they fall from. */
   drips: 29,
   /** The "Boosted!" label: it passes behind the flying layer instead of over its face. */

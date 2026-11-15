@@ -1,6 +1,7 @@
 import { BD_TEX } from './backdrop';
 import { BACKDROP_COLORS } from './backdrop-colors';
 import type { Range, TravelSpec } from './backdrop-life';
+import { CREATURE_MATERIALS } from './creature-materials';
 import type { ZoneId } from './zones';
 
 /**
@@ -16,7 +17,7 @@ export interface GuestLook {
   feetY: number;
   /** The head side of the picture: the guest faces this way when the picture is not mirrored. */
   headSide: -1 | 1;
-  /** Key and colours of the flat picture: a pancake with bulging eyes. */
+  /** Key and colours of the flat picture: a pancake with crossed-out eyes. */
   flat: {
     texture: string;
     width: number;
@@ -25,9 +26,24 @@ export interface GuestLook {
     feetShare: number;
     /** Half of the flat picture's visible width at `scale` 1, for the room it takes on a layer. */
     halfWidthPx: number;
-    /** Radius of one bulging eye, a share of the picture height, and the width of its outline. */
+    /** The body ellipse: its centre and size as shares of the picture. */
+    bodyY: number;
+    bodyWidth: number;
+    bodyHeight: number;
+    /** The wing pressed flat under the body (the other one sticks out, see `wingOut`). */
+    flatWing: { x: number; y: number; width: number; height: number };
+    /** The eyes: centres (shares of the picture), radius (share of the height), outline width. */
+    eyeX: number;
+    eyeY: number;
     eyeRadiusShare: number;
     eyeRingPx: number;
+    /** The cross in each eye: arm length (share of the eye radius) and line width. */
+    crossShare: number;
+    crossPx: number;
+    /** Legs sticking out from under the pancake: where they start (shares), how long and how they fan out. */
+    legs: { x: number; y: number; lengthPx: number; fanDeg: readonly number[] };
+    /** The other wing, sticking out: where it starts (shares), its size and lean. */
+    wingOut: { x: number; y: number; lengthPx: number; widthPx: number; angleDeg: number };
     body: number;
     wing: number;
     wingAlpha: number;
@@ -58,6 +74,9 @@ export interface GuestLook {
 
 const KITCHEN_FLY = BD_TEX.kitchen.fly;
 
+/** The camera kick of the heaviest landing (the brownie's material): a splat kicks as hard. */
+const HEAVY_KICK = CREATURE_MATERIALS.brownie.impact?.kick ?? 1;
+
 export const TOWER_GUESTS: Partial<Record<ZoneId, GuestLook>> = {
   kitchen: {
     texture: KITCHEN_FLY,
@@ -66,12 +85,22 @@ export const TOWER_GUESTS: Partial<Record<ZoneId, GuestLook>> = {
     headSide: -1,
     flat: {
       texture: 'guest_fly_flat',
-      width: 72,
-      height: 40,
+      width: 92,
+      height: 44,
       feetShare: 0.55,
-      halfWidthPx: 32,
-      eyeRadiusShare: 0.21,
+      halfWidthPx: 40,
+      bodyY: 0.64,
+      bodyWidth: 0.62,
+      bodyHeight: 0.3,
+      flatWing: { x: 0.25, y: 0.6, width: 0.28, height: 0.2 },
+      eyeX: 0.11,
+      eyeY: 0.62,
+      eyeRadiusShare: 0.2,
       eyeRingPx: 1.6,
+      crossShare: 0.62,
+      crossPx: 2.4,
+      legs: { x: 0.29, y: 0.7, lengthPx: 11, fanDeg: [8, 32, 58] },
+      wingOut: { x: 0.2, y: 0.6, lengthPx: 22, widthPx: 9, angleDeg: -12 },
       body: BACKDROP_COLORS.kitchen.fly,
       wing: BACKDROP_COLORS.shared.white,
       wingAlpha: 0.75,
@@ -158,58 +187,122 @@ export const TOWER_GUEST = {
   /** The wing beat and the buzz tilt fade in over this long when a flight starts (and out when it lands). */
   flightRampMs: 100,
 
+  /** "Fewer effects" lets no guest come to the tower (the dev trigger `window.tippyFly()` still does). */
+  reducedVisits: false,
+
   /**
    * The guest flinches (hops, leans away, settles) when a layer in the air comes within `marginPx`
    * of it or over it; it does not leave. `cooldownMs` keeps it from hopping on every pass.
    */
   shy: { marginPx: 14, hopPx: 10, hopMs: 260, leanDeg: 14, cooldownMs: 1400 },
 
-  /** A layer lands on the guest. */
+  /** A layer lands on the guest (docs/06, "Гость на башне", the splat step by step). */
   splat: {
     /**
-     * The picture squashes from the normal shape into this one (`squashMs`), then the flat
-     * picture pops in, its eyes bulging, and settles with a gloop that dies out (`kick` times
-     * `amount` at first, over `settleMs`).
+     * The blow on the layer that landed: it holds its squash for `hitstopMs` (only the picture;
+     * the sim and the game clock go on), squashes deeper than a normal landing and dips by
+     * `dipPx` where the guest is, tilting around its far bottom corner, then settles over
+     * `settleMs`. The camera is kicked `kickMul` times a normal landing, as a heavy layer does.
      */
-    squashMs: 70,
+    impact: {
+      hitstopMs: 20,
+      squashX: 1.2,
+      squashY: 0.62,
+      dipPx: 8,
+      settleMs: 340,
+      dipEase: 'Quad.easeOut',
+      kickMul: HEAVY_KICK,
+    },
+    /**
+     * The picture squashes from the normal shape into this one (`squashMs`), then the flat
+     * picture pops in and settles with a gloop that dies out (`kick` times `amount` at first,
+     * over `settleMs`).
+     */
+    squashMs: 60,
     squashTo: { scaleX: 1.6, scaleY: 0.25 },
     gloop: { amount: 0.05, periodMs: 260, kick: 5, settleMs: 160 },
     holdMs: [800, 1200] as Range,
+    /** The legs and the wing sticking out of the pancake tremble: swing in degrees, one shiver every `periodMs`. */
+    tremble: { periodMs: 70, legDeg: 14, wingDeg: 10 },
     /** The layer above looks down at the guest and gapes for this long after the hold ends. */
     surprise: { reaction: 'gape' as const, extraMs: 300 },
-    peelMs: 280,
     /**
-     * The peel: the flat picture narrows as one end comes off (`flatEnd`, scales of the flat
-     * picture), then the normal one swells back (`scaleX`, `scaleY`), tilted by `tiltDeg`.
+     * The stretchy peel: the flat picture narrows and stretches up (`stretch`, scales of the flat
+     * picture) while it tilts up to `tiltDeg`; at `popAt` of the way the normal picture pops out,
+     * crumpled small (`pop`), and the tilt goes back.
      */
-    peel: { flatEnd: { scaleX: 0.47, scaleY: 0.97 }, scaleX: 0.85, scaleY: 1.3, tiltDeg: 18 },
-    /** Shaking itself into shape: a damped wobble of the scales and the tilt. */
-    shakeMs: 460,
-    shake: { amount: 0.3, cycles: 3.5, decay: 3.2, tiltDeg: 14 },
-    /** The offended flight away: a long zigzag with sharp turns. */
+    peelMs: 300,
+    peel: {
+      stretch: { scaleX: 0.5, scaleY: 1.8 },
+      popAt: 0.6,
+      pop: { scaleX: 0.8, scaleY: 0.6 },
+      tiltDeg: 18,
+    },
+    /** Inflating back from the crumpled shape: a spring that overshoots `cycles` times and dies out. */
+    inflateMs: 420,
+    inflate: { cycles: 2, decay: 3.5 },
+    /** Shaking its head: a damped swing of the tilt with a little wobble of the scales. */
+    shakeMs: 760,
+    shake: { amount: 0.08, cycles: 4, decay: 2.4, tiltDeg: 20 },
+    /**
+     * Stars circling over its head while it shakes: `count` of them on an ellipse (`radiusXPx`,
+     * `radiusYPx`, pixels of the world) `liftPx` above its feet, one turn every `periodMs`; the
+     * far side is drawn `farScale` smaller. They fade out over `fadeMs` once it flies away.
+     */
+    orbit: {
+      count: 3,
+      radiusXPx: 40,
+      radiusYPx: 12,
+      liftPx: 74,
+      periodMs: 560,
+      scale: 1.15,
+      farScale: 0.6,
+      fadeMs: 500,
+      tints: [0xffd23f, 0xfff3b0, 0xffd23f],
+    },
+    /**
+     * The offended flight away: a long zigzag whose swing staggers (grows and shrinks `stagger.share`
+     * of it, `stagger.cycles` times on the way) and a strong tilt.
+     */
     flee: {
-      flightMs: [1700, 2300] as Range,
-      zigzagPx: 44,
+      flightMs: [1900, 2500] as Range,
+      zigzagPx: 40,
       zigzagCycles: 5,
       risePx: [180, 320] as Range,
+      stagger: { share: 0.7, cycles: 1.7 },
+      tiltDeg: 26,
     },
     /** Little stars fly out of the pancake. */
     stars: {
-      count: 7,
+      count: 9,
       tints: [0xffd23f, 0xfff3b0, 0xffffff],
       style: {
-        speed: [90, 190] as Range,
+        speed: [110, 230] as Range,
         gravity: 260,
         drag: 1.4,
         spin: [-240, 240] as Range,
-        scale: [0.5, 0.9] as Range,
+        scale: [0.55, 1] as Range,
         scaleTo: 0.2,
         alpha: 1,
         holdShare: 0.4,
-        lifeMs: [520, 760] as Range,
+        lifeMs: [560, 820] as Range,
         spreadDeg: 300,
         tiltDeg: 0,
       },
+    },
+    /** The clap ring around the pancake: a ring as wide as `widthMul` times the pancake. */
+    ring: { tint: 0xffffff, widthMul: 1.1 },
+    /**
+     * The layers under the seam (`depth` of them) glance at the pancake, each with `glanceChance`;
+     * one of those may giggle (`giggleChance`) `giggleDelayMs` after the splat, for `giggleMs`.
+     */
+    neighbours: {
+      depth: 2,
+      glanceChance: 0.85,
+      giggleChance: 0.6,
+      giggleDelayMs: 380,
+      giggleMs: 700,
+      giggle: 'joy' as const,
     },
   },
 } as const;

@@ -88,10 +88,12 @@ export class RunFx {
       this.glow,
       gameState.recordHeight,
     );
-    this.guest = new TowerGuest(scene, this.tower, this.landingFx.particles, {
+    this.guest = new TowerGuest(scene, this.tower, this.landingFx, {
       splat: () => services.audio.guestSplat(),
-      squeak: () => services.audio.guestSqueak(),
+      peel: () => services.audio.guestPeel(),
       buzz: () => services.audio.guestBuzz(),
+      giggle: () => services.audio.guestGiggle(),
+      kick: (mul) => this.kick.kick(ANIM.cameraKick.drop * mul, ANIM.cameraKick.durationMs),
     });
     const licks = this.tower.licks;
     licks.onSlurp = () => services.audio.lickSlurp();

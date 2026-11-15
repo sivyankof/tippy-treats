@@ -255,8 +255,7 @@ export class LickDirector {
       if (this.random.next() >= LICK.neighbourGlanceChance) continue;
       const otherFace = other.faceView;
       if (otherFace.licking) continue;
-      const s = otherFace.faceScale || 1;
-      otherFace.glanceAt((fx - other.x - otherFace.x) / s, (fy - other.y - otherFace.y) / s, left);
+      other.glanceAtWorld(fx, fy, left);
       run.glancers.push(other);
     }
   }

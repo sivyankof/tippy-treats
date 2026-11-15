@@ -20,6 +20,20 @@ import { LayerRig } from './layer-rig';
 import { artWidth, lookCodeFor } from './layer-art';
 import { LayerArtSlot } from './layer-art-slot';
 import { GlazeDripLayer } from './glaze-drip-layer';
+import { pressAngle, pressDrop, pressPivot, pressShift } from './layer-press';
+
+/** A heavy press at one spot of a layer (it landed on the guest of the tower). */
+export interface PressSpec {
+  /** The squash it starts from, held for `holdMs`, then springing back over `settleMs`. */
+  scaleX: number;
+  scaleY: number;
+  holdMs: number;
+  settleMs: number;
+  squashEase: string;
+  /** How far the pressed spot dips, and how the dip eases back. */
+  dipPx: number;
+  dipEase: string;
+}
 
 /**
  * One cake layer: a baked picture (shadow, body, glaze, gloss) and a face on top.
@@ -57,6 +71,9 @@ export class LayerView extends Phaser.GameObjects.Container {
   slideX = 0;
   private faceEnabled = true;
   private readonly lookPlan: LayerPlan = { kind: 'plain' };
+  /** The tilt of a press (radians) around the bottom corner on `side` (1 right, -1 left). */
+  private readonly press = { angle: 0, side: 1 as -1 | 1 };
+  private readonly pressOffset = { x: 0, y: 0 };
 
   constructor(scene: Phaser.Scene) {
     super(scene);
@@ -155,6 +172,13 @@ export class LayerView extends Phaser.GameObjects.Container {
   }
 
   /** Pieces that fall off the tower have no face. */
+  /** The face looks at the world point (wx, wy) for `ms`. */
+  glanceAtWorld(wx: number, wy: number, ms: number): void {
+    const face = this.faceView;
+    const scale = face.faceScale || 1;
+    face.glanceAt((wx - this.x - face.x) / scale, (wy - this.y - face.y) / scale, ms);
+  }
+
   setFaceEnabled(enabled: boolean): this {
     this.faceEnabled = enabled;
     this.face.setVisible(enabled && this.artSlot.drawnWidth > 0);
@@ -224,6 +248,56 @@ export class LayerView extends Phaser.GameObjects.Container {
     }
   }
 
+  /**
+   * A heavy press at `dx` from the centre: a deeper squash held for a moment (a hitstop of the
+   * picture only), and a dip at that spot as the layer tilts around its far bottom corner; both
+   * settle back. Only the drawing moves, never the layer's place.
+   */
+  playPress(dx: number, spec: PressSpec): void {
+    const { scaleX, scaleY, holdMs, settleMs, squashEase, dipPx, dipEase } = spec;
+    springScaleBack(
+      this.scene,
+      this.squashRoot,
+      { scaleX, scaleY },
+      settleMs,
+      squashEase,
+      0,
+      holdMs,
+    );
+    const half = (Math.max(0, this.artSlot.drawnWidth) / 2) * scaleX;
+    this.press.side = pressPivot(dx, half) < 0 ? -1 : 1;
+    this.press.angle = pressAngle(dx * scaleX, half, dipPx);
+    this.scene.tweens.killTweensOf(this.press);
+    this.scene.tweens.add({
+      targets: this.press,
+      angle: 0,
+      duration: settleMs,
+      ease: dipEase,
+      delay: holdMs,
+    });
+  }
+
+  /** How far the bottom edge at `dx` from the centre is pushed down by a press now, pixels. */
+  pressDropAt(dx: number): number {
+    if (this.press.angle === 0) return 0;
+    const sx = this.squashRoot.scaleX;
+    return pressDrop(dx * sx, this.pressCorner(), this.press.angle);
+  }
+
+  /** The bottom corner a press tilts around, pixels from the bottom centre at the current squash. */
+  private pressCorner(): number {
+    return (this.press.side * Math.max(0, this.artSlot.drawnWidth) * this.squashRoot.scaleX) / 2;
+  }
+
+  /** Puts the tilt of a press onto the part pinned to the bottom edge (after the rig placed it). */
+  private applyPress(): void {
+    const angle = this.press.angle;
+    const shift = pressShift(this.pressCorner(), angle, this.pressOffset);
+    this.squashRoot.setRotation(angle);
+    this.squashRoot.setX(shift.x);
+    if (angle !== 0) this.squashRoot.y += shift.y;
+  }
+
   /** Quick vertical squash (a sneeze) that springs back. */
   playSqueeze(scaleY: number, durationMs: number): void {
     this.springBack(this.squashRoot, { scaleY }, durationMs, ANIM.sneeze.ease, 0);
@@ -264,7 +338,15 @@ export class LayerView extends Phaser.GameObjects.Container {
 
   /** Stops every animation of this layer and restores its shape, for reuse from a pool. */
   resetAnim(): this {
-    this.scene.tweens.killTweensOf([this, this.squashRoot, this.content, this.glossSweep]);
+    this.scene.tweens.killTweensOf([
+      this,
+      this.squashRoot,
+      this.content,
+      this.glossSweep,
+      this.press,
+    ]);
+    this.press.angle = 0;
+    this.squashRoot.setRotation(0).setX(0);
     this.edgeSkin?.clear();
     this.rig.reset();
     this.material.reset();
@@ -285,6 +367,7 @@ export class LayerView extends Phaser.GameObjects.Container {
    */
   tick(dtMs: number, motion?: MaterialMotion): void {
     this.rig.apply();
+    this.applyPress();
     this.glazeDrips.setAlpha(this.art.alpha);
     this.material.tick(dtMs, motion);
     if (motion) this.breathe(motion);

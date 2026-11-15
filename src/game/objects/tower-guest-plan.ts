@@ -2,6 +2,7 @@ import { TOWER_GUEST } from '../../data/tower-guest';
 import {
   DEG_TO_RAD,
   clamp01,
+  easeInQuad,
   easeOutQuad,
   lerp,
   pickRange,
@@ -13,7 +14,10 @@ const { splat } = TOWER_GUEST;
 
 /** Where a visit is: coming in, resting, leaving, or the stages of a splat. */
 export type GuestPhase =
-  'away' | 'arrive' | 'sit' | 'leave' | 'squash' | 'hold' | 'peel' | 'shake' | 'flee';
+  'away' | 'arrive' | 'sit' | 'leave' | 'squash' | 'hold' | 'peel' | 'inflate' | 'shake' | 'flee';
+
+/** The stages of a splat that show the guest's splat shape, in order. */
+export const SPLAT_STAGES: readonly GuestPhase[] = ['squash', 'hold', 'peel', 'inflate', 'shake'];
 
 /** Waits for the next visit; the numbers come from the cosmetic stream of the run. */
 export class GuestScheduler {
@@ -129,10 +133,17 @@ export interface FlightPoint {
   y: number;
 }
 
+/** A zigzag whose swing grows and shrinks by `share` of it, `cycles` times along the way. */
+export interface Stagger {
+  share: number;
+  cycles: number;
+}
+
 /**
  * Point `t` (0..1) of a flight from (`fromX`, `fromY`) to (`toX`, `toY`): a straight way with
- * sharp zigzag turns across it, `cycles` turns of `zigzagPx` that die out at both ends.
- * `ease` shapes the progress along the way. Fills and returns `out`.
+ * sharp zigzag turns across it, `cycles` turns of `zigzagPx` that die out at both ends; with a
+ * `stagger` the swing is uneven, as if the flier reels. `ease` shapes the progress along the way.
+ * Fills and returns `out`.
  */
 export function flightPoint(
   fromX: number,
@@ -144,6 +155,7 @@ export function flightPoint(
   cycles: number,
   ease: (t: number) => number,
   out: FlightPoint,
+  stagger: Stagger | null = null,
 ): FlightPoint {
   const p = ease(clamp01(t));
   const dx = toX - fromX;
@@ -153,7 +165,8 @@ export function flightPoint(
   const phase = (clamp01(t) * cycles) % 1;
   const tri = 1 - 4 * Math.abs(phase - 0.5);
   const envelope = Math.min(1, clamp01(t) * 4, (1 - clamp01(t)) * 4);
-  const side = tri * envelope * zigzagPx;
+  const reel = stagger ? 1 + stagger.share * Math.sin(TWO_PI * stagger.cycles * clamp01(t)) : 1;
+  const side = tri * envelope * zigzagPx * reel;
   out.x = fromX + dx * p + (-dy / length) * side;
   out.y = fromY + dy * p + (dx / length) * side;
   return out;
@@ -161,7 +174,7 @@ export function flightPoint(
 
 /** Shape of the guest picture: which picture, its scales (1 is the normal size) and the tilt in radians. */
 export interface GuestShape {
-  /** The flat picture (a pancake with bulging eyes) instead of the normal one. */
+  /** The flat picture (a pancake with crossed-out eyes) instead of the normal one. */
   flat: boolean;
   scaleX: number;
   scaleY: number;
@@ -170,9 +183,9 @@ export interface GuestShape {
 
 /**
  * The shape of the guest `inMs` into a stage of the splat: it squashes, the flat picture pops in
- * and gloops while held, narrows as the peel starts, then the normal picture swells back (tilted,
- * as if one end came off first) and shakes itself into shape. The shake ends exactly at the
- * normal shape. Fills and returns `out`.
+ * and gloops while held, stretches up as it peels and pops out as a crumpled normal picture,
+ * inflates back with a spring and shakes its head. Every stage starts where the one before it
+ * ended, and the shake ends exactly at the normal shape. Fills and returns `out`.
  */
 export function splatShape(phase: GuestPhase, inMs: number, out: GuestShape): GuestShape {
   out.flat = false;
@@ -197,27 +210,37 @@ export function splatShape(phase: GuestPhase, inMs: number, out: GuestShape): Gu
     }
     case 'peel': {
       const p = clamp01(inMs / splat.peelMs);
-      out.tilt = -peel.tiltDeg * DEG_TO_RAD * Math.sin(Math.PI * p);
-      if (p < 0.5) {
+      const tilt = -peel.tiltDeg * DEG_TO_RAD;
+      if (p < peel.popAt) {
+        const q = easeInQuad(p / peel.popAt);
         out.flat = true;
-        out.scaleX = lerp(1, peel.flatEnd.scaleX, p * 2);
-        out.scaleY = lerp(1, peel.flatEnd.scaleY, p * 2);
+        out.scaleX = lerp(1, peel.stretch.scaleX, q);
+        out.scaleY = lerp(1, peel.stretch.scaleY, q);
+        out.tilt = tilt * (p / peel.popAt);
       } else {
-        out.scaleX = peel.scaleX;
-        out.scaleY = peel.scaleY;
+        out.scaleX = peel.pop.scaleX;
+        out.scaleY = peel.pop.scaleY;
+        out.tilt = tilt * (1 - (p - peel.popAt) / (1 - peel.popAt));
       }
+      return out;
+    }
+    case 'inflate': {
+      const p = clamp01(inMs / splat.inflateMs);
+      const { cycles, decay } = splat.inflate;
+      // A damped spring from the crumpled shape: it overshoots the normal size and ends exactly on it.
+      const spring = (1 - p) * Math.exp(-decay * p) * Math.cos(TWO_PI * cycles * p);
+      out.scaleX = 1 + (peel.pop.scaleX - 1) * spring;
+      out.scaleY = 1 + (peel.pop.scaleY - 1) * spring;
       return out;
     }
     case 'shake': {
       const p = clamp01(inMs / splat.shakeMs);
       const { amount, cycles, decay, tiltDeg } = splat.shake;
-      // The peel's shape settles back to 1 while a wobble on top of it dies out.
       const fade = (1 - p) * Math.exp(-decay * p);
-      const wobble = Math.sin(TWO_PI * cycles * p) * fade;
-      const settle = (1 - p) * (1 - p);
-      out.scaleX = 1 + (peel.scaleX - 1) * settle + amount * wobble * 0.5;
-      out.scaleY = 1 + (peel.scaleY - 1) * settle - amount * wobble;
-      out.tilt = tiltDeg * DEG_TO_RAD * Math.sin(TWO_PI * cycles * p) * fade;
+      const swing = Math.sin(TWO_PI * cycles * p) * fade;
+      out.scaleX = 1 + amount * Math.abs(swing) * 0.5;
+      out.scaleY = 1 - amount * Math.abs(swing);
+      out.tilt = tiltDeg * DEG_TO_RAD * swing;
       return out;
     }
     default:
@@ -232,9 +255,46 @@ export function stageMs(phase: GuestPhase): number {
       return splat.squashMs;
     case 'peel':
       return splat.peelMs;
+    case 'inflate':
+      return splat.inflateMs;
     case 'shake':
       return splat.shakeMs;
     default:
       return 0;
   }
+}
+
+/** One star circling over the guest's head: offset from its feet (pixels), drawn scale, in front or behind. */
+export interface OrbitStar {
+  x: number;
+  y: number;
+  scale: number;
+  front: boolean;
+}
+
+/**
+ * Star `index` of `splat.orbit.count` circling over the guest's head `timeMs` into the circling:
+ * on an ellipse `liftPx` above the feet, the far half smaller. Fills and returns `out`.
+ */
+export function orbitStar(index: number, timeMs: number, out: OrbitStar): OrbitStar {
+  const { count, radiusXPx, radiusYPx, liftPx, periodMs, scale, farScale } = splat.orbit;
+  const angle = TWO_PI * (timeMs / periodMs + index / count);
+  const depth = Math.sin(angle);
+  out.x = Math.cos(angle) * radiusXPx;
+  out.y = depth * radiusYPx - liftPx;
+  out.front = depth >= 0;
+  out.scale = scale * lerp(farScale, 1, (depth + 1) / 2);
+  return out;
+}
+
+/** Phase step between two neighbouring legs, a share of the shiver period, so no two move together. */
+const TREMBLE_STEP = 0.37;
+
+/**
+ * How far leg or wing `index` of the pancake swings now (radians): a quick shiver of up to
+ * `amountDeg`, each one out of step with the others.
+ */
+export function trembleAngle(index: number, timeMs: number, amountDeg: number): number {
+  const { periodMs } = splat.tremble;
+  return amountDeg * DEG_TO_RAD * sineWave(timeMs + index * periodMs * TREMBLE_STEP, periodMs);
 }

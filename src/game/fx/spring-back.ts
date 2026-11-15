@@ -4,8 +4,9 @@ import type * as Phaser from 'phaser';
 export type ScaleStart = { scaleX?: number; scaleY?: number };
 
 /**
- * Sets the scale of `target` to `from` (after `delayMs`) and tweens it back to 1. Any running
- * tween of the target is stopped first, so a new squash always wins over the old one.
+ * Sets the scale of `target` to `from` (after `delayMs`), holds it for `holdMs` and tweens it
+ * back to 1. Any running tween of the target is stopped first, so a new squash always wins over
+ * the old one.
  */
 export function springScaleBack(
   scene: Phaser.Scene,
@@ -14,6 +15,7 @@ export function springScaleBack(
   durationMs: number,
   ease: string,
   delayMs: number,
+  holdMs = 0,
 ): void {
   scene.tweens.killTweensOf(target);
   const props: Record<string, { from: number; to: number }> = {};
@@ -28,6 +30,6 @@ export function springScaleBack(
     ...props,
     duration: durationMs,
     ease,
-    delay: delayMs,
+    delay: delayMs + holdMs,
   });
 }

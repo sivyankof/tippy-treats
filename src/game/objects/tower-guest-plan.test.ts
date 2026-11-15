@@ -9,11 +9,16 @@ import {
   GuestScheduler,
   layerCovers,
   layerOverGuest,
+  orbitStar,
   shouldFlinch,
   siteOffset,
+  SPLAT_STAGES,
   splatShape,
+  stageMs,
+  trembleAngle,
   type FlightPoint,
   type GuestShape,
+  type OrbitStar,
 } from './tower-guest-plan';
 
 const { site, splat } = TOWER_GUEST;
@@ -179,6 +184,23 @@ describe('flightPoint', () => {
     expect(Math.max(-min, max)).toBeLessThanOrEqual(30 + 1e-9);
   });
 
+  it('reels with a stagger: the swing grows past the amplitude but never past its share more', () => {
+    const stagger = { share: 0.7, cycles: 1.7 };
+    let plain = 0;
+    let reeling = 0;
+    for (let i = 0; i <= 200; i++) {
+      flightPoint(0, 0, 400, 0, i / 200, 30, 5, (t) => t, out);
+      plain = Math.max(plain, Math.abs(out.y));
+      flightPoint(0, 0, 400, 0, i / 200, 30, 5, (t) => t, out, stagger);
+      reeling = Math.max(reeling, Math.abs(out.y));
+    }
+    expect(reeling).toBeGreaterThan(plain);
+    expect(reeling).toBeLessThanOrEqual(30 * (1 + stagger.share) + 1e-9);
+    flightPoint(0, 0, 400, 0, 1, 30, 5, (t) => t, out, stagger);
+    expect(out.x).toBeCloseTo(400);
+    expect(out.y).toBeCloseTo(0);
+  });
+
   it('eases in slowly and out slowly', () => {
     expect(easeIn(0.5)).toBeLessThan(0.5);
     expect(easeOut(0.5)).toBeGreaterThan(0.5);
@@ -196,10 +218,18 @@ describe('splatShape', () => {
     expect(shape.scaleY).toBeCloseTo(splat.squashTo.scaleY);
   });
 
-  it('shows the flat picture while held and begins the peel with it', () => {
+  it('shows the flat picture while held and while the peel stretches it, then pops the normal one', () => {
+    const popMs = splat.peelMs * splat.peel.popAt;
     expect(splatShape('hold', 400, shape).flat).toBe(true);
     expect(splatShape('peel', 0, shape).flat).toBe(true);
-    expect(splatShape('peel', splat.peelMs, shape).flat).toBe(false);
+    splatShape('peel', popMs - 1, shape);
+    expect(shape.flat).toBe(true);
+    expect(shape.scaleY).toBeGreaterThan(1.5);
+    expect(shape.scaleX).toBeLessThan(0.6);
+    splatShape('peel', popMs, shape);
+    expect(shape.flat).toBe(false);
+    expect(shape.scaleX).toBeCloseTo(splat.peel.pop.scaleX);
+    expect(shape.scaleY).toBeCloseTo(splat.peel.pop.scaleY);
   });
 
   it('settles the gloop around the flat shape', () => {
@@ -207,16 +237,75 @@ describe('splatShape', () => {
     expect(Math.abs(shape.scaleX - 1)).toBeLessThanOrEqual(splat.gloop.amount + 1e-9);
   });
 
-  it('is continuous from the peel into the shake, and the shake ends in the normal shape', () => {
-    splatShape('peel', splat.peelMs, shape);
-    const peeled = { x: shape.scaleX, y: shape.scaleY };
-    splatShape('shake', 0, shape);
-    expect(shape.scaleX).toBeCloseTo(peeled.x);
-    expect(shape.scaleY).toBeCloseTo(peeled.y);
+  it('runs from the peel through the inflate into the shake without a jump, and ends in the normal shape', () => {
+    for (let i = 0; i + 1 < SPLAT_STAGES.length; i++) {
+      const stage = SPLAT_STAGES[i];
+      const next = SPLAT_STAGES[i + 1];
+      if (!stage || !next || stage === 'squash' || stage === 'hold') continue;
+      splatShape(stage, stageMs(stage), shape);
+      const end = { ...shape };
+      splatShape(next, 0, shape);
+      expect(shape.flat).toBe(end.flat);
+      expect(shape.scaleX).toBeCloseTo(end.scaleX);
+      expect(shape.scaleY).toBeCloseTo(end.scaleY);
+      expect(shape.tilt).toBeCloseTo(end.tilt);
+    }
     splatShape('shake', splat.shakeMs, shape);
     expect(shape.flat).toBe(false);
     expect(shape.scaleX).toBeCloseTo(1);
     expect(shape.scaleY).toBeCloseTo(1);
     expect(shape.tilt).toBeCloseTo(0);
+  });
+
+  it('inflates past the normal size before it settles', () => {
+    let max = 0;
+    for (let ms = 0; ms <= splat.inflateMs; ms += 5) {
+      max = Math.max(max, splatShape('inflate', ms, shape).scaleY);
+    }
+    expect(max).toBeGreaterThan(1.02);
+  });
+
+  it('shakes its head to both sides', () => {
+    let left = 0;
+    let right = 0;
+    for (let ms = 0; ms <= splat.shakeMs; ms += 5) {
+      const tilt = splatShape('shake', ms, shape).tilt;
+      left = Math.min(left, tilt);
+      right = Math.max(right, tilt);
+    }
+    expect(left).toBeLessThan(-0.1);
+    expect(right).toBeGreaterThan(0.1);
+  });
+});
+
+describe('orbitStar', () => {
+  const star: OrbitStar = { x: 0, y: 0, scale: 0, front: true };
+  const { orbit } = splat;
+
+  it('circles above the feet within its ellipse, smaller behind the head', () => {
+    for (let ms = 0; ms < orbit.periodMs; ms += 20) {
+      orbitStar(0, ms, star);
+      expect(Math.abs(star.x)).toBeLessThanOrEqual(orbit.radiusXPx + 1e-9);
+      expect(star.y).toBeLessThan(0);
+      expect(Math.abs(star.y + orbit.liftPx)).toBeLessThanOrEqual(orbit.radiusYPx + 1e-9);
+      const middle = (orbit.scale * (1 + orbit.farScale)) / 2;
+      if (star.front) expect(star.scale).toBeGreaterThanOrEqual(middle - 1e-9);
+      else expect(star.scale).toBeLessThanOrEqual(middle + 1e-9);
+    }
+  });
+
+  it('spreads the stars evenly around the circle', () => {
+    const a = { ...orbitStar(0, 0, star) };
+    const b = { ...orbitStar(1, 0, star) };
+    expect(Math.hypot(a.x - b.x, a.y - b.y)).toBeGreaterThan(orbit.radiusYPx);
+  });
+});
+
+describe('trembleAngle', () => {
+  it('shivers within its amount, the legs out of step', () => {
+    for (let ms = 0; ms < 200; ms += 7) {
+      expect(Math.abs(trembleAngle(0, ms, 14))).toBeLessThanOrEqual((14 * Math.PI) / 180 + 1e-9);
+    }
+    expect(trembleAngle(0, 30, 14)).not.toBeCloseTo(trembleAngle(1, 30, 14));
   });
 });

@@ -1,6 +1,7 @@
 import * as Phaser from 'phaser';
 import { Rng } from '../../core/rng';
 import type { SimEvent, TowerState } from '../../core/tower-sim';
+import { ANIM } from '../../data/anim';
 import { BALANCE } from '../../data/balance';
 import type { Range } from '../../data/backdrop-life';
 import { faceRecipe } from '../../data/creature-looks';
@@ -18,12 +19,14 @@ import {
 } from '../../util/math';
 import { DEPTH } from '../depth';
 import { effectsMode } from '../effects-mode';
+import { FX_TEXTURES } from '../fx/fx-textures';
 import { faceHalfSpan } from '../fx/glaze-growth';
-import type { Particles } from '../fx/particles';
+import type { LandingFx } from '../fx/landing-fx';
 import { starBurst } from '../fx/sparkle-fx';
 import type { GuestSource, SourcePoint } from './backdrop/guest-source';
+import type { LayerView } from './layer-view';
 import { plainLooks } from './plain-look';
-import { bakeGuestFlat, drawGuestLegs } from './tower-guest-art';
+import { bakeGuestFlat, drawFlatLimbs, drawGuestLegs } from './tower-guest-art';
 import {
   clearOfFace,
   flightPoint,
@@ -31,17 +34,23 @@ import {
   GuestScheduler,
   layerCovers,
   layerOverGuest,
+  orbitStar,
   shouldFlinch,
   siteOffset,
+  SPLAT_STAGES,
   splatShape,
+  stageMs,
   type FlightPoint,
   type GuestPhase,
   type GuestShape,
+  type OrbitStar,
   type Span,
+  type Stagger,
 } from './tower-guest-plan';
 import type { LayerPose, TowerView } from './tower-view';
 
 const { splat, flap, rub, shy } = TOWER_GUEST;
+const { impact, orbit, neighbours } = splat;
 const HALF_LAYER = BALANCE.layer.height / 2;
 
 /** What the guest needs to know about the frame. */
@@ -53,17 +62,21 @@ export interface GuestContext {
   shadow: Readonly<{ x: number; visible: boolean }>;
 }
 
-/** Sounds of the guest; the run wires them to the audio service. */
-export interface GuestSounds {
+/** Sounds and the camera kick of the guest; the run wires them to the audio service and its camera. */
+export interface GuestCues {
   splat: () => void;
-  squeak: () => void;
+  peel: () => void;
   buzz: () => void;
+  giggle: () => void;
+  /** Kicks the camera `mul` times a normal landing. */
+  kick: (mul: number) => void;
 }
 
-/** Style of one flight: zigzag turns and how far up it climbs when it leaves. */
+/** Style of one flight: zigzag turns, an optional reel, and how far up it climbs when it leaves. */
 interface FlightSpec {
   zigzagPx: number;
   zigzagCycles: number;
+  stagger?: Stagger;
 }
 
 /** A layer of the tower the guest is tied to and where on it. */
@@ -78,10 +91,12 @@ interface Anchor {
 /**
  * The guest of the tower (docs/06, "Гость на башне"): in a zone that has one, it flies in now and
  * then, sits on the top layer beside the face, rubs its legs and flies away. A layer that lands on
- * it flattens it (squash, a flat pancake with bulging eyes and stars, the layer above looks down),
- * then it peels off, shakes itself into shape and flees, offended. In the air it shies from a flying
- * layer that stays over it and bolts when the tower sneezes. The timing comes from the cosmetic
- * stream of the run: nothing of this touches the rules, and "fewer effects" keeps the guest away.
+ * it splats it: the layer holds its squash and dips at that spot, the camera kicks, the guest goes
+ * flat (crossed-out eyes, trembling legs, stars and a clap ring; the neighbours glance, one may
+ * giggle), then it peels off, inflates back, shakes its head under circling stars and staggers away.
+ * In the air it shies from a flying layer that stays over it and bolts when the tower sneezes.
+ * Every choice comes from the cosmetic stream of the run: nothing of this touches the rules.
+ * "Fewer effects" keeps the guest away and cuts a splat down to the flattening and the flight.
  */
 export class TowerGuest {
   private readonly random: Rng;
@@ -130,12 +145,23 @@ export class TowerGuest {
   private readonly slide = { from: 0, to: 0 };
   private last: GuestContext | null = null;
   private shownFlat: boolean | null = null;
+  /** The visit was started by the dev trigger: it stays in "fewer effects". */
+  private forced = false;
+  /** The splat now going is the "fewer effects" one: flattening and the flight away only. */
+  private plainSplat = false;
+  /** Stars circling over the guest's head, and the time they have been circling (negative: none). */
+  private readonly orbitStars: Phaser.GameObjects.Image[];
+  private orbitMs = -1;
+  private readonly orbitPoint: OrbitStar = { x: 0, y: 0, scale: 1, front: true };
+  /** A neighbour that giggles at the pancake once `giggleInMs` runs out. */
+  private giggler: LayerView | null = null;
+  private giggleInMs = 0;
 
   constructor(
     scene: Phaser.Scene,
     private readonly tower: TowerView,
-    private readonly particles: Particles,
-    private readonly sounds: GuestSounds,
+    private readonly fx: LandingFx,
+    private readonly cues: GuestCues,
   ) {
     this.random = new Rng(plainLooks.cosmeticSeed).fork(TOWER_GUEST.stream);
     this.scheduler = new GuestScheduler(() => this.random.next());
@@ -145,6 +171,12 @@ export class TowerGuest {
     this.root = new Phaser.GameObjects.Container(scene, 0, 0, [this.body, this.legs]);
     this.root.setDepth(DEPTH.pieces).setVisible(false);
     scene.add.existing(this.root);
+    this.orbitStars = Array.from({ length: orbit.count }, (_, i) =>
+      scene.add
+        .image(0, 0, FX_TEXTURES.star)
+        .setTint(orbit.tints[i % orbit.tints.length] ?? orbit.tints[0])
+        .setVisible(false),
+    );
   }
 
   /** Where the guest's backdrop creature is; the guest flies out of it and hides it while out. */
@@ -156,6 +188,7 @@ export class TowerGuest {
   update(dtMs: number, ctx: GuestContext): void {
     this.last = ctx;
     this.clockMs += dtMs;
+    this.tickGiggle(dtMs);
     if (this.phase === 'away') {
       this.tickAway(dtMs, ctx);
       return;
@@ -182,6 +215,7 @@ export class TowerGuest {
         break;
     }
     if (this.root.visible) this.draw();
+    this.drawOrbit(dtMs);
   }
 
   /** Reacts to the events of one sim step: a landing, a sneeze. Call it after the tower is synced. */
@@ -209,6 +243,7 @@ export class TowerGuest {
     const dx = this.pickSite(look, pose, null);
     if (dx === null) return false;
     this.begin(look, top, dx);
+    this.forced = true;
     this.source?.suspend(true);
     this.enter('sit', this.pick(TOWER_GUEST.sitMs));
     this.facing = this.headTo(dx < 0 ? 1 : -1);
@@ -221,8 +256,13 @@ export class TowerGuest {
     return pickRange(range, () => this.random.next());
   }
 
+  /** "Fewer effects" keeps the guest away (unless the data lets it come, or the dev trigger brought it). */
+  private keptAway(): boolean {
+    return effectsMode.reduced && !TOWER_GUEST.reducedVisits && !this.forced;
+  }
+
   private tickAway(dtMs: number, ctx: GuestContext): void {
-    if (effectsMode.reduced) return;
+    if (effectsMode.reduced && !TOWER_GUEST.reducedVisits) return;
     this.scheduler.tick(dtMs);
     if (this.scheduler.ready && !this.tryArrive(ctx)) this.scheduler.retry();
   }
@@ -305,7 +345,7 @@ export class TowerGuest {
     this.scaleFrom = look.scale;
     this.source = this.getSource();
     this.scheduler.started();
-    this.legs.setPosition(-look.size.width / 2, -look.feetY);
+    this.forced = false;
     this.root.setVisible(true);
     this.shownFlat = null;
   }
@@ -331,8 +371,13 @@ export class TowerGuest {
     if (!pose) return false;
     const a = pose.angle * DEG_TO_RAD;
     const edgeY = this.anchor.edge === 'top' ? -HALF_LAYER + TOWER_GUEST.site.sinkPx : HALF_LAYER;
-    out.x = pose.x + this.anchor.dx * Math.cos(a) - edgeY * Math.sin(a);
-    out.y = pose.y + edgeY * Math.cos(a) + this.anchor.dx * Math.sin(a);
+    // A layer pressed down on the guest pushes it down with the dip.
+    const dip =
+      this.anchor.edge === 'bottom'
+        ? (this.tower.viewAt(this.anchor.index)?.pressDropAt(this.anchor.dx) ?? 0)
+        : 0;
+    out.x = pose.x + this.anchor.dx * Math.cos(a) - (edgeY + dip) * Math.sin(a);
+    out.y = pose.y + (edgeY + dip) * Math.cos(a) + this.anchor.dx * Math.sin(a);
     this.swayTilt = a;
     return true;
   }
@@ -344,7 +389,7 @@ export class TowerGuest {
   private follow(state: Readonly<TowerState>): boolean {
     if (this.phase === 'leave' || this.phase === 'flee') return true;
     const visiting = this.phase === 'arrive' || this.phase === 'sit';
-    if (visiting && (this.anchor.index !== state.layers.length - 1 || effectsMode.reduced)) {
+    if (visiting && (this.anchor.index !== state.layers.length - 1 || this.keptAway())) {
       this.startLeave('startle');
       return true;
     }
@@ -384,6 +429,7 @@ export class TowerGuest {
       zigzagCycles,
       this.ease,
       this.pos,
+      this.zigzag.stagger ?? null,
     );
   }
 
@@ -406,6 +452,7 @@ export class TowerGuest {
 
   /** The guest takes off for the nearer screen edge: calmly (`leave`) or in a hurry (`startle`: a miss, a sneeze). */
   private startLeave(kind: 'leave' | 'startle'): void {
+    this.flinchMs = -1;
     this.flyOff(TOWER_GUEST[kind]);
     this.enter('leave', this.pick(TOWER_GUEST[kind].flightMs));
   }
@@ -429,7 +476,11 @@ export class TowerGuest {
     if (t >= 1) this.hide();
   }
 
-  /** A layer landed on the guest: it is tied to the new layer's lower edge and squashes. */
+  /**
+   * A layer landed on the guest: it is tied to the new layer's lower edge and squashes. The layer
+   * holds its squash for a moment and dips at that spot, and the camera kicks as for a heavy layer
+   * (not in "fewer effects").
+   */
   private startSplat(index: number, pose: LayerPose): void {
     const look = this.look;
     const from = this.pos.x - pose.x;
@@ -438,8 +489,21 @@ export class TowerGuest {
     this.slide.from = from;
     this.slide.to = clearOfFace(from, this.faceHalfOf(pose), half, pose.width);
     this.anchor = { index, edge: 'bottom', dx: from };
+    this.flinchMs = -1;
+    this.plainSplat = effectsMode.reduced;
     this.enter('squash', splat.squashMs);
-    this.sounds.splat();
+    this.cues.splat();
+    if (this.plainSplat) return;
+    this.tower.viewAt(index)?.playPress(this.slide.to, {
+      scaleX: impact.squashX,
+      scaleY: impact.squashY,
+      holdMs: impact.hitstopMs,
+      settleMs: impact.settleMs,
+      squashEase: ANIM.land.ease,
+      dipPx: impact.dipPx,
+      dipEase: impact.dipEase,
+    });
+    this.cues.kick(impact.kickMul);
   }
 
   private tickSplat(): void {
@@ -450,52 +514,105 @@ export class TowerGuest {
         this.onFlat();
         break;
       case 'hold':
-        this.enter('peel', splat.peelMs);
-        this.sounds.squeak();
+        if (this.plainSplat) {
+          this.flee();
+          break;
+        }
+        this.enter('peel', stageMs('peel'));
+        // The sound pulls up while the pancake stretches and pops as the guest comes off.
+        this.cues.peel();
         break;
       case 'peel':
-        this.enter('shake', splat.shakeMs);
+        this.enter('inflate', stageMs('inflate'));
+        break;
+      case 'inflate':
+        this.enter('shake', stageMs('shake'));
+        this.orbitMs = 0;
         break;
       case 'shake':
-        this.flyOff(splat.flee);
-        this.enter('flee', this.pick(splat.flee.flightMs));
-        this.sounds.buzz();
+        this.flee();
         break;
       default:
         break;
     }
   }
 
-  /** The pancake pops in: stars fly out and the layer above looks down at it, surprised. */
+  /** The offended flight away: staggering, with a rattling buzz ("fewer effects": a plain zigzag). */
+  private flee(): void {
+    const { stagger, ...plain } = splat.flee;
+    this.flyOff(this.plainSplat ? plain : { ...plain, stagger });
+    this.enter('flee', this.pick(splat.flee.flightMs));
+    this.cues.buzz();
+  }
+
+  /**
+   * The pancake pops in: stars fly out, a clap ring spreads, the layer above looks down at it,
+   * surprised, and the neighbours below glance at it. "Fewer effects" keeps none of it.
+   */
   private onFlat(): void {
-    const { stars, surprise } = splat;
-    starBurst(this.particles, this.pos.x, this.pos.y, stars.count, -90, stars.style, stars.tints);
-    const view = this.tower.viewAt(this.anchor.index);
-    if (!view) return;
-    const face = view.faceView;
-    const scale = face.faceScale || 1;
-    const ms = this.spanMs + splat.peelMs + surprise.extraMs;
-    face.react(surprise.reaction, ms);
-    face.glanceAt(
-      (this.pos.x - view.x - face.x) / scale,
-      (this.pos.y - view.y - face.y) / scale,
-      ms,
+    if (this.plainSplat) return;
+    const { stars, surprise, ring } = splat;
+    starBurst(
+      this.fx.particles,
+      this.pos.x,
+      this.pos.y,
+      stars.count,
+      -90,
+      stars.style,
+      stars.tints,
     );
+    const look = this.look;
+    if (look) {
+      const width = look.flat.halfWidthPx * 2 * look.scale * ring.widthMul;
+      this.fx.ring.play(this.pos.x, this.pos.y, width, { tint: ring.tint });
+    }
+    const lookMs = this.spanMs + splat.peelMs + surprise.extraMs;
+    const view = this.tower.viewAt(this.anchor.index);
+    if (view) {
+      view.faceView.react(surprise.reaction, lookMs);
+      this.glance(view, lookMs);
+    }
+    this.glanceNeighbours(lookMs);
+  }
+
+  /** The face of `view` looks at the guest for `ms`. */
+  private glance(view: LayerView, ms: number): void {
+    view.glanceAtWorld(this.pos.x, this.pos.y, ms);
+  }
+
+  /** The layers under the seam may glance at the pancake, and one of them may giggle. */
+  private glanceNeighbours(ms: number): void {
+    const glancers: LayerView[] = [];
+    for (let k = 1; k <= neighbours.depth; k++) {
+      const view = this.tower.viewAt(this.anchor.index - k);
+      if (!view || !view.visible || view.faceView.licking) continue;
+      if (this.random.next() >= neighbours.glanceChance) continue;
+      this.glance(view, ms);
+      glancers.push(view);
+    }
+    if (glancers.length === 0 || this.random.next() >= neighbours.giggleChance) return;
+    this.giggler = glancers[Math.floor(this.random.next() * glancers.length)] ?? null;
+    this.giggleInMs = neighbours.giggleDelayMs;
   }
 
   private hide(): void {
     this.source?.suspend(false);
     this.source = null;
     this.phase = 'away';
+    this.forced = false;
+    this.giggler = null;
+    this.giggleInMs = -1;
     this.root.setVisible(false);
     this.legs.clear();
+    this.orbitMs = -1;
+    for (const star of this.orbitStars) star.setVisible(false);
   }
 
   /** The shape of this frame: the splat stages, or the flight and the rest. */
   private fillShape(): GuestShape {
     const shape = this.shape;
     const phase = this.phase;
-    if (phase === 'squash' || phase === 'hold' || phase === 'peel' || phase === 'shake') {
+    if (SPLAT_STAGES.includes(phase)) {
       splatShape(phase, this.phaseMs, shape);
       shape.tilt += this.swayTilt;
       return shape;
@@ -513,12 +630,10 @@ export class TowerGuest {
     // Flying: wing beats flatten the picture and the body tilts with the buzz; both fade in at
     // take-off (and out at landing) so the shape does not jump.
     const ramp = this.flightRamp();
+    const tiltDeg = phase === 'flee' && !this.plainSplat ? splat.flee.tiltDeg : TOWER_GUEST.tiltDeg;
     shape.scaleY = lerp(1, flapScale(this.clockMs, flap), ramp);
     shape.tilt =
-      ramp *
-      TOWER_GUEST.tiltDeg *
-      DEG_TO_RAD *
-      sineWave(this.clockMs, flap.ms * TOWER_GUEST.tiltPeriodMul);
+      ramp * tiltDeg * DEG_TO_RAD * sineWave(this.clockMs, flap.ms * TOWER_GUEST.tiltPeriodMul);
     return shape;
   }
 
@@ -543,16 +658,65 @@ export class TowerGuest {
       const height = shape.flat ? flat.height : look.size.height;
       const feet = shape.flat ? flat.height * flat.feetShare : look.feetY;
       this.body.setOrigin(0.5, feet / height);
+      const width = shape.flat ? flat.width : look.size.width;
+      this.legs.setPosition(-width / 2, -feet);
     }
     const resting = this.phase === 'sit';
-    this.legs.setVisible(resting);
-    if (resting) drawGuestLegs(this.legs, look, this.clockMs, look.headSide);
+    this.legs.setVisible(resting || shape.flat);
+    if (shape.flat) drawFlatLimbs(this.legs, look, this.clockMs, !this.plainSplat);
+    else if (resting) drawGuestLegs(this.legs, look, this.clockMs, look.headSide);
     const size =
       this.phase === 'arrive'
         ? lerp(this.scaleFrom, look.scale, clamp01(this.phaseMs / this.spanMs))
         : look.scale;
+    this.root.setDepth(this.pressed() ? this.pressedDepth() : DEPTH.pieces);
     this.root.setPosition(this.pos.x, this.pos.y - this.flinch.lift);
     this.root.setRotation(shape.tilt);
     this.root.setScale(this.facing * size * shape.scaleX, size * shape.scaleY);
+  }
+
+  /** The guest lies squashed under the layer that landed on it (it peels off in front of it). */
+  private pressed(): boolean {
+    return this.phase === 'squash' || this.phase === 'hold';
+  }
+
+  /** Between the layer that pressed the guest and the one under it: the layer hides what it covers. */
+  private pressedDepth(): number {
+    return DEPTH.tower + (this.anchor.index - DEPTH.guestPressedStep) * DEPTH.towerLayerStep;
+  }
+
+  /** The neighbour picked to giggle does it once its delay runs out: a happy face and a "хи-хи-хи". */
+  private tickGiggle(dtMs: number): void {
+    const view = this.giggler;
+    if (!view) return;
+    this.giggleInMs -= dtMs;
+    if (this.giggleInMs > 0) return;
+    this.giggler = null;
+    if (!view.visible || effectsMode.reduced) return;
+    view.faceView.react(neighbours.giggle, neighbours.giggleMs);
+    this.cues.giggle();
+  }
+
+  /** Stars circle over the guest's head while it shakes and fade out as it flies away. */
+  private drawOrbit(dtMs: number): void {
+    if (this.orbitMs < 0) return;
+    const shaking = this.phase === 'shake';
+    if (!shaking && this.phase !== 'flee') {
+      this.orbitMs = -1;
+      for (const star of this.orbitStars) star.setVisible(false);
+      return;
+    }
+    this.orbitMs += dtMs;
+    const alpha = shaking ? 1 : 1 - clamp01(this.phaseMs / orbit.fadeMs);
+    this.orbitStars.forEach((star, i) => {
+      const p = orbitStar(i, this.orbitMs, this.orbitPoint);
+      star
+        .setVisible(alpha > 0)
+        .setAlpha(alpha)
+        .setPosition(this.pos.x + p.x, this.pos.y + p.y)
+        .setScale(p.scale)
+        .setDepth(p.front ? DEPTH.guestStarsFront : DEPTH.guestStarsBack);
+    });
+    if (alpha <= 0) this.orbitMs = -1;
   }
 }

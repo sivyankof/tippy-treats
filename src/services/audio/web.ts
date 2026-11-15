@@ -207,17 +207,27 @@ export class WebAudioService implements AudioService {
 
   guestSplat(): void {
     this.play((s) => {
-      s.tone(SFX.guest.splat.thump);
-      s.noise(SFX.guest.splat.wet);
+      const { thump, sub, wet } = SFX.guest.splat;
+      s.tone(thump);
+      s.tone(sub);
+      s.noise(wet);
     });
   }
 
-  guestSqueak(): void {
-    this.play((s) => s.sequence(SFX.guest.squeak));
+  guestPeel(): void {
+    this.play((s) => {
+      const { notes, click } = SFX.guest.peel;
+      s.sequence(notes);
+      s.noiseSequence([click]);
+    });
   }
 
   guestBuzz(): void {
     this.play((s) => s.sequence(SFX.guest.buzz));
+  }
+
+  guestGiggle(): void {
+    this.play((s) => s.sequence(SFX.guest.giggle));
   }
 
   squeak(pitch: number): void {
