@@ -1,15 +1,17 @@
 import type * as Phaser from 'phaser';
 import { TUTORIAL_ANIM } from '../../data/tutorial-anim';
 import { PALETTE } from '../../data/palette';
+import { OUTLINE_SHARE, outlineColor } from '../fx/plain-style';
 import { bakeTexture } from '../ui/bake-texture';
 
 export const HINT_TEXTURES = { hand: 'tutorial_hand', arrow: 'tutorial_arrow' } as const;
 
-/** Outline of the hand, logical pixels. */
-const OUTLINE = 7;
 const HAND = { width: 150, height: 200 };
+/** Outline of the hand: the same share of its height as the layers have, logical pixels. */
+const OUTLINE = HAND.height * OUTLINE_SHARE;
 const ARROW = TUTORIAL_ANIM.arrow;
-const { width: ARROW_W, height: ARROW_H, outline: ARROW_OUTLINE } = ARROW;
+const { width: ARROW_W, height: ARROW_H } = ARROW;
+const ARROW_OUTLINE = ARROW_H * OUTLINE_SHARE;
 
 interface Box {
   x: number;
@@ -34,7 +36,7 @@ function bakeHand(scene: Phaser.Scene): void {
         g.fillRoundedRect(b.x - grow, b.y - grow, b.w + grow * 2, b.h + grow * 2, b.r + grow);
       }
     };
-    fill(PALETTE.textDark, OUTLINE);
+    fill(outlineColor(PALETTE.panel), OUTLINE);
     fill(PALETTE.panel, 0);
   });
 }
@@ -52,8 +54,9 @@ function bakeArrow(scene: Phaser.Scene): void {
       g.fillRoundedRect(stemX, pad, stemW, stemH, ARROW.stemRadius);
       g.fillTriangle(pad, headY, pad + ARROW_W, headY, pad + ARROW_W / 2, tip);
     };
-    g.lineStyle(ARROW_OUTLINE * 2, PALETTE.textDark, 1);
-    g.fillStyle(PALETTE.textDark, 1);
+    const line = outlineColor(PALETTE.gold);
+    g.lineStyle(ARROW_OUTLINE * 2, line, 1);
+    g.fillStyle(line, 1);
     shapes();
     g.strokeRoundedRect(stemX, pad, stemW, stemH, ARROW.stemRadius);
     g.strokeTriangle(pad, headY, pad + ARROW_W, headY, pad + ARROW_W / 2, tip);

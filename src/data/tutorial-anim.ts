@@ -75,8 +75,6 @@ export const TUTORIAL_ANIM = {
     periodMs: 600,
     /** Gap between the arrow and the caption plate above it. */
     captionGap: 16,
-    /** Outline around the arrow picture, logical pixels. */
-    outline: 7,
     /** Stem of the arrow: left edge and width as shares of the arrow width. */
     stemX: 0.3,
     stemWidth: 0.4,
