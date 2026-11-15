@@ -61,7 +61,7 @@
   "creature": {
     "honey": {
       "name": "Honey",
-      "desc": "Sticky: for the next {value} layers a drop this close counts as perfect.",
+      "desc": "Sticky: for the next {layers} layers a drop within {value} pixels of the target counts as perfect.",
       "trait": "A sleepy sweetheart"
     },
     "puff": {
@@ -116,7 +116,7 @@
     },
     "rainbow": {
       "name": "Rainbow",
-      "desc": "Miracle: the next {value} layers are not cut, wherever they land. A complete miss is still a miss.",
+      "desc": "Miracle: the next layers are not cut, wherever they land. Layers protected: {value}. A complete miss is still a miss.",
       "trait": "Majestic"
     }
   },

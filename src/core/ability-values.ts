@@ -10,7 +10,7 @@ export function abilityValues(id: CreatureId, level: number): AbilityValues {
   const def = abilityDef(id);
   switch (def.kind) {
     case 'honey':
-      return { value: levelValue(def.tolerance, level) };
+      return { value: levelValue(def.tolerance, level), layers: def.layers };
     case 'puff':
       return { value: levelValue(def.widen, level) };
     case 'jelly':

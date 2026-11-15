@@ -12,7 +12,7 @@ describe('ability values', () => {
   });
 
   it('reads the level values', () => {
-    expect(abilityValues('honey', 2)).toEqual({ value: 34 });
+    expect(abilityValues('honey', 2)).toEqual({ value: 34, layers: 3 });
     expect(abilityValues('sprinkle', 3)).toEqual({ value: 2.5 });
     expect(Object.keys(abilityValues('jelly', 1)).sort()).toEqual(['layers', 'percent', 'value']);
   });
