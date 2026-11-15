@@ -131,7 +131,7 @@ describe('the tally in GameState', () => {
 
   it('counts nothing for a refused credit and works without a tally', () => {
     const { state, tally } = setup();
-    expect(state.claimMission(0)).toBe(0);
+    expect(state.claimMission(0)).toBeNull();
     expect(state.claimChest()).toBe(0);
     expect(tally.total('coins')).toBe(0);
     const plain = createTestState({ ms: T0 });

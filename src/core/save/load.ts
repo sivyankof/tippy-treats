@@ -1,5 +1,5 @@
 import { CREATURE_IDS, MAX_CREATURE_LEVEL } from '../../data/creatures';
-import { MAX_BAKER_LEVEL } from '../../data/progression';
+import { MAX_BAKER_LEVEL, OVEN } from '../../data/progression';
 import { SAVE_DEFAULTS } from '../../data/save-defaults';
 import { xpToNext } from '../progression';
 import { pickTeam } from '../team';
@@ -109,6 +109,8 @@ function normalize(raw: Obj, d: Save): Save {
   const notifications = obj(settings.notifications);
   const ads = obj(raw.ads);
   const consent = obj(raw.consent);
+  const oven = obj(raw.oven);
+  const doubles = obj(raw.doubles);
   const creatures = normalizeCreatures(raw.creatures);
   const bakerLevel = Math.min(MAX_BAKER_LEVEL, Math.max(1, uint(raw.bakerLevel, d.bakerLevel)));
   return {
@@ -191,6 +193,12 @@ function normalize(raw: Obj, d: Save): Save {
       shownDay: day(ads.shownDay),
       shownToday: uint(ads.shownToday, 0),
     },
+    oven: {
+      day: day(oven.day),
+      used: Math.min(uint(oven.used, 0), OVEN.freshLayers),
+      carry: Math.min(uint(oven.carry, 0), OVEN.layersPerXp - 1),
+    },
+    doubles: { day: day(doubles.day), used: uint(doubles.used, 0) },
     consent: {
       attAsked: bool(consent.attAsked, false),
       notifAsked: bool(consent.notifAsked, false),

@@ -23,11 +23,11 @@ describe('coin amounts', () => {
     expect(floatingCoinAmount(DOUBLE)).toBe(2);
   });
 
-  it('pays combo coins from the fifth perfect in a row', () => {
-    expect([1, 4].map((c) => comboCoinAmount(c, NONE))).toEqual([0, 0]);
-    expect(comboCoinAmount(5, NONE)).toBe(1);
-    expect(comboCoinAmount(30, NONE)).toBe(1);
-    expect(comboCoinAmount(5, DOUBLE)).toBe(2);
+  it('pays combo coins for every second perfect from the fifth in a row', () => {
+    expect([1, 4, 5].map((c) => comboCoinAmount(c, NONE))).toEqual([0, 0, 0]);
+    expect([6, 8, 10, 30].map((c) => comboCoinAmount(c, NONE))).toEqual([1, 1, 1, 1]);
+    expect([7, 9, 31].map((c) => comboCoinAmount(c, NONE))).toEqual([0, 0, 0]);
+    expect(comboCoinAmount(6, DOUBLE)).toBe(2);
   });
 
   it('turns the cut edge into whole coins and ignores it without crumb', () => {
@@ -37,8 +37,8 @@ describe('coin amounts', () => {
     expect(crumbCoinAmount(0, 18)).toBe(0);
   });
 
-  it('gives 2 coins per 10 layers at run end', () => {
-    expect([0, 9, 10, 19, 25, 100].map(heightBonusCoins)).toEqual([0, 0, 2, 2, 4, 20]);
+  it('gives 2 coins per 20 layers at run end', () => {
+    expect([0, 19, 20, 39, 45, 100].map(heightBonusCoins)).toEqual([0, 0, 2, 2, 4, 10]);
   });
 });
 

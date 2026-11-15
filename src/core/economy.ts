@@ -1,5 +1,11 @@
 import { CREATURES, MAX_CREATURE_LEVEL, type CreatureId } from '../data/creatures';
-import { BERRY_PACKS, DUPLICATE_CREATURE_SHARE, UPGRADE_COSTS } from '../data/economy';
+import {
+  BERRY_PACKS,
+  DUPLICATE_CREATURE_SHARE,
+  LEGENDARY_UPGRADE_MIN_BAKER,
+  UPGRADE_COSTS,
+  UPGRADE_MIN_BAKER,
+} from '../data/economy';
 
 export interface Wallet {
   coins: number;
@@ -141,7 +147,18 @@ export function upgradeCost(level: number): number | null {
   return UPGRADE_COSTS[Math.max(1, Math.floor(level)) - 1] ?? null;
 }
 
-export type UpgradeError = 'not_owned' | 'max_level' | 'not_enough';
+/**
+ * Baker level the upgrade of `id` from `level` to `level + 1` needs; null at the maximum level.
+ * A legendary creature has its own, later last step (docs/03-creatures.md, "Прокачка").
+ */
+export function upgradeGate(id: CreatureId, level: number): number | null {
+  if (level >= MAX_CREATURE_LEVEL) return null;
+  const gates =
+    CREATURES[id].rarity === 'legendary' ? LEGENDARY_UPGRADE_MIN_BAKER : UPGRADE_MIN_BAKER;
+  return gates[Math.max(1, Math.floor(level)) - 1] ?? null;
+}
+
+export type UpgradeError = 'not_owned' | 'max_level' | 'locked' | 'not_enough';
 
 export function upgradeCreature(
   slice: EconomySlice,
@@ -151,6 +168,8 @@ export function upgradeCreature(
   if (!owned) return { ok: false, reason: 'not_owned' };
   const cost = upgradeCost(owned.level);
   if (cost === null) return { ok: false, reason: 'max_level' };
+  if (slice.bakerLevel < (upgradeGate(id, owned.level) ?? 1))
+    return { ok: false, reason: 'locked' };
   const paid = spend(slice, { coins: cost });
   if (!paid) return { ok: false, reason: 'not_enough' };
   return {

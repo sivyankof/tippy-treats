@@ -1,7 +1,15 @@
 import { describe, expect, it } from 'vitest';
 import { createDefaultSave } from './defaults';
 import { loadSave, serializeSave } from './load';
-import { migrate, migrateV1, migrateV2, migrateV3, SaveError, type Migration } from './migrations';
+import {
+  migrate,
+  migrateV1,
+  migrateV2,
+  migrateV3,
+  migrateV4,
+  SaveError,
+  type Migration,
+} from './migrations';
 import { MAX_BAKER_LEVEL } from '../../data/progression';
 import { xpToNext } from '../progression';
 import { SAVE_VERSION, type Save } from './schema';
@@ -395,5 +403,72 @@ describe('migration 3 to 4', () => {
     expect(ok.save.ads).toMatchObject({ shownDay: '2026-11-15', shownToday: 7 });
     const bad = load(JSON.stringify({ ...fresh(), ads: { shownDay: 'today', shownToday: -3 } }));
     expect(bad.save.ads).toMatchObject({ shownDay: '', shownToday: 0 });
+  });
+});
+
+describe('migration 4 to 5', () => {
+  const v4 = { ...fresh(), version: 4 };
+  const raw = (over: Record<string, unknown> = {}): Record<string, unknown> => ({
+    ...v4,
+    ...over,
+  });
+
+  it('adds an empty oven and an empty x2 counter', () => {
+    const next = migrateV4(raw());
+    expect(next.oven).toEqual({ day: '', used: 0, carry: 0 });
+    expect(next.doubles).toEqual({ day: '', used: 0 });
+  });
+
+  it('rescales the XP inside the level in proportion and never lowers a level', () => {
+    // Level 3 needed 90 XP before and needs 400 now: 45 / 90 of the bar is 200 / 400.
+    const next = migrateV4(raw({ bakerLevel: 3, bakerXp: 45 }));
+    expect(next.bakerLevel).toBe(3);
+    expect(next.bakerXp).toBe(200);
+    // Level 12 needed 315 XP before and needs 100 + 810 * 8 = 6580 now.
+    const high = migrateV4(raw({ bakerLevel: 12, bakerXp: 100 }));
+    expect(high.bakerXp).toBe(Math.floor((100 / 315) * 6580));
+    expect(high.bakerLevel).toBe(12);
+  });
+
+  it('keeps an empty bar empty and a full bar below the next level', () => {
+    expect(migrateV4(raw({ bakerLevel: 5, bakerXp: 0 })).bakerXp).toBe(0);
+    expect(Number(migrateV4(raw({ bakerLevel: 5, bakerXp: 999 })).bakerXp)).toBeLessThan(910);
+  });
+
+  it('keeps creature levels, even above the new upgrade gates', () => {
+    const creatures = { honey: { level: 5 }, rainbow: { level: 5 } };
+    const result = load(JSON.stringify({ ...v4, bakerLevel: 2, creatures }));
+    expect(result.save.version).toBe(SAVE_VERSION);
+    expect(result.save.bakerLevel).toBe(2);
+    expect(result.save.creatures.honey).toEqual({ level: 5 });
+    expect(result.save.creatures.rainbow).toEqual({ level: 5 });
+  });
+
+  it('loads a version 4 text into the current save without losing progress', () => {
+    const result = load(JSON.stringify({ ...v4, coins: 321, bakerLevel: 4, bakerXp: 100 }));
+    expect(result.save.version).toBe(SAVE_VERSION);
+    expect(result.save.coins).toBe(321);
+    expect(result.save.bakerLevel).toBe(4);
+    // Level 4 needed 115 XP before and needs 600 now.
+    expect(result.save.bakerXp).toBe(Math.floor((100 / 115) * 600));
+    expect(result.save.oven).toEqual({ day: '', used: 0, carry: 0 });
+    expect(result.save.doubles).toEqual({ day: '', used: 0 });
+  });
+
+  it('repairs bad oven and x2 counters and keeps good ones', () => {
+    const bad = load(
+      JSON.stringify({ ...fresh(), oven: { day: 'x', used: 99_999, carry: 40 }, doubles: 5 }),
+    );
+    expect(bad.save.oven).toEqual({ day: '', used: 1300, carry: 5 });
+    expect(bad.save.doubles).toEqual({ day: '', used: 0 });
+    const ok = load(
+      serializeSave({
+        ...fresh(),
+        oven: { day: '2026-11-15', used: 10, carry: 3 },
+        doubles: { day: '2026-11-15', used: 2 },
+      }),
+    );
+    expect(ok.save.oven).toEqual({ day: '2026-11-15', used: 10, carry: 3 });
+    expect(ok.save.doubles).toEqual({ day: '2026-11-15', used: 2 });
   });
 });

@@ -12,6 +12,7 @@ import {
   spend,
   upgradeCost,
   upgradeCreature,
+  upgradeGate,
   type EconomySlice,
 } from './economy';
 
@@ -155,12 +156,12 @@ describe('buyCreature', () => {
 describe('upgrades', () => {
   it('costs come from the data and end at level 5', () => {
     expect([1, 2, 3, 4].map(upgradeCost)).toEqual([...UPGRADE_COSTS]);
-    expect([150, 400, 900, 2000]).toEqual([...UPGRADE_COSTS]);
+    expect([200, 600, 1300, 2800]).toEqual([...UPGRADE_COSTS]);
     expect(upgradeCost(5)).toBeNull();
   });
 
   it('upgrades and pays', () => {
-    const result = upgradeCreature(slice({ coins: 200 }), 'honey');
+    const result = upgradeCreature(slice({ coins: 250 }), 'honey');
     expect(result).toMatchObject({
       ok: true,
       value: { coins: 50, creatures: { honey: { level: 2 } } },
@@ -231,5 +232,34 @@ describe('creature reward the player already owns', () => {
     expect(grant.value.creatures.rainbow).toEqual({ level: 3 });
     expect(grant.value.berries).toBe(305);
     expect(grant.value.coins).toBe(0);
+  });
+});
+
+describe('upgrade gates by baker level', () => {
+  it('opens level 2 at once, then 6, 11 and 16 for an ordinary creature', () => {
+    expect([1, 2, 3, 4].map((level) => upgradeGate('honey', level))).toEqual([1, 6, 11, 16]);
+    expect(upgradeGate('honey', 5)).toBeNull();
+  });
+
+  it('holds the legendary last step back to baker level 20', () => {
+    expect([1, 2, 3, 4].map((level) => upgradeGate('rainbow', level))).toEqual([1, 6, 11, 20]);
+  });
+
+  it('refuses an upgrade below the gate and allows it at the gate', () => {
+    const at = (bakerLevel: number, level: number, id: 'honey' | 'rainbow') =>
+      upgradeCreature(slice({ coins: 9999, bakerLevel, creatures: { [id]: { level } } }), id);
+    expect(at(5, 2, 'honey')).toEqual({ ok: false, reason: 'locked' });
+    expect(at(6, 2, 'honey')).toMatchObject({ ok: true });
+    expect(at(15, 4, 'honey')).toEqual({ ok: false, reason: 'locked' });
+    expect(at(16, 4, 'honey')).toMatchObject({ ok: true });
+    expect(at(19, 4, 'rainbow')).toEqual({ ok: false, reason: 'locked' });
+    expect(at(20, 4, 'rainbow')).toMatchObject({ ok: true });
+  });
+
+  it('does not charge a locked upgrade and keeps a level above the gate', () => {
+    const start = slice({ coins: 5000, bakerLevel: 1, creatures: { honey: { level: 4 } } });
+    expect(upgradeCreature(start, 'honey')).toEqual({ ok: false, reason: 'locked' });
+    expect(start.coins).toBe(5000);
+    expect(start.creatures.honey).toEqual({ level: 4 });
   });
 });

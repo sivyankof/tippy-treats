@@ -228,7 +228,10 @@ export const CREATURES: Record<CreatureId, CreatureDef> = {
     ...keys('twins'),
     rarity: 'epic',
     ability: { kind: 'twins', bonusScore: [50, 80, 120, 170, 250], bonusHeight: 1 },
-    unlock: [{ kind: 'record', mode: 'classic', height: 75 }],
+    unlock: [
+      { kind: 'record', mode: 'classic', height: 75 },
+      { kind: 'shop', coins: 2500, minBakerLevel: 14 },
+    ],
     palette: {
       body: '#a58be8',
       glaze: '#8a6fe0',

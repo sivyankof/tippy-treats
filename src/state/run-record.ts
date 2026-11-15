@@ -1,17 +1,19 @@
 // Run bookkeeping as pure functions over the save: stats, records, XP and level rewards.
-import { earn, grantCreature, type Cost } from '../core/economy';
+import { earn, grantCreature } from '../core/economy';
 import type { DailyPayout } from '../core/daily';
-import { addXp, levelReward, xpForRun } from '../core/progression';
+import { bakeLayers } from '../core/oven';
+import { runLayers } from '../core/progression';
 import type { RunResult } from '../core/run-result';
 import type { MissionProgress, Save } from '../core/save/schema';
-import type { LevelReward } from '../data/progression';
+import { CREATURES, CREATURE_IDS, type CreatureId } from '../data/creatures';
+import { withXp, type LevelUp } from './level-up';
 
-/** One level reached by a run, with what it paid. */
-export interface LevelUp {
-  level: number;
-  reward: LevelReward;
-  /** The reward creature was already owned: what was paid instead of it. */
-  duplicate: Cost | null;
+export type { LevelUp };
+
+/** Fresh layers of the oven left after a run, and whether that run emptied it (the gentle message). */
+export interface OvenSummary {
+  left: number;
+  ranOut: boolean;
 }
 
 /** What a finished run changed, for the results screen. */
@@ -29,7 +31,11 @@ export interface RunSummary {
   /** Baker level and XP before the run, so the results can fill the bar from there. */
   before: { level: number; xp: number };
   xpGained: number;
+  /** The oven after the run; `null` for a run that did not reach the save. */
+  oven: OvenSummary | null;
   levelUps: LevelUp[];
+  /** Creatures the record of this run opened (a creature with a record way, like the twins). */
+  recordCreatures: CreatureId[];
   /** The missions of the day before and after this run, for the progress lines of the results. */
   missions: { before: MissionProgress[]; after: MissionProgress[] };
   /** Daily tower tiers this run reached and paid (empty outside the daily tower). */
@@ -43,7 +49,9 @@ export const EMPTY_SUMMARY: RunSummary = {
   previousRecord: null,
   before: { level: 1, xp: 0 },
   xpGained: 0,
+  oven: null,
   levelUps: [],
+  recordCreatures: [],
   missions: { before: [], after: [] },
   dailyTiers: [],
 };
@@ -61,22 +69,23 @@ export function applyRun(
   firstRun: boolean,
   /** Local day the run ended on (`YYYY-MM-DD`), for the best height of the day. */
   day: string,
+  /** The clock looks set back: the oven does not start a new day. */
+  clockBack = false,
 ): { save: Save; summary: RunSummary } {
   const isRecord =
     result.mode === 'classic' &&
     before.stats.runs > 0 &&
     result.height > before.records.classicHeight;
   const previousRecord = before.stats.runs === 0 ? null : before.records.classicHeight;
-  const xpGained = xpForRun(result.height, startHeight);
-  const progress = addXp(before.bakerLevel, before.bakerXp, xpGained);
+  const layers = runLayers(result.height, startHeight);
+  const baked = bakeLayers(before.oven, layers, day, clockBack);
   let next: Save = {
     ...earn(before, { coins: result.coins }),
-    bakerLevel: progress.level,
-    bakerXp: progress.xp,
+    oven: baked.oven,
     stats: {
       ...before.stats,
       runs: before.stats.runs + 1,
-      totalLayers: before.stats.totalLayers + xpGained,
+      totalLayers: before.stats.totalLayers + layers,
       perfects: before.stats.perfects + Math.max(0, Math.floor(result.perfects)),
     },
     tutorial: { ...before.tutorial, firstRunDone: true },
@@ -93,13 +102,9 @@ export function applyRun(
       },
     };
   }
-  const levelUps: LevelUp[] = [];
-  for (const level of progress.levelsGained) {
-    const reward = levelReward(level);
-    const applied = applyLevelReward(next, reward);
-    next = applied.value;
-    levelUps.push({ level, reward, duplicate: applied.duplicate });
-  }
+  const leveled = withXp(next, baked.xp);
+  const rewarded = withRecordCreatures(leveled.save);
+  next = rewarded.save;
   const beforeXp = { level: before.bakerLevel, xp: before.bakerXp };
   return {
     save: next,
@@ -108,20 +113,28 @@ export function applyRun(
       firstRun,
       previousRecord,
       before: beforeXp,
-      xpGained,
-      levelUps,
+      xpGained: baked.xp,
+      oven: { left: baked.after, ranOut: baked.before > 0 && baked.after === 0 },
+      levelUps: leveled.levelUps,
+      recordCreatures: rewarded.creatures,
       missions: EMPTY_SUMMARY.missions,
       dailyTiers: EMPTY_SUMMARY.dailyTiers,
     },
   };
 }
 
-/** Coins and berries of a level reward, and the creature it hands over (or its compensation). */
-function applyLevelReward(
-  save: Save,
-  reward: LevelReward,
-): { value: Save; duplicate: Cost | null } {
-  const paid = earn(save, { coins: reward.coins, berries: reward.berries });
-  if (reward.creature === undefined) return { value: paid, duplicate: null };
-  return grantCreature(paid, reward.creature);
+/** Hands over the creatures whose record way is reached by the best classic height of the save. */
+function withRecordCreatures(save: Save): { save: Save; creatures: CreatureId[] } {
+  let next = save;
+  const creatures: CreatureId[] = [];
+  for (const id of CREATURE_IDS) {
+    if (next.creatures[id] !== undefined) continue;
+    const reached = CREATURES[id].unlock.some(
+      (unlock) => unlock.kind === 'record' && next.records.classicHeight >= unlock.height,
+    );
+    if (!reached) continue;
+    next = grantCreature(next, id).value;
+    creatures.push(id);
+  }
+  return { save: next, creatures };
 }

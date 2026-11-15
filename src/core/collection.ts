@@ -36,6 +36,23 @@ export function unlockHint(id: CreatureId): UnlockHint {
     : { kind: 'starterPack' };
 }
 
+/**
+ * Every way a locked creature can be obtained, as its cards show them: the free ways first
+ * (baker level, streak, record), then the shop price (coins first, as `unlockHint`). One entry for
+ * a creature with a single way. The starter pack and the tutorial are not shown next to others.
+ */
+export function unlockHints(id: CreatureId): UnlockHint[] {
+  const primary = unlockHint(id);
+  const hints: UnlockHint[] = [];
+  for (const unlock of CREATURES[id].unlock) {
+    if (unlock.kind === 'bakerLevel') hints.push({ kind: 'bakerLevel', level: unlock.level });
+    if (unlock.kind === 'streak') hints.push({ kind: 'streak', day: unlock.day });
+    if (unlock.kind === 'record') hints.push({ kind: 'record', height: unlock.height });
+  }
+  if (primary.kind === 'shop') hints.push(primary);
+  return hints.length > 0 ? hints : [primary];
+}
+
 /** Owned and total creature count for the "7 / 12" line. */
 export function collectionCount(owned: OwnedCreatures): { owned: number; total: number } {
   return {

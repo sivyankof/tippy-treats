@@ -11,13 +11,18 @@ import {
 describe('double coins offer', () => {
   it('needs at least 10 coins earned', () => {
     expect(REWARDED_OFFERS.doubleCoinsMin).toBe(10);
-    expect(canOfferDoubleCoins(3, true)).toBe(false);
-    expect(canOfferDoubleCoins(9, true)).toBe(false);
-    expect(canOfferDoubleCoins(10, true)).toBe(true);
+    expect(canOfferDoubleCoins(3, true, 5)).toBe(false);
+    expect(canOfferDoubleCoins(9, true, 5)).toBe(false);
+    expect(canOfferDoubleCoins(10, true, 5)).toBe(true);
+  });
+
+  it('is not offered once the day has no doublings left', () => {
+    expect(canOfferDoubleCoins(50, true, 1)).toBe(true);
+    expect(canOfferDoubleCoins(50, true, 0)).toBe(false);
   });
 
   it('is never offered for a run that did not reach the save', () => {
-    expect(canOfferDoubleCoins(50, false)).toBe(false);
+    expect(canOfferDoubleCoins(50, false, 5)).toBe(false);
   });
 });
 

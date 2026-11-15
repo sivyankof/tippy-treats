@@ -259,7 +259,7 @@ describe('claimMission', () => {
       item('runs_3', { progress: 1 }),
       item('combo_5', { progress: 5, claimed: true }),
     ]);
-    expect(claimMission(m, 0)).toEqual({ missions: m, coins: 0 });
+    expect(claimMission(m, 0)).toEqual({ missions: m, coins: 0, xp: 0 });
     expect(claimMission(m, 1).coins).toBe(0);
     expect(claimMission(m, 7).coins).toBe(0);
   });

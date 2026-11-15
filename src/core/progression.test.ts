@@ -1,26 +1,30 @@
 import { describe, expect, it } from 'vitest';
-import { addXp, levelReward, xpForRun, xpToNext } from './progression';
+import { addXp, levelReward, runLayers, xpToNext } from './progression';
 
 describe('xpToNext', () => {
-  it('follows 40 + 25 * (level - 1)', () => {
-    expect(xpToNext(1)).toBe(40);
-    expect(xpToNext(2)).toBe(65);
-    expect(xpToNext(10)).toBe(265);
+  it('takes 150, 250, 400, 600 for levels 1 to 4', () => {
+    expect([1, 2, 3, 4].map(xpToNext)).toEqual([150, 250, 400, 600]);
+  });
+
+  it('follows 100 + 810 * (level - 4) from level 5 on', () => {
+    expect(xpToNext(5)).toBe(910);
+    expect(xpToNext(10)).toBe(4960);
+    expect(xpToNext(20)).toBe(13_060);
   });
 });
 
 describe('addXp', () => {
   it('adds without a level-up', () => {
-    expect(addXp(1, 0, 39)).toEqual({ level: 1, xp: 39, levelsGained: [] });
+    expect(addXp(1, 0, 149)).toEqual({ level: 1, xp: 149, levelsGained: [] });
   });
 
   it('levels up exactly at the threshold', () => {
-    expect(addXp(1, 0, 40)).toEqual({ level: 2, xp: 0, levelsGained: [2] });
+    expect(addXp(1, 0, 150)).toEqual({ level: 2, xp: 0, levelsGained: [2] });
   });
 
   it('can gain several levels at once and keeps the remainder', () => {
-    // 40 + 65 + 90 = 195 reaches level 4, 5 left over
-    expect(addXp(1, 10, 190)).toEqual({ level: 4, xp: 5, levelsGained: [2, 3, 4] });
+    // 150 + 250 + 400 = 800 reaches level 4, 5 left over
+    expect(addXp(1, 10, 795)).toEqual({ level: 4, xp: 5, levelsGained: [2, 3, 4] });
   });
 
   it('ignores negative gains', () => {
@@ -54,13 +58,13 @@ describe('levelReward', () => {
   });
 });
 
-describe('xpForRun', () => {
+describe('runLayers', () => {
   it('counts layers placed in the run', () => {
-    expect(xpForRun(30)).toBe(30);
-    expect(xpForRun(45, 20)).toBe(25);
+    expect(runLayers(30)).toBe(30);
+    expect(runLayers(45, 20)).toBe(25);
   });
 
   it('never goes below zero', () => {
-    expect(xpForRun(10, 20)).toBe(0);
+    expect(runLayers(10, 20)).toBe(0);
   });
 });

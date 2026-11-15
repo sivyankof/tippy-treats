@@ -54,9 +54,10 @@ export class ResultsCoins {
     const grid = this.breakdown(lines);
     if (grid) rows.push(grid);
     this.button = null;
-    if (canOfferDoubleCoins(earned, canDouble)) {
+    const left = gameState.doublesLeft;
+    if (canOfferDoubleCoins(earned, canDouble, left)) {
       const { button, label } = createTextButton(scene, {
-        text: t('results.double'),
+        text: t('results.doubleLeft', { n: left }),
         font: cfg.adButton.font,
         maxLabelWidth: cfg.adButton.width - cfg.adTextPadding,
         fill: PALETTE.accentSecondary,
@@ -129,7 +130,7 @@ export class ResultsCoins {
     const result = await showRewarded('double_coins');
     if (!this.container.active) return;
     if (result === 'rewarded') {
-      gameState.addCoins(this.earned, 'ad_double');
+      gameState.claimDoubleCoins(this.earned);
       this.roll.set(this.earned * 2);
       this.buttonLabel?.setText(t('results.doubled'));
       if (this.buttonLabel) fitText(this.buttonLabel, cfg.adButton.width - cfg.adTextPadding);

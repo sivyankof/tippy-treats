@@ -10,7 +10,7 @@ import { LEVEL_REWARDS } from '../data/progression';
 import { SHOP } from '../data/shop';
 import { MemoryStorage } from '../services/storage/memory';
 import type { RunSummary } from './game-state';
-import { createTestState } from './test-state';
+import { createTestState, layersForXp } from './test-state';
 
 const T0 = Date.UTC(2026, 5, 10, 12, 0, 0);
 
@@ -45,7 +45,7 @@ function levelBerries(summary: RunSummary): number {
 function layersTo(level: number): number {
   let total = 0;
   for (let l = 1; l < level; l++) total += xpToNext(l);
-  return total;
+  return layersForXp(total);
 }
 
 describe('level rewards', () => {
@@ -154,10 +154,10 @@ describe('missions and the chest', () => {
     const count = state.missions.items.length;
     expect(state.claimableMissions).toBe(count);
     let paid = 0;
-    for (let i = 0; i < count; i++) paid += state.claimMission(i);
+    for (let i = 0; i < count; i++) paid += state.claimMission(i)?.coins ?? 0;
     expect(paid).toBeGreaterThan(0);
     const coins = state.coins;
-    for (let i = 0; i < count; i++) expect(state.claimMission(i)).toBe(0);
+    for (let i = 0; i < count; i++) expect(state.claimMission(i)).toBeNull();
     expect(state.coins).toBe(coins);
     const berries = state.berries;
     const chest = state.claimChest();
@@ -174,7 +174,7 @@ describe('missions and the chest', () => {
     const coins = state.coins;
     state.refreshDay();
     state.refreshDay();
-    expect(state.claimMission(0)).toBe(0);
+    expect(state.claimMission(0)).toBeNull();
     expect(state.coins).toBe(coins);
   });
 
@@ -204,7 +204,7 @@ describe('missions and the chest', () => {
     clock.ms -= 2 * MS_PER_DAY;
     state.refreshDay();
     expect(state.claimableMissions).toBe(0);
-    for (let i = 0; i < state.missions.items.length; i++) expect(state.claimMission(i)).toBe(0);
+    for (let i = 0; i < state.missions.items.length; i++) expect(state.claimMission(i)).toBeNull();
     expect(state.claimChest()).toBe(0);
     expect({ coins: state.coins, berries: state.berries }).toEqual(wallet);
   });

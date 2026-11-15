@@ -3,13 +3,14 @@ import {
   ENDLESS_FROM_LEVEL,
   ENDLESS_REWARD,
   LEVEL_REWARDS,
-  XP_TO_NEXT,
+  XP_CURVE,
   type LevelReward,
 } from '../data/progression';
 
 /** XP needed to go from `level` to `level + 1`. */
 export function xpToNext(level: number): number {
-  return XP_TO_NEXT.base + XP_TO_NEXT.step * (Math.max(1, level) - 1);
+  const at = Math.max(1, Math.floor(level));
+  return XP_CURVE.early[at - 1] ?? XP_CURVE.lateBase + XP_CURVE.lateStep * (at - 4);
 }
 
 export interface XpResult {
@@ -43,7 +44,7 @@ export function levelReward(level: number): LevelReward {
   return {};
 }
 
-/** One XP per layer placed in the run; a run started from a checkpoint does not count the start height. */
-export function xpForRun(height: number, startHeight = 0): number {
+/** Layers placed in the run (a run from a checkpoint does not count the start height); XP comes from them through the oven (`core/oven.ts`). */
+export function runLayers(height: number, startHeight = 0): number {
   return Math.max(0, Math.floor(height) - Math.floor(startHeight));
 }

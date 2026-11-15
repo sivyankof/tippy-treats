@@ -157,15 +157,19 @@ export function applyRunStats(
   });
 }
 
-/** Marks a completed, unclaimed mission as claimed and returns the coins to pay (0 when not allowed). */
+/** Marks a completed, unclaimed mission as claimed and returns the coins and XP to pay (0 when not allowed). */
 export function claimMission(
   missions: Missions,
   index: number,
-): { missions: Missions; coins: number } {
+): { missions: Missions; coins: number; xp: number } {
   const item = missions.items[index];
-  if (!item || item.claimed || !isComplete(item)) return { missions, coins: 0 };
+  if (!item || item.claimed || !isComplete(item)) return { missions, coins: 0, xp: 0 };
   const items = missions.items.map((it, i) => (i === index ? { ...it, claimed: true } : it));
-  return { missions: { ...missions, items }, coins: MISSIONS.reward[item.group] };
+  return {
+    missions: { ...missions, items },
+    coins: MISSIONS.reward[item.group],
+    xp: MISSIONS.xp[item.group],
+  };
 }
 
 /** Replaces an open mission with another template of its group, once a day (unchanged when not allowed). */

@@ -7,6 +7,7 @@ import { SAVE_WRITE_DEBOUNCE_MS, STORAGE_KEYS } from '../data/storage';
 import { MemoryStorage } from '../services/storage/memory';
 import { xpToNext } from '../core/progression';
 import { GameState, type LoadInfo, type Scheduler } from './game-state';
+import { layersForXp } from './test-state';
 
 const T0 = 1_700_000_000_000;
 
@@ -383,7 +384,7 @@ describe('GameState runs', () => {
     await state.load();
     let total = 0;
     for (let level = 1; level < 5; level++) total += xpToNext(level);
-    const summary = state.recordRun(run({ height: total, coins: 0 }));
+    const summary = state.recordRun(run({ height: layersForXp(total), coins: 0 }));
     expect(summary.levelUps.map((up) => up.level)).toEqual([2, 3, 4, 5]);
     expect(state.data.bakerLevel).toBe(5);
     // Level 4: 100 coins, level 5: 10 berries.
@@ -401,7 +402,7 @@ describe('GameState runs', () => {
     };
     await storage.set(STORAGE_KEYS.save, serializeSave(saved));
     await loaded(state);
-    const summary = state.recordRun(run({ height: xpToNext(19), coins: 0 }));
+    const summary = state.recordRun(run({ height: layersForXp(xpToNext(19)), coins: 0 }));
     expect(summary.levelUps).toEqual([
       { level: 20, reward: { creature: 'rainbow' }, duplicate: { berries: 300 } },
     ]);
@@ -414,7 +415,7 @@ describe('GameState runs', () => {
     const saved: Save = { ...createDefaultSave(T0, 'a'), bakerLevel: 19, bakerXp: 0 };
     await storage.set(STORAGE_KEYS.save, serializeSave(saved));
     await loaded(state);
-    const [up] = state.recordRun(run({ height: xpToNext(19), coins: 0 })).levelUps;
+    const [up] = state.recordRun(run({ height: layersForXp(xpToNext(19)), coins: 0 })).levelUps;
     expect(up?.duplicate).toBeNull();
     expect(state.data.creatures.rainbow).toEqual({ level: 1 });
     expect(state.berries).toBe(0);
@@ -639,7 +640,7 @@ describe('team and creatures', () => {
     expect(state.coins).toBe(400);
     expect(state.buyCreature('jelly', 'coins')).toEqual({ ok: false, reason: 'owned' });
     expect(state.upgradeCreature('jelly')).toEqual({ ok: true, value: 2 });
-    expect(state.coins).toBe(250);
+    expect(state.coins).toBe(200);
     expect(state.data.creatures.jelly).toEqual({ level: 2 });
   });
 

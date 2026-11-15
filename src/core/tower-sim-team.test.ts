@@ -579,18 +579,18 @@ describe('coins', () => {
     drop(sim, 100);
     expect(only(drop(sim, 0, 540), 'coin_collect').amount).toBe(2);
     let combo: SimEvent[] = [];
-    for (let i = 0; i < 4; i++) combo = drop(sim, 0);
-    expect(sim.state.combo).toBe(5);
+    for (let i = 0; i < 5; i++) combo = drop(sim, 0);
+    expect(sim.state.combo).toBe(6);
     expect(only(combo, 'coin_collect').amount).toBe(2);
   });
 
-  it('pays one coin for every perfect drop from the fifth combo on', () => {
+  it('pays one coin for every second perfect drop from the fifth combo on', () => {
     const sim = new TowerSim(config({ startHeight: 5 }));
     const amounts: number[] = [];
-    for (let i = 0; i < 6; i++) {
+    for (let i = 0; i < 8; i++) {
       amounts.push(pick(drop(sim, 0), 'coin_collect').reduce((sum, e) => sum + e.amount, 0));
     }
-    expect(amounts).toEqual([0, 0, 0, 0, 1, 1]);
+    expect(amounts).toEqual([0, 0, 0, 0, 0, 1, 0, 1]);
   });
 
   it('turns the cut edge into coins with crumb, never multiplied by caramel', () => {
@@ -613,8 +613,8 @@ describe('coins', () => {
     expect(only(next, 'coin_collect').amount).toBe(Math.floor(land(next).cutWidth / 24));
   });
 
-  it('adds a height bonus of 2 coins per 10 layers when the run ends', () => {
-    const sim = new TowerSim(config({ mode: 'daily', startHeight: 24 }));
+  it('adds a height bonus of 2 coins per 20 layers when the run ends', () => {
+    const sim = new TowerSim(config({ mode: 'daily', startHeight: 44 }));
     const events = missNow(sim);
     expect(only(events, 'coin_collect')).toEqual({
       type: 'coin_collect',

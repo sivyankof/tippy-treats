@@ -3,8 +3,21 @@ import type { CreatureId } from './creatures';
 /** Highest baker level a save may hold; a larger number in a stored text is a damaged or edited one. */
 export const MAX_BAKER_LEVEL = 1000;
 
-/** Baker XP needed to leave a level: `base + step * (level - 1)` (docs/04-meta-retention.md, section 1). */
-export const XP_TO_NEXT = { base: 40, step: 25 } as const;
+/**
+ * Baker XP needed to leave a level (docs/04-meta-retention.md, section 1): levels 1..4 take the
+ * `early` values, from level 5 on `lateBase + lateStep * (level - 4)`.
+ */
+export const XP_CURVE = {
+  early: [150, 250, 400, 600] as readonly number[],
+  lateBase: 100,
+  lateStep: 810,
+} as const;
+
+/** The curve before save version 5: `base + step * (level - 1)`; only the save migration reads it. */
+export const LEGACY_XP_TO_NEXT = { base: 40, step: 25 } as const;
+
+/** "Fresh oven": the first `freshLayers` layers of a local day pay 1 XP each, later layers 1 XP per `layersPerXp`. */
+export const OVEN = { freshLayers: 1300, layersPerXp: 6 } as const;
 
 export interface LevelReward {
   /** Creature handed over for free. */

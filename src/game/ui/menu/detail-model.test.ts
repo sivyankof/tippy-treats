@@ -28,18 +28,34 @@ describe('mainAction for a locked creature', () => {
         { currency: 'coins', price: 2500 },
         { currency: 'berries', price: 250 },
       ],
+      otherWays: [],
     });
   });
 
   it('names the baker level a shop creature needs', () => {
-    expect(mainAction('lemon', null, 1)).toEqual({ kind: 'shopFrom', minBakerLevel: 12 });
-    expect(mainAction('rainbow', null, 1)).toEqual({ kind: 'shopFrom', minBakerLevel: 5 });
+    expect(mainAction('lemon', null, 1)).toEqual({
+      kind: 'shopFrom',
+      minBakerLevel: 12,
+      price: 2500,
+      currency: 'coins',
+      otherWays: [],
+    });
+    expect(mainAction('rainbow', null, 1)).toEqual({
+      kind: 'shopFrom',
+      minBakerLevel: 5,
+      price: 600,
+      currency: 'berries',
+      otherWays: [{ kind: 'bakerLevel', level: 20 }],
+    });
   });
 
   it('explains how to get a creature the shop never sells', () => {
-    expect(mainAction('twins', null, 20)).toEqual({
-      kind: 'howTo',
-      hint: { kind: 'record', height: 75 },
+    expect(mainAction('twins', null, 1)).toEqual({
+      kind: 'shopFrom',
+      minBakerLevel: 14,
+      price: 2500,
+      currency: 'coins',
+      otherWays: [{ kind: 'record', height: 75 }],
     });
     expect(mainAction('brownie', null, 20)).toEqual({
       kind: 'howTo',
@@ -49,6 +65,29 @@ describe('mainAction for a locked creature', () => {
       kind: 'howTo',
       hint: { kind: 'bakerLevel', level: 2 },
     });
+  });
+});
+
+describe('mainAction for the twins, which have two ways', () => {
+  it('shows the coin price and the record way side by side from baker level 14', () => {
+    expect(mainAction('twins', null, 14)).toEqual({
+      kind: 'buy',
+      options: [{ currency: 'coins', price: 2500 }],
+      otherWays: [{ kind: 'record', height: 75 }],
+    });
+  });
+});
+
+describe('mainAction for an upgrade behind a baker level', () => {
+  it('names the baker level the next upgrade waits for', () => {
+    expect(mainAction('honey', 2, 5)).toEqual({ kind: 'upgradeFrom', minBakerLevel: 6 });
+    expect(mainAction('honey', 2, 6)).toEqual({ kind: 'upgrade', price: upgradeCost(2) });
+    expect(mainAction('honey', 4, 15)).toEqual({ kind: 'upgradeFrom', minBakerLevel: 16 });
+  });
+
+  it('holds the Rainbow level 5 back to baker level 20', () => {
+    expect(mainAction('rainbow', 4, 19)).toEqual({ kind: 'upgradeFrom', minBakerLevel: 20 });
+    expect(mainAction('rainbow', 4, 20)).toEqual({ kind: 'upgrade', price: upgradeCost(4) });
   });
 });
 

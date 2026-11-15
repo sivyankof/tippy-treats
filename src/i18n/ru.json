@@ -132,6 +132,7 @@
   "unlock": {
     "bakerLevel": "Ур. пекаря {n}",
     "record": "Рекорд {n}",
+    "shopFrom": "{price} · ур. {n}",
     "streak": "{n}-й день серии",
     "starterPack": "Стартовый набор",
     "tutorial": "Обучение"
@@ -174,8 +175,16 @@
     "teamFull": "Бригада полна",
     "nextLevel": "Ур. {n}: {change}",
     "noChange": "Ур. {n}: без изменений",
-    "shopFrom": "В магазине с ур. пекаря {n}",
+    "shopFromCoins": "Магазин: {price} монет с ур. пекаря {n}",
+    "shopFromBerries": "Магазин: {price} ягод с ур. пекаря {n}",
+    "upgradeFrom": "Улучшить с {n}-го уровня пекаря",
+    "orWay": "Или: {way}",
     "howTo": "Как получить: {way}"
+  },
+  "oven": {
+    "left": "Свежая печь: {n}",
+    "empty": "Печь вернётся завтра",
+    "ranOut": "Свежая печь снова зажжётся завтра!"
   },
   "newCreature": {
     "title": "Новое существо!",
@@ -195,6 +204,7 @@
       "height": "Бонус высоты"
     },
     "double": "×2 за рекламу",
+    "doubleLeft": "×2 за рекламу · осталось {n}",
     "doubled": "Удвоено!",
     "xp": "+{n} опыта",
     "abilityCount": "×{n}",

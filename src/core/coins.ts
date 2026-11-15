@@ -27,9 +27,13 @@ export function floatingCoinAmount(mods: Pick<Modifiers, 'coinMultAdd'>): number
   return multipliedCoins(C.collectAmount, mods);
 }
 
-/** Coins of a perfect drop in a long enough combo; `combo` already includes this drop. */
+/**
+ * Coins of a perfect drop in a long enough combo; `combo` already includes this drop. Only every
+ * `comboEvery`-th perfect drop counted from `comboFrom` pays (combos 6, 8, 10... for 5 and 2).
+ */
 export function comboCoinAmount(combo: number, mods: Pick<Modifiers, 'coinMultAdd'>): number {
-  return combo >= C.comboFrom ? multipliedCoins(C.comboAmount, mods) : 0;
+  const pays = combo >= C.comboFrom && (combo - C.comboFrom + 1) % C.comboEvery === 0;
+  return pays ? multipliedCoins(C.comboAmount, mods) : 0;
 }
 
 /** Crumb: one coin per `pixelsPerCoin` of the cut edge, never multiplied. */

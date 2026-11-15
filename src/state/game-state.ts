@@ -6,7 +6,9 @@ import type {
   UpgradeError,
   Wallet,
 } from '../core/economy';
+import { doublesLeft, withDoubleUsed } from '../core/double-coins';
 import { exchangeBerries, spend } from '../core/economy';
+import { freshLeft } from '../core/oven';
 import {
   canShowInterstitial,
   shouldOfferRemoveAds,
@@ -40,6 +42,7 @@ import {
 import { giftWaitMs, isGiftReady, withGiftOpened } from './gift';
 import {
   claimableMissions,
+  type MissionClaim,
   withChestClaimed,
   withMissionClaimed,
   withMissionRerolled,
@@ -70,7 +73,8 @@ import { runCoinCredits, type CreditSource } from './session-tally';
 import { SaveStore, type GameStateDeps, type LoadOptions, type LoadOutcome } from './save-store';
 import { withAdWatched, withBerries, withCoins } from './wallet';
 
-export { EMPTY_SUMMARY, type LevelUp, type RunSummary } from './run-record';
+export { EMPTY_SUMMARY, type LevelUp, type OvenSummary, type RunSummary } from './run-record';
+export type { MissionClaim } from './missions';
 export type { DailyInfo } from './daily';
 export type { RunExtras } from './run-progress';
 export type { RestorePayment, StreakClaim } from './streak';
@@ -157,7 +161,7 @@ export class GameState {
       withMissionsForDay(this.store.save, today, this.clockBehind),
       this.utcToday(),
     );
-    const applied = applyRun(refreshed, result, startHeight, firstRun, today);
+    const applied = applyRun(refreshed, result, startHeight, firstRun, today, this.clockBehind);
     const progress = applyRunProgress(
       applied.save,
       result,
@@ -272,12 +276,12 @@ export class GameState {
     return claimableMissions(this.store.save);
   }
 
-  /** Pays the coins of a completed mission; 0 when it cannot be claimed. */
-  claimMission(index: number): number {
+  /** Pays the coins and XP of a completed mission; null when it cannot be claimed. */
+  claimMission(index: number): MissionClaim | null {
     const claimed = withMissionClaimed(this.store.save, index);
-    if (!claimed) return 0;
+    if (!claimed) return null;
     this.commit(claimed.save, 'mission');
-    return claimed.coins;
+    return { coins: claimed.coins, xp: claimed.xp, levelUps: claimed.levelUps };
   }
 
   /** Swaps an open mission for another one, once a day; false when not allowed. */
@@ -375,6 +379,28 @@ export class GameState {
   addCoins(coins: number, source: CreditSource = 'debug'): void {
     const next = withCoins(this.store.save, coins);
     if (next !== this.store.save) this.commit(next, source);
+  }
+
+  /** "x2 coins" ads still allowed today. */
+  get doublesLeft(): number {
+    return doublesLeft(this.store.save.doubles, this.today(), this.clockBehind);
+  }
+
+  /** Fresh oven layers left today (the bar of Home and the results). */
+  get ovenLeft(): number {
+    return freshLeft(this.store.save.oven, this.today(), this.clockBehind);
+  }
+
+  /**
+   * Pays the doubled coins of a watched ad and counts it for today; false (nothing paid) when
+   * today's doublings are used up.
+   */
+  claimDoubleCoins(coins: number): boolean {
+    if (this.doublesLeft <= 0) return false;
+    const doubles = withDoubleUsed(this.store.save.doubles, this.today(), this.clockBehind);
+    const next = withCoins({ ...this.store.save, doubles }, coins);
+    this.commit(next, 'ad_double');
+    return true;
   }
 
   /** A rewarded ad was watched to the end. */

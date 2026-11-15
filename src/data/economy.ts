@@ -1,5 +1,11 @@
 /** Price of the upgrade from level n to n + 1, index 0 is level 1 -> 2 (docs/05-economy-monetization.md, section 4). */
-export const UPGRADE_COSTS: readonly number[] = [150, 400, 900, 2000];
+export const UPGRADE_COSTS: readonly number[] = [200, 600, 1300, 2800];
+
+/** Baker level the upgrade from level n to n + 1 needs, index 0 is level 1 -> 2. */
+export const UPGRADE_MIN_BAKER: readonly number[] = [1, 6, 11, 16];
+
+/** The same for a legendary creature: its last upgrade (to level 5) waits for baker level 20. */
+export const LEGENDARY_UPGRADE_MIN_BAKER: readonly number[] = [1, 6, 11, 20];
 
 export interface BerryPack {
   berries: number;

@@ -10,6 +10,14 @@ import {
   type RunStats,
 } from '../core/missions';
 import type { Save } from '../core/save/schema';
+import { withXp, type LevelUp } from './level-up';
+
+/** What claiming a mission paid: coins, XP and the levels the XP reached. */
+export interface MissionClaim {
+  coins: number;
+  xp: number;
+  levelUps: LevelUp[];
+}
 
 /** The save with the mission list of `today` (a new list on a later day); the same save when nothing changes. */
 export function withMissionsForDay(save: Save, today: string, clockBack: boolean): Save {
@@ -34,15 +42,16 @@ export function withMissionStats(save: Save, stats: RunStats): Save {
   return { ...save, missions: { ...save.missions, items } };
 }
 
-/** The save with the mission claimed and its coins paid; null when it cannot be claimed. */
+/** The save with the mission claimed, its coins and XP paid (and the level rewards of that XP); null when it cannot be claimed. */
 export function withMissionClaimed(
   save: Save,
   index: number,
-): { save: Save; coins: number } | null {
+): ({ save: Save } & MissionClaim) | null {
   const claimed = claimMission(save.missions, index);
   if (claimed.coins <= 0) return null;
   const paid = earn(save, { coins: claimed.coins });
-  return { save: { ...paid, missions: claimed.missions }, coins: claimed.coins };
+  const leveled = withXp({ ...paid, missions: claimed.missions }, claimed.xp);
+  return { save: leveled.save, coins: claimed.coins, xp: claimed.xp, levelUps: leveled.levelUps };
 }
 
 /** The save with the mission replaced; null when a reroll is not allowed. */

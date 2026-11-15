@@ -7,6 +7,7 @@ import { msUntilLocalMidnight, now } from '../../../util/clock';
 import { createOutlinedText } from '../outlined-text';
 import { PopupWindow } from '../style/dialog-window';
 import type { Button } from '../button';
+import { showLevelUps } from './level-up-chain';
 import { MissionCard } from './missions-card';
 import { MissionsChest } from './missions-chest';
 import { flyReward, type WalletTargets } from './reward-flight';
@@ -55,17 +56,18 @@ export function openMissionsWindow(
         canReroll: !rerollUsed && !item.claimed && item.progress < item.target,
         rerollUsed,
         onClaim: (button) => {
-          const coins = gameState.claimMission(index);
-          if (coins > 0) {
+          const claim = gameState.claimMission(index);
+          if (claim) {
             services.haptics.play('success');
             flyReward(scene, {
               currency: 'coins',
-              amount: coins,
+              amount: claim.coins,
               from: screenPoint(button),
               wallet,
             });
           }
           build();
+          if (claim && claim.levelUps.length > 0) showLevelUps(scene, claim.levelUps);
         },
         onReroll: () => {
           if (gameState.rerollMission(index)) services.haptics.play('medium');

@@ -32,7 +32,12 @@ describe('unlock hints', () => {
   it('shows the free way of a creature the shop does not sell', () => {
     expect(unlockHint('puff')).toEqual({ kind: 'bakerLevel', level: 2 });
     expect(unlockHint('brownie')).toEqual({ kind: 'streak', day: 7 });
-    expect(unlockHint('twins')).toEqual({ kind: 'record', height: 75 });
+    expect(unlockHint('twins')).toEqual({
+      kind: 'shop',
+      currency: 'coins',
+      price: 2500,
+      minBakerLevel: 14,
+    });
     expect(unlockHint('honey')).toEqual({ kind: 'tutorial' });
   });
 

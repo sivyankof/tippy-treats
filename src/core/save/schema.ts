@@ -1,6 +1,6 @@
 import type { CreatureId } from '../../data/creatures';
 
-export const SAVE_VERSION = 4;
+export const SAVE_VERSION = 5;
 
 export type MissionGroup = 'easy' | 'medium' | 'hard';
 
@@ -111,5 +111,18 @@ export interface SaveV4 extends Omit<SaveV3, 'version' | 'ads'> {
   ads: SaveV3['ads'] & { shownDay: string; shownToday: number };
 }
 
+/**
+ * Version 5 (economy): `oven` keeps the "fresh oven" counter of the baker XP (`core/oven.ts`) and
+ * `doubles` the "x2 coins" ads watched today (`core/double-coins.ts`). Both count per local day.
+ * The baker XP inside the current level is recalculated for the new curve by the migration.
+ */
+export interface SaveV5 extends Omit<SaveV4, 'version'> {
+  version: 5;
+  /** `used`: fresh layers spent on `day`; `carry`: layers beyond them that are not a whole XP yet. */
+  oven: { day: string; used: number; carry: number };
+  /** "x2 coins" ads watched on the local day `day`. */
+  doubles: { day: string; used: number };
+}
+
 /** The current save version. */
-export type Save = SaveV4;
+export type Save = SaveV5;

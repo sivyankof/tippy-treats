@@ -39,6 +39,8 @@ export const MISSIONS = {
   groups: ['easy', 'medium', 'hard'] as const,
   /** Coins paid for a claimed mission. */
   reward: { easy: 40, medium: 80, hard: 150 } as const,
+  /** Baker XP paid with the coins of a claimed mission. */
+  xp: { easy: 20, medium: 40, hard: 60 } as const,
   /** Berries for the chest of the day (all three claimed). */
   chestBerries: 5,
   /** A "calm" run never lets the wobble reach this value. */

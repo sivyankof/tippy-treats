@@ -1,3 +1,5 @@
+import { LEGACY_XP_TO_NEXT } from '../../data/progression';
+import { xpToNext } from '../progression';
 import { SAVE_VERSION, type Save } from './schema';
 
 export type SaveErrorCode = 'not_object' | 'bad_version' | 'future_version' | 'missing_migration';
@@ -51,8 +53,31 @@ export function migrateV3(raw: RawSave): RawSave {
   return { ...raw, ads: { ...ads, shownDay: '', shownToday: 0 } };
 }
 
+/**
+ * 4 → 5: the oven and the "x2 coins" counters start empty (a full oven on the first day), and the
+ * XP inside the current level is rescaled to the new curve in proportion, so the bar keeps its fill:
+ * `floor(xp / oldXpToNext * newXpToNext)`. The baker level and the creature levels are never lowered.
+ */
+export function migrateV4(raw: RawSave): RawSave {
+  const level = typeof raw.bakerLevel === 'number' ? Math.max(1, Math.floor(raw.bakerLevel)) : 1;
+  const oldNeed = LEGACY_XP_TO_NEXT.base + LEGACY_XP_TO_NEXT.step * (level - 1);
+  const oldXp = typeof raw.bakerXp === 'number' && raw.bakerXp > 0 ? Math.floor(raw.bakerXp) : 0;
+  const newNeed = xpToNext(level);
+  return {
+    ...raw,
+    bakerXp: Math.min(newNeed - 1, Math.floor((oldXp / oldNeed) * newNeed)),
+    oven: { day: '', used: 0, carry: 0 },
+    doubles: { day: '', used: 0 },
+  };
+}
+
 /** Migrations keyed by the version they upgrade from. */
-export const MIGRATIONS: MigrationChain = { 1: migrateV1, 2: migrateV2, 3: migrateV3 };
+export const MIGRATIONS: MigrationChain = {
+  1: migrateV1,
+  2: migrateV2,
+  3: migrateV3,
+  4: migrateV4,
+};
 
 /**
  * Runs the migration chain up to `target`. The result has the right version but is not

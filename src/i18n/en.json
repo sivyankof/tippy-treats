@@ -132,6 +132,7 @@
   "unlock": {
     "bakerLevel": "Baker lv {n}",
     "record": "Record {n}",
+    "shopFrom": "{price} · lv {n}",
     "streak": "Streak day {n}",
     "starterPack": "Starter pack",
     "tutorial": "Tutorial"
@@ -174,8 +175,16 @@
     "teamFull": "Team is full",
     "nextLevel": "Lv {n}: {change}",
     "noChange": "Lv {n}: no change",
-    "shopFrom": "In the shop from baker lv {n}",
+    "shopFromCoins": "Shop: {price} coins from baker lv {n}",
+    "shopFromBerries": "Shop: {price} berries from baker lv {n}",
+    "upgradeFrom": "Upgrade from baker lv {n}",
+    "orWay": "Or: {way}",
     "howTo": "How to get: {way}"
+  },
+  "oven": {
+    "left": "Fresh oven: {n}",
+    "empty": "Oven is back tomorrow",
+    "ranOut": "The fresh oven lights up again tomorrow!"
   },
   "newCreature": {
     "title": "New creature!",
@@ -195,6 +204,7 @@
       "height": "Height bonus"
     },
     "double": "×2 for an ad",
+    "doubleLeft": "×2 for an ad · {n} left",
     "doubled": "Doubled!",
     "xp": "+{n} XP",
     "abilityCount": "×{n}",

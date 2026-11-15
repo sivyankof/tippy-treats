@@ -160,10 +160,10 @@ describe('missions', () => {
     );
     expect(state.claimableMissions).toBe(3);
     expect(state.claimChest()).toBe(0);
-    const coins = [0, 1, 2].map((index) => state.claimMission(index));
+    const coins = [0, 1, 2].map((index) => state.claimMission(index)?.coins);
     expect(coins).toEqual(items.map((item) => MISSIONS.reward[item.group]));
-    expect(state.claimMission(0)).toBe(0);
-    expect(state.coins).toBe(coins.reduce((a, b) => a + b, 0));
+    expect(state.claimMission(0)).toBeNull();
+    expect(state.coins).toBe(coins.reduce((a = 0, b = 0) => a + b, 0));
     expect(state.claimableMissions).toBe(0);
     expect(state.claimChest()).toBe(MISSIONS.chestBerries);
     expect(state.berries).toBe(MISSIONS.chestBerries);

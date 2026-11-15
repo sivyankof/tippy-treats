@@ -74,8 +74,10 @@ export const BALANCE = {
     /** A perfect drop from this combo on pays `comboAmount` coins (multiplied by caramel). */
     comboFrom: 5,
     comboAmount: 1,
+    /** Only every this many perfect drops of a long combo pay: the 2nd, 4th... counted from `comboFrom`. */
+    comboEvery: 2,
     /** At run end: `heightBonusCoins` coins for every full `heightBonusEvery` layers. */
-    heightBonusEvery: 10,
+    heightBonusEvery: 20,
     heightBonusCoins: 2,
   },
   golden: {

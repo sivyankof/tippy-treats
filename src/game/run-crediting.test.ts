@@ -8,7 +8,7 @@ import { DAILY } from '../data/daily';
 import { STORAGE_KEYS } from '../data/storage';
 import { MemoryStorage } from '../services/storage/memory';
 import { bindPageLeave } from '../state/page-lifecycle';
-import { createTestState } from '../state/test-state';
+import { createTestState, layersForXp } from '../state/test-state';
 import type { GameState } from '../state/game-state';
 import { parseDebugParams, savesRun } from '../util/debug-params';
 import { ContinueFlow } from './continue-flow';
@@ -312,9 +312,9 @@ describe('daily tower runs', () => {
 
   async function unlocked(clock: { ms: number }): Promise<GameState> {
     const state = createTestState(clock);
-    // Baker level 5 opens the tower.
+    // Baker level 5 opens the tower: 150 + 250 + 400 + 600 XP.
     await Promise.resolve();
-    state.recordRun(fakeResult({ height: 700, coins: 0 }));
+    state.recordRun(fakeResult({ height: layersForXp(1400), coins: 0 }));
     return state;
   }
 

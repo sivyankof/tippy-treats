@@ -16,4 +16,6 @@ export const STUB_ADS = {
 export const REWARDED_OFFERS = {
   /** "×2 coins" on the results screen needs at least this many coins earned in the run. */
   doubleCoinsMin: 10,
+  /** "×2 coins" may be watched this many times per local day. */
+  doubleCoinsPerDay: 5,
 } as const;

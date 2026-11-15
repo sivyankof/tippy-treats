@@ -1,5 +1,6 @@
 import { serializeSave } from '../core/save/load';
 import type { Save } from '../core/save/schema';
+import { OVEN } from '../data/progression';
 import { STORAGE_KEYS } from '../data/storage';
 import { MemoryStorage } from '../services/storage/memory';
 import { GameState } from './game-state';
@@ -40,4 +41,14 @@ function build(storage: MemoryStorage, clock: { ms: number }, tally?: SessionTal
     scheduler: { set: () => 0, clear: () => undefined },
     tally,
   });
+}
+
+/**
+ * Layers a first run of a fresh local day needs to pay `xp` baker XP: the fresh oven pays 1 XP per
+ * layer for the first `OVEN.freshLayers`, later layers `OVEN.layersPerXp` per XP.
+ */
+export function layersForXp(xp: number): number {
+  return xp <= OVEN.freshLayers
+    ? xp
+    : OVEN.freshLayers + (xp - OVEN.freshLayers) * OVEN.layersPerXp;
 }
