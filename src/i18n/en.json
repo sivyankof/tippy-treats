@@ -120,8 +120,7 @@
     }
   },
   "meta": {
-    "levelShort": "Lv {n}",
-    "soon": "Soon"
+    "levelShort": "Lv {n}"
   },
   "rarity": {
     "common": "Common",
@@ -149,7 +148,8 @@
       "missions": "Missions"
     },
     "streakDays": "one={n} day|other={n} days",
-    "giftReady": "Gift ready!"
+    "giftReady": "Gift ready!",
+    "starter": "Starter pack {price}"
   },
   "team": {
     "title": "Team",
@@ -226,7 +226,8 @@
   "time": {
     "hm": "{h} h {m} min",
     "ms": "{m} min {s} s",
-    "s": "{s} s"
+    "s": "{s} s",
+    "dh": "{d} d {h} h"
   },
   "mission": {
     "runs_3": "Finish runs: {n}",
@@ -332,6 +333,47 @@
       "berries_500": "500 berries",
       "berries_1200": "1,200 berries",
       "berries_2800": "2,800 berries"
+    },
+    "title": "Shop",
+    "unavailable": "Unavailable",
+    "owned": "Bought",
+    "buyFor": "Buy for {price}",
+    "pending": "Purchase is waiting for approval",
+    "failed": "Purchase did not go through",
+    "restore": "Restore purchases",
+    "coinsN": "one={amount} coin|other={amount} coins",
+    "coinsPlus": "one=+{amount} coin|other=+{amount} coins",
+    "berriesN": "one={amount} berry|other={amount} berries",
+    "section": {
+      "creatures": "Creatures",
+      "free": "Free",
+      "berries": "Berries",
+      "exchange": "Berries to coins",
+      "noAds": "No ads"
+    },
+    "starter": {
+      "title": "Starter pack",
+      "left": "Left: {time}",
+      "note": "If you already have {name}, you get {coins} extra",
+      "noteOwned": "You already have {name}, so you get {coins} extra"
+    },
+    "free": {
+      "watch": "Watch",
+      "left": "Left today: {left} of {total}",
+      "done": "Come back tomorrow"
+    },
+    "badge": {
+      "popular": "Popular",
+      "bestValue": "Best value"
+    },
+    "noAds": {
+      "title": "Remove ads",
+      "desc": "Reward videos stay optional"
+    },
+    "restoreResult": {
+      "restored": "Purchases restored",
+      "nothing": "Nothing to restore",
+      "failed": "Could not reach the store"
     }
   }
 }

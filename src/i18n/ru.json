@@ -120,8 +120,7 @@
     }
   },
   "meta": {
-    "levelShort": "Ур. {n}",
-    "soon": "Скоро"
+    "levelShort": "Ур. {n}"
   },
   "rarity": {
     "common": "Обычное",
@@ -149,7 +148,8 @@
       "missions": "Задания"
     },
     "streakDays": "one={n} день|few={n} дня|many={n} дней|other={n} дня",
-    "giftReady": "Подарок готов!"
+    "giftReady": "Подарок готов!",
+    "starter": "Стартовый набор {price}"
   },
   "team": {
     "title": "Бригада",
@@ -226,7 +226,8 @@
   "time": {
     "hm": "{h} ч {m} мин",
     "ms": "{m} мин {s} с",
-    "s": "{s} с"
+    "s": "{s} с",
+    "dh": "{d} д {h} ч"
   },
   "mission": {
     "runs_3": "Заверши забегов: {n}",
@@ -332,6 +333,47 @@
       "berries_500": "500 ягод",
       "berries_1200": "1200 ягод",
       "berries_2800": "2800 ягод"
+    },
+    "title": "Магазин",
+    "unavailable": "Недоступно",
+    "owned": "Куплено",
+    "buyFor": "Купить за {price}",
+    "pending": "Покупка ожидает подтверждения",
+    "failed": "Покупка не удалась",
+    "restore": "Восстановить покупки",
+    "coinsN": "one={amount} монета|few={amount} монеты|many={amount} монет|other={amount} монеты",
+    "coinsPlus": "one=+{amount} монета|few=+{amount} монеты|many=+{amount} монет|other=+{amount} монеты",
+    "berriesN": "one={amount} ягода|few={amount} ягоды|many={amount} ягод|other={amount} ягоды",
+    "section": {
+      "creatures": "Существа",
+      "free": "Бесплатно",
+      "berries": "Ягоды",
+      "exchange": "Ягоды в монеты",
+      "noAds": "Без рекламы"
+    },
+    "starter": {
+      "title": "Стартовый набор",
+      "left": "Осталось: {time}",
+      "note": "Если {name} уже есть, добавим {coins}",
+      "noteOwned": "{name} у тебя уже есть, поэтому добавлено {coins}"
+    },
+    "free": {
+      "watch": "Смотреть",
+      "left": "Осталось: {left} из {total}",
+      "done": "Приходи завтра"
+    },
+    "badge": {
+      "popular": "Популярный",
+      "bestValue": "Выгодно"
+    },
+    "noAds": {
+      "title": "Отключить рекламу",
+      "desc": "Видео за награду остаются"
+    },
+    "restoreResult": {
+      "restored": "Покупки восстановлены",
+      "nothing": "Нечего восстанавливать",
+      "failed": "Не удалось связаться со стором"
     }
   }
 }

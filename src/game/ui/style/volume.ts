@@ -16,6 +16,7 @@
  *   all of them have this look (shape, bevel, gloss, press).
  * - An on/off setting: `ToggleSwitch` (toggle-switch.ts), a label and a sliding switch.
  * - A countdown ring with the seconds in it: `RingTimer` (ring-timer.ts).
+ * - A list that scrolls under the header: `ScrollList` (scroll-list.ts) with `ScreenHeader` `band`.
  * - A coin or berry counter on its plate: `WalletChip` (wallet-chip.ts); in the run HUD with
  *   `hud: true`, see-through. Inside a window where the currency is spent: `BalanceChip`
  *   (balance-chip.ts), which also snaps and shakes.

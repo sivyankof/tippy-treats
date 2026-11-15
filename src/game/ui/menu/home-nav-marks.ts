@@ -55,6 +55,11 @@ export function missionDots(): boolean[] {
   return gameState.missions.items.map((item) => isComplete(item));
 }
 
+/** A creature of the shop can be bought for coins right now. */
+export function shopWaiting(): boolean {
+  return gameState.coinCreatureAffordable;
+}
+
 /** The daily tower is open and today's attempt is still unused. */
 export function dailyWaiting(): boolean {
   const info = gameState.dailyInfo();

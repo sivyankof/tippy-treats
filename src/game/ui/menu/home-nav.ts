@@ -4,10 +4,16 @@ import { PALETTE } from '../../../data/palette';
 import { t } from '../../../i18n';
 import type { Button } from '../button';
 import { createOutlinedText } from '../outlined-text';
-import { faceOffsetY, VolumePlate } from '../style/volume';
+import { VolumePlate } from '../style/volume';
 import { fitText } from './fit-text';
 import { createIconButton, type IconKind } from './icon-button';
-import { dailyWaiting, missionDots, missionsWaiting, NavMarks } from './home-nav-marks';
+import {
+  dailyWaiting,
+  missionDots,
+  missionsWaiting,
+  NavMarks,
+  shopWaiting,
+} from './home-nav-marks';
 
 const cfg = MENU.home;
 
@@ -16,47 +22,23 @@ interface NavSpec {
   label: string;
   fill: number;
   size: number;
-  /** Null: the screen is not built yet. */
-  onClick: (() => void) | null;
+  onClick: () => void;
 }
 
-/** One item of the bottom bar: a round icon button, its caption and maybe a "soon" badge. */
+/** One item of the bottom bar: a round icon button and its caption. */
 class NavItem {
   readonly root: Phaser.GameObjects.Container;
   readonly button: Button;
-  readonly live: boolean;
   readonly marks: NavMarks;
 
   constructor(scene: Phaser.Scene, spec: NavSpec, slotWidth: number) {
-    this.live = spec.onClick !== null;
-    this.button = createIconButton(
-      scene,
-      0,
-      0,
-      spec.size,
-      spec.fill,
-      spec.icon,
-      spec.onClick ?? (() => undefined),
-    );
+    this.button = createIconButton(scene, 0, 0, spec.size, spec.fill, spec.icon, spec.onClick);
     const caption = fitText(
       createOutlinedText(scene, 0, spec.size / 2 + cfg.navCaptionGap, spec.label, cfg.navFont),
       slotWidth,
     ).setOrigin(0.5, 0);
-    const parts: Phaser.GameObjects.GameObject[] = [this.button, caption];
-    if (!this.live) {
-      this.button.setEnabled(false);
-      const { width, height, font, offsetY, fill } = cfg.navBadge;
-      const y = -spec.size / 2 - offsetY;
-      const badge = new VolumePlate(scene, 'chip', height, { fill }).setBodyWidth(width).setY(y);
-      const text = fitText(
-        createOutlinedText(scene, 0, y + faceOffsetY('chip'), t('meta.soon'), font),
-        width,
-      );
-      parts.push(badge, text);
-    }
-    this.root = scene.add.container(0, 0, parts);
+    this.root = scene.add.container(0, 0, [this.button, caption]);
     this.marks = new NavMarks(scene, this.root, spec.size);
-    if (!this.live) this.button.setAlpha(cfg.navDisabledAlpha);
   }
 }
 
@@ -67,7 +49,13 @@ export class HomeNav {
 
   constructor(
     scene: Phaser.Scene,
-    handlers: { collection: () => void; play: () => void; daily: () => void; missions: () => void },
+    handlers: {
+      shop: () => void;
+      collection: () => void;
+      play: () => void;
+      daily: () => void;
+      missions: () => void;
+    },
   ) {
     const slotWidth = cfg.navSlotWidth;
     const specs: NavSpec[] = [
@@ -76,7 +64,7 @@ export class HomeNav {
         label: t('home.nav.shop'),
         fill: PALETTE.accentSecondary,
         size: cfg.navSize,
-        onClick: null,
+        onClick: handlers.shop,
       },
       {
         icon: 'collection',
@@ -115,7 +103,8 @@ export class HomeNav {
 
   /** The progress dots of Missions and the red dots of Missions and Daily follow the save. */
   refresh(): void {
-    const [, , , daily, missions] = this.items;
+    const [shop, , , daily, missions] = this.items;
+    shop?.marks.setAlert(shopWaiting());
     missions?.marks.setDots(missionDots());
     missions?.marks.setAlert(missionsWaiting());
     daily?.marks.setAlert(dailyWaiting());
@@ -143,8 +132,6 @@ export class HomeNav {
   }
 
   setEnabled(enabled: boolean): void {
-    for (const item of this.items) {
-      if (item.live) item.button.setEnabled(enabled);
-    }
+    for (const item of this.items) item.button.setEnabled(enabled);
   }
 }

@@ -128,6 +128,22 @@ export const MENU = {
     /** The plates under the coin and berry counters of a screen header. */
     /** The one grey of a price button the player cannot pay yet ("Not enough N"). */
     shortFill: 0x9a8fa8,
+    /** A list that scrolls by dragging a finger or the wheel (`ScrollList`). */
+    scroll: {
+      /** A press that moves farther than this is a drag, not a tap. */
+      dragPx: 18,
+      /** Share of the speed kept every 16 ms after the finger is lifted, and the speed below which it stops (px/ms). */
+      friction: 0.95,
+      /** The span of time `friction` is counted over, in ms. */
+      frictionFrameMs: 16,
+      stopSpeed: 0.02,
+      /** Speed is taken from the last moves of the finger, in ms. */
+      speedWindowMs: 90,
+      /** Wheel notch to pixels. */
+      wheelScale: 1,
+      /** The list leaves this much room under its last block. */
+      endPad: 140,
+    },
     wallet: { height: 84, padLeft: 26, padRight: 12, fill: 0x5b4372 },
     /**
      * Plates of the run HUD: chips of the kit, see-through so the tower shows under them
@@ -180,6 +196,11 @@ export const MENU = {
     shadow: 6,
     /** Content of a screen starts this far from the top. */
     contentTop: 230,
+    /**
+     * A plate behind the header of a screen whose list scrolls under it: its lower edge, and how
+     * far it runs past the top and the sides of the screen.
+     */
+    band: { bottom: 214, overhang: 80 },
   },
   /** The popup window of the menus (missions, streak, gift). */
   popup: {
@@ -325,6 +346,8 @@ export const MENU = {
     playFont: 96,
     playRadius: 66,
     playShadow: 16,
+    /** The "Starter pack $1.99" button above Play, for the first days (docs/07, section 2). */
+    starter: { width: 700, height: 108, radius: 38, shadowOffset: 8, font: 44, gap: 44, pad: 40 },
     /** The hint bubble about a free team slot, above Play. */
     hintAbovePlay: 220,
     hintFont: 36,
@@ -335,7 +358,6 @@ export const MENU = {
     /** Line height of a nav caption, as a share of its font size. */
     navLineHeight: 1.4,
     navSlotWidth: 200,
-    navDisabledAlpha: 0.45,
     /** The bar: its visible height, the room above the buttons, and how far it runs past the screen edges. */
     navBar: { height: 252, padTop: 26, overhang: 60 },
     /** After the tutorial Play pulses with a ring. */
@@ -361,7 +383,6 @@ export const MENU = {
       fill: 0x7c5cff,
     },
     navCaptionGap: 16,
-    navBadge: { width: 110, height: 44, font: 24, offsetY: 12, fill: 0x7c5cff },
     /** Progress dots of the Missions button and the red dots that say "something is waiting". */
     navDots: { size: 20, gap: 12, offsetY: 18, off: 0xe9d5c3, on: 0x3ddc97, outline: 4 },
     navAlert: { size: 40, offsetX: 6, offsetY: 6, fill: 0xe8334a, outline: 6 },
@@ -863,6 +884,79 @@ export const MENU = {
       portraitGap: 24,
       okButton: { width: 520, height: 112, radius: 40, shadowOffset: 8, font: 52 },
     },
+  },
+  /** The shop: a scrolling list of blocks 960 wide under the header band. */
+  shop: {
+    width: 960,
+    /** Air between the header band and the first block. */
+    top: 40,
+    /** Between blocks, and between the rows of one block. */
+    gap: 52,
+    rowGap: 26,
+    /** One row: a card with an icon, two lines of text and a button. */
+    row: {
+      height: 160,
+      padX: 28,
+      iconSize: 108,
+      iconGap: 24,
+      titleFont: 46,
+      subFont: 32,
+      titleY: 0.36,
+      subY: 0.72,
+      button: { width: 300, height: 104, radius: 36, shadowOffset: 8, font: 42 },
+      wideButton: { width: 400, height: 104, radius: 36, shadowOffset: 8, font: 38 },
+      /** The button label shrinks to fit the button less this much. */
+      buttonPad: 28,
+      badge: { height: 44, font: 28, padX: 26, fill: 0xe8334a },
+      ownedFill: 0x2fb97f,
+    },
+    /** The starter pack card. */
+    starter: {
+      height: 540,
+      rim: 0xffc93c,
+      titleFont: 54,
+      timerFont: 34,
+      timerColor: 0xffc93c,
+      padX: 40,
+      titleY: 62,
+      /** The title takes at most this share of the width; the timer gets what is left less `titleGap`. */
+      titleShare: 0.6,
+      titleGap: 24,
+      iconSize: 190,
+      iconX: 150,
+      iconY: 226,
+      lineX: 290,
+      lineFont: 44,
+      lineIcon: 64,
+      lineGap: 14,
+      linesY: 160,
+      lineStep: 72,
+      noteFont: 30,
+      noteY: 392,
+      noteWrap: 820,
+      button: { width: 600, height: 108, radius: 38, shadowOffset: 8, font: 50 },
+      buttonY: 468,
+      /** The timer is redrawn this often. */
+      tickMs: 500,
+    },
+    /** The small "Restore purchases" button at the end of the list. */
+    restore: { width: 520, height: 88, radius: 30, shadowOffset: 6, font: 34, fill: 0x7c5cff },
+    /** A short message under the header ("Purchase failed"). */
+    toast: {
+      /** Middle of the message, measured from the lower edge of the header band. */
+      belowBand: 90,
+      height: 96,
+      font: 38,
+      padX: 48,
+      maxWidth: 940,
+      showMs: 2600,
+      fadeMs: 300,
+      depth: 600,
+    },
+    /** Dim of a block whose product has no store id. */
+    unavailableAlpha: 0.6,
+    /** The crossed-out "AD" tile of the No ads product; sizes are shares of the tile. */
+    noAdsIcon: { radius: 0.22, fill: 0x7c5cff, border: 6, font: 0.4, slash: 0.1, reach: 0.78 },
   },
   /** The daily tower screen: a stack of blocks that spreads out on a taller screen. */
   daily: {

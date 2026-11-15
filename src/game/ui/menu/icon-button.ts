@@ -40,10 +40,31 @@ export function drawIcon(
       g.fillTriangle(cx - s * 0.5, cy - s * 0.7, cx - s * 0.5, cy + s * 0.7, cx + s * 0.75, cy);
       return;
     case 'shop':
-      g.fillRoundedRect(cx - s * 0.75, cy - s * 0.35, s * 1.5, s * 1.05, s * 0.18);
+      // A shopping cart: handle, basket and two wheels.
       g.beginPath();
-      g.arc(cx, cy - s * 0.35, s * 0.45, Math.PI, 0);
+      g.moveTo(cx - s * 0.9, cy - s * 0.65);
+      g.lineTo(cx - s * 0.55, cy - s * 0.65);
+      g.lineTo(cx - s * 0.3, cy + s * 0.4);
+      g.lineTo(cx + s * 0.7, cy + s * 0.4);
       g.strokePath();
+      g.fillTriangle(
+        cx - s * 0.5,
+        cy - s * 0.4,
+        cx + s * 0.85,
+        cy - s * 0.4,
+        cx + s * 0.65,
+        cy + s * 0.2,
+      );
+      g.fillTriangle(
+        cx - s * 0.5,
+        cy - s * 0.4,
+        cx + s * 0.65,
+        cy + s * 0.2,
+        cx - s * 0.35,
+        cy + s * 0.2,
+      );
+      g.fillCircle(cx - s * 0.1, cy + s * 0.75, s * 0.17);
+      g.fillCircle(cx + s * 0.55, cy + s * 0.75, s * 0.17);
       return;
     case 'collection':
       g.fillRoundedRect(cx - s * 0.8, cy - s * 0.7, s * 0.72, s * 1.4, s * 0.14);

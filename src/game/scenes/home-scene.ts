@@ -1,9 +1,12 @@
 import * as Phaser from 'phaser';
 import { canFillTeam } from '../../core/team';
+import { ANIM } from '../../data/anim';
 import { MENU } from '../../data/menu-layout';
 import { PALETTE } from '../../data/palette';
 import { t } from '../../i18n';
 import { gameState } from '../../state';
+import { buyProduct, loadPrices } from '../purchases';
+import { starterPackContents } from '../../core/shop';
 import { startRunFrom, openScreen, SCENES, type HomeData } from '../scene-keys';
 import { createTextButton, type Button } from '../ui/button';
 import { createHintBubble } from '../ui/menu/home-hint';
@@ -36,6 +39,10 @@ export class HomeScene extends Phaser.Scene {
   private badges!: HomeBadges;
   private hint: ReturnType<typeof createHintBubble> | null = null;
   private ring: Phaser.GameObjects.Container | null = null;
+  private starter: Button | null = null;
+  /** Room above Play is kept for the starter pack button while the offer is on (the hint bubble stands above it). */
+  private offerRoom = false;
+  private buying = false;
   private leaving = false;
 
   constructor() {
@@ -47,10 +54,14 @@ export class HomeScene extends Phaser.Scene {
     gameState.refreshDay();
     this.hint = null;
     this.ring = null;
+    this.starter = null;
+    this.buying = false;
+    this.offerRoom = gameState.starterPackOffered;
     this.scenery = new MenuScenery(this, 'home');
     this.shelf = new HomeShelf(this, () => this.goTo(() => openScreen(this, SCENES.team)));
     this.record = createRecordPlate(this);
     this.nav = new HomeNav(this, {
+      shop: () => this.goTo(() => openScreen(this, SCENES.shop)),
       collection: () => this.goTo(() => openScreen(this, SCENES.collection)),
       play: () => this.startRun(),
       daily: () => this.goTo(() => openScreen(this, SCENES.daily)),
@@ -86,6 +97,7 @@ export class HomeScene extends Phaser.Scene {
       );
     }
     if (data?.highlightPlay) this.ring = this.createRing();
+    if (this.offerRoom) void this.addStarterOffer();
 
     this.scale.on(Phaser.Scale.Events.RESIZE, this.layout, this);
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
@@ -117,6 +129,7 @@ export class HomeScene extends Phaser.Scene {
     ];
     if (this.hint) items.push(this.hint.root);
     if (this.ring) items.push(this.ring);
+    if (this.starter) items.push(this.starter);
     items.push(this.play, ...this.nav.parts);
     return items;
   }
@@ -162,7 +175,12 @@ export class HomeScene extends Phaser.Scene {
     const playY = navTop - cfg.playAboveNav - cfg.playHeight / 2;
     this.play.setPosition(cx, playY);
     this.ring?.setPosition(cx, playY);
-    this.hint?.root.setPosition(cx, playY - cfg.hintAbovePlay);
+    const offerRoom = this.offerRoom ? cfg.starter.height + cfg.starter.gap : 0;
+    this.starter?.setPosition(
+      cx,
+      playY - cfg.playHeight / 2 - cfg.starter.gap - cfg.starter.height / 2,
+    );
+    this.hint?.root.setPosition(cx, playY - cfg.hintAbovePlay - offerRoom);
   }
 
   private setEnabled(enabled: boolean): void {
@@ -171,6 +189,7 @@ export class HomeScene extends Phaser.Scene {
     this.badges.setEnabled(enabled);
     this.shelf.setEnabled(enabled);
     this.hint?.setEnabled(enabled);
+    this.starter?.setEnabled(enabled && !this.buying);
   }
 
   /** Leaves the screen once (no double taps), then runs `next`. */
@@ -201,6 +220,57 @@ export class HomeScene extends Phaser.Scene {
     this.goTo(() =>
       openScreen(this, SCENES.newCreature, {
         creatures: [id],
+        then: { kind: 'screen', key: SCENES.home },
+      }),
+    );
+  }
+
+  /** The starter pack button, once the store has told its price; it is not shown for a product without one. */
+  private async addStarterOffer(): Promise<void> {
+    const price = (await loadPrices()).starter_pack;
+    if (!this.scene.isActive() || this.leaving || this.starter) return;
+    if (price === undefined) {
+      this.offerRoom = false;
+      this.layout();
+      return;
+    }
+    const { width, height, radius, shadowOffset, font, pad } = cfg.starter;
+    this.starter = createTextButton(this, {
+      text: t('home.starter', { price }),
+      font,
+      maxLabelWidth: width - pad,
+      fill: PALETTE.gold,
+      layout: { width, height, radius, shadowOffset },
+      keyPrefix: 'ui_home_starter',
+      onClick: () => void this.buyStarter(),
+    }).button.breathe(false);
+    this.layout();
+    this.starter.setAlpha(0);
+    this.tweens.add({ targets: this.starter, alpha: 1, duration: ANIM.ui.transition.inMs });
+  }
+
+  /** Buys the pack through the store; a new creature gets its own screen, then Home comes back. */
+  private async buyStarter(): Promise<void> {
+    if (this.buying || this.leaving) return;
+    const creature = starterPackContents(gameState.data.creatures).creature;
+    this.buying = true;
+    this.starter?.setEnabled(false);
+    const outcome = await buyProduct('starter_pack');
+    this.buying = false;
+    if (!this.scene.isActive()) return;
+    if (outcome !== 'purchased') {
+      this.starter?.setEnabled(!this.leaving);
+      return;
+    }
+    this.starter?.destroy();
+    this.starter = null;
+    this.offerRoom = false;
+    this.layout();
+    this.refreshMarks();
+    if (creature === null) return;
+    this.goTo(() =>
+      openScreen(this, SCENES.newCreature, {
+        creatures: [creature],
         then: { kind: 'screen', key: SCENES.home },
       }),
     );
