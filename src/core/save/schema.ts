@@ -1,6 +1,6 @@
 import type { CreatureId } from '../../data/creatures';
 
-export const SAVE_VERSION = 3;
+export const SAVE_VERSION = 4;
 
 export type MissionGroup = 'easy' | 'medium' | 'hard';
 
@@ -101,5 +101,15 @@ export interface SaveV3 extends Omit<SaveV2, 'version' | 'ads'> {
   ads: SaveV2['ads'] & { offerDay: string };
 }
 
+/**
+ * Version 4 (softer interstitials): `ads.shownDay` and `ads.shownToday` keep how many interstitials
+ * the local day has shown, so the daily limit survives a restart. The rest keeps the V3 shape.
+ */
+export interface SaveV4 extends Omit<SaveV3, 'version' | 'ads'> {
+  version: 4;
+  /** `shownDay`: local day (`YYYY-MM-DD`) of the last interstitial, '' when none; `shownToday`: shows on that day. */
+  ads: SaveV3['ads'] & { shownDay: string; shownToday: number };
+}
+
 /** The current save version. */
-export type Save = SaveV3;
+export type Save = SaveV4;

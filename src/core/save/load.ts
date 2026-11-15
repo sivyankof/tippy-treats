@@ -188,6 +188,8 @@ function normalize(raw: Obj, d: Save): Save {
       runsSinceInterstitial: uint(ads.runsSinceInterstitial, 0),
       sessions: uint(ads.sessions, 0),
       offerDay: day(ads.offerDay),
+      shownDay: day(ads.shownDay),
+      shownToday: uint(ads.shownToday, 0),
     },
     consent: {
       attAsked: bool(consent.attAsked, false),

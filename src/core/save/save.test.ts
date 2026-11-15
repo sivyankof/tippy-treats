@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { createDefaultSave } from './defaults';
 import { loadSave, serializeSave } from './load';
-import { migrate, migrateV1, migrateV2, SaveError, type Migration } from './migrations';
+import { migrate, migrateV1, migrateV2, migrateV3, SaveError, type Migration } from './migrations';
 import { MAX_BAKER_LEVEL } from '../../data/progression';
 import { xpToNext } from '../progression';
 import { SAVE_VERSION, type Save } from './schema';
@@ -343,6 +343,8 @@ describe('migration 2 to 3', () => {
       runsSinceInterstitial: 2,
       sessions: 4,
       offerDay: '',
+      shownDay: '',
+      shownToday: 0,
     });
   });
 
@@ -351,5 +353,47 @@ describe('migration 2 to 3', () => {
     expect(ok.save.ads.offerDay).toBe('2026-11-15');
     const bad = load(JSON.stringify({ ...fresh(), ads: { offerDay: 'yesterday' } }));
     expect(bad.save.ads.offerDay).toBe('');
+  });
+});
+
+describe('migration 3 to 4', () => {
+  const v3 = {
+    ...fresh(),
+    version: 3,
+    ads: { lastInterstitialAt: 5, runsSinceInterstitial: 2, sessions: 4, offerDay: '2026-11-14' },
+  };
+
+  it('adds an empty daily interstitial count and keeps the other counters', () => {
+    expect(migrateV3(v3 as unknown as Record<string, unknown>).ads).toEqual({
+      lastInterstitialAt: 5,
+      runsSinceInterstitial: 2,
+      sessions: 4,
+      offerDay: '2026-11-14',
+      shownDay: '',
+      shownToday: 0,
+    });
+    expect(migrateV3({ version: 3 }).ads).toEqual({ shownDay: '', shownToday: 0 });
+  });
+
+  it('loads a version 3 text into the current save without losing progress', () => {
+    const result = load(JSON.stringify({ ...v3, coins: 77 }));
+    expect(result.save.version).toBe(SAVE_VERSION);
+    expect(result.save.coins).toBe(77);
+    expect(result.save.ads).toEqual({
+      lastInterstitialAt: 5,
+      runsSinceInterstitial: 2,
+      sessions: 4,
+      offerDay: '2026-11-14',
+      shownDay: '',
+      shownToday: 0,
+    });
+  });
+
+  it('keeps a stored daily count and repairs a bad one', () => {
+    const ads = { ...fresh().ads, shownDay: '2026-11-15', shownToday: 7 };
+    const ok = load(serializeSave({ ...fresh(), ads }));
+    expect(ok.save.ads).toMatchObject({ shownDay: '2026-11-15', shownToday: 7 });
+    const bad = load(JSON.stringify({ ...fresh(), ads: { shownDay: 'today', shownToday: -3 } }));
+    expect(bad.save.ads).toMatchObject({ shownDay: '', shownToday: 0 });
   });
 });

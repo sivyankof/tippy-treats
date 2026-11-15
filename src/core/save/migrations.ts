@@ -45,8 +45,14 @@ export function migrateV2(raw: RawSave): RawSave {
   return { ...raw, ads: { ...ads, offerDay: '' } };
 }
 
+/** 3 → 4: the daily interstitial count starts empty (no day, no shows). */
+export function migrateV3(raw: RawSave): RawSave {
+  const ads = isRecord(raw.ads) ? raw.ads : {};
+  return { ...raw, ads: { ...ads, shownDay: '', shownToday: 0 } };
+}
+
 /** Migrations keyed by the version they upgrade from. */
-export const MIGRATIONS: MigrationChain = { 1: migrateV1, 2: migrateV2 };
+export const MIGRATIONS: MigrationChain = { 1: migrateV1, 2: migrateV2, 3: migrateV3 };
 
 /**
  * Runs the migration chain up to `target`. The result has the right version but is not

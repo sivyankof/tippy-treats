@@ -7,7 +7,11 @@ import type {
   Wallet,
 } from '../core/economy';
 import { exchangeBerries, spend } from '../core/economy';
-import { canShowInterstitial, shouldOfferRemoveAds } from '../core/video-policy';
+import {
+  canShowInterstitial,
+  shouldOfferRemoveAds,
+  type InterstitialRunFacts,
+} from '../core/video-policy';
 import type { RunResult } from '../core/run-result';
 import {
   coinCreatureAffordable,
@@ -44,6 +48,7 @@ import {
 import { withCreatureBought, withCreatureUpgraded, withTeam } from './creatures';
 import { Hints } from './hints';
 import {
+  shownTodayCount,
   withInterstitialShown,
   withOfferShown,
   withRunCounted,
@@ -179,26 +184,27 @@ export class GameState {
     this.store.replace(withSessionStarted(this.store.save));
   }
 
-  /**
-   * The rules of docs/05, section 6 for the player leaving the results of a run that lasted
-   * `runMs` (`rewardedInRun`: a rewarded ad was watched during it).
-   */
-  canShowInterstitial(runMs: number, rewardedInRun: boolean): boolean {
-    const { ads, purchases } = this.store.save;
+  /** The rules of docs/05, section 6 for the player leaving the results of the run described by `facts`. */
+  canShowInterstitial(facts: InterstitialRunFacts): boolean {
+    const { ads, purchases, createdAt } = this.store.save;
     return canShowInterstitial({
+      ...facts,
       removeAds: purchases.removeAds,
       session: ads.sessions,
+      createdAt,
+      clockBehind: this.clockBehind,
       runsSince: ads.runsSinceInterstitial,
       nowMs: (this.deps.now ?? now)(),
       lastShownAt: ads.lastInterstitialAt,
-      rewardedInRun,
-      runMs,
+      shownToday: shownTodayCount(this.store.save, this.today()),
     });
   }
 
   /** An interstitial was shown just now. */
   noteInterstitialShown(): void {
-    this.store.replace(withInterstitialShown(this.store.save, (this.deps.now ?? now)()));
+    this.store.replace(
+      withInterstitialShown(this.store.save, (this.deps.now ?? now)(), this.today()),
+    );
   }
 
   /** The "No ads" offer is due on Home: `shownInSession` interstitials were shown, none offered today. */

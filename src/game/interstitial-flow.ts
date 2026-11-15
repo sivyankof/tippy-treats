@@ -14,6 +14,12 @@ export interface RunExit {
   runMs: number;
   /** The run reached the save (false for the dev bot and start-height runs). */
   recorded: boolean;
+  /** The run beat the best height. */
+  newRecord: boolean;
+  /** The run raised the baker level. */
+  levelUp: boolean;
+  /** A creature comes with the results (a level reward, the first Honey). */
+  newCreature: boolean;
 }
 
 /** The "No ads" offer of one Home entry: its price is asked for at once, the window opens later. */
@@ -54,7 +60,18 @@ export function prepareRemoveAdsOffer(): RemoveAdsOffer {
  * say so. The "No ads" offer does not delay the way on: it waits for Home. Resolves when the way is free.
  */
 export async function leaveResultsAds(exit: RunExit): Promise<void> {
-  if (!exit.recorded || !gameState.canShowInterstitial(exit.runMs, rewardedWatchedInRun())) return;
+  if (!exit.recorded) return;
+  const { runMs, newRecord, levelUp, newCreature } = exit;
+  const facts = { runMs, newRecord, levelUp, newCreature };
+  if (
+    !gameState.canShowInterstitial({
+      ...facts,
+      rewardedInRun: rewardedWatchedInRun(),
+      shownInSession: session.shown,
+    })
+  ) {
+    return;
+  }
   services.audio.suspend('ad');
   let shown: boolean;
   try {

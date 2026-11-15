@@ -18,7 +18,13 @@ vi.mock('../services', () => ({
 vi.mock('./rewarded', () => ({ rewardedWatchedInRun: () => false }));
 
 const scene = { scene: { isActive: () => true } } as unknown as Phaser.Scene;
-const exit = { runMs: 30_000, recorded: true };
+const exit = {
+  runMs: 30_000,
+  recorded: true,
+  newRecord: false,
+  levelUp: false,
+  newCreature: false,
+};
 
 describe('the "No ads" offer flow', () => {
   beforeEach(() => {

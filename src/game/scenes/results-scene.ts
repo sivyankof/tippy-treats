@@ -7,7 +7,7 @@ import { PALETTE } from '../../data/palette';
 import { services } from '../../services';
 import { gameState } from '../../state';
 import { RecordCelebration } from '../fx/record-celebration';
-import { leaveResultsAds } from '../interstitial-flow';
+import { leaveResultsAds, type RunExit } from '../interstitial-flow';
 import { isDebugRun } from '../results-data';
 import { SCENES, type ResultsData } from '../scene-keys';
 import { createDimOverlay } from '../ui/dim-overlay';
@@ -53,7 +53,13 @@ export class ResultsScene extends Phaser.Scene {
   /** The share picture is being made: another tap waits for it. */
   private sharing = false;
   /** What the interstitial rules need to know about the run on screen. */
-  private runExit = { runMs: 0, recorded: false };
+  private runExit: RunExit = {
+    runMs: 0,
+    recorded: false,
+    newRecord: false,
+    levelUp: false,
+    newCreature: false,
+  };
   /** Padding and gap of the panel, shrunk on a short screen. */
   private spacing: { padY: number; gap: number } = { padY: cfg.panel.padY, gap: cfg.panel.gap };
 
@@ -67,7 +73,6 @@ export class ResultsScene extends Phaser.Scene {
     const { width, height } = this.scale.gameSize;
     this.leaving = false;
     this.sharing = false;
-    this.runExit = { runMs: result.durationMs, recorded: data.recorded };
     this.dim = createDimOverlay(this, ANIM.results.overlayAlpha, width, height).setInteractive();
     this.header = new ResultsHeader(this, result, summary.isRecord);
     this.stats = createStats(this, result, tally, width);
@@ -87,7 +92,9 @@ export class ResultsScene extends Phaser.Scene {
     // A run that is not saved gained no XP and set no record: the XP block and the hint stay out.
     this.recorded = data.recorded;
     this.xp.container.setVisible(this.recorded);
-    this.debugPlate = isDebugRun(this.recorded, import.meta.env.DEV) ? createDebugPlate(this) : null;
+    this.debugPlate = isDebugRun(this.recorded, import.meta.env.DEV)
+      ? createDebugPlate(this)
+      : null;
     const hintText = daily
       ? dailyBestText(gameState.dailyInfo().best)
       : nearMissText(
@@ -110,6 +117,13 @@ export class ResultsScene extends Phaser.Scene {
     const fresh: CreatureId[] = summary.firstRun
       ? ['honey', ...levelCreatures.filter((id) => id !== 'honey')]
       : levelCreatures;
+    this.runExit = {
+      runMs: result.durationMs,
+      recorded: data.recorded,
+      newRecord: summary.isRecord,
+      levelUp: summary.levelUps.length > 0,
+      newCreature: fresh.length > 0,
+    };
     const flow = resultsFlow({
       scene: this,
       summary,

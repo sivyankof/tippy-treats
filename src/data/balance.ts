@@ -102,11 +102,17 @@ export const BALANCE = {
   ads: {
     interstitial: {
       /** Sessions 1..firstSessionsFree have no interstitials at all. */
-      firstSessionsFree: 1,
+      firstSessionsFree: 3,
+      /** ...and neither has the time after the first launch; whichever of the two ends later counts. */
+      firstFreeMs: 24 * 60 * 60 * 1000,
       /** Finished runs since the last interstitial. */
-      minRuns: 3,
+      minRuns: 4,
       /** Time since the last interstitial. */
-      minGapMs: 120_000,
+      minGapMs: 180_000,
+      /** Shows per launch of the app. */
+      maxPerSession: 4,
+      /** Shows per local day. */
+      maxPerDay: 12,
       /** The run that just ended lasted at least this long. */
       minRunMs: 15_000,
     },

@@ -21,22 +21,35 @@ describe('double coins offer', () => {
   });
 });
 
+const DAY = 86_400_000;
+const NOW = 10 * DAY;
+
 const ready: InterstitialContext = {
   removeAds: false,
-  session: 2,
-  runsSince: 3,
-  nowMs: 1_000_000,
-  lastShownAt: 1_000_000 - 120_000,
+  session: 4,
+  createdAt: NOW - DAY,
+  clockBehind: false,
+  runsSince: 4,
+  nowMs: NOW,
+  lastShownAt: NOW - 180_000,
+  shownInSession: 3,
+  shownToday: 11,
   rewardedInRun: false,
   runMs: 15_000,
+  newRecord: false,
+  levelUp: false,
+  newCreature: false,
 };
 
 describe('interstitial rules', () => {
   it('uses the numbers of the design document', () => {
     expect(BALANCE.ads.interstitial).toEqual({
-      firstSessionsFree: 1,
-      minRuns: 3,
-      minGapMs: 120_000,
+      firstSessionsFree: 3,
+      firstFreeMs: DAY,
+      minRuns: 4,
+      minGapMs: 180_000,
+      maxPerSession: 4,
+      maxPerDay: 12,
       minRunMs: 15_000,
     });
     expect(BALANCE.ads.removeAdsOfferAfter).toBe(2);
@@ -50,19 +63,51 @@ describe('interstitial rules', () => {
     expect(canShowInterstitial({ ...ready, removeAds: true })).toBe(false);
   });
 
-  it('never shows in the first session', () => {
-    expect(canShowInterstitial({ ...ready, session: 1 })).toBe(false);
+  it('is off for the first three sessions', () => {
+    expect(canShowInterstitial({ ...ready, session: 3 })).toBe(false);
     expect(canShowInterstitial({ ...ready, session: 0 })).toBe(false);
+    expect(canShowInterstitial({ ...ready, session: 4 })).toBe(true);
   });
 
-  it('needs three runs since the last one', () => {
-    expect(canShowInterstitial({ ...ready, runsSince: 2 })).toBe(false);
+  it('is off for 24 hours after the first launch, whichever of the two ends later', () => {
+    expect(canShowInterstitial({ ...ready, createdAt: NOW - DAY + 1 })).toBe(false);
+    expect(canShowInterstitial({ ...ready, createdAt: NOW - 30 * DAY, session: 3 })).toBe(false);
+    expect(canShowInterstitial({ ...ready, createdAt: NOW - 30 * DAY })).toBe(true);
+  });
+
+  it('is off when the clock looks set back', () => {
+    expect(canShowInterstitial({ ...ready, clockBehind: true })).toBe(false);
+    expect(canShowInterstitial({ ...ready, createdAt: NOW + 1_000 })).toBe(false);
+  });
+
+  it('needs four runs since the last one', () => {
+    expect(canShowInterstitial({ ...ready, runsSince: 3 })).toBe(false);
     expect(canShowInterstitial({ ...ready, runsSince: 9 })).toBe(true);
   });
 
-  it('needs two minutes since the last one', () => {
-    expect(canShowInterstitial({ ...ready, lastShownAt: ready.nowMs - 119_999 })).toBe(false);
+  it('needs three minutes since the last one', () => {
+    expect(canShowInterstitial({ ...ready, lastShownAt: ready.nowMs - 179_999 })).toBe(false);
     expect(canShowInterstitial({ ...ready, lastShownAt: 0 })).toBe(true);
+  });
+
+  it('is skipped when the clock went back before the last show', () => {
+    expect(canShowInterstitial({ ...ready, lastShownAt: ready.nowMs + 5_000 })).toBe(false);
+  });
+
+  it('shows at most four times per session', () => {
+    expect(canShowInterstitial({ ...ready, shownInSession: 4 })).toBe(false);
+    expect(canShowInterstitial({ ...ready, shownInSession: 0 })).toBe(true);
+  });
+
+  it('shows at most twelve times per local day', () => {
+    expect(canShowInterstitial({ ...ready, shownToday: 12 })).toBe(false);
+    expect(canShowInterstitial({ ...ready, shownToday: 0 })).toBe(true);
+  });
+
+  it('is skipped after a new record, a baker level or a new creature', () => {
+    expect(canShowInterstitial({ ...ready, newRecord: true })).toBe(false);
+    expect(canShowInterstitial({ ...ready, levelUp: true })).toBe(false);
+    expect(canShowInterstitial({ ...ready, newCreature: true })).toBe(false);
   });
 
   it('is skipped when a rewarded ad was watched in the run', () => {
@@ -71,10 +116,6 @@ describe('interstitial rules', () => {
 
   it('is skipped after a run shorter than 15 seconds', () => {
     expect(canShowInterstitial({ ...ready, runMs: 14_999 })).toBe(false);
-  });
-
-  it('is skipped when the clock went back before the last show', () => {
-    expect(canShowInterstitial({ ...ready, lastShownAt: ready.nowMs + 5_000 })).toBe(false);
   });
 });
 

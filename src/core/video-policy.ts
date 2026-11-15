@@ -15,25 +15,54 @@ export interface InterstitialContext {
   removeAds: boolean;
   /** Launch number of the app, 1 for the first one ever. */
   session: number;
+  /** When the save was created, epoch ms: the first launch. */
+  createdAt: number;
+  /** The clock looks set back (behind the last launch by more than the tolerance). */
+  clockBehind: boolean;
   /** Finished runs since the last interstitial. */
   runsSince: number;
   nowMs: number;
   /** When the last interstitial was shown; 0 when there was none. */
   lastShownAt: number;
+  /** Interstitials shown since this launch of the app. */
+  shownInSession: number;
+  /** Interstitials shown on the current local day. */
+  shownToday: number;
   /** The player watched a rewarded ad during this run (the continue offer, the ×2 coins). */
   rewardedInRun: boolean;
   /** How long the run lasted. */
   runMs: number;
+  /** The run beat the best height. */
+  newRecord: boolean;
+  /** The run raised the baker level. */
+  levelUp: boolean;
+  /** The run or its results gave a creature (a level reward, the first Honey). */
+  newCreature: boolean;
 }
+
+/** The part of the context that the screen and the flow know: the run just ended and this launch. */
+export type InterstitialRunFacts = Pick<
+  InterstitialContext,
+  'runMs' | 'rewardedInRun' | 'newRecord' | 'levelUp' | 'newCreature' | 'shownInSession'
+>;
 
 /** The interstitial on leaving the results: all the conditions of docs/05, section 6 at once. */
 export function canShowInterstitial(ctx: InterstitialContext): boolean {
   const rules = BALANCE.ads.interstitial;
+  // A clock set back never lets an ad through: the first-launch pause and the limits cannot be trusted.
+  if (ctx.clockBehind || ctx.nowMs < ctx.createdAt) return false;
+  const pastStart =
+    ctx.session > rules.firstSessionsFree && ctx.nowMs - ctx.createdAt >= rules.firstFreeMs;
   return (
     !ctx.removeAds &&
-    ctx.session > rules.firstSessionsFree &&
+    pastStart &&
     ctx.runsSince >= rules.minRuns &&
     ctx.nowMs - ctx.lastShownAt >= rules.minGapMs &&
+    ctx.shownInSession < rules.maxPerSession &&
+    ctx.shownToday < rules.maxPerDay &&
+    !ctx.newRecord &&
+    !ctx.levelUp &&
+    !ctx.newCreature &&
     !ctx.rewardedInRun &&
     ctx.runMs >= rules.minRunMs
   );
