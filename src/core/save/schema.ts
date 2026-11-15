@@ -1,6 +1,6 @@
 import type { CreatureId } from '../../data/creatures';
 
-export const SAVE_VERSION = 2;
+export const SAVE_VERSION = 3;
 
 export type MissionGroup = 'easy' | 'medium' | 'hard';
 
@@ -91,5 +91,15 @@ export interface SaveV2 extends Omit<SaveV1, 'version' | 'streak'> {
   today: { day: string; bestHeight: number };
 }
 
+/**
+ * Version 3 (M6, session 4): `ads.offerDay` keeps the local day the "No ads" offer was last shown,
+ * so it comes at most once a day across launches. The rest keeps the V2 shape.
+ */
+export interface SaveV3 extends Omit<SaveV2, 'version' | 'ads'> {
+  version: 3;
+  /** `offerDay`: local day (`YYYY-MM-DD`) of the last "No ads" offer, or '' when it was never shown. */
+  ads: SaveV2['ads'] & { offerDay: string };
+}
+
 /** The current save version. */
-export type Save = SaveV2;
+export type Save = SaveV3;

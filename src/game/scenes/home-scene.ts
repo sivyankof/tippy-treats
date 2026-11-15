@@ -5,6 +5,7 @@ import { MENU } from '../../data/menu-layout';
 import { PALETTE } from '../../data/palette';
 import { t } from '../../i18n';
 import { gameState } from '../../state';
+import { prepareRemoveAdsOffer } from '../interstitial-flow';
 import { buyProduct, loadPrices, syncPurchases } from '../purchases';
 import { starterPackContents } from '../../core/shop';
 import { startRunFrom, openScreen, SCENES, type HomeData } from '../scene-keys';
@@ -240,10 +241,14 @@ export class HomeScene extends Phaser.Scene {
     leaveScreen(this, [], () => startRunFrom(this));
   }
 
-  /** The first entry of the day: the threat window and the streak calendar. */
+  /** Every entry: the threat window and the streak calendar (first of the day), then the "No ads" offer when it is due. */
   private showDayEntry(): void {
     if (this.leaving) return;
-    openStreakEntry(this, this.header.wallet, (claim) => this.afterStreak(claim));
+    const offer = prepareRemoveAdsOffer();
+    openStreakEntry(this, this.header.wallet, (claim) => {
+      this.afterStreak(claim);
+      if (!this.leaving) offer.open(this);
+    });
   }
 
   /** A creature of the calendar (day 7) is shown on its own screen, then Home comes back. */

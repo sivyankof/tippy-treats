@@ -1,5 +1,4 @@
 import type * as Phaser from 'phaser';
-import { shouldOfferRemoveAds } from '../core/video-policy';
 import { services } from '../services';
 import { gameState } from '../state';
 import { loadPrices } from './purchases';
@@ -7,7 +6,7 @@ import { rewardedWatchedInRun } from './rewarded';
 import { openNoAdsOffer } from './ui/menu/no-ads-offer';
 
 /** What this launch of the app has shown so far; a new launch starts over. */
-const session = { shown: 0, offered: false };
+const session = { shown: 0 };
 
 /** What the results screen knows about the run it is leaving. */
 export interface RunExit {
@@ -17,21 +16,44 @@ export interface RunExit {
   recorded: boolean;
 }
 
-/** After the second interstitial of the session, once: the "No ads" offer, if the store gave its price. */
-async function offerRemoveAds(scene: Phaser.Scene): Promise<void> {
-  if (!shouldOfferRemoveAds(gameState.data.purchases.removeAds, session.shown, session.offered))
-    return;
-  const price = (await loadPrices()).remove_ads;
-  if (price === undefined || !scene.scene.isActive()) return;
-  session.offered = true;
-  await new Promise<void>((resolve) => openNoAdsOffer(scene, price, resolve));
+/** The "No ads" offer of one Home entry: its price is asked for at once, the window opens later. */
+export interface RemoveAdsOffer {
+  /** Settles when the price has come (or the offer is not due). */
+  readonly ready: Promise<void>;
+  /**
+   * Opens the offer at once, when nothing else is open: only if it is due (the second
+   * interstitial of the session is behind, none offered today) and the price has already come.
+   * There is no waiting here, so no window of the player can be opened in between; without a
+   * price nothing is shown and the day is not used up, the next Home entry tries again.
+   */
+  open(scene: Phaser.Scene): void;
+}
+
+/** Starts the offer of a Home entry: call it as Home appears, `open` once the day windows are closed. */
+export function prepareRemoveAdsOffer(): RemoveAdsOffer {
+  let price: string | undefined;
+  const ready = gameState.removeAdsOfferDue(session.shown)
+    ? loadPrices().then((prices) => {
+        price = prices.remove_ads;
+      })
+    : Promise.resolve();
+  return {
+    ready,
+    open(scene: Phaser.Scene): void {
+      if (price === undefined || !scene.scene.isActive()) return;
+      if (!gameState.removeAdsOfferDue(session.shown)) return;
+      gameState.noteRemoveAdsOffered();
+      gameState.flush();
+      openNoAdsOffer(scene, price, () => undefined);
+    },
+  };
 }
 
 /**
  * The player is leaving the results: shows an interstitial when the rules of `core/video-policy.ts`
- * say so, then the "No ads" offer when it is due. Resolves when the way on is free.
+ * say so. The "No ads" offer does not delay the way on: it waits for Home. Resolves when the way is free.
  */
-export async function leaveResultsAds(scene: Phaser.Scene, exit: RunExit): Promise<void> {
+export async function leaveResultsAds(exit: RunExit): Promise<void> {
   if (!exit.recorded || !gameState.canShowInterstitial(exit.runMs, rewardedWatchedInRun())) return;
   services.audio.suspend('ad');
   let shown: boolean;
@@ -45,5 +67,4 @@ export async function leaveResultsAds(scene: Phaser.Scene, exit: RunExit): Promi
   gameState.noteInterstitialShown();
   gameState.flush();
   session.shown += 1;
-  await offerRemoveAds(scene);
 }

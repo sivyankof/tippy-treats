@@ -14,6 +14,11 @@ export function withRunCounted(save: Save): Save {
   };
 }
 
+/** The "No ads" offer was shown on the local day `day`. */
+export function withOfferShown(save: Save, day: string): Save {
+  return { ...save, ads: { ...save.ads, offerDay: day } };
+}
+
 /** An interstitial was shown at `nowMs`: the run counter starts over. */
 export function withInterstitialShown(save: Save, nowMs: number): Save {
   return { ...save, ads: { ...save.ads, runsSinceInterstitial: 0, lastInterstitialAt: nowMs } };

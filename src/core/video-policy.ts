@@ -39,11 +39,15 @@ export function canShowInterstitial(ctx: InterstitialContext): boolean {
   );
 }
 
-/** The gentle "no ads" offer: once per session, after the second interstitial shown in it. */
+/**
+ * The gentle "no ads" offer on entering Home: due once the session has shown its second
+ * interstitial, and at most once per local day (`offerDay` is the day it was last shown).
+ */
 export function shouldOfferRemoveAds(
   removeAds: boolean,
   shownInSession: number,
-  offeredInSession: boolean,
+  offerDay: string,
+  today: string,
 ): boolean {
-  return !removeAds && !offeredInSession && shownInSession >= BALANCE.ads.removeAdsOfferAfter;
+  return !removeAds && shownInSession >= BALANCE.ads.removeAdsOfferAfter && offerDay !== today;
 }

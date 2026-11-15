@@ -79,13 +79,14 @@ describe('interstitial rules', () => {
 });
 
 describe('remove ads offer', () => {
-  it('comes after the second interstitial of the session, once', () => {
-    expect(shouldOfferRemoveAds(false, 1, false)).toBe(false);
-    expect(shouldOfferRemoveAds(false, 2, false)).toBe(true);
-    expect(shouldOfferRemoveAds(false, 3, true)).toBe(false);
+  it('is due after the second interstitial of the session, once per local day', () => {
+    expect(shouldOfferRemoveAds(false, 1, '', '2026-11-15')).toBe(false);
+    expect(shouldOfferRemoveAds(false, 2, '', '2026-11-15')).toBe(true);
+    expect(shouldOfferRemoveAds(false, 3, '2026-11-14', '2026-11-15')).toBe(true);
+    expect(shouldOfferRemoveAds(false, 3, '2026-11-15', '2026-11-15')).toBe(false);
   });
 
   it('is not made to a player who bought it', () => {
-    expect(shouldOfferRemoveAds(true, 2, false)).toBe(false);
+    expect(shouldOfferRemoveAds(true, 2, '', '2026-11-15')).toBe(false);
   });
 });

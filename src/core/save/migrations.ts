@@ -39,8 +39,14 @@ export function migrateV1(raw: RawSave): RawSave {
   };
 }
 
+/** 2 → 3: `ads.offerDay` starts empty, so the "No ads" offer may come on the first Home entry. */
+export function migrateV2(raw: RawSave): RawSave {
+  const ads = isRecord(raw.ads) ? raw.ads : {};
+  return { ...raw, ads: { ...ads, offerDay: '' } };
+}
+
 /** Migrations keyed by the version they upgrade from. */
-export const MIGRATIONS: MigrationChain = { 1: migrateV1 };
+export const MIGRATIONS: MigrationChain = { 1: migrateV1, 2: migrateV2 };
 
 /**
  * Runs the migration chain up to `target`. The result has the right version but is not

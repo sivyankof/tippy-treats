@@ -214,6 +214,7 @@ function normalize(raw: Obj, d: Save): Save {
       lastInterstitialAt: uint(ads.lastInterstitialAt, 0),
       runsSinceInterstitial: uint(ads.runsSinceInterstitial, 0),
       sessions: uint(ads.sessions, 0),
+      offerDay: day(ads.offerDay),
     },
     consent: {
       attAsked: bool(consent.attAsked, false),

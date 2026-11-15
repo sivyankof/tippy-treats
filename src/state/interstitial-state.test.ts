@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { RunResult } from '../core/run-result';
-import { createTestState } from './test-state';
+import { createTestState, loadTestState } from './test-state';
 
 const T0 = Date.UTC(2026, 5, 10, 12, 0, 0);
 
@@ -61,5 +61,39 @@ describe('interstitial counters in the game state', () => {
     for (let i = 0; i < 3; i++) state.recordRun(run());
     state.grantProduct('remove_ads');
     expect(state.canShowInterstitial(20_000, false)).toBe(false);
+  });
+});
+
+describe('"No ads" offer in the game state', () => {
+  const DAY = 86_400_000;
+
+  it('is due after the second interstitial of the session, once per local day', () => {
+    const clock = { ms: T0 };
+    const state = createTestState(clock);
+    expect(state.removeAdsOfferDue(0)).toBe(false);
+    expect(state.removeAdsOfferDue(1)).toBe(false);
+    expect(state.removeAdsOfferDue(2)).toBe(true);
+    state.noteRemoveAdsOffered();
+    expect(state.removeAdsOfferDue(2)).toBe(false);
+    expect(state.removeAdsOfferDue(5)).toBe(false);
+    clock.ms = T0 + DAY;
+    expect(state.removeAdsOfferDue(2)).toBe(true);
+  });
+
+  it('is never due once remove_ads is owned', () => {
+    const state = createTestState({ ms: T0 });
+    state.grantProduct('remove_ads');
+    expect(state.removeAdsOfferDue(3)).toBe(false);
+  });
+
+  it('survives a reload through the save', async () => {
+    const clock = { ms: T0 };
+    const state = createTestState(clock);
+    state.noteRemoveAdsOffered();
+    const reloaded = await loadTestState(state.data, clock);
+    expect(reloaded.data.ads.offerDay).not.toBe('');
+    expect(reloaded.removeAdsOfferDue(2)).toBe(false);
+    clock.ms = T0 + DAY;
+    expect(reloaded.removeAdsOfferDue(2)).toBe(true);
   });
 });

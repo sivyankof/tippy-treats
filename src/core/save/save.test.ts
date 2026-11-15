@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { createDefaultSave } from './defaults';
 import { loadSave, serializeSave } from './load';
-import { migrate, migrateV1, SaveError, type Migration } from './migrations';
+import { migrate, migrateV1, migrateV2, SaveError, type Migration } from './migrations';
 import { MAX_BAKER_LEVEL } from '../../data/progression';
 import { xpToNext } from '../progression';
 import { SAVE_VERSION, type Save } from './schema';
@@ -314,5 +314,42 @@ describe('migration 1 -> 2', () => {
       claimedDay: '2026-11-13',
     });
     expect(result.save.today).toEqual({ day: '', bestHeight: 0 });
+  });
+});
+
+describe('migration 2 to 3', () => {
+  const v2 = {
+    ...fresh(),
+    version: 2,
+    ads: { lastInterstitialAt: 5, runsSinceInterstitial: 2, sessions: 4 },
+  };
+
+  it('adds an empty offer day and keeps the other counters', () => {
+    expect(migrateV2(v2 as unknown as Record<string, unknown>).ads).toEqual({
+      lastInterstitialAt: 5,
+      runsSinceInterstitial: 2,
+      sessions: 4,
+      offerDay: '',
+    });
+    expect(migrateV2({ version: 2 }).ads).toEqual({ offerDay: '' });
+  });
+
+  it('loads a version 2 text into the current save without losing progress', () => {
+    const result = load(JSON.stringify({ ...v2, coins: 77 }));
+    expect(result.save.version).toBe(SAVE_VERSION);
+    expect(result.save.coins).toBe(77);
+    expect(result.save.ads).toEqual({
+      lastInterstitialAt: 5,
+      runsSinceInterstitial: 2,
+      sessions: 4,
+      offerDay: '',
+    });
+  });
+
+  it('keeps a stored offer day and repairs a bad one', () => {
+    const ok = load(serializeSave({ ...fresh(), ads: { ...fresh().ads, offerDay: '2026-11-15' } }));
+    expect(ok.save.ads.offerDay).toBe('2026-11-15');
+    const bad = load(JSON.stringify({ ...fresh(), ads: { offerDay: 'yesterday' } }));
+    expect(bad.save.ads.offerDay).toBe('');
   });
 });

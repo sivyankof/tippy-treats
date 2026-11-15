@@ -7,7 +7,7 @@ import type {
   Wallet,
 } from '../core/economy';
 import { exchangeBerries, spend } from '../core/economy';
-import { canShowInterstitial } from '../core/video-policy';
+import { canShowInterstitial, shouldOfferRemoveAds } from '../core/video-policy';
 import type { RunResult } from '../core/run-result';
 import {
   coinCreatureAffordable,
@@ -43,7 +43,12 @@ import {
 } from './missions';
 import { withCreatureBought, withCreatureUpgraded, withTeam } from './creatures';
 import { Hints } from './hints';
-import { withInterstitialShown, withRunCounted, withSessionStarted } from './interstitial';
+import {
+  withInterstitialShown,
+  withOfferShown,
+  withRunCounted,
+  withSessionStarted,
+} from './interstitial';
 import { applyRun, type RunSummary } from './run-record';
 import { applyRunProgress, NO_EXTRAS, type RunExtras } from './run-progress';
 import {
@@ -186,6 +191,17 @@ export class GameState {
   /** An interstitial was shown just now. */
   noteInterstitialShown(): void {
     this.store.replace(withInterstitialShown(this.store.save, (this.deps.now ?? now)()));
+  }
+
+  /** The "No ads" offer is due on Home: `shownInSession` interstitials were shown, none offered today. */
+  removeAdsOfferDue(shownInSession: number): boolean {
+    const { ads, purchases } = this.store.save;
+    return shouldOfferRemoveAds(purchases.removeAds, shownInSession, ads.offerDay, this.today());
+  }
+
+  /** The "No ads" offer was shown today: it does not come again before tomorrow. */
+  noteRemoveAdsOffered(): void {
+    this.store.replace(withOfferShown(this.store.save, this.today()));
   }
 
   // --- Days ---

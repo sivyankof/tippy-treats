@@ -36,7 +36,7 @@ export function createDefaultSave(nowMs: number, installId: string): Save {
       lang: 'auto',
       notifications: { gift: true, streak: true, daily: true, comeback: true },
     },
-    ads: { lastInterstitialAt: 0, runsSinceInterstitial: 0, sessions: 0 },
+    ads: { lastInterstitialAt: 0, runsSinceInterstitial: 0, sessions: 0, offerDay: '' },
     consent: { attAsked: false, notifAsked: false },
   };
 }

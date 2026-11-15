@@ -249,6 +249,6 @@ export class ResultsScene extends Phaser.Scene {
     this.buttons.setEnabled(false);
     this.coins.setEnabled(false);
     const slideAway = (): void => leaveScreen(this, this.content(), then);
-    void leaveResultsAds(this, this.runExit).then(slideAway, slideAway);
+    void leaveResultsAds(this.runExit).then(slideAway, slideAway);
   }
 }
