@@ -13,6 +13,7 @@ import { GlazeDripGrowth } from './glaze-drip-growth';
 import { LickDirector, type LickContext } from './lick-director';
 import { isAiming, type LickKind, type LickScene } from './lick-plan';
 import { plainLooks } from './plain-look';
+import { prepareTongue } from './face-lick';
 import { LayerView } from './layer-view';
 import { SwayHold } from './sway-hold';
 import { snapshotTower, type TowerSnapshot } from './tower-snapshot';
@@ -102,6 +103,8 @@ export class TowerView {
   ) {
     this.tray = new Tray(scene, trayTopY);
     this.glazeGrowth = new GlazeDripGrowth(scene);
+    // The pictures of the lick tongue are baked now, not at the first lick.
+    prepareTongue(scene);
   }
 
   /** World centre y of the layer with the given 0-based index. */

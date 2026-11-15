@@ -20,6 +20,8 @@ import { ensureSleepTexture } from '../objects/sleep-silhouette';
 import { bakeGuestFlat } from '../objects/tower-guest-art';
 import { bakeTopperTextures } from '../fx/topper-texture';
 import { bakeHintTextures } from '../tutorial/hint-textures';
+import { bakeTongue } from '../objects/tongue-view';
+import { bakeStripTextures } from '../objects/tongue-strip-texture';
 
 /**
  * Pictures that the game bakes lazily (on first use) or in the boot scene are baked here so they
@@ -38,6 +40,8 @@ const PRIME_STEPS: ReadonlyArray<(scene: Phaser.Scene) => void> = [
   bakeAllFarArt,
   bakeTowerSparkle,
   bakeHintTextures,
+  bakeTongue,
+  bakeStripTextures,
   bakeChestTextures,
   bakeCheckpointTextures,
   (scene) => bakeShadeTextures(scene),

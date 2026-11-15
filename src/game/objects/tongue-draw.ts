@@ -6,7 +6,7 @@ import type { Ribbon } from './tongue-ribbon';
 
 const TWO_PI = Math.PI * 2;
 /** The colours of the ribbon; the light stripe is pre-mixed, so a bend never doubles it. */
-const COLORS = {
+export const TONGUE_COLORS = {
   outline: PALETTE.textDark,
   fill: LICK.tongue.fill,
   stripe: mixColor(LICK.tongue.fill, PALETTE.textLight, LICK.tongue.stripeAlpha),
@@ -14,20 +14,24 @@ const COLORS = {
 } as const;
 
 /** A band along the ribbon: its centre `across` (share of the width, right of travel is positive) and its width. */
-interface Band {
+export interface Band {
   across: number;
   width: number;
   color: number;
 }
 
 /** The light stripe sits right of the middle (`stripeAt` is negative), the groove in the middle. */
-const STRIPE: Band = {
+export const STRIPE: Band = {
   across: -LICK.tongue.stripeAt,
   width: LICK.tongue.stripeWidth,
-  color: COLORS.stripe,
+  color: TONGUE_COLORS.stripe,
 };
-const GROOVE: Band = { across: 0, width: LICK.tongue.grooveWidth, color: COLORS.groove };
-const TIP_BANDS: readonly Band[] = [STRIPE, GROOVE];
+export const GROOVE: Band = {
+  across: 0,
+  width: LICK.tongue.grooveWidth,
+  color: TONGUE_COLORS.groove,
+};
+export const TIP_BANDS: readonly Band[] = [STRIPE, GROOVE];
 
 /** Where the corner of a piece sits: sample `k`, `reach` along the travel, `side` of the band edge. */
 function cornerX(
@@ -106,8 +110,8 @@ function bandPass(g: Phaser.GameObjects.Graphics, r: Ribbon, band: Band): void {
 /** Draws the body of the ribbon (outline, fill, light stripe, groove) into `g`. */
 export function drawTongueBody(g: Phaser.GameObjects.Graphics, r: Ribbon): void {
   g.clear();
-  ribbonPass(g, r, COLORS.outline, LICK.tongue.outline);
-  ribbonPass(g, r, COLORS.fill, 0);
+  ribbonPass(g, r, TONGUE_COLORS.outline, LICK.tongue.outline);
+  ribbonPass(g, r, TONGUE_COLORS.fill, 0);
   bandPass(g, r, STRIPE);
   bandPass(g, r, GROOVE);
 }
@@ -187,8 +191,8 @@ export function drawTongueTip(g: Phaser.GameObjects.Graphics, r: Ribbon): void {
   CENTER.y = r.y[k]!;
   const half = r.half[k]!;
   const height = half * 2 * tipShare;
-  tipRim(g, half, height, outline, COLORS.outline);
-  tipRim(g, half, height, 0, COLORS.fill);
+  tipRim(g, half, height, outline, TONGUE_COLORS.outline);
+  tipRim(g, half, height, 0, TONGUE_COLORS.fill);
   // The stripe and the groove run on into the tip, a straight piece from the last sample.
   const reach = height * draw.tipStripeShare;
   for (let i = 0; i < TIP_BANDS.length; i++) {
