@@ -12,6 +12,9 @@ function packageVersion(): string {
   return (JSON.parse(text) as { version: string }).version;
 }
 
+/** Wait this long after the last package.json change before restarting the dev server. */
+const RESTART_DEBOUNCE_MS = 300;
+
 /** Phaser's own minified ES module build: one file, no imports, no source map. */
 const PHASER_MIN = '/node_modules/phaser/dist/phaser.esm.min.js';
 
@@ -49,8 +52,18 @@ function restartOnPackageJson(): Plugin {
     configureServer(server) {
       const file = normalizePath(`${server.config.root}/package.json`);
       server.watcher.add(file);
+      let timer: ReturnType<typeof setTimeout> | undefined;
       server.watcher.on('change', (changed) => {
-        if (normalizePath(changed) === file) void server.restart();
+        if (normalizePath(changed) !== file) return;
+        // Editors and npm write the file in several events: restart once.
+        clearTimeout(timer);
+        timer = setTimeout(() => {
+          server.restart().catch((error: unknown) => {
+            server.config.logger.error(
+              `restart after package.json change failed: ${String(error)}`,
+            );
+          });
+        }, RESTART_DEBOUNCE_MS);
       });
     },
   };
