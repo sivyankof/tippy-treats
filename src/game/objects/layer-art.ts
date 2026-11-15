@@ -72,6 +72,9 @@ export function cakeColorsFor(
 }
 
 /** Whole-pixel width the art is baked at. */
+/** Half the height of a layer: the distance from its centre to its top or bottom edge. */
+export const HALF_LAYER = BALANCE.layer.height / 2;
+
 export function artWidth(width: number): number {
   return Math.max(1, Math.round(width));
 }

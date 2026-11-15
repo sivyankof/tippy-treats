@@ -12,6 +12,8 @@ import { createGlossBand, sweepGloss } from '../fx/gloss-sweep';
 import { springScaleBack, type ScaleStart } from '../fx/spring-back';
 import { idlePose, type IdlePose } from '../ui/idle-motion';
 import { creatureColors } from './creature-art/primitives';
+import type { EdgeShape } from './edge-squash';
+import { EdgeSquashSkin } from './edge-squash-skin';
 import { LayerFace } from './layer-face';
 import { LayerMaterial, type MaterialMotion } from './layer-material';
 import { LayerRig } from './layer-rig';
@@ -28,13 +30,19 @@ import { GlazeDripLayer } from './glaze-drip-layer';
  * to the centre of the layer (widening pivots there):
  *
  *   LayerView > squashRoot (y = +H/2) > breathRoot > shapeRoot > content (y = -H/2) > art, glazeDrips, glossSweep, face
+ *
+ * A flying layer squashed against the screen edge shows its art through `EdgeSquashSkin`
+ * (made on first use and put right above the art) instead of the plain art image.
  */
 export class LayerView extends Phaser.GameObjects.Container {
   private readonly squashRoot: Phaser.GameObjects.Container;
   /** Idle breathing of a placed layer: it only ever grows upwards, so no gap opens above it. */
   private readonly breathRoot: Phaser.GameObjects.Container;
   private readonly breath: IdlePose = { scaleX: 1, scaleY: 1, angle: 0, bob: 0 };
+  private readonly shapeRoot: Phaser.GameObjects.Container;
   private readonly content: Phaser.GameObjects.Container;
+  /** The art squashed against the screen edge; made the first time a squash is asked for. */
+  private edgeSkin: EdgeSquashSkin | null = null;
   private readonly art: Phaser.GameObjects.Image;
   private readonly artSlot: LayerArtSlot;
   /** Glaze drips that keep growing after the layer has landed, drawn over the baked ones. */
@@ -66,9 +74,9 @@ export class LayerView extends Phaser.GameObjects.Container {
       this.glossSweep,
       this.face,
     ]);
-    const shapeRoot = new Phaser.GameObjects.Container(scene, 0, 0, [this.content]);
-    this.material = new LayerMaterial(shapeRoot);
-    this.breathRoot = new Phaser.GameObjects.Container(scene, 0, 0, [shapeRoot]);
+    this.shapeRoot = new Phaser.GameObjects.Container(scene, 0, 0, [this.content]);
+    this.material = new LayerMaterial(this.shapeRoot);
+    this.breathRoot = new Phaser.GameObjects.Container(scene, 0, 0, [this.shapeRoot]);
     this.squashRoot = new Phaser.GameObjects.Container(scene, 0, half, [this.breathRoot]);
     this.rig.attach(this.content, this.squashRoot);
     this.add(this.squashRoot);
@@ -159,6 +167,30 @@ export class LayerView extends Phaser.GameObjects.Container {
     return this;
   }
 
+  /** Horizontal scale the inner containers give the picture, on top of the view's own scale. */
+  get innerScaleX(): number {
+    return (
+      this.squashRoot.scaleX * this.breathRoot.scaleX * this.shapeRoot.scaleX * this.content.scaleX
+    );
+  }
+
+  /**
+   * Draws the picture squashed against the screen edge (`edge-squash.ts`; offsets in the view's
+   * own units), or as it is for `null`. Only the drawing changes, never the layer's place.
+   */
+  setEdgeSquash(shape: Readonly<EdgeShape> | null): this {
+    if (!shape) {
+      this.edgeSkin?.clear();
+      return this;
+    }
+    if (!this.edgeSkin) {
+      this.edgeSkin = new EdgeSquashSkin(this.scene, this.art, this.face, this.glossSweep);
+      this.content.addAt(this.edgeSkin.parts, this.content.getIndex(this.art) + 1);
+    }
+    this.edgeSkin.apply(shape, this.innerScaleX);
+    return this;
+  }
+
   /** Squashes at once, then springs back to the normal shape; `delayMs` postpones the squash. */
   playLanding(
     scaleX: number = ANIM.land.scaleX,
@@ -233,6 +265,7 @@ export class LayerView extends Phaser.GameObjects.Container {
   /** Stops every animation of this layer and restores its shape, for reuse from a pool. */
   resetAnim(): this {
     this.scene.tweens.killTweensOf([this, this.squashRoot, this.content, this.glossSweep]);
+    this.edgeSkin?.clear();
     this.rig.reset();
     this.material.reset();
     this.slideX = 0;

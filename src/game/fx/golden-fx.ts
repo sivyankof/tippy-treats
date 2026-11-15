@@ -57,11 +57,13 @@ export class GoldenFx {
     hidden: boolean,
   ): void {
     const layer = state.flying;
-    const shine = layer?.kind === 'golden' && pos && !hidden ? pos : null;
-    this.placeSparkles(timeMs, shine, layer?.width ?? 0);
+    // The shine follows the drawn body, squashed against a screen edge.
+    const body = this.flying.body();
+    const shine = layer?.kind === 'golden' && pos && body && !hidden ? body : null;
+    this.placeSparkles(timeMs, shine, shine?.width ?? 0);
     if (shine && layer) {
       this.runGloss(dtMs);
-      if (state.phase === 'flying') this.runTrail(dtMs, shine, layer.width, layer.dir);
+      if (state.phase === 'flying') this.runTrail(dtMs, shine, shine.width, layer.dir);
     } else {
       this.glossMs = cfg.glossEveryMs * cfg.glossFirstShare;
     }

@@ -30,10 +30,46 @@ const TEXTURES: Readonly<Record<MaterialTexture, string>> = {
 };
 
 /** Colours of a burst: palette keys of the creature, or hex colours of their own. */
-function burstTints(burst: MaterialBurst, creature: CreatureId): number[] {
+function burstTints(burst: Pick<MaterialBurst, 'colors'>, creature: CreatureId): number[] {
   const palette = creatureColors(creature);
   return burst.colors.map((c) =>
     c.startsWith('#') ? parseHex(c) : palette[c as keyof typeof palette],
+  );
+}
+
+/**
+ * A hard flying layer knocked against the screen edge: its particles fly from (`x`, `y`) in
+ * `directionDeg`, away from the wall. None in "fewer effects".
+ */
+export function wallKnockBurst(
+  bursts: AbilityBursts,
+  burst: Readonly<Omit<MaterialBurst, 'from'>>,
+  creature: CreatureId,
+  x: number,
+  y: number,
+  directionDeg: number,
+): void {
+  if (effectsMode.reduced) return;
+  coneBurst(bursts, burst, creature, x, y, directionDeg);
+}
+
+/** A cone of the burst's particles from (`x`, `y`) in `directionDeg`, in the texture and tints of its material. */
+function coneBurst(
+  bursts: AbilityBursts,
+  burst: Readonly<Omit<MaterialBurst, 'from'>>,
+  creature: CreatureId,
+  x: number,
+  y: number,
+  directionDeg: number,
+): void {
+  bursts.cone(
+    x,
+    y,
+    directionDeg,
+    burst.count,
+    burst.style,
+    TEXTURES[burst.texture],
+    burstTints(burst, creature),
   );
 }
 
@@ -107,15 +143,7 @@ export class MaterialFx {
     if (burst.from === 'edges') {
       this.bursts.edges(pose.x, pose.y, pose.width, burst.count, burst.style, texture, tints);
     } else {
-      this.bursts.cone(
-        pose.x,
-        pose.y - HALF_LAYER,
-        UP_DEG,
-        burst.count,
-        burst.style,
-        texture,
-        tints,
-      );
+      coneBurst(this.bursts, burst, creature, pose.x, pose.y - HALF_LAYER, UP_DEG);
     }
   }
 }

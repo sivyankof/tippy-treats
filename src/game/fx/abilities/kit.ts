@@ -3,15 +3,13 @@ import type { AbilityPayload } from '../../../core/abilities/types';
 import type { TowerState } from '../../../core/tower-sim';
 import type { CreatureId } from '../../../data/creatures';
 import { ANIM } from '../../../data/anim';
-import { BALANCE } from '../../../data/balance';
 import type { LayerPose, TowerView } from '../../objects/tower-view';
 import type { LayerView } from '../../objects/layer-view';
 import type { CreatureColors } from '../../objects/creature-art/primitives';
 import type { AbilityBursts } from './ability-bursts';
 import type { SpriteFx } from './sprite-fx';
 
-/** Half the height of a layer: the distance from its centre to its top or bottom edge. */
-export const HALF_LAYER = BALANCE.layer.height / 2;
+export { HALF_LAYER } from '../../objects/layer-art';
 
 /** Direction of a particle cone that points straight up (degrees, screen y runs down). */
 export const UP_DEG = -90;

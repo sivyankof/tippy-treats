@@ -1,6 +1,7 @@
 import { ANIM } from './anim';
 import type { CreatureId, CreaturePalette } from './creatures';
 import { SPRINKLE_COLORS } from './creature-looks';
+import type { WallFeelKind } from './edge-squash';
 
 /** Small shared effect pictures a material burst can use (`FX_TEXTURES` in the game). */
 export type MaterialTexture = 'drop' | 'circle' | 'star' | 'crumb' | 'spark';
@@ -65,6 +66,11 @@ export interface CreatureMaterial {
   impact?: { kick: number; wave: number };
   /** When the squash wave passes, the top shell lags: it lifts `liftPx` and settles back. */
   shellLag?: { liftPx: number; liftMs: number };
+  /**
+   * How the flying layer meets the screen edge (`data/edge-squash.ts`; none: the normal give)
+   * and the particles it knocks off there, flying away from the wall.
+   */
+  wall?: { feel: WallFeelKind; knock?: Omit<MaterialBurst, 'from'> };
 }
 
 const DEFAULT_EASE = ANIM.land.ease;
@@ -114,6 +120,21 @@ const CRUMBS = {
   tiltDeg: 25,
 } as const;
 
+/** A short glint off a hard surface that hits the screen edge. */
+const GLINT = {
+  speed: [140, 300],
+  gravity: 250,
+  drag: 2.2,
+  spin: [-240, 240],
+  scale: [0.9, 1.4],
+  scaleTo: 0.2,
+  alpha: 1,
+  holdShare: 0.35,
+  lifeMs: [280, 420],
+  spreadDeg: 110,
+  tiltDeg: 0,
+} as const;
+
 export const CREATURE_MATERIALS: Readonly<Record<CreatureId, CreatureMaterial>> = {
   honey: {
     land: { squash: 1.1, durationMul: 1.5, ease: 'Sine.easeOut' },
@@ -122,15 +143,21 @@ export const CREATURE_MATERIALS: Readonly<Record<CreatureId, CreatureMaterial>> 
   puff: {
     land: { squash: 1.3, durationMul: 1.8, ease: 'Cubic.easeOut' },
     idle: { mode: 'breathe', x: 0.012, y: 0.02, periodMs: 2600 },
+    wall: { feel: 'soft' },
   },
   jelly: {
     land: { squash: 1.45, durationMul: 2, ease: DEFAULT_EASE },
     sway: { mode: 'squash', x: 0.012, y: 0.06, periodMs: 700, tilt: 1.3 },
     idle: { mode: 'squash', x: 0.004, y: 0.012, periodMs: 1100 },
+    wall: { feel: 'soft' },
   },
   caramel: {
     land: { squash: 0.35, durationMul: 0.5, ease: 'Quad.easeOut' },
     glossOnLand: true,
+    wall: {
+      feel: 'hard',
+      knock: { count: 7, texture: 'star', colors: ['#ffffff', 'accent'], style: GLINT },
+    },
   },
   frosty: {
     land: { squash: 0.5, durationMul: 0.6, ease: 'Quad.easeOut' },
@@ -161,10 +188,18 @@ export const CREATURE_MATERIALS: Readonly<Record<CreatureId, CreatureMaterial>> 
         tiltDeg: 0,
       },
     },
+    wall: {
+      feel: 'hard',
+      knock: { count: 7, texture: 'star', colors: ['accent', '#ffffff'], style: GLINT },
+    },
   },
   brownie: {
     land: { squash: 0.5, durationMul: 0.8, ease: DEFAULT_EASE },
     impact: { kick: 2, wave: 1.5 },
+    wall: {
+      feel: 'hard',
+      knock: { count: 6, texture: 'crumb', colors: ['body', 'detail'], style: CRUMBS },
+    },
   },
   sprinkle: {
     land: { squash: 1, durationMul: 1, ease: DEFAULT_EASE },
@@ -207,6 +242,10 @@ export const CREATURE_MATERIALS: Readonly<Record<CreatureId, CreatureMaterial>> 
         colors: ['body', 'detail'],
         style: CRUMBS,
       },
+    },
+    wall: {
+      feel: 'hard',
+      knock: { count: 7, texture: 'crumb', colors: ['body', 'detail'], style: CRUMBS },
     },
   },
   ghost: {

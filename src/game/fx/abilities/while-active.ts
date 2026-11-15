@@ -73,13 +73,9 @@ export class WhileActiveFx {
       this.tower.topViewX(),
       mods.perfectTolerance,
     );
-    this.coat.update(
-      dtMs,
-      timeMs,
-      this.coatState,
-      this.flying.position(),
-      state.flying?.width ?? 0,
-    );
+    // The coat lies on the drawn body, squashed against a screen edge.
+    const body = this.flying.body();
+    this.coat.update(dtMs, timeMs, this.coatState, body, body?.width ?? 0);
     this.guides.update(
       dtMs,
       guidesOn,

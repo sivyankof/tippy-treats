@@ -32,6 +32,8 @@ const PUFF_TINTS = [RULE_ANIM.colors.rushPuff, RULE_ANIM.colors.rushStreak] as c
 interface Spot extends Point {
   width: number;
   dir: 1 | -1;
+  /** How many times taller than normal the drawn body gets (a squash against a screen edge). */
+  tall: number;
 }
 
 /**
@@ -44,7 +46,7 @@ export class RuleFx {
   private readonly streaks: SpeedStreaks;
   private readonly cloud: CloudCover;
   private readonly visual: RuleVisual = idleVisual();
-  private readonly spot: Spot = { x: 0, y: 0, width: 0, dir: 1 };
+  private readonly spot: Spot = { x: 0, y: 0, width: 0, dir: 1, tall: 1 };
   /** What the cloud is told each frame; one object, refilled. */
   private readonly cloudInput: CloudInput = {
     covering: false,
@@ -101,11 +103,14 @@ export class RuleFx {
       // The shake moves the picture and `pos` together, so that everything laid around the
       // layer (outline, streaks, coats, sparkles) follows the shifted picture.
       this.shake(dtMs, timeMs, v, layer.dir, layer.width, pos, state.phase === 'flying');
+      // What is laid around the layer follows the drawn body, squashed against a screen edge.
+      const body = this.flying.body();
       const spot = this.spot;
-      spot.x = pos.x;
+      spot.x = body?.x ?? pos.x;
       spot.y = pos.y;
-      spot.width = layer.width;
+      spot.width = body?.width ?? layer.width;
       spot.dir = layer.dir;
+      spot.tall = body?.tall ?? 1;
     } else {
       this.lastIndex = -1;
       this.windup.reset();
@@ -123,7 +128,7 @@ export class RuleFx {
       this.ageMs,
       this.flash(),
       pose.scaleX,
-      pose.scaleY,
+      pose.scaleY * at.tall,
     );
     this.streaks.update(shown ? v.streaks : 0, v.streakKind, at.x, at.y, at.width, at.dir, timeMs);
     const flying = shown && state.phase === 'flying';
