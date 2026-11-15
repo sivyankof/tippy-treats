@@ -1,6 +1,6 @@
 // The interstitial counters of the save as pure functions: sessions, runs and the last show.
 import type { Save } from '../core/save/schema';
-import { daysBetween } from '../util/clock';
+import { addUsed, usedToday, type DayCounter } from '../core/day-count';
 
 /** A new launch of the app: the session counter grows by one. */
 export function withSessionStarted(save: Save): Save {
@@ -20,27 +20,35 @@ export function withOfferShown(save: Save, day: string): Save {
   return { ...save, ads: { ...save.ads, offerDay: day } };
 }
 
+/** The daily interstitial count of the save as the shared per-day counter. */
+function shownCounter(save: Save): DayCounter {
+  return { day: save.ads.shownDay, used: save.ads.shownToday };
+}
+
 /**
- * Interstitials shown on the local day `today`. The count starts over only when `today` is later
- * than the day of the last show, so a clock set back never gives the day a fresh count.
+ * Interstitials shown on the local day `today`. The count starts over only on a strictly later
+ * day and not on a clock that looks set back (`core/day-count.ts`).
  */
-export function shownTodayCount(save: Save, today: string): number {
-  const { shownDay, shownToday } = save.ads;
-  return daysBetween(shownDay, today) > 0 ? 0 : shownToday;
+export function shownTodayCount(save: Save, today: string, clockBack: boolean): number {
+  return usedToday(shownCounter(save), today, clockBack);
 }
 
 /** An interstitial was shown at `nowMs` on the local day `today`: the run counter starts over, the day count grows. */
-export function withInterstitialShown(save: Save, nowMs: number, today: string): Save {
-  const later = daysBetween(save.ads.shownDay, today);
+export function withInterstitialShown(
+  save: Save,
+  nowMs: number,
+  today: string,
+  clockBack: boolean,
+): Save {
+  const counter = addUsed(shownCounter(save), 1, today, clockBack);
   return {
     ...save,
     ads: {
       ...save.ads,
       runsSinceInterstitial: 0,
       lastInterstitialAt: nowMs,
-      // An earlier `today` (clock set back) keeps the later day and its count.
-      shownDay: later > 0 || Number.isNaN(later) ? today : save.ads.shownDay,
-      shownToday: shownTodayCount(save, today) + 1,
+      shownDay: counter.day,
+      shownToday: counter.used,
     },
   };
 }

@@ -200,14 +200,19 @@ export class GameState {
       runsSince: ads.runsSinceInterstitial,
       nowMs: (this.deps.now ?? now)(),
       lastShownAt: ads.lastInterstitialAt,
-      shownToday: shownTodayCount(this.store.save, this.today()),
+      shownToday: shownTodayCount(this.store.save, this.today(), this.clockBehind),
     });
   }
 
   /** An interstitial was shown just now. */
   noteInterstitialShown(): void {
     this.store.replace(
-      withInterstitialShown(this.store.save, (this.deps.now ?? now)(), this.today()),
+      withInterstitialShown(
+        this.store.save,
+        (this.deps.now ?? now)(),
+        this.today(),
+        this.clockBehind,
+      ),
     );
   }
 
