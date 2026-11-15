@@ -34,6 +34,7 @@ export type {
   PlacedLayer,
   RunConfig,
   SimEvent,
+  SpeedScaleContext,
   SimPhase,
   TeamSlot,
   TowerState,
@@ -211,7 +212,8 @@ export class TowerSim {
     const rules = layerRules(this.zonesRng, index);
     const speed =
       nominalSpeed(s.height, zoneIndex, this.currentModifiers().speedMult) *
-      this.tutorialSpeedMult(index);
+      this.tutorialSpeedMult(index) *
+      this.analysisSpeedScale(index, zoneIndex);
     const layer = newFlyingLayer(planned.attempt.plan, rules, this.nextWidth, speed);
     this.flight = new Flight(layer, rules.fakeoutX, (pass) =>
       cloudRoll(this.zonesRng, rules, pass),
@@ -219,6 +221,14 @@ export class TowerSim {
     s.flying = layer;
     this.enter('flying');
     events.push({ type: 'spawn', layer: { ...layer } });
+  }
+
+  /** Analysis hook `RunConfig.speedScale`; exactly 1 when it is not set. */
+  private analysisSpeedScale(index: number, zoneIndex: number): number {
+    const { speedScale } = this.config;
+    return speedScale
+      ? speedScale({ index, height: this.s.height, zoneIndex, combo: this.s.combo })
+      : 1;
   }
 
   /** Tutorial run: the first layers fly slower. */

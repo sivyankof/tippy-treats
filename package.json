@@ -12,6 +12,8 @@
     "sim": "tsx scripts/sim.ts",
     "sim:strong": "tsx scripts/strong-fit.ts",
     "sim:coins": "tsx scripts/coin-sources.ts",
+    "sim:speed": "tsx scripts/speed-curve.ts",
+    "sim:speed-variants": "tsx scripts/speed-variants.ts",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "format": "prettier --write .",

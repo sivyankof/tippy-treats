@@ -11,6 +11,17 @@ export interface TeamSlot {
   level: number;
 }
 
+/** What `RunConfig.speedScale` sees when a layer spawns. */
+export interface SpeedScaleContext {
+  /** 1-based number the spawning layer will have. */
+  index: number;
+  /** Height of the tower before the layer lands. */
+  height: number;
+  zoneIndex: number;
+  /** Perfect drops in a row so far. */
+  combo: number;
+}
+
 export interface RunConfig {
   seed: number;
   mode: RunMode;
@@ -19,6 +30,11 @@ export interface RunConfig {
   tutorial: boolean;
   /** Debug: start with this many perfect full-width layers already placed. */
   startHeight?: number;
+  /**
+   * Analysis-only hook (never set by the game): called once per layer spawn, the result multiplies
+   * the nominal speed of that layer. Absent means exactly the normal speed.
+   */
+  speedScale?: (context: SpeedScaleContext) => number;
 }
 
 export type SimPhase = 'flying' | 'falling' | 'pause' | 'await_continue' | 'over';
