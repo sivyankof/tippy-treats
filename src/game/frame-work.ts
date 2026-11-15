@@ -12,6 +12,15 @@ export const frameWorkStats = new FrameWorkStats({
   refreshFrames: statsRefreshFrames,
 });
 
+/** Gets every frame's work time as it is measured (the `?perf=1` benchmark collects them this way). */
+export type FrameWorkListener = (workMs: number, nowMs: number) => void;
+let listener: FrameWorkListener | null = null;
+
+/** Sets (or, with `null`, removes) the one listener of the frame work times. */
+export function setFrameWorkListener(next: FrameWorkListener | null): void {
+  listener = next;
+}
+
 /**
  * Measures the work of every frame, from the start of the game step to the end of its render
  * (CPU time: the video chip works on its own and shows up in the following frames), and feeds
@@ -28,6 +37,7 @@ export function bindFrameWork(game: Phaser.Game): void {
     const workMs = nowMs - stepStartMs;
     frameWorkStats.add(workMs);
     effectsMode.noteFrame(workMs, nowMs);
+    listener?.(workMs, nowMs);
   });
   // The scenes exist from the start; each one reports its own creation, restarts included.
   for (const scene of game.scene.scenes) {

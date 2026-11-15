@@ -58,6 +58,11 @@ export class AbilityFx {
     this.kit.arc.onDeflate = () => this.onRainbowPuff?.();
   }
 
+  /** The Rainbow arc is fully grown (the benchmark's still waits for it). */
+  get rainbowArcGrown(): boolean {
+    return this.kit.arc.fullyGrown;
+  }
+
   /**
    * Before the sim step is shown: a jelly lets the sway calm down smoothly instead of at once.
    * It has to run before the tower is synced to the new state.

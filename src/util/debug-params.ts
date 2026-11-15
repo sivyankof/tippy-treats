@@ -1,5 +1,6 @@
 import { isCreatureId, MAX_CREATURE_LEVEL, type CreatureId } from '../data/creatures';
 import { BALANCE } from '../data/balance';
+import { isPerfSegmentId, PERF, type PerfSegmentId } from '../data/perf';
 import { UINT32_RANGE } from './math';
 
 export interface DebugParams {
@@ -97,6 +98,40 @@ export function parseDebugParams(search: string): DebugParams {
 /** `?fps=1` shows the small frame counter. It works in dev and production builds alike, unlike the other debug parameters. */
 export function showsFpsMeter(search: string): boolean {
   return new URLSearchParams(search).get('fps') === '1';
+}
+
+/** What `?perf=1` asked for. */
+export interface PerfParams {
+  /** `fx=reduced` pins "fewer effects" for the whole run; the default pins full effects. */
+  fx: 'full' | 'reduced';
+  /** `only=a,b`: just these segments, in the order of the benchmark; `null` for all of them. */
+  only: PerfSegmentId[] | null;
+  /** `still=tower|tongue|arc` (or a segment id): play that segment and freeze at a fixed moment, no measuring. */
+  still: PerfSegmentId | null;
+}
+
+/**
+ * Reads `?perf=1&fx=reduced&only=calm,edge&still=tongue`; `null` when `?perf=1` is absent. It works in dev
+ * and production builds alike, like `?fps=1`. Unknown segment names are dropped.
+ */
+export function parsePerfParams(search: string): PerfParams | null {
+  const params = new URLSearchParams(search);
+  if (params.get('perf') !== '1') return null;
+  const names = (params.get('only') ?? '').split(',').map((name) => name.trim());
+  const only = names.filter(isPerfSegmentId);
+  const still = params.get('still')?.trim() ?? '';
+  const named = Object.entries(PERF.stills).find(([name]) => name === still)?.[1];
+  const stillId = named ?? (isPerfSegmentId(still) ? still : null);
+  return {
+    fx: params.get('fx') === 'reduced' ? 'reduced' : 'full',
+    only: only.length > 0 ? only : null,
+    still: stillId,
+  };
+}
+
+/** The benchmark parameters of the current page; `null` for a normal start. */
+export function readPerfParams(): PerfParams | null {
+  return parsePerfParams(window.location.search);
 }
 
 /** Debug parameters of the current page. They only apply to dev builds. */

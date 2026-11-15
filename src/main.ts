@@ -9,7 +9,8 @@ import { detectLang, setLang } from './i18n';
 import { syncPurchases } from './game/purchases';
 import { gameState } from './state';
 import { bindSaveFlush } from './state/page-lifecycle';
-import { readDebugParams, showsFpsMeter, withoutReset } from './util/debug-params';
+import { beginPerfSession } from './game/perf/perf-session';
+import { readDebugParams, readPerfParams, showsFpsMeter, withoutReset } from './util/debug-params';
 
 // Sample covers both subsets so the Latin and Cyrillic font files are fetched up front.
 const FONT_SAMPLE = 'Tippy Treats Башня 0123456789';
@@ -66,8 +67,13 @@ async function start(): Promise<void> {
   await loadSave();
   bootStage('fonts');
   await loadFonts();
+  // `?perf=1` (any build): an automatic benchmark run, kept out of the save (docs/08-architecture.md, section 9).
+  const perf = readPerfParams();
+  const perfDirector = perf ? await import('./game/perf/perf-director') : null;
+  if (perf) beginPerfSession(perf);
   bootStage('game');
   const game = new Phaser.Game(createGameConfig(parent));
+  perfDirector?.startPerfDirector(game);
   bindLogicalResize(game, parent);
   refreshTextsOnFontLoad(game);
   bootStage('started');

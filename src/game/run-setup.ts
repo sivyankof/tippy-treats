@@ -13,6 +13,8 @@ import { now, utcDay } from '../util/clock';
 import { readDebugParams, savesRun, skipsTutorial } from '../util/debug-params';
 import { randomSeed } from '../util/math';
 import { hasDebugTeam, resolveRunTeam } from './debug/debug-team';
+import type { DropDriver } from './perf/perf-drivers';
+import { perfRunSetup, perfSession } from './perf/perf-session';
 import { demoTeam, type RunRequest } from './run-request';
 import { TUTORIAL_TEAM } from './tutorial/tutorial-team';
 
@@ -39,6 +41,8 @@ export interface RunSetup {
   noContinue: boolean;
   /** Timing deviation of the dev bot player, if one plays. */
   bot: number | undefined;
+  /** Drops the layers of a `?perf=1` benchmark run (it replaces the bot); absent in every other run. */
+  perfDriver?: DropDriver;
 }
 
 /**
@@ -47,6 +51,8 @@ export interface RunSetup {
  * panel) override in dev builds.
  */
 export function setupRun(request: RunRequest): RunSetup {
+  const perf = perfRunSetup(request);
+  if (perf) return perf;
   const debug = readDebugParams();
   const seed = debug.seed ?? randomSeed();
   if (request.kind === 'daily') {
@@ -125,6 +131,7 @@ function debugStartWidth(start: number | undefined): number | undefined {
 export function opensWithRun(): boolean {
   const debug = readDebugParams();
   return (
+    perfSession() !== null ||
     debug.team !== undefined ||
     debug.level !== undefined ||
     debug.bot !== undefined ||
