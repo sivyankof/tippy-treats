@@ -880,6 +880,13 @@ export const MENU = {
     statColumns: 3,
     /** Width a stat label may take before it shrinks. */
     statWidth: 300,
+    /** The abilities tile is wider; its creature icons with their counts stand in a row. */
+    abilityCellWidth: 440,
+    abilityIconSize: 60,
+    abilityIconGap: 6,
+    abilityItemGap: 26,
+    /** Size of the count beside an icon, as a share of the stat font. */
+    abilityCountScale: 0.75,
     coinTotalFont: 84,
     /** The coin icon beside the total: its size as a share of the font, and the gap to the number. */
     coinIconScale: 1,

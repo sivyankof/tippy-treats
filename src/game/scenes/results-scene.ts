@@ -70,7 +70,7 @@ export class ResultsScene extends Phaser.Scene {
     this.runExit = { runMs: result.durationMs, recorded: data.recorded };
     this.dim = createDimOverlay(this, ANIM.results.overlayAlpha, width, height).setInteractive();
     this.header = new ResultsHeader(this, result, summary.isRecord);
-    this.stats = createStats(this, result, tally.abilities, width);
+    this.stats = createStats(this, result, tally, width);
     // The coins of a daily run are not doubled by an ad: that place is for the classic run only.
     this.coins = new ResultsCoins(this, result.coins, coinLines(tally), data.recorded && !daily);
     this.tiers = new ResultsTiers(this, summary.dailyTiers);

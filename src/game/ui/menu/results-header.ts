@@ -1,13 +1,15 @@
 import type * as Phaser from 'phaser';
 import type { RunResult } from '../../../core/run-result';
+import { abilityCounts, type RunTally } from '../../../core/run-tally';
 import { MENU } from '../../../data/menu-layout';
 import { PALETTE } from '../../../data/palette';
 import { formatNumber, t } from '../../../i18n';
+import { createCreatureIcon } from '../creature-icons';
 import { NumberRoll } from '../number-roll';
 import { createOutlinedText } from '../outlined-text';
 import { TitleRibbon } from '../style/title-ribbon';
 import { fitText } from './fit-text';
-import { stackRows, type Row } from './results-layout';
+import { cellWidths, stackRows, type Row } from './results-layout';
 
 const cfg = MENU.results;
 
@@ -48,39 +50,93 @@ export class ResultsHeader {
   }
 }
 
-/** Score, best combo and abilities of the run side by side, each with its caption. */
+/** Score, best combo and the creatures whose abilities triggered side by side, each with its caption. */
 export function createStats(
   scene: Phaser.Scene,
   result: RunResult,
-  abilities: number,
+  tally: RunTally,
   width: number,
 ): { obj: Phaser.GameObjects.Container; height: number } {
-  const cells = [
-    { label: t('results.score'), value: formatNumber(result.score) },
-    { label: t('results.bestCombo'), value: t('run.combo', { n: result.bestCombo }) },
-    { label: t('results.abilities'), value: formatNumber(abilities) },
+  const triggered = abilityCounts(tally);
+  const cells: Array<{ label: string; value: string; wanted: number }> = [
+    { label: t('results.score'), value: formatNumber(result.score), wanted: cfg.statWidth },
+    {
+      label: t('results.bestCombo'),
+      value: t('run.combo', { n: result.bestCombo }),
+      wanted: cfg.statWidth,
+    },
   ];
+  const widths = cellWidths(
+    [...cells.map((c) => c.wanted), ...(triggered.length > 0 ? [cfg.abilityCellWidth] : [])],
+    Math.min(cfg.panel.width, width),
+  );
   const stats = scene.add.container(0, 0);
-  const columnWidth = Math.min(cfg.statWidth, width / cells.length);
   const cellHeight = (cfg.labelFont + cfg.statFont) * cfg.lineHeight;
-  cells.forEach((cell, i) => {
-    const x = (i - (cells.length - 1) / 2) * columnWidth;
-    const label = fitText(
-      createOutlinedText(scene, x, -cellHeight / 2 + cfg.labelFont / 2, cell.label, cfg.labelFont),
-      columnWidth - cfg.rowGap * 2,
-    );
-    const value = fitText(
-      createOutlinedText(
-        scene,
-        x,
-        cellHeight / 2 - cfg.statFont / 2,
-        cell.value,
-        cfg.statFont,
-        PALETTE.gold,
+  const labelY = -cellHeight / 2 + cfg.labelFont / 2;
+  const valueY = cellHeight / 2 - cfg.statFont / 2;
+  let left = -widths.reduce((sum, w) => sum + w, 0) / 2;
+  const addLabel = (text: string, x: number, columnWidth: number): void => {
+    stats.add(
+      fitText(
+        createOutlinedText(scene, x, labelY, text, cfg.labelFont),
+        columnWidth - cfg.rowGap * 2,
       ),
-      columnWidth - cfg.rowGap * 2,
     );
-    stats.add([label, value]);
+  };
+  cells.forEach((cell, i) => {
+    const columnWidth = widths[i] ?? 0;
+    const x = left + columnWidth / 2;
+    left += columnWidth;
+    addLabel(cell.label, x, columnWidth);
+    stats.add(
+      fitText(
+        createOutlinedText(scene, x, valueY, cell.value, cfg.statFont, PALETTE.gold),
+        columnWidth - cfg.rowGap * 2,
+      ),
+    );
   });
+  if (triggered.length > 0) {
+    const columnWidth = widths[cells.length] ?? 0;
+    const x = left + columnWidth / 2;
+    addLabel(t('results.abilities'), x, columnWidth);
+    stats.add(abilityRow(scene, triggered, x, valueY, columnWidth - cfg.rowGap * 2));
+  }
   return { obj: stats, height: cellHeight };
+}
+
+/** Small creature icons, each followed by how many times its ability triggered; the row is centred on (x, y). */
+function abilityRow(
+  scene: Phaser.Scene,
+  triggered: ReturnType<typeof abilityCounts>,
+  x: number,
+  y: number,
+  maxWidth: number,
+): Phaser.GameObjects.Container {
+  const row = scene.add.container(x, y);
+  const items = triggered.map(({ id, count }) => {
+    const icon = createCreatureIcon(scene, 0, 0, id).setDisplaySize(
+      cfg.abilityIconSize,
+      cfg.abilityIconSize,
+    );
+    const label = createOutlinedText(
+      scene,
+      0,
+      0,
+      t('results.abilityCount', { n: formatNumber(count) }),
+      cfg.statFont * cfg.abilityCountScale,
+      PALETTE.gold,
+    ).setOrigin(0, 0.5);
+    return { icon, label, width: cfg.abilityIconSize + cfg.abilityIconGap + label.width };
+  });
+  const total =
+    items.reduce((sum, item) => sum + item.width, 0) + cfg.abilityItemGap * (items.length - 1);
+  let left = -total / 2;
+  for (const { icon, label, width } of items) {
+    icon.setPosition(left + cfg.abilityIconSize / 2, 0);
+    label.setPosition(left + cfg.abilityIconSize + cfg.abilityIconGap, 0);
+    row.add([icon, label]);
+    left += width + cfg.abilityItemGap;
+  }
+  if (total > maxWidth) row.setScale(maxWidth / total);
+  return row;
 }

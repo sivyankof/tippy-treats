@@ -1,5 +1,15 @@
 import { describe, expect, it } from 'vitest';
-import { spacingShare, spreadBlocks } from './results-layout';
+import { cellWidths, spacingShare, spreadBlocks } from './results-layout';
+
+describe('cellWidths', () => {
+  it('keeps the wanted widths when they fit', () => {
+    expect(cellWidths([300, 300], 1000)).toEqual([300, 300]);
+  });
+
+  it('shrinks all cells by the same share when they do not fit', () => {
+    expect(cellWidths([300, 300, 400], 500)).toEqual([150, 150, 200]);
+  });
+});
 
 describe('spreadBlocks', () => {
   it('spreads free room evenly, edges included', () => {

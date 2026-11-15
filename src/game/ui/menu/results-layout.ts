@@ -43,6 +43,16 @@ export function spacingShare(
   return Math.min(1, Math.max(minShare, free / spacing));
 }
 
+/**
+ * Widths of the stat cells side by side: each wants its own width, and when together they are
+ * wider than `total` they all shrink by the same share.
+ */
+export function cellWidths(wanted: readonly number[], total: number): number[] {
+  const sum = wanted.reduce((a, b) => a + b, 0);
+  const share = sum > total ? total / sum : 1;
+  return wanted.map((w) => w * share);
+}
+
 /** A child of a block together with the height it takes. */
 export interface Row {
   obj: Phaser.GameObjects.Text | Phaser.GameObjects.Container;

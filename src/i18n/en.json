@@ -184,7 +184,7 @@
   "results": {
     "score": "Score",
     "bestCombo": "Best combo",
-    "abilities": "Abilities",
+    "abilities": "Abilities triggered",
     "coins": "Coins",
     "source": {
       "floating": "Floating",
@@ -197,6 +197,7 @@
     "double": "×2 for an ad",
     "doubled": "Doubled!",
     "xp": "+{n} XP",
+    "abilityCount": "×{n}",
     "debugRun": "Debug run: not saved",
     "home": "Home",
     "next": "Next",
