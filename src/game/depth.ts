@@ -15,6 +15,8 @@ export const DEPTH = {
   tower: 20,
   /** Added per layer index to the tower depth: a higher layer always draws over the one below it. */
   towerLayerStep: 0.001,
+  /** The small rainbow of the Rainbow layer's star: over every layer of the tower, under the aim hint. */
+  rainbowJoke: 24,
   hint: 25,
   /** Dashed guides of the ghost, and the rim of the brownie's bubble, over the tower. */
   guides: 26,

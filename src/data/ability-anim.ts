@@ -324,6 +324,11 @@ export const ABILITY_ANIM = {
       risePx: 120,
       riseShare: 0.2,
       edgeOverPx: 30,
+      /**
+       * While the flying layer is within `gapPx` above the top of the tower the arc steps aside so the
+       * tower top and the landing hint read: it bows out `sideBoost` (share) wider and fades down to `alpha`.
+       */
+      near: { gapPx: 300, sideBoost: 0.8, alpha: 0.4 },
       sideDeadPx: 40,
       bowLerp: 0.2,
       steps: 28,

@@ -108,3 +108,11 @@ export function swell(u: number, at: number, bulge: number, sigma: number): numb
   const d = (u - at) / sigma;
   return 1 + bulge * Math.exp(-d * d);
 }
+
+/**
+ * How close the flying layer is to the top of the tower, 0..1: 0 while its top edge is `gapPx` or
+ * more above the tower top, 1 once it has reached it (or passed it).
+ */
+export function towerNearness(gap: number, gapPx: number): number {
+  return Math.min(1, Math.max(0, 1 - gap / gapPx));
+}

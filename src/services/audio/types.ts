@@ -23,6 +23,8 @@ export interface AudioService {
   ability(rarity: Rarity): void;
   /** The Rainbow layer flies in: a short quiet chime. */
   rainbowChime(): void;
+  /** The star of the Rainbow layer pops a small rainbow: a quiet rising ding. */
+  rainbowJoke(): void;
   /** The cream cloud of the rainbow deflates: a soft puff. */
   cloudPuff(): void;
   /** The brownie's shield bursts and eats a miss. */

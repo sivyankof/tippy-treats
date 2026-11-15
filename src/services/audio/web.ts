@@ -120,6 +120,10 @@ export class WebAudioService implements AudioService {
     this.play((s) => s.sequence(SFX.rainbowChime.notes));
   }
 
+  rainbowJoke(): void {
+    this.play((s) => s.sequence(SFX.rainbowJoke.notes));
+  }
+
   cloudPuff(): void {
     this.play((s) =>
       s.noise({ ...SFX.ability.puff, gain: SFX.ability.puff.gain * SFX.cloudPuff.puffGainShare }),

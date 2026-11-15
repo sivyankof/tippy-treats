@@ -4,6 +4,7 @@ import type { LayerPlan, PlacedLayer, TowerState } from '../../core/tower-sim';
 import { wobbleAmplitude, wobbleOffset } from '../../core/wobble';
 import { ANIM } from '../../data/anim';
 import { BALANCE } from '../../data/balance';
+import { RAINBOW_LOOK } from '../../data/rainbow-look';
 import { DEPTH } from '../depth';
 import { effectsMode } from '../effects-mode';
 import { waveStep } from '../fx/anim-curves';
@@ -149,6 +150,18 @@ export class TowerView {
     return this.active.get(index) ?? null;
   }
 
+  /** Called when the star of a Rainbow layer pops its small rainbow (the ding). */
+  onRainbowJoke: (() => void) | null = null;
+
+  /** The layers above and below look at the star while it jokes. */
+  private rainbowJoke(index: number, view: LayerView): void {
+    this.onRainbowJoke?.();
+    const star = view.starWorld();
+    for (const next of [index - 1, index + 1]) {
+      this.viewAt(next)?.glanceAtWorld(star.x, star.y, RAINBOW_LOOK.idle.joke.glanceMs);
+    }
+  }
+
   /** The placed layers and their bitten edges as plain data, for the picture the player shares. */
   snapshot(): TowerSnapshot {
     return snapshotTower(this.state?.layers ?? [], this.cuts);
@@ -233,7 +246,7 @@ export class TowerView {
       const target = this.lookTarget;
       face.lookAt(target ? target.x - view.x : 0, target ? target.y - view.y : 0);
       this.motion.phase = index * MATERIAL_PHASE_STEP;
-      view.tick(dtMs, this.motion);
+      if (view.tick(dtMs, this.motion)) this.rainbowJoke(index, view);
     }
     if (this.hiddenFrom === Infinity) {
       this.glazeGrowth.tick(this.active, state, this.clockMs, dtMs);

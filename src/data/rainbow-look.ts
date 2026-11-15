@@ -82,6 +82,8 @@ export const RAINBOW_LOOK = {
       holdMs: 800,
       fadeMs: 300,
       squintMs: 1300,
+      /** How long the layers above and below look at the star. */
+      glanceMs: 1300,
       /** Gloss of the band: the same as on the arc of the Rainbow ability. */
       glossShare: ABILITY_ANIM.rainbow.arc.glossShare,
       glossAlpha: ABILITY_ANIM.rainbow.arc.glossAlpha,

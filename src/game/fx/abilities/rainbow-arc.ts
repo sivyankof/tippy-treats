@@ -8,7 +8,7 @@ import { FX_TEXTURES } from '../fx-textures';
 import { outlineColor } from '../plain-style';
 import type { AbilityBursts } from './ability-bursts';
 import { paintBand } from './rainbow-band';
-import { arcCurve, arcSide, swell, type Point } from './rainbow-arc-geometry';
+import { arcCurve, arcSide, swell, towerNearness, type Point } from './rainbow-arc-geometry';
 import { HALF_LAYER } from './kit';
 
 const cfg = ABILITY_ANIM.rainbow;
@@ -43,6 +43,8 @@ export class RainbowArc {
   onDeflate: (() => void) | null = null;
   /** Bottom edge of the screen in world pixels (the arc starts below it when its cloud is off screen). */
   private viewBottom = Infinity;
+  /** How close the flying layer is to the tower top now (0..1): the arc then steps aside and fades. */
+  private near = 0;
 
   constructor(
     scene: Phaser.Scene,
@@ -88,9 +90,10 @@ export class RainbowArc {
   }
 
   /** `target` is the middle of the top edge of the flying layer (`null` while none flies). */
-  update(dtMs: number, target: Point | null, viewBottom = Infinity): void {
+  update(dtMs: number, target: Point | null, viewBottom = Infinity, towerTop = Infinity): void {
     this.gfx.clear();
     this.viewBottom = viewBottom;
+    this.near = target ? towerNearness(towerTop - target.y, arc.near.gapPx) : 0;
     if (this.phase === 'idle') return;
     this.ageMs += dtMs;
     if (this.phase === 'deflate') {
@@ -126,7 +129,8 @@ export class RainbowArc {
   private curve(grown: number): Array<Point & { nx: number; ny: number }> {
     const start = this.start0();
     const dist = Math.hypot(this.last.x - start.x, this.last.y - start.y);
-    const side = Math.max(arc.sidePx, dist * arc.sideShare) * this.bow;
+    const side =
+      Math.max(arc.sidePx, dist * arc.sideShare) * (1 + arc.near.sideBoost * this.near) * this.bow;
     const rise = arc.risePx + dist * arc.riseShare;
     return arcCurve(start, this.last, side, rise, grown, arc.steps);
   }
@@ -142,7 +146,7 @@ export class RainbowArc {
       outlinePx: arc.outlinePx,
       glossShare: arc.glossShare,
       glossAlpha: arc.glossAlpha,
-      alpha: arc.alpha,
+      alpha: arc.alpha * (1 - (1 - arc.near.alpha) * this.near),
       widthAt: (u) => swell(u, swellAt, arc.waveBulge, arc.waveSigma),
     });
     const popped = pop(clamp01(this.ageMs / cloud.popMs));
