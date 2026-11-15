@@ -46,6 +46,8 @@ export function createDefaultSave(nowMs: number, installId: string): Save {
     },
     oven: { day: '', used: 0, carry: 0 },
     doubles: { day: '', used: 0 },
+    checkpoints: [],
+    checkpointAds: { day: '', used: 0 },
     consent: { attAsked: false, notifAsked: false },
   };
 }

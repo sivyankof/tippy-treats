@@ -5,17 +5,21 @@ import { createTestState } from '../state/test-state';
 const h = vi.hoisted(() => ({
   audio: { suspend: vi.fn(), resume: vi.fn() },
   ads: { showRewarded: vi.fn<(placement: string) => Promise<RewardedResult>>() },
+  telemetry: { logEvent: vi.fn(), setUserProperty: vi.fn() },
 }));
 const state = createTestState();
 
 vi.mock('../state', () => ({ gameState: state }));
-vi.mock('../services', () => ({ services: { audio: h.audio, ads: h.ads } }));
+vi.mock('../services', () => ({
+  services: { audio: h.audio, ads: h.ads, telemetry: h.telemetry },
+}));
 
 describe('showRewarded', () => {
   beforeEach(() => {
     h.audio.suspend.mockClear();
     h.audio.resume.mockClear();
     h.ads.showRewarded.mockReset();
+    h.telemetry.logEvent.mockClear();
   });
 
   it('suspends the sound around the ad, counts a rewarded ad once and remembers it for the run', async () => {
@@ -53,5 +57,15 @@ describe('showRewarded', () => {
     expect(state.data.stats.adsWatched).toBe(before);
     expect(h.audio.suspend).toHaveBeenCalledOnce();
     expect(h.audio.resume).toHaveBeenCalledOnce();
+  });
+
+  it('logs the show and the result of every placement', async () => {
+    const { showRewarded } = await import('./rewarded');
+    h.ads.showRewarded.mockResolvedValue('dismissed');
+    await showRewarded('checkpoint_start');
+    expect(h.telemetry.logEvent.mock.calls).toEqual([
+      ['ad_rewarded_show', { placement: 'checkpoint_start' }],
+      ['ad_rewarded_result', { placement: 'checkpoint_start', result: 'dismissed' }],
+    ]);
   });
 });

@@ -14,6 +14,7 @@ import {
   shouldOfferRemoveAds,
   type InterstitialRunFacts,
 } from '../core/video-policy';
+import type { CheckpointHeight, CheckpointMethod, CheckpointRow } from '../core/checkpoints';
 import type { RunResult } from '../core/run-result';
 import {
   coinCreatureAffordable,
@@ -48,6 +49,7 @@ import {
   withMissionRerolled,
   withMissionsForDay,
 } from './missions';
+import { checkpointAdsLeftOf, checkpointRowsOf, withCheckpointPaid } from './checkpoints';
 import { withCreatureBought, withCreatureUpgraded, withTeam } from './creatures';
 import { Hints } from './hints';
 import {
@@ -170,6 +172,7 @@ export class GameState {
       this.clockBehind,
       this.dailyAttemptDay,
       this.utcToday(),
+      startHeight,
     );
     const next = withRunCounted(progress.save);
     const summary = {
@@ -181,6 +184,40 @@ export class GameState {
     this.noteRun(this.store.save, next, summary, extras);
     this.store.replace(next);
     return summary;
+  }
+
+  // --- Checkpoints ---
+
+  /** Opened checkpoint heights, lowest first. */
+  get checkpoints(): readonly CheckpointHeight[] {
+    return this.store.save.checkpoints as CheckpointHeight[];
+  }
+
+  /** Checkpoint starts a rewarded ad may still pay today. */
+  get checkpointAdsLeft(): number {
+    return checkpointAdsLeftOf(this.store.save, this.today(), this.clockBehind);
+  }
+
+  /** The rows of the start choice; `adReady`: the ad service has a rewarded ad loaded. */
+  checkpointRows(adReady: boolean): CheckpointRow[] {
+    return checkpointRowsOf(this.store.save, adReady, this.today(), this.clockBehind);
+  }
+
+  /**
+   * Pays for a start from an opened checkpoint: berries are spent, an ad start is only counted
+   * (the caller shows the ad). False, nothing changed, when it is not allowed or the berries are short.
+   */
+  payCheckpoint(height: CheckpointHeight, method: CheckpointMethod): boolean {
+    const next = withCheckpointPaid(
+      this.store.save,
+      height,
+      method,
+      this.today(),
+      this.clockBehind,
+    );
+    if (!next) return false;
+    this.store.replace(next);
+    return true;
   }
 
   // --- Interstitial ads ---

@@ -446,10 +446,14 @@ describe('dev runs stay out of the save', () => {
         tally: emptyTally(),
         recorded: false,
         tower: {} as never,
+        startHeight: 0,
+        checkpoint: null,
       },
       state,
     );
     expect(data.recorded).toBe(false);
+    expect(data.startHeight).toBe(0);
+    expect(data.checkpoint).toBeNull();
     expect(data.summary.xpGained).toBe(0);
     expect(data.summary.levelUps).toEqual([]);
     expect(data.summary.before).toEqual({ level: state.data.bakerLevel, xp: state.data.bakerXp });

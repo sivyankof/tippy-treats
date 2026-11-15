@@ -8,6 +8,7 @@ import {
   migrateV3,
   migrateV4,
   migrateV5,
+  migrateV6,
   SaveError,
   type Migration,
 } from './migrations';
@@ -521,10 +522,90 @@ describe('migration 5 to 6', () => {
     const tutorial = { firstRunDone: true, hintsShown: ['tutorial', 'oven'] };
     const result = load(JSON.stringify({ ...v5, coins: 210, bakerLevel: 6, daily, tutorial }));
     expect(result.save.version).toBe(SAVE_VERSION);
-    expect(SAVE_VERSION).toBe(6);
     expect(result.save.coins).toBe(210);
     expect(result.save.bakerLevel).toBe(6);
     expect(result.save.daily).toEqual(daily);
     expect(result.save.tutorial.hintsShown).toEqual(['tutorial', 'oven']);
+  });
+});
+
+describe('migration 6 to 7', () => {
+  const v6 = { ...fresh(), version: 6 } as Record<string, unknown>;
+  delete v6.checkpoints;
+  delete v6.checkpointAds;
+  const withRecord = (classicHeight: number) => ({
+    ...v6,
+    records: { classicHeight, classicScore: 900, bestCombo: 7 },
+  });
+
+  it('opens the checkpoints the record already reached and starts the ad counter empty', () => {
+    const next = migrateV6(withRecord(65));
+    expect(next.checkpoints).toEqual([20, 40, 60]);
+    expect(next.checkpointAds).toEqual({ day: '', used: 0 });
+  });
+
+  it('opens nothing below the first checkpoint and survives a damaged record', () => {
+    expect(migrateV6(withRecord(19)).checkpoints).toEqual([]);
+    expect(migrateV6({ ...v6, records: 'oops' }).checkpoints).toEqual([]);
+    expect(migrateV6({ ...v6, records: { classicHeight: Number.NaN } }).checkpoints).toEqual([]);
+  });
+
+  it('loads a version 6 text into the current save without losing progress', () => {
+    const result = load(JSON.stringify({ ...withRecord(100), coins: 77 }));
+    expect(result.save.version).toBe(SAVE_VERSION);
+    expect(result.save.coins).toBe(77);
+    expect(result.save.records.classicHeight).toBe(100);
+    expect(result.save.checkpoints).toEqual([20, 40, 60, 80, 100]);
+    expect(result.save.checkpointAds).toEqual({ day: '', used: 0 });
+  });
+
+  it('carries a version 1 save through the whole chain', () => {
+    const result = load(JSON.stringify({ version: 1, coins: 5, records: { classicHeight: 45 } }));
+    expect(result.save.version).toBe(SAVE_VERSION);
+    expect(result.save.checkpoints).toEqual([20, 40]);
+  });
+});
+
+describe('checkpoint fields of the loader', () => {
+  const record = (classicHeight: number) => ({ classicHeight, classicScore: 0, bestCombo: 0 });
+
+  it('starts a new save with nothing opened', () => {
+    const save = fresh();
+    expect(save.checkpoints).toEqual([]);
+    expect(save.checkpointAds).toEqual({ day: '', used: 0 });
+  });
+
+  it('drops invalid heights, sorts and removes duplicates', () => {
+    const raw = { ...fresh(), checkpoints: [40, 'x', 7, 20, 40, null, -20] };
+    expect(load(JSON.stringify(raw)).save.checkpoints).toEqual([20, 40]);
+  });
+
+  it('keeps the list in line with the record', () => {
+    const raw = { ...fresh(), records: record(85) };
+    const all = [20, 40, 60, 80];
+    expect(load(JSON.stringify({ ...raw, checkpoints: [] })).save.checkpoints).toEqual(all);
+    expect(load(JSON.stringify({ ...raw, checkpoints: 'oops' })).save.checkpoints).toEqual(all);
+  });
+
+  it('keeps an opened checkpoint above a lowered record', () => {
+    const raw = { ...fresh(), records: record(10), checkpoints: [20, 40] };
+    expect(load(JSON.stringify(raw)).save.checkpoints).toEqual([20, 40]);
+  });
+
+  it('repairs the ad counter', () => {
+    const bad = load(JSON.stringify({ ...fresh(), checkpointAds: { day: 'x', used: -3 } }));
+    expect(bad.save.checkpointAds).toEqual({ day: '', used: 0 });
+    const wrong = load(JSON.stringify({ ...fresh(), checkpointAds: 4 }));
+    expect(wrong.save.checkpointAds).toEqual({ day: '', used: 0 });
+  });
+
+  it('round-trips the checkpoint fields', () => {
+    const save: Save = {
+      ...fresh(),
+      records: record(62),
+      checkpoints: [20, 40, 60],
+      checkpointAds: { day: '2026-11-15', used: 3 },
+    };
+    expect(load(serializeSave(save)).save).toEqual(save);
   });
 });

@@ -12,6 +12,8 @@ import { WebHaptics } from './haptics/web';
 import { productIds } from './iap/product-ids';
 import type { IapService } from './iap/types';
 import { WebIap, type StubProduct } from './iap/web';
+import type { AnalyticsService } from './telemetry/types';
+import { WebAnalytics } from './telemetry/web';
 import type { StorageService } from './storage/types';
 import { WebStorage } from './storage/web';
 
@@ -23,6 +25,7 @@ export interface Services {
   iap: IapService;
   storage: StorageService;
   share: ShareService;
+  telemetry: AnalyticsService;
 }
 
 const webAds = new WebAds();
@@ -53,6 +56,7 @@ export const services: Services = {
   iap: new WebIap(stubCatalog),
   storage: new WebStorage(),
   share: new WebShare(),
+  telemetry: new WebAnalytics(),
 };
 
 /** Dev switch of the ad stub (debug panel). Not part of the services: native ads have none. */

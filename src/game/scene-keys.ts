@@ -1,4 +1,5 @@
 import type * as Phaser from 'phaser';
+import type { CheckpointHeight } from '../core/checkpoints';
 import type { RunResult } from '../core/run-result';
 import type { RunTally } from '../core/run-tally';
 import type { CreatureId } from '../data/creatures';
@@ -37,6 +38,10 @@ export interface ResultsData {
   recorded: boolean;
   /** The finished tower, for the picture of "Share". */
   tower: TowerSnapshot;
+  /** Height the run began from (0, a checkpoint or a dev start); layers up to it were not placed. */
+  startHeight: number;
+  /** The checkpoint the player chose, or null for the zero start (and every unpaid dev start). */
+  checkpoint: CheckpointHeight | null;
 }
 
 /** Screens a creature card can return to (equal to the keys of the collection and team scenes). */

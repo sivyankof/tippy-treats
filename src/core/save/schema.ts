@@ -1,6 +1,6 @@
 import type { CreatureId } from '../../data/creatures';
 
-export const SAVE_VERSION = 6;
+export const SAVE_VERSION = 7;
 
 export type MissionGroup = 'easy' | 'medium' | 'hard';
 
@@ -134,5 +134,17 @@ export interface SaveV6 extends Omit<SaveV5, 'version'> {
   version: 6;
 }
 
+/**
+ * Version 7 (start from a checkpoint): `checkpoints` lists the opened checkpoint heights (a classic
+ * run that reached one opens it for good) and `checkpointAds` counts the ad starts of the local day.
+ */
+export interface SaveV7 extends Omit<SaveV6, 'version'> {
+  version: 7;
+  /** Opened checkpoint heights (`CHECKPOINT_HEIGHTS`), ascending; always include those of `records.classicHeight`. */
+  checkpoints: number[];
+  /** Checkpoint starts paid with a rewarded ad on the local day `day`. */
+  checkpointAds: { day: string; used: number };
+}
+
 /** The current save version. */
-export type Save = SaveV6;
+export type Save = SaveV7;
