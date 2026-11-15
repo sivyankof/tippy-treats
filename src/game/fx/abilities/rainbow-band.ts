@@ -1,6 +1,6 @@
 import type * as Phaser from 'phaser';
 import { PALETTE } from '../../../data/palette';
-import { fillPolygon, type Pt } from '../plain-style';
+import { fillRibbon, type Pt } from '../plain-style';
 
 /** A point of a curve with the unit normal that points to the outer (upper) edge. */
 export type CurvePoint = Pt & { nx: number; ny: number };
@@ -42,9 +42,11 @@ export function paintBand(
     });
   const strip = (from: number, to: number, color: number, extra = 0): void => {
     g.fillStyle(color, style.alpha);
-    const a = edge((u) => half(u) * from + extra);
-    const b = edge((u) => half(u) * to - extra);
-    fillPolygon(g, [...a, ...b.reverse()]);
+    fillRibbon(
+      g,
+      edge((u) => half(u) * from + extra),
+      edge((u) => half(u) * to - extra),
+    );
   };
   strip(1, -1, style.outline, style.outlinePx);
   style.colors.forEach((color, i) => strip(1 - (2 * i) / bands, 1 - (2 * (i + 1)) / bands, color));

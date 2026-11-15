@@ -29,11 +29,20 @@ export class TimedPool<V, E extends PoolEntry<V>> {
     return this.live.length;
   }
 
-  /** An item to fill in for the next entry: recycled if possible, else made. */
-  take(): V {
+  /**
+   * An item to fill in for the next entry: recycled if possible, else made. With `prefer`, the
+   * most recently freed item it accepts is taken first (one that needs the least refilling).
+   */
+  take(prefer?: (item: V) => boolean): V {
     if (this.live.length >= this.maxLive) {
       const oldest = this.live.shift();
       if (oldest) this.release(oldest.item);
+    }
+    if (prefer) {
+      for (let i = this.free.length - 1; i >= 0; i--) {
+        const item = this.free[i];
+        if (item !== undefined && prefer(item)) return this.free.splice(i, 1)[0] as V;
+      }
     }
     return this.free.pop() ?? this.make();
   }

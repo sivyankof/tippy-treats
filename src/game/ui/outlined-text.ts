@@ -15,17 +15,26 @@ export function createOutlinedText(
   color: number = PALETTE.textLight,
 ): Phaser.GameObjects.Text {
   const padding = textPadding(ANIM.hud.numberStroke, 0, ANIM.hud.shadowOffset);
+  // Everything goes into the style: each setter afterwards would measure the font and re-upload the canvas.
   return scene.add
     .text(x, y, text, {
       fontFamily: FONT_FAMILY,
       fontStyle: FONT_WEIGHT.black,
       fontSize,
       color: cssColor(color),
+      padding: { left: padding.x, right: padding.x, top: padding.y, bottom: padding.y },
+      stroke: cssColor(PALETTE.textDark),
+      strokeThickness: ANIM.hud.numberStroke,
+      shadow: {
+        offsetX: 0,
+        offsetY: ANIM.hud.shadowOffset,
+        color: cssColor(PALETTE.textDark),
+        blur: 0,
+        stroke: true,
+        fill: true,
+      },
     })
-    .setOrigin(0.5)
-    .setPadding(padding.x, padding.y)
-    .setStroke(cssColor(PALETTE.textDark), ANIM.hud.numberStroke)
-    .setShadow(0, ANIM.hud.shadowOffset, cssColor(PALETTE.textDark), 0, true, true);
+    .setOrigin(0.5);
 }
 
 /** Small label with a light or dark outline for readability over the scene; origin is the centre. */
@@ -46,8 +55,9 @@ export function createStrokedText(
       fontStyle: FONT_WEIGHT.black,
       fontSize,
       color: cssColor(color),
+      padding: { left: padding.x, right: padding.x, top: padding.y, bottom: padding.y },
+      stroke: cssColor(strokeColor),
+      strokeThickness: strokeWidth,
     })
-    .setOrigin(0.5)
-    .setPadding(padding.x, padding.y)
-    .setStroke(cssColor(strokeColor), strokeWidth);
+    .setOrigin(0.5);
 }

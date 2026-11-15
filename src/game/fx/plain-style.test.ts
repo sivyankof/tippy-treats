@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import {
   domeShape,
+  fillQuad,
+  fillRibbon,
   glossFromShares,
   openBodyLayout,
   roundRectPoints,
@@ -8,6 +10,52 @@ import {
 } from './plain-style';
 
 const CORNER_POINTS = 7;
+
+/** A stand-in for Graphics that records the triangles it is asked to fill. */
+function triangleRecorder(): { g: Parameters<typeof fillQuad>[0]; triangles: number[][] } {
+  const triangles: number[][] = [];
+  const g = {
+    fillTriangle: (...coords: number[]) => triangles.push(coords),
+  } as unknown as Parameters<typeof fillQuad>[0];
+  return { g, triangles };
+}
+
+describe('fillRibbon', () => {
+  it('covers the band between two polylines with two triangles per step', () => {
+    const { g, triangles } = triangleRecorder();
+    const top = [
+      { x: 0, y: 0 },
+      { x: 10, y: 0 },
+      { x: 20, y: 0 },
+    ];
+    const bottom = top.map((p) => ({ x: p.x, y: 4 }));
+    fillRibbon(g, top, bottom);
+    expect(triangles).toHaveLength(4);
+    const area = triangles.reduce(
+      (sum, [x0, y0, x1, y1, x2, y2]) =>
+        sum + Math.abs((x1! - x0!) * (y2! - y0!) - (x2! - x0!) * (y1! - y0!)) / 2,
+      0,
+    );
+    expect(area).toBe(80);
+  });
+
+  it('draws nothing for a single point', () => {
+    const { g, triangles } = triangleRecorder();
+    fillRibbon(g, [{ x: 0, y: 0 }], [{ x: 0, y: 1 }]);
+    expect(triangles).toHaveLength(0);
+  });
+});
+
+describe('fillQuad', () => {
+  it('splits a quadrilateral into two triangles', () => {
+    const { g, triangles } = triangleRecorder();
+    fillQuad(g, { x: 0, y: 0 }, { x: 4, y: 0 }, { x: 4, y: 3 }, { x: 0, y: 3 });
+    expect(triangles).toEqual([
+      [0, 0, 4, 0, 4, 3],
+      [0, 0, 4, 3, 0, 3],
+    ]);
+  });
+});
 
 describe('roundRectPoints', () => {
   it('gives the same number of points for every corner', () => {

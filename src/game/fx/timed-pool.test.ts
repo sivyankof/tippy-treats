@@ -33,6 +33,15 @@ function start(pool: TimedPool<Item, PoolEntry<Item>>, lifeMs: number): Item {
 }
 
 describe('TimedPool', () => {
+  it('hands out the freed item the preference accepts, else the latest one', () => {
+    const { pool } = makePool();
+    const a = start(pool, 10);
+    const b = start(pool, 10);
+    pool.update(10, () => undefined);
+    expect(pool.take((item) => item === a)).toBe(a);
+    expect(pool.take(() => false)).toBe(b);
+  });
+
   it('ages entries and reports progress', () => {
     const { pool } = makePool();
     start(pool, 100);
