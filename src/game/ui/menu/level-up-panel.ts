@@ -1,12 +1,20 @@
-import type * as Phaser from 'phaser';
+import * as Phaser from 'phaser';
 import type { Currency } from '../../../core/economy';
 import { CREATURES } from '../../../data/creatures';
 import { MENU } from '../../../data/menu-layout';
 import { PALETTE } from '../../../data/palette';
-import { t } from '../../../i18n';
+import { REWARD_LOOK } from '../../../data/reward-look';
+import { formatNumber, t, tn } from '../../../i18n';
 import { services } from '../../../services';
 import type { LevelUp } from '../../../state/game-state';
+import { effectsMode } from '../../effects-mode';
+import { FX_TEXTURES } from '../../fx/fx-textures';
+import { pileSizeFor } from '../../fx/pile-size';
+import { REWARD_TEXTURES } from '../../fx/reward-pictures';
+import { createTreasurePile } from '../../fx/treasure-pile';
+import { TREASURE_TEXTURES } from '../../fx/treasure-textures';
 import { CreaturePortrait } from '../../objects/creature-portrait';
+import { CREATURE_ICON_KEYS } from '../creature-icons';
 import { createTextButton } from '../button';
 import { createOutlinedText } from '../outlined-text';
 import { PopupWindow } from '../style/dialog-window';
@@ -24,6 +32,8 @@ const cfg = MENU.results.levelUp;
 export class LevelUpPanel {
   private readonly popup: PopupWindow;
   private readonly portraits: CreaturePortrait[] = [];
+  /** The pictures of the rewards, in the order they pop in. */
+  private readonly pops: Phaser.GameObjects.Container[] = [];
 
   constructor(
     private readonly scene: Phaser.Scene,
@@ -70,6 +80,7 @@ export class LevelUpPanel {
     body.setY(total / 2);
     this.popup.content.add(body);
     this.popup.setContentHeight(total);
+    this.playAppear();
   }
 
   /** The rows of one reward; a creature that was already owned adds a row for the refund. */
@@ -78,16 +89,129 @@ export class LevelUpPanel {
       case 'creature':
         return this.creatureRows(line, inner);
       case 'gain':
-        return [
-          { obj: this.priceTag('+{price}', line.amount, line.currency), height: cfg.rowHeight },
-        ];
+        return [this.gainRow(line.currency, line.amount, inner)];
       case 'slot':
-        return [this.textRow(t('levelUp.slot'), inner)];
+        return [this.pictureRow(this.image(REWARD_TEXTURES.slot, true), t('levelUp.slot'), inner)];
       case 'daily':
-        return [this.textRow(t('levelUp.daily'), inner)];
+        return [
+          this.pictureRow(this.image(REWARD_TEXTURES.tower, true), t('levelUp.daily'), inner),
+        ];
       case 'shop':
-        return [this.textRow(t('levelUp.shop', { name: t(CREATURES[line.id].nameKey) }), inner)];
+        return [
+          this.pictureRow(
+            this.shopPicture(line.id),
+            t('levelUp.shop', { name: t(CREATURES[line.id].nameKey) }),
+            inner,
+          ),
+        ];
     }
+  }
+
+  /** A picture of the window at the reward size; `bob` makes it rise and fall gently. */
+  private image(key: string, bob: boolean): Phaser.GameObjects.Image {
+    const size = cfg.pictureSize;
+    const image = this.scene.add.image(0, 0, key).setDisplaySize(size, size);
+    if (bob) this.bob(image);
+    return image;
+  }
+
+  private bob(target: Phaser.GameObjects.Image): void {
+    if (effectsMode.reduced) return;
+    const { bobPx, bobPeriodMs } = cfg.appear;
+    const tween = this.scene.tweens.add({
+      targets: target,
+      y: target.y - bobPx,
+      duration: bobPeriodMs / 2,
+      yoyo: true,
+      repeat: -1,
+      ease: 'Sine.easeInOut',
+      delay: Phaser.Math.Between(0, bobPeriodMs / 2),
+    });
+    target.once(Phaser.GameObjects.Events.DESTROY, () => tween.remove());
+  }
+
+  /** The creature that went to the shop: its picture with a coin chip at the corner. */
+  private shopPicture(
+    id: Extract<RewardLine, { kind: 'shop' }>['id'],
+  ): Phaser.GameObjects.Container {
+    const size = cfg.pictureSize;
+    const coin = REWARD_LOOK.shopCoin;
+    const icon = this.image(CREATURE_ICON_KEYS[id], true);
+    const chip = this.scene.add
+      .image(coin.x * size, coin.y * size, TREASURE_TEXTURES.coin)
+      .setDisplaySize(coin.size * size, coin.size * size);
+    return this.scene.add.container(0, 0, [icon, chip]);
+  }
+
+  private gainRow(currency: Currency, amount: number, inner: number): Row {
+    const pile = createTreasurePile(
+      this.scene,
+      currency,
+      pileSizeFor(currency, amount),
+      cfg.pictureSize,
+    );
+    const key = currency === 'coins' ? 'shop.coinsPlus' : 'shop.berriesPlus';
+    return this.pictureRow(pile, tn(key, amount, { amount: formatNumber(amount) }), inner);
+  }
+
+  /** A row: the reward picture on the left (it pops in later), the text on its right. */
+  private pictureRow(
+    picture: Phaser.GameObjects.Container | Phaser.GameObjects.Image,
+    text: string,
+    inner: number,
+  ): Row {
+    const size = cfg.pictureSize;
+    const holder = this.scene.add.container(-inner / 2 + size / 2, 0, [picture]);
+    const left = -inner / 2 + size + cfg.portraitGap;
+    const label = fitText(
+      createOutlinedText(this.scene, left, 0, text, cfg.lineFont).setOrigin(0, 0.5),
+      inner / 2 - left,
+    );
+    this.addPop(holder);
+    return { obj: this.scene.add.container(0, 0, [holder, label]), height: cfg.pictureRowHeight };
+  }
+
+  private addPop(holder: Phaser.GameObjects.Container): void {
+    holder.setScale(effectsMode.reduced ? 1 : 0).setAlpha(effectsMode.reduced ? 0 : 1);
+    this.pops.push(holder);
+  }
+
+  /** The pictures pop in one after another with a small sparkle; with fewer effects they only fade in. */
+  private playAppear(): void {
+    const a = cfg.appear;
+    this.pops.forEach((holder, i) => {
+      const reduced = effectsMode.reduced;
+      const tween = this.scene.tweens.add({
+        targets: holder,
+        ...(reduced ? { alpha: 1, duration: a.fadeMs } : { scale: 1, duration: a.popMs }),
+        delay: a.startMs + i * a.staggerMs,
+        ease: reduced ? 'Linear' : a.ease,
+        onStart: () => {
+          if (!reduced) this.sparkle(holder);
+        },
+      });
+      holder.once(Phaser.GameObjects.Events.DESTROY, () => tween.remove());
+    });
+  }
+
+  private sparkle(holder: Phaser.GameObjects.Container): void {
+    const size = cfg.pictureSize;
+    const { sparkle } = cfg.appear;
+    const star = this.scene.add
+      .image(sparkle.x * size, sparkle.y * size, FX_TEXTURES.star)
+      .setTint(sparkle.tint)
+      .setScale(0);
+    holder.add(star);
+    const tween = this.scene.tweens.add({
+      targets: star,
+      scale: sparkle.scale,
+      angle: sparkle.turnDeg,
+      alpha: 0,
+      duration: sparkle.ms,
+      ease: 'Sine.easeOut',
+      onComplete: () => star.destroy(),
+    });
+    star.once(Phaser.GameObjects.Events.DESTROY, () => tween.remove());
   }
 
   private creatureRows(line: Extract<RewardLine, { kind: 'creature' }>, inner: number): Row[] {
@@ -103,9 +227,10 @@ export class LevelUpPanel {
       cfg.lineFont,
     ).setOrigin(0, 0.5);
     fitText(name, textWidth);
-    const group = this.scene.add.container(0, 0, [portrait, name]);
-    portrait.setX(-inner / 2 + cfg.portraitWidth / 2);
-    name.setX(portrait.x + cfg.portraitWidth / 2 + cfg.portraitGap);
+    const holder = this.scene.add.container(-inner / 2 + cfg.portraitWidth / 2, 0, [portrait]);
+    this.addPop(holder);
+    const group = this.scene.add.container(0, 0, [holder, name]);
+    name.setX(-inner / 2 + cfg.portraitWidth + cfg.portraitGap);
     if (owned) {
       const tag = createOutlinedText(
         this.scene,
@@ -124,13 +249,6 @@ export class LevelUpPanel {
       rows.push({ obj: tag, height: cfg.duplicateRowHeight });
     }
     return rows;
-  }
-
-  private textRow(text: string, maxWidth: number): Row {
-    return {
-      obj: fitText(createOutlinedText(this.scene, 0, 0, text, cfg.lineFont), maxWidth),
-      height: cfg.rowHeight,
-    };
   }
 
   private priceTag(text: string, amount: number, currency: Currency): PriceTag {

@@ -1011,6 +1011,20 @@ export const MENU = {
       duplicateRowHeight: 78,
       portraitWidth: 150,
       portraitGap: 24,
+      /** Picture of a reward line (the pile, the slot, the tower, the shop creature) and the height of its row. */
+      pictureSize: 150,
+      pictureRowHeight: 158,
+      /** Pop-in of the pictures: the first starts after `startMs`, the rest follow every `staggerMs`. */
+      appear: {
+        startMs: 250,
+        staggerMs: 110,
+        popMs: 360,
+        fadeMs: 200,
+        ease: 'Back.easeOut',
+        bobPx: 3,
+        bobPeriodMs: 1700,
+        sparkle: { x: 0.36, y: -0.36, scale: 0.7, turnDeg: 90, ms: 520, tint: 0xfff2a8 },
+      },
       okButton: { width: 520, height: 112, radius: 40, shadowOffset: 8, font: 52 },
     },
   },
