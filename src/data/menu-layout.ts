@@ -1019,8 +1019,21 @@ export const MENU = {
     },
     /** Dim of a block whose product has no store id. */
     unavailableAlpha: 0.6,
-    /** The crossed-out "AD" tile of the No ads product; sizes are shares of the tile. */
-    noAdsIcon: { radius: 0.22, fill: 0x7c5cff, border: 6, font: 0.4, slash: 0.1, reach: 0.78 },
+    /**
+     * The crossed-out tile of the No ads product: a small screen with a "play" triangle, no letters.
+     * Sizes are shares of the tile, except `border` (pixels); `screen.y` is the screen centre
+     * measured from the tile centre, `stand` hangs under the screen.
+     */
+    noAdsIcon: {
+      radius: 0.22,
+      fill: 0x7c5cff,
+      border: 6,
+      slash: 0.1,
+      reach: 0.78,
+      screen: { width: 0.56, height: 0.38, y: -0.06, radius: 0.07, border: 0.045, fill: 0xffffff },
+      play: { size: 0.12, fill: 0x7c5cff },
+      stand: { neckWidth: 0.07, neckHeight: 0.06, footWidth: 0.26, footHeight: 0.05 },
+    },
   },
   /** The daily tower screen: a stack of blocks that spreads out on a taller screen. */
   daily: {
