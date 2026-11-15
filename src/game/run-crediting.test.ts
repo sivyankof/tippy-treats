@@ -399,8 +399,14 @@ describe('daily tower runs', () => {
 });
 
 describe('dev runs stay out of the save', () => {
-  it('?bot and ?start runs change nothing, however they end', () => {
-    for (const query of ['?bot=45', '?start=20', '?bot=45&start=20&team=honey&level=3']) {
+  it('?bot, ?start, ?team and ?level runs change nothing, however they end', () => {
+    for (const query of [
+      '?bot=45',
+      '?start=20',
+      '?team=honey,jelly',
+      '?level=3',
+      '?bot=45&start=20&team=honey&level=3',
+    ]) {
       expect(savesRun(parseDebugParams(query))).toBe(false);
     }
     const state = createTestState({ ms: T0 });
@@ -449,8 +455,8 @@ describe('dev runs stay out of the save', () => {
     expect(data.summary.before).toEqual({ level: state.data.bakerLevel, xp: state.data.bakerXp });
   });
 
-  it('?team, ?level, ?tutorial and ?seed runs are real play that counts (docs/08, section 9)', () => {
-    for (const query of ['?team=honey,jelly', '?level=3', '?tutorial=1', '?seed=5', '?debug=1']) {
+  it('?tutorial, ?seed and ?debug runs are real play that counts (docs/08, section 9)', () => {
+    for (const query of ['?tutorial=1', '?seed=5', '?debug=1']) {
       expect(savesRun(parseDebugParams(query))).toBe(true);
     }
   });

@@ -123,10 +123,13 @@ describe('skipsTutorial', () => {
 });
 
 describe('savesRun', () => {
-  it('skips the save for bot and start runs only', () => {
+  it('skips the save for bot, start, team and level runs', () => {
     expect(savesRun(parseDebugParams(''))).toBe(true);
     expect(savesRun(parseDebugParams('?debug&seed=1'))).toBe(true);
-    expect(savesRun(parseDebugParams('?team=honey&level=3'))).toBe(true);
+    expect(savesRun(parseDebugParams('?tutorial=1'))).toBe(true);
+    expect(savesRun(parseDebugParams('?team=honey&level=3'))).toBe(false);
+    expect(savesRun(parseDebugParams('?team=honey'))).toBe(false);
+    expect(savesRun(parseDebugParams('?level=3'))).toBe(false);
     expect(savesRun(parseDebugParams('?bot=50'))).toBe(false);
     expect(savesRun(parseDebugParams('?start=20'))).toBe(false);
     expect(savesRun(parseDebugParams('?team=honey&bot=50'))).toBe(false);

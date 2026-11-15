@@ -17,7 +17,7 @@ export interface RunOutcome {
 
 /**
  * Whether the results show the "debug run, not saved" plate: only in the dev build, and only
- * for a run that did not reach the save (`?bot=`, `?start=`; see `savesRun`).
+ * for a run that did not reach the save (`?bot=`, `?start=`, `?team=`, `?level=`; see `savesRun`).
  */
 export function isDebugRun(recorded: boolean, dev: boolean): boolean {
   return dev && !recorded;

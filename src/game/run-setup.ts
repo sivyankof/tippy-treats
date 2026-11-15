@@ -6,7 +6,7 @@ import { gameState } from '../state';
 import { now, utcDay } from '../util/clock';
 import { readDebugParams, savesRun, skipsTutorial } from '../util/debug-params';
 import { randomSeed } from '../util/math';
-import { resolveRunTeam } from './debug/debug-team';
+import { hasDebugTeam, resolveRunTeam } from './debug/debug-team';
 import { demoTeam, type RunRequest } from './run-request';
 import { TUTORIAL_TEAM } from './tutorial/tutorial-team';
 
@@ -81,7 +81,8 @@ export function setupRun(request: RunRequest): RunSetup {
     team,
     tutorialRun,
     hints,
-    writesSave: savesRun(debug),
+    // A team picked in the debug panel is as artificial as `?team=`.
+    writesSave: savesRun(debug) && !hasDebugTeam(),
     noContinue: debug.bot !== undefined,
     bot: debug.bot,
   };

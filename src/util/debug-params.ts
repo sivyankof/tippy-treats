@@ -116,12 +116,17 @@ export function skipsTutorial(params: DebugParams): boolean {
 }
 
 /**
- * Whether a run goes into the save. `?bot=` and `?start=` runs are artificial (a bot plays, or
- * the tower begins part-way up), so they leave the save alone; `?team=` and `?level=` runs are
- * real play with a hand-picked team and count.
+ * Whether a run goes into the save. `?bot=`, `?start=`, `?team=` and `?level=` runs are artificial
+ * (a bot plays, the tower begins part-way up, or the team is hand-picked), so they leave the save
+ * alone; `?tutorial=`, `?seed=` and `?debug` runs are normal play and count.
  */
 export function savesRun(params: DebugParams): boolean {
-  return params.bot === undefined && params.start === undefined;
+  return (
+    params.bot === undefined &&
+    params.start === undefined &&
+    params.team === undefined &&
+    params.level === undefined
+  );
 }
 
 /** The address with `?reset=1` taken out, so a reload does not reset the save again. */
