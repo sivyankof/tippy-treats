@@ -10,7 +10,8 @@ import { oscillate01 } from '../../util/math';
 import { stepSpring, type SpringState } from '../fx/anim-curves';
 import { bakeTexture } from './bake-texture';
 import { applyIdlePose, idlePose, type IdlePose } from './idle-motion';
-import { HudPlate } from './style/hud-plate';
+import { HudPlate, hudPlateWidth } from './style/hud-plate';
+import { wobbleCentreX } from './tempo-chip-layout';
 import type { Movable } from './transition';
 import { FONT_FAMILY, FONT_WEIGHT } from './fonts';
 
@@ -28,8 +29,17 @@ const TEXTURES = {
   danger: 'ui_bar_danger',
   wave: 'ui_bar_wave',
 } as const;
-const { barWidth, barHeight, barPad, labelGap, labelFont, barY, barPlate, barDangerText } =
-  HUD_LAYOUT;
+const {
+  barWidth,
+  barHeight,
+  barPad,
+  labelGap,
+  labelFont,
+  barY,
+  barPlate,
+  barDangerText,
+  tempoChip,
+} = HUD_LAYOUT;
 const FILL_HEIGHT = barHeight - barPad * 2;
 const FILL_RADIUS = FILL_HEIGHT / 2;
 const TRACK_RADIUS = barHeight / 2;
@@ -136,15 +146,23 @@ export class WobbleBar {
 
   /** Centres label and gauge as one row on the plate. Call on creation and on every resize. */
   layout(screenWidth: number): void {
-    const left = (screenWidth - barWidth) / 2 + (this.label.width + labelGap) / 2;
-    this.gauge.setX(left + barWidth / 2);
-    this.label.setX(left - labelGap);
     const rowWidth = this.label.width + labelGap + barWidth;
     const rowHeight = Math.max(this.label.height, barHeight);
-    const plateWidth = rowWidth + barPlate.padX * 2;
+    const plateWidth = hudPlateWidth(rowWidth + barPlate.padX * 2);
     const plateHeight = rowHeight + barPlate.padY * 2;
-    this.plate.place(screenWidth / 2, barY, plateWidth, plateHeight);
-    this.edge = { right: (screenWidth + plateWidth) / 2, y: barY, height: plateHeight };
+    // The row leaves room for the tempo chip on its right, so the chip never covers the plate.
+    const centre = wobbleCentreX(
+      screenWidth,
+      plateWidth,
+      tempoChip.width,
+      tempoChip.gap,
+      tempoChip.margin,
+    );
+    const left = centre - barWidth / 2 + (this.label.width + labelGap) / 2;
+    this.gauge.setX(left + barWidth / 2);
+    this.label.setX(left - labelGap);
+    this.plate.place(centre, barY, plateWidth, plateHeight);
+    this.edge = { right: centre + plateWidth / 2, y: barY, height: plateHeight };
   }
 
   /** Where the plate ends, for the tempo chip that docks to it. */

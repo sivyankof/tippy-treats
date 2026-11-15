@@ -11,6 +11,9 @@ export interface IdlePose {
   bob: number;
 }
 
+/** The pose of an object that does not sway. */
+export const REST_POSE: Readonly<IdlePose> = { scaleX: 1, scaleY: 1, angle: 0, bob: 0 };
+
 /**
  * The quiet sway of an object at `timeMs`: scale, tilt and bob as sines of one period. `phase`
  * (radians) offsets the whole sway. `out` is refilled and returned, so a frame allocates nothing.

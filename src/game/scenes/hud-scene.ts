@@ -211,7 +211,7 @@ export class HudScene extends Phaser.Scene {
     this.overlay.layout(width, height);
     this.continueWindow.layout(width, height);
     this.wobbleBar.layout(width);
-    this.tempoChip.layout(width, this.wobbleBar.plateEdge);
+    this.tempoChip.layout(this.wobbleBar.plateEdge);
     this.nextBadge.layout(width);
     this.zoneBanner.layout(width);
     this.treasure.layout(width);

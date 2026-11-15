@@ -5,6 +5,11 @@ import { createVolumeImage, lookOf } from './volume';
 
 const cfg = MENU.style.hud;
 
+/** The width a HUD plate is drawn at for a requested body width (rounded up to the width step). */
+export function hudPlateWidth(width: number): number {
+  return Math.ceil(width / cfg.widthStep) * cfg.widthStep;
+}
+
 /**
  * A plate of the run HUD: a chip of the kit, see-through (`MENU.style.hud.alpha`) so the tower
  * shows under it. It sits behind a label, a gauge or a counter and takes any size. Its position
@@ -29,7 +34,7 @@ export class HudPlate extends Phaser.GameObjects.Container {
 
   /** Centres the plate on (x, y), its body `width` x `height`. */
   place(x: number, y: number, width: number, height: number): this {
-    const w = Math.ceil(width / cfg.widthStep) * cfg.widthStep;
+    const w = hudPlateWidth(width);
     const h = Math.round(height);
     const size = `${w}x${h}`;
     if (size !== this.size) {
