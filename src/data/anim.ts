@@ -468,9 +468,9 @@ export const ANIM = {
     countdownSteps: 3,
     countdownStepMs: 700,
   },
-  /** Creature badges of the run HUD: active effects and the next creature. */
   /** The tempo ease chip next to the wobble plate fades and grows in and out over this long. */
   tempoChip: { fadeMs: 260, minScale: 0.7 },
+  /** Creature badges of the run HUD: active effects and the next creature. */
   badges: {
     inMs: 280,
     inEase: 'Back.easeOut',
