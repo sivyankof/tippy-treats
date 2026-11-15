@@ -174,12 +174,19 @@ describe('parsePerfParams', () => {
   });
 
   it('reads the effects level, the subset and the still', () => {
-    expect(parsePerfParams('?perf=1&fx=reduced&only=calm,edge&still=tongue')).toEqual({
-      fx: 'reduced',
+    expect(parsePerfParams('?perf=1&fx=lite&only=calm,edge&still=tongue')).toEqual({
+      fx: 'lite',
       only: ['calm', 'edge'],
       still: 'lick-big',
     });
     expect(parsePerfParams('?perf=1&still=rainbow')?.still).toBe('rainbow');
+  });
+
+  it('takes the three effect levels and reduced as another name of minimal', () => {
+    expect(parsePerfParams('?perf=1&fx=full')?.fx).toBe('full');
+    expect(parsePerfParams('?perf=1&fx=lite')?.fx).toBe('lite');
+    expect(parsePerfParams('?perf=1&fx=minimal')?.fx).toBe('minimal');
+    expect(parsePerfParams('?perf=1&fx=reduced')?.fx).toBe('minimal');
   });
 
   it('drops unknown names', () => {

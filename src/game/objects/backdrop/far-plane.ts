@@ -127,6 +127,11 @@ export class FarPlane {
   }
 
   update(ctx: FrameCtx, scrollY: number): void {
+    // Lite and minimal effects: the far plane stands still; the minimal level also hides the rays.
+    if (effectsMode.atMost('lite')) {
+      this.rays.setVisible(!effectsMode.reduced);
+      return;
+    }
     this.tiles.tilePositionY = scrollY * FAR.parallax;
     this.tiles.tilePositionX = (FAR.driftPxPerSec * ctx.timeMs) / MS_PER_SECOND;
     const showRays = !effectsMode.reduced;

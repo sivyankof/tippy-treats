@@ -1,14 +1,14 @@
 export interface FrameWorkWatchOptions {
   /** A frame whose work takes longer than this is over budget. */
   budgetMs: number;
-  /** The mode turns on when this share of the frames of `onWindowMs` is over budget. */
+  /** The level steps down when this share of the frames of `onWindowMs` is over budget. */
   onShare: number;
   onWindowMs: number;
-  /** It turns off when at most `offBadShare` of the frames of `offWindowMs` took more than budget minus margin. */
+  /** It steps back up when at most `offBadShare` of the frames of `offWindowMs` took more than budget minus margin. */
   offWindowMs: number;
   offMarginMs: number;
   offBadShare: number;
-  /** The mode changes at most once in this long. */
+  /** The level changes at most once in this long (between any two changes). */
   minSwitchGapMs: number;
   /** Frames this long after a return from the background are not counted. */
   resumeIgnoreMs: number;
@@ -19,10 +19,11 @@ export interface FrameWorkWatchOptions {
 }
 
 /**
- * Decides from the frame work time (ms spent in update and render) whether the device is
- * too slow for full effects. The frame rate is not used: a phone that limits its own rate
- * is not slow. The last frames are kept as counters in a ring of time buckets, so feeding a
- * frame allocates nothing and the windows are checked once per bucket.
+ * Decides from the frame work time (ms spent in update and render) how many steps the effects
+ * must be cut by on this device: 0 is full, `maxLevel` the lowest. It moves one step at a time,
+ * down after a slow window and up after a calm one. The frame rate is not used: a phone that
+ * limits its own rate is not slow. The last frames are kept as counters in a ring of time
+ * buckets, so feeding a frame allocates nothing and the windows are checked once per bucket.
  */
 export class FrameWorkWatch {
   private readonly size: number;
@@ -38,9 +39,14 @@ export class FrameWorkWatch {
   private ignoreUntilMs = 0;
   private lastNowMs = -1;
   private lastSwitchMs = Number.NEGATIVE_INFINITY;
-  private on = false;
+  private stepped = 0;
+  private floor = 0;
 
-  constructor(private readonly options: FrameWorkWatchOptions) {
+  constructor(
+    private readonly options: FrameWorkWatchOptions,
+    /** How many steps down there are (2 for full, lite, minimal). */
+    private readonly maxLevel = 1,
+  ) {
     this.onBuckets = Math.ceil(options.onWindowMs / options.bucketMs);
     this.offBuckets = Math.ceil(options.offWindowMs / options.bucketMs);
     this.size = Math.max(this.onBuckets, this.offBuckets) + 1;
@@ -49,9 +55,22 @@ export class FrameWorkWatch {
     this.bad = new Int32Array(this.size);
   }
 
-  /** True while the device counts as slow. */
-  get reduced(): boolean {
-    return this.on;
+  /** Steps the effects are cut by now: 0 while the device keeps up, up to `maxLevel` while it is slow. */
+  get level(): number {
+    return this.stepped;
+  }
+
+  /**
+   * The lowest level it may step back up to. Raising it above the current level lifts the level to
+   * the floor at once, so the next step down needs a slow window of its own and not the switch gap;
+   * lowering it leaves the level where it is until a calm window brings it up.
+   */
+  setFloor(floor: number): void {
+    this.floor = Math.min(Math.max(0, floor), this.maxLevel);
+    if (this.stepped < this.floor) {
+      this.stepped = this.floor;
+      this.clearHistory();
+    }
   }
 
   /** Forgets the recent frames and skips the next `ignoreMs` (a scene was loaded, the app came back). */
@@ -61,13 +80,13 @@ export class FrameWorkWatch {
     this.lastNowMs = nowMs;
   }
 
-  /** Feeds one frame: its work time and the time it ended at. Returns whether the device counts as slow. */
-  note(workMs: number, nowMs: number): boolean {
+  /** Feeds one frame: its work time and the time it ended at. Returns the level. */
+  note(workMs: number, nowMs: number): number {
     if (this.lastNowMs >= 0 && nowMs - this.lastNowMs > this.options.gapMs) {
       this.restart(nowMs, this.options.resumeIgnoreMs);
     }
     this.lastNowMs = nowMs;
-    if (nowMs < this.ignoreUntilMs) return this.on;
+    if (nowMs < this.ignoreUntilMs) return this.stepped;
     const bucket = Math.floor(nowMs / this.options.bucketMs);
     const rolled = this.advance(bucket);
     const slot = this.head % this.size;
@@ -77,7 +96,7 @@ export class FrameWorkWatch {
       this.bad[slot] = (this.bad[slot] ?? 0) + 1;
     }
     if (rolled && nowMs - this.lastSwitchMs >= this.options.minSwitchGapMs) this.evaluate(nowMs);
-    return this.on;
+    return this.stepped;
   }
 
   /** Moves the head to `bucket`, clearing the buckets it passes; true when a bucket was finished. */
@@ -96,21 +115,25 @@ export class FrameWorkWatch {
   }
 
   private evaluate(nowMs: number): void {
-    if (!this.on) {
-      if (this.finished < this.onBuckets) return;
+    if (this.stepped < this.maxLevel && this.finished >= this.onBuckets) {
       const { frames, over } = this.sum(this.over, this.onBuckets);
-      if (frames > 0 && over / frames >= this.options.onShare) this.switchTo(true, nowMs);
-    } else {
-      if (this.finished < this.offBuckets) return;
+      if (frames > 0 && over / frames >= this.options.onShare) {
+        this.switchTo(this.stepped + 1, nowMs);
+        return;
+      }
+    }
+    if (this.stepped > this.floor && this.finished >= this.offBuckets) {
       const { frames, over: bad } = this.sum(this.bad, this.offBuckets);
-      if (frames === 0 || bad / frames <= this.options.offBadShare) this.switchTo(false, nowMs);
+      if (frames === 0 || bad / frames <= this.options.offBadShare) {
+        this.switchTo(this.stepped - 1, nowMs);
+      }
     }
   }
 
-  private switchTo(on: boolean, nowMs: number): void {
-    this.on = on;
+  private switchTo(level: number, nowMs: number): void {
+    this.stepped = level;
     this.lastSwitchMs = nowMs;
-    // The next decision looks at frames of the new mode only.
+    // The next decision looks at frames of the new level only.
     this.clearHistory();
   }
 

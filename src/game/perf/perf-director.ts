@@ -1,4 +1,5 @@
 import type * as Phaser from 'phaser';
+import type { EffectLevel } from '../../data/effect-levels';
 import { PERF, type PerfSegmentDef } from '../../data/perf';
 import { setFrameWorkListener } from '../frame-work';
 import { CLASSIC_RUN } from '../run-request';
@@ -19,7 +20,7 @@ export interface PerfReport {
   segment: string | null;
   /** `?still=`: the game is frozen at the moment of the still. */
   stillReady?: boolean;
-  fx?: 'full' | 'reduced';
+  fx?: EffectLevel;
   /** Draw calls could be counted (WebGL context). */
   drawCallsCounted?: boolean;
   segments?: SegmentStats[];

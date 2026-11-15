@@ -58,6 +58,6 @@ export function soundSettingRows(): ToggleRowSpec[] {
   return [
     { label: t('run.sounds'), read: () => services.audio.enabled, write: setSoundOn },
     { label: t('run.vibration'), read: () => services.haptics.enabled, write: setVibrationOn },
-    { label: t('run.reducedFx'), read: () => effectsMode.reduced, write: setReducedFxOn },
+    { label: t('run.reducedFx'), read: () => effectsMode.switchOn, write: setReducedFxOn },
   ];
 }

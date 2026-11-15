@@ -133,7 +133,9 @@ export class LickDirector {
     const [index, view] = picked;
     const face = view.faceView;
     const creature = view.look.kind === 'creature' ? (view.look.creature ?? null) : null;
-    const lickScene = scene ?? this.scheduler.nextScene();
+    // The scheduler is asked either way, so the stream of random numbers does not depend on the level.
+    const scheduled = this.scheduler.nextScene();
+    const lickScene = scene ?? (effectsMode.atMost('lite') ? 'short' : scheduled);
     const random = this.random.next();
     // Creatures (and the short scene) lick only a drop that fell from above.
     const lickKind: LickKind =

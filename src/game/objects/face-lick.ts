@@ -1,6 +1,7 @@
 import type * as Phaser from 'phaser';
 import { LICK, type LickStyle } from '../../data/lick';
 import { frameLerp } from '../../util/math';
+import { effectsMode } from '../effects-mode';
 import type { FaceParts } from './face-parts';
 import type { Reaction } from './face-state';
 import {
@@ -277,7 +278,7 @@ export class FaceLick {
       view.hideTongue();
     }
     if (!dent) this.follow(dtMs, 0, 0, 0, 0);
-    if (this.scene === 'big') {
+    if (this.scene === 'big' && !effectsMode.atMost('lite')) {
       const reached = reachedPhase(frame, this.style);
       const to = this.style.sweep >= 1 ? LICK.loop.loopTo : this.style.sweep;
       view.updateTrail(reached, LICK.loop.shootTo, to, this.shape, frame.tMs);

@@ -1,5 +1,6 @@
 import { isCreatureId, MAX_CREATURE_LEVEL, type CreatureId } from '../data/creatures';
 import { BALANCE } from '../data/balance';
+import { isEffectLevel, type EffectLevel } from '../data/effect-levels';
 import { isPerfSegmentId, PERF, type PerfSegmentId } from '../data/perf';
 import { UINT32_RANGE } from './math';
 
@@ -102,8 +103,8 @@ export function showsFpsMeter(search: string): boolean {
 
 /** What `?perf=1` asked for. */
 export interface PerfParams {
-  /** `fx=reduced` pins "fewer effects" for the whole run; the default pins full effects. */
-  fx: 'full' | 'reduced';
+  /** `fx=full|lite|minimal` pins that effects level for the whole run (`reduced` is `minimal`); the default pins full effects. */
+  fx: EffectLevel;
   /** `only=a,b`: just these segments, in the order of the benchmark; `null` for all of them. */
   only: PerfSegmentId[] | null;
   /** `still=tower|tongue|arc` (or a segment id): play that segment and freeze at a fixed moment, no measuring. */
@@ -111,7 +112,7 @@ export interface PerfParams {
 }
 
 /**
- * Reads `?perf=1&fx=reduced&only=calm,edge&still=tongue`; `null` when `?perf=1` is absent. It works in dev
+ * Reads `?perf=1&fx=lite&only=calm,edge&still=tongue`; `null` when `?perf=1` is absent. It works in dev
  * and production builds alike, like `?fps=1`. Unknown segment names are dropped.
  */
 export function parsePerfParams(search: string): PerfParams | null {
@@ -123,10 +124,16 @@ export function parsePerfParams(search: string): PerfParams | null {
   const named = Object.entries(PERF.stills).find(([name]) => name === still)?.[1];
   const stillId = named ?? (isPerfSegmentId(still) ? still : null);
   return {
-    fx: params.get('fx') === 'reduced' ? 'reduced' : 'full',
+    fx: perfFx(params.get('fx')),
     only: only.length > 0 ? only : null,
     still: stillId,
   };
+}
+
+/** The pinned level of `fx=`: a level name, `reduced` as another name of `minimal`, else full. */
+function perfFx(value: string | null): EffectLevel {
+  if (value === 'reduced') return 'minimal';
+  return isEffectLevel(value) ? value : 'full';
 }
 
 /** The benchmark parameters of the current page; `null` for a normal start. */

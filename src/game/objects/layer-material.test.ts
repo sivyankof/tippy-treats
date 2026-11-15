@@ -21,7 +21,7 @@ function fakeRoot(): { root: Phaser.GameObjects.Container; scale: { x: number; y
 const swaying = { timeMs: 175, swayShare: 1, phase: 0 };
 
 describe('LayerMaterial', () => {
-  afterEach(() => effectsMode.setChoice('auto'));
+  afterEach(() => effectsMode.pinLevel(null));
 
   it('lands like a plain layer without a creature', () => {
     const material = new LayerMaterial(fakeRoot().root);
@@ -53,7 +53,7 @@ describe('LayerMaterial', () => {
   });
 
   it('keeps only the landing with fewer effects', () => {
-    effectsMode.setChoice('on');
+    effectsMode.pinLevel('minimal');
     const { root, scale } = fakeRoot();
     const material = new LayerMaterial(root);
     material.setCreature('jelly');

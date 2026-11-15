@@ -17,7 +17,7 @@ const MARGIN = 20;
 const SPEED_DECIMALS = 0;
 const WOBBLE_DECIMALS = 1;
 const WORK_DECIMALS = 1;
-const AUTO_FX_LABEL = 'reduced (auto)';
+const AUTO_FX_SUFFIX = ' (auto)';
 const ENTRY_PADDING = { x: 14, y: 8 };
 const ENTRY_GAP = 12;
 /** Space between the controls row and the numbers above it. */
@@ -33,9 +33,11 @@ const DEBUG_COINS = 500;
 const CHECKPOINT_LABEL = 'Checkpoint window';
 const RESET_PURCHASES_LABEL = 'Reset stub purchases';
 
+/** The effects level, with a mark when the automatic mode set it. */
 function fxLabel(): string {
-  const reason = effectsMode.reason;
-  return reason === 'auto' ? AUTO_FX_LABEL : (reason ?? 'full');
+  return effectsMode.reason === 'auto'
+    ? `${effectsMode.level}${AUTO_FX_SUFFIX}`
+    : effectsMode.level;
 }
 
 /** Dev-only overlay with the run numbers and the team override picker. */

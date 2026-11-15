@@ -1,6 +1,5 @@
 import { checkpointStartWidth, isCheckpointHeight } from '../../core/checkpoints';
 import { PERF, PERF_SEGMENTS, type PerfSegmentDef, type PerfSegmentId } from '../../data/perf';
-import type { ReducedFxSetting } from '../../core/save/schema';
 import type { PerfParams } from '../../util/debug-params';
 import { toTeamSlots } from '../debug/debug-team';
 import { effectsMode } from '../effects-mode';
@@ -20,8 +19,6 @@ export interface PerfSession {
   runsStarted: number;
   /** Driver of the running run. */
   driver: DropDriver | null;
-  /** The player's effects choice before the benchmark pinned its own, put back at the end. */
-  readonly savedChoice: ReducedFxSetting;
 }
 
 let session: PerfSession | null = null;
@@ -35,18 +32,17 @@ function idsOf(params: PerfParams): PerfSegmentId[] {
 
 /**
  * Starts the benchmark: pins the effects level in memory only (never saved) so the automatic
- * "fewer effects" switch cannot change what is measured. Call before the game is created.
+ * level steps cannot change what is measured. Call before the game is created.
  */
 export function beginPerfSession(params: PerfParams): PerfSession {
-  const savedChoice = effectsMode.getChoice();
-  effectsMode.setChoice(params.fx === 'reduced' ? 'on' : 'off');
-  session = { params, ids: idsOf(params), index: 0, runsStarted: 0, driver: null, savedChoice };
+  effectsMode.pinLevel(params.fx);
+  session = { params, ids: idsOf(params), index: 0, runsStarted: 0, driver: null };
   return session;
 }
 
-/** Puts the player's effects choice back; the benchmark is over. */
+/** Lets the effects mode decide again; the benchmark is over. */
 export function endPerfSession(): void {
-  if (session) effectsMode.setChoice(session.savedChoice);
+  effectsMode.pinLevel(null);
 }
 
 /** The benchmark of this page, `null` for a normal start. */
