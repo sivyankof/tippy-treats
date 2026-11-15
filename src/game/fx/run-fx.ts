@@ -32,6 +32,7 @@ import { isCovered } from './rule-state';
 import { TowerSparkles } from './tower-sparkles';
 import type { SparkleField } from './tower-sparkle-spot';
 import { TowerCollapse } from './tower-collapse';
+import { TopperFx } from './topper-fx';
 
 /** The flying layer as it was before the sim step that just ran. */
 export type FlyingMemo = Pick<FlyingLayer, 'x' | 'width' | 'kind' | 'creature' | 'level'>;
@@ -75,6 +76,7 @@ export class RunFx {
     avoid: null,
   };
   private readonly flyColumn = { left: 0, right: 0 };
+  private readonly topperFx: TopperFx;
 
   private glowOn = false;
   private missPiece: LayerView | null = null;
@@ -113,6 +115,7 @@ export class RunFx {
       giggle: () => services.audio.guestGiggle(),
       kick: (mul) => this.kick.kick(ANIM.cameraKick.drop * mul, ANIM.cameraKick.durationMs),
     });
+    this.topperFx = new TopperFx(scene, () => services.audio.topperHop());
     const licks = this.tower.licks;
     this.abilityFx.onRainbowPuff = () => services.audio.cloudPuff();
     this.tower.onRainbowJoke = () => services.audio.rainbowJoke();
@@ -195,8 +198,11 @@ export class RunFx {
     // The sway of the frame before the sneeze is the one the tower holds.
     if (events.some((e) => e.type === 'wobble_sneeze')) this.tower.freeze(ANIM.sneeze.freezeMs);
     this.abilityFx.beforeSync(events);
+    // The topper under the landing layer hops off while its view still shows it.
+    if (land) this.topperFx.hopOffBelow(this.tower, state);
     // Landings need the view of the new layer, which normally appears on the next sync.
     if (land) this.tower.sync(state, cam.scrollY + cam.height);
+    if (land) this.topperFx.settleOnTop(this.tower, state, memo);
 
     for (const event of events) {
       switch (event.type) {
@@ -261,6 +267,7 @@ export class RunFx {
     });
 
     this.debris.update(visualMs);
+    this.topperFx.update(visualMs);
     this.landingFx.update(visualMs);
     this.materialFx.update(visualMs, state.wobble);
     this.abilityFx.update(visualMs, timeMs, state, mods, cam, this.runIsOn(state));

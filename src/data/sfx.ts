@@ -506,6 +506,41 @@ export const SFX = {
     ] satisfies readonly TimedTone[],
   },
 
+  /**
+   * "Украшение на макушке слетает" (docs/06, section 7): a springy "boing", a triangle note that
+   * goes up and back down, and a short click; quieter than a normal drop.
+   */
+  topperHop: {
+    notes: [
+      {
+        delay: 0,
+        wave: 'triangle',
+        freq: 240,
+        endFreq: 700,
+        attack: 0.004,
+        duration: 0.09,
+        gain: 0.2,
+      },
+      {
+        delay: 0.09,
+        wave: 'triangle',
+        freq: 700,
+        endFreq: 320,
+        attack: 0.004,
+        duration: 0.16,
+        gain: 0.17,
+      },
+    ] satisfies readonly TimedTone[],
+    click: {
+      filter: 'highpass',
+      cutoff: 2400,
+      q: 0.8,
+      attack: 0.001,
+      duration: 0.03,
+      gain: 0.14,
+    } satisfies NoiseRecipe,
+  },
+
   /** "Существо на главном экране": a squeak; `pitch` scales it per creature. */
   squeak: {
     wave: 'sine',

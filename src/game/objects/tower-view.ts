@@ -219,7 +219,11 @@ export class TowerView {
       const offset = this.swayOffset(state, i);
       this.sway.note(i, offset);
       const pose = this.fillPose(this.scratchPose, layer, i, offset);
-      view.setLook(pose.look).setLayer(i + 1, pose.width, pose.cut);
+      // Only the real top layer carries its topper: a layer below it (or one left when the tower collapses) has hopped it off.
+      view
+        .setLook(pose.look)
+        .setTopperAllowed(i === state.layers.length - 1)
+        .setLayer(i + 1, pose.width, pose.cut);
       view.setPosition(pose.x + view.slideX, pose.y).setAngle(pose.angle * view.material.tilt);
       if (i === count - 1) this.updateTopSpan(pose.x, pose.width);
       this.shadeBelow(i, view, pose.x + view.slideX, pose.width);

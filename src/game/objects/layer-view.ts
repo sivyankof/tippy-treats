@@ -24,6 +24,7 @@ import { RAINBOW_LOOK } from '../../data/rainbow-look';
 import { TWO_PI } from '../../util/math';
 import { RainbowIdle } from './rainbow-idle';
 import { GlazeDripLayer } from './glaze-drip-layer';
+import { LayerTopper, type TopperWorld } from './layer-topper';
 import { pressAngle, pressDrop, pressPivot, pressShift } from './layer-press';
 
 /** A heavy press at one spot of a layer (it landed on the guest of the tower). */
@@ -69,6 +70,8 @@ export class LayerView extends Phaser.GameObjects.Container {
   private readonly face: LayerFace;
   /** The shade of the layer above, laid along the top of this one. */
   private readonly shade: LayerShade;
+  /** The big topper on the top edge of a plain layer. */
+  private readonly topper: LayerTopper;
   /** The star and the rest wave of the Rainbow layer. */
   private readonly rainbow: RainbowIdle;
   /** Extra animations for the abilities: flash, hop, fade, split. */
@@ -92,6 +95,7 @@ export class LayerView extends Phaser.GameObjects.Container {
     this.glossSweep = createGlossBand(scene, BALANCE.layer.height - ANIM.layer.outline * 2);
     this.face = new LayerFace(scene);
     this.shade = new LayerShade(scene);
+    this.topper = new LayerTopper(scene);
     this.rig = new LayerRig(scene, this.art, this.face);
     this.content = new Phaser.GameObjects.Container(scene, 0, -half, [
       this.art,
@@ -100,6 +104,7 @@ export class LayerView extends Phaser.GameObjects.Container {
       ...this.rig.parts,
       this.glossSweep,
       this.face,
+      this.topper.image,
     ]);
     this.rainbow = new RainbowIdle(scene, this.content, this.art);
     this.shapeRoot = new Phaser.GameObjects.Container(scene, 0, 0, [this.content]);
@@ -160,6 +165,8 @@ export class LayerView extends Phaser.GameObjects.Container {
   setLayer(index: number, width: number, cut: CutSide | null = null): this {
     const look = lookCodeFor(index, this.lookPlan.kind === 'golden');
     const w = artWidth(width);
+    this.topper.setFaceless(!this.faceEnabled);
+    this.topper.update(index, w, this.lookPlan.kind === 'plain');
     const creature = this.creatureOf(this.lookPlan);
     if (!this.artSlot.show(look, w, cut, creature, !this.faceEnabled)) return this;
     this.rainbow.set(creature === 'rainbow', w);
@@ -173,6 +180,23 @@ export class LayerView extends Phaser.GameObjects.Container {
     if (upper) this.shade.set(x, width, upper.x, upper.width);
     else this.shade.clear();
     return this;
+  }
+
+  /** Lets the view show the big topper of its plain layer (a flying layer, the top layer of the tower). */
+  setTopperAllowed(on: boolean): this {
+    this.topper.setAllowed(on);
+    return this;
+  }
+
+  /** The topper stands `dx` from the centre from now on (`null`: it is gone). */
+  carryTopper(dx: number | null): this {
+    this.topper.setCarry(dx);
+    return this;
+  }
+
+  /** The topper in the world as it is now, or `null` while the layer shows none. */
+  topperWorld(out: TopperWorld): TopperWorld | null {
+    return this.topper.world(out);
   }
 
   /** Draws the art fully opaque (a see-through creature baked into an icon keeps its face parts opaque too). */
@@ -229,6 +253,7 @@ export class LayerView extends Phaser.GameObjects.Container {
    */
   setEdgeSquash(shape: Readonly<EdgeShape> | null): this {
     this.rainbow.setHidden(shape !== null);
+    this.topper.setEdgeHidden(shape !== null);
     if (!shape) {
       this.edgeSkin?.clear();
       return this;
@@ -388,6 +413,7 @@ export class LayerView extends Phaser.GameObjects.Container {
     this.shade.clear();
     this.rainbow.endJoke();
     this.face.reset();
+    this.topper.reset();
     return this;
   }
 

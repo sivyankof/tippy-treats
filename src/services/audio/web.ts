@@ -244,6 +244,14 @@ export class WebAudioService implements AudioService {
     this.play((s) => s.sequence(SFX.guest.giggle));
   }
 
+  topperHop(): void {
+    this.play((s) => {
+      const { notes, click } = SFX.topperHop;
+      s.sequence(notes);
+      s.noise(click);
+    });
+  }
+
   squeak(pitch: number): void {
     this.play((s) =>
       s.tone(SFX.squeak, { pitch: Number.isFinite(pitch) && pitch > 0 ? pitch : 1 }),

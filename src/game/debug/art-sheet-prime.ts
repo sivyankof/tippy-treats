@@ -17,6 +17,7 @@ import { createCreatureIconTextures } from '../objects/creature-icon-textures';
 import { bakeShadeTextures } from '../objects/layer-shade';
 import { ensureSleepTexture } from '../objects/sleep-silhouette';
 import { bakeGuestFlat } from '../objects/tower-guest-art';
+import { bakeTopperTextures } from '../fx/topper-texture';
 import { bakeHintTextures } from '../tutorial/hint-textures';
 
 /**
@@ -38,6 +39,7 @@ const PRIME_STEPS: ReadonlyArray<(scene: Phaser.Scene) => void> = [
   bakeHintTextures,
   bakeChestTextures,
   (scene) => bakeShadeTextures(scene),
+  bakeTopperTextures,
   (scene) => bakeGiftTextures(scene, false),
   (scene) => bakeGiftTextures(scene, true),
   (scene) => {
