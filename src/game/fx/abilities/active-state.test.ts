@@ -5,6 +5,7 @@ import {
   bubbleInputFor,
   emptyFlags,
   guideGlow,
+  landedRimAlpha,
   isFadedIn,
   nextBubblePhase,
   readActiveFlags,
@@ -62,6 +63,16 @@ describe('guideGlow', () => {
   it('stays dark without guides or without a flying layer', () => {
     expect(guideGlow(false, 500, 500, 30)).toBe(false);
     expect(guideGlow(true, null, 500, 30)).toBe(false);
+  });
+});
+
+describe('landedRimAlpha', () => {
+  it('holds at full opacity, then fades out linearly', () => {
+    expect(landedRimAlpha(0, 400, 200)).toBe(1);
+    expect(landedRimAlpha(400, 400, 200)).toBe(1);
+    expect(landedRimAlpha(500, 400, 200)).toBeCloseTo(0.5);
+    expect(landedRimAlpha(600, 400, 200)).toBe(0);
+    expect(landedRimAlpha(900, 400, 200)).toBe(0);
   });
 });
 

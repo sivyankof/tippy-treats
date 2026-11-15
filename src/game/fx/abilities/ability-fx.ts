@@ -107,6 +107,7 @@ export class AbilityFx {
       const { slideMs, slideEase } = ABILITY_ANIM.jelly;
       this.tower.topView()?.playSlide((event.dx * share) / (1 - share), slideMs, slideEase);
     }
+    if (event.savedWidth > 0) this.active.markSaved(state.layers.length - 1);
     if (this.active.flags.crumb && event.cutWidth > 0 && event.cutSide && memo) {
       this.crumbs.fly(event, state);
     }

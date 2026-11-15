@@ -42,6 +42,12 @@ export function guideGlow(
   return guidesOn && flyingX !== null && Math.abs(flyingX - targetX) <= tolerance;
 }
 
+/** Opacity (0..1) of the rim a saved layer keeps after landing: full while it holds, then a linear fade. */
+export function landedRimAlpha(ageMs: number, holdMs: number, fadeMs: number): number {
+  if (ageMs <= holdMs) return 1;
+  return Math.max(0, 1 - (ageMs - holdMs) / fadeMs);
+}
+
 /** States of the brownie's bubble: absent, shown, bursting (a shielded miss), melting (it ran out). */
 export type BubblePhase = 'idle' | 'on' | 'popping' | 'melting';
 

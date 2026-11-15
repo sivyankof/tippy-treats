@@ -392,6 +392,20 @@ export const ABILITY_ANIM = {
       /** Hue distance between the left and the right edge of the layer. */
       hueSpread: 0.45,
       glossEveryMs: 900,
+      /**
+       * The outline of a layer the rainbow keeps from the cut: a coloured rim of `width` px that
+       * turns through the hues; "fewer effects" keeps a still rim in `staticColor`. After a
+       * landing that was saved from the cut the rim stays `landHoldMs`, then fades in `landFadeMs`.
+       */
+      rim: {
+        width: 7,
+        alpha: 0.95,
+        saturation: 0.85,
+        huePeriodMs: 1400,
+        staticColor: 0xc56cf0,
+        landHoldMs: 450,
+        landFadeMs: 350,
+      },
     },
   },
 } as const;

@@ -9,6 +9,7 @@ import type { AbilityBursts } from './ability-bursts';
 import { emptyFlags, guideGlow, readActiveFlags, type ActiveFlags } from './active-state';
 import { FlyingCoat, type CoatState } from './flying-coat';
 import { Guides } from './guides';
+import { RainbowRim } from './rainbow-rim';
 import { ShieldBubble, type BubbleTarget } from './shield-bubble';
 import { Vignette } from './vignette';
 
@@ -24,6 +25,7 @@ export class WhileActiveFx {
   readonly flags: ActiveFlags = emptyFlags();
   private readonly guides: Guides;
   private readonly coat: FlyingCoat;
+  private readonly rim: RainbowRim;
   private readonly vignette: Vignette;
   private readonly bubble: ShieldBubble;
   private readonly coatState: CoatState = { frost: false, rainbow: false, glow: false };
@@ -38,6 +40,7 @@ export class WhileActiveFx {
   ) {
     this.guides = new Guides(scene);
     this.coat = new FlyingCoat(scene);
+    this.rim = new RainbowRim(scene);
     this.vignette = new Vignette(scene);
     this.bubble = new ShieldBubble(scene, bursts);
   }
@@ -50,6 +53,11 @@ export class WhileActiveFx {
   /** The shield ran out. */
   meltShield(): void {
     this.bubble.melt(this.target());
+  }
+
+  /** The layer at `index` landed whole under the rainbow although a normal drop would have cut it. */
+  markSaved(index: number): void {
+    this.rim.markLanded(index);
   }
 
   /** `running` is false once the run is over: every visual then fades out. */
@@ -76,6 +84,7 @@ export class WhileActiveFx {
     // The coat lies on the drawn body, squashed against a screen edge.
     const body = this.flying.body();
     this.coat.update(dtMs, timeMs, this.coatState, body, body?.width ?? 0);
+    this.rim.update(dtMs, timeMs, body, flags.rainbow, (i) => this.tower.layerPose(i));
     this.guides.update(
       dtMs,
       guidesOn,

@@ -116,7 +116,7 @@
     },
     "rainbow": {
       "name": "Rainbow",
-      "desc": "Miracle: the next {value} drops are perfect automatically, unless you miss completely.",
+      "desc": "Miracle: the next {value} layers are not cut, wherever they land. A complete miss is still a miss.",
       "trait": "Majestic"
     }
   },
