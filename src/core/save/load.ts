@@ -1,17 +1,11 @@
-import { CREATURE_IDS, MAX_CREATURE_LEVEL, type CreatureId } from '../../data/creatures';
+import { CREATURE_IDS, MAX_CREATURE_LEVEL } from '../../data/creatures';
 import { MAX_BAKER_LEVEL } from '../../data/progression';
 import { SAVE_DEFAULTS } from '../../data/save-defaults';
 import { xpToNext } from '../progression';
+import { pickTeam } from '../team';
 import { createDefaultSave } from './defaults';
 import { migrate } from './migrations';
-import type {
-  Lang,
-  MissionGroup,
-  MissionProgress,
-  ReducedFxSetting,
-  Save,
-  TeamSlots,
-} from './schema';
+import type { Lang, MissionGroup, MissionProgress, ReducedFxSetting, Save } from './schema';
 
 export type SaveSource = 'primary' | 'backup' | 'new';
 
@@ -75,27 +69,6 @@ function normalizeCreatures(value: unknown): Save['creatures'] {
   return result;
 }
 
-/**
- * Three slots of owned creatures. An empty team is the player's choice (a run may start without
- * creatures) and stays empty; a team that is not a list at all becomes the default one.
- */
-function normalizeTeam(value: unknown, owned: Save['creatures'], fallback: TeamSlots): TeamSlots {
-  return pickTeam(value, owned, fallback);
-}
-
-function pickTeam(value: unknown, owned: Save['creatures'], fallback: TeamSlots): TeamSlots {
-  if (!Array.isArray(value)) return [...fallback];
-  const used = new Set<CreatureId>();
-  const picked = [0, 1, 2].map((index): CreatureId | null => {
-    const entry: unknown = value[index];
-    const id = CREATURE_IDS.find((creatureId) => creatureId === entry);
-    if (id === undefined || owned[id] === undefined || used.has(id)) return null;
-    used.add(id);
-    return id;
-  });
-  return picked as TeamSlots;
-}
-
 function normalizeMissions(value: unknown): MissionProgress[] {
   if (!Array.isArray(value)) return [];
   const items: MissionProgress[] = [];
@@ -150,7 +123,7 @@ function normalize(raw: Obj, d: Save): Save {
     // Below the level-up threshold: a huge value would otherwise freeze the next run in level-ups.
     bakerXp: Math.min(uint(raw.bakerXp, d.bakerXp), xpToNext(bakerLevel) - 1),
     creatures,
-    team: normalizeTeam(raw.team, creatures, d.team),
+    team: pickTeam(raw.team, creatures, d.team),
     records: {
       classicHeight: uint(records.classicHeight, 0),
       classicScore: uint(records.classicScore, 0),

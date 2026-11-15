@@ -1,6 +1,7 @@
 import { BALANCE } from '../data/balance';
-import { clampLevel, type CreatureId } from '../data/creatures';
+import { clampLevel, CREATURE_IDS, type CreatureId } from '../data/creatures';
 import { LEVEL_REWARDS } from '../data/progression';
+import type { TeamSlots } from './save/schema';
 import type { TeamSlot } from './sim-types';
 
 /** Team slots as the save holds them: a creature id or `null` for an empty slot. */
@@ -79,4 +80,22 @@ export function runTeam(
 /** The layer index the creature of each slot first arrives at: 6, 12, 18. */
 export function slotLayers(): number[] {
   return Array.from({ length: BALANCE.team.slots }, (_, i) => (i + 1) * BALANCE.team.creatureEvery);
+}
+
+/**
+ * Three slots of owned creatures from a stored or requested team: unknown, unowned and repeated
+ * entries become empty slots. An empty team is the player's choice and stays empty; a value that
+ * is not a list at all becomes `fallback`.
+ */
+export function pickTeam(value: unknown, owned: OwnedCreatures, fallback: TeamSlots): TeamSlots {
+  if (!Array.isArray(value)) return [...fallback];
+  const used = new Set<CreatureId>();
+  const picked = Array.from({ length: BALANCE.team.slots }, (_, index): CreatureId | null => {
+    const entry: unknown = value[index];
+    const id = CREATURE_IDS.find((creatureId) => creatureId === entry);
+    if (id === undefined || owned[id] === undefined || used.has(id)) return null;
+    used.add(id);
+    return id;
+  });
+  return picked as TeamSlots;
 }

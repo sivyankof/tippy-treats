@@ -1,18 +1,17 @@
 // Coins, berries and counters outside a run, as pure functions over the save.
+import { earn } from '../core/economy';
 import type { Save } from '../core/save/schema';
 
 /** The save with `coins` added; the same save when nothing whole and positive is given. */
 export function withCoins(save: Save, coins: number): Save {
-  const whole = Math.floor(coins);
-  if (!(whole > 0)) return save;
-  return { ...save, coins: save.coins + whole };
+  const next = earn(save, { coins });
+  return next.coins === save.coins ? save : next;
 }
 
 /** The save with `berries` added; the same save when nothing whole and positive is given. */
 export function withBerries(save: Save, berries: number): Save {
-  const whole = Math.floor(berries);
-  if (!(whole > 0)) return save;
-  return { ...save, berries: save.berries + whole };
+  const next = earn(save, { berries });
+  return next.berries === save.berries ? save : next;
 }
 
 export function withAdWatched(save: Save): Save {

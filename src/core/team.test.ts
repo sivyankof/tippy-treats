@@ -3,11 +3,13 @@ import {
   addToTeam,
   canFillTeam,
   openSlots,
+  pickTeam,
   removeFromTeam,
   runTeam,
   slotLayers,
   slotOpensAt,
 } from './team';
+import type { TeamSlots } from './save/schema';
 
 describe('team slots', () => {
   it('opens the third slot at baker level 3', () => {
@@ -61,5 +63,21 @@ describe('team slots', () => {
 
   it('lists the layers the slots arrive at', () => {
     expect(slotLayers()).toEqual([6, 12, 18]);
+  });
+});
+
+describe('pickTeam', () => {
+  const owned = { honey: { level: 1 }, ghost: { level: 2 } };
+  const fallback: TeamSlots = ['honey', null, null];
+
+  it('keeps owned creatures and empties unowned, unknown and repeated entries', () => {
+    expect(pickTeam(['ghost', 'ghost', 'nope'], owned, fallback)).toEqual(['ghost', null, null]);
+    expect(pickTeam([null, 'honey', 'ghost'], owned, fallback)).toEqual([null, 'honey', 'ghost']);
+    expect(pickTeam(['brownie', 'honey'], owned, fallback)).toEqual([null, 'honey', null]);
+  });
+  it('keeps an empty team empty and falls back only when it is not a list', () => {
+    expect(pickTeam([], owned, fallback)).toEqual([null, null, null]);
+    expect(pickTeam('x', owned, fallback)).toEqual(fallback);
+    expect(pickTeam(undefined, owned, fallback)).not.toBe(fallback);
   });
 });
