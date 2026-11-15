@@ -19,6 +19,11 @@ export function setSoundOn(on: boolean): void {
   gameState.updateSettings({ sfx: on });
 }
 
+/** Only stores the choice; there is no music player until music is added. */
+export function setMusicOn(on: boolean): void {
+  gameState.updateSettings({ music: on });
+}
+
 export function setVibrationOn(on: boolean): void {
   services.haptics.setEnabled(on);
   gameState.updateSettings({ haptics: on });

@@ -386,6 +386,7 @@
   "settings": {
     "title": "Settings",
     "language": "Language",
+    "music": "Music",
     "langEn": "English",
     "langRu": "Русский",
     "notifications": "Notifications",
