@@ -17,7 +17,8 @@ const cfg = MENU.ovenBar;
 export class OvenBar extends Phaser.GameObjects.Container {
   private readonly bar: Phaser.GameObjects.Graphics;
   private readonly label: Phaser.GameObjects.Text;
-  private shown: number | null = null;
+  /** What the bar shows now (the label says it all), so a repeat draws nothing. */
+  private shown: string | null = null;
 
   constructor(scene: Phaser.Scene, x: number, y: number) {
     super(scene, x, y);
@@ -27,17 +28,18 @@ export class OvenBar extends Phaser.GameObjects.Container {
     scene.add.existing(this);
   }
 
-  /** `left` fresh layers are still to come today; the same number again draws nothing, so it can be called every frame. */
+  /** `left` fresh layers are still to come today; the same picture again draws nothing, so it is cheap to call often. */
   show(left: number): this {
-    if (left === this.shown) return this;
-    this.shown = left;
+    const text = left > 0 ? t('oven.left', { n: formatNumber(left) }) : t('oven.empty');
+    if (text === this.shown) return this;
+    this.shown = text;
     drawProgressBar(
       this.bar,
       { width: cfg.barWidth, height: cfg.height, radius: cfg.radius, border: cfg.border },
       Math.min(1, left / OVEN.freshLayers),
       PALETTE.gold,
     );
-    this.label.setText(left > 0 ? t('oven.left', { n: formatNumber(left) }) : t('oven.empty'));
+    this.label.setText(text);
     fitText(this.label, cfg.width - cfg.barWidth - cfg.gap);
     return this;
   }

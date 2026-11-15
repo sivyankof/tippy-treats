@@ -82,7 +82,8 @@ export class HomeScene extends Phaser.Scene {
       collection: () => this.goTo(() => openScreen(this, SCENES.collection)),
       play: () => this.startRun(),
       daily: () => this.goTo(() => openScreen(this, SCENES.daily)),
-      missions: () => openMissionsWindow(this, () => this.refreshMarks(), this.header.wallet),
+      missions: () =>
+        openMissionsWindow(this, (creatures) => this.afterMissions(creatures), this.header.wallet),
     });
     this.badges = new HomeBadges(this, {
       streak: () =>
@@ -135,8 +136,8 @@ export class HomeScene extends Phaser.Scene {
     this.scenery.update(delta);
     this.header.update(time, delta);
     this.shelf.update(delta);
-    this.badges.update();
-    this.oven.show(gameState.ovenLeft);
+    // The timer text changes once a second: enough to notice a new day for the oven.
+    if (this.badges.update()) this.oven.show(gameState.ovenLeft);
   }
 
   /** Everything that slides with the screen; the scenery stays. */
@@ -244,7 +245,7 @@ export class HomeScene extends Phaser.Scene {
   private afterStreak(claim: StreakClaim | null): void {
     this.refreshMarks();
     if (claim?.reward.kind !== 'creature' || claim.duplicate) return;
-    this.showNewCreature(claim.reward.id);
+    this.showNewCreatures([claim.reward.id]);
   }
 
   /** The starter pack button, once the store has told its price; it is not shown for a product without one. */
@@ -280,14 +281,20 @@ export class HomeScene extends Phaser.Scene {
     this.offerRoom = false;
     this.layout();
     this.refreshMarks();
-    if (creature !== null) this.showNewCreature(creature);
+    if (creature !== null) this.showNewCreatures([creature]);
   }
 
-  /** A new creature gets its own screen, then Home comes back. */
-  private showNewCreature(id: CreatureId): void {
+  /** The missions window closed: creatures of a level reached there get their own screen. */
+  private afterMissions(creatures: CreatureId[]): void {
+    this.refreshMarks();
+    if (creatures.length > 0) this.showNewCreatures(creatures);
+  }
+
+  /** New creatures get their own screen, then Home comes back. */
+  private showNewCreatures(creatures: CreatureId[]): void {
     this.goTo(() =>
       openScreen(this, SCENES.newCreature, {
-        creatures: [id],
+        creatures,
         then: { kind: 'screen', key: SCENES.home },
       }),
     );

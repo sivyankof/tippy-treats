@@ -3,8 +3,8 @@ import { MENU } from '../../../data/menu-layout';
 import { t } from '../../../i18n';
 import { services } from '../../../services';
 import { gameState } from '../../../state';
+import type { CreatureId } from '../../../data/creatures';
 import type { LevelUp } from '../../../state/game-state';
-import { openScreen, SCENES, type NewCreatureData } from '../../scene-keys';
 import { msUntilLocalMidnight, now } from '../../../util/clock';
 import { createOutlinedText } from '../outlined-text';
 import { PopupWindow } from '../style/dialog-window';
@@ -24,35 +24,22 @@ function screenPoint(button: Button): { x: number; y: number } {
   return { x: matrix.tx, y: matrix.ty };
 }
 
-/** The creatures a level handed out get the new creature screen, then Home comes back (as after a run). */
-function presentLevelCreatures(scene: Phaser.Scene, levelUps: readonly LevelUp[]): void {
-  const creatures = newCreaturesOf(levelUps);
-  if (creatures.length === 0) return;
-  const data: NewCreatureData = { creatures, then: { kind: 'screen', key: SCENES.home } };
-  openScreen(scene, SCENES.newCreature, data);
-}
-
 /** The missions window: three missions of the day, the chest, the reroll (docs/07-ui-screens.md, section 11). */
 export function openMissionsWindow(
   scene: Phaser.Scene,
-  onClosed?: () => void,
+  onClosed?: (newCreatures: CreatureId[]) => void,
   wallet?: WalletTargets,
 ): void {
   gameState.refreshDay();
   const timer = { event: null as Phaser.Time.TimerEvent | null };
-  // Creatures of a level reached here wait until the window is closed, then get their own screen.
-  const later = { open: true, levelUps: [] as LevelUp[] };
-  const present = (levelUps: readonly LevelUp[]): void => {
-    if (later.open) later.levelUps.push(...levelUps);
-    else presentLevelCreatures(scene, levelUps);
-  };
+  // Levels reached here are kept until the window is closed; the creatures they handed out go back to the caller.
+  // (Home shows them; they are already in the save, so a window torn down early loses only the show.)
+  const levelUps: LevelUp[] = [];
   const popup = new PopupWindow(scene, {
     title: t('missions.title'),
     onClosed: () => {
       timer.event?.remove(false);
-      later.open = false;
-      onClosed?.();
-      presentLevelCreatures(scene, later.levelUps);
+      onClosed?.(newCreaturesOf(levelUps));
     },
   });
   const width = popup.innerWidth;
@@ -87,7 +74,7 @@ export function openMissionsWindow(
           }
           build();
           if (claim && claim.levelUps.length > 0) {
-            showLevelUps(scene, claim.levelUps, () => present(claim.levelUps));
+            showLevelUps(scene, claim.levelUps, () => levelUps.push(...claim.levelUps));
           }
         },
         onReroll: () => {

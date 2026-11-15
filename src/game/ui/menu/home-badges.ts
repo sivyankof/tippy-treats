@@ -116,11 +116,11 @@ export class HomeBadges {
     }
   }
 
-  /** The timer of the gift plate; call every frame. */
-  update(): void {
+  /** The timer of the gift plate; call every frame. True when its text changed (about once a second). */
+  update(): boolean {
     const ready = gameState.giftReady;
     const text = ready ? t('home.giftReady') : formatTimeLeft(gameState.msUntilGift);
-    if (text === this.giftText) return;
+    if (text === this.giftText) return false;
     this.giftText = text;
     this.giftIsReady = ready;
     const { width, boxInset, padRight } = cfg.gift;
@@ -128,6 +128,7 @@ export class HomeBadges {
     const right = width / 2 - padRight;
     this.giftLabel.setText(text).setColor(cssColor(ready ? cfg.readyColor : PALETTE.textLight));
     fitText(this.giftLabel, right - left).setX((left + right) / 2);
+    return true;
   }
 
   private tap(onTap: () => void): void {
