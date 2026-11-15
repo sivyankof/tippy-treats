@@ -328,11 +328,13 @@ export class LayerView extends Phaser.GameObjects.Container {
   }
 
   /** A white band runs over the layer from left to right and fades at both ends. */
-  playGlossSweep(): void {
+  playGlossSweep(
+    ms: number = ANIM.perfect.glossSweepMs,
+    alpha: number = ANIM.perfect.glossSweepAlpha,
+  ): void {
     const { outline } = ANIM.layer;
-    const { glossSweepWidth, glossSweepMs, glossSweepAlpha } = ANIM.perfect;
-    const travel = this.artSlot.drawnWidth / 2 - outline - glossSweepWidth / 2;
-    sweepGloss(this.glossSweep, travel, glossSweepMs, glossSweepAlpha);
+    const travel = this.artSlot.drawnWidth / 2 - outline - ANIM.perfect.glossSweepWidth / 2;
+    sweepGloss(this.glossSweep, travel, ms, alpha);
   }
 
   /** The layer slides in from `fromX` pixels off its place and settles with a spring. */

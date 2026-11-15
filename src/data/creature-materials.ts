@@ -1,6 +1,7 @@
 import { ANIM } from './anim';
 import type { CreatureId, CreaturePalette } from './creatures';
 import { SPRINKLE_COLORS } from './creature-looks';
+import { RAINBOW_BANDS } from './rainbow-look';
 import type { WallFeelKind } from './edge-squash';
 
 /** Small shared effect pictures a material burst can use (`FX_TEXTURES` in the game). */
@@ -62,6 +63,14 @@ export interface CreatureMaterial {
   /** A gloss band runs over the layer when it lands, and once every `glossEveryMs` at rest. */
   glossOnLand?: boolean;
   glossEveryMs?: number;
+  /** The resting gloss runs this long (`ms`) at this opacity instead of the quick landing gloss. */
+  glossSweep?: { ms: number; alpha: number };
+  /**
+   * A twinkling star at a random point on a ring around the layer every `everyMs` (a random
+   * time between the two), `margin` pixels outside it, in these colours. Layers on screen and
+   * menu portraits only; none with "fewer effects".
+   */
+  sparkle?: { everyMs: readonly [number, number]; margin: number; tints: readonly `#${string}`[] };
   /** A heavy layer pushes the camera and the squash wave harder (multipliers). */
   impact?: { kick: number; wave: number };
   /** When the squash wave passes, the top shell lags: it lifts `liftPx` and settles back. */
@@ -274,7 +283,13 @@ export const CREATURE_MATERIALS: Readonly<Record<CreatureId, CreatureMaterial>> 
   rainbow: {
     land: { squash: 1, durationMul: 1, ease: DEFAULT_EASE },
     glossOnLand: true,
-    glossEveryMs: 4500,
+    glossEveryMs: 2600,
+    glossSweep: { ms: 1400, alpha: 0.4 },
+    sparkle: {
+      everyMs: [1500, 3000],
+      margin: 22,
+      tints: [...RAINBOW_BANDS, '#ffffff'],
+    },
   },
 };
 

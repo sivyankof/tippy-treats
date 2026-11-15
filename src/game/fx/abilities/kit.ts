@@ -7,6 +7,7 @@ import type { LayerPose, TowerView } from '../../objects/tower-view';
 import type { LayerView } from '../../objects/layer-view';
 import type { CreatureColors } from '../../objects/creature-art/primitives';
 import type { AbilityBursts } from './ability-bursts';
+import type { RainbowArc } from './rainbow-arc';
 import type { SpriteFx } from './sprite-fx';
 
 export { HALF_LAYER } from '../../objects/layer-art';
@@ -20,6 +21,7 @@ export interface FxKit {
   tower: TowerView;
   sprites: SpriteFx;
   bursts: AbilityBursts;
+  arc: RainbowArc;
 }
 
 /** What a signature animation knows about the ability that just fired. */

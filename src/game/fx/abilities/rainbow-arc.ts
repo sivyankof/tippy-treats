@@ -1,0 +1,161 @@
+import * as Phaser from 'phaser';
+import { ABILITY_ANIM } from '../../../data/ability-anim';
+import { PALETTE } from '../../../data/palette';
+import { clamp01 } from '../../../util/math';
+import { DEPTH } from '../../depth';
+import { easeFn } from '../ease';
+import { FX_TEXTURES } from '../fx-textures';
+import { fillPolygon, outlineColor, type Pt } from '../plain-style';
+import type { AbilityBursts } from './ability-bursts';
+import { arcCurve, swell, type Point } from './rainbow-arc-geometry';
+import { HALF_LAYER } from './kit';
+
+const cfg = ABILITY_ANIM.rainbow;
+const arc = cfg.arc;
+const cloud = cfg.cloud;
+const grow = easeFn(arc.growEase);
+const pop = easeFn(cloud.popEase);
+/** Just behind the flying layer, so the arc seems to end in it. */
+const ARC_DEPTH = DEPTH.flying - 0.1;
+
+type Phase = 'idle' | 'live' | 'deflate';
+
+/**
+ * The rainbow arc of the Rainbow ability: a fat cartoon rainbow that shoots out of a cream cloud
+ * with a face on the Rainbow layer, reaches a second cloud on the flying layer and follows it.
+ * When the protected layer lands it bursts into stars, the lower cloud deflates, and the arc is
+ * thrown again from the landed layer if the next layer is protected too.
+ */
+export class RainbowArc {
+  private readonly gfx: Phaser.GameObjects.Graphics;
+  private phase: Phase = 'idle';
+  private ageMs = 0;
+  private lostMs = 0;
+  private readonly from: Point = { x: 0, y: 0 };
+  private readonly last: Point = { x: 0, y: 0 };
+  private relaunch: Point | null = null;
+
+  constructor(
+    scene: Phaser.Scene,
+    private readonly bursts: AbilityBursts,
+  ) {
+    this.gfx = scene.add.graphics().setDepth(ARC_DEPTH);
+  }
+
+  /** Starts an arc out of a cloud at (`x`, `y`). */
+  start(x: number, y: number): void {
+    this.from.x = x;
+    this.from.y = y;
+    this.last.x = x;
+    this.last.y = y - arc.idleRise;
+    this.phase = 'live';
+    this.ageMs = 0;
+    this.lostMs = 0;
+    this.relaunch = null;
+  }
+
+  /** A protected layer landed at `top` (the middle of its top edge): the arc bursts. `again` throws a new one from there. */
+  land(top: Point, again: boolean): void {
+    if (this.phase !== 'live') return;
+    const curve = this.curve(1);
+    const { points, count } = arc.burst;
+    for (let i = 0; i < points; i++) {
+      const p = curve[Math.round(((curve.length - 1) * (i + 0.5)) / points)];
+      if (!p) continue;
+      const style = ABILITY_ANIM.active.rainbow.landStars.style;
+      this.bursts.cone(p.x, p.y, 0, count, style, FX_TEXTURES.star, cfg.stripes);
+    }
+    this.phase = 'deflate';
+    this.ageMs = 0;
+    this.relaunch = again ? { x: top.x, y: top.y } : null;
+  }
+
+  /** `target` is the middle of the top edge of the flying layer (`null` while none flies). */
+  update(dtMs: number, target: Point | null): void {
+    this.gfx.clear();
+    if (this.phase === 'idle') return;
+    this.ageMs += dtMs;
+    if (this.phase === 'deflate') {
+      if (this.ageMs >= cloud.deflateMs) {
+        const again = this.relaunch;
+        this.phase = 'idle';
+        if (again) this.start(again.x, again.y);
+        return;
+      }
+      this.cloud(this.from.x, this.from.y, 1 - clamp01(this.ageMs / cloud.deflateMs), true);
+      return;
+    }
+    if (target) {
+      this.last.x = target.x;
+      this.last.y = target.y;
+      this.lostMs = 0;
+    } else if ((this.lostMs += dtMs) > arc.lostMs) {
+      this.land(this.last, false);
+      return;
+    }
+    this.paint();
+  }
+
+  private curve(grown: number): Array<Point & { nx: number; ny: number }> {
+    return arcCurve(this.from, this.last, arc.lift, arc.sideShare, grown, arc.steps);
+  }
+
+  private paint(): void {
+    const k = grow(clamp01(this.ageMs / arc.growMs));
+    const curve = this.curve(Math.max(0.04, k));
+    const bands = cfg.stripes.length;
+    const swellAt = (this.ageMs % arc.waveMs) / arc.waveMs;
+    const edge = (reach: (u: number) => number): Pt[] =>
+      curve.map((p, i) => {
+        const o = reach(i / (curve.length - 1));
+        return { x: p.x + p.nx * o, y: p.y + p.ny * o };
+      });
+    const half = (u: number): number =>
+      (bands * arc.bandPx * swell(u, swellAt, arc.waveBulge, arc.waveSigma)) / 2;
+    const strip = (from: number, to: number, color: number, extra = 0): void => {
+      this.gfx.fillStyle(color, arc.alpha);
+      const a = edge((u) => half(u) * from + extra);
+      const b = edge((u) => half(u) * to - extra);
+      fillPolygon(this.gfx, [...a, ...b.reverse()]);
+    };
+    // The outline is the whole band pushed out by `outlinePx`; the colours are equal slices of the width.
+    strip(1, -1, arc.outlineColor, arc.outlinePx);
+    cfg.stripes.forEach((color, i) => strip(1 - (2 * i) / bands, 1 - (2 * (i + 1)) / bands, color));
+    // The gloss runs along the top edge of the outer band.
+    const gloss = edge((u) => half(u) - arc.bandPx * arc.glossShare);
+    this.gfx.lineStyle(arc.bandPx * 0.25, PALETTE.textLight, arc.glossAlpha).beginPath();
+    gloss.forEach((p, i) => (i === 0 ? this.gfx.moveTo(p.x, p.y) : this.gfx.lineTo(p.x, p.y)));
+    this.gfx.strokePath();
+    const popped = pop(clamp01(this.ageMs / cloud.popMs));
+    this.cloud(this.from.x, this.from.y, popped, true);
+    if (k > 0.85) {
+      this.cloud(this.last.x, this.last.y - HALF_LAYER * 0.2, popped * cloud.upperScale, false);
+    }
+  }
+
+  /** A cream cloud of lumps with an outline; the lower one has a face and bobs. */
+  private cloud(x: number, y: number, scale: number, face: boolean): void {
+    const r = cloud.radius * scale;
+    if (r <= 0) return;
+    const bob = face ? Math.sin((this.ageMs / cloud.bobMs) * Math.PI * 2) * cloud.bobPx : 0;
+    const cy = y + bob;
+    const line = outlineColor(cloud.fill);
+    const lumps = cloud.lumps.map(([dx, dy, lr]) => ({
+      x: x + dx * r,
+      y: cy + dy * r,
+      r: lr * r,
+    }));
+    this.gfx.fillStyle(line, 1);
+    for (const l of lumps) this.gfx.fillCircle(l.x, l.y, l.r + cloud.outlinePx * scale);
+    this.gfx.fillStyle(cloud.fill, 1);
+    for (const l of lumps) this.gfx.fillCircle(l.x, l.y, l.r);
+    if (!face) return;
+    this.gfx.fillStyle(line, 1);
+    for (const s of [-1, 1]) {
+      this.gfx.fillCircle(x + s * cloud.eye.x * r, cy + cloud.eye.y * r, cloud.eye.radius * r);
+    }
+    this.gfx.lineStyle(cloud.smile.thick * scale, line, 1).beginPath();
+    this.gfx.arc(x, cy + cloud.smile.y * r, cloud.smile.radius * r, 0.2, Math.PI - 0.2);
+    this.gfx.strokePath();
+  }
+}

@@ -20,7 +20,7 @@ import {
   thaws,
   type BelowSpan,
 } from '../fx/glaze-growth';
-import { CREAM_DRIPS, CREAM_DRIP_LENGTH } from './creature-art/layered';
+import { CREAM_DRIPS, CREAM_DRIP_LENGTH } from './creature-art/rainbow';
 import { creatureColors } from './creature-art/primitives';
 import {
   bulbOuter,

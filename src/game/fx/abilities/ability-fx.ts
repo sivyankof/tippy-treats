@@ -13,6 +13,7 @@ import type { CameraInfo, FlyingMemo } from '../run-fx';
 import { AbilityBursts } from './ability-bursts';
 import { CrumbFlight } from './crumb-flight';
 import { HALF_LAYER, type FxKit, type SignatureContext } from './kit';
+import { RainbowArc } from './rainbow-arc';
 import { SIGNATURES } from './signatures';
 import { SpriteFx } from './sprite-fx';
 import { WhileActiveFx } from './while-active';
@@ -34,12 +35,18 @@ export class AbilityFx {
   constructor(
     scene: Scene,
     private readonly tower: TowerView,
-    flying: FlyingLayerView,
+    private readonly flying: FlyingLayerView,
     private readonly landing: LandingFx,
   ) {
     const bursts = new AbilityBursts(landing.particles);
-    this.kit = { scene, tower, sprites: new SpriteFx(scene), bursts };
-    this.active = new WhileActiveFx(scene, tower, flying, bursts);
+    this.kit = {
+      scene,
+      tower,
+      sprites: new SpriteFx(scene),
+      bursts,
+      arc: new RainbowArc(scene, bursts),
+    };
+    this.active = new WhileActiveFx(scene, tower, this.flying, bursts);
     this.crumbs = new CrumbFlight(this.kit);
   }
 
@@ -93,6 +100,8 @@ export class AbilityFx {
   ): void {
     this.active.update(dtMs, timeMs, state, mods, cam, running);
     this.kit.sprites.update(dtMs);
+    const body = this.flying.body();
+    this.kit.arc.update(dtMs, body && { x: body.x, y: body.y - HALF_LAYER });
   }
 
   /** A normal (cut) landing during the spring effect slides in from where the layer really came down. */
@@ -107,7 +116,11 @@ export class AbilityFx {
       const { slideMs, slideEase } = ABILITY_ANIM.jelly;
       this.tower.topView()?.playSlide((event.dx * share) / (1 - share), slideMs, slideEase);
     }
-    if (event.savedWidth > 0) this.active.markSaved(state.layers.length - 1);
+    if (event.savedWidth > 0) {
+      this.active.markSaved(state.layers.length - 1);
+      const pose = this.tower.layerPose(state.layers.length - 1);
+      if (pose) this.kit.arc.land({ x: pose.x, y: pose.y - HALF_LAYER }, this.active.flags.rainbow);
+    }
     // A layer the rainbow saved pays the crumb coins of its would-be cut, so the crumbs fly too.
     if (this.active.flags.crumb && event.cutWidth + event.savedWidth > 0 && memo) {
       this.crumbs.fly(event, state);

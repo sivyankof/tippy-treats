@@ -2,6 +2,9 @@ import * as Phaser from 'phaser';
 import { CREATURE_IDS, clampLevel, type CreatureId } from '../../data/creatures';
 import { MENU } from '../../data/menu-layout';
 import { services } from '../../services';
+import { BALANCE } from '../../data/balance';
+import { creatureMaterial } from '../../data/creature-materials';
+import { PortraitSparkles } from './portrait-sparkles';
 import { LayerView } from './layer-view';
 
 const cfg = MENU.portrait;
@@ -20,6 +23,7 @@ export class CreaturePortrait extends Phaser.GameObjects.Container {
   private readonly inner: Phaser.GameObjects.Container;
   private timeMs = Math.random() * cfg.breathePeriodMs;
   private hopTween: Phaser.Tweens.Tween | null = null;
+  private readonly sparkles: PortraitSparkles | null;
 
   constructor(
     scene: Phaser.Scene,
@@ -35,6 +39,10 @@ export class CreaturePortrait extends Phaser.GameObjects.Container {
       .setLook({ kind: 'creature', creature, level: clampLevel(level) })
       .setLayer(1, layerWidth);
     this.inner = scene.add.container(0, 0, [this.view]);
+    const spec = creatureMaterial(creature).sparkle;
+    this.sparkles = spec
+      ? new PortraitSparkles(scene, this.inner, spec, layerWidth, BALANCE.layer.height)
+      : null;
     this.add(this.inner);
     this.setScale(scale);
     scene.add.existing(this);
@@ -43,6 +51,7 @@ export class CreaturePortrait extends Phaser.GameObjects.Container {
   tick(dtMs: number): void {
     this.timeMs += dtMs;
     this.view.tick(dtMs);
+    this.sparkles?.tick(dtMs);
     const phase = (this.timeMs / cfg.breathePeriodMs) * Math.PI * 2;
     const breathe = Math.sin(phase) * cfg.breatheScale;
     this.inner.setScale(1 - breathe / 2, 1 + breathe);

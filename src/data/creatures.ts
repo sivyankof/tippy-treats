@@ -287,12 +287,12 @@ export const CREATURES: Record<CreatureId, CreatureDef> = {
       { kind: 'shop', berries: 600, minBakerLevel: 5 },
     ],
     palette: {
-      body: '#ff9ecf',
+      body: '#ffe9c9',
       glaze: '#fffdf7',
       accent: '#ffe76b',
       detail: '#ffffff',
       sponge: '#fff0f8',
-      outline: '#a8447a',
+      outline: '#6a2d73',
     },
   },
 };

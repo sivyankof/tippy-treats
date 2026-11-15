@@ -301,14 +301,58 @@ export const ABILITY_ANIM = {
       0x6c5ce7,
       0xc56cf0,
     ],
-    stripeWidth: 70,
-    stripeGapPx: 56,
-    waveMs: 900,
-    waveEase: 'Sine.easeInOut',
-    /** The stripes are this share of the screen height tall and leaning by `tiltDeg`. */
-    heightShare: 1.3,
-    tiltDeg: 12,
-    waveAlpha: 0.5,
+    /**
+     * The arc: a fat cartoon rainbow of `stripes` bands `bandPx` thick with one dark warm outline
+     * (`outlinePx`) and a white gloss strip on its top edge, along a curve that leaves the cloud
+     * on the Rainbow layer sideways and up (`sideShare` of the distance to the side, `lift` up)
+     * and ends at the cream cloud on the flying layer. It shoots out in `growMs` with a spring
+     * (overshoots and settles), a swell (`waveBulge`, `waveSigma` of the length wide) runs up it
+     * every `waveMs`, and it follows the layer. `idleRise` is where it ends while no layer flies.
+     */
+    arc: {
+      bandPx: 11,
+      outlinePx: 5,
+      outlineColor: 0x6a2d73,
+      glossShare: 0.45,
+      glossAlpha: 0.85,
+      lift: 0.3,
+      sideShare: 0.45,
+      steps: 28,
+      growMs: 650,
+      growEase: 'Back.easeOut',
+      waveMs: 1100,
+      waveBulge: 0.22,
+      waveSigma: 0.14,
+      idleRise: 200,
+      alpha: 1,
+      /** How long the arc may hang with no layer to follow before it bursts. */
+      lostMs: 900,
+      /** The arc bursts into this many stars at points spread along it. */
+      burst: { points: 6, count: 3 },
+    },
+    /**
+     * The cream cloud at both ends: radius of the big puff, its lumps (offset x, offset y, radius
+     * as shares of the radius), the fill, the face on the lower one and the pop-in / deflate times.
+     */
+    cloud: {
+      radius: 26,
+      upperScale: 0.7,
+      lumps: [
+        [-0.8, 0.1, 0.7],
+        [0, -0.25, 0.9],
+        [0.8, 0.1, 0.7],
+        [0, 0.35, 0.8],
+      ],
+      fill: 0xfffaf0,
+      outlinePx: 4,
+      eye: { x: 0.3, y: -0.1, radius: 0.1 },
+      smile: { y: 0.15, radius: 0.28, thick: 3 },
+      popMs: 300,
+      popEase: 'Back.easeOut',
+      deflateMs: 420,
+      bobPx: 2,
+      bobMs: 700,
+    },
     sparks: { count: 12, style: SPARKLE },
   },
 
@@ -393,19 +437,26 @@ export const ABILITY_ANIM = {
       hueSpread: 0.45,
       glossEveryMs: 900,
       /**
-       * The outline of a layer the rainbow keeps from the cut: a coloured rim of `width` px that
-       * turns through the hues; "fewer effects" keeps a still rim in `staticColor`. After a
-       * landing that was saved from the cut the rim stays `landHoldMs`, then fades in `landFadeMs`.
+       * The outline of a layer the rainbow keeps from the cut: a multicolour rim of `width` px (the
+       * bands of `stripes` along the outline, travelling around it every `travelMs`); "fewer effects"
+       * keeps it still. After a landing that was saved from the cut it stays `landHoldMs`, then
+       * fades in `landFadeMs`.
        */
       rim: {
         width: 7,
         alpha: 0.95,
-        saturation: 0.85,
-        huePeriodMs: 1400,
-        staticColor: 0xc56cf0,
+        segmentPx: 10,
+        travelMs: 2400,
+        /** How many times the colour cycle repeats along the outline. */
+        cycles: 2,
         landHoldMs: 450,
         landFadeMs: 350,
       },
+      /** The short trail of colour streaks behind the flying layer. */
+      trail: { ms: 260, streakPx: 4, alpha: 0.8, parts: 4, minMovePx: 1 },
+      /** Sparks around the flying layer, and the stars the rainbow bursts into when a saved layer lands. */
+      sparks: { everyMs: 140, count: 2, style: SPARKLE },
+      landStars: { count: 14, style: { ...SPARKLE, speed: [140, 340], gravity: 260 } },
     },
   },
 } as const;

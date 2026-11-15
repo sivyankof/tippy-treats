@@ -8,10 +8,15 @@ import type { Particles } from './particles';
 const SPARKLE_TINTS = TREASURE.colors.sparkle;
 
 /** One star that swells and fades where it is, at the world point (x, y). */
-export function twinkle(particles: Particles, x: number, y: number): void {
+export function twinkle(
+  particles: Particles,
+  x: number,
+  y: number,
+  tints: readonly number[] = SPARKLE_TINTS,
+): void {
   particles.emit(1, (n) => coneBurst(x, y, 0, n, TREASURE.twinkle), {
     texture: FX_TEXTURES.star,
-    tints: SPARKLE_TINTS,
+    tints,
     depth: DEPTH.particles,
   });
 }

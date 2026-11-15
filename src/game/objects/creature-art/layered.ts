@@ -1,12 +1,12 @@
 import { ANIM } from '../../../data/anim';
 import { CREATURE_STYLE } from '../../../data/creature-style';
-import { parseHex, shade } from '../../../util/color';
+import { shade } from '../../../util/color';
 import { PALETTE } from '../../../data/palette';
 import { faceRecipe } from '../../../data/creature-looks';
 import { faceHalfSpan } from '../../fx/glaze-growth';
 import { faceLayout } from '../face-recipe';
 import { drawShadow } from '../layer-draw';
-import { drawGlaze, type GlossSpot } from './flat-draw';
+import type { GlossSpot } from './flat-draw';
 import { twinsSeam } from './twins-seam';
 import {
   countFor,
@@ -39,15 +39,6 @@ const CRYSTAL_STEP = 18;
 const CRYSTAL_HEIGHT_STEP = 8;
 const CRYSTAL_INSET = 30;
 const CRYSTAL_NARROW_SHARE = 0.3;
-const CROWN_PEAK_WIDTH = 18;
-const CROWN_SIDE_HEIGHT = 20;
-const CROWN_SPREAD = 46;
-const CROWN_SPREAD_SHARE = 0.2;
-const CROWN_OVERLAP = 12;
-const CROWN_JEWEL = 4;
-/** The cream drips of the rainbow layer (the growing drips continue them). */
-export const CREAM_DRIP_LENGTH = 14;
-export const CREAM_DRIPS = 3;
 
 /** Jelly: see-through teal body with bubbles, a wavy top edge and a strong shine. */
 export function drawJelly(ctx: ArtContext, r: Recipe<'jelly'>): void {
@@ -243,53 +234,4 @@ export function drawTwins(ctx: ArtContext, r: Recipe<'twins'>): void {
   );
   fillBand(g, box, seam.top, seam.bottom, colors.accent);
   drawFinish(ctx, 1, twinsGlossSpot(box.width));
-}
-
-/** Rainbow cake: six thin bands under white cream, a small cream crown on top. */
-export function drawRainbow(ctx: ArtContext, r: Recipe<'rainbow'>): void {
-  const { g, box, colors } = ctx;
-  const { outline } = ANIM.layer;
-  drawShadow(g, box);
-
-  const middle = box.top - r.topPad + outline / 2 + CROWN_PEAK_WIDTH / 2;
-  const spreadX = Math.min(CROWN_SPREAD, box.width * CROWN_SPREAD_SHARE);
-  const peaks = r.crown;
-  for (const pass of ['outline', 'fill'] as const) {
-    const grow = pass === 'outline' ? outline / 2 : 0;
-    g.fillStyle(pass === 'outline' ? colors.outline : colors.glaze, 1);
-    for (let i = 0; i < peaks; i++) {
-      const offset = i - (peaks - 1) / 2;
-      const height = offset === 0 ? r.topPad - outline / 2 : CROWN_SIDE_HEIGHT;
-      const w = CROWN_PEAK_WIDTH + grow * 2;
-      const x = offset * spreadX;
-      g.fillRoundedRect(
-        x - w / 2,
-        box.top - height - grow,
-        w,
-        height + CROWN_OVERLAP + grow,
-        w / 2,
-      );
-    }
-  }
-  g.fillStyle(colors.accent, 1);
-  g.fillCircle(0, middle, CROWN_JEWEL);
-
-  drawBase(ctx);
-  const bands = r.bands.map(parseHex);
-  const start = box.top + box.height * r.creamShare;
-  for (let i = 0; i < bands.length; i++) {
-    const y0 = start + ((box.innerBottom - start) * i) / bands.length;
-    const y1 = start + ((box.innerBottom - start) * (i + 1)) / bands.length;
-    fillBand(g, box, y0, y1, bands[i] ?? colors.body);
-  }
-  shadeBottom(ctx);
-  drawGlaze(g, box, colors, {
-    depth: r.creamShare,
-    dripCount: CREAM_DRIPS,
-    dripLength: CREAM_DRIP_LENGTH,
-    avoid: ctx.face,
-  });
-  // The cream on top is nearly white: the gloss lies on the first coloured band.
-  const bandH = (box.innerBottom - start) / bands.length;
-  drawFinish(ctx, 1, { y: start + bandH / 2 - box.top });
 }
