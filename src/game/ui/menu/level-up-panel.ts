@@ -33,6 +33,7 @@ export class LevelUpPanel {
     this.popup = new PopupWindow(scene, {
       title: t('levelUp.title', { n: levelUp.level }),
       closable: false,
+      layer: 1,
       closeOnVeil: false,
       onClosed: onClose,
     });

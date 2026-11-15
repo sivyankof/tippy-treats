@@ -17,6 +17,8 @@ export interface PopupOptions {
   closable?: boolean;
   /** A tap on the veil closes the window. Default: the same as `closable`. */
   closeOnVeil?: boolean;
+  /** Stacking layer: 0 for a window over a screen, 1 for one over another window. Default 0. */
+  layer?: number;
   /** Runs once the window is gone. */
   onClosed?: () => void;
 }
@@ -61,15 +63,16 @@ export class PopupWindow {
     const { width, height } = scene.scale.gameSize;
     const closable = options.closable ?? true;
     this.contentHeight = options.contentHeight ?? cfg.minContentHeight;
+    const depth = cfg.depth + (options.layer ?? 0) * cfg.layerStep;
     this.dim = createDimOverlay(scene, cfg.dimAlpha, width, height)
       .setInteractive()
-      .setDepth(cfg.depth);
+      .setDepth(depth);
     if (options.closeOnVeil ?? closable)
       this.dim.on(Phaser.Input.Events.POINTER_UP, this.close, this);
     this.content = scene.add.container(0, 0);
     this.ribbon = new TitleRibbon(scene, 0, 0, options.title);
     this.body = scene.add.container(0, 0);
-    this.root = scene.add.container(width / 2, height / 2, [this.body]).setDepth(cfg.depth + 1);
+    this.root = scene.add.container(width / 2, height / 2, [this.body]).setDepth(depth + 1);
     if (closable) {
       this.closeButton = createIconButton(
         scene,

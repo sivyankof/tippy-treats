@@ -207,6 +207,8 @@ export const MENU = {
   /** The popup window of the menus (missions, streak, gift). */
   popup: {
     depth: 700,
+    /** Depth added per stacking layer, so a window opened over another one sits above it (and its veil blocks it). */
+    layerStep: 10,
     dimAlpha: 0.62,
     /** Width of the window body. */
     width: 900,
