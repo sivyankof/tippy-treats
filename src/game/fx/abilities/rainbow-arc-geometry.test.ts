@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { arcCurve, arcSide, bandAt, rimPolyline, swell } from './rainbow-arc-geometry';
+import {
+  arcCurve,
+  arcSide,
+  bandAt,
+  rimPolyline,
+  swell,
+  towerNearness,
+} from './rainbow-arc-geometry';
 
 describe('arcCurve', () => {
   it('arches above both ends to the signed side and comes down onto the end', () => {
@@ -74,5 +81,15 @@ describe('swell', () => {
   it('is widest at the swell and calm away from it', () => {
     expect(swell(0.5, 0.5, 0.2, 0.1)).toBeCloseTo(1.2);
     expect(swell(0.9, 0.1, 0.2, 0.1)).toBeCloseTo(1);
+  });
+});
+
+describe('towerNearness', () => {
+  it('is 0 far above the tower top, 1 at it and past it, and grows in between', () => {
+    expect(towerNearness(400, 300)).toBe(0);
+    expect(towerNearness(300, 300)).toBe(0);
+    expect(towerNearness(150, 300)).toBeCloseTo(0.5);
+    expect(towerNearness(0, 300)).toBe(1);
+    expect(towerNearness(-80, 300)).toBe(1);
   });
 });

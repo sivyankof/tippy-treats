@@ -120,6 +120,7 @@ export class AbilityFx {
       dtMs,
       body && { x: body.x, y: body.y - HALF_LAYER },
       cam.scrollY + cam.height,
+      this.tower.topY(),
     );
   }
 

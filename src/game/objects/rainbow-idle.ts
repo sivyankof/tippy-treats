@@ -4,20 +4,29 @@ import { arcCurve } from '../fx/abilities/rainbow-arc-geometry';
 import { paintBand } from '../fx/abilities/rainbow-band';
 import { outlineColor } from '../fx/plain-style';
 import { easeFn } from '../fx/ease';
+import { ANIM } from '../../data/anim';
 import { artRecipe } from '../../data/creature-looks';
 import { PALETTE } from '../../data/palette';
 import { RAINBOW_BAND_COLORS as BAND_COLORS, RAINBOW_LOOK } from '../../data/rainbow-look';
 import { mixColor } from '../../util/color';
 import { DEG_TO_RAD, TWO_PI } from '../../util/math';
+import { DEPTH } from '../depth';
 import { effectsMode } from '../effects-mode';
 import { fillPolygon, type Pt } from '../fx/plain-style';
-import { paintStar } from './creature-art/rainbow';
+import { CREAM_DRIP_LENGTH, CREAM_DRIPS, paintStar } from './creature-art/rainbow';
 import { bodySpan, spongeRows, starPoints, waveAt } from './creature-art/rainbow-geometry';
-import { humpAt, sparkleAt, waveProgress } from './creature-art/rainbow-idle-geometry';
-import { layerBox, type LayerBox } from './layer-draw';
+import {
+  glazeFloorAt,
+  humpAt,
+  sparkleAt,
+  waveProgress,
+} from './creature-art/rainbow-idle-geometry';
+import { DRIP_WIDTH, dripSpots, layerBox, type LayerBox } from './layer-draw';
 
 const { idle, star } = RAINBOW_LOOK;
 const { joke } = idle;
+const { wave } = RAINBOW_LOOK;
+const SCRATCH = new Phaser.GameObjects.Components.TransformMatrix();
 const JOKE_OUTLINE = outlineColor(BAND_COLORS[1] ?? 0);
 const jokeGrow = easeFn(joke.growEase);
 /** Points of the white sparkle. */
@@ -26,18 +35,26 @@ const jokeRng = new Rng(joke.seed).fork('rainbow-joke');
 /** When the next joke may start (scene time, ms); shared, so only one Rainbow tells it at a time. */
 let nextJokeAt = -1;
 
+/** Lets the next live Rainbow layer tell its joke right away (a dev hook). */
+export function startRainbowJokeNow(): void {
+  nextJokeAt = 0;
+}
+
 /**
  * What the Rainbow layer does besides its baked picture: the gold star (it is not baked, so it
  * can sway and flash) behind the body, so the body hides its foot, and, while it rests, a colour
  * wave in which the sponges swell one after another over the body. Two small `Graphics` per layer
- * redrawn from their own clock (only while something moves); "fewer effects" leaves the star
- * still and the wave off. Both are hidden while the body is squashed against the screen edge.
+ * redrawn from their own clock (only while something moves), and a third at scene level for the
+ * joke, so the small rainbow shows over the layer above; "fewer effects" leaves the star still and
+ * the wave and the joke off. Both are hidden while the body is squashed against the screen edge.
  */
 export class RainbowIdle {
   /** The star and the joke, under the body. */
   private readonly back: Phaser.GameObjects.Graphics;
   /** The wave and the sparkle, over the body. */
   private readonly g: Phaser.GameObjects.Graphics;
+  /** The joke, over every layer of the tower (it follows the layer's own transform). */
+  private readonly front: Phaser.GameObjects.Graphics;
   private width = 0;
   private on = false;
   private hidden = false;
@@ -45,17 +62,21 @@ export class RainbowIdle {
   private dirty = true;
   private wasLive = false;
   private rows: Array<{ top: number; bottom: number }> = [];
+  /** Lowest y of the baked glaze at x: the wave keeps below it. */
+  private glazeFloor: (x: number) => number = () => -Infinity;
   private jokeStart = -1;
   private jokeDir = 1;
   private squint = false;
 
   constructor(
     scene: Phaser.Scene,
-    parent: Phaser.GameObjects.Container,
+    private readonly parent: Phaser.GameObjects.Container,
     art: Phaser.GameObjects.GameObject,
   ) {
     this.back = new Phaser.GameObjects.Graphics(scene).setVisible(false);
     this.g = new Phaser.GameObjects.Graphics(scene).setVisible(false);
+    this.front = scene.add.graphics().setVisible(false).setDepth(DEPTH.rainbowJoke);
+    parent.once(Phaser.GameObjects.Events.DESTROY, () => this.front.destroy());
     const at = parent.getIndex(art);
     parent.addAt(this.back, at);
     parent.addAt(this.g, at + 2);
@@ -65,7 +86,9 @@ export class RainbowIdle {
   set(on: boolean, width: number): void {
     this.on = on;
     this.width = width;
-    this.rows = on ? this.sponges(layerBox(width)) : [];
+    const box = layerBox(width);
+    this.rows = on ? this.sponges(box) : [];
+    this.glazeFloor = on ? this.glazeFloorFor(box) : () => -Infinity;
     this.dirty = true;
     this.show();
     if (on) this.draw(this.g.scene.time.now, 0, false);
@@ -100,6 +123,7 @@ export class RainbowIdle {
       : 0;
     paintStar(star0, cy, sway, 1 + flash * idle.sparkleScale);
     if (live) this.drawJoke(timeMs, cy);
+    else this.jokeStart = -1;
     if (flash > 0) {
       const size = star.radius * idle.sparkleSize * flash;
       const x = idle.sparkleOffset.x * star.radius;
@@ -113,11 +137,42 @@ export class RainbowIdle {
     const visible = this.on && !this.hidden;
     this.back.setVisible(visible);
     this.g.setVisible(visible);
+    this.front.setVisible(visible);
+    if (!visible) this.endJoke();
   }
 
   private clear(): void {
     this.back.clear();
     this.g.clear();
+    this.front.clear();
+  }
+
+  /** Stops a joke at once (the layer goes back to the pool). */
+  endJoke(): void {
+    this.jokeStart = -1;
+    this.front.clear();
+  }
+
+  /** The star of the crown in world pixels (where the neighbours look). */
+  starWorld(): Pt {
+    const m = this.parent.getWorldTransformMatrix(SCRATCH);
+    return m.transformPoint(0, layerBox(this.width).top - star.lift);
+  }
+
+  /** The baked glaze: its lower edge, scallops and drips, as the picture draws them. */
+  private glazeFloorFor(box: LayerBox): (x: number) => number {
+    const recipe = artRecipe('rainbow');
+    if (recipe.kind !== 'rainbow') return () => -Infinity;
+    const scallops = {
+      edgeY: box.innerTop + box.height * recipe.creamShare,
+      x0: box.innerLeft + box.innerRadius,
+      x1: box.innerRight - box.innerRadius,
+      radius: wave.amplitude * 4,
+      step: wave.amplitude * 8,
+    };
+    const drips = dripSpots(box, CREAM_DRIPS, CREAM_DRIP_LENGTH);
+    const grow = ANIM.layer.outline / 2;
+    return (x) => glazeFloorAt(x, scallops, drips, DRIP_WIDTH, grow);
   }
 
   /** The rows of the sponges of a layer of this width (the wave swells them one by one). */
@@ -145,6 +200,8 @@ export class RainbowIdle {
       this.squint = true;
       nextJokeAt = timeMs + jokeRng.range(joke.minGapMs, joke.maxGapMs);
     }
+    const m = this.parent.getWorldTransformMatrix(SCRATCH);
+    this.front.setPosition(m.tx, m.ty).setRotation(m.rotation).setScale(m.scaleX, m.scaleY);
     const age = timeMs - this.jokeStart;
     const total = joke.growMs + joke.holdMs + joke.fadeMs;
     if (age > total) {
@@ -156,7 +213,7 @@ export class RainbowIdle {
     const to = { x: this.jokeDir * joke.spanPx, y: cy + star.radius * joke.endY };
     const curve = arcCurve(from, to, 0, joke.risePx, grown, joke.steps);
     const fade = age > total - joke.fadeMs ? (total - age) / joke.fadeMs : 1;
-    paintBand(this.back, curve, {
+    paintBand(this.front, curve, {
       colors: BAND_COLORS,
       bandPx: joke.bandPx,
       outline: JOKE_OUTLINE,
@@ -171,11 +228,11 @@ export class RainbowIdle {
   private drawWave(timeMs: number, box: LayerBox): void {
     const column = (x: number, row: { top: number; bottom: number }, bulge: number): Pt[] => {
       const span = bodySpan(box, x);
-      const up = row.top + waveAt(x) - bulge;
-      const down = row.bottom + waveAt(x);
+      const down = Math.min(span.bottom, row.bottom + waveAt(x));
+      const up = Math.max(span.top, this.glazeFloor(x), row.top + waveAt(x) - bulge);
       return [
-        { x, y: Math.max(span.top, up) },
-        { x, y: Math.min(span.bottom, down) },
+        { x, y: Math.min(up, down) },
+        { x, y: down },
       ];
     };
     this.rows.forEach((row, i) => {

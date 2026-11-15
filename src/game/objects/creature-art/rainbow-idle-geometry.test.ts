@@ -1,6 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import { RAINBOW_LOOK } from '../../../data/rainbow-look';
-import { humpAt, rotatePoints, sparkleAt, waveProgress } from './rainbow-idle-geometry';
+import {
+  glazeFloorAt,
+  humpAt,
+  rotatePoints,
+  sparkleAt,
+  waveProgress,
+} from './rainbow-idle-geometry';
 
 const { idle } = RAINBOW_LOOK;
 
@@ -36,5 +42,15 @@ describe('rotatePoints', () => {
     const [p] = rotatePoints([{ x: 1, y: 0 }], 0, 0, Math.PI / 2);
     expect(p!.x).toBeCloseTo(0);
     expect(p!.y).toBeCloseTo(1);
+  });
+});
+
+describe('glazeFloorAt', () => {
+  const scallops = { edgeY: 10, x0: 0, x1: 100, radius: 10, step: 20 };
+  it('is the glaze edge between scallops, deeper under a scallop and under a drip', () => {
+    expect(glazeFloorAt(-5, scallops, [], 20, 0)).toBe(10);
+    expect(glazeFloorAt(10, scallops, [], 20, 0)).toBeCloseTo(20);
+    expect(glazeFloorAt(50, scallops, [{ x: 50, length: 30 }], 20, 0)).toBe(40);
+    expect(glazeFloorAt(50, scallops, [{ x: 50, length: 30 }], 20, 2)).toBe(42);
   });
 });

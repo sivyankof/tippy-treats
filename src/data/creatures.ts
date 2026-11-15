@@ -292,7 +292,8 @@ export const CREATURES: Record<CreatureId, CreatureDef> = {
       accent: '#ffe76b',
       detail: '#ffffff',
       sponge: '#fff0f8',
-      outline: '#6a2d73',
+      // The tone of the arc outline and of the plain layers: warm dark, not purple.
+      outline: '#9e6930',
     },
   },
 };

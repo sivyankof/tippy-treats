@@ -12,6 +12,7 @@ import { effectsMode } from '../effects-mode';
 import { aimMouth } from '../objects/face-state';
 import { FlyingLayerView } from '../objects/flying-layer-view';
 import type { LayerView } from '../objects/layer-view';
+import { startRainbowJokeNow } from '../objects/rainbow-idle';
 import type { LickKind, LickScene } from '../objects/lick-plan';
 import type { GuestSource } from '../objects/backdrop/guest-source';
 import { TowerGuest } from '../objects/tower-guest';
@@ -114,6 +115,7 @@ export class RunFx {
     });
     const licks = this.tower.licks;
     this.abilityFx.onRainbowPuff = () => services.audio.cloudPuff();
+    this.tower.onRainbowJoke = () => services.audio.rainbowJoke();
     licks.onSlurp = () => services.audio.lickSlurp();
     licks.onSlurpLong = () => services.audio.lickSlurpLong();
     licks.onSmack = () => services.audio.lickSmack();
@@ -126,6 +128,8 @@ export class RunFx {
       (
         window as Window & { tippyLick?: (scene?: LickScene, kind?: LickKind) => boolean }
       ).tippyLick = (scene, kind) => this.tower.lickNow(scene, kind);
+      // window.tippyRainbowJoke(): the next Rainbow star pops its small rainbow right away.
+      (window as Window & { tippyRainbowJoke?: () => void }).tippyRainbowJoke = startRainbowJokeNow;
       // window.tippyFly(): the guest of the zone sits on the top layer right away; true when it could.
       (window as Window & { tippyFly?: () => boolean }).tippyFly = () => this.guest.landNow();
     }

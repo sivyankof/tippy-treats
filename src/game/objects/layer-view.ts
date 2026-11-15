@@ -386,15 +386,17 @@ export class LayerView extends Phaser.GameObjects.Container {
     this.glossSweep.setVisible(false);
     this.glazeDrips.clear();
     this.shade.clear();
+    this.rainbow.endJoke();
     this.face.reset();
     return this;
   }
 
   /**
    * Advances the face (blinks, reactions, pupils; a hidden face stands still) and the material.
-   * Without `motion` the material stays still (a flying or falling layer).
+   * Without `motion` the material stays still (a flying or falling layer). True when the Rainbow
+   * star has just started its joke.
    */
-  tick(dtMs: number, motion?: MaterialMotion): void {
+  tick(dtMs: number, motion?: MaterialMotion): boolean {
     this.rig.apply();
     this.applyPress();
     this.glazeDrips.setAlpha(this.art.alpha);
@@ -403,7 +405,14 @@ export class LayerView extends Phaser.GameObjects.Container {
     if (this.face.visible) this.face.tick(dtMs);
     const phaseMs = ((motion?.phase ?? 0) / TWO_PI) * RAINBOW_LOOK.idle.waveEveryMs;
     this.rainbow.draw(this.scene.time.now, phaseMs, true);
-    if (this.rainbow.takeSquint()) this.face.react('squint', RAINBOW_LOOK.idle.joke.squintMs);
+    if (!this.rainbow.takeSquint()) return false;
+    this.face.react('squint', RAINBOW_LOOK.idle.joke.squintMs);
+    return true;
+  }
+
+  /** The star of the Rainbow layer in world pixels. */
+  starWorld(): { x: number; y: number } {
+    return this.rainbow.starWorld();
   }
 
   /**

@@ -228,6 +228,14 @@ export const SFX = {
     ] satisfies TimedTone[],
   },
 
+  /** The star of the Rainbow layer pops a small rainbow: a quiet two-note rising ding. */
+  rainbowJoke: {
+    notes: [
+      { delay: 0, wave: 'sine', freq: 1319, attack: 0.004, duration: 0.2, gain: 0.1 },
+      { delay: 0.1, wave: 'sine', freq: 1760, attack: 0.004, duration: 0.34, gain: 0.1 },
+    ] satisfies TimedTone[],
+  },
+
   /** The cream cloud of the rainbow deflates: the ability puff, quieter. */
   cloudPuff: { puffGainShare: 0.55 },
 
