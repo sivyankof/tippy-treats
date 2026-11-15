@@ -226,6 +226,13 @@ describe('WebAudioService', () => {
     );
   });
 
+  it('plays the topper hop as two notes and a click', () => {
+    const { ctx, service } = setup();
+    service.unlock();
+    service.topperHop();
+    expect(ctx.oscillators).toHaveLength(SFX.topperHop.notes.length);
+  });
+
   it('disconnects nodes when a sound ends', () => {
     const { ctx, service } = setup();
     service.unlock();

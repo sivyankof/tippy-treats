@@ -57,7 +57,7 @@ export class DebrisFx {
    */
   dropMissed(memo: FlyingMemo, state: Readonly<TowerState>): LayerView {
     const side = memo.x >= this.tower.topViewX() ? 1 : -1;
-    return this.pieces.spawn({
+    const piece = this.pieces.spawn({
       layerIndex: state.layers.length + 1,
       x: memo.x,
       y: this.tower.layerCenterY(state.layers.length),
@@ -67,6 +67,8 @@ export class DebrisFx {
       face: 'horror',
       look: memo,
     });
+    // The topper of the missed layer falls with it.
+    return piece.setTopperAllowed(true).setLayer(state.layers.length + 1, memo.width);
   }
 
   /** The bitten-off part falls away, a glaze drop runs down the cut edge. */

@@ -158,7 +158,10 @@ export class FlyingLayerView {
       this.edge.reset(flying, this.walls, state.layers.length + 1);
     }
     // The colour follows the number the layer will have in the tower (twins add height, not layers).
-    this.view.setLook(flying).setLayer(state.layers.length + 1, flying.width);
+    this.view
+      .setLook(flying)
+      .setTopperAllowed(true)
+      .setLayer(state.layers.length + 1, flying.width);
     this.view.setSquash(1 + (ANIM.fall.scaleX - 1) * stretch, 1 + (ANIM.fall.scaleY - 1) * stretch);
     if (falling !== this.squinting) {
       this.squinting = falling;

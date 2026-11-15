@@ -51,6 +51,8 @@ export interface AudioService {
   guestBuzz(): void;
   /** A neighbour layer giggles at the splatted guest: a short "хи-хи-хи". */
   guestGiggle(): void;
+  /** The topper of a layer hops off when the next layer lands: a springy "boing" and a click. */
+  topperHop(): void;
   /** Creature squeak; `pitch` is a multiplier (1 = base pitch). */
   squeak(pitch: number): void;
 }
