@@ -28,8 +28,17 @@ export interface RunConfig {
   /** Slot order matters: the creature layers walk through the slots in turn; `null` is an empty slot. */
   team: Array<TeamSlot | null>;
   tutorial: boolean;
-  /** Debug: start with this many perfect full-width layers already placed. */
+  /**
+   * Layers already placed when the run begins: a checkpoint start (20, 40… with `startWidth` from
+   * `data/checkpoints.ts`) or the debug `?start=`. They earn nothing: score, coins and the height
+   * bonus count only the layers placed in this run.
+   */
   startHeight?: number;
+  /**
+   * Width of the first flying layer above `startHeight`; the pre-built layers narrow evenly from
+   * the first width down to it. Absent: the first width (a debug start of full-width layers).
+   */
+  startWidth?: number;
   /**
    * Analysis-only hook (never set by the game): called once per layer spawn, the result multiplies
    * the nominal speed of that layer. Absent means exactly the normal speed.

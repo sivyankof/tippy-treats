@@ -95,6 +95,15 @@ export const BALANCE = {
     restoreWidth: 360,
     missSlowMoMs: 400,
   },
+  /**
+   * Checkpoint starts (docs/02-gameplay.md, section 10; prices approved by the owner 2026-11-14):
+   * berries per start height, the heights an ad can pay for, and ad starts per local day.
+   */
+  checkpoints: {
+    berries: { 20: 5, 40: 10, 60: 15, 80: 25, 100: 40 },
+    adHeights: [20, 40, 60],
+    adsPerDay: 5,
+  },
   daily: {
     attempts: 3,
     extraAttempts: 1,

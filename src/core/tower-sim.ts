@@ -42,6 +42,21 @@ export type {
 } from './sim-types';
 
 const STEP_MS = BALANCE.sim.stepMs;
+
+/**
+ * The tower a run starts on: `height` plain perfect layers centred on the tray, narrowing evenly
+ * from the first width down to `topWidth` (the start width of a checkpoint).
+ */
+export function prebuiltTower(height: number, topWidth?: number): PlacedLayer[] {
+  const { firstWidth, maxWidth } = BALANCE.layer;
+  const top = Math.min(maxWidth, Math.max(BALANCE.drop.missMargin, topWidth ?? firstWidth));
+  return Array.from({ length: height }, (_, i) => ({
+    x: BALANCE.tray.centerX,
+    width: height === 1 ? top : Math.round(firstWidth + ((top - firstWidth) * i) / (height - 1)),
+    kind: 'plain' as const,
+    quality: 'perfect' as const,
+  }));
+}
 /** Absorbs floating point drift so a frame of exactly N steps always runs N steps. */
 const STEP_EPSILON_MS = 1e-6;
 
@@ -58,6 +73,8 @@ export class TowerSim {
   /** Width of the next layer to spawn. */
   private nextWidth: number = BALANCE.layer.firstWidth;
   private endReason: RunEndReason = 'miss';
+  /** Layers placed before the run began (checkpoint or debug start); they earn nothing. */
+  private readonly startHeight: number;
   private planState: PlanState;
   /** The layer being attempted; a retry (shield, continue) of the same index keeps it. */
   private attempt: LayerAttempt | null = null;
@@ -94,14 +111,9 @@ export class TowerSim {
       tempoLeft: 0,
     };
     const startHeight = Math.max(0, Math.floor(config.startHeight ?? 0));
-    for (let i = 0; i < startHeight; i++) {
-      this.s.layers.push({
-        x: BALANCE.tray.centerX,
-        width: BALANCE.layer.firstWidth,
-        kind: 'plain',
-        quality: 'perfect',
-      });
-    }
+    this.startHeight = startHeight;
+    this.s.layers.push(...prebuiltTower(startHeight, config.startWidth));
+    if (startHeight > 0) this.nextWidth = this.s.layers.at(-1)?.width ?? this.nextWidth;
     this.s.height = startHeight;
     // A debug start lands straight in its zone, without a zone_change event.
     this.s.zoneIndex = zoneIndexOf(startHeight + 1);
@@ -379,7 +391,7 @@ export class TowerSim {
   }
 
   private finish(events: SimEvent[]): void {
-    payHeightBonus(this.s, events);
+    payHeightBonus(this.s, events, this.startHeight);
     this.enter('over');
     events.push({ type: 'run_over', result: this.buildResult(this.endReason) });
   }

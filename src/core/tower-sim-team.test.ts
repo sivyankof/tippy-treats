@@ -676,17 +676,13 @@ describe('coins', () => {
     expect(only(safe, 'coin_collect').amount).toBe(only(plain, 'coin_collect').amount);
   });
 
-  it('adds a height bonus of 2 coins per 20 layers when the run ends', () => {
+  it('pays no height bonus for layers placed before the run began', () => {
     const sim = new TowerSim(config({ mode: 'daily', startHeight: 44 }));
     const events = missNow(sim);
-    expect(only(events, 'coin_collect')).toEqual({
-      type: 'coin_collect',
-      amount: 4,
-      source: 'height',
-    });
+    expect(pick(events, 'coin_collect')).toEqual([]);
     const result = only(events, 'run_over').result;
-    expect(result.coins).toBe(4);
-    expect(sim.state.coins).toBe(4);
+    expect(result.height).toBe(44);
+    expect(result.coins).toBe(0);
   });
 });
 

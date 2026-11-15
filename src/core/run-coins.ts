@@ -77,7 +77,10 @@ export function payLanding(
   }
 }
 
-/** Coins for the reached height, paid once when the run ends. */
-export function payHeightBonus(s: TowerState, events: SimEvent[]): void {
-  gainCoins(s, events, heightBonusCoins(s.height), 'height');
+/**
+ * Coins for the height climbed in this run, paid once when the run ends. A run from a checkpoint
+ * counts only the layers above `startHeight`.
+ */
+export function payHeightBonus(s: TowerState, events: SimEvent[], startHeight = 0): void {
+  gainCoins(s, events, heightBonusCoins(s.height - startHeight), 'height');
 }
