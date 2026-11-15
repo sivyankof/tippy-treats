@@ -17,12 +17,16 @@ const MAX_RUN_MS = 60 * 60 * 1000;
 /** The part of a difficulty target that decides how the bot plays. */
 export type BotProfile = Pick<DifficultyTarget, 'timingSdMs' | 'coinChase'>;
 
-/** One bot run. The bot never continues a run. `observers` collect statistics without changing it. */
+/**
+ * One bot run. The bot never continues a run. `observers` collect statistics without changing it.
+ * A run that reaches `maxHeight` is cut off and returned as a `quit` result.
+ */
 export function playRun(
   config: RunConfig,
   profile: BotProfile,
   noise: Rng,
   observers: readonly RunObserver[] = [],
+  maxHeight = Infinity,
 ): RunResult {
   const sim = new TowerSim(config);
   const bot = new TimingBot(profile.timingSdMs, noise, { coinChase: profile.coinChase });
@@ -36,6 +40,12 @@ export function playRun(
 
     for (const event of events) {
       if (event.type === 'run_over') return event.result;
+    }
+
+    if (sim.state.height >= maxHeight) {
+      for (const observer of observers) observer.noteCensored?.(sim.state);
+      const cut = sim.quitResult();
+      if (cut) return cut;
     }
 
     if (bot.shouldDrop(sim)) {

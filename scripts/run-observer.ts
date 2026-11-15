@@ -6,6 +6,8 @@ export interface RunObserver {
   beforeStep?(state: Readonly<TowerState>): void;
   /** The events of a step (the decline of a continue offer included). */
   noteEvents?(events: readonly SimEvent[], state: Readonly<TowerState>): void;
+  /** The run was cut off at the height limit (a bot that never misses); no `run_over` follows. */
+  noteCensored?(state: Readonly<TowerState>): void;
   /** Right before the bot taps. */
   noteDrop?(state: Readonly<TowerState>): void;
 }

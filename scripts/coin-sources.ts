@@ -23,12 +23,15 @@ declare const process: {
 const SEARCH_LEVELS = [1, 5] as const;
 const DEFAULT_SEARCH_RUNS = 300;
 const DEFAULT_TOP = 5;
+/** A bot with a strong team at level 5 may never miss; such a run is cut off at this height. */
+const DEFAULT_MAX_HEIGHT = 1500;
 const MS_PER_SECOND = 1000;
 
 interface CliOptions {
   runs: number;
   searchRuns: number;
   top: number;
+  maxHeight: number;
   profile: string | null;
   json: string | null;
 }
@@ -38,6 +41,7 @@ function parseArgs(argv: string[]): CliOptions {
     runs: DIFFICULTY.runsPerProfile,
     searchRuns: DEFAULT_SEARCH_RUNS,
     top: DEFAULT_TOP,
+    maxHeight: DEFAULT_MAX_HEIGHT,
     profile: null,
     json: null,
   };
@@ -48,6 +52,8 @@ function parseArgs(argv: string[]): CliOptions {
     else if (key === 'search-runs' && Number(value) > 0)
       options.searchRuns = Math.floor(Number(value));
     else if (key === 'top' && Number(value) > 0) options.top = Math.floor(Number(value));
+    else if (key === 'max-height' && Number(value) > 0)
+      options.maxHeight = Math.floor(Number(value));
     else if (key === 'profile' && value) options.profile = value;
     else if (key === 'json' && value) options.json = value;
     else throw new Error(`Unknown or invalid argument: ${arg}`);
@@ -79,6 +85,8 @@ interface Cell {
   team: string[];
   level: number;
   runs: number;
+  /** Runs cut off at the height limit (their coins include the height bonus as if they had ended there). */
+  censoredRuns: number;
   /** Mean coins per run by source; `total` is their sum as the run reports it. */
   coinsBySource: Record<string, number>;
   /** XP of a run is its height. */
@@ -94,7 +102,13 @@ interface Cell {
 }
 
 /** Plays `runs` runs; the seeds and the bot noise are the same for every team of a profile. */
-function evaluate(target: DifficultyTarget, set: SimTeamSet, level: number, runs: number): Cell {
+function evaluate(
+  target: DifficultyTarget,
+  set: SimTeamSet,
+  level: number,
+  runs: number,
+  maxHeight: number,
+): Cell {
   const { seeds, noise } = profileStreams(target.id);
   const team = teamSlots(set, level);
   const stats = new CoinStats();
@@ -104,29 +118,29 @@ function evaluate(target: DifficultyTarget, set: SimTeamSet, level: number, runs
       target,
       noise,
       [stats],
+      maxHeight,
     ),
   );
   const bySource: Record<string, number> = {};
   for (const source of COIN_SOURCES) {
     bySource[source] = round(mean(stats.runs.map((c: CoinsBySource) => c[source])));
   }
-  bySource.total = round(mean(results.map((r) => r.coins)));
+  const coins = stats.runs.map((c) => COIN_SOURCES.reduce((sum, source) => sum + c[source], 0));
+  bySource.total = round(mean(coins));
   const heights = results.map((r) => r.height);
   const durations = results.map((r) => r.durationMs / MS_PER_SECOND);
   return {
     team: [...set.creatures],
     level,
     runs,
+    censoredRuns: stats.censored,
     coinsBySource: bySource,
     xp: round(mean(heights)),
     durationSec: round(mean(durations), 1),
     berries: round(mean(results.map((r) => r.berries))),
     distribution: {
       height: spread(heights, 0),
-      coins: spread(
-        results.map((r) => r.coins),
-        1,
-      ),
+      coins: spread(coins, 1),
       durationSec: spread(durations, 1),
       berriesFromGolden: spread(results.map((r) => r.berries)),
     },
@@ -152,12 +166,15 @@ function bestTeam(
   const screened = teams
     .map((set) => ({
       set,
-      screenCoins: round(evaluate(target, set, level, options.searchRuns).coinsBySource.total ?? 0),
+      screenCoins: round(
+        evaluate(target, set, level, options.searchRuns, options.maxHeight).coinsBySource.total ??
+          0,
+      ),
     }))
     .sort((a, b) => b.screenCoins - a.screenCoins)
     .slice(0, options.top);
   const finals = screened
-    .map(({ set }) => evaluate(target, set, level, options.runs))
+    .map(({ set }) => evaluate(target, set, level, options.runs, options.maxHeight))
     .sort((a, b) => (b.coinsBySource.total ?? 0) - (a.coinsBySource.total ?? 0));
   const winner = finals[0] as Cell;
   return {
@@ -177,6 +194,7 @@ function row(setup: string, cell: Cell): Record<string, string | number> {
     setup,
     team: cell.team.join('+') || '-',
     runs: cell.runs,
+    cut: cell.censoredRuns,
     'XP (height)': cell.xp,
     ...Object.fromEntries(LABELS.map((key) => [key, cell.coinsBySource[key] ?? 0])),
     berries: cell.berries,
@@ -196,7 +214,7 @@ function main(): void {
   const starter: SimTeamSet = { name: 'starter', creatures: SAVE_DEFAULTS.startCreatures };
   console.log(
     `Coins per run by source. Runs per cell: ${options.runs}; team search: ${teams.length} full teams x ${options.searchRuns} runs, ` +
-      `best ${options.top} replayed with ${options.runs}; starter team: ${starter.creatures.join('+')} at level ${SAVE_DEFAULTS.startCreatureLevel}.`,
+      `best ${options.top} replayed with ${options.runs}; runs are cut off at height ${options.maxHeight} (column cut); starter team: ${starter.creatures.join('+')} at level ${SAVE_DEFAULTS.startCreatureLevel}.`,
   );
   console.log(
     'Columns: floating = floating coins; combo = perfect drops at combo >= 5; golden = normal drops of golden layers; height = height bonus; ' +
@@ -211,9 +229,15 @@ function main(): void {
   for (const target of targets) {
     const cells: Record<string, Cell | { team: string; top: SearchRow[]; cell: Cell }> = {};
     const rows: Array<Record<string, string | number>> = [];
-    cells.none = evaluate(target, NO_TEAM, 1, options.runs);
+    cells.none = evaluate(target, NO_TEAM, 1, options.runs, options.maxHeight);
     rows.push(row('no team', cells.none));
-    cells.starter = evaluate(target, starter, SAVE_DEFAULTS.startCreatureLevel, options.runs);
+    cells.starter = evaluate(
+      target,
+      starter,
+      SAVE_DEFAULTS.startCreatureLevel,
+      options.runs,
+      options.maxHeight,
+    );
     rows.push(row(`starter L${SAVE_DEFAULTS.startCreatureLevel}`, cells.starter));
     for (const level of SEARCH_LEVELS) {
       const { cell, top } = bestTeam(target, level, options, teams);
@@ -232,6 +256,7 @@ function main(): void {
     const meta = {
       runsPerCell: options.runs,
       searchRuns: options.searchRuns,
+      maxHeight: options.maxHeight,
       searchTop: options.top,
       searchedTeams: teams.length,
       starterTeam: [...starter.creatures],

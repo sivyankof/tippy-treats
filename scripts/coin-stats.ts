@@ -1,4 +1,5 @@
-import type { CoinSource, SimEvent } from '../src/core/sim-types';
+import { heightBonusCoins } from '../src/core/coins';
+import type { CoinSource, SimEvent, TowerState } from '../src/core/sim-types';
 import type { RunObserver } from './run-observer';
 
 /** Every coin source the sim pays; the order is the order of the report columns. */
@@ -21,7 +22,16 @@ export function emptyCoins(): CoinsBySource {
 export class CoinStats implements RunObserver {
   /** One entry per finished run, in play order. */
   readonly runs: CoinsBySource[] = [];
+  /** Runs cut off at the height limit; their height bonus is added as if the run had ended there. */
+  censored = 0;
   private current = emptyCoins();
+
+  noteCensored(state: Readonly<TowerState>): void {
+    this.censored += 1;
+    this.current.height += heightBonusCoins(state.height);
+    this.runs.push(this.current);
+    this.current = emptyCoins();
+  }
 
   noteEvents(events: readonly SimEvent[]): void {
     for (const event of events) {
