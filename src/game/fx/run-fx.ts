@@ -192,6 +192,9 @@ export class RunFx {
           this.tower.squashTop();
           this.debris.sneeze(state);
           break;
+        case 'tempo_ease':
+          this.tower.exhale();
+          break;
         case 'miss':
           this.onMiss(event.shielded, memo, land !== undefined, state);
           break;

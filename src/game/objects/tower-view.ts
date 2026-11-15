@@ -275,6 +275,20 @@ export class TowerView {
     }
   }
 
+  /**
+   * The tempo eased: a soft settle wave runs from the top layer down, weaker and later with
+   * each layer. "Fewer effects" skips it (the HUD badge is the only sign).
+   */
+  exhale(): void {
+    if (effectsMode.reduced) return;
+    const { layers, strength, falloff, stepDelayMs } = ANIM.exhale;
+    for (let k = 0; k < layers; k++) {
+      const view = this.active.get(this.layerCount - 1 - k);
+      if (!view) break;
+      view.playImpact(strength * Math.pow(falloff, k), k * stepDelayMs);
+    }
+  }
+
   /** Quick squash of the top layer when the tower sneezes; every face squints. */
   squashTop(): void {
     this.topView()?.playSqueeze(ANIM.sneeze.squashScale, ANIM.sneeze.durationMs);

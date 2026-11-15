@@ -9,7 +9,7 @@ import { createAbilityTextures } from '../fx/abilities/ability-textures';
 import { createFxTextures } from '../fx/fx-textures';
 import { FACE_TEXTURES } from '../objects/face-textures';
 import { loadSvgTextures } from '../objects/svg-textures';
-import { CREATURE_ICON_KEYS } from '../ui/creature-icons';
+import { CREATURE_ICON_KEYS, TEMPO_ICON_KEY } from '../ui/creature-icons';
 import { SCENES, startRunFrom } from '../scene-keys';
 import { createTreasureTextures } from '../fx/treasure-textures';
 import { opensWithRun } from '../run-setup';
@@ -26,7 +26,11 @@ export class BootScene extends Phaser.Scene {
 
   preload(): void {
     loadSvgTextures(this, Object.values(FACE_TEXTURES));
-    loadSvgTextures(this, Object.values(CREATURE_ICON_KEYS), HUD_LAYOUT.iconTextureScale);
+    loadSvgTextures(
+      this,
+      [...Object.values(CREATURE_ICON_KEYS), TEMPO_ICON_KEY],
+      HUD_LAYOUT.iconTextureScale,
+    );
   }
 
   create(): void {

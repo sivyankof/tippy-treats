@@ -4,11 +4,12 @@ import type { CreatureId } from '../../data/creatures';
 import { oscillate01 } from '../../util/math';
 import type { EaseFn } from '../fx/ease';
 
-/** A badge shows an effect by its creature id, or the brownie shield. */
-export type BadgeKey = CreatureId | 'shield';
+/** A badge shows an effect by its creature id, the brownie shield, or the tempo ease. */
+export type BadgeKey = CreatureId | 'shield' | 'tempo';
 
-/** The creature whose icon a badge shows (the shield is the brownie's). */
-export function badgeCreature(key: BadgeKey): CreatureId {
+/** The creature whose icon a badge shows (the shield is the brownie's); `null` for the tempo snail. */
+export function badgeCreature(key: BadgeKey): CreatureId | null {
+  if (key === 'tempo') return null;
   return key === 'shield' ? 'brownie' : key;
 }
 
@@ -46,11 +47,12 @@ export class BadgeTracker {
   /** Badges in display order; the array and its objects are reused. */
   readonly items: BadgeState[] = [];
 
-  /** Brings the badges in line with the effects and the shield (layers left, 0 for none). */
-  sync(effects: readonly ActiveEffect[], shield: number): void {
+  /** Brings the badges in line with the effects, the shield and the tempo ease (layers left, 0 for none). */
+  sync(effects: readonly ActiveEffect[], shield: number, tempo = 0): void {
     for (const badge of this.items) badge.seen = false;
     for (const effect of effects) this.note(effect.id, effect.layersLeft);
     if (shield > 0) this.note('shield', shield);
+    if (tempo > 0) this.note('tempo', tempo);
     for (const badge of this.items) {
       if (!badge.seen && badge.phase !== 'out') this.setPhase(badge, 'out');
     }

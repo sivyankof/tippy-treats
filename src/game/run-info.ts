@@ -16,6 +16,8 @@ export interface RunInfo {
   effects: readonly ActiveEffect[];
   /** Layers left on the brownie shield, 0 for none. */
   shield: number;
+  /** Layers of the tempo ease left, 0 for none. */
+  tempoLeft: number;
   /** Index of the zone of the run (the banner announces a change). */
   zoneIndex: number;
   coins: number;
@@ -34,6 +36,7 @@ export function emptyRunInfo(): RunInfo {
     team: [],
     effects: [],
     shield: 0,
+    tempoLeft: 0,
     zoneIndex: 0,
     coins: 0,
     berries: 0,
@@ -58,6 +61,7 @@ export function fillRunInfo(
   info.team = team;
   info.effects = s.effects;
   info.shield = s.shield;
+  info.tempoLeft = s.tempoLeft;
   info.zoneIndex = s.zoneIndex;
   info.coins = s.coins;
   info.berries = s.berries;

@@ -7,7 +7,7 @@ import { PALETTE } from '../../data/palette';
 import { formatNumber } from '../../i18n';
 import { frameLerp } from '../../util/math';
 import { easeFn } from '../fx/ease';
-import { createCreatureIcon, setCreatureIcon } from './creature-icons';
+import { createCreatureIcon, setCreatureIcon, TEMPO_ICON_KEY } from './creature-icons';
 import { idlePose, type IdlePose } from './idle-motion';
 import {
   badgeCreature,
@@ -64,7 +64,9 @@ class BadgeSlot {
   show(badge: Readonly<BadgeState>, visual: Readonly<BadgeVisual>): void {
     if (badge.key !== this.key) {
       this.key = badge.key;
-      setCreatureIcon(this.icon, badgeCreature(badge.key));
+      const creature = badgeCreature(badge.key);
+      if (creature) setCreatureIcon(this.icon, creature);
+      else this.icon.setTexture(TEMPO_ICON_KEY).setDisplaySize(badgeSize, badgeSize);
     }
     if (badge.layersLeft !== this.shownCount) {
       this.shownCount = badge.layersLeft;
@@ -113,8 +115,14 @@ export class EffectBadges {
     return badgeMargin + badgeSize / 2 + index * (badgeSize + badgeGap);
   }
 
-  update(effects: readonly ActiveEffect[], shield: number, timeMs: number, deltaMs: number): void {
-    this.tracker.sync(effects, shield);
+  update(
+    effects: readonly ActiveEffect[],
+    shield: number,
+    tempo: number,
+    timeMs: number,
+    deltaMs: number,
+  ): void {
+    this.tracker.sync(effects, shield, tempo);
     this.tracker.step(deltaMs);
     const items = this.tracker.items;
     const k = frameLerp(badges.slideLerp, deltaMs);

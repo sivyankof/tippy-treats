@@ -131,6 +131,16 @@ export const ANIM = {
     /** Each layer squashes this share of the one above. */
     falloff: 0.7,
   },
+  /** The tower "exhales" when the tempo eases: a soft settle wave from the top layer down. */
+  exhale: {
+    /** Layers from the top that settle, the top one included. */
+    layers: 6,
+    /** Strength of the top layer's settle, as a share of a normal landing. */
+    strength: 0.6,
+    /** Each layer below settles this share of the one above, and this much later. */
+    falloff: 0.8,
+    stepDelayMs: 70,
+  },
   cameraKick: {
     /** Short push down on a normal landing. */
     drop: 6,

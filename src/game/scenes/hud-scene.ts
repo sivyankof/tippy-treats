@@ -143,7 +143,7 @@ export class HudScene extends Phaser.Scene {
       this.wobbleBar.update(info.wobble, time, delta);
       this.nextBadge.update(info.height, info.team);
       this.nextBadge.idle(time);
-      this.effectBadges.update(info.effects, info.shield, time, delta);
+      this.effectBadges.update(info.effects, info.shield, info.tempoLeft, time, delta);
       this.treasure.update(info, time, delta, this.gameScene()?.continueFlow?.isOpen === true);
     }
     this.numbersIdle.update(time);

@@ -26,6 +26,15 @@ describe('BadgeTracker', () => {
     expect(tracker.items.every((b) => b.phase === 'in')).toBe(true);
   });
 
+  it('adds a tempo badge while eased layers are left and shows no creature for it', () => {
+    const tracker = new BadgeTracker();
+    tracker.sync([], 0, 3);
+    expect(tracker.items.map((b) => [b.key, b.layersLeft])).toEqual([['tempo', 3]]);
+    expect(badgeCreature('tempo')).toBeNull();
+    tracker.sync([], 0, 0);
+    expect(tracker.items[0]?.phase).toBe('out');
+  });
+
   it('settles a new badge after the appear time', () => {
     const tracker = new BadgeTracker();
     tracker.sync([effect('honey', 3)], 0);
