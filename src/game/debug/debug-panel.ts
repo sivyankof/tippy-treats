@@ -3,6 +3,7 @@ import { BALANCE } from '../../data/balance';
 import { PALETTE } from '../../data/palette';
 import { cssColor } from '../../util/color';
 import { effectsMode } from '../effects-mode';
+import { frameWorkStats } from '../frame-work';
 import { FONT_FAMILY, FONT_WEIGHT } from '../ui/fonts';
 import type { UiRegion } from '../ui/ui-regions';
 import type { RunInfo } from '../run-info';
@@ -15,6 +16,8 @@ const FONT_SIZE = 30;
 const MARGIN = 20;
 const SPEED_DECIMALS = 0;
 const WOBBLE_DECIMALS = 1;
+const WORK_DECIMALS = 1;
+const AUTO_FX_LABEL = 'reduced (auto)';
 const ENTRY_PADDING = { x: 14, y: 8 };
 const ENTRY_GAP = 12;
 /** Space between the controls row and the numbers above it. */
@@ -27,6 +30,11 @@ const SAVE_LEVEL = 'save';
 const DEBUG_BERRIES = 50;
 const COINS_LABEL = '+500 coins';
 const DEBUG_COINS = 500;
+
+function fxLabel(): string {
+  const reason = effectsMode.reason;
+  return reason === 'auto' ? AUTO_FX_LABEL : (reason ?? 'full');
+}
 
 /** Dev-only overlay with the run numbers and the team override picker. */
 export class DebugPanel {
@@ -152,7 +160,8 @@ export class DebugPanel {
         `height ${info.height}`,
         `phase ${info.phase}`,
         `team ${info.team.map((slot) => (slot ? `${slot.id}:${slot.level}` : NO_CREATURE)).join(' ')}`,
-        `fx ${effectsMode.reason ?? 'full'}`,
+        `work ${frameWorkStats.average.toFixed(WORK_DECIMALS)} ms, p95 ${frameWorkStats.percentile.toFixed(WORK_DECIMALS)} ms`,
+        `fx ${fxLabel()}`,
         `berries ${gameState.berries}`,
         ...(EDGE_PROBE ? [`edge: ${EDGE_PROBE}`] : []),
       ].join('\n'),

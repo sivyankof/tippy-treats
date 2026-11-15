@@ -1,0 +1,138 @@
+import { describe, expect, it } from 'vitest';
+import { ANIM } from '../../data/anim';
+import { FrameWorkWatch } from './frame-work-watch';
+
+const A = ANIM.fx.auto;
+const OPTIONS = {
+  budgetMs: A.budgetMs,
+  onShare: A.onShare,
+  onWindowMs: A.onWindowMs,
+  offWindowMs: A.offWindowMs,
+  offMarginMs: A.offMarginMs,
+  offBadShare: A.offBadShare,
+  minSwitchGapMs: A.minSwitchGapMs,
+  resumeIgnoreMs: A.resumeIgnoreMs,
+  gapMs: A.gapMs,
+  bucketMs: A.bucketMs,
+};
+const SLOW_WORK = A.budgetMs + 8;
+const FAST_WORK = 5;
+const SLOW_FRAME_MS = 25;
+const FRAME_60 = 1000 / 60;
+
+/** A scene was created at time 0: the watch counts frames from the end of the warm-up. */
+function newWatch(): { watch: FrameWorkWatch; start: number } {
+  const watch = new FrameWorkWatch(OPTIONS);
+  watch.restart(0, A.warmUpMs);
+  return { watch, start: A.warmUpMs };
+}
+
+/** Feeds frames of `frameMs` carrying `workMs` of work from `from` for `ms`; returns the end time. */
+function run(
+  watch: FrameWorkWatch,
+  from: number,
+  ms: number,
+  frameMs: number,
+  workMs: number | ((i: number) => number),
+): number {
+  let t = from;
+  let i = 0;
+  while (t < from + ms) {
+    t += frameMs;
+    watch.note(typeof workMs === 'function' ? workMs(i++) : workMs, t);
+  }
+  return t;
+}
+
+describe('FrameWorkWatch', () => {
+  it('turns on when nearly every frame is over budget for the window', () => {
+    const { watch, start } = newWatch();
+    run(watch, start, A.onWindowMs - 1000, SLOW_FRAME_MS, SLOW_WORK);
+    expect(watch.reduced).toBe(false);
+    run(watch, start + A.onWindowMs - 1000, 2000, SLOW_FRAME_MS, SLOW_WORK);
+    expect(watch.reduced).toBe(true);
+  });
+
+  it('does not turn on for a throttled 30 fps phone with short frame work', () => {
+    const { watch, start } = newWatch();
+    run(watch, start, 60_000, 1000 / 30, FAST_WORK);
+    expect(watch.reduced).toBe(false);
+  });
+
+  it('does not turn on for a 120 Hz screen with short frame work', () => {
+    const { watch, start } = newWatch();
+    run(watch, start, 30_000, 1000 / 120, FAST_WORK);
+    expect(watch.reduced).toBe(false);
+  });
+
+  it('does not turn on when only some frames are over budget', () => {
+    const { watch, start } = newWatch();
+    run(watch, start, 20_000, FRAME_60, (i) => (i % 5 === 0 ? SLOW_WORK : FAST_WORK));
+    expect(watch.reduced).toBe(false);
+  });
+
+  it('ignores slow frames during the warm-up', () => {
+    const watch = new FrameWorkWatch(OPTIONS);
+    watch.restart(0, A.warmUpMs);
+    const end = run(watch, 0, A.warmUpMs - 100, SLOW_FRAME_MS, SLOW_WORK);
+    expect(watch.reduced).toBe(false);
+    // The slow frames of the warm-up do not count: the window still needs its full length.
+    run(watch, end + 100, A.onWindowMs - 1000, SLOW_FRAME_MS, SLOW_WORK);
+    expect(watch.reduced).toBe(false);
+  });
+
+  it('ignores the frames after a return from the background', () => {
+    const { watch, start } = newWatch();
+    let t = run(watch, start, 2000, FRAME_60, FAST_WORK);
+    t += 60_000;
+    // The first frames back are slow (everything wakes up), then the device is fine.
+    t = run(watch, t, A.resumeIgnoreMs - 50, SLOW_FRAME_MS, SLOW_WORK);
+    run(watch, t, 10_000, FRAME_60, FAST_WORK);
+    expect(watch.reduced).toBe(false);
+  });
+
+  it('does not join slow stretches cut by a background gap into one window', () => {
+    const { watch, start } = newWatch();
+    let t = run(watch, start, 3000, SLOW_FRAME_MS, SLOW_WORK);
+    t += 5000;
+    t = run(watch, t, 3000, SLOW_FRAME_MS, SLOW_WORK);
+    expect(watch.reduced).toBe(false);
+    run(watch, t, 3000, SLOW_FRAME_MS, SLOW_WORK);
+    expect(watch.reduced).toBe(true);
+  });
+
+  it('goes back to full effects after 10 s of frames inside the budget with a margin', () => {
+    const { watch, start } = newWatch();
+    let t = run(watch, start, A.onWindowMs + 1000, SLOW_FRAME_MS, SLOW_WORK);
+    expect(watch.reduced).toBe(true);
+    // Frames inside the budget but not with the margin: it stays on.
+    t = run(watch, t, 40_000, FRAME_60, A.budgetMs - 1);
+    expect(watch.reduced).toBe(true);
+    run(watch, t, A.offWindowMs + A.minSwitchGapMs, FRAME_60, FAST_WORK);
+    expect(watch.reduced).toBe(false);
+  });
+
+  it('does not go back before the 30 s between switches have passed', () => {
+    const { watch, start } = newWatch();
+    const t = run(watch, start, A.onWindowMs + 1000, SLOW_FRAME_MS, SLOW_WORK);
+    expect(watch.reduced).toBe(true);
+    // 12 s of good frames: the recovery window is full, the switch gap is not over.
+    const mid = run(watch, t, 12_000, FRAME_60, FAST_WORK);
+    expect(watch.reduced).toBe(true);
+    run(watch, mid, A.minSwitchGapMs, FRAME_60, FAST_WORK);
+    expect(watch.reduced).toBe(false);
+  });
+
+  it('does not switch again within 30 s when the device turns slow right after', () => {
+    const { watch, start } = newWatch();
+    let t = run(watch, start, A.onWindowMs + 1000, SLOW_FRAME_MS, SLOW_WORK);
+    // Good frames until the mode goes off.
+    while (watch.reduced) t = run(watch, t, 1000, FRAME_60, FAST_WORK);
+    const offAt = t;
+    // Slow again, but the 30 s since the last switch are not over: it stays off.
+    while (t - offAt < A.minSwitchGapMs - 3000) t = run(watch, t, 1000, SLOW_FRAME_MS, SLOW_WORK);
+    expect(watch.reduced).toBe(false);
+    run(watch, t, 10_000, SLOW_FRAME_MS, SLOW_WORK);
+    expect(watch.reduced).toBe(true);
+  });
+});

@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { parseDebugParams, savesRun, skipsTutorial, withoutReset } from './debug-params';
+import {
+  parseDebugParams,
+  savesRun,
+  showsFpsMeter,
+  skipsTutorial,
+  withoutReset,
+} from './debug-params';
 
 describe('parseDebugParams', () => {
   it('is off for an empty query', () => {
@@ -139,5 +145,15 @@ describe('withoutReset', () => {
     expect(parseDebugParams('?edge=img')).toEqual({ debug: true, edge: 'img' });
     expect(parseDebugParams('?edge=nofolds').edge).toBe('nofolds');
     expect(parseDebugParams('?edge=other')).toEqual({ debug: false });
+  });
+});
+
+describe('showsFpsMeter', () => {
+  it('is on only for ?fps=1', () => {
+    expect(showsFpsMeter('?fps=1')).toBe(true);
+    expect(showsFpsMeter('?debug=1&fps=1')).toBe(true);
+    expect(showsFpsMeter('')).toBe(false);
+    expect(showsFpsMeter('?fps=0')).toBe(false);
+    expect(showsFpsMeter('?fps')).toBe(false);
   });
 });

@@ -13,7 +13,6 @@ import { plainLooks } from '../objects/plain-look';
 import { RunCamera } from '../run-camera';
 import { ContinueFlow } from '../continue-flow';
 import { extrasOf, RunRecorder } from '../run-recorder';
-import { effectsMode } from '../effects-mode';
 import { FlyingTracker } from '../fx/flying-tracker';
 import { placeTutorialTarget } from '../fx/tutorial-target';
 import { driveContinue } from '../objects/continue-driver';
@@ -143,7 +142,6 @@ export class GameScene extends Phaser.Scene {
   }
 
   override update(time: number, delta: number): void {
-    effectsMode.noteFrame(delta);
     this.flying.note(this.sim.state);
 
     // The tutorial holds the sim for a moment while it explains the creature layer.

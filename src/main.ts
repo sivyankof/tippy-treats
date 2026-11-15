@@ -8,7 +8,7 @@ import { detectLang, setLang } from './i18n';
 import { syncPurchases } from './game/purchases';
 import { gameState } from './state';
 import { bindSaveFlush } from './state/page-lifecycle';
-import { readDebugParams, withoutReset } from './util/debug-params';
+import { readDebugParams, showsFpsMeter, withoutReset } from './util/debug-params';
 
 // Sample covers both subsets so the Latin and Cyrillic font files are fetched up front.
 const FONT_SAMPLE = 'Tippy Treats Башня 0123456789';
@@ -68,6 +68,9 @@ async function start(): Promise<void> {
   const game = new Phaser.Game(createGameConfig(parent));
   bindLogicalResize(game, parent);
   bootStage('started');
+  // Works in production builds too, unlike the other debug parameters.
+  if (showsFpsMeter(window.location.search))
+    void import('./game/debug/fps-meter').then((meter) => meter.showFpsMeter(game));
   if (import.meta.env.DEV) {
     // Handle for browser automation and manual poking from the console.
     (window as Window & { tippyGame?: Phaser.Game }).tippyGame = game;

@@ -1,26 +1,21 @@
 import type { ReducedFxSetting } from '../core/save/schema';
 import { ANIM } from '../data/anim';
-import { LowFpsWatch } from './fx/low-fps-watch';
+import { FrameWorkWatch } from './fx/frame-work-watch';
 
-/** Why "fewer effects" is on: the player's switch, the system setting or a slow device. */
-export type ReducedFxReason = 'user' | 'system' | 'low_fps';
+/** Why "fewer effects" is on: the player's switch, the system setting or the automatic mode on a slow device. */
+export type ReducedFxReason = 'user' | 'system' | 'auto';
 
 /**
  * The "fewer effects" mode: half the particles and no squash wave down the tower.
  *
- * The player's switch always wins. Without it the mode follows the system
- * "reduce motion" setting and turns on by itself once the frame rate stays low
- * (it then stays on for the session). The choice itself is saved in the settings.
+ * The player's switch always wins. Without it the mode follows the system "reduce motion"
+ * setting and turns on by itself when the frame work time stays over budget (and turns off
+ * again after a calm stretch). The choice itself is saved in the settings.
  */
 export class EffectsMode {
   private userChoice: boolean | null = null;
   private systemReducedMotion = false;
-  private lowFps = false;
-  private readonly watch = new LowFpsWatch({
-    lowFps: ANIM.fx.lowFps,
-    windowMs: ANIM.fx.lowFpsWindowMs,
-    hitchMs: ANIM.fx.lowFpsHitchMs,
-  });
+  private readonly watch = new FrameWorkWatch(ANIM.fx.auto);
 
   get reduced(): boolean {
     return this.reason !== null;
@@ -30,7 +25,7 @@ export class EffectsMode {
   get reason(): ReducedFxReason | null {
     if (this.userChoice !== null) return this.userChoice ? 'user' : null;
     if (this.systemReducedMotion) return 'system';
-    return this.lowFps ? 'low_fps' : null;
+    return this.watch.reduced ? 'auto' : null;
   }
 
   /** The player's choice from the settings: `auto` hands the decision back to the system and the frame rate. */
@@ -42,10 +37,19 @@ export class EffectsMode {
     this.systemReducedMotion = on;
   }
 
-  /** Feeds one frame of the run. A frame rate below the limit for the window turns the mode on. */
-  noteFrame(deltaMs: number): void {
-    if (this.lowFps || this.userChoice !== null) return;
-    if (this.watch.update(deltaMs)) this.lowFps = true;
+  /** Feeds one frame: the time its update and render took and the time it ended at. */
+  noteFrame(workMs: number, nowMs: number): void {
+    this.watch.note(workMs, nowMs);
+  }
+
+  /** A scene was created: its first seconds (baking, settling) are not judged. */
+  noteSceneLoaded(nowMs: number): void {
+    this.watch.restart(nowMs, ANIM.fx.auto.warmUpMs);
+  }
+
+  /** The app came back from the background: the frames right after it are not judged. */
+  noteResumed(nowMs: number): void {
+    this.watch.restart(nowMs, ANIM.fx.auto.resumeIgnoreMs);
   }
 
   /** How many particles a burst of `count` gets. A burst never disappears completely. */

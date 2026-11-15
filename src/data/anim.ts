@@ -387,11 +387,36 @@ export const ANIM = {
   fx: {
     /** Shared cap of live particles. */
     particleLimit: 250,
-    /** "Fewer effects" turns on when the frame rate stays below this for the window. */
-    lowFps: 50,
-    lowFpsWindowMs: 2000,
-    /** A frame longer than this is a hitch (tab switch, loading), not a slow device: the window restarts. */
-    lowFpsHitchMs: 250,
+    /**
+     * The automatic "fewer effects" decides by the frame work time (update and render, in ms), not
+     * by the frame rate: a phone that limits its own rate (low power, 120 Hz) is not a slow one.
+     */
+    auto: {
+      /** A frame whose work takes longer than this is over budget. */
+      budgetMs: 16,
+      /** The mode turns on when this share of the frames of `onWindowMs` is over budget. */
+      onShare: 0.95,
+      onWindowMs: 4000,
+      /** It turns off when at most `offBadShare` of the frames of `offWindowMs` took more than budget minus margin. */
+      offWindowMs: 10_000,
+      offMarginMs: 4,
+      offBadShare: 0.02,
+      /** The mode changes at most once in this long. */
+      minSwitchGapMs: 30_000,
+      /** Frames this long after a scene is created are not counted (textures bake, the scene settles). */
+      warmUpMs: 3000,
+      /** Frames this long after a return from the background are not counted. */
+      resumeIgnoreMs: 1000,
+      /** A gap between frames longer than this is treated as a return from the background. */
+      gapMs: 250,
+      /** The windows are kept as buckets of this length. */
+      bucketMs: 250,
+      /** Frames kept for the debug panel (average and 95th percentile of the work time). */
+      statsFrames: 240,
+      statsPercentile: 0.95,
+      /** The percentile is recomputed every this many frames. */
+      statsRefreshFrames: 30,
+    },
     reducedParticleShare: 0.5,
     /** A long frame (tab in the background) is not simulated beyond this length. */
     maxSimMs: 100,
