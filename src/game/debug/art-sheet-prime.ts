@@ -12,6 +12,7 @@ import { createPileTextures } from '../fx/treasure-pile';
 import { createTreasureTextures } from '../fx/treasure-textures';
 import { bakeSharedArt } from '../objects/backdrop/art-kit';
 import { createCreatureIconTextures } from '../objects/creature-icon-textures';
+import { bakeShadeTextures } from '../objects/layer-shade';
 import { ensureSleepTexture } from '../objects/sleep-silhouette';
 import { bakeGuestFlat } from '../objects/tower-guest-art';
 import { bakeHintTextures } from '../tutorial/hint-textures';
@@ -32,6 +33,7 @@ const PRIME_STEPS: ReadonlyArray<(scene: Phaser.Scene) => void> = [
   bakeSharedArt,
   bakeHintTextures,
   bakeChestTextures,
+  (scene) => bakeShadeTextures(scene),
   (scene) => bakeGiftTextures(scene, false),
   (scene) => bakeGiftTextures(scene, true),
   (scene) => {

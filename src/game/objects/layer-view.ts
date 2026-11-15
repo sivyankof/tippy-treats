@@ -15,6 +15,7 @@ import { creatureColors } from './creature-art/primitives';
 import type { EdgeShape } from './edge-squash';
 import { EdgeSquashSkin } from './edge-squash-skin';
 import { LayerFace } from './layer-face';
+import { LayerShade } from './layer-shade';
 import { LayerMaterial, type MaterialMotion } from './layer-material';
 import { LayerRig } from './layer-rig';
 import { artWidth, lookCodeFor } from './layer-art';
@@ -66,6 +67,8 @@ export class LayerView extends Phaser.GameObjects.Container {
   readonly glazeDrips: GlazeDripLayer;
   private readonly glossSweep: Phaser.GameObjects.Image;
   private readonly face: LayerFace;
+  /** The shade of the layer above, laid along the top of this one. */
+  private readonly shade: LayerShade;
   /** The star and the rest wave of the Rainbow layer. */
   private readonly rainbow: RainbowIdle;
   /** Extra animations for the abilities: flash, hop, fade, split. */
@@ -88,10 +91,12 @@ export class LayerView extends Phaser.GameObjects.Container {
     this.glazeDrips = new GlazeDripLayer(scene);
     this.glossSweep = createGlossBand(scene, BALANCE.layer.height - ANIM.layer.outline * 2);
     this.face = new LayerFace(scene);
+    this.shade = new LayerShade(scene);
     this.rig = new LayerRig(scene, this.art, this.face);
     this.content = new Phaser.GameObjects.Container(scene, 0, -half, [
       this.art,
       this.glazeDrips,
+      ...this.shade.parts,
       ...this.rig.parts,
       this.glossSweep,
       this.face,
@@ -160,6 +165,13 @@ export class LayerView extends Phaser.GameObjects.Container {
     this.rainbow.set(creature === 'rainbow', w);
     this.face.layout(w);
     this.face.setVisible(this.faceEnabled);
+    return this;
+  }
+
+  /** Lays the shade of the layer above (centre `upperX`, width `upperW`; this one is at `x`, `width`), or none for `null`. */
+  setShadeFrom(upper: { x: number; width: number } | null, x: number, width: number): this {
+    if (upper) this.shade.set(x, width, upper.x, upper.width);
+    else this.shade.clear();
     return this;
   }
 
@@ -373,6 +385,7 @@ export class LayerView extends Phaser.GameObjects.Container {
     this.content.setScale(1);
     this.glossSweep.setVisible(false);
     this.glazeDrips.clear();
+    this.shade.clear();
     this.face.reset();
     return this;
   }
