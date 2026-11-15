@@ -5,7 +5,7 @@ import { BALANCE } from '../../data/balance';
 import type { Range } from '../../data/backdrop-life';
 import { TOWER_GUEST, TOWER_GUESTS, type GuestLook } from '../../data/tower-guest';
 import { ZONES } from '../../data/zones';
-import { clamp01, DEG_TO_RAD, lerp, pickRange, stepToward } from '../../util/math';
+import { clamp01, DEG_TO_RAD, lerp, stepToward } from '../../util/math';
 import { DEPTH } from '../depth';
 import { effectsMode } from '../effects-mode';
 import type { LandingFx } from '../fx/landing-fx';
@@ -15,21 +15,18 @@ import { bakeGuestFlat } from './tower-guest-art';
 import { GuestPicture } from './tower-guest-picture';
 import {
   aimedByShadowOnly,
-  chooseSite,
-  clearOfSpan,
   GuestScheduler,
   layerCovers,
   stageMs,
   type FlightPoint,
   type GuestPhase,
   type GuestShape,
-  type Span,
 } from './tower-guest-plan';
 import { GuestFlight } from './tower-guest-flight';
 import { fillGuestShape, type ShapeInput } from './tower-guest-shape';
 import { GuestShy } from './tower-guest-shy';
-import { faceHalfOf, shadowSpanInto } from './tower-guest-site';
 import { GuestSplat } from './tower-guest-splat';
+import { GuestVisitPlanner } from './tower-guest-visit';
 import type { Anchor, FlightSpec, GuestContext, GuestCues } from './tower-guest-types';
 import type { LayerPose, TowerView } from './tower-view';
 
@@ -53,6 +50,7 @@ export class TowerGuest {
   private readonly scheduler: GuestScheduler;
   private readonly picture: GuestPicture;
   private readonly press: GuestSplat;
+  private readonly plan: GuestVisitPlanner;
   private look: GuestLook | null = null;
   private phase: GuestPhase = 'away';
   private phaseMs = 0;
@@ -77,8 +75,6 @@ export class TowerGuest {
     cut: null,
     look: { kind: 'plain' },
   };
-  /** The shadow of the flying layer as offsets from the centre of the anchor layer (reused). */
-  private readonly shadowBox: Span = { left: 0, right: 0 };
   /** The shadow of the flying layer is near the guest now (the guest hides the aim hint if it stays big). */
   private nearShadow = false;
   /** Share of the full size the guest is drawn at: small over the aim hint (`TOWER_GUEST.shadowFit`). */
@@ -117,6 +113,7 @@ export class TowerGuest {
     this.scheduler = new GuestScheduler(() => this.random.next());
     for (const look of Object.values(TOWER_GUESTS)) bakeGuestFlat(scene, look);
     this.picture = new GuestPicture(scene);
+    this.plan = new GuestVisitPlanner(this.random);
     this.press = new GuestSplat(scene, tower, fx, this.cues, this.random);
   }
 
@@ -190,21 +187,17 @@ export class TowerGuest {
     const top = ctx.state.layers.length - 1;
     const pose = look && top >= 0 ? this.poseOf(top) : null;
     if (!look || !pose) return false;
-    this.onPath = this.rollOnPath(ctx.state);
-    const dx = this.pickSite(look, pose, ctx.state, null);
+    this.onPath = this.plan.rollOnPath(ctx.state);
+    const dx = this.plan.pickSite(look, pose, ctx.state, this.onPath, null);
     if (dx === null) return false;
     this.begin(look, top, dx);
     this.forced = true;
     this.source?.suspend(true);
-    this.enter('sit', this.pick(TOWER_GUEST.sitMs));
+    this.enter('sit', this.plan.pick(TOWER_GUEST.sitMs));
     this.facing = this.headTo(dx < 0 ? 1 : -1);
     this.anchorPoint(this.pos);
     this.draw();
     return true;
-  }
-
-  private pick(range: Range): number {
-    return pickRange(range, () => this.random.next());
   }
 
   /** "Fewer effects" keeps the guest away (unless the data lets it come, or the dev trigger brought it). */
@@ -239,17 +232,14 @@ export class TowerGuest {
     }
     const pose = this.poseOf(top);
     if (!pose) return false;
-    this.onPath = this.rollOnPath(state);
+    this.onPath = this.plan.rollOnPath(state);
     // A visit bound for the path of the next layer may sit under its shadow; any other keeps clear of it.
-    const avoid = this.onPath ? null : shadowSpanInto(this.shadowBox, ctx, pose);
-    const dx = this.pickSite(look, pose, state, avoid);
+    const avoid = this.plan.avoidSpan(ctx, pose, this.onPath);
+    const dx = this.plan.pickSite(look, pose, state, this.onPath, avoid);
     if (dx === null) return false;
     this.begin(look, top, dx);
-    const { arrive, offscreenPx } = TOWER_GUEST;
-    const fromLeft = this.random.next() < 0.5;
-    this.from.x = fromLeft ? -offscreenPx : cam.width + offscreenPx;
-    const above = this.pick(arrive.abovePx);
-    this.from.y = Math.max(cam.scrollY + arrive.abovePx[0] / 2, pose.y - HALF_LAYER - above);
+    const { arrive } = TOWER_GUEST;
+    this.plan.arrivalStart(cam, pose, this.from);
     // The creature of the backdrop that is in view peels off its path and flies on from there.
     if (this.source?.peek(this.sourcePoint)) {
       this.from.x = this.sourcePoint.x;
@@ -258,7 +248,7 @@ export class TowerGuest {
     }
     this.source?.suspend(true);
     this.flight.setArrival(arrive);
-    this.enter('arrive', this.pick(arrive.flightMs));
+    this.enter('arrive', this.plan.pick(arrive.flightMs));
     this.pos.x = this.from.x;
     this.pos.y = this.from.y;
     this.facing = this.headTo(this.from.x < pose.x ? 1 : -1);
@@ -266,22 +256,11 @@ export class TowerGuest {
     return true;
   }
 
-  /**
-   * Whether this visit is bound for the path of the next layer. The draw is always taken (so the
-   * stream does not depend on the rule); a layer aimed by its shadow alone gets no such visit.
-   */
-  private rollOnPath(state: Readonly<TowerState>): boolean {
-    const roll = this.random.next();
-    return roll < TOWER_GUEST.site.pathChance && !aimedByShadowOnly(state.flying?.rule ?? null);
-  }
-
-  /** The shadow of the flying layer is within the guest's full-size body plus the shadow gap of it. */
+  /** The shadow of the flying layer is near the guest's full-size body. */
   private shadowIsNear(ctx: GuestContext): boolean {
     const look = this.look;
     const pose = look ? this.poseOf(this.anchor.index) : null;
-    if (!look || !pose) return false;
-    const half = look.halfWidthPx * look.scale;
-    return !clearOfSpan(this.pos.x - pose.x, half, shadowSpanInto(this.shadowBox, ctx, pose));
+    return !!look && !!pose && this.plan.shadowIsNear(ctx, look, pose, this.pos.x);
   }
 
   /** The drawn size follows the aim hint: small on the path of the next layer or when the shadow is near, full otherwise. */
@@ -290,20 +269,6 @@ export class TowerGuest {
     const small = visiting && (this.onPath || this.nearShadow);
     const step = ((1 - shadowFit.scale) * dtMs) / shadowFit.rampMs;
     this.shrink = stepToward(this.shrink, small ? shadowFit.scale : 1, step);
-  }
-
-  /** Where on the top layer (`pose`) the guest sits; the next layer is the flying one, or as wide as the top. */
-  private pickSite(
-    look: GuestLook,
-    pose: LayerPose,
-    state: Readonly<TowerState>,
-    avoid: Span | null,
-  ): number | null {
-    const face = faceHalfOf(pose);
-    const next = state.flying?.width ?? pose.width;
-    const half = look.halfWidthPx * look.scale;
-    const random = (): number => this.random.next();
-    return chooseSite(pose.width, face, half, next, this.onPath, random, avoid);
   }
 
   /**
@@ -317,13 +282,13 @@ export class TowerGuest {
     const top = state.layers.length - 1;
     const pose = look ? this.poseOf(top) : null;
     if (!look || !pose) return false;
-    const dx = this.pickSite(look, pose, state, null);
+    const dx = this.plan.pickSite(look, pose, state, this.onPath, null);
     if (dx === null) return false;
     this.scaleFrom = this.drawnScale(look);
     this.anchor = { index: top, edge: 'top', dx };
     this.from.x = this.pos.x;
     this.from.y = this.pos.y;
-    this.enter('arrive', this.pick(TOWER_GUEST.arrive.retargetMs));
+    this.enter('arrive', this.plan.pick(TOWER_GUEST.arrive.retargetMs));
     this.rampedMs = TOWER_GUEST.flightRampMs;
     return true;
   }
@@ -405,7 +370,7 @@ export class TowerGuest {
     this.flight.fly(t);
     this.facing = this.headTo(this.to.x >= this.from.x ? 1 : -1);
     if (t >= 1) {
-      this.enter('sit', this.pick(TOWER_GUEST.sitMs));
+      this.enter('sit', this.plan.pick(TOWER_GUEST.sitMs));
       this.facing = this.headTo(this.anchor.dx < 0 ? 1 : -1);
     }
   }
@@ -426,14 +391,14 @@ export class TowerGuest {
   private startLeave(kind: 'leave' | 'startle'): void {
     this.shy.cancel();
     this.flyOff(TOWER_GUEST[kind]);
-    this.enter('leave', this.pick(TOWER_GUEST[kind].flightMs));
+    this.enter('leave', this.plan.pick(TOWER_GUEST[kind].flightMs));
   }
 
   /** Aims a flight from where the guest is to beyond the nearer screen edge, climbing. */
   private flyOff(spec: FlightSpec & { risePx: Range }): void {
     const width = this.last?.cam.width ?? BALANCE.tray.centerX * 2;
     const toRight = this.pos.x >= width / 2;
-    this.flight.aimOff(spec, width, toRight, this.pick(spec.risePx));
+    this.flight.aimOff(spec, width, toRight, this.plan.pick(spec.risePx));
     this.facing = this.headTo(toRight ? 1 : -1);
   }
 
@@ -456,7 +421,7 @@ export class TowerGuest {
     if (this.phaseMs < this.spanMs) return;
     switch (this.phase) {
       case 'squash':
-        this.enter('hold', this.pick(splat.holdMs));
+        this.enter('hold', this.plan.pick(splat.holdMs));
         this.press.onFlat(this.look, this.pos.x, this.pos.y, this.anchor.index, this.spanMs);
         break;
       case 'hold':
@@ -487,7 +452,7 @@ export class TowerGuest {
   private flee(): void {
     const { stagger, ...plain } = splat.flee;
     this.flyOff(this.press.plain ? plain : { ...plain, stagger });
-    this.enter('flee', this.pick(splat.flee.flightMs));
+    this.enter('flee', this.plan.pick(splat.flee.flightMs));
     this.cues.buzz();
   }
 
