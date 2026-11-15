@@ -13,6 +13,8 @@ import type { LayerPose, TowerView } from '../objects/tower-view';
 import { AbilityBursts } from './abilities/ability-bursts';
 import { HALF_LAYER, UP_DEG } from './abilities/kit';
 import { DROP_BIG_SCALE, FX_TEXTURES } from './fx-textures';
+import { ringPoint, sparkleDelay } from './layer-sparkle';
+import { twinkle } from './sparkle-fx';
 import type { Particles } from './particles';
 
 /** How hard a landing pushes the camera and the squash wave (multipliers). */
@@ -121,10 +123,12 @@ export class MaterialFx {
   /** Time of the last shed burst and of the last gloss, per layer index. */
   private readonly lastShed = new Map<number, number>();
   private readonly lastGloss = new Map<number, number>();
+  /** Clock time of the next twinkle, per layer index. */
+  private readonly nextSparkle = new Map<number, number>();
 
   constructor(
     private readonly tower: TowerView,
-    particles: Particles,
+    private readonly particles: Particles,
   ) {
     this.bursts = new AbilityBursts(particles);
   }
@@ -155,9 +159,33 @@ export class MaterialFx {
       const every = material.glossEveryMs;
       if (every && this.clockMs - (this.lastGloss.get(index) ?? -Infinity) >= every) {
         this.lastGloss.set(index, this.clockMs);
-        view.playGlossSweep();
+        const sweep = material.glossSweep;
+        view.playGlossSweep(sweep?.ms, sweep?.alpha);
       }
+      this.sparkle(index, creature, material);
     }
+  }
+
+  /** A star twinkles at a random point around a layer that has sparkles, now and then. */
+  private sparkle(index: number, creature: CreatureId, material: CreatureMaterial): void {
+    const spec = material.sparkle;
+    if (!spec) return;
+    const due = this.nextSparkle.get(index);
+    if (due === undefined) {
+      this.nextSparkle.set(index, this.clockMs + sparkleDelay(spec.everyMs));
+      return;
+    }
+    if (this.clockMs < due) return;
+    this.nextSparkle.set(index, this.clockMs + sparkleDelay(spec.everyMs));
+    const pose = this.tower.layerPose(index);
+    if (!pose) return;
+    const at = ringPoint(Math.random(), pose.width, BALANCE.layer.height, spec.margin);
+    twinkle(
+      this.particles,
+      pose.x + at.x,
+      pose.y + at.y,
+      burstTints({ colors: spec.tints }, creature),
+    );
   }
 
   private shed(

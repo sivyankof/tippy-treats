@@ -99,18 +99,14 @@ export class NextCreatureBadge {
     if (this.shown) this.pop(creatureChanged ? this.icon : this.label);
   }
 
-  /** Text hugs the right margin, the icon sits to its left; the chip runs from the icon to past the text. */
+  /** Text hugs the right margin, the icon sits to its left; the chip runs from before the icon to past the text, so the icon never lies on the text. */
   private place(): void {
     const right = this.screenWidth - badgeMargin - nextChip.padX;
     this.label.setX(right);
     this.icon.setX(right - this.label.width - badgeGap - badgeSize / 2);
+    const chipLeft = this.icon.x - badgeSize / 2 - nextChip.padX;
     const chipRight = right + nextChip.padX;
-    this.chip.place(
-      (this.icon.x + chipRight) / 2,
-      badgeRowY,
-      chipRight - this.icon.x,
-      nextChip.height,
-    );
+    this.chip.place((chipLeft + chipRight) / 2, badgeRowY, chipRight - chipLeft, nextChip.height);
   }
 
   private pop(target: Phaser.GameObjects.Image | Phaser.GameObjects.Text): void {

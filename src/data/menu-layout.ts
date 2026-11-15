@@ -273,6 +273,8 @@ export const MENU = {
     /** At rest a creature breathes a little. */
     breatheScale: 0.025,
     breathePeriodMs: 2200,
+    /** Twinkling stars around a creature with sparkles: at most `maxLive` at once, each lives `lifeMs`, `size` is the star's scale and `spinDeg` how far it turns. */
+    sparkle: { maxLive: 3, lifeMs: 520, size: 1.3, spinDeg: 70 },
   },
   /** Baker level and XP bar. */
   xpBar: {

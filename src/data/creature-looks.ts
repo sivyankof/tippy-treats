@@ -1,4 +1,5 @@
 import type { CreatureId } from './creatures';
+import { RAINBOW_BANDS } from './rainbow-look';
 
 /** Mouth shapes of a face (the pictures are `assets/svg/face_mouth_*.svg`). */
 export type MouthKind = 'smile' | 'open' | 'o' | 'flat' | 'scared' | 'yum';
@@ -131,7 +132,6 @@ export type ArtRecipe =
       topPad: number;
       bands: readonly string[];
       creamShare: number;
-      crown: number;
     };
 
 export interface CreatureLook {
@@ -270,10 +270,9 @@ export const CREATURE_LOOKS: Readonly<Record<CreatureId, CreatureLook>> = {
   rainbow: {
     art: {
       kind: 'rainbow',
-      topPad: 30,
-      bands: ['#ff6b6b', '#ffa94d', '#ffe066', '#69db7c', '#4dabf7', '#b197fc'],
+      topPad: 36,
+      bands: RAINBOW_BANDS,
       creamShare: 0.2,
-      crown: 3,
     },
     face: {
       ...FACE_DEFAULTS,

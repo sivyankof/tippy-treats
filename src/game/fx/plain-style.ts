@@ -29,6 +29,35 @@ export function fillPolygon(g: Phaser.GameObjects.Graphics, points: readonly Pt[
   g.fillPath();
 }
 
+/** Directions the outline of a small shape is pushed in to make it thicker all round. */
+const OUTLINE_DIRECTIONS = 8;
+
+/**
+ * A closed shape with a thick outline of its own: the shape is drawn pushed `grow` pixels in
+ * eight directions in `outline`, then once in `fill`. For small details (a crown peak) where a
+ * bigger copy of the shape would not stay a similar shape.
+ */
+export function fillOutlinedPolygon(
+  g: Phaser.GameObjects.Graphics,
+  points: readonly Pt[],
+  fill: number,
+  outline: number,
+  grow: number,
+): void {
+  g.fillStyle(outline, 1);
+  for (let i = 0; i < OUTLINE_DIRECTIONS; i++) {
+    const a = (TWO_PI * i) / OUTLINE_DIRECTIONS;
+    const dx = Math.cos(a) * grow;
+    const dy = Math.sin(a) * grow;
+    fillPolygon(
+      g,
+      points.map((p) => ({ x: p.x + dx, y: p.y + dy })),
+    );
+  }
+  g.fillStyle(fill, 1);
+  fillPolygon(g, points);
+}
+
 const ELLIPSE_STEPS = 20;
 
 /** A rotated ellipse as points. */

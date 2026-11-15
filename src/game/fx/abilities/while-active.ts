@@ -2,6 +2,9 @@ import type { Modifiers } from '../../../core/abilities/types';
 import type { TowerState } from '../../../core/tower-sim';
 import { ABILITY_ANIM } from '../../../data/ability-anim';
 import { HUD_LAYOUT } from '../../../data/hud-layout';
+import { effectsMode } from '../../effects-mode';
+import { FX_TEXTURES } from '../fx-textures';
+import { UP_DEG } from './kit';
 import type { FlyingLayerView } from '../../objects/flying-layer-view';
 import type { TowerView } from '../../objects/tower-view';
 import type { CameraInfo } from '../run-fx';
@@ -31,18 +34,19 @@ export class WhileActiveFx {
   private readonly coatState: CoatState = { frost: false, rainbow: false, glow: false };
   private readonly bubbleTarget: BubbleTarget = { x: 0, width: 0, surfaceY: 0 };
   private glossMs = 0;
+  private sparkMs = 0;
 
   constructor(
     scene: Scene,
     private readonly tower: TowerView,
     private readonly flying: FlyingLayerView,
-    bursts: AbilityBursts,
+    private readonly bursts: AbilityBursts,
   ) {
     this.guides = new Guides(scene);
     this.coat = new FlyingCoat(scene);
     this.rim = new RainbowRim(scene);
     this.vignette = new Vignette(scene);
-    this.bubble = new ShieldBubble(scene, bursts);
+    this.bubble = new ShieldBubble(scene, this.bursts);
   }
 
   /** The shield caught a miss. */
@@ -58,6 +62,18 @@ export class WhileActiveFx {
   /** The layer at `index` landed whole under the rainbow although a normal drop would have cut it. */
   markSaved(index: number): void {
     this.rim.markLanded(index);
+    const pose = this.tower.layerPose(index);
+    if (!pose || effectsMode.reduced) return;
+    const { count, style } = ABILITY_ANIM.active.rainbow.landStars;
+    this.bursts.cone(
+      pose.x,
+      pose.y,
+      UP_DEG,
+      count,
+      style,
+      FX_TEXTURES.star,
+      ABILITY_ANIM.rainbow.stripes,
+    );
   }
 
   /** `running` is false once the run is over: every visual then fades out. */
@@ -95,6 +111,31 @@ export class WhileActiveFx {
     this.vignette.update(dtMs, timeMs, flags.lemon, cam.width, cam.height);
     this.bubble.update(dtMs, timeMs, state.shield > 0, running, this.target());
     this.runRainbowGloss(dtMs, flags.rainbow && flyingX !== null);
+    this.runRainbowSparks(dtMs, flags.rainbow ? body : null);
+  }
+
+  /** A few colour sparks pop around the flying layer while the rainbow is on (none with "fewer effects"). */
+  private runRainbowSparks(
+    dtMs: number,
+    body: Readonly<{ x: number; y: number; width: number }> | null,
+  ): void {
+    const { everyMs, count, style } = ABILITY_ANIM.active.rainbow.sparks;
+    if (!body || effectsMode.reduced) {
+      this.sparkMs = 0;
+      return;
+    }
+    this.sparkMs += dtMs;
+    if (this.sparkMs < everyMs) return;
+    this.sparkMs = 0;
+    this.bursts.edges(
+      body.x,
+      body.y,
+      body.width,
+      count,
+      style,
+      FX_TEXTURES.star,
+      ABILITY_ANIM.rainbow.stripes,
+    );
   }
 
   /** A white band runs over the flying layer now and then while the rainbow is on. */

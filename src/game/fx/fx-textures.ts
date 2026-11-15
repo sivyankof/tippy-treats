@@ -56,8 +56,15 @@ const CONFETTI_RADIUS_SHARE = 0.25;
 export const RING_DIAMETER =
   2 * (ANIM.fx.textures.ring.size / 2 - ANIM.fx.textures.ring.stroke * RING_GLOW[0]!.widthScale);
 
+/** Outline radii of a five-pointed star of outer radius `outer`, points and notches in turn. */
+export function starRadii(outer: number): number[] {
+  return Array.from({ length: STAR_POINTS * 2 }, (_, i) =>
+    i % 2 === 0 ? outer : outer * STAR_INNER,
+  );
+}
+
 /** Fills a star-shaped polygon given by its outline radii from the centre, starting at `startDeg`. */
-function fillFan(
+export function fillFan(
   g: Phaser.GameObjects.Graphics,
   cx: number,
   cy: number,
@@ -120,12 +127,9 @@ export function createFxTextures(scene: Phaser.Scene): void {
   });
 
   const starHalf = sizes.star / 2;
-  const starRadii = Array.from({ length: STAR_POINTS * 2 }, (_, i) =>
-    i % 2 === 0 ? starHalf : starHalf * STAR_INNER,
-  );
   bakeTexture(scene, FX_TEXTURES.star, sizes.star, sizes.star, (g) => {
     g.fillStyle(white, 1);
-    fillFan(g, starHalf, starHalf, starRadii);
+    fillFan(g, starHalf, starHalf, starRadii(starHalf));
   });
 
   const crumbHalf = sizes.crumb / 2;
