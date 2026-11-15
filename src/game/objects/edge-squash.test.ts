@@ -5,10 +5,12 @@ import {
   edgeOverflow,
   fitShape,
   flatShape,
+  glazeSwing,
   isSquashed,
   knockPulse,
   slideShift,
   softOverflow,
+  squashGlaze,
   squashMid,
   squashScale,
   squashTallest,
@@ -145,7 +147,10 @@ describe('edge squash shape', () => {
     const soft = shapeAt(140, 720, feel.soft);
     const normal = shapeAt(140, 720, feel.normal);
     const hard = shapeAt(140, 720, feel.hard);
-    expect(soft.left.zone).toBeGreaterThan(normal.left.zone);
+    // At the deepest squash both zones fill the whole width: compare them a little further out.
+    expect(shapeAt(220, 720, feel.soft).left.zone).toBeGreaterThan(
+      shapeAt(220, 720, feel.normal).left.zone,
+    );
     expect(squashTall(soft, -340)).toBeGreaterThan(squashTall(normal, -340));
     expect(hard.left.depth).toBeLessThan(normal.left.depth * 0.5);
   });
@@ -235,5 +240,38 @@ describe('hard layer slide', () => {
     const s = shapeAt(140, 720);
     expect(squashTallest(s)).toBeGreaterThan(1);
     expect(squashTallest(s)).toBeLessThanOrEqual(feel.normal.maxTall);
+  });
+
+  it('squeezes the column at the wall harder with the edge bias, the far side stays put', () => {
+    const plain: WallFeel = { ...feel.normal, edgeBias: 0 };
+    const biased = shapeAt(300, 720, feel.normal);
+    const flat = shapeAt(300, 720, plain);
+    expect(squashScale(biased, -359)).toBeLessThan(squashScale(flat, -359) * 0.85);
+    expect(squashScale(biased, -359)).toBeGreaterThanOrEqual(feel.normal.minScale - 1e-9);
+    expect(squashScale(biased, 100)).toBe(1);
+    expect(squashX(biased, 100)).toBe(100);
+  });
+
+  it('keeps a hard material nearly flat', () => {
+    const hard = shapeAt(140, 720, feel.hard);
+    expect(squashScale(hard, -359)).toBeGreaterThanOrEqual(feel.hard.minScale - 1e-9);
+    expect(hard.folds).toBe(0);
+  });
+
+  it('gathers the glaze only where the width was lost and sags it at the wall itself', () => {
+    const s = shapeAt(180, 720);
+    expect(squashGlaze(s, 300)).toBe(0);
+    expect(squashGlaze(s, -250)).toBeGreaterThan(0);
+    expect(squashGlaze(s, -250)).toBeGreaterThan(squashGlaze(s, -359) * 0.5);
+    const flat = flatShape();
+    expect(squashGlaze(flat, 0)).toBe(0);
+  });
+
+  it('swings the glaze spring from rest without a jump and settles', () => {
+    const { periodMs, decayMs } = EDGE_SQUASH.glazeSpring;
+    expect(glazeSwing(0, periodMs, decayMs)).toBe(0);
+    expect(glazeSwing(Infinity, periodMs, decayMs)).toBe(0);
+    expect(Math.abs(glazeSwing(2000, periodMs, decayMs))).toBeLessThan(0.001);
+    expect(glazeSwing(periodMs / 4, periodMs, decayMs)).toBeGreaterThan(0);
   });
 });

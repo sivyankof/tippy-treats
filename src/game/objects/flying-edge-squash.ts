@@ -13,6 +13,7 @@ import {
   edgeOverflow,
   fitShape,
   flatShape,
+  glazeSwing,
   isSquashed,
   knockPulse,
   slideShift,
@@ -23,6 +24,9 @@ import {
 } from './edge-squash';
 import { artWidth } from './layer-art';
 import type { LayerView } from './layer-view';
+
+/** Both walls; one array for every frame. */
+const SIDES = ['left', 'right'] as const;
 
 type Side = 'left' | 'right';
 
@@ -101,7 +105,7 @@ export class FlyingEdgeSquash {
     view: LayerView,
   ): void {
     this.fade = 1 - smoothstep(fallShare);
-    for (const side of ['left', 'right'] as const) {
+    for (const side of SIDES) {
       this.bounceMs[side] += dtMs;
       this.knockMs[side] += dtMs;
     }
@@ -145,6 +149,12 @@ export class FlyingEdgeSquash {
     const left = this.depthOf('left', over.left);
     const right = this.depthOf('right', over.right);
     fitShape(half, left, right, this.feel, this.shape);
+    this.shape.folds = effectsMode.reduced ? 0 : this.feel.folds;
+    const spring = EDGE_SQUASH.glazeSpring;
+    for (const side of SIDES) {
+      const swing = glazeSwing(this.bounceMs[side], spring.periodMs, spring.decayMs);
+      this.shape[side].spring = 1 + spring.amp * swing;
+    }
     this.shape.shift = slideShift(over.left, over.right, EDGE_SQUASH.kneePx, this.feel) * this.fade;
     const squashed = isSquashed(this.shape);
     view.setEdgeSquash(squashed ? this.shape : null);

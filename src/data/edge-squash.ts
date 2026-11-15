@@ -32,6 +32,18 @@ export interface WallFeel {
   /** A short dent at the moment of the touch (px, 0: none) and how long it lasts. */
   knockPx: number;
   knockMs: number;
+  /**
+   * Extra squeeze at the very wall: the push is `(1 - edgeBias) t^2 + edgeBias t^4` over the
+   * zone, so the column at the wall gets narrower by `1 + edgeBias` times while the rest of
+   * the layer stays put and the edge still stops at the wall.
+   */
+  edgeBias: number;
+  /** How much the glaze gathers into a bulge at the wall, px of rise per share of lost width. */
+  glazeLiftPx: number;
+  /** Share of that bulge that sags back towards the wall itself (0..1). */
+  glazeSag: number;
+  /** Share of the accordion folds shown on the sponge, 0..1 (0 for a hard material: none). */
+  folds: number;
   /** The face at the touch and how long it holds it. */
   face: WallFace;
   faceMs: number;
@@ -53,15 +65,47 @@ export const EDGE_SQUASH = {
   reactFromPx: 24,
   /** The bounce at the turn: length of one hop and the time it takes to die down by e. */
   bounce: { periodMs: 200, decayMs: 180 },
+  /** The gathered glaze springs back after the turn: share of the bulge, length of a swing, decay. */
+  glazeSpring: { amp: 0.6, periodMs: 240, decayMs: 160 },
+  /**
+   * Accordion folds on the squeezed sponge: a few short vertical wrinkles hugging the wall,
+   * shorter and fainter towards the middle. `at` is the distance from the wall as a share of the
+   * layer width (all within the outer `0.12`, so they never reach the face); `from`/`to` span a
+   * share of the sponge height (from the glaze down to the bottom edge).
+   */
+  folds: {
+    /** Folds show from this squeeze depth (px) and are full at `fullDepthPx`. */
+    fromDepthPx: 14,
+    fullDepthPx: 50,
+    items: [
+      { at: 0.018, from: 0.25, to: 0.85, alpha: 1 },
+      { at: 0.055, from: 0.35, to: 0.8, alpha: 0.65 },
+      { at: 0.095, from: 0.45, to: 0.72, alpha: 0.35 },
+    ],
+    /** The fold bows this far sideways in the middle (px), away from the wall. */
+    bowPx: 2.5,
+    widthPx: 4.5,
+    colour: 0x000000,
+    alpha: 0.38,
+    /** A light edge beside the dark crease, towards the wall. */
+    lightWidthPx: 2.2,
+    lightOffsetPx: 2.5,
+    lightColour: 0xffffff,
+    lightAlpha: 0.28,
+  },
   feel: {
     normal: {
       give: 1,
       slide: 1,
       zoneShare: 0.5,
-      minScale: 0.22,
-      bulge: 0.32,
-      maxTall: 1.22,
+      minScale: 0.17,
+      bulge: 0.4,
+      maxTall: 1.28,
       bounce: 0.12,
+      edgeBias: 0.25,
+      glazeLiftPx: 18,
+      glazeSag: 0.5,
+      folds: 1,
       knockPx: 0,
       knockMs: 0,
       face: 'squint',
@@ -71,10 +115,14 @@ export const EDGE_SQUASH = {
       give: 1,
       slide: 1,
       zoneShare: 0.95,
-      minScale: 0.18,
-      bulge: 0.55,
-      maxTall: 1.38,
+      minScale: 0.14,
+      bulge: 0.62,
+      maxTall: 1.44,
       bounce: 0.2,
+      edgeBias: 0.25,
+      glazeLiftPx: 26,
+      glazeSag: 0.55,
+      folds: 1,
       knockPx: 0,
       knockMs: 0,
       face: 'squint',
@@ -88,6 +136,10 @@ export const EDGE_SQUASH = {
       bulge: 0.1,
       maxTall: 1.06,
       bounce: 0.08,
+      edgeBias: 0.1,
+      glazeLiftPx: 3,
+      glazeSag: 0.2,
+      folds: 0,
       knockPx: 12,
       knockMs: 130,
       face: 'gape',

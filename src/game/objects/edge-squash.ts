@@ -11,6 +11,10 @@ import type { WallFeel } from '../../data/edge-squash';
 export interface SideSquash {
   depth: number;
   zone: number;
+  /** How much the gathered glaze of this side swings (1: at rest), the spring after a turn. */
+  spring: number;
+  /** Extra squeeze at the very wall that fits into the zone (0 .. the feel's `edgeBias`). */
+  bias: number;
 }
 
 export interface EdgeShape {
@@ -21,6 +25,11 @@ export interface EdgeShape {
   minScale: number;
   bulge: number;
   maxTall: number;
+  /** How high the glaze gathers at the wall and how much of it sags. */
+  glazeLift: number;
+  glazeSag: number;
+  /** Share of the accordion folds shown (0: none). */
+  folds: number;
   /** The whole drawn body slid sideways (px): a hard layer that hardly squashes keeps off the wall. */
   shift: number;
 }
@@ -28,11 +37,14 @@ export interface EdgeShape {
 export function flatShape(): EdgeShape {
   return {
     half: 0,
-    left: { depth: 0, zone: 1 },
-    right: { depth: 0, zone: 1 },
+    left: { depth: 0, zone: 1, spring: 1, bias: 0 },
+    right: { depth: 0, zone: 1, spring: 1, bias: 0 },
     minScale: 1,
     bulge: 0,
     maxTall: 1,
+    glazeLift: 0,
+    glazeSag: 0,
+    folds: 0,
     shift: 0,
   };
 }
@@ -103,6 +115,9 @@ export function fitShape(
   out.minScale = feel.minScale;
   out.bulge = feel.bulge;
   out.maxTall = feel.maxTall;
+  out.glazeLift = feel.glazeLiftPx;
+  out.glazeSag = feel.glazeSag;
+  out.folds = feel.folds;
   out.shift = 0;
   const width = half * 2;
   const sum = wantLeft + wantRight;
@@ -120,9 +135,16 @@ function fitSide(
 ): void {
   const give = 1 - feel.minScale;
   const share = sum > 0 ? want / sum : 1;
-  const zone = Math.min(Math.max(feel.zoneShare * width, (2 * want) / give), width * share);
+  const zone = Math.min(
+    Math.max(feel.zoneShare * width, ((2 + 2 * feel.edgeBias) * want) / give),
+    width * share,
+  );
   side.zone = Math.max(zone, Number.EPSILON);
   side.depth = zone > 0 ? Math.min(want, (zone * give) / 2) : 0;
+  // The slope at the wall is `2 + 2 * bias` times depth over zone: the extra squeeze takes
+  // whatever room is left under `minScale`, so a deep squash simply gets less of it.
+  const room = side.depth > 0 ? (side.zone * give) / side.depth : 2;
+  side.bias = Math.min(feel.edgeBias, Math.max(0, (room - 2) / 2));
 }
 
 /**
@@ -133,28 +155,33 @@ function fitSide(
  */
 function push(side: Readonly<SideSquash>, half: number, x: number): number {
   if (side.depth <= 0) return 0;
+  const bias = side.bias;
   const from = half - side.zone;
   if (x <= from) return 0;
-  if (x >= half) return side.depth + ((2 * side.depth) / side.zone) * (x - half);
+  if (x >= half) return side.depth + (((2 + 2 * bias) * side.depth) / side.zone) * (x - half);
   const t = (x - from) / side.zone;
-  return side.depth * t * t;
+  const t2 = t * t;
+  return side.depth * ((1 - bias) * t2 + bias * t2 * t2);
 }
 
 /** Slope of `push` at `x`. */
 function pushSlope(side: Readonly<SideSquash>, half: number, x: number): number {
   if (side.depth <= 0) return 0;
+  const bias = side.bias;
   const t = Math.min(1, (x - (half - side.zone)) / side.zone);
-  return t <= 0 ? 0 : (2 * side.depth * t) / side.zone;
+  return t <= 0 ? 0 : (side.depth * (2 * (1 - bias) * t + 4 * bias * t * t * t)) / side.zone;
 }
 
 /** Where the column at offset `u` is drawn. */
 export function squashX(shape: Readonly<EdgeShape>, u: number): number {
-  return shape.shift + u - push(shape.right, shape.half, u) + push(shape.left, shape.half, -u);
+  const { half } = shape;
+  return shape.shift + u - push(shape.right, half, u) + push(shape.left, half, -u);
 }
 
 /** Horizontal scale of the picture at offset `u` (1: untouched). */
 export function squashScale(shape: Readonly<EdgeShape>, u: number): number {
-  const slope = 1 - pushSlope(shape.right, shape.half, u) - pushSlope(shape.left, shape.half, -u);
+  const { half } = shape;
+  const slope = 1 - pushSlope(shape.right, half, u) - pushSlope(shape.left, half, -u);
   return Math.max(0, slope);
 }
 
@@ -162,6 +189,23 @@ export function squashScale(shape: Readonly<EdgeShape>, u: number): number {
 export function squashTall(shape: Readonly<EdgeShape>, u: number): number {
   const lost = 1 - squashScale(shape, u);
   return Math.min(shape.maxTall, 1 + shape.bulge * lost);
+}
+
+/**
+ * How far the glaze of the column at offset `u` rises (px, up) as it gathers at the wall: in
+ * proportion to the width the column lost, but the part nearest the wall sags back by `glazeSag`.
+ * The spring after a turn scales it per side.
+ */
+export function squashGlaze(shape: Readonly<EdgeShape>, u: number): number {
+  return shape.glazeLift * (glazeRise(shape, shape.right, u) + glazeRise(shape, shape.left, -u));
+}
+
+/** The glaze rise of one side at offset `x` towards that side's wall, before `glazeLift`. */
+function glazeRise(shape: Readonly<EdgeShape>, s: Readonly<SideSquash>, x: number): number {
+  const range = 1 - shape.minScale;
+  const lost = pushSlope(s, shape.half, x);
+  const near = range > 0 ? Math.min(1, lost / range) : 0;
+  return lost * (1 - shape.glazeSag * near * near) * s.spring;
 }
 
 /** Centre of the drawn body, as an offset from the layer centre. */
@@ -190,6 +234,15 @@ export function bounceWave(ageMs: number, periodMs: number, decayMs: number): nu
   if (ageMs <= 0 || !Number.isFinite(ageMs)) return 0;
   const hop = Math.sin((Math.PI * ageMs) / periodMs);
   return hop * hop * Math.exp(-ageMs / decayMs);
+}
+
+/**
+ * The swing of the gathered glaze `ageMs` after the turn: a damped wave that starts at 0 with no
+ * jump, first lifts the glaze as the wall lets go, then dips below rest and settles.
+ */
+export function glazeSwing(ageMs: number, periodMs: number, decayMs: number): number {
+  if (ageMs <= 0 || !Number.isFinite(ageMs)) return 0;
+  return Math.sin((2 * Math.PI * ageMs) / periodMs) * Math.exp(-ageMs / decayMs);
 }
 
 /** A single bump `ageMs` after the touch: 0 at both ends, 1 in the middle of `ms`. */

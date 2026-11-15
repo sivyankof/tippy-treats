@@ -1,6 +1,7 @@
 import * as Phaser from 'phaser';
 import { EDGE_SQUASH } from '../../data/edge-squash';
-import { squashMid, squashTall, squashX, type EdgeShape } from './edge-squash';
+import { squashGlaze, squashMid, squashTall, squashX, type EdgeShape } from './edge-squash';
+import { EdgeFolds } from './edge-squash-folds';
 import { HALF_LAYER } from './layer-art';
 import { createColumnView, type Columns, type ColumnView } from './edge-squash-columns';
 
@@ -13,6 +14,7 @@ import { createColumnView, type Columns, type ColumnView } from './edge-squash-c
 export class EdgeSquashSkin {
   private readonly view: ColumnView;
   private readonly columns: Columns;
+  private readonly folds: EdgeFolds;
   private on = false;
   private artWasVisible = false;
   /** The gloss band position the tween set and the one drawn instead, to map it only once. */
@@ -27,6 +29,7 @@ export class EdgeSquashSkin {
   ) {
     const columns = EDGE_SQUASH.columns;
     this.view = createColumnView(scene, columns);
+    this.folds = new EdgeFolds(scene);
     this.columns = {
       xs: new Float32Array(columns),
       tops: new Float32Array(columns),
@@ -36,7 +39,7 @@ export class EdgeSquashSkin {
 
   /** What to put into the content container right above the art. */
   get parts(): Phaser.GameObjects.GameObject[] {
-    return this.view.parts;
+    return [...this.view.parts, this.folds.part];
   }
 
   /**
@@ -55,10 +58,11 @@ export class EdgeSquashSkin {
       const u = ((i / (n - 1)) * width - art.originX * width) * s;
       const tall = squashTall(shape, u);
       xs[i] = squashX(shape, u) / s;
-      tops[i] = HALF_LAYER + (top - HALF_LAYER) * tall;
+      tops[i] = HALF_LAYER + (top - HALF_LAYER) * tall - squashGlaze(shape, u) / s;
       bottoms[i] = HALF_LAYER + (bottom - HALF_LAYER) * tall;
     }
     this.view.show(art.texture.key, width, art.height, this.columns, art.alpha);
+    this.folds.draw(shape, s, shape.folds);
     if (!this.on) this.artWasVisible = art.visible;
     art.setVisible(false);
     this.face.x = (squashMid(shape) * EDGE_SQUASH.faceShare) / s;
@@ -71,6 +75,7 @@ export class EdgeSquashSkin {
     if (!this.on) return;
     this.on = false;
     this.view.hide();
+    this.folds.hide();
     this.art.setVisible(this.artWasVisible);
     this.face.x = 0;
     if (this.gloss.x === this.glossDrawn) this.gloss.x = this.glossRaw;
