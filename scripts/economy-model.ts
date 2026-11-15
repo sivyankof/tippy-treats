@@ -16,6 +16,7 @@
  *
  * `npm run sim:economy -- [--runs=1000] [--cache=path] [--current]`
  */
+import { SESSION_TIME } from './session-time';
 import {
   levelReward as currentLevelReward,
   xpToNext as currentXpToNext,
@@ -276,8 +277,8 @@ const MISSION_RATE: Record<ProfileId, { easy: number; medium: number; hard: numb
   strong: { easy: 1, medium: 1, hard: 1 },
 };
 
-const RESULTS_SEC = 20;
-const AD_SEC = 30;
+const RESULTS_SEC = SESSION_TIME.resultsSec;
+const AD_SEC = SESSION_TIME.adSec;
 const giftsPerDay = (minutes: number): number => (minutes >= 120 ? 4 : 2);
 
 // ---------------------------------------------------------------- day walk

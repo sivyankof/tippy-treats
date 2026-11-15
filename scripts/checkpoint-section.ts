@@ -6,6 +6,7 @@ import {
   playCheckpointRuns,
   type CheckpointSample,
 } from './checkpoint-runs';
+import { SESSION_TIME } from './session-time';
 import { mean, percentile } from './sim-runner';
 
 /**
@@ -50,6 +51,9 @@ interface Stats {
   meanSeconds: number;
   coinsPerMin: number;
   layersPerMin: number;
+  /** Per minute of play with the results screen after the run (a berry start, no ad). */
+  coinsPerPlayMin: number;
+  layersPerPlayMin: number;
 }
 
 function statsOf(samples: CheckpointSample[]): Stats {
@@ -65,6 +69,9 @@ function statsOf(samples: CheckpointSample[]): Stats {
     meanSeconds: seconds,
     coinsPerMin: (coins / seconds) * 60,
     layersPerMin: (mean(samples.map((s) => s.placed)) / seconds) * 60,
+    coinsPerPlayMin: (coins / (seconds + SESSION_TIME.resultsSec)) * 60,
+    layersPerPlayMin:
+      (mean(samples.map((s) => s.placed)) / (seconds + SESSION_TIME.resultsSec)) * 60,
   };
 }
 
@@ -76,7 +83,7 @@ export function printCheckpointSection(runs: number, profile: string | null): vo
   );
   console.log(
     'Duration is the sim clock of the run (placed layers only). A start from a checkpoint must not beat the run from zero by more than ' +
-      `${TOLERANCE_PP} percentage points on (a) median placed layers vs median height from zero, (b) median coins per run, (c) coins per minute, (d) placed layers per minute.`,
+      `${TOLERANCE_PP} percentage points on (a) median placed layers vs median height from zero, (b) median coins per run, (c) coins per minute, (d) placed layers per minute; (e) and (f) are (c) and (d) per minute of play with the ${SESSION_TIME.resultsSec} s results screen after every run.`,
   );
   const widthRows: string[] = [];
   const failures: string[] = [];
@@ -100,27 +107,29 @@ export function printCheckpointSection(runs: number, profile: string | null): vo
     const title = `${player.profile}, team ${player.team.name}${player.team === NO_TEAM ? '' : ` (level ${player.level})`}`;
     console.log(`\n### ${title}`);
     console.log(
-      '| start | runs | median height | median placed | median coins | mean coins | mean berries | mean s | coins/min | placed/min | (a) placed vs zero height | (b) median coins | (c) coins/min | (d) placed/min |',
+      '| start | runs | median height | median placed | median coins | mean coins | mean berries | mean s | coins/min | placed/min | (a) placed vs zero height | (b) median coins | (c) coins/min | (d) placed/min | coins/play min | placed/play min | (e) coins/play min | (f) placed/play min |',
     );
-    console.log('|---|---|---|---|---|---|---|---|---|---|---|---|---|---|');
+    console.log('|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|');
     for (const { start, stats } of rows) {
       const checks =
         start === 0
-          ? ['-', '-', '-', '-']
+          ? ['-', '-', '-', '-', '-', '-']
           : [
               deltaPct(stats.medPlaced, zero.medFull),
               deltaPct(stats.medCoins, zero.medCoins),
               deltaPct(stats.coinsPerMin, zero.coinsPerMin),
               deltaPct(stats.layersPerMin, zero.layersPerMin),
+              deltaPct(stats.coinsPerPlayMin, zero.coinsPerPlayMin),
+              deltaPct(stats.layersPerPlayMin, zero.layersPerPlayMin),
             ].map((d, i) => {
               const text = verdict(d);
               if (text.endsWith('FAIL')) {
-                failures.push(`${title}, start ${start}, (${'abcd'[i]}): ${text}`);
+                failures.push(`${title}, start ${start}, (${'abcdef'[i]}): ${text}`);
               }
               return text;
             });
       console.log(
-        `| ${start} | ${stats.runs} | ${stats.medFull} | ${stats.medPlaced} | ${stats.medCoins} | ${stats.meanCoins.toFixed(1)} | ${stats.meanBerries.toFixed(2)} | ${stats.meanSeconds.toFixed(1)} | ${stats.coinsPerMin.toFixed(1)} | ${stats.layersPerMin.toFixed(1)} | ${checks.join(' | ')} |`,
+        `| ${start} | ${stats.runs} | ${stats.medFull} | ${stats.medPlaced} | ${stats.medCoins} | ${stats.meanCoins.toFixed(1)} | ${stats.meanBerries.toFixed(2)} | ${stats.meanSeconds.toFixed(1)} | ${stats.coinsPerMin.toFixed(1)} | ${stats.layersPerMin.toFixed(1)} | ${stats.coinsPerPlayMin.toFixed(1)} | ${stats.layersPerPlayMin.toFixed(1)} | ${checks.join(' | ')} |`,
       );
     }
     if (player.team === NO_TEAM) {
