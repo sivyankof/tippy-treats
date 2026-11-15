@@ -1,6 +1,8 @@
 import { WebAds } from './rewarded-video/web';
 import type { AdsDevControl, AdsService } from './rewarded-video/types';
 import { WebAudioService } from './audio/web';
+import type { ShareService } from './share/types';
+import { WebShare } from './share/web';
 import type { AudioService } from './audio/types';
 import type { HapticsService } from './haptics/types';
 import { WebHaptics } from './haptics/web';
@@ -13,6 +15,7 @@ export interface Services {
   haptics: HapticsService;
   ads: AdsService;
   storage: StorageService;
+  share: ShareService;
 }
 
 const webAds = new WebAds();
@@ -26,6 +29,7 @@ export const services: Services = {
   haptics: new WebHaptics(),
   ads: webAds,
   storage: new WebStorage(),
+  share: new WebShare(),
 };
 
 /** Dev switch of the ad stub (debug panel). Not part of the services: native ads have none. */
