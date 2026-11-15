@@ -10,16 +10,16 @@ export type CheckpointHeight = (typeof CHECKPOINT_HEIGHTS)[number];
 
 /**
  * Width of the first flying layer of a run that starts from a checkpoint: the median width of the
- * layer at that height over the bot runs from zero, no team, continues declined
- * (`npm run sim`: the width table at the end of its checkpoint section prints the measured values
- * next to these). Profile: regular for 20 and 40 (2000 runs, 1980 and 468 reach the height); the regular
- * profile almost never gets higher (5 runs reach 60, none reach 80 or 100), so 60, 80 and 100 come
- * from the expert profile (1908, 961 and 139 runs). The pre-built tower below narrows evenly from
- * the first width down to this one.
+ * layer at that height over the EXPERT bot runs from zero that reach it, no team, continues
+ * declined (`npm run sim`: the width table at the end of its checkpoint section prints the measured
+ * values next to these; 2000, 2000, 1908, 961 and 139 runs reach 20…100). Owner's decision
+ * 2026-11-15: the regular profile rarely reaches the high checkpoints and only with narrow layers,
+ * so its medians are biased (146 at 40, narrower than at 60). The pre-built tower below narrows
+ * evenly from the first width down to this one.
  */
 export const CHECKPOINT_START_WIDTH: Readonly<Record<CheckpointHeight, number>> = {
-  20: 429,
-  40: 146,
+  20: 691,
+  40: 591,
   60: 459,
   80: 240,
   100: 183,

@@ -9,9 +9,21 @@ import type {
 /** A rewarded ad was watched since the current run began (the interstitial rule 4). */
 let watchedInRun = false;
 
-/** A new run begins: the memory of rewarded ads watched starts over. */
+/** A rewarded ad watched before the run paid for that run (a checkpoint start). */
+let carriedIntoNextRun = false;
+
+/**
+ * The rewarded ad just watched paid for the run that starts next (a start from a checkpoint): it
+ * counts as watched in that run, so no interstitial comes after it (docs/05, section 6).
+ */
+export function carryRewardedIntoNextRun(): void {
+  carriedIntoNextRun = true;
+}
+
+/** A new run begins: the memory of rewarded ads watched starts over, keeping an ad that paid for it. */
 export function beginRunRewardedMemo(): void {
-  watchedInRun = false;
+  watchedInRun = carriedIntoNextRun;
+  carriedIntoNextRun = false;
 }
 
 /** The player watched a rewarded ad (the continue offer, the ×2 coins) during the current run. */

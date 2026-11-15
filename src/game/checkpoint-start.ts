@@ -10,7 +10,7 @@ import type { RewardedResult } from '../services/rewarded-video/types';
 import type { AnalyticsService } from '../services/telemetry/types';
 import { gameState } from '../state';
 import type { GameState } from '../state/game-state';
-import { showRewarded } from './rewarded';
+import { carryRewardedIntoNextRun, showRewarded } from './rewarded';
 
 /**
  * How paying for a start from a checkpoint ended:
@@ -29,6 +29,8 @@ export interface CheckpointStartDeps {
   adReady: () => boolean;
   showRewarded: (placement: 'checkpoint_start') => Promise<RewardedResult>;
   telemetry: Pick<AnalyticsService, 'logEvent'>;
+  /** The ad paid for the run that starts next: it counts as a rewarded ad of that run. */
+  carryReward?: () => void;
 }
 
 function liveDeps(): CheckpointStartDeps {
@@ -37,6 +39,7 @@ function liveDeps(): CheckpointStartDeps {
     adReady: () => services.ads.isRewardedReady(),
     showRewarded,
     telemetry: services.telemetry,
+    carryReward: carryRewardedIntoNextRun,
   };
 }
 
@@ -86,6 +89,7 @@ async function pay(
   const shown = await deps.showRewarded('checkpoint_start');
   if (shown !== 'rewarded') return shown;
   if (!state.payCheckpoint(height, 'ad')) return 'refused';
+  deps.carryReward?.();
   logStart(deps, height, method, 0);
   return 'paid';
 }
