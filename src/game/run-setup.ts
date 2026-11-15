@@ -1,3 +1,4 @@
+import { checkpointStartWidth, isCheckpointHeight } from '../core/checkpoints';
 import { dailySeed, dailyTeam } from '../core/daily';
 import type { RunMode } from '../core/run-result';
 import type { TeamSlot } from '../core/sim-types';
@@ -16,6 +17,8 @@ export interface RunSetup {
   mode: RunMode;
   seed: number;
   startHeight: number;
+  /** Width of the first layer above `startHeight` (`TowerSim` config); absent: the first width. */
+  startWidth?: number;
   team: Array<TeamSlot | null>;
   /** The run is the tutorial run (the hints director decides what it shows). */
   tutorialRun: boolean;
@@ -78,6 +81,8 @@ export function setupRun(request: RunRequest): RunSetup {
     mode: 'classic',
     seed,
     startHeight: debug.start ?? 0,
+    // A debug start at a checkpoint height looks exactly like a checkpoint start.
+    startWidth: debugStartWidth(debug.start),
     team,
     tutorialRun,
     hints,
@@ -86,6 +91,11 @@ export function setupRun(request: RunRequest): RunSetup {
     noContinue: debug.bot !== undefined,
     bot: debug.bot,
   };
+}
+
+/** `?start=` at a checkpoint height takes the checkpoint width; any other height keeps the first width. */
+function debugStartWidth(start: number | undefined): number | undefined {
+  return start !== undefined && isCheckpointHeight(start) ? checkpointStartWidth(start) : undefined;
 }
 
 /** True when the page was opened for a run straight away (dev parameters), not for Home. */

@@ -100,6 +100,7 @@ export class GameScene extends Phaser.Scene {
       team: this.team,
       tutorial: setup.tutorialRun,
       startHeight: this.startHeight,
+      startWidth: setup.startWidth,
     });
     this.mods = this.sim.currentModifiers();
     this.bot = setup.bot ? new TimingBot(setup.bot, new Rng(this.seed).fork('bot')) : null;
