@@ -28,6 +28,11 @@ export class EffectsMode {
     return this.watch.reduced ? 'auto' : null;
   }
 
+  /** The player's choice as `setChoice` takes it. */
+  getChoice(): ReducedFxSetting {
+    return this.userChoice === null ? 'auto' : this.userChoice ? 'on' : 'off';
+  }
+
   /** The player's choice from the settings: `auto` hands the decision back to the system and the frame rate. */
   setChoice(setting: ReducedFxSetting): void {
     this.userChoice = setting === 'auto' ? null : setting === 'on';

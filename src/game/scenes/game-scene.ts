@@ -6,7 +6,7 @@ import { emptyTally, tallyEvents, type RunTally } from '../../core/run-tally';
 import type { CheckpointHeight } from '../../core/checkpoints';
 import type { RunMode } from '../../core/run-result';
 import type { TeamSlot } from '../../core/sim-types';
-import { TowerSim } from '../../core/tower-sim';
+import { TowerSim, type TowerState } from '../../core/tower-sim';
 import { RunFx } from '../fx/run-fx';
 import { easeFn } from '../fx/ease';
 import { RunIntro } from '../fx/run-intro';
@@ -30,6 +30,8 @@ import { openScreen, restartRun, SCENES } from '../scene-keys';
 import { exitTarget } from '../run-exit';
 import { CLASSIC_RUN, demoFinished, type RunRequest } from '../run-request';
 import { setupRun } from '../run-setup';
+import type { DropDriver } from '../perf/perf-drivers';
+import { perfResultsData } from '../perf/perf-session';
 import { ANIM } from '../../data/anim';
 import { DEMO } from '../../data/demo';
 import { enterWorld, leaveScreen } from '../ui/transition';
@@ -41,7 +43,9 @@ const TRAY_TOP_Y = 0;
 
 export class GameScene extends Phaser.Scene {
   private sim!: TowerSim;
-  private bot: TimingBot | null = null;
+  private bot: DropDriver | null = null;
+  /** A `?perf=1` benchmark run: its results show as saved (the save itself is never touched). */
+  private perfRun = false;
   private seed = 0;
   private startHeight = 0;
   /** The checkpoint the run started from (null: the zero start), for the results. */
@@ -113,7 +117,10 @@ export class GameScene extends Phaser.Scene {
     });
     this.mods = this.sim.currentModifiers();
     logRunStart(setup, gameState.data.stats.runs);
-    this.bot = setup.bot ? new TimingBot(setup.bot, new Rng(this.seed).fork('bot')) : null;
+    this.perfRun = setup.perfDriver !== undefined;
+    this.bot =
+      setup.perfDriver ??
+      (setup.bot ? new TimingBot(setup.bot, new Rng(this.seed).fork('bot')) : null);
     this.flying.reset();
     this.continueFlow?.dispose();
     this.continueFlow = new ContinueFlow({
@@ -214,7 +221,7 @@ export class GameScene extends Phaser.Scene {
       checkpoint: this.checkpoint,
     };
     const data = buildResultsData({ ...outcome, recorded: this.writesSave }, gameState);
-    this.scene.launch(SCENES.results, data);
+    this.scene.launch(SCENES.results, this.perfRun ? perfResultsData(data) : data);
   }
 
   /**
@@ -238,6 +245,11 @@ export class GameScene extends Phaser.Scene {
     if (!demoFinished(this.sim.state.layers.length)) return;
     this.demoLeaving = true;
     this.time.delayedCall(DEMO.endDelayMs, () => this.leaveRun());
+  }
+
+  /** A look at the run for the `?perf=1` director: the intro is over, and the sim state. */
+  perfProbe(): { introActive: boolean; state: Readonly<TowerState> } | null {
+    return this.sim ? { introActive: this.camera.introActive, state: this.sim.state } : null;
   }
 
   /** The state of the run for the HUD. The object is reused: read it at once, do not keep it. */

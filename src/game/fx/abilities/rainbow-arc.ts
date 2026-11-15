@@ -53,6 +53,11 @@ export class RainbowArc {
     this.gfx = scene.add.graphics().setDepth(ARC_DEPTH);
   }
 
+  /** The arc has grown out fully and is in the air. */
+  get fullyGrown(): boolean {
+    return this.phase === 'live' && this.ageMs >= arc.growMs;
+  }
+
   /** Starts an arc out of a cloud at (`x`, `y`). */
   start(x: number, y: number): void {
     this.from.x = x;

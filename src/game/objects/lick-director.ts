@@ -101,6 +101,11 @@ export class LickDirector {
     if (this.scheduler.ready) this.start(ctx, false);
   }
 
+  /** The beat the lick that is on has reached; `null` when none is on. */
+  get stage(): LickStage | null {
+    return this.run?.stage ?? null;
+  }
+
   /** Starts a lick at once if a layer can lick (a dev tool); returns whether it did. */
   lickNow(ctx: LickContext, scene?: LickScene, kind?: LickKind): boolean {
     if (this.run || effectsMode.reduced) return false;

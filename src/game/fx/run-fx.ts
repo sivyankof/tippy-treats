@@ -34,6 +34,7 @@ import { TowerSparkles } from './tower-sparkles';
 import type { SparkleField } from './tower-sparkle-spot';
 import { TowerCollapse } from './tower-collapse';
 import { TopperFx } from './topper-fx';
+import { setRunHooks } from '../perf/run-hooks';
 
 /** The flying layer as it was before the sim step that just ran. */
 export type FlyingMemo = Pick<FlyingLayer, 'x' | 'width' | 'kind' | 'creature' | 'level'>;
@@ -130,6 +131,14 @@ export class RunFx {
       services.audio.lickHum();
       heartPop(this.landingFx.particles, x, y);
     };
+    // The benchmark's way in, in every build (the window hooks below are for dev only).
+    setRunHooks({
+      lick: (scene, kind) => this.tower.lickNow(scene, kind),
+      lickStage: () => licks.stage,
+      guest: () => this.guest.landNow(),
+      rainbowJoke: startRainbowJokeNow,
+      arcGrown: () => this.abilityFx.rainbowArcGrown,
+    });
     if (import.meta.env.DEV) {
       // window.tippyLick('big' | 'short', 'run' | 'fall'): a layer licks right away; true when one could.
       (

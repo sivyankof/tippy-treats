@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   parseDebugParams,
+  parsePerfParams,
   savesRun,
   showsFpsMeter,
   skipsTutorial,
@@ -158,5 +159,35 @@ describe('showsFpsMeter', () => {
     expect(showsFpsMeter('')).toBe(false);
     expect(showsFpsMeter('?fps=0')).toBe(false);
     expect(showsFpsMeter('?fps')).toBe(false);
+  });
+});
+
+describe('parsePerfParams', () => {
+  it('is off without ?perf=1', () => {
+    expect(parsePerfParams('')).toBeNull();
+    expect(parsePerfParams('?perf=0')).toBeNull();
+    expect(parsePerfParams('?perf')).toBeNull();
+  });
+
+  it('plays everything with full effects by default', () => {
+    expect(parsePerfParams('?perf=1')).toEqual({ fx: 'full', only: null, still: null });
+  });
+
+  it('reads the effects level, the subset and the still', () => {
+    expect(parsePerfParams('?perf=1&fx=reduced&only=calm,edge&still=tongue')).toEqual({
+      fx: 'reduced',
+      only: ['calm', 'edge'],
+      still: 'lick-big',
+    });
+    expect(parsePerfParams('?perf=1&still=rainbow')?.still).toBe('rainbow');
+  });
+
+  it('drops unknown names', () => {
+    expect(parsePerfParams('?perf=1&only=nope,space&fx=x&still=constructor')).toEqual({
+      fx: 'full',
+      only: ['space'],
+      still: null,
+    });
+    expect(parsePerfParams('?perf=1&only=nope')?.only).toBeNull();
   });
 });

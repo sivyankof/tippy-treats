@@ -1,0 +1,239 @@
+import type * as Phaser from 'phaser';
+import { PERF, type PerfSegmentDef } from '../../data/perf';
+import { setFrameWorkListener } from '../frame-work';
+import { CLASSIC_RUN } from '../run-request';
+import type { GameScene } from '../scenes/game-scene';
+import { launchRun, SCENES } from '../scene-keys';
+import { countDrawCalls } from './draw-calls';
+import { MissDriver } from './perf-drivers';
+import { PerfOverlay } from './perf-overlay';
+import { currentSegment, endPerfSession, perfSession } from './perf-session';
+import { formatTable, SegmentSamples, type SegmentStats } from './perf-stats';
+import { runHooks } from './run-hooks';
+
+/** What the page reads from `window.__tippyPerf`. */
+export interface PerfReport {
+  /** The benchmark is over (or the still is frozen). */
+  done: boolean;
+  /** Name of the segment being played while it runs. */
+  segment: string | null;
+  /** `?still=`: the game is frozen at the moment of the still. */
+  stillReady?: boolean;
+  fx?: 'full' | 'reduced';
+  /** Draw calls could be counted (WebGL context). */
+  drawCallsCounted?: boolean;
+  segments?: SegmentStats[];
+  table?: string;
+}
+
+type PerfWindow = Window & { __tippyPerf?: PerfReport };
+
+/** Where a segment is: waiting for its run, warming up (and waiting for its window to open), measuring. */
+type Phase = 'launch' | 'warmup' | 'measure';
+
+/** A segment that never gets going is given up after this long (the note says so in the table). */
+const TIMEOUT_NOTE = 'timeout';
+
+/**
+ * Plays the segments of the benchmark one after another: starts the run of each (the setup comes
+ * from `perf-session`), waits until it is ready, warms up, measures the frame work time of a
+ * window and moves on; at the end it shows the table. The director only watches and pokes the
+ * scene through `GameScene.perfProbe` and the run hooks: it adds nothing to the game rules.
+ */
+class PerfDirector {
+  private readonly overlay: PerfOverlay | null;
+  private readonly drawTotal: (() => number) | null;
+  private readonly rows: SegmentStats[] = [];
+  private samples = new SegmentSamples();
+  private phase: Phase = 'launch';
+  private phaseStartMs = 0;
+  private readyMs = 0;
+  /** When the driver of a miss is armed (the collapse and the results wait for it); `null`: not (any more). */
+  private armAtMs: number | null = null;
+  /** When the measured window opens; `null` while it waits for the miss or the results screen. */
+  private opensAtMs: number | null = null;
+  private windowStartMs = 0;
+  private lastDrawTotal = 0;
+  private nextPokeMs = 0;
+  /** A still: when the arc has been seen grown, and so when to freeze. */
+  private freezeAtMs = 0;
+  /** The benchmark ended its last segment (or the still froze the game). */
+  private finished = false;
+
+  constructor(private readonly game: Phaser.Game) {
+    this.overlay = perfSession()?.params.still ? null : new PerfOverlay();
+    this.drawTotal = countDrawCalls(game);
+  }
+
+  start(): void {
+    this.phaseStartMs = performance.now();
+    this.showLabel();
+    setFrameWorkListener((workMs, nowMs) => this.onFrame(workMs, nowMs));
+  }
+
+  private get gameScene(): GameScene {
+    return this.game.scene.getScene(SCENES.game) as GameScene;
+  }
+
+  private get resultsUp(): boolean {
+    return this.game.scene.isActive(SCENES.results);
+  }
+
+  private onFrame(workMs: number, nowMs: number): void {
+    const def = currentSegment();
+    const session = perfSession();
+    if (this.finished || !def || !session) return;
+    if (this.phase === 'launch') {
+      if (session.runsStarted === session.index + 1 && this.runReady()) this.runIsReady(def, nowMs);
+      else if (nowMs - this.phaseStartMs > PERF.readyTimeoutMs)
+        this.endSegment(nowMs, TIMEOUT_NOTE);
+      return;
+    }
+    this.poke(def, nowMs);
+    if (this.phase === 'warmup') {
+      if (session.params.still) this.watchStill(def, nowMs);
+      else this.warmUp(def, nowMs);
+      return;
+    }
+    const total = this.drawTotal?.() ?? null;
+    this.samples.add(workMs, total === null ? null : total - this.lastDrawTotal, nowMs);
+    if (total !== null) this.lastDrawTotal = total;
+    if (nowMs - this.windowStartMs >= def.measureMs) this.endSegment(nowMs, '');
+    else if (this.resultsUp && def.startOn !== 'results') {
+      this.endSegment(nowMs, def.endOnResults ? '' : 'run ended early');
+    }
+  }
+
+  /** The run of this segment exists, its camera is up and the layers are flying. */
+  private runReady(): boolean {
+    const probe = this.gameScene.perfProbe();
+    return probe !== null && !probe.introActive && probe.state.phase === 'flying';
+  }
+
+  private runIsReady(def: PerfSegmentDef, nowMs: number): void {
+    this.phase = 'warmup';
+    this.phaseStartMs = nowMs;
+    this.readyMs = nowMs;
+    this.nextPokeMs = nowMs;
+    this.freezeAtMs = 0;
+    this.armAtMs = null;
+    this.opensAtMs = null;
+    if (def.startOn === 'ready') this.opensAtMs = nowMs + def.warmupMs;
+    // The collapse waits for the miss; the results screen needs the miss at once.
+    else this.armAtMs = nowMs + (def.startOn === 'miss' ? def.warmupMs : 0);
+  }
+
+  /** Arms the miss when it is time, opens the window when its moment has come. */
+  private warmUp(def: PerfSegmentDef, nowMs: number): void {
+    if (this.armAtMs !== null && nowMs >= this.armAtMs) {
+      this.armAtMs = null;
+      const driver = perfSession()?.driver;
+      if (driver instanceof MissDriver) driver.arm();
+    }
+    if (this.opensAtMs === null) {
+      const driver = perfSession()?.driver;
+      if (def.startOn === 'miss' && driver instanceof MissDriver && driver.fired) {
+        this.opensAtMs = nowMs;
+      } else if (def.startOn === 'results' && this.resultsUp) {
+        // The results screen has its own warm-up: it slides in and fills first.
+        this.opensAtMs = nowMs + def.warmupMs;
+      }
+    }
+    if (this.opensAtMs !== null && nowMs >= this.opensAtMs) {
+      this.samples = new SegmentSamples();
+      this.lastDrawTotal = this.drawTotal?.() ?? 0;
+      this.windowStartMs = nowMs;
+      this.phase = 'measure';
+    } else if (nowMs - this.readyMs > PERF.readyTimeoutMs * 2) {
+      this.endSegment(nowMs, TIMEOUT_NOTE);
+    }
+  }
+
+  /** Does what the segment repeats: licks and the guest. */
+  private poke(def: PerfSegmentDef, nowMs: number): void {
+    const trigger = def.trigger;
+    if (!trigger || nowMs < this.nextPokeMs) return;
+    this.nextPokeMs = nowMs + trigger.everyMs;
+    const hooks = runHooks();
+    if (!hooks) return;
+    if (trigger.kind === 'lick') hooks.lick(trigger.scene, trigger.drop);
+    else hooks.guest();
+  }
+
+  /** A still: the game freezes at its moment (the screenshot is the harness's job). */
+  private watchStill(def: PerfSegmentDef, nowMs: number): void {
+    const hooks = runHooks();
+    let settled: boolean;
+    if (def.id === 'lick-big') settled = hooks?.lickStage() === 'hold';
+    else if (def.id === 'rainbow') settled = this.arcSettled(hooks?.arcGrown() === true, nowMs);
+    else settled = nowMs - this.readyMs >= PERF.towerStillMs;
+    if (!settled) return;
+    this.finished = true;
+    this.game.loop.sleep();
+    setFrameWorkListener(null);
+    this.publish({ done: true, stillReady: true, segment: def.id });
+  }
+
+  /** The arc has been grown for a moment, so it hangs in the air. */
+  private arcSettled(grown: boolean, nowMs: number): boolean {
+    if (!grown) return false;
+    if (this.freezeAtMs === 0) this.freezeAtMs = nowMs + PERF.stillSettleMs;
+    return nowMs >= this.freezeAtMs;
+  }
+
+  private endSegment(nowMs: number, note: string): void {
+    const def = currentSegment();
+    const session = perfSession();
+    if (!def || !session) return;
+    this.rows.push(this.samples.summary(def.id, PERF.percentile, note));
+    this.samples = new SegmentSamples();
+    if (session.index + 1 >= session.ids.length) {
+      this.finish();
+      return;
+    }
+    session.index++;
+    this.phase = 'launch';
+    this.phaseStartMs = nowMs;
+    this.showLabel();
+    // The results screen of the last segment goes away with the run that made it.
+    if (this.resultsUp) this.game.scene.stop(SCENES.results);
+    launchRun(this.gameScene, CLASSIC_RUN);
+  }
+
+  private finish(): void {
+    this.finished = true;
+    setFrameWorkListener(null);
+    endPerfSession();
+    const table = formatTable(this.rows, PERF.overlay.decimals);
+    const fx = perfSession()?.params.fx ?? 'full';
+    this.publish({
+      done: true,
+      segment: null,
+      fx,
+      drawCallsCounted: this.drawTotal !== null,
+      segments: this.rows,
+      table,
+    });
+    console.log(`[perf] ${JSON.stringify((window as PerfWindow).__tippyPerf)}`);
+    console.log(table);
+    this.overlay?.table(`fx=${fx}\n${table}`);
+  }
+
+  /** The progress line: changes only between segments, so it costs the frames nothing. */
+  private showLabel(): void {
+    const session = perfSession();
+    const id = currentSegment()?.id ?? null;
+    if (!session) return;
+    this.overlay?.progress(`perf ${session.index + 1}/${session.ids.length} ${id ?? '-'}`);
+    this.publish({ done: false, segment: id });
+  }
+
+  private publish(report: PerfReport): void {
+    (window as PerfWindow).__tippyPerf = report;
+  }
+}
+
+/** Starts the benchmark director for a game whose session has begun (`beginPerfSession`). */
+export function startPerfDirector(game: Phaser.Game): void {
+  new PerfDirector(game).start();
+}
