@@ -76,6 +76,7 @@ export class LayerTopper {
 
   /** Shows, moves or hides the topper of the plain layer `layerIndex` (1-based), `width` wide. */
   update(layerIndex: number, width: number, plain: boolean): void {
+    plainToppers.note(layerIndex, plain, width);
     const topper =
       this.allowed && plain && !this.faceless && !this.edgeHidden
         ? plainToppers.at(layerIndex)

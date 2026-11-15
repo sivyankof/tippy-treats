@@ -184,27 +184,27 @@ export const PLAIN_LAYER = {
      */
     ribbons: [
       {
-        yShare: 0.27,
+        yShare: 0.26,
         period: 140,
-        amplitude: 8,
+        amplitude: 6,
         phase: 0,
         width: 12,
         color: 0xd69a52,
         edge: 0xa86a2c,
       },
       {
-        yShare: 0.54,
+        yShare: 0.5,
         period: 140,
-        amplitude: 7,
+        amplitude: 5,
         phase: 0.7,
         width: 7,
         color: 0xeeb978,
         edge: 0xc88a48,
       },
       {
-        yShare: 0.82,
+        yShare: 0.74,
         period: 170,
-        amplitude: 4,
+        amplitude: 3,
         phase: 1.6,
         width: 3.5,
         color: 0xfff6e8,
@@ -214,6 +214,10 @@ export const PLAIN_LAYER = {
     edgePx: 1.5,
     /** A piece of a ribbon shorter than this (a stub left by the face or the outline) is not drawn. */
     minLength: 70,
+    /** On a narrow layer the shortest piece is at most this share of the side stretch left, so shorter ribbons survive. */
+    minShare: 0.5,
+    /** No piece is drawn shorter than this, so there are no dots, however narrow the stretch. */
+    minFloor: 24,
     /** Gap to the face, the outline and the cut. */
     faceMargin: 14,
     inset: 8,

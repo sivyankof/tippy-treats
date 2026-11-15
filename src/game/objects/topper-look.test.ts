@@ -7,8 +7,10 @@ import {
   popLaunch,
   sideOfOffset,
   topperAt,
+  topperFor,
   topperOffset,
   topperSize,
+  type LayerFacts,
   type PopPose,
 } from './topper-look';
 
@@ -57,19 +59,79 @@ describe('topperAt', () => {
   });
 });
 
-describe('topperAt first-run guarantee', () => {
-  it('shows a topper within the first ten layers for every seed that has a bare layer from 4 to 10', () => {
-    const { guaranteeFrom, guaranteeTo } = PLAIN_TOPPERS;
-    for (let seed = 1; seed <= 3000; seed++) {
-      const looks = Array.from({ length: guaranteeTo }, (_, i) => plainLookAt(seed, i + 1));
-      const canHave = looks.slice(guaranteeFrom - 1).some((l) => l.decor === null);
-      if (!canHave) continue;
-      let found = 0;
-      for (let n = 1; n <= guaranteeTo; n++) {
-        if (topperAt(seed, n, looks[n - 1]!.decor)) found++;
+describe('topperFor first-run guarantee', () => {
+  const { guaranteeFrom, guaranteeTo } = PLAIN_TOPPERS;
+  const WIDE = 600;
+
+  /** Layer kinds of a run: every `period`-th layer starting at `offset` is not plain. */
+  function layersOf(period: number, offset: number, width = WIDE): LayerFacts[] {
+    return Array.from({ length: 30 }, (_, i) => ({
+      plain: period === 0 || (i + offset) % period !== 0,
+      width,
+    }));
+  }
+
+  function shown(seed: number, layers: LayerFacts[], upTo: number): number[] {
+    const out: number[] = [];
+    for (let n = 1; n <= upTo; n++) if (topperFor(seed, n, layers)) out.push(n);
+    return out;
+  }
+
+  it('shows a topper within the first ten layers whenever a wide bare plain layer exists from 4 to 10', () => {
+    for (const [period, offset] of [
+      [0, 0],
+      [2, 0],
+      [3, 1],
+      [4, 2],
+    ] as const) {
+      const layers = layersOf(period, offset);
+      for (let seed = 1; seed <= 1500; seed++) {
+        const canHave = Array.from({ length: guaranteeTo - guaranteeFrom + 1 }, (_, i) => {
+          const n = guaranteeFrom + i;
+          return layers[n - 1]!.plain && plainLookAt(seed, n).decor === null;
+        }).some(Boolean);
+        if (!canHave) continue;
+        expect(shown(seed, layers, guaranteeTo).length).toBeGreaterThan(0);
       }
-      expect(found).toBeGreaterThan(0);
     }
+  });
+
+  it('never puts a topper on a layer that is not plain', () => {
+    const layers = layersOf(2, 0);
+    for (let seed = 1; seed <= 500; seed++) {
+      for (let n = 1; n <= 30; n++) {
+        if (!layers[n - 1]!.plain) expect(topperFor(seed, n, layers)).toBeNull();
+      }
+    }
+  });
+
+  it('is the same for the same seed and the same layers', () => {
+    const layers = layersOf(3, 0);
+    for (let seed = 1; seed <= 200; seed++) {
+      expect(shown(seed, layers, 12)).toEqual(shown(seed, layers, 12));
+    }
+  });
+
+  it('gives only one topper by the guarantee, none when an earlier layer had one by chance', () => {
+    const layers = layersOf(0, 0);
+    let guaranteed = 0;
+    for (let seed = 1; seed <= 1500; seed++) {
+      const early = shown(seed, layers, guaranteeFrom - 1);
+      const inRange = shown(seed, layers, guaranteeTo).filter((n) => n >= guaranteeFrom);
+      const bareFirst = Array.from(
+        { length: guaranteeTo - guaranteeFrom + 1 },
+        (_, i) => i + guaranteeFrom,
+      ).find((n) => plainLookAt(seed, n).decor === null);
+      if (early.length > 0 || bareFirst === undefined) continue;
+      guaranteed++;
+      expect(inRange).toContain(bareFirst);
+    }
+    expect(guaranteed).toBeGreaterThan(0);
+  });
+
+  it('skips a layer too narrow for the topper', () => {
+    const layers = layersOf(0, 0, 40);
+    for (let seed = 1; seed <= 300; seed++) expect(shown(seed, layers, 30)).toEqual([]);
   });
 });
 

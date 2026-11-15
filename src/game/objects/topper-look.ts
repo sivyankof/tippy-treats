@@ -2,7 +2,8 @@ import { Rng } from '../../core/rng';
 import { PLAIN_TOPPERS, TOPPER_KINDS, type TopperKind } from '../../data/plain-toppers';
 import type { DecorKind } from '../../data/plain-layers';
 import { DEG_TO_RAD, lerp } from '../../util/math';
-import { lookOfCode, plainLookAt, plainLooks } from './plain-look';
+import { faceHalfSpan } from '../fx/glaze-growth';
+import { plainLookAt, plainLooks } from './plain-look';
 
 /** What a kind takes on screen, pixels: the picture size, its resting spot (from the picture top) and half its width on the edge. */
 export interface TopperSize {
@@ -26,7 +27,7 @@ export interface Topper {
 }
 
 /** The draws of a layer's own topper stream: always all taken, so nothing depends on the decoration. */
-function topperDraws(seed: number, layerIndex: number): { wanted: boolean } & Topper {
+function topperDraws(seed: number, layerIndex: number): Topper & { wanted: boolean } {
   const rng = new Rng(seed).fork(`${PLAIN_TOPPERS.stream}:${layerIndex}`);
   const wanted = rng.next() < PLAIN_TOPPERS.shareOfBare;
   const kind = TOPPER_KINDS[rng.int(0, TOPPER_KINDS.length - 1)]!;
@@ -34,27 +35,54 @@ function topperDraws(seed: number, layerIndex: number): { wanted: boolean } & To
   return { wanted, kind, side };
 }
 
-/** The layer numbers `[from, to]` the first-topper guarantee looks at. */
-const { guaranteeFrom, guaranteeTo } = PLAIN_TOPPERS;
-
 /**
- * The topper of the plain layer with this 1-based number for the cosmetic `seed`, or `null`. Only
- * a layer without a small decoration gets one. Each layer draws from a stream of its own. When
- * none of layers 1..`guaranteeTo` got one by chance, the first bare layer from `guaranteeFrom`
- * takes it, so every run shows a topper early; this depends on the cosmetic seed alone.
+ * The topper the seeded draw gives to the plain layer with this 1-based number, or `null`. Only a
+ * layer without a small decoration gets one. Each layer draws from a stream of its own.
  */
 export function topperAt(seed: number, layerIndex: number, decor: DecorKind | null): Topper | null {
-  const own = topperDraws(seed, layerIndex);
-  if (decor !== null) return null;
-  if (own.wanted) return { kind: own.kind, side: own.side };
+  const { wanted, ...topper } = topperDraws(seed, layerIndex);
+  return decor === null && wanted ? topper : null;
+}
+
+/** What the first-topper guarantee needs to know about a layer of the run: its kind and how wide it is. */
+export interface LayerFacts {
+  plain: boolean;
+  width: number;
+}
+
+/** Whether `facts` is a plain layer that can show a topper at all (it is bare, and there is room beside the face). */
+function canShow(seed: number, layerIndex: number, facts: LayerFacts | undefined): boolean {
+  if (!facts || !facts.plain || plainLookAt(seed, layerIndex).decor !== null) return false;
+  const { kind, side } = topperDraws(seed, layerIndex);
+  return topperOffset(kind, side, facts.width, faceHalfSpan(facts.width, null)) !== null;
+}
+
+/**
+ * The topper of the plain layer `layerIndex` for the cosmetic `seed`: the seeded draw, or, when it
+ * is a layer from `guaranteeFrom` to `guaranteeTo` and no plain layer of the run before it has
+ * shown a topper, the first bare layer wide enough takes one, so every run shows a topper early.
+ * `layers[i - 1]` tells about layer `i` (golden layers and creatures never carry one). The result
+ * depends on the seed and on the kinds and widths of the layers up to this one only.
+ */
+export function topperFor(
+  seed: number,
+  layerIndex: number,
+  layers: ReadonlyArray<LayerFacts | undefined>,
+): Topper | null {
+  const facts = layers[layerIndex - 1];
+  if (!facts || !facts.plain) return null;
+  const decor = plainLookAt(seed, layerIndex).decor;
+  const own = topperAt(seed, layerIndex, decor);
+  if (own) return canShow(seed, layerIndex, facts) ? own : null;
+  const { guaranteeFrom, guaranteeTo } = PLAIN_TOPPERS;
   if (layerIndex < guaranteeFrom || layerIndex > guaranteeTo) return null;
-  let first: number | null = null;
-  for (let n = 1; n <= guaranteeTo; n++) {
-    const bare = plainLookAt(seed, n).decor === null;
-    if (bare && topperDraws(seed, n).wanted) return null;
-    if (bare && first === null && n >= guaranteeFrom) first = n;
+  if (!canShow(seed, layerIndex, facts)) return null;
+  for (let n = 1; n < layerIndex; n++) {
+    if (!canShow(seed, n, layers[n - 1])) continue;
+    if (n >= guaranteeFrom || topperAt(seed, n, null)) return null;
   }
-  return first === layerIndex ? { kind: own.kind, side: own.side } : null;
+  const { kind, side } = topperDraws(seed, layerIndex);
+  return { kind, side };
 }
 
 /**
@@ -154,18 +182,31 @@ export function restTilt(kind: TopperKind, side: -1 | 1): number {
 class PlainToppers {
   private seed = -1;
   private known: Array<Topper | null> = [];
+  private facts: Array<LayerFacts | undefined> = [];
 
-  /** The topper of the plain layer with this 1-based number, if it has one. */
-  at(layerIndex: number): Topper | null {
+  private sync(): number {
     const seed = plainLooks.cosmeticSeed;
     if (seed !== this.seed) {
       this.seed = seed;
       this.known = [];
+      this.facts = [];
     }
+    return seed;
+  }
+
+  /** A view shows layer `layerIndex` (1-based) of this kind and width; the first note of a layer stays. */
+  note(layerIndex: number, plain: boolean, width: number): void {
+    this.sync();
+    this.facts[layerIndex - 1] ??= { plain, width };
+  }
+
+  /** The topper of the plain layer with this 1-based number, if it has one (`null` until a view noted the layer). */
+  at(layerIndex: number): Topper | null {
+    const seed = this.sync();
     const cached = this.known[layerIndex];
     if (cached !== undefined) return cached;
-    const decor = lookOfCode(plainLooks.codeFor(layerIndex)).decor;
-    const topper = topperAt(seed, layerIndex, decor);
+    if (!this.facts[layerIndex - 1]) return null;
+    const topper = topperFor(seed, layerIndex, this.facts);
     this.known[layerIndex] = topper;
     return topper;
   }

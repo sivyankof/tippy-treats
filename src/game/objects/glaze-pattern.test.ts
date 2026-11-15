@@ -61,8 +61,15 @@ describe('glazePattern', () => {
 
   it('fills a faceless piece to the middle', () => {
     for (const kind of PATTERN_KINDS) {
-      const xs = points(make(kind, 480, null, false).pattern).map(([x]) => x);
-      expect(xs.some((x) => Math.abs(x) < P.dots.pitch)).toBe(true);
+      const xs = points(make(kind, 480, null, false).pattern).map(([x]) => Math.abs(x));
+      // Half of the horizontal step of the kind: a gap at the middle would be wider than this.
+      const repeat = {
+        zigzag: P.zigzag.period,
+        lattice: P.lattice.pitch,
+        waves: P.waves.period,
+        dots: P.dots.pitch,
+      }[kind];
+      expect(Math.min(...xs)).toBeLessThanOrEqual(repeat / 2);
     }
   });
 

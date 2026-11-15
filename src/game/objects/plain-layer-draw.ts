@@ -239,15 +239,9 @@ export function drawPlainLayer(
   const wave = glazeWave(box, cut, faceHalf);
   drawShadow(g, box);
   drawSpongeBody(g, box, art.sponge, wave.crestY);
-  // Patterned sponges start under the lowest tongue of the glaze, or the glaze would cut the ribbons short.
-  drawSpongeTexture(
-    g,
-    box,
-    art.sponge,
-    cut,
-    faceHalf,
-    art.sponge.material ? deepestY(wave) : wave.crestY,
-  );
+  // Marble starts under the lowest tongue of the glaze, or the glaze would cut the ribbons short.
+  const textureTop = art.sponge.material === 'marble' ? deepestY(wave) : wave.crestY;
+  drawSpongeTexture(g, box, art.sponge, cut, faceHalf, textureTop);
   if (cut) drawCutFace(g, box, cut, art.sponge, wave);
   drawWavyGlaze(g, box, art.colors.glaze, wave);
   if (art.pattern) drawGlazePattern(g, art.pattern, art.colors.glaze, box, cut, faceHalf, wave);

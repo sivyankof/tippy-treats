@@ -30,6 +30,14 @@ function spongeInside(
 }
 
 /**
+ * The shortest piece of a ribbon that is drawn on a side stretch `sideSpan` wide (the space left
+ * beside the face): `minLength` on a wide layer, shorter on a narrow one so some ribbons stay.
+ */
+export function marbleMinLength(sideSpan: number): number {
+  return Math.max(M.minFloor, Math.min(M.minLength, M.minShare * sideSpan));
+}
+
+/**
  * Strokes of the marble sponge from `topY` down: long smooth wavy ribbons (caramel, light and a
  * thin white one; an edge under each but the white). They are counted from the uncut edge and break in front of the face
  * (`faceHalf` either side of the centre; `null`: a faceless piece).
@@ -43,10 +51,13 @@ export function marbleStrokes(
   const axis = uAxis(box, cut);
   const faceEdge = faceHalf === null ? 0 : faceHalf + M.faceMargin;
   const height = box.innerBottom - topY;
+  const minLength = marbleMinLength(axis.length / 2 - faceEdge - M.inset);
   const strokes: Stroke[] = [];
   for (const rib of M.ribbons) {
     const y0 = topY + height * rib.yShare;
-    const inside = spongeInside(box, topY, M.inset, faceEdge, rib.width / 2, cut);
+    // The edge stroke is wider than the ribbon, so the margin takes it in.
+    const reach = rib.width / 2 + (rib.edge !== null ? M.edgePx : 0);
+    const inside = spongeInside(box, topY, M.inset, faceEdge, reach, cut);
     const lines = clipPolylines(
       (u) => [
         xAt(axis, u),
@@ -56,7 +67,7 @@ export function marbleStrokes(
       axis.length,
       STEP,
       inside,
-    ).filter((line) => (line.length / 2) * STEP >= M.minLength);
+    ).filter((line) => (line.length / 2) * STEP >= minLength);
     if (rib.edge !== null) {
       strokes.push({ color: rib.edge, width: rib.width + M.edgePx * 2, lines });
     }
