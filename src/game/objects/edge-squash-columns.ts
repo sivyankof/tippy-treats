@@ -1,4 +1,10 @@
 import * as Phaser from 'phaser';
+import { readDebugParams } from '../../util/debug-params';
+
+/** Dev-only `?edge=` probe (see `DebugParams.edge`); `undefined` in a normal run. */
+export const EDGE_PROBE = readDebugParams().edge;
+/** The fill of the rope under `?edge=tint`: loud, so its real triangles show. */
+const EDGE_PROBE_TINT = 0xff00ff;
 
 /** Columns of a picture: x, top and bottom of each one (content px); column `i` shows the texture at `i / (n - 1)` of its width. */
 export interface Columns {
@@ -63,6 +69,7 @@ class RopeColumns implements ColumnView {
     if (texture !== this.texture) {
       this.texture = texture;
       rope.setTexture(texture).setTintMode(Phaser.TintModes.MULTIPLY);
+      if (EDGE_PROBE === 'tint') rope.setTintMode(Phaser.TintModes.FILL).setColors(EDGE_PROBE_TINT);
       rope.updateUVs();
     }
     rope.columns = columns;
@@ -133,7 +140,7 @@ class ImageColumns implements ColumnView {
 
 /** The column view the renderer can draw: a rope on WebGL, cropped images on Canvas. */
 export function createColumnView(scene: Phaser.Scene, count: number): ColumnView {
-  return scene.game.renderer.type === Phaser.CANVAS
+  return scene.game.renderer.type === Phaser.CANVAS || EDGE_PROBE === 'img'
     ? new ImageColumns(scene, count)
     : new RopeColumns(scene, count);
 }

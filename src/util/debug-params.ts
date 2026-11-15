@@ -22,6 +22,19 @@ export interface DebugParams {
   dayOffset?: number;
   /** `?reset=1` makes the state layer start from a fresh save. */
   reset?: boolean;
+  /**
+   * `?edge=` narrows down a squash rendering problem on a device: `img` draws the squash with
+   * cropped images instead of the rope, `tint` fills the rope magenta to show its triangles,
+   * `nofolds` hides the folds, `off` shows the plain picture. It also opens the debug panel.
+   */
+  edge?: EdgeProbe;
+}
+
+export const EDGE_PROBES = ['img', 'tint', 'nofolds', 'off'] as const;
+export type EdgeProbe = (typeof EDGE_PROBES)[number];
+
+function parseEdgeProbe(raw: string | null): EdgeProbe | undefined {
+  return EDGE_PROBES.find((probe) => probe === raw);
 }
 
 const UINT32_MAX = UINT32_RANGE - 1;
@@ -65,7 +78,7 @@ function parseLevel(raw: string | null): number | undefined {
 }
 
 /**
- * Reads `?debug`, `?seed=`, `?bot=`, `?start=`, `?team=`, `?level=`, `?lineup=1`, `?tutorial=`, `?dayOffset=` and `?reset=1` from a query string.
+ * Reads `?debug`, `?seed=`, `?bot=`, `?start=`, `?team=`, `?level=`, `?lineup=1`, `?tutorial=`, `?dayOffset=`, `?reset=1` and `?edge=` from a query string.
  * Invalid values are ignored.
  */
 export function parseDebugParams(search: string): DebugParams {
@@ -88,6 +101,11 @@ export function parseDebugParams(search: string): DebugParams {
   const dayOffset = parseDayOffset(params.get('dayOffset'));
   if (dayOffset !== undefined) result.dayOffset = dayOffset;
   if (params.get('reset') === '1') result.reset = true;
+  const edge = parseEdgeProbe(params.get('edge'));
+  if (edge !== undefined) {
+    result.edge = edge;
+    result.debug = true;
+  }
   return result;
 }
 

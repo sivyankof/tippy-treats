@@ -5,6 +5,7 @@ import { EDGE_SQUASH } from '../../data/edge-squash';
 import { smoothstep } from '../../util/math';
 import { squashTall, squashX, type EdgeShape, type SideSquash } from './edge-squash';
 import { HALF_LAYER } from './layer-art';
+import { EDGE_PROBE } from './edge-squash-columns';
 
 /** Both sides, left then right; one array for every frame. */
 const SIGNS = [-1, 1] as const;
@@ -37,6 +38,7 @@ export class EdgeFolds {
     const cfg = EDGE_SQUASH.folds;
     let any = false;
     for (const sign of SIGNS) {
+      if (EDGE_PROBE === 'nofolds') break;
       const side = sign === -1 ? shape.left : shape.right;
       const grow = power > 0 ? power * foldGrowth(side) : 0;
       if (grow <= 0) continue;

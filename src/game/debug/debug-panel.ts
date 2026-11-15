@@ -9,6 +9,7 @@ import type { RunInfo } from '../run-info';
 import { adsDev } from '../../services';
 import { gameState } from '../../state';
 import { cycleDebugLevel, cycleDebugSlot, getDebugTeam } from './debug-team';
+import { EDGE_PROBE } from '../objects/edge-squash-columns';
 
 const FONT_SIZE = 30;
 const MARGIN = 20;
@@ -153,6 +154,7 @@ export class DebugPanel {
         `team ${info.team.map((slot) => (slot ? `${slot.id}:${slot.level}` : NO_CREATURE)).join(' ')}`,
         `fx ${effectsMode.reason ?? 'full'}`,
         `berries ${gameState.berries}`,
+        ...(EDGE_PROBE ? [`edge: ${EDGE_PROBE}`] : []),
       ].join('\n'),
     );
   }
