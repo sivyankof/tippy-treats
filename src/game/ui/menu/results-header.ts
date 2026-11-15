@@ -4,9 +4,11 @@ import { abilityCounts, type RunTally } from '../../../core/run-tally';
 import { MENU } from '../../../data/menu-layout';
 import { PALETTE } from '../../../data/palette';
 import { formatNumber, t } from '../../../i18n';
+import { gameState } from '../../../state';
 import { createCreatureIcon } from '../creature-icons';
 import { NumberRoll } from '../number-roll';
 import { createOutlinedText } from '../outlined-text';
+import { BalanceChip } from '../style/balance-chip';
 import { TitleRibbon } from '../style/title-ribbon';
 import { fitText, onFontRefresh } from './fit-text';
 import { cellWidths, stackRows, type Row } from './results-layout';
@@ -20,8 +22,16 @@ export class ResultsHeader {
   readonly height: number;
   private readonly roll = new NumberRoll();
   private readonly value: Phaser.GameObjects.Text;
+  /** Row of the ribbon inside the container, for what stands beside it. */
+  private readonly titleY: number;
 
-  constructor(scene: Phaser.Scene, result: RunResult, isRecord: boolean) {
+  /** `startLine`: "Started at layer N, placed M" under the height of a run from a checkpoint. */
+  constructor(
+    private readonly scene: Phaser.Scene,
+    result: RunResult,
+    isRecord: boolean,
+    startLine: string | null = null,
+  ) {
     this.container = scene.add.container(0, 0);
     const title = new TitleRibbon(scene, 0, 0, t('run.gameOver'));
     this.value = createOutlinedText(scene, 0, 0, formatNumber(0), cfg.heightFont, PALETTE.gold);
@@ -31,6 +41,11 @@ export class ResultsHeader {
       { obj: title, height: MENU.style.ribbon.height },
       { obj: this.value, height: cfg.heightFont * cfg.lineHeight },
     ];
+    if (startLine) {
+      const line = createOutlinedText(scene, 0, 0, startLine, cfg.startedFont);
+      fitText(line, cfg.nearMissWidth);
+      rows.push({ obj: line, height: cfg.startedFont * cfg.lineHeight });
+    }
     if (isRecord) {
       const record = createOutlinedText(
         scene,
@@ -43,6 +58,15 @@ export class ResultsHeader {
       rows.push({ obj: record, height: cfg.recordFont * cfg.lineHeight });
     }
     this.height = stackRows(this.container, rows, cfg.rowGap);
+    this.titleY = title.y;
+  }
+
+  /** A berry balance at the right end of the ribbon row; it moves with the header. */
+  addBalance(): BalanceChip {
+    const chip = new BalanceChip(this.scene, 'berries', cfg.panel.width / 2, this.titleY);
+    chip.snap(gameState.berries);
+    this.container.add(chip.root);
+    return chip;
   }
 
   update(dtMs: number): void {

@@ -95,7 +95,7 @@ export function createCheckpointStep(
       ),
     );
   } else {
-    const hasAd = row.ad !== 'none';
+    const hasAd = row.ad === 'ready' || row.ad === 'unavailable';
     const shiftUp = hasAd ? cfg.adMark.offsetY / 2 : 0;
     const tag = new PriceTag(scene, priceX, faceY - shiftUp, cfg.priceFont);
     tag.show('{price}', row.berries, 'berries');

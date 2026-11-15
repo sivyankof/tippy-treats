@@ -4,6 +4,7 @@ import { PALETTE } from '../../../data/palette';
 import { t } from '../../../i18n';
 import { createTextButton, type Button, type LabelButtonLayout } from '../button';
 import { stackRows, type Row } from './results-layout';
+import type { ExtraButtons } from './results-start';
 
 const cfg = MENU.results;
 
@@ -33,6 +34,7 @@ export class ResultsButtons {
     firstRun: boolean,
     handlers: ResultsButtonHandlers,
     labels: ResultsButtonLabels = { primary: 'run.playAgain', home: 'results.home' },
+    private readonly extra: ExtraButtons | null = null,
   ) {
     this.container = scene.add.container(0, 0);
     const make = (
@@ -62,6 +64,7 @@ export class ResultsButtons {
       handlers.primary,
     ).breathe();
     const rows: Row[] = [{ obj: primary, height: cfg.playButton.height }];
+    if (this.extra) rows.push(...this.extra.rows);
     if (!firstRun) {
       const { share } = handlers;
       const layout = share ? cfg.pairButton : cfg.homeButton;
@@ -94,5 +97,6 @@ export class ResultsButtons {
 
   setEnabled(enabled: boolean): void {
     for (const button of this.buttons) button.setEnabled(enabled);
+    this.extra?.setEnabled(enabled);
   }
 }

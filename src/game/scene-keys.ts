@@ -7,7 +7,7 @@ import type { RunSummary } from '../state/game-state';
 import type { TowerSnapshot } from './objects/tower-snapshot';
 import { gameState } from '../state';
 import { CLASSIC_RUN, type DemoBack, type RunRequest } from './run-request';
-import { decideRestart } from './run-restart';
+import { decideRestart, restartRequest } from './run-restart';
 
 export const SCENES = {
   boot: 'boot',
@@ -86,12 +86,13 @@ export function launchRun(scene: Phaser.Scene, request: RunRequest = CLASSIC_RUN
 }
 
 /**
- * Restarts the current run (pause, page cache restore): a daily run spends an attempt first, and
+ * Restarts the current run (pause, page cache restore): a run from a checkpoint begins from zero, a daily run spends an attempt first, and
  * with none left the daily screen opens instead.
  */
 export function restartRun(scene: Phaser.Scene, request: RunRequest = CLASSIC_RUN): void {
-  if (decideRestart(request, () => gameState.startDailyAttempt()) === 'run') {
-    launchRun(scene, request);
+  const next = restartRequest(request);
+  if (decideRestart(next, () => gameState.startDailyAttempt()) === 'run') {
+    launchRun(scene, next);
   } else {
     openScreen(scene, SCENES.daily);
   }

@@ -67,8 +67,10 @@ export function checkpointRunAllowed(mode: RunMode, tutorial: boolean): boolean 
 
 /** How the ad button of a checkpoint row looks. */
 export type CheckpointAdState =
-  /** No ad for this checkpoint (80, 100, the free start) or today's ad starts are used up. */
+  /** No ad for this checkpoint (80, 100, the free start, a locked step). */
   | 'none'
+  /** An open low checkpoint whose ad starts are used up today: no button, a caption says why. */
+  | 'spent'
   | 'ready'
   /** The ad did not load: grey "Ad unavailable". */
   | 'unavailable';
@@ -107,14 +109,15 @@ export function checkpointRows(input: CheckpointRowsInput): CheckpointRow[] {
   const rows = CHECKPOINT_HEIGHTS.map((height): CheckpointRow => {
     const locked = !input.opened.includes(height);
     const berries = checkpointBerryPrice(height);
-    const hasAd = !locked && checkpointHasAd(height) && input.adsLeft > 0;
+    const hasAd = !locked && checkpointHasAd(height);
+    const spent = hasAd && input.adsLeft <= 0;
     return {
       height,
       zoneIndex: zoneIndexOf(height + 1),
       locked,
       berries,
       missing: Math.max(0, berries - Math.max(0, Math.floor(input.berries))),
-      ad: hasAd ? (input.adReady ? 'ready' : 'unavailable') : 'none',
+      ad: !hasAd ? 'none' : spent ? 'spent' : input.adReady ? 'ready' : 'unavailable',
     };
   });
   return [free, ...rows];

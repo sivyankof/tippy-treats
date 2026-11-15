@@ -28,6 +28,8 @@
     "decline": "Нет, спасибо"
   },
   "checkpoint": {
+    "adsSpent": "Старты за рекламу на сегодня закончились",
+    "from": "С места ▸",
     "window": {
       "title": "С какого места?",
       "layer": "Слой {n}",
@@ -226,7 +228,10 @@
     "debugRun": "Отладочный забег: не сохраняется",
     "home": "Домой",
     "next": "Дальше",
-    "share": "Поделиться"
+    "share": "Поделиться",
+    "startedAt": "Старт со слоя {start} · положено {placed}",
+    "fromPointFor": "С точки {n} · {price}",
+    "fromPointAd": "С точки {n} ▶"
   },
   "share": {
     "title": "Tippy Treats",
