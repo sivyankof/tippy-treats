@@ -5,6 +5,7 @@ import { SleepLetters } from '../../objects/sleep-letters';
 import { CREATURE_SLEEP } from '../../../data/creature-style';
 import { effectsMode } from '../../effects-mode';
 import {
+  OVEN_ORIGIN,
   OVEN_PICTURE_HEIGHT,
   OVEN_TEXTURES,
   OVEN_WINDOW,
@@ -12,6 +13,7 @@ import {
   type OvenState,
 } from '../../fx/oven-texture';
 import { FlameIcon } from './flame-icon';
+import { startSwayTween } from './hop-motion';
 
 const look = OVEN_LOOK;
 const motion = look.motion;
@@ -27,7 +29,7 @@ export interface OvenPictureOptions {
 
 /**
  * The oven character: body, a flame (or a tiny ember) behind the ring of the window, a face.
- * Lit: bobs and rocks, the flame flickers. Spent: grey, breathes slowly, the ember glows, "z" float up.
+ * Lit: rocks gently, the flame flickers. Spent: grey, breathes slowly, the ember glows, "z" float up.
  * Local (0, 0) is the middle of the body; `OVEN_PICTURE_HEIGHT` is its height at scale 1.
  */
 export class OvenPicture extends Phaser.GameObjects.Container {
@@ -47,8 +49,10 @@ export class OvenPicture extends Phaser.GameObjects.Container {
       : options.face
         ? t.spentFace
         : t.spentPlain;
-    const body = scene.add.image(0, 0, bodyKey);
-    const ring = scene.add.image(0, 0, lit ? t.ringLit : t.ringSpent);
+    const body = scene.add.image(0, 0, bodyKey).setOrigin(OVEN_ORIGIN.x, OVEN_ORIGIN.y);
+    const ring = scene.add
+      .image(0, 0, lit ? t.ringLit : t.ringSpent)
+      .setOrigin(OVEN_ORIGIN.x, OVEN_ORIGIN.y);
     this.holder = scene.add.container(0, 0, [body]);
     if (lit) {
       const size = OVEN_WINDOW.radius * 2 * look.flame.size;
@@ -129,18 +133,7 @@ export class OvenPicture extends Phaser.GameObjects.Container {
   private startMotion(lit: boolean): void {
     const scene = this.scene;
     if (lit) {
-      const { rise, ms, stretch } = motion.bob;
-      // The living oven hops and stretches instead of rocking (docs/08 journal); rocking is the owner's call.
-      scene.tweens.add({
-        targets: this.holder,
-        y: -rise,
-        scaleX: 1 - stretch,
-        scaleY: 1 + stretch,
-        duration: ms,
-        yoyo: true,
-        repeat: -1,
-        ease: 'Sine.easeInOut',
-      });
+      startSwayTween(scene, this.holder, motion.sway, false);
       return;
     }
     const { scaleX, scaleY, ms } = motion.breath;
