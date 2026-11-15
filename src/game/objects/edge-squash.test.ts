@@ -1,41 +1,93 @@
 import { describe, expect, it } from 'vitest';
 import { EDGE_SQUASH, type WallFeel } from '../../data/edge-squash';
+import { BALANCE } from '../../data/balance';
+import { ribLayoutFor } from './edge-squash-ribs';
 import {
   bounceWave,
+  byPower,
+  columnEdge,
   edgeOverflow,
   fitShape,
   flatShape,
   glazeSwing,
   isSquashed,
   knockPulse,
+  ribReach,
   slideShift,
   softOverflow,
+  speedPower,
   squashGlaze,
   squashMid,
   squashScale,
   squashTallest,
-  squashTall,
   squashWidth,
   squashX,
   wantedDepth,
+  type ColumnEdge,
   type EdgeShape,
 } from './edge-squash';
 
 const { feel, kneePx } = EDGE_SQUASH;
+const LAYER_H = BALANCE.layer.height;
+const RIBS = ribLayoutFor(1234, 5);
 const WALL_L = 12;
 const WALL_R = 1068;
 
 /** The shape of a layer `width` wide around `cx` between the test walls. */
-function shapeAt(cx: number, width: number, f: Readonly<WallFeel> = feel.normal): EdgeShape {
+function shapeAt(
+  cx: number,
+  width: number,
+  f: Readonly<WallFeel> = feel.normal,
+  power = 0,
+): EdgeShape {
   const half = width / 2;
   const over = edgeOverflow(cx, half, WALL_L, WALL_R);
-  return fitShape(
+  const shape = fitShape(
     half,
     wantedDepth(over.left, kneePx, f),
     wantedDepth(over.right, kneePx, f),
     f,
     flatShape(),
+    power,
   );
+  shape.ribs = RIBS;
+  return shape;
+}
+
+/** How far the smooth wedge of the columns at `u` reaches above and below the normal outline, shares of the layer height. */
+function wedge(shape: Readonly<EdgeShape>, u: number): ColumnEdge {
+  return columnEdge(shape, u, { up: 0, down: 0 });
+}
+
+/** The drawn distance of the column at `u` from the wall of each side it is nearer to. */
+function fromWall(shape: Readonly<EdgeShape>, u: number): { side: 'left' | 'right'; d: number } {
+  const x = squashX(shape, u) - shape.shift;
+  const left = x - shape.edgeLeft;
+  const right = shape.edgeRight - x;
+  return left < right ? { side: 'left', d: left } : { side: 'right', d: right };
+}
+
+/** How far the whole outline (the wedge of the columns and the ribs of the silhouette on it) reaches at `u`, shares of the layer height. */
+function reach(shape: Readonly<EdgeShape>, u: number): ColumnEdge {
+  const base = wedge(shape, u);
+  const at = fromWall(shape, u);
+  const ribs = ribReach(shape, shape[at.side], at.d, { up: 0, down: 0 });
+  return { up: base.up + ribs.up, down: base.down + ribs.down };
+}
+
+/** The most the body grows beyond its normal height anywhere, share of the layer height (glaze included). */
+function tallestGrowth(shape: Readonly<EdgeShape>): { total: number; up: number } {
+  let total = 0;
+  let up = 0;
+  for (let u = -shape.half; u <= shape.half; u += 1) {
+    const r = reach(shape, u);
+    const glaze = squashGlaze(shape, u) / LAYER_H;
+    if (r.up + glaze + r.down > total) {
+      total = r.up + glaze + r.down;
+      up = r.up + glaze;
+    }
+  }
+  return { total, up: total > 0 ? up / total : 0 };
 }
 
 /** Drawn left and right edges of the body, world x. */
@@ -83,16 +135,17 @@ describe('edge squash shape', () => {
     const s = shapeAt(880, 720);
     expect(squashX(s, -360)).toBe(-360);
     expect(squashScale(s, -200)).toBe(1);
-    expect(squashTall(s, -200)).toBe(1);
+    expect(reach(s, -200)).toEqual({ up: 0, down: 0 });
     expect(squashScale(s, 359)).toBeLessThan(0.9);
   });
 
   it('is mirrored between the walls', () => {
-    const a = shapeAt(150, 600);
-    const b = shapeAt(1080 - 150, 600);
+    const a = shapeAt(150, 600, feel.normal, 0.7);
+    const b = shapeAt(1080 - 150, 600, feel.normal, 0.7);
     for (let u = -300; u <= 300; u += 25) {
       expect(squashX(a, u)).toBeCloseTo(-squashX(b, -u), 6);
-      expect(squashTall(a, u)).toBeCloseTo(squashTall(b, -u), 6);
+      expect(reach(a, u).up).toBeCloseTo(reach(b, -u).up, 6);
+      expect(reach(a, u).down).toBeCloseTo(reach(b, -u).down, 6);
     }
   });
 
@@ -115,12 +168,14 @@ describe('edge squash shape', () => {
     const step = 0.25;
     for (const f of Object.values(feel)) {
       for (let cx = 140; cx <= 300; cx += step) {
-        const a = shapeAt(cx, 720, f);
-        const b = shapeAt(cx + step, 720, f);
+        const a = shapeAt(cx, 720, f, 0.8);
+        const b = shapeAt(cx + step, 720, f, 0.8);
         for (let u = -360; u <= 360; u += 30) {
           // A column can move at most by the step itself plus the squash it takes up.
           expect(Math.abs(cx + step + squashX(b, u) - (cx + squashX(a, u)))).toBeLessThan(step * 3);
-          expect(Math.abs(squashTall(b, u) - squashTall(a, u))).toBeLessThan(0.01);
+          // The foot of a rib is a cusp (round bumps, pointed hollows), so allow a little more there.
+          expect(Math.abs(reach(b, u).up - reach(a, u).up)).toBeLessThan(0.03);
+          expect(Math.abs(reach(b, u).down - reach(a, u).down)).toBeLessThan(0.03);
         }
       }
     }
@@ -136,22 +191,23 @@ describe('edge squash shape', () => {
     expect(last).toBeGreaterThan(200);
   });
 
-  it('makes the side at the wall taller, never more than maxTall', () => {
-    const s = shapeAt(140, 720, feel.soft);
-    expect(squashTall(s, -360)).toBeGreaterThan(1.2);
-    expect(squashTall(s, -360)).toBeLessThanOrEqual(feel.soft.maxTall);
-    expect(squashTall(s, 355)).toBe(1);
+  it('makes the side at the wall taller and leaves the far side alone', () => {
+    const s = shapeAt(140, 720, feel.normal, 1);
+    expect(tallestGrowth(s).total).toBeGreaterThan(0.2);
+    expect(reach(s, 355)).toEqual({ up: 0, down: 0 });
+    expect(reach(s, 300)).toEqual({ up: 0, down: 0 });
   });
 
   it('gives a soft material a longer, taller squash and a hard one hardly any', () => {
-    const soft = shapeAt(140, 720, feel.soft);
-    const normal = shapeAt(140, 720, feel.normal);
-    const hard = shapeAt(140, 720, feel.hard);
+    const soft = shapeAt(140, 720, feel.soft, 0.5);
+    const normal = shapeAt(140, 720, feel.normal, 0.5);
+    const hard = shapeAt(140, 720, feel.hard, 0.5);
     // At the deepest squash both zones fill the whole width: compare them a little further out.
-    expect(shapeAt(220, 720, feel.soft).left.zone).toBeGreaterThan(
-      shapeAt(220, 720, feel.normal).left.zone,
+    expect(shapeAt(300, 720, feel.soft).left.zone).toBeGreaterThan(
+      shapeAt(300, 720, feel.normal).left.zone,
     );
-    expect(squashTall(soft, -340)).toBeGreaterThan(squashTall(normal, -340));
+    expect(tallestGrowth(soft).total).toBeGreaterThan(tallestGrowth(normal).total * 1.2);
+    expect(tallestGrowth(hard).total).toBeLessThan(tallestGrowth(normal).total * 0.4);
     expect(hard.left.depth).toBeLessThan(normal.left.depth * 0.5);
   });
 
@@ -200,7 +256,7 @@ describe('hard layer slide', () => {
   function hardShape(cx: number, width: number): EdgeShape {
     const half = width / 2;
     const over = edgeOverflow(cx, half, WALL_L, WALL_R);
-    const s = shapeAt(cx, width, hard);
+    const s = shapeAt(cx, width, hard, 1);
     s.shift = slideShift(over.left, over.right, kneePx, hard);
     return s;
   }
@@ -239,7 +295,7 @@ describe('hard layer slide', () => {
     expect(squashTallest(flatShape())).toBe(1);
     const s = shapeAt(140, 720);
     expect(squashTallest(s)).toBeGreaterThan(1);
-    expect(squashTallest(s)).toBeLessThanOrEqual(feel.normal.maxTall);
+    expect(squashTallest(s)).toBe(1 + s.left.rise);
   });
 
   it('squeezes the column at the wall harder with the edge bias, the far side stays put', () => {
@@ -255,7 +311,7 @@ describe('hard layer slide', () => {
   it('keeps a hard material nearly flat', () => {
     const hard = shapeAt(140, 720, feel.hard);
     expect(squashScale(hard, -359)).toBeGreaterThanOrEqual(feel.hard.minScale - 1e-9);
-    expect(hard.folds).toBe(0);
+    expect(hard.ribShare).toBe(0);
   });
 
   it('gathers the glaze only where the width was lost and sags it at the wall itself', () => {
@@ -273,5 +329,275 @@ describe('hard layer slide', () => {
     expect(glazeSwing(Infinity, periodMs, decayMs)).toBe(0);
     expect(Math.abs(glazeSwing(2000, periodMs, decayMs))).toBeLessThan(0.001);
     expect(glazeSwing(periodMs / 4, periodMs, decayMs)).toBeGreaterThan(0);
+  });
+});
+
+describe('wedge strength by speed', () => {
+  const { base, max } = BALANCE.speed;
+
+  it('maps the speed to a share between the base and the maximum speed, smoothly', () => {
+    expect(speedPower(base)).toBe(0);
+    expect(speedPower(max)).toBe(1);
+    expect(speedPower(base - 100)).toBe(0);
+    expect(speedPower(max + 500)).toBe(1);
+    expect(speedPower((base + max) / 2)).toBeCloseTo(0.5, 9);
+    expect(byPower(EDGE_SQUASH.byPower.rise, 0)).toBe(EDGE_SQUASH.byPower.rise[0]);
+    expect(byPower(EDGE_SQUASH.byPower.rise, 1)).toBe(EDGE_SQUASH.byPower.rise[1]);
+  });
+
+  it('a slow layer rises 12-15% at the wall, a fast one 25-30%', () => {
+    const slow = tallestGrowth(shapeAt(140, 720, feel.normal, 0));
+    const fast = tallestGrowth(shapeAt(140, 720, feel.normal, 1));
+    expect(slow.total).toBeGreaterThanOrEqual(0.12);
+    expect(slow.total).toBeLessThanOrEqual(0.15);
+    expect(fast.total).toBeGreaterThanOrEqual(0.25);
+    expect(fast.total).toBeLessThanOrEqual(0.3);
+  });
+
+  it('grows with the speed, step by step', () => {
+    let last = tallestGrowth(shapeAt(140, 720, feel.normal, 0)).total;
+    for (let p = 0.05; p <= 1; p += 0.05) {
+      const now = tallestGrowth(shapeAt(140, 720, feel.normal, p)).total;
+      expect(now).toBeGreaterThanOrEqual(last - 1e-9);
+      expect(now - last).toBeLessThan(0.02);
+      last = now;
+    }
+  });
+
+  it('spreads mostly upwards: about 80% of the added height', () => {
+    for (const p of [0, 0.5, 1]) {
+      const share = tallestGrowth(shapeAt(140, 720, feel.normal, p)).up;
+      expect(share).toBeGreaterThanOrEqual(0.75);
+      expect(share).toBeLessThanOrEqual(0.88);
+    }
+  });
+
+  it('is a wedge a quarter of the layer long, longer on a deep squash but never past a third', () => {
+    const shallow = shapeAt(360, 720, feel.normal, 1);
+    expect(shallow.left.len).toBeGreaterThan(720 * 0.25 - 1e-6);
+    expect(shallow.left.len).toBeLessThan(720 * 0.27);
+    for (const f of Object.values(feel)) {
+      for (let cx = 140; cx >= 80; cx -= 6) {
+        for (const power of [0, 1]) {
+          const len = shapeAt(cx, 720, f, power).left.len;
+          expect(len).toBeLessThanOrEqual(720 / 3 + 1e-9);
+        }
+      }
+    }
+    const deep = shapeAt(140, 720, feel.normal, 1);
+    expect(deep.left.len).toBeGreaterThan(shallow.left.len);
+    expect(deep.left.len).toBeLessThanOrEqual(720 / 3 + 1e-9);
+    const s = deep;
+    const end = squashX(s, -360) + s.left.len + 1;
+    let u = -360;
+    while (squashX(s, u) < end) u += 1;
+    expect(reach(s, u)).toEqual({ up: 0, down: 0 });
+    // And the part near the wall is taller than the part towards the end of the wedge.
+    let near = 0;
+    let far = 0;
+    for (let x = -360; x < 360; x += 0.5) {
+      const d = squashX(s, x) - squashX(s, -360);
+      const up = reach(s, x).up;
+      if (d < s.left.len * 0.3) near = Math.max(near, up);
+      if (d > s.left.len * 0.6 && d < s.left.len) far = Math.max(far, up);
+    }
+    expect(near).toBeGreaterThan(far * 1.3);
+  });
+
+  it('is tallest right at the wall and the outline never rises above that further in', () => {
+    for (const p of [0, 0.5, 1]) {
+      for (const f of [feel.normal, feel.soft]) {
+        for (let layer = 1; layer <= 40; layer++) {
+          const s = shapeAt(140, 720, f, p);
+          s.ribs = ribLayoutFor(1234, layer);
+          const wall = reach(s, -360);
+          const wallTop = wall.up;
+          const wallBottom = wall.down;
+          expect(wallTop).toBeGreaterThan(0);
+          for (let u = -359; u <= 360; u += 1) {
+            const r = reach(s, u);
+            expect(r.up).toBeLessThanOrEqual(wallTop + 1e-9);
+            expect(r.down).toBeLessThanOrEqual(wallBottom + 1e-9);
+          }
+        }
+      }
+    }
+  });
+
+  it('makes the ribs and the glaze bulge bigger with the speed: small when slow, plump when fast', () => {
+    // The ribs are a share of the rise: about 65% of a small one when slow, 97% of a big one when fast.
+    const ribs = (power: number): number => {
+      const s = shapeAt(140, 720, feel.normal, power);
+      return s.ribShare * s.left.rise;
+    };
+    expect(ribs(1)).toBeGreaterThan(ribs(0) * 2.5);
+    const bulge = (power: number): number => {
+      const s = shapeAt(140, 720, feel.normal, power);
+      let best = 0;
+      for (let u = -359; u <= 0; u += 1) best = Math.max(best, squashGlaze(s, u));
+      return best;
+    };
+    expect(bulge(1)).toBeGreaterThan(bulge(0) * 2.5);
+  });
+
+  it('draws round bumps, not a staircase: every rib stands clear of the hollow before it', () => {
+    for (const power of [0, 1]) {
+      for (let layer = 1; layer <= 40; layer++) {
+        const s = shapeAt(140, 720, feel.normal, power);
+        s.ribs = ribLayoutFor(1234, layer);
+        const d0 = squashX(s, -360);
+        const heights: number[] = [];
+        for (let x = 0; x < s.left.len; x += 0.5) {
+          // The column drawn x px from the wall.
+          let u = -360;
+          while (squashX(s, u) - d0 < x) u += 0.25;
+          heights.push(reach(s, u).up);
+        }
+        // Local peaks standing above the dips on both sides by a clear margin (of the layer height).
+        let peaks = 0;
+        let min = heights[0]!;
+        let top = heights[0]!;
+        let rising = true;
+        for (const h of heights) {
+          if (rising) {
+            top = Math.max(top, h);
+            if (h < top - 0.01) {
+              peaks++;
+              rising = false;
+              min = h;
+            }
+          } else {
+            min = Math.min(min, h);
+            if (h > min + 0.01) {
+              rising = true;
+              top = h;
+            }
+          }
+        }
+        const lastShown = s.lastRib > 0.5 ? 4 : 3;
+        expect(peaks).toBeGreaterThanOrEqual(power === 1 ? lastShown - 1 : 1);
+      }
+    }
+  });
+
+  it('shows 3 ribs at a slow speed and 4 at a fast one, the fourth fading in', () => {
+    expect(shapeAt(140, 720, feel.normal, 0).lastRib).toBe(0);
+    expect(shapeAt(140, 720, feel.normal, 1).lastRib).toBe(1);
+    let last = 0;
+    for (let p = 0; p <= 1; p += 0.02) {
+      const now = shapeAt(140, 720, feel.normal, p).lastRib;
+      expect(now).toBeGreaterThanOrEqual(last);
+      expect(now - last).toBeLessThan(0.2);
+      last = now;
+    }
+  });
+
+  it('puts the whole rise into the wedge without the ribs (fewer effects)', () => {
+    const ribbed = shapeAt(140, 720, feel.normal, 1);
+    const plain = shapeAt(140, 720, feel.normal, 1);
+    plain.ribbing = false;
+    // The ribs make the outline uneven; without them it only ever goes down away from the wall.
+    let lastUp = Infinity;
+    let bumps = 0;
+    let lastRibbed = Infinity;
+    for (let u = -355; u <= -150; u += 1) {
+      const a = reach(plain, u).up;
+      expect(a).toBeLessThanOrEqual(lastUp + 1e-9);
+      lastUp = a;
+      const b = reach(ribbed, u).up;
+      if (b > lastRibbed + 1e-9) bumps++;
+      lastRibbed = b;
+    }
+    expect(bumps).toBeGreaterThan(5);
+    expect(tallestGrowth(plain).total).toBeGreaterThan(tallestGrowth(ribbed).total * 0.85);
+  });
+
+  it('springs the ribs: a swing of the spring changes their height, 1 is the rest', () => {
+    const rest = shapeAt(140, 720, feel.normal, 1);
+    const high = shapeAt(140, 720, feel.normal, 1);
+    high.left.spring = 1.5;
+    let sum = 0;
+    let sumHigh = 0;
+    for (let u = -355; u <= -150; u += 1) {
+      sum += reach(rest, u).up;
+      sumHigh += reach(high, u).up;
+    }
+    expect(sumHigh).toBeGreaterThan(sum);
+  });
+
+  it('never draws a column beyond the wall for a hard layer with ribs, slid and bounced', () => {
+    for (let cx = 140; cx >= 100; cx -= 4) {
+      const half = 360;
+      const over = edgeOverflow(cx, half, WALL_L, WALL_R);
+      const wanted = wantedDepth(over.left, kneePx, feel.hard);
+      for (let bounce = 1; bounce <= 1.2; bounce += 0.05) {
+        const s = fitShape(half, wanted * bounce + feel.hard.knockPx, 0, feel.hard, flatShape(), 1);
+        s.ribs = RIBS;
+        s.shift = slideShift(over.left, over.right, kneePx, feel.hard);
+        for (let u = -half; u <= half; u += 3) {
+          expect(cx + squashX(s, u)).toBeGreaterThanOrEqual(WALL_L - 1e-6);
+        }
+      }
+    }
+  });
+
+  it('never draws a column beyond the wall, with the bounce on top of any depth', () => {
+    for (let cx = 140; cx <= 200; cx += 4) {
+      const half = 360;
+      const over = edgeOverflow(cx, half, WALL_L, WALL_R);
+      for (let bounce = 1; bounce <= 1.3; bounce += 0.05) {
+        const s = fitShape(
+          half,
+          wantedDepth(over.left, kneePx, feel.normal) * bounce,
+          0,
+          feel.normal,
+          flatShape(),
+          1,
+        );
+        s.ribs = RIBS;
+        for (let u = -half; u <= half; u += 3) {
+          expect(cx + squashX(s, u)).toBeGreaterThanOrEqual(WALL_L - 1e-6);
+        }
+      }
+    }
+  });
+});
+
+describe('ribs of the silhouette', () => {
+  it('stand out of the wedge at the wall: together with it they make the rise, the wall rib the highest', () => {
+    const s = shapeAt(140, 720, feel.normal, 1);
+    const wall = ribReach(s, s.left, 0, { up: 0, down: 0 });
+    expect(wall.up).toBeGreaterThan(wall.down);
+    expect(wall.up).toBeGreaterThan(0.1);
+    for (let d = 1; d < s.left.len; d += 1) {
+      const r = ribReach(s, s.left, d, { up: 0, down: 0 });
+      expect(r.up).toBeLessThanOrEqual(wall.up + 1e-9);
+    }
+    expect(ribReach(s, s.left, s.left.len, { up: 0, down: 0 })).toEqual({ up: 0, down: 0 });
+    expect(ribReach(s, s.left, -5, { up: 0, down: 0 }).up).toBeCloseTo(wall.up, 9);
+  });
+
+  it('are none without a rise, in fewer effects and for a hard layer', () => {
+    const s = shapeAt(140, 720, feel.normal, 1);
+    s.ribbing = false;
+    expect(ribReach(s, s.left, 0, { up: 0, down: 0 })).toEqual({ up: 0, down: 0 });
+    const hard = shapeAt(140, 720, feel.hard, 1);
+    expect(ribReach(hard, hard.left, 0, { up: 0, down: 0 })).toEqual({ up: 0, down: 0 });
+    const flat = flatShape();
+    flat.ribs = RIBS;
+    expect(ribReach(flat, flat.left, 0, { up: 0, down: 0 })).toEqual({ up: 0, down: 0 });
+  });
+
+  it('leave the columns a smooth wedge: the outline of the columns alone only ever goes down away from the wall', () => {
+    for (let layer = 1; layer <= 20; layer++) {
+      const s = shapeAt(140, 720, feel.normal, 1);
+      s.ribs = ribLayoutFor(1234, layer);
+      let last = Infinity;
+      for (let u = -360; u <= -100; u += 1) {
+        const up = wedge(s, u).up;
+        expect(up).toBeLessThanOrEqual(last + 1e-9);
+        last = up;
+      }
+    }
   });
 });

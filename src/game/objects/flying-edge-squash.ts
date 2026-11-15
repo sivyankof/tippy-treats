@@ -5,8 +5,9 @@ import {
   type MaterialBurst,
 } from '../../data/creature-materials';
 import type { CreatureId } from '../../data/creatures';
+import type { MouthKind } from '../../data/creature-looks';
 import { EDGE_SQUASH, type WallFeel } from '../../data/edge-squash';
-import { smoothstep } from '../../util/math';
+import { lerp, smoothstep } from '../../util/math';
 import { effectsMode } from '../effects-mode';
 import {
   bounceWave,
@@ -17,13 +18,16 @@ import {
   isSquashed,
   knockPulse,
   slideShift,
+  speedPower,
   squashTallest,
   squashMid,
   squashWidth,
   wantedDepth,
 } from './edge-squash';
-import { artWidth } from './layer-art';
+import { BUBBLE_RIBS, ribLayoutFor, type RibLayout } from './edge-squash-ribs';
+import { artWidth, cakeColorsFor } from './layer-art';
 import type { LayerView } from './layer-view';
+import { plainLooks } from './plain-look';
 
 /** Both walls; one array for every frame. */
 const SIDES = ['left', 'right'] as const;
@@ -36,14 +40,19 @@ export interface Walls {
   right: number;
 }
 
-/** A hard layer knocked against a wall this frame: where, and what flies off it. */
+/** A layer touched a wall this frame: where, and what flies off it (crumbs of a hard one, glaze drops of a fast one). */
 export interface WallTouch {
   x: number;
   y: number;
   /** Direction the particles fly, away from the wall (degrees, 0 is right). */
   directionDeg: number;
-  creature: CreatureId;
-  knock: Readonly<Omit<MaterialBurst, 'from'>>;
+  creature: CreatureId | null;
+  /** What a hard layer knocks off, `null` for the others. */
+  knock: Readonly<Omit<MaterialBurst, 'from'>> | null;
+  /** Glaze drops that fly up off a fast layer: how many, how big (share of full size) and in which colour (0: none). */
+  drops: number;
+  dropSize: number;
+  glaze: number;
 }
 
 /** Drawn body of the squashed layer: centre offset from the layer centre and width, sim units. */
@@ -52,6 +61,11 @@ export interface SquashBody {
   width: number;
   /** Height of the tallest column as a multiple of the normal height (1: not squashed). */
   tall: number;
+}
+
+/** 0 at `from`, 1 at `full`, smooth between. */
+function rampBetween(value: number, from: number, full: number): number {
+  return smoothstep((value - from) / (full - from));
 }
 
 const RIGHT_DEG = 0;
@@ -77,15 +91,31 @@ export class FlyingEdgeSquash {
   private readonly knockMs = { left: Infinity, right: Infinity };
   private fade = 1;
   private touch: WallTouch | null = null;
+  /** How strong the touch is: the speed of the layer between the base and the maximum, 0..1. */
+  private power = 0;
+  /** The ribs of the layer and the colour of its glaze (for the drops). */
+  private ribs: Readonly<RibLayout> | null = null;
+  private glaze = 0;
+  /** Age of the impact strokes per side, ms (infinity: none), and how strong they were at the touch. */
+  private readonly hitMs = { left: Infinity, right: Infinity };
+  private readonly hitGain = { left: 0, right: 0 };
   private readonly body: SquashBody = { mid: 0, width: 0, tall: 1 };
 
-  /** A new layer: its material, no history. */
-  reset(layer: Readonly<FlyingLayer>, walls: Readonly<Walls>): void {
+  /**
+   * A new layer: its material, its ribs and no history. `number` is the 1-based place it will have
+   * in the tower, which gives its glaze colour.
+   */
+  reset(layer: Readonly<FlyingLayer>, walls: Readonly<Walls>, number: number): void {
     this.creature = (layer.kind === 'creature' && layer.creature) || null;
     this.material = this.creature ? creatureMaterial(this.creature) : null;
     this.feel = EDGE_SQUASH.feel[this.material?.wall?.feel ?? 'normal'];
+    this.power = speedPower(layer.speed);
+    this.ribs = this.feel.bubble ? BUBBLE_RIBS : ribLayoutFor(plainLooks.cosmeticSeed, layer.index);
+    this.glaze = cakeColorsFor(this.creature, number, layer.kind === 'golden').glaze;
     this.bounceMs.left = this.bounceMs.right = Infinity;
     this.knockMs.left = this.knockMs.right = Infinity;
+    this.hitMs.left = this.hitMs.right = Infinity;
+    this.hitGain.left = this.hitGain.right = 0;
     this.touch = null;
     this.lastDir = layer.dir;
     this.noteOverflow(layer, walls);
@@ -108,7 +138,9 @@ export class FlyingEdgeSquash {
     for (const side of SIDES) {
       this.bounceMs[side] += dtMs;
       this.knockMs[side] += dtMs;
+      this.hitMs[side] += dtMs;
     }
+    this.power = speedPower(layer.speed);
     const lastDir = this.lastDir;
     const turnedFrom: Side = lastDir === 1 ? 'right' : 'left';
     const pressed = this.lastOver[turnedFrom] > -EDGE_SQUASH.kneePx;
@@ -121,13 +153,29 @@ export class FlyingEdgeSquash {
       const react = EDGE_SQUASH.reactFromPx;
       const depth = wantedDepth(over, EDGE_SQUASH.kneePx, this.feel);
       const wasDepth = wantedDepth(was, EDGE_SQUASH.kneePx, this.feel);
-      if (wasDepth < react && depth >= react) view.faceView.react(this.feel.face, this.feel.faceMs);
+      const hold = wasDepth < react && depth >= react ? this.faceHold() : 0;
+      if (hold > 0) view.faceView.react(this.feel.face, hold);
     }
     // A turn while pressed against a wall bounces off it.
     if (layer.dir !== lastDir) {
       if (pressed && !effectsMode.reduced) this.bounceMs[turnedFrom] = 0;
       this.lastDir = layer.dir;
     }
+  }
+
+  /**
+   * The mouth of the face for the aim `hint`: a slow layer pressed against a wall keeps a calm
+   * face (the worried `o` of an aim near the edge is held back), and the closer to the squint
+   * the speed gets, the more the face is let to change; a squinting layer shows it. A hard layer
+   * keeps its own gape.
+   */
+  wallMouth(hint: MouthKind): MouthKind {
+    const side = this.shape.left.depth > 0 || this.shape.right.depth > 0;
+    if (hint !== 'o' || !side || this.feel.face !== 'squint') return hint;
+    const { from, full } = EDGE_SQUASH.byPower.squint;
+    return rampBetween(this.power, from, full) < EDGE_SQUASH.byPower.squint.mouthFrom
+      ? 'smile'
+      : hint;
   }
 
   /** A hard layer knocked against the wall this frame, once; `null` otherwise. */
@@ -148,8 +196,13 @@ export class FlyingEdgeSquash {
     const over = edgeOverflow(0, half, (walls.left - x) / viewScale, (walls.right - x) / viewScale);
     const left = this.depthOf('left', over.left);
     const right = this.depthOf('right', over.right);
-    fitShape(half, left, right, this.feel, this.shape);
-    this.shape.folds = effectsMode.reduced ? 0 : this.feel.folds;
+    fitShape(half, left, right, this.feel, this.shape, this.power);
+    this.shape.ribbing = !effectsMode.reduced;
+    this.shape.ribs = this.ribs;
+    for (const side of SIDES) {
+      this.shape[side].hit = this.strokeProgress(side);
+      this.shape[side].hitGain = this.hitGain[side];
+    }
     const spring = EDGE_SQUASH.glazeSpring;
     for (const side of SIDES) {
       const swing = glazeSwing(this.bounceMs[side], spring.periodMs, spring.decayMs);
@@ -179,6 +232,26 @@ export class FlyingEdgeSquash {
     return depth * this.fade;
   }
 
+  /** How much of the splash (drops, strokes) the layer gives at this speed: 0 at `from`, 1 at `full`, smooth, none for a hard material. */
+  private splash(range: Readonly<{ from: number; full: number }>): number {
+    return rampBetween(this.power, range.from, range.full) * this.feel.splash;
+  }
+
+  /** How long the face holds its squint at the touch, ms: always the full time for a hard layer, growing with the speed otherwise (0: none). */
+  private faceHold(): number {
+    if (this.feel.face !== 'squint') return this.feel.faceMs;
+    const { from, full, minShare } = EDGE_SQUASH.byPower.squint;
+    const share = rampBetween(this.power, from, full);
+    return share < minShare ? 0 : this.feel.faceMs * share;
+  }
+
+  /** How far the impact strokes of a side have got, 0..1 (-1: none). */
+  private strokeProgress(side: Side): number {
+    const age = this.hitMs[side];
+    const ms = EDGE_SQUASH.strokes.ms;
+    return age < ms ? age / ms : -1;
+  }
+
   private noteOverflow(layer: Readonly<FlyingLayer>, walls: Readonly<Walls>): void {
     const over = edgeOverflow(layer.x, artWidth(layer.width) / 2, walls.left, walls.right);
     this.lastOver.left = over.left;
@@ -186,15 +259,25 @@ export class FlyingEdgeSquash {
   }
 
   private touchWall(side: Side, walls: Readonly<Walls>, view: LayerView): void {
-    if (!effectsMode.reduced) this.knockMs[side] = 0;
-    const knock = this.material?.wall?.knock;
-    if (!knock || !this.creature || effectsMode.reduced) return;
+    if (effectsMode.reduced) return;
+    this.knockMs[side] = 0;
+    const by = EDGE_SQUASH.byPower;
+    const strokes = this.splash(by.strokes);
+    this.hitGain[side] = strokes;
+    if (strokes > 0) this.hitMs[side] = 0;
+    const knock = this.material?.wall?.knock ?? null;
+    const dropGain = this.splash(by.drops);
+    const drops = dropGain > 0 ? Math.ceil(dropGain * by.drops.count) : 0;
+    if (!knock && drops <= 0) return;
     this.touch = {
       x: side === 'left' ? walls.left : walls.right,
       y: view.y,
       directionDeg: side === 'left' ? RIGHT_DEG : LEFT_DEG,
       creature: this.creature,
       knock,
+      drops,
+      dropSize: lerp(by.drops.size, 1, dropGain),
+      glaze: this.glaze,
     };
   }
 }

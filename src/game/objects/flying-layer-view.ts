@@ -155,7 +155,7 @@ export class FlyingLayerView {
       this.squinting = false;
       this.view.resetAnim();
       this.view.playAppear();
-      this.edge.reset(flying, this.walls);
+      this.edge.reset(flying, this.walls, state.layers.length + 1);
     }
     // The colour follows the number the layer will have in the tower (twins add height, not layers).
     this.view.setLook(flying).setLayer(state.layers.length + 1, flying.width);
@@ -165,7 +165,9 @@ export class FlyingLayerView {
       if (falling) face.react('squint', Infinity);
       else face.clearReaction();
     }
-    face.setMouthHint(aimMouth(flying.x - this.tower.topViewX(), flying.width));
+    face.setMouthHint(
+      this.edge.wallMouth(aimMouth(flying.x - this.tower.topViewX(), flying.width)),
+    );
     face.lookAt(this.tower.topViewX() - flying.x, surface - y);
     this.view.setPosition(flying.x, y).setVisible(true);
     this.edge.step(

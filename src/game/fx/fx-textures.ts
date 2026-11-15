@@ -9,6 +9,8 @@ import { bakeTexture } from '../ui/bake-texture';
 export const FX_TEXTURES = {
   glossBand: 'fx_gloss_band',
   drop: 'fx_drop',
+  /** The same teardrop baked big and padded, for drops that fly and are scaled up. */
+  dropBig: 'fx_drop_big',
   halo: 'fx_halo',
   circle: 'fx_circle',
   star: 'fx_star',
@@ -29,6 +31,9 @@ const HEART_SHINE = { x: 0.27, y: 0.3, w: 0.16, h: 0.12 } as const;
 const GLOSS_HEIGHT = 128;
 const DROP_WIDTH = ANIM.bite.dripSize;
 const DROP_HEIGHT = Math.round(ANIM.bite.dripSize * 1.5);
+/** The big drop is baked this many times larger than the small one, with an empty rim so its smooth edge is never cut by the texture border. */
+export const DROP_BIG_SCALE = 3;
+const DROP_BIG_PAD = 3;
 const HALO_SIZE = 256;
 /** Number of stacked circles that fake the radial falloff of the halo. */
 const HALO_RINGS = 18;
@@ -88,6 +93,16 @@ export function createFxTextures(scene: Phaser.Scene): void {
     g.fillStyle(white, 1);
     g.fillCircle(radius, DROP_HEIGHT - radius, radius);
     g.fillTriangle(radius, 0, 0, DROP_HEIGHT - radius, DROP_WIDTH, DROP_HEIGHT - radius);
+  });
+
+  const bigW = DROP_WIDTH * DROP_BIG_SCALE;
+  const bigH = DROP_HEIGHT * DROP_BIG_SCALE;
+  const bigRadius = bigW / 2;
+  bakeTexture(scene, FX_TEXTURES.dropBig, bigW + DROP_BIG_PAD * 2, bigH + DROP_BIG_PAD * 2, (g) => {
+    g.fillStyle(white, 1);
+    g.translateCanvas(DROP_BIG_PAD, DROP_BIG_PAD);
+    g.fillCircle(bigRadius, bigH - bigRadius, bigRadius);
+    g.fillTriangle(bigRadius, 0, 0, bigH - bigRadius, bigW, bigH - bigRadius);
   });
 
   const half = HALO_SIZE / 2;

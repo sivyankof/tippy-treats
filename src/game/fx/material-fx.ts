@@ -3,14 +3,16 @@ import type {
   MaterialBurst,
   MaterialTexture,
 } from '../../data/creature-materials';
+import { BALANCE } from '../../data/balance';
 import type { CreatureId } from '../../data/creatures';
+import { EDGE_SQUASH } from '../../data/edge-squash';
 import { parseHex } from '../../util/color';
 import { effectsMode } from '../effects-mode';
 import { creatureColors } from '../objects/creature-art/primitives';
 import type { LayerPose, TowerView } from '../objects/tower-view';
 import { AbilityBursts } from './abilities/ability-bursts';
 import { HALF_LAYER, UP_DEG } from './abilities/kit';
-import { FX_TEXTURES } from './fx-textures';
+import { DROP_BIG_SCALE, FX_TEXTURES } from './fx-textures';
 import type { Particles } from './particles';
 
 /** How hard a landing pushes the camera and the squash wave (multipliers). */
@@ -51,6 +53,41 @@ export function wallKnockBurst(
 ): void {
   if (effectsMode.reduced) return;
   coneBurst(bursts, burst, creature, x, y, directionDeg);
+}
+
+/**
+ * A fast flying layer touched the screen edge: `count` drops of its glaze (`tint`), `size` times
+ * their full size (the weaker the touch, the smaller), fly up from
+ * a little inside the wall at (`wallX`, `y`), `inwards` being 1 for the left wall and -1 for the
+ * right one. None in "fewer effects".
+ */
+export function wallGlazeDrops(
+  bursts: AbilityBursts,
+  count: number,
+  size: number,
+  tint: number,
+  wallX: number,
+  y: number,
+  inwards: 1 | -1,
+): void {
+  if (effectsMode.reduced || count <= 0) return;
+  const { insetPx, riseShare, awayDeg, launch, style } = EDGE_SQUASH.drops;
+  const scale: [number, number] = [
+    (style.scale[0]! * size) / DROP_BIG_SCALE,
+    (style.scale[1]! * size) / DROP_BIG_SCALE,
+  ];
+  // One drop per launch, each its own way and speed, so they fly apart instead of in a clump.
+  for (const { offsetDeg, speed } of launch.slice(0, count)) {
+    bursts.cone(
+      wallX + inwards * insetPx,
+      y - riseShare * BALANCE.layer.height,
+      UP_DEG + inwards * (awayDeg + offsetDeg),
+      1,
+      { ...style, speed: [speed, speed], scale },
+      FX_TEXTURES.dropBig,
+      [tint],
+    );
+  }
 }
 
 /** A cone of the burst's particles from (`x`, `y`) in `directionDeg`, in the texture and tints of its material. */

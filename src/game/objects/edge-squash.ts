@@ -1,10 +1,14 @@
-import type { WallFeel } from '../../data/edge-squash';
+import { BALANCE } from '../../data/balance';
+import { EDGE_SQUASH, type ByPower, type WallFeel } from '../../data/edge-squash';
+import { clamp01, lerp, smoothstep } from '../../util/math';
+import { ribHeight, type RibLayout } from './edge-squash-ribs';
 
 /**
  * The squash of the flying layer against the screen edges, as pure functions of the layer
  * position (docs/06, section 4, "Удар о край экрана"). Offsets are measured from the layer
  * centre; `half` is half of the body width. Each side squashes a zone of the body next to its
- * wall: the column at offset `u` is drawn at `squashX(u)` and is `squashTall(u)` times as tall.
+ * wall: the column at offset `u` is drawn at `squashX(u)`, and the part by the wall grows into a
+ * wedge with ribs (`columnEdge`).
  */
 
 /** The squash of one side: how far its edge is pushed in (px) and how long the squashed part is. */
@@ -15,21 +19,36 @@ export interface SideSquash {
   spring: number;
   /** Extra squeeze at the very wall that fits into the zone (0 .. the feel's `edgeBias`). */
   bias: number;
+  /** How much taller the column at the wall gets, share of the layer height (without the ribs' crests). */
+  rise: number;
+  /** Length of the wedge along the drawn body, px. */
+  len: number;
+  /** Progress of the impact strokes of this side, 0..1 (-1: none shown). */
+  hit: number;
+  /** How strong those strokes are, 0..1 (set at the touch from the flight speed). */
+  hitGain: number;
 }
 
 export interface EdgeShape {
   half: number;
   left: SideSquash;
   right: SideSquash;
-  /** Narrowest a column may get and how much taller it gets for the width it lost. */
+  /** Narrowest a column may get. */
   minScale: number;
-  bulge: number;
-  maxTall: number;
   /** How high the glaze gathers at the wall and how much of it sags. */
   glazeLift: number;
   glazeSag: number;
-  /** Share of the accordion folds shown (0: none). */
-  folds: number;
+  /** Drawn edges of the body without the slide, offsets from the layer centre. */
+  edgeLeft: number;
+  edgeRight: number;
+  /** Share of the rise that is made of ribs (0: none), their size and how much of the farthest one shows. */
+  ribShare: number;
+  ribGrow: number;
+  lastRib: number;
+  /** The ribs are shown (the reduced mode turns them off: the wedge carries the whole rise). */
+  ribbing: boolean;
+  /** The rib layout of the layer, `null`: no ribs. */
+  ribs: Readonly<RibLayout> | null;
   /** The whole drawn body slid sideways (px): a hard layer that hardly squashes keeps off the wall. */
   shift: number;
 }
@@ -37,14 +56,18 @@ export interface EdgeShape {
 export function flatShape(): EdgeShape {
   return {
     half: 0,
-    left: { depth: 0, zone: 1, spring: 1, bias: 0 },
-    right: { depth: 0, zone: 1, spring: 1, bias: 0 },
+    left: { depth: 0, zone: 1, spring: 1, bias: 0, rise: 0, len: 0, hit: -1, hitGain: 0 },
+    right: { depth: 0, zone: 1, spring: 1, bias: 0, rise: 0, len: 0, hit: -1, hitGain: 0 },
     minScale: 1,
-    bulge: 0,
-    maxTall: 1,
     glazeLift: 0,
     glazeSag: 0,
-    folds: 0,
+    edgeLeft: 0,
+    edgeRight: 0,
+    ribShare: 0,
+    ribGrow: 0,
+    lastRib: 1,
+    ribbing: true,
+    ribs: null,
     shift: 0,
   };
 }
@@ -99,10 +122,26 @@ export function slideShift(
 }
 
 /**
+ * How strong the touch is for a layer flying at `speed` px/s: 0 at the base speed of the run and
+ * 1 at the maximum one (`BALANCE.speed`), smooth in between.
+ */
+export function speedPower(speed: number): number {
+  const { base, max } = BALANCE.speed;
+  return max > base ? clamp01((speed - base) / (max - base)) : 0;
+}
+
+/** A value at `power` between its slow and its fast end. */
+export function byPower(values: ByPower, power: number): number {
+  return lerp(values[0], values[1], clamp01(power));
+}
+
+/**
  * Fits the wanted depths of both sides into a body `half` wide: each side squashes a zone of at
  * least `zoneShare` of the width, longer when the squash is deep, so no column gets narrower than
  * `minScale`. Two zones never overlap (they share the width by depth), so the picture never
- * folds. Every step is continuous in the depths, so the shape never jumps. Fills `out`.
+ * folds. `power` (see `speedPower`) sets how tall the wedge at the wall gets and how big the
+ * ribs and the glaze bulge are. Every step is continuous in the depths, so the shape never
+ * jumps. Fills `out`.
  */
 export function fitShape(
   half: number,
@@ -110,20 +149,46 @@ export function fitShape(
   wantRight: number,
   feel: Readonly<WallFeel>,
   out: EdgeShape,
+  power = 0,
 ): EdgeShape {
+  const by = EDGE_SQUASH.byPower;
   out.half = half;
   out.minScale = feel.minScale;
-  out.bulge = feel.bulge;
-  out.maxTall = feel.maxTall;
-  out.glazeLift = feel.glazeLiftPx;
+  out.glazeLift = feel.glazeLiftPx * byPower(by.glazeMul, power);
   out.glazeSag = feel.glazeSag;
-  out.folds = feel.folds;
+  out.ribShare = feel.ribs > 0 ? byPower(by.ribShare, power) : 0;
+  out.ribGrow = feel.ribs;
+  out.lastRib = smoothstep((power - by.fourthRib[0]) / (by.fourthRib[1] - by.fourthRib[0]));
   out.shift = 0;
   const width = half * 2;
   const sum = wantLeft + wantRight;
   fitSide(out.left, width, Math.max(0, wantLeft), sum, feel);
   fitSide(out.right, width, Math.max(0, wantRight), sum, feel);
+  out.edgeLeft = -half + out.left.depth;
+  out.edgeRight = half - out.right.depth;
+  const rise = byPower(by.rise, power) * feel.rise;
+  const body = out.edgeRight - out.edgeLeft;
+  fitWedge(out.left, width, body, feel, rise);
+  fitWedge(out.right, width, body, feel, rise);
   return out;
+}
+
+/**
+ * The wedge of one side: how long it is (the share of the width of the feel, longer on a deep
+ * squash, never past a third of the width and never past its share of the drawn body) and how
+ * tall it gets, growing with the depth of the squash.
+ */
+function fitWedge(
+  side: SideSquash,
+  width: number,
+  body: number,
+  feel: Readonly<WallFeel>,
+  rise: number,
+): void {
+  const { fullDepthPx, deepDepthPx, deepMul, maxShare, maxBodyShare } = EDGE_SQUASH.wedge;
+  const deep = lerp(1, deepMul, smoothstep(side.depth / deepDepthPx));
+  side.len = Math.min(feel.zoneShare * width * deep, maxShare * width, maxBodyShare * body);
+  side.rise = rise * smoothstep(side.depth / fullDepthPx);
 }
 
 function fitSide(
@@ -172,6 +237,19 @@ function pushSlope(side: Readonly<SideSquash>, half: number, x: number): number 
   return t <= 0 ? 0 : (side.depth * (2 * (1 - bias) * t + 4 * bias * t * t * t)) / side.zone;
 }
 
+/**
+ * Where column `i` of `n` sits in the picture, as a share of its width (0..1): the columns are
+ * packed densely in the outer parts, where the ribs are, and sparse in the middle. Piecewise
+ * linear, so it never folds.
+ */
+export function columnShare(i: number, n: number): number {
+  const { edgeSpan, edgeShare } = EDGE_SQUASH.columns;
+  const s = n > 1 ? i / (n - 1) : 0;
+  if (s <= edgeShare) return (s / edgeShare) * edgeSpan;
+  if (s >= 1 - edgeShare) return 1 - ((1 - s) / edgeShare) * edgeSpan;
+  return edgeSpan + ((s - edgeShare) / (1 - 2 * edgeShare)) * (1 - 2 * edgeSpan);
+}
+
 /** Where the column at offset `u` is drawn. */
 export function squashX(shape: Readonly<EdgeShape>, u: number): number {
   const { half } = shape;
@@ -185,10 +263,69 @@ export function squashScale(shape: Readonly<EdgeShape>, u: number): number {
   return Math.max(0, slope);
 }
 
-/** How many times taller the column at offset `u` is: it gets back part of the width it lost. */
-export function squashTall(shape: Readonly<EdgeShape>, u: number): number {
-  const lost = 1 - squashScale(shape, u);
-  return Math.min(shape.maxTall, 1 + shape.bulge * lost);
+/** How much a column grows beyond the layer's normal outline, shares of the layer height. */
+export interface ColumnEdge {
+  up: number;
+  down: number;
+}
+
+/**
+ * How far the column at offset `u` reaches above and below the normal outline (shares of the
+ * layer height, glaze not counted): a smooth wedge that is highest at the wall and goes back to
+ * the normal height along `len`, mostly upwards. The ribs ride on its outline as a separate
+ * silhouette (`ribReach`). The wedge is laid along the drawn distance from the wall, so it stays
+ * where it is while the picture is squashed under it. Fills `out`.
+ */
+export function columnEdge(shape: Readonly<EdgeShape>, u: number, out: ColumnEdge): ColumnEdge {
+  out.up = 0;
+  out.down = 0;
+  const x = squashX(shape, u) - shape.shift;
+  wedgeAt(shape, shape.left, x - shape.edgeLeft, out);
+  wedgeAt(shape, shape.right, shape.edgeRight - x, out);
+  return out;
+}
+
+/** The reach of one side's smooth wedge at `d` px from its wall, kept in `out` when it is higher. */
+function wedgeAt(
+  shape: Readonly<EdgeShape>,
+  side: Readonly<SideSquash>,
+  d: number,
+  out: ColumnEdge,
+): void {
+  if (side.rise <= 0 || side.len <= 0) return;
+  const t = Math.max(0, d) / side.len;
+  if (t >= 1) return;
+  const { upShare, profile } = EDGE_SQUASH.wedge;
+  const ribFrac = shape.ribbing && shape.ribs ? shape.ribShare : 0;
+  const base = side.rise * (1 - ribFrac) * Math.pow(1 - t, profile);
+  out.up = Math.max(out.up, upShare * base);
+  out.down = Math.max(out.down, (1 - upShare) * base);
+}
+
+/**
+ * How far the ribs of one side stand out of the wedge outline at `d` px from its wall (shares of
+ * the layer height, top and bottom): the round bumps of the silhouette drawn over the picture
+ * (see `edge-squash-silhouette.ts`), the one at the wall the biggest. The wedge and the ribs
+ * together add up to the rise of the side. Fills `out`.
+ */
+export function ribReach(
+  shape: Readonly<EdgeShape>,
+  side: Readonly<SideSquash>,
+  d: number,
+  out: ColumnEdge,
+): ColumnEdge {
+  out.up = 0;
+  out.down = 0;
+  const ribs = shape.ribbing ? shape.ribs : null;
+  if (!ribs || side.rise <= 0 || side.len <= 0) return out;
+  const t = Math.max(0, d) / side.len;
+  if (t >= 1) return out;
+  // The wall rib of the top and of the bottom row add up to `ribShare` of the rise.
+  const lump = side.rise * shape.ribShare * shape.ribGrow * Math.max(0, side.spring);
+  const upShare = EDGE_SQUASH.ribs.upShare;
+  out.up = lump * upShare * ribHeight(ribs.top, t, shape.lastRib);
+  out.down = lump * (1 - upShare) * ribHeight(ribs.bottom, t, shape.lastRib);
+  return out;
 }
 
 /**
@@ -213,10 +350,10 @@ export function squashMid(shape: Readonly<EdgeShape>): number {
   return shape.shift + (shape.left.depth - shape.right.depth) / 2;
 }
 
-/** The tallest column of the body (1: not squashed): what is laid around the layer must cover it. */
+/** How many times taller than normal the tallest part of the body gets (1: not squashed): what is laid around the layer must cover it. */
 export function squashTallest(shape: Readonly<EdgeShape>): number {
   if (!isSquashed(shape)) return 1;
-  return Math.max(squashTall(shape, -shape.half), squashTall(shape, shape.half));
+  return 1 + Math.max(shape.left.rise, shape.right.rise);
 }
 
 /** Width of the drawn body. */

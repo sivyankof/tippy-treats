@@ -4,7 +4,7 @@ import type { FlyingLayerView } from '../objects/flying-layer-view';
 import type { TowerView } from '../objects/tower-view';
 import { AbilityBursts } from './abilities/ability-bursts';
 import { GoldenFx } from './golden-fx';
-import { wallKnockBurst } from './material-fx';
+import { wallGlazeDrops, wallKnockBurst } from './material-fx';
 import type { Particles } from './particles';
 import { RuleFx } from './rule-fx';
 
@@ -40,8 +40,9 @@ export class FlyingFx {
     this.golden.update(dtMs, timeMs, state, pos, hidden);
     const touch = this.flying.takeWallTouch();
     if (touch && !hidden) {
-      const { knock, creature, x, y, directionDeg } = touch;
-      wallKnockBurst(this.bursts, knock, creature, x, y, directionDeg);
+      const { knock, creature, x, y, directionDeg, drops, dropSize, glaze } = touch;
+      if (knock && creature) wallKnockBurst(this.bursts, knock, creature, x, y, directionDeg);
+      wallGlazeDrops(this.bursts, drops, dropSize, glaze, x, y, directionDeg === 0 ? 1 : -1);
     }
   }
 }
