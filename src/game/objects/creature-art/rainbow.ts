@@ -20,6 +20,7 @@ import {
   starPoints,
   waveLine,
 } from './rainbow-geometry';
+import { rotatePoints } from './rainbow-idle-geometry';
 import {
   countFor,
   drawFinish,
@@ -36,31 +37,42 @@ const { wave, band, star } = RAINBOW_LOOK;
 export const CREAM_DRIP_LENGTH = 14;
 export const CREAM_DRIPS = 3;
 
-/** The gold star on the crown: outlined, with a gloss stroke and a dot. Drawn before the body, which hides its foot. */
-function drawStar(ctx: ArtContext): void {
-  const { g, box } = ctx;
-  const cy = box.top - star.lift;
-  const fill = ctx.sleeping ? ctx.colors.accent : star.color;
-  fillOutlinedPolygon(
-    g,
-    starPoints(0, cy, star.radius, star.notch),
-    fill,
-    ctx.sleeping ? ctx.colors.outline : outlineColor(fill),
-    star.outline,
-  );
-  if (ctx.sleeping) return;
-  const { gloss } = star;
+/**
+ * The gold star of the crown with its centre at (0, `cy`): outlined, with a gloss stroke and a dot;
+ * turned by `rad` and swollen by `scale` (the awake layer star sways and flashes).
+ */
+export function paintStar(
+  g: ArtContext['g'],
+  cy: number,
+  rad = 0,
+  scale = 1,
+  fill: number = star.color,
+  line: number = outlineColor(star.color),
+  gloss = true,
+): void {
+  const r = star.radius * scale;
+  const points = rotatePoints(starPoints(0, cy, r, star.notch), 0, cy, rad);
+  fillOutlinedPolygon(g, points, fill, line, star.outline);
+  if (!gloss) return;
+  const mark = star.gloss;
+  const [at] = rotatePoints([{ x: mark.x * r, y: cy + mark.y * r }], 0, cy, rad);
+  if (!at) return;
   drawGlossMark(g, {
-    x: gloss.x * star.radius,
-    y: cy + gloss.y * star.radius,
-    length: gloss.length * star.radius,
-    thick: gloss.thick * star.radius,
-    tilt: gloss.tilt,
-    dotGap: gloss.dotGap,
-    dotRadius: gloss.dotRadius,
+    x: at.x,
+    y: at.y,
+    length: mark.length * r,
+    thick: mark.thick * r,
+    tilt: mark.tilt + rad,
+    dotGap: mark.dotGap,
+    dotRadius: mark.dotRadius,
     color: PALETTE.textLight,
     alpha: 1,
   });
+}
+
+/** The sleeping silhouette star: still and muted. The awake layer star is drawn by `RainbowIdle`. */
+function drawStar(ctx: ArtContext): void {
+  paintStar(ctx.g, ctx.box.top - star.lift, 0, 1, ctx.colors.accent, ctx.colors.outline, false);
 }
 
 /** Five thin coloured sponges, each in two tones, with a white cream strip under each. */
@@ -118,7 +130,7 @@ export function drawRainbow(ctx: ArtContext, r: Recipe<'rainbow'>): void {
   const { g, box, colors } = ctx;
   const bands = r.bands.map(parseHex);
   drawShadow(g, box);
-  drawStar(ctx);
+  if (ctx.sleeping) drawStar(ctx);
   drawBody(g, box, colors);
   const start = box.innerTop + box.height * r.creamShare;
   drawSponges(ctx, bands, start);

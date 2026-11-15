@@ -19,34 +19,38 @@ export function arcSide(current: number, dx: number, deadPx: number): number {
 }
 
 /**
- * Points along a quadratic curve from `from` to `to` whose control point lies `lift` of the
- * distance above the middle and `side` (signed, a share of the distance) to the side of it, so
- * the curve leaves `from` sideways and up, from the start to the share `grown` of the curve
- * (above 1 it runs past the end). Each point has the unit normal of the curve, always pointing up.
+ * Points along a cubic arch from `from` to `to`, from the start to the share `grown` of the curve
+ * (above 1 it runs past the end). Both control points sit `rise` above their end and `side`
+ * (signed, pixels) to the side of it, so the curve leaves `from` up and sideways, rounds off
+ * high above both ends and comes down onto `to` from above. Each point has the unit normal of
+ * the curve pointing to the outer (upper) edge of the arch.
  */
 export function arcCurve(
   from: Point,
   to: Point,
-  lift: number,
   side: number,
+  rise: number,
   grown: number,
   steps: number,
 ): Array<Point & { nx: number; ny: number }> {
-  const dist = Math.hypot(to.x - from.x, to.y - from.y);
-  const cx = (from.x + to.x) / 2 + dist * side;
-  const cy = (from.y + to.y) / 2 - dist * lift;
+  const sgn = side < 0 ? -1 : 1;
+  const c1 = { x: from.x + side, y: from.y - rise };
+  const c2 = { x: to.x + side, y: to.y - rise };
   const out: Array<Point & { nx: number; ny: number }> = [];
   const count = Math.max(1, Math.round(steps * grown));
   for (let i = 0; i <= count; i++) {
     const t = (grown * i) / count;
     const k = 1 - t;
-    const x = k * k * from.x + 2 * k * t * cx + t * t * to.x;
-    const y = k * k * from.y + 2 * k * t * cy + t * t * to.y;
-    const dx = 2 * k * (cx - from.x) + 2 * t * (to.x - cx);
-    const dy = 2 * k * (cy - from.y) + 2 * t * (to.y - cy);
+    const a = k * k * k;
+    const b = 3 * k * k * t;
+    const c = 3 * k * t * t;
+    const d = t * t * t;
+    const x = a * from.x + b * c1.x + c * c2.x + d * to.x;
+    const y = a * from.y + b * c1.y + c * c2.y + d * to.y;
+    const dx = 3 * k * k * (c1.x - from.x) + 6 * k * t * (c2.x - c1.x) + 3 * t * t * (to.x - c2.x);
+    const dy = 3 * k * k * (c1.y - from.y) + 6 * k * t * (c2.y - c1.y) + 3 * t * t * (to.y - c2.y);
     const len = Math.hypot(dx, dy) || 1;
-    const flip = dx > 0 ? -1 : 1;
-    out.push({ x, y, nx: (flip * -dy) / len, ny: (flip * dx) / len });
+    out.push({ x, y, nx: (sgn * -dy) / len, ny: (sgn * dx) / len });
   }
   return out;
 }

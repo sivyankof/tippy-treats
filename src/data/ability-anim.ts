@@ -301,24 +301,29 @@ export const ABILITY_ANIM = {
       0x6c5ce7,
       0xc56cf0,
     ],
+    /** The Rainbow layer flying in: a rainbow trail of sparks for `trailMs`, one every `everyMs`, and the neighbours look at it for `lookMs`. */
+    arrival: { trailMs: 700, everyMs: 55, count: 2, lookMs: 700 },
     /**
-     * The arc: a fat cartoon rainbow of `stripes` bands `bandPx` thick with one dark warm outline
-     * (`outlinePx`) and a white gloss strip on its top edge, along a curve that leaves the cloud
-     * on the Rainbow layer sideways and up (`sideShare` of the distance to the side of the flying
-     * layer, so it never crosses the top of the tower; the side is kept within `sideDeadPx` of the
-     * start and swaps smoothly at `bowLerp`; `lift` up)
-     * and ends at the cream cloud on the flying layer. It shoots out in `growMs` with a spring
-     * (overshoots and settles), a swell (`waveBulge`, `waveSigma` of the length wide) runs up it
-     * every `waveMs`, and it follows the layer. `idleRise` is where it ends while no layer flies.
+     * The arc: a fat cartoon rainbow of five bands (`RAINBOW_BANDS`) `bandPx` thick with one dark
+     * warm outline (`outlinePx`, in the tone `outlineFrom` gets as a plain layer outline) and a white
+     * gloss strip on its top edge. It is a real arch: it leaves the cloud on the Rainbow layer up and
+     * to the side, rounds off `risePx` + `riseShare` of the distance above both ends and comes down
+     * onto the flying layer from above. The side reach is at least `sidePx` (so it clears the tower)
+     * or `sideShare` of the distance; the side is kept within `sideDeadPx` of the start and swaps
+     * smoothly at `bowLerp`. `edgeOverPx` is how far below the screen edge it starts when its cloud
+     * is off screen.
      */
     arc: {
-      bandPx: 11,
+      bandPx: 12,
       outlinePx: 5,
-      outlineColor: 0x6a2d73,
+      outlineFrom: 0xffa94d,
       glossShare: 0.45,
       glossAlpha: 0.85,
-      lift: 0.25,
-      sideShare: 0.85,
+      sidePx: 190,
+      sideShare: 0.45,
+      risePx: 120,
+      riseShare: 0.2,
+      edgeOverPx: 30,
       sideDeadPx: 40,
       bowLerp: 0.2,
       steps: 28,

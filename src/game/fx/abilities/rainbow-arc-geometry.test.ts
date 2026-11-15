@@ -2,28 +2,31 @@ import { describe, expect, it } from 'vitest';
 import { arcCurve, arcSide, bandAt, rimPolyline, swell } from './rainbow-arc-geometry';
 
 describe('arcCurve', () => {
-  it('has normals that point up and leans to the side of the end', () => {
-    const pts = arcCurve({ x: 0, y: 100 }, { x: 200, y: 0 }, 0.2, 0.5, 1, 10);
-    expect(pts.every((p) => p.ny < 0.01)).toBe(true);
-    const left = arcCurve({ x: 200, y: 100 }, { x: 0, y: 0 }, 0.2, -0.5, 1, 10);
-    expect(left.every((p) => p.ny < 0.01)).toBe(true);
+  it('arches above both ends to the signed side and comes down onto the end', () => {
+    const from = { x: 100, y: 300 };
+    const to = { x: 100, y: 100 };
+    const right = arcCurve(from, to, 200, 120, 1, 20);
+    expect(right[0]).toMatchObject(from);
+    expect(right[right.length - 1]!.x).toBeCloseTo(100);
+    expect(Math.max(...right.map((p) => p.x))).toBeGreaterThan(200);
+    expect(Math.min(...right.map((p) => p.x))).toBeGreaterThanOrEqual(99);
+    expect(Math.min(...right.map((p) => p.y))).toBeLessThan(to.y - 30);
+    const last = right[right.length - 1]!;
+    const before = right[right.length - 2]!;
+    expect(last.y).toBeGreaterThan(before.y);
+    const left = arcCurve(from, to, -200, 120, 1, 20);
+    expect(Math.min(...left.map((p) => p.x))).toBeLessThan(0);
   });
-  it('bows to the signed side even when the end is straight above the start', () => {
-    const right = arcCurve({ x: 100, y: 200 }, { x: 100, y: 0 }, 0.2, 0.8, 1, 10);
-    expect(Math.max(...right.map((p) => p.x))).toBeGreaterThan(130);
-    expect(Math.min(...right.map((p) => p.x))).toBeGreaterThanOrEqual(100);
-    const left = arcCurve({ x: 100, y: 200 }, { x: 100, y: 0 }, 0.2, -0.8, 1, 10);
-    expect(Math.min(...left.map((p) => p.x))).toBeLessThan(70);
-  });
-  it('runs from the start to the end and bulges up', () => {
-    const pts = arcCurve({ x: 0, y: 100 }, { x: 200, y: 100 }, 0.5, 0, 1, 10);
-    expect(pts[0]).toMatchObject({ x: 0, y: 100 });
-    expect(pts[pts.length - 1]!.x).toBeCloseTo(200);
-    expect(Math.min(...pts.map((p) => p.y))).toBeLessThan(100);
+  it('keeps the normal on the outer edge of the arch', () => {
+    for (const side of [200, -200]) {
+      const pts = arcCurve({ x: 100, y: 300 }, { x: 100, y: 100 }, side, 120, 1, 20);
+      const apex = pts.reduce((m, p) => (p.y < m.y ? p : m));
+      expect(apex.ny).toBeLessThan(-0.9);
+    }
   });
   it('stops part way while it grows', () => {
-    const pts = arcCurve({ x: 0, y: 0 }, { x: 200, y: 0 }, 0.3, 0, 0.5, 10);
-    expect(pts[pts.length - 1]!.x).toBeLessThan(120);
+    const pts = arcCurve({ x: 0, y: 0 }, { x: 200, y: 0 }, 50, 100, 0.5, 10);
+    expect(pts[pts.length - 1]!.x).toBeLessThan(160);
   });
 });
 

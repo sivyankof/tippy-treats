@@ -96,6 +96,7 @@ export class RunFx {
       kick: (mul) => this.kick.kick(ANIM.cameraKick.drop * mul, ANIM.cameraKick.durationMs),
     });
     const licks = this.tower.licks;
+    this.abilityFx.onRainbowPuff = () => services.audio.cloudPuff();
     licks.onSlurp = () => services.audio.lickSlurp();
     licks.onSlurpLong = () => services.audio.lickSlurpLong();
     licks.onSmack = () => services.audio.lickSmack();

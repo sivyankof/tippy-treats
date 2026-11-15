@@ -33,4 +33,50 @@ export const RAINBOW_LOOK = {
     /** The white gloss stroke and dot on the star: centre as shares of the radius, length, thickness, tilt (radians), dot gap and radius. */
     gloss: { x: -0.35, y: -0.35, length: 0.5, thick: 0.16, tilt: -0.9, dotGap: 3, dotRadius: 1.8 },
   },
+  /**
+   * The rest animation of the layer: every `waveEveryMs` a colour wave runs left to right, each sponge
+   * (top to bottom, `staggerMs` apart) swelling up to `bulgePx` and lighter by `brighten` in a window
+   * `halfPx` each side of the wave, which crosses the layer in `travelMs`; the star sways `swayDeg`
+   * (period `swayMs`) and every `sparkleEveryMs` flashes for `sparkleMs` (it swells by `sparkleScale`
+   * and a white four-point sparkle of `sparkleSize` (share of the star radius) shows at its upper right).
+   */
+  idle: {
+    waveEveryMs: 4600,
+    staggerMs: 150,
+    travelMs: 900,
+    halfPx: 56,
+    bulgePx: 3,
+    brighten: 0.4,
+    sliceStep: 6,
+    swayDeg: 7,
+    swayMs: 1700,
+    sparkleEveryMs: 3300,
+    sparkleMs: 420,
+    sparkleScale: 0.25,
+    sparkleSize: 0.7,
+    sparkleOffset: { x: 0.55, y: -0.55 },
+    sparkleNotch: 0.25,
+    /**
+     * The rare joke (a seeded cosmetic stream, never more often than every `minGapMs`..`maxGapMs`;
+     * the first one after `firstMinMs`..`firstMaxMs`): a small rainbow arch pops out of the star,
+     * `spanPx` wide, rising `risePx`, growing for `growMs`, held `holdMs`, fading for `fadeMs`; the
+     * Rainbow squints shyly for `squintMs`.
+     */
+    joke: {
+      seed: 7,
+      firstMinMs: 12000,
+      firstMaxMs: 25000,
+      minGapMs: 40000,
+      maxGapMs: 60000,
+      spanPx: 74,
+      risePx: 44,
+      bandPx: 3.2,
+      outlinePx: 2,
+      steps: 14,
+      growMs: 450,
+      holdMs: 800,
+      fadeMs: 300,
+      squintMs: 1300,
+    },
+  },
 } as const;

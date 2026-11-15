@@ -13,7 +13,9 @@ import type { CameraInfo, FlyingMemo } from '../run-fx';
 import { rainbowArcOnLand } from './active-state';
 import { AbilityBursts } from './ability-bursts';
 import { CrumbFlight } from './crumb-flight';
-import { HALF_LAYER, type FxKit, type SignatureContext } from './kit';
+import { effectsMode } from '../../effects-mode';
+import { FX_TEXTURES } from '../fx-textures';
+import { HALF_LAYER, UP_DEG, type FxKit, type SignatureContext } from './kit';
 import { RainbowArc } from './rainbow-arc';
 import { SIGNATURES } from './signatures';
 import { SpriteFx } from './sprite-fx';
@@ -32,6 +34,10 @@ export class AbilityFx {
   private readonly kit: FxKit;
   private readonly active: WhileActiveFx;
   private readonly crumbs: CrumbFlight;
+  /** Sounds of the rainbow, set by the run effects. */
+  onRainbowPuff: (() => void) | null = null;
+  private trailMs = 0;
+  private trailGapMs = 0;
 
   constructor(
     scene: Scene,
@@ -49,6 +55,7 @@ export class AbilityFx {
     };
     this.active = new WhileActiveFx(scene, tower, this.flying, bursts);
     this.crumbs = new CrumbFlight(this.kit);
+    this.kit.arc.onDeflate = () => this.onRainbowPuff?.();
   }
 
   /**
@@ -73,6 +80,11 @@ export class AbilityFx {
     const caught = events.some((e) => e.type === 'miss' && e.shielded);
     for (const event of events) {
       switch (event.type) {
+        case 'spawn':
+          if (event.layer.kind === 'creature' && event.layer.creature === 'rainbow') {
+            this.onRainbowArrive(state);
+          }
+          break;
         case 'land':
           this.onLand(event, state, memo, mods);
           break;
@@ -103,7 +115,47 @@ export class AbilityFx {
     this.active.update(dtMs, timeMs, state, mods, cam, running);
     this.kit.sprites.update(dtMs);
     const body = this.flying.body();
-    this.kit.arc.update(dtMs, body && { x: body.x, y: body.y - HALF_LAYER });
+    this.runTrail(dtMs, body);
+    this.kit.arc.update(
+      dtMs,
+      body && { x: body.x, y: body.y - HALF_LAYER },
+      cam.scrollY + cam.height,
+    );
+  }
+
+  /** The Rainbow layer flies in: a short rainbow trail follows it and the neighbours turn to look. */
+  private onRainbowArrive(state: Readonly<TowerState>): void {
+    if (effectsMode.reduced) return;
+    const { trailMs, lookMs } = ABILITY_ANIM.rainbow.arrival;
+    this.trailMs = trailMs;
+    this.trailGapMs = 0;
+    const pos = this.flying.position();
+    if (!pos) return;
+    const top = state.layers.length - 1;
+    for (const index of [top, top - 1]) {
+      this.tower.viewAt(index)?.glanceAtWorld(pos.x, pos.y, lookMs);
+    }
+  }
+
+  private runTrail(
+    dtMs: number,
+    body: Readonly<{ x: number; y: number; width: number }> | null,
+  ): void {
+    if (this.trailMs <= 0 || !body || effectsMode.reduced) return;
+    this.trailMs -= dtMs;
+    this.trailGapMs += dtMs;
+    const { everyMs, count } = ABILITY_ANIM.rainbow.arrival;
+    if (this.trailGapMs < everyMs) return;
+    this.trailGapMs = 0;
+    this.kit.bursts.cone(
+      body.x,
+      body.y + HALF_LAYER,
+      UP_DEG + 180,
+      count,
+      ABILITY_ANIM.active.rainbow.sparks.style,
+      FX_TEXTURES.star,
+      ABILITY_ANIM.rainbow.stripes,
+    );
   }
 
   /** A normal (cut) landing during the spring effect slides in from where the layer really came down. */

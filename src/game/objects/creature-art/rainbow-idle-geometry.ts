@@ -1,0 +1,48 @@
+import { RAINBOW_LOOK } from '../../../data/rainbow-look';
+import type { Pt } from '../../fx/plain-style';
+
+const { idle } = RAINBOW_LOOK;
+
+/** 1 at `x === center`, falling to 0 at `half` away from it (a smooth hump). */
+export function humpAt(x: number, center: number, half: number): number {
+  const d = Math.abs(x - center);
+  return d >= half ? 0 : 0.5 * (1 + Math.cos((Math.PI * d) / half));
+}
+
+/**
+ * Where the wave of sponge `index` (0 = top) is at `timeMs`, as a share (0..1) of the way across
+ * the layer, or `null` while it is not on its way.
+ */
+export function waveProgress(timeMs: number, index: number): number | null {
+  const local = (timeMs % idle.waveEveryMs) - index * idle.staggerMs;
+  if (local < 0 || local > idle.travelMs) return null;
+  return local / idle.travelMs;
+}
+
+/** Share (0..1) of the sparkle flash at `timeMs`, a smooth in-and-out; 0 between flashes. */
+export function sparkleAt(timeMs: number, phaseMs: number): number {
+  const local = (timeMs + phaseMs) % idle.sparkleEveryMs;
+  if (local > idle.sparkleMs) return 0;
+  return Math.sin((Math.PI * local) / idle.sparkleMs);
+}
+
+/** `points` turned by `rad` around (`cx`, `cy`). */
+export function rotatePoints(points: readonly Pt[], cx: number, cy: number, rad: number): Pt[] {
+  const cos = Math.cos(rad);
+  const sin = Math.sin(rad);
+  return points.map((p) => ({
+    x: cx + (p.x - cx) * cos - (p.y - cy) * sin,
+    y: cy + (p.x - cx) * sin + (p.y - cy) * cos,
+  }));
+}
+
+/** A four-point sparkle of outer radius `outer`, its notches `notch` of that deep. */
+export function sparklePoints(cx: number, cy: number, outer: number, notch: number): Pt[] {
+  const points: Pt[] = [];
+  for (let i = 0; i < 8; i++) {
+    const r = i % 2 === 0 ? outer : outer * notch;
+    const a = -Math.PI / 2 + (Math.PI * i) / 4;
+    points.push({ x: cx + r * Math.cos(a), y: cy + r * Math.sin(a) });
+  }
+  return points;
+}

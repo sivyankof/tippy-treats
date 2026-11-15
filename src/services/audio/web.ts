@@ -116,6 +116,16 @@ export class WebAudioService implements AudioService {
     });
   }
 
+  rainbowChime(): void {
+    this.play((s) => s.sequence(SFX.rainbowChime.notes));
+  }
+
+  cloudPuff(): void {
+    this.play((s) =>
+      s.noise({ ...SFX.ability.puff, gain: SFX.ability.puff.gain * SFX.cloudPuff.puffGainShare }),
+    );
+  }
+
   shieldPop(): void {
     this.play((s) => {
       s.tone(SFX.shieldPop.blip);

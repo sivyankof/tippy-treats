@@ -219,6 +219,18 @@ export const SFX = {
     } satisfies Record<Rarity, AbilityRecipe>,
   },
 
+  /** The Rainbow layer flies in: a short quiet chime of three rising bells. */
+  rainbowChime: {
+    notes: [
+      { delay: 0, wave: 'sine', freq: 1175, attack: 0.004, duration: 0.22, gain: 0.14 },
+      { delay: 0.07, wave: 'sine', freq: 1568, attack: 0.004, duration: 0.22, gain: 0.14 },
+      { delay: 0.14, wave: 'sine', freq: 1976, attack: 0.004, duration: 0.4, gain: 0.12 },
+    ] satisfies TimedTone[],
+  },
+
+  /** The cream cloud of the rainbow deflates: the ability puff, quieter. */
+  cloudPuff: { puffGainShare: 0.55 },
+
   /** The brownie's chocolate bubble bursts: a short rising blip and a bright pop of noise. */
   shieldPop: {
     blip: {

@@ -15,6 +15,7 @@ export type SoundCue =
         | 'sneeze'
         | 'miss'
         | 'shieldPop'
+        | 'rainbowChime'
         | 'coin'
         | 'click'
         | 'berry'
@@ -70,6 +71,11 @@ export function cuesForEvents(
         break;
       case 'golden':
         if (event.perfect) cues.sounds.push({ kind: 'berry' });
+        break;
+      case 'spawn':
+        if (event.layer.kind === 'creature' && event.layer.creature === 'rainbow') {
+          cues.sounds.push({ kind: 'rainbowChime' });
+        }
         break;
       case 'ability':
         cues.sounds.push({ kind: 'ability', rarity: CREATURES[event.creature].rarity });

@@ -19,6 +19,8 @@ import { LayerMaterial, type MaterialMotion } from './layer-material';
 import { LayerRig } from './layer-rig';
 import { artWidth, lookCodeFor } from './layer-art';
 import { LayerArtSlot } from './layer-art-slot';
+import { RAINBOW_LOOK } from '../../data/rainbow-look';
+import { RainbowIdle } from './rainbow-idle';
 import { GlazeDripLayer } from './glaze-drip-layer';
 import { pressAngle, pressDrop, pressPivot, pressShift } from './layer-press';
 
@@ -63,6 +65,8 @@ export class LayerView extends Phaser.GameObjects.Container {
   readonly glazeDrips: GlazeDripLayer;
   private readonly glossSweep: Phaser.GameObjects.Image;
   private readonly face: LayerFace;
+  /** The star and the rest wave of the Rainbow layer. */
+  private readonly rainbow: RainbowIdle;
   /** Extra animations for the abilities: flash, hop, fade, split. */
   readonly rig: LayerRig;
   /** How the material of a creature layer lands, jiggles and rests. */
@@ -91,6 +95,7 @@ export class LayerView extends Phaser.GameObjects.Container {
       this.glossSweep,
       this.face,
     ]);
+    this.rainbow = new RainbowIdle(scene, this.content, this.face);
     this.shapeRoot = new Phaser.GameObjects.Container(scene, 0, 0, [this.content]);
     this.material = new LayerMaterial(this.shapeRoot);
     this.breathRoot = new Phaser.GameObjects.Container(scene, 0, 0, [this.shapeRoot]);
@@ -151,6 +156,7 @@ export class LayerView extends Phaser.GameObjects.Container {
     const w = artWidth(width);
     const creature = this.creatureOf(this.lookPlan);
     if (!this.artSlot.show(look, w, cut, creature, !this.faceEnabled)) return this;
+    this.rainbow.set(creature === 'rainbow', w);
     this.face.layout(w);
     this.face.setVisible(this.faceEnabled);
     return this;
@@ -380,6 +386,8 @@ export class LayerView extends Phaser.GameObjects.Container {
     this.material.tick(dtMs, motion);
     if (motion) this.breathe(motion);
     if (this.face.visible) this.face.tick(dtMs);
+    this.rainbow.draw(this.scene.time.now, motion?.phase ?? 0, true);
+    if (this.rainbow.takeSquint()) this.face.react('squint', RAINBOW_LOOK.idle.joke.squintMs);
   }
 
   /**

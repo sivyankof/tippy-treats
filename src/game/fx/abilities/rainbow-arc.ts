@@ -1,18 +1,22 @@
 import * as Phaser from 'phaser';
 import { ABILITY_ANIM } from '../../../data/ability-anim';
-import { PALETTE } from '../../../data/palette';
+import { RAINBOW_BANDS } from '../../../data/rainbow-look';
+import { parseHex } from '../../../util/color';
 import { clamp01, frameLerp } from '../../../util/math';
 import { DEPTH } from '../../depth';
 import { easeFn } from '../ease';
 import { FX_TEXTURES } from '../fx-textures';
-import { fillPolygon, outlineColor, type Pt } from '../plain-style';
+import { outlineColor } from '../plain-style';
 import type { AbilityBursts } from './ability-bursts';
+import { paintBand } from './rainbow-band';
 import { arcCurve, arcSide, swell, type Point } from './rainbow-arc-geometry';
 import { HALF_LAYER } from './kit';
 
 const cfg = ABILITY_ANIM.rainbow;
 const arc = cfg.arc;
 const cloud = cfg.cloud;
+const BAND_COLORS = RAINBOW_BANDS.map(parseHex);
+const OUTLINE = outlineColor(arc.outlineFrom);
 const grow = easeFn(arc.growEase);
 const pop = easeFn(cloud.popEase);
 /** Just behind the flying layer, so the arc seems to end in it. */
@@ -37,6 +41,10 @@ export class RainbowArc {
   /** Which way the arc bows now, smoothed between -1 (left) and 1 (right). */
   private bow = 1;
   private bowTarget = 1;
+  /** Bottom edge of the screen in world pixels (the arc starts below it when its cloud is off screen). */
+  /** Called when the lower cloud starts to deflate (the puff sound). */
+  onDeflate: (() => void) | null = null;
+  private viewBottom = Infinity;
 
   constructor(
     scene: Phaser.Scene,
@@ -70,6 +78,7 @@ export class RainbowArc {
       this.bursts.cone(p.x, p.y, 0, count, style, FX_TEXTURES.star, cfg.stripes);
     }
     this.phase = 'deflate';
+    this.onDeflate?.();
     this.ageMs = 0;
     this.relaunch = again ? { x: top.x, y: top.y } : null;
   }
@@ -81,8 +90,9 @@ export class RainbowArc {
   }
 
   /** `target` is the middle of the top edge of the flying layer (`null` while none flies). */
-  update(dtMs: number, target: Point | null): void {
+  update(dtMs: number, target: Point | null, viewBottom = Infinity): void {
     this.gfx.clear();
+    this.viewBottom = viewBottom;
     if (this.phase === 'idle') return;
     this.ageMs += dtMs;
     if (this.phase === 'deflate') {
@@ -108,38 +118,36 @@ export class RainbowArc {
     this.paint();
   }
 
+  /** Where the arc starts: the cloud, or just below the screen edge while the cloud is off screen. */
+  private start0(): Point {
+    return this.from.y > this.viewBottom
+      ? { x: this.from.x, y: this.viewBottom + arc.edgeOverPx }
+      : this.from;
+  }
+
   private curve(grown: number): Array<Point & { nx: number; ny: number }> {
-    return arcCurve(this.from, this.last, arc.lift, arc.sideShare * this.bow, grown, arc.steps);
+    const dist = Math.hypot(this.last.x - this.from.x, this.last.y - this.from.y);
+    const side = Math.max(arc.sidePx, dist * arc.sideShare) * this.bow;
+    const rise = arc.risePx + dist * arc.riseShare;
+    return arcCurve(this.start0(), this.last, side, rise, grown, arc.steps);
   }
 
   private paint(): void {
     const k = grow(clamp01(this.ageMs / arc.growMs));
     const curve = this.curve(Math.max(0.04, k));
-    const bands = cfg.stripes.length;
     const swellAt = (this.ageMs % arc.waveMs) / arc.waveMs;
-    const edge = (reach: (u: number) => number): Pt[] =>
-      curve.map((p, i) => {
-        const o = reach(i / (curve.length - 1));
-        return { x: p.x + p.nx * o, y: p.y + p.ny * o };
-      });
-    const half = (u: number): number =>
-      (bands * arc.bandPx * swell(u, swellAt, arc.waveBulge, arc.waveSigma)) / 2;
-    const strip = (from: number, to: number, color: number, extra = 0): void => {
-      this.gfx.fillStyle(color, arc.alpha);
-      const a = edge((u) => half(u) * from + extra);
-      const b = edge((u) => half(u) * to - extra);
-      fillPolygon(this.gfx, [...a, ...b.reverse()]);
-    };
-    // The outline is the whole band pushed out by `outlinePx`; the colours are equal slices of the width.
-    strip(1, -1, arc.outlineColor, arc.outlinePx);
-    cfg.stripes.forEach((color, i) => strip(1 - (2 * i) / bands, 1 - (2 * (i + 1)) / bands, color));
-    // The gloss runs along the top edge of the outer band.
-    const gloss = edge((u) => half(u) - arc.bandPx * arc.glossShare);
-    this.gfx.lineStyle(arc.bandPx * 0.25, PALETTE.textLight, arc.glossAlpha).beginPath();
-    gloss.forEach((p, i) => (i === 0 ? this.gfx.moveTo(p.x, p.y) : this.gfx.lineTo(p.x, p.y)));
-    this.gfx.strokePath();
+    paintBand(this.gfx, curve, {
+      colors: BAND_COLORS,
+      bandPx: arc.bandPx,
+      outline: OUTLINE,
+      outlinePx: arc.outlinePx,
+      glossShare: arc.glossShare,
+      glossAlpha: arc.glossAlpha,
+      alpha: arc.alpha,
+      widthAt: (u) => swell(u, swellAt, arc.waveBulge, arc.waveSigma),
+    });
     const popped = pop(clamp01(this.ageMs / cloud.popMs));
-    this.cloud(this.from.x, this.from.y, popped, true);
+    if (this.from.y <= this.viewBottom) this.cloud(this.from.x, this.from.y, popped, true);
     if (k > 0.85) {
       this.cloud(this.last.x, this.last.y - HALF_LAYER * 0.2, popped * cloud.upperScale, false);
     }
