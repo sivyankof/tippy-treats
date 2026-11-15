@@ -654,6 +654,28 @@ describe('coins', () => {
     expect(only(next, 'coin_collect').amount).toBe(Math.floor(land(next).cutWidth / 24));
   });
 
+  it('pays crumb coins for the width the rainbow saved, as for the cut it replaced', () => {
+    const run = (withRainbow: boolean) => {
+      const sim = crew('crumb');
+      drop(sim, 100);
+      if (withRainbow) {
+        mutable(sim).effects.push({
+          id: 'rainbow',
+          layersLeft: 3,
+          level: 1,
+          boosted: false,
+          value: 1,
+        });
+      }
+      return drop(sim, 100);
+    };
+    const plain = run(false);
+    const safe = run(true);
+    expect(land(safe).cutWidth).toBe(0);
+    expect(land(safe).savedWidth).toBeCloseTo(land(plain).cutWidth);
+    expect(only(safe, 'coin_collect').amount).toBe(only(plain, 'coin_collect').amount);
+  });
+
   it('adds a height bonus of 2 coins per 20 layers when the run ends', () => {
     const sim = new TowerSim(config({ mode: 'daily', startHeight: 44 }));
     const events = missNow(sim);
