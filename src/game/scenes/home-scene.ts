@@ -199,6 +199,7 @@ export class HomeScene extends Phaser.Scene {
   /** The badges and the dots of the nav bar follow the save again. */
   private refreshMarks(): void {
     refreshLevelPlate(this.level);
+    this.oven.show(gameState.ovenLeft);
     this.badges.refreshStreak();
     this.nav.refresh();
   }

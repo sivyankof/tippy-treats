@@ -69,7 +69,7 @@ function parseTeams(): SimTeamSet[] {
   return named.split(';').map((name) => {
     if (name === 'none') return NO_TEAM;
     const creatures = name.split('+');
-    const unknown = creatures.find((id) => !(id in CREATURES));
+    const unknown = creatures.find((id) => !Object.hasOwn(CREATURES, id));
     if (unknown) throw new Error(`Unknown creature in --team: ${unknown}`);
     return { name, creatures: creatures as CreatureId[] };
   });
