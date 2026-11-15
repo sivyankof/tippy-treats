@@ -81,6 +81,7 @@ export class ShopScene extends Phaser.Scene {
     this.bg.update(delta);
     this.header.update(time, delta);
     this.list.tick(delta);
+    this.starter?.tick(delta);
     if (!this.loaded || this.busy || this.leaving) return;
     const ready = services.ads.isRewardedReady();
     const offered = gameState.starterPackOffered;
