@@ -37,7 +37,11 @@ import { OVEN, type LevelReward } from '../src/data/progression';
 import { REWARDED_OFFERS } from '../src/data/rewarded-video';
 import { SHOP } from '../src/data/shop';
 import { STREAK_REWARDS } from '../src/data/streak';
+import { checkpointBerryPrice, checkpointHasAd } from '../src/core/checkpoints';
+import { BALANCE } from '../src/data/balance';
+import { CHECKPOINT_HEIGHTS, type CheckpointHeight } from '../src/data/checkpoints';
 import { MS_PER_SECOND } from '../src/util/math';
+import { playCheckpointRuns } from './checkpoint-runs';
 import { COIN_SOURCES, CoinStats, type CoinsBySource } from './coin-stats';
 import { intArg, nodeFs, scriptArgs } from './node-env';
 import { ANALYSIS_MAX_HEIGHT, mean, playRun, profileStreams, teamSlots } from './sim-runner';
@@ -45,7 +49,10 @@ import { ANALYSIS_MAX_HEIGHT, mean, playRun, profileStreams, teamSlots } from '.
 // ---------------------------------------------------------------- samples
 
 interface RunSample {
+  /** Layers placed in the run (XP and the height bonus count these). */
   h: number;
+  /** Full height of a run from a checkpoint (start + placed); absent when it equals `h`. */
+  top?: number;
   c: CoinsBySource;
   b: number;
   s: number;
@@ -250,7 +257,16 @@ export interface Player {
   ads: boolean;
   /** Saves berries for the rainbow and buys it in the shop instead of waiting for level 20. */
   rainbowByBerries?: boolean;
+  /**
+   * Starts classic runs from a checkpoint: `ads` = up to `adsPerDay` ad starts from the highest
+   * opened of 20/40/60 (needs `ads`); `berries` = the same plus a berry start from the highest
+   * opened checkpoint whenever the berries cover the price.
+   */
+  checkpoints?: 'ads' | 'berries';
 }
+
+/** Runs of one profile and team from every checkpoint, by start height. */
+export type CheckpointSamples = Record<CheckpointHeight, RunSample[]>;
 
 /** Share of each mission group done per day, by profile (an estimate, see the report). */
 const MISSION_RATE: Record<ProfileId, { easy: number; medium: number; hard: number }> = {
@@ -285,9 +301,23 @@ const PREFER_CREATURE_UNDER = 900;
 const STATS_DAYS = 30;
 const LEVEL_MARKS = [5, 10, 15, 20];
 
-export function walk(eco: Economy, player: Player, samples: RunSample[]): WalkResult {
+export function walk(
+  eco: Economy,
+  player: Player,
+  samples: RunSample[],
+  cp?: CheckpointSamples,
+): WalkResult {
   const rng = new Rng(7);
   let sampleIdx = 0;
+  const cpIdx: Record<number, number> = {};
+  const nextCheckpointRun = (height: CheckpointHeight): RunSample => {
+    const list = cp?.[height] ?? [];
+    const i = cpIdx[height] ?? 0;
+    cpIdx[height] = i + 1;
+    const r = list[i % list.length];
+    if (!r) throw new Error(`no checkpoint samples for ${height}`);
+    return r;
+  };
   const nextRun = (): RunSample => {
     const r = samples[sampleIdx % samples.length];
     sampleIdx += 1;
@@ -440,10 +470,31 @@ export function walk(eco: Economy, player: Player, samples: RunSample[]): WalkRe
         }
       }
     }
+    let adStarts = 0;
     while (budget > 0) {
-      const r = nextRun();
+      let r: RunSample | null = null;
+      let cost = RESULTS_SEC;
+      if (player.checkpoints && cp) {
+        // Checkpoints open when the best height reaches them.
+        const opened = CHECKPOINT_HEIGHTS.filter((h) => h <= record);
+        const adHeight = [...opened].reverse().find(checkpointHasAd);
+        const top = opened[opened.length - 1];
+        if (player.ads && adHeight !== undefined && adStarts < BALANCE.checkpoints.adsPerDay) {
+          r = nextCheckpointRun(adHeight);
+          adStarts += 1;
+          cost += AD_SEC;
+        } else if (
+          player.checkpoints === 'berries' &&
+          top !== undefined &&
+          berries >= checkpointBerryPrice(top)
+        ) {
+          berries -= checkpointBerryPrice(top);
+          r = nextCheckpointRun(top);
+        }
+      }
+      r ??= nextRun();
+      cost += r.s;
       let earned = eco.runCoins(r);
-      let cost = r.s + RESULTS_SEC;
       if (player.ads && doubles < eco.doubleCap && earned >= eco.doubleMinCoins) {
         earned *= 2;
         doubles += 1;
@@ -452,7 +503,7 @@ export function walk(eco: Economy, player: Player, samples: RunSample[]): WalkRe
       earnCoins(earned);
       berries += eco.runBerries(r);
       runXp(r);
-      record = Math.max(record, r.h);
+      record = Math.max(record, r.top ?? r.h);
       totalRuns += 1;
       budget -= cost;
     }
@@ -624,6 +675,119 @@ function criteriaTable(eco: Economy, samples: Samples): void {
   }
 }
 
+// ---------------------------------------------------------------- checkpoint starts
+
+/** Runs of a profile and team from every checkpoint; the same seeds as the runs from zero. */
+function playCheckpointSamples(
+  profileId: ProfileId,
+  setup: TeamSetup,
+  runs: number,
+): CheckpointSamples {
+  const out = {} as CheckpointSamples;
+  for (const start of CHECKPOINT_HEIGHTS) {
+    out[start] = playCheckpointRuns({
+      profileId,
+      team: { name: setup.key, creatures: setup.creatures },
+      level: setup.level,
+      start,
+      runs,
+      streamId: `${profileId}:${setup.key}`,
+    }).map((s) => ({ h: s.placed, top: s.full, c: s.c, b: s.berries, s: s.seconds }));
+  }
+  return out;
+}
+
+const REGULAR_TARGET_DAYS = [60, 90] as const;
+const STRONG_MIN_DAYS = 28;
+
+/** Checkpoint starts in the economy: the same players with and without them, and the owner's targets. */
+function checkpointTable(eco: Economy, samples: Samples, runs: number): void {
+  const cases: Array<{
+    profile: ProfileId;
+    setup: TeamSetup;
+    minutes: number;
+    ads: boolean;
+    rainbow: boolean;
+    variants: Array<Player['checkpoints']>;
+  }> = [];
+  const regular = SETUPS.find((s) => s.key === 'starter');
+  const strong = SETUPS.find((s) => s.key === 'coin');
+  if (!regular || !strong) throw new Error('setups');
+  cases.push({
+    profile: 'regular',
+    setup: regular,
+    minutes: 30,
+    ads: false,
+    rainbow: false,
+    variants: [undefined, 'berries'],
+  });
+  cases.push({
+    profile: 'regular',
+    setup: regular,
+    minutes: 30,
+    ads: true,
+    rainbow: false,
+    variants: [undefined, 'ads', 'berries'],
+  });
+  for (const rainbow of [false, true]) {
+    cases.push({
+      profile: 'strong',
+      setup: strong,
+      minutes: 210,
+      ads: true,
+      rainbow,
+      variants: [undefined, 'ads', 'berries'],
+    });
+  }
+  const cpSamples = {
+    regular: playCheckpointSamples('regular', regular, runs),
+    strong: playCheckpointSamples('strong', strong, runs),
+  };
+  console.log(
+    `\n## ${eco.name}: checkpoint starts (${runs} runs per start height; XP only for placed layers, fresh oven as above)`,
+  );
+  console.log(
+    '| profile | team | min/day | x2 ads | rainbow | checkpoint starts | coins/day | XP/day | full (12) | lvl 5 | lvl 10 | lvl 15 | lvl 20 | target |',
+  );
+  console.log('|---|---|---|---|---|---|---|---|---|---|---|---|---|---|');
+  const [lo, hi] = REGULAR_TARGET_DAYS;
+  for (const c of cases) {
+    for (const variant of c.variants) {
+      const player: Player = {
+        profile: c.profile,
+        team: c.setup.key,
+        minutesPerDay: c.minutes,
+        ads: c.ads,
+        rainbowByBerries: c.rainbow,
+        checkpoints: variant,
+      };
+      const r = walk(
+        eco,
+        player,
+        samples[`${c.profile}:${c.setup.key}`] ?? [],
+        cpSamples[c.profile as 'regular' | 'strong'],
+      );
+      const lvl20 = r.levelDay[20] ?? null;
+      const target =
+        c.profile === 'regular'
+          ? r.fullDay !== null &&
+            lvl20 !== null &&
+            r.fullDay >= lo &&
+            r.fullDay <= hi &&
+            lvl20 >= lo &&
+            lvl20 <= hi
+            ? `ok (${lo}..${hi} days)`
+            : `MISSED (${lo}..${hi} days)`
+          : r.fullDay !== null && r.fullDay >= STRONG_MIN_DAYS
+            ? `ok (>= ${STRONG_MIN_DAYS} days)`
+            : `MISSED (>= ${STRONG_MIN_DAYS} days)`;
+      console.log(
+        `| ${c.profile} | ${c.setup.key} | ${c.minutes} | ${c.ads ? 'x2' : '-'} | ${c.rainbow ? 'berries' : 'lvl 20'} | ${variant ?? 'none'} | ${r.perDay.coins.toFixed(0)} | ${r.perDay.xp.toFixed(0)} | ${fmt(r.fullDay)} | ${fmt(r.levelDay[5] ?? null)} | ${fmt(r.levelDay[10] ?? null)} | ${fmt(r.levelDay[15] ?? null)} | ${fmt(lvl20)} | ${target} |`,
+      );
+    }
+  }
+}
+
 // ---------------------------------------------------------------- main
 
 function main(): void {
@@ -644,6 +808,7 @@ function main(): void {
     daysTable(eco, samples);
     criteriaTable(eco, samples);
   }
+  checkpointTable(CURRENT, samples, runs);
 }
 
 main();
