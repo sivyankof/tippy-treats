@@ -40,11 +40,19 @@ export function openMissionsWindow(
 ): void {
   gameState.refreshDay();
   const timer = { event: null as Phaser.Time.TimerEvent | null };
+  // Creatures of a level reached here wait until the window is closed, then get their own screen.
+  const later = { open: true, levelUps: [] as LevelUp[] };
+  const present = (levelUps: readonly LevelUp[]): void => {
+    if (later.open) later.levelUps.push(...levelUps);
+    else presentLevelCreatures(scene, levelUps);
+  };
   const popup = new PopupWindow(scene, {
     title: t('missions.title'),
     onClosed: () => {
       timer.event?.remove(false);
+      later.open = false;
       onClosed?.();
+      presentLevelCreatures(scene, later.levelUps);
     },
   });
   const width = popup.innerWidth;
@@ -79,7 +87,7 @@ export function openMissionsWindow(
           }
           build();
           if (claim && claim.levelUps.length > 0) {
-            showLevelUps(scene, claim.levelUps, () => presentLevelCreatures(scene, claim.levelUps));
+            showLevelUps(scene, claim.levelUps, () => present(claim.levelUps));
           }
         },
         onReroll: () => {
