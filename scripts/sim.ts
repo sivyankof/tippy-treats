@@ -9,6 +9,7 @@ import {
   isFullTeam,
   type SimTeamSet,
 } from '../src/data/sim-teams';
+import { printCheckpointSection } from './checkpoint-section';
 import { EndStats, type EndRow } from './end-stats';
 import type { RunObserver } from './run-observer';
 import { mean, percentile, playRun, profileStreams, teamSlots } from './sim-runner';
@@ -333,6 +334,8 @@ Rule on the layer the run was lost on, % of runs, no team ` +
         (plainOverTeams.length ? ` (${plainOverTeams.join('; ')})` : ''),
     );
   }
+
+  printCheckpointSection(options.runs, options.profile);
 }
 
 main();
