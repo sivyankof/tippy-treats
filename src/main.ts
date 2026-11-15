@@ -5,6 +5,7 @@ import { bindLogicalResize, createGameConfig } from './game/config';
 import { FONT_FAMILY, FONT_WEIGHT } from './game/ui/fonts';
 import { applySavedSettings } from './game/apply-settings';
 import { detectLang, setLang } from './i18n';
+import { syncPurchases } from './game/purchases';
 import { gameState } from './state';
 import { bindSaveFlush } from './state/page-lifecycle';
 import { readDebugParams, withoutReset } from './util/debug-params';
@@ -49,6 +50,7 @@ async function loadSave(): Promise<void> {
   }
   bindSaveFlush(gameState);
   applySavedSettings();
+  await syncPurchases();
 }
 
 async function start(): Promise<void> {

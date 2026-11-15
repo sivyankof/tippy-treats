@@ -6,8 +6,19 @@ import type {
   UpgradeError,
   Wallet,
 } from '../core/economy';
-import { spend } from '../core/economy';
+import { exchangeBerries, spend } from '../core/economy';
 import type { RunResult } from '../core/run-result';
+import {
+  coinCreatureAffordable,
+  freeCoinsLeft,
+  shopCreatures,
+  starterPackMsLeft,
+  starterPackOffered,
+  withFreeCoinsClaimed,
+  withProductGranted,
+  withPurchasesRestored,
+} from '../core/shop';
+import type { ProductKey } from '../data/shop';
 import type { TeamSlot } from '../core/sim-types';
 import { runTeam, type TeamIds } from '../core/team';
 import type { HintId, Save } from '../core/save/schema';
@@ -326,6 +337,64 @@ export class GameState {
 
   canAffordBerries(berries: number): boolean {
     return berries >= 0 && this.store.save.berries >= berries;
+  }
+
+  // --- Shop ---
+
+  /** The starter pack is on offer: the first days after the install, until it is bought. */
+  get starterPackOffered(): boolean {
+    return starterPackOffered(this.store.save, (this.deps.now ?? now)());
+  }
+
+  get starterPackMsLeft(): number {
+    return starterPackMsLeft(this.store.save, (this.deps.now ?? now)());
+  }
+
+  /** Free-coin ads left today (local day). */
+  get freeCoinsLeft(): number {
+    return freeCoinsLeft(this.store.save.shop, this.today());
+  }
+
+  /** The creatures the shop sells for coins at the baker level, cheapest first. */
+  get shopCreatures(): Array<{ id: CreatureId; price: number }> {
+    return shopCreatures(this.store.save);
+  }
+
+  /** A creature of the shop can be bought for coins now (the red dot on Shop). */
+  get coinCreatureAffordable(): boolean {
+    return coinCreatureAffordable(this.store.save);
+  }
+
+  /** Pays the coins of a watched free-coin ad; false when today's ads are used up. */
+  claimFreeCoins(): boolean {
+    const next = withFreeCoinsClaimed(this.store.save, this.today());
+    if (!next) return false;
+    this.store.replace(next);
+    return true;
+  }
+
+  /** Swaps a pack of berries (10, 50 or 100) for coins; false (nothing taken) when the berries are short. */
+  exchangeBerries(berries: number): boolean {
+    const result = exchangeBerries(this.store.save, berries);
+    if (!result.ok) return false;
+    this.store.replace({ ...this.store.save, ...result.value });
+    return true;
+  }
+
+  /** Pays out a purchase the store confirmed; false when a one-time product was already given. */
+  grantProduct(key: ProductKey): boolean {
+    const next = withProductGranted(this.store.save, key);
+    if (!next) return false;
+    this.store.replace(next);
+    return true;
+  }
+
+  /** Brings the save in line with the one-time products the store says are owned; true when it changed. */
+  restorePurchases(owned: readonly ProductKey[]): boolean {
+    const next = withPurchasesRestored(this.store.save, owned);
+    if (next === this.store.save) return false;
+    this.store.replace(next);
+    return true;
   }
 
   // --- Hints ---
