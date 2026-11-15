@@ -116,6 +116,7 @@ export function openGiftWindow(
     services.audio.coin();
     services.haptics.play('heavy');
     box.popLid();
+    box.startSway(cfg.motion, false);
     // The coins start at the opening, the top of the body, and pour out of it.
     const m = box.getWorldTransformMatrix();
     flyReward(scene, {
