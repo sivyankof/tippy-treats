@@ -275,8 +275,6 @@ export const MENU = {
     breathePeriodMs: 2200,
   },
   /** Baker level and XP bar. */
-  /** The "fresh oven" line: a thin bar and a label to its right, `width` across in all. */
-  ovenBar: { width: 600, barWidth: 230, height: 22, radius: 11, border: 3, font: 30, gap: 20 },
   xpBar: {
     width: 640,
     height: 44,
@@ -298,8 +296,28 @@ export const MENU = {
     extraShare: 0.5,
     /** Baker level and XP on a plate in the top-left corner; the bar is placed from the plate centre. */
     levelPlate: { left: 24, y: 100, width: 600, height: 140, barWidth: 340, barX: 74, barY: -20 },
-    /** The oven line in the gap between the level plate and the badge row. */
-    ovenBar: { y: 196 },
+    /**
+     * The "fresh oven" plate under the record plate (no room above): the character on the left, the lines
+     * and the scale of the bonus layers on the right. It moves down by `extraShare` of the extra height.
+     */
+    ovenPlate: {
+      y: 580,
+      extraShare: 0.25,
+      width: 960,
+      height: 210,
+      pictureX: 130,
+      pictureScale: 1,
+      textLeft: 250,
+      textRight: 48,
+      mainFont: 62,
+      subFont: 34,
+      /** Lines from the middle of the plate: the lit one has a scale, the spent one has two text lines. */
+      lit: { mainY: -56, barY: 12, subY: 66 },
+      spent: { mainY: -36, subY: 40 },
+      bar: { height: 28, radius: 14, border: 3 },
+      /** The time to the new day is redrawn when the minute changes: checked this often. */
+      tickMs: 1000,
+    },
     /** The record line on a plate under the top bar; it moves down by `extraShare` of the extra height. */
     record: { y: 396, extraShare: 0.25, font: 50, height: 96, padX: 48, fill: 0x7c5cff },
     /** The team shelf: a thick plank on two brackets, with up to three creatures standing on it. */
@@ -510,6 +528,16 @@ export const MENU = {
     laterY: 624,
   },
   /** The free gift window. */
+  /** The oven explainer window. */
+  ovenWindow: {
+    contentHeight: 780,
+    pictureY: 200,
+    pictureScale: 2,
+    textY: 505,
+    font: 46,
+    buttonY: 690,
+    button: { width: 640, height: 124, radius: 44, shadowOffset: 10, font: 52 },
+  },
   gift: {
     /** The box on the window, by its centre from the top of the content, and its scale. */
     boxY: 190,
@@ -960,8 +988,8 @@ export const MENU = {
     adTextPadding: 40,
     adDisabledAlpha: 0.5,
     xpFont: 52,
-    /** The oven line under the XP bar, and the message when a run emptied it. */
-    ovenRowHeight: 44,
+    /** The oven mark beside the XP line (icon and chip), and the message when a run emptied the oven. */
+    ovenMark: { height: 64, iconScale: 0.4, font: 40, gap: 14 },
     ovenMessageFont: 34,
     ovenMessageWidth: 900,
     nearMissFont: 40,

@@ -31,7 +31,7 @@ import { runTeam, type TeamIds } from '../core/team';
 import type { HintId, Save } from '../core/save/schema';
 import type { CreatureId } from '../data/creatures';
 import type { CalendarCell, StreakEntry } from '../core/streak';
-import { clockWentBack, localDay, now, utcDay } from '../util/clock';
+import { clockWentBack, localDay, msUntilLocalMidnight, now, utcDay } from '../util/clock';
 import {
   infoOf,
   withAttemptAdded,
@@ -394,6 +394,11 @@ export class GameState {
   /** Fresh oven layers left today (the bar of Home and the results). */
   get ovenLeft(): number {
     return freshLeft(this.store.save.oven, this.today(), this.clockBehind);
+  }
+
+  /** Time until the fresh oven lights up again: the next local midnight. */
+  get msUntilOven(): number {
+    return msUntilLocalMidnight((this.deps.now ?? now)());
   }
 
   /**

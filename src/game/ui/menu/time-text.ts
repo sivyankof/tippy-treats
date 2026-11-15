@@ -20,3 +20,14 @@ export function formatTimeLeft(ms: number): string {
   if (m > 0) return t('time.ms', { m, s: String(s).padStart(2, '0') });
   return t('time.s', { s });
 }
+
+const MINUTE_MS = 60_000;
+const HOUR_MIN = 60;
+
+/** Time left in whole minutes, rounded up: "3 h 05 min" from an hour up, "12 min" below it (the oven's "heats up in"). */
+export function formatHoursMinutes(ms: number): string {
+  const total = Math.max(1, Math.ceil(ms / MINUTE_MS));
+  const h = Math.floor(total / HOUR_MIN);
+  const m = total % HOUR_MIN;
+  return h > 0 ? t('time.hm', { h, m: String(m).padStart(2, '0') }) : t('time.m', { m });
+}

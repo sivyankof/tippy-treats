@@ -23,6 +23,7 @@ export const HINT_IDS = [
   'berry',
   'firstResults',
   'cloud',
+  'oven',
 ] as const;
 export type HintId = (typeof HINT_IDS)[number];
 

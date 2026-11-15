@@ -16,7 +16,7 @@ import { formatTimeLeft } from './time-text';
 const cfg = MENU.home.badges;
 
 /** Makes a container tappable over a `width` x `height` area around its origin, with press feedback. */
-function makeTappable(
+export function makeTappable(
   box: Phaser.GameObjects.Container,
   width: number,
   height: number,
