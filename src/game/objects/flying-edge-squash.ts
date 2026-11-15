@@ -196,7 +196,7 @@ export class FlyingEdgeSquash {
     const over = edgeOverflow(0, half, (walls.left - x) / viewScale, (walls.right - x) / viewScale);
     const left = this.depthOf('left', over.left);
     const right = this.depthOf('right', over.right);
-    fitShape(half, left, right, this.feel, this.shape, this.power);
+    fitShape(half, left, right, this.feel, this.shape, this.power, !effectsMode.reduced);
     this.shape.ribbing = !effectsMode.reduced;
     this.shape.ribs = this.ribs;
     for (const side of SIDES) {

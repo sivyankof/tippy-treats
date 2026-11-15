@@ -24,6 +24,10 @@ export interface SideSquash {
   /** How far the ribs stand out of the wedge outline at the top and at the bottom, share of the layer height (own numbers, not a part of `rise`). */
   ribUp: number;
   ribDown: number;
+  /** The ceiling of the drawn outline above the normal one at this side (wedge, glaze and ribs together), share of the layer height. */
+  cap: number;
+  /** The most the gathered glaze of this side can lift at rest, share of the layer height (it counts against `cap`). */
+  glazeMax: number;
   /** Length of the wedge along the drawn body, px. */
   len: number;
   /** Progress of the impact strokes of this side, 0..1 (-1: none shown). */
@@ -66,6 +70,8 @@ export function flatShape(): EdgeShape {
       rise: 0,
       ribUp: 0,
       ribDown: 0,
+      cap: 0,
+      glazeMax: 0,
       len: 0,
       hit: -1,
       hitGain: 0,
@@ -78,6 +84,8 @@ export function flatShape(): EdgeShape {
       rise: 0,
       ribUp: 0,
       ribDown: 0,
+      cap: 0,
+      glazeMax: 0,
       len: 0,
       hit: -1,
       hitGain: 0,
@@ -189,6 +197,7 @@ export function fitShape(
   feel: Readonly<WallFeel>,
   out: EdgeShape,
   power = 0,
+  ribbing = true,
 ): EdgeShape {
   const by = EDGE_SQUASH.byPower;
   out.half = half;
@@ -206,10 +215,26 @@ export function fitShape(
   out.edgeRight = half - out.right.depth;
   const rise = byPower(by.rise, power) * feel.rise;
   const body = out.edgeRight - out.edgeLeft;
-  const ribUp = byPower(by.ribHeight.top, power) * feel.ribs;
+  const ribWant = byPower(by.ribHeight.top, power) * feel.ribs;
   const ribDown = byPower(by.ribHeight.bottom, power) * feel.ribs;
-  fitWedge(out.left, width, body, feel, rise, ribUp, ribDown);
-  fitWedge(out.right, width, body, feel, rise, ribUp, ribDown);
+  // The drawn outline never rises past the ceiling: the glaze takes its share, the ribs get most of
+  // the rest (deeper hollows between them, never taller), and the wedge under them gets what is left.
+  const cap = byPower(by.maxUp, power);
+  const glazeMax = (out.glazeLift * (1 - feel.minScale)) / BALANCE.layer.height;
+  const room = Math.max(0, cap - glazeMax);
+  const ribUp = Math.min(ribWant, room * EDGE_SQUASH.ribs.ceilingShare);
+  // Without the ribs (fewer effects) the wedge alone fills the room under the ceiling.
+  const wedgeUp = Math.max(
+    0,
+    Math.min(EDGE_SQUASH.wedge.upShare * rise, room - (ribbing ? ribUp : 0)),
+  );
+  const fitRise = wedgeUp / EDGE_SQUASH.wedge.upShare;
+  fitWedge(out.left, width, body, feel, fitRise, ribUp, ribDown);
+  fitWedge(out.right, width, body, feel, fitRise, ribUp, ribDown);
+  for (const side of [out.left, out.right]) {
+    side.cap = cap;
+    side.glazeMax = glazeMax;
+  }
   return out;
 }
 
@@ -365,7 +390,10 @@ export function ribReach(
   const t = Math.max(0, d) / side.len;
   if (t >= 1) return out;
   const spring = Math.max(0, side.spring);
-  out.up = side.ribUp * spring * ribHeight(ribs.top, t, shape.lastRib);
+  // The spring can swing the glaze and the ribs past rest: together with the wedge they stay under the ceiling.
+  wedgeAt(side, d, out);
+  const free = Math.max(0, side.cap - out.up - side.glazeMax * spring);
+  out.up = Math.min(side.ribUp * spring * ribHeight(ribs.top, t, shape.lastRib), free);
   out.down = side.ribDown * spring * ribHeight(ribs.bottom, t, shape.lastBottomRib);
   return out;
 }

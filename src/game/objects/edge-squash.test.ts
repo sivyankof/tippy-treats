@@ -41,6 +41,7 @@ function shapeAt(
   width: number,
   f: Readonly<WallFeel> = feel.normal,
   power = 0,
+  ribbing = true,
 ): EdgeShape {
   const half = width / 2;
   const over = edgeOverflow(cx, half, WALL_L, WALL_R);
@@ -51,8 +52,10 @@ function shapeAt(
     f,
     flatShape(),
     power,
+    ribbing,
   );
   shape.ribs = RIBS;
+  shape.ribbing = ribbing;
   return shape;
 }
 
@@ -201,9 +204,9 @@ describe('edge squash shape', () => {
   });
 
   it('gives a soft material a longer, taller squash and a hard one hardly any', () => {
-    const soft = shapeAt(140, 720, feel.soft, 0.5);
-    const normal = shapeAt(140, 720, feel.normal, 0.5);
-    const hard = shapeAt(140, 720, feel.hard, 0.5);
+    const soft = shapeAt(140, 720, feel.soft, 0.5, false);
+    const normal = shapeAt(140, 720, feel.normal, 0.5, false);
+    const hard = shapeAt(140, 720, feel.hard, 0.5, false);
     // At the deepest squash both zones fill the whole width: compare them a little further out.
     expect(shapeAt(300, 720, feel.soft).left.zone).toBeGreaterThan(
       shapeAt(300, 720, feel.normal).left.zone,
@@ -350,9 +353,9 @@ describe('wedge strength by speed', () => {
     expect(byPower(EDGE_SQUASH.byPower.rise, 1)).toBe(EDGE_SQUASH.byPower.rise[1]);
   });
 
-  it('a slow layer rises 12-15% at the wall, a fast one 25-30% (the wedge itself: the ribs stand on it)', () => {
-    const slow = tallestGrowth(shapeAt(140, 720, feel.normal, 0), false);
-    const fast = tallestGrowth(shapeAt(140, 720, feel.normal, 1), false);
+  it('a slow layer rises 12-15% at the wall, a fast one 25-30% (the wedge itself, without the ribs)', () => {
+    const slow = tallestGrowth(shapeAt(140, 720, feel.normal, 0, false), false);
+    const fast = tallestGrowth(shapeAt(140, 720, feel.normal, 1, false), false);
     expect(slow.total).toBeGreaterThanOrEqual(0.12);
     expect(slow.total).toBeLessThanOrEqual(0.15);
     expect(fast.total).toBeGreaterThanOrEqual(0.25);
@@ -360,9 +363,9 @@ describe('wedge strength by speed', () => {
   });
 
   it('grows with the speed, step by step', () => {
-    let last = tallestGrowth(shapeAt(140, 720, feel.normal, 0), false).total;
+    let last = tallestGrowth(shapeAt(140, 720, feel.normal, 0, false), false).total;
     for (let p = 0.05; p <= 1; p += 0.05) {
-      const now = tallestGrowth(shapeAt(140, 720, feel.normal, p), false).total;
+      const now = tallestGrowth(shapeAt(140, 720, feel.normal, p, false), false).total;
       expect(now).toBeGreaterThanOrEqual(last - 1e-9);
       expect(now - last).toBeLessThan(0.02);
       last = now;
@@ -582,8 +585,7 @@ describe('ribs of the silhouette', () => {
   });
 
   it('are none without a rise, in fewer effects and for a hard layer', () => {
-    const s = shapeAt(140, 720, feel.normal, 1);
-    s.ribbing = false;
+    const s = shapeAt(140, 720, feel.normal, 1, false);
     expect(ribReach(s, s.left, 0, { up: 0, down: 0 })).toEqual({ up: 0, down: 0 });
     const hard = shapeAt(140, 720, feel.hard, 1);
     expect(ribReach(hard, hard.left, 0, { up: 0, down: 0 })).toEqual({ up: 0, down: 0 });
@@ -674,7 +676,7 @@ describe('rib size and count by speed', () => {
     expect(fast.lastBottomRib).toBe(1);
   });
 
-  it('makes the ribs 1.5 times (slow) to 2 times (fast) taller than the old ones, on their own numbers', () => {
+  it('makes the ribs 1.5 times (slow) to 2 times (fast) taller than the old ones, on their own numbers (before the ceiling)', () => {
     // The old ribs were a share of the rise: 0.65 * 0.12 * 0.8 slow, 0.97 * 0.24 * 0.8 fast.
     const oldSlow = 0.65 * 0.12 * 0.8;
     const oldFast = 0.97 * 0.24 * 0.8;
@@ -684,7 +686,8 @@ describe('rib size and count by speed', () => {
     expect(by.ribHeight.top[1]).toBeLessThan(oldFast * 2.1);
     // They do not depend on the wedge: the rise is its own number.
     const a = shapeAt(140, 720, feel.normal, 1);
-    expect(a.left.ribUp).toBeCloseTo(by.ribHeight.top[1], 9);
+    expect(a.left.ribUp).toBeLessThanOrEqual(by.ribHeight.top[1]);
+    expect(a.left.ribUp).toBeGreaterThan(by.ribHeight.top[1] * 0.65);
     expect(a.left.ribDown).toBeCloseTo(by.ribHeight.bottom[1], 9);
   });
 
@@ -719,21 +722,21 @@ describe('rib size and count by speed', () => {
         const s = shapeAt(140, 720, feel.normal, p);
         s.ribs = ribLayoutFor(1234, layer);
         const wall = reach(s, -360);
-        expect(s.left.ribDown).toBeLessThan(s.left.ribUp * 0.4);
-        expect(wall.down).toBeLessThan(wall.up * 0.4);
+        expect(s.left.ribDown).toBeLessThan(s.left.ribUp * 0.45);
+        expect(wall.down).toBeLessThan(wall.up * 0.45);
       }
     }
   });
 
   it('gives a soft layer a bubble of its own size, a hard one no ribs', () => {
     const soft = shapeAt(140, 720, feel.soft, 1);
-    expect(soft.left.ribUp).toBeCloseTo(by.ribHeight.top[1] * feel.soft.ribs, 9);
+    expect(soft.left.ribUp).toBeLessThanOrEqual(by.ribHeight.top[1] * feel.soft.ribs);
+    expect(soft.left.ribUp).toBeGreaterThan(by.ribHeight.top[1] * feel.soft.ribs * 0.55);
     expect(shapeAt(140, 720, feel.hard, 1).left.ribUp).toBe(0);
   });
 
   it('draws no ribs in fewer effects, only the wedge', () => {
-    const s = shapeAt(140, 720, feel.normal, 1);
-    s.ribbing = false;
+    const s = shapeAt(140, 720, feel.normal, 1, false);
     expect(ribReach(s, s.left, 0, { up: 0, down: 0 })).toEqual({ up: 0, down: 0 });
     expect(crownCover(s, -360)).toBe(0);
     expect(wedge(s, -360).up).toBeGreaterThan(0.19);
@@ -775,5 +778,51 @@ describe('crown of a soft layer under the wedge', () => {
     ribReach(s, s.left, 0, out);
     expect(out.up).toBeGreaterThan(0);
     expect(out.down).toBeGreaterThan(0);
+  });
+});
+
+describe('height ceiling at the wall', () => {
+  const by = EDGE_SQUASH.byPower;
+
+  /** The highest the drawn outline reaches above the normal top (wedge, ribs and glaze), share of the layer height. */
+  function highest(shape: Readonly<EdgeShape>): number {
+    let top = 0;
+    for (let u = -shape.half; u <= shape.half; u += 0.5) {
+      top = Math.max(top, reach(shape, u).up + squashGlaze(shape, u) / LAYER_H);
+    }
+    return top;
+  }
+
+  it('keeps the ceiling numbers: +25% slow, +45% fast', () => {
+    expect(by.maxUp[0]).toBe(0.25);
+    expect(by.maxUp[1]).toBe(0.45);
+  });
+
+  it('never lets the outline rise past the ceiling of its speed, for any material, depth and ribs on or off', () => {
+    for (const f of Object.values(feel)) {
+      for (const ribbing of [true, false]) {
+        for (const p of [0, 0.25, 0.5, 0.75, 1]) {
+          const cap = byPower(by.maxUp, p);
+          for (let cx = 330; cx >= 100; cx -= 10) {
+            for (const spring of [1, 1.6, 0]) {
+              const s = shapeAt(cx, 720, f, p, ribbing);
+              s.left.spring = spring;
+              s.right.spring = spring;
+              for (let layer = 1; layer <= 8; layer++) {
+                s.ribs = ribLayoutFor(99, layer);
+                expect(highest(s)).toBeLessThanOrEqual(cap + 1e-9);
+              }
+            }
+          }
+        }
+      }
+    }
+  });
+
+  it('keeps the ribs big on a fast layer: most of the ceiling is the ribs, with deep hollows between them', () => {
+    const s = shapeAt(140, 720, feel.normal, 1);
+    expect(s.left.ribUp).toBeGreaterThan(0.2);
+    const hollow = reach(s, -360 + 120).up;
+    expect(hollow).toBeLessThan(s.left.ribUp);
   });
 });

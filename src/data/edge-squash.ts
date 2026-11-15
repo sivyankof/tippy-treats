@@ -128,6 +128,12 @@ export const EDGE_SQUASH = {
       top: [0.095, 0.37] satisfies ByPower,
       bottom: [0.035, 0.11] satisfies ByPower,
     },
+    /**
+     * The ceiling of the drawn outline above the normal layer top at the wall, glaze, wedge and ribs
+     * together, share of the layer height: slow +25%, fast +45%. It never lets the squash cover the
+     * tower or hide the aim, whatever the material.
+     */
+    maxUp: [0.25, 0.45] satisfies ByPower,
     /** The glaze bulge, times `feel.glazeLiftPx`. */
     glazeMul: [0.4, 1.45] satisfies ByPower,
     /**
@@ -278,10 +284,12 @@ export const EDGE_SQUASH = {
     },
     /** The crest sits at `0.5 ^ (1 / lean)` of the rib from its wall side (1: in the middle, less: nearer the wall). */
     lean: 0.7,
+    /** The top ribs take at most this share of what is left under the ceiling after the glaze; the wedge under them gets the rest. */
+    ceilingShare: 0.8,
     /** Below 1 the bump is plumper (flatter on top, steeper at the foot). */
-    plump: 0.5,
+    plump: 0.35,
     /** The foot of every rib eases in over this share of its width, so the hollows are soft creases (no spike, no vertical wall). */
-    foot: 0.08,
+    foot: 0.22,
     /** The ribs shrink along the wedge as `(1 - t) ^ fade`. */
     fade: 0.12,
   },
@@ -293,7 +301,7 @@ export const EDGE_SQUASH = {
    */
   silhouette: {
     /** Points along the wedge for each row of ribs (more: rounder). */
-    samples: 40,
+    samples: 64,
     /** The fill reaches this far into the body below the outline, so the picture's own outline under it never shows, px. */
     insetPx: ANIM.layer.outline + 3,
     /** Line width of the outline: the layer's own. */
