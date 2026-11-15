@@ -2,6 +2,7 @@ import * as Phaser from 'phaser';
 import './style.css';
 import { BOOT } from './data/boot';
 import { bindLogicalResize, createGameConfig } from './game/config';
+import { refreshTextsOnFontLoad } from './game/ui/font-refresh';
 import { FONT_FAMILY, FONT_WEIGHT } from './game/ui/fonts';
 import { applySavedSettings } from './game/apply-settings';
 import { detectLang, setLang } from './i18n';
@@ -68,6 +69,7 @@ async function start(): Promise<void> {
   bootStage('game');
   const game = new Phaser.Game(createGameConfig(parent));
   bindLogicalResize(game, parent);
+  refreshTextsOnFontLoad(game);
   bootStage('started');
   // Works in production builds too, unlike the other debug parameters.
   if (showsFpsMeter(window.location.search))
