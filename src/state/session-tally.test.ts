@@ -2,9 +2,11 @@ import { describe, expect, it } from 'vitest';
 import type { RunResult } from '../core/run-result';
 import { xpToNext } from '../core/progression';
 import { MS_PER_DAY } from '../data/clock';
+import { createDefaultSave } from '../core/save/defaults';
+import { DAILY } from '../data/daily';
 import { MemoryStorage } from '../services/storage/memory';
 import { runCoinCredits, SessionTally } from './session-tally';
-import { createTestState } from './test-state';
+import { createTestState, loadTestState } from './test-state';
 
 const T0 = Date.UTC(2026, 5, 10, 12, 0, 0);
 
@@ -101,6 +103,22 @@ describe('the tally in GameState', () => {
     expect(totals.berries.debug).toBe(50);
     expect(tally.total('coins')).toBe(state.coins);
     expect(tally.total('berries')).toBe(state.berries);
+  });
+
+  it('books the daily tiers a run paid under daily_tier, coins and berries', async () => {
+    const clock = { ms: T0 };
+    const tally = new SessionTally();
+    const save = { ...createDefaultSave(T0, 'abc'), bakerLevel: 5 };
+    const state = await loadTestState(save, clock, tally);
+    const top = DAILY.tiers.reduce((best, tier) => (tier.height > best.height ? tier : best));
+    expect(state.startDailyAttempt()).toBe(true);
+    state.recordRun(run({ mode: 'daily', height: top.height, coins: 0 }));
+    const coins = DAILY.tiers.reduce((sum, tier) => sum + (tier.reward.coins ?? 0), 0);
+    const berries = DAILY.tiers.reduce((sum, tier) => sum + (tier.reward.berries ?? 0), 0);
+    const totals = tally.snapshot();
+    expect(totals.coins.daily_tier).toBe(coins);
+    expect(totals.berries.daily_tier).toBe(berries);
+    expect(totals.coins.run_other ?? 0).toBe(0);
   });
 
   it('counts a berry exchange as coins and leaves spending alone', () => {

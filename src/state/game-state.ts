@@ -162,9 +162,14 @@ export class GameState {
       this.dailyAttemptDay,
     );
     const next = withRunCounted(progress.save);
-    this.noteRun(this.store.save, next, applied.summary, extras);
+    const summary = {
+      ...applied.summary,
+      missions: progress.missions,
+      dailyTiers: progress.dailyTiers,
+    };
+    this.noteRun(this.store.save, next, summary, extras);
     this.store.replace(next);
-    return { ...applied.summary, missions: progress.missions, dailyTiers: progress.dailyTiers };
+    return summary;
   }
 
   // --- Interstitial ads ---

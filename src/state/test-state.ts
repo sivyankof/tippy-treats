@@ -18,10 +18,14 @@ export function createTestState(
 }
 
 /** Like `createTestState`, but starts from a given save (read through the normal load). */
-export async function loadTestState(save: Save, clock: { ms: number }): Promise<GameState> {
+export async function loadTestState(
+  save: Save,
+  clock: { ms: number },
+  tally?: SessionTally,
+): Promise<GameState> {
   const storage = new MemoryStorage();
   await storage.set(STORAGE_KEYS.save, serializeSave(save));
-  const state = build(storage, clock);
+  const state = build(storage, clock, tally);
   await state.load();
   return state;
 }
