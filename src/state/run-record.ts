@@ -3,9 +3,10 @@ import { earn, grantCreature } from '../core/economy';
 import type { DailyPayout } from '../core/daily';
 import { bakeLayers } from '../core/oven';
 import { runLayers } from '../core/progression';
+import { recordCreaturesReached } from '../core/record-unlocks';
 import type { RunResult } from '../core/run-result';
 import type { MissionProgress, Save } from '../core/save/schema';
-import { CREATURES, CREATURE_IDS, type CreatureId } from '../data/creatures';
+import type { CreatureId } from '../data/creatures';
 import { withXp, type LevelUp } from './level-up';
 
 export type { LevelUp };
@@ -125,16 +126,11 @@ export function applyRun(
 
 /** Hands over the creatures whose record way is reached by the best classic height of the save. */
 function withRecordCreatures(save: Save): { save: Save; creatures: CreatureId[] } {
+  const creatures = recordCreaturesReached(
+    save.records.classicHeight,
+    (id) => save.creatures[id] !== undefined,
+  );
   let next = save;
-  const creatures: CreatureId[] = [];
-  for (const id of CREATURE_IDS) {
-    if (next.creatures[id] !== undefined) continue;
-    const reached = CREATURES[id].unlock.some(
-      (unlock) => unlock.kind === 'record' && next.records.classicHeight >= unlock.height,
-    );
-    if (!reached) continue;
-    next = grantCreature(next, id).value;
-    creatures.push(id);
-  }
+  for (const id of creatures) next = grantCreature(next, id).value;
   return { save: next, creatures };
 }

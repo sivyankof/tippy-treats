@@ -13,9 +13,6 @@ export const XP_CURVE = {
   lateStep: 810,
 } as const;
 
-/** The curve before save version 5: `base + step * (level - 1)`; only the save migration reads it. */
-export const LEGACY_XP_TO_NEXT = { base: 40, step: 25 } as const;
-
 /** "Fresh oven": the first `freshLayers` layers of a local day pay 1 XP each, later layers 1 XP per `layersPerXp`. */
 export const OVEN = { freshLayers: 1300, layersPerXp: 6 } as const;
 

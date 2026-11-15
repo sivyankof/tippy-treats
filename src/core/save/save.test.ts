@@ -12,6 +12,7 @@ import {
 } from './migrations';
 import { MAX_BAKER_LEVEL } from '../../data/progression';
 import { xpToNext } from '../progression';
+import { legacyXpToNext, V5_RECORD_UNLOCKS, v5XpToNext } from './frozen-v5';
 import { SAVE_VERSION, type Save } from './schema';
 
 const NOW = 1_700_000_000_000;
@@ -428,6 +429,12 @@ describe('migration 4 to 5', () => {
     const high = migrateV4(raw({ bakerLevel: 12, bakerXp: 100 }));
     expect(high.bakerXp).toBe(Math.floor((100 / 315) * 6580));
     expect(high.bakerLevel).toBe(12);
+  });
+
+  it('uses the frozen numbers of version 5, not the live data', () => {
+    expect([1, 2, 3, 4, 5, 12].map(legacyXpToNext)).toEqual([40, 65, 90, 115, 140, 315]);
+    expect([1, 2, 3, 4, 5, 12].map(v5XpToNext)).toEqual([150, 250, 400, 600, 910, 6580]);
+    expect(V5_RECORD_UNLOCKS).toEqual([{ id: 'twins', height: 75 }]);
   });
 
   it('keeps an empty bar empty and a full bar below the next level', () => {

@@ -20,6 +20,7 @@ import {
   levelReward as currentLevelReward,
   xpToNext as currentXpToNext,
 } from '../src/core/progression';
+import { legacyXpToNext } from '../src/core/save/frozen-v5';
 import { Rng } from '../src/core/rng';
 import { DIFFICULTY } from '../src/data/balance';
 import { CREATURE_IDS, CREATURES, type CreatureId } from '../src/data/creatures';
@@ -177,7 +178,6 @@ const BEFORE_RULES = {
   /** Every perfect drop of a combo of 5+ paid, now every second one does. */
   comboFactor: 2,
   upgradeCosts: [150, 400, 900, 2000],
-  xpToNext: { base: 40, step: 25 },
 } as const;
 
 /** The rules of the game, read from src/data and src/core. */
@@ -228,8 +228,7 @@ export const BEFORE: Economy = {
     Math.floor(r.h / BEFORE_RULES.heightStep) * BEFORE_RULES.heightPerStep,
   runXp: (r) => r.h,
   dailyXpBonus: { firstXp: 0, mult: 1 },
-  xpToNext: (level) =>
-    BEFORE_RULES.xpToNext.base + BEFORE_RULES.xpToNext.step * (Math.max(1, level) - 1),
+  xpToNext: legacyXpToNext,
   missionXp: { easy: 0, medium: 0, hard: 0 },
   doubleCap: Infinity,
   upgradeCosts: [...BEFORE_RULES.upgradeCosts],

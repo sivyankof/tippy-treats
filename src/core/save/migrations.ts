@@ -1,6 +1,5 @@
-import { CREATURES, CREATURE_IDS } from '../../data/creatures';
-import { LEGACY_XP_TO_NEXT } from '../../data/progression';
-import { xpToNext } from '../progression';
+import { recordCreaturesReached } from '../record-unlocks';
+import { legacyXpToNext, V5_RECORD_UNLOCKS, v5XpToNext } from './frozen-v5';
 import { SAVE_VERSION, type Save } from './schema';
 
 export type SaveErrorCode = 'not_object' | 'bad_version' | 'future_version' | 'missing_migration';
@@ -68,26 +67,27 @@ export function migrateV4(raw: RawSave): RawSave {
   // A damaged or missing XP stays as it is, so the loader can still tell the save is damaged.
   if (typeof raw.bakerXp === 'number' && Number.isFinite(raw.bakerXp)) {
     const level = typeof raw.bakerLevel === 'number' ? Math.max(1, Math.floor(raw.bakerLevel)) : 1;
-    const oldNeed = LEGACY_XP_TO_NEXT.base + LEGACY_XP_TO_NEXT.step * (level - 1);
+    const oldNeed = legacyXpToNext(level);
     const oldXp = raw.bakerXp > 0 ? Math.floor(raw.bakerXp) : 0;
-    const newNeed = xpToNext(level);
+    const newNeed = v5XpToNext(level);
     next.bakerXp = Math.min(newNeed - 1, Math.floor((oldXp / oldNeed) * newNeed));
   }
   return withRecordCreatures(next);
 }
 
-/** Hands over creatures whose record way the best classic height already reached. */
+/** Hands over creatures whose record way (as of version 5) the best classic height already reached. */
 function withRecordCreatures(raw: RawSave): RawSave {
   const records = isRecord(raw.records) ? raw.records : {};
   const height = typeof records.classicHeight === 'number' ? records.classicHeight : 0;
   if (!isRecord(raw.creatures)) return raw;
-  const creatures: RawSave = { ...raw.creatures };
-  for (const id of CREATURE_IDS) {
-    if (creatures[id] !== undefined) continue;
-    const reached = CREATURES[id].unlock.some(
-      (unlock) => unlock.kind === 'record' && height >= unlock.height,
-    );
-    if (reached) creatures[id] = { level: 1 };
+  const owned = raw.creatures;
+  const creatures: RawSave = { ...owned };
+  for (const id of recordCreaturesReached(
+    height,
+    (creature) => owned[creature] !== undefined,
+    V5_RECORD_UNLOCKS,
+  )) {
+    creatures[id] = { level: 1 };
   }
   return { ...raw, creatures };
 }
