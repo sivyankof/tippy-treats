@@ -133,12 +133,12 @@ export const TOWER_GUESTS: Partial<Record<ZoneId, GuestLook>> = {
 export const TOWER_GUEST = {
   /** Name of the stream forked from the cosmetic seed of the run. */
   stream: 'guest',
-  /** Wait between the end of one visit and the start of the next (so at least this apart). */
-  intervalMs: [40000, 60000] as Range,
+  /** Wait from the start of one visit to the start of the next. */
+  intervalMs: [30000, 45000] as Range,
   /** The first visit of a run comes this soon. */
-  firstDelayMs: [9000, 22000] as Range,
+  firstDelayMs: [12000, 20000] as Range,
   /** A visit could not start (no room, a layer in the way): look again after this. */
-  retryMs: 3000,
+  retryMs: 1000,
 
   /** Where the guest sits on the top layer. */
   site: {
@@ -147,6 +147,15 @@ export const TOWER_GUEST = {
     edgeGapPx: 6,
     /** The guest sits this far (share of the free stretch, `[near, far]`) from the face. */
     reach: [0.3, 1] as Range,
+    /**
+     * With this chance a visit is bound for the path of the next layer: the guest sits within that
+     * layer's width over the top layer's centre and near the face (`pathReach`), where even an
+     * off-aim landing covers it, and a layer landing while it is still coming does not scare it
+     * off: it turns to the new top layer (`arrive.retargetMs`). The other visits sit anywhere beside
+     * the face and bolt from such a landing. About this share of the visits ends in a splat.
+     */
+    pathChance: 0.5,
+    pathReach: [0, 0.5] as Range,
     /** The feet sink this far into the top surface. */
     sinkPx: 4,
     /** Free space kept on each side of the shadow of the flying layer. */
@@ -164,6 +173,8 @@ export const TOWER_GUEST = {
     zigzagCycles: 2.5,
     /** How high above the layer the arrival path starts. */
     abovePx: [140, 320] as Range,
+    /** A layer landed while the guest was still coming: it turns to the new top layer, this long. */
+    retargetMs: [450, 650] as Range,
   },
   leave: {
     flightMs: [1700, 2400] as Range,

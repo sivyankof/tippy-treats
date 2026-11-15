@@ -28,6 +28,7 @@ import type { LayerView } from './layer-view';
 import { plainLooks } from './plain-look';
 import { bakeGuestFlat, drawFlatLimbs, drawGuestLegs } from './tower-guest-art';
 import {
+  chooseSite,
   clearOfFace,
   flightPoint,
   flinchPose,
@@ -36,7 +37,6 @@ import {
   layerOverGuest,
   orbitStar,
   shouldFlinch,
-  siteOffset,
   SPLAT_STAGES,
   splatShape,
   stageMs,
@@ -110,6 +110,10 @@ export class TowerGuest {
   private clockMs = 0;
   /** Length of the flight, the hold or the sit now going. */
   private spanMs = 0;
+  /** This visit is bound for the path of the next layer (`TOWER_GUEST.site.pathChance`). */
+  private onPath = false;
+  /** The wing beat of this flight is already going (a turned arrival): it does not fade in again. */
+  private rampedMs = 0;
   private anchor: Anchor = { index: 0, edge: 'top', dx: 0 };
   private readonly pos: FlightPoint = { x: 0, y: 0 };
   private readonly from: FlightPoint = { x: 0, y: 0 };
@@ -188,9 +192,11 @@ export class TowerGuest {
   update(dtMs: number, ctx: GuestContext): void {
     this.last = ctx;
     this.clockMs += dtMs;
+    // The wait runs during a visit too: visits start `intervalMs` apart.
+    this.scheduler.tick(dtMs);
     this.tickGiggle(dtMs);
     if (this.phase === 'away') {
-      this.tickAway(dtMs, ctx);
+      this.tickAway(ctx);
       return;
     }
     if (!this.runIsOn(ctx.state)) {
@@ -226,6 +232,10 @@ export class TowerGuest {
       return;
     }
     if (!events.some((e) => e.type === 'land')) return;
+    if (this.phase === 'arrive') {
+      if (!this.retarget(state)) this.startLeave('startle');
+      return;
+    }
     const top = state.layers.length - 1;
     const pose = this.phase === 'sit' && this.anchor.index === top - 1 ? this.poseOf(top) : null;
     if (pose && layerCovers(this.pos.x, pose.x, pose.width)) this.startSplat(top, pose);
@@ -240,7 +250,8 @@ export class TowerGuest {
     const top = ctx.state.layers.length - 1;
     const pose = look && top >= 0 ? this.poseOf(top) : null;
     if (!look || !pose) return false;
-    const dx = this.pickSite(look, pose, null);
+    this.onPath = this.random.next() < TOWER_GUEST.site.pathChance;
+    const dx = this.pickSite(look, pose, ctx.state, null);
     if (dx === null) return false;
     this.begin(look, top, dx);
     this.forced = true;
@@ -261,9 +272,8 @@ export class TowerGuest {
     return effectsMode.reduced && !TOWER_GUEST.reducedVisits && !this.forced;
   }
 
-  private tickAway(dtMs: number, ctx: GuestContext): void {
+  private tickAway(ctx: GuestContext): void {
     if (effectsMode.reduced && !TOWER_GUEST.reducedVisits) return;
-    this.scheduler.tick(dtMs);
     if (this.scheduler.ready && !this.tryArrive(ctx)) this.scheduler.retry();
   }
 
@@ -289,7 +299,10 @@ export class TowerGuest {
     }
     const pose = this.poseOf(top);
     if (!pose) return false;
-    const dx = this.pickSite(look, pose, this.shadowSpan(ctx, pose));
+    this.onPath = this.random.next() < TOWER_GUEST.site.pathChance;
+    // A visit bound for the path of the next layer may sit under its shadow; any other keeps clear of it.
+    const avoid = this.onPath ? null : this.shadowSpan(ctx, pose);
+    const dx = this.pickSite(look, pose, state, avoid);
     if (dx === null) return false;
     this.begin(look, top, dx);
     const { arrive, offscreenPx } = TOWER_GUEST;
@@ -328,11 +341,40 @@ export class TowerGuest {
     return faceHalfSpan(pose.width, creature ? faceRecipe(creature) : null);
   }
 
-  private pickSite(look: GuestLook, pose: LayerPose, avoid: Span | null): number | null {
+  /** Where on the top layer (`pose`) the guest sits; the next layer is the flying one, or as wide as the top. */
+  private pickSite(
+    look: GuestLook,
+    pose: LayerPose,
+    state: Readonly<TowerState>,
+    avoid: Span | null,
+  ): number | null {
     const face = this.faceHalfOf(pose);
-    const side: -1 | 1 = this.random.next() < 0.5 ? -1 : 1;
-    const reach = this.pick(TOWER_GUEST.site.reach);
-    return siteOffset(pose.width, face, look.halfWidthPx * look.scale, side, reach, avoid);
+    const next = state.flying?.width ?? pose.width;
+    const half = look.halfWidthPx * look.scale;
+    const random = (): number => this.random.next();
+    return chooseSite(pose.width, face, half, next, this.onPath, random, avoid);
+  }
+
+  /**
+   * A layer landed while the guest was still coming: one bound for the path of the next layer
+   * turns to the new top layer and lands there instead, from where it is now. False for any other
+   * guest, or when there is no room on that layer.
+   */
+  private retarget(state: Readonly<TowerState>): boolean {
+    const look = this.look;
+    if (!this.onPath) return false;
+    const top = state.layers.length - 1;
+    const pose = look ? this.poseOf(top) : null;
+    if (!look || !pose) return false;
+    const dx = this.pickSite(look, pose, state, null);
+    if (dx === null) return false;
+    this.scaleFrom = this.drawnScale(look);
+    this.anchor = { index: top, edge: 'top', dx };
+    this.from.x = this.pos.x;
+    this.from.y = this.pos.y;
+    this.enter('arrive', this.pick(TOWER_GUEST.arrive.retargetMs));
+    this.rampedMs = TOWER_GUEST.flightRampMs;
+    return true;
   }
 
   /** Starts a visit on the layer `index` at `dx` from its centre. */
@@ -354,6 +396,7 @@ export class TowerGuest {
     this.phase = phase;
     this.phaseMs = 0;
     this.spanMs = spanMs;
+    this.rampedMs = 0;
   }
 
   /** The `facing` that makes the guest look towards `dir` (its picture looks to `headSide`). */
@@ -641,7 +684,13 @@ export class TowerGuest {
   private flightRamp(): number {
     const { flightRampMs } = TOWER_GUEST;
     const landing = this.phase === 'arrive' ? (this.spanMs - this.phaseMs) / flightRampMs : 1;
-    return clamp01(Math.min(this.phaseMs / flightRampMs, landing));
+    return clamp01(Math.min((this.phaseMs + this.rampedMs) / flightRampMs, landing));
+  }
+
+  /** The drawn size now: growing from the backdrop creature's size while it arrives. */
+  private drawnScale(look: GuestLook): number {
+    if (this.phase !== 'arrive') return look.scale;
+    return lerp(this.scaleFrom, look.scale, clamp01(this.phaseMs / this.spanMs));
   }
 
   /** Places and shapes the picture for this frame. */
@@ -665,10 +714,7 @@ export class TowerGuest {
     this.legs.setVisible(resting || shape.flat);
     if (shape.flat) drawFlatLimbs(this.legs, look, this.clockMs, !this.plainSplat);
     else if (resting) drawGuestLegs(this.legs, look, this.clockMs, look.headSide);
-    const size =
-      this.phase === 'arrive'
-        ? lerp(this.scaleFrom, look.scale, clamp01(this.phaseMs / this.spanMs))
-        : look.scale;
+    const size = this.drawnScale(look);
     this.root.setDepth(this.pressed() ? this.pressedDepth() : DEPTH.pieces);
     this.root.setPosition(this.pos.x, this.pos.y - this.flinch.lift);
     this.root.setRotation(shape.tilt);

@@ -80,6 +80,30 @@ export function siteOffset(
   return clear(other) ? other : null;
 }
 
+/**
+ * Picks where a guest `halfBody` wide sits on a top layer `width` wide whose face takes `faceHalf`
+ * on each side (offset from its centre, `null` when there is no room). A guest bound for the path
+ * of the next layer (`onPath`) sits within `nextWidth` over the top layer's centre and near the
+ * face (`site.pathReach`), where even an off-aim landing covers it; any other one anywhere beside
+ * the face (`site.reach`). The side and the place come from `random`; `avoid` is kept clear as in
+ * `siteOffset`.
+ */
+export function chooseSite(
+  width: number,
+  faceHalf: number,
+  halfBody: number,
+  nextWidth: number,
+  onPath: boolean,
+  random: () => number,
+  avoid: Span | null = null,
+): number | null {
+  const side: -1 | 1 = random() < 0.5 ? -1 : 1;
+  const { pathReach, reach } = TOWER_GUEST.site;
+  const along = pickRange(onPath ? pathReach : reach, random);
+  const room = onPath ? Math.min(width, nextWidth) : width;
+  return siteOffset(room, faceHalf, halfBody, side, along, avoid);
+}
+
 /** A layer in the air is over the guest at `flyX` (its body, with the margin of `TOWER_GUEST.shy`). */
 export function layerOverGuest(flyX: number, layerX: number, layerWidth: number): boolean {
   return Math.abs(flyX - layerX) < layerWidth / 2 + TOWER_GUEST.shy.marginPx;

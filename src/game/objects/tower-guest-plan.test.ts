@@ -1,8 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import { Rng } from '../../core/rng';
-import { TOWER_GUEST } from '../../data/tower-guest';
-import { easeInQuad as easeIn, easeOutQuad as easeOut } from '../../util/math';
+import type { Range } from '../../data/backdrop-life';
+import { TOWER_GUEST, TOWER_GUESTS } from '../../data/tower-guest';
+import { easeInQuad as easeIn, easeOutQuad as easeOut, pickRange } from '../../util/math';
+import { faceHalfSpan } from '../fx/glaze-growth';
 import {
+  chooseSite,
   clearOfFace,
   flightPoint,
   flinchPose,
@@ -94,6 +97,78 @@ describe('siteOffset', () => {
     expect(x).toBeLessThan(0);
     const both = { left: -200, right: 200 };
     expect(siteOffset(400, FACE, HALF_BODY, 1, 0.5, both)).toBeNull();
+  });
+});
+
+describe('chooseSite', () => {
+  it('keeps a guest bound for the path within the next layer and nearer the face', () => {
+    const rng = new Rng(5);
+    const random = (): number => rng.next();
+    let onPathFar = 0;
+    let freeFar = 0;
+    for (let i = 0; i < 400; i++) {
+      const onPath = chooseSite(600, FACE, HALF_BODY, 400, true, random);
+      expect(onPath).not.toBeNull();
+      expect(Math.abs(onPath ?? 0) + HALF_BODY).toBeLessThanOrEqual(200 + 1e-9);
+      onPathFar = Math.max(onPathFar, Math.abs(onPath ?? 0));
+      freeFar = Math.max(
+        freeFar,
+        Math.abs(chooseSite(600, FACE, HALF_BODY, 400, false, random) ?? 0),
+      );
+    }
+    expect(freeFar).toBeGreaterThan(onPathFar);
+  });
+});
+
+/**
+ * A simple model of a player and a visit, to check how many visits end in a splat. The player drops
+ * a layer every `periodMs` (drawn per visit, the first one at a random point of it) and lands
+ * normally distributed, `sigma` of the layer width off the centre. A visit bound for the path that
+ * meets a landing on its way turns to the new top layer; any other one bolts. A guest that sits
+ * is splatted by the first landing in its sit when that layer covers it, and is startled
+ * otherwise; with no landing it leaves on its own.
+ */
+function splatShare(periodMs: Range, sigma: number, seed: number, visits = 4000): number {
+  const rng = new Rng(seed);
+  const random = (): number => rng.next();
+  const look = TOWER_GUESTS.kitchen;
+  const half = look ? look.halfWidthPx * look.scale : HALF_BODY;
+  let tried = 0;
+  let splats = 0;
+  for (let v = 0; v < visits; v++) {
+    const width = pickRange([360, 720], random);
+    const onPath = random() < site.pathChance;
+    const dx = chooseSite(width, faceHalfSpan(width, null), half, width, onPath, random);
+    if (dx === null) continue;
+    tried++;
+    const period = pickRange(periodMs, random);
+    let drop = random() * period;
+    let landed = pickRange(TOWER_GUEST.arrive.flightMs, random);
+    if (!onPath && drop < landed) continue;
+    while (drop < landed) {
+      landed = drop + pickRange(TOWER_GUEST.arrive.retargetMs, random);
+      drop += period;
+    }
+    const leaves = landed + pickRange(TOWER_GUEST.sitMs, random);
+    const offset = rng.normal() * sigma * width;
+    if (drop < leaves && Math.abs(dx - offset) < width / 2) splats++;
+  }
+  return splats / tried;
+}
+
+describe('splat share', () => {
+  it('ends about half of the visits in a splat for quick, steady and slow players alike', () => {
+    const players: [Range, number][] = [
+      [[800, 1200], 0.08],
+      [[1200, 2500], 0.15],
+      [[2000, 4000], 0.25],
+      [[3000, 6000], 0.3],
+    ];
+    for (const [period, sigma] of players) {
+      const share = splatShare(period, sigma, 11);
+      expect(share).toBeGreaterThan(0.4);
+      expect(share).toBeLessThan(0.6);
+    }
   });
 });
 
