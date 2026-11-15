@@ -58,6 +58,24 @@ export interface LayerPlan {
   level?: number;
 }
 
+/**
+ * What the layer that is falling will look like when it lands, as far as the sim can tell before
+ * it does: the picture the view needs. Abilities and a sneeze can still change the width.
+ */
+export interface LandingPreview {
+  /** 1-based number the layer will have in the tower (its place among the placed layers). */
+  index: number;
+  kind: LayerKind;
+  /** The creature of a creature layer, `null` otherwise. */
+  creature: CreatureId | null;
+  /** Width of the placed layer. */
+  width: number;
+  /** Bitten edge of the placed layer; `null` for an intact one. */
+  cut: CutSide | null;
+  /** Width of the bitten-off piece; 0 when nothing is bitten off. */
+  pieceWidth: number;
+}
+
 export interface FlyingLayer extends LayerPlan {
   /** 1-based number this layer will have in the tower. */
   index: number;

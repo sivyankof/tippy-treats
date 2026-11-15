@@ -68,6 +68,23 @@ function sizeFor(creature: CreatureId | null): DripSize {
   return { stem: stem * mul, bulb: bulb * mul, outline };
 }
 
+/** Outline of the growing drips of a creature layer (none for a plain layer: the default tone). */
+function outlineOf(creature: CreatureId | null): number | undefined {
+  return creature ? creatureColors(creature).glazeOutline : undefined;
+}
+
+/**
+ * The pictures of the growing drips of a layer: baked on the first call for a glaze colour and
+ * creature, found after that. Wrap the call in `collectBakeSteps` to bake them later, one by one.
+ */
+export function dripTexturesFor(
+  scene: Phaser.Scene,
+  creature: CreatureId | null,
+  glaze: number,
+): DripTextureSet {
+  return dripTextures(scene, glaze, sizeFor(creature), outlineOf(creature));
+}
+
 /** A meltwater drop leaves the bottom edge this far inside a side of the layer at least. */
 const THAW_SIDE_MARGIN = GLAZE_DRIPS.look.bulb;
 /** Points along a drip checked against a tongue. */
@@ -211,7 +228,7 @@ export class GlazeDripLayer extends Phaser.GameObjects.Container {
 
   /** Outline of the drips of a creature layer (none for a plain layer: the default tone). */
   get dripOutline(): number | undefined {
-    return this.creature ? creatureColors(this.creature).glazeOutline : undefined;
+    return outlineOf(this.creature);
   }
 
   /** The glaze colour of the layer itself. */

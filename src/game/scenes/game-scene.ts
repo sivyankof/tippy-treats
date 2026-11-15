@@ -6,9 +6,10 @@ import { emptyTally, tallyEvents, type RunTally } from '../../core/run-tally';
 import type { CheckpointHeight } from '../../core/checkpoints';
 import type { RunMode } from '../../core/run-result';
 import type { TeamSlot } from '../../core/sim-types';
-import { TowerSim, type TowerState } from '../../core/tower-sim';
+import { TowerSim, type LandingPreview, type TowerState } from '../../core/tower-sim';
 import { RunFx } from '../fx/run-fx';
 import { easeFn } from '../fx/ease';
+import { resultsBakeSteps } from '../fx/results-prep';
 import { RunIntro } from '../fx/run-intro';
 import { effectsMode } from '../effects-mode';
 import { Backdrop } from '../objects/backdrop/backdrop';
@@ -34,6 +35,7 @@ import type { DropDriver } from '../perf/perf-drivers';
 import { perfResultsData } from '../perf/perf-session';
 import { ANIM } from '../../data/anim';
 import { DEMO } from '../../data/demo';
+import type { BakeStep } from '../ui/bake-texture';
 import { enterWorld, leaveScreen } from '../ui/transition';
 import { isOverUi } from '../ui/ui-regions';
 import { TutorialDirector } from '../tutorial/tutorial-director';
@@ -80,6 +82,17 @@ export class GameScene extends Phaser.Scene {
   /** Drop modifiers as the sim last reported them; refreshed whenever a step had events. */
   private mods!: Readonly<Modifiers>;
   private camera!: RunCamera;
+  /** Pictures of the results screen still to bake, one per frame while the layer flies. */
+  private resultsBakes: BakeStep[] = [];
+  /** How the layer in the fall will land, refilled every frame it falls. */
+  private readonly landing: LandingPreview = {
+    index: 0,
+    kind: 'plain',
+    creature: null,
+    width: 0,
+    cut: null,
+    pieceWidth: 0,
+  };
 
   constructor() {
     super(SCENES.game);
@@ -163,6 +176,7 @@ export class GameScene extends Phaser.Scene {
       );
     }
     this.camera.snap();
+    this.resultsBakes = resultsBakeSteps(this);
   }
 
   override update(time: number, delta: number): void {
@@ -174,6 +188,8 @@ export class GameScene extends Phaser.Scene {
     const events = held ? [] : this.sim.update(delta);
     this.bot?.observe(events);
     if (!held && this.bot?.shouldDrop(this.sim)) events.push(...this.sim.drop());
+    if (this.sim.state.phase === 'flying') this.resultsBakes.shift()?.();
+    this.fx.tower.prepareLanding(this.sim.landingPreview(this.landing) ? this.landing : null);
     this.tutorial?.observe(events, this.sim.state);
     driveContinue(
       {

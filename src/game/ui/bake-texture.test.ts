@@ -1,16 +1,27 @@
 import type * as Phaser from 'phaser';
-import { describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { bakeTexture, collectBakeSteps } from './bake-texture';
+
+beforeEach(() => {
+  vi.stubGlobal('document', { createElement: () => ({ width: 0, height: 0 }) });
+});
+
+afterEach(() => {
+  vi.unstubAllGlobals();
+});
 
 function fakeScene(): { scene: Phaser.Scene; keys: Set<string> } {
   const keys = new Set<string>();
   const graphics = {
     setVisible: () => graphics,
-    generateTexture: (key: string) => keys.add(key),
+    generateTexture: () => undefined,
     destroy: () => undefined,
   };
   const scene = {
-    textures: { exists: (key: string) => keys.has(key) },
+    textures: {
+      exists: (key: string) => keys.has(key),
+      addCanvas: (key: string) => keys.add(key),
+    },
     add: { graphics: () => graphics },
   } as unknown as Phaser.Scene;
   return { scene, keys };

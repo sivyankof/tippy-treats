@@ -165,6 +165,21 @@ export function acquireLayerArt(
   return key;
 }
 
+/**
+ * Bakes the art ahead of its first use. No view holds it yet, so it stays idle (and the oldest
+ * idle pictures go first) until a view takes it.
+ */
+export function prepareLayerArt(
+  scene: Phaser.Scene,
+  look: number,
+  width: number,
+  cut: CutSide | null,
+  creature: CreatureId | null = null,
+  faceless = false,
+): void {
+  releaseLayerArt(scene, acquireLayerArt(scene, look, width, cut, creature, faceless));
+}
+
 /** Gives a texture back; unused textures beyond the idle limit are removed. */
 export function releaseLayerArt(scene: Phaser.Scene, key: string): void {
   const users = refs.get(key);
