@@ -13,6 +13,7 @@ function fakeStorage(): Storage {
   return {
     getItem: (key: string) => map.get(key) ?? null,
     setItem: (key: string, value: string) => void map.set(key, value),
+    removeItem: (key: string) => void map.delete(key),
   } as unknown as Storage;
 }
 
@@ -83,6 +84,35 @@ describe('WebIap', () => {
     );
     await iap.purchase('ads');
     await expect(iap.restore()).resolves.toEqual(['ads']);
+  });
+
+  it('forgets every purchase after a reset, in the storage and in the page', async () => {
+    const storage = fakeStorage();
+    const iap = new WebIap(
+      CATALOG,
+      () => Promise.resolve(true),
+      () => storage,
+    );
+    await iap.purchase('ads');
+    iap.resetPurchases();
+    expect(storage.getItem(STUB_IAP.storageKey)).toBeNull();
+    await expect(iap.restore()).resolves.toEqual([]);
+    const again = new WebIap(
+      CATALOG,
+      () => Promise.resolve(true),
+      () => storage,
+    );
+    await expect(again.ownedNonConsumables()).resolves.toEqual([]);
+  });
+
+  it('clears the page memory on reset even when the storage is blocked', async () => {
+    const blocked = () => {
+      throw new Error('blocked');
+    };
+    const iap = new WebIap(CATALOG, () => Promise.resolve(true), blocked);
+    await iap.purchase('ads');
+    expect(() => iap.resetPurchases()).not.toThrow();
+    await expect(iap.restore()).resolves.toEqual([]);
   });
 
   it('ignores a damaged stored value', async () => {

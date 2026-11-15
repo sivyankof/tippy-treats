@@ -10,7 +10,7 @@ import type { AudioService } from './audio/types';
 import type { HapticsService } from './haptics/types';
 import { WebHaptics } from './haptics/web';
 import { productIds } from './iap/product-ids';
-import type { IapService } from './iap/types';
+import type { IapDevControl, IapService } from './iap/types';
 import { WebIap, type StubProduct } from './iap/web';
 import type { AnalyticsService } from './telemetry/types';
 import { WebAnalytics } from './telemetry/web';
@@ -44,6 +44,8 @@ const stubCatalog: StubProduct[] = PRODUCT_KEYS.flatMap((key) => {
   ];
 });
 
+const webIap = new WebIap(stubCatalog);
+
 /**
  * The single place that picks implementations. Capacitor is not installed yet, so these are
  * the web ones; native haptics, ads and purchases chosen by Capacitor.isNativePlatform() arrive
@@ -53,7 +55,7 @@ export const services: Services = {
   audio: new WebAudioService(),
   haptics: new WebHaptics(),
   ads: webAds,
-  iap: new WebIap(stubCatalog),
+  iap: webIap,
   storage: new WebStorage(),
   share: new WebShare(),
   telemetry: new WebAnalytics(),
@@ -61,3 +63,6 @@ export const services: Services = {
 
 /** Dev switch of the ad stub (debug panel). Not part of the services: native ads have none. */
 export const adsDev: AdsDevControl = webAds;
+
+/** Dev switch of the store stub (debug panel). Null outside the development build, so the reset cannot be reached in production. */
+export const iapDev: IapDevControl | null = import.meta.env.DEV ? webIap : null;

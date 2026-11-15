@@ -148,6 +148,16 @@ export class WebIap implements IapService {
     return Promise.resolve(this.owned());
   }
 
+  /** Forgets every purchase of this stub store, in the page and in the storage. Debug panel only. */
+  resetPurchases(): void {
+    this.memory = [];
+    try {
+      this.source()?.removeItem(STUB_IAP.storageKey);
+    } catch {
+      // Blocked storage: the page memory above is already cleared.
+    }
+  }
+
   private owned(): string[] {
     try {
       const text = this.source()?.getItem(STUB_IAP.storageKey);
