@@ -2,9 +2,11 @@ import * as Phaser from 'phaser';
 import { LOGICAL_SIZE } from '../data/screen';
 import { computeLogicalSize, type LogicalSize } from '../util/logical-size';
 import { KITCHEN_COLORS } from '../data/palette';
+import { readDebugParams } from '../util/debug-params';
 import { BootScene } from './scenes/boot-scene';
 import { GameScene } from './scenes/game-scene';
 import { HudScene } from './scenes/hud-scene';
+import { ArtSheetScene } from './debug/art-sheet-scene';
 import { LineupScene } from './debug/lineup-scene';
 import { ResultsScene } from './scenes/results-scene';
 import { HomeScene } from './scenes/home-scene';
@@ -49,6 +51,7 @@ export function createGameConfig(parent: HTMLElement): Phaser.Types.Core.GameCon
       ResultsScene,
       NewCreatureScene,
       LineupScene,
+      ArtSheetScene,
     ],
   };
 }
@@ -58,6 +61,8 @@ export function createGameConfig(parent: HTMLElement): Phaser.Types.Core.GameCon
  * Scenes get the new size through the scale manager `resize` event.
  */
 export function bindLogicalResize(game: Phaser.Game, parent: HTMLElement): void {
+  // The art sheet sets its own tall logical size.
+  if (readDebugParams().artsheet) return;
   const apply = (): void => {
     const size = logicalSizeFor(parent);
     game.scale.getParentBounds();

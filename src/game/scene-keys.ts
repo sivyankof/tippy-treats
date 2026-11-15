@@ -21,6 +21,7 @@ export const SCENES = {
   hud: 'hud',
   results: 'results',
   lineup: 'lineup',
+  artSheet: 'art_sheet',
 } as const;
 
 export type SceneKey = (typeof SCENES)[keyof typeof SCENES];

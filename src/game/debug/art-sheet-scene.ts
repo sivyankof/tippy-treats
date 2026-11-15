@@ -1,0 +1,51 @@
+import * as Phaser from 'phaser';
+import { ART_SHEET, isSheetPicture } from '../../data/art-sheet';
+import { SCENES } from '../scene-keys';
+import { primeArtTextures } from './art-sheet-prime';
+
+/**
+ * Debug page `?artsheet=1` (dev build): every picture of the texture registry in a grid, each
+ * with its key as a caption. The game is resized to the height of the whole sheet, so one
+ * screenshot of the page is the art sheet.
+ */
+export class ArtSheetScene extends Phaser.Scene {
+  constructor() {
+    super(SCENES.artSheet);
+  }
+
+  create(): void {
+    primeArtTextures(this);
+    const keys = this.textures
+      .getTextureKeys()
+      .filter(isSheetPicture)
+      .sort((a, b) => a.localeCompare(b));
+    const { columns, cellWidth, cellHeight, gap, margin } = ART_SHEET;
+    const width = margin * 2 + columns * cellWidth + (columns - 1) * gap;
+    const rows = Math.ceil(keys.length / columns);
+    const height = margin * 2 + rows * cellHeight + (rows - 1) * gap;
+    this.scale.setGameSize(width, height);
+    this.cameras.main.setBackgroundColor(ART_SHEET.background);
+    keys.forEach((key, i) => {
+      const x = margin + (i % columns) * (cellWidth + gap);
+      const y = margin + Math.floor(i / columns) * (cellHeight + gap);
+      this.drawCell(key, x, y);
+    });
+  }
+
+  private drawCell(key: string, x: number, y: number): void {
+    const { cellWidth, cellHeight, captionHeight, maxScale } = ART_SHEET;
+    this.add.rectangle(x, y, cellWidth, cellHeight, ART_SHEET.cellColor).setOrigin(0, 0);
+    const frame = this.textures.getFrame(key);
+    const boxH = cellHeight - captionHeight;
+    const scale = Math.min(cellWidth / frame.width, boxH / frame.height, maxScale);
+    this.add.image(x + cellWidth / 2, y + boxH / 2, key).setScale(scale);
+    this.add
+      .text(x + cellWidth / 2, y + cellHeight - 2, `${key}\n${frame.width}x${frame.height}`, {
+        font: ART_SHEET.captionFont,
+        color: ART_SHEET.captionColor,
+        align: 'center',
+        wordWrap: { width: cellWidth - 6, useAdvancedWrap: true },
+      })
+      .setOrigin(0.5, 1);
+  }
+}

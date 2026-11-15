@@ -40,6 +40,10 @@ export class BootScene extends Phaser.Scene {
       this.scene.start(SCENES.lineup);
       return;
     }
+    if (readDebugParams().artsheet) {
+      this.scene.start(SCENES.artSheet);
+      return;
+    }
     createTreasureTextures(this);
     createCreatureIconTextures(this);
     if (opensWithRun() || !gameState.hasHint('tutorial')) {

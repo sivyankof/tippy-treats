@@ -40,6 +40,12 @@ describe('parseDebugParams', () => {
     expect(parseDebugParams('')).toEqual({ debug: false });
   });
 
+  it('reads the art sheet flag only when it is 1', () => {
+    expect(parseDebugParams('?artsheet=1').artsheet).toBe(true);
+    expect(parseDebugParams('?artsheet=0').artsheet).toBeUndefined();
+    expect(parseDebugParams('?artsheet').artsheet).toBeUndefined();
+  });
+
   it('reads the tutorial switch only as 1 or 0', () => {
     expect(parseDebugParams('?tutorial=1').tutorial).toBe(true);
     expect(parseDebugParams('?tutorial=0').tutorial).toBe(false);

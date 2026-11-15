@@ -16,6 +16,8 @@ export interface DebugParams {
   level?: number;
   /** Show the line-up of all 12 creature layers instead of a run (a temporary art-review tool). */
   lineup?: boolean;
+  /** Show the art sheet: every picture of the texture registry in one grid (a dev tool). */
+  artsheet?: boolean;
   /** `?tutorial=1` forces the tutorial run with every hint fresh, `?tutorial=0` turns all hints off. */
   tutorial?: boolean;
   /** Shifts the game clock by whole days (may be negative) to test the streak, missions and daily tower. */
@@ -65,7 +67,7 @@ function parseLevel(raw: string | null): number | undefined {
 }
 
 /**
- * Reads `?debug`, `?seed=`, `?bot=`, `?start=`, `?team=`, `?level=`, `?lineup=1`, `?tutorial=`, `?dayOffset=` and `?reset=1` from a query string.
+ * Reads `?debug`, `?seed=`, `?bot=`, `?start=`, `?team=`, `?level=`, `?lineup=1`, `?artsheet=1`, `?tutorial=`, `?dayOffset=` and `?reset=1` from a query string.
  * Invalid values are ignored.
  */
 export function parseDebugParams(search: string): DebugParams {
@@ -82,6 +84,7 @@ export function parseDebugParams(search: string): DebugParams {
   if (team !== undefined) result.team = team;
   if (level !== undefined) result.level = level;
   if (params.get('lineup') === '1') result.lineup = true;
+  if (params.get('artsheet') === '1') result.artsheet = true;
   const tutorial = params.get('tutorial');
   if (tutorial === '1') result.tutorial = true;
   else if (tutorial === '0') result.tutorial = false;
