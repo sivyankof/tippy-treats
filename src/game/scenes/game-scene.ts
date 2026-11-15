@@ -7,6 +7,9 @@ import type { RunMode } from '../../core/run-result';
 import type { TeamSlot } from '../../core/sim-types';
 import { TowerSim } from '../../core/tower-sim';
 import { RunFx } from '../fx/run-fx';
+import { easeFn } from '../fx/ease';
+import { RunIntro } from '../fx/run-intro';
+import { effectsMode } from '../effects-mode';
 import { Backdrop } from '../objects/backdrop/backdrop';
 import { plainLooks } from '../objects/plain-look';
 import { RunCamera } from '../run-camera';
@@ -25,6 +28,7 @@ import { openScreen, restartRun, SCENES } from '../scene-keys';
 import { exitTarget } from '../run-exit';
 import { CLASSIC_RUN, demoFinished, type RunRequest } from '../run-request';
 import { setupRun } from '../run-setup';
+import { ANIM } from '../../data/anim';
 import { DEMO } from '../../data/demo';
 import { enterWorld, leaveScreen } from '../ui/transition';
 import { isOverUi } from '../ui/ui-regions';
@@ -139,6 +143,12 @@ export class GameScene extends Phaser.Scene {
     this.camera.setEntry(enterWorld(this));
     // Sync once so the tower height is known, then jump the camera to its target.
     this.fx.update(0, 0, this.sim.state, this.mods, this.camera.cameraInfo());
+    // A run that starts on a built tower opens with the camera rising along it (not in a demo).
+    if (this.request.kind !== 'demo') {
+      this.camera.startIntro(
+        new RunIntro(this.startHeight, effectsMode.reduced, easeFn(ANIM.runIntro.ease)),
+      );
+    }
     this.camera.snap();
   }
 
@@ -147,7 +157,7 @@ export class GameScene extends Phaser.Scene {
 
     // The tutorial holds the sim for a moment while it explains the creature layer.
     this.tutorial?.tick(delta);
-    const held = this.tutorial?.holding ?? false;
+    const held = (this.tutorial?.holding ?? false) || this.camera.introActive;
     const events = held ? [] : this.sim.update(delta);
     this.bot?.observe(events);
     if (!held && this.bot?.shouldDrop(this.sim)) events.push(...this.sim.drop());
@@ -223,14 +233,19 @@ export class GameScene extends Phaser.Scene {
     return fillRunInfo(this.runInfo, this.sim.state, this.seed, this.team, this.sys.isPaused());
   }
 
+  /** Taps do not drop a layer while a hint explains, the camera rises along the built tower or the demo ends. */
+  private get inputBlocked(): boolean {
+    return (this.tutorial?.holding ?? false) || this.camera.introActive || this.demoLeaving;
+  }
+
   private onPointerDown(pointer: Phaser.Input.Pointer): void {
-    if (isOverUi(pointer.x, pointer.y) || this.tutorial?.holding || this.demoLeaving) return;
+    if (isOverUi(pointer.x, pointer.y) || this.inputBlocked) return;
     this.sim.drop();
   }
 
   private onDropKey(event: KeyboardEvent): void {
     // Holding the key must not drop every new layer the moment it appears.
-    if (event.repeat || this.tutorial?.holding || this.demoLeaving) return;
+    if (event.repeat || this.inputBlocked) return;
     this.sim.drop();
   }
 

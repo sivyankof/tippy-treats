@@ -51,6 +51,8 @@ export class TowerView {
   private layerCount = 0;
   /** Layers from this index up are not drawn (the tower is collapsing). */
   private hiddenFrom = Infinity;
+  /** Only the layers inside the screen are drawn, top ones too (the camera rises along the tower). */
+  private windowed = false;
   private topViewXValue: number = BALANCE.tray.centerX;
   private readonly span = {
     left: BALANCE.tray.centerX - BALANCE.tray.width / 2,
@@ -224,24 +226,39 @@ export class TowerView {
   }
 
   /**
-   * Places the views. `cameraBottomY` is the world y of the bottom screen edge:
-   * layers fully below it are returned to the pool.
+   * Draws only the layers inside the screen, the top ones included, instead of the top few: for
+   * the run intro, where the camera runs along a tower that was built before the run.
    */
-  sync(state: Readonly<TowerState>, cameraBottomY: number): void {
+  setWindowed(on: boolean): void {
+    this.windowed = on;
+  }
+
+  /**
+   * Places the views. `cameraBottomY` and `cameraTopY` are the world y of the bottom and top
+   * screen edges: layers fully below the bottom are returned to the pool (and, while windowed,
+   * so are the ones above the top).
+   */
+  sync(state: Readonly<TowerState>, cameraBottomY: number, cameraTopY: number): void {
     this.state = state;
     this.glazeGrowth.noteLayers(state.layers.length, this.clockMs);
     const count = Math.min(state.layers.length, this.hiddenFrom);
     this.layerCount = count;
     const offscreen = Math.floor((this.trayTopY - cameraBottomY) / BALANCE.layer.height);
     const firstVisible = Math.max(0, offscreen - ANIM.pool.offscreenMarginLayers);
-    const first = Math.min(Math.max(firstVisible, count - ANIM.pool.maxLiveLayers), count - 1);
+    const first = this.windowed
+      ? Math.min(firstVisible, count - 1)
+      : Math.min(Math.max(firstVisible, count - ANIM.pool.maxLiveLayers), count - 1);
+    const lastVisible = Math.floor((this.trayTopY - cameraTopY) / BALANCE.layer.height);
+    const end = this.windowed
+      ? Math.min(count, Math.max(0, lastVisible + ANIM.pool.windowMarginLayers + 1))
+      : count;
 
     for (const [index, view] of this.active) {
-      if (index < first || index >= count) this.release(index, view);
+      if (index < first || index >= end) this.release(index, view);
     }
 
     this.sway.beginFrame();
-    for (let i = Math.max(first, 0); i < count; i++) {
+    for (let i = Math.max(first, 0); i < end; i++) {
       const layer = state.layers[i];
       if (!layer) continue;
       const view = this.active.get(i) ?? this.acquire(i);

@@ -1,5 +1,35 @@
 import { describe, expect, it } from 'vitest';
+import { checkpointStartWidth } from '../../core/checkpoints';
+import { config, mutable, untilFlying, untilSettled } from '../../core/sim-test-utils';
+import { TowerSim } from '../../core/tower-sim';
+import { zoneIndexOf } from '../../core/zones';
+import { BALANCE } from '../../data/balance';
+import { CHECKPOINT_HEIGHTS } from '../../data/checkpoints';
 import { ZoneChangeWatch } from './zone-change-watch';
+
+/** The zones a run from a checkpoint reports to the watch, frame by frame, while it places perfect layers. */
+function zonesAnnounced(start: (typeof CHECKPOINT_HEIGHTS)[number], placed: number) {
+  const sim = new TowerSim(
+    config({ seed: 5, startHeight: start, startWidth: checkpointStartWidth(start) }),
+  );
+  const watch = new ZoneChangeWatch();
+  const announced: Array<{ layer: number; zone: number }> = [];
+  const feed = (): void => {
+    const zone = watch.observe(sim.state.zoneIndex);
+    if (zone !== null) announced.push({ layer: sim.state.layers.length + 1, zone });
+  };
+  feed();
+  for (let i = 0; i < placed; i++) {
+    untilFlying(sim);
+    feed();
+    const flying = mutable(sim).flying;
+    if (flying) flying.x = sim.topLayerX();
+    sim.drop();
+    untilSettled(sim);
+    feed();
+  }
+  return announced;
+}
 
 describe('ZoneChangeWatch', () => {
   it('does not announce the zone a run starts in', () => {
@@ -37,4 +67,20 @@ describe('ZoneChangeWatch', () => {
     expect(watch.observe(null)).toBeNull();
     expect(watch.observe(1)).toBeNull();
   });
+
+  it.each(CHECKPOINT_HEIGHTS)(
+    'shows no plate at a start from %i, only at the next zone',
+    (start) => {
+      const nextZoneLayer = (zoneIndexOf(start + 1) + 1) * BALANCE.zones.length + 1;
+      const placed = nextZoneLayer - start;
+      const announced = zonesAnnounced(start, placed);
+      const lastZone = zoneIndexOf(Number.MAX_SAFE_INTEGER);
+      if (zoneIndexOf(start + 1) >= lastZone) {
+        expect(announced).toEqual([]);
+      } else {
+        // The plate comes with the first layer of the next zone, never at the start.
+        expect(announced).toEqual([{ layer: nextZoneLayer, zone: zoneIndexOf(start + 1) + 1 }]);
+      }
+    },
+  );
 });

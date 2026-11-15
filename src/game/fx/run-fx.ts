@@ -162,6 +162,11 @@ export class RunFx {
     return this.slowMoMs > 0 ? CONTINUE_ANIM.slowMoScale : 1;
   }
 
+  /** While the camera rises along the pre-built tower only the layers on screen are drawn. */
+  setIntroView(on: boolean): void {
+    this.tower.setWindowed(on);
+  }
+
   /** Scroll the collapse wants the camera to have; `null` outside of it. */
   get collapseScroll(): number | null {
     return this.collapse ? this.collapse.scrollY : null;
@@ -205,7 +210,7 @@ export class RunFx {
     // The topper under the landing layer hops off while its view still shows it.
     if (land) this.topperFx.hopOffBelow(this.tower, state);
     // Landings need the view of the new layer, which normally appears on the next sync.
-    if (land) this.tower.sync(state, cam.scrollY + cam.height);
+    if (land) this.tower.sync(state, cam.scrollY + cam.height, cam.scrollY);
     if (land) this.topperFx.settleOnTop(this.tower, state, memo);
 
     for (const event of events) {
@@ -257,7 +262,7 @@ export class RunFx {
     this.slowMoMs = Math.max(0, this.slowMoMs - realMs);
     this.advanceEnd(realMs, state, cam);
 
-    this.tower.sync(state, cam.scrollY + cam.height);
+    this.tower.sync(state, cam.scrollY + cam.height, cam.scrollY);
     this.flyingView.sync(state, timeMs, visualMs);
     this.flyingFx.update(visualMs, timeMs, state);
     this.coinFx.update(visualMs, timeMs, state);

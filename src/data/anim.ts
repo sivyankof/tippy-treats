@@ -443,12 +443,24 @@ export const ANIM = {
     /** Free space kept between the HUD and the flying layer. */
     hudClearance: 32,
   },
+  /** The start of a run from a checkpoint: the built tower is shown, then the camera rises to the top. */
+  runIntro: {
+    /** Pause on the built tower before the rise. */
+    holdMs: 350,
+    /** Length of the rise: `baseMs` plus `perLayerMs` for each pre-built layer, at most `maxMs`. */
+    baseMs: 700,
+    perLayerMs: 10,
+    maxMs: 1500,
+    ease: 'Cubic.easeInOut',
+  },
   parallax: [0.05, 0.15, 0.3, 0.6],
   pool: {
     /** Upper cap of live tower views; layers below the screen are released earlier. */
     maxLiveLayers: 16,
     /** Layers kept alive below the bottom edge of the screen (sway, shadow). */
     offscreenMarginLayers: 1,
+    /** Layers kept alive above the top edge while the camera rises along the tower (intro). */
+    windowMarginLayers: 3,
     /** Unused baked layer textures kept for reuse before the oldest are removed. */
     idleLayerTextures: 48,
     /** Cap of live falling pieces; when a collapse needs more, the oldest piece goes first. */
