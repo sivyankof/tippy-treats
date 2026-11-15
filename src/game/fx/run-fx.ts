@@ -1,3 +1,4 @@
+import { TOWER_SPARKLES } from '../../data/tower-sparkles';
 import type * as Phaser from 'phaser';
 import type { Modifiers } from '../../core/abilities/types';
 import type { FlyingLayer, SimEvent, TowerState } from '../../core/tower-sim';
@@ -52,6 +53,9 @@ export interface CameraInfo {
  * animations on the tower, the flying layer, debris, drops, camera kick and glow,
  * and runs the miss reaction and the collapse that end a run.
  */
+/** How many of the topmost layers a sparkle can stand beside (the rows it may reach below the top). */
+const SPARKLE_LAYERS = Math.ceil(TOWER_SPARKLES.rowsBelow);
+
 export class RunFx {
   readonly tower: TowerView;
   private readonly flyingView: FlyingLayerView;
@@ -284,9 +288,7 @@ export class RunFx {
   /** The tower as the sparkles need it; the object is reused. */
   private sparkleFieldFor(state: Readonly<TowerState>, cam: CameraInfo): SparkleField {
     const field = this.sparkleField;
-    const span = this.tower.topSpan();
-    field.left = span.left;
-    field.right = span.right;
+    this.tower.widestSpan(SPARKLE_LAYERS, field);
     field.topY = this.tower.topY();
     field.screenWidth = cam.width;
     const { flying } = state;

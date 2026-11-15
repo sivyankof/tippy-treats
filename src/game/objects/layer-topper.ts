@@ -3,7 +3,7 @@ import { BALANCE } from '../../data/balance';
 import { PLAIN_TOPPERS, type TopperKind } from '../../data/plain-toppers';
 import { ensureTopperTexture } from '../fx/topper-texture';
 import { faceHalfSpan } from '../fx/glaze-growth';
-import { plainToppers, restTilt, topperOffset, topperSize } from './topper-look';
+import { plainToppers, restTilt, sideOfOffset, topperOffset, topperSize } from './topper-look';
 
 /** Where a shown topper is in the world, for the hop when the next layer lands. */
 export interface TopperWorld {
@@ -30,6 +30,8 @@ export class LayerTopper {
   private kind: TopperKind | null = null;
   /** Offset it was moved to by a landing (`null`: the bite took it, `undefined`: its own place). */
   private carry: number | null | undefined;
+  /** The side of the face it stands on now (`null`: not shown). */
+  private shownSide: -1 | 1 | null = null;
   private readonly matrix = new Phaser.GameObjects.Components.TransformMatrix();
 
   constructor(scene: Phaser.Scene) {
@@ -64,6 +66,12 @@ export class LayerTopper {
     this.edgeHidden = false;
     this.carry = undefined;
     this.image.setVisible(false);
+    this.shownSide = null;
+  }
+
+  /** The side of the face the shown topper stands on (-1 left, 1 right), or `null` while none is shown. */
+  side(): -1 | 1 | null {
+    return this.image.visible ? this.shownSide : null;
   }
 
   /** Shows, moves or hides the topper of the plain layer `layerIndex` (1-based), `width` wide. */
@@ -74,14 +82,18 @@ export class LayerTopper {
         : null;
     if (!topper || this.carry === null) {
       this.image.setVisible(false);
+      this.shownSide = null;
       return;
     }
     const dx =
       this.carry ?? topperOffset(topper.kind, topper.side, width, faceHalfSpan(width, null));
     if (dx === null) {
       this.image.setVisible(false);
+      this.shownSide = null;
       return;
     }
+    // The side comes from where it really stands (a carried topper may have crossed the face).
+    this.shownSide = sideOfOffset(dx);
     if (this.kind !== topper.kind) {
       this.kind = topper.kind;
       const look = topperSize(topper.kind);
@@ -92,7 +104,7 @@ export class LayerTopper {
     }
     this.image
       .setPosition(dx, -BALANCE.layer.height / 2 + PLAIN_TOPPERS.sinkPx)
-      .setRotation(restTilt(topper.kind, topper.side))
+      .setRotation(restTilt(topper.kind, this.shownSide))
       .setVisible(true);
   }
 

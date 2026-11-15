@@ -2,10 +2,10 @@ import { describe, expect, it } from 'vitest';
 import { PLAIN_TOPPERS, TOPPER_KINDS } from '../../data/plain-toppers';
 import { plainLookAt } from './plain-look';
 import {
-  awayFromTopper,
   carriedOffset,
   popAt,
   popLaunch,
+  sideOfOffset,
   topperAt,
   topperOffset,
   topperSize,
@@ -93,11 +93,10 @@ describe('carriedOffset', () => {
   });
 });
 
-describe('awayFromTopper', () => {
-  it('moves a guest off the side of the topper and leaves the other side', () => {
-    expect(awayFromTopper(80, 1)).toBe(-80);
-    expect(awayFromTopper(-80, 1)).toBe(-80);
-    expect(awayFromTopper(80, null)).toBe(80);
+describe('sideOfOffset', () => {
+  it('tells the side of the face an offset is on', () => {
+    expect(sideOfOffset(-80)).toBe(-1);
+    expect(sideOfOffset(80)).toBe(1);
   });
 });
 

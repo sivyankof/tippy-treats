@@ -43,9 +43,9 @@ export interface LayerPose {
 export class TowerView {
   private readonly active = new Map<number, LayerView>();
   private readonly pool: LayerView[] = [];
-  /** Presentation memory: the bitten edge of each placed layer (0-based). */
   /** Placement of the layer just placed in `sync`, for the shade of the one under it. */
   private readonly shadeLower = { index: -1, x: 0, width: 0 };
+  /** Presentation memory: the bitten edge of each placed layer (0-based). */
   private readonly cuts: Array<CutSide | null> = [];
   private state: Readonly<TowerState> | null = null;
   private layerCount = 0;
@@ -58,6 +58,16 @@ export class TowerView {
   };
   /** Reused by `sync` for every layer, so a frame allocates no poses. */
   private readonly scratchPose: LayerPose = {
+    x: 0,
+    y: 0,
+    width: 0,
+    angle: 0,
+    cut: null,
+    look: PLAIN_LOOK,
+  };
+
+  /** Reused by `widestSpan`. */
+  private readonly spanPose: LayerPose = {
     x: 0,
     y: 0,
     width: 0,
@@ -113,6 +123,25 @@ export class TowerView {
    */
   topSpan(): Readonly<{ left: number; right: number }> {
     return this.span;
+  }
+
+  /**
+   * The widest horizontal extent of the `layers` topmost layers (the tray when the tower is empty),
+   * sway included; fills and returns `out`.
+   */
+  widestSpan(
+    layers: number,
+    out: { left: number; right: number },
+  ): { left: number; right: number } {
+    out.left = this.span.left;
+    out.right = this.span.right;
+    for (let k = 1; k < layers; k++) {
+      const pose = this.layerPoseInto(this.spanPose, this.layerCount - 1 - k);
+      if (!pose) break;
+      out.left = Math.min(out.left, pose.x - pose.width / 2);
+      out.right = Math.max(out.right, pose.x + pose.width / 2);
+    }
+    return out;
   }
 
   /** The part of the world the screen shows (world y): only layers inside it lick. */
@@ -223,6 +252,7 @@ export class TowerView {
       view
         .setLook(pose.look)
         .setTopperAllowed(i === state.layers.length - 1)
+        .setJokeAllowed(true)
         .setLayer(i + 1, pose.width, pose.cut);
       view.setPosition(pose.x + view.slideX, pose.y).setAngle(pose.angle * view.material.tilt);
       if (i === count - 1) this.updateTopSpan(pose.x, pose.width);

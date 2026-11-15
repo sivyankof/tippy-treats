@@ -1,6 +1,6 @@
 import type { CutSide } from '../../core/drop';
 import { PLAIN_LAYER, type PatternKind } from '../../data/plain-layers';
-import { mixColor, shade } from '../../util/color';
+import { luma, mixColor, shade } from '../../util/color';
 import { type GlazeWave, waveY } from './glaze-wave';
 import type { LayerBox } from './layer-draw';
 import { clipPolylines, uAxis, xAt, type Polyline } from './plain-lines';
@@ -25,14 +25,6 @@ export interface GlazePattern {
 const FULL_TURN = Math.PI * 2;
 /** Directions the edge of a dot is tested in. */
 const DOT_TESTS = 8;
-
-/** Brightness of a colour, 0..1. */
-function luma(color: number): number {
-  const r = (color >> 16) & 0xff;
-  const g = (color >> 8) & 0xff;
-  const b = color & 0xff;
-  return (0.299 * r + 0.587 * g + 0.114 * b) / 255;
-}
 
 /** Colour of a pattern on this glaze: white drizzle, a light tone of the glaze otherwise; darker on a very light glaze. */
 export function patternColor(glaze: number, kind: PatternKind): number {

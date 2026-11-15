@@ -22,6 +22,8 @@ export interface PieceSpawn extends PieceMotion {
   angle?: number;
   /** What the layer is; plain when left out. */
   look?: LayerPlan;
+  /** The piece carries the big topper of its plain layer and drops it with it (off when left out). */
+  topper?: boolean;
 }
 
 const PLAIN_LOOK: LayerPlan = { kind: 'plain' };
@@ -58,6 +60,7 @@ export class FallingPieces {
       .setFaceEnabled(opts.face !== null)
       .setDepth(DEPTH.pieces)
       .setLook(opts.look ?? PLAIN_LOOK)
+      .setTopperAllowed(opts.topper ?? false)
       .setLayer(opts.layerIndex, opts.width, opts.cut)
       .setPosition(opts.x, opts.y)
       .setAngle(opts.angle ?? 0)

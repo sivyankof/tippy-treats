@@ -19,6 +19,15 @@ describe('sparkleSpot', () => {
     expect(right?.x).toBeGreaterThan(field.right);
   });
 
+  it('stays clear of the widest layer in reach: left and right are that extent', () => {
+    // A lower layer reaching 40 px further out on each side than the top one: the field is that wider extent.
+    const wide = { ...field, left: field.left - 40, right: field.right + 40 };
+    const left = sparkleSpot(wide, [0.1, 0, 0.999]);
+    const right = sparkleSpot(wide, [0.9, 0, 0.999]);
+    expect(left?.x).toBeLessThanOrEqual(wide.left - TOWER_SPARKLES.gapPx[0]);
+    expect(right?.x).toBeGreaterThanOrEqual(wide.right + TOWER_SPARKLES.gapPx[0]);
+  });
+
   it('stays near the top of the tower', () => {
     const high = sparkleSpot(field, [0.9, 0.2, 0]);
     const low = sparkleSpot(field, [0.9, 0.2, 0.999]);

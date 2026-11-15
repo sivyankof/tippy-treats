@@ -17,6 +17,8 @@ const STAR_GOLD = 0xffc93c;
 export const RAINBOW_LOOK = {
   /** The soft wave of every sponge edge: height of a crest, length of one period, step of the drawn polyline. */
   wave: { amplitude: 3, length: 150, step: 8 },
+  /** The white glaze on top: the drips (their number and length) and the scallops of its lower edge. */
+  glaze: { dripCount: 3, dripLength: 14, scallopRadius: 12, scallopStep: 24 },
   band: {
     /** Height of a coloured sponge and of the cream strip under it, as shares of the room under the glaze. */
     sponge: 0.15,
@@ -46,6 +48,8 @@ export const RAINBOW_LOOK = {
    * and a white four-point sparkle of `sparkleSize` (share of the star radius) shows at its upper right).
    */
   idle: {
+    /** The baked glaze floor the wave keeps below is sampled every this many pixels across the layer. */
+    floorStepPx: 1,
     waveEveryMs: 4600,
     staggerMs: 150,
     travelMs: 900,

@@ -20,7 +20,6 @@ import {
   thaws,
   type BelowSpan,
 } from '../fx/glaze-growth';
-import { CREAM_DRIPS, CREAM_DRIP_LENGTH } from './creature-art/rainbow';
 import { creatureColors } from './creature-art/primitives';
 import {
   bulbOuter,
@@ -32,6 +31,7 @@ import {
 import { glazeWave, waveDripSpots, type WaveDripSpot } from './glaze-wave';
 import { plainLooks } from './plain-look';
 import { chainDistance, lickedDripShare } from './lick-plan';
+import { RAINBOW_LOOK } from '../../data/rainbow-look';
 import { DRIP_MIN_LAYER_WIDTH, dripSpots, glazeBottomY, layerBox } from './layer-draw';
 
 /** The baked drips of a layer. */
@@ -52,7 +52,11 @@ function dripRecipe(creature: CreatureId): DripRecipe | null {
     return { count: art.dripCount, length: art.dripLength, depth: art.capDepth };
   }
   if (art.kind === 'rainbow') {
-    return { count: CREAM_DRIPS, length: CREAM_DRIP_LENGTH, depth: art.creamShare };
+    return {
+      count: RAINBOW_LOOK.glaze.dripCount,
+      length: RAINBOW_LOOK.glaze.dripLength,
+      depth: art.creamShare,
+    };
   }
   return null;
 }

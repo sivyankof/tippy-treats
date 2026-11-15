@@ -97,12 +97,12 @@ export class LayerShade {
       return;
     }
     const r = image.width;
-    // Distance from the outer edge of the corner, which is the left edge of the picture.
-    const from = mirrored ? edge - span.x1 : span.x0 - edge;
-    const to = mirrored ? edge - span.x0 : span.x1 - edge;
+    // The picture sits at the layer's edge (the mirrored one against it, inside); a crop is in
+    // the picture's own displayed coordinates, which Phaser flips for a flipped image.
+    const left = mirrored ? edge - r : edge;
     image
-      .setPosition(mirrored ? edge - r : edge, top)
-      .setCrop(from, 0, to - from, height)
+      .setPosition(left, top)
+      .setCrop(span.x0 - left, 0, span.x1 - span.x0, height)
       .setVisible(true);
   }
 }

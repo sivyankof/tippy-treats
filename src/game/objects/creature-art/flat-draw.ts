@@ -3,7 +3,7 @@ import { ANIM } from '../../../data/anim';
 import { CREATURE_STYLE } from '../../../data/creature-style';
 import { PALETTE } from '../../../data/palette';
 import { drawGlossMark, type GlossMark } from '../../fx/plain-style';
-import { DRIP_WIDTH, dripSpots, touches, type GlazeOptions, type LayerBox } from '../layer-draw';
+import { DRIP_WIDTH, glazeLayout, type GlazeOptions, type LayerBox } from '../layer-draw';
 import type { CreatureColors } from './primitives';
 
 /** Outline in the tone of the creature, the flat shadow tone, then the lit tone above a shadow band. */
@@ -50,26 +50,9 @@ export function drawGlaze(
   colors: CreatureColors,
   options: GlazeOptions = {},
 ): void {
-  const { glazeDepth, dripCount, dripLength } = ANIM.layer;
-  const depth = options.depth ?? glazeDepth;
-  const { avoid } = options;
-  const clear = (rect: { left: number; right: number; top: number; bottom: number }): boolean =>
-    !avoid || !touches(rect, avoid);
-  const drips = dripSpots(
-    box,
-    options.dripCount ?? dripCount,
-    options.dripLength ?? dripLength,
-  ).filter((d) =>
-    clear({
-      left: d.x - DRIP_WIDTH / 2,
-      right: d.x + DRIP_WIDTH / 2,
-      top: box.innerTop + box.height * depth,
-      bottom: box.innerTop + box.height * depth + d.length + DRIP_WIDTH / 2,
-    }),
-  );
-  const glazeH = box.height * depth;
+  const { edgeY, scallops, drips } = glazeLayout(box, options);
+  const glazeH = edgeY - box.innerTop;
   const topCorners = { tl: box.innerRadius, tr: box.innerRadius, bl: 0, br: 0 };
-  const edgeY = box.innerTop + glazeH;
 
   for (const { color, grow, lift } of glazePasses(colors)) {
     g.fillStyle(color, 1);
@@ -80,22 +63,7 @@ export function drawGlaze(
       glazeH + grow - lift,
       topCorners,
     );
-    if (options.scallop) {
-      const { radius, step } = options.scallop;
-      const x0 = box.innerLeft + box.innerRadius;
-      const x1 = box.innerRight - box.innerRadius;
-      const count = Math.max(1, Math.round((x1 - x0) / step));
-      for (let i = 0; i < count; i++) {
-        const cx = x0 + ((x1 - x0) * (i + 0.5)) / count;
-        const bump = {
-          left: cx - radius,
-          right: cx + radius,
-          top: edgeY - radius,
-          bottom: edgeY + radius,
-        };
-        if (clear(bump)) g.fillCircle(cx, edgeY - lift, radius + grow);
-      }
-    }
+    for (const bump of scallops) g.fillCircle(bump.x, edgeY - lift, bump.radius + grow);
     for (const drip of drips) {
       const w = DRIP_WIDTH + grow * 2;
       g.fillRoundedRect(

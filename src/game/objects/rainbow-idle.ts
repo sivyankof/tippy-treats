@@ -13,7 +13,7 @@ import { DEG_TO_RAD, TWO_PI } from '../../util/math';
 import { DEPTH } from '../depth';
 import { effectsMode } from '../effects-mode';
 import { fillPolygon, type Pt } from '../fx/plain-style';
-import { CREAM_DRIP_LENGTH, CREAM_DRIPS, paintStar } from './creature-art/rainbow';
+import { paintStar, rainbowGlaze } from './creature-art/rainbow';
 import { bodySpan, spongeRows, starPoints, waveAt } from './creature-art/rainbow-geometry';
 import {
   glazeFloorAt,
@@ -21,11 +21,10 @@ import {
   sparkleAt,
   waveProgress,
 } from './creature-art/rainbow-idle-geometry';
-import { DRIP_WIDTH, dripSpots, layerBox, type LayerBox } from './layer-draw';
+import { DRIP_WIDTH, glazeLayout, layerBox, type LayerBox } from './layer-draw';
 
 const { idle, star } = RAINBOW_LOOK;
 const { joke } = idle;
-const { wave } = RAINBOW_LOOK;
 const SCRATCH = new Phaser.GameObjects.Components.TransformMatrix();
 const JOKE_OUTLINE = outlineColor(BAND_COLORS[1] ?? 0);
 const jokeGrow = easeFn(joke.growEase);
@@ -38,6 +37,30 @@ let nextJokeAt = -1;
 /** Lets the next live Rainbow layer tell its joke right away (a dev hook). */
 export function startRainbowJokeNow(): void {
   nextJokeAt = 0;
+}
+
+/** Whether the view and every container above it show something (visible, not fully transparent). */
+function shownUp(owner: Phaser.GameObjects.Container): boolean {
+  let node: Phaser.GameObjects.Container | null = owner;
+  while (node) {
+    if (!node.visible || node.alpha <= 0) return false;
+    node = node.parentContainer;
+  }
+  return true;
+}
+
+/** The scene-level joke picture: drawn only while the layer that tells it is shown. */
+class JokeGraphics extends Phaser.GameObjects.Graphics {
+  constructor(
+    scene: Phaser.Scene,
+    private readonly owner: Phaser.GameObjects.Container,
+  ) {
+    super(scene);
+  }
+
+  override willRender(camera: Phaser.Cameras.Scene2D.Camera): boolean {
+    return shownUp(this.owner) && super.willRender(camera);
+  }
 }
 
 /**
@@ -62,11 +85,14 @@ export class RainbowIdle {
   private dirty = true;
   private wasLive = false;
   private rows: Array<{ top: number; bottom: number }> = [];
-  /** Lowest y of the baked glaze at x: the wave keeps below it. */
-  private glazeFloor: (x: number) => number = () => -Infinity;
+  /** Lowest y of the baked glaze every `idle.floorStepPx` from the left of the body: the wave keeps below it. */
+  private glazeFloor: Float32Array = new Float32Array(0);
+  private floorLeft = 0;
   private jokeStart = -1;
   private jokeDir = 1;
   private squint = false;
+  /** The layer is in the run's tower, so the joke may show over the layer above it. */
+  private jokeAllowed = false;
 
   constructor(
     scene: Phaser.Scene,
@@ -75,7 +101,8 @@ export class RainbowIdle {
   ) {
     this.back = new Phaser.GameObjects.Graphics(scene).setVisible(false);
     this.g = new Phaser.GameObjects.Graphics(scene).setVisible(false);
-    this.front = scene.add.graphics().setVisible(false).setDepth(DEPTH.rainbowJoke);
+    this.front = new JokeGraphics(scene, parent).setVisible(false).setDepth(DEPTH.rainbowJoke);
+    scene.add.existing(this.front);
     parent.once(Phaser.GameObjects.Events.DESTROY, () => this.front.destroy());
     const at = parent.getIndex(art);
     parent.addAt(this.back, at);
@@ -88,11 +115,17 @@ export class RainbowIdle {
     this.width = width;
     const box = layerBox(width);
     this.rows = on ? this.sponges(box) : [];
-    this.glazeFloor = on ? this.glazeFloorFor(box) : () => -Infinity;
+    this.glazeFloor = on ? this.sampleGlazeFloor(box) : new Float32Array(0);
     this.dirty = true;
     this.show();
     if (on) this.draw(this.g.scene.time.now, 0, false);
     else this.clear();
+  }
+
+  /** Lets the layer tell the joke (a layer of the tower in the run); off ends one at once. */
+  setJokeAllowed(on: boolean): void {
+    this.jokeAllowed = on;
+    if (!on) this.endJoke();
   }
 
   /** Hides the overlay (the body is drawn squashed instead) or shows it again. */
@@ -122,7 +155,7 @@ export class RainbowIdle {
       ? Math.sin((TWO_PI * (timeMs + phaseMs)) / idle.swayMs) * idle.swayDeg * DEG_TO_RAD
       : 0;
     paintStar(star0, cy, sway, 1 + flash * idle.sparkleScale);
-    if (live) this.drawJoke(timeMs, cy);
+    if (live && this.jokeAllowed) this.drawJoke(timeMs, cy);
     else this.jokeStart = -1;
     if (flash > 0) {
       const size = star.radius * idle.sparkleSize * flash;
@@ -159,20 +192,25 @@ export class RainbowIdle {
     return m.transformPoint(0, layerBox(this.width).top - star.lift);
   }
 
-  /** The baked glaze: its lower edge, scallops and drips, as the picture draws them. */
-  private glazeFloorFor(box: LayerBox): (x: number) => number {
+  /** The baked glaze (lower edge, scallops, drips, as the picture draws them) sampled across the body, once per width. */
+  private sampleGlazeFloor(box: LayerBox): Float32Array {
     const recipe = artRecipe('rainbow');
-    if (recipe.kind !== 'rainbow') return () => -Infinity;
-    const scallops = {
-      edgeY: box.innerTop + box.height * recipe.creamShare,
-      x0: box.innerLeft + box.innerRadius,
-      x1: box.innerRight - box.innerRadius,
-      radius: wave.amplitude * 4,
-      step: wave.amplitude * 8,
-    };
-    const drips = dripSpots(box, CREAM_DRIPS, CREAM_DRIP_LENGTH);
+    if (recipe.kind !== 'rainbow') return new Float32Array(0);
+    const layout = glazeLayout(box, { depth: recipe.creamShare, ...rainbowGlaze() });
     const grow = ANIM.layer.outline / 2;
-    return (x) => glazeFloorAt(x, scallops, drips, DRIP_WIDTH, grow);
+    this.floorLeft = box.innerLeft;
+    const count = Math.ceil(box.innerW / idle.floorStepPx) + 1;
+    const floor = new Float32Array(count);
+    for (let i = 0; i < count; i++) {
+      floor[i] = glazeFloorAt(box.innerLeft + i * idle.floorStepPx, layout, DRIP_WIDTH, grow);
+    }
+    return floor;
+  }
+
+  /** Lowest y of the glaze at `x` (nothing above the sampled stretch). */
+  private floorAt(x: number): number {
+    const i = Math.round((x - this.floorLeft) / idle.floorStepPx);
+    return this.glazeFloor[Math.min(this.glazeFloor.length - 1, Math.max(0, i))] ?? -Infinity;
   }
 
   /** The rows of the sponges of a layer of this width (the wave swells them one by one). */
@@ -229,7 +267,7 @@ export class RainbowIdle {
     const column = (x: number, row: { top: number; bottom: number }, bulge: number): Pt[] => {
       const span = bodySpan(box, x);
       const down = Math.min(span.bottom, row.bottom + waveAt(x));
-      const up = Math.max(span.top, this.glazeFloor(x), row.top + waveAt(x) - bulge);
+      const up = Math.max(span.top, this.floorAt(x), row.top + waveAt(x) - bulge);
       return [
         { x, y: Math.min(up, down) },
         { x, y: down },

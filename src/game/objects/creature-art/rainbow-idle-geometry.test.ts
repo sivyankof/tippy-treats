@@ -46,11 +46,12 @@ describe('rotatePoints', () => {
 });
 
 describe('glazeFloorAt', () => {
-  const scallops = { edgeY: 10, x0: 0, x1: 100, radius: 10, step: 20 };
+  const scallops = [10, 30, 50, 70, 90].map((x) => ({ x, radius: 10 }));
+  const layout = (drips: Array<{ x: number; length: number }>) => ({ edgeY: 10, scallops, drips });
   it('is the glaze edge between scallops, deeper under a scallop and under a drip', () => {
-    expect(glazeFloorAt(-5, scallops, [], 20, 0)).toBe(10);
-    expect(glazeFloorAt(10, scallops, [], 20, 0)).toBeCloseTo(20);
-    expect(glazeFloorAt(50, scallops, [{ x: 50, length: 30 }], 20, 0)).toBe(40);
-    expect(glazeFloorAt(50, scallops, [{ x: 50, length: 30 }], 20, 2)).toBe(42);
+    expect(glazeFloorAt(-5, layout([]), 20, 0)).toBe(10);
+    expect(glazeFloorAt(10, layout([]), 20, 0)).toBeCloseTo(20);
+    expect(glazeFloorAt(50, layout([{ x: 50, length: 30 }]), 20, 0)).toBe(40);
+    expect(glazeFloorAt(50, layout([{ x: 50, length: 30 }]), 20, 2)).toBe(42);
   });
 });

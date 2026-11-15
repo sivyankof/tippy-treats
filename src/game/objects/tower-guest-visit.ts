@@ -13,7 +13,6 @@ import {
 } from './tower-guest-plan';
 import { faceHalfOf, shadowSpanInto } from './tower-guest-site';
 import type { GuestContext } from './tower-guest-types';
-import { awayFromTopper, plainToppers } from './topper-look';
 import type { LayerPose } from './tower-view';
 
 const HALF_LAYER = BALANCE.layer.height / 2;
@@ -48,23 +47,21 @@ export class GuestVisitPlanner {
     return onPath ? null : shadowSpanInto(this.shadowBox, ctx, pose);
   }
 
-  /** Where on the top layer (`pose`) the guest sits; the next layer is the flying one, or as wide as the top. */
+  /** Where on the top layer (`pose`) the guest sits, never on the `topperSide` (`null`: no topper); the next layer is the flying one, or as wide as the top. */
   pickSite(
     look: GuestLook,
     pose: LayerPose,
     state: Readonly<TowerState>,
     onPath: boolean,
     avoid: Span | null,
+    topperSide: -1 | 1 | null,
   ): number | null {
     const face = faceHalfOf(pose);
     const next = state.flying?.width ?? pose.width;
     const half = look.halfWidthPx * look.scale;
     const random = (): number => this.random.next();
-    const offset = chooseSite(pose.width, face, half, next, onPath, random, avoid);
-    if (offset === null) return null;
     // The topper owns its side of the face: the fly lands on the other one.
-    const topper = pose.look.kind === 'plain' ? plainToppers.at(state.layers.length) : null;
-    return awayFromTopper(offset, topper?.side ?? null);
+    return chooseSite(pose.width, face, half, next, onPath, random, avoid, topperSide);
   }
 
   /** Writes where an arrival starts: beyond a side of the screen, above the layer `pose`. */

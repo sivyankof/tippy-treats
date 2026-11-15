@@ -2,7 +2,7 @@ import { TOWER_SPARKLES } from '../../data/tower-sparkles';
 
 /** Where the tower is, as the sparkles need it (world space). */
 export interface SparkleField {
-  /** Horizontal extent of the top layer. */
+  /** Horizontal extent of the widest layer a sparkle can reach (the top rows of the tower). */
   left: number;
   right: number;
   /** Top of the top layer and the height of one layer. */
@@ -20,7 +20,7 @@ export type SparkleDraw = readonly [side: number, out: number, row: number];
 /**
  * A spot for a sparkle beside the top of the tower, or `null` when the draw falls on the
  * flying layer column, its shadow, or the edge of the screen. The sparkle never stands
- * over the tower itself: it is always outside the top layer.
+ * over the tower itself: it is always outside the widest of the layers in its reach.
  */
 export function sparkleSpot(
   field: SparkleField,

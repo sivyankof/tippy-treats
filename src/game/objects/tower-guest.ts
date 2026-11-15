@@ -188,7 +188,7 @@ export class TowerGuest {
     const pose = look && top >= 0 ? this.poseOf(top) : null;
     if (!look || !pose) return false;
     this.onPath = this.plan.rollOnPath(ctx.state);
-    const dx = this.plan.pickSite(look, pose, ctx.state, this.onPath, null);
+    const dx = this.plan.pickSite(look, pose, ctx.state, this.onPath, null, this.topperSide());
     if (dx === null) return false;
     this.begin(look, top, dx);
     this.forced = true;
@@ -198,6 +198,11 @@ export class TowerGuest {
     this.anchorPoint(this.pos);
     this.draw();
     return true;
+  }
+
+  /** The side of the face the topper of the top layer stands on now (`null`: none shown). */
+  private topperSide(): -1 | 1 | null {
+    return this.tower.topView()?.topperSide() ?? null;
   }
 
   /** "Fewer effects" keeps the guest away (unless the data lets it come, or the dev trigger brought it). */
@@ -235,7 +240,7 @@ export class TowerGuest {
     this.onPath = this.plan.rollOnPath(state);
     // A visit bound for the path of the next layer may sit under its shadow; any other keeps clear of it.
     const avoid = this.plan.avoidSpan(ctx, pose, this.onPath);
-    const dx = this.plan.pickSite(look, pose, state, this.onPath, avoid);
+    const dx = this.plan.pickSite(look, pose, state, this.onPath, avoid, this.topperSide());
     if (dx === null) return false;
     this.begin(look, top, dx);
     const { arrive } = TOWER_GUEST;
@@ -282,7 +287,7 @@ export class TowerGuest {
     const top = state.layers.length - 1;
     const pose = look ? this.poseOf(top) : null;
     if (!look || !pose) return false;
-    const dx = this.plan.pickSite(look, pose, state, this.onPath, null);
+    const dx = this.plan.pickSite(look, pose, state, this.onPath, null, this.topperSide());
     if (dx === null) return false;
     this.scaleFrom = this.drawnScale(look);
     this.anchor = { index: top, edge: 'top', dx };

@@ -84,6 +84,9 @@ export class TowerCollapse {
         face: 'joy',
         angle: pose.angle,
         look: pose.look,
+        // The top layer still wears its topper (the others hopped theirs off) and drops it with it.
+        topper:
+          index === this.opts.count - 1 && (tower.viewAt(index)?.topperSide() ?? null) !== null,
       });
     }
     tower.hideFrom(index);

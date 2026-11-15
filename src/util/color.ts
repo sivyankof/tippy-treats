@@ -32,6 +32,12 @@ function linearChannel(value: number): number {
   return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4);
 }
 
+/** Perceived brightness of a 0xRRGGBB colour on the gamma-encoded channels (Rec. 601 weights), 0..1. */
+export function luma(color: number): number {
+  const [r, g, b] = channels(color);
+  return (0.299 * r + 0.587 * g + 0.114 * b) / CHANNEL_MAX;
+}
+
 /** Relative luminance (WCAG) of a 0xRRGGBB colour, 0..1. */
 export function luminance(color: number): number {
   const [r, g, b] = channels(color);

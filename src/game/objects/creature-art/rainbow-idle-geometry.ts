@@ -1,5 +1,6 @@
 import { RAINBOW_LOOK } from '../../../data/rainbow-look';
 import type { Pt } from '../../fx/plain-style';
+import type { GlazeLayout } from '../layer-draw';
 
 const { idle } = RAINBOW_LOOK;
 
@@ -36,15 +37,6 @@ export function rotatePoints(points: readonly Pt[], cx: number, cy: number, rad:
   }));
 }
 
-/** The scalloped edge of the glaze: the circles hang from y `edgeY`, between `x0` and `x1`, about `step` apart. */
-export interface GlazeScallops {
-  edgeY: number;
-  x0: number;
-  x1: number;
-  radius: number;
-  step: number;
-}
-
 /**
  * The lowest y the baked glaze reaches at `x`: its flat lower edge, the scallop circles under it
  * and the drips (`width` wide, `length` long from the edge), all grown by `grow` for the outline.
@@ -52,18 +44,15 @@ export interface GlazeScallops {
  */
 export function glazeFloorAt(
   x: number,
-  scallops: GlazeScallops,
-  drips: ReadonlyArray<{ x: number; length: number }>,
+  layout: GlazeLayout,
   dripWidth: number,
   grow: number,
 ): number {
-  const { edgeY, x0, x1, radius, step } = scallops;
+  const { edgeY, scallops, drips } = layout;
   let floor = edgeY + grow;
-  const count = Math.max(1, Math.round((x1 - x0) / step));
-  for (let i = 0; i < count; i++) {
-    const cx = x0 + ((x1 - x0) * (i + 0.5)) / count;
-    const dx = Math.abs(x - cx);
-    const r = radius + grow;
+  for (const bump of scallops) {
+    const dx = Math.abs(x - bump.x);
+    const r = bump.radius + grow;
     if (dx < r) floor = Math.max(floor, edgeY + Math.sqrt(r * r - dx * dx));
   }
   for (const d of drips) {

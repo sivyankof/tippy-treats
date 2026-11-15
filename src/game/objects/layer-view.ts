@@ -188,10 +188,21 @@ export class LayerView extends Phaser.GameObjects.Container {
     return this;
   }
 
+  /** Lets a Rainbow layer tell its star joke over the layer above (a layer of the tower in the run only). */
+  setJokeAllowed(on: boolean): this {
+    this.rainbow.setJokeAllowed(on);
+    return this;
+  }
+
   /** The topper stands `dx` from the centre from now on (`null`: it is gone). */
   carryTopper(dx: number | null): this {
     this.topper.setCarry(dx);
     return this;
+  }
+
+  /** The side of the face the shown topper stands on, or `null` while the layer shows none. */
+  topperSide(): -1 | 1 | null {
+    return this.topper.side();
   }
 
   /** The topper in the world as it is now, or `null` while the layer shows none. */
@@ -207,6 +218,7 @@ export class LayerView extends Phaser.GameObjects.Container {
 
   /** Gives the baked art back so a pooled view does not keep its texture alive; `setLayer` brings it back. */
   releaseArt(): this {
+    this.rainbow.endJoke();
     this.artSlot.release();
     return this;
   }
@@ -411,7 +423,7 @@ export class LayerView extends Phaser.GameObjects.Container {
     this.glossSweep.setVisible(false);
     this.glazeDrips.clear();
     this.shade.clear();
-    this.rainbow.endJoke();
+    this.rainbow.setJokeAllowed(false);
     this.face.reset();
     this.topper.reset();
     return this;

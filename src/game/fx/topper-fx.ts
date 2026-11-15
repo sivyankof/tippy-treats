@@ -14,6 +14,7 @@ import {
   popAt,
   popLaunch,
   restTilt,
+  sideOfOffset,
   topperSize,
   topperOffset,
   type PopLaunch,
@@ -97,7 +98,7 @@ export class TopperFx {
     this.world.kind = topper.kind;
     this.world.x = x;
     this.world.y = tower.layerCenterY(index) - BALANCE.layer.height / 2 + PLAIN_TOPPERS.sinkPx;
-    this.world.rotation = restTilt(topper.kind, topper.side);
+    this.world.rotation = restTilt(topper.kind, sideOfOffset(from));
     this.world.scaleX = look.width / frame.width;
     this.world.scaleY = look.height / frame.height;
     this.launch(this.world, index + 1, x < layer.x ? -1 : 1);

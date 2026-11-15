@@ -129,6 +129,53 @@ export function dripSpots(box: LayerBox, count: number, length: number): DripSpo
   return spots;
 }
 
+/** The baked glaze of a layer: where its lower edge is, the scallop circles hanging from it and its drips. */
+export interface GlazeLayout {
+  edgeY: number;
+  scallops: Array<{ x: number; radius: number }>;
+  drips: DripSpot[];
+}
+
+/**
+ * Where the glaze of a layer reaches: the one place the picture and whatever keeps clear of it
+ * (the rainbow wave) read. Drips and scallops that would touch `options.avoid` are left out.
+ */
+export function glazeLayout(box: LayerBox, options: GlazeOptions = {}): GlazeLayout {
+  const { glazeDepth, dripCount, dripLength } = ANIM.layer;
+  const depth = options.depth ?? glazeDepth;
+  const { avoid } = options;
+  const clear = (rect: Rect): boolean => !avoid || !touches(rect, avoid);
+  const edgeY = box.innerTop + box.height * depth;
+  const drips = dripSpots(
+    box,
+    options.dripCount ?? dripCount,
+    options.dripLength ?? dripLength,
+  ).filter((d) =>
+    clear({
+      left: d.x - DRIP_WIDTH / 2,
+      right: d.x + DRIP_WIDTH / 2,
+      top: edgeY,
+      bottom: edgeY + d.length + DRIP_WIDTH / 2,
+    }),
+  );
+  const scallops: GlazeLayout['scallops'] = [];
+  if (options.scallop) {
+    const { radius, step } = options.scallop;
+    const x0 = box.innerLeft + box.innerRadius;
+    const x1 = box.innerRight - box.innerRadius;
+    const count = Math.max(1, Math.round((x1 - x0) / step));
+    for (let i = 0; i < count; i++) {
+      const x = x0 + ((x1 - x0) * (i + 0.5)) / count;
+      if (
+        clear({ left: x - radius, right: x + radius, top: edgeY - radius, bottom: edgeY + radius })
+      ) {
+        scallops.push({ x, radius });
+      }
+    }
+  }
+  return { edgeY, scallops, drips };
+}
+
 /** Y of the lower edge of the glaze (the top of every drip), around the layer centre. */
 export function glazeBottomY(box: LayerBox, depth: number = ANIM.layer.glazeDepth): number {
   return box.innerTop + box.height * depth;

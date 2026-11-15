@@ -100,6 +100,12 @@ describe('siteOffset', () => {
     const both = { left: -200, right: 200 };
     expect(siteOffset(400, FACE, HALF_BODY, 1, 0.5, both)).toBeNull();
   });
+
+  it('never sits on a blocked side, and has no seat when the shadow takes the other one', () => {
+    expect(siteOffset(400, FACE, HALF_BODY, 1, 0.5, null, 1)).toBeLessThan(0);
+    expect(siteOffset(400, FACE, HALF_BODY, -1, 0.5, null, 1)).toBeLessThan(0);
+    expect(siteOffset(400, FACE, HALF_BODY, 1, 0.5, { left: -200, right: -20 }, 1)).toBeNull();
+  });
 });
 
 describe('clearOfSpan', () => {

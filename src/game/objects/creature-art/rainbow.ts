@@ -10,7 +10,7 @@ import {
   outlineColor,
 } from '../../fx/plain-style';
 import { faceHalfSpan } from '../../fx/glaze-growth';
-import { drawShadow } from '../layer-draw';
+import { drawShadow, type GlazeOptions } from '../layer-draw';
 import { drawBody, drawGlaze } from './flat-draw';
 import {
   bandEdge,
@@ -33,9 +33,11 @@ import {
 
 const { wave, band, star } = RAINBOW_LOOK;
 
-/** The cream drips of the rainbow layer (the growing drips continue them). */
-export const CREAM_DRIP_LENGTH = 14;
-export const CREAM_DRIPS = 3;
+/** The glaze options of the rainbow layer (the growing drips continue its drips); the idle wave reads the same ones. */
+export function rainbowGlaze(): Pick<GlazeOptions, 'dripCount' | 'dripLength' | 'scallop'> {
+  const { dripCount, dripLength, scallopRadius, scallopStep } = RAINBOW_LOOK.glaze;
+  return { dripCount, dripLength, scallop: { radius: scallopRadius, step: scallopStep } };
+}
 
 /**
  * The gold star of the crown with its centre at (0, `cy`): outlined, with a gloss stroke and a dot;
@@ -138,9 +140,7 @@ export function drawRainbow(ctx: ArtContext, r: Recipe<'rainbow'>): void {
   shadeBottom(ctx);
   drawGlaze(g, box, colors, {
     depth: r.creamShare,
-    dripCount: CREAM_DRIPS,
-    dripLength: CREAM_DRIP_LENGTH,
-    scallop: { radius: wave.amplitude * 4, step: wave.amplitude * 8 },
+    ...rainbowGlaze(),
     avoid: ctx.face,
   });
   if (!ctx.sleeping) {

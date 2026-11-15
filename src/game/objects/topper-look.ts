@@ -71,17 +71,16 @@ export function carriedOffset(
   const half = topperSize(kind).halfBody;
   const raw = worldX - layerX;
   if (Math.abs(raw) > width / 2) return null;
-  const side = raw < 0 ? -1 : 1;
+  const side = sideOfOffset(raw);
   const near = faceHalf + faceGapPx + half;
   const far = width / 2 - edgeGapPx - half;
   if (far < near) return null;
   return side * Math.min(Math.max(Math.abs(raw), near), far);
 }
 
-/** A guest offset moved to the other side of the layer when it would sit on the topper's side. */
-export function awayFromTopper(offset: number, topperSide: -1 | 1 | null): number {
-  if (topperSide === null || offset === 0) return offset;
-  return Math.sign(offset) === topperSide ? -offset : offset;
+/** The side of the face a topper at `offset` from the centre stands on (-1 left, 1 right). */
+export function sideOfOffset(offset: number): -1 | 1 {
+  return offset < 0 ? -1 : 1;
 }
 
 /** The launch of a hopped-off topper. */

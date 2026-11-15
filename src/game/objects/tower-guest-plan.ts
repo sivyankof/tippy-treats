@@ -71,6 +71,7 @@ export function aimedByShadowOnly(rule: LayerRuleKind | null): boolean {
  * face. `side` is -1 or 1, `reach` is 0..1 along the free stretch (0 is next to the face).
  * `avoid` (the shadow of the flying layer, as offsets from the centre) is kept clear when the
  * other choice allows it: the guest then sits as near the free end as the shadow leaves.
+ * `blocked` is a side the guest never sits on (the side of a topper): only the other side is tried.
  */
 export function siteOffset(
   width: number,
@@ -79,13 +80,16 @@ export function siteOffset(
   side: -1 | 1,
   reach: number,
   avoid: Span | null = null,
+  blocked: -1 | 1 | null = null,
 ): number | null {
   const { faceGapPx, edgeGapPx } = TOWER_GUEST.site;
   const near = faceHalf + faceGapPx + halfBody;
   const far = width / 2 - edgeGapPx - halfBody;
   if (far < near) return null;
-  const offset = side * lerp(near, far, clamp01(reach));
+  const chosen = blocked !== null && side === blocked ? -side : side;
+  const offset = chosen * lerp(near, far, clamp01(reach));
   if (clearOfSpan(offset, halfBody, avoid)) return offset;
+  if (blocked !== null) return null;
   const other = -offset;
   return clearOfSpan(other, halfBody, avoid) ? other : null;
 }
@@ -96,7 +100,7 @@ export function siteOffset(
  * of the next layer (`onPath`) sits within `nextWidth` over the top layer's centre and near the
  * face (`site.pathReach`), where even an off-aim landing covers it; any other one anywhere beside
  * the face (`site.reach`). The side and the place come from `random`; `avoid` is kept clear as in
- * `siteOffset`.
+ * `siteOffset`, and so is the `blocked` side.
  */
 export function chooseSite(
   width: number,
@@ -106,12 +110,13 @@ export function chooseSite(
   onPath: boolean,
   random: () => number,
   avoid: Span | null = null,
+  blocked: -1 | 1 | null = null,
 ): number | null {
   const side: -1 | 1 = random() < 0.5 ? -1 : 1;
   const { pathReach, reach } = TOWER_GUEST.site;
   const along = pickRange(onPath ? pathReach : reach, random);
   const room = onPath ? Math.min(width, nextWidth) : width;
-  return siteOffset(room, faceHalf, halfBody, side, along, avoid);
+  return siteOffset(room, faceHalf, halfBody, side, along, avoid, blocked);
 }
 
 /** A layer in the air is over the guest at `flyX` (its body, with the margin of `TOWER_GUEST.shy`). */
