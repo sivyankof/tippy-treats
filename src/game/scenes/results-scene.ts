@@ -8,12 +8,14 @@ import { services } from '../../services';
 import { gameState } from '../../state';
 import { RecordCelebration } from '../fx/record-celebration';
 import { leaveResultsAds } from '../interstitial-flow';
+import { isDebugRun } from '../results-data';
 import { SCENES, type ResultsData } from '../scene-keys';
 import { createDimOverlay } from '../ui/dim-overlay';
 import { createPlate, type VolumePlate } from '../ui/style/volume';
 import { createOutlinedText } from '../ui/outlined-text';
 import { enterScreen, leaveScreen, type Movable } from '../ui/transition';
 import { fitText } from '../ui/menu/fit-text';
+import { createDebugPlate } from '../ui/menu/results-debug-plate';
 import { ResultsButtons } from '../ui/menu/results-buttons';
 import { ResultsCoins } from '../ui/menu/results-coins';
 import { ResultsHeader, createStats } from '../ui/menu/results-header';
@@ -41,6 +43,10 @@ export class ResultsScene extends Phaser.Scene {
   private tiers!: ResultsTiers;
   private missions!: ResultsMissions;
   private hint!: Phaser.GameObjects.Text;
+  /** The dev-only "not saved" plate, `null` for a normal run. */
+  private debugPlate: { obj: Block; height: number } | null = null;
+  /** The run reached the save. */
+  private recorded = true;
   private buttons!: ResultsButtons;
   private celebration: RecordCelebration | null = null;
   private leaving = false;
@@ -78,6 +84,10 @@ export class ResultsScene extends Phaser.Scene {
       level: gameState.data.bakerLevel,
       xp: gameState.data.bakerXp,
     });
+    // A run that is not saved gained no XP and set no record: the XP block and the hint stay out.
+    this.recorded = data.recorded;
+    this.xp.container.setVisible(this.recorded);
+    this.debugPlate = isDebugRun(this.recorded, import.meta.env.DEV) ? createDebugPlate(this) : null;
     const hintText = daily
       ? dailyBestText(gameState.dailyInfo().best)
       : nearMissText(
@@ -94,6 +104,7 @@ export class ResultsScene extends Phaser.Scene {
         );
     this.hint = createOutlinedText(this, 0, 0, hintText, cfg.nearMissFont, PALETTE.gold);
     fitText(this.hint, cfg.nearMissWidth);
+    this.hint.setVisible(this.recorded);
     // The creatures the levels handed out are presented before anything else.
     const levelCreatures = newCreaturesOf(summary.levelUps);
     const fresh: CreatureId[] = summary.firstRun
@@ -176,12 +187,13 @@ export class ResultsScene extends Phaser.Scene {
   /** The blocks on the panel, top to bottom; empty ones are left out. */
   private blocks(): Array<{ obj: Block; height: number }> {
     const all: Array<{ obj: Block; height: number }> = [
+      ...(this.debugPlate ? [this.debugPlate] : []),
       { obj: this.stats.obj, height: this.stats.height },
       { obj: this.coins.container, height: this.coins.height },
       { obj: this.tiers.container, height: this.tiers.height },
-      { obj: this.xp.container, height: this.xp.height },
+      { obj: this.xp.container, height: this.recorded ? this.xp.height : 0 },
       { obj: this.missions.container, height: this.missions.height },
-      { obj: this.hint, height: cfg.nearMissFont * cfg.lineHeight },
+      { obj: this.hint, height: this.recorded ? cfg.nearMissFont * cfg.lineHeight : 0 },
     ];
     return all.filter((b) => b.height > 0);
   }

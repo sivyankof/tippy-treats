@@ -868,6 +868,8 @@ export const MENU = {
     panel: { width: 1000, padY: 40, gap: 24 },
     /** On a short screen the panel's padding and gaps shrink to this share at the least. */
     panelMinSpacing: 0.3,
+    /** The dev-only plate over a run that is not saved. */
+    debugPlate: { width: 900, height: 84, font: 38 },
     heightFont: 200,
     recordFont: 48,
     /** Line height of a text, as a share of its font size. */

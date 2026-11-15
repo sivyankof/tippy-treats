@@ -16,6 +16,14 @@ export interface RunOutcome {
 }
 
 /**
+ * Whether the results show the "debug run, not saved" plate: only in the dev build, and only
+ * for a run that did not reach the save (`?bot=`, `?start=`; see `savesRun`).
+ */
+export function isDebugRun(recorded: boolean, dev: boolean): boolean {
+  return dev && !recorded;
+}
+
+/**
  * Bundles a finished run for the results scene. A run that did not reach the save (dev bot,
  * start height) keeps the experience bar where it is.
  */
