@@ -7,7 +7,7 @@ import { createOutlinedText } from '../outlined-text';
 import { faceOffsetY, VolumePlate } from '../style/volume';
 import { XpBar } from './xp-bar';
 
-const { levelPlate, record } = MENU.home;
+const { levelPlate, record, highlightRing } = MENU.home;
 
 /** Baker level and XP on a cream plate; the container is placed at the plate centre. */
 export function createLevelPlate(scene: Phaser.Scene): Phaser.GameObjects.Container {
@@ -28,4 +28,24 @@ export function createRecordPlate(scene: Phaser.Scene): Phaser.GameObjects.Conta
   plate.setBodyWidth(label.width + record.padX * 2);
   label.setY(faceOffsetY('chip'));
   return scene.add.container(0, 0, [plate, label]);
+}
+
+/** A ring around Play that grows and fades again and again, until Play is pressed. */
+export function createPlayRing(scene: Phaser.Scene): Phaser.GameObjects.Container {
+  const { width, grow, ms, pad } = highlightRing;
+  const { playWidth, playHeight, playRadius } = MENU.home;
+  const g = scene.add.graphics();
+  const w = playWidth + pad * 2;
+  const h = playHeight + pad * 2;
+  g.lineStyle(width, PALETTE.gold, 1).strokeRoundedRect(-w / 2, -h / 2, w, h, playRadius + pad);
+  const holder = scene.add.container(0, 0, [g]);
+  scene.tweens.add({
+    targets: g,
+    scale: grow,
+    alpha: 0,
+    duration: ms,
+    ease: 'Sine.easeOut',
+    repeat: -1,
+  });
+  return holder;
 }

@@ -1,6 +1,7 @@
 import * as Phaser from 'phaser';
 import { canFillTeam } from '../../core/team';
 import { ANIM } from '../../data/anim';
+import type { CreatureId } from '../../data/creatures';
 import { MENU } from '../../data/menu-layout';
 import { PALETTE } from '../../data/palette';
 import { t } from '../../i18n';
@@ -14,7 +15,7 @@ import { createTextButton, type Button } from '../ui/button';
 import { createHintBubble } from '../ui/menu/home-hint';
 import { HomeBadges } from '../ui/menu/home-badges';
 import { HomeNav } from '../ui/menu/home-nav';
-import { createLevelPlate, createRecordPlate } from '../ui/menu/home-plates';
+import { createLevelPlate, createPlayRing, createRecordPlate } from '../ui/menu/home-plates';
 import { HomeShelf } from '../ui/menu/home-shelf';
 import { openGiftWindow } from '../ui/menu/gift-window';
 import { openMissionsWindow } from '../ui/menu/missions-window';
@@ -105,7 +106,7 @@ export class HomeScene extends Phaser.Scene {
         this.goTo(() => openScreen(this, SCENES.team)),
       );
     }
-    if (this.highlightPlay) this.ring = this.createRing();
+    if (this.highlightPlay) this.ring = createPlayRing(this);
     if (this.offerRoom) void this.addStarterOffer();
 
     this.scale.on(Phaser.Scale.Events.RESIZE, this.layout, this);
@@ -142,31 +143,6 @@ export class HomeScene extends Phaser.Scene {
     if (this.starter) items.push(this.starter);
     items.push(this.play, ...this.nav.parts);
     return items;
-  }
-
-  /** A ring around Play that grows and fades again and again, until Play is pressed. */
-  private createRing(): Phaser.GameObjects.Container {
-    const { width, grow, ms, pad } = cfg.highlightRing;
-    const g = this.add.graphics();
-    const w = cfg.playWidth + pad * 2;
-    const h = cfg.playHeight + pad * 2;
-    g.lineStyle(width, PALETTE.gold, 1).strokeRoundedRect(
-      -w / 2,
-      -h / 2,
-      w,
-      h,
-      cfg.playRadius + pad,
-    );
-    const holder = this.add.container(0, 0, [g]);
-    this.tweens.add({
-      targets: g,
-      scale: grow,
-      alpha: 0,
-      duration: ms,
-      ease: 'Sine.easeOut',
-      repeat: -1,
-    });
-    return holder;
   }
 
   private layout(): void {
@@ -255,13 +231,7 @@ export class HomeScene extends Phaser.Scene {
   private afterStreak(claim: StreakClaim | null): void {
     this.refreshMarks();
     if (claim?.reward.kind !== 'creature' || claim.duplicate) return;
-    const { id } = claim.reward;
-    this.goTo(() =>
-      openScreen(this, SCENES.newCreature, {
-        creatures: [id],
-        then: { kind: 'screen', key: SCENES.home },
-      }),
-    );
+    this.showNewCreature(claim.reward.id);
   }
 
   /** The starter pack button, once the store has told its price; it is not shown for a product without one. */
@@ -306,10 +276,14 @@ export class HomeScene extends Phaser.Scene {
     this.offerRoom = false;
     this.layout();
     this.refreshMarks();
-    if (creature === null) return;
+    if (creature !== null) this.showNewCreature(creature);
+  }
+
+  /** A new creature gets its own screen, then Home comes back. */
+  private showNewCreature(id: CreatureId): void {
     this.goTo(() =>
       openScreen(this, SCENES.newCreature, {
-        creatures: [creature],
+        creatures: [id],
         then: { kind: 'screen', key: SCENES.home },
       }),
     );
