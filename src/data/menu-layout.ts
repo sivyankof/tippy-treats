@@ -250,15 +250,8 @@ export const MENU = {
     hintLineGap: 38,
     /** Side room kept free around a hint line. */
     hintPad: 24,
-    /** Locked cards show the icon as a dark silhouette. */
-    silhouetteSize: 150,
-    silhouetteColor: 0x3b2a4a,
-    silhouetteAlpha: 0.55,
     /** In-team cards of the team grid get a veil of this alpha over the opaque card and carry a tick. */
     inTeamVeil: 0.45,
-    /** A locked silhouette floats up and down by this much (a tilt breaks the flat-tint draw). */
-    bobPx: 8,
-    swayMs: 1800,
     /** Locked cards have a duller body: the panel colour darkened by this much. */
     lockedShade: -0.1,
     /** A lighter window behind the creature (height 0: none), tinted like the card rim. */
@@ -697,7 +690,6 @@ export const MENU = {
       starsY: 184,
       starsScale: 1.5,
       hintFont: 36,
-      silhouetteSize: 170,
       stageHeight: 200,
       stageInset: 20,
     },

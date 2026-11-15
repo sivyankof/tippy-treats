@@ -20,6 +20,11 @@ export type CakeColors = Pick<LayerColors, 'cake' | 'glaze'>;
 
 /** Empty pixels around the art so antialiased edges are not cut. */
 const SIDE_PAD = 2;
+/** Width of the baked picture of a layer `width` wide: the layer, a margin and an even number of pixels. */
+export function artTextureWidth(width: number): number {
+  return 2 * Math.ceil((width + SIDE_PAD * 2) / 2);
+}
+
 /** Space under the layer for its shadow. */
 const SHADOW_MARGIN = Math.ceil(SHADOW_DROP + ANIM.layer.shadowHeight / 2) + 1;
 
@@ -146,7 +151,7 @@ export function acquireLayerArt(
   const w = artWidth(width);
   const key = layerArtKey(look, creature, w, cut, faceless);
   const top = artTopPad(creature);
-  const texW = 2 * Math.ceil((w + SIDE_PAD * 2) / 2);
+  const texW = artTextureWidth(w);
   const texH = artHeight(creature);
   bakeTexture(scene, key, texW, texH, (g) => {
     g.translateCanvas(texW / 2, top + BALANCE.layer.height / 2);

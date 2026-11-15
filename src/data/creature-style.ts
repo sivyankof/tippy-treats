@@ -60,3 +60,54 @@ export const CREATURE_ICON = {
   /** Empty margin around the picture, as a share of the square side. */
   marginShare: 0.04,
 } as const;
+
+/**
+ * The sleeping silhouette of a locked creature (docs/06, "Спящие силуэты"): the creature's own
+ * layer picture in muted tones of its own hue, closed-eye arcs instead of a face, floating "z".
+ */
+export const CREATURE_SLEEP = {
+  palette: {
+    /** Share of the outline's saturation the body keeps. */
+    saturation: 0.6,
+    /** Lightness of the body, and how much of the real body's offset from 0.5 it keeps. */
+    bodyLightness: 0.5,
+    keepLightness: 0.3,
+    /** The glaze is this much darker than the body, or lighter when the real glaze is lighter. */
+    glazeStep: 0.1,
+    /** The outline: dark and a little less saturated than the real one. */
+    outlineLightness: 0.26,
+    outlineSaturation: 0.6,
+  },
+  /** A closed eye: a lower arc (like a bowl) of this half width and depth, drawn this thick; sizes at face scale 1. */
+  eyes: { halfWidth: 20, depth: 11, thick: 7, steps: 12, clearance: 4 },
+  /** Slow breathing instead of the old bob: one breath every `periodMs`. */
+  breath: { periodMs: 3400, scaleX: 0.012, scaleY: 0.03 },
+  /** The floating letters: size and the way up are in pixels at scale 1, anchored over the right top of the layer. */
+  zs: {
+    glyph: 'z',
+    count: 3,
+    font: 104,
+    /** The letters take the muted body tone, lightened by this much. */
+    lighten: 0.2,
+    /** Letter sizes from the first to the last, as shares of `font`. */
+    sizeShares: [0.7, 0.85, 1],
+    periodMs: 2600,
+    rise: 80,
+    /** Half the height of the biggest letter as a share of `font`, and the least share of the rise a cramped place still gets. */
+    glyphHalfShare: 0.4,
+    minRiseShare: 0.3,
+    drift: 34,
+    /** Where the first letter starts: from the centre of the layer, as a share of its half width, and in pixels above its top edge. */
+    anchorX: 0.55,
+    anchorLift: 4,
+    /** Share of the loop spent fading in, and fading out. */
+    fadeIn: 0.2,
+    fadeOut: 0.35,
+    /** The letters grow from this share of their size while they rise. */
+    growFrom: 0.6,
+    popMs: 220,
+    popEase: 'Back.easeOut',
+  },
+  /** Waking up in the reveal: a pause with the letters, then the cross-fade into the real creature. */
+  wake: { holdMs: 160, fadeMs: 220 },
+} as const;

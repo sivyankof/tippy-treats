@@ -8,6 +8,7 @@ import { t } from '../../i18n';
 import { cssColor } from '../../util/color';
 import { Particles } from '../fx/particles';
 import { CreaturePortrait } from '../objects/creature-portrait';
+import { SleepingSilhouette } from '../objects/sleep-silhouette';
 import { goNext, SCENES, type NewCreatureData } from '../scene-keys';
 import { createTextButton, type Button } from '../ui/button';
 import { fitText } from '../ui/menu/fit-text';
@@ -31,6 +32,7 @@ export class NewCreatureScene extends Phaser.Scene {
   private rays!: LightRays;
   private box!: GiftBox;
   private portrait!: CreaturePortrait;
+  private sleeper!: SleepingSilhouette;
   private nameText!: Phaser.GameObjects.Text;
   private rarityText!: Phaser.GameObjects.Text;
   private button!: Button;
@@ -78,6 +80,7 @@ export class NewCreatureScene extends Phaser.Scene {
     this.particles.update(delta);
     this.rays.tick(delta);
     this.portrait.tick(delta);
+    this.sleeper.tick(delta);
     this.sequence.update(delta);
   }
 
@@ -90,6 +93,8 @@ export class NewCreatureScene extends Phaser.Scene {
     this.title = new TitleRibbon(this, 0, 0, t('newCreature.title'));
     this.title.setMaxWidth(maxWidth);
     this.box = new GiftBox(this, 0, 0, { face: true }).setVisible(false);
+    // The sleeper is made first so the portrait fades in on top of it.
+    this.sleeper = new SleepingSilhouette(this, 0, 0, id, cfg.layerWidth).setVisible(false);
     this.portrait = new CreaturePortrait(this, 0, 0, id, 1, cfg.layerWidth).setVisible(false);
     const hit = new Phaser.Geom.Rectangle(0, 0, cfg.layerWidth, cfg.layerWidth * cfg.portraitHit);
     this.portrait
@@ -109,6 +114,7 @@ export class NewCreatureScene extends Phaser.Scene {
       scene: this,
       box: this.box,
       portrait: this.portrait,
+      sleeper: this.sleeper,
       rays: this.rays,
       particles: this.particles,
       nameText: this.nameText,

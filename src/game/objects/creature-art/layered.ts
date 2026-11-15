@@ -76,7 +76,7 @@ export function drawJelly(ctx: ArtContext, r: Recipe<'jelly'>): void {
     box.innerH - GLOW_INSET * 2,
     box.innerRadius,
   );
-  const bubbles = countFor(box.width, r.bubbles);
+  const bubbles = ctx.sleeping ? 0 : countFor(box.width, r.bubbles);
   for (let i = 0; i < bubbles; i++) {
     const radius = BUBBLE_MIN + BUBBLE_RANGE * scatter(i, 0.3);
     const x = box.innerLeft + SIDE_MARGIN + scatter(i, 0.15) * (box.innerW - SIDE_MARGIN * 2);
@@ -86,7 +86,7 @@ export function drawJelly(ctx: ArtContext, r: Recipe<'jelly'>): void {
     g.fillStyle(PALETTE.textLight, 1);
     g.fillCircle(x - radius * BUBBLE_SHINE, y2 - radius * BUBBLE_SHINE, radius * BUBBLE_SHINE);
   }
-  g.fillStyle(PALETTE.textLight, JELLY_STREAK_ALPHA);
+  g.fillStyle(PALETTE.textLight, ctx.sleeping ? 0 : JELLY_STREAK_ALPHA);
   g.fillRoundedRect(
     box.innerRight - SIDE_MARGIN - JELLY_STREAK_WIDTH * 2,
     box.innerTop + SIDE_MARGIN,
@@ -287,6 +287,7 @@ export function drawRainbow(ctx: ArtContext, r: Recipe<'rainbow'>): void {
     depth: r.creamShare,
     dripCount: CREAM_DRIPS,
     dripLength: CREAM_DRIP_LENGTH,
+    avoid: ctx.face,
   });
   // The cream on top is nearly white: the gloss lies on the first coloured band.
   const bandH = (box.innerBottom - start) / bands.length;

@@ -161,6 +161,7 @@ export function drawCaramel(ctx: ArtContext, r: Recipe<'caramel'>): void {
     depth: r.capDepth,
     dripCount: r.dripCount,
     dripLength: r.dripLength,
+    avoid: ctx.face,
   });
   fillBand(
     g,
@@ -213,6 +214,7 @@ export function drawLemon(ctx: ArtContext, r: Recipe<'lemon'>): void {
     depth: r.creamShare,
     dripCount: 0,
     scallop: { radius: CREAM_SCALLOP_RADIUS, step: CREAM_SCALLOP_RADIUS * 2 },
+    avoid: ctx.face,
   });
   drawFinish(ctx);
 }

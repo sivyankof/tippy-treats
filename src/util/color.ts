@@ -49,3 +49,48 @@ export function contrastRatio(a: number, b: number): number {
 export function parseHex(css: string): number {
   return Number.parseInt(css.replace('#', ''), 16);
 }
+
+/** Hue (0..1), saturation (0..1) and lightness (0..1) of a 0xRRGGBB colour. */
+export interface Hsl {
+  h: number;
+  s: number;
+  l: number;
+}
+
+export function toHsl(color: number): Hsl {
+  const [r8, g8, b8] = channels(color);
+  const r = r8 / CHANNEL_MAX;
+  const g = g8 / CHANNEL_MAX;
+  const b = b8 / CHANNEL_MAX;
+  const max = Math.max(r, g, b);
+  const min = Math.min(r, g, b);
+  const l = (max + min) / 2;
+  if (max === min) return { h: 0, s: 0, l };
+  const d = max - min;
+  const s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+  let h: number;
+  if (max === r) h = (g - b) / d + (g < b ? 6 : 0);
+  else if (max === g) h = (b - r) / d + 2;
+  else h = (r - g) / d + 4;
+  return { h: h / 6, s, l };
+}
+
+function hueChannel(p: number, q: number, t: number): number {
+  const u = t < 0 ? t + 1 : t > 1 ? t - 1 : t;
+  if (u < 1 / 6) return p + (q - p) * 6 * u;
+  if (u < 1 / 2) return q;
+  if (u < 2 / 3) return p + (q - p) * (2 / 3 - u) * 6;
+  return p;
+}
+
+/** The 0xRRGGBB colour of a hue, saturation and lightness (each 0..1). */
+export function fromHsl({ h, s, l }: Hsl): number {
+  if (s === 0) return pack(l * CHANNEL_MAX, l * CHANNEL_MAX, l * CHANNEL_MAX);
+  const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+  const p = 2 * l - q;
+  return pack(
+    hueChannel(p, q, h + 1 / 3) * CHANNEL_MAX,
+    hueChannel(p, q, h) * CHANNEL_MAX,
+    hueChannel(p, q, h - 1 / 3) * CHANNEL_MAX,
+  );
+}

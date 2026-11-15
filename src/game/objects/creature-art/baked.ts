@@ -1,5 +1,6 @@
 import { ANIM } from '../../../data/anim';
 import { parseHex, shade } from '../../../util/color';
+import { touches } from '../layer-draw';
 import { drawGlaze } from './flat-draw';
 import {
   countFor,
@@ -77,7 +78,11 @@ export function drawHoney(ctx: ArtContext, r: Recipe<'honey'>): void {
       STRIPE_SHADOW_ALPHA,
     );
   }
-  drawGlaze(g, box, colors, { dripCount: r.dripCount, dripLength: r.dripLength });
+  drawGlaze(g, box, colors, {
+    dripCount: r.dripCount,
+    dripLength: r.dripLength,
+    avoid: ctx.face,
+  });
   drawFinish(ctx);
 }
 
@@ -133,6 +138,13 @@ export function drawCrumb(ctx: ArtContext, r: Recipe<'crumb'>): void {
     const w = CHIP_MIN_WIDTH + CHIP_WIDTH_RANGE * scatter(i, 0.7);
     const x = box.innerLeft + SIDE_MARGIN + scatter(i, 0.1) * (box.innerW - SIDE_MARGIN * 2);
     const y = box.innerTop + CHIP_TOP_GAP + scatter(i, 0.5) * (box.innerH - CHIP_VERTICAL_MARGIN);
+    const chip = {
+      left: x - w / 2,
+      right: x + w / 2,
+      top: y - CHIP_HEIGHT / 2,
+      bottom: y + CHIP_HEIGHT / 2,
+    };
+    if (ctx.face && touches(chip, ctx.face)) continue;
     g.fillStyle(colors.accent, 1);
     g.fillRoundedRect(x - w / 2, y - CHIP_HEIGHT / 2, w, CHIP_HEIGHT, CHIP_CORNER);
     g.fillStyle(shade(colors.accent, CHIP_LIGHT), CHIP_SHINE_ALPHA);
@@ -155,6 +167,7 @@ export function drawSprinkle(ctx: ArtContext, r: Recipe<'sprinkle'>): void {
     depth: ICING_DEPTH,
     dripCount: 0,
     scallop: { radius: r.scallopRadius, step: r.scallopRadius * 2 },
+    avoid: ctx.face,
   });
 
   const palette = r.sprinkleColors.map(parseHex);

@@ -2,10 +2,17 @@ import type * as Phaser from 'phaser';
 import type { CutSide } from '../../../core/drop';
 import { BALANCE } from '../../../data/balance';
 import type { ArtRecipe } from '../../../data/creature-looks';
-import { CREATURES, type CreatureId } from '../../../data/creatures';
+import { CREATURES, type CreatureId, type CreaturePalette } from '../../../data/creatures';
 import { CREATURE_STYLE } from '../../../data/creature-style';
 import { mixColor, parseHex, shade } from '../../../util/color';
-import { GLAZE_OUTLINE, GOLDEN_STEP, drawShadow, drawSponge, type LayerBox } from '../layer-draw';
+import {
+  GLAZE_OUTLINE,
+  GOLDEN_STEP,
+  drawShadow,
+  drawSponge,
+  type LayerBox,
+  type Rect,
+} from '../layer-draw';
 import { drawBody, drawGloss, type GlossSpot } from './flat-draw';
 
 export type Graphics = Phaser.GameObjects.Graphics;
@@ -31,29 +38,33 @@ export interface CreatureColors {
 
 const colorCache = new Map<CreatureId, CreatureColors>();
 
+/** The drawing colours of a palette: the flat shadow and the glaze tones are derived from it. */
+export function colorsOf(p: CreaturePalette): CreatureColors {
+  const body = parseHex(p.body);
+  const glaze = parseHex(p.glaze);
+  const outline = parseHex(p.outline);
+  const glazeOutline = mixColor(
+    shade(glaze, GLAZE_OUTLINE),
+    outline,
+    CREATURE_STYLE.glaze.outlineMix,
+  );
+  return {
+    body,
+    glaze,
+    accent: parseHex(p.accent),
+    detail: parseHex(p.detail),
+    sponge: parseHex(p.sponge),
+    outline,
+    shadow: p.shadow ? parseHex(p.shadow) : mixColor(body, outline, CREATURE_STYLE.shadowMix),
+    glazeOutline,
+    glazeShadow: mixColor(glaze, glazeOutline, CREATURE_STYLE.glaze.shadowMix),
+  };
+}
+
 export function creatureColors(id: CreatureId): CreatureColors {
   let colors = colorCache.get(id);
   if (!colors) {
-    const p = CREATURES[id].palette;
-    const body = parseHex(p.body);
-    const glaze = parseHex(p.glaze);
-    const outline = parseHex(p.outline);
-    const glazeOutline = mixColor(
-      shade(glaze, GLAZE_OUTLINE),
-      outline,
-      CREATURE_STYLE.glaze.outlineMix,
-    );
-    colors = {
-      body,
-      glaze,
-      accent: parseHex(p.accent),
-      detail: parseHex(p.detail),
-      sponge: parseHex(p.sponge),
-      outline,
-      shadow: p.shadow ? parseHex(p.shadow) : mixColor(body, outline, CREATURE_STYLE.shadowMix),
-      glazeOutline,
-      glazeShadow: mixColor(glaze, glazeOutline, CREATURE_STYLE.glaze.shadowMix),
-    };
+    colors = colorsOf(CREATURES[id].palette);
     colorCache.set(id, colors);
   }
   return colors;
@@ -65,6 +76,10 @@ export interface ArtContext {
   box: LayerBox;
   colors: CreatureColors;
   cut: CutSide | null;
+  /** A sleeping silhouette: no gloss and no inner pattern that would show colours of its own. */
+  sleeping: boolean;
+  /** Where the closed eyes of a sleeper are: glaze edges and chips keep off it so the eyes stay readable. */
+  face?: Rect;
 }
 
 /** Circle with the dark outline of its own colour. */
@@ -172,6 +187,7 @@ export function drawBase(ctx: ArtContext): void {
 /** The cut sponge in the creature's own colours, then the gloss (`glossScale` makes it bigger). */
 export function drawFinish(ctx: ArtContext, glossScale = 1, spot: GlossSpot = {}): void {
   if (ctx.cut) drawSponge(ctx.g, ctx.cut, ctx.colors.sponge, ctx.box);
+  if (ctx.sleeping) return;
   drawGloss(ctx.g, ctx.box, glossScale, spot);
 }
 

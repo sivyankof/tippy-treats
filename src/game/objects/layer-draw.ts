@@ -94,6 +94,20 @@ export interface GlazeOptions {
   dripLength?: number;
   /** A wavy lower edge of circles instead of drips. */
   scallop?: { radius: number; step: number };
+  /** Drips and scallops that would touch this box are left out (the closed eyes of a sleeper). */
+  avoid?: Rect | undefined;
+}
+
+/** A box around the layer centre: x and y ranges in pixels. */
+export interface Rect {
+  left: number;
+  right: number;
+  top: number;
+  bottom: number;
+}
+
+export function touches(a: Rect, b: Rect): boolean {
+  return a.left < b.right && a.right > b.left && a.top < b.bottom && a.bottom > b.top;
 }
 
 /** One drip hanging from the glaze: its centre x and the length of the baked part below the glaze. */

@@ -6,7 +6,7 @@ import { PALETTE } from '../../../data/palette';
 import { RARITY_COLORS } from '../../../data/rarity';
 import { t } from '../../../i18n';
 import { CreaturePortrait } from '../../objects/creature-portrait';
-import { CREATURE_ICON_KEYS } from '../creature-icons';
+import { SleepingSilhouette } from '../../objects/sleep-silhouette';
 import { createOutlinedText } from '../outlined-text';
 import { fitText } from './fit-text';
 import { VolumePlate } from '../style/volume';
@@ -28,20 +28,19 @@ export interface CardState {
 
 /**
  * A creature card of the collection and the team grid: a volumetric body with a rim in the colour of the rarity, the
- * live creature, its name and level stars. A locked creature is a swaying dark silhouette with
+ * live creature, its name and level stars. A locked creature is a sleeping muted silhouette with
  * the way to get it. (x, y) is the centre; the card is interactive over its whole size.
  */
 export class CreatureCard extends Phaser.GameObjects.Container {
   readonly portrait: CreaturePortrait | null;
-  private readonly silhouette: Phaser.GameObjects.Image | null;
-  private timeMs = Math.random() * MENU.card.swayMs;
+  private readonly silhouette: SleepingSilhouette | null;
 
   constructor(
     scene: Phaser.Scene,
     x: number,
     y: number,
     readonly card: CardState,
-    private readonly cfg: CardLayout = MENU.card,
+    cfg: CardLayout = MENU.card,
   ) {
     super(scene, x, y);
     const def = CREATURES[card.id];
@@ -73,12 +72,15 @@ export class CreatureCard extends Phaser.GameObjects.Container {
       this.add(new LevelStars(scene, 0, cfg.starsY, card.level ?? 1, cfg.starsScale));
     } else {
       this.portrait = null;
-      this.silhouette = scene.add
-        .image(0, cfg.layerY, CREATURE_ICON_KEYS[card.id])
-        .setDisplaySize(cfg.silhouetteSize, cfg.silhouetteSize)
-        .setTint(cfg.silhouetteColor)
-        .setTintMode(Phaser.TintModes.FILL)
-        .setAlpha(cfg.silhouetteAlpha);
+      this.silhouette = new SleepingSilhouette(
+        scene,
+        0,
+        cfg.layerY,
+        card.id,
+        cfg.layerWidth,
+        cfg.layerScale,
+        cfg.height / 2 + cfg.layerY - cfg.frame,
+      );
       this.add(this.silhouette);
       this.add(this.createHint(card, cfg));
     }
@@ -140,11 +142,7 @@ export class CreatureCard extends Phaser.GameObjects.Container {
   }
 
   tick(dtMs: number): void {
-    this.timeMs += dtMs;
     this.portrait?.tick(dtMs);
-    if (this.silhouette) {
-      const phase = (this.timeMs / MENU.card.swayMs) * Math.PI * 2;
-      this.silhouette.setY(this.cfg.layerY + Math.sin(phase) * MENU.card.bobPx);
-    }
+    this.silhouette?.tick(dtMs);
   }
 }
