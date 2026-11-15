@@ -97,8 +97,13 @@ export function startRunFrom(scene: Phaser.Scene, request: RunRequest = CLASSIC_
   scene.scene.stop();
 }
 
-/** Replaces the calling screen (and a run under it) with another screen. */
-export function openScreen(scene: Phaser.Scene, key: SceneKey, data?: object): void {
+/**
+ * Replaces the calling screen (and a run under it) with another screen. Phaser keeps the data of
+ * the previous start when a scene is started without any, so a one-off flag (Home's
+ * `reopenSettings` after a language change, `highlightPlay`) would come back on every later visit:
+ * a screen opened without data always gets a fresh empty object.
+ */
+export function openScreen(scene: Phaser.Scene, key: SceneKey, data: object = {}): void {
   for (const runKey of RUN_SCENES) {
     if (runKey === scene.scene.key) continue;
     if (scene.scene.isActive(runKey) || scene.scene.isPaused(runKey)) scene.scene.stop(runKey);
