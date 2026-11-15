@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { EDGE_SQUASH, type WallFeel } from '../../data/edge-squash';
 import { BALANCE } from '../../data/balance';
-import { ribLayoutFor } from './edge-squash-ribs';
+import { BUBBLE_RIBS, ribLayoutFor } from './edge-squash-ribs';
 import {
   bounceWave,
   byPower,
@@ -20,6 +20,7 @@ import {
   squashMid,
   squashScale,
   squashTallest,
+  crownCover,
   squashWidth,
   squashX,
   visibleWalls,
@@ -77,11 +78,11 @@ function reach(shape: Readonly<EdgeShape>, u: number): ColumnEdge {
 }
 
 /** The most the body grows beyond its normal height anywhere, share of the layer height (glaze included). */
-function tallestGrowth(shape: Readonly<EdgeShape>): { total: number; up: number } {
+function tallestGrowth(shape: Readonly<EdgeShape>, withRibs = true): { total: number; up: number } {
   let total = 0;
   let up = 0;
   for (let u = -shape.half; u <= shape.half; u += 1) {
-    const r = reach(shape, u);
+    const r = withRibs ? reach(shape, u) : wedge(shape, u);
     const glaze = squashGlaze(shape, u) / LAYER_H;
     if (r.up + glaze + r.down > total) {
       total = r.up + glaze + r.down;
@@ -207,8 +208,10 @@ describe('edge squash shape', () => {
     expect(shapeAt(300, 720, feel.soft).left.zone).toBeGreaterThan(
       shapeAt(300, 720, feel.normal).left.zone,
     );
-    expect(tallestGrowth(soft).total).toBeGreaterThan(tallestGrowth(normal).total * 1.2);
-    expect(tallestGrowth(hard).total).toBeLessThan(tallestGrowth(normal).total * 0.4);
+    expect(tallestGrowth(soft, false).total).toBeGreaterThan(
+      tallestGrowth(normal, false).total * 1.2,
+    );
+    expect(tallestGrowth(hard, false).total).toBeLessThan(tallestGrowth(normal, false).total * 0.4);
     expect(hard.left.depth).toBeLessThan(normal.left.depth * 0.5);
   });
 
@@ -296,7 +299,7 @@ describe('hard layer slide', () => {
     expect(squashTallest(flatShape())).toBe(1);
     const s = shapeAt(140, 720);
     expect(squashTallest(s)).toBeGreaterThan(1);
-    expect(squashTallest(s)).toBe(1 + s.left.rise);
+    expect(squashTallest(s)).toBe(1 + s.left.rise + s.left.ribUp + s.left.ribDown);
   });
 
   it('squeezes the column at the wall harder with the edge bias, the far side stays put', () => {
@@ -312,7 +315,8 @@ describe('hard layer slide', () => {
   it('keeps a hard material nearly flat', () => {
     const hard = shapeAt(140, 720, feel.hard);
     expect(squashScale(hard, -359)).toBeGreaterThanOrEqual(feel.hard.minScale - 1e-9);
-    expect(hard.ribShare).toBe(0);
+    expect(hard.left.ribUp).toBe(0);
+    expect(hard.left.ribDown).toBe(0);
   });
 
   it('gathers the glaze only where the width was lost and sags it at the wall itself', () => {
@@ -346,9 +350,9 @@ describe('wedge strength by speed', () => {
     expect(byPower(EDGE_SQUASH.byPower.rise, 1)).toBe(EDGE_SQUASH.byPower.rise[1]);
   });
 
-  it('a slow layer rises 12-15% at the wall, a fast one 25-30%', () => {
-    const slow = tallestGrowth(shapeAt(140, 720, feel.normal, 0));
-    const fast = tallestGrowth(shapeAt(140, 720, feel.normal, 1));
+  it('a slow layer rises 12-15% at the wall, a fast one 25-30% (the wedge itself: the ribs stand on it)', () => {
+    const slow = tallestGrowth(shapeAt(140, 720, feel.normal, 0), false);
+    const fast = tallestGrowth(shapeAt(140, 720, feel.normal, 1), false);
     expect(slow.total).toBeGreaterThanOrEqual(0.12);
     expect(slow.total).toBeLessThanOrEqual(0.15);
     expect(fast.total).toBeGreaterThanOrEqual(0.25);
@@ -356,9 +360,9 @@ describe('wedge strength by speed', () => {
   });
 
   it('grows with the speed, step by step', () => {
-    let last = tallestGrowth(shapeAt(140, 720, feel.normal, 0)).total;
+    let last = tallestGrowth(shapeAt(140, 720, feel.normal, 0), false).total;
     for (let p = 0.05; p <= 1; p += 0.05) {
-      const now = tallestGrowth(shapeAt(140, 720, feel.normal, p)).total;
+      const now = tallestGrowth(shapeAt(140, 720, feel.normal, p), false).total;
       expect(now).toBeGreaterThanOrEqual(last - 1e-9);
       expect(now - last).toBeLessThan(0.02);
       last = now;
@@ -426,11 +430,8 @@ describe('wedge strength by speed', () => {
   });
 
   it('makes the ribs and the glaze bulge bigger with the speed: small when slow, plump when fast', () => {
-    // The ribs are a share of the rise: about 65% of a small one when slow, 97% of a big one when fast.
-    const ribs = (power: number): number => {
-      const s = shapeAt(140, 720, feel.normal, power);
-      return s.ribShare * s.left.rise;
-    };
+    // The ribs have their own height: ~1.5 times the old one when slow, ~2 times when fast.
+    const ribs = (power: number): number => shapeAt(140, 720, feel.normal, power).left.ribUp;
     expect(ribs(1)).toBeGreaterThan(ribs(0) * 2.5);
     const bulge = (power: number): number => {
       const s = shapeAt(140, 720, feel.normal, power);
@@ -493,7 +494,7 @@ describe('wedge strength by speed', () => {
     }
   });
 
-  it('puts the whole rise into the wedge without the ribs (fewer effects)', () => {
+  it('keeps the whole wedge without the ribs (fewer effects): smooth, no bumps', () => {
     const ribbed = shapeAt(140, 720, feel.normal, 1);
     const plain = shapeAt(140, 720, feel.normal, 1);
     plain.ribbing = false;
@@ -510,7 +511,9 @@ describe('wedge strength by speed', () => {
       lastRibbed = b;
     }
     expect(bumps).toBeGreaterThan(5);
-    expect(tallestGrowth(plain).total).toBeGreaterThan(tallestGrowth(ribbed).total * 0.85);
+    // The wedge is the same with or without the ribs; the ribs only stand on top of it.
+    expect(tallestGrowth(plain).total).toBeCloseTo(tallestGrowth(ribbed, false).total, 9);
+    expect(tallestGrowth(ribbed).total).toBeGreaterThan(tallestGrowth(plain).total);
   });
 
   it('springs the ribs: a swing of the spring changes their height, 1 is the rest', () => {
@@ -647,5 +650,108 @@ describe('walls at the screen edge', () => {
         }
       }
     }
+  });
+});
+
+describe('rib size and count by speed', () => {
+  const by = EDGE_SQUASH.byPower;
+
+  /** How many ribs of a row show at `last` (the farthest one counts when it has grown past half). */
+  function shown(slots: number, last: number): number {
+    return slots - 1 + (last > 0.5 ? 1 : 0);
+  }
+
+  it('shows 3 ribs on top and 2 at the bottom when slow, 4 and 3 when fast', () => {
+    const slow = shapeAt(140, 720, feel.normal, 0);
+    const fast = shapeAt(140, 720, feel.normal, 1);
+    expect(shown(EDGE_SQUASH.ribs.slots.top, slow.lastRib)).toBe(3);
+    expect(shown(EDGE_SQUASH.ribs.slots.bottom, slow.lastBottomRib)).toBe(2);
+    expect(shown(EDGE_SQUASH.ribs.slots.top, fast.lastRib)).toBe(4);
+    expect(shown(EDGE_SQUASH.ribs.slots.bottom, fast.lastBottomRib)).toBe(3);
+    expect(slow.lastRib).toBe(0);
+    expect(slow.lastBottomRib).toBe(0);
+    expect(fast.lastRib).toBe(1);
+    expect(fast.lastBottomRib).toBe(1);
+  });
+
+  it('makes the ribs 1.5 times (slow) to 2 times (fast) taller than the old ones, on their own numbers', () => {
+    // The old ribs were a share of the rise: 0.65 * 0.12 * 0.8 slow, 0.97 * 0.24 * 0.8 fast.
+    const oldSlow = 0.65 * 0.12 * 0.8;
+    const oldFast = 0.97 * 0.24 * 0.8;
+    expect(by.ribHeight.top[0]).toBeGreaterThan(oldSlow * 1.4);
+    expect(by.ribHeight.top[0]).toBeLessThan(oldSlow * 1.6);
+    expect(by.ribHeight.top[1]).toBeGreaterThan(oldFast * 1.9);
+    expect(by.ribHeight.top[1]).toBeLessThan(oldFast * 2.1);
+    // They do not depend on the wedge: the rise is its own number.
+    const a = shapeAt(140, 720, feel.normal, 1);
+    expect(a.left.ribUp).toBeCloseTo(by.ribHeight.top[1], 9);
+    expect(a.left.ribDown).toBeCloseTo(by.ribHeight.bottom[1], 9);
+  });
+
+  it('grows the height and the count smoothly in between, never shrinking', () => {
+    let lastUp = by.ribHeight.top[0];
+    let lastDown = 0;
+    let lastTop = 0;
+    let lastBottom = 0;
+    for (let p = 0; p <= 1.0001; p += 0.02) {
+      const s = shapeAt(140, 720, feel.normal, p);
+      expect(s.left.ribUp).toBeGreaterThanOrEqual(lastUp);
+      expect(s.left.ribDown).toBeGreaterThanOrEqual(lastDown);
+      expect(s.lastRib).toBeGreaterThanOrEqual(lastTop);
+      expect(s.lastBottomRib).toBeGreaterThanOrEqual(lastBottom);
+      expect(s.left.ribUp - lastUp).toBeLessThan(0.02);
+      lastUp = s.left.ribUp;
+      lastDown = s.left.ribDown;
+      lastTop = s.lastRib;
+      lastBottom = s.lastBottomRib;
+    }
+    const mid = shapeAt(140, 720, feel.normal, 0.5);
+    expect(mid.left.ribUp).toBeGreaterThan(by.ribHeight.top[0]);
+    expect(mid.left.ribUp).toBeLessThan(by.ribHeight.top[1]);
+    expect(mid.lastRib).toBeGreaterThan(0.9);
+    expect(mid.lastBottomRib).toBeGreaterThan(0);
+    expect(mid.lastBottomRib).toBeLessThan(1);
+  });
+
+  it('keeps the bottom ribs clearly lower than the top ones at any speed', () => {
+    for (const p of [0, 0.25, 0.5, 0.75, 1]) {
+      for (let layer = 1; layer <= 30; layer++) {
+        const s = shapeAt(140, 720, feel.normal, p);
+        s.ribs = ribLayoutFor(1234, layer);
+        const wall = reach(s, -360);
+        expect(s.left.ribDown).toBeLessThan(s.left.ribUp * 0.35);
+        expect(wall.down).toBeLessThan(wall.up * 0.35);
+      }
+    }
+  });
+
+  it('gives a soft layer a bubble of its own size, a hard one no ribs', () => {
+    const soft = shapeAt(140, 720, feel.soft, 1);
+    expect(soft.left.ribUp).toBeCloseTo(by.ribHeight.top[1] * feel.soft.ribs, 9);
+    expect(shapeAt(140, 720, feel.hard, 1).left.ribUp).toBe(0);
+  });
+
+  it('draws no ribs in fewer effects, only the wedge', () => {
+    const s = shapeAt(140, 720, feel.normal, 1);
+    s.ribbing = false;
+    expect(ribReach(s, s.left, 0, { up: 0, down: 0 })).toEqual({ up: 0, down: 0 });
+    expect(crownCover(s, -360)).toBe(0);
+    expect(wedge(s, -360).up).toBeGreaterThan(0.19);
+  });
+});
+
+describe('crown of a soft layer under the wedge', () => {
+  it('is cut away along the whole wedge and lets go smoothly past its end', () => {
+    const s = shapeAt(140, 720, feel.soft, 1);
+    s.ribs = BUBBLE_RIBS;
+    expect(crownCover(s, -360)).toBe(1);
+    let last = 1;
+    for (let u = -360; u <= 0; u += 1) {
+      const c = crownCover(s, u);
+      expect(c).toBeLessThanOrEqual(last + 1e-9);
+      expect(last - c).toBeLessThan(0.1);
+      last = c;
+    }
+    expect(crownCover(s, 300)).toBe(0);
   });
 });

@@ -42,10 +42,10 @@ export class EdgeSilhouette {
     const g = this.gfx;
     g.clear();
     let any = false;
-    if (shape.ribbing && shape.ribs && shape.ribShare > 0) {
+    if (shape.ribbing && shape.ribs) {
       for (const sign of SIGNS) {
         const side = sign === -1 ? shape.left : shape.right;
-        if (side.rise <= 0 || side.len <= 0) continue;
+        if (side.ribUp <= 0 || side.len <= 0) continue;
         this.row(g, shape, side, sign, scale, columns, frame, look, 1);
         this.row(g, shape, side, sign, scale, columns, frame, look, -1);
         any = true;

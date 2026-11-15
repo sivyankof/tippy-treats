@@ -152,7 +152,8 @@ describe('ribs by material', () => {
       const ribs = hitWall(creature, 1).shape?.ribs;
       expect(ribs).not.toBeNull();
       expect(ribs).not.toBe(BUBBLE_RIBS);
-      expect(ribs?.top.start.length).toBe(EDGE_SQUASH.ribs.slots);
+      expect(ribs?.top.start.length).toBe(EDGE_SQUASH.ribs.slots.top);
+      expect(ribs?.bottom.start.length).toBe(EDGE_SQUASH.ribs.slots.bottom);
     }
   });
 });

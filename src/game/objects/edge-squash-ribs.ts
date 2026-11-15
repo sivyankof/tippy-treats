@@ -26,9 +26,10 @@ export const BUBBLE_RIBS: Readonly<RibLayout> = {
   bottom: { start: [0], width: [1], height: [1] },
 };
 
-/** One row: widths and heights picked from the ranges of the layout `style`. */
-function makeRow(rng: Rng, style: number): RibRow {
-  const layout = cfg.styles[style % cfg.styles.length]!;
+/** One row of the `part` (top or bottom): widths and heights picked from the ranges of the layout `style`. */
+function makeRow(rng: Rng, part: 'top' | 'bottom', style: number): RibRow {
+  const styles = cfg.styles[part];
+  const layout = styles[style % styles.length]!;
   const raw = layout.width.map(([lo, hi]) => rng.range(lo, hi));
   const sum = raw.reduce((a, b) => a + b, 0);
   const width: number[] = [];
@@ -56,8 +57,8 @@ export function ribLayoutFor(seed: number, layerIndex: number): RibLayout {
   const n = Math.max(1, Math.floor(layerIndex));
   const rng = new Rng(seed).fork(`${cfg.stream}:${n}`);
   return {
-    top: makeRow(rng.fork('top'), n),
-    bottom: makeRow(rng.fork('bottom'), n + 2),
+    top: makeRow(rng.fork('top'), 'top', n),
+    bottom: makeRow(rng.fork('bottom'), 'bottom', n + 2),
   };
 }
 
@@ -65,7 +66,8 @@ export function ribLayoutFor(seed: number, layerIndex: number): RibLayout {
  * Height of one rib row at `t` along the wedge (0 at the wall, 1 where the wedge ends), 0..1: a
  * plump round bump per slot, its crest leaning towards the wall, smaller and smaller along the
  * wedge and gone at its end. The first rib starts at its crest, so it is full height right at the
- * wall. `last` (0..1) is how much of the farthest rib shows.
+ * wall. `last` (0..1) is how much of the farthest rib shows (the row's own number of ribs is its
+ * `start.length`: 4 on top, 3 at the bottom).
  */
 export function ribHeight(row: Readonly<RibRow>, t: number, last: number): number {
   if (t < 0 || t >= 1) return 0;

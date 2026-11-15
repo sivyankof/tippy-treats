@@ -4,6 +4,7 @@ import { smoothstep } from '../../util/math';
 import { EDGE_SQUASH } from '../../data/edge-squash';
 import {
   columnEdge,
+  crownCover,
   columnShare,
   squashGlaze,
   squashMid,
@@ -81,7 +82,8 @@ export class EdgeSquashSkin {
       const u = ((us[i] ?? 0) * width - art.originX * width) * s;
       const reach = columnEdge(shape, u, this.reach);
       xs[i] = squashX(shape, u) / s;
-      const cut = crown * smoothstep((from - squashScale(shape, u)) / (from - full));
+      const squeezed = smoothstep((from - squashScale(shape, u)) / (from - full));
+      const cut = crown * Math.max(squeezed, crownCover(shape, u));
       const edge = top - reach.up * height - squashGlaze(shape, u) / s;
       bottoms[i] = bottom + reach.down * height;
       // The crown is cut off the picture (its rows) and the column starts that much lower.

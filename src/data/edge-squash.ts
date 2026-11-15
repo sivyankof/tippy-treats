@@ -46,7 +46,7 @@ export interface WallFeel {
   glazeLiftPx: number;
   /** Share of that bulge that sags back towards the wall itself (0..1). */
   glazeSag: number;
-  /** Size of the ribs along the wedge outline, times the ribs of `byPower` (0 for a hard material: none). */
+  /** Size of the ribs along the wedge outline, times `byPower.ribHeight` (0 for a hard material: none; a soft one only has a low bubble). */
   ribs: number;
   /** A soft material with a wavy top has no ribs: the wedge bulges at the wall as one smooth bubble. */
   bubble: boolean;
@@ -79,9 +79,10 @@ export const EDGE_SQUASH = {
    * What stands above the body in the picture (the scalloped crown of the jelly, a wafer) would be
    * squeezed into spikes: as a column gets narrower than `from` (its horizontal scale) that part is
    * cut away, all of it by `full`, leaving `rimPx` above the body for its outline, so the silhouette
-   * is the smooth outline of the ribs.
+   * is the smooth outline of the ribs. The crown is also cut away along the whole wedge and lets go
+   * over `releaseShare` of its length past the end, so the bubble of a soft layer never ends in a step.
    */
-  crownCut: { from: 0.97, full: 0.75, rimPx: 3.5 },
+  crownCut: { from: 0.97, full: 0.75, rimPx: 3.5, releaseShare: 0.35 },
   /** The face moves this share of the way to the centre of the visible part. */
   faceShare: 1,
   /** The face reacts only to a squash at least this deep, px. */
@@ -113,17 +114,30 @@ export const EDGE_SQUASH = {
   /**
    * How strong everything is, by the speed of the layer: `power` is its share between the base
    * and the maximum speed of `BALANCE.speed`. Slow: +12-15% of the height at the wall with the
-   * glaze, calm. Fast: +25-30%, 4 ribs, a bigger bulge, drops and strokes, a squint.
+   * glaze, calm, 3 small ribs on top and 2 at the bottom. Fast: +25-30%, 4 ribs on top and 3 at the bottom, a bigger bulge, drops and strokes, a squint.
    */
   byPower: {
     /** Added height of the wedge at the wall without the glaze, share of the layer height. */
-    rise: [0.12, 0.24] satisfies ByPower,
-    /** Share of the rise that is made of ribs on top of the wedge (the smooth wedge carries the rest): small ribs when slow, big plump ones when fast. */
-    ribShare: [0.65, 0.97] satisfies ByPower,
+    rise: [0.12, 0.235] satisfies ByPower,
+    /**
+     * Height of the ribs standing on the wedge outline, share of the layer height, independent
+     * of the wedge: small when slow, big plump ones when fast. The bottom ribs are clearly
+     * lower, so they never cover the top of the tower layer or the ghost guide below.
+     */
+    ribHeight: {
+      top: [0.095, 0.37] satisfies ByPower,
+      bottom: [0.03, 0.09] satisfies ByPower,
+    },
     /** The glaze bulge, times `feel.glazeLiftPx`. */
     glazeMul: [0.4, 1.45] satisfies ByPower,
-    /** The fourth rib fades in between these two powers; the first three are always there. */
-    fourthRib: [0.15, 0.55] satisfies ByPower,
+    /**
+     * The last rib of each row fades in between these two powers: the fourth on top (the first
+     * three are always there), the third at the bottom (the first two are always there).
+     */
+    lastRib: {
+      top: [0.15, 0.55] satisfies ByPower,
+      bottom: [0.3, 0.7] satisfies ByPower,
+    },
     /**
      * Glaze drops, strokes and the squint grow smoothly: nothing at `from`, everything at `full`
      * (powers). Up to `count` drops fly; each new drop grows from nothing, and `size` is the
@@ -136,14 +150,14 @@ export const EDGE_SQUASH = {
     squint: { from: 0.25, full: 0.7, minShare: 0.2, mouthFrom: 0.5 },
   },
   /**
-   * The ribs: the wedge outline is cut into `slots` places, each with its own width and height
-   * picked from ranges, so they are never ruler-made. A rib is a plump round bump leaning towards
+   * The ribs: the wedge outline is cut into `slots` places (top and bottom row), each with its own
+   * width and height picked from ranges, so they are never ruler-made. A rib is a plump round bump leaning towards
    * the wall; the one at the wall is the biggest.
    */
   ribs: {
     /** Name of the stream a layer's ribs are picked from (`fork('<name>:<layer>:<row>')` of the cosmetic seed). */
     stream: 'ribs',
-    slots: 4,
+    slots: { top: 4, bottom: 3 },
     /**
      * Four very different layouts (widths as shares of the wedge length, scaled to add up to 1,
      * and heights 0..1 per slot, from the wall): big-small-medium-low, medium-big-low-small, and
@@ -151,66 +165,117 @@ export const EDGE_SQUASH = {
      * different ones), so two layers in a row, and two layers with one between, never get the
      * same cut.
      */
-    styles: [
-      {
-        width: [
-          [0.38, 0.42],
-          [0.14, 0.18],
-          [0.22, 0.26],
-          [0.18, 0.22],
-        ],
-        height: [
-          [0.92, 1.0],
-          [0.72, 0.84],
-          [0.8, 0.88],
-          [0.4, 0.48],
-        ],
-      },
-      {
-        width: [
-          [0.2, 0.24],
-          [0.32, 0.36],
-          [0.13, 0.16],
-          [0.26, 0.3],
-        ],
-        height: [
-          [0.9, 0.96],
-          [0.8, 0.88],
-          [0.4, 0.48],
-          [0.66, 0.78],
-        ],
-      },
-      {
-        width: [
-          [0.14, 0.17],
-          [0.14, 0.17],
-          [0.34, 0.38],
-          [0.28, 0.32],
-        ],
-        height: [
-          [0.94, 1.0],
-          [0.4, 0.48],
-          [0.8, 0.88],
-          [0.66, 0.78],
-        ],
-      },
-      {
-        width: [
-          [0.26, 0.3],
-          [0.2, 0.24],
-          [0.14, 0.17],
-          [0.3, 0.34],
-        ],
-        height: [
-          [0.96, 1.0],
-          [0.74, 0.86],
-          [0.4, 0.48],
-          [0.8, 0.88],
-        ],
-      },
-    ] as const,
-    /** The share of the ribs' height that goes up (the bottom ribs get the rest, so they are smaller but still bumps). */
-    upShare: 0.8,
+    styles: {
+      top: [
+        {
+          width: [
+            [0.38, 0.42],
+            [0.14, 0.18],
+            [0.22, 0.26],
+            [0.18, 0.22],
+          ],
+          height: [
+            [0.92, 1.0],
+            [0.72, 0.84],
+            [0.8, 0.88],
+            [0.4, 0.48],
+          ],
+        },
+        {
+          width: [
+            [0.2, 0.24],
+            [0.32, 0.36],
+            [0.13, 0.16],
+            [0.26, 0.3],
+          ],
+          height: [
+            [0.9, 0.96],
+            [0.8, 0.88],
+            [0.4, 0.48],
+            [0.66, 0.78],
+          ],
+        },
+        {
+          width: [
+            [0.14, 0.17],
+            [0.14, 0.17],
+            [0.34, 0.38],
+            [0.28, 0.32],
+          ],
+          height: [
+            [0.94, 1.0],
+            [0.4, 0.48],
+            [0.8, 0.88],
+            [0.66, 0.78],
+          ],
+        },
+        {
+          width: [
+            [0.26, 0.3],
+            [0.2, 0.24],
+            [0.14, 0.17],
+            [0.3, 0.34],
+          ],
+          height: [
+            [0.96, 1.0],
+            [0.74, 0.86],
+            [0.4, 0.48],
+            [0.8, 0.88],
+          ],
+        },
+      ] as const,
+      /** Three slots for the bottom row (fewer, lower and wider; never the layout of the top). */
+      bottom: [
+        {
+          width: [
+            [0.42, 0.46],
+            [0.16, 0.2],
+            [0.34, 0.38],
+          ],
+          height: [
+            [0.9, 1.0],
+            [0.3, 0.4],
+            [0.74, 0.84],
+          ],
+        },
+        {
+          width: [
+            [0.16, 0.2],
+            [0.42, 0.46],
+            [0.34, 0.38],
+          ],
+          height: [
+            [0.92, 1.0],
+            [0.78, 0.88],
+            [0.4, 0.5],
+          ],
+        },
+        {
+          width: [
+            [0.3, 0.34],
+            [0.14, 0.18],
+            [0.48, 0.52],
+          ],
+          height: [
+            [0.94, 1.0],
+            [0.34, 0.44],
+            [0.7, 0.82],
+          ],
+        },
+        {
+          width: [
+            [0.16, 0.2],
+            [0.3, 0.34],
+            [0.46, 0.5],
+          ],
+          height: [
+            [0.9, 0.98],
+            [0.45, 0.5],
+            [0.8, 0.9],
+          ],
+        },
+      ] as const,
+    },
     /** The crest sits at `0.5 ^ (1 / lean)` of the rib from its wall side (1: in the middle, less: nearer the wall). */
     lean: 0.7,
     /** Below 1 the bump is plumper (flatter on top, steeper at the foot). */
@@ -341,7 +406,7 @@ export const EDGE_SQUASH = {
       edgeBias: 0.2,
       glazeLiftPx: 18,
       glazeSag: 0.55,
-      ribs: 1.2,
+      ribs: 0.9,
       bubble: true,
       splash: 1,
       knockPx: 0,

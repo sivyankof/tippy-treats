@@ -3,7 +3,7 @@ import { EDGE_SQUASH } from '../../data/edge-squash';
 import { DEG_TO_RAD, lerp, smoothstep } from '../../util/math';
 import { UP_DEG } from '../fx/abilities/kit';
 import { BALANCE } from '../../data/balance';
-import { hollowAt } from './edge-squash-ribs';
+import { hollowAt, type RibRow } from './edge-squash-ribs';
 import type { Columns } from './edge-squash-columns';
 import { ribReach, type ColumnEdge, type EdgeShape, type SideSquash } from './edge-squash';
 
@@ -70,15 +70,46 @@ export class EdgeMarks {
     const ribs = shape.ribbing ? shape.ribs : null;
     const cfg = EDGE_SQUASH.notches;
     const grow = smoothstep((side.depth - cfg.fromDepthPx) / (cfg.fullDepthPx - cfg.fromDepthPx));
-    if (!ribs || shape.ribShare <= 0 || grow <= 0 || side.len <= 0) return false;
-    const hollows = ribs.top.start.length - 1;
+    if (!ribs || side.ribUp <= 0 || grow <= 0 || side.len <= 0) return false;
+    this.notchRow(g, shape, side, sign, scale, columns, frame, ribs.top, 1, shape.lastRib, grow);
+    this.notchRow(
+      g,
+      shape,
+      side,
+      sign,
+      scale,
+      columns,
+      frame,
+      ribs.bottom,
+      -1,
+      shape.lastBottomRib,
+      grow,
+    );
+    return true;
+  }
+
+  /** The notches in the hollows of one row of ribs (`from` 1: the top row, -1: the bottom one). */
+  private notchRow(
+    g: Phaser.GameObjects.Graphics,
+    shape: Readonly<EdgeShape>,
+    side: Readonly<SideSquash>,
+    sign: -1 | 1,
+    scale: number,
+    columns: Readonly<Columns>,
+    frame: Readonly<BodyFrame>,
+    row: Readonly<RibRow>,
+    from: 1 | -1,
+    last: number,
+    grow: number,
+  ): void {
+    const cfg = EDGE_SQUASH.notches;
+    const hollows = row.start.length - 1;
     for (let i = 0; i < hollows; i++) {
       // The hollow before the farthest rib is only there as far as that rib is.
-      const reveal = i === hollows - 1 ? shape.lastRib : 1;
+      const reveal = i === hollows - 1 ? last : 1;
       const fall = 1 - cfg.shrink * i;
       const alpha = cfg.alpha * grow * reveal * fall;
       if (alpha <= 0.01) continue;
-      const length = cfg.lengthPx * fall;
       this.notch(
         g,
         shape,
@@ -87,26 +118,12 @@ export class EdgeMarks {
         scale,
         columns,
         frame,
-        hollowAt(ribs.top, i),
-        1,
-        length,
-        alpha,
-      );
-      this.notch(
-        g,
-        shape,
-        side,
-        sign,
-        scale,
-        columns,
-        frame,
-        hollowAt(ribs.bottom, i),
-        -1,
-        length,
+        hollowAt(row, i),
+        from,
+        cfg.lengthPx * fall,
         alpha,
       );
     }
-    return true;
   }
 
   /**
