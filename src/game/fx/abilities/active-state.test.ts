@@ -8,6 +8,7 @@ import {
   landedRimAlpha,
   isFadedIn,
   nextBubblePhase,
+  rainbowArcOnLand,
   readActiveFlags,
 } from './active-state';
 
@@ -126,5 +127,16 @@ describe('isFadedIn', () => {
     expect(isFadedIn(0)).toBe(false);
     expect(isFadedIn(0.01)).toBe(false);
     expect(isFadedIn(0.02)).toBe(true);
+  });
+});
+
+describe('rainbowArcOnLand', () => {
+  it('leaves the arc alone for an unprotected drop', () => {
+    expect(rainbowArcOnLand(false, 3)).toBe('keep');
+    expect(rainbowArcOnLand(false, 0)).toBe('keep');
+  });
+  it('throws a new arc only while protected drops are left', () => {
+    expect(rainbowArcOnLand(true, 2)).toBe('again');
+    expect(rainbowArcOnLand(true, 0)).toBe('end');
   });
 });

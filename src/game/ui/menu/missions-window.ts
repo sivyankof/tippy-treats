@@ -98,7 +98,10 @@ export function openMissionsWindow(
       justOpened,
       onOpen: () => {
         const berries = gameState.claimChest();
-        if (berries <= 0) return;
+        if (berries <= 0) {
+          build();
+          return;
+        }
         services.audio.berry();
         services.haptics.play('success');
         justOpened = true;

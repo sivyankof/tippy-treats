@@ -158,7 +158,7 @@ export function createPileTextures(scene: Phaser.Scene): void {
 /**
  * A picture of a pile of coins or berries, `box` pixels across and centred on (0, 0). The pieces
  * are the berry and coin pictures of the game plus the drawn stacks, bowl and basket. `idle`
- * adds a slow bob (still in the reduced effects mode).
+ * adds a slow bob (there is none in the reduced effects mode).
  */
 export function createTreasurePile(
   scene: Phaser.Scene,

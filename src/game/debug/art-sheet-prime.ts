@@ -6,6 +6,9 @@ import { createAbilityTextures } from '../fx/abilities/ability-textures';
 import { bakeChestTextures } from '../fx/chest-texture';
 import { createFxTextures } from '../fx/fx-textures';
 import { bakeGiftTextures } from '../fx/gift-texture';
+import { bakeOvenTextures } from '../fx/oven-texture';
+import { createRewardTextures } from '../fx/reward-pictures';
+import { createPileTextures } from '../fx/treasure-pile';
 import { createTreasureTextures } from '../fx/treasure-textures';
 import { bakeSharedArt } from '../objects/backdrop/art-kit';
 import { createCreatureIconTextures } from '../objects/creature-icon-textures';
@@ -14,13 +17,17 @@ import { bakeGuestFlat } from '../objects/tower-guest-art';
 import { bakeHintTextures } from '../tutorial/hint-textures';
 
 /**
- * Pictures that the game bakes lazily (on first use) are baked here so they land on the art
- * sheet. A new lazy baker needs one line in this list; a texture made at start-up needs none.
+ * Pictures that the game bakes lazily (on first use) or in the boot scene are baked here so they
+ * land on the art sheet, which opens before the boot bakers run. A new baker needs one line in
+ * this list.
  */
 const PRIME_STEPS: ReadonlyArray<(scene: Phaser.Scene) => void> = [
   createFxTextures,
   createAbilityTextures,
   createTreasureTextures,
+  createPileTextures,
+  createRewardTextures,
+  bakeOvenTextures,
   createCreatureIconTextures,
   bakeSharedArt,
   bakeHintTextures,

@@ -41,6 +41,8 @@ function drawShape(
 
 /** A flame drawn in code, about `size` high. It stretches and sways forever (docs/06 section 6). */
 export class FlameIcon extends Phaser.GameObjects.Container {
+  private readonly shape: Phaser.GameObjects.Graphics;
+
   constructor(scene: Phaser.Scene, x: number, y: number, size: number) {
     super(scene, x, y);
     const half = size / 2;
@@ -49,6 +51,7 @@ export class FlameIcon extends Phaser.GameObjects.Container {
     drawShape(g, half, 1, 0, OUTER);
     drawShape(g, half, 0.62, 0.32, MIDDLE);
     drawShape(g, half, 0.3, 0.55, CORE);
+    this.shape = g;
     this.add(g);
     scene.tweens.add({
       targets: g,
@@ -61,5 +64,10 @@ export class FlameIcon extends Phaser.GameObjects.Container {
       ease: 'Sine.easeInOut',
     });
     scene.add.existing(this);
+  }
+
+  override destroy(fromScene?: boolean): void {
+    this.scene?.tweens.killTweensOf(this.shape);
+    super.destroy(fromScene);
   }
 }

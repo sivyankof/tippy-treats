@@ -11,10 +11,18 @@ export interface RimPoint extends Point {
 const QUARTER_STEPS = 4;
 
 /**
+ * Which way the arc bows, -1 (left) or 1 (right): the side of `to` once it is more than `deadPx`
+ * away from `from` sideways, otherwise the side it bowed to before (no flip-flopping over the tower).
+ */
+export function arcSide(current: number, dx: number, deadPx: number): number {
+  return Math.abs(dx) > deadPx ? Math.sign(dx) : current;
+}
+
+/**
  * Points along a quadratic curve from `from` to `to` whose control point lies `lift` of the
- * distance above the middle and `side` of the distance to the side of `to` (so the curve leaves
- * `from` sideways and up), from the start to the share `grown` of the curve (above 1 it runs
- * past the end). Each point has the unit normal of the curve, always pointing up.
+ * distance above the middle and `side` (signed, a share of the distance) to the side of it, so
+ * the curve leaves `from` sideways and up, from the start to the share `grown` of the curve
+ * (above 1 it runs past the end). Each point has the unit normal of the curve, always pointing up.
  */
 export function arcCurve(
   from: Point,
@@ -25,7 +33,7 @@ export function arcCurve(
   steps: number,
 ): Array<Point & { nx: number; ny: number }> {
   const dist = Math.hypot(to.x - from.x, to.y - from.y);
-  const cx = (from.x + to.x) / 2 + (Math.sign(to.x - from.x) || 1) * dist * side;
+  const cx = (from.x + to.x) / 2 + dist * side;
   const cy = (from.y + to.y) / 2 - dist * lift;
   const out: Array<Point & { nx: number; ny: number }> = [];
   const count = Math.max(1, Math.round(steps * grown));

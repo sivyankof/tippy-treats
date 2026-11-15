@@ -66,3 +66,34 @@ export function runHop(
   };
   run(0);
 }
+
+/** The sway and the hops of one container, with the bookkeeping both need (one sway at a time, no overlapping hops). */
+export class HopSway {
+  private swayTween: Phaser.Tweens.Tween | null = null;
+  private hopping = false;
+
+  constructor(
+    private readonly scene: Phaser.Scene,
+    private readonly target: Phaser.GameObjects.Container,
+  ) {}
+
+  /** Rocks from side to side all the time; `ready` rocks wider. Replaces a sway that runs. */
+  startSway(motion: HopMotion, ready: boolean): void {
+    this.stopSway();
+    this.swayTween = startSwayTween(this.scene, this.target, motion, ready);
+  }
+
+  /** Stops the sway and stands the target upright. */
+  stopSway(): void {
+    this.swayTween?.stop();
+    this.swayTween = null;
+    this.target.setAngle(0);
+  }
+
+  /** One hop; ignored while one runs. */
+  hop(motion: HopMotion): void {
+    if (this.hopping || !this.target.active) return;
+    this.hopping = true;
+    runHop(this.scene, this.target, motion, () => (this.hopping = false));
+  }
+}

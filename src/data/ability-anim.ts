@@ -304,7 +304,9 @@ export const ABILITY_ANIM = {
     /**
      * The arc: a fat cartoon rainbow of `stripes` bands `bandPx` thick with one dark warm outline
      * (`outlinePx`) and a white gloss strip on its top edge, along a curve that leaves the cloud
-     * on the Rainbow layer sideways and up (`sideShare` of the distance to the side, `lift` up)
+     * on the Rainbow layer sideways and up (`sideShare` of the distance to the side of the flying
+     * layer, so it never crosses the top of the tower; the side is kept within `sideDeadPx` of the
+     * start and swaps smoothly at `bowLerp`; `lift` up)
      * and ends at the cream cloud on the flying layer. It shoots out in `growMs` with a spring
      * (overshoots and settles), a swell (`waveBulge`, `waveSigma` of the length wide) runs up it
      * every `waveMs`, and it follows the layer. `idleRise` is where it ends while no layer flies.
@@ -315,8 +317,10 @@ export const ABILITY_ANIM = {
       outlineColor: 0x6a2d73,
       glossShare: 0.45,
       glossAlpha: 0.85,
-      lift: 0.3,
-      sideShare: 0.45,
+      lift: 0.25,
+      sideShare: 0.85,
+      sideDeadPx: 40,
+      bowLerp: 0.2,
       steps: 28,
       growMs: 650,
       growEase: 'Back.easeOut',

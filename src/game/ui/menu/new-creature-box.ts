@@ -8,7 +8,7 @@ import {
   GIFT_LID_ORIGIN,
   GIFT_TEXTURES,
 } from '../../fx/gift-texture';
-import { runHop, startSwayTween } from './hop-motion';
+import { HopSway } from './hop-motion';
 
 const cfg = MENU.newCreature;
 
@@ -23,14 +23,14 @@ export class GiftBox extends Phaser.GameObjects.Container {
   readonly lid: Phaser.GameObjects.Image;
   /** Local y of the top of the body: where things pour out when the lid is off. */
   readonly openingY: number;
-  private swayTween: Phaser.Tweens.Tween | null = null;
-  private hopping = false;
+  private readonly motion: HopSway;
   private readonly face: boolean;
 
   constructor(scene: Phaser.Scene, x: number, y: number, options: GiftBoxOptions = {}) {
     super(scene, x, y);
     const face = options.face ?? false;
     this.face = face;
+    this.motion = new HopSway(scene, this);
     bakeGiftTextures(scene, face);
     const half = cfg.boxSize / 2;
     const lidH = cfg.lidHeight;
@@ -66,20 +66,15 @@ export class GiftBox extends Phaser.GameObjects.Container {
 
   /** The box rocks from side to side all the time; `ready` rocks wider. */
   startSway(motion: HopMotion, ready: boolean): void {
-    this.stopSway();
-    this.swayTween = startSwayTween(this.scene, this, motion, ready);
+    this.motion.startSway(motion, ready);
   }
 
   stopSway(): void {
-    this.swayTween?.stop();
-    this.swayTween = null;
-    this.setAngle(0);
+    this.motion.stopSway();
   }
 
   /** One hop: a crouch, a jump with a stretch, a fall and a squash on landing. Ignored while hopping. */
   hop(motion: HopMotion): void {
-    if (this.hopping) return;
-    this.hopping = true;
-    runHop(this.scene, this, motion, () => (this.hopping = false));
+    this.motion.hop(motion);
   }
 }

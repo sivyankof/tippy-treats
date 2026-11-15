@@ -207,6 +207,7 @@ export class HomeScene extends Phaser.Scene {
     this.shelf.setEnabled(enabled);
     this.hint?.setEnabled(enabled);
     this.starter.setEnabled(enabled);
+    this.oven.setEnabled(enabled);
   }
 
   /** Leaves the screen once (no double taps), then runs `next`. */

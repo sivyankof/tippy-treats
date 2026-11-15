@@ -99,3 +99,12 @@ export function fadeToward(value: number, on: boolean, lerp: number, dtMs: numbe
   const next = value + (target - value) * frameLerp(lerp, dtMs);
   return Math.abs(target - next) < FADE_EPSILON ? target : next;
 }
+
+/** What a landing does to the rainbow arc: nothing, burst it, or burst it and throw a new one from the landed layer. */
+export type RainbowArcStep = 'keep' | 'end' | 'again';
+
+/** `protectedDrop`: the drop was resolved under the rainbow; `dropsLeft`: protected drops left after it. */
+export function rainbowArcOnLand(protectedDrop: boolean, dropsLeft: number): RainbowArcStep {
+  if (!protectedDrop) return 'keep';
+  return dropsLeft > 0 ? 'again' : 'end';
+}

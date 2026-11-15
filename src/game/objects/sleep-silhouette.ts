@@ -4,14 +4,13 @@ import { CREATURE_SLEEP } from '../../data/creature-style';
 import type { CreatureId } from '../../data/creatures';
 import { shade } from '../../util/color';
 import { bakeTexture } from '../ui/bake-texture';
-import { createOutlinedText } from '../ui/outlined-text';
 import { drawCreatureLayer } from './creature-art';
 import { sleepLook } from './creature-art/sleep-look';
 import { stroke } from './creature-art/primitives';
 import { artRecipe } from '../../data/creature-looks';
 import { artHeight, artOriginY, artTextureWidth, artTopPad, artWidth } from './layer-art';
 import { eyeArcPoints, sleepEyes } from './sleep-eyes';
-import { zPose, type ZPose } from './sleep-zs';
+import { SleepLetters } from './sleep-letters';
 
 const { eyes: EYES, zs: ZS, breath: BREATH } = CREATURE_SLEEP;
 
@@ -56,11 +55,10 @@ export function ensureSleepTexture(
  */
 export class SleepingSilhouette extends Phaser.GameObjects.Container {
   private readonly picture: Phaser.GameObjects.Image;
-  private readonly letters: Phaser.GameObjects.Text[] = [];
+  private readonly letters: SleepLetters;
   /** Holds the letters; public so a skipped reveal can stop its pop. */
   readonly lettersRoot: Phaser.GameObjects.Container;
   private readonly anchor: { x: number; y: number };
-  private readonly pose: ZPose = { x: 0, y: 0, alpha: 0, scale: 0 };
   private timeMs = Math.random() * BREATH.periodMs;
   private readonly pictureScale: number;
   private readonly riseShare: number;
@@ -81,19 +79,13 @@ export class SleepingSilhouette extends Phaser.GameObjects.Container {
       .setOrigin(0.5, artOriginY(creature));
     const letterColor = shade(sleepLook(creature, artRecipe(creature)).colors.body, ZS.lighten);
     this.lettersRoot = scene.add.container(0, 0);
-    ZS.sizeShares.forEach((share, i) => {
-      if (i >= ZS.count) return;
-      const letter = createOutlinedText(
-        scene,
-        0,
-        0,
-        ZS.glyph,
-        ZS.font * share * scale,
-        letterColor,
-      );
-      this.letters.push(letter);
-      this.lettersRoot.add(letter);
-    });
+    this.letters = new SleepLetters(
+      scene,
+      this.lettersRoot,
+      ZS.sizeShares.slice(0, ZS.count).map((share) => ZS.font * share * scale),
+      letterColor,
+      this.timeMs,
+    );
     // The first letter starts over the creature's top detail; the climb stops short of `headroom`.
     const anchorY = -(BALANCE.layer.height / 2 + artTopPad(creature) + ZS.anchorLift) * scale;
     const glyphHalf = ZS.font * scale * ZS.glyphHalfShare;
@@ -119,15 +111,13 @@ export class SleepingSilhouette extends Phaser.GameObjects.Container {
   }
 
   private placeLetters(): void {
-    this.letters.forEach((letter, i) => {
-      const pose = zPose(this.timeMs, i, this.pose);
-      letter
-        .setPosition(
-          this.anchor.x + pose.x * this.pictureScale,
-          this.anchor.y + pose.y * this.pictureScale * this.riseShare,
-        )
-        .setScale(pose.scale)
-        .setAlpha(pose.alpha);
+    this.letters.setTime(this.timeMs);
+    this.letters.place({
+      x: this.anchor.x,
+      y: this.anchor.y,
+      reachX: this.pictureScale,
+      reachY: this.pictureScale * this.riseShare,
+      scale: 1,
     });
   }
 

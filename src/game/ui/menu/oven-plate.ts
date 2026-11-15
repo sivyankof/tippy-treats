@@ -40,6 +40,12 @@ export class OvenPlate extends Phaser.GameObjects.Container {
     makeTappable(this, cfg.width, cfg.height, onTap);
   }
 
+  /** A disabled plate ignores taps (the screen is moving or leaving). */
+  setEnabled(enabled: boolean): this {
+    if (this.input) this.input.enabled = enabled;
+    return this;
+  }
+
   /** Shows the oven for these facts; cheap to call often, it redraws only when the picture would change. */
   show(facts: OvenFacts): this {
     const lit = facts.left > 0;
@@ -64,15 +70,11 @@ export class OvenPlate extends Phaser.GameObjects.Container {
     }).setScale(cfg.pictureScale);
     this.add(this.picture);
     const left = -cfg.width / 2 + cfg.textLeft;
-    const rows = lit
-      ? [
-          { y: cfg.lit.mainY, font: cfg.mainFont, color: OVEN_TEXT_COLOR.lit },
-          { y: cfg.lit.subY, font: cfg.subFont, color: PALETTE.textLight },
-        ]
-      : [
-          { y: cfg.spent.mainY, font: cfg.mainFont, color: OVEN_TEXT_COLOR.spent },
-          { y: cfg.spent.subY, font: cfg.subFont, color: PALETTE.textLight },
-        ];
+    const rowsAt = lit ? cfg.lit : cfg.spent;
+    const rows = [
+      { y: rowsAt.mainY, font: cfg.mainFont, color: OVEN_TEXT_COLOR[lit ? 'lit' : 'spent'] },
+      { y: rowsAt.subY, font: cfg.subFont, color: PALETTE.textLight },
+    ];
     for (const row of rows) {
       const text = createOutlinedText(this.scene, left, row.y + dy, '', row.font, row.color);
       text.setOrigin(0, 0.5);

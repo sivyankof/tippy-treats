@@ -1,13 +1,13 @@
 import * as Phaser from 'phaser';
 import { ABILITY_ANIM } from '../../../data/ability-anim';
 import { PALETTE } from '../../../data/palette';
-import { clamp01 } from '../../../util/math';
+import { clamp01, frameLerp } from '../../../util/math';
 import { DEPTH } from '../../depth';
 import { easeFn } from '../ease';
 import { FX_TEXTURES } from '../fx-textures';
 import { fillPolygon, outlineColor, type Pt } from '../plain-style';
 import type { AbilityBursts } from './ability-bursts';
-import { arcCurve, swell, type Point } from './rainbow-arc-geometry';
+import { arcCurve, arcSide, swell, type Point } from './rainbow-arc-geometry';
 import { HALF_LAYER } from './kit';
 
 const cfg = ABILITY_ANIM.rainbow;
@@ -22,7 +22,7 @@ type Phase = 'idle' | 'live' | 'deflate';
 
 /**
  * The rainbow arc of the Rainbow ability: a fat cartoon rainbow that shoots out of a cream cloud
- * with a face on the Rainbow layer, reaches a second cloud on the flying layer and follows it.
+ * with a face on the Rainbow layer, bows out to the side of the tower (not over its top), reaches a second cloud on the flying layer and follows it.
  * When the protected layer lands it bursts into stars, the lower cloud deflates, and the arc is
  * thrown again from the landed layer if the next layer is protected too.
  */
@@ -34,6 +34,9 @@ export class RainbowArc {
   private readonly from: Point = { x: 0, y: 0 };
   private readonly last: Point = { x: 0, y: 0 };
   private relaunch: Point | null = null;
+  /** Which way the arc bows now, smoothed between -1 (left) and 1 (right). */
+  private bow = 1;
+  private bowTarget = 1;
 
   constructor(
     scene: Phaser.Scene,
@@ -52,6 +55,7 @@ export class RainbowArc {
     this.ageMs = 0;
     this.lostMs = 0;
     this.relaunch = null;
+    this.bow = this.bowTarget;
   }
 
   /** A protected layer landed at `top` (the middle of its top edge): the arc bursts. `again` throws a new one from there. */
@@ -70,6 +74,12 @@ export class RainbowArc {
     this.relaunch = again ? { x: top.x, y: top.y } : null;
   }
 
+  /** The Rainbow effect ran out: no new arc is thrown; one in the air bursts. */
+  stop(): void {
+    this.relaunch = null;
+    if (this.phase === 'live') this.land(this.last, false);
+  }
+
   /** `target` is the middle of the top edge of the flying layer (`null` while none flies). */
   update(dtMs: number, target: Point | null): void {
     this.gfx.clear();
@@ -86,6 +96,8 @@ export class RainbowArc {
       return;
     }
     if (target) {
+      this.bowTarget = arcSide(this.bowTarget, target.x - this.from.x, arc.sideDeadPx);
+      this.bow += (this.bowTarget - this.bow) * frameLerp(arc.bowLerp, dtMs);
       this.last.x = target.x;
       this.last.y = target.y;
       this.lostMs = 0;
@@ -97,7 +109,7 @@ export class RainbowArc {
   }
 
   private curve(grown: number): Array<Point & { nx: number; ny: number }> {
-    return arcCurve(this.from, this.last, arc.lift, arc.sideShare, grown, arc.steps);
+    return arcCurve(this.from, this.last, arc.lift, arc.sideShare * this.bow, grown, arc.steps);
   }
 
   private paint(): void {

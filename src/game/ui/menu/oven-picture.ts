@@ -1,7 +1,7 @@
 import * as Phaser from 'phaser';
 import { OVEN_LOOK } from '../../../data/oven-look';
 import { PALETTE } from '../../../data/palette';
-import { zPose, type ZPose } from '../../objects/sleep-zs';
+import { SleepLetters } from '../../objects/sleep-letters';
 import { CREATURE_SLEEP } from '../../../data/creature-style';
 import { effectsMode } from '../../effects-mode';
 import {
@@ -11,7 +11,6 @@ import {
   bakeOvenTextures,
   type OvenState,
 } from '../../fx/oven-texture';
-import { createOutlinedText } from '../outlined-text';
 import { FlameIcon } from './flame-icon';
 
 const look = OVEN_LOOK;
@@ -33,8 +32,8 @@ export interface OvenPictureOptions {
  */
 export class OvenPicture extends Phaser.GameObjects.Container {
   private readonly holder: Phaser.GameObjects.Container;
-  private readonly letters: Phaser.GameObjects.Text[] = [];
-  private readonly pose: ZPose = { x: 0, y: 0, alpha: 0, scale: 0 };
+  private letters: SleepLetters | null = null;
+  private ember: Phaser.GameObjects.Graphics | null = null;
 
   constructor(scene: Phaser.Scene, x: number, y: number, options: OvenPictureOptions) {
     super(scene, x, y);
@@ -53,18 +52,26 @@ export class OvenPicture extends Phaser.GameObjects.Container {
     this.holder = scene.add.container(0, 0, [body]);
     if (lit) {
       const size = OVEN_WINDOW.radius * 2 * look.flame.size;
-      this.holder.add(
-        new FlameIcon(scene, 0, OVEN_WINDOW.y + OVEN_WINDOW.radius * look.flame.drop, size),
+      const flame = new FlameIcon(
+        scene,
+        0,
+        OVEN_WINDOW.y + OVEN_WINDOW.radius * look.flame.drop,
+        size,
       );
+      this.holder.add(flame);
     } else {
-      this.holder.add(this.makeEmber(scene));
+      this.ember = this.makeEmber(scene);
+      this.holder.add(this.ember);
     }
     this.holder.add(ring);
     this.add(this.holder);
     if (!lit && options.letters) this.makeLetters(scene);
     scene.add.existing(this);
     this.startMotion(lit);
-    this.once(Phaser.GameObjects.Events.DESTROY, () => scene.tweens.killTweensOf(this.holder));
+    this.once(Phaser.GameObjects.Events.DESTROY, () => {
+      const targets = [this.holder, this.ember].filter((o) => o !== null);
+      scene.tweens.killTweensOf(targets);
+    });
   }
 
   private makeEmber(scene: Phaser.Scene): Phaser.GameObjects.Graphics {
@@ -89,36 +96,33 @@ export class OvenPicture extends Phaser.GameObjects.Container {
   private makeLetters(scene: Phaser.Scene): void {
     const z = motion.zs;
     const font = OVEN_PICTURE_HEIGHT * z.font;
-    for (let i = 0; i < Z_COUNT; i++) {
-      const letter = createOutlinedText(scene, 0, 0, CREATURE_SLEEP.zs.glyph, font, z.color);
-      this.letters.push(letter);
-      this.add(letter);
-    }
-    if (effectsMode.reduced) {
-      this.placeLetters(0.5 * CREATURE_SLEEP.zs.periodMs, 1);
-      return;
-    }
-    const period = CREATURE_SLEEP.zs.periodMs;
-    scene.tweens.addCounter({
-      from: 0,
-      to: period,
-      duration: period,
-      repeat: -1,
-      onUpdate: (tween) => {
-        if (this.active) this.placeLetters(tween.getValue() ?? 0, Z_COUNT);
-      },
-    });
+    this.letters = new SleepLetters(
+      scene,
+      this,
+      Array.from({ length: Z_COUNT }, () => font),
+      z.color,
+      effectsMode.reduced ? 0.5 * CREATURE_SLEEP.zs.periodMs : 0,
+    );
+    this.placeLetters();
   }
 
-  private placeLetters(timeMs: number, shown: number): void {
+  /** The sleeping letters float on the scene's update list; "fewer effects" leaves one still frame. */
+  preUpdate(_time: number, delta: number): void {
+    if (!this.letters || effectsMode.reduced) return;
+    this.letters.tick(delta);
+    this.placeLetters();
+  }
+
+  private placeLetters(): void {
     const z = motion.zs;
     const h = OVEN_PICTURE_HEIGHT;
-    this.letters.forEach((letter, i) => {
-      const p = zPose(timeMs, i, this.pose);
-      letter
-        .setPosition(h * z.x + p.x * z.scale, h * z.y + p.y * z.scale)
-        .setScale(p.scale * z.scale)
-        .setAlpha(i < shown ? p.alpha : 0);
+    this.letters?.place({
+      x: h * z.x,
+      y: h * z.y,
+      reachX: z.scale,
+      reachY: z.scale,
+      scale: z.scale,
+      shown: effectsMode.reduced ? 1 : Z_COUNT,
     });
   }
 
@@ -126,7 +130,7 @@ export class OvenPicture extends Phaser.GameObjects.Container {
     const scene = this.scene;
     if (lit) {
       const { rise, ms, stretch } = motion.bob;
-      // A rotated picture inside a plate loses pieces of its image on Phaser 4 (docs/08 journal), so it hops and stretches instead of rocking.
+      // The living oven hops and stretches instead of rocking (docs/08 journal); rocking is the owner's call.
       scene.tweens.add({
         targets: this.holder,
         y: -rise,

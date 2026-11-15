@@ -12,7 +12,7 @@ import {
 } from '../../fx/chest-texture';
 import { CHEST_LOOK } from '../../../data/chest-look';
 import { effectsMode } from '../../effects-mode';
-import { runHop, startSwayTween } from './hop-motion';
+import { HopSway } from './hop-motion';
 import { LightRays } from './new-creature-rays';
 
 export type ChestState = 'closed' | 'ready' | 'opened';
@@ -31,9 +31,8 @@ export class ChestBox extends Phaser.GameObjects.Container {
   /** Holds the flattened, pulsing rays; only the rays inside it turn, so the squash stays level. */
   private rays: Phaser.GameObjects.Container | null = null;
   private raysInner: LightRays | null = null;
-  private swayTween: Phaser.Tweens.Tween | null = null;
+  private readonly sway: HopSway;
   private hopTimer: Phaser.Time.TimerEvent | null = null;
-  private hopping = false;
 
   constructor(
     scene: Phaser.Scene,
@@ -44,6 +43,7 @@ export class ChestBox extends Phaser.GameObjects.Container {
   ) {
     super(scene, x, y);
     bakeChestTextures(scene);
+    this.sway = new HopSway(scene, this);
     const open = state === 'opened';
     this.trunk = scene.add
       .image(0, 0, open ? CHEST_TEXTURES.bodyOpen : CHEST_TEXTURES.body)
@@ -84,12 +84,12 @@ export class ChestBox extends Phaser.GameObjects.Container {
 
   private startMotion(state: ChestState): void {
     const ready = state === 'ready';
-    this.swayTween = startSwayTween(this.scene, this, this.motion, ready);
+    this.sway.startSway(this.motion, ready);
     if (!ready) return;
     this.hopTimer = this.scene.time.addEvent({
       delay: this.motion.hop.everyMs,
       loop: true,
-      callback: () => this.hop(),
+      callback: () => this.sway.hop(this.motion),
     });
     if (!effectsMode.reduced) this.startRays();
   }
@@ -126,12 +126,6 @@ export class ChestBox extends Phaser.GameObjects.Container {
     });
   }
 
-  private hop(): void {
-    if (this.hopping || !this.active) return;
-    this.hopping = true;
-    runHop(this.scene, this, this.motion, () => (this.hopping = false));
-  }
-
   /** The lid flips back with a pop: it folds flat on its front edge, then stands up inside out behind the body. */
   playOpen(): void {
     this.stopAll();
@@ -162,8 +156,7 @@ export class ChestBox extends Phaser.GameObjects.Container {
   }
 
   private stopAll(): void {
-    this.swayTween?.stop();
-    this.swayTween = null;
+    this.sway.stopSway();
     this.hopTimer?.remove(false);
     this.hopTimer = null;
     if (this.rays && this.raysInner) {
