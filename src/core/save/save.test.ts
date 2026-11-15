@@ -455,6 +455,21 @@ describe('migration 4 to 5', () => {
     expect(result.save.doubles).toEqual({ day: '', used: 0 });
   });
 
+  it('does not invent an XP for a damaged version 4 save, so the intact backup wins', () => {
+    const backup = JSON.stringify({ ...v4, coins: 777, bakerLevel: 9, bakerXp: 100 });
+    const result = load(JSON.stringify({ ...v4, coins: 5, bakerXp: null }), backup);
+    expect(result.source).toBe('backup');
+    expect(result.save.coins).toBe(777);
+  });
+
+  it('hands over the twins when the old record already reached 75', () => {
+    const records = { ...fresh().records, classicHeight: 92 };
+    const result = load(JSON.stringify({ ...v4, records }));
+    expect(result.save.creatures.twins).toEqual({ level: 1 });
+    const low = load(JSON.stringify({ ...v4, records: { ...records, classicHeight: 74 } }));
+    expect(low.save.creatures.twins).toBeUndefined();
+  });
+
   it('repairs bad oven and x2 counters and keeps good ones', () => {
     const bad = load(
       JSON.stringify({ ...fresh(), oven: { day: 'x', used: 99_999, carry: 40 }, doubles: 5 }),

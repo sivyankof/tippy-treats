@@ -1,3 +1,4 @@
+import { CREATURES, CREATURE_IDS } from '../../data/creatures';
 import { LEGACY_XP_TO_NEXT } from '../../data/progression';
 import { xpToNext } from '../progression';
 import { SAVE_VERSION, type Save } from './schema';
@@ -59,16 +60,36 @@ export function migrateV3(raw: RawSave): RawSave {
  * `floor(xp / oldXpToNext * newXpToNext)`. The baker level and the creature levels are never lowered.
  */
 export function migrateV4(raw: RawSave): RawSave {
-  const level = typeof raw.bakerLevel === 'number' ? Math.max(1, Math.floor(raw.bakerLevel)) : 1;
-  const oldNeed = LEGACY_XP_TO_NEXT.base + LEGACY_XP_TO_NEXT.step * (level - 1);
-  const oldXp = typeof raw.bakerXp === 'number' && raw.bakerXp > 0 ? Math.floor(raw.bakerXp) : 0;
-  const newNeed = xpToNext(level);
-  return {
+  const next: RawSave = {
     ...raw,
-    bakerXp: Math.min(newNeed - 1, Math.floor((oldXp / oldNeed) * newNeed)),
     oven: { day: '', used: 0, carry: 0 },
     doubles: { day: '', used: 0 },
   };
+  // A damaged or missing XP stays as it is, so the loader can still tell the save is damaged.
+  if (typeof raw.bakerXp === 'number' && Number.isFinite(raw.bakerXp)) {
+    const level = typeof raw.bakerLevel === 'number' ? Math.max(1, Math.floor(raw.bakerLevel)) : 1;
+    const oldNeed = LEGACY_XP_TO_NEXT.base + LEGACY_XP_TO_NEXT.step * (level - 1);
+    const oldXp = raw.bakerXp > 0 ? Math.floor(raw.bakerXp) : 0;
+    const newNeed = xpToNext(level);
+    next.bakerXp = Math.min(newNeed - 1, Math.floor((oldXp / oldNeed) * newNeed));
+  }
+  return withRecordCreatures(next);
+}
+
+/** Hands over creatures whose record way the best classic height already reached. */
+function withRecordCreatures(raw: RawSave): RawSave {
+  const records = isRecord(raw.records) ? raw.records : {};
+  const height = typeof records.classicHeight === 'number' ? records.classicHeight : 0;
+  if (!isRecord(raw.creatures)) return raw;
+  const creatures: RawSave = { ...raw.creatures };
+  for (const id of CREATURE_IDS) {
+    if (creatures[id] !== undefined) continue;
+    const reached = CREATURES[id].unlock.some(
+      (unlock) => unlock.kind === 'record' && height >= unlock.height,
+    );
+    if (reached) creatures[id] = { level: 1 };
+  }
+  return { ...raw, creatures };
 }
 
 /** Migrations keyed by the version they upgrade from. */
