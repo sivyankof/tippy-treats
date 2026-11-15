@@ -249,16 +249,57 @@ describe('abilities in play', () => {
     });
   });
 
-  it('rainbow makes drops perfect, but not a complete miss', () => {
+  it('rainbow keeps the layer whole but counts a drop outside the tolerance as a normal one', () => {
     const sim = crew('rainbow');
     drop(sim, 100);
     const wide = drop(sim, 150);
-    expect(land(wide).quality).toBe('perfect');
-    expect(only(wide, 'combo').value).toBe(1);
+    expect(land(wide)).toMatchObject({ quality: 'normal', cutWidth: 0 });
+    expect(land(wide).savedWidth).toBeGreaterThan(100);
+    expect(pick(wide, 'combo')).toHaveLength(0);
+    expect(sim.state.combo).toBe(0);
+    expect(sim.state.layers.at(-1)?.width).toBe(sim.state.layers.at(-2)?.width);
     expect(sim.state.layers.at(-1)?.x).toBe(sim.state.layers.at(-2)?.x);
 
     only(missNow(sim), 'miss');
     expect(sim.state.phase).toBe('await_continue');
+  });
+
+  it('rainbow keeps a perfect drop perfect and extends the combo as usual', () => {
+    const sim = crew('rainbow');
+    drop(sim, 100);
+    const events = drop(sim, 10);
+    expect(land(events).quality).toBe('perfect');
+    expect(only(events, 'combo').value).toBe(1);
+  });
+
+  it('rainbow never makes a drop worse than the same drop without it', () => {
+    const run = (offset: number, withRainbow: boolean) => {
+      const sim = crew('rainbow');
+      drop(sim, 100);
+      if (!withRainbow) mutable(sim).effects = [];
+      const events = drop(sim, offset, offset % 2 === 0 ? 540 : null);
+      const state = sim.state;
+      return {
+        phase: state.phase,
+        quality: pick(events, 'land')[0]?.quality,
+        width: state.layers.at(-1)?.width ?? 0,
+        combo: state.combo,
+        wobble: state.wobble,
+        score: state.score,
+        coins: state.coins,
+      };
+    };
+    for (const offset of [0, 5, 10, 18, 21, 40, 90, 150, 220, 300]) {
+      const plain = run(offset, false);
+      const safe = run(offset, true);
+      expect(safe.phase).toBe(plain.phase);
+      expect(safe.quality).toBe(plain.quality);
+      expect(safe.width).toBeGreaterThanOrEqual(plain.width);
+      expect(safe.combo).toBe(plain.combo);
+      expect(safe.wobble).toBeLessThanOrEqual(plain.wobble);
+      expect(safe.score).toBeGreaterThanOrEqual(plain.score);
+      expect(safe.coins).toBeGreaterThanOrEqual(plain.coins);
+    }
   });
 
   it('ghost only shows guides: the modifiers carry the flag', () => {

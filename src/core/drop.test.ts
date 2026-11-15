@@ -10,7 +10,7 @@ const drop = (dx: number, overrides: Partial<DropInput> = {}) =>
     width: 400,
     targetX: TARGET,
     perfectTolerance: BALANCE.drop.perfectTolerance,
-    autoPerfect: false,
+    protectCut: false,
     springShare: 0,
     ...overrides,
   });
@@ -24,6 +24,7 @@ describe('resolveDrop', () => {
       centerOffset: 0,
       cutWidth: 0,
       cutSide: null,
+      savedWidth: 0,
     });
   });
 
@@ -35,6 +36,7 @@ describe('resolveDrop', () => {
       centerOffset: 50,
       cutWidth: 100,
       cutSide: 'right',
+      savedWidth: 0,
     });
   });
 
@@ -46,6 +48,7 @@ describe('resolveDrop', () => {
       centerOffset: -30,
       cutWidth: 60,
       cutSide: 'left',
+      savedWidth: 0,
     });
   });
 
@@ -84,26 +87,45 @@ describe('resolveDrop', () => {
     expect(drop(31, { perfectTolerance: 30 }).quality).toBe('normal');
   });
 
-  it('auto-perfect turns a normal drop into a perfect one', () => {
-    expect(drop(100, { autoPerfect: true })).toMatchObject({
-      quality: 'perfect',
+  it('cut protection keeps the whole layer centred but the drop stays normal', () => {
+    expect(drop(100, { protectCut: true })).toEqual({
+      quality: 'normal',
       dx: 100,
       newWidth: 400,
       centerOffset: 0,
       cutWidth: 0,
+      cutSide: null,
+      savedWidth: 100,
     });
-    expect(drop(-375, { autoPerfect: true }).quality).toBe('perfect');
+    expect(drop(-375, { protectCut: true })).toMatchObject({ quality: 'normal', newWidth: 400 });
   });
 
-  it('auto-perfect does not save a complete miss', () => {
+  it('cut protection does not save a complete miss', () => {
     const edge = 400 - BALANCE.drop.missMargin;
-    expect(drop(edge, { autoPerfect: true }).quality).toBe('miss');
-    expect(drop(-900, { autoPerfect: true })).toMatchObject({ quality: 'miss', newWidth: 0 });
+    expect(drop(edge, { protectCut: true }).quality).toBe('miss');
+    expect(drop(-900, { protectCut: true })).toMatchObject({ quality: 'miss', newWidth: 0 });
   });
 
-  it('auto-perfect keeps the tolerance rule on narrow layers', () => {
-    expect(drop(20, { width: 40, autoPerfect: true }).quality).toBe('perfect');
-    expect(drop(21, { width: 40, autoPerfect: true }).quality).toBe('miss');
+  it('cut protection keeps the tolerance rule on narrow layers', () => {
+    expect(drop(20, { width: 40, protectCut: true }).quality).toBe('perfect');
+    expect(drop(21, { width: 40, protectCut: true }).quality).toBe('miss');
+  });
+
+  it('a drop inside the tolerance is perfect with the protection too', () => {
+    const tolerance = BALANCE.drop.perfectTolerance;
+    expect(drop(tolerance, { protectCut: true })).toEqual(drop(tolerance));
+    expect(drop(-tolerance, { protectCut: true }).quality).toBe('perfect');
+  });
+
+  it('cut protection never makes a drop worse', () => {
+    for (let dx = -420; dx <= 420; dx += 3) {
+      const plain = drop(dx);
+      const safe = drop(dx, { protectCut: true });
+      expect(safe.quality).toBe(plain.quality);
+      expect(safe.newWidth).toBeGreaterThanOrEqual(plain.newWidth);
+      expect(safe.cutWidth + safe.savedWidth).toBeCloseTo(plain.cutWidth);
+      expect(safe.dx).toBe(plain.dx);
+    }
   });
 });
 
@@ -140,10 +162,12 @@ describe('resolveDrop with a spring', () => {
     expect(drop(edge - 1, { springShare: 0.6 }).quality).toBe('normal');
   });
 
-  it('leaves auto-perfect and a zero share as they were', () => {
-    expect(drop(100, { autoPerfect: true, springShare: 0.6 })).toMatchObject({
-      quality: 'perfect',
-      dx: 100,
+  it('the spring and the cut protection together keep the settled offset', () => {
+    expect(drop(100, { protectCut: true, springShare: 0.6 })).toMatchObject({
+      quality: 'normal',
+      dx: 40,
+      newWidth: 400,
+      savedWidth: 40,
     });
     expect(drop(100, { springShare: 0 })).toMatchObject({ dx: 100, newWidth: 300 });
   });

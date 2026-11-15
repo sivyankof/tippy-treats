@@ -9,6 +9,7 @@ const land: SimEvent = {
   cutWidth: 0,
   cutSide: null,
   newWidth: 100,
+  savedWidth: 0,
 };
 
 describe('payoutFromEvents', () => {

@@ -49,7 +49,10 @@ export function collectFloatingCoin(
   }
 }
 
-/** Coins and berries a landing pays besides the floating coin. */
+/**
+ * Coins and berries a landing pays besides the floating coin. `cutWidth` is what a normal drop
+ * cut off, also when a protected layer kept it.
+ */
 export function payLanding(
   s: TowerState,
   events: SimEvent[],

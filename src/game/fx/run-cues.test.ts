@@ -12,6 +12,7 @@ const land = (over: Partial<Extract<SimEvent, { type: 'land' }>> = {}): SimEvent
   cutWidth: 0,
   cutSide: null,
   newWidth: 100,
+  savedWidth: 0,
   ...over,
 });
 const sneeze: SimEvent = { type: 'wobble_sneeze', newWidth: 50 };

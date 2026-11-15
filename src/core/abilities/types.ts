@@ -31,7 +31,8 @@ export interface Modifiers {
   perfectCoinAdd: number;
   /** The largest of the base and all effects. */
   perfectTolerance: number;
-  autoPerfect: boolean;
+  /** The layer is not cut, but the drop counts as a normal one unless it was perfect anyway. */
+  protectCut: boolean;
   guides: boolean;
   /** Share (0..1) of the offset of a normal drop that the layer springs back to the centre. The largest of the effects. */
   springShare: number;
@@ -45,7 +46,7 @@ export const BASE_MODIFIERS: Readonly<Modifiers> = {
   coinMultAdd: 0,
   perfectCoinAdd: 0,
   perfectTolerance: BALANCE.drop.perfectTolerance,
-  autoPerfect: false,
+  protectCut: false,
   guides: false,
   springShare: 0,
   crumbToCoinsPx: null,

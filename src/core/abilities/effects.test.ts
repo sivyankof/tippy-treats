@@ -94,7 +94,7 @@ describe('collectModifiers', () => {
     const both = collect(effect('crumb', 28), effect('crumb', 18, 1, 5));
     expect(both.crumbToCoinsPx).toBe(18);
     const flags = collect(effect('ghost', 0), effect('rainbow', 0));
-    expect(flags).toMatchObject({ guides: true, autoPerfect: true });
+    expect(flags).toMatchObject({ guides: true, protectCut: true });
   });
 
   it('ignores effects without modifiers and does not touch the base object', () => {

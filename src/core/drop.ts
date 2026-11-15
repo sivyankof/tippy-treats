@@ -11,7 +11,8 @@ export interface DropInput {
   /** Centre of the tower top at the moment of landing, wobble included. */
   targetX: number;
   perfectTolerance: number;
-  autoPerfect: boolean;
+  /** The layer is not cut (rainbow); it still counts as a normal drop outside the tolerance. */
+  protectCut: boolean;
   /** Share (0..1) of the offset of a normal drop that springs back to the centre; 0 for none. */
   springShare: number;
 }
@@ -29,6 +30,8 @@ export interface DropOutcome {
   centerOffset: number;
   cutWidth: number;
   cutSide: CutSide | null;
+  /** Width the cut protection saved, so the cut that would have been (0 for every other drop). */
+  savedWidth: number;
 }
 
 /** Speed of the layer that flies above a tower of the given height. */
@@ -49,16 +52,28 @@ export function resolveDrop(input: DropInput): DropOutcome {
     centerOffset: 0,
     cutWidth: 0,
     cutSide: null,
+    savedWidth: 0,
   };
   if (distance <= input.perfectTolerance) return perfect;
   // A complete miss stays a miss even when every landed drop would be made perfect.
   if (distance >= width - BALANCE.drop.missMargin) {
-    return { quality: 'miss', dx, newWidth: 0, centerOffset: 0, cutWidth: 0, cutSide: null };
+    return {
+      quality: 'miss',
+      dx,
+      newWidth: 0,
+      centerOffset: 0,
+      cutWidth: 0,
+      cutSide: null,
+      savedWidth: 0,
+    };
   }
-  if (input.autoPerfect) return perfect;
   // Perfect and miss were decided by the raw offset; the spring only softens a normal drop.
   const settled = dx * (1 - input.springShare);
   const cut = Math.abs(settled);
+  if (input.protectCut) {
+    // Whole layer, centred, but the throw itself counts as a normal one.
+    return { ...perfect, quality: 'normal', dx: settled, savedWidth: cut };
+  }
   return {
     quality: 'normal',
     dx: settled,
@@ -66,5 +81,6 @@ export function resolveDrop(input: DropInput): DropOutcome {
     centerOffset: settled / 2,
     cutWidth: cut,
     cutSide: dx > 0 ? 'right' : 'left',
+    savedWidth: 0,
   };
 }

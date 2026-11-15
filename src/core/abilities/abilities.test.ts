@@ -192,16 +192,16 @@ describe('abilities: effects of every level', () => {
     [
       [1, 0],
       [1, 0],
+      [1, 0],
       [2, 0],
       [2, 0],
-      [3, 0],
     ],
     [
       [2, 0],
       [2, 0],
+      [2, 0],
       [3, 0],
       [3, 0],
-      [4, 0],
     ],
   );
 });
@@ -342,7 +342,7 @@ describe('abilities: modifiers of one effect', () => {
     expect(mods('sprinkle', 5)).toEqual({ scoreMult: 3 });
     expect(mods('crumb', 4)).toEqual({ crumbToCoinsPx: 13 });
     expect(mods('ghost')).toEqual({ guides: true });
-    expect(mods('rainbow')).toEqual({ autoPerfect: true });
+    expect(mods('rainbow')).toEqual({ protectCut: true });
     expect(mods('lemon', 2)).toEqual({ speedMult: 1.2, scoreMult: 3.5, perfectCoinAdd: 1 });
   });
 

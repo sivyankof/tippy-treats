@@ -265,7 +265,7 @@ export const CREATURES: Record<CreatureId, CreatureDef> = {
   rainbow: {
     ...keys('rainbow'),
     rarity: 'legendary',
-    ability: { kind: 'rainbow', layers: [1, 1, 2, 2, 3], boostExtraLayers: 1 },
+    ability: { kind: 'rainbow', layers: [1, 1, 1, 2, 2], boostExtraLayers: 1 },
     unlock: [
       { kind: 'bakerLevel', level: 20 },
       { kind: 'shop', berries: 600, minBakerLevel: 5 },

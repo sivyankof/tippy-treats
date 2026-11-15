@@ -129,6 +129,8 @@ export type SimEvent =
       cutWidth: number;
       cutSide: CutSide | null;
       newWidth: number;
+      /** Width a protected layer kept that a normal drop would have cut off (rainbow). */
+      savedWidth: number;
     }
   | { type: 'miss'; shielded: boolean }
   | { type: 'combo'; value: number; widened: number }

@@ -269,7 +269,7 @@ export class TowerSim {
       width: flying.width,
       targetX: this.topLayerX(),
       perfectTolerance: this.perfectTolerance(mods),
-      autoPerfect: mods.autoPerfect,
+      protectCut: mods.protectCut,
       springShare: mods.springShare,
     });
     s.flying = null;
@@ -305,13 +305,21 @@ export class TowerSim {
       cutWidth: outcome.cutWidth,
       cutSide: outcome.cutSide,
       newWidth: outcome.newWidth,
+      savedWidth: outcome.savedWidth,
     });
 
     collectFloatingCoin(s, events, coinX, layer, mods);
     // Zone and ability multipliers multiply together; the zone is that of the landing layer.
     const scoreMult = mods.scoreMult * (ZONES[flying.zoneIndex]?.scoreMult ?? 1);
     this.score(events, layer, outcome.dx, flying.width, perfect, scoreMult);
-    payLanding(s, events, flying.kind === 'golden', perfect, outcome.cutWidth, mods);
+    payLanding(
+      s,
+      events,
+      flying.kind === 'golden',
+      perfect,
+      outcome.cutWidth + outcome.savedWidth,
+      mods,
+    );
 
     const emit = (event: SimEvent): number => events.push(event);
     // The shield covers the N layers after the brownie, so this layer counts with the shield

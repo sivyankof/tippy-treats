@@ -25,7 +25,7 @@ export function collectModifiers(
     result.coinMultAdd += part.coinMultAdd ?? 0;
     result.perfectCoinAdd += part.perfectCoinAdd ?? 0;
     result.perfectTolerance = Math.max(result.perfectTolerance, part.perfectTolerance ?? 0);
-    result.autoPerfect ||= part.autoPerfect ?? false;
+    result.protectCut ||= part.protectCut ?? false;
     result.guides ||= part.guides ?? false;
     result.springShare = Math.max(result.springShare, part.springShare ?? 0);
     if (part.crumbToCoinsPx != null) {

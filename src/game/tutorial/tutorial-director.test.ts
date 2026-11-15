@@ -21,6 +21,7 @@ const land = (quality: 'perfect' | 'normal'): SimEvent => ({
   cutWidth: 0,
   cutSide: null,
   newWidth: 700,
+  savedWidth: 0,
 });
 const state = (
   layers: PlacedLayer[],
