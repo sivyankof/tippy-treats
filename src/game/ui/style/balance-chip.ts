@@ -1,0 +1,62 @@
+import type * as Phaser from 'phaser';
+import type { Currency } from '../../../core/economy';
+import { MENU } from '../../../data/menu-layout';
+import { TREASURE } from '../../../data/treasure-anim';
+import { TREASURE_TEXTURES } from '../../fx/treasure-textures';
+import { shakeX } from '../shake-x';
+import { WalletChip } from './wallet-chip';
+
+const iconHalf = TREASURE.counter.iconSize / 2;
+
+/**
+ * The player's balance of one currency inside a window where it is spent: a `WalletChip` of the
+ * kit (the same counter as in the HUD and the menu headers), placed so that the right end of its
+ * plate stands at `rightX` of the parent. It rolls to a new value, can snap to one and shakes
+ * when a tap could not pay.
+ */
+export class BalanceChip {
+  readonly chip: WalletChip;
+  private readonly x: number;
+
+  constructor(
+    private readonly scene: Phaser.Scene,
+    currency: Currency,
+    rightX: number,
+    y: number,
+  ) {
+    const berries = currency === 'berries';
+    this.chip = new WalletChip(scene, {
+      texture: berries ? TREASURE_TEXTURES.berry : TREASURE_TEXTURES.coin,
+      row: berries ? 1 : 0,
+      hiddenUntilFirst: false,
+      sway: berries,
+    });
+    this.x = rightX - iconHalf - MENU.style.wallet.padRight;
+    this.chip.counter.root.setPosition(this.x, y);
+  }
+
+  /** The object to add to the window. */
+  get root(): Phaser.GameObjects.Container {
+    return this.chip.counter.root;
+  }
+
+  /** Where the icon sits, in the parent's coordinates. */
+  get position(): { x: number; y: number } {
+    return { x: this.root.x, y: this.root.y };
+  }
+
+  /** Rolls the number to `value`; call every frame while the window shows. */
+  update(value: number): void {
+    this.chip.update(value, this.scene.time.now, this.scene.game.loop.delta);
+  }
+
+  /** Shows `value` at once. */
+  snap(value: number): void {
+    this.chip.snap(value);
+  }
+
+  /** The tap could not pay: the counter shakes. */
+  shake(): void {
+    shakeX(this.scene, this.root, this.x);
+  }
+}

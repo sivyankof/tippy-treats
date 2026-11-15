@@ -3,6 +3,7 @@ import type { TeamIds } from '../../../core/team';
 import { CREATURE_IDS, type CreatureId } from '../../../data/creatures';
 import { MENU } from '../../../data/menu-layout';
 import { PALETTE } from '../../../data/palette';
+import { shakeX } from '../shake-x';
 import { VolumePlate } from '../style/volume';
 import { CreatureCard } from './creature-card';
 import { cellAt, layoutGrid, type GridCell } from './team-layout';
@@ -125,17 +126,7 @@ export class TeamGrid {
     const c = this.slotsOf[i];
     if (!c) return;
     const rest = (): number => this.cells[i]?.x ?? c.x;
-    const x = rest();
-    this.scene.tweens.killTweensOf(c);
-    c.setX(x);
-    this.scene.tweens.add({
-      targets: c,
-      x: x + cfg.shakePx,
-      duration: cfg.shakeMs,
-      yoyo: true,
-      repeat: cfg.shakeRepeat,
-      onComplete: () => c.setX(rest()),
-    });
+    shakeX(this.scene, c, rest());
   }
 
   tick(dtMs: number): void {

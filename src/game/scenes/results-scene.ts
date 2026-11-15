@@ -9,13 +9,14 @@ import { gameState } from '../../state';
 import { RecordCelebration } from '../fx/record-celebration';
 import { SCENES, type ResultsData } from '../scene-keys';
 import { createDimOverlay } from '../ui/dim-overlay';
+import { createPlate, type VolumePlate } from '../ui/style/volume';
 import { createOutlinedText } from '../ui/outlined-text';
 import { enterScreen, leaveScreen, type Movable } from '../ui/transition';
 import { fitText } from '../ui/menu/fit-text';
 import { ResultsButtons } from '../ui/menu/results-buttons';
 import { ResultsCoins } from '../ui/menu/results-coins';
 import { ResultsHeader, createStats } from '../ui/menu/results-header';
-import { spreadBlocks } from '../ui/menu/results-layout';
+import { spacingShare, spreadBlocks } from '../ui/menu/results-layout';
 import { ResultsMissions } from '../ui/menu/results-missions';
 import { resultsFlow } from '../ui/menu/results-flow';
 import { ResultsTiers } from '../ui/menu/results-tiers';
@@ -29,6 +30,8 @@ type Block = Phaser.GameObjects.Container | Phaser.GameObjects.Text;
 /** The end of a run: height, stats, coins, XP and the way on (docs/07-ui-screens.md, section 6). */
 export class ResultsScene extends Phaser.Scene {
   private dim!: Phaser.GameObjects.Rectangle;
+  /** The window plate of the kit under the blocks below the header. */
+  private plate!: VolumePlate;
   private header!: ResultsHeader;
   private stats!: ReturnType<typeof createStats>;
   private coins!: ResultsCoins;
@@ -39,6 +42,8 @@ export class ResultsScene extends Phaser.Scene {
   private buttons!: ResultsButtons;
   private celebration: RecordCelebration | null = null;
   private leaving = false;
+  /** Padding and gap of the panel, shrunk on a short screen. */
+  private spacing: { padY: number; gap: number } = { padY: cfg.panel.padY, gap: cfg.panel.gap };
 
   constructor() {
     super(SCENES.results);
@@ -81,7 +86,6 @@ export class ResultsScene extends Phaser.Scene {
         );
     this.hint = createOutlinedText(this, 0, 0, hintText, cfg.nearMissFont, PALETTE.gold);
     fitText(this.hint, cfg.nearMissWidth);
-
     // The creatures the levels handed out are presented before anything else.
     const levelCreatures = newCreaturesOf(summary.levelUps);
     const fresh: CreatureId[] = summary.firstRun
@@ -97,6 +101,10 @@ export class ResultsScene extends Phaser.Scene {
     this.buttons = new ResultsButtons(this, summary.firstRun, flow.handlers, flow.labels);
     this.buttons.setEnabled(false);
     this.coins.setEnabled(false);
+    this.spacing = this.fitSpacing(height);
+    this.plate = createPlate(this, 'window', 0, 0, cfg.panel.width, this.panelHeight());
+    // Under the blocks, over the veil.
+    this.children.moveBelow(this.plate, this.header.container);
 
     this.celebration = null;
     if (summary.isRecord) this.celebrate(width, height);
@@ -136,7 +144,12 @@ export class ResultsScene extends Phaser.Scene {
 
   /** What slides in and out with the screen, top to bottom; the dim veil stays. */
   private content(): Movable[] {
-    return [...this.blocks().map((b) => b.obj), this.buttons.container];
+    return [
+      this.header.container,
+      this.plate,
+      ...this.blocks().map((b) => b.obj),
+      this.buttons.container,
+    ];
   }
 
   /** Confetti, the ribbon, the fanfare and the three-hit vibration of a new record. */
@@ -147,10 +160,9 @@ export class ResultsScene extends Phaser.Scene {
     services.haptics.play('triple');
   }
 
-  /** The blocks above the buttons, top to bottom; empty ones are left out. */
+  /** The blocks on the panel, top to bottom; empty ones are left out. */
   private blocks(): Array<{ obj: Block; height: number }> {
     const all: Array<{ obj: Block; height: number }> = [
-      { obj: this.header.container, height: this.header.height },
       { obj: this.stats.obj, height: this.stats.height },
       { obj: this.coins.container, height: this.coins.height },
       { obj: this.tiers.container, height: this.tiers.height },
@@ -161,25 +173,47 @@ export class ResultsScene extends Phaser.Scene {
     return all.filter((b) => b.height > 0);
   }
 
-  /** Buttons stand at the bottom; the blocks above them share the free room evenly. */
+  /** The panel wraps its blocks: they stand `panel.gap` apart, `panel.padY` from its edges. */
+  private panelHeight(): number {
+    const { padY, gap } = this.spacing;
+    const blocks = this.blocks();
+    const sum = blocks.reduce((total, b) => total + b.height, 0);
+    return sum + gap * Math.max(0, blocks.length - 1) + padY * 2;
+  }
+
+  /** The panel's padding and gaps, shrunk when the header and the panel would not fit above the buttons. */
+  private fitSpacing(screenHeight: number): { padY: number; gap: number } {
+    const { padY, gap } = cfg.panel;
+    const blocks = this.blocks();
+    const sum = blocks.reduce((total, b) => total + b.height, 0);
+    const spacing = gap * Math.max(0, blocks.length - 1) + padY * 2;
+    const room = screenHeight - cfg.buttonsBottom - this.buttons.height - cfg.top - cfg.sectionGap;
+    const share = spacingShare(sum, spacing, this.header.height, room, cfg.panelMinSpacing);
+    return { padY: padY * share, gap: gap * share };
+  }
+
+  /** Buttons stand at the bottom; the header and the panel above them share the free room evenly. */
   private layout(): void {
     const { width, height } = this.scale.gameSize;
     const cx = width / 2;
     this.cameras.main.setSize(width, height);
     this.dim.setSize(width, height);
-    const blocks = this.blocks();
     const buttonsY = height - cfg.buttonsBottom - this.buttons.height / 2;
-    const centres = spreadBlocks(
-      blocks.map((b) => b.height),
+    const panelHeight = this.plate.bodyHeight;
+    const [headerY = 0, panelY = 0] = spreadBlocks(
+      [this.header.height, panelHeight],
       cfg.top,
       buttonsY - this.buttons.height / 2,
       cfg.sectionGap,
     );
-    blocks.forEach((b, i) => {
-      b.obj.setPosition(cx, centres[i]);
-    });
+    this.header.container.setPosition(cx, headerY);
+    this.plate.setPosition(cx, panelY);
+    let y = panelY - panelHeight / 2 + this.spacing.padY;
+    for (const b of this.blocks()) {
+      b.obj.setPosition(cx, y + b.height / 2);
+      y += b.height + this.spacing.gap;
+    }
     this.buttons.container.setPosition(cx, buttonsY);
-    this.xp.layout(width, height);
   }
 
   /** The screen slides away and darkens, then `then` takes over. Buttons stop answering. */

@@ -12,15 +12,23 @@ const input = (overrides: Partial<ContinueOfferInput> = {}): ContinueOfferInput 
 
 describe('continueOffer', () => {
   it('offers the ad on the first continue, and berries only when affordable', () => {
-    expect(continueOffer(input())).toEqual({ ad: 'ready', berryCost: null });
-    expect(continueOffer(input({ berries: 14 }))?.berryCost).toBeNull();
-    expect(continueOffer(input({ berries: 15 }))).toEqual({ ad: 'ready', berryCost: 15 });
+    expect(continueOffer(input({ berries: 15 }))).toEqual({
+      ad: 'ready',
+      berryCost: 15,
+      berriesMissing: 0,
+    });
+  });
+
+  it('keeps the berry price next to the ad when berries are short, with the missing amount', () => {
+    expect(continueOffer(input())).toEqual({ ad: 'ready', berryCost: 15, berriesMissing: 15 });
+    expect(continueOffer(input({ berries: 14 }))?.berriesMissing).toBe(1);
   });
 
   it('shows the disabled ad next to an affordable berry price', () => {
     expect(continueOffer(input({ adReady: false, berries: 40 }))).toEqual({
       ad: 'unavailable',
       berryCost: 15,
+      berriesMissing: 0,
     });
   });
 
@@ -33,6 +41,7 @@ describe('continueOffer', () => {
     expect(continueOffer(input({ continuesUsed: 1, berries: 30 }))).toEqual({
       ad: null,
       berryCost: 30,
+      berriesMissing: 0,
     });
   });
 

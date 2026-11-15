@@ -1,5 +1,6 @@
 import * as Phaser from 'phaser';
 import { CONTINUE_ANIM } from '../../data/continue-anim';
+import { MENU } from '../../data/menu-layout';
 import { PALETTE } from '../../data/palette';
 import { formatNumber, t } from '../../i18n';
 import { services } from '../../services';
@@ -7,26 +8,32 @@ import type { ContinueFlow } from '../continue-flow';
 import { cuesForMoment } from '../fx/moment-cues';
 import { playCues } from '../fx/run-cues';
 import { createTreasureTextures } from '../fx/treasure-textures';
-import { bakeTexture } from './bake-texture';
+import { flyBerries } from './continue-berry-flight';
 import { ContinueButtons } from './continue-buttons';
 import { ContinueTimer } from './continue-timer';
 import { createOutlinedText } from './outlined-text';
+import { TitleRibbon } from './style/title-ribbon';
+import { BalanceChip } from './style/balance-chip';
+import { createPlate } from './style/volume';
 import type { UiRegion } from './ui-regions';
 
-const { window: win, decline, ease } = CONTINUE_ANIM;
-const PANEL_TEXTURE = 'ui_continue_panel';
+const { window: win, decline, ease, button: btn } = CONTINUE_ANIM;
+/** The right end of the balance chip lines up with the buttons. */
+const balanceRight = btn.width / 2;
+/** The ribbon title stands this far above the top edge of the window. */
+const ribbonReach = MENU.style.ribbon.height / 2;
 
 /**
- * The "Continue?" window: slides in from the bottom, shows the tower height, a ring timer
- * and the ways to go on. It only draws what the `ContinueFlow` says and passes taps to it.
+ * The "Continue?" window: a window plate of the kit with a ribbon title; it slides in from the
+ * bottom, shows the tower height, the kit's ring timer and the ways to go on. It only draws what the `ContinueFlow` says and passes taps to it.
  */
 export class ContinueWindow {
   private readonly panel: Phaser.GameObjects.Container;
   private readonly bob: Phaser.GameObjects.Container;
-  private readonly title: Phaser.GameObjects.Text;
   private readonly heightText: Phaser.GameObjects.Text;
   private readonly timer: ContinueTimer;
   private readonly buttons: ContinueButtons;
+  private readonly balance: BalanceChip;
   private readonly declineText: Phaser.GameObjects.Text;
   private flow: ContinueFlow | null = null;
   private shown = false;
@@ -37,24 +44,16 @@ export class ContinueWindow {
 
   constructor(private readonly scene: Phaser.Scene) {
     createTreasureTextures(scene);
-    bakeTexture(scene, PANEL_TEXTURE, win.width, win.height + win.shadowOffset, (g) => {
-      g.fillStyle(PALETTE.panelShadow, 1).fillRoundedRect(
-        0,
-        win.shadowOffset,
-        win.width,
-        win.height,
-        win.radius,
-      );
-      g.fillStyle(PALETTE.panel, 1).fillRoundedRect(0, 0, win.width, win.height, win.radius);
-    });
-    const face = scene.add.image(0, 0, PANEL_TEXTURE).setOrigin(0.5, 0);
-    this.title = createOutlinedText(scene, 0, win.titleY, t('continue.title'), win.titleFont);
+    const plate = createPlate(scene, 'window', 0, win.height / 2, win.width, win.height);
+    const title = new TitleRibbon(scene, 0, 0, t('continue.title'));
     this.heightText = createOutlinedText(scene, 0, win.heightY, '', win.heightFont, PALETTE.gold);
     this.timer = new ContinueTimer(scene, win.timerY);
     this.buttons = new ContinueButtons(scene, {
       onWatchAd: () => void this.flow?.watchAd(),
-      onPayBerries: () => void this.flow?.payWithBerries(),
+      onPayBerries: () => this.payWithBerries(),
+      onShort: () => this.balance.shake(),
     });
+    this.balance = new BalanceChip(scene, 'berries', balanceRight, win.balanceY);
     this.declineText = createOutlinedText(
       scene,
       0,
@@ -66,12 +65,12 @@ export class ContinueWindow {
     this.declineText.on(Phaser.Input.Events.POINTER_UP, () => this.flow?.decline());
 
     this.bob = scene.add.container(0, 0, [
-      face,
-      this.title,
+      plate,
+      title,
       this.heightText,
       this.timer.root,
-      this.buttons.ad,
-      this.buttons.berry,
+      this.balance.root,
+      this.buttons.root,
       this.declineText,
     ]);
     this.panel = scene.add.container(0, 0, [this.bob]).setDepth(win.depth).setVisible(false);
@@ -82,9 +81,9 @@ export class ContinueWindow {
     if (!this.shown) return null;
     return {
       x: this.panel.x - win.width / 2,
-      y: this.panel.y,
+      y: this.panel.y - ribbonReach,
       width: win.width,
-      height: win.height + win.shadowOffset,
+      height: win.height + ribbonReach,
     };
   }
 
@@ -97,40 +96,63 @@ export class ContinueWindow {
   /** Follows the flow every frame: opens, runs and closes the window. `runHeight` is the tower height. */
   update(flow: ContinueFlow | null, runHeight: number): void {
     this.flow = flow;
+    if (flow?.isOpen && !this.shown) this.show(flow, runHeight);
+    // The balance keeps rolling for as long as the window is on screen.
+    if (this.panel.visible && flow) this.balance.update(flow.balance);
     if (!flow?.isOpen) {
       if (this.shown) this.hide();
       return;
     }
-    if (!this.shown) this.show(runHeight);
     this.timer.update(flow);
-    if (flow.offer) this.buttons.sync(flow.offer, flow.adBusy);
+    // While a payment is shown the buttons stay off.
+    if (flow.paying) this.buttons.disable();
+    else if (flow.offer) this.buttons.sync(flow.offer, flow.adBusy);
     this.syncDecline(flow);
   }
 
-  private show(runHeight: number): void {
+  /** Taps the pay button: berries fly into it on success, the balance shakes when short. */
+  private payWithBerries(): void {
+    const flow = this.flow;
+    const offer = flow?.offer;
+    if (!flow || !offer) return;
+    if (offer.berriesMissing > 0) {
+      this.balance.shake();
+      return;
+    }
+    if (!flow.payWithBerries()) return;
+    const button = this.buttons.payButton;
+    flyBerries(this.scene, this.bob, this.balance.position, button, offer.berryCost);
+  }
+
+  private show(flow: ContinueFlow, runHeight: number): void {
     this.shown = true;
+    this.balance.snap(flow.balance);
     this.declineShown = false;
     this.timer.reset();
     this.heightText.setText(t('continue.height', { n: formatNumber(runHeight) }));
     this.scene.tweens.killTweensOf(this.declineText);
     this.declineText.setAlpha(0);
-    this.panel.setVisible(true).setY(this.screenH);
+    this.panel.setVisible(true).setY(this.offscreenY());
     this.slideTo(this.targetY(), win.slideInMs, win.slideInEase);
     this.startBob();
-    this.pulse(this.title, 0);
-    this.pulse(this.heightText, win.titlePulse.ms / 2);
+    this.pulse(this.heightText);
     playCues(cuesForMoment('offerOpened'), services);
   }
 
   private hide(): void {
     this.shown = false;
     this.buttons.disable();
-    this.slideTo(this.screenH, win.slideOutMs, win.slideOutEase, () => {
+    this.slideTo(this.offscreenY(), win.slideOutMs, win.slideOutEase, () => {
       if (!this.shown) this.panel.setVisible(false);
     });
     this.bobTween?.stop();
     this.bobTween = null;
     this.bob.y = 0;
+  }
+
+  /** Below the bottom edge, ribbon included. */
+  private offscreenY(): number {
+    return this.screenH + ribbonReach;
   }
 
   private targetY(): number {
@@ -155,14 +177,13 @@ export class ContinueWindow {
   }
 
   /** A slow breathing so no text of the window stands still. */
-  private pulse(target: Phaser.GameObjects.Text, delay: number): void {
+  private pulse(target: Phaser.GameObjects.Text): void {
     this.scene.tweens.killTweensOf(target);
     target.setScale(1);
     this.scene.tweens.add({
       targets: target,
       scale: win.titlePulse.scale,
       duration: win.titlePulse.ms,
-      delay,
       ease: ease.sine,
       yoyo: true,
       repeat: -1,

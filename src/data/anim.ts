@@ -381,6 +381,8 @@ export const ANIM = {
     numberRollMs: [400, 800],
     /** A change this big (or bigger) rolls for the longest time; the scale is logarithmic. */
     numberRollBigChange: 1000,
+    /** The refusal shake ("this did nothing"): a card, a counter, a button. */
+    refuseShake: { px: 14, ms: 55, repeat: 2 },
   },
   fx: {
     /** Shared cap of live particles. */
@@ -427,7 +429,6 @@ export const ANIM = {
   hud: {
     numberStroke: 8,
     shadowOffset: 4,
-    pauseOverlayAlpha: 0.6,
     /** Steps and step length of the 3-2-1 countdown after a pause. */
     countdownSteps: 3,
     countdownStepMs: 700,

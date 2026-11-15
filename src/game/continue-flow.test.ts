@@ -70,6 +70,7 @@ describe('ContinueFlow', () => {
     expect(cost).toBeGreaterThan(0);
     expect(flow.payWithBerries()).toBe(true);
     flow.decline();
+    flow.update(CONTINUE_ANIM.balance.paidHoldMs);
     expect(flow.takeAction()).toBe('continue');
     expect(wallet.berries).toBe(before - cost);
   });
@@ -104,7 +105,7 @@ describe('ContinueFlow', () => {
     const { flow } = setup('unavailable', true, 20);
     flow.open('classic', 0);
     await flow.watchAd();
-    expect(flow.offer).toEqual({ ad: 'unavailable', berryCost: 15 });
+    expect(flow.offer).toEqual({ ad: 'unavailable', berryCost: 15, berriesMissing: 0 });
     expect(flow.takeAction()).toBeNull();
   });
 
@@ -113,14 +114,44 @@ describe('ContinueFlow', () => {
     flow.open('classic', 0);
     expect(flow.payWithBerries()).toBe(true);
     expect(wallet.berries).toBe(5);
+    expect(flow.takeAction()).toBeNull();
+    flow.update(CONTINUE_ANIM.balance.paidHoldMs);
     expect(flow.takeAction()).toBe('continue');
   });
 
-  it('cannot pay what it does not offer', () => {
-    const { flow, wallet } = setup('rewarded', true, 14);
+  it('keeps the window open while the payment is shown', () => {
+    const { flow } = setup('rewarded', true, 20);
     flow.open('classic', 0);
+    flow.payWithBerries();
+    expect(flow.paying).toBe(true);
+    flow.update(CONTINUE_ANIM.balance.paidHoldMs - 1);
+    expect(flow.isOpen).toBe(true);
+    expect(flow.takeAction()).toBeNull();
+    flow.update(1);
+    expect(flow.paying).toBe(false);
+    expect(flow.takeAction()).toBe('continue');
+  });
+
+  it('opens with the ad and a short berry price, and a tap on the price takes nothing', () => {
+    const { flow, wallet } = setup('rewarded', true, 14);
+    expect(flow.open('classic', 0)).toBe(true);
+    expect(flow.offer).toEqual({ ad: 'ready', berryCost: 15, berriesMissing: 1 });
     expect(flow.payWithBerries()).toBe(false);
     expect(wallet.berries).toBe(14);
+    expect(flow.takeAction()).toBeNull();
+  });
+
+  it('reports the wallet balance for the counter, and the new one after paying', () => {
+    const { flow } = setup('rewarded', true, 20);
+    flow.open('classic', 0);
+    expect(flow.balance).toBe(20);
+    flow.payWithBerries();
+    expect(flow.balance).toBe(5);
+  });
+
+  it('does not open the second continue when berries are short (no ad there)', () => {
+    const { flow } = setup('rewarded', true, 29);
+    expect(flow.open('classic', 1)).toBe(false);
   });
 
   it('forgets a late ad result after dispose', async () => {

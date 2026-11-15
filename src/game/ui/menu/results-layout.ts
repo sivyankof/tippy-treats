@@ -27,6 +27,22 @@ export function spreadBlocks(
   });
 }
 
+/**
+ * How much of the panel's padding and gaps survives so that the header and the panel fit into
+ * `room` (1 when they fit as they are). The spacing shrinks together, never below `minShare`.
+ */
+export function spacingShare(
+  blocksHeight: number,
+  spacing: number,
+  headerHeight: number,
+  room: number,
+  minShare: number,
+): number {
+  if (spacing <= 0) return 1;
+  const free = room - headerHeight - blocksHeight;
+  return Math.min(1, Math.max(minShare, free / spacing));
+}
+
 /** A child of a block together with the height it takes. */
 export interface Row {
   obj: Phaser.GameObjects.Text | Phaser.GameObjects.Container;

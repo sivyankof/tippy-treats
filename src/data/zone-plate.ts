@@ -1,9 +1,11 @@
 import { ANIM } from './anim';
 import { HUD_LAYOUT } from './hud-layout';
+import { MENU } from './menu-layout';
 
 const WIDTH = 660;
 const HEIGHT = 132;
-const SHADOW_OFFSET = 10;
+/** How far the soft shadow of the card plate reaches below its body. */
+const SHADOW_REACH = MENU.style.looks.card.shadowOffset + MENU.style.looks.card.shadowBlur;
 const TILT_DEG = -2;
 const SWAY_DEG = 1.2;
 
@@ -15,24 +17,22 @@ const TILT_DROP = Math.ceil(
 );
 
 /**
- * The plate that announces a new zone (docs/06, "Смена зоны"): it drops in from the top
- * with `backOut` in 300 ms, hangs for 1.2 s and leaves upwards.
+ * The plate that announces a new zone (docs/06, "Смена зоны"): a card plate of the kit with an
+ * accent rim. It drops in from the top with `backOut` in 300 ms, hangs for 1.2 s and leaves
+ * upwards.
  */
 export const ZONE_BANNER = {
   width: WIDTH,
   height: HEIGHT,
-  radius: 46,
-  shadowOffset: SHADOW_OFFSET,
-  /** Width of the coloured edge inside the plate. */
-  edge: 8,
-  /** Inset of that edge from the plate border. */
-  edgeInset: 14,
+  shadowReach: SHADOW_REACH,
   fontSize: 72,
+  /** Room between the name and the ends of the plate. */
+  labelPad: 40,
   /**
    * Centre y while it hangs. The plate stays inside the HUD band, so the flying layer
    * (which may be a rush layer with its wind-up) is never covered; it hangs over the badge row.
    */
-  restY: LOWEST_EDGE_Y - (HEIGHT + SHADOW_OFFSET) / 2 - TILT_DROP,
+  restY: LOWEST_EDGE_Y - HEIGHT / 2 - SHADOW_REACH - TILT_DROP,
   lowestEdgeY: LOWEST_EDGE_Y,
   tiltDrop: TILT_DROP,
   inMs: 300,

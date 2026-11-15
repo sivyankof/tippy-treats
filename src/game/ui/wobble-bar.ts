@@ -9,8 +9,8 @@ import { cssColor } from '../../util/color';
 import { oscillate01 } from '../../util/math';
 import { stepSpring, type SpringState } from '../fx/anim-curves';
 import { bakeTexture } from './bake-texture';
-import { BarPlate } from './bar-plate';
 import { applyIdlePose, idlePose, type IdlePose } from './idle-motion';
+import { HudPlate } from './style/hud-plate';
 import type { Movable } from './transition';
 import { FONT_FAMILY, FONT_WEIGHT } from './fonts';
 
@@ -43,11 +43,11 @@ function bakePill(
 }
 
 /**
- * Wobble label and gauge on a backing plate: baked textures, nothing is re-tessellated per
+ * Wobble label and gauge on a see-through plate of the kit: baked textures, nothing is re-tessellated per
  * frame. All three sway a little (`IDLE_MOTION`), so the bar never stands still.
  */
 export class WobbleBar {
-  private readonly plate: BarPlate;
+  private readonly plate: HudPlate;
   private readonly label: Phaser.GameObjects.Text;
   private readonly pose: IdlePose = { scaleX: 1, scaleY: 1, angle: 0, bob: 0 };
   /** Track, fills and wave band: scaled together for the danger pulse. */
@@ -84,7 +84,7 @@ export class WobbleBar {
     );
 
     // Created first: it draws under the label and the gauge.
-    this.plate = new BarPlate(scene);
+    this.plate = new HudPlate(scene);
     this.label = scene.add
       .text(0, barY, t('run.wobble'), {
         fontFamily: FONT_FAMILY,
@@ -122,7 +122,7 @@ export class WobbleBar {
 
   /** Plate, label and gauge, for screen transitions. */
   get parts(): Movable[] {
-    return [this.plate.image, this.label, this.gauge];
+    return [this.plate, this.label, this.gauge];
   }
 
   /** Centres label and gauge as one row on the plate. Call on creation and on every resize. */
@@ -178,7 +178,7 @@ export class WobbleBar {
       idlePose(IDLE_MOTION.wobbleLabel, timeMs, IDLE_PHASE.label, this.pose),
     );
     applyIdlePose(
-      this.plate.image,
+      this.plate,
       idlePose(IDLE_MOTION.wobblePlate, timeMs, IDLE_PHASE.plate, this.pose),
     );
   }

@@ -12,12 +12,11 @@ export const CONTINUE_ANIM = {
   ease: { sine: 'Sine.easeInOut', pop: 'Back.easeOut' },
   window: {
     depth: 400,
-    /** Title and height text breathe between 1 and this scale. */
+    /** The height text breathes between 1 and this scale (the ribbon title breathes by itself). */
     titlePulse: { scale: 1.05, ms: 1100 },
+    /** The window plate of the kit (`VolumePlate` 'window'); the ribbon title sits on its top edge. */
     width: 900,
-    height: 1060,
-    radius: 56,
-    shadowOffset: 14,
+    height: 1040,
     /** Gap between the window and the bottom edge of the screen. */
     bottomMargin: 36,
     slideInMs: 380,
@@ -28,14 +27,14 @@ export const CONTINUE_ANIM = {
     bobDistance: 8,
     bobPeriodMs: 1900,
     /** Content rows: y from the top of the window. */
-    titleY: 100,
-    titleFont: 84,
-    heightY: 205,
+    heightY: 150,
     heightFont: 56,
-    timerY: 430,
-    adButtonY: 740,
-    berryButtonY: 890,
-    declineY: 1000,
+    timerY: 370,
+    adButtonY: 700,
+    berryButtonY: 850,
+    /** Berry balance counter: right edge in line with the buttons, between the timer and the buttons. */
+    balanceY: 570,
+    declineY: 970,
   },
   timer: {
     radius: 128,
@@ -61,6 +60,22 @@ export const CONTINUE_ANIM = {
     disabledAlpha: 0.5,
     berryIconSize: 72,
     berryGap: 16,
+  },
+  /** The berry balance in the window: the refusal shake and the berries flying into the pay button. */
+  balance: {
+    /** At most this many berries fly, however high the price. */
+    maxFlying: 8,
+    flightMs: 320,
+    staggerMs: 35,
+    /** Size of a flying berry and the scale it shrinks to on arrival. */
+    size: 56,
+    endScale: 0.5,
+    ease: 'Quad.easeIn',
+    /**
+     * After a payment the window stays this long with its buttons off, so the number rolls down
+     * and the last berry lands (the longest roll is `ANIM.ui.numberRollMs[1]`).
+     */
+    paidHoldMs: 850,
   },
   decline: {
     font: 44,

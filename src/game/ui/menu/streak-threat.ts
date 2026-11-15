@@ -2,12 +2,14 @@ import * as Phaser from 'phaser';
 import { MENU } from '../../../data/menu-layout';
 import { PALETTE } from '../../../data/palette';
 import { STREAK } from '../../../data/streak';
-import { formatNumber, t, tn } from '../../../i18n';
+import { t, tn } from '../../../i18n';
 import { services } from '../../../services';
 import { gameState } from '../../../state';
-import { createTextButton } from '../button';
+import { createTextButton, type Button } from '../button';
 import { createOutlinedText } from '../outlined-text';
+import { BalanceChip } from '../style/balance-chip';
 import { PopupWindow } from '../style/popup-window';
+import { createPriceButton } from '../style/price-button';
 import { fitText } from './fit-text';
 import { FlameIcon } from './flame-icon';
 
@@ -42,6 +44,12 @@ export function openStreakThreat(scene: Phaser.Scene, onClosed?: () => void): vo
     radius: cfg.buttonRadius,
     shadowOffset: cfg.buttonShadow,
   };
+  const place = (button: Button): Button => {
+    button.setY(y + cfg.buttonHeight / 2);
+    content.add(button);
+    y += cfg.buttonHeight + cfg.buttonGap;
+    return button;
+  };
   const make = (label: string, fill: number, key: string, onClick: () => void) => {
     const made = createTextButton(scene, {
       text: label,
@@ -50,14 +58,21 @@ export function openStreakThreat(scene: Phaser.Scene, onClosed?: () => void): vo
       fill,
       layout: buttonLayout,
       keyPrefix: key,
-      x: 0,
-      y: y + cfg.buttonHeight / 2,
       onClick,
     });
-    content.add(made.button);
-    y += cfg.buttonHeight + cfg.buttonGap;
+    place(made.button);
     return made;
   };
+
+  // The balance sits above the buttons: the player sees what they have and what is missing.
+  const balance = new BalanceChip(scene, 'berries', cfg.balanceRight, y + cfg.balanceHeight / 2);
+  content.add(balance.root);
+  y += cfg.balanceHeight + cfg.buttonGap;
+  const balanceTick = (): void => balance.update(gameState.berries);
+  scene.events.on(Phaser.Scenes.Events.UPDATE, balanceTick);
+  content.once(Phaser.GameObjects.Events.DESTROY, () =>
+    scene.events.off(Phaser.Scenes.Events.UPDATE, balanceTick),
+  );
 
   let busy = false;
   const settle = (): void => popup.close();
@@ -90,21 +105,24 @@ export function openStreakThreat(scene: Phaser.Scene, onClosed?: () => void): vo
 
   if (!services.ads.isRewardedReady()) markAdUnavailable();
 
-  const missing = STREAK.restoreBerries - gameState.berries;
-  const short = missing > 0;
-  const berries = make(
-    short
-      ? t('streakThreat.restoreShort', { n: formatNumber(missing) })
-      : tn('streakThreat.restoreBerries', STREAK.restoreBerries, {
-          price: formatNumber(STREAK.restoreBerries),
-        }),
-    short ? cfg.shortFill : PALETTE.accent,
-    short ? 'ui_threat_short' : 'ui_threat_berries',
-    () => {
-      if (!busy && gameState.restoreStreak('berries')) settle();
-    },
+  place(
+    createPriceButton(scene, {
+      template: tn('streakThreat.restoreBerries', STREAK.restoreBerries, { price: '{price}' }),
+      price: STREAK.restoreBerries,
+      have: gameState.berries,
+      currency: 'berries',
+      fill: PALETTE.accent,
+      layout: buttonLayout,
+      font: cfg.buttonFont,
+      maxWidth: cfg.buttonWidth - cfg.buttonRadius * 2,
+      keyPrefix: 'ui_threat_berries',
+      onPay: () => {
+        if (!busy && gameState.restoreStreak('berries')) settle();
+      },
+      // The tap takes nothing; the counter shakes.
+      onShort: () => balance.shake(),
+    }),
   );
-  if (short) berries.button.setEnabled(false);
 
   const decline = createOutlinedText(
     scene,

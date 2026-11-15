@@ -4,32 +4,15 @@ import { ZONE_BANNER } from '../../data/zone-plate';
 import { ZONES } from '../../data/zones';
 import { t } from '../../i18n';
 import { DEG_TO_RAD, sineWave } from '../../util/math';
-import { bakeTexture } from './bake-texture';
-import { createStrokedText } from './outlined-text';
+import { fitText } from './menu/fit-text';
+import { createOutlinedText } from './outlined-text';
+import { createVolumeImage, faceOffsetY, lookOf } from './style/volume';
 
-const TEXTURE = 'ui_zone_banner';
-const { width, height, radius, shadowOffset, edge, edgeInset } = ZONE_BANNER;
-
-function bakePlate(scene: Phaser.Scene): void {
-  bakeTexture(scene, TEXTURE, width, height + shadowOffset, (g) => {
-    g.fillStyle(PALETTE.panelShadow, 1);
-    g.fillRoundedRect(0, shadowOffset, width, height, radius);
-    g.fillStyle(PALETTE.panel, 1);
-    g.fillRoundedRect(0, 0, width, height, radius);
-    g.lineStyle(edge, PALETTE.accent, 1);
-    g.strokeRoundedRect(
-      edgeInset,
-      edgeInset,
-      width - edgeInset * 2,
-      height - edgeInset * 2,
-      radius - edgeInset / 2,
-    );
-  });
-}
+const { width, height } = ZONE_BANNER;
 
 /**
- * The plate with the name of a new zone. It is shown over the HUD scene, does not take
- * taps, and drops in from above, hangs, then leaves upwards.
+ * The plate with the name of a new zone: a card plate of the kit with an accent rim. It is shown
+ * over the HUD scene, does not take taps, and drops in from above, hangs, then leaves upwards.
  */
 export class ZoneBanner {
   private readonly root: Phaser.GameObjects.Container;
@@ -37,18 +20,11 @@ export class ZoneBanner {
   private hangTimer: Phaser.Time.TimerEvent | null = null;
 
   constructor(private readonly scene: Phaser.Scene) {
-    bakePlate(scene);
-    const plate = scene.add.image(0, shadowOffset / 2, TEXTURE);
-    this.label = createStrokedText(
-      scene,
-      0,
-      0,
-      '',
-      ZONE_BANNER.fontSize,
-      PALETTE.textDark,
-      PALETTE.panel,
-      0,
-    );
+    // One baked image, not a nine-slice: the plate is tilted, and a tilted nine-slice breaks up.
+    const plate = createVolumeImage(scene, 'ui_zone_banner', width, height, lookOf('card'), {
+      rim: PALETTE.accent,
+    });
+    this.label = createOutlinedText(scene, 0, faceOffsetY('card'), '', ZONE_BANNER.fontSize);
     this.root = scene.add
       .container(0, -height, [plate, this.label])
       .setVisible(false)
@@ -64,7 +40,7 @@ export class ZoneBanner {
   show(zoneIndex: number): void {
     const zone = ZONES[zoneIndex];
     if (!zone) return;
-    this.label.setText(t(`zone.${zone.id}.name`));
+    fitText(this.label.setText(t(`zone.${zone.id}.name`)), width - ZONE_BANNER.labelPad * 2);
     this.hangTimer?.remove();
     this.scene.tweens.killTweensOf(this.root);
     this.root.setVisible(true).setY(-height);

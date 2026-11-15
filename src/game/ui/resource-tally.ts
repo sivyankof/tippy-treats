@@ -97,6 +97,13 @@ export class ResourceCounter {
     this.hopMs = 0;
   }
 
+  /** Shows `total` at once, without a roll (a window that opens must not roll from an old value). */
+  snap(total: number): void {
+    this.roll.set(shownTotal(total, this.pending), true);
+    this.shown = this.roll.shown;
+    this.text.setText(formatNumber(this.shown));
+  }
+
   /** `total` is the run total as the game knows it. */
   update(total: number, timeMs: number, dtMs: number): void {
     const target = shownTotal(total, this.pending);

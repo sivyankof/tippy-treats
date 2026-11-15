@@ -4,10 +4,10 @@ import type { CreatureId } from '../../../data/creatures';
 import { MENU } from '../../../data/menu-layout';
 import { PALETTE } from '../../../data/palette';
 import { formatNumber, t } from '../../../i18n';
-import { Button, createLabelButton, createTextButton, type LabelButtonLayout } from '../button';
+import { Button, createTextButton, type LabelButtonLayout } from '../button';
+import { createPriceButton } from '../style/price-button';
 import { createTextPlate } from './detail-info';
-import { mainAction, missingAmount, type MainAction } from './detail-model';
-import { PriceTag } from './price-tag';
+import { mainAction, type MainAction } from './detail-model';
 import { unlockText } from './unlock-text';
 
 const cfg = MENU.detail;
@@ -52,7 +52,7 @@ function textButton(
   }).button;
 }
 
-/** A wide button whose label ends with the coin or berry icon; grey when `price` is out of reach. */
+/** A wide button whose label ends with the coin or berry icon; the kit's grey one when `price` is out of reach. */
 function priceButton(
   scene: Phaser.Scene,
   template: string,
@@ -61,26 +61,19 @@ function priceButton(
   have: number,
   onClick: () => void,
 ): Button {
-  const short = have < price;
-  const tag = new PriceTag(scene, 0, 0, short ? cfg.shortFont : wideButton.font);
-  tag.show(
-    short ? t('detail.short', { price: '{price}' }) : template,
-    short ? missingAmount(price, have) : price,
+  return createPriceButton(scene, {
+    template,
+    price,
+    have,
     currency,
-  );
-  tag.setScale(Math.min(1, (wideButton.width - cfg.buttonPadding * 2) / tag.contentWidth));
-  const fill = short ? cfg.disabledFill : PALETTE.accent;
-  return createLabelButton(
-    scene,
-    0,
-    0,
-    tag,
-    fill,
-    wideButton,
-    'ui_detail_wide',
-    onClick,
-    'volume',
-  ).setEnabled(!short);
+    fill: PALETTE.accent,
+    layout: wideButton,
+    font: wideButton.font,
+    shortFont: cfg.shortFont,
+    maxWidth: wideButton.width - cfg.buttonPadding * 2,
+    keyPrefix: 'ui_detail_wide',
+    onPay: onClick,
+  });
 }
 
 /** The main and the secondary buttons of a creature card, and where they stand. */

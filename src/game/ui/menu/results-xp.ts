@@ -107,10 +107,6 @@ export class ResultsXp {
     this.panel?.tick(dtMs);
   }
 
-  layout(width: number, height: number): void {
-    this.panel?.layout(width, height);
-  }
-
   /** The bar flashes, then the window of that level opens (when the run recorded one). */
   private levelReached(level: number, then: () => void): void {
     if (this.stopped) return;

@@ -1,6 +1,5 @@
-import * as Phaser from 'phaser';
+import type * as Phaser from 'phaser';
 import type { Currency } from '../../../core/economy';
-import { ANIM } from '../../../data/anim';
 import { CREATURES } from '../../../data/creatures';
 import { MENU } from '../../../data/menu-layout';
 import { PALETTE } from '../../../data/palette';
@@ -9,10 +8,8 @@ import { services } from '../../../services';
 import type { LevelUp } from '../../../state/game-state';
 import { CreaturePortrait } from '../../objects/creature-portrait';
 import { createTextButton } from '../button';
-import { createDimOverlay } from '../dim-overlay';
 import { createOutlinedText } from '../outlined-text';
-import { faceOffsetY, VolumePlate } from '../style/volume';
-import { openPopup } from '../transition';
+import { PopupWindow } from '../style/popup-window';
 import { fitText } from './fit-text';
 import { PriceTag } from './price-tag';
 import { rewardLines, type RewardLine } from './results-text';
@@ -21,27 +18,25 @@ import { stackRows, type Row } from './results-layout';
 const cfg = MENU.results.levelUp;
 
 /**
- * The window that pops up for every baker level a run reached: "Level 4!" and what the level
- * paid. `onClose` runs when the player closes it; the window then removes itself.
+ * The window that pops up for every baker level a run reached: a `PopupWindow` of the kit titled
+ * "Level 4!" with what the level paid. `onClose` runs once the player closed it and it is gone.
  */
 export class LevelUpPanel {
-  private readonly dim: Phaser.GameObjects.Rectangle;
-  private readonly panel: Phaser.GameObjects.Container;
+  private readonly popup: PopupWindow;
   private readonly portraits: CreaturePortrait[] = [];
-  private closing = false;
 
   constructor(
     private readonly scene: Phaser.Scene,
     levelUp: LevelUp,
-    private readonly onClose: () => void,
+    onClose: () => void,
   ) {
-    const { width, height } = scene.scale.gameSize;
-    this.dim = createDimOverlay(scene, cfg.dimAlpha, width, height)
-      .setInteractive()
-      .setDepth(cfg.depth);
-    this.panel = scene.add.container(width / 2, height / 2).setDepth(cfg.depth + 1);
+    this.popup = new PopupWindow(scene, {
+      title: t('levelUp.title', { n: levelUp.level }),
+      closable: false,
+      closeOnVeil: false,
+      onClosed: onClose,
+    });
     this.build(levelUp);
-    openPopup(scene, this.dim, this.panel);
     services.audio.record();
     services.haptics.play('triple');
   }
@@ -50,43 +45,30 @@ export class LevelUpPanel {
     for (const portrait of this.portraits) portrait.tick(dtMs);
   }
 
-  layout(width: number, height: number): void {
-    this.dim.setSize(width, height);
-    this.panel.setPosition(width / 2, height / 2);
-  }
-
   private build(levelUp: LevelUp): void {
-    const inner = cfg.width - cfg.padding * 2;
-    const title = createOutlinedText(
-      this.scene,
-      0,
-      0,
-      t('levelUp.title', { n: levelUp.level }),
-      cfg.titleFont,
-      PALETTE.gold,
-    );
-    fitText(title, inner);
-    const rows: Row[] = [{ obj: title, height: cfg.titleFont * cfg.lineHeight }];
+    const inner = this.popup.innerWidth;
+    const rows: Row[] = [];
     for (const line of rewardLines(levelUp)) rows.push(...this.lineRows(line, inner));
     const { button: ok } = createTextButton(this.scene, {
       text: t('levelUp.ok'),
       font: cfg.okButton.font,
-      maxLabelWidth: cfg.okButton.width - cfg.padding,
+      maxLabelWidth: cfg.okButton.width - cfg.labelPad,
       fill: PALETTE.success,
       layout: cfg.okButton,
       keyPrefix: 'ui_level_up_ok',
-      onClick: () => this.close(),
+      onClick: () => {
+        ok.setEnabled(false);
+        this.popup.close();
+      },
     });
     rows.push({ obj: ok, height: cfg.okButton.height });
 
-    // The background is sized from the rows, so stack them into a scratch container first.
+    // The rows stack around the origin of `body`; the content of the window starts at its top.
     const body = this.scene.add.container(0, 0);
     const total = stackRows(body, rows, cfg.gap);
-    const w = cfg.width;
-    const h = total + cfg.padding * 2;
-    const plate = new VolumePlate(this.scene, 'window', h, { fill: cfg.fill }).setBodyWidth(w);
-    body.setY(faceOffsetY('window'));
-    this.panel.add([plate, body]);
+    body.setY(total / 2);
+    this.popup.content.add(body);
+    this.popup.setContentHeight(total);
   }
 
   /** The rows of one reward; a creature that was already owned adds a row for the refund. */
@@ -152,20 +134,5 @@ export class LevelUpPanel {
 
   private priceTag(text: string, amount: number, currency: Currency): PriceTag {
     return new PriceTag(this.scene, 0, 0, cfg.lineFont).show(text, amount, currency);
-  }
-
-  private close(): void {
-    if (this.closing) return;
-    this.closing = true;
-    this.scene.tweens.add({
-      targets: [this.panel, this.dim],
-      alpha: 0,
-      duration: ANIM.ui.popup.dimMs,
-      onComplete: () => {
-        this.panel.destroy();
-        this.dim.destroy();
-        this.onClose();
-      },
-    });
   }
 }

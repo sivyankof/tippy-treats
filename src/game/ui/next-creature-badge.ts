@@ -3,21 +3,24 @@ import { nextCreature, type NextCreature } from '../../core/team-queue';
 import type { TeamSlot } from '../../core/sim-types';
 import { ANIM } from '../../data/anim';
 import { HUD_LAYOUT } from '../../data/hud-layout';
+import { MENU } from '../../data/menu-layout';
 import { IDLE_MOTION, IDLE_PHASE } from '../../data/idle-motion';
 import { PALETTE } from '../../data/palette';
 import { createCreatureIcon, setCreatureIcon } from './creature-icons';
 import { idlePose, type IdlePose } from './idle-motion';
 import { nextCreatureLabel } from './next-creature-label';
 import { createStrokedText } from './outlined-text';
+import { HudPlate } from './style/hud-plate';
 
-const { badgeSize, badgeGap, badgeMargin, badgeRowY, nextFont, nextStroke } = HUD_LAYOUT;
+const { badgeSize, badgeGap, badgeMargin, badgeRowY, nextFont, nextStroke, nextChip } = HUD_LAYOUT;
 
 /**
  * "Next creature" at the right of the badge row: the creature icon and how many layers away
- * its layer is. Hidden for a run without a team. The text pops when it changes, the icon when
+ * its layer is, on a see-through wallet chip of the kit. Hidden for a run without a team. The text pops when it changes, the icon when
  * another creature comes next.
  */
 export class NextCreatureBadge {
+  private readonly chip: HudPlate;
   private readonly icon: Phaser.GameObjects.Image;
   private readonly label: Phaser.GameObjects.Text;
   private screenWidth = 0;
@@ -28,6 +31,7 @@ export class NextCreatureBadge {
   private readonly pose: IdlePose = { scaleX: 1, scaleY: 1, angle: 0, bob: 0 };
 
   constructor(private readonly scene: Phaser.Scene) {
+    this.chip = new HudPlate(scene, MENU.style.wallet.fill).setVisible(false);
     this.icon = createCreatureIcon(scene, 0, badgeRowY).setVisible(false);
     this.label = createStrokedText(
       scene,
@@ -43,9 +47,9 @@ export class NextCreatureBadge {
       .setVisible(false);
   }
 
-  /** Both parts, for screen transitions and tests of the layout. */
+  /** The parts, for screen transitions and tests of the layout. */
   get parts(): Phaser.GameObjects.GameObject[] {
-    return [this.icon, this.label];
+    return [this.chip, this.icon, this.label];
   }
 
   layout(screenWidth: number): void {
@@ -74,6 +78,7 @@ export class NextCreatureBadge {
     const visible = next !== null;
     if (visible !== this.visible) {
       this.visible = visible;
+      this.chip.setVisible(visible);
       this.icon.setVisible(visible);
       this.label.setVisible(visible);
     }
@@ -94,11 +99,18 @@ export class NextCreatureBadge {
     if (this.shown) this.pop(creatureChanged ? this.icon : this.label);
   }
 
-  /** Text hugs the right margin, the icon sits to its left. */
+  /** Text hugs the right margin, the icon sits to its left; the chip runs from the icon to past the text. */
   private place(): void {
-    const right = this.screenWidth - badgeMargin;
+    const right = this.screenWidth - badgeMargin - nextChip.padX;
     this.label.setX(right);
     this.icon.setX(right - this.label.width - badgeGap - badgeSize / 2);
+    const chipRight = right + nextChip.padX;
+    this.chip.place(
+      (this.icon.x + chipRight) / 2,
+      badgeRowY,
+      chipRight - this.icon.x,
+      nextChip.height,
+    );
   }
 
   private pop(target: Phaser.GameObjects.Image | Phaser.GameObjects.Text): void {

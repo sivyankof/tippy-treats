@@ -1,19 +1,10 @@
 import * as Phaser from 'phaser';
 import { ANIM } from '../../data/anim';
-import { MENU_BUTTON } from '../../data/hud-layout';
-import { PALETTE } from '../../data/palette';
 import { services } from '../../services';
 import { createGlossBand, sweepGloss } from '../fx/gloss-sweep';
-import { bakeTexture } from './bake-texture';
 import { fitText } from './menu/fit-text';
 import { createOutlinedText } from './outlined-text';
-import { bakeVolume, lookOf } from './style/volume';
-
-/**
- * 'flat': the run look, a face over a hard dark shadow. 'volume': the menu look of
- * `style/volume.ts`, a glossy gradient face over a darker bevel, outlined, with a soft shadow.
- */
-export type ButtonLook = 'flat' | 'volume';
+import { createVolumeImage, lookOf } from './style/volume';
 
 export interface ButtonOptions {
   /** Centre of the button on screen. */
@@ -23,7 +14,7 @@ export interface ButtonOptions {
   height: number;
   radius: number;
   fill: number;
-  shadowColor: number;
+  /** Height of the darker bevel under the face. */
   shadowOffset: number;
   /** Key of the baked face texture. Buttons with the same look share one key. */
   textureKey: string;
@@ -32,11 +23,9 @@ export interface ButtonOptions {
   /** Label or icon placed on the centre of the face. */
   content?: Phaser.GameObjects.GameObject;
   onClick: () => void;
-  /** 'flat' when left out. In the 'volume' look `shadowOffset` is the bevel under the face. */
-  look?: ButtonLook;
 }
 
-/** Size and look of a text button: the shape fields of MENU_BUTTON and TOGGLE_BUTTON. */
+/** Size and look of a text button, such as `MENU.wideButton`. */
 export interface LabelButtonLayout {
   width: number;
   height: number;
@@ -45,8 +34,8 @@ export interface LabelButtonLayout {
 }
 
 /**
- * A text button with a dark drop shadow. `keyPrefix` names the baked face together with the
- * fill, so buttons of different sizes never share a texture.
+ * A button with a label or any other content on its face. `keyPrefix` names the baked face
+ * together with the fill, so buttons of different sizes never share a texture.
  */
 export function createLabelButton(
   scene: Phaser.Scene,
@@ -57,7 +46,6 @@ export function createLabelButton(
   layout: LabelButtonLayout,
   keyPrefix: string,
   onClick: () => void,
-  look: ButtonLook = 'flat',
 ): Button {
   const { width, height, radius, shadowOffset } = layout;
   return new Button(scene, {
@@ -67,12 +55,10 @@ export function createLabelButton(
     height,
     radius,
     fill,
-    shadowColor: PALETTE.textDark,
     shadowOffset,
     textureKey: `${keyPrefix}_${fill.toString(16)}`,
     content: label,
     onClick,
-    look,
   });
 }
 
@@ -88,8 +74,6 @@ export interface TextButtonOptions {
   /** Centre of the button; (0, 0) when left out. */
   x?: number;
   y?: number;
-  /** The menu look ('volume') when left out. */
-  look?: ButtonLook;
 }
 
 /** A label button whose outlined text shrinks to fit, so long Russian labels stay inside. */
@@ -110,22 +94,8 @@ export function createTextButton(
     options.layout,
     options.keyPrefix,
     options.onClick,
-    options.look ?? 'volume',
   );
   return { button, label };
-}
-
-/** The big text button of the pause and results screens. */
-export function createMenuButton(
-  scene: Phaser.Scene,
-  x: number,
-  y: number,
-  text: string,
-  fill: number,
-  onClick: () => void,
-): Button {
-  const label = createOutlinedText(scene, 0, 0, text, MENU_BUTTON.font);
-  return createLabelButton(scene, x, y, label, fill, MENU_BUTTON, 'ui_menu_button', onClick);
 }
 
 export interface PressFeedbackOptions {
@@ -192,7 +162,7 @@ export function attachPressFeedback(
 }
 
 /**
- * Rounded button with a drop shadow and press feedback. A click counts only when
+ * Rounded button of the style kit with press feedback. A click counts only when
  * the press started on the button and the pointer is still over it on release.
  *
  * The press scales the button itself, the breathing scales `breatheRoot` inside it, and
@@ -224,33 +194,21 @@ export class Button extends Phaser.GameObjects.Container {
     scene.add.existing(this);
   }
 
-  /** The baked face, placed so that (0, 0) is the centre of the face (not of its shadow). */
+  /**
+   * The baked face in the look of `style/volume.ts` (gradient, gloss, outline, bevel, soft
+   * shadow), placed so that (0, 0) is the centre of the face (not of the bevel or the shadow).
+   */
   private static createFace(scene: Phaser.Scene, options: ButtonOptions): Phaser.GameObjects.Image {
     const { width, height, shadowOffset, radius, fill } = options;
-    if (options.look === 'volume') {
-      const art = bakeVolume(
-        scene,
-        `${options.textureKey}_vol`,
-        width,
-        height + shadowOffset,
-        lookOf('button', radius, shadowOffset),
-        { fill },
-        options.decorate ? (g) => options.decorate?.(g, width, height) : undefined,
-      );
-      return new Phaser.GameObjects.Image(scene, 0, 0, art.key).setOrigin(
-        (art.left + width / 2) / art.textureWidth,
-        (art.top + height / 2) / art.textureHeight,
-      );
-    }
-    bakeTexture(scene, options.textureKey, width, height + shadowOffset, (g) => {
-      g.fillStyle(options.shadowColor, 1).fillRoundedRect(0, shadowOffset, width, height, radius);
-      g.fillStyle(fill, 1).fillRoundedRect(0, 0, width, height, radius);
-      options.decorate?.(g, width, height);
-    });
-    return new Phaser.GameObjects.Image(scene, 0, -height / 2, options.textureKey).setOrigin(
-      0.5,
-      0,
-    );
+    return createVolumeImage(
+      scene,
+      `${options.textureKey}_vol`,
+      width,
+      height + shadowOffset,
+      lookOf('button', radius, shadowOffset),
+      { fill },
+      options.decorate ? (g) => options.decorate?.(g, width, height) : undefined,
+    ).setY(shadowOffset / 2);
   }
 
   /** A disabled button ignores the pointer. */

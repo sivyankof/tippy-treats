@@ -10,8 +10,20 @@
  * - A small plate under a number or a label: `new VolumePlate(scene, 'chip', height, { fill })`.
  * - A bar along a screen edge: `new VolumePlate(scene, 'bar', height)`.
  * - A screen title: `ScreenHeader` draws it on a `TitleRibbon` (title-ribbon.ts) by itself.
- * - A button: `createTextButton` / `createIconButton` give the volumetric look by default;
- *   `new Button(...)` and `createLabelButton(...)` take `look: 'volume'` (the run keeps 'flat').
+ * - A popup window (veil, plate, ribbon title, open and close animation): `PopupWindow`
+ *   (popup-window.ts). Every window of the game is one, the pause and level-up ones too.
+ * - A button: `createTextButton`, `createIconButton`, `createLabelButton` or `new Button(...)`;
+ *   all of them have this look (shape, bevel, gloss, press).
+ * - An on/off setting: `ToggleSwitch` (toggle-switch.ts), a label and a sliding switch.
+ * - A countdown ring with the seconds in it: `RingTimer` (ring-timer.ts).
+ * - A coin or berry counter on its plate: `WalletChip` (wallet-chip.ts); in the run HUD with
+ *   `hud: true`, see-through. Inside a window where the currency is spent: `BalanceChip`
+ *   (balance-chip.ts), which also snaps and shakes.
+ * - A button with a price (grey "Not enough N" when the player cannot pay): `createPriceButton`
+ *   (price-button.ts).
+ * - A see-through plate of the run HUD (wobble bar, tutorial captions, badges): `HudPlate`
+ *   (hud-plate.ts); the HUD must not hide the tower.
+ * - A disc, a knob or another fixed body as one image: `createVolumeImage`.
  * - Custom art in one baked texture (a speech bubble, a sign): `drawVolume(g, ...)` inside
  *   `bakeTexture`, with `MENU.style.looks.<kind>` or a look of your own.
  * Plates are baked once per kind, height and colours and stretched sideways (a 3-slice), so a
@@ -226,6 +238,26 @@ export function bakeVolume(
     }
   });
   return art;
+}
+
+/**
+ * A baked body (see `bakeVolume`) as an image whose position is the centre of the body, so the
+ * shadow hangs around it. For round knobs, discs and faces of fixed size.
+ */
+export function createVolumeImage(
+  scene: Phaser.Scene,
+  key: string,
+  width: number,
+  height: number,
+  look: VolumeLook,
+  colors: VolumeColors = {},
+  decorate?: (g: Phaser.GameObjects.Graphics) => void,
+): Phaser.GameObjects.Image {
+  const art = bakeVolume(scene, key, width, height, look, colors, decorate);
+  return new Phaser.GameObjects.Image(scene, 0, 0, art.key).setOrigin(
+    (art.left + width / 2) / art.textureWidth,
+    (art.top + height / 2) / art.textureHeight,
+  );
 }
 
 /** Texture key part of a colour set. */

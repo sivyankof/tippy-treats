@@ -2,13 +2,17 @@ import { describe, expect, it } from 'vitest';
 import { contrastRatio, mixColor } from '../util/color';
 import { HUD_LAYOUT } from './hud-layout';
 import { IDLE_MOTION } from './idle-motion';
+import { MENU } from './menu-layout';
 import { PALETTE } from './palette';
 
 /** Backdrops the plate may sit on: from white to black (the dark zones). */
 const BACKDROPS = [0xffffff, 0xffc7a1, 0x6c5ce7, 0x1a1040, 0x000000];
 const { barPlate, barDangerText } = HUD_LAYOUT;
+/** The HUD plate of the kit: a chip in the panel colour, see-through. */
+const chip = MENU.style.looks.chip;
+const plateAlpha = MENU.style.hud.alpha;
 /** The plate as it looks on a backdrop: its colour at its alpha over it. */
-const plateOn = (backdrop: number): number => mixColor(backdrop, barPlate.color, barPlate.alpha);
+const plateOn = (backdrop: number): number => mixColor(backdrop, PALETTE.panel, plateAlpha);
 
 describe('wobble bar plate', () => {
   it('and its shadow stay clear of the badge row (also with the idle sway)', () => {
@@ -17,14 +21,14 @@ describe('wobble bar plate', () => {
       HUD_LAYOUT.barHeight,
     );
     const plateBottom =
-      HUD_LAYOUT.barY + rowHeight / 2 + barPlate.padY + barPlate.shadowOffset + barPlate.shadowBlur;
+      HUD_LAYOUT.barY + rowHeight / 2 + barPlate.padY + chip.shadowOffset + chip.shadowBlur;
     const badgeTop = HUD_LAYOUT.badgeRowY - HUD_LAYOUT.badgeSize / 2 - IDLE_MOTION.badge.bobPx;
     expect(plateBottom).toBeLessThanOrEqual(badgeTop);
   });
 
   it('is mostly opaque so the backdrop does not eat the label', () => {
-    expect(barPlate.alpha).toBeGreaterThanOrEqual(0.75);
-    expect(barPlate.alpha).toBeLessThanOrEqual(0.9);
+    expect(plateAlpha).toBeGreaterThanOrEqual(0.75);
+    expect(plateAlpha).toBeLessThanOrEqual(0.9);
   });
 
   it('gives the normal label at least 4.5:1 on every backdrop', () => {

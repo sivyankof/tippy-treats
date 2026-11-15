@@ -5,12 +5,13 @@ import { PALETTE } from '../../../data/palette';
 import { formatNumber, t } from '../../../i18n';
 import { NumberRoll } from '../number-roll';
 import { createOutlinedText } from '../outlined-text';
+import { TitleRibbon } from '../style/title-ribbon';
 import { fitText } from './fit-text';
 import { stackRows, type Row } from './results-layout';
 
 const cfg = MENU.results;
 
-/** "Tower height", the height rolling up big and, for a new best, the record label. */
+/** "Tower height" on the kit's ribbon, the height rolling up big and, for a new best, the record label. */
 export class ResultsHeader {
   readonly container: Phaser.GameObjects.Container;
   /** Height of the block. */
@@ -20,12 +21,12 @@ export class ResultsHeader {
 
   constructor(scene: Phaser.Scene, result: RunResult, isRecord: boolean) {
     this.container = scene.add.container(0, 0);
-    const title = createOutlinedText(scene, 0, 0, t('run.gameOver'), cfg.titleFont);
+    const title = new TitleRibbon(scene, 0, 0, t('run.gameOver'));
     this.value = createOutlinedText(scene, 0, 0, formatNumber(0), cfg.heightFont, PALETTE.gold);
     this.roll.set(0);
     this.roll.set(result.height);
     const rows: Row[] = [
-      { obj: title, height: cfg.titleFont * cfg.lineHeight },
+      { obj: title, height: MENU.style.ribbon.height },
       { obj: this.value, height: cfg.heightFont * cfg.lineHeight },
     ];
     if (isRecord) {

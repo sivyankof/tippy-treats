@@ -7,7 +7,8 @@ import { readDebugParams } from '../../util/debug-params';
 import { ContinueWindow } from '../ui/continue-window';
 import { DebugPanel } from '../debug/debug-panel';
 import { launchRun, SCENES } from '../scene-keys';
-import { Button } from '../ui/button';
+import type { Button } from '../ui/button';
+import { createIconButton } from '../ui/menu/icon-button';
 import { NumberRoll } from '../ui/number-roll';
 import { createOutlinedText } from '../ui/outlined-text';
 import { PauseOverlay } from '../ui/pause-overlay';
@@ -23,7 +24,7 @@ import { WobbleBar } from '../ui/wobble-bar';
 import { TutorialHints } from '../tutorial/tutorial-hints';
 import type { GameScene } from './game-scene';
 
-const { pauseSize, pauseMargin, pauseBarWidth, pauseBarHeight, pauseBarGap } = HUD_LAYOUT;
+const { pauseSize, pauseMargin } = HUD_LAYOUT;
 
 export class HudScene extends Phaser.Scene {
   private heightText!: Phaser.GameObjects.Text;
@@ -177,33 +178,18 @@ export class HudScene extends Phaser.Scene {
     this.overlay.show();
   }
 
+  /** The round pause button of the kit, the same as the back button of the menus. */
   private createPauseButton(): Button {
-    return new Button(this, {
-      x: pauseMargin + pauseSize / 2,
-      y: pauseMargin + pauseSize / 2,
-      width: pauseSize,
-      height: pauseSize,
-      radius: HUD_LAYOUT.pauseRadius,
-      fill: PALETTE.panel,
-      shadowColor: PALETTE.panelShadow,
-      shadowOffset: HUD_LAYOUT.pauseShadow,
-      textureKey: 'ui_pause_button',
-      decorate: (g, width, height) => {
-        const left = (width - (pauseBarWidth * 2 + pauseBarGap)) / 2;
-        const top = (height - pauseBarHeight) / 2;
-        g.fillStyle(PALETTE.textDark, 1);
-        g.fillRoundedRect(left, top, pauseBarWidth, pauseBarHeight, pauseBarWidth / 2);
-        g.fillRoundedRect(
-          left + pauseBarWidth + pauseBarGap,
-          top,
-          pauseBarWidth,
-          pauseBarHeight,
-          pauseBarWidth / 2,
-        );
-      },
+    return createIconButton(
+      this,
+      pauseMargin + pauseSize / 2,
+      pauseMargin + pauseSize / 2,
+      pauseSize,
+      PALETTE.accentSecondary,
+      'pause',
       // Pausing on release keeps the press from ever reaching the run or the overlay.
-      onClick: () => this.pause(),
-    });
+      () => this.pause(),
+    );
   }
 
   private showDemoLabel(): void {

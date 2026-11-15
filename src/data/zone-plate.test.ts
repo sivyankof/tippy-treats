@@ -3,7 +3,7 @@ import { ZONE_BANNER } from './zone-plate';
 
 describe('ZONE_BANNER', () => {
   it('keeps the hanging plate above the flying layer', () => {
-    const bottom = ZONE_BANNER.restY + (ZONE_BANNER.height + ZONE_BANNER.shadowOffset) / 2;
+    const bottom = ZONE_BANNER.restY + ZONE_BANNER.height / 2 + ZONE_BANNER.shadowReach;
     expect(bottom + ZONE_BANNER.tiltDrop).toBeLessThanOrEqual(ZONE_BANNER.lowestEdgeY);
   });
 

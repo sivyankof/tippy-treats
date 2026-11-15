@@ -1,27 +1,20 @@
 import type * as Phaser from 'phaser';
 import { ANIM } from '../../data/anim';
-import { MENU_BUTTON, TOGGLE_BUTTON } from '../../data/hud-layout';
+import { PAUSE } from '../../data/hud-layout';
+import { MENU } from '../../data/menu-layout';
 import { PALETTE } from '../../data/palette';
 import { t } from '../../i18n';
 import { services } from '../../services';
 import { setReducedFxOn, setSoundOn, setVibrationOn } from '../apply-settings';
 import { effectsMode } from '../effects-mode';
-import { createMenuButton, type Button } from './button';
-import { createDimOverlay } from './dim-overlay';
+import { createTextButton, type Button } from './button';
 import { createOutlinedText } from './outlined-text';
-import { ToggleButton } from './toggle-button';
-import { leaveScreen, openPopup } from './transition';
+import { PopupWindow } from './style/popup-window';
+import { ToggleSwitch } from './style/toggle-switch';
+import { leaveScreen } from './transition';
 
-const OVERLAY_DEPTH = 500;
-const TITLE_FONT = 120;
-const COUNTDOWN_FONT = 320;
-const TITLE_OFFSET = -440;
-const CONTINUE_OFFSET = -160;
-const MENU_STEP = MENU_BUTTON.height + 40;
-const RESTART_OFFSET = CONTINUE_OFFSET + MENU_STEP;
-const HOME_OFFSET = RESTART_OFFSET + MENU_STEP;
-const FIRST_TOGGLE_OFFSET = HOME_OFFSET + MENU_BUTTON.height + TOGGLE_BUTTON.gap;
-const TOGGLE_STEP = TOGGLE_BUTTON.height + TOGGLE_BUTTON.gap / 2;
+const btn = PAUSE.button;
+const toggleHeight = MENU.style.toggle.height;
 
 export interface PauseHandlers {
   /** Called after the 3-2-1 countdown: the run may go on. */
@@ -33,106 +26,108 @@ export interface PauseHandlers {
 }
 
 /**
- * Pause window: Continue (with a countdown), Restart, Home and the sound, vibration and
- * "fewer effects" switches. Everything but the dim veil
- * sits in `panel`, centred on the screen, so the window pops open around its centre.
+ * Pause window of the kit (`PopupWindow`): Continue (with a 3-2-1 countdown over the run),
+ * Restart, Home and the sound, vibration and "fewer effects" switches.
  */
 export class PauseOverlay {
-  private readonly root: Phaser.GameObjects.Container;
-  private readonly panel: Phaser.GameObjects.Container;
-  private readonly dim: Phaser.GameObjects.Rectangle;
-  private readonly title: Phaser.GameObjects.Text;
   private readonly countdown: Phaser.GameObjects.Text;
-  private readonly buttons: Button[];
-  private readonly toggles: ToggleButton[];
+  private popup: PopupWindow | null = null;
+  private controls: Array<Button | ToggleSwitch> = [];
   private countdownTimer: Phaser.Time.TimerEvent | null = null;
 
   constructor(
     private readonly scene: Phaser.Scene,
     private readonly handlers: PauseHandlers,
   ) {
-    this.dim = createDimOverlay(scene, ANIM.hud.pauseOverlayAlpha, 1, 1);
-    this.title = createOutlinedText(scene, 0, TITLE_OFFSET, t('run.paused'), TITLE_FONT);
-    this.countdown = createOutlinedText(scene, 0, 0, '', COUNTDOWN_FONT, PALETTE.gold).setVisible(
-      false,
-    );
-    const continueButton = createMenuButton(
-      scene,
-      0,
-      CONTINUE_OFFSET,
-      t('run.resume'),
-      PALETTE.accent,
-      () => this.beginCountdown(),
-    );
-    const restartButton = createMenuButton(
-      scene,
-      0,
-      RESTART_OFFSET,
-      t('run.restart'),
-      PALETTE.accentSecondary,
-      () => this.leave(this.handlers.onRestart),
-    );
-    const homeButton = createMenuButton(scene, 0, HOME_OFFSET, t('run.home'), PALETTE.success, () =>
-      this.leave(this.handlers.onHome),
-    );
-    this.toggles = [
-      new ToggleButton(scene, 'run.sounds', () => services.audio.enabled, setSoundOn),
-      new ToggleButton(scene, 'run.vibration', () => services.haptics.enabled, setVibrationOn),
-      new ToggleButton(scene, 'run.reducedFx', () => effectsMode.reduced, setReducedFxOn),
-    ];
-    this.toggles.forEach((toggle, i) => toggle.button.setY(FIRST_TOGGLE_OFFSET + i * TOGGLE_STEP));
-    this.buttons = [
-      continueButton,
-      restartButton,
-      homeButton,
-      ...this.toggles.map((toggle) => toggle.button),
-    ];
-
-    this.panel = scene.add.container(0, 0, [this.title, this.countdown, ...this.buttons]);
-    this.root = scene.add
-      .container(0, 0, [this.dim, this.panel])
-      .setDepth(OVERLAY_DEPTH)
+    this.countdown = createOutlinedText(scene, 0, 0, '', PAUSE.countdownFont, PALETTE.gold)
+      .setDepth(PAUSE.countdownDepth)
       .setVisible(false);
   }
 
+  /** The window or its countdown is up: the run waits and takes no taps. */
   get visible(): boolean {
-    return this.root.visible;
+    return this.popup !== null || this.countdownTimer !== null;
   }
 
   show(): void {
     this.cancelCountdown();
-    for (const toggle of this.toggles) toggle.refresh();
-    this.showMenu(true);
-    this.root.setVisible(true);
-    this.dim.setInteractive();
-    openPopup(this.scene, this.dim, this.panel);
+    this.popup?.destroy();
+    const popup = new PopupWindow(this.scene, {
+      title: t('run.paused'),
+      closable: false,
+      closeOnVeil: false,
+    });
+    const button = (text: string, fill: number, row: number, onClick: () => void): Button =>
+      createTextButton(this.scene, {
+        text,
+        font: btn.font,
+        maxLabelWidth: btn.width - PAUSE.labelPad,
+        fill,
+        layout: btn,
+        keyPrefix: 'ui_pause_button',
+        y: btn.height / 2 + row * (btn.height + PAUSE.buttonGap),
+        onClick,
+      }).button;
+    const buttons = [
+      button(t('run.resume'), PALETTE.accent, 0, () => this.beginCountdown()).breathe(),
+      button(t('run.restart'), PALETTE.accentSecondary, 1, () =>
+        this.leave(this.handlers.onRestart),
+      ),
+      button(t('run.home'), PALETTE.success, 2, () => this.leave(this.handlers.onHome)),
+    ];
+    const togglesTop = buttons.length * (btn.height + PAUSE.buttonGap) + PAUSE.togglesTop;
+    const toggle = (key: string, row: number, read: () => boolean, write: (on: boolean) => void) =>
+      new ToggleSwitch(
+        this.scene,
+        0,
+        togglesTop + toggleHeight / 2 + row * (toggleHeight + PAUSE.toggleGap),
+        { label: t(key), width: btn.width, read, write },
+      );
+    const toggles = [
+      toggle('run.sounds', 0, () => services.audio.enabled, setSoundOn),
+      toggle('run.vibration', 1, () => services.haptics.enabled, setVibrationOn),
+      toggle('run.reducedFx', 2, () => effectsMode.reduced, setReducedFxOn),
+    ];
+    popup.content.add([...buttons, ...toggles]);
+    popup.setContentHeight(
+      togglesTop + toggles.length * (toggleHeight + PAUSE.toggleGap) - PAUSE.toggleGap,
+    );
+    this.popup = popup;
+    this.controls = [...buttons, ...toggles];
   }
 
+  /** Takes the window and the countdown away at once. */
   hide(): void {
     this.cancelCountdown();
-    this.root.setVisible(false);
-    this.dim.disableInteractive();
+    this.countdown.setVisible(false);
+    this.popup?.destroy();
+    this.popup = null;
+    this.controls = [];
   }
 
   layout(width: number, height: number): void {
-    this.dim.setSize(width, height);
-    this.panel.setPosition(width / 2, height / 2);
+    this.countdown.setPosition(width / 2, height / 2);
   }
 
-  private showMenu(menu: boolean): void {
-    this.title.setVisible(menu);
-    for (const button of this.buttons) button.setVisible(menu).setEnabled(menu);
-    this.countdown.setVisible(!menu);
+  private disableControls(): void {
+    for (const control of this.controls) control.setEnabled(false);
   }
 
   /** The window slides away and the screen darkens before the new run (or the next screen) starts. */
   private leave(then: () => void): void {
-    for (const button of this.buttons) button.setEnabled(false);
-    leaveScreen(this.scene, [this.panel], then);
+    if (!this.popup) return;
+    this.disableControls();
+    leaveScreen(this.scene, [this.popup.frame], then);
   }
 
+  /** The window shrinks away and 3-2-1 counts down over the run. */
   private beginCountdown(): void {
-    this.showMenu(false);
+    if (!this.popup) return;
+    this.disableControls();
+    this.popup.close();
+    this.popup = null;
+    this.controls = [];
+    this.countdown.setVisible(true);
     this.tick(ANIM.hud.countdownSteps);
   }
 

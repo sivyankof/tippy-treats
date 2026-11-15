@@ -3,25 +3,25 @@ import { PALETTE } from '../../data/palette';
 import { TUTORIAL_ANIM } from '../../data/tutorial-anim';
 import { cssColor } from '../../util/color';
 import { sineWave } from '../../util/math';
-import { BarPlate } from '../ui/bar-plate';
 import { FONT_FAMILY, FONT_WEIGHT } from '../ui/fonts';
+import { HudPlate } from '../ui/style/hud-plate';
 
 const cfg = TUTORIAL_ANIM.caption;
 
 /**
- * Text on a plate, readable on every backdrop. It is only a picture: taps go through it.
+ * Text on a see-through plate of the kit (`HudPlate`), readable on every backdrop. It is only a picture: taps go through it.
  * The owner decides when it shows (`render`) and where it sits (`place`).
  */
 export class CaptionHint {
   private readonly root: Phaser.GameObjects.Container;
-  private readonly plate: BarPlate;
+  private readonly plate: HudPlate;
   private readonly text: Phaser.GameObjects.Text;
   private phase: number;
 
   /** `phase` offsets the sway so two captions do not move in step. */
   constructor(scene: Phaser.Scene, phase = 0) {
     this.phase = phase;
-    this.plate = new BarPlate(scene);
+    this.plate = new HudPlate(scene);
     this.text = scene.add
       .text(0, 0, '', {
         fontFamily: FONT_FAMILY,
@@ -33,7 +33,7 @@ export class CaptionHint {
         wordWrap: { width: cfg.width - cfg.padX * 2 },
       })
       .setOrigin(0.5);
-    this.root = scene.add.container(0, 0, [this.plate.image, this.text]).setVisible(false);
+    this.root = scene.add.container(0, 0, [this.plate, this.text]).setVisible(false);
   }
 
   setText(content: string): void {

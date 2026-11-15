@@ -28,6 +28,8 @@ export class ContinueFlow {
   private adShowing = false;
   private pending: ContinueAction | null = null;
   private disposed = false;
+  /** Time left of the pause after a payment, while the window shows the berries flying. */
+  private holdMs = 0;
 
   constructor(private readonly deps: ContinueFlowDeps) {}
 
@@ -41,6 +43,16 @@ export class ContinueFlow {
 
   get adBusy(): boolean {
     return this.adShowing;
+  }
+
+  /** A payment was made and the window is still showing it. */
+  get paying(): boolean {
+    return this.holdMs > 0;
+  }
+
+  /** Berries the player holds now: the number the window's balance counter shows. */
+  get balance(): number {
+    return this.deps.wallet.berries;
   }
 
   get remainingMs(): number {
@@ -69,11 +81,13 @@ export class ContinueFlow {
     this.elapsed = 0;
     this.left = BALANCE.continues.offerMs;
     this.pending = null;
+    this.holdMs = 0;
     return true;
   }
 
   /** Advances the timer; at zero the offer is declined. */
   update(dtMs: number): void {
+    if (this.holdMs > 0) this.holdMs = Math.max(0, this.holdMs - dtMs);
     if (!this.current || this.pending) return;
     this.elapsed += dtMs;
     if (this.adShowing) return;
@@ -93,6 +107,7 @@ export class ContinueFlow {
     if (cost === null || this.adShowing || this.pending) return false;
     if (!this.deps.wallet.spendBerries(cost)) return false;
     this.pending = 'continue';
+    this.holdMs = CONTINUE_ANIM.balance.paidHoldMs;
     return true;
   }
 
@@ -120,7 +135,7 @@ export class ContinueFlow {
   /** The decision once it is made, then `null` until the next offer. Closes the offer. */
   takeAction(): ContinueAction | null {
     const action = this.pending;
-    if (!action) return null;
+    if (!action || this.holdMs > 0) return null;
     this.pending = null;
     this.current = null;
     return action;
@@ -131,5 +146,6 @@ export class ContinueFlow {
     this.disposed = true;
     this.current = null;
     this.pending = null;
+    this.holdMs = 0;
   }
 }

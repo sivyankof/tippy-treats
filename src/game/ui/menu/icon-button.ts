@@ -3,7 +3,8 @@ import { PALETTE } from '../../../data/palette';
 import { Button } from '../button';
 
 /** Icons drawn in code on round buttons. */
-export type IconKind = 'back' | 'close' | 'play' | 'shop' | 'collection' | 'daily' | 'missions';
+export type IconKind =
+  'back' | 'close' | 'pause' | 'play' | 'shop' | 'collection' | 'daily' | 'missions';
 
 /** Line width of the stroked icons, as a share of the icon size. */
 const STROKE = 0.14;
@@ -30,6 +31,10 @@ export function drawIcon(
     case 'close':
       g.lineBetween(cx - s * 0.6, cy - s * 0.6, cx + s * 0.6, cy + s * 0.6);
       g.lineBetween(cx + s * 0.6, cy - s * 0.6, cx - s * 0.6, cy + s * 0.6);
+      return;
+    case 'pause':
+      g.fillRoundedRect(cx - s * 0.6, cy - s * 0.7, s * 0.42, s * 1.4, s * 0.21);
+      g.fillRoundedRect(cx + s * 0.18, cy - s * 0.7, s * 0.42, s * 1.4, s * 0.21);
       return;
     case 'play':
       g.fillTriangle(cx - s * 0.5, cy - s * 0.7, cx - s * 0.5, cy + s * 0.7, cx + s * 0.75, cy);
@@ -78,11 +83,9 @@ export function createIconButton(
     height: size,
     radius: size * 0.3,
     fill,
-    shadowColor: PALETTE.textDark,
     shadowOffset: Math.round(size * 0.07),
     textureKey: `ui_icon_${icon}_${size}_${fill.toString(16)}`,
     decorate: (g, w, h) => drawIcon(g, icon, w / 2, h / 2, size * 0.5),
     onClick,
-    look: 'volume',
   });
 }

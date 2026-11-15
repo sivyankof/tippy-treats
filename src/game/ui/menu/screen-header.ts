@@ -5,44 +5,14 @@ import { TREASURE } from '../../../data/treasure-anim';
 import { gameState } from '../../../state';
 import { TREASURE_TEXTURES } from '../../fx/treasure-textures';
 import type { Button } from '../button';
-import { ResourceCounter } from '../resource-tally';
 import { TitleRibbon } from '../style/title-ribbon';
-import { VolumePlate } from '../style/volume';
+import { WalletChip } from '../style/wallet-chip';
 import { createIconButton } from './icon-button';
 import type { WalletTargets } from './reward-flight';
 
 const { backSize, margin } = MENU.header;
 const ribbon = MENU.style.ribbon;
-const wallet = MENU.style.wallet;
 const iconHalf = TREASURE.counter.iconSize / 2;
-
-/** A wallet counter on its plate; the plate sits inside the counter, so it breathes with it. */
-class WalletRow {
-  readonly counter: ResourceCounter;
-  private readonly plate: VolumePlate;
-  private reach = -1;
-
-  /** How far the plate of the wallet reaches left of the counter's anchor. */
-  get plateReach(): number {
-    return Math.max(this.reach, 0) + wallet.padLeft;
-  }
-
-  constructor(scene: Phaser.Scene, texture: string, row: number, sway: boolean) {
-    this.counter = new ResourceCounter(scene, { texture, row, hiddenUntilFirst: false, sway });
-    this.plate = new VolumePlate(scene, 'chip', wallet.height, { fill: wallet.fill });
-    this.counter.root.addAt(this.plate, 0);
-  }
-
-  update(value: number, timeMs: number, dtMs: number): void {
-    this.counter.update(value, timeMs, dtMs);
-    const reach = this.counter.numberReach;
-    if (reach === this.reach) return;
-    this.reach = reach;
-    const right = iconHalf + wallet.padRight;
-    const left = -reach - wallet.padLeft;
-    this.plate.setBodyWidth(right - left).setX((left + right) / 2);
-  }
-}
 
 /**
  * The top of a menu screen: a back button on the left (none on Home), the title on a ribbon in
@@ -54,8 +24,8 @@ export class ScreenHeader {
   /** The title text on the ribbon; null when the screen has no title. */
   readonly title: Phaser.GameObjects.Text | null;
   readonly ribbon: TitleRibbon | null;
-  private readonly coins: WalletRow;
-  private readonly berries: WalletRow;
+  private readonly coins: WalletChip;
+  private readonly berries: WalletChip;
   private width = 0;
   private lastReach = -1;
 
@@ -73,8 +43,17 @@ export class ScreenHeader {
       : null;
     this.ribbon = title === '' ? null : new TitleRibbon(scene, 0, ribbon.y, title);
     this.title = this.ribbon?.label ?? null;
-    this.coins = new WalletRow(scene, TREASURE_TEXTURES.coin, 0, false);
-    this.berries = new WalletRow(scene, TREASURE_TEXTURES.berry, 1, true);
+    this.coins = new WalletChip(scene, {
+      texture: TREASURE_TEXTURES.coin,
+      row: 0,
+      hiddenUntilFirst: false,
+    });
+    this.berries = new WalletChip(scene, {
+      texture: TREASURE_TEXTURES.berry,
+      row: 1,
+      hiddenUntilFirst: false,
+      sway: true,
+    });
   }
 
   /** The two counters, where menu rewards fly to. */

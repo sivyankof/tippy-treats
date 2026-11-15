@@ -88,6 +88,11 @@ export class PopupWindow {
     openPopup(scene, this.dim, this.root);
   }
 
+  /** The window without its veil: what slides away when the whole screen leaves (`leaveScreen`). */
+  get frame(): Phaser.GameObjects.Container {
+    return this.root;
+  }
+
   /** Total height of the window body. */
   get height(): number {
     return cfg.titleSpace + this.contentHeight + cfg.padBottom;

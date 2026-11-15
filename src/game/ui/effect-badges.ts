@@ -1,6 +1,7 @@
 import * as Phaser from 'phaser';
 import { ANIM } from '../../data/anim';
 import { HUD_LAYOUT } from '../../data/hud-layout';
+import { MENU } from '../../data/menu-layout';
 import { IDLE_MOTION, IDLE_PHASE } from '../../data/idle-motion';
 import { PALETTE } from '../../data/palette';
 import { formatNumber } from '../../i18n';
@@ -16,6 +17,7 @@ import {
   type BadgeVisual,
 } from './effect-badge-state';
 import { createStrokedText } from './outlined-text';
+import { HudPlate } from './style/hud-plate';
 import type { ActiveEffect } from '../../core/abilities/types';
 
 const { badgeSize, badgeGap, badgeMargin, badgeRowY, badgeCounterFont, badgeCounterInset } =
@@ -27,10 +29,14 @@ const COUNTER_OFFSET = badgeSize / 2 - badgeCounterInset;
 /** A slot that is within this many pixels of its place counts as there. */
 const SETTLE_EPSILON = 0.5;
 
-/** A pooled badge: icon and counter in a container that scales around the icon centre. */
+/**
+ * A pooled badge: icon and counter in a container that scales around the icon centre. The counter
+ * sits on a see-through wallet chip of the kit.
+ */
 class BadgeSlot {
   readonly root: Phaser.GameObjects.Container;
   private readonly icon: Phaser.GameObjects.Image;
+  private readonly chip: HudPlate;
   private readonly counter: Phaser.GameObjects.Text;
   private key: BadgeState['key'] | null = null;
   private shownCount = -1;
@@ -48,7 +54,10 @@ class BadgeSlot {
       PALETTE.textDark,
       HUD_LAYOUT.badgeCounterStroke,
     );
-    this.root = scene.add.container(0, badgeRowY, [this.icon, this.counter]).setVisible(false);
+    this.chip = new HudPlate(scene, MENU.style.wallet.fill);
+    this.root = scene.add
+      .container(0, badgeRowY, [this.icon, this.chip, this.counter])
+      .setVisible(false);
   }
 
   /** Shows the badge for its state; picture and text change only when they differ from the last call. */
@@ -60,6 +69,9 @@ class BadgeSlot {
     if (badge.layersLeft !== this.shownCount) {
       this.shownCount = badge.layersLeft;
       this.counter.setText(formatNumber(badge.layersLeft));
+      const { height, padX } = HUD_LAYOUT.badgeChip;
+      const width = Math.max(height, this.counter.width + padX * 2);
+      this.chip.place(COUNTER_OFFSET, COUNTER_OFFSET, width, height);
     }
     const pop =
       badge.counterAgeMs < badges.counterPopMs

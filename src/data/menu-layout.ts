@@ -113,7 +113,33 @@ export const MENU = {
       breathe: { scale: 1.025, ms: 2400 },
     },
     /** The plates under the coin and berry counters of a screen header. */
+    /** The one grey of a price button the player cannot pay yet ("Not enough N"). */
+    shortFill: 0x9a8fa8,
     wallet: { height: 84, padLeft: 26, padRight: 12, fill: 0x5b4372 },
+    /**
+     * Plates of the run HUD: chips of the kit, see-through so the tower shows under them
+     * (docs/07 section 4). The alpha is set on the plate only, never on its text.
+     */
+    hud: {
+      alpha: 0.8,
+      /** HUD plates are baked per size; widths are rounded up to this step to share pictures. */
+      widthStep: 8,
+    },
+    /** An on/off switch: the label on the left, a track with a sliding knob on the right. */
+    toggle: {
+      height: 104,
+      font: 48,
+      trackWidth: 156,
+      trackHeight: 80,
+      /** Room between the knob and the ends of the track. */
+      knobInset: 10,
+      labelGap: 28,
+      onFill: 0x3ddc97,
+      offFill: 0xb9a9c6,
+      knobFill: 0xfff6ec,
+      slideMs: 180,
+      slideEase: 'Back.easeOut',
+    },
     /** The kitchen of the run behind the menus, under a veil and a darker top and bottom. */
     scenery: {
       depth: -100,
@@ -403,8 +429,9 @@ export const MENU = {
       /** The decline text takes taps in a zone this tall. */
       declineHit: 88,
       disabledAlpha: 0.6,
-      /** Fill of the berries button when the berries are short. */
-      shortFill: 0x9a8fa8,
+      /** The berry balance row above the price: its height and the right end of its plate. */
+      balanceHeight: 90,
+      balanceRight: 380,
     },
   },
   /** The free gift window. */
@@ -487,10 +514,6 @@ export const MENU = {
     popEase: 'Back.easeOut',
     /** Fade of a card that goes in or out of the team. */
     fadeMs: 180,
-    /** The refusal shake of a card. */
-    shakePx: 14,
-    shakeMs: 55,
-    shakeRepeat: 2,
     /** The ghost that follows the finger during a drag. */
     ghostScale: 0.9,
     ghostAlpha: 0.9,
@@ -747,9 +770,15 @@ export const MENU = {
   results: {
     /** Free space above the first block. */
     top: 40,
-    /** The blocks keep at least this much air between them; on a taller screen they spread out. */
+    /** The header and the panel keep at least this much air between them; on a taller screen they spread out. */
     sectionGap: 16,
-    titleFont: 60,
+    /**
+     * The window plate of the kit under the blocks from the stats down to the "almost" line: the
+     * blocks stand `gap` apart inside it, `padY` from its top and bottom edges.
+     */
+    panel: { width: 1000, padY: 40, gap: 24 },
+    /** On a short screen the panel's padding and gaps shrink to this share at the least. */
+    panelMinSpacing: 0.3,
     heightFont: 200,
     recordFont: 48,
     /** Line height of a text, as a share of its font size. */
@@ -759,21 +788,21 @@ export const MENU = {
     statFont: 56,
     statColumns: 3,
     /** Width a stat label may take before it shrinks. */
-    statWidth: 320,
+    statWidth: 300,
     coinTotalFont: 84,
     /** The coin icon beside the total: its size as a share of the font, and the gap to the number. */
     coinIconScale: 1,
     coinIconGap: 16,
     breakdownFont: 36,
     breakdownColumns: 2,
-    breakdownColumnWidth: 470,
+    breakdownColumnWidth: 440,
     breakdownRowHeight: 56,
     adButton: { width: 580, height: 104, radius: 36, shadowOffset: 8, font: 44 },
     adTextPadding: 40,
     unavailableColor: 0xb9a9c6,
     xpFont: 52,
     nearMissFont: 40,
-    nearMissWidth: 960,
+    nearMissWidth: 900,
     /** The missions block: a title and compact rows of the missions this run moved. */
     missions: {
       /** At most this many rows are shown. */
@@ -782,18 +811,18 @@ export const MENU = {
       rowHeight: 64,
       rowGap: 8,
       textFont: 34,
-      textWidth: 540,
+      textWidth: 510,
       barWidth: 360,
       barHeight: 44,
       barFont: 28,
-      width: 940,
+      width: 900,
       fillMs: 900,
       delayMs: 500,
       doneScale: 1.18,
       doneMs: 220,
     },
     /** The daily tiers paid by a daily run: one compact row each. */
-    tiers: { rowHeight: 56, rowGap: 6, font: 36, width: 940, rewardFont: 40 },
+    tiers: { rowHeight: 56, rowGap: 6, font: 36, width: 900, rewardFont: 40 },
     /** The XP bar fills this long per whole level, at least `xpMinMs` per piece. */
     xpFillMs: 1400,
     xpMinMs: 350,
@@ -805,15 +834,11 @@ export const MENU = {
     buttonTextPadding: 50,
     buttonsBottom: 170,
     buttonGap: 28,
-    /** Level-up window. */
+    /** Level-up window: a `PopupWindow` of the kit, the level on its ribbon. */
     levelUp: {
-      width: 880,
-      titleFont: 84,
-      /** Line height of the title, as a share of its font size. */
-      lineHeight: 1.2,
       lineFont: 44,
-      padding: 56,
-      fill: 0x7c5cff,
+      /** Room for the label inside the button. */
+      labelPad: 56,
       gap: 26,
       rowHeight: 76,
       creatureRowHeight: 150,
@@ -821,8 +846,6 @@ export const MENU = {
       portraitWidth: 150,
       portraitGap: 24,
       okButton: { width: 520, height: 112, radius: 40, shadowOffset: 8, font: 52 },
-      depth: 600,
-      dimAlpha: 0.62,
     },
   },
   /** The daily tower screen: a stack of blocks that spreads out on a taller screen. */

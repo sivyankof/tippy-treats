@@ -15,9 +15,6 @@
     "sounds": "Sounds",
     "reducedFx": "Fewer effects",
     "vibration": "Vibration",
-    "toggle": "{name}: {state}",
-    "on": "On",
-    "off": "Off",
     "record": "Record",
     "recordPop": "Record!",
     "home": "Home",
@@ -271,8 +268,7 @@
     "text": "one=You missed a day. Your streak of {n} day is about to end.|other=You missed a day. Your streak of {n} days is about to end.",
     "restoreAd": "Save it for an ad",
     "restoreBerries": "one=Save it for {price} berry|other=Save it for {price} berries",
-    "decline": "Start over",
-    "restoreShort": "Need {n} more berries"
+    "decline": "Start over"
   },
   "gift": {
     "title": "Free gift",
