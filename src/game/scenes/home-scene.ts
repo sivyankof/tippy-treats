@@ -12,6 +12,7 @@ import { starterPackContents } from '../../core/shop';
 import { startRunFrom, openScreen, SCENES, type HomeData } from '../scene-keys';
 import type { PopupWindow } from '../ui/style/dialog-window';
 import { createTextButton, type Button } from '../ui/button';
+import { createStarterButton } from '../ui/menu/home-starter';
 import { createHintBubble } from '../ui/menu/home-hint';
 import { HomeBadges } from '../ui/menu/home-badges';
 import { HomeNav } from '../ui/menu/home-nav';
@@ -255,16 +256,7 @@ export class HomeScene extends Phaser.Scene {
       this.layout();
       return;
     }
-    const { width, height, radius, shadowOffset, font, pad } = cfg.starter;
-    this.starter = createTextButton(this, {
-      text: t('home.starter', { price }),
-      font,
-      maxLabelWidth: width - pad,
-      fill: PALETTE.gold,
-      layout: { width, height, radius, shadowOffset },
-      keyPrefix: 'ui_home_starter',
-      onClick: () => void this.buyStarter(),
-    }).button.breathe(false);
+    this.starter = createStarterButton(this, price, () => void this.buyStarter());
     this.layout();
     this.starter.setAlpha(0);
     this.tweens.add({ targets: this.starter, alpha: 1, duration: ANIM.ui.transition.inMs });
