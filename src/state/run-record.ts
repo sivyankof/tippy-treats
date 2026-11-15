@@ -13,6 +13,8 @@ export type { LevelUp };
 
 /** Fresh layers of the oven left after a run, and whether that run emptied it (the gentle message). */
 export interface OvenSummary {
+  /** Fresh layers this run was paid for (0 when the oven was already spent). */
+  fresh: number;
   left: number;
   ranOut: boolean;
 }
@@ -115,7 +117,11 @@ export function applyRun(
       previousRecord,
       before: beforeXp,
       xpGained: baked.xp,
-      oven: { left: baked.after, ranOut: baked.before > 0 && baked.after === 0 },
+      oven: {
+        fresh: baked.before - baked.after,
+        left: baked.after,
+        ranOut: baked.before > 0 && baked.after === 0,
+      },
       levelUps: leveled.levelUps,
       recordCreatures: rewarded.creatures,
       missions: EMPTY_SUMMARY.missions,

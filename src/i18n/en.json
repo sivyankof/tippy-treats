@@ -182,8 +182,14 @@
     "howTo": "How to get: {way}"
   },
   "oven": {
-    "left": "Fresh oven: {n}",
-    "empty": "Oven is back tomorrow",
+    "title": "Fresh oven",
+    "bonus": "×{n} XP per layer",
+    "plain": "×1 regular XP",
+    "left": "one={amount} layer left today|other={amount} layers left today",
+    "back": "The oven heats up in {time}",
+    "explain": "The first {n} layers of every day give {x} times more XP. Bake while the oven is hot!",
+    "ok": "Got it!",
+    "mark": "×{n} fresh oven",
     "ranOut": "The fresh oven lights up again tomorrow!"
   },
   "newCreature": {
@@ -239,6 +245,7 @@
     "hm": "{h} h {m} min",
     "ms": "{m} min {s} s",
     "s": "{s} s",
+    "m": "{m} min",
     "dh": "{d} d {h} h"
   },
   "mission": {

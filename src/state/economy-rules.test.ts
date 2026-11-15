@@ -34,14 +34,14 @@ describe('the fresh oven in a run', () => {
     const state = createTestState({ ms: T0 });
     const first = state.recordRun(run({ height: OVEN.freshLayers - 100 }));
     expect(first.xpGained).toBe(OVEN.freshLayers - 100);
-    expect(first.oven).toEqual({ left: 100, ranOut: false });
+    expect(first.oven).toEqual({ fresh: OVEN.freshLayers - 100, left: 100, ranOut: false });
     const second = state.recordRun(run({ height: 160 }));
     // 100 fresh layers + 60 layers at 1 per 6.
     expect(second.xpGained).toBe(110);
-    expect(second.oven).toEqual({ left: 0, ranOut: true });
+    expect(second.oven).toEqual({ fresh: 100, left: 0, ranOut: true });
     const third = state.recordRun(run({ height: 12 }));
     expect(third.xpGained).toBe(2);
-    expect(third.oven).toEqual({ left: 0, ranOut: false });
+    expect(third.oven).toEqual({ fresh: 0, left: 0, ranOut: false });
     expect(state.ovenLeft).toBe(0);
   });
 
@@ -49,7 +49,7 @@ describe('the fresh oven in a run', () => {
     const state = createTestState({ ms: T0 });
     const summary = state.recordRun(run({ mode: 'daily', height: 40 }));
     expect(summary.xpGained).toBe(40);
-    expect(summary.oven).toEqual({ left: OVEN.freshLayers - 40, ranOut: false });
+    expect(summary.oven).toEqual({ fresh: 40, left: OVEN.freshLayers - 40, ranOut: false });
     expect(state.ovenLeft).toBe(OVEN.freshLayers - 40);
   });
 

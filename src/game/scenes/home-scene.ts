@@ -20,7 +20,8 @@ import {
   createRecordPlate,
   refreshLevelPlate,
 } from '../ui/menu/home-plates';
-import { OvenBar } from '../ui/menu/oven-bar';
+import { OvenPlate } from '../ui/menu/oven-plate';
+import { openOvenWindow } from '../ui/menu/oven-window';
 import { HomeShelf } from '../ui/menu/home-shelf';
 import { openGiftWindow } from '../ui/menu/gift-window';
 import { openMissionsWindow } from '../ui/menu/missions-window';
@@ -41,7 +42,8 @@ export class HomeScene extends Phaser.Scene {
   private scenery!: MenuScenery;
   private header!: ScreenHeader;
   private level!: Phaser.GameObjects.Container;
-  private oven!: OvenBar;
+  private oven!: OvenPlate;
+  private ovenTimer = 0;
   private shelf!: HomeShelf;
   private record!: Phaser.GameObjects.Container;
   private play!: Button;
@@ -92,7 +94,8 @@ export class HomeScene extends Phaser.Scene {
       settings: () => this.openSettings(),
     });
     this.level = createLevelPlate(this);
-    this.oven = new OvenBar(this, 0, 0).show(gameState.ovenLeft);
+    this.oven = new OvenPlate(this, () => this.openOven());
+    this.showOven();
     this.header = new ScreenHeader(this, '', null);
 
     this.play = createTextButton(this, {
@@ -136,8 +139,23 @@ export class HomeScene extends Phaser.Scene {
     this.scenery.update(delta);
     this.header.update(time, delta);
     this.shelf.update(delta);
-    // The timer text changes once a second: enough to notice a new day for the oven.
-    if (this.badges.update()) this.oven.show(gameState.ovenLeft);
+    this.badges.update();
+    // The oven's wait is in whole minutes and a new day lights it: looking every tick is cheap.
+    this.ovenTimer += delta;
+    if (this.ovenTimer >= cfg.ovenPlate.tickMs) {
+      this.ovenTimer = 0;
+      this.showOven();
+    }
+  }
+
+  private showOven(): void {
+    this.oven.show({ left: gameState.ovenLeft, waitMs: gameState.msUntilOven });
+  }
+
+  /** A tap on the oven plate: the explainer again. */
+  private openOven(): void {
+    if (this.leaving) return;
+    openOvenWindow(this);
   }
 
   /** Everything that slides with the screen; the scenery stays. */
@@ -166,7 +184,7 @@ export class HomeScene extends Phaser.Scene {
     this.header.layout(width);
     this.badges.layout(width);
     this.level.setPosition(cfg.levelPlate.left + cfg.levelPlate.width / 2, cfg.levelPlate.y);
-    this.oven.setPosition(cfg.levelPlate.left + cfg.levelPlate.width / 2, cfg.ovenBar.y);
+    this.oven.setPosition(cx, cfg.ovenPlate.y + extra * cfg.ovenPlate.extraShare);
     const shelfY = cfg.shelf.y + extra;
     this.shelf.root.setPosition(cx, shelfY);
     this.record.setPosition(cx, cfg.record.y + extra * cfg.record.extraShare);
@@ -237,7 +255,10 @@ export class HomeScene extends Phaser.Scene {
     const offer = prepareRemoveAdsOffer();
     openStreakEntry(this, this.header.wallet, (claim) => {
       this.afterStreak(claim);
-      if (!this.leaving) offer.open(this);
+      if (this.leaving) return;
+      // The oven explainer comes once, first; the offer follows when it closes.
+      if (gameState.hasHint('oven')) offer.open(this);
+      else openOvenWindow(this, () => offer.open(this));
     });
   }
 

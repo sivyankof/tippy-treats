@@ -8,7 +8,7 @@ import type { LevelUp, RunSummary } from '../../../state/game-state';
 import { createOutlinedText } from '../outlined-text';
 import { fitText } from './fit-text';
 import { LevelUpPanel } from './level-up-panel';
-import { OvenBar } from './oven-bar';
+import { OvenMark } from './oven-mark';
 import { stackRows, type Row } from './results-layout';
 import { xpSegments } from './results-text';
 import { XpBar } from './xp-bar';
@@ -60,13 +60,13 @@ export class ResultsXp {
       PALETTE.gold,
     );
     this.bar = new XpBar(scene, 0, 0).show(summary.before.level, summary.before.xp);
-    const rows: Row[] = [
-      { obj: gain, height: cfg.xpFont * cfg.lineHeight },
-      { obj: this.bar, height: BAR_BLOCK },
-    ];
+    const rows: Row[] = [{ obj: gain, height: cfg.xpFont * cfg.lineHeight }];
     const oven = summary.oven;
+    if (oven && oven.fresh > 0) {
+      rows.push({ obj: new OvenMark(scene), height: cfg.ovenMark.height });
+    }
+    rows.push({ obj: this.bar, height: BAR_BLOCK });
     if (oven) {
-      rows.push({ obj: new OvenBar(scene, 0, 0).show(oven.left), height: cfg.ovenRowHeight });
       if (oven.ranOut) {
         const message = createOutlinedText(
           scene,
