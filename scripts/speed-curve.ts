@@ -1,6 +1,7 @@
 import { nominalSpeed, zoneIndexOf } from '../src/core/zones';
 import { BALANCE } from '../src/data/balance';
 import { ZONES } from '../src/data/zones';
+import { MS_PER_SECOND } from '../src/util/math';
 
 /**
  * `npm run sim:speed` part 1: the nominal flying speed of every layer from 1 to 160 and the time a
@@ -11,7 +12,6 @@ import { ZONES } from '../src/data/zones';
 const LAST_LAYER = 160;
 const TABLE_STEP = 5;
 const CROSSING_LAYERS = [1, 20, 40, 60, 80, 100, 120];
-const MS_PER_SECOND = 1000;
 
 /** The distance the centre of a layer travels between the two walls, px. */
 const TRACK_PX = BALANCE.layer.maxCenterX - BALANCE.layer.minCenterX;

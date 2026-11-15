@@ -1,10 +1,15 @@
 import { DIFFICULTY } from '../src/data/balance';
 import { NO_TEAM } from '../src/data/sim-teams';
 import { CoinStats, type CoinsBySource } from './coin-stats';
-import { mean, percentile, playRun, profileStreams, teamSlots } from './sim-runner';
-
-/** Node global; the project does not pull in the Node type definitions. */
-declare const process: { argv: string[] };
+import { intArg, scriptArgs } from './node-env';
+import {
+  ANALYSIS_MAX_HEIGHT,
+  mean,
+  percentile,
+  playRun,
+  profileStreams,
+  teamSlots,
+} from './sim-runner';
 
 /**
  * How well the `strong` bot profile fits the live data of one tester (no team, no ads, no
@@ -15,8 +20,7 @@ const LIVE_100 = { floating: 26, golden: 20, combo: 15, height: 20, total: 81 } 
 const BAND = [95, 105] as const;
 const SOURCES = ['floating', 'golden', 'combo', 'height'] as const;
 
-const runsArg = process.argv.find((arg) => arg.startsWith('--runs='));
-const runs = runsArg ? Number(runsArg.slice('--runs='.length)) : DIFFICULTY.runsPerProfile;
+const runs = intArg(scriptArgs(), 'runs', DIFFICULTY.runsPerProfile);
 const target = DIFFICULTY.targets.find((t) => t.id === 'strong');
 if (!target) throw new Error('No strong profile');
 
@@ -33,6 +37,7 @@ const results = Array.from({ length: runs }, () =>
     target,
     noise,
     [stats],
+    ANALYSIS_MAX_HEIGHT,
   ),
 );
 

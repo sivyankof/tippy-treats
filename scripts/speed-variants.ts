@@ -5,10 +5,16 @@ import { BALANCE, DIFFICULTY, type DifficultyTarget } from '../src/data/balance'
 import { SAVE_DEFAULTS } from '../src/data/save-defaults';
 import { NO_TEAM, type SimTeamSet } from '../src/data/sim-teams';
 import { ZONES } from '../src/data/zones';
-import { mean, percentile, playRun, profileStreams, teamSlots } from './sim-runner';
-
-/** Node global; the project does not pull in the Node type definitions. */
-declare const process: { argv: string[] };
+import { MS_PER_SECOND } from '../src/util/math';
+import { intArg, scriptArgs } from './node-env';
+import {
+  ANALYSIS_MAX_HEIGHT,
+  mean,
+  percentile,
+  playRun,
+  profileStreams,
+  teamSlots,
+} from './sim-runner';
 
 /**
  * `npm run sim:speed-variants`: what changes in height, coins and XP if the speed pacing is
@@ -94,13 +100,13 @@ function play(target: DifficultyTarget, set: SimTeamSet, variant: Variant, runs:
       { seed: seeds.int(0, 0xffffffff), mode: 'classic', team, tutorial: false, speedScale },
       target,
       noise,
+      [],
+      ANALYSIS_MAX_HEIGHT,
     );
   });
 }
 
-const runsArg = process.argv.find((arg) => arg.startsWith('--runs='));
-const runs = runsArg ? Number(runsArg.slice('--runs='.length)) : DIFFICULTY.runsPerProfile;
-const MS_PER_SECOND = 1000;
+const runs = intArg(scriptArgs(), 'runs', DIFFICULTY.runsPerProfile);
 
 console.log(
   `Speed pacing variants, ${runs} runs per cell, creature level ${SAVE_DEFAULTS.startCreatureLevel}; ` +

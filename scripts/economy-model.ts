@@ -24,9 +24,10 @@ import { MISSIONS } from '../src/data/missions';
 import type { LevelReward } from '../src/data/progression';
 import { SHOP } from '../src/data/shop';
 import { STREAK_REWARDS } from '../src/data/streak';
-import { CoinStats, type CoinsBySource } from './coin-stats';
-import { nodeFs, scriptArgs } from './node-env';
-import { mean, playRun, profileStreams, teamSlots } from './sim-runner';
+import { MS_PER_SECOND } from '../src/util/math';
+import { COIN_SOURCES, CoinStats, type CoinsBySource } from './coin-stats';
+import { intArg, nodeFs, scriptArgs } from './node-env';
+import { ANALYSIS_MAX_HEIGHT, mean, playRun, profileStreams, teamSlots } from './sim-runner';
 
 // ---------------------------------------------------------------- samples
 
@@ -49,7 +50,6 @@ const SETUPS: TeamSetup[] = [
 ];
 const PROFILES = ['novice', 'regular', 'expert', 'strong'] as const;
 type ProfileId = (typeof PROFILES)[number];
-const MAX_HEIGHT = 1500;
 
 function playSamples(profileId: ProfileId, setup: TeamSetup, runs: number): RunSample[] {
   const profile = DIFFICULTY.targets.find((t) => t.id === profileId);
@@ -68,11 +68,11 @@ function playSamples(profileId: ProfileId, setup: TeamSetup, runs: number): RunS
       profile,
       noise,
       [coins],
-      MAX_HEIGHT,
+      ANALYSIS_MAX_HEIGHT,
     );
     const c = coins.runs[coins.runs.length - 1];
     if (!c) throw new Error('no coin stats');
-    out.push({ h: result.height, c, b: result.berries, s: result.durationMs / 1000 });
+    out.push({ h: result.height, c, b: result.berries, s: result.durationMs / MS_PER_SECOND });
   }
   return out;
 }
@@ -141,7 +141,7 @@ const shopPriceFromData = (): Economy['shopPrice'] => {
 };
 
 const coinSum = (c: CoinsBySource): number =>
-  c.floating + c.combo + c.golden + c.height + c.perfect + c.crumb;
+  COIN_SOURCES.reduce((sum, source) => sum + c[source], 0);
 
 const bestPack = BERRY_PACKS[BERRY_PACKS.length - 1] ?? { berries: 100, coins: 1400 };
 
@@ -479,7 +479,7 @@ function main(): void {
   let proposalOnly = false;
   for (const arg of scriptArgs()) {
     const [key, value = ''] = arg.replace(/^--/, '').split('=');
-    if (key === 'runs') runs = Number(value);
+    if (key === 'runs') runs = intArg([arg], 'runs', runs);
     else if (key === 'cache') cache = value;
     else if (key === 'proposal') proposalOnly = true;
     else throw new Error(`Unknown argument: ${arg}`);
@@ -497,6 +497,7 @@ function main(): void {
 /** Knobs of the proposal, kept together so the report can print them. */
 export const KNOBS = {
   floating: 1,
+  perfect: 1,
   combo: 0.5,
   golden: 5,
   /** Height bonus: `perStep` coins for every full `step` layers. */
@@ -525,6 +526,7 @@ export const PROPOSAL: Economy = {
   name: 'proposal',
   runCoins: (r) =>
     KNOBS.floating * r.c.floating +
+    KNOBS.perfect * r.c.perfect +
     KNOBS.combo * r.c.combo +
     (r.c.golden / BALANCE.golden.normalCoins) * KNOBS.golden +
     Math.floor(r.h / KNOBS.heightStep) * KNOBS.heightPerStep +

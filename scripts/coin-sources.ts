@@ -3,7 +3,15 @@ import { SAVE_DEFAULTS } from '../src/data/save-defaults';
 import { NO_TEAM, allFullTeams, type SimTeamSet } from '../src/data/sim-teams';
 import { COIN_SOURCES, CoinStats, type CoinsBySource } from './coin-stats';
 import { nodeFs, scriptArgs } from './node-env';
-import { mean, percentile, playRun, profileStreams, teamSlots } from './sim-runner';
+import { MS_PER_SECOND } from '../src/util/math';
+import {
+  ANALYSIS_MAX_HEIGHT,
+  mean,
+  percentile,
+  playRun,
+  profileStreams,
+  teamSlots,
+} from './sim-runner';
 
 /**
  * `npm run sim:coins`: coins per run by source, XP (= height) and run duration for every bot
@@ -18,9 +26,6 @@ import { mean, percentile, playRun, profileStreams, teamSlots } from './sim-runn
 const SEARCH_LEVELS = [1, 5] as const;
 const DEFAULT_SEARCH_RUNS = 300;
 const DEFAULT_TOP = 5;
-/** A bot with a strong team at level 5 may never miss; such a run is cut off at this height. */
-const DEFAULT_MAX_HEIGHT = 1500;
-const MS_PER_SECOND = 1000;
 
 interface CliOptions {
   runs: number;
@@ -36,7 +41,7 @@ function parseArgs(argv: string[]): CliOptions {
     runs: DIFFICULTY.runsPerProfile,
     searchRuns: DEFAULT_SEARCH_RUNS,
     top: DEFAULT_TOP,
-    maxHeight: DEFAULT_MAX_HEIGHT,
+    maxHeight: ANALYSIS_MAX_HEIGHT,
     profile: null,
     json: null,
   };

@@ -12,6 +12,8 @@ import type { RunObserver } from './run-observer';
 const STEP_MS = BALANCE.sim.stepMs;
 export const BASE_SEED = 20261113;
 /** Safety net for a bot that never misses. */
+/** A bot with a strong team may never miss; analysis runs are cut off at this height. */
+export const ANALYSIS_MAX_HEIGHT = 1500;
 const MAX_RUN_MS = 60 * 60 * 1000;
 
 /** The part of a difficulty target that decides how the bot plays. */
