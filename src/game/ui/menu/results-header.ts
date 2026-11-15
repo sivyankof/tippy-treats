@@ -8,7 +8,7 @@ import { createCreatureIcon } from '../creature-icons';
 import { NumberRoll } from '../number-roll';
 import { createOutlinedText } from '../outlined-text';
 import { TitleRibbon } from '../style/title-ribbon';
-import { fitText } from './fit-text';
+import { fitText, onFontRefresh } from './fit-text';
 import { cellWidths, stackRows, type Row } from './results-layout';
 
 const cfg = MENU.results;
@@ -126,17 +126,21 @@ function abilityRow(
       cfg.statFont * cfg.abilityCountScale,
       PALETTE.gold,
     ).setOrigin(0, 0.5);
-    return { icon, label, width: cfg.abilityIconSize + cfg.abilityIconGap + label.width };
+    return { icon, label };
   });
-  const total =
-    items.reduce((sum, item) => sum + item.width, 0) + cfg.abilityItemGap * (items.length - 1);
-  let left = -total / 2;
-  for (const { icon, label, width } of items) {
-    icon.setPosition(left + cfg.abilityIconSize / 2, 0);
-    label.setPosition(left + cfg.abilityIconSize + cfg.abilityIconGap, 0);
-    row.add([icon, label]);
-    left += width + cfg.abilityItemGap;
-  }
-  if (total > maxWidth) row.setScale(maxWidth / total);
+  for (const { icon, label } of items) row.add([icon, label]);
+  const layout = (): void => {
+    const widths = items.map(({ label }) => cfg.abilityIconSize + cfg.abilityIconGap + label.width);
+    const total = widths.reduce((sum, w) => sum + w, 0) + cfg.abilityItemGap * (items.length - 1);
+    let left = -total / 2;
+    items.forEach(({ icon, label }, i) => {
+      icon.setPosition(left + cfg.abilityIconSize / 2, 0);
+      label.setPosition(left + cfg.abilityIconSize + cfg.abilityIconGap, 0);
+      left += (widths[i] ?? 0) + cfg.abilityItemGap;
+    });
+    row.setScale(total > maxWidth ? maxWidth / total : 1);
+  };
+  layout();
+  onFontRefresh(row, layout);
   return row;
 }
