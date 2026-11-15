@@ -6,7 +6,7 @@ import { emptyTally, tallyEvents, type RunTally } from '../../core/run-tally';
 import type { CheckpointHeight } from '../../core/checkpoints';
 import type { RunMode } from '../../core/run-result';
 import type { TeamSlot } from '../../core/sim-types';
-import { TowerSim, type TowerState } from '../../core/tower-sim';
+import { TowerSim, type LandingPreview, type TowerState } from '../../core/tower-sim';
 import { RunFx } from '../fx/run-fx';
 import { easeFn } from '../fx/ease';
 import { RunIntro } from '../fx/run-intro';
@@ -80,6 +80,15 @@ export class GameScene extends Phaser.Scene {
   /** Drop modifiers as the sim last reported them; refreshed whenever a step had events. */
   private mods!: Readonly<Modifiers>;
   private camera!: RunCamera;
+  /** How the layer in the fall will land, refilled every frame it falls. */
+  private readonly landing: LandingPreview = {
+    index: 0,
+    kind: 'plain',
+    creature: null,
+    width: 0,
+    cut: null,
+    pieceWidth: 0,
+  };
 
   constructor() {
     super(SCENES.game);
@@ -174,6 +183,7 @@ export class GameScene extends Phaser.Scene {
     const events = held ? [] : this.sim.update(delta);
     this.bot?.observe(events);
     if (!held && this.bot?.shouldDrop(this.sim)) events.push(...this.sim.drop());
+    this.fx.tower.prepareLanding(this.sim.landingPreview(this.landing) ? this.landing : null);
     this.tutorial?.observe(events, this.sim.state);
     driveContinue(
       {

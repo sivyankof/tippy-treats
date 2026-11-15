@@ -1,6 +1,6 @@
 import type * as Phaser from 'phaser';
 import type { CutSide } from '../../core/drop';
-import type { LayerPlan, PlacedLayer, TowerState } from '../../core/tower-sim';
+import type { LandingPreview, LayerPlan, PlacedLayer, TowerState } from '../../core/tower-sim';
 import { wobbleAmplitude, wobbleOffset } from '../../core/wobble';
 import { ANIM } from '../../data/anim';
 import { BALANCE } from '../../data/balance';
@@ -10,6 +10,7 @@ import { effectsMode } from '../effects-mode';
 import { waveStep } from '../fx/anim-curves';
 import { moodForWobble, type MouthKind, type Reaction } from './face-state';
 import { GlazeDripGrowth } from './glaze-drip-growth';
+import { LandingPrep } from './landing-prep';
 import { LickDirector, type LickContext } from './lick-director';
 import { isAiming, type LickKind, type LickScene } from './lick-plan';
 import { plainLooks } from './plain-look';
@@ -88,6 +89,8 @@ export class TowerView {
 
   private readonly tray: Tray;
   private readonly glazeGrowth: GlazeDripGrowth;
+  /** Bakes the pictures of the layer in the air and in the fall before it lands. */
+  private readonly prep: LandingPrep;
   /** The rare lick of a layer; it draws from the cosmetic stream of the run. */
   readonly licks = new LickDirector(plainLooks.cosmeticSeed);
   private bandTop = -Infinity;
@@ -103,6 +106,7 @@ export class TowerView {
   ) {
     this.tray = new Tray(scene, trayTopY);
     this.glazeGrowth = new GlazeDripGrowth(scene);
+    this.prep = new LandingPrep(scene);
     // The pictures of the lick tongue are baked now, not at the first lick.
     prepareTongue(scene);
   }
@@ -203,6 +207,15 @@ export class TowerView {
     return snapshotTower(this.state?.layers ?? [], this.cuts);
   }
 
+  /**
+   * The layer in the fall will land like this (`null`: no layer falls, or it misses): its
+   * pictures are baked over the next frames, so the landing frame finds them ready.
+   */
+  prepareLanding(preview: Readonly<LandingPreview> | null): void {
+    if (preview) this.prep.noteLanding(preview);
+    else this.prep.endLanding();
+  }
+
   /** Remembers which edge of the layer (0-based) was bitten; `null` for an intact one. */
   noteCut(index: number, side: CutSide | null): void {
     this.cuts[index] = side;
@@ -243,6 +256,7 @@ export class TowerView {
    */
   sync(state: Readonly<TowerState>, cameraBottomY: number, cameraTopY: number): void {
     this.state = state;
+    this.prep.noteFlying(state.flying, state.layers.length + 1);
     this.glazeGrowth.noteLayers(state.layers.length, this.clockMs);
     const count = Math.min(state.layers.length, this.hiddenFrom);
     this.layerCount = count;
@@ -286,6 +300,7 @@ export class TowerView {
     const state = this.state;
     if (!state) return;
     this.sway.advance(dtMs);
+    this.prep.tick();
     this.clockMs += dtMs;
     this.tray.tick(this.clockMs);
     this.motion.timeMs = this.clockMs;

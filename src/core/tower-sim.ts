@@ -3,7 +3,7 @@ import { ZONES } from '../data/zones';
 import { collectModifiers } from './abilities/modifiers';
 import { runAbility, tickRunEffects } from './abilities/run';
 import type { Modifiers } from './abilities/types';
-import { resolveDrop } from './drop';
+import { resolveDrop, type DropInput } from './drop';
 import { growInField } from './field';
 import { Flight, newFlyingLayer } from './flight';
 import { applyContinue, applyMiss } from './miss';
@@ -11,7 +11,15 @@ import { Rng } from './rng';
 import { collectFloatingCoin, payHeightBonus, payLanding, spawnFloatingCoin } from './run-coins';
 import type { RunEndReason, RunResult } from './run-result';
 import { comboWidening, nextCombo, normalScore, perfectScore } from './scoring';
-import type { PlacedLayer, RunConfig, SimEvent, SimPhase, TowerState } from './sim-types';
+import type {
+  FlyingLayer,
+  LandingPreview,
+  PlacedLayer,
+  RunConfig,
+  SimEvent,
+  SimPhase,
+  TowerState,
+} from './sim-types';
 import { TempoEase } from './tempo-ease';
 import { attemptLayer, type LayerAttempt, type PlanState } from './team-queue';
 import { cloudRoll, layerRules, nominalSpeed, zoneIndexOf } from './zones';
@@ -31,6 +39,7 @@ export type {
   FlyingLayer,
   LandQuality,
   LayerKind,
+  LandingPreview,
   LayerPlan,
   PlacedLayer,
   RunConfig,
@@ -191,6 +200,19 @@ export class TowerSim {
     return this.s.layers.at(-1)?.x ?? BALANCE.tray.centerX;
   }
 
+  /** Where the top layer will be when the fall ends: the sway keeps moving while the layer falls. */
+  private topLayerXAtLanding(): number {
+    const s = this.s;
+    if (s.layers.length === 0) return this.topRestX();
+    let { phaseMs, wobble, wobblePhase } = s;
+    while (phaseMs < BALANCE.layer.fallMs) {
+      phaseMs += STEP_MS;
+      wobble = decayWobble(wobble, STEP_MS);
+      wobblePhase = advanceWobblePhase(wobblePhase, STEP_MS);
+    }
+    return this.topRestX() + wobbleOffset(wobble, wobblePhase, 0);
+  }
+
   private topSway(): number {
     if (this.s.layers.length === 0) return 0;
     return wobbleOffset(this.s.wobble, this.s.wobblePhase, 0);
@@ -270,20 +292,51 @@ export class TowerSim {
     return assist ? Math.max(mods.perfectTolerance, assistTolerance) : mods.perfectTolerance;
   }
 
+  /** What `resolveDrop` needs to settle the flying layer on the tower. */
+  private dropInput(flying: FlyingLayer, mods: Readonly<Modifiers>, targetX: number): DropInput {
+    return {
+      flyingX: flying.x,
+      width: flying.width,
+      targetX,
+      perfectTolerance: this.perfectTolerance(mods),
+      protectCut: mods.protectCut,
+      springShare: mods.springShare,
+    };
+  }
+
+  /**
+   * Fills `out` with how the falling layer will land (the drop is settled the moment it is
+   * dropped: the layer no longer moves) and returns true; false when no layer falls or it will
+   * miss. Changes nothing. Only the abilities of the landing and a sneeze can still alter the
+   * width, so a view may prepare its picture from this but must cope with another one.
+   */
+  landingPreview(out: LandingPreview): boolean {
+    const flying = this.s.flying;
+    if (this.s.phase !== 'falling' || !flying) return false;
+    const outcome = resolveDrop(
+      this.dropInput(flying, this.currentModifiers(), this.topLayerXAtLanding()),
+    );
+    if (outcome.quality === 'miss') return false;
+    const perfect = outcome.quality === 'perfect';
+    const x = this.topRestX() + outcome.centerOffset;
+    const placed = growInField(x, outcome.newWidth, 0);
+    const widening = perfect ? comboWidening(nextCombo(this.s.combo, true), placed.width) : 0;
+    out.index = this.s.layers.length + 1;
+    out.kind = flying.kind;
+    out.creature = flying.kind === 'creature' && flying.creature ? flying.creature : null;
+    out.width = growInField(placed.x, placed.width, widening).width;
+    out.cut = outcome.cutSide;
+    out.pieceWidth = outcome.cutSide ? outcome.cutWidth : 0;
+    return true;
+  }
+
   private resolveLanding(events: SimEvent[]): void {
     const s = this.s;
     const flying = s.flying;
     if (!flying) return;
     // Modifiers come from the effects that were active before this layer.
     const mods = this.currentModifiers();
-    const outcome = resolveDrop({
-      flyingX: flying.x,
-      width: flying.width,
-      targetX: this.topLayerX(),
-      perfectTolerance: this.perfectTolerance(mods),
-      protectCut: mods.protectCut,
-      springShare: mods.springShare,
-    });
+    const outcome = resolveDrop(this.dropInput(flying, mods, this.topLayerX()));
     s.flying = null;
     this.flight = null;
     // The floating coin is lost on a miss; a retried layer rolls no new one.

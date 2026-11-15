@@ -50,7 +50,13 @@ export function bakeTexture(
   const g = scene.add.graphics().setVisible(false);
   try {
     draw(g);
-    g.generateTexture(key, Math.ceil(width), Math.ceil(height));
+    // The picture goes into a canvas first and the texture is made from the finished canvas,
+    // so the GPU gets one upload instead of an empty one and a second after the drawing.
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.ceil(width);
+    canvas.height = Math.ceil(height);
+    g.generateTexture(canvas, canvas.width, canvas.height);
+    scene.textures.addCanvas(key, canvas);
   } finally {
     g.destroy();
   }
