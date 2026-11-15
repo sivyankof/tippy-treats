@@ -1,4 +1,4 @@
-import type { Plugin } from 'vite';
+import { normalizePath, type Plugin } from 'vite';
 import { defineConfig } from 'vitest/config';
 
 /** Node global; the project does not pull in the Node type definitions. */
@@ -37,13 +37,32 @@ function leanDevPhaser(): Plugin {
   };
 }
 
+/**
+ * Dev only: the version is baked in through `define` when the config loads, and Vite reloads the
+ * config for its own file but not for package.json. A long-running dev server would keep showing
+ * the old version after a bump, so a change of package.json restarts the server.
+ */
+function restartOnPackageJson(): Plugin {
+  return {
+    name: 'restart-on-package-json',
+    apply: 'serve',
+    configureServer(server) {
+      const file = normalizePath(`${server.config.root}/package.json`);
+      server.watcher.add(file);
+      server.watcher.on('change', (changed) => {
+        if (normalizePath(changed) === file) void server.restart();
+      });
+    },
+  };
+}
+
 export default defineConfig(({ command, mode }) => {
   const devServer = command === 'serve' && mode !== 'test';
   return {
     // Relative base so the build also works from the Capacitor webview.
     base: './',
     define: { __APP_VERSION__: JSON.stringify(packageVersion()) },
-    plugins: devServer ? [leanDevPhaser()] : [],
+    plugins: devServer ? [leanDevPhaser(), restartOnPackageJson()] : [],
     resolve: devServer ? { alias: [{ find: /^phaser$/, replacement: PHASER_MIN }] } : {},
     optimizeDeps: devServer ? { exclude: ['phaser'] } : {},
     build: {
