@@ -122,7 +122,7 @@ tippy-treats/
     │   ├── run-exit.ts         куда уходит забег без результатов: карточка после демо, экран башни дня, Home (через новых существ)
     │   ├── scene-keys.ts       ключи сцен, переходы (`openScreen`, `startRunFrom`, `launchRun`, `goNext`), данные сцен
     │   ├── tutorial/           обучение: `tutorial-director.ts` (когда что показывать), `timeline.ts`, подсказки
-    │   │                       `tap-hint.ts`, `perfect-hint.ts`, `caption-hint.ts`, `tutorial-hints.ts`, `hint-textures.ts`
+    │   │                       `tap-hint.ts`, `perfect-hint.ts`, `caption-hint.ts`, `tutorial-hints.ts`, `hint-spot.ts` (выбор места плашки), `hint-textures.ts`
     │   ├── scenes/
     │   │   ├── boot-scene.ts
     │   │   ├── preload-scene.ts

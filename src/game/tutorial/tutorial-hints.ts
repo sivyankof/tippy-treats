@@ -4,15 +4,17 @@ import { HUD_LAYOUT } from '../../data/hud-layout';
 import { TUTORIAL_ANIM } from '../../data/tutorial-anim';
 import { t } from '../../i18n';
 import { oscillate01 } from '../../util/math';
+import { FLYING_REACH } from '../camera-layout';
 import { effectsMode } from '../effects-mode';
 import { CaptionHint } from './caption-hint';
 import { bakeHintTextures, HINT_TEXTURES } from './hint-textures';
+import { pickPlateY, type SpotInput } from './hint-spot';
 import { PerfectHint } from './perfect-hint';
 import { TapHint } from './tap-hint';
 import { fadeAlpha, HintClock } from './timeline';
 import type { TutorialDirector } from './tutorial-director';
 
-const { caption, arrow, wobbleHint, berryHint, cloudHint } = TUTORIAL_ANIM;
+const { caption, arrow, wobbleHint, berryHint, cloudHint, hintSpot } = TUTORIAL_ANIM;
 
 /**
  * Everything the first-run hints draw, in the HUD scene: the tap hint, the first-perfect
@@ -45,6 +47,18 @@ export class TutorialHints {
   private director: TutorialDirector | null = null;
   private screenWidth = 0;
   private screenHeight = 0;
+  /** Reused by every plate placement: no allocation per frame. */
+  private readonly spot: SpotInput = {
+    screenHeight: 0,
+    hudBottom: HUD_LAYOUT.bottomEdge,
+    plateWidth: 0,
+    plateHeight: 0,
+    centerX: 0,
+    topLayer: { left: 0, top: 0, right: 0, bottom: 0 },
+    flightRow: { left: 0, top: 0, right: 0, bottom: 0 },
+    shadow: null,
+  };
+  private readonly shadowRect = { left: 0, top: 0, right: 0, bottom: 0 };
 
   constructor(scene: Phaser.Scene) {
     bakeHintTextures(scene);
@@ -97,8 +111,8 @@ export class TutorialHints {
       for (const cue of director.takeCues()) {
         if (cue.type === 'first_perfect')
           this.perfect.show(effectsMode.reduced, director.towerTopY);
-        else if (cue.type === 'wobble') this.startWobble(director.towerTopY);
-        else if (cue.type === 'berry') this.startBerry(director.towerTopY);
+        else if (cue.type === 'wobble') this.startWobble(director);
+        else if (cue.type === 'berry') this.startBerry(director);
         else if (cue.type === 'cloud') this.cloudClock.start(cloudHint.holdMs);
       }
     }
@@ -109,12 +123,47 @@ export class TutorialHints {
     this.updateHoney(timeMs, director);
   }
 
-  /** The plate sits on the tower just under its top surface, below the flying row. */
-  private startWobble(towerTopY: number): void {
-    const lowest = this.screenHeight - wobbleHint.screenMargin - this.wobble.height / 2;
-    const y = Math.min(towerTopY + wobbleHint.gapBelowTop + this.wobble.height / 2, lowest);
-    this.wobble.place(this.screenWidth / 2, y);
+  /** The plate stands in a free zone, clear of the top layer, the flying row and the shadow. */
+  private startWobble(director: TutorialDirector): void {
+    this.wobble.place(this.screenWidth / 2, this.plateY(this.wobble, director));
     this.wobbleClock.start(wobbleHint.holdMs);
+  }
+
+  /**
+   * Fills the reused placement input from the director and picks the plate's centre y.
+   * `width` is the plate's own width; the caption reports its height.
+   */
+  private plateY(
+    plate: CaptionHint,
+    director: TutorialDirector,
+    shadow: { readonly x: number; readonly y: number; readonly known: boolean } | null = null,
+  ): number {
+    const { spot, shadowRect } = this;
+    const top = director.towerTopY;
+    spot.screenHeight = this.screenHeight;
+    spot.plateWidth = plate.width;
+    spot.plateHeight = plate.height;
+    spot.centerX = this.screenWidth / 2;
+    const layer = spot.topLayer;
+    layer.left = director.towerSpan.left;
+    layer.right = director.towerSpan.right;
+    layer.top = top;
+    layer.bottom = top + BALANCE.layer.height;
+    const row = spot.flightRow;
+    row.left = 0;
+    row.right = this.screenWidth;
+    row.top = top - FLYING_REACH;
+    row.bottom = top;
+    const at = shadow ?? (director.shadow.valid ? { ...director.shadow, known: true } : null);
+    if (at?.known) {
+      const half = BALANCE.layer.maxWidth / 2;
+      shadowRect.left = at.x - half;
+      shadowRect.right = at.x + half;
+      shadowRect.top = at.y;
+      shadowRect.bottom = at.y + hintSpot.shadowHeight;
+      spot.shadow = shadowRect;
+    } else spot.shadow = null;
+    return pickPlateY(spot);
   }
 
   private updateWobble(timeMs: number, deltaMs: number): void {
@@ -122,11 +171,9 @@ export class TutorialHints {
     this.wobble.render(this.wobbleClock.alpha(caption.fadeInMs, caption.fadeOutMs), timeMs);
   }
 
-  /** Same place as the wobble hint: on the tower under its top surface, never in the flying row. */
-  private startBerry(towerTopY: number): void {
-    const lowest = this.screenHeight - berryHint.screenMargin - this.berry.height / 2;
-    const y = Math.min(towerTopY + berryHint.gapBelowTop + this.berry.height / 2, lowest);
-    this.berry.place(this.screenWidth / 2, y);
+  /** Same place as the wobble hint. */
+  private startBerry(director: TutorialDirector): void {
+    this.berry.place(this.screenWidth / 2, this.plateY(this.berry, director));
     this.berryClock.start(berryHint.holdMs);
   }
 
@@ -136,8 +183,8 @@ export class TutorialHints {
   }
 
   /**
-   * The arrow stands under the shadow of the hidden layer and follows it; the plate hangs under
-   * the arrow, on the tower, so the flying row stays clear.
+   * The arrow stands under the shadow of the hidden layer and follows it; the plate stands in a free
+   * zone, clear of the top layer, the flying row and the shadow.
    */
   private updateCloud(timeMs: number, deltaMs: number, director: TutorialDirector | null): void {
     this.cloudClock.tick(deltaMs);
@@ -152,10 +199,8 @@ export class TutorialHints {
     const bob = arrow.bobPx * oscillate01(timeMs, arrow.periodMs);
     const tipY = this.cloudSpot.y + cloudHint.arrowGap + bob;
     this.cloudArrow.setPosition(this.cloudSpot.x, tipY).setAlpha(alpha);
-    const plateHalf = this.cloud.height / 2;
-    const wanted = tipY + this.cloudArrow.displayHeight + cloudHint.plateGap + plateHalf;
-    const lowest = this.screenHeight - cloudHint.screenMargin - plateHalf;
-    this.cloud.place(this.screenWidth / 2, Math.min(wanted, lowest));
+    if (director)
+      this.cloud.place(this.screenWidth / 2, this.plateY(this.cloud, director, this.cloudSpot));
   }
 
   /** The caption and the arrow above the Honey layer, for as long as the sim is held. */

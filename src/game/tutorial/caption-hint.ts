@@ -38,8 +38,12 @@ export class CaptionHint {
 
   setText(content: string): void {
     this.text.setText(content);
-    const width = Math.min(cfg.width, this.text.width + cfg.padX * 2);
-    this.plate.place(0, 0, width, this.text.height + cfg.padY * 2);
+    this.plate.place(0, 0, this.width, this.height);
+  }
+
+  /** Width of the plate as `setText` sized it. */
+  get width(): number {
+    return Math.min(cfg.width, this.text.width + cfg.padX * 2);
   }
 
   get height(): number {

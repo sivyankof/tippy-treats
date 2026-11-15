@@ -13,6 +13,9 @@ export function placeTutorialTarget(
 ): void {
   // Where the top of the tower settles on the screen: hints keep out of the flying row above it.
   tutorial.towerTopY = fx.tower.topY() - runCamera.targetScrollY();
+  const span = fx.tower.topSpan();
+  tutorial.towerSpan.left = span.left - camera.scrollX;
+  tutorial.towerSpan.right = span.right - camera.scrollX;
   const shadow = fx.shadowAnchor();
   tutorial.shadow.valid = shadow.visible;
   if (shadow.visible) {

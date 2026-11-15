@@ -33,6 +33,8 @@ export class TutorialDirector {
   readonly target = { x: 0, y: 0, valid: false };
   /** Screen y where the top of the tower settles (the flying row is above it), set by the scene. */
   towerTopY = 0;
+  /** Screen x range of the top layer of the tower, set by the scene every frame. */
+  readonly towerSpan = { left: 0, right: 0 };
   /** Screen position of the shadow of the flying layer on the tower, set by the scene every frame. */
   readonly shadow = { x: 0, y: 0, valid: false };
 

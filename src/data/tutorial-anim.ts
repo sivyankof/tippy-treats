@@ -86,32 +86,34 @@ export const TUTORIAL_ANIM = {
     stemOverlap: 10,
     stemRadius: 14,
   },
-  /** The berry hint sits where the wobble hint does: on the tower, under its top surface. */
-  berryHint: {
-    gapBelowTop: 40,
+  /**
+   * Where a hint plate of a run may stand (`game/tutorial/hint-spot.ts`): clear of the top layer
+   * of the tower, the flying row and the shadow, by `gap`.
+   */
+  hintSpot: {
+    gap: 40,
+    /** Least gap between the plate and the bottom of the screen. */
     screenMargin: 40,
+    /** The shadow hint on the top layer is this tall (its width is the layer's). */
+    shadowHeight: 50,
+  },
+  /** The berry hint stands where the wobble hint does. */
+  berryHint: {
     holdMs: 3500,
   },
   /**
    * The cloud hint: an arrow under the shadow of the hidden layer (it follows the shadow) and a
-   * plate under the arrow, on the tower.
+   * plate in a free zone (`hintSpot`).
    */
   cloudHint: {
     /** Gap between the shadow and the tip of the arrow. */
     arrowGap: 12,
     /** The arrow is the shared one, smaller. */
     arrowScale: 0.55,
-    /** Gap between the arrow and the plate. */
-    plateGap: 10,
-    screenMargin: 40,
     holdMs: 3800,
   },
-  /** The wobble hint sits on the tower, just under its top surface, centred: never in the flying row. */
+  /** The wobble hint stands centred in a free zone (`hintSpot`), never over the top layer. */
   wobbleHint: {
-    /** Gap between the top surface of the tower and the top of the plate. */
-    gapBelowTop: 40,
-    /** Least gap between the plate and the bottom of the screen. */
-    screenMargin: 40,
     holdMs: 3400,
   },
 } as const;
