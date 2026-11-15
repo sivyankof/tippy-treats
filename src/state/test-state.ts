@@ -8,8 +8,11 @@ import { GameState } from './game-state';
  * A state on in-memory storage with timers that never fire, for tests of code that reads or marks
  * the save. `clock.ms` is both the game clock and the real clock; move it to change the day.
  */
-export function createTestState(clock: { ms: number } = { ms: 1_700_000_000_000 }): GameState {
-  return build(new MemoryStorage(), clock);
+export function createTestState(
+  clock: { ms: number } = { ms: 1_700_000_000_000 },
+  storage: MemoryStorage = new MemoryStorage(),
+): GameState {
+  return build(storage, clock);
 }
 
 /** Like `createTestState`, but starts from a given save (read through the normal load). */
