@@ -32,7 +32,7 @@ describe('topperAt', () => {
     }
   });
 
-  it('gives about one plain layer in six a topper, and every kind turns up', () => {
+  it('gives about one plain layer in four a topper, and every kind turns up', () => {
     const total = 3000;
     const kinds = new Set<string>();
     let count = 0;
@@ -42,8 +42,8 @@ describe('topperAt', () => {
       count++;
       kinds.add(t.kind);
     }
-    expect(count / total).toBeGreaterThan(0.13);
-    expect(count / total).toBeLessThan(0.2);
+    expect(count / total).toBeGreaterThan(0.22);
+    expect(count / total).toBeLessThan(0.3);
     expect([...kinds].sort()).toEqual([...TOPPER_KINDS].sort());
   });
 
@@ -54,6 +54,22 @@ describe('topperAt', () => {
       if (t) sides.add(t.side);
     }
     expect(sides).toEqual(new Set([-1, 1]));
+  });
+});
+
+describe('topperAt first-run guarantee', () => {
+  it('shows a topper within the first ten layers for every seed that has a bare layer from 4 to 10', () => {
+    const { guaranteeFrom, guaranteeTo } = PLAIN_TOPPERS;
+    for (let seed = 1; seed <= 3000; seed++) {
+      const looks = Array.from({ length: guaranteeTo }, (_, i) => plainLookAt(seed, i + 1));
+      const canHave = looks.slice(guaranteeFrom - 1).some((l) => l.decor === null);
+      if (!canHave) continue;
+      let found = 0;
+      for (let n = 1; n <= guaranteeTo; n++) {
+        if (topperAt(seed, n, looks[n - 1]!.decor)) found++;
+      }
+      expect(found).toBeGreaterThan(0);
+    }
   });
 });
 

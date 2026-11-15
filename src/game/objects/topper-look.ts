@@ -2,7 +2,7 @@ import { Rng } from '../../core/rng';
 import { PLAIN_TOPPERS, TOPPER_KINDS, type TopperKind } from '../../data/plain-toppers';
 import type { DecorKind } from '../../data/plain-layers';
 import { DEG_TO_RAD, lerp } from '../../util/math';
-import { lookOfCode, plainLooks } from './plain-look';
+import { lookOfCode, plainLookAt, plainLooks } from './plain-look';
 
 /** What a kind takes on screen, pixels: the picture size, its resting spot (from the picture top) and half its width on the edge. */
 export interface TopperSize {
@@ -25,17 +25,36 @@ export interface Topper {
   side: -1 | 1;
 }
 
-/**
- * The topper of the plain layer with this 1-based number for the cosmetic `seed`, or `null`. Only
- * a layer without a small decoration gets one. The draws are always taken, so the choice never
- * depends on the decoration, and it has a stream of its own per layer number.
- */
-export function topperAt(seed: number, layerIndex: number, decor: DecorKind | null): Topper | null {
+/** The draws of a layer's own topper stream: always all taken, so nothing depends on the decoration. */
+function topperDraws(seed: number, layerIndex: number): { wanted: boolean } & Topper {
   const rng = new Rng(seed).fork(`${PLAIN_TOPPERS.stream}:${layerIndex}`);
   const wanted = rng.next() < PLAIN_TOPPERS.shareOfBare;
   const kind = TOPPER_KINDS[rng.int(0, TOPPER_KINDS.length - 1)]!;
   const side: -1 | 1 = rng.next() < 0.5 ? -1 : 1;
-  return wanted && decor === null ? { kind, side } : null;
+  return { wanted, kind, side };
+}
+
+/** The layer numbers `[from, to]` the first-topper guarantee looks at. */
+const { guaranteeFrom, guaranteeTo } = PLAIN_TOPPERS;
+
+/**
+ * The topper of the plain layer with this 1-based number for the cosmetic `seed`, or `null`. Only
+ * a layer without a small decoration gets one. Each layer draws from a stream of its own. When
+ * none of layers 1..`guaranteeTo` got one by chance, the first bare layer from `guaranteeFrom`
+ * takes it, so every run shows a topper early; this depends on the cosmetic seed alone.
+ */
+export function topperAt(seed: number, layerIndex: number, decor: DecorKind | null): Topper | null {
+  const own = topperDraws(seed, layerIndex);
+  if (decor !== null) return null;
+  if (own.wanted) return { kind: own.kind, side: own.side };
+  if (layerIndex < guaranteeFrom || layerIndex > guaranteeTo) return null;
+  let first: number | null = null;
+  for (let n = 1; n <= guaranteeTo; n++) {
+    const bare = plainLookAt(seed, n).decor === null;
+    if (bare && topperDraws(seed, n).wanted) return null;
+    if (bare && first === null && n >= guaranteeFrom) first = n;
+  }
+  return first === layerIndex ? { kind: own.kind, side: own.side } : null;
 }
 
 /**

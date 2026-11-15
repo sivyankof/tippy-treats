@@ -1,6 +1,6 @@
 /**
  * Big toppers of the plain layers (docs/06, section 3, "Простые слои", "Украшение на макушке"):
- * one large sweet that sits on the top edge beside the face of about one plain layer in six and
+ * one large sweet that sits on the top edge beside the face of about one plain layer in four and
  * hops off when the next layer lands. Sizes are in screen pixels of the shown picture; the
  * baked texture of a kind is `bakeScale` times bigger so it stays crisp.
  */
@@ -33,8 +33,11 @@ export const PLAIN_TOPPERS = {
   stream: 'topper',
   /** Name of the stream of the launch of a hopped-off topper, followed by `:<layer number>`. */
   popStream: 'topper-pop',
-  /** Share of the layers without a small decoration that get a topper (about 1 in 6 of all plain layers). */
-  shareOfBare: 1 / 3,
+  /** Share of the layers without a small decoration that get a topper (about 1 in 4 of all plain layers). */
+  shareOfBare: 1 / 2,
+  /** If none of layers 1..`guaranteeTo` got a topper, the first bare layer from `guaranteeFrom` gets one. */
+  guaranteeFrom: 4,
+  guaranteeTo: 10,
   /** The pictures are drawn at the sizes of `kinds` and shown this many times bigger. */
   showScale: 1.35,
   /** The baked texture is this many times bigger than the shown picture. */
