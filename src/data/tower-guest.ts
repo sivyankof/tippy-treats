@@ -2,7 +2,7 @@ import { BD_TEX } from './backdrop';
 import { BACKDROP_COLORS } from './backdrop-colors';
 import type { Range, TravelSpec } from './backdrop-life';
 import { CREATURE_MATERIALS } from './creature-materials';
-import type { ZoneId } from './zones';
+import type { LayerRuleKind, ZoneId } from './zones';
 
 /**
  * How a guest of the tower looks: the picture it sits with, the flat one it turns into when a
@@ -198,8 +198,22 @@ export const TOWER_GUEST = {
   /** The wing beat and the buzz tilt fade in over this long when a flight starts (and out when it lands). */
   flightRampMs: 100,
 
-  /** "Fewer effects" lets no guest come to the tower (the dev trigger `window.tippyFly()` still does). */
-  reducedVisits: false,
+  /** "Fewer effects" still lets the guest visit (its splat is cut down to the flattening and the flight). */
+  reducedVisits: true,
+
+  /**
+   * The shadow of the flying layer is the aim hint, so the guest must not hide it. A guest on the
+   * path of the next layer, or one the shadow has come near (within the guest's body plus
+   * `site.shadowGapPx`), is drawn `scale` times its size and grows back over `rampMs`; a splat
+   * grows it back at once.
+   */
+  shadowFit: { scale: 0.5, rampMs: 180 },
+  /**
+   * Layers with these rules are aimed by the shadow alone (a cloud hides the layer): the guest
+   * never sits in that shadow. It does not choose a path visit, keeps clear of the shadow when it
+   * picks a seat, and leaves when the shadow reaches it.
+   */
+  shadowOnlyRules: ['clouds'] as readonly LayerRuleKind[],
 
   /**
    * The guest flinches (hops, leans away, settles) when a layer in the air comes within `marginPx`

@@ -5,8 +5,10 @@ import { TOWER_GUEST, TOWER_GUESTS } from '../../data/tower-guest';
 import { easeInQuad as easeIn, easeOutQuad as easeOut, pickRange } from '../../util/math';
 import { faceHalfSpan } from '../fx/glaze-growth';
 import {
+  aimedByShadowOnly,
   chooseSite,
   clearOfFace,
+  clearOfSpan,
   flightPoint,
   flinchPose,
   GuestScheduler,
@@ -97,6 +99,38 @@ describe('siteOffset', () => {
     expect(x).toBeLessThan(0);
     const both = { left: -200, right: 200 };
     expect(siteOffset(400, FACE, HALF_BODY, 1, 0.5, both)).toBeNull();
+  });
+});
+
+describe('clearOfSpan', () => {
+  it('is clear on both sides of the span by the body and the shadow gap, and not within', () => {
+    const span = { left: -50, right: 50 };
+    const reach = HALF_BODY + site.shadowGapPx;
+    expect(clearOfSpan(0, HALF_BODY, span)).toBe(false);
+    expect(clearOfSpan(50 + reach - 1, HALF_BODY, span)).toBe(false);
+    expect(clearOfSpan(50 + reach + 1, HALF_BODY, span)).toBe(true);
+    expect(clearOfSpan(-50 - reach - 1, HALF_BODY, span)).toBe(true);
+  });
+
+  it('is always clear when there is no shadow', () => {
+    expect(clearOfSpan(0, HALF_BODY, null)).toBe(true);
+  });
+});
+
+describe('aimedByShadowOnly', () => {
+  it('holds for the cloud rule only, and not for an unknown rule', () => {
+    expect(aimedByShadowOnly('clouds')).toBe(true);
+    expect(aimedByShadowOnly('none')).toBe(false);
+    expect(aimedByShadowOnly('stars')).toBe(false);
+    expect(aimedByShadowOnly(null)).toBe(false);
+  });
+});
+
+describe('shadow fit data', () => {
+  it('draws the guest smaller over the aim hint and lets it visit in "fewer effects"', () => {
+    expect(TOWER_GUEST.shadowFit.scale).toBeGreaterThan(0);
+    expect(TOWER_GUEST.shadowFit.scale).toBeLessThan(1);
+    expect(TOWER_GUEST.reducedVisits).toBe(true);
   });
 });
 

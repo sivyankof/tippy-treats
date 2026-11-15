@@ -1,4 +1,5 @@
 import { TOWER_GUEST } from '../../data/tower-guest';
+import type { LayerRuleKind } from '../../data/zones';
 import {
   DEG_TO_RAD,
   clamp01,
@@ -52,6 +53,18 @@ export interface Span {
   right: number;
 }
 
+/** A guest `halfBody` wide at offset `x` is clear of the `span` by the shadow gap on both sides (any `x` when there is none). */
+export function clearOfSpan(x: number, halfBody: number, span: Span | null): boolean {
+  if (!span) return true;
+  const gap = TOWER_GUEST.site.shadowGapPx;
+  return x + halfBody + gap < span.left || x - halfBody - gap > span.right;
+}
+
+/** The next layer with this rule (`null`: not known yet) is aimed by its shadow alone. */
+export function aimedByShadowOnly(rule: LayerRuleKind | null): boolean {
+  return rule !== null && TOWER_GUEST.shadowOnlyRules.includes(rule);
+}
+
 /**
  * Where on a layer `width` wide, whose face takes `faceHalf` on each side of the centre, a guest
  * `halfBody` wide can sit: its offset from the centre, or `null` when there is no room beside the
@@ -67,17 +80,14 @@ export function siteOffset(
   reach: number,
   avoid: Span | null = null,
 ): number | null {
-  const { faceGapPx, edgeGapPx, shadowGapPx } = TOWER_GUEST.site;
+  const { faceGapPx, edgeGapPx } = TOWER_GUEST.site;
   const near = faceHalf + faceGapPx + halfBody;
   const far = width / 2 - edgeGapPx - halfBody;
   if (far < near) return null;
   const offset = side * lerp(near, far, clamp01(reach));
-  if (!avoid) return offset;
-  const clear = (x: number): boolean =>
-    x + halfBody + shadowGapPx < avoid.left || x - halfBody - shadowGapPx > avoid.right;
-  if (clear(offset)) return offset;
+  if (clearOfSpan(offset, halfBody, avoid)) return offset;
   const other = -offset;
-  return clear(other) ? other : null;
+  return clearOfSpan(other, halfBody, avoid) ? other : null;
 }
 
 /**
