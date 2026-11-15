@@ -128,10 +128,28 @@ export const BALANCE = {
   },
 } as const;
 
+/**
+ * Bot skill "chase the floating coin" (bot-model assumption). When the coin lies inside the
+ * tower top but within `riskMarginPx` of its edge, a normal cut could slice it off, so the bot
+ * aims `shiftPx` towards the coin, as long as the layer stays at least `minWidthPx` wide.
+ */
+export interface CoinChase {
+  shiftPx: number;
+  riskMarginPx: number;
+  minWidthPx: number;
+}
+
 export interface DifficultyTarget {
-  id: 'novice' | 'regular' | 'expert';
+  id: 'novice' | 'regular' | 'expert' | 'strong';
   /** Standard deviation of the tap timing error. */
   timingSdMs: number;
+  /**
+   * Calibration profile for analysis: `npm run sim` plays it only with `--profile=<id>`, so the
+   * balance checks over the design profiles (and their acceptance criteria) stay as they were.
+   */
+  analysisOnly?: true;
+  /** Optional bot skill; absent means the bot never aims at floating coins. */
+  coinChase?: CoinChase;
   /** Expected median height without creatures. */
   medianHeight: readonly [min: number, max: number];
 }
@@ -155,5 +173,8 @@ export const DIFFICULTY = {
     { id: 'novice', timingSdMs: 70, medianHeight: [12, 18] },
     { id: 'regular', timingSdMs: 45, medianHeight: [30, 45] },
     { id: 'expert', timingSdMs: 25, medianHeight: [80, 120] },
+    // Live-player calibration (a tester's runs, no ads, no debug), not a design target:
+    // sd 20 ms puts the median near 100 layers and a 100-layer run near 80 coins (docs/02, section 12).
+    { id: 'strong', timingSdMs: 20, medianHeight: [90, 115], analysisOnly: true },
   ] satisfies DifficultyTarget[],
 } as const;

@@ -1,9 +1,5 @@
-import { TimingBot } from '../src/core/bot';
-import { Rng } from '../src/core/rng';
 import type { RunResult } from '../src/core/run-result';
-import type { RunConfig } from '../src/core/sim-types';
-import { TowerSim } from '../src/core/tower-sim';
-import { BALANCE, DIFFICULTY, type DifficultyTarget } from '../src/data/balance';
+import { DIFFICULTY, type DifficultyTarget } from '../src/data/balance';
 import { ZONES } from '../src/data/zones';
 import {
   NO_TEAM,
@@ -15,15 +11,12 @@ import {
 } from '../src/data/sim-teams';
 import { EndStats, type EndRow } from './end-stats';
 import type { RunObserver } from './run-observer';
+import { mean, percentile, playRun, profileStreams, teamSlots } from './sim-runner';
 import { WobbleStats, type WobbleRow } from './wobble-stats';
 
 /** Node global; the project does not pull in the Node type definitions. */
 declare const process: { argv: string[] };
 
-const STEP_MS = BALANCE.sim.stepMs;
-const BASE_SEED = 20261113;
-/** Safety net for a bot that never misses. */
-const MAX_RUN_MS = 60 * 60 * 1000;
 /** Median height gain of a full level-3 team expected by the M4 exit criteria, in percent. */
 const GAIN_RANGE_PCT = [30, 50] as const;
 /**
@@ -69,55 +62,12 @@ function parseArgs(argv: string[]): CliOptions {
   return options;
 }
 
-/** One bot run. The bot never continues a run. `observers` collect statistics without changing it. */
-function playRun(
-  config: RunConfig,
-  timingSdMs: number,
-  noise: Rng,
-  observers: readonly RunObserver[],
-): RunResult {
-  const sim = new TowerSim(config);
-  const bot = new TimingBot(timingSdMs, noise);
-
-  for (let elapsed = 0; elapsed < MAX_RUN_MS; elapsed += STEP_MS) {
-    for (const observer of observers) observer.beforeStep?.(sim.state);
-    const events = sim.update(STEP_MS);
-    if (sim.state.phase === 'await_continue') events.push(...sim.decline());
-    bot.observe(events);
-    for (const observer of observers) observer.noteEvents?.(events, sim.state);
-
-    for (const event of events) {
-      if (event.type === 'run_over') return event.result;
-    }
-
-    if (bot.shouldDrop(sim)) {
-      for (const observer of observers) observer.noteDrop?.(sim.state);
-      sim.drop();
-    }
-  }
-  throw new Error(`Run with seed ${config.seed} did not end`);
-}
-
-function percentile(sorted: number[], p: number): number {
-  const index = Math.min(sorted.length - 1, Math.max(0, Math.ceil(p * sorted.length) - 1));
-  return sorted[index] ?? 0;
-}
-
-const mean = (values: number[]): number =>
-  values.reduce((sum, value) => sum + value, 0) / values.length;
-
 function verdict(median: number, [min, max]: DifficultyTarget['medianHeight']): string {
   if (median >= min && median <= max) return 'ok';
   const { tolerance } = DIFFICULTY;
   if (median >= min * (1 - tolerance) && median <= max * (1 + tolerance)) return 'near';
   return 'OFF';
 }
-
-const teamSlots = (set: SimTeamSet, level: number): RunConfig['team'] =>
-  Array.from({ length: BALANCE.team.slots }, (_, i) => {
-    const id = set.creatures[i];
-    return id ? { id, level } : null;
-  });
 
 /** Plays all runs of one profile with one team; seeds and bot noise are the same for every team. */
 function playProfile(
@@ -126,19 +76,13 @@ function playProfile(
   options: CliOptions,
   observers: readonly RunObserver[] = [],
 ): { results: RunResult[]; heights: number[] } {
-  const seeds = new Rng(BASE_SEED).fork(`seeds:${target.id}`);
-  const noise = new Rng(BASE_SEED).fork(`noise:${target.id}`);
+  const { seeds, noise } = profileStreams(target.id);
   const team = teamSlots(set, options.level);
   const results: RunResult[] = [];
   for (let i = 0; i < options.runs; i++) {
     const seed = seeds.int(0, 0xffffffff);
     results.push(
-      playRun(
-        { seed, mode: 'classic', team, tutorial: false },
-        target.timingSdMs,
-        noise,
-        observers,
-      ),
+      playRun({ seed, mode: 'classic', team, tutorial: false }, target, noise, observers),
     );
   }
   const heights = results.map((r) => r.height).sort((a, b) => a - b);
@@ -266,7 +210,9 @@ const status = (ok: boolean): string => (ok ? 'ok' : 'FAIL');
 
 function main(): void {
   const options = parseArgs(process.argv.slice(2));
-  const targets = DIFFICULTY.targets.filter((t) => !options.profile || t.id === options.profile);
+  const targets = DIFFICULTY.targets.filter((t) =>
+    options.profile ? t.id === options.profile : !t.analysisOnly,
+  );
   if (targets.length === 0) throw new Error(`Unknown profile: ${options.profile}`);
 
   // The baseline is always played: every delta is measured against it.
