@@ -12,6 +12,8 @@ import { loadSvgTextures } from '../objects/svg-textures';
 import { TEMPO_ICON_KEY } from '../ui/creature-icons';
 import { createCreatureIconTextures } from '../objects/creature-icon-textures';
 import { SCENES, startRunFrom } from '../scene-keys';
+import { createRewardTextures } from '../fx/reward-pictures';
+import { createPileTextures } from '../fx/treasure-pile';
 import { createTreasureTextures } from '../fx/treasure-textures';
 import { opensWithRun } from '../run-setup';
 import { gameState } from '../../state';
@@ -45,6 +47,8 @@ export class BootScene extends Phaser.Scene {
       return;
     }
     createTreasureTextures(this);
+    createPileTextures(this);
+    createRewardTextures(this);
     createCreatureIconTextures(this);
     if (opensWithRun() || !gameState.hasHint('tutorial')) {
       startRunFrom(this);

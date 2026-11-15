@@ -14,7 +14,7 @@ import { faceOffsetY, VolumePlate } from '../style/volume';
 import type { DailySection } from './daily-section';
 import { fitText } from './fit-text';
 import { formatTimeLeft } from './time-text';
-import { berryIcon, coinIcon, shopIcon } from './shop-row';
+import { pileIcon, shopIcon } from './shop-row';
 
 const cfg = MENU.shop.starter;
 const width = MENU.shop.width;
@@ -22,7 +22,7 @@ const creatureId = PRODUCTS.starter_pack.grant.creature;
 
 /** One line of the contents: a picture and a text. */
 interface Line {
-  icon: Phaser.GameObjects.Image;
+  icon: Phaser.GameObjects.Container | Phaser.GameObjects.Image;
   text: string;
 }
 
@@ -67,9 +67,13 @@ export class ShopStarter implements DailySection {
     const parts: Phaser.GameObjects.GameObject[] = [plate, title, this.timer];
 
     const contents = starterPackContents(gameState.data.creatures);
-    const art = creatureId ? shopIcon(scene, CREATURE_ICON_KEYS[creatureId], cfg.iconSize) : null;
-    art?.setPosition(-half + cfg.iconX, cfg.iconY);
-    if (art) parts.push(art);
+    // Crumb himself, or a big pile of coins when he is owned already.
+    const art =
+      creatureId && contents.creature !== null
+        ? shopIcon(scene, CREATURE_ICON_KEYS[creatureId], cfg.iconSize)
+        : pileIcon(scene, 'coins', contents.coins, cfg.iconSize, cfg.ownedPileStep);
+    art.setPosition(-half + cfg.iconX, cfg.iconY);
+    parts.push(art);
     const lines: Line[] = [];
     if (creatureId && contents.creature !== null) {
       lines.push({
@@ -79,11 +83,11 @@ export class ShopStarter implements DailySection {
     }
     lines.push(
       {
-        icon: coinIcon(scene, cfg.lineIcon),
+        icon: pileIcon(scene, 'coins', contents.coins, cfg.lineIcon, cfg.linePileStep),
         text: tn('shop.coinsN', contents.coins, { amount: formatNumber(contents.coins) }),
       },
       {
-        icon: berryIcon(scene, cfg.lineIcon),
+        icon: pileIcon(scene, 'berries', contents.berries, cfg.lineIcon, cfg.linePileStep),
         text: tn('shop.berriesN', contents.berries, { amount: formatNumber(contents.berries) }),
       },
     );

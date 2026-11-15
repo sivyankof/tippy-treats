@@ -362,6 +362,7 @@
     "coinsN": "one={amount} монета|few={amount} монеты|many={amount} монет|other={amount} монеты",
     "coinsPlus": "one=+{amount} монета|few=+{amount} монеты|many=+{amount} монет|other=+{amount} монеты",
     "berriesN": "one={amount} ягода|few={amount} ягоды|many={amount} ягод|other={amount} ягоды",
+    "berriesPlus": "one=+{amount} ягода|few=+{amount} ягоды|many=+{amount} ягод|other=+{amount} ягоды",
     "section": {
       "creatures": "Существа",
       "free": "Бесплатно",

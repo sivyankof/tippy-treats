@@ -2,7 +2,10 @@ import type * as Phaser from 'phaser';
 import { DAILY } from '../../../data/daily';
 import { MENU } from '../../../data/menu-layout';
 import { PALETTE } from '../../../data/palette';
+import { REWARD_LOOK } from '../../../data/reward-look';
 import { t } from '../../../i18n';
+import { idleBob } from '../../fx/idle-bob';
+import { REWARD_TEXTURES } from '../../fx/reward-pictures';
 import { createTextButton, type Button } from '../button';
 import { markAdUnavailable } from './ad-unavailable';
 import { fitText } from './fit-text';
@@ -10,15 +13,6 @@ import { createCaption, type DailySection } from './daily-section';
 
 const cfg = MENU.daily.attempts;
 const captionHeight = MENU.daily.caption.height;
-
-/** An attempt token: a round badge with a play triangle, coloured when free and grey when used. */
-function drawToken(g: Phaser.GameObjects.Graphics, x: number, y: number, free: boolean): void {
-  const r = cfg.iconSize / 2;
-  g.fillStyle(PALETTE.textDark, 1).fillCircle(x, y + r * 0.1, r);
-  g.fillStyle(free ? cfg.freeColor : cfg.usedColor, 1).fillCircle(x, y, r * 0.9);
-  g.fillStyle(PALETTE.textLight, free ? 1 : 0.7);
-  g.fillTriangle(x - r * 0.25, y - r * 0.4, x - r * 0.25, y + r * 0.4, x + r * 0.45, y);
-}
 
 /** What the attempts block shows. */
 export interface AttemptsView {
@@ -32,14 +26,14 @@ export class DailyAttempts implements DailySection {
   readonly height = captionHeight + cfg.rowHeight;
   readonly adButton: Button;
   private readonly adLabel: Phaser.GameObjects.Text;
-  private readonly tokens: Phaser.GameObjects.Graphics;
+  private readonly tokens: Phaser.GameObjects.Container;
   private readonly caption: Phaser.GameObjects.Container;
 
   constructor(
     private readonly scene: Phaser.Scene,
     onAd: () => void,
   ) {
-    this.tokens = scene.add.graphics();
+    this.tokens = scene.add.container(0, 0);
     this.caption = scene.add.container(0, 0);
     const { button, label } = createTextButton(scene, {
       text: t('daily.extraAttempt'),
@@ -62,9 +56,20 @@ export class DailyAttempts implements DailySection {
     const total = DAILY.attempts + (view.canAddAttempt ? 0 : DAILY.extraAttempts);
     const y = captionHeight + cfg.rowHeight / 2;
     const step = cfg.iconSize + cfg.iconGap;
-    this.tokens.clear();
+    this.tokens.removeAll(true);
+    const { width, height } = REWARD_LOOK.ticket;
+    const ticketWidth = cfg.iconSize;
     for (let i = 0; i < total; i++) {
-      drawToken(this.tokens, -cfg.width / 2 + cfg.iconSize / 2 + i * step, y, i < view.left);
+      const free = i < view.left;
+      const ticket = this.scene.add
+        .image(
+          -cfg.width / 2 + ticketWidth / 2 + i * step,
+          y,
+          free ? REWARD_TEXTURES.ticketFree : REWARD_TEXTURES.ticketUsed,
+        )
+        .setDisplaySize(ticketWidth, (ticketWidth * height) / width);
+      this.tokens.add(ticket);
+      if (free) idleBob(this.scene, ticket, REWARD_LOOK.ticket.idle);
     }
     this.caption.removeAll(true);
     this.caption.add(createCaption(this.scene, t('daily.attempts', { n: view.left })));

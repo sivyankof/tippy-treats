@@ -362,6 +362,7 @@
     "coinsN": "one={amount} coin|other={amount} coins",
     "coinsPlus": "one=+{amount} coin|other=+{amount} coins",
     "berriesN": "one={amount} berry|other={amount} berries",
+    "berriesPlus": "one=+{amount} berry|other=+{amount} berries",
     "section": {
       "creatures": "Creatures",
       "free": "Free",
