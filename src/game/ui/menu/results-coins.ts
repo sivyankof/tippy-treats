@@ -130,7 +130,11 @@ export class ResultsCoins {
     const result = await showRewarded('double_coins');
     if (!this.container.active) return;
     if (result === 'rewarded') {
-      gameState.claimDoubleCoins(this.earned);
+      if (!gameState.claimDoubleCoins(this.earned)) {
+        // The daily limit ran out meanwhile: nothing was paid, so nothing is shown as doubled.
+        this.markAdGone();
+        return;
+      }
       this.roll.set(this.earned * 2);
       this.buttonLabel?.setText(t('results.doubled'));
       if (this.buttonLabel) fitText(this.buttonLabel, cfg.adButton.width - cfg.adTextPadding);

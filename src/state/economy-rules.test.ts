@@ -45,6 +45,14 @@ describe('the fresh oven in a run', () => {
     expect(state.ovenLeft).toBe(0);
   });
 
+  it('counts the layers of a daily run into the same oven bar', () => {
+    const state = createTestState({ ms: T0 });
+    const summary = state.recordRun(run({ mode: 'daily', height: 40 }));
+    expect(summary.xpGained).toBe(40);
+    expect(summary.oven).toEqual({ left: OVEN.freshLayers - 40, ranOut: false });
+    expect(state.ovenLeft).toBe(OVEN.freshLayers - 40);
+  });
+
   it('counts the layers of the run, not the XP, in the stats', () => {
     const state = createTestState({ ms: T0 });
     state.recordRun(run({ height: OVEN.freshLayers + 60 }));
