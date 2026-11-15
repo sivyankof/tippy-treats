@@ -137,6 +137,27 @@ describe('restoreStreak', () => {
     expect(streakEntry(restored, DAY, false)).toMatchObject({ kind: 'claim', position: 5 });
     expect(countRunDay(restored, DAY, false).count).toBe(5);
   });
+  it('counts a forgiven day that was claimed without a run, so the next claim is the next cell', () => {
+    const start = make({ count: 1, best: 1, lastDay: '2026-11-12', claimedDay: '2026-11-13' });
+    const restored = restoreStreak(start, DAY, false);
+    if (!restored) throw new Error('expected a restored streak');
+    expect(restored).toMatchObject({ count: 2, best: 2, lastDay: '2026-11-13' });
+    expect(streakEntry(restored, DAY, false)).toMatchObject({ kind: 'claim', position: 3 });
+  });
+  it('does not repeat the reward or bump the cycle again around day 7', () => {
+    const start = make({
+      count: 6,
+      best: 6,
+      lastDay: '2026-11-12',
+      claimedDay: '2026-11-13',
+      cycle: 1,
+    });
+    const restored = restoreStreak(start, DAY, false);
+    if (!restored) throw new Error('expected a restored streak');
+    expect(restored.cycle).toBe(1);
+    expect(streakEntry(restored, DAY, false)).toMatchObject({ kind: 'claim', position: 1 });
+    expect(claimStreak(restored, DAY, false)?.streak.cycle).toBe(1);
+  });
   it('handles month and year boundaries', () => {
     const newYear = restoreStreak(make({ count: 1, lastDay: '2026-12-30' }), '2027-01-01', false);
     expect(newYear?.lastDay).toBe('2026-12-31');

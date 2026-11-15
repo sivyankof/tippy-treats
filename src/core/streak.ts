@@ -96,7 +96,14 @@ export function restoreStreak(
   clockBack: boolean,
 ): StreakState | null {
   if (clockBack || !isThreatened(streak, today)) return null;
-  return { ...streak, lastDay: previousDay(today) };
+  const forgiven = previousDay(today);
+  // The forgiven day was already claimed on the calendar without a run: count it, so the next
+  // claim is the next cell and not the same one again.
+  if (streak.claimedDay === forgiven) {
+    const count = streak.count + 1;
+    return { ...streak, count, lastDay: forgiven, best: Math.max(streak.best, count) };
+  }
+  return { ...streak, lastDay: forgiven };
 }
 
 /** The player gave the streak up: it starts over from day 1, the best one stays. Only inside the threat window. */
