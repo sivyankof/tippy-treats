@@ -3,25 +3,37 @@
  *
  * 1. Plays bot runs per profile and team with the real sim and keeps per-run samples
  *    (height, coins by source, berries, duration). The samples can be cached with `--cache=path`.
- * 2. Re-prices every sample with an economy (`CURRENT` from src/data, or a proposal object) and
- *    walks days: runs fill the daily play time, fixed daily income is added, coins are spent
- *    greedily on creatures and upgrades, berries are exchanged for coins.
+ * 2. Prices every sample with an economy and walks days: runs fill the daily play time, fixed
+ *    daily income is added, coins are spent greedily on creatures and upgrades, berries are
+ *    exchanged for coins. `CURRENT` reads the rules of the game from src/data (fresh oven, XP
+ *    curve, upgrade gates with the legendary rule, twins for coins, x2 limit, coin rules);
+ *    `BEFORE` is the frozen economy of the game before the 2026-11-15 decisions, kept for
+ *    comparison (the samples come from the current sim, so the old coin rules are re-priced from
+ *    their sources).
  *
- * `npm run sim:economy -- [--runs=1000] [--cache=path] [--proposal]`
+ * The income is based on the play volume (runs in the minutes of the day), not on a fixed number
+ * of runs a day.
+ *
+ * `npm run sim:economy -- [--runs=1000] [--cache=path] [--current]`
  */
-import { heightBonusCoins } from '../src/core/coins';
 import {
   levelReward as currentLevelReward,
   xpToNext as currentXpToNext,
 } from '../src/core/progression';
 import { Rng } from '../src/core/rng';
-import { BALANCE, DIFFICULTY } from '../src/data/balance';
+import { DIFFICULTY } from '../src/data/balance';
 import { CREATURE_IDS, CREATURES, type CreatureId } from '../src/data/creatures';
 import { DAILY } from '../src/data/daily';
-import { BERRY_PACKS, UPGRADE_COSTS } from '../src/data/economy';
+import {
+  BERRY_PACKS,
+  LEGENDARY_UPGRADE_MIN_BAKER,
+  UPGRADE_COSTS,
+  UPGRADE_MIN_BAKER,
+} from '../src/data/economy';
 import { GIFT } from '../src/data/gift';
 import { MISSIONS } from '../src/data/missions';
-import type { LevelReward } from '../src/data/progression';
+import { OVEN, type LevelReward } from '../src/data/progression';
+import { REWARDED_OFFERS } from '../src/data/rewarded-video';
 import { SHOP } from '../src/data/shop';
 import { STREAK_REWARDS } from '../src/data/streak';
 import { MS_PER_SECOND } from '../src/util/math';
@@ -158,16 +170,30 @@ const coinSum = (c: CoinsBySource): number =>
 
 const bestPack = BERRY_PACKS[BERRY_PACKS.length - 1] ?? { berries: 100, coins: 1400 };
 
+/** Frozen numbers of the economy before the 2026-11-15 decisions (save version 4 and older). */
+const BEFORE_RULES = {
+  heightStep: 10,
+  heightPerStep: 2,
+  /** Every perfect drop of a combo of 5+ paid, now every second one does. */
+  comboFactor: 2,
+  upgradeCosts: [150, 400, 900, 2000],
+  xpToNext: { base: 40, step: 25 },
+} as const;
+
+/** The rules of the game, read from src/data and src/core. */
 export const CURRENT: Economy = {
   name: 'current',
+  // The samples are played by the current sim, so their coins already follow the current rules.
   runCoins: (r) => coinSum(r.c),
   runBerries: (r) => r.b,
-  runXp: (r) => r.h,
-  dailyXpBonus: { firstXp: 0, mult: 1 },
+  // Layers beyond the fresh ones pay 1 XP per `layersPerXp`; the fresh ones are a daily bonus
+  // that lifts the first `freshLayers / layersPerXp` raw XP of the day back to 1 XP per layer.
+  runXp: (r) => r.h / OVEN.layersPerXp,
+  dailyXpBonus: { firstXp: OVEN.freshLayers / OVEN.layersPerXp, mult: OVEN.layersPerXp },
   xpToNext: currentXpToNext,
   levelReward: currentLevelReward,
   missionCoins: { ...MISSIONS.reward },
-  missionXp: { easy: 0, medium: 0, hard: 0 },
+  missionXp: { ...MISSIONS.xp },
   chestBerries: MISSIONS.chestBerries,
   streakCoins: STREAK_REWARDS.map((r) => (r.kind === 'coins' ? r.amount : 0)),
   streakBerries: STREAK_REWARDS.map((r) => (r.kind === 'berries' ? r.amount : 0)),
@@ -175,13 +201,44 @@ export const CURRENT: Economy = {
   dailyTiers: DAILY.tiers.map((t) => [t.height, t.reward.coins ?? 0, t.reward.berries ?? 0]),
   dailyAttempts: DAILY.attempts,
   shopFree: { amount: SHOP.freeCoins.amount, perDay: SHOP.freeCoins.perDay },
-  doubleCap: Infinity,
-  doubleMinCoins: 10,
+  doubleCap: REWARDED_OFFERS.doubleCoinsPerDay,
+  doubleMinCoins: REWARDED_OFFERS.doubleCoinsMin,
   upgradeCosts: [...UPGRADE_COSTS],
-  upgradeMinBaker: [1, 1, 1, 1],
+  upgradeMinBaker: [...UPGRADE_MIN_BAKER],
+  upgradeMinBakerFor: Object.fromEntries(
+    CREATURE_IDS.filter((id) => CREATURES[id].rarity === 'legendary').map((id) => [
+      id,
+      [...LEGENDARY_UPGRADE_MIN_BAKER],
+    ]),
+  ),
   shopPrice: shopPriceFromData(),
   berryPack: bestPack,
   rainbowBerries: rainbowBerryPrice(),
+};
+
+/** The economy before the decisions, for comparison: samples are re-priced to the old coin rules. */
+export const BEFORE: Economy = {
+  ...CURRENT,
+  name: 'before',
+  runCoins: (r) =>
+    coinSum(r.c) -
+    r.c.combo -
+    r.c.height +
+    BEFORE_RULES.comboFactor * r.c.combo +
+    Math.floor(r.h / BEFORE_RULES.heightStep) * BEFORE_RULES.heightPerStep,
+  runXp: (r) => r.h,
+  dailyXpBonus: { firstXp: 0, mult: 1 },
+  xpToNext: (level) =>
+    BEFORE_RULES.xpToNext.base + BEFORE_RULES.xpToNext.step * (Math.max(1, level) - 1),
+  missionXp: { easy: 0, medium: 0, hard: 0 },
+  doubleCap: Infinity,
+  upgradeCosts: [...BEFORE_RULES.upgradeCosts],
+  upgradeMinBaker: [1, 1, 1, 1],
+  upgradeMinBakerFor: {},
+  // The twins were never sold.
+  shopPrice: Object.fromEntries(
+    Object.entries(shopPriceFromData()).filter(([id]) => id !== 'twins'),
+  ),
 };
 
 // ---------------------------------------------------------------- player behaviour
@@ -215,7 +272,10 @@ interface WalkResult {
   levelDay: Record<number, number | null>;
   /** Days of the coin purchases, in order. */
   buyDay: number[];
+  /** All 12 creatures owned at level 5 (the twins by record or bought for coins). */
   fullDay: number | null;
+  /** The same without the twins. */
+  fullNoTwinsDay: number | null;
   twinsDay: number | null;
   perDay: { coins: number; xp: number; runs: number };
 }
@@ -247,6 +307,7 @@ export function walk(eco: Economy, player: Player, samples: RunSample[]): WalkRe
   const ownDay: number[] = [];
   const buyDay: number[] = [];
   let fullDay: number | null = null;
+  let fullNoTwinsDay: number | null = null;
   let twinsDay: number | null = null;
   let totalCoins = 0;
   let totalXp = 0;
@@ -262,6 +323,7 @@ export function walk(eco: Economy, player: Player, samples: RunSample[]): WalkRe
     }
     owned.set(id, 1);
     ownDay.push(day);
+    if (id === 'twins') twinsDay = day;
   };
 
   const gainXp = (amount: number, day: number): void => {
@@ -395,10 +457,7 @@ export function walk(eco: Economy, player: Player, samples: RunSample[]): WalkRe
       totalRuns += 1;
       budget -= cost;
     }
-    if (record >= 75 && twinsDay === null) {
-      grantCreature('twins', day);
-      twinsDay = day;
-    }
+    if (record >= 75 && !owned.has('twins')) grantCreature('twins', day);
 
     // Missions after the day's play.
     const missionCoins =
@@ -415,18 +474,18 @@ export function walk(eco: Economy, player: Player, samples: RunSample[]): WalkRe
     berries += rate.easy * rate.medium * rate.hard * eco.chestBerries;
 
     spend(day);
-    // Full collection without the twins: they need a record of 75, which a fixed bot team
-    // reaches only through its distribution tail; their day is reported apart.
-    const full =
-      CREATURE_IDS.every((id) => id === 'twins' || owned.has(id)) &&
-      [...owned.entries()].every(([id, lv]) => id === 'twins' || lv >= 5);
-    if (full && fullDay === null) fullDay = day;
+    // The twins come by a record of 75 or, in the current economy, for coins from baker level 14.
+    const maxed = (skipTwins: boolean): boolean =>
+      CREATURE_IDS.every((id) => (skipTwins && id === 'twins') || (owned.get(id) ?? 0) >= 5);
+    if (fullNoTwinsDay === null && maxed(true)) fullNoTwinsDay = day;
+    if (fullDay === null && maxed(false)) fullDay = day;
     if (day === STATS_DAYS) stats = avg(totalCoins, totalXp, totalRuns, day);
     if (fullDay !== null && levelDay[20] !== null && day >= STATS_DAYS) {
       return {
         levelDay,
         buyDay,
         fullDay,
+        fullNoTwinsDay,
         twinsDay,
         perDay: stats ?? avg(totalCoins, totalXp, totalRuns, day),
       };
@@ -436,6 +495,7 @@ export function walk(eco: Economy, player: Player, samples: RunSample[]): WalkRe
     levelDay,
     buyDay,
     fullDay,
+    fullNoTwinsDay,
     twinsDay,
     perDay: stats ?? avg(totalCoins, totalXp, totalRuns, MAX_DAYS),
   };
@@ -483,9 +543,9 @@ const RUN_VARIANTS: ReadonlyArray<readonly [boolean, boolean]> = [
 function daysTable(eco: Economy, samples: Samples): void {
   console.log(`\n## ${eco.name}: days to goals`);
   console.log(
-    '| profile | team | min/day | ads | rainbow | coins/day | XP/day | runs/day | 1st buy | 2nd buy | full (no twins) | twins | lvl 5 | lvl 10 | lvl 15 | lvl 20 |',
+    '| profile | team | min/day | ads | rainbow | coins/day | XP/day | runs/day | 1st buy | 2nd buy | full (12) | full (no twins) | twins | lvl 5 | lvl 10 | lvl 15 | lvl 20 |',
   );
-  console.log('|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|');
+  console.log('|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|');
   for (const p of PROFILES) {
     for (const setup of SETUPS) {
       for (const minutes of [30, 210]) {
@@ -500,11 +560,68 @@ function daysTable(eco: Economy, samples: Samples): void {
           };
           const r = walk(eco, player, runs);
           console.log(
-            `| ${p} | ${setup.key} | ${minutes} | ${ads ? 'x2' : '-'} | ${rainbowByBerries ? 'berries' : 'lvl 20'} | ${r.perDay.coins.toFixed(0)} | ${r.perDay.xp.toFixed(0)} | ${r.perDay.runs.toFixed(0)} | ${r.buyDay[0] ?? '-'} | ${r.buyDay[1] ?? '-'} | ${fmt(r.fullDay)} | ${fmt(r.twinsDay)} | ${fmt(r.levelDay[5] ?? null)} | ${fmt(r.levelDay[10] ?? null)} | ${fmt(r.levelDay[15] ?? null)} | ${fmt(r.levelDay[20] ?? null)} |`,
+            `| ${p} | ${setup.key} | ${minutes} | ${ads ? 'x2' : '-'} | ${rainbowByBerries ? 'berries' : 'lvl 20'} | ${r.perDay.coins.toFixed(0)} | ${r.perDay.xp.toFixed(0)} | ${r.perDay.runs.toFixed(0)} | ${r.buyDay[0] ?? '-'} | ${r.buyDay[1] ?? '-'} | ${fmt(r.fullDay)} | ${fmt(r.fullNoTwinsDay)} | ${fmt(r.twinsDay)} | ${fmt(r.levelDay[5] ?? null)} | ${fmt(r.levelDay[10] ?? null)} | ${fmt(r.levelDay[15] ?? null)} | ${fmt(r.levelDay[20] ?? null)} |`,
           );
         }
       }
     }
+  }
+}
+
+/** The acceptance criteria of the 2026-11-15 economy, checked for key players of `eco`. */
+function criteriaTable(eco: Economy, samples: Samples): void {
+  const walkFor = (
+    profile: ProfileId,
+    team: string,
+    minutes: number,
+    ads: boolean,
+    berries = false,
+  ) =>
+    walk(
+      eco,
+      { profile, team, minutesPerDay: minutes, ads, rainbowByBerries: berries },
+      samples[`${profile}:${team}`] ?? [],
+    );
+  const rows: Array<{ name: string; r: WalkResult; rule: string; ok: boolean }> = [];
+  for (const ads of [false, true]) {
+    const r = walkFor('regular', 'starter', 30, ads);
+    const day = r.fullDay;
+    rows.push({
+      name: `regular, starter, 30 min, ${ads ? 'x2' : 'no x2'}: all 12 at level 5 and baker 20`,
+      r,
+      rule: '60..90',
+      ok: day !== null && day >= 60 && day <= 90 && (r.levelDay[20] ?? 999) <= day,
+    });
+  }
+  for (const berries of [false, true]) {
+    const r = walkFor('strong', 'coin', 210, true, berries);
+    rows.push({
+      name: `strong, coin team, 210 min, x2, rainbow ${berries ? 'by berries' : 'at lvl 20'}: everything incl. Rainbow L5`,
+      r,
+      rule: '>= 28',
+      ok: r.fullDay !== null && r.fullDay >= 28,
+    });
+  }
+  for (const [profile, team] of [
+    ['regular', 'starter'],
+    ['novice', 'starter'],
+    ['strong', 'coin'],
+  ] as const) {
+    const r = walkFor(profile, team, 30, false);
+    rows.push({
+      name: `${profile}, ${team}, 30 min: 1st buy day 1, 2nd by day 3, baker 5 by day 2`,
+      r,
+      rule: 'buy1 = 1, buy2 <= 3, lvl5 <= 2',
+      ok: r.buyDay[0] === 1 && (r.buyDay[1] ?? 99) <= 3 && (r.levelDay[5] ?? 99) <= 2,
+    });
+  }
+  console.log(`\n## ${eco.name}: acceptance criteria`);
+  console.log('| player | rule | full (12) | lvl 20 | 1st buy | 2nd buy | lvl 5 | ok |');
+  console.log('|---|---|---|---|---|---|---|---|');
+  for (const { name, r, rule, ok } of rows) {
+    console.log(
+      `| ${name} | ${rule} | ${fmt(r.fullDay)} | ${fmt(r.levelDay[20] ?? null)} | ${r.buyDay[0] ?? '-'} | ${r.buyDay[1] ?? '-'} | ${fmt(r.levelDay[5] ?? null)} | ${ok ? 'yes' : 'NO'} |`,
+    );
   }
 }
 
@@ -513,75 +630,21 @@ function daysTable(eco: Economy, samples: Samples): void {
 function main(): void {
   let runs = 1000;
   let cache: string | null = null;
-  let proposalOnly = false;
+  let currentOnly = false;
   for (const arg of scriptArgs()) {
     const [key, value = ''] = arg.replace(/^--/, '').split('=');
     if (key === 'runs') runs = intArg([arg], 'runs', runs);
     else if (key === 'cache') cache = value;
-    else if (key === 'proposal') proposalOnly = true;
+    else if (key === 'current') currentOnly = true;
     else throw new Error(`Unknown argument: ${arg}`);
   }
   const samples = loadSamples(runs, cache);
-  const economies = proposalOnly ? [PROPOSAL] : [CURRENT, PROPOSAL];
+  const economies = currentOnly ? [CURRENT] : [BEFORE, CURRENT];
   for (const eco of economies) {
     perRunTable(eco, samples);
     daysTable(eco, samples);
+    criteriaTable(eco, samples);
   }
 }
 
-// ---------------------------------------------------------------- proposal (filled in below)
-
-/** Knobs of the proposal, kept together so the report can print them. */
-export const KNOBS = {
-  floating: 1,
-  perfect: 1,
-  combo: 0.5,
-  golden: 10,
-  /** Height bonus: `perStep` coins for every full `step` layers. */
-  heightStep: 20,
-  heightPerStep: 2,
-  crumb: 1,
-  doubleCap: 5,
-  /** Full XP (1 per layer) for the first `freshLayers` layers of a local day, then 1 per `tiredEvery`. */
-  freshLayers: 1300,
-  tiredEvery: 6,
-  missionXp: { easy: 20, medium: 40, hard: 60 },
-  /** XP to leave levels 1..4, then `lateBase + lateStep * (level - 4)`. */
-  earlyXp: [150, 250, 400, 600],
-  lateBase: 100,
-  lateStep: 810,
-  /** Baker level needed for creature level 2, 3, 4, 5. */
-  upgradeMinBaker: [1, 6, 11, 16],
-  upgradeCosts: [200, 600, 1300, 2800],
-  /** Gates of the legendary rainbow, which can be bought for berries before baker level 20. */
-  rainbowMinBaker: [1, 6, 11, 20],
-};
-
-const proposalXpToNext = (level: number): number =>
-  KNOBS.earlyXp[level - 1] ?? KNOBS.lateBase + KNOBS.lateStep * (level - 4);
-
-export const PROPOSAL: Economy = {
-  ...CURRENT,
-  name: 'proposal',
-  runCoins: (r) =>
-    KNOBS.floating * r.c.floating +
-    KNOBS.perfect * r.c.perfect +
-    KNOBS.combo * r.c.combo +
-    (r.c.golden / BALANCE.golden.normalCoins) * KNOBS.golden +
-    Math.floor(r.h / KNOBS.heightStep) * KNOBS.heightPerStep +
-    KNOBS.crumb * r.c.crumb,
-  // Fresh layers count 1 XP, later ones 1 / tiredEvery: expressed as raw XP 1/tiredEvery per layer
-  // and a daily bonus that lifts the first freshLayers / tiredEvery raw XP back to full.
-  runXp: (r) => r.h / KNOBS.tiredEvery,
-  dailyXpBonus: { firstXp: KNOBS.freshLayers / KNOBS.tiredEvery, mult: KNOBS.tiredEvery },
-  xpToNext: proposalXpToNext,
-  missionXp: KNOBS.missionXp,
-  doubleCap: KNOBS.doubleCap,
-  upgradeMinBaker: KNOBS.upgradeMinBaker,
-  upgradeMinBakerFor: { rainbow: KNOBS.rainbowMinBaker },
-  upgradeCosts: KNOBS.upgradeCosts,
-};
-
-void heightBonusCoins;
-void BALANCE;
 main();
