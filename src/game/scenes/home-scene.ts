@@ -1,18 +1,16 @@
 import * as Phaser from 'phaser';
 import { canFillTeam } from '../../core/team';
-import { ANIM } from '../../data/anim';
 import type { CreatureId } from '../../data/creatures';
 import { MENU } from '../../data/menu-layout';
 import { PALETTE } from '../../data/palette';
 import { t } from '../../i18n';
 import { gameState } from '../../state';
 import { prepareRemoveAdsOffer } from '../interstitial-flow';
-import { buyProduct, loadPrices, syncPurchases } from '../purchases';
-import { starterPackContents } from '../../core/shop';
+import { syncPurchases } from '../purchases';
 import { startRunFrom, openScreen, SCENES, type HomeData } from '../scene-keys';
 import type { PopupWindow } from '../ui/style/dialog-window';
 import { createTextButton, type Button } from '../ui/button';
-import { createStarterButton } from '../ui/menu/home-starter';
+import { HomeStarterOffer } from '../ui/menu/home-starter';
 import { createHintBubble } from '../ui/menu/home-hint';
 import { HomeBadges } from '../ui/menu/home-badges';
 import { HomeNav } from '../ui/menu/home-nav';
@@ -51,10 +49,7 @@ export class HomeScene extends Phaser.Scene {
   private badges!: HomeBadges;
   private hint: ReturnType<typeof createHintBubble> | null = null;
   private ring: Phaser.GameObjects.Container | null = null;
-  private starter: Button | null = null;
-  /** Room above Play is kept for the starter pack button while the offer is on (the hint bubble stands above it). */
-  private offerRoom = false;
-  private buying = false;
+  private starter!: HomeStarterOffer;
   private leaving = false;
   /** Kept so a language restart redraws the ring on Play. */
   private highlightPlay = false;
@@ -71,9 +66,14 @@ export class HomeScene extends Phaser.Scene {
     gameState.refreshDay();
     this.hint = null;
     this.ring = null;
-    this.starter = null;
-    this.buying = false;
-    this.offerRoom = gameState.starterPackOffered;
+    this.starter = new HomeStarterOffer(this, {
+      leaving: () => this.leaving,
+      changed: () => this.layout(),
+      bought: (creature) => {
+        this.refreshMarks();
+        if (creature !== null) this.showNewCreatures([creature]);
+      },
+    });
     this.scenery = new MenuScenery(this, 'home');
     this.shelf = new HomeShelf(this, () => this.goTo(() => openScreen(this, SCENES.team)));
     this.record = createRecordPlate(this);
@@ -117,7 +117,7 @@ export class HomeScene extends Phaser.Scene {
       );
     }
     if (this.highlightPlay) this.ring = createPlayRing(this);
-    if (this.offerRoom) void this.addStarterOffer();
+    if (this.starter.room) void this.starter.start();
 
     this.scale.on(Phaser.Scale.Events.RESIZE, this.layout, this);
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
@@ -152,7 +152,7 @@ export class HomeScene extends Phaser.Scene {
     ];
     if (this.hint) items.push(this.hint.root);
     if (this.ring) items.push(this.ring);
-    if (this.starter) items.push(this.starter);
+    if (this.starter.button) items.push(this.starter.button);
     items.push(this.play, ...this.nav.parts);
     return items;
   }
@@ -174,8 +174,8 @@ export class HomeScene extends Phaser.Scene {
     const playY = navTop - cfg.playAboveNav - cfg.playHeight / 2;
     this.play.setPosition(cx, playY);
     this.ring?.setPosition(cx, playY);
-    const offerRoom = this.offerRoom ? cfg.starter.height + cfg.starter.gap : 0;
-    this.starter?.setPosition(
+    const offerRoom = this.starter.room ? cfg.starter.height + cfg.starter.gap : 0;
+    this.starter.button?.setPosition(
       cx,
       playY - cfg.playHeight / 2 - cfg.starter.gap - cfg.starter.height / 2,
     );
@@ -188,7 +188,7 @@ export class HomeScene extends Phaser.Scene {
     this.badges.setEnabled(enabled);
     this.shelf.setEnabled(enabled);
     this.hint?.setEnabled(enabled);
-    this.starter?.setEnabled(enabled && !this.buying);
+    this.starter.setEnabled(enabled);
   }
 
   /** Leaves the screen once (no double taps), then runs `next`. */
@@ -246,42 +246,6 @@ export class HomeScene extends Phaser.Scene {
     this.refreshMarks();
     if (claim?.reward.kind !== 'creature' || claim.duplicate) return;
     this.showNewCreatures([claim.reward.id]);
-  }
-
-  /** The starter pack button, once the store has told its price; it is not shown for a product without one. */
-  private async addStarterOffer(): Promise<void> {
-    const price = (await loadPrices()).starter_pack;
-    if (!this.scene.isActive() || this.leaving || this.starter) return;
-    if (price === undefined) {
-      this.offerRoom = false;
-      this.layout();
-      return;
-    }
-    this.starter = createStarterButton(this, price, () => void this.buyStarter());
-    this.layout();
-    this.starter.setAlpha(0);
-    this.tweens.add({ targets: this.starter, alpha: 1, duration: ANIM.ui.transition.inMs });
-  }
-
-  /** Buys the pack through the store; a new creature gets its own screen, then Home comes back. */
-  private async buyStarter(): Promise<void> {
-    if (this.buying || this.leaving) return;
-    const creature = starterPackContents(gameState.data.creatures).creature;
-    this.buying = true;
-    this.starter?.setEnabled(false);
-    const outcome = await buyProduct('starter_pack');
-    this.buying = false;
-    if (!this.scene.isActive()) return;
-    if (outcome !== 'purchased') {
-      this.starter?.setEnabled(!this.leaving);
-      return;
-    }
-    this.starter?.destroy();
-    this.starter = null;
-    this.offerRoom = false;
-    this.layout();
-    this.refreshMarks();
-    if (creature !== null) this.showNewCreatures([creature]);
   }
 
   /** The missions window closed: creatures of a level reached there get their own screen. */
