@@ -27,6 +27,17 @@
     "adUnavailable": "Ad unavailable",
     "decline": "No thanks"
   },
+  "checkpoint": {
+    "window": {
+      "title": "Where from?",
+      "layer": "Layer {n}",
+      "locked": "Reach layer {n}",
+      "free": "free",
+      "play": "Play",
+      "playFor": "Play · {price}",
+      "watchAd": "▶ Watch ad"
+    }
+  },
   "ads": {
     "stub": "Ad (stub)",
     "stubInterstitial": "Interstitial ad (stub)"

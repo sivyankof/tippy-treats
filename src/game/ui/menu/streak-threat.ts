@@ -9,7 +9,7 @@ import { showRewarded } from '../../rewarded';
 import { markAdUnavailable } from './ad-unavailable';
 import { createTextButton, type Button } from '../button';
 import { createOutlinedText } from '../outlined-text';
-import { BalanceChip } from '../style/balance-chip';
+import { BalanceChip, followBalance } from '../style/balance-chip';
 import { PopupWindow } from '../style/dialog-window';
 import { createPriceButton } from '../style/price-button';
 import { fitText } from './fit-text';
@@ -70,20 +70,7 @@ export function openStreakThreat(scene: Phaser.Scene, onClosed?: () => void): vo
   const balance = new BalanceChip(scene, 'berries', cfg.balanceRight, y + cfg.balanceHeight / 2);
   content.add(balance.root);
   y += cfg.balanceHeight + cfg.buttonGap;
-  const stopTick = (): void => {
-    scene.events.off(Phaser.Scenes.Events.UPDATE, balanceTick);
-  };
-  const balanceTick = (): void => {
-    // The window can be gone by the time the scene updates again (closed, or the scene left).
-    if (!content.active || !balance.root.active) {
-      stopTick();
-      return;
-    }
-    balance.update(gameState.berries);
-  };
-  scene.events.on(Phaser.Scenes.Events.UPDATE, balanceTick);
-  content.once(Phaser.GameObjects.Events.DESTROY, stopTick);
-  scene.events.once(Phaser.Scenes.Events.SHUTDOWN, stopTick);
+  followBalance(scene, balance, content, () => gameState.berries);
 
   let busy = false;
   const settle = (): void => popup.close();
