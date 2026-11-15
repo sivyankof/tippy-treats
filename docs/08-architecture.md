@@ -405,10 +405,12 @@ export interface Modifiers {
 
 ```ts
 // core/save/schema.ts
-// Текущая версия 3. Версия 2: streak.claimedToday заменён на claimedDay, добавлено today.
+// Текущая версия 5. Версия 2: streak.claimedToday заменён на claimedDay, добавлено today.
 // Версия 3: в ads добавлен offerDay (день последнего показа предложения «Без рекламы»).
-export interface SaveV3 {
-  version: 3;
+// Версия 4: в ads добавлены shownDay и shownToday (дневной счётчик межстраничной рекламы).
+// Версия 5: добавлены oven (счётчик «Свежей печи») и doubles (счётчик «×2 монеты» за день); bakerXp пересчитан под новую кривую.
+export interface SaveV5 {
+  version: 5;
   installId: string;             // random uuid, for mission seed & support
   createdAt: number;             // epoch ms
   lastSeenAt: number;
@@ -430,7 +432,9 @@ export interface SaveV3 {
   tutorial: { firstRunDone: boolean; hintsShown: string[] };
   settings: { music: boolean; sfx: boolean; haptics: boolean; reducedFx: 'auto' | 'on' | 'off'; lang: 'en' | 'ru' | 'auto';
               notifications: { gift: boolean; streak: boolean; daily: boolean; comeback: boolean } };
-  ads: { lastInterstitialAt: number; runsSinceInterstitial: number; sessions: number; offerDay: string };   // offerDay: местный день или ''
+  ads: { lastInterstitialAt: number; runsSinceInterstitial: number; sessions: number; offerDay: string; shownDay: string; shownToday: number };   // дни: местные или ''
+  oven: { day: string; used: number; carry: number };      // used: «свежих» слоёв потрачено в день day; carry: остаток слоёв (< 6) до следующего опыта, не сбрасывается
+  doubles: { day: string; used: number };                  // «×2 монеты» за рекламу, использовано в день day
   consent: { attAsked: boolean; notifAsked: boolean };
 }
 
@@ -782,3 +786,4 @@ interface MissionProgress { id: string; group: 'easy' | 'medium' | 'hard'; targe
 | 2026-11-15 | Скорость в «Космосе» пока не меняется; находка для витков космоса (идея 15): предел 1400 достигается к слою 80–90, поэтому множитель Космоса ×1,15 не действует, а в Космосе скорость даже ниже, чем в «Звёздах» (1470 → 1400); ощущение «в космосе слишком быстро» даёт упор в предел вместе с правилами зоны (`npm run sim:speed`) | Решение владельца 2026-11-15: учесть при витках космоса вместе с волной темпа |
 | 2026-11-15 | Мягкая межстраничная реклама: пороги в `BALANCE.ads.interstitial` (3 первые сессии и 24 часа с `createdAt`, 4 забега и 180 с между показами, 4 показа за сессию и 12 за местный день), забег с рекордом, уровнем пекаря или новым существом рекламу не вызывает. Дневной счётчик в сохранении: версия 4, миграция 3 → 4 (`migrateV3`) добавляет `ads.shownDay` и `ads.shownToday`; счётчик обнуляется только когда местный день строго позже `shownDay`, поэтому перевод часов назад его не сбрасывает. Часы, похожие на переведённые назад (`clockBehind`, время раньше `createdAt`, раньше последнего показа), рекламу запрещают. Факты забега (`newRecord`, `levelUp`, `newCreature`) передаёт экран результатов в `RunExit` | Правила документа 05, раздел 6; сцена только собирает факты, решает ядро |
 | 2026-11-15 | Награда за серию («передышка»): чистый `TempoEase` (`core/tempo-ease.ts`, числа `BALANCE.tempoEase`) решает при каждом появлении слоя, множитель скорости 0,85 на 3 слоя после 5 идеальных подряд, не чаще раза на 10 слоёв; семантика совпадает с вариантом `streak` скрипта `sim:speed-variants`, чтобы измеренные числа остались верными (хук `RunConfig.speedScale` остаётся только для анализа и умножается поверх). Повтор того же слоя (продолжение, щит) берёт решение, принятое при первом появлении, и счётчик не тратит. В обучающем забеге передышки нет. Ядро шлёт `tempo_ease` и держит `TowerState.tempoLeft`; сцена показывает «выдох» башни (`TowerView.exhale`, `ANIM.exhale`) и значок-улитку в `EffectBadges` (ключ `tempo` в `BadgeTracker`, `assets/svg/tempo_ease.svg`) | Решение владельца; раздел 2 документа 02, раздел «Передышка» документа 06 |
+| 2026-11-15 | Экономика (решения владельца 2026-11-15): опыт 1 за 6 слоёв с «Свежей печью» (первые 1300 слоёв местного дня по 1 опыту), кривая 150/250/400/600 и `100 + 810 × (level − 4)`, опыт за задания 20/40/60, прокачка существ с 6/11/16-го уровня пекаря (легендарное с 20-го для 5-го уровня), цены прокачки 200/600/1300/2800, монеты серии идеальных вдвое реже, бонус высоты за 20 слоёв, «×2 монеты» 5 раз в день, «Двойняшки» ещё и за 2500 монет с 14-го уровня. Версия сохранения 5, миграция 4 → 5 (`migrateV4`): `oven` и `doubles` пустые; `bakerXp` пересчитывается пропорционально `floor(xp / старый xpToNext × новый xpToNext)`, уровень пекаря и уровни существ не понижаются. Остаток слоёв `oven.carry` живёт между днями, чтобы ничего не терялось; счётчики дня одинаково работают через `core/day-counter.ts` (новый день только строго позже сохранённого и без признака перевода часов назад). Дополнительно: награда «Двойняшек» за рекорд 75 в коде раньше не выдавалась, теперь выдаётся в `applyRun` | Правила в документах 03, 04, 05, 07; модель `npm run sim:economy` |
