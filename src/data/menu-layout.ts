@@ -500,6 +500,8 @@ export const MENU = {
     contentHeight: 700,
     iconSize: 190,
     iconY: 110,
+    /** The picture sways gently: the angle (degrees) and the half period (ms). */
+    sway: { angle: 4, ms: 1100 },
     textY: 290,
     textFont: 46,
     /** The note under the text; it also shows why a purchase did not go through. */
@@ -942,8 +944,8 @@ export const MENU = {
     /** Width a stat label may take before it shrinks. */
     statWidth: 300,
     /** The abilities tile is wider; its creature icons with their counts stand in a row. */
-    abilityCellWidth: 440,
-    abilityIconSize: 60,
+    abilityCellWidth: 470,
+    abilityIconSize: 72,
     abilityIconGap: 6,
     abilityItemGap: 26,
     /** Size of the count beside an icon, as a share of the stat font. */
@@ -1108,7 +1110,19 @@ export const MENU = {
     noAdsIcon: {
       radius: 0.22,
       fill: 0x7c5cff,
-      border: 6,
+      /** Darkening of the flat shadow band, and its thickness as a share of the tile. */
+      shadeAmount: -0.22,
+      shadowShare: 0.05,
+      gloss: {
+        x: -0.3,
+        y: -0.34,
+        length: 0.16,
+        thick: 0.045,
+        tiltDeg: -20,
+        dotGap: 0.03,
+        dotRadius: 0.025,
+        alpha: 0.85,
+      },
       slash: 0.1,
       reach: 0.78,
       screen: { width: 0.56, height: 0.38, y: -0.06, radius: 0.07, border: 0.045, fill: 0xffffff },
