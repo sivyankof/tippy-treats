@@ -1,5 +1,5 @@
 import * as Phaser from 'phaser';
-import { unlockHint } from '../../../core/collection';
+import { unlockHint, unlockHints, type UnlockHint } from '../../../core/collection';
 import { CREATURES, type CreatureId } from '../../../data/creatures';
 import { MENU } from '../../../data/menu-layout';
 import { PALETTE } from '../../../data/palette';
@@ -8,6 +8,7 @@ import { t } from '../../../i18n';
 import { CreaturePortrait } from '../../objects/creature-portrait';
 import { CREATURE_ICON_KEYS } from '../creature-icons';
 import { createOutlinedText } from '../outlined-text';
+import { fitText } from './fit-text';
 import { VolumePlate } from '../style/volume';
 import { shade } from '../../../util/color';
 import { PriceTag } from './price-tag';
@@ -87,6 +88,8 @@ export class CreatureCard extends Phaser.GameObjects.Container {
 
   /** The price of a creature the shop sells now, or the text of its way to get it. */
   private createHint(card: CardState, cfg: CardLayout): Phaser.GameObjects.GameObject {
+    const hints = unlockHints(card.id);
+    if (hints.length > 1) return this.createHintLines(hints, card, cfg);
     const hint = unlockHint(card.id);
     const text = unlockText(hint, card.bakerLevel);
     const y = (cfg.nameY + cfg.starsY) / 2;
@@ -98,6 +101,42 @@ export class CreatureCard extends Phaser.GameObjects.Container {
       );
     }
     return createOutlinedText(this.scene, 0, y, text ?? '', cfg.hintFont);
+  }
+
+  /** One small line per way to get the creature, the shop price with the level it needs among them. */
+  private createHintLines(
+    hints: UnlockHint[],
+    card: CardState,
+    cfg: CardLayout,
+  ): Phaser.GameObjects.GameObject {
+    const group = this.scene.add.container(0, (cfg.nameY + cfg.starsY) / 2);
+    const maxWidth = cfg.width - cfg.hintPad * 2;
+    hints.forEach((hint, i) => {
+      const y = (i - (hints.length - 1) / 2) * cfg.hintLineGap;
+      if (hint.kind === 'shop') {
+        const template =
+          card.bakerLevel >= hint.minBakerLevel
+            ? '{price}'
+            : t('unlock.shopFrom', { n: hint.minBakerLevel, price: '{price}' });
+        const tag = new PriceTag(this.scene, 0, y, cfg.hintFontMulti).show(
+          template,
+          hint.price,
+          hint.currency,
+        );
+        tag.setScale(Math.min(1, maxWidth / tag.contentWidth));
+        group.add(tag);
+        return;
+      }
+      const text = createOutlinedText(
+        this.scene,
+        0,
+        y,
+        unlockText(hint, card.bakerLevel) ?? '',
+        cfg.hintFontMulti,
+      );
+      group.add(fitText(text, maxWidth));
+    });
+    return group;
   }
 
   tick(dtMs: number): void {

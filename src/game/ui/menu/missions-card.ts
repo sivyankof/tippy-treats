@@ -70,6 +70,16 @@ export class MissionCard extends Phaser.GameObjects.Container {
         'coins',
       ),
     );
+    this.add(
+      createOutlinedText(
+        scene,
+        cfg.rewardX,
+        cfg.xpY,
+        t('results.xp', { n: formatNumber(MISSIONS.xp[item.group]) }),
+        cfg.xpFont,
+        PALETTE.gold,
+      ),
+    );
     this.addAction(scene, status, options);
     this.setSize(width, cfg.cardHeight);
   }

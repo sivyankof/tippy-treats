@@ -6,8 +6,10 @@ import { formatNumber, t } from '../../../i18n';
 import { services } from '../../../services';
 import type { LevelUp, RunSummary } from '../../../state/game-state';
 import { createOutlinedText } from '../outlined-text';
+import { fitText } from './fit-text';
 import { LevelUpPanel } from './level-up-panel';
-import { stackRows } from './results-layout';
+import { OvenBar } from './oven-bar';
+import { stackRows, type Row } from './results-layout';
 import { xpSegments } from './results-text';
 import { XpBar } from './xp-bar';
 
@@ -58,14 +60,27 @@ export class ResultsXp {
       PALETTE.gold,
     );
     this.bar = new XpBar(scene, 0, 0).show(summary.before.level, summary.before.xp);
-    this.height = stackRows(
-      this.container,
-      [
-        { obj: gain, height: cfg.xpFont * cfg.lineHeight },
-        { obj: this.bar, height: BAR_BLOCK },
-      ],
-      cfg.rowGap,
-    );
+    const rows: Row[] = [
+      { obj: gain, height: cfg.xpFont * cfg.lineHeight },
+      { obj: this.bar, height: BAR_BLOCK },
+    ];
+    const oven = summary.oven;
+    if (oven) {
+      rows.push({ obj: new OvenBar(scene, 0, 0).show(oven.left), height: cfg.ovenRowHeight });
+      if (oven.ranOut) {
+        const message = createOutlinedText(
+          scene,
+          0,
+          0,
+          t('oven.ranOut'),
+          cfg.ovenMessageFont,
+          PALETTE.gold,
+        );
+        fitText(message, cfg.ovenMessageWidth);
+        rows.push({ obj: message, height: cfg.ovenMessageFont * cfg.lineHeight });
+      }
+    }
+    this.height = stackRows(this.container, rows, cfg.rowGap);
     // The bar's origin is the bar line; the row spans the frame above it and the numbers below.
     this.bar.y += BAR_TOP - BAR_BLOCK / 2;
   }

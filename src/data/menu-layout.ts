@@ -243,6 +243,11 @@ export const MENU = {
     nameY: 74,
     starsY: 116,
     hintFont: 32,
+    /** A locked card with several ways to get the creature stacks one smaller line per way. */
+    hintFontMulti: 28,
+    hintLineGap: 38,
+    /** Side room kept free around a hint line. */
+    hintPad: 24,
     /** Locked cards show the icon as a dark silhouette. */
     silhouetteSize: 150,
     silhouetteColor: 0x3b2a4a,
@@ -275,6 +280,8 @@ export const MENU = {
     breathePeriodMs: 2200,
   },
   /** Baker level and XP bar. */
+  /** The "fresh oven" line: a thin bar and a label to its right, `width` across in all. */
+  ovenBar: { width: 600, barWidth: 230, height: 22, radius: 11, border: 3, font: 30, gap: 20 },
   xpBar: {
     width: 640,
     height: 44,
@@ -296,6 +303,8 @@ export const MENU = {
     extraShare: 0.5,
     /** Baker level and XP on a plate in the top-left corner; the bar is placed from the plate centre. */
     levelPlate: { left: 24, y: 100, width: 600, height: 140, barWidth: 340, barX: 74, barY: -20 },
+    /** The oven line in the gap between the level plate and the badge row. */
+    ovenBar: { y: 196 },
     /** The record line on a plate under the top bar; it moves down by `extraShare` of the extra height. */
     record: { y: 396, extraShare: 0.25, font: 50, height: 96, padX: 48, fill: 0x7c5cff },
     /** The team shelf: a thick plank on two brackets, with up to three creatures standing on it. */
@@ -840,6 +849,9 @@ export const MENU = {
     groupColors: { easy: 0x3ddc97, medium: 0xffc93c, hard: 0xff5c8a },
     rewardFont: 40,
     rewardX: 100,
+    /** The XP of a mission under its coins. */
+    xpFont: 26,
+    xpY: 84,
     actionX: 272,
     actionY: 38,
     actionButton: { width: 200, height: 88, radius: 30, shadowOffset: 7, font: 38 },
@@ -902,6 +914,10 @@ export const MENU = {
     adTextPadding: 40,
     adDisabledAlpha: 0.5,
     xpFont: 52,
+    /** The oven line under the XP bar, and the message when a run emptied it. */
+    ovenRowHeight: 44,
+    ovenMessageFont: 34,
+    ovenMessageWidth: 900,
     nearMissFont: 40,
     nearMissWidth: 900,
     /** The missions block: a title and compact rows of the missions this run moved. */

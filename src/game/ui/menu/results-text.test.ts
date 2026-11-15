@@ -93,6 +93,12 @@ describe('level-up lines', () => {
     ];
     expect(newCreaturesOf(list)).toEqual(['puff']);
   });
+
+  it('adds the creatures a record opened after the level rewards, once', () => {
+    expect(newCreaturesOf([], ['twins'])).toEqual(['twins']);
+    const list = [up({ level: 2, reward: { creature: 'puff' } })];
+    expect(newCreaturesOf(list, ['twins', 'puff'])).toEqual(['puff', 'twins']);
+  });
 });
 
 describe('xp segments', () => {

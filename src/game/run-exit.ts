@@ -20,7 +20,7 @@ export function exitTarget(request: RunRequest, summary: RunSummary | null): Scr
     return { key: SCENES.creatureDetail, data };
   }
   if (request.kind === 'daily') return { key: SCENES.daily };
-  const creatures = summary ? newCreaturesOf(summary.levelUps) : [];
+  const creatures = summary ? newCreaturesOf(summary.levelUps, summary.recordCreatures) : [];
   if (creatures.length === 0) return { key: SCENES.home };
   const data: NewCreatureData = { creatures, then: { kind: 'screen', key: SCENES.home } };
   return { key: SCENES.newCreature, data };

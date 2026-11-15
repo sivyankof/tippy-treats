@@ -15,7 +15,13 @@ import { createTextButton, type Button } from '../ui/button';
 import { createHintBubble } from '../ui/menu/home-hint';
 import { HomeBadges } from '../ui/menu/home-badges';
 import { HomeNav } from '../ui/menu/home-nav';
-import { createLevelPlate, createPlayRing, createRecordPlate } from '../ui/menu/home-plates';
+import {
+  createLevelPlate,
+  createPlayRing,
+  createRecordPlate,
+  refreshLevelPlate,
+} from '../ui/menu/home-plates';
+import { OvenBar } from '../ui/menu/oven-bar';
 import { HomeShelf } from '../ui/menu/home-shelf';
 import { openGiftWindow } from '../ui/menu/gift-window';
 import { openMissionsWindow } from '../ui/menu/missions-window';
@@ -36,6 +42,7 @@ export class HomeScene extends Phaser.Scene {
   private scenery!: MenuScenery;
   private header!: ScreenHeader;
   private level!: Phaser.GameObjects.Container;
+  private oven!: OvenBar;
   private shelf!: HomeShelf;
   private record!: Phaser.GameObjects.Container;
   private play!: Button;
@@ -83,6 +90,7 @@ export class HomeScene extends Phaser.Scene {
       settings: () => this.openSettings(),
     });
     this.level = createLevelPlate(this);
+    this.oven = new OvenBar(this, 0, 0).show(gameState.ovenLeft);
     this.header = new ScreenHeader(this, '', null);
 
     this.play = createTextButton(this, {
@@ -133,6 +141,7 @@ export class HomeScene extends Phaser.Scene {
   private content(): Movable[] {
     const items: Movable[] = [
       this.level,
+      this.oven,
       ...this.badges.parts,
       ...this.header.parts,
       this.shelf.root,
@@ -154,6 +163,7 @@ export class HomeScene extends Phaser.Scene {
     this.header.layout(width);
     this.badges.layout(width);
     this.level.setPosition(cfg.levelPlate.left + cfg.levelPlate.width / 2, cfg.levelPlate.y);
+    this.oven.setPosition(cfg.levelPlate.left + cfg.levelPlate.width / 2, cfg.ovenBar.y);
     const shelfY = cfg.shelf.y + extra;
     this.shelf.root.setPosition(cx, shelfY);
     this.record.setPosition(cx, cfg.record.y + extra * cfg.record.extraShare);
@@ -188,6 +198,7 @@ export class HomeScene extends Phaser.Scene {
 
   /** The badges and the dots of the nav bar follow the save again. */
   private refreshMarks(): void {
+    refreshLevelPlate(this.level);
     this.badges.refreshStreak();
     this.nav.refresh();
   }

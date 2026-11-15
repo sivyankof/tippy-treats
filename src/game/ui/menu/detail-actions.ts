@@ -1,4 +1,5 @@
 import * as Phaser from 'phaser';
+import type { UnlockHint } from '../../../core/collection';
 import type { Currency } from '../../../core/economy';
 import type { CreatureId } from '../../../data/creatures';
 import { MENU } from '../../../data/menu-layout';
@@ -118,6 +119,11 @@ export class DetailActions {
           ),
         );
         return;
+      case 'upgradeFrom':
+        this.main.push(
+          this.infoLine(scene, t('detail.upgradeFrom', { n: formatNumber(action.minBakerLevel) })),
+        );
+        return;
       case 'maxLevel':
         this.main.push(
           textButton(
@@ -139,12 +145,19 @@ export class DetailActions {
             ),
           );
         }
+        this.addOtherWays(scene, action.otherWays, ctx);
         return;
-      case 'shopFrom':
+      case 'shopFrom': {
+        const key = action.currency === 'coins' ? 'detail.shopFromCoins' : 'detail.shopFromBerries';
         this.main.push(
-          this.infoLine(scene, t('detail.shopFrom', { n: formatNumber(action.minBakerLevel) })),
+          this.infoLine(
+            scene,
+            t(key, { n: formatNumber(action.minBakerLevel), price: formatNumber(action.price) }),
+          ),
         );
+        this.addOtherWays(scene, action.otherWays, ctx);
         return;
+      }
       case 'howTo':
         this.main.push(
           this.infoLine(
@@ -152,6 +165,14 @@ export class DetailActions {
             t('detail.howTo', { way: unlockText(action.hint, ctx.bakerLevel) ?? '' }),
           ),
         );
+    }
+  }
+
+  /** One line per free way to get the creature besides the shop ("Or: Record 75"). */
+  private addOtherWays(scene: Phaser.Scene, ways: UnlockHint[], ctx: ActionContext): void {
+    for (const hint of ways) {
+      const way = unlockText(hint, ctx.bakerLevel);
+      if (way !== null) this.main.push(this.infoLine(scene, t('detail.orWay', { way })));
     }
   }
 

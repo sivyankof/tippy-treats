@@ -19,6 +19,12 @@ export function createLevelPlate(scene: Phaser.Scene): Phaser.GameObjects.Contai
   return scene.add.container(0, 0, [plate, bar]);
 }
 
+/** Shows the level and XP of the save again (a mission paid XP while the screen stood). */
+export function refreshLevelPlate(plate: Phaser.GameObjects.Container): void {
+  const bar = plate.getAt(1);
+  if (bar instanceof XpBar) bar.show(gameState.data.bakerLevel, gameState.data.bakerXp);
+}
+
 /** The best height ("Record: 42") or the first-tower call, in gold on a purple plate. */
 export function createRecordPlate(scene: Phaser.Scene): Phaser.GameObjects.Container {
   const best = gameState.recordHeight;

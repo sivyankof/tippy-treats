@@ -52,12 +52,16 @@ export function dailyBestText(best: number): string {
   return best > 0 ? t('daily.best', { n: best }) : t('daily.bestNone');
 }
 
-/** Creatures to present after the results: the free ones that are new to the player. */
-export function newCreaturesOf(levelUps: readonly LevelUp[]): CreatureId[] {
+/** Creatures to present after the results: the free ones that are new to the player (level rewards, then record rewards). */
+export function newCreaturesOf(
+  levelUps: readonly LevelUp[],
+  recordCreatures: readonly CreatureId[] = [],
+): CreatureId[] {
   const ids: CreatureId[] = [];
   for (const { reward, duplicate } of levelUps) {
     if (reward.creature && duplicate === null) ids.push(reward.creature);
   }
+  for (const id of recordCreatures) if (!ids.includes(id)) ids.push(id);
   return ids;
 }
 

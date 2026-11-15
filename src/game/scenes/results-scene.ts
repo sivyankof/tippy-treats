@@ -113,7 +113,7 @@ export class ResultsScene extends Phaser.Scene {
     fitText(this.hint, cfg.nearMissWidth);
     this.hint.setVisible(this.recorded);
     // The creatures the levels handed out are presented before anything else.
-    const levelCreatures = newCreaturesOf(summary.levelUps);
+    const levelCreatures = newCreaturesOf(summary.levelUps, summary.recordCreatures);
     const fresh: CreatureId[] = summary.firstRun
       ? ['honey', ...levelCreatures.filter((id) => id !== 'honey')]
       : levelCreatures;
