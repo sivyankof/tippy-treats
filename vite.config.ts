@@ -6,6 +6,12 @@ declare const process: {
   getBuiltinModule(id: 'node:fs'): { readFileSync(path: string, encoding: 'utf-8'): string };
 };
 
+/** The `version` of package.json: the one source of the version the game shows. */
+function packageVersion(): string {
+  const text = process.getBuiltinModule('node:fs').readFileSync('./package.json', 'utf-8');
+  return (JSON.parse(text) as { version: string }).version;
+}
+
 /** Phaser's own minified ES module build: one file, no imports, no source map. */
 const PHASER_MIN = '/node_modules/phaser/dist/phaser.esm.min.js';
 
@@ -36,6 +42,7 @@ export default defineConfig(({ command, mode }) => {
   return {
     // Relative base so the build also works from the Capacitor webview.
     base: './',
+    define: { __APP_VERSION__: JSON.stringify(packageVersion()) },
     plugins: devServer ? [leanDevPhaser()] : [],
     resolve: devServer ? { alias: [{ find: /^phaser$/, replacement: PHASER_MIN }] } : {},
     optimizeDeps: devServer ? { exclude: ['phaser'] } : {},

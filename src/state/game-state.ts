@@ -53,6 +53,7 @@ import {
   type RestorePayment,
   type StreakClaim,
 } from './streak';
+import { withProgressReset } from './reset';
 import { SaveStore, type GameStateDeps, type LoadOptions, type LoadOutcome } from './save-store';
 import { withAdWatched, withBerries, withCoins } from './wallet';
 
@@ -63,7 +64,7 @@ export type { RestorePayment, StreakClaim } from './streak';
 export type { GameStateDeps, LoadInfo, LoadOptions, LoadOutcome, Scheduler } from './save-store';
 
 export type SettingsPatch = Partial<
-  Pick<Save['settings'], 'music' | 'sfx' | 'haptics' | 'reducedFx' | 'lang'>
+  Pick<Save['settings'], 'music' | 'sfx' | 'haptics' | 'reducedFx' | 'lang' | 'notifications'>
 >;
 
 /**
@@ -424,6 +425,12 @@ export class GameState {
   updateSettings(patch: SettingsPatch): void {
     const save = this.store.save;
     this.store.replace({ ...save, settings: { ...save.settings, ...patch } });
+  }
+
+  /** Wipes the progress (a new save as at the first launch) and writes it at once; see `withProgressReset`. */
+  resetProgress(): void {
+    this.store.replace(withProgressReset(this.store.save, this.deps.realNow()));
+    this.store.flush();
   }
 
   /** Local day of the game clock (streak, missions). */

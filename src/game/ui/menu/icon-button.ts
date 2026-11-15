@@ -4,7 +4,10 @@ import { Button } from '../button';
 
 /** Icons drawn in code on round buttons. */
 export type IconKind =
-  'back' | 'close' | 'pause' | 'play' | 'shop' | 'collection' | 'daily' | 'missions';
+  'back' | 'close' | 'pause' | 'play' | 'shop' | 'collection' | 'daily' | 'missions' | 'settings';
+
+/** The gear: how many teeth it has. */
+const GEAR_TEETH = 8;
 
 /** Line width of the stroked icons, as a share of the icon size. */
 const STROKE = 0.14;
@@ -76,6 +79,21 @@ export function drawIcon(
       g.fillRect(cx + s * 0.29, cy - s * 0.85, s * 0.16, s * 0.4);
       g.fillStyle(PALETTE.accent, 1);
       g.fillRect(cx - s * 0.55, cy - s * 0.2, s * 1.1, s * 0.12);
+      return;
+    case 'settings':
+      // A gear: a ring with short thick teeth around it.
+      g.lineStyle(size * STROKE * 0.9, PALETTE.textLight, 1);
+      g.strokeCircle(cx, cy, s * 0.5);
+      g.lineStyle(size * STROKE * 1.2, PALETTE.textLight, 1);
+      for (let i = 0; i < GEAR_TEETH; i++) {
+        const a = (i / GEAR_TEETH) * Math.PI * 2;
+        g.lineBetween(
+          cx + Math.cos(a) * s * 0.72,
+          cy + Math.sin(a) * s * 0.72,
+          cx + Math.cos(a) * s * 0.95,
+          cy + Math.sin(a) * s * 0.95,
+        );
+      }
       return;
     case 'missions':
       g.beginPath();

@@ -4,11 +4,12 @@ import { PALETTE } from '../../../data/palette';
 import { t, tn } from '../../../i18n';
 import { gameState } from '../../../state';
 import { cssColor } from '../../../util/color';
-import { attachPressFeedback } from '../button';
+import { attachPressFeedback, type Button } from '../button';
 import { createOutlinedText } from '../outlined-text';
 import { faceOffsetY, VolumePlate } from '../style/volume';
 import { fitText } from './fit-text';
 import { FlameIcon } from './flame-icon';
+import { createIconButton } from './icon-button';
 import { GiftBox } from './new-creature-box';
 import { formatTimeLeft } from './time-text';
 
@@ -31,12 +32,13 @@ function makeTappable(
 }
 
 /**
- * The two plates under the level plate of Home: the streak flame with the day count (opens the
- * calendar) and the gift box with its timer (opens the gift window).
+ * The row under the level plate of Home: the streak flame with the day count (opens the
+ * calendar), the gift box with its timer (opens the gift window) and the settings gear beside it.
  */
 export class HomeBadges {
   readonly streak: Phaser.GameObjects.Container;
   readonly gift: Phaser.GameObjects.Container;
+  readonly gear: Button;
   private readonly streakPlate: VolumePlate;
   private readonly streakFlame: FlameIcon;
   private readonly streakLabel: Phaser.GameObjects.Text;
@@ -48,7 +50,7 @@ export class HomeBadges {
 
   constructor(
     private readonly scene: Phaser.Scene,
-    handlers: { streak: () => void; gift: () => void },
+    handlers: { streak: () => void; gift: () => void; settings: () => void },
   ) {
     const { height } = cfg;
     this.streakPlate = new VolumePlate(scene, 'chip', height, { fill: cfg.streak.fill });
@@ -64,6 +66,10 @@ export class HomeBadges {
     this.giftLabel = createOutlinedText(scene, 0, faceOffsetY('chip'), '', cfg.gift.font);
     this.gift = scene.add.container(0, 0, [giftPlate, this.giftBox, this.giftLabel]);
 
+    this.gear = createIconButton(scene, 0, 0, cfg.gear.size, cfg.gear.fill, 'settings', () =>
+      this.tap(handlers.settings),
+    );
+
     this.refreshStreak();
     this.update();
     makeTappable(this.streak, this.streakPlate.width, height, () => this.tap(handlers.streak));
@@ -73,17 +79,22 @@ export class HomeBadges {
 
   /** What slides in with the screen. */
   get parts(): Phaser.GameObjects.Container[] {
-    return [this.streak, this.gift];
+    return [this.streak, this.gift, this.gear];
   }
 
-  /** Streak plate on the left edge, gift plate on the right edge of a screen `width` wide. */
+  /** Streak plate on the left edge, gift plate on the right edge and the gear left of it, on a screen `width` wide. */
   layout(width: number): void {
     this.streak.setPosition(cfg.edge + this.streakPlate.width / 2, cfg.y);
     this.gift.setPosition(width - cfg.edge - cfg.gift.width / 2, cfg.y);
+    this.gear.setPosition(
+      width - cfg.edge - cfg.gift.width - cfg.gear.gap - cfg.gear.size / 2,
+      cfg.y,
+    );
   }
 
   setEnabled(enabled: boolean): void {
     this.enabled = enabled;
+    this.gear.setEnabled(enabled);
   }
 
   /** The day count of the streak plate; call after the streak changed. */

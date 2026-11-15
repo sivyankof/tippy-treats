@@ -518,6 +518,24 @@ describe('GameState settings', () => {
       music: true,
     });
   });
+
+  it('wipes the progress at once and keeps install id and settings', async () => {
+    const { state, create, scheduler } = setup();
+    await state.load();
+    const installId = state.data.installId;
+    state.updateSettings({ lang: 'ru' });
+    state.addCoins(500);
+    state.markHint('tutorial');
+    state.resetProgress();
+    await settle();
+    const again = create();
+    await again.load();
+    expect(again.coins).toBe(0);
+    expect(again.hasHint('tutorial')).toBe(false);
+    expect(again.data.installId).toBe(installId);
+    expect(again.settings.lang).toBe('ru');
+    scheduler.run();
+  });
 });
 
 /** Storage whose reads answer only when the test lets them. */

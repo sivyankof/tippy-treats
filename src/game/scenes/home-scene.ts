@@ -5,9 +5,10 @@ import { MENU } from '../../data/menu-layout';
 import { PALETTE } from '../../data/palette';
 import { t } from '../../i18n';
 import { gameState } from '../../state';
-import { buyProduct, loadPrices } from '../purchases';
+import { buyProduct, loadPrices, syncPurchases } from '../purchases';
 import { starterPackContents } from '../../core/shop';
 import { startRunFrom, openScreen, SCENES, type HomeData } from '../scene-keys';
+import type { PopupWindow } from '../ui/style/popup-window';
 import { createTextButton, type Button } from '../ui/button';
 import { createHintBubble } from '../ui/menu/home-hint';
 import { HomeBadges } from '../ui/menu/home-badges';
@@ -16,6 +17,7 @@ import { createLevelPlate, createRecordPlate } from '../ui/menu/home-plates';
 import { HomeShelf } from '../ui/menu/home-shelf';
 import { openGiftWindow } from '../ui/menu/gift-window';
 import { openMissionsWindow } from '../ui/menu/missions-window';
+import { openSettingsWindow } from '../ui/menu/settings-window';
 import { ScreenHeader } from '../ui/menu/screen-header';
 import { openStreakCalendar, openStreakEntry } from '../ui/menu/streak-windows';
 import type { StreakClaim } from '../../state/game-state';
@@ -44,6 +46,9 @@ export class HomeScene extends Phaser.Scene {
   private offerRoom = false;
   private buying = false;
   private leaving = false;
+  /** Kept so a language restart redraws the ring on Play. */
+  private highlightPlay = false;
+  private settings: PopupWindow | null = null;
 
   constructor() {
     super(SCENES.home);
@@ -51,6 +56,8 @@ export class HomeScene extends Phaser.Scene {
 
   create(data?: HomeData): void {
     this.leaving = false;
+    this.settings = null;
+    this.highlightPlay = data?.highlightPlay ?? false;
     gameState.refreshDay();
     this.hint = null;
     this.ring = null;
@@ -71,6 +78,7 @@ export class HomeScene extends Phaser.Scene {
       streak: () =>
         openStreakCalendar(this, (claim) => this.afterStreak(claim), this.header.wallet),
       gift: () => openGiftWindow(this, () => this.refreshMarks(), this.header.wallet),
+      settings: () => this.openSettings(),
     });
     this.level = createLevelPlate(this);
     this.header = new ScreenHeader(this, '', null);
@@ -96,7 +104,7 @@ export class HomeScene extends Phaser.Scene {
         this.goTo(() => openScreen(this, SCENES.team)),
       );
     }
-    if (data?.highlightPlay) this.ring = this.createRing();
+    if (this.highlightPlay) this.ring = this.createRing();
     if (this.offerRoom) void this.addStarterOffer();
 
     this.scale.on(Phaser.Scale.Events.RESIZE, this.layout, this);
@@ -107,7 +115,8 @@ export class HomeScene extends Phaser.Scene {
     this.setEnabled(false);
     enterScreen(this, this.content(), () => {
       this.setEnabled(true);
-      this.showDayEntry();
+      if (data?.reopenSettings) this.openSettings();
+      else this.showDayEntry();
     });
   }
 
@@ -204,6 +213,31 @@ export class HomeScene extends Phaser.Scene {
   private refreshMarks(): void {
     this.badges.refreshStreak();
     this.nav.refresh();
+  }
+
+  /** The settings window; a language change rebuilds this screen and opens the window again, a reset starts the first run. */
+  private openSettings(): void {
+    this.settings = openSettingsWindow(this, {
+      onLanguage: () => {
+        if (this.leaving) return;
+        this.scene.restart({
+          reopenSettings: true,
+          highlightPlay: this.highlightPlay,
+        } satisfies HomeData);
+      },
+      onReset: () => void this.restartFresh(),
+    });
+  }
+
+  /** After a reset: the store gives back what was paid for, then the game starts like the first launch. */
+  private async restartFresh(): Promise<void> {
+    if (this.leaving) return;
+    this.leaving = true;
+    this.settings?.destroy();
+    this.settings = null;
+    this.setEnabled(false);
+    await syncPurchases();
+    leaveScreen(this, [], () => startRunFrom(this));
   }
 
   /** The first entry of the day: the threat window and the streak calendar. */

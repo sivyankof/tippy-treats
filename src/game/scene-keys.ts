@@ -59,6 +59,8 @@ export interface NewCreatureData {
 export interface HomeData {
   /** Highlight "Play" right after the tutorial. */
   highlightPlay?: boolean;
+  /** Open the settings window right away (the screen was rebuilt after a language change). */
+  reopenSettings?: boolean;
 }
 
 /** The scenes of a run; a menu screen replaces them. */

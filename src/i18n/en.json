@@ -375,5 +375,32 @@
       "nothing": "Nothing to restore",
       "failed": "Could not reach the store"
     }
+  },
+  "settings": {
+    "title": "Settings",
+    "language": "Language",
+    "langEn": "English",
+    "langRu": "Русский",
+    "notifications": "Notifications",
+    "notify": {
+      "gift": "Gift",
+      "streak": "Streak",
+      "daily": "Daily tower",
+      "comeback": "Come back"
+    },
+    "version": "Version {version}",
+    "installId": "ID {id}",
+    "reset": "Reset progress",
+    "resetAsk": {
+      "title": "Reset progress?",
+      "text": "All creatures, coins, berries, records and your streak will be erased from this device. There is no cloud save, so the progress cannot be brought back. Paid purchases return through the store.",
+      "next": "Continue",
+      "cancel": "Cancel"
+    },
+    "resetSure": {
+      "title": "Erase everything?",
+      "text": "This is the last step. The progress is lost for good and the game starts as on the very first launch.",
+      "confirm": "Erase progress"
+    }
   }
 }

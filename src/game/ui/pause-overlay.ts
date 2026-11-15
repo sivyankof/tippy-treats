@@ -1,20 +1,16 @@
 import type * as Phaser from 'phaser';
 import { ANIM } from '../../data/anim';
 import { PAUSE } from '../../data/hud-layout';
-import { MENU } from '../../data/menu-layout';
 import { PALETTE } from '../../data/palette';
 import { t } from '../../i18n';
-import { services } from '../../services';
-import { setReducedFxOn, setSoundOn, setVibrationOn } from '../apply-settings';
-import { effectsMode } from '../effects-mode';
 import { createTextButton, type Button } from './button';
+import { createToggleRows, soundSettingRows } from './menu/setting-toggles';
 import { createOutlinedText } from './outlined-text';
 import { PopupWindow } from './style/popup-window';
-import { ToggleSwitch } from './style/toggle-switch';
+import type { ToggleSwitch } from './style/toggle-switch';
 import { leaveScreen } from './transition';
 
 const btn = PAUSE.button;
-const toggleHeight = MENU.style.toggle.height;
 
 export interface PauseHandlers {
   /** Called after the 3-2-1 countdown: the run may go on. */
@@ -76,22 +72,13 @@ export class PauseOverlay {
       button(t('run.home'), PALETTE.success, 2, () => this.leave(this.handlers.onHome)),
     ];
     const togglesTop = buttons.length * (btn.height + PAUSE.buttonGap) + PAUSE.togglesTop;
-    const toggle = (key: string, row: number, read: () => boolean, write: (on: boolean) => void) =>
-      new ToggleSwitch(
-        this.scene,
-        0,
-        togglesTop + toggleHeight / 2 + row * (toggleHeight + PAUSE.toggleGap),
-        { label: t(key), width: btn.width, read, write },
-      );
-    const toggles = [
-      toggle('run.sounds', 0, () => services.audio.enabled, setSoundOn),
-      toggle('run.vibration', 1, () => services.haptics.enabled, setVibrationOn),
-      toggle('run.reducedFx', 2, () => effectsMode.reduced, setReducedFxOn),
-    ];
+    const { toggles, bottom } = createToggleRows(this.scene, soundSettingRows(), {
+      x: 0,
+      top: togglesTop,
+      width: btn.width,
+    });
     popup.content.add([...buttons, ...toggles]);
-    popup.setContentHeight(
-      togglesTop + toggles.length * (toggleHeight + PAUSE.toggleGap) - PAUSE.toggleGap,
-    );
+    popup.setContentHeight(bottom);
     this.popup = popup;
     this.controls = [...buttons, ...toggles];
   }

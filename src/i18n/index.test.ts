@@ -5,6 +5,7 @@ import {
   formatDecimal,
   formatNumber,
   keysOf,
+  resolveLang,
   setLang,
   t,
   tn,
@@ -40,6 +41,13 @@ describe('i18n', () => {
     expect(detectLang(['en-US', 'ru-RU'])).toBe('en');
     expect(detectLang(['de-DE'])).toBe('en');
     expect(detectLang([])).toBe('en');
+  });
+
+  it('resolves a saved choice, auto following the system', () => {
+    expect(resolveLang('auto', ['ru-RU'])).toBe('ru');
+    expect(resolveLang('auto', ['en-US'])).toBe('en');
+    expect(resolveLang('en', ['ru-RU'])).toBe('en');
+    expect(resolveLang('ru', ['en-US'])).toBe('ru');
   });
 
   it('groups thousands for the current language', () => {

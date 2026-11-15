@@ -14,6 +14,11 @@ export function detectLang(locales: readonly string[]): Lang {
   return locales[0]?.toLowerCase().startsWith('ru') ? 'ru' : 'en';
 }
 
+/** The language a saved choice stands for: `auto` follows the system locales. */
+export function resolveLang(choice: Lang | 'auto', locales: readonly string[]): Lang {
+  return choice === 'auto' ? detectLang(locales) : choice;
+}
+
 export function setLang(lang: Lang): void {
   current = lang;
 }

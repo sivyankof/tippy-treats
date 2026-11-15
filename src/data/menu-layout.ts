@@ -166,6 +166,8 @@ export const MENU = {
       onFill: 0x3ddc97,
       offFill: 0xb9a9c6,
       knobFill: 0xfff6ec,
+      /** Space between two switches of a column (`createToggleRows`). */
+      gap: 6,
       slideMs: 180,
       slideEase: 'Back.easeOut',
     },
@@ -393,6 +395,8 @@ export const MENU = {
       edge: 24,
       streak: { fill: 0xff7a2f, font: 46, padX: 36, flame: 74, gap: 10 },
       gift: { fill: 0x7c5cff, width: 400, font: 36, box: 0.3, boxInset: 52, padRight: 28 },
+      /** The settings button, left of the gift plate in the same row (it is at least 88 across). */
+      gear: { size: 96, fill: 0x7c5cff, gap: 24 },
       /** The flame stretches and sways all the time. */
       flicker: { ms: 380, scaleY: 1.1, scaleX: 0.94, swayDeg: 4 },
       /** A ready gift box shakes for `shakeMs` every `everyMs`. */
@@ -489,6 +493,41 @@ export const MENU = {
     pop: { scale: 1.3, ms: 280 },
     /** The "next gift in" timer is redrawn this often. */
     tickMs: 250,
+  },
+  /** The settings window (docs/07, section 13). Heights are from the top of the content. */
+  settings: {
+    /** Space between blocks of the window (switches, language, notifications, restore, reset). */
+    blockGap: 36,
+    /** Language row: the label on the left, two buttons on the right. */
+    language: {
+      height: 104,
+      font: 48,
+      button: { width: 270, height: 96, radius: 34, shadowOffset: 8, font: 40 },
+      buttonGap: 20,
+      picked: 0xff5c8a,
+      other: 0x7c5cff,
+    },
+    /** Notification switches of the types are narrower and shifted right: they belong to the general one. */
+    notifyIndent: 64,
+    /** "Restore purchases" and "Reset progress". */
+    wideButton: { width: 680, height: 100, radius: 36, shadowOffset: 8, font: 42 },
+    restoreFill: 0x7c5cff,
+    /** The result line under "Restore purchases": its room and font. */
+    resultHeight: 56,
+    resultFont: 38,
+    /** Version and install id lines, small. */
+    infoFont: 30,
+    infoLine: 40,
+    /** Install id is shown by its first characters only. */
+    installIdChars: 8,
+    infoAlpha: 0.85,
+  },
+  /** The confirmation windows of "Reset progress": the text, a gap and two buttons one under the other. */
+  confirm: {
+    textFont: 44,
+    textGap: 40,
+    button: { width: 680, height: 112, radius: 40, shadowOffset: 10, font: 52 },
+    buttonGap: 26,
   },
   team: {
     /** The design height the layout numbers are made for; a taller screen shifts the blocks down by these shares of the extra height. */

@@ -11,7 +11,6 @@ export const PAUSE = {
   buttonGap: 26,
   /** Space between the last button and the first switch. */
   togglesTop: 40,
-  toggleGap: 6,
   countdownFont: 320,
   countdownDepth: 800,
 } as const;
