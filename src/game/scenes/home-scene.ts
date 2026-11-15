@@ -135,6 +135,7 @@ export class HomeScene extends Phaser.Scene {
     this.header.update(time, delta);
     this.shelf.update(delta);
     this.badges.update();
+    this.oven.show(gameState.ovenLeft);
   }
 
   /** Everything that slides with the screen; the scenery stays. */
@@ -199,7 +200,6 @@ export class HomeScene extends Phaser.Scene {
   /** The badges and the dots of the nav bar follow the save again. */
   private refreshMarks(): void {
     refreshLevelPlate(this.level);
-    this.oven.show(gameState.ovenLeft);
     this.badges.refreshStreak();
     this.nav.refresh();
   }
