@@ -1,6 +1,11 @@
 import type * as Phaser from 'phaser';
 import type { CutSide } from '../../core/drop';
-import { PLAIN_LAYER, type DecorKind, type SpongeLook } from '../../data/plain-layers';
+import {
+  PLAIN_LAYER,
+  type DecorKind,
+  type PatternKind,
+  type SpongeLook,
+} from '../../data/plain-layers';
 import { PALETTE, type LayerColors } from '../../data/palette';
 import { mixColor, shade } from '../../util/color';
 import { GOLDEN } from '../../util/math';
@@ -8,7 +13,10 @@ import { faceHalfSpan } from '../fx/glaze-growth';
 import { drawDecor } from './decor-draw';
 import { decorItems } from './decor-layout';
 import { cutStripWidth, glazeWave, waveEdge, type GlazeWave } from './glaze-wave';
-import { drawShadow, fillGradient, layerBox, type LayerBox } from './layer-draw';
+import { glazePattern, patternColor } from './glaze-pattern';
+import { drawShadow, layerBox, type LayerBox } from './layer-draw';
+import type { Stroke } from './plain-lines';
+import { marbleStrokes, waffleStrokes } from './sponge-material';
 import { innerInsetAt, spongePores } from './sponge-pores';
 
 /** Everything a plain (or golden) layer is drawn from. */
@@ -16,6 +24,7 @@ export interface PlainArt {
   colors: LayerColors;
   sponge: SpongeLook;
   decor: DecorKind | null;
+  pattern: PatternKind | null;
 }
 
 /** Rows of the polygon that follows the rounded inner corners. */
@@ -51,31 +60,58 @@ function fillInnerSlice(
   g.fillPath();
 }
 
-/** Warm outline, a lighter top and a soft darker band at the bottom. */
-function drawSpongeBody(g: Phaser.GameObjects.Graphics, box: LayerBox, sponge: SpongeLook): void {
-  const { bandShare, bandMix, bandSteps, lift, bands } = PLAIN_LAYER.body;
-  const cake = sponge.cake;
+/** Warm outline, then flat steps: a light band under the glaze, the main colour, shadows below. */
+function drawSpongeBody(
+  g: Phaser.GameObjects.Graphics,
+  box: LayerBox,
+  sponge: SpongeLook,
+  crestY: number,
+): void {
+  const { topShare, topLift, shadows } = PLAIN_LAYER.body;
   g.fillStyle(sponge.outline, 1);
   g.fillRoundedRect(box.left, box.top, box.width, box.height, box.radius);
-  g.fillStyle(cake, 1);
+  g.fillStyle(sponge.cake, 1);
   g.fillRoundedRect(box.innerLeft, box.innerTop, box.innerW, box.innerH, box.innerRadius);
-  fillGradient(
-    g,
-    {
-      x: box.innerLeft,
-      y: box.innerTop,
-      width: box.innerW,
-      height: Math.max(0, box.innerH - box.innerRadius),
-    },
-    box.innerRadius,
-    cake,
-    shade(cake, lift),
-    bands,
-  );
-  const bandH = box.innerH * bandShare;
-  for (let s = 0; s < bandSteps; s++) {
-    g.fillStyle(mixColor(cake, sponge.pore, (bandMix * (s + 1)) / bandSteps), 1);
-    fillInnerSlice(g, box, box.innerBottom - bandH * (1 - s / bandSteps), box.innerBottom);
+  g.fillStyle(shade(sponge.cake, topLift), 1);
+  fillInnerSlice(g, box, box.innerTop, crestY + box.innerH * topShare);
+  for (const { share, mix } of shadows) {
+    g.fillStyle(mixColor(sponge.cake, sponge.pore, mix), 1);
+    fillInnerSlice(g, box, box.innerBottom - box.innerH * share, box.innerBottom);
+  }
+}
+
+/** Strokes the polylines of a set of strokes with round joins and caps. */
+function drawStrokes(g: Phaser.GameObjects.Graphics, strokes: readonly Stroke[]): void {
+  for (const { color, width, lines } of strokes) {
+    g.lineStyle(width, color, 1);
+    g.fillStyle(color, 1);
+    for (const line of lines) {
+      // Round joins and caps: dots on every vertex, as the stroke itself has none.
+      for (let i = 0; i < line.length; i += 2) g.fillCircle(line[i]!, line[i + 1]!, width / 2);
+      g.beginPath();
+      g.moveTo(line[0]!, line[1]!);
+      for (let i = 2; i < line.length; i += 2) g.lineTo(line[i]!, line[i + 1]!);
+      g.strokePath();
+    }
+  }
+}
+
+/** Pores of a plain sponge, or the swirls of a marble one and the grid of a waffle one. */
+function drawSpongeTexture(
+  g: Phaser.GameObjects.Graphics,
+  box: LayerBox,
+  sponge: SpongeLook,
+  cut: CutSide | null,
+  faceHalf: number | null,
+  topY: number,
+): void {
+  if (sponge.material === 'marble') {
+    drawStrokes(g, marbleStrokes(box, cut, faceHalf, topY));
+  } else if (sponge.material === 'waffle') {
+    drawStrokes(g, waffleStrokes(box, cut, faceHalf, topY));
+  } else {
+    g.fillStyle(sponge.pore, PLAIN_LAYER.pores.alpha);
+    for (const pore of spongePores(box, cut, faceHalf, topY)) g.fillCircle(pore.x, pore.y, pore.r);
   }
 }
 
@@ -131,14 +167,46 @@ function drawWavyGlaze(
     g.closePath();
     g.fillPath();
   }
-  fillGradient(
-    g,
-    { x: box.innerLeft, y: box.innerTop, width: box.innerW, height: lip - box.innerTop + 1 },
-    box.innerRadius,
-    glaze,
-    shade(glaze, spec.lift),
-    spec.bands,
+  // The top: a light rim, then the main colour over everything but the rim.
+  const corners = { tl: box.innerRadius, tr: box.innerRadius, bl: 0, br: 0 };
+  g.fillStyle(shade(glaze, spec.rimLift), 1);
+  g.fillRoundedRect(box.innerLeft, box.innerTop, box.innerW, lip - box.innerTop + 1, corners);
+  g.fillStyle(glaze, 1);
+  g.fillRoundedRect(
+    box.innerLeft,
+    box.innerTop + spec.rimPx,
+    box.innerW,
+    lip - box.innerTop - spec.rimPx + 1,
+    corners,
   );
+  // A darker tone along the wavy edge, above the dark line.
+  g.fillStyle(shade(glaze, spec.bandShade), 1);
+  g.beginPath();
+  for (let i = 0; i < edge.length; i += 2) {
+    const y = Math.max(box.innerTop + spec.rimPx, edge[i + 1]! - spec.bandPx);
+    if (i === 0) g.moveTo(edge[i]!, y);
+    else g.lineTo(edge[i]!, y);
+  }
+  for (let i = edge.length - 2; i >= 0; i -= 2) g.lineTo(edge[i]!, edge[i + 1]!);
+  g.closePath();
+  g.fillPath();
+}
+
+/** The pattern of the glaze: lines and dots in the tone of the pattern. */
+function drawGlazePattern(
+  g: Phaser.GameObjects.Graphics,
+  kind: PatternKind,
+  glaze: number,
+  box: LayerBox,
+  cut: CutSide | null,
+  faceHalf: number | null,
+  wave: GlazeWave,
+): void {
+  const pattern = glazePattern(kind, box, cut, faceHalf, wave);
+  const color = patternColor(glaze, kind);
+  drawStrokes(g, [{ color, width: pattern.lineWidth, lines: pattern.lines }]);
+  g.fillStyle(color, 1);
+  for (const dot of pattern.dots) g.fillCircle(dot.x, dot.y, dot.r);
 }
 
 /** A long white streak along the top of the glaze and a short dash after it. */
@@ -170,13 +238,11 @@ export function drawPlainLayer(
   const faceHalf = faceless ? null : faceHalfSpan(width, null);
   const wave = glazeWave(box, cut, faceHalf);
   drawShadow(g, box);
-  drawSpongeBody(g, box, art.sponge);
-  g.fillStyle(art.sponge.pore, PLAIN_LAYER.pores.alpha);
-  for (const pore of spongePores(box, cut, faceHalf, wave.crestY)) {
-    g.fillCircle(pore.x, pore.y, pore.r);
-  }
+  drawSpongeBody(g, box, art.sponge, wave.crestY);
+  drawSpongeTexture(g, box, art.sponge, cut, faceHalf, wave.crestY);
   if (cut) drawCutFace(g, box, cut, art.sponge, wave);
   drawWavyGlaze(g, box, art.colors.glaze, wave);
+  if (art.pattern) drawGlazePattern(g, art.pattern, art.colors.glaze, box, cut, faceHalf, wave);
   drawGlazeGloss(g, box, wave);
   if (art.decor) drawDecor(g, art.decor, decorItems(art.decor, box, cut, faceHalf));
 }

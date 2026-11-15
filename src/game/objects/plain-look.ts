@@ -2,37 +2,48 @@ import { Rng } from '../../core/rng';
 import type { LayerColors } from '../../data/palette';
 import {
   DECOR_KINDS,
+  PATTERN_KINDS,
   PLAIN_LAYER,
   PLAIN_PAIRS,
   SPONGES,
   type DecorKind,
+  type PatternKind,
   type PlainPair,
 } from '../../data/plain-layers';
 
-/** What a plain layer looks like: its "sponge + glaze" pair and its decoration (or none). */
+/**
+ * What a plain layer looks like: its "sponge + glaze" pair and either a decoration, a pattern on
+ * the glaze, or neither. A layer with a decoration has no pattern.
+ */
 export interface PlainLook {
   pair: number;
   decor: DecorKind | null;
+  pattern: PatternKind | null;
 }
 
-/** Decoration slots in a look code: 0 is "no decoration", then one per kind. */
-const DECOR_SLOTS = DECOR_KINDS.length + 1;
+/** Slots of a look code per pair: 0 is "bare", then one per decoration, then one per pattern. */
+const LOOK_SLOTS = 1 + DECOR_KINDS.length + PATTERN_KINDS.length;
 
 /** Look code of the golden layer: past every plain code, so it has art of its own. */
-export const GOLDEN_LOOK = PLAIN_PAIRS.length * DECOR_SLOTS;
+export const GOLDEN_LOOK = PLAIN_PAIRS.length * LOOK_SLOTS;
 
 /** One number per look (the texture key and the art slot compare it). */
 export function lookCode(look: PlainLook): number {
-  const decor = look.decor === null ? 0 : DECOR_KINDS.indexOf(look.decor) + 1;
-  return look.pair * DECOR_SLOTS + decor;
+  let slot = 0;
+  if (look.decor !== null) slot = 1 + DECOR_KINDS.indexOf(look.decor);
+  else if (look.pattern !== null)
+    slot = 1 + DECOR_KINDS.length + PATTERN_KINDS.indexOf(look.pattern);
+  return look.pair * LOOK_SLOTS + slot;
 }
 
 /** The look behind a plain look code. */
 export function lookOfCode(code: number): PlainLook {
-  const slot = code % DECOR_SLOTS;
+  const slot = code % LOOK_SLOTS;
+  const patternSlot = slot - 1 - DECOR_KINDS.length;
   return {
-    pair: Math.floor(code / DECOR_SLOTS) % PLAIN_PAIRS.length,
-    decor: slot === 0 ? null : (DECOR_KINDS[slot - 1] ?? null),
+    pair: Math.floor(code / LOOK_SLOTS) % PLAIN_PAIRS.length,
+    decor: slot >= 1 && patternSlot < 0 ? (DECOR_KINDS[slot - 1] ?? null) : null,
+    pattern: patternSlot >= 0 ? (PATTERN_KINDS[patternSlot] ?? null) : null,
   };
 }
 
@@ -75,7 +86,16 @@ export function plainLookAt(seed: number, layerIndex: number): PlainLook {
   const rng = new Rng(seed).fork(`decor:${layerIndex}`);
   const options = PLAIN_PAIRS[pair]!.decor;
   const decorated = rng.next() < PLAIN_LAYER.decorShare && options.length > 0;
-  return { pair, decor: decorated ? options[rng.int(0, options.length - 1)]! : null };
+  const decor = decorated ? options[rng.int(0, options.length - 1)]! : null;
+  return { pair, decor, pattern: decor === null ? patternAt(seed, layerIndex) : null };
+}
+
+/** Pattern of an undecorated layer: its own stream, so the decor decisions stay as they were. */
+function patternAt(seed: number, layerIndex: number): PatternKind | null {
+  const rng = new Rng(seed).fork(`pattern:${layerIndex}`);
+  const plain = rng.next() < PLAIN_LAYER.pattern.plainShare;
+  const kind = PATTERN_KINDS[rng.int(0, PATTERN_KINDS.length - 1)]!;
+  return plain ? null : kind;
 }
 
 /** Sponge and glaze colours of a pair. */
