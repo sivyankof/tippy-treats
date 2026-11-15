@@ -1,4 +1,4 @@
-import type * as Phaser from 'phaser';
+import * as Phaser from 'phaser';
 import type { Currency } from '../../../core/economy';
 import { MENU } from '../../../data/menu-layout';
 import { TREASURE } from '../../../data/treasure-anim';
@@ -59,4 +59,30 @@ export class BalanceChip {
   shake(): void {
     shakeX(this.scene, this.root, this.x);
   }
+}
+
+/**
+ * Keeps `chip` rolling to `value()` every frame while `owner` (the window that holds the chip)
+ * is alive; stops by itself when the owner is destroyed or the scene shuts down.
+ */
+export function followBalance(
+  scene: Phaser.Scene,
+  chip: BalanceChip,
+  owner: Phaser.GameObjects.GameObject,
+  value: () => number,
+): void {
+  const stop = (): void => {
+    scene.events.off(Phaser.Scenes.Events.UPDATE, tick);
+  };
+  const tick = (): void => {
+    // The window can be gone by the time the scene updates again (closed, or the scene left).
+    if (!owner.active || !chip.root.active) {
+      stop();
+      return;
+    }
+    chip.update(value());
+  };
+  scene.events.on(Phaser.Scenes.Events.UPDATE, tick);
+  owner.once(Phaser.GameObjects.Events.DESTROY, stop);
+  scene.events.once(Phaser.Scenes.Events.SHUTDOWN, stop);
 }

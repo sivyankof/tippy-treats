@@ -3,6 +3,7 @@ import { ART_SHEET } from '../../data/art-sheet';
 import { CREATURE_IDS } from '../../data/creatures';
 import { TOWER_GUESTS } from '../../data/tower-guest';
 import { createAbilityTextures } from '../fx/abilities/ability-textures';
+import { bakeCheckpointTextures } from '../fx/checkpoint-textures';
 import { bakeChestTextures } from '../fx/chest-texture';
 import { createFxTextures } from '../fx/fx-textures';
 import { bakeGiftTextures } from '../fx/gift-texture';
@@ -38,6 +39,7 @@ const PRIME_STEPS: ReadonlyArray<(scene: Phaser.Scene) => void> = [
   bakeTowerSparkle,
   bakeHintTextures,
   bakeChestTextures,
+  bakeCheckpointTextures,
   (scene) => bakeShadeTextures(scene),
   bakeTopperTextures,
   (scene) => bakeGiftTextures(scene, false),

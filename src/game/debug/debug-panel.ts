@@ -9,6 +9,7 @@ import type { UiRegion } from '../ui/ui-regions';
 import type { RunInfo } from '../run-info';
 import { adsDev } from '../../services';
 import { gameState, sessionTally } from '../../state';
+import { openCheckpointDemo } from './checkpoint-demo';
 import { cycleDebugLevel, cycleDebugSlot, getDebugTeam } from './debug-team';
 
 const FONT_SIZE = 30;
@@ -29,6 +30,7 @@ const SAVE_LEVEL = 'save';
 const DEBUG_BERRIES = 50;
 const COINS_LABEL = '+500 coins';
 const DEBUG_COINS = 500;
+const CHECKPOINT_LABEL = 'Checkpoint window';
 
 function fxLabel(): string {
   const reason = effectsMode.reason;
@@ -44,11 +46,15 @@ export class DebugPanel {
   private readonly berriesEntry: Phaser.GameObjects.Text;
   private readonly coinsEntry: Phaser.GameObjects.Text;
   private readonly adsEntry: Phaser.GameObjects.Text;
+  private readonly checkpointEntry: Phaser.GameObjects.Text;
   private readonly entries: Phaser.GameObjects.Text[];
   private teamKey = '';
 
   /** `onApply` starts a new run, which takes the picked team. */
-  constructor(scene: Phaser.Scene, onApply: () => void) {
+  constructor(
+    private readonly scene: Phaser.Scene,
+    onApply: () => void,
+  ) {
     this.text = scene.add
       .text(MARGIN, 0, '', {
         fontFamily: FONT_FAMILY,
@@ -101,6 +107,9 @@ export class DebugPanel {
       this.showAdsMode();
       this.relayout();
     }, PALETTE.panel);
+    this.checkpointEntry = entry(() => openCheckpointDemo(scene), PALETTE.panel).setText(
+      CHECKPOINT_LABEL,
+    );
     this.showAdsMode();
     this.entries = [
       ...this.slotEntries,
@@ -108,6 +117,7 @@ export class DebugPanel {
       this.berriesEntry,
       this.coinsEntry,
       this.adsEntry,
+      this.checkpointEntry,
       this.applyEntry,
     ];
   }
@@ -128,22 +138,30 @@ export class DebugPanel {
     const last = this.entries[this.entries.length - 1];
     if (!first || !last) return null;
     const height = first.height;
+    const top = Math.min(...this.entries.map((entry) => entry.y)) - height;
     return {
-      x: first.x,
-      y: first.y - height,
-      width: last.x + last.width - first.x,
-      height,
+      x: MARGIN,
+      y: top,
+      width: this.scene.scale.gameSize.width - MARGIN,
+      height: first.y - top,
     };
   }
 
   layout(screenHeight: number): void {
+    const rowHeight = this.entries[0]?.height ?? 0;
+    const maxX = this.scene.scale.gameSize.width - MARGIN;
+    // The controls wrap into rows when they do not fit the screen width; the first row is the lowest.
     let x = MARGIN;
+    let row = 0;
     for (const entry of this.entries) {
-      entry.setPosition(x, screenHeight - MARGIN);
+      if (x > MARGIN && x + entry.width > maxX) {
+        x = MARGIN;
+        row += 1;
+      }
+      entry.setPosition(x, screenHeight - MARGIN - row * (rowHeight + ENTRY_GAP));
       x += entry.width + ENTRY_GAP;
     }
-    const rowHeight = this.entries[0]?.height ?? 0;
-    this.text.setY(screenHeight - MARGIN - rowHeight - ROW_GAP);
+    this.text.setY(screenHeight - MARGIN - (row + 1) * rowHeight - row * ENTRY_GAP - ROW_GAP);
   }
 
   update(info: RunInfo | null, fps: number): void {
