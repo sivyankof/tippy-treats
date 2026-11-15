@@ -12,7 +12,7 @@ import { GOLDEN } from '../../util/math';
 import { faceHalfSpan } from '../fx/glaze-growth';
 import { drawDecor } from './decor-draw';
 import { decorItems } from './decor-layout';
-import { cutStripWidth, glazeWave, waveEdge, type GlazeWave } from './glaze-wave';
+import { cutStripWidth, deepestY, glazeWave, waveEdge, type GlazeWave } from './glaze-wave';
 import { glazePattern, patternColor } from './glaze-pattern';
 import { drawShadow, layerBox, type LayerBox } from './layer-draw';
 import type { Stroke } from './plain-lines';
@@ -239,7 +239,15 @@ export function drawPlainLayer(
   const wave = glazeWave(box, cut, faceHalf);
   drawShadow(g, box);
   drawSpongeBody(g, box, art.sponge, wave.crestY);
-  drawSpongeTexture(g, box, art.sponge, cut, faceHalf, wave.crestY);
+  // Patterned sponges start under the lowest tongue of the glaze, or the glaze would cut the ribbons short.
+  drawSpongeTexture(
+    g,
+    box,
+    art.sponge,
+    cut,
+    faceHalf,
+    art.sponge.material ? deepestY(wave) : wave.crestY,
+  );
   if (cut) drawCutFace(g, box, cut, art.sponge, wave);
   drawWavyGlaze(g, box, art.colors.glaze, wave);
   if (art.pattern) drawGlazePattern(g, art.pattern, art.colors.glaze, box, cut, faceHalf, wave);

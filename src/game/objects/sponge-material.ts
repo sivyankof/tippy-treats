@@ -30,8 +30,8 @@ function spongeInside(
 }
 
 /**
- * Strokes of the marble sponge from `topY` down: wavy ribbons in caramel (a dark edge under
- * each) and white. They are counted from the uncut edge and break in front of the face
+ * Strokes of the marble sponge from `topY` down: long smooth wavy ribbons (caramel, light and a
+ * thin white one; an edge under each but the white). They are counted from the uncut edge and break in front of the face
  * (`faceHalf` either side of the centre; `null`: a faceless piece).
  */
 export function marbleStrokes(
@@ -46,7 +46,7 @@ export function marbleStrokes(
   const strokes: Stroke[] = [];
   for (const rib of M.ribbons) {
     const y0 = topY + height * rib.yShare;
-    const inside = spongeInside(box, topY, M.inset, faceEdge, rib.width / 2 + rib.amplitude, cut);
+    const inside = spongeInside(box, topY, M.inset, faceEdge, rib.width / 2, cut);
     const lines = clipPolylines(
       (u) => [
         xAt(axis, u),
@@ -56,11 +56,11 @@ export function marbleStrokes(
       axis.length,
       STEP,
       inside,
-    );
-    if (rib.color === 'caramel') {
-      strokes.push({ color: M.caramelEdge, width: rib.width + M.edgePx * 2, lines });
+    ).filter((line) => (line.length / 2) * STEP >= M.minLength);
+    if (rib.edge !== null) {
+      strokes.push({ color: rib.edge, width: rib.width + M.edgePx * 2, lines });
     }
-    strokes.push({ color: rib.color === 'caramel' ? M.caramel : M.white, width: rib.width, lines });
+    strokes.push({ color: rib.color, width: rib.width, lines });
   }
   return strokes;
 }

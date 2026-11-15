@@ -62,7 +62,7 @@ describe('glazePattern', () => {
   it('fills a faceless piece to the middle', () => {
     for (const kind of PATTERN_KINDS) {
       const xs = points(make(kind, 480, null, false).pattern).map(([x]) => x);
-      expect(xs.some((x) => Math.abs(x) < 10)).toBe(true);
+      expect(xs.some((x) => Math.abs(x) < P.dots.pitch)).toBe(true);
     }
   });
 

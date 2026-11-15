@@ -159,35 +159,61 @@ export const PLAIN_LAYER = {
     /** Share of the layers without decorations that stay plain. */
     plainShare: 1 / 3,
     /** Gap to keep from the wavy edge (and its darker band), the top and the sides, and the face. */
-    edgeGap: 3,
-    topGap: 7,
+    edgeGap: 4,
+    topGap: 8,
     sideGap: 12,
     faceMargin: 18,
     /** Step of the sampled lines. */
     step: 2,
     /** How much lighter the pattern is than the glaze, and the darker tone used on a very light glaze. */
-    lift: 0.45,
-    darkShade: -0.14,
+    lift: 0.75,
+    darkShade: -0.26,
     /** A glaze lighter than this (0..1) takes the dark tone. */
     lightLuma: 0.9,
-    zigzag: { period: 16, amplitude: 3.5, width: 2.5 },
-    lattice: { pitch: 22, width: 2.5 },
-    waves: { period: 44, amplitude: 3, width: 3, rowPitch: 12 },
-    dots: { pitch: 30, rowPitch: 20, radius: 5.5 },
+    zigzag: { period: 24, amplitude: 4, width: 4 },
+    lattice: { pitch: 32, width: 4 },
+    waves: { period: 60, amplitude: 4, width: 4.5, rowPitch: 16 },
+    dots: { pitch: 40, rowPitch: 26, radius: 7 },
   },
 
-  /** Marble sponge: wavy ribbons in caramel (with a dark edge) and white. */
+  /** Marble sponge: a few long smooth wavy ribbons across the whole layer, each with its own edge. */
   marble: {
-    caramel: 0xd69a52,
-    caramelEdge: 0xa86a2c,
-    white: 0xfff6e8,
-    /** Ribbons: height share of the sponge band they sit at, wave period, amplitude, widths. */
+    /**
+     * Ribbons: height share of the sponge band they sit at, wave period, amplitude, phase, the
+     * width, the fill and the edge (`null`: no edge). Long periods and wide bends keep them smooth.
+     */
     ribbons: [
-      { yShare: 0.3, period: 150, amplitude: 9, phase: 0, width: 9, color: 'caramel' },
-      { yShare: 0.58, period: 120, amplitude: 8, phase: 2.1, width: 6, color: 'white' },
-      { yShare: 0.76, period: 170, amplitude: 7, phase: 4.2, width: 8, color: 'caramel' },
+      {
+        yShare: 0.27,
+        period: 140,
+        amplitude: 8,
+        phase: 0,
+        width: 12,
+        color: 0xd69a52,
+        edge: 0xa86a2c,
+      },
+      {
+        yShare: 0.54,
+        period: 140,
+        amplitude: 7,
+        phase: 0.7,
+        width: 7,
+        color: 0xeeb978,
+        edge: 0xc88a48,
+      },
+      {
+        yShare: 0.82,
+        period: 170,
+        amplitude: 4,
+        phase: 1.6,
+        width: 3.5,
+        color: 0xfff6e8,
+        edge: null,
+      },
     ],
     edgePx: 1.5,
+    /** A piece of a ribbon shorter than this (a stub left by the face or the outline) is not drawn. */
+    minLength: 70,
     /** Gap to the face, the outline and the cut. */
     faceMargin: 14,
     inset: 8,

@@ -1,7 +1,7 @@
 import type { CutSide } from '../../core/drop';
 import { PLAIN_LAYER, type PatternKind } from '../../data/plain-layers';
 import { luma, mixColor, shade } from '../../util/color';
-import { type GlazeWave, waveY } from './glaze-wave';
+import { deepestY, type GlazeWave, waveY } from './glaze-wave';
 import type { LayerBox } from './layer-draw';
 import { clipPolylines, uAxis, xAt, type Polyline } from './plain-lines';
 
@@ -58,7 +58,7 @@ export function glazePattern(
     x >= left && x <= right && Math.abs(x) >= faceEdge && y >= topY && y <= limitY(wave, x);
   const u0 = P.sideGap;
   const u1 = axis.length - P.sideGap;
-  const deepest = wave.crestY + wave.tongues.reduce((m, t) => Math.max(m, t.depth), 0);
+  const deepest = deepestY(wave);
   const result: GlazePattern = { lineWidth: 0, lines: [], dots: [] };
 
   if (kind === 'zigzag') {

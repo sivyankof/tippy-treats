@@ -62,7 +62,7 @@ export const BACKDROP_FAR = {
   /** Side of the square silhouette tile. */
   tile: 512,
   /** The silhouettes are drawn this share of the way from the sky colour to `light`, per tone step. */
-  toneShares: [0.1, 0.18, 0.26],
+  toneShares: [0.15, 0.27, 0.39],
   /** Where on the sky gradient (0 top, 1 bottom) the base colour is taken. */
   skyAt: 0.55,
   /** Pale colour the silhouettes and rays lean towards, per zone. */
@@ -99,9 +99,9 @@ export const BACKDROP_FAR = {
     wedgeDeg: 15,
     /** Steps of one wedge, wide and faint to narrow and bright: [angle share, length share, alpha]. */
     steps: [
-      [1, 1, 0.06],
-      [0.7, 0.9, 0.06],
-      [0.4, 0.78, 0.06],
+      [1, 1, 0.09],
+      [0.7, 0.9, 0.09],
+      [0.4, 0.78, 0.09],
     ],
     /** Turn period of one full circle, in ms. */
     periodMs: 240000,

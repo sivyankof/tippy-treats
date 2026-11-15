@@ -23,6 +23,11 @@ export interface GlazeWave {
   tongues: GlazeTongue[];
 }
 
+/** Y of the lowest point of the glaze edge. */
+export function deepestY(wave: GlazeWave): number {
+  return wave.crestY + wave.tongues.reduce((m, t) => Math.max(m, t.depth), 0);
+}
+
 /** Width of the sponge strip on a bitten edge. */
 export function cutStripWidth(box: LayerBox): number {
   return Math.max(0, Math.min(PLAIN_LAYER.cut.width, box.innerW / 2));
