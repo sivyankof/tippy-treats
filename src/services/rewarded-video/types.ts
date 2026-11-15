@@ -1,5 +1,11 @@
 export type RewardedPlacement =
-  'continue' | 'double_coins' | 'gift_double' | 'daily_attempt' | 'streak_restore' | 'shop_coins';
+  | 'continue'
+  | 'double_coins'
+  | 'gift_double'
+  | 'daily_attempt'
+  | 'streak_restore'
+  | 'shop_coins'
+  | 'checkpoint_start';
 
 export type RewardedResult = 'rewarded' | 'dismissed' | 'unavailable';
 

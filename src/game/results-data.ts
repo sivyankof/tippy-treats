@@ -1,3 +1,4 @@
+import type { CheckpointHeight } from '../core/checkpoints';
 import type { RunResult } from '../core/run-result';
 import type { RunTally } from '../core/run-tally';
 import { EMPTY_SUMMARY, type GameState } from '../state/game-state';
@@ -13,6 +14,9 @@ export interface RunOutcome {
   /** The run reached the save (false for dev bot and start-height runs). */
   recorded: boolean;
   tower: TowerSnapshot;
+  /** Height the run began from, and the checkpoint the player chose (null: the zero start). */
+  startHeight: number;
+  checkpoint: CheckpointHeight | null;
 }
 
 /**
@@ -31,5 +35,6 @@ export function buildResultsData(outcome: RunOutcome, save: GameState): ResultsD
   const { bakerLevel: level, bakerXp: xp } = save.data;
   const summary = outcome.recorder.summary ?? { ...EMPTY_SUMMARY, before: { level, xp } };
   const { result, tally, recorded, tower } = outcome;
-  return { result, summary, tally, recorded, tower };
+  const { startHeight, checkpoint } = outcome;
+  return { result, summary, tally, recorded, tower, startHeight, checkpoint };
 }

@@ -1,3 +1,4 @@
+import { checkpointsReached } from '../checkpoints';
 import { recordCreaturesReached } from '../record-unlocks';
 import { legacyXpToNext, V5_RECORD_UNLOCKS, v5XpToNext } from './frozen-v5';
 import { SAVE_VERSION, type Save } from './schema';
@@ -86,6 +87,20 @@ export function migrateV5(raw: RawSave): RawSave {
   return { ...raw, tutorial: { ...tutorial, hintsShown } };
 }
 
+/**
+ * 6 -> 7: the checkpoints the best classic height already reached are open, and no ad start was
+ * used. A damaged record counts as 0.
+ */
+export function migrateV6(raw: RawSave): RawSave {
+  const records = isRecord(raw.records) ? raw.records : {};
+  const height = typeof records.classicHeight === 'number' ? records.classicHeight : 0;
+  return {
+    ...raw,
+    checkpoints: checkpointsReached(Number.isFinite(height) ? height : 0),
+    checkpointAds: { day: '', used: 0 },
+  };
+}
+
 /** Hands over creatures whose record way (as of version 5) the best classic height already reached. */
 function withRecordCreatures(raw: RawSave): RawSave {
   const records = isRecord(raw.records) ? raw.records : {};
@@ -110,6 +125,7 @@ export const MIGRATIONS: MigrationChain = {
   3: migrateV3,
   4: migrateV4,
   5: migrateV5,
+  6: migrateV6,
 };
 
 /**

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { DEMO } from '../data/demo';
 import { nextCreature } from '../core/team-queue';
-import { demoFinished, demoTeam } from './run-request';
+import { CLASSIC_RUN, checkpointRun, demoFinished, demoTeam } from './run-request';
 
 describe('creature demo', () => {
   it('brings the creature as the first flying layer', () => {
@@ -12,5 +12,12 @@ describe('creature demo', () => {
   it('ends after its drops', () => {
     expect(demoFinished(DEMO.startHeight + DEMO.drops - 1)).toBe(false);
     expect(demoFinished(DEMO.startHeight + DEMO.drops)).toBe(true);
+  });
+});
+
+describe('checkpointRun', () => {
+  it('is a classic request that carries the checkpoint', () => {
+    expect(checkpointRun(60)).toEqual({ kind: 'classic', checkpoint: 60 });
+    expect(CLASSIC_RUN).toEqual({ kind: 'classic' });
   });
 });

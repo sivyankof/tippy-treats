@@ -1,4 +1,9 @@
-import { checkpointStartWidth, isCheckpointHeight } from '../core/checkpoints';
+import {
+  checkpointRunAllowed,
+  checkpointStartWidth,
+  isCheckpointHeight,
+  type CheckpointHeight,
+} from '../core/checkpoints';
 import { dailySeed, dailyTeam } from '../core/daily';
 import type { RunMode } from '../core/run-result';
 import type { TeamSlot } from '../core/sim-types';
@@ -19,6 +24,8 @@ export interface RunSetup {
   startHeight: number;
   /** Width of the first layer above `startHeight` (`TowerSim` config); absent: the first width. */
   startWidth?: number;
+  /** The checkpoint the player chose to start from; null for the zero start, `?start=`, the daily tower and demos. */
+  checkpoint: CheckpointHeight | null;
   team: Array<TeamSlot | null>;
   /** The run is the tutorial run (the hints director decides what it shows). */
   tutorialRun: boolean;
@@ -47,6 +54,7 @@ export function setupRun(request: RunRequest): RunSetup {
       mode: 'daily',
       seed: dailySeed(day),
       startHeight: 0,
+      checkpoint: null,
       team: dailyTeam(day),
       tutorialRun: false,
       hints: false,
@@ -61,6 +69,7 @@ export function setupRun(request: RunRequest): RunSetup {
       mode: 'classic',
       seed,
       startHeight: DEMO.startHeight,
+      checkpoint: null,
       team: demoTeam(request.creature, request.level),
       tutorialRun: false,
       hints: false,
@@ -76,13 +85,16 @@ export function setupRun(request: RunRequest): RunSetup {
   const team = tutorialRun
     ? [...TUTORIAL_TEAM]
     : resolveRunTeam(gameState.data.team, gameState.runTeam());
+  const checkpoint = chosenCheckpoint(request, tutorialRun);
   return {
     request,
     mode: 'classic',
     seed,
-    startHeight: debug.start ?? 0,
+    startHeight: checkpoint ?? debug.start ?? 0,
     // A debug start at a checkpoint height looks exactly like a checkpoint start.
-    startWidth: debugStartWidth(debug.start),
+    startWidth:
+      checkpoint === null ? debugStartWidth(debug.start) : checkpointStartWidth(checkpoint),
+    checkpoint,
     team,
     tutorialRun,
     hints,
@@ -91,6 +103,12 @@ export function setupRun(request: RunRequest): RunSetup {
     noContinue: debug.bot !== undefined,
     bot: debug.bot,
   };
+}
+
+/** The checkpoint of the request when this run may start from it (not the tutorial run). */
+function chosenCheckpoint(request: RunRequest, tutorialRun: boolean): CheckpointHeight | null {
+  if (request.kind !== 'classic' || request.checkpoint === undefined) return null;
+  return checkpointRunAllowed('classic', tutorialRun) ? request.checkpoint : null;
 }
 
 /** `?start=` at a checkpoint height takes the checkpoint width; any other height keeps the first width. */

@@ -33,7 +33,8 @@ export interface StorageService {
 
 ```ts
 export type RewardedPlacement =
-  | 'continue' | 'double_coins' | 'gift_double' | 'daily_attempt' | 'streak_restore' | 'shop_coins';
+  | 'continue' | 'double_coins' | 'gift_double' | 'daily_attempt' | 'streak_restore' | 'shop_coins'
+  | 'checkpoint_start';
 
 export interface AdsService {
   init(): Promise<void>;                       // after consent
@@ -92,6 +93,10 @@ export interface AnalyticsService {
 }
 ```
 
+В браузере сервис уже есть: `services/telemetry/web.ts` печатает `[telemetry] имя {параметры}` через `console.info` в режиме разработки, в продакшен-сборке молчит; он зарегистрирован как `services.telemetry`. Нативная Firebase-реализация придёт на M8.
+
+Отправляются уже сейчас: `run_start` (сцена забега, не для демо; `team` без пустых слотов, `run_index` = число законченных забегов + 1, `game/run-telemetry.ts`), `checkpoint_offer` (`logCheckpointOffer` в `game/checkpoint-start.ts`, окно вызывает его при открытии; `max_height` = старшая открытая точка), `checkpoint_start` и `currency_spend` (`item` = `checkpoint_<высота>`, только за ягоды) из `payForCheckpoint`, `ad_rewarded_show` и `ad_rewarded_result` для каждого места показа (внутри `showRewarded`). Остальные события таблицы появятся позже.
+
 ### События
 
 | Событие | Параметры | Когда |
@@ -99,7 +104,7 @@ export interface AnalyticsService {
 | `tutorial_step` | `step` | Каждый шаг обучения |
 | `tutorial_complete` | `height` | Конец первого забега |
 | `run_start` | `mode`, `team` (ид. через запятую), `run_index`, `start_height` (0 или контрольная точка) | Начало забега |
-| `checkpoint_offer` | `max_height` | Открыто окно выбора старта (после M6b) |
+| `checkpoint_offer` | `max_height` | Открыто окно выбора старта |
 | `checkpoint_start` | `height`, `method` (`ad`/`berries`), `price` | Начат забег с контрольной точки |
 | `run_end` | `mode`, `height`, `score`, `duration_s`, `perfects`, `best_combo`, `coins`, `abilities_used`, `continues`, `zone`, `end_reason` (`miss`/`sneeze`/`quit`) | Конец забега |
 | `new_record` | `height`, `prev` | Побит рекорд |

@@ -1,5 +1,6 @@
 // What a finished run adds beyond XP and records: streak day, mission progress and daily tiers.
 import { dailyTowerChanged, type DailyPayout } from '../core/daily';
+import { runLayers } from '../core/progression';
 import type { RunStats } from '../core/missions';
 import type { CoinSource } from '../core/sim-types';
 import type { RunResult } from '../core/run-result';
@@ -27,10 +28,11 @@ export interface RunProgress {
   dailyStale: boolean;
 }
 
-export function statsOf(result: RunResult, extras: RunExtras): RunStats {
+/** `startHeight`: the checkpoint the run began from; missions count only the layers placed above it. */
+export function statsOf(result: RunResult, extras: RunExtras, startHeight = 0): RunStats {
   return {
     mode: result.mode,
-    height: result.height,
+    height: runLayers(result.height, startHeight),
     score: result.score,
     bestCombo: result.bestCombo,
     perfects: result.perfects,
@@ -54,10 +56,11 @@ export function applyRunProgress(
   clockBack: boolean,
   attemptDay: string,
   utcDay: string,
+  startHeight = 0,
 ): RunProgress {
   const before = save.missions.items;
   let next = withRunDayCounted(save, today, clockBack);
-  next = withMissionStats(next, statsOf(result, extras));
+  next = withMissionStats(next, statsOf(result, extras, startHeight));
   let dailyTiers: DailyPayout[] = [];
   let dailyStale = false;
   if (result.mode === 'daily') {

@@ -1,4 +1,5 @@
 // Run bookkeeping as pure functions over the save: stats, records, XP and level rewards.
+import { withReached } from '../core/checkpoints';
 import { earn, grantCreature } from '../core/economy';
 import type { DailyPayout } from '../core/daily';
 import { bakeLayers } from '../core/oven';
@@ -101,6 +102,8 @@ export function applyRun(
     next = {
       ...next,
       today: { day, bestHeight: Math.max(todayBest, result.height) },
+      // Reaching a height opens its checkpoints for good; the full height counts, not the placed layers.
+      checkpoints: withReached(before.checkpoints, result.height),
       records: {
         classicHeight: Math.max(before.records.classicHeight, result.height),
         classicScore: Math.max(before.records.classicScore, result.score),

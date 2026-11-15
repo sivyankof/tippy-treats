@@ -1,3 +1,4 @@
+import type { CheckpointHeight } from '../core/checkpoints';
 import type { TeamSlot } from '../core/sim-types';
 import { BALANCE } from '../data/balance';
 import type { CreatureId } from '../data/creatures';
@@ -8,7 +9,7 @@ import { DEMO } from '../data/demo';
  * creature card (a short run with that creature in every slot, no rewards, back to the card).
  */
 export type RunRequest =
-  | { kind: 'classic' }
+  | { kind: 'classic'; checkpoint?: CheckpointHeight }
   | { kind: 'daily' }
   | { kind: 'demo'; creature: CreatureId; level: number; back: DemoBack };
 
@@ -16,6 +17,11 @@ export type RunRequest =
 export type DemoBack = 'collection' | 'team';
 
 export const CLASSIC_RUN: RunRequest = { kind: 'classic' };
+
+/** A classic run that starts from an opened checkpoint (paid for by the caller). */
+export function checkpointRun(height: CheckpointHeight): RunRequest {
+  return { kind: 'classic', checkpoint: height };
+}
 
 export const DAILY_RUN: RunRequest = { kind: 'daily' };
 

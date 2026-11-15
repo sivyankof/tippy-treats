@@ -3,6 +3,7 @@ import { TimingBot } from '../../core/bot';
 import type { Modifiers } from '../../core/abilities/types';
 import { Rng } from '../../core/rng';
 import { emptyTally, tallyEvents, type RunTally } from '../../core/run-tally';
+import type { CheckpointHeight } from '../../core/checkpoints';
 import type { RunMode } from '../../core/run-result';
 import type { TeamSlot } from '../../core/sim-types';
 import { TowerSim } from '../../core/tower-sim';
@@ -20,6 +21,7 @@ import { berriesFromEvents } from '../../core/berries';
 import { gameState } from '../../state';
 import { emptyRunInfo, fillRunInfo, type RunInfo } from '../run-info';
 import { bindPageLeave } from '../../state/page-lifecycle';
+import { logRunStart } from '../run-telemetry';
 import { buildResultsData } from '../results-data';
 import { openScreen, restartRun, SCENES } from '../scene-keys';
 import { exitTarget } from '../run-exit';
@@ -38,6 +40,8 @@ export class GameScene extends Phaser.Scene {
   private bot: TimingBot | null = null;
   private seed = 0;
   private startHeight = 0;
+  /** The checkpoint the run started from (null: the zero start), for the results. */
+  private checkpoint: CheckpointHeight | null = null;
   /** What kind of run this is: a normal one or a creature demo. */
   request: RunRequest = CLASSIC_RUN;
   /** False for `?bot=`, `?start=` and demo runs: nothing of them reaches the save. */
@@ -82,6 +86,7 @@ export class GameScene extends Phaser.Scene {
     // The plain layers take their look from the cosmetic stream of the seed.
     plainLooks.setRunSeed(this.seed);
     this.startHeight = setup.startHeight;
+    this.checkpoint = setup.checkpoint;
     this.writesSave = setup.writesSave;
     this.noContinue = setup.noContinue;
     this.mode = setup.mode;
@@ -103,6 +108,7 @@ export class GameScene extends Phaser.Scene {
       startWidth: setup.startWidth,
     });
     this.mods = this.sim.currentModifiers();
+    if (this.request.kind !== 'demo') logRunStart(setup, gameState.data.stats.runs);
     this.bot = setup.bot ? new TimingBot(setup.bot, new Rng(this.seed).fork('bot')) : null;
     this.flying.reset();
     this.continueFlow?.dispose();
@@ -189,7 +195,14 @@ export class GameScene extends Phaser.Scene {
       return;
     }
     const { tower } = this.fx;
-    const outcome = { result, recorder: this.recorder, tally: this.tally, tower: tower.snapshot() };
+    const outcome = {
+      result,
+      recorder: this.recorder,
+      tally: this.tally,
+      tower: tower.snapshot(),
+      startHeight: this.startHeight,
+      checkpoint: this.checkpoint,
+    };
     const data = buildResultsData({ ...outcome, recorded: this.writesSave }, gameState);
     this.scene.launch(SCENES.results, data);
   }

@@ -405,13 +405,14 @@ export interface Modifiers {
 
 ```ts
 // core/save/schema.ts
-// Текущая версия 6. Версия 2: streak.claimedToday заменён на claimedDay, добавлено today.
+// Текущая версия 7. Версия 2: streak.claimedToday заменён на claimedDay, добавлено today.
 // Версия 3: в ads добавлен offerDay (день последнего показа предложения «Без рекламы»).
 // Версия 4: в ads добавлены shownDay и shownToday (дневной счётчик межстраничной рекламы).
 // Версия 5: добавлены oven (счётчик «Свежей печи») и doubles (счётчик «×2 монеты» за день); bakerXp пересчитан под новую кривую.
 // Версия 6: форма та же; новая подсказка dailyIntro (окно-объяснение башни дня), миграция убирает её из hintsShown, чтобы окно увидели все.
-export interface SaveV6 {
-  version: 6;
+// Версия 7: добавлены checkpoints (открытые контрольные точки) и checkpointAds (старты за рекламу за местный день); миграция 6 → 7 открывает точки по рекорду.
+export interface SaveV7 {
+  version: 7;
   installId: string;             // random uuid, for mission seed & support
   createdAt: number;             // epoch ms
   lastSeenAt: number;
@@ -436,13 +437,15 @@ export interface SaveV6 {
   ads: { lastInterstitialAt: number; runsSinceInterstitial: number; sessions: number; offerDay: string; shownDay: string; shownToday: number };   // дни: местные или ''
   oven: { day: string; used: number; carry: number };      // used: «свежих» слоёв потрачено в день day; carry: остаток слоёв (< 6) до следующего опыта, не сбрасывается
   doubles: { day: string; used: number };                  // «×2 монеты» за рекламу, использовано в день day
+  checkpoints: number[];                                   // открытые контрольные точки (20/40/60/80/100), по возрастанию; всегда не меньше точек рекорда
+  checkpointAds: { day: string; used: number };            // старты с контрольной точки за рекламу, использовано в местный день day
   consent: { attAsked: boolean; notifAsked: boolean };
 }
 
 interface MissionProgress { id: string; group: 'easy' | 'medium' | 'hard'; target: number; progress: number; claimed: boolean }
 ```
 
-`hintsShown` хранит id подсказок: `tutorial` (вступление «Медка» сыграло), `tap`, `firstPerfect`, `honey`, `wobble`, `berry`, `firstResults`, `cloud`, `oven` (окно «Свежая печь»), `dailyIntro` (окно-объяснение башни дня, с версии 6). `reducedFx`: `auto` (игрок не выбирал, решают система и автоматическое переключение), `on`, `off` (выбор игрока важнее системного «Уменьшения движения» и автомата).
+`hintsShown` хранит id подсказок: `tutorial` (вступление «Медка» сыграло), `tap`, `firstPerfect`, `honey`, `wobble`, `berry`, `firstResults`, `cloud`, `oven` (окно «Свежая печь»), `dailyIntro` (окно-объяснение башни дня, с версии 6). `checkpoints`: забег Классики, дошедший до высоты, открывает все точки не выше неё навсегда (`withReached`, по полной высоте, а не по поставленным слоям; башня дня не открывает); при загрузке неверные высоты отбрасываются, список сортируется и дополняется точками рекорда. Платит за старт `gameState.payCheckpoint` (ягоды или засчитанный старт за рекламу, сам показ рекламы за вызывающим кодом, `game/checkpoint-start.ts`). `reducedFx`: `auto` (игрок не выбирал, решают система и автоматическое переключение), `on`, `off` (выбор игрока важнее системного «Уменьшения движения» и автомата).
 
 Правила:
 - Даты дней хранятся строкой `YYYY-MM-DD`: местная для серии и заданий, UTC для башни дня.

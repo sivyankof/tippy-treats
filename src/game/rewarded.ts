@@ -26,6 +26,7 @@ export function rewardedWatchedInRun(): boolean {
  */
 export async function showRewarded(placement: RewardedPlacement): Promise<RewardedResult> {
   let result: RewardedResult;
+  services.telemetry.logEvent('ad_rewarded_show', { placement });
   services.audio.suspend('ad');
   try {
     result = await services.ads.showRewarded(placement);
@@ -34,6 +35,7 @@ export async function showRewarded(placement: RewardedPlacement): Promise<Reward
   } finally {
     services.audio.resume('ad');
   }
+  services.telemetry.logEvent('ad_rewarded_result', { placement, result });
   if (result === 'rewarded') {
     watchedInRun = true;
     gameState.countAdWatched();

@@ -1,6 +1,7 @@
 import { CREATURE_IDS, MAX_CREATURE_LEVEL } from '../../data/creatures';
 import { MAX_BAKER_LEVEL, OVEN } from '../../data/progression';
 import { SAVE_DEFAULTS } from '../../data/save-defaults';
+import { withReached } from '../checkpoints';
 import { xpToNext } from '../progression';
 import { pickTeam } from '../team';
 import { createDefaultSave } from './defaults';
@@ -37,6 +38,8 @@ function uint(value: unknown, fallback: number): number {
   if (typeof value !== 'number' || !Number.isFinite(value)) return fallback;
   return Math.min(Number.MAX_SAFE_INTEGER, Math.max(0, Math.floor(value)));
 }
+
+const isNumber = (value: unknown): value is number => typeof value === 'number';
 
 const bool = (value: unknown, fallback: boolean): boolean =>
   typeof value === 'boolean' ? value : fallback;
@@ -111,7 +114,9 @@ function normalize(raw: Obj, d: Save): Save {
   const consent = obj(raw.consent);
   const oven = obj(raw.oven);
   const doubles = obj(raw.doubles);
+  const checkpointAds = obj(raw.checkpointAds);
   const creatures = normalizeCreatures(raw.creatures);
+  const classicHeight = uint(records.classicHeight, 0);
   const bakerLevel = Math.min(MAX_BAKER_LEVEL, Math.max(1, uint(raw.bakerLevel, d.bakerLevel)));
   return {
     version: d.version,
@@ -127,7 +132,7 @@ function normalize(raw: Obj, d: Save): Save {
     creatures,
     team: pickTeam(raw.team, creatures, d.team),
     records: {
-      classicHeight: uint(records.classicHeight, 0),
+      classicHeight,
       classicScore: uint(records.classicScore, 0),
       bestCombo: uint(records.bestCombo, 0),
     },
@@ -199,6 +204,12 @@ function normalize(raw: Obj, d: Save): Save {
       carry: Math.min(uint(oven.carry, 0), OVEN.layersPerXp - 1),
     },
     doubles: { day: day(doubles.day), used: uint(doubles.used, 0) },
+    // Valid heights only, ascending, and never fewer than the record has reached.
+    checkpoints: withReached(
+      Array.isArray(raw.checkpoints) ? (raw.checkpoints as unknown[]).filter(isNumber) : [],
+      classicHeight,
+    ),
+    checkpointAds: { day: day(checkpointAds.day), used: uint(checkpointAds.used, 0) },
     consent: {
       attAsked: bool(consent.attAsked, false),
       notifAsked: bool(consent.notifAsked, false),
