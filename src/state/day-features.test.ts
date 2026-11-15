@@ -98,10 +98,10 @@ describe('streak', () => {
       expect(state.streakEntry()).toEqual({ kind: 'threat' });
     });
 
-    it('is forgiven for an ad, which is counted', () => {
+    it('is forgiven for an ad, which showRewarded counts', () => {
       const { state } = missed();
       expect(state.restoreStreak('ad')).toBe(true);
-      expect(state.data.stats.adsWatched).toBe(1);
+      expect(state.data.stats.adsWatched).toBe(0);
     });
 
     it('starts over when the player declines', () => {
@@ -220,7 +220,6 @@ describe('daily tower', () => {
     for (let i = 0; i < DAILY.attempts; i++) expect(state.startDailyAttempt()).toBe(true);
     expect(state.startDailyAttempt()).toBe(false);
     expect(state.addDailyAttempt()).toBe(true);
-    expect(state.data.stats.adsWatched).toBe(1);
     expect(state.addDailyAttempt()).toBe(false);
     expect(state.dailyInfo().attemptsLeft).toBe(DAILY.extraAttempts);
     expect(state.startDailyAttempt()).toBe(true);

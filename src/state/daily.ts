@@ -15,7 +15,6 @@ import {
 } from '../core/daily';
 import type { Save } from '../core/save/schema';
 import type { TeamSlot } from '../core/sim-types';
-import { withAdWatched } from './wallet';
 
 /** What the Daily screen shows. */
 export interface DailyInfo {
@@ -64,7 +63,7 @@ export function withAttemptStarted(save: Save, utcDay: string): Save | null {
 export function withAttemptAdded(save: Save, utcDay: string): Save | null {
   const today = withDailyForDay(save, utcDay);
   if (!canAddAttempt(today.daily)) return null;
-  return withAdWatched({ ...today, daily: addAttempt(today.daily) });
+  return { ...today, daily: addAttempt(today.daily) };
 }
 
 /** The save with a finished daily run recorded and its newly reached tiers paid. */

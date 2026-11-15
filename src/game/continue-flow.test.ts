@@ -8,7 +8,6 @@ import { createTestState } from '../state/test-state';
 function setup(adResult: RewardedResult | 'never' = 'rewarded', ready = true, berries = 0) {
   const wallet = createTestState();
   wallet.addBerries(berries);
-  const audio = { suspend: vi.fn(), resume: vi.fn() };
   let release: (r: RewardedResult) => void = () => {};
   const ads = {
     init: vi.fn(),
@@ -23,8 +22,8 @@ function setup(adResult: RewardedResult | 'never' = 'rewarded', ready = true, be
     maybeShowInterstitial: vi.fn(),
     setRemoveAds: vi.fn(),
   };
-  const flow = new ContinueFlow({ ads, audio, wallet });
-  return { flow, wallet, audio, ads, release: (r: RewardedResult) => release(r) };
+  const flow = new ContinueFlow({ ads, wallet });
+  return { flow, wallet, ads, release: (r: RewardedResult) => release(r) };
 }
 
 describe('ContinueFlow', () => {
@@ -75,13 +74,10 @@ describe('ContinueFlow', () => {
     expect(wallet.berries).toBe(before - cost);
   });
 
-  it('continues after a rewarded ad, with the audio suspended around it', async () => {
-    const { flow, audio } = setup('rewarded');
+  it('continues after a rewarded ad', async () => {
+    const { flow } = setup('rewarded');
     flow.open('classic', 0);
-    const shown = flow.watchAd();
-    expect(audio.suspend).toHaveBeenCalledOnce();
-    await shown;
-    expect(audio.resume).toHaveBeenCalledOnce();
+    await flow.watchAd();
     expect(flow.takeAction()).toBe('continue');
   });
 

@@ -171,7 +171,6 @@ export class ShopScene extends Phaser.Scene {
     this.busy = false;
     if (!this.scene.isActive()) return;
     if (result === 'rewarded') {
-      gameState.countAdWatched();
       if (gameState.claimFreeCoins()) this.fly('coins', SHOP.freeCoins.amount, from);
     }
     this.rebuild();

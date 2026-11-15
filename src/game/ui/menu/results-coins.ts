@@ -130,7 +130,6 @@ export class ResultsCoins {
     if (!this.container.active) return;
     if (result === 'rewarded') {
       gameState.addCoins(this.earned);
-      gameState.countAdWatched();
       this.roll.set(this.earned * 2);
       this.buttonLabel?.setText(t('results.doubled'));
       if (this.buttonLabel) fitText(this.buttonLabel, cfg.adButton.width - cfg.adTextPadding);

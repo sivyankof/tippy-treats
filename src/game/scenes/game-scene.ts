@@ -6,7 +6,6 @@ import { emptyTally, tallyEvents, type RunTally } from '../../core/run-tally';
 import type { RunMode } from '../../core/run-result';
 import type { TeamSlot } from '../../core/sim-types';
 import { TowerSim } from '../../core/tower-sim';
-import { services } from '../../services';
 import { RunFx } from '../fx/run-fx';
 import { Backdrop } from '../objects/backdrop/backdrop';
 import { plainLooks } from '../objects/plain-look';
@@ -108,7 +107,6 @@ export class GameScene extends Phaser.Scene {
     this.continueFlow?.dispose();
     this.continueFlow = new ContinueFlow({
       ads: rewardedAds,
-      audio: services.audio,
       wallet: gameState,
     });
 

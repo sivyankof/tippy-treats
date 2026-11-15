@@ -12,7 +12,6 @@ import {
   type StreakEntry,
 } from '../core/streak';
 import { STREAK, type StreakReward } from '../data/streak';
-import { withAdWatched } from './wallet';
 
 /** A claimed calendar reward. */
 export interface StreakClaim {
@@ -59,7 +58,7 @@ export function withStreakClaimed(
 }
 
 /**
- * The save with the missed day forgiven and paid for (berries are spent, an ad is counted);
+ * The save with the missed day forgiven and paid for (berries are spent; an ad is counted by `showRewarded`);
  * null, nothing charged, when the core refuses or the wallet is short.
  */
 export function withStreakRestored(
@@ -70,7 +69,7 @@ export function withStreakRestored(
 ): Save | null {
   const restored = restoreStreak(save.streak, today, clockBack);
   if (!restored) return null;
-  if (payment === 'ad') return withAdWatched({ ...save, streak: restored });
+  if (payment === 'ad') return { ...save, streak: restored };
   const paid = spend(save, { berries: STREAK.restoreBerries });
   return paid ? { ...paid, streak: restored } : null;
 }

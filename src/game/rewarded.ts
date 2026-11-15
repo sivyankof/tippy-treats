@@ -1,4 +1,5 @@
 import { services } from '../services';
+import { gameState } from '../state';
 import type {
   AdsService,
   RewardedPlacement,
@@ -19,17 +20,24 @@ export function rewardedWatchedInRun(): boolean {
 }
 
 /**
- * The only way the game asks for a rewarded ad. A broken ad service counts as `unavailable`; a
- * `rewarded` answer is remembered for the interstitial rules. The caller pays the reward.
+ * The only way the game asks for a rewarded ad. The sound is suspended while it shows; a broken
+ * ad service counts as `unavailable`; a `rewarded` answer is counted in the stats and remembered
+ * for the interstitial rules. The caller pays the reward.
  */
 export async function showRewarded(placement: RewardedPlacement): Promise<RewardedResult> {
   let result: RewardedResult;
+  services.audio.suspend('ad');
   try {
     result = await services.ads.showRewarded(placement);
   } catch {
     result = 'unavailable';
+  } finally {
+    services.audio.resume('ad');
   }
-  if (result === 'rewarded') watchedInRun = true;
+  if (result === 'rewarded') {
+    watchedInRun = true;
+    gameState.countAdWatched();
+  }
   return result;
 }
 

@@ -2,16 +2,13 @@ import { continueOffer, type ContinueOffer } from '../core/continue-offer';
 import type { RunMode } from '../core/run-result';
 import { BALANCE } from '../data/balance';
 import { CONTINUE_ANIM } from '../data/continue-anim';
-import type { AdsService, RewardedResult } from '../services/rewarded-video/types';
-import type { AudioService } from '../services/audio/types';
+import type { AdsService } from '../services/rewarded-video/types';
 import type { GameState } from '../state/game-state';
 
 export type ContinueAction = 'continue' | 'decline';
 
 export interface ContinueFlowDeps {
   ads: Pick<AdsService, 'isRewardedReady' | 'showRewarded'>;
-  /** Suspended while an ad shows. */
-  audio: Pick<AudioService, 'suspend' | 'resume'>;
   /** The save: the berry balance and the payment. */
   wallet: Pick<GameState, 'berries' | 'spendBerries'>;
 }
@@ -112,21 +109,14 @@ export class ContinueFlow {
   }
 
   /**
-   * Shows the rewarded ad with the sound off. A reward continues the run, closing the ad
+   * Shows the rewarded ad (`showRewarded` mutes the sound and counts it). A reward continues the run, closing the ad
    * returns to the window with the timer running again, `unavailable` disables the button.
    */
   async watchAd(): Promise<void> {
     if (this.current?.ad !== 'ready' || this.adShowing || this.pending) return;
     this.adShowing = true;
-    this.deps.audio.suspend('ad');
-    let result: RewardedResult;
-    try {
-      result = await this.deps.ads.showRewarded('continue');
-    } catch {
-      result = 'unavailable';
-    }
+    const result = await this.deps.ads.showRewarded('continue');
     this.adShowing = false;
-    this.deps.audio.resume('ad');
     if (this.disposed || !this.current) return;
     if (result === 'rewarded') this.pending = 'continue';
     else if (result === 'unavailable') this.current = { ...this.current, ad: 'unavailable' };
