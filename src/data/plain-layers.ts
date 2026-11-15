@@ -5,7 +5,12 @@
  * so the daily tower looks the same for everyone.
  */
 
-export type SpongeKind = 'light' | 'chocolate' | 'caramel';
+export type SpongeKind = 'light' | 'chocolate' | 'caramel' | 'marble' | 'waffle';
+
+/** Patterns of the glaze; the position in `PATTERN_KINDS` is part of the look code of a layer. */
+export type PatternKind = 'zigzag' | 'lattice' | 'waves' | 'dots';
+
+export const PATTERN_KINDS: readonly PatternKind[] = ['zigzag', 'lattice', 'waves', 'dots'];
 
 export type DecorKind = 'sprinkles' | 'berries' | 'flowers' | 'nuts' | 'cream';
 
@@ -25,6 +30,8 @@ export interface SpongeLook {
   pore: number;
   /** Warm outline in the tone of the sponge. */
   outline: number;
+  /** Drawn pattern of the sponge instead of pores (none for the plain kinds). */
+  material?: 'marble' | 'waffle';
 }
 
 export const SPONGES: Readonly<Record<SpongeKind, SpongeLook>> = {
@@ -32,6 +39,9 @@ export const SPONGES: Readonly<Record<SpongeKind, SpongeLook>> = {
   // Milk chocolate, clearly lighter than the brownie creature.
   chocolate: { cake: 0xb57a52, pore: 0x7c4528, outline: 0x6a3a20 },
   caramel: { cake: 0xdc9655, pore: 0xa65a22, outline: 0x84451a },
+  // Light sponge with swirls, and a golden waffle: both have shadow tones, but no pores.
+  marble: { cake: 0xf8dcae, pore: 0xd6a066, outline: 0xa8742f, material: 'marble' },
+  waffle: { cake: 0xf2c76e, pore: 0xc98f36, outline: 0xa0702a, material: 'waffle' },
 };
 
 export interface PlainPair {
@@ -53,6 +63,9 @@ export const PLAIN_PAIRS: readonly PlainPair[] = [
   { sponge: 'chocolate', glaze: 0xffbdd3, decor: ['sprinkles', 'cream', 'berries'] },
   { sponge: 'caramel', glaze: 0xfff0c2, decor: ['nuts', 'cream'] },
   { sponge: 'caramel', glaze: 0xffd36e, decor: ['nuts', 'flowers', 'sprinkles'] },
+  { sponge: 'marble', glaze: 0xffe08a, decor: ['berries', 'cream', 'sprinkles'] },
+  { sponge: 'marble', glaze: 0x8fd9d0, decor: ['flowers', 'sprinkles', 'cream'] },
+  { sponge: 'waffle', glaze: 0xffaecb, decor: ['berries', 'cream', 'sprinkles'] },
 ];
 
 export const PLAIN_LAYER = {
@@ -81,9 +94,12 @@ export const PLAIN_LAYER = {
     outlinePx: 4.5,
     /** How much darker that line is than the glaze. */
     outlineShade: -0.22,
-    /** Top-to-bottom gradient: how much lighter the top is, and the number of bands. */
-    lift: 0.08,
-    bands: 4,
+    /** Thin light rim along the top edge: its thickness and how much lighter it is. */
+    rimPx: 3,
+    rimLift: 0.16,
+    /** Darker second tone along the lower wavy edge, above the dark line: thickness and shade. */
+    bandPx: 7,
+    bandShade: -0.1,
   },
 
   /** Highlight on the glaze along the top, from the left. */
@@ -100,14 +116,16 @@ export const PLAIN_LAYER = {
     alpha: 0.6,
   },
 
-  /** Body of the sponge: soft darker band at the bottom and a lighter top. */
+  /** Body of the sponge in flat steps: a light band under the glaze, the main colour, two shadows. */
   body: {
-    /** Height of the bottom band as a share of the inner height, its darkest mix and the steps. */
-    bandShare: 0.3,
-    bandMix: 0.32,
-    bandSteps: 4,
-    lift: 0.1,
-    bands: 4,
+    /** Light band under the glaze edge: height as a share of the inner height, and how light. */
+    topShare: 0.16,
+    topLift: 0.12,
+    /** Shadow steps at the bottom: height as a share of the inner height and mix towards the pore tone. */
+    shadows: [
+      { share: 0.3, mix: 0.16 },
+      { share: 0.14, mix: 0.34 },
+    ],
   },
 
   /** Pores of the sponge: small dots of three sizes, none in front of the face. */
@@ -120,6 +138,62 @@ export const PLAIN_LAYER = {
     inset: 6,
     /** Pores repeat every this many pixels, counted from the uncut edge. */
     tileWidth: 180,
+  },
+
+  /**
+   * Patterns on the glaze of the layers without small decorations. They repeat from the uncut
+   * edge, stay above the wavy edge and keep clear of the face.
+   */
+  pattern: {
+    /** Share of the layers without decorations that stay plain. */
+    plainShare: 1 / 3,
+    /** Gap to keep from the wavy edge (and its darker band), the top and the sides, and the face. */
+    edgeGap: 3,
+    topGap: 7,
+    sideGap: 12,
+    faceMargin: 18,
+    /** Step of the sampled lines. */
+    step: 2,
+    /** How much lighter the pattern is than the glaze, and the darker tone used on a very light glaze. */
+    lift: 0.45,
+    darkShade: -0.14,
+    /** A glaze lighter than this (0..1) takes the dark tone. */
+    lightLuma: 0.9,
+    zigzag: { period: 16, amplitude: 3.5, width: 2.5 },
+    lattice: { pitch: 22, width: 2.5 },
+    waves: { period: 44, amplitude: 3, width: 3, rowPitch: 12 },
+    dots: { pitch: 30, rowPitch: 20, radius: 5.5 },
+  },
+
+  /** Marble sponge: wavy ribbons in caramel (with a dark edge) and white. */
+  marble: {
+    caramel: 0xd69a52,
+    caramelEdge: 0xa86a2c,
+    white: 0xfff6e8,
+    /** Ribbons: height share of the sponge band they sit at, wave period, amplitude, widths. */
+    ribbons: [
+      { yShare: 0.3, period: 150, amplitude: 9, phase: 0, width: 9, color: 'caramel' },
+      { yShare: 0.58, period: 120, amplitude: 8, phase: 2.1, width: 6, color: 'white' },
+      { yShare: 0.76, period: 170, amplitude: 7, phase: 4.2, width: 8, color: 'caramel' },
+    ],
+    edgePx: 1.5,
+    /** Gap to the face, the outline and the cut. */
+    faceMargin: 14,
+    inset: 8,
+  },
+
+  /** Waffle sponge: a grid of darker lines and a thin cream layer across. */
+  waffle: {
+    line: 0xc98a30,
+    lineWidth: 2.5,
+    cell: 22,
+    cream: 0xfff1cf,
+    creamEdge: 0xe0b878,
+    creamYShare: 0.55,
+    creamWidth: 7,
+    creamEdgePx: 1.5,
+    faceMargin: 14,
+    inset: 6,
   },
 
   /** The bitten edge: lighter sponge under the cut glaze, with pores. */

@@ -43,14 +43,15 @@ const GOLDEN_ART: PlainArt = {
     outline: shade(GOLDEN_COLORS.cake, DARK_OUTLINE),
   },
   decor: null,
+  pattern: null,
 };
 
 /** What the plain (or golden) layer with this look code is drawn from. */
 export function plainArt(look: number): PlainArt {
   if (look === GOLDEN_LOOK) return GOLDEN_ART;
-  const { pair, decor } = lookOfCode(look);
+  const { pair, decor, pattern } = lookOfCode(look);
   const p = PLAIN_PAIRS[pair] ?? PLAIN_PAIRS[0]!;
-  return { colors: pairColors(pair), sponge: SPONGES[p.sponge], decor };
+  return { colors: pairColors(pair), sponge: SPONGES[p.sponge], decor, pattern };
 }
 
 /** Look code of a layer view: gold for a golden layer, the run's plain look otherwise. */
