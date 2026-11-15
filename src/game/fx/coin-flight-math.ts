@@ -1,5 +1,5 @@
 /** Pure maths of the coins that fly into the HUD counter: payout split, arc path, spin and the counter catch-up. */
-import { clamp01, smoothstep } from '../../util/math';
+import { DEG_TO_RAD, clamp01, smoothstep } from '../../util/math';
 import { shapeAt } from './abilities/sprite-motion';
 
 export interface Point {
@@ -48,6 +48,34 @@ export function arcPoint(from: Point, to: Point, t: number, arc: number, out: Po
   const c = clamp01(t);
   out.x = from.x + (to.x - from.x) * c;
   out.y = from.y + (to.y - from.y) * c - arc * Math.sin(Math.PI * c);
+  return out;
+}
+
+/** How the pictures of a reward spread when they leave the source. */
+export interface BurstShape {
+  /** Poured out of an opening: an upward fan of `fanDeg` degrees instead of a ring all around. */
+  pour: boolean;
+  fanDeg: number;
+  /** Distance of the spots; the odd ones reach half as far. */
+  reach: number;
+}
+
+/**
+ * Where picture `index` of `count` comes to rest after it pops out of `from`: spread evenly around a
+ * ring, or in a fan around straight up when poured. Every second picture stops short for depth.
+ */
+export function burstSpot(
+  from: Point,
+  index: number,
+  count: number,
+  shape: BurstShape,
+  out: Point,
+): Point {
+  const share = (index + 0.5) / count;
+  const deg = shape.pour ? -90 + (share - 0.5) * shape.fanDeg : share * 360;
+  const reach = shape.reach * (0.5 + (index % 2) * 0.5);
+  out.x = from.x + Math.cos(deg * DEG_TO_RAD) * reach;
+  out.y = from.y + Math.sin(deg * DEG_TO_RAD) * reach;
   return out;
 }
 

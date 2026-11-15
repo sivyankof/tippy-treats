@@ -49,7 +49,7 @@ export class HomeBadges {
   private giftIsReady = false;
 
   constructor(
-    private readonly scene: Phaser.Scene,
+    scene: Phaser.Scene,
     handlers: { streak: () => void; gift: () => void; settings: () => void },
   ) {
     const { height } = cfg;
@@ -63,6 +63,7 @@ export class HomeBadges {
     this.giftBox = new GiftBox(scene, -cfg.gift.width / 2 + cfg.gift.boxInset, 0).setScale(
       cfg.gift.box,
     );
+    this.giftBox.startSway(cfg.gift.motion, false);
     this.giftLabel = createOutlinedText(scene, 0, faceOffsetY('chip'), '', cfg.gift.font);
     this.gift = scene.add.container(0, 0, [giftPlate, this.giftBox, this.giftLabel]);
 
@@ -74,7 +75,11 @@ export class HomeBadges {
     this.update();
     makeTappable(this.streak, this.streakPlate.width, height, () => this.tap(handlers.streak));
     makeTappable(this.gift, cfg.gift.width, height, () => this.tap(handlers.gift));
-    scene.time.addEvent({ delay: cfg.shake.everyMs, loop: true, callback: () => this.shake() });
+    scene.time.addEvent({
+      delay: cfg.gift.motion.hop.everyMs,
+      loop: true,
+      callback: () => this.hop(),
+    });
   }
 
   /** What slides in with the screen. */
@@ -122,6 +127,7 @@ export class HomeBadges {
     const text = ready ? t('home.giftReady') : formatTimeLeft(gameState.msUntilGift);
     if (text === this.giftText) return false;
     this.giftText = text;
+    if (ready !== this.giftIsReady) this.giftBox.startSway(cfg.gift.motion, ready);
     this.giftIsReady = ready;
     const { width, boxInset, padRight } = cfg.gift;
     const left = -width / 2 + boxInset * 2;
@@ -135,17 +141,8 @@ export class HomeBadges {
     if (this.enabled) onTap();
   }
 
-  /** A ready box shakes now and then. */
-  private shake(): void {
-    if (!this.giftIsReady) return;
-    const { shakeMs, repeat, deg } = cfg.shake;
-    this.scene.tweens.add({
-      targets: this.giftBox,
-      angle: { from: -deg, to: deg },
-      duration: shakeMs,
-      yoyo: true,
-      repeat,
-      onComplete: () => this.giftBox.setAngle(0),
-    });
+  /** A ready box hops now and then. */
+  private hop(): void {
+    if (this.giftIsReady) this.giftBox.hop(cfg.gift.motion);
   }
 }

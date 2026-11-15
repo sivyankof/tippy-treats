@@ -34,7 +34,8 @@ export function openGiftWindow(
   });
   let shake: Phaser.Tweens.Tween | null = null;
   popup.content.once('destroy', () => shake?.stop());
-  const box = new GiftBox(scene, 0, cfg.boxY).setScale(cfg.boxScale);
+  const box = new GiftBox(scene, 0, cfg.boxY, { face: true }).setScale(cfg.boxScale);
+  box.startSway(cfg.motion, false);
   popup.content.add(box);
   const wait = createOutlinedText(scene, 0, cfg.textY, '', cfg.textFont);
   popup.content.add(wait);
@@ -74,19 +75,18 @@ export function openGiftWindow(
   };
 
   const showOpen = (): void => {
-    const idle = scene.tweens.add({
-      targets: box,
-      angle: { from: -cfg.shakeDeg / 2, to: cfg.shakeDeg / 2 },
-      duration: cfg.shakeMs / 2,
-      yoyo: true,
-      repeat: -1,
-      ease: 'Sine.easeInOut',
+    box.startSway(cfg.motion, true);
+    const invite = scene.time.addEvent({
+      delay: cfg.motion.hop.everyMs,
+      loop: true,
+      callback: () => (box.active ? box.hop(cfg.motion) : invite.remove(false)),
     });
     wait.setText(t('gift.ready'));
     fitText(wait, popup.innerWidth);
     const open = addButton(t('gift.open'), PALETTE.accent, 'ui_gift_open', () => {
       open.button.destroy();
-      idle.stop();
+      invite.remove(false);
+      box.stopSway();
       shakeThenOpen();
     });
     open.button.breathe(false);
@@ -116,8 +116,15 @@ export function openGiftWindow(
     services.audio.coin();
     services.haptics.play('heavy');
     box.popLid();
+    // The coins start at the opening, the top of the body, and pour out of it.
     const m = box.getWorldTransformMatrix();
-    flyReward(scene, { currency: 'coins', amount: coins, from: { x: m.tx, y: m.ty }, wallet });
+    flyReward(scene, {
+      currency: 'coins',
+      amount: coins,
+      from: { x: m.tx, y: m.ty + box.openingY * m.d },
+      wallet,
+      pour: true,
+    });
     wait
       .setText(tn('gift.coins', coins, { amount: formatNumber(coins) }))
       .setFontSize(cfg.coinsFont);

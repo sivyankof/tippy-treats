@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   arcPoint,
+  burstSpot,
   flightLifeMs,
   hopHeight,
   sampleFlight,
@@ -151,5 +152,45 @@ describe('shownTotal', () => {
     expect(seen[0]).toBe(0);
     expect(seen.at(-1)).toBe(total);
     expect([...seen].sort((a, b) => a - b)).toEqual(seen);
+  });
+});
+
+describe('burstSpot', () => {
+  const origin = { x: 100, y: 500 };
+  const out = { x: 0, y: 0 };
+  const ring = { pour: false, fanDeg: 130, reach: 200 };
+  const fan = { pour: true, fanDeg: 130, reach: 200 };
+
+  it('puts a pour above the source, spread both ways', () => {
+    const spots = Array.from({ length: 8 }, (_, i) => ({
+      ...burstSpot(origin, i, 8, fan, { x: 0, y: 0 }),
+    }));
+    for (const s of spots) expect(s.y).toBeLessThan(origin.y);
+    expect(Math.min(...spots.map((s) => s.x))).toBeLessThan(origin.x - 30);
+    expect(Math.max(...spots.map((s) => s.x))).toBeGreaterThan(origin.x + 30);
+  });
+
+  it('keeps a pour inside the fan angle', () => {
+    for (let i = 0; i < 8; i++) {
+      burstSpot(origin, i, 8, fan, out);
+      const deg = (Math.atan2(out.y - origin.y, out.x - origin.x) * 180) / Math.PI;
+      expect(deg).toBeGreaterThanOrEqual(-90 - 65);
+      expect(deg).toBeLessThanOrEqual(-90 + 65);
+    }
+  });
+
+  it('sends even pictures the full reach and odd ones half', () => {
+    const dist = (i: number): number => {
+      burstSpot(origin, i, 6, ring, out);
+      return Math.hypot(out.x - origin.x, out.y - origin.y);
+    };
+    expect(dist(1)).toBeCloseTo(200);
+    expect(dist(0)).toBeCloseTo(100);
+  });
+
+  it('spreads a ring all around', () => {
+    const ys = [0, 1, 2, 3].map((i) => burstSpot(origin, i, 4, ring, { x: 0, y: 0 }).y);
+    expect(Math.min(...ys)).toBeLessThan(origin.y);
+    expect(Math.max(...ys)).toBeGreaterThan(origin.y);
   });
 });

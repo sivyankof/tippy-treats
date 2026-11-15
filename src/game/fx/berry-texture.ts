@@ -4,7 +4,10 @@ import { DEG_TO_RAD } from '../../util/math';
 import { bakeTexture } from '../ui/bake-texture';
 import {
   OUTLINE_SHARE,
+  drawFace,
   drawGlossMark,
+  glossFromShares,
+  drawTwoToneBody,
   ellipsePoints,
   fillPolygon,
   outlineColor,
@@ -57,29 +60,22 @@ function leafPoints(from: Pt, rad: number, length: number, width: number): Pt[] 
 function drawBody(g: Phaser.GameObjects.Graphics, size: number, cx: number, cy: number): void {
   const rx = size * body.halfWidth;
   const ry = size * body.halfHeight;
-  const grow = 2 * ry * OUTLINE_SHARE;
-  g.fillStyle(outlineColor(colors.base), 1);
-  fillPolygon(g, bodyOutline(cx, cy, rx + grow, ry + grow));
-  g.fillStyle(colors.shadow, 1);
-  fillPolygon(g, bodyOutline(cx, cy, rx, ry));
-  // The lit body is a smaller copy pushed to the top left: what stays visible is the flat band.
-  const band = body.bandShare;
-  g.fillStyle(colors.base, 1);
-  fillPolygon(g, bodyOutline(cx - rx * band, cy - ry * band, rx * (1 - band), ry * (1 - band)));
+  drawTwoToneBody(g, bodyOutline, cx, cy, rx, ry, {
+    base: colors.base,
+    shadow: colors.shadow,
+    grow: 2 * ry * OUTLINE_SHARE,
+    band: body.bandShare,
+  });
 }
 
 function drawGloss(g: Phaser.GameObjects.Graphics, size: number, cx: number, cy: number): void {
-  drawGlossMark(g, {
-    x: cx + gloss.x * size * body.halfWidth,
-    y: cy + gloss.y * size * body.halfHeight,
-    length: size * gloss.length,
-    thick: size * gloss.thick,
-    tilt: gloss.tiltDeg * DEG_TO_RAD,
-    dotGap: size * gloss.dotGap,
-    dotRadius: size * gloss.dotRadius,
-    color: colors.gloss,
-    alpha: gloss.alpha,
-  });
+  drawGlossMark(
+    g,
+    glossFromShares(gloss, cx, cy, size, colors.gloss, gloss.alpha, {
+      x: size * body.halfWidth,
+      y: size * body.halfHeight,
+    }),
+  );
 }
 
 function drawSeeds(g: Phaser.GameObjects.Graphics, size: number, cx: number, cy: number): void {
@@ -137,21 +133,6 @@ function drawCalyx(g: Phaser.GameObjects.Graphics, size: number, cx: number, cy:
   g.fillRoundedRect(hub.x - stemW / 2, hub.y - stemH, stemW, stemH + stemW * 0.4, stemW * 0.45);
 }
 
-/** Two dot eyes and a smile in the lower middle of the body. */
-function drawFace(g: Phaser.GameObjects.Graphics, size: number, cx: number, cy: number): void {
-  const half = (size * face.eyeSpacing) / 2;
-  g.fillStyle(colors.face, 1);
-  g.fillCircle(cx - half, cy + size * face.eyeY, size * face.eyeRadius);
-  g.fillCircle(cx + half, cy + size * face.eyeY, size * face.eyeRadius);
-  const span = (face.smileSpanDeg * DEG_TO_RAD) / 2;
-  const down = Math.PI / 2;
-  const radius = size * face.smileRadius;
-  g.lineStyle(size * face.smileThick, colors.face, 1);
-  g.beginPath();
-  g.arc(cx, cy + size * face.smileY - radius, radius, down - span, down + span);
-  g.strokePath();
-}
-
 /**
  * Bakes the berry in the manner of the plain layers: flat two-tone fill, thick outline, a
  * highlight stroke and dot, big seeds and a two-tone calyx. `withFace` adds the small face of
@@ -165,7 +146,7 @@ export function bakeBerry(scene: Phaser.Scene, key: string, withFace: boolean): 
     drawBody(g, size, cx, cy);
     drawSeeds(g, size, cx, cy);
     drawGloss(g, size, cx, cy);
-    if (withFace) drawFace(g, size, cx, cy);
+    if (withFace) drawFace(g, size, cx, cy, face, colors.face);
     drawCalyx(g, size, cx, cy);
   });
 }

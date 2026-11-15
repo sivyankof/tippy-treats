@@ -1,49 +1,48 @@
 import * as Phaser from 'phaser';
+import type { GiftMotion } from '../../../data/gift-look';
 import { MENU } from '../../../data/menu-layout';
-import { shade } from '../../../util/color';
+import { bakeGiftTextures, bodyKey, GIFT_LID_ORIGIN, GIFT_TEXTURES } from '../../fx/gift-texture';
 
 const cfg = MENU.newCreature;
 
-/** The gift box of the reveal, drawn in code: a body with a ribbon and a lid with a bow. */
+export interface GiftBoxOptions {
+  /** The small face on the body; only the large box has one. */
+  face?: boolean;
+}
+
+/** The gift box in the manner of the plain layers: a body, and a lid with a bow that can fly off. */
 export class GiftBox extends Phaser.GameObjects.Container {
-  readonly base: Phaser.GameObjects.Graphics;
-  readonly lid: Phaser.GameObjects.Graphics;
+  readonly base: Phaser.GameObjects.Image;
+  readonly lid: Phaser.GameObjects.Image;
+  /** Local y of the top of the body: where things pour out when the lid is off. */
+  readonly openingY: number;
+  private swayTween: Phaser.Tweens.Tween | null = null;
+  private hopping = false;
+  private readonly face: boolean;
 
-  constructor(scene: Phaser.Scene, x: number, y: number) {
+  constructor(scene: Phaser.Scene, x: number, y: number, options: GiftBoxOptions = {}) {
     super(scene, x, y);
-    const size = cfg.boxSize;
-    const half = size / 2;
+    const face = options.face ?? false;
+    this.face = face;
+    bakeGiftTextures(scene, face);
+    const half = cfg.boxSize / 2;
     const lidH = cfg.lidHeight;
-    this.base = scene.add.graphics();
-    this.base.fillStyle(shade(cfg.box, cfg.shade), 1);
-    this.base.fillRoundedRect(-half, -half + lidH, size, size - lidH, cfg.boxRadius);
-    this.base.fillStyle(cfg.box, 1);
-    this.base.fillRoundedRect(-half, -half + lidH, size, size - lidH - cfg.boxDepth, cfg.boxRadius);
-    this.base.fillStyle(cfg.ribbon, 1);
-    this.base.fillRect(-cfg.ribbonWidth / 2, -half + lidH, cfg.ribbonWidth, size - lidH);
-
-    // The lid pivots around its own centre, which sits at the top of the box.
-    this.lid = scene.add.graphics();
-    const lidW = size + cfg.lidOverhang * 2;
-    this.lid.fillStyle(shade(cfg.boxLid, cfg.shade), 1);
-    this.lid.fillRoundedRect(-lidW / 2, -lidH / 2 + cfg.lidDepth, lidW, lidH, cfg.boxRadius);
-    this.lid.fillStyle(cfg.boxLid, 1);
-    this.lid.fillRoundedRect(-lidW / 2, -lidH / 2, lidW, lidH - cfg.lidDepth, cfg.boxRadius);
-    this.lid.fillStyle(cfg.ribbon, 1);
-    this.lid.fillRect(-cfg.ribbonWidth / 2, -lidH / 2, cfg.ribbonWidth, lidH - cfg.lidDepth);
-    this.lid.fillCircle(-cfg.bowSize / 2, -lidH / 2 - cfg.bowSize * cfg.bowLift, cfg.bowSize / 2);
-    this.lid.fillCircle(cfg.bowSize / 2, -lidH / 2 - cfg.bowSize * cfg.bowLift, cfg.bowSize / 2);
-    this.lid.fillStyle(shade(cfg.ribbon, cfg.shade), 1);
-    this.lid.fillCircle(0, -lidH / 2 - cfg.bowSize * cfg.bowKnotLift, cfg.bowSize * cfg.bowKnot);
-    this.lid.setPosition(0, -half + lidH / 2);
-
+    this.openingY = -half + lidH;
+    // The body picture is centred on the body, the lid picture pivots around the middle of the lid.
+    this.base = scene.add.image(0, -half + lidH + (cfg.boxSize - lidH) / 2, bodyKey(face, false));
+    this.lid = scene.add
+      .image(0, -half + lidH / 2, GIFT_TEXTURES.lid)
+      .setOrigin(GIFT_LID_ORIGIN.x, GIFT_LID_ORIGIN.y);
     this.add([this.base, this.lid]);
+    this.once(Phaser.GameObjects.Events.DESTROY, () => this.scene?.tweens.killTweensOf(this));
     scene.add.existing(this);
   }
 
   /** The lid flies up and away; the body stays. Calls `onDone` when the lid is gone. */
   popLid(onDone?: () => void): void {
     const f = cfg.lidFlight;
+    // The lid leaves, so the body shows its opening.
+    this.base.setTexture(bodyKey(this.face, true));
     this.scene.tweens.add({
       targets: this.lid,
       y: this.lid.y - f.rise,
@@ -54,5 +53,70 @@ export class GiftBox extends Phaser.GameObjects.Container {
       ease: 'Quad.easeOut',
       onComplete: onDone,
     });
+  }
+
+  /** The box rocks from side to side all the time; `ready` rocks wider. */
+  startSway(motion: GiftMotion, ready: boolean): void {
+    this.stopSway();
+    const deg = ready ? motion.sway.readyDeg : motion.sway.idleDeg;
+    this.swayTween = this.scene.tweens.add({
+      targets: this,
+      angle: { from: -deg, to: deg },
+      duration: motion.sway.ms / 2,
+      yoyo: true,
+      repeat: -1,
+      ease: 'Sine.easeInOut',
+    });
+  }
+
+  stopSway(): void {
+    this.swayTween?.stop();
+    this.swayTween = null;
+    this.setAngle(0);
+  }
+
+  /** One hop: a crouch, a jump with a stretch, a fall and a squash on landing. Ignored while hopping. */
+  hop(motion: GiftMotion): void {
+    if (this.hopping) return;
+    this.hopping = true;
+    const { rise, riseMs, fallMs, squash, stretch } = motion.hop;
+    const sx = this.scaleX;
+    const sy = this.scaleY;
+    const y0 = this.y;
+    const steps: Phaser.Types.Tweens.TweenBuilderConfig[] = [
+      {
+        targets: this,
+        scaleX: sx * squash.x,
+        scaleY: sy * squash.y,
+        duration: squash.ms,
+        ease: 'Sine.easeOut',
+      },
+      {
+        targets: this,
+        y: y0 - rise,
+        scaleX: sx * stretch.x,
+        scaleY: sy * stretch.y,
+        duration: riseMs,
+        ease: 'Quad.easeOut',
+      },
+      { targets: this, y: y0, scaleX: sx, scaleY: sy, duration: fallMs, ease: 'Quad.easeIn' },
+      {
+        targets: this,
+        scaleX: sx * squash.x,
+        scaleY: sy * squash.y,
+        duration: squash.ms,
+        yoyo: true,
+        ease: 'Sine.easeOut',
+      },
+    ];
+    const run = (i: number): void => {
+      const step = steps[i];
+      if (!step || !this.active) {
+        this.hopping = false;
+        return;
+      }
+      this.scene.tweens.add({ ...step, onComplete: () => run(i + 1) });
+    };
+    run(0);
   }
 }

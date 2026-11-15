@@ -405,13 +405,30 @@ export const MENU = {
       height: 100,
       edge: 24,
       streak: { fill: 0xff7a2f, font: 46, padX: 36, flame: 74, gap: 10 },
-      gift: { fill: 0x7c5cff, width: 400, font: 36, box: 0.3, boxInset: 52, padRight: 28 },
+      gift: {
+        fill: 0x7c5cff,
+        width: 400,
+        font: 36,
+        box: 0.3,
+        boxInset: 52,
+        padRight: 28,
+        /** The closed box sways calmly; a ready one sways wider and hops now and then. */
+        motion: {
+          sway: { idleDeg: 3, readyDeg: 7, ms: 1500 },
+          hop: {
+            everyMs: 2600,
+            rise: 16,
+            riseMs: 170,
+            fallMs: 150,
+            squash: { x: 1.12, y: 0.86, ms: 90 },
+            stretch: { x: 0.92, y: 1.1 },
+          },
+        },
+      },
       /** The settings button, left of the gift plate in the same row (it is at least 88 across). */
       gear: { size: 96, fill: 0x7c5cff, gap: 24 },
       /** The flame stretches and sways all the time. */
       flicker: { ms: 380, scaleY: 1.1, scaleX: 0.94, swayDeg: 4 },
-      /** A ready gift box shakes for `shakeMs` every `everyMs`. */
-      shake: { everyMs: 2600, shakeMs: 90, repeat: 5, deg: 9 },
       /** The timer text is redrawn when the whole second changes. */
       readyColor: 0xffc93c,
     },
@@ -430,6 +447,8 @@ export const MENU = {
     arc: 160,
     /** Without a wallet to fly into the pictures just float up and fade. */
     floatUp: 140,
+    /** Pictures poured out of an opening (a box): they rise in a fan around straight up, `reach` px away; they start `staggerMs` apart and wait `holdMs` at the top so the whole fan shows before they fly to the wallet. */
+    pour: { fanDeg: 130, reach: 300, riseMs: 360, staggerMs: 22, holdMs: 200 },
   },
   /** The streak windows: the calendar and the threat window. */
   streak: {
@@ -516,6 +535,18 @@ export const MENU = {
     shakeMs: 700,
     shakeWaves: 28,
     shakeDeg: 9,
+    /** The box invites: it sways wide and hops now and then while the gift is ready. */
+    motion: {
+      sway: { idleDeg: 3, readyDeg: 6, ms: 1600 },
+      hop: {
+        everyMs: 2200,
+        rise: 35,
+        riseMs: 230,
+        fallMs: 200,
+        squash: { x: 1.1, y: 0.88, ms: 120 },
+        stretch: { x: 0.94, y: 1.08 },
+      },
+    },
     /** The coins line pops in at this scale and settles. */
     pop: { scale: 1.3, ms: 280 },
     /** The "next gift in" timer is redrawn this often. */
@@ -770,9 +801,6 @@ export const MENU = {
     /** Name and rarity appear letter by letter. */
     letterMs: 55,
     buttonY: 0.82,
-    box: 0xff9ecf,
-    boxLid: 0xff5c8a,
-    ribbon: 0xffc93c,
     titleY: 0.14,
     /** The box falls in from this far above its place. */
     dropFrom: 700,
@@ -783,11 +811,10 @@ export const MENU = {
     shakeWaves: 36,
     /** With reduced effects the shaking is this share as long. */
     reducedShakeShare: 0.4,
-    boxRadius: 36,
     lidHeight: 90,
     lidOverhang: 18,
     ribbonWidth: 54,
-    bowSize: 64,
+    bowSize: 96,
     /** The lid flies up and away, spinning. */
     lidFlight: { rise: 420, drift: 220, spinDeg: 200, ms: 520 },
     /** The creature starts this small in the box and grows while it jumps. */
@@ -802,13 +829,6 @@ export const MENU = {
     /** Side margin of the title and the name, and the label padding inside the button. */
     sideMargin: 80,
     buttonLabelPad: 80,
-    /** Gift box drawing: thickness of the lower edge, shade of the edges, bow proportions. */
-    boxDepth: 10,
-    lidDepth: 8,
-    shade: -0.2,
-    bowLift: 1 / 3,
-    bowKnotLift: 1 / 4,
-    bowKnot: 1 / 3,
     /** Direction of the confetti burst: straight up. */
     burstAngleDeg: -90,
     /** The button appears and the creature may be poked after the reveal. */

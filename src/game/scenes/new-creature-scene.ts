@@ -89,7 +89,7 @@ export class NewCreatureScene extends Phaser.Scene {
     this.rays = new LightRays(this, color);
     this.title = new TitleRibbon(this, 0, 0, t('newCreature.title'));
     this.title.setMaxWidth(maxWidth);
-    this.box = new GiftBox(this, 0, 0).setVisible(false);
+    this.box = new GiftBox(this, 0, 0, { face: true }).setVisible(false);
     this.portrait = new CreaturePortrait(this, 0, 0, id, 1, cfg.layerWidth).setVisible(false);
     const hit = new Phaser.Geom.Rectangle(0, 0, cfg.layerWidth, cfg.layerWidth * cfg.portraitHit);
     this.portrait

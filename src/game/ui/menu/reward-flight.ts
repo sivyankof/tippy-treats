@@ -1,7 +1,7 @@
 import * as Phaser from 'phaser';
 import { MENU } from '../../../data/menu-layout';
 import { services } from '../../../services';
-import { arcPoint, splitAmount, type Point } from '../../fx/coin-flight-math';
+import { arcPoint, burstSpot, splitAmount, type Point } from '../../fx/coin-flight-math';
 import { createTreasureTextures, TREASURE_TEXTURES } from '../../fx/treasure-textures';
 import type { ResourceCounter } from '../resource-tally';
 
@@ -20,6 +20,8 @@ export interface RewardFlight {
   from: Point;
   /** Without a wallet the pictures float up and fade. */
   wallet?: WalletTargets;
+  /** The pictures pour out of an opening (a box) in an upward fan instead of scattering all around. */
+  pour?: boolean;
   /** Runs when the last picture has arrived. */
   onDone?: () => void;
 }
@@ -55,19 +57,26 @@ export function flyReward(scene: Phaser.Scene, flight: RewardFlight): void {
       left -= 1;
       if (left === 0) flight.onDone?.();
     };
-    const angle = Phaser.Math.DegToRad(((i + 0.5) / shares.length) * 360);
-    const spot: Point = {
-      x: flight.from.x + Math.cos(angle) * cfg.scatter * (0.5 + (i % 2) * 0.5),
-      y: flight.from.y + Math.sin(angle) * cfg.scatter * (0.5 + (i % 2) * 0.5),
-    };
+    const spot = burstSpot(
+      flight.from,
+      i,
+      shares.length,
+      {
+        pour: flight.pour === true,
+        fanDeg: cfg.pour.fanDeg,
+        reach: flight.pour ? cfg.pour.reach : cfg.scatter,
+      },
+      { x: 0, y: 0 },
+    );
     scene.tweens.add({
       targets: image,
       x: spot.x,
       y: spot.y,
       scale: 1,
-      duration: cfg.scatterMs,
+      duration: flight.pour ? cfg.pour.riseMs : cfg.scatterMs,
       ease: 'Back.easeOut',
-      delay: i * cfg.staggerMs,
+      delay: i * (flight.pour ? cfg.pour.staggerMs : cfg.staggerMs),
+
       onComplete: () => {
         if (!counter) {
           scene.tweens.add({
@@ -87,6 +96,7 @@ export function flyReward(scene: Phaser.Scene, flight: RewardFlight): void {
           targets: progress,
           p: 1,
           duration: cfg.flyMs,
+          delay: flight.pour ? cfg.pour.holdMs : 0,
           ease: 'Sine.easeIn',
           onUpdate: () => {
             arcPoint(spot, target, progress.p, cfg.arc, point);

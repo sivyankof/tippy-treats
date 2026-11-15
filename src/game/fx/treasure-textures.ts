@@ -4,10 +4,9 @@ import { BALANCE } from '../../data/balance';
 import { RULE_ANIM } from '../../data/rule-anim';
 import { TREASURE } from '../../data/treasure-anim';
 import { bakeTexture } from '../ui/bake-texture';
-import { DEG_TO_RAD } from '../../util/math';
 import { bakeBerry } from './berry-texture';
 import { shade } from '../../util/color';
-import { OUTLINE_SHARE, drawGlossMark } from './plain-style';
+import { OUTLINE_SHARE, drawGlossMark, glossFromShares } from './plain-style';
 
 /** Keys of the pictures of coins, berries and the zone rules. */
 export const TREASURE_TEXTURES = {
@@ -61,17 +60,7 @@ function bakeCoin(scene: Phaser.Scene): void {
     g.fillTriangle(c, c - reach, c + reach * 0.7, c, c - reach * 0.7, c);
     g.fillTriangle(c, c + reach, c + reach * 0.7, c, c - reach * 0.7, c);
     const shine = coinLook.coinShine;
-    drawGlossMark(g, {
-      x: c + shine.x * c,
-      y: c + shine.y * c,
-      length: shine.length * c,
-      thick: shine.thick * c,
-      tilt: shine.tiltDeg * DEG_TO_RAD,
-      dotGap: shine.dotGap * c,
-      dotRadius: shine.dotRadius * c,
-      color: colors.coinShine,
-      alpha: coinLook.shineAlpha,
-    });
+    drawGlossMark(g, glossFromShares(shine, c, c, c, colors.coinShine, coinLook.shineAlpha));
   });
 }
 
