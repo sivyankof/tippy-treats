@@ -1,4 +1,5 @@
 import { abilityDef, levelValue } from '../../data/creatures';
+import { growInField } from '../field';
 import { cappedWidening } from '../scoring';
 import { boostAmount, emitAbility } from './helpers';
 import type { Ability } from './types';
@@ -9,11 +10,13 @@ const DEF = abilityDef('puff');
 export const puff: Ability = {
   id: 'puff',
   onLand(ctx) {
-    const widened = cappedWidening(
-      ctx.layer.width,
+    const before = ctx.layer.width;
+    const amount = cappedWidening(
+      before,
       boostAmount(levelValue(DEF.widen, ctx.level), ctx.boosted),
     );
-    ctx.layer.width += widened;
+    Object.assign(ctx.layer, growInField(ctx.layer.x, before, amount));
+    const widened = ctx.layer.width - before;
     emitAbility(ctx, { widened });
   },
 };

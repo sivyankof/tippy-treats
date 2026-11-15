@@ -4,6 +4,7 @@ import { collectModifiers } from './abilities/modifiers';
 import { runAbility, tickRunEffects } from './abilities/run';
 import type { Modifiers } from './abilities/types';
 import { resolveDrop } from './drop';
+import { growInField } from './field';
 import { Flight, newFlyingLayer } from './flight';
 import { applyContinue, applyMiss } from './miss';
 import { Rng } from './rng';
@@ -270,6 +271,8 @@ export class TowerSim {
       kind: flying.kind,
       quality: outcome.quality,
     };
+    // A layer that came back wider than the one below (restore width) still sits inside the field.
+    Object.assign(layer, growInField(layer.x, layer.width, 0));
     if (flying.creature) layer.creature = flying.creature;
     if (flying.level !== undefined) layer.level = flying.level;
     s.layers.push(layer);
@@ -325,8 +328,9 @@ export class TowerSim {
     if (perfect) {
       this.perfects += 1;
       s.bestCombo = Math.max(s.bestCombo, s.combo);
-      const widened = comboWidening(s.combo, layer.width);
-      layer.width += widened;
+      const before = layer.width;
+      Object.assign(layer, growInField(layer.x, before, comboWidening(s.combo, before)));
+      const widened = layer.width - before;
       s.wobble = wobbleAfterPerfect(s.wobble);
       s.score += perfectScore(s.combo, scoreMult);
       events.push({ type: 'combo', value: s.combo, widened });
