@@ -42,22 +42,6 @@ const tempoWave =
     return 1 - drop * (1 - progress);
   };
 
-/** Streak reward: after `needed` perfects in a row the next `layers` layers fly `slow` times as fast, a new reward at least `gap` layers after the last one started. */
-const STREAK = { needed: 5, layers: 3, slow: 0.85, gap: 10 } as const;
-function streakReward(): SpeedScale {
-  let startedAt = -Infinity;
-  let left = 0;
-  return ({ index, combo }) => {
-    if (left === 0 && combo >= STREAK.needed && index - startedAt >= STREAK.gap) {
-      startedAt = index;
-      left = STREAK.layers;
-    }
-    if (left === 0) return 1;
-    left -= 1;
-    return STREAK.slow;
-  };
-}
-
 /** Space speed multiplier replaced by `mult`, same cap: the ratio of the new capped speed to the old one. */
 const SPACE_MULT = 1.05;
 const spaceMult: SpeedScale = ({ zoneIndex, height }) => {
@@ -72,7 +56,6 @@ const VARIANTS: Variant[] = [
   { name: 'baseline', make: () => undefined },
   { name: 'wave -10%', make: () => tempoWave(0.1) },
   { name: 'wave -15%', make: () => tempoWave(0.15) },
-  { name: 'streak reward', make: streakReward },
   { name: `space x${SPACE_MULT}`, make: () => spaceMult },
 ];
 
@@ -111,8 +94,7 @@ const runs = intArg(scriptArgs(), 'runs', DIFFICULTY.runsPerProfile);
 console.log(
   `Speed pacing variants, ${runs} runs per cell, creature level ${SAVE_DEFAULTS.startCreatureLevel}; ` +
     `wave: zones 2-6 start slower and grow back to nominal by the zone's last layer (the kitchen is untouched); ` +
-    `streak reward: after ${STREAK.needed} perfects in a row the next ${STREAK.layers} layers fly ${Math.round((1 - STREAK.slow) * 100)}% slower, ` +
-    `a new reward starts at least ${STREAK.gap} layers after the previous one.`,
+    `the baseline already includes the streak reward of the game (BALANCE.tempoEase).`,
 );
 for (const id of PROFILE_IDS) {
   const target = DIFFICULTY.targets.find((t) => t.id === id) as DifficultyTarget;

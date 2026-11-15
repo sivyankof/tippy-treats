@@ -113,6 +113,8 @@ export interface TowerState {
   continuesUsed: number;
   /** Layers left on the brownie shield; 0 means no shield. */
   shield: number;
+  /** Layers of the tempo ease left (the one in the air included); 0 outside an ease. */
+  tempoLeft: number;
 }
 
 /** Where a collected coin came from (the scene animates it, the results screen sums it up). */
@@ -131,6 +133,8 @@ export type SimEvent =
   | { type: 'miss'; shielded: boolean }
   | { type: 'combo'; value: number; widened: number }
   | { type: 'wobble_sneeze'; newWidth: number }
+  /** The streak reward began: this many layers fly slower, the one that just spawned first. */
+  | { type: 'tempo_ease'; layers: number }
   | { type: 'coin_spawn'; x: number }
   | { type: 'coin_collect'; amount: number; source: CoinSource }
   | { type: 'ability'; creature: CreatureId; boosted: boolean; payload: AbilityPayload }

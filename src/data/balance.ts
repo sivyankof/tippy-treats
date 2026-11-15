@@ -119,6 +119,12 @@ export const BALANCE = {
     /** The "no ads" offer comes once per session after this many interstitials shown in it. */
     removeAdsOfferAfter: 2,
   },
+  /**
+   * Streak reward (docs/02-gameplay.md, section 2): after `afterPerfects` perfect drops in a row
+   * the next `layers` layers fly `speedMult` times as fast; a new one starts at least
+   * `minGapLayers` layers after the previous one started. Not in the tutorial run.
+   */
+  tempoEase: { afterPerfects: 5, layers: 3, speedMult: 0.85, minGapLayers: 10 },
   tutorial: {
     slowLayers: 3,
     slowSpeedMult: 0.6,

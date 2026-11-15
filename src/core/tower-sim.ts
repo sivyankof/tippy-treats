@@ -12,6 +12,7 @@ import { collectFloatingCoin, payHeightBonus, payLanding, spawnFloatingCoin } fr
 import type { RunEndReason, RunResult } from './run-result';
 import { comboWidening, nextCombo, normalScore, perfectScore } from './scoring';
 import type { PlacedLayer, RunConfig, SimEvent, SimPhase, TowerState } from './sim-types';
+import { TempoEase } from './tempo-ease';
 import { attemptLayer, type LayerAttempt, type PlanState } from './team-queue';
 import { cloudRoll, layerRules, nominalSpeed, zoneIndexOf } from './zones';
 import {
@@ -62,6 +63,8 @@ export class TowerSim {
   private attempt: LayerAttempt | null = null;
   /** Motion of the flying layer; `null` outside the flying phase. */
   private flight: Flight | null = null;
+  /** Streak reward: slower layers after a run of perfects. */
+  private readonly tempoEase = new TempoEase();
 
   constructor(config: RunConfig) {
     this.config = config;
@@ -88,6 +91,7 @@ export class TowerSim {
       zoneIndex: 0,
       continuesUsed: 0,
       shield: 0,
+      tempoLeft: 0,
     };
     const startHeight = Math.max(0, Math.floor(config.startHeight ?? 0));
     for (let i = 0; i < startHeight; i++) {
@@ -210,9 +214,14 @@ export class TowerSim {
       events.push({ type: 'zone_change', zoneIndex });
     }
     const rules = layerRules(this.zonesRng, index);
+    const tempo = this.config.tutorial
+      ? { mult: 1, started: false, left: 0 }
+      : this.tempoEase.next(index, s.combo);
+    s.tempoLeft = tempo.left;
     const speed =
       nominalSpeed(s.height, zoneIndex, this.currentModifiers().speedMult) *
       this.tutorialSpeedMult(index) *
+      tempo.mult *
       this.analysisSpeedScale(index, zoneIndex);
     const layer = newFlyingLayer(planned.attempt.plan, rules, this.nextWidth, speed);
     this.flight = new Flight(layer, rules.fakeoutX, (pass) =>
@@ -221,6 +230,7 @@ export class TowerSim {
     s.flying = layer;
     this.enter('flying');
     events.push({ type: 'spawn', layer: { ...layer } });
+    if (tempo.started) events.push({ type: 'tempo_ease', layers: tempo.left });
   }
 
   /** Analysis hook `RunConfig.speedScale`; exactly 1 when it is not set. */
@@ -286,6 +296,7 @@ export class TowerSim {
     if (flying.creature) layer.creature = flying.creature;
     if (flying.level !== undefined) layer.level = flying.level;
     s.layers.push(layer);
+    s.tempoLeft = Math.max(0, s.tempoLeft - 1);
     s.height = s.layers.length + s.bonusHeight;
     events.push({
       type: 'land',
