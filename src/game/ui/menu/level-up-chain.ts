@@ -1,4 +1,4 @@
-import type * as Phaser from 'phaser';
+import * as Phaser from 'phaser';
 import type { LevelUp } from '../../../state/game-state';
 import { LevelUpPanel } from './level-up-panel';
 
@@ -13,11 +13,18 @@ export function showLevelUps(
 ): void {
   let panel: LevelUpPanel | null = null;
   const onUpdate = (_time: number, delta: number): void => panel?.tick(delta);
+  const stop = (): void => {
+    scene.events.off('update', onUpdate);
+    scene.events.off(Phaser.Scenes.Events.SHUTDOWN, stop);
+    panel = null;
+  };
   scene.events.on('update', onUpdate);
+  // A scene that stops in the middle of the chain takes the listener and the open panel with it.
+  scene.events.once(Phaser.Scenes.Events.SHUTDOWN, stop);
   const next = (index: number): void => {
     const levelUp = levelUps[index];
     if (!levelUp) {
-      scene.events.off('update', onUpdate);
+      stop();
       onDone();
       return;
     }
