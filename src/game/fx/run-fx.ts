@@ -6,7 +6,9 @@ import { ANIM } from '../../data/anim';
 import { BALANCE } from '../../data/balance';
 import { CONTINUE_ANIM } from '../../data/continue-anim';
 import { services } from '../../services';
+import { Rng } from '../../core/rng';
 import { gameState } from '../../state';
+import { effectsMode } from '../effects-mode';
 import { aimMouth } from '../objects/face-state';
 import { FlyingLayerView } from '../objects/flying-layer-view';
 import type { LayerView } from '../objects/layer-view';
@@ -26,6 +28,8 @@ import { RecordMoment } from './record-moment';
 import { heartPop } from './sparkle-fx';
 import { cuesForEvents, playCues } from './run-cues';
 import { isCovered } from './rule-state';
+import { TowerSparkles } from './tower-sparkles';
+import type { SparkleField } from './tower-sparkle-spot';
 import { TowerCollapse } from './tower-collapse';
 
 /** The flying layer as it was before the sim step that just ran. */
@@ -59,6 +63,17 @@ export class RunFx {
   private readonly flyingFx: FlyingFx;
   private readonly recordMoment: RecordMoment;
   private readonly guest: TowerGuest;
+  private readonly sparkles: TowerSparkles;
+  /** Refilled for the sparkles every frame. */
+  private readonly sparkleField: SparkleField = {
+    left: 0,
+    right: 0,
+    topY: 0,
+    layerHeight: BALANCE.layer.height,
+    screenWidth: 0,
+    avoid: null,
+  };
+  private readonly flyColumn = { left: 0, right: 0 };
 
   private glowOn = false;
   private missPiece: LayerView | null = null;
@@ -71,7 +86,9 @@ export class RunFx {
   private resultsWaitMs: number = ANIM.results.delayMs;
   private resultsDelivered = false;
 
-  constructor(scene: Phaser.Scene, trayTopY: number) {
+  /** `seed` is the run seed: the sparkles take their random draws from its cosmetic stream. */
+  constructor(scene: Phaser.Scene, trayTopY: number, seed: number) {
+    this.sparkles = new TowerSparkles(scene, new Rng(seed).fork('sparkles'));
     this.tower = new TowerView(scene, trayTopY);
     this.flyingView = new FlyingLayerView(scene, this.tower);
     this.glow = new ComboGlow(scene);
@@ -184,7 +201,7 @@ export class RunFx {
           this.slowMoMs = 0;
           break;
         case 'land':
-          this.onLand(event, state, memo);
+          this.onLand(event, state, memo, cam);
           break;
         case 'combo':
           this.onCombo(event.widened, state);
@@ -246,9 +263,36 @@ export class RunFx {
     this.kick.update(visualMs);
     this.recordMoment.update(visualMs, timeMs, state, cam);
     this.placeGlow(timeMs, cam);
+    this.sparkles.update(
+      visualMs,
+      this.sparkleFieldFor(state, cam),
+      this.runIsOn(state) && !effectsMode.reduced,
+    );
   }
 
-  private onLand(event: LandEvent, state: Readonly<TowerState>, memo: FlyingMemo | null): void {
+  /** The tower as the sparkles need it; the object is reused. */
+  private sparkleFieldFor(state: Readonly<TowerState>, cam: CameraInfo): SparkleField {
+    const field = this.sparkleField;
+    const span = this.tower.topSpan();
+    field.left = span.left;
+    field.right = span.right;
+    field.topY = this.tower.topY();
+    field.screenWidth = cam.width;
+    const { flying } = state;
+    if (flying) {
+      this.flyColumn.left = flying.x - flying.width / 2;
+      this.flyColumn.right = flying.x + flying.width / 2;
+    }
+    field.avoid = flying ? this.flyColumn : null;
+    return field;
+  }
+
+  private onLand(
+    event: LandEvent,
+    state: Readonly<TowerState>,
+    memo: FlyingMemo | null,
+    cam: CameraInfo,
+  ): void {
     const perfect = event.quality === 'perfect';
     const top = this.tower.topView();
     const index = state.layers.length - 1;
@@ -265,6 +309,7 @@ export class RunFx {
       if (pose) this.landingFx.perfect(pose, state.combo);
       top?.playGlossSweep();
       this.tower.reactAll('joy', ANIM.perfect.joyMs);
+      if (!effectsMode.reduced) this.sparkles.perfect(this.sparkleFieldFor(state, cam));
     } else if (event.cutSide && event.cutWidth > 0 && memo) {
       top?.faceView.react('ouch', ANIM.bite.ouchMs);
       this.debris.biteOff(event, event.cutSide, memo, index);

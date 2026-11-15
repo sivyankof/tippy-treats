@@ -6,11 +6,13 @@ import { createAbilityTextures } from '../fx/abilities/ability-textures';
 import { bakeChestTextures } from '../fx/chest-texture';
 import { createFxTextures } from '../fx/fx-textures';
 import { bakeGiftTextures } from '../fx/gift-texture';
+import { bakeTowerSparkle } from '../fx/tower-sparkles';
 import { bakeOvenTextures } from '../fx/oven-texture';
 import { createRewardTextures } from '../fx/reward-pictures';
 import { createPileTextures } from '../fx/treasure-pile';
 import { createTreasureTextures } from '../fx/treasure-textures';
 import { bakeSharedArt } from '../objects/backdrop/art-kit';
+import { bakeAllFarArt } from '../objects/backdrop/far-plane';
 import { createCreatureIconTextures } from '../objects/creature-icon-textures';
 import { ensureSleepTexture } from '../objects/sleep-silhouette';
 import { bakeGuestFlat } from '../objects/tower-guest-art';
@@ -30,6 +32,8 @@ const PRIME_STEPS: ReadonlyArray<(scene: Phaser.Scene) => void> = [
   bakeOvenTextures,
   createCreatureIconTextures,
   bakeSharedArt,
+  bakeAllFarArt,
+  bakeTowerSparkle,
   bakeHintTextures,
   bakeChestTextures,
   (scene) => bakeGiftTextures(scene, false),
