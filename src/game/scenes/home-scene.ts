@@ -7,10 +7,13 @@ import { t } from '../../i18n';
 import { gameState } from '../../state';
 import { prepareRemoveAdsOffer } from '../interstitial-flow';
 import { syncPurchases } from '../purchases';
+import type { RunRequest } from '../run-request';
 import { startRunFrom, openScreen, SCENES, type HomeData } from '../scene-keys';
 import type { PopupWindow } from '../ui/style/dialog-window';
 import { createTextButton, type Button } from '../ui/button';
 import { HomeStarterOffer } from '../ui/menu/home-starter';
+import { HomeStartFrom } from '../ui/menu/home-start-from';
+import { openStartChoice } from '../ui/menu/start-choice';
 import { createHintBubble } from '../ui/menu/home-hint';
 import { HomeBadges } from '../ui/menu/home-badges';
 import { HomeNav } from '../ui/menu/home-nav';
@@ -47,6 +50,7 @@ export class HomeScene extends Phaser.Scene {
   private shelf!: HomeShelf;
   private record!: Phaser.GameObjects.Container;
   private play!: Button;
+  private startFrom!: HomeStartFrom;
   private nav!: HomeNav;
   private badges!: HomeBadges;
   private hint: ReturnType<typeof createHintBubble> | null = null;
@@ -119,6 +123,7 @@ export class HomeScene extends Phaser.Scene {
         this.goTo(() => openScreen(this, SCENES.team)),
       );
     }
+    this.startFrom = new HomeStartFrom(this, () => this.chooseStart());
     if (this.highlightPlay) this.ring = createPlayRing(this);
     if (this.starter.room) void this.starter.start();
 
@@ -171,6 +176,7 @@ export class HomeScene extends Phaser.Scene {
     if (this.hint) items.push(this.hint.root);
     if (this.ring) items.push(this.ring);
     if (this.starter.button) items.push(this.starter.button);
+    if (this.startFrom.button) items.push(this.startFrom.button);
     items.push(this.play, ...this.nav.parts);
     return items;
   }
@@ -192,16 +198,20 @@ export class HomeScene extends Phaser.Scene {
     const playY = navTop - cfg.playAboveNav - cfg.playHeight / 2;
     this.play.setPosition(cx, playY);
     this.ring?.setPosition(cx, playY);
-    const offerRoom = this.starter.room ? cfg.starter.height + cfg.starter.gap : 0;
+    const fromRoom = this.startFrom.room;
+    const offerRoom = (this.starter.room ? cfg.starter.height + cfg.starter.gap : 0) + fromRoom;
+    const playTop = playY - cfg.playHeight / 2;
+    this.startFrom.layout(cx, playTop);
     this.starter.button?.setPosition(
       cx,
-      playY - cfg.playHeight / 2 - cfg.starter.gap - cfg.starter.height / 2,
+      playTop - fromRoom - cfg.starter.gap - cfg.starter.height / 2,
     );
     this.hint?.root.setPosition(cx, playY - cfg.hintAbovePlay - offerRoom);
   }
 
   private setEnabled(enabled: boolean): void {
     this.play.setEnabled(enabled);
+    this.startFrom.setEnabled(enabled);
     this.nav.setEnabled(enabled);
     this.badges.setEnabled(enabled);
     this.shelf.setEnabled(enabled);
@@ -286,9 +296,14 @@ export class HomeScene extends Phaser.Scene {
     );
   }
 
-  private startRun(): void {
+  private startRun(request?: RunRequest): void {
     this.ring?.destroy();
     this.ring = null;
-    this.goTo(() => startRunFrom(this));
+    this.goTo(() => startRunFrom(this, request));
+  }
+
+  /** The "Where from?" window; a chosen start leaves Home like Play does. */
+  private chooseStart(): void {
+    if (!this.leaving) openStartChoice(this, (request) => this.startRun(request));
   }
 }

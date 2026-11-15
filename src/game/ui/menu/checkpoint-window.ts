@@ -11,6 +11,7 @@ import { PopupWindow } from '../style/dialog-window';
 import { createPriceButton } from '../style/price-button';
 import { markAdUnavailable } from './ad-unavailable';
 import { buttonsFor, keepSelection, type StartHeight } from './checkpoint-model';
+import { createAdsSpentNote } from './no-more-starts-note';
 import { createCheckpointStep } from './checkpoint-step';
 
 const cfg = CHECKPOINT_WINDOW;
@@ -139,6 +140,11 @@ export function openCheckpointWindow(
         }),
         0,
       );
+    }
+    if (wanted.adSpent) {
+      const y = buttonsTop + button.height + cfg.buttonGap + button.height / 2;
+      dynamic.add(createAdsSpentNote(scene, 0, y - button.height / 4, labelWidth));
+      return;
     }
     if (wanted.ad === 'hidden') return;
     const ad = createTextButton(scene, {

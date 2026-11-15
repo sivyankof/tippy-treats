@@ -1,7 +1,15 @@
-import type { RunRequest } from './run-request';
+import { CLASSIC_RUN, type RunRequest } from './run-request';
 
 /** What a restart of the current run turns into. */
 export type RestartDecision = 'run' | 'daily-screen';
+
+/**
+ * The request a restart begins with: a run that was paid to start from a checkpoint restarts from
+ * zero (the payment bought that one run), every other run restarts as it was.
+ */
+export function restartRequest(request: RunRequest): RunRequest {
+  return request.kind === 'classic' && request.checkpoint !== undefined ? CLASSIC_RUN : request;
+}
 
 /**
  * Decides whether a restart may begin a new run. A daily run spends an attempt first (as the

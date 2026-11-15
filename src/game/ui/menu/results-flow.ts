@@ -5,12 +5,15 @@ import type { RunSummary } from '../../../state/game-state';
 import { CLASSIC_RUN, DAILY_RUN } from '../../run-request';
 import { decideRestart } from '../../run-restart';
 import { goNext, openScreen, SCENES, type NextStep } from '../../scene-keys';
+import type { StartRun } from './start-choice';
 import type { ResultsButtonHandlers, ResultsButtonLabels } from './results-buttons';
 
 /** What the two buttons of the results do and say. */
 export interface ResultsFlow {
   handlers: ResultsButtonHandlers;
   labels: ResultsButtonLabels;
+  /** Leaves the results into the run of a request (a paid start from a checkpoint). */
+  start: StartRun;
 }
 
 interface FlowInput {
@@ -39,6 +42,7 @@ function proceed(scene: Phaser.Scene, fresh: readonly CreatureId[], next: NextSt
 function classicFlow(input: FlowInput): ResultsFlow {
   const { scene, summary, fresh, leave } = input;
   return {
+    start: (request) => leave(() => proceed(scene, fresh, { kind: 'run', request })),
     labels: { primary: 'run.playAgain', home: 'results.home' },
     handlers: {
       primary: () =>
@@ -69,8 +73,10 @@ function dailyFlow(input: FlowInput): ResultsFlow {
     decideRestart(DAILY_RUN, () => gameState.startDailyAttempt()) === 'run'
       ? { kind: 'run', request: DAILY_RUN }
       : DAILY_SCREEN;
+  const start: StartRun = (request) => leave(() => proceed(scene, fresh, { kind: 'run', request }));
   return again
     ? {
+        start,
         labels: { primary: 'run.playAgain', home: 'resultsDaily.back' },
         handlers: {
           primary: () => leave(() => proceed(scene, fresh, replay())),
@@ -78,6 +84,7 @@ function dailyFlow(input: FlowInput): ResultsFlow {
         },
       }
     : {
+        start,
         labels: { primary: 'resultsDaily.back', home: 'results.home' },
         handlers: {
           primary: () => leave(() => proceed(scene, fresh, DAILY_SCREEN)),

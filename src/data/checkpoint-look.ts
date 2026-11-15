@@ -283,5 +283,7 @@ export const CHECKPOINT_WINDOW = {
   adFont: 46,
   playFont: 52,
   shortFont: 44,
+  /** The caption "No more ad starts today" under the price. */
+  noteFont: 34,
   disabledAlpha: 0.6,
 } as const;

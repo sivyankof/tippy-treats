@@ -28,6 +28,8 @@
     "decline": "No thanks"
   },
   "checkpoint": {
+    "adsSpent": "No more ad starts today",
+    "from": "Start from ▸",
     "window": {
       "title": "Where from?",
       "layer": "Layer {n}",
@@ -226,7 +228,10 @@
     "debugRun": "Debug run: not saved",
     "home": "Home",
     "next": "Next",
-    "share": "Share"
+    "share": "Share",
+    "startedAt": "Started at layer {start} · placed {placed}",
+    "fromPointFor": "From {n} · {price}",
+    "fromPointAd": "From {n} ▶"
   },
   "share": {
     "title": "Tippy Treats",

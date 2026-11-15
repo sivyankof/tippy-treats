@@ -4,6 +4,7 @@ import { ANIM } from '../../data/anim';
 import type { CreatureId } from '../../data/creatures';
 import { MENU } from '../../data/menu-layout';
 import { PALETTE } from '../../data/palette';
+import { t } from '../../i18n';
 import { services } from '../../services';
 import { gameState } from '../../state';
 import { RecordCelebration } from '../fx/record-celebration';
@@ -19,6 +20,8 @@ import { createDebugPlate } from '../ui/menu/results-debug-plate';
 import { ResultsButtons } from '../ui/menu/results-buttons';
 import { ResultsCoins } from '../ui/menu/results-coins';
 import { ResultsHeader, createStats } from '../ui/menu/results-header';
+import { createResultsStart } from '../ui/menu/results-start';
+import { startedLine } from '../ui/menu/results-start-model';
 import { shareResult } from '../ui/menu/results-share';
 import { spacingShare, spreadBlocks } from '../ui/menu/results-layout';
 import { ResultsMissions } from '../ui/menu/results-missions';
@@ -76,7 +79,13 @@ export class ResultsScene extends Phaser.Scene {
     this.leaving = false;
     this.sharing = false;
     this.dim = createDimOverlay(this, ANIM.results.overlayAlpha, width, height).setInteractive();
-    this.header = new ResultsHeader(this, result, summary.isRecord);
+    const started = data.checkpoint === null ? null : startedLine(data.startHeight, result.height);
+    this.header = new ResultsHeader(
+      this,
+      result,
+      summary.isRecord,
+      started && t('results.startedAt', started),
+    );
     this.stats = createStats(this, result, tally, width);
     // The coins of a daily run are not doubled by an ad: that place is for the classic run only.
     this.coins = new ResultsCoins(this, result.coins, coinLines(tally), data.recorded && !daily);
@@ -139,7 +148,11 @@ export class ResultsScene extends Phaser.Scene {
       data.recorded && !summary.firstRun
         ? { ...flow.handlers, share: () => this.share(data) }
         : flow.handlers;
-    this.buttons = new ResultsButtons(this, summary.firstRun, handlers, flow.labels);
+    const start = createResultsStart(this, data, this.header, {
+      start: flow.start,
+      leaving: () => this.leaving,
+    });
+    this.buttons = new ResultsButtons(this, summary.firstRun, handlers, flow.labels, start);
     this.buttons.setEnabled(false);
     this.coins.setEnabled(false);
     this.spacing = this.fitSpacing(height);

@@ -90,7 +90,7 @@ describe('checkpoints', () => {
       'none',
     ]);
     const spent = checkpointRows({ opened, berries: 0, adReady: true, adsLeft: 0 });
-    expect(spent.every((r) => r.ad === 'none')).toBe(true);
+    expect(spent.map((r) => r.ad)).toEqual(['none', 'spent', 'spent', 'spent', 'none', 'none']);
   });
 
   it('reports the highest opened checkpoint', () => {

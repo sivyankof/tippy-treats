@@ -24,7 +24,11 @@ describe('buttonsFor', () => {
   };
 
   it('the free start has only Play', () => {
-    expect(buttonsFor(rowAt(rows([20], 0), 0))).toEqual({ main: { kind: 'free' }, ad: 'hidden' });
+    expect(buttonsFor(rowAt(rows([20], 0), 0))).toEqual({
+      main: { kind: 'free' },
+      ad: 'hidden',
+      adSpent: false,
+    });
   });
 
   it('a paid step shows the price, the shortfall and the ad state', () => {
@@ -34,5 +38,11 @@ describe('buttonsFor', () => {
     expect(short.ad).toBe('ready');
     expect(buttonsFor(rowAt(list, 80)).ad).toBe('hidden');
     expect(buttonsFor(rowAt(rows([20], 30, false), 20)).ad).toBe('unavailable');
+  });
+
+  it('with the ad starts used up the ad button is hidden and a caption is asked for', () => {
+    const spent = checkpointRows({ opened: [20, 80], berries: 30, adReady: true, adsLeft: 0 });
+    expect(buttonsFor(rowAt(spent, 20))).toMatchObject({ ad: 'hidden', adSpent: true });
+    expect(buttonsFor(rowAt(spent, 80))).toMatchObject({ ad: 'hidden', adSpent: false });
   });
 });
