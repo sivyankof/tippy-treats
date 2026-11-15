@@ -158,6 +158,11 @@ export function upgradeGate(id: CreatureId, level: number): number | null {
   return gates[Math.max(1, Math.floor(level)) - 1] ?? null;
 }
 
+/** The baker is below the level the upgrade of `id` from `level` needs. */
+export function upgradeLocked(id: CreatureId, level: number, bakerLevel: number): boolean {
+  return bakerLevel < (upgradeGate(id, level) ?? 1);
+}
+
 export type UpgradeError = 'not_owned' | 'max_level' | 'locked' | 'not_enough';
 
 export function upgradeCreature(
@@ -168,8 +173,7 @@ export function upgradeCreature(
   if (!owned) return { ok: false, reason: 'not_owned' };
   const cost = upgradeCost(owned.level);
   if (cost === null) return { ok: false, reason: 'max_level' };
-  if (slice.bakerLevel < (upgradeGate(id, owned.level) ?? 1))
-    return { ok: false, reason: 'locked' };
+  if (upgradeLocked(id, owned.level, slice.bakerLevel)) return { ok: false, reason: 'locked' };
   const paid = spend(slice, { coins: cost });
   if (!paid) return { ok: false, reason: 'not_enough' };
   return {

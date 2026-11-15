@@ -1,5 +1,11 @@
 import { unlockHint, unlockHints, type UnlockHint } from '../../../core/collection';
-import { creaturePrice, upgradeCost, upgradeGate, type PriceOption } from '../../../core/economy';
+import {
+  creaturePrice,
+  upgradeCost,
+  upgradeGate,
+  upgradeLocked,
+  type PriceOption,
+} from '../../../core/economy';
 import { MAX_CREATURE_LEVEL, type CreatureId } from '../../../data/creatures';
 
 /** What the main button area of a creature card offers. */
@@ -29,9 +35,8 @@ export function mainAction(id: CreatureId, level: number | null, bakerLevel: num
   if (level !== null) {
     const price = level >= MAX_CREATURE_LEVEL ? null : upgradeCost(level);
     if (price === null) return { kind: 'maxLevel' };
-    const gate = upgradeGate(id, level) ?? 1;
-    return bakerLevel < gate
-      ? { kind: 'upgradeFrom', minBakerLevel: gate }
+    return upgradeLocked(id, level, bakerLevel)
+      ? { kind: 'upgradeFrom', minBakerLevel: upgradeGate(id, level) ?? 1 }
       : { kind: 'upgrade', price };
   }
   const options = creaturePrice(id, bakerLevel);

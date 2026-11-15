@@ -13,6 +13,7 @@ import {
   upgradeCost,
   upgradeCreature,
   upgradeGate,
+  upgradeLocked,
   type EconomySlice,
 } from './economy';
 
@@ -239,6 +240,9 @@ describe('upgrade gates by baker level', () => {
   it('opens level 2 at once, then 6, 11 and 16 for an ordinary creature', () => {
     expect([1, 2, 3, 4].map((level) => upgradeGate('honey', level))).toEqual([1, 6, 11, 16]);
     expect(upgradeGate('honey', 5)).toBeNull();
+    expect(upgradeLocked('honey', 2, 5)).toBe(true);
+    expect(upgradeLocked('honey', 2, 6)).toBe(false);
+    expect(upgradeLocked('honey', 5, 1)).toBe(false);
   });
 
   it('holds the legendary last step back to baker level 20', () => {
