@@ -1,4 +1,4 @@
-import * as Phaser from 'phaser';
+import type * as Phaser from 'phaser';
 import {
   PILE_LOOK,
   PILE_PIECES,
@@ -6,8 +6,8 @@ import {
   type PilePieceKind,
   type PileSize,
 } from '../../data/treasure-piles';
-import { effectsMode } from '../effects-mode';
 import { bakeTexture } from '../ui/bake-texture';
+import { idleBob } from './idle-bob';
 import {
   drawGlossMark,
   drawTwoToneBody,
@@ -174,18 +174,6 @@ export function createTreasurePile(
     inner.add(image);
   }
   const holder = scene.add.container(0, 0, [inner]).setSize(box, box);
-  if (idle && !effectsMode.reduced) {
-    const { bobPx, bobPeriodMs, phaseSpreadMs } = look.idle;
-    const tween = scene.tweens.add({
-      targets: inner,
-      y: -bobPx,
-      duration: bobPeriodMs / 2,
-      yoyo: true,
-      repeat: -1,
-      ease: 'Sine.easeInOut',
-      delay: Phaser.Math.Between(0, phaseSpreadMs),
-    });
-    holder.once(Phaser.GameObjects.Events.DESTROY, () => tween.remove());
-  }
+  if (idle) idleBob(scene, inner, look.idle);
   return holder;
 }

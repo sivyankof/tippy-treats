@@ -42,6 +42,43 @@ export const REWARD_LOOK = {
       lineCount: 2,
     },
   },
+  /** The check badge of a passed tier: a green disc with a white check. */
+  check: { size: 96, base: PALETTE.success, shadow: 0x1f9e68, mark: 0xffffff, markThick: 0.13 },
+  /** An attempt ticket: a flat cake with a glaze cap, drips and a perforation; the used one is grey and flatter. */
+  ticket: {
+    width: 120,
+    height: 84,
+    outline: 6,
+    band: 0.1,
+    /** Half height of the sponge and of the glaze cap as shares of the picture height. */
+    spongeRy: 0.3,
+    capRy: 0.17,
+    capY: -0.13,
+    capInset: 0.04,
+    drips: [-0.26, 0.04, 0.3],
+    dripRadius: 0.075,
+    /** Perforation dots: x share from the centre and dot count down the sponge. */
+    perforationX: 0.2,
+    perforationDots: 4,
+    perforationRadius: 0.026,
+    free: { cake: 0xf1c27d, cakeShadow: 0xd69f58, glaze: 0xff8fb8, glazeShadow: 0xe4659a },
+    used: { cake: 0xc9c1cf, cakeShadow: 0xaaa1b3, glaze: 0xdcd6e0, glazeShadow: 0xbab2c3 },
+    /** The used ticket is this much flatter and sits this much lower (shares of the picture height). */
+    usedFlatten: 0.8,
+    usedDrop: 0.06,
+    gloss: {
+      x: -0.3,
+      y: -0.16,
+      length: 0.2,
+      thick: 0.05,
+      tiltDeg: -8,
+      dotGap: 0.06,
+      dotRadius: 0.026,
+    },
+    idle: { bobPx: 3, bobPeriodMs: 3200, phaseSpreadMs: 800 },
+  },
+  /** The next tier to reach swells softly. */
+  pulse: { scale: 1.04, periodMs: 900 },
   /** A price chip on the picture of a creature that went to the shop: the coin sits at its corner. */
   shopCoin: { x: 0.36, y: 0.36, size: 0.42 },
   /** The sparkle of a picture appearing. */

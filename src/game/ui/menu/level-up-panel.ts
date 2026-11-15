@@ -9,6 +9,7 @@ import { services } from '../../../services';
 import type { LevelUp } from '../../../state/game-state';
 import { effectsMode } from '../../effects-mode';
 import { FX_TEXTURES } from '../../fx/fx-textures';
+import { idleBob } from '../../fx/idle-bob';
 import { pileSizeFor } from '../../fx/pile-size';
 import { REWARD_TEXTURES } from '../../fx/reward-pictures';
 import { createTreasurePile } from '../../fx/treasure-pile';
@@ -111,23 +112,8 @@ export class LevelUpPanel {
   private image(key: string, bob: boolean): Phaser.GameObjects.Image {
     const size = cfg.pictureSize;
     const image = this.scene.add.image(0, 0, key).setDisplaySize(size, size);
-    if (bob) this.bob(image);
+    if (bob) idleBob(this.scene, image, cfg.appear.bob);
     return image;
-  }
-
-  private bob(target: Phaser.GameObjects.Image): void {
-    if (effectsMode.reduced) return;
-    const { bobPx, bobPeriodMs } = cfg.appear;
-    const tween = this.scene.tweens.add({
-      targets: target,
-      y: target.y - bobPx,
-      duration: bobPeriodMs / 2,
-      yoyo: true,
-      repeat: -1,
-      ease: 'Sine.easeInOut',
-      delay: Phaser.Math.Between(0, bobPeriodMs / 2),
-    });
-    target.once(Phaser.GameObjects.Events.DESTROY, () => tween.remove());
   }
 
   /** The creature that went to the shop: its picture with a coin chip at the corner. */

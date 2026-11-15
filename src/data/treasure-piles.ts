@@ -133,5 +133,5 @@ export const PILE_LOOK = {
     dotRadius: 0.022,
   },
   /** Idle: the pile rises and falls, each one out of step with the others. */
-  idle: { bobPx: 3, bobPeriodMs: 1900, phaseSpreadMs: 900 },
+  idle: { bobPx: 3, bobPeriodMs: 3800, phaseSpreadMs: 900 },
 } as const;

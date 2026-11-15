@@ -1021,8 +1021,7 @@ export const MENU = {
         popMs: 360,
         fadeMs: 200,
         ease: 'Back.easeOut',
-        bobPx: 3,
-        bobPeriodMs: 1700,
+        bob: { bobPx: 3, bobPeriodMs: 3400, phaseSpreadMs: 1700 },
         sparkle: { x: 0.36, y: -0.36, scale: 0.7, turnDeg: 90, ms: 520, tint: 0xfff2a8 },
       },
       okButton: { width: 520, height: 112, radius: 40, shadowOffset: 8, font: 52 },
@@ -1176,17 +1175,18 @@ export const MENU = {
       reachedFill: 0x2fb97f,
       openFill: 0x7c5cff,
       bestRim: 0xffc93c,
-      tick: { size: 52, inset: 10 },
+      tick: { size: 60, inset: 12 },
+      /** A passed tier is drawn this opaque. */
+      doneAlpha: 0.82,
       sideFont: 36,
     },
     /** Attempts: icons on the left, the ad button on the right. */
     attempts: {
       width: 960,
       rowHeight: 104,
-      iconSize: 84,
+      /** Width of one ticket; the height follows the picture. */
+      iconSize: 110,
       iconGap: 16,
-      freeColor: 0x3ddc97,
-      usedColor: 0xb9a9c6,
       ad: { width: 560, height: 104, radius: 36, shadowOffset: 8, font: 38 },
       adPadding: 40,
       adDisabledAlpha: 0.55,

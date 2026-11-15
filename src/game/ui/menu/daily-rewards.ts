@@ -1,9 +1,11 @@
-import * as Phaser from 'phaser';
+import type * as Phaser from 'phaser';
 import type { Currency } from '../../../core/economy';
 import { DAILY } from '../../../data/daily';
 import { MENU } from '../../../data/menu-layout';
-import { PALETTE } from '../../../data/palette';
+import { REWARD_LOOK } from '../../../data/reward-look';
 import { formatNumber, t } from '../../../i18n';
+import { effectsMode } from '../../effects-mode';
+import { REWARD_TEXTURES } from '../../fx/reward-pictures';
 import { createOutlinedText } from '../outlined-text';
 import { faceOffsetY, VolumePlate } from '../style/volume';
 import { createCaption, type DailySection } from './daily-section';
@@ -13,20 +15,7 @@ const cfg = MENU.daily.rewards;
 const captionHeight = MENU.daily.caption.height;
 const CURRENCIES: readonly Currency[] = ['coins', 'berries'];
 
-/** A green round tick with a white check mark, centred at (x, y). */
-function drawTick(g: Phaser.GameObjects.Graphics, x: number, y: number, size: number): void {
-  const r = size / 2;
-  g.fillStyle(PALETTE.textDark, 1).fillCircle(x, y + r * 0.12, r);
-  g.fillStyle(PALETTE.success, 1).fillCircle(x, y, r * 0.92);
-  g.lineStyle(size * 0.14, PALETTE.textLight, 1);
-  g.beginPath();
-  g.moveTo(x - r * 0.45, y);
-  g.lineTo(x - r * 0.1, y + r * 0.38);
-  g.lineTo(x + r * 0.5, y - r * 0.38);
-  g.strokePath();
-}
-
-/** The reward bar: five tiers with their prizes; reached ones are green and ticked, the best one has a gold rim. */
+/** The reward bar: five tiers with their prizes; reached ones are green, a little muted and badged with a check, the best one has a gold rim, the next one to reach pulses softly. */
 export class DailyRewards implements DailySection {
   readonly root: Phaser.GameObjects.Container;
   readonly height = captionHeight + cfg.cellHeight;
@@ -38,40 +27,54 @@ export class DailyRewards implements DailySection {
     const reached = tiers.filter((tier) => best >= tier.height);
     const top = reached[reached.length - 1];
     const side = best > 0 ? t('daily.best', { n: formatNumber(best) }) : t('daily.bestNone');
+    const next = tiers.find((tier) => best < tier.height);
     const parts: Phaser.GameObjects.GameObject[] = [createCaption(scene, t('daily.rewards'), side)];
     tiers.forEach((tier, i) => {
       const x = -cfg.width / 2 + cellWidth / 2 + i * (cellWidth + cfg.gap);
       const y = captionHeight;
       const done = claimed.includes(tier.height);
-      parts.push(
+      const tile: Phaser.GameObjects.GameObject[] = [
         new VolumePlate(scene, 'chip', cfg.cellHeight, {
           fill: done ? cfg.reachedFill : cfg.openFill,
           rim: top === tier ? cfg.bestRim : undefined,
         })
           .setBodyWidth(cellWidth)
-          .setPosition(x, y + cfg.cellHeight / 2),
-        createOutlinedText(
-          scene,
-          x,
-          y + cfg.heightY + lift,
-          formatNumber(tier.height),
-          cfg.heightFont,
-        ),
-      );
+          .setPosition(0, cfg.cellHeight / 2),
+        createOutlinedText(scene, 0, cfg.heightY + lift, formatNumber(tier.height), cfg.heightFont),
+      ];
       CURRENCIES.filter((currency) => (tier.reward[currency] ?? 0) > 0).forEach((currency, row) => {
-        const rowY = y + cfg.priceFirstY + row * cfg.priceStep + lift;
-        parts.push(
-          new PriceTag(scene, x, rowY, cfg.priceFont).show(
+        const rowY = cfg.priceFirstY + row * cfg.priceStep + lift;
+        tile.push(
+          new PriceTag(scene, 0, rowY, cfg.priceFont).show(
             '{price}',
             tier.reward[currency] ?? 0,
             currency,
           ),
         );
       });
+      // A passed tier is a little muted, with the check badge on top of it.
+      const holder = scene.add.container(x, y, tile).setAlpha(done ? cfg.doneAlpha : 1);
+      parts.push(holder);
       if (done) {
-        const g = scene.add.graphics();
-        drawTick(g, x + cellWidth / 2 - cfg.tick.inset, y + cfg.tick.inset, cfg.tick.size);
-        parts.push(g);
+        const size = cfg.tick.size;
+        parts.push(
+          scene.add
+            .image(x + cellWidth / 2 - cfg.tick.inset, y + cfg.tick.inset, REWARD_TEXTURES.check)
+            .setDisplaySize(size, size),
+        );
+      }
+      if (tier === next && !done && !effectsMode.reduced) {
+        const { scale, periodMs } = REWARD_LOOK.pulse;
+        const tween = scene.tweens.add({
+          targets: holder,
+          scale,
+          y: y - (cfg.cellHeight * (scale - 1)) / 2,
+          duration: periodMs / 2,
+          yoyo: true,
+          repeat: -1,
+          ease: 'Sine.easeInOut',
+        });
+        holder.once('destroy', () => tween.remove());
       }
     });
     this.root = scene.add.container(0, 0, parts);
