@@ -7,7 +7,7 @@ import type { ZoneId } from '../../../data/zones';
 import { mixColor } from '../../../util/color';
 import { MS_PER_SECOND, oscillate01, sineWave } from '../../../util/math';
 import { bakeTexture } from '../../ui/bake-texture';
-import { FarPlane } from './far-plane';
+import { bakeFarArt, FarPlane } from './far-plane';
 import type { GuestSource } from './guest-source';
 import type { FrameCtx, Life } from './life';
 import { gradientBands } from './sky-gradient';
@@ -65,6 +65,8 @@ export class ZoneScenery {
     height: number,
   ) {
     bakeSky(scene, zone);
+    // Menu screens build the kitchen without the run backdrop, so the far plane bakes here too.
+    bakeFarArt(scene, zone);
     this.drift = BACKDROP.drift[zone];
     this.tints = BACKDROP.layerTint[zone] ?? null;
     this.breathePhase = depth;
