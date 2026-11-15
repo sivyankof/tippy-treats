@@ -14,6 +14,7 @@ import { isAiming, type LickKind, type LickScene } from './lick-plan';
 import { plainLooks } from './plain-look';
 import { LayerView } from './layer-view';
 import { SwayHold } from './sway-hold';
+import { snapshotTower, type TowerSnapshot } from './tower-snapshot';
 import { Tray } from './tray';
 
 const PLAIN_LOOK: LayerPlan = { kind: 'plain' };
@@ -146,6 +147,11 @@ export class TowerView {
   /** The view of a placed layer (0-based index), if it is drawn. */
   viewAt(index: number): LayerView | null {
     return this.active.get(index) ?? null;
+  }
+
+  /** The placed layers and their bitten edges as plain data, for the picture the player shares. */
+  snapshot(): TowerSnapshot {
+    return snapshotTower(this.state?.layers ?? [], this.cuts);
   }
 
   /** Remembers which edge of the layer (0-based) was bitten; `null` for an intact one. */

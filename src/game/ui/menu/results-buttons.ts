@@ -17,6 +17,8 @@ export interface ResultsButtonHandlers {
   /** "Play again", or "Next" after the tutorial run. */
   primary: () => void;
   home: () => void;
+  /** The "Share" button next to "Home"; none when the run cannot be shared. */
+  share?: () => void;
 }
 
 /** The big "Play again" (or "Next" after the tutorial) and the small "Home" under it. */
@@ -61,14 +63,31 @@ export class ResultsButtons {
     ).breathe();
     const rows: Row[] = [{ obj: primary, height: cfg.playButton.height }];
     if (!firstRun) {
+      const { share } = handlers;
+      const layout = share ? cfg.pairButton : cfg.homeButton;
       const home = make(
         t(labels.home),
         PALETTE.accentSecondary,
-        cfg.homeButton,
-        'ui_results_home',
+        layout,
+        share ? 'ui_results_pair' : 'ui_results_home',
         handlers.home,
       );
-      rows.push({ obj: home, height: cfg.homeButton.height });
+      if (share) {
+        const shift = (cfg.pairButton.width + cfg.pairGap) / 2;
+        const shareButton = make(
+          t('results.share'),
+          PALETTE.accentSecondary,
+          cfg.pairButton,
+          'ui_results_pair',
+          share,
+        );
+        home.setX(-shift);
+        shareButton.setX(shift);
+        const pair = scene.add.container(0, 0, [home, shareButton]);
+        rows.push({ obj: pair, height: cfg.pairButton.height });
+      } else {
+        rows.push({ obj: home, height: cfg.homeButton.height });
+      }
     }
     this.height = stackRows(this.container, rows, cfg.buttonGap);
   }

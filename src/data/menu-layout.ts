@@ -8,6 +8,19 @@ export const MENU = {
    * top), a gloss band in its upper part and a darker bevel along the bottom.
    */
   style: {
+    /** A short notice on a plate (`ui/style/toast.ts`): it slides up, waits and fades. */
+    toast: {
+      width: 760,
+      height: 120,
+      font: 44,
+      /** Distance from the bottom edge of the screen to the plate centre. */
+      bottom: 80,
+      textPadding: 50,
+      inMs: 220,
+      holdMs: 1800,
+      outMs: 300,
+      depth: 1000,
+    },
     /** The outline is the fill (or the rim colour) darkened by this much. */
     outlineShade: -0.38,
     /** The bevel along the bottom of a body: the fill darkened by this much. */
@@ -831,6 +844,9 @@ export const MENU = {
     /** Big and small buttons at the bottom; they stand `buttonsBottom` above the bottom edge. */
     playButton: { width: 760, height: 150, radius: 48, shadowOffset: 10, font: 64 },
     homeButton: { width: 520, height: 104, radius: 36, shadowOffset: 8, font: 44 },
+    /** "Home" and "Share" side by side in one row as wide as the big button. */
+    pairButton: { width: 366, height: 104, radius: 36, shadowOffset: 8, font: 40 },
+    pairGap: 28,
     buttonTextPadding: 50,
     buttonsBottom: 170,
     buttonGap: 28,

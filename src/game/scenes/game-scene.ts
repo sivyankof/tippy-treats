@@ -19,10 +19,10 @@ import { placeTutorialTarget } from '../fx/tutorial-target';
 import { driveContinue } from '../objects/continue-driver';
 import { berriesFromEvents } from '../../core/berries';
 import { gameState } from '../../state';
-import { EMPTY_SUMMARY } from '../../state/game-state';
 import { emptyRunInfo, fillRunInfo, type RunInfo } from '../run-info';
 import { bindPageLeave } from '../../state/page-lifecycle';
-import { launchRun, openScreen, SCENES, type ResultsData } from '../scene-keys';
+import { buildResultsData } from '../results-data';
+import { launchRun, openScreen, SCENES } from '../scene-keys';
 import { exitTarget } from '../run-exit';
 import { CLASSIC_RUN, demoFinished, type RunRequest } from '../run-request';
 import { setupRun } from '../run-setup';
@@ -189,10 +189,9 @@ export class GameScene extends Phaser.Scene {
       this.leaveRun();
       return;
     }
-    // A run that did not reach the save (dev bot, start height) keeps the bar where it is.
-    const { bakerLevel: level, bakerXp: xp } = gameState.data;
-    const summary = this.recorder.summary ?? { ...EMPTY_SUMMARY, before: { level, xp } };
-    const data: ResultsData = { result, summary, tally: this.tally, recorded: this.writesSave };
+    const { tower } = this.fx;
+    const outcome = { result, recorder: this.recorder, tally: this.tally, tower: tower.snapshot() };
+    const data = buildResultsData({ ...outcome, recorded: this.writesSave }, gameState);
     this.scene.launch(SCENES.results, data);
   }
 

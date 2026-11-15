@@ -197,7 +197,15 @@
     "doubled": "Doubled!",
     "xp": "+{n} XP",
     "home": "Home",
-    "next": "Next"
+    "next": "Next",
+    "share": "Share"
+  },
+  "share": {
+    "title": "Tippy Treats",
+    "height": "Tower height: {n}",
+    "text": "one=My tower in Tippy Treats is {n} layer tall!|other=My tower in Tippy Treats is {n} layers tall!",
+    "saved": "Picture saved",
+    "failed": "Could not share"
   },
   "nearMiss": {
     "record": "one=Only {n} layer to your record!|other=Only {n} layers to your record!",

@@ -197,7 +197,15 @@
     "doubled": "Удвоено!",
     "xp": "+{n} опыта",
     "home": "Домой",
-    "next": "Дальше"
+    "next": "Дальше",
+    "share": "Поделиться"
+  },
+  "share": {
+    "title": "Tippy Treats",
+    "height": "Высота башни: {n}",
+    "text": "one=Моя башня в Tippy Treats высотой {n} слой!|few=Моя башня в Tippy Treats высотой {n} слоя!|other=Моя башня в Tippy Treats высотой {n} слоёв!",
+    "saved": "Картинка сохранена",
+    "failed": "Не получилось поделиться"
   },
   "nearMiss": {
     "record": "one=До рекорда {n} слой!|few=До рекорда {n} слоя!|other=До рекорда {n} слоёв!",

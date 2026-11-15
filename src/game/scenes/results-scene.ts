@@ -16,6 +16,7 @@ import { fitText } from '../ui/menu/fit-text';
 import { ResultsButtons } from '../ui/menu/results-buttons';
 import { ResultsCoins } from '../ui/menu/results-coins';
 import { ResultsHeader, createStats } from '../ui/menu/results-header';
+import { shareResult } from '../ui/menu/results-share';
 import { spacingShare, spreadBlocks } from '../ui/menu/results-layout';
 import { ResultsMissions } from '../ui/menu/results-missions';
 import { resultsFlow } from '../ui/menu/results-flow';
@@ -42,6 +43,8 @@ export class ResultsScene extends Phaser.Scene {
   private buttons!: ResultsButtons;
   private celebration: RecordCelebration | null = null;
   private leaving = false;
+  /** The share picture is being made: another tap waits for it. */
+  private sharing = false;
   /** Padding and gap of the panel, shrunk on a short screen. */
   private spacing: { padY: number; gap: number } = { padY: cfg.panel.padY, gap: cfg.panel.gap };
 
@@ -54,6 +57,7 @@ export class ResultsScene extends Phaser.Scene {
     const daily = result.mode === 'daily';
     const { width, height } = this.scale.gameSize;
     this.leaving = false;
+    this.sharing = false;
     this.dim = createDimOverlay(this, ANIM.results.overlayAlpha, width, height).setInteractive();
     this.header = new ResultsHeader(this, result, summary.isRecord);
     this.stats = createStats(this, result, tally.abilities, width);
@@ -98,7 +102,12 @@ export class ResultsScene extends Phaser.Scene {
       fresh,
       leave: (then) => this.leave(then),
     });
-    this.buttons = new ResultsButtons(this, summary.firstRun, flow.handlers, flow.labels);
+    // Runs that do not reach the save (bot, start height) and the tutorial run have nothing to share.
+    const handlers =
+      data.recorded && !summary.firstRun
+        ? { ...flow.handlers, share: () => this.share(data) }
+        : flow.handlers;
+    this.buttons = new ResultsButtons(this, summary.firstRun, handlers, flow.labels);
     this.buttons.setEnabled(false);
     this.coins.setEnabled(false);
     this.spacing = this.fitSpacing(height);
@@ -214,6 +223,15 @@ export class ResultsScene extends Phaser.Scene {
       y += b.height + this.spacing.gap;
     }
     this.buttons.container.setPosition(cx, buttonsY);
+  }
+
+  /** Makes the picture of the tower and shares it; taps during the making are ignored. */
+  private share(data: ResultsData): void {
+    if (this.sharing || this.leaving) return;
+    this.sharing = true;
+    void shareResult(this, data).finally(() => {
+      this.sharing = false;
+    });
   }
 
   /** The screen slides away and darkens, then `then` takes over. Buttons stop answering. */

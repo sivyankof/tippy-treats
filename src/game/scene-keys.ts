@@ -3,6 +3,7 @@ import type { RunResult } from '../core/run-result';
 import type { RunTally } from '../core/run-tally';
 import type { CreatureId } from '../data/creatures';
 import type { RunSummary } from '../state/game-state';
+import type { TowerSnapshot } from './objects/tower-snapshot';
 import { CLASSIC_RUN, type DemoBack, type RunRequest } from './run-request';
 
 export const SCENES = {
@@ -30,6 +31,8 @@ export interface ResultsData {
   tally: RunTally;
   /** The run reached the save (false for dev bot and start-height runs). */
   recorded: boolean;
+  /** The finished tower, for the picture of "Share". */
+  tower: TowerSnapshot;
 }
 
 /** Screens a creature card can return to (equal to the keys of the collection and team scenes). */
