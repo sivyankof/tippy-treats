@@ -20,6 +20,7 @@ import { LayerRig } from './layer-rig';
 import { artWidth, lookCodeFor } from './layer-art';
 import { LayerArtSlot } from './layer-art-slot';
 import { RAINBOW_LOOK } from '../../data/rainbow-look';
+import { TWO_PI } from '../../util/math';
 import { RainbowIdle } from './rainbow-idle';
 import { GlazeDripLayer } from './glaze-drip-layer';
 import { pressAngle, pressDrop, pressPivot, pressShift } from './layer-press';
@@ -95,7 +96,7 @@ export class LayerView extends Phaser.GameObjects.Container {
       this.glossSweep,
       this.face,
     ]);
-    this.rainbow = new RainbowIdle(scene, this.content, this.face);
+    this.rainbow = new RainbowIdle(scene, this.content, this.art);
     this.shapeRoot = new Phaser.GameObjects.Container(scene, 0, 0, [this.content]);
     this.material = new LayerMaterial(this.shapeRoot);
     this.breathRoot = new Phaser.GameObjects.Container(scene, 0, 0, [this.shapeRoot]);
@@ -215,6 +216,7 @@ export class LayerView extends Phaser.GameObjects.Container {
    * own units), or as it is for `null`. Only the drawing changes, never the layer's place.
    */
   setEdgeSquash(shape: Readonly<EdgeShape> | null): this {
+    this.rainbow.setHidden(shape !== null);
     if (!shape) {
       this.edgeSkin?.clear();
       return this;
@@ -386,7 +388,8 @@ export class LayerView extends Phaser.GameObjects.Container {
     this.material.tick(dtMs, motion);
     if (motion) this.breathe(motion);
     if (this.face.visible) this.face.tick(dtMs);
-    this.rainbow.draw(this.scene.time.now, motion?.phase ?? 0, true);
+    const phaseMs = ((motion?.phase ?? 0) / TWO_PI) * RAINBOW_LOOK.idle.waveEveryMs;
+    this.rainbow.draw(this.scene.time.now, phaseMs, true);
     if (this.rainbow.takeSquint()) this.face.react('squint', RAINBOW_LOOK.idle.joke.squintMs);
   }
 

@@ -68,7 +68,7 @@ export const OVEN_LOOK = {
   ember: { radius: 0.2, drop: 0.45, color: 0xff8a3c, core: 0xffd27a },
   motion: {
     /** The living oven rocks from side to side. */
-    sway: { sway: { idleDeg: 3, readyDeg: 3, ms: 1800 } },
+    sway: { deg: 3, ms: 1800 },
     /** The sleeping oven breathes slowly. */
     breath: { scaleX: 0.012, scaleY: 0.03, ms: 2400 },
     emberPulse: { alpha: 0.45, ms: 900 },

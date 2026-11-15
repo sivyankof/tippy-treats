@@ -33,9 +33,10 @@ export function arcCurve(
   grown: number,
   steps: number,
 ): Array<Point & { nx: number; ny: number }> {
-  const sgn = side < 0 ? -1 : 1;
   const c1 = { x: from.x + side, y: from.y - rise };
   const c2 = { x: to.x + side, y: to.y - rise };
+  // The outer edge is the side of the chord the control points lie on, whichever way the apex leans.
+  const sgn = (to.x - from.x) * (c1.y - from.y) - (to.y - from.y) * (c1.x - from.x) < 0 ? -1 : 1;
   const out: Array<Point & { nx: number; ny: number }> = [];
   const count = Math.max(1, Math.round(steps * grown));
   for (let i = 0; i <= count; i++) {

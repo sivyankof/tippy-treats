@@ -1,7 +1,6 @@
 import * as Phaser from 'phaser';
 import { ABILITY_ANIM } from '../../../data/ability-anim';
-import { RAINBOW_BANDS } from '../../../data/rainbow-look';
-import { parseHex } from '../../../util/color';
+import { RAINBOW_BAND_COLORS } from '../../../data/rainbow-look';
 import { clamp01, frameLerp } from '../../../util/math';
 import { DEPTH } from '../../depth';
 import { easeFn } from '../ease';
@@ -15,7 +14,6 @@ import { HALF_LAYER } from './kit';
 const cfg = ABILITY_ANIM.rainbow;
 const arc = cfg.arc;
 const cloud = cfg.cloud;
-const BAND_COLORS = RAINBOW_BANDS.map(parseHex);
 const OUTLINE = outlineColor(arc.outlineFrom);
 const grow = easeFn(arc.growEase);
 const pop = easeFn(cloud.popEase);
@@ -41,9 +39,9 @@ export class RainbowArc {
   /** Which way the arc bows now, smoothed between -1 (left) and 1 (right). */
   private bow = 1;
   private bowTarget = 1;
-  /** Bottom edge of the screen in world pixels (the arc starts below it when its cloud is off screen). */
   /** Called when the lower cloud starts to deflate (the puff sound). */
   onDeflate: (() => void) | null = null;
+  /** Bottom edge of the screen in world pixels (the arc starts below it when its cloud is off screen). */
   private viewBottom = Infinity;
 
   constructor(
@@ -126,10 +124,11 @@ export class RainbowArc {
   }
 
   private curve(grown: number): Array<Point & { nx: number; ny: number }> {
-    const dist = Math.hypot(this.last.x - this.from.x, this.last.y - this.from.y);
+    const start = this.start0();
+    const dist = Math.hypot(this.last.x - start.x, this.last.y - start.y);
     const side = Math.max(arc.sidePx, dist * arc.sideShare) * this.bow;
     const rise = arc.risePx + dist * arc.riseShare;
-    return arcCurve(this.start0(), this.last, side, rise, grown, arc.steps);
+    return arcCurve(start, this.last, side, rise, grown, arc.steps);
   }
 
   private paint(): void {
@@ -137,7 +136,7 @@ export class RainbowArc {
     const curve = this.curve(Math.max(0.04, k));
     const swellAt = (this.ageMs % arc.waveMs) / arc.waveMs;
     paintBand(this.gfx, curve, {
-      colors: BAND_COLORS,
+      colors: RAINBOW_BAND_COLORS,
       bandPx: arc.bandPx,
       outline: OUTLINE,
       outlinePx: arc.outlinePx,

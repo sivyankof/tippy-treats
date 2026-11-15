@@ -35,14 +35,3 @@ export function rotatePoints(points: readonly Pt[], cx: number, cy: number, rad:
     y: cy + (p.x - cx) * sin + (p.y - cy) * cos,
   }));
 }
-
-/** A four-point sparkle of outer radius `outer`, its notches `notch` of that deep. */
-export function sparklePoints(cx: number, cy: number, outer: number, notch: number): Pt[] {
-  const points: Pt[] = [];
-  for (let i = 0; i < 8; i++) {
-    const r = i % 2 === 0 ? outer : outer * notch;
-    const a = -Math.PI / 2 + (Math.PI * i) / 4;
-    points.push({ x: cx + r * Math.cos(a), y: cy + r * Math.sin(a) });
-  }
-  return points;
-}

@@ -4,6 +4,7 @@ import type { Pt } from '../../fx/plain-style';
 import type { LayerBox } from '../layer-draw';
 
 const { wave } = RAINBOW_LOOK;
+/** Points of the star of the crown. */
 const STAR_POINTS = 5;
 
 /** Height of the wave at `x`: the same for every band edge. */
@@ -51,12 +52,18 @@ export function waveLine(x0: number, x1: number, y: number, step: number): Pt[] 
   return points;
 }
 
-/** The outline of a five-pointed star of outer radius `outer` at (`cx`, `cy`), point up, notches `notch` of the radius deep. */
-export function starPoints(cx: number, cy: number, outer: number, notch: number): Pt[] {
+/** The outline of a star of `count` points (five: the crown star) of outer radius `outer` at (`cx`, `cy`), one point up, notches `notch` of the radius deep. */
+export function starPoints(
+  cx: number,
+  cy: number,
+  outer: number,
+  notch: number,
+  count = STAR_POINTS,
+): Pt[] {
   const points: Pt[] = [];
-  for (let i = 0; i < STAR_POINTS * 2; i++) {
+  for (let i = 0; i < count * 2; i++) {
     const r = i % 2 === 0 ? outer : outer * notch;
-    const a = -Math.PI / 2 + (Math.PI * i) / STAR_POINTS;
+    const a = -Math.PI / 2 + (Math.PI * i) / count;
     points.push({ x: cx + r * Math.cos(a), y: cy + r * Math.sin(a) });
   }
   return points;

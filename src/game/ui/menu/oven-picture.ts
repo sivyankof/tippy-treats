@@ -133,7 +133,7 @@ export class OvenPicture extends Phaser.GameObjects.Container {
   private startMotion(lit: boolean): void {
     const scene = this.scene;
     if (lit) {
-      startSwayTween(scene, this.holder, motion.sway, false);
+      startSwayTween(scene, this.holder, motion.sway.deg, motion.sway.ms);
       return;
     }
     const { scaleX, scaleY, ms } = motion.breath;

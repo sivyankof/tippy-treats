@@ -57,6 +57,11 @@ describe('starPoints', () => {
     expect(pts[0]?.y).toBeCloseTo(-20);
     expect(pts[1] && Math.hypot(pts[1].x, pts[1].y)).toBeCloseTo(10);
   });
+  it('takes the number of points', () => {
+    const pts = starPoints(0, 0, 10, 0.25, 4);
+    expect(pts).toHaveLength(8);
+    expect(pts[2]?.x).toBeCloseTo(10);
+  });
 });
 
 describe('spongeRows', () => {

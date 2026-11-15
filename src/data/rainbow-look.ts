@@ -1,5 +1,10 @@
+import { parseHex } from '../util/color';
+import { ABILITY_ANIM } from './ability-anim';
+
 /** The five thin sponge layers of the rainbow cake, top to bottom; the effects take the same colours. */
 export const RAINBOW_BANDS = ['#ff6b6b', '#ffa94d', '#ffe066', '#69db7c', '#4dabf7'] as const;
+/** The same colours as numbers. */
+export const RAINBOW_BAND_COLORS: readonly number[] = RAINBOW_BANDS.map(parseHex);
 
 /** The gold of the star on the crown of the Rainbow layer. */
 const STAR_GOLD = 0xffc93c;
@@ -77,6 +82,15 @@ export const RAINBOW_LOOK = {
       holdMs: 800,
       fadeMs: 300,
       squintMs: 1300,
+      /** Gloss of the band: the same as on the arc of the Rainbow ability. */
+      glossShare: ABILITY_ANIM.rainbow.arc.glossShare,
+      glossAlpha: ABILITY_ANIM.rainbow.arc.glossAlpha,
+      growEase: 'Back.easeOut',
+      /** Where the arch starts and ends, as shares of the star radius below (+) / above (-) its centre. */
+      startY: -0.3,
+      endY: 1,
+      /** Chance that the arch goes to the left. */
+      leftChance: 0.5,
     },
   },
 } as const;

@@ -24,6 +24,19 @@ describe('arcCurve', () => {
       expect(apex.ny).toBeLessThan(-0.9);
     }
   });
+  it('keeps the normal outward when the apex leans against the side', () => {
+    const cases: Array<[string, { x: number; y: number }, { x: number; y: number }, number]> = [
+      ['a star joke (no side, to the right)', { x: 0, y: -20 }, { x: 74, y: 40 }, 0],
+      ['a star joke (no side, to the left)', { x: 0, y: -20 }, { x: -74, y: 40 }, 0],
+      ['the ability arc', { x: 0, y: 1000 }, { x: 600, y: 800 }, 190],
+      ['a swap with the bow near zero', { x: 0, y: 300 }, { x: 200, y: 100 }, -1],
+    ];
+    for (const [name, from, to, side] of cases) {
+      const pts = arcCurve(from, to, side, 120, 1, 24);
+      const apex = pts.reduce((m, p) => (p.y < m.y ? p : m));
+      expect(apex.ny, name).toBeLessThan(-0.5);
+    }
+  });
   it('stops part way while it grows', () => {
     const pts = arcCurve({ x: 0, y: 0 }, { x: 200, y: 0 }, 50, 100, 0.5, 10);
     expect(pts[pts.length - 1]!.x).toBeLessThan(160);

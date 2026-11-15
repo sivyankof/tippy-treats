@@ -5,7 +5,7 @@ import { t } from '../../i18n';
 import { oscillate01, sineWave } from '../../util/math';
 import { FLYING_REACH } from '../camera-layout';
 import { createOutlinedText } from '../ui/outlined-text';
-import { HINT_TEXTURES } from './hint-textures';
+import { HAND, HAND_TOP_ORIGIN, HINT_TEXTURES } from './hint-textures';
 
 const tap = TUTORIAL_ANIM.tap;
 const CAPTION_HUD_GAP = TUTORIAL_ANIM.caption.hudGap;
@@ -23,7 +23,10 @@ export class TapHint {
 
   constructor(scene: Phaser.Scene) {
     this.label = createOutlinedText(scene, 0, 0, t('tutorial.tap'), tap.fontSize).setAlpha(0);
-    this.hand = scene.add.image(0, 0, HINT_TEXTURES.hand).setOrigin(0.5, 0).setAlpha(0);
+    this.hand = scene.add
+      .image(0, 0, HINT_TEXTURES.hand)
+      .setOrigin(0.5, HAND_TOP_ORIGIN)
+      .setAlpha(0);
     this.setVisible(false);
   }
 
@@ -37,7 +40,7 @@ export class TapHint {
    */
   private place(towerTopY: number): void {
     const flightTop = towerTopY - FLYING_REACH;
-    const groupHeight = this.label.height + tap.textGap + this.hand.height + tap.tapDistance;
+    const groupHeight = this.label.height + tap.textGap + HAND.height + tap.tapDistance;
     const top = Math.max(
       HUD_LAYOUT.bottomEdge + CAPTION_HUD_GAP,
       flightTop - tap.gapAboveFlight - groupHeight,

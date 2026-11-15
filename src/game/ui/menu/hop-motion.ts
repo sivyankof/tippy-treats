@@ -1,18 +1,17 @@
 import type * as Phaser from 'phaser';
 import type { HopMotion } from '../../../data/hop-motion';
 
-/** The target rocks from side to side all the time; `ready` rocks wider. */
+/** The target rocks `deg` degrees to each side, a full swing in `ms`, all the time. */
 export function startSwayTween(
   scene: Phaser.Scene,
   target: Phaser.GameObjects.Container,
-  motion: Pick<HopMotion, 'sway'>,
-  ready: boolean,
+  deg: number,
+  ms: number,
 ): Phaser.Tweens.Tween {
-  const deg = ready ? motion.sway.readyDeg : motion.sway.idleDeg;
   return scene.tweens.add({
     targets: target,
     angle: { from: -deg, to: deg },
-    duration: motion.sway.ms / 2,
+    duration: ms / 2,
     yoyo: true,
     repeat: -1,
     ease: 'Sine.easeInOut',
@@ -80,7 +79,12 @@ export class HopSway {
   /** Rocks from side to side all the time; `ready` rocks wider. Replaces a sway that runs. */
   startSway(motion: HopMotion, ready: boolean): void {
     this.stopSway();
-    this.swayTween = startSwayTween(this.scene, this.target, motion, ready);
+    this.swayTween = startSwayTween(
+      this.scene,
+      this.target,
+      ready ? motion.sway.readyDeg : motion.sway.idleDeg,
+      motion.sway.ms,
+    );
   }
 
   /** Stops the sway and stands the target upright. */

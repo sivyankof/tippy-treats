@@ -6,9 +6,12 @@ import { bakeTexture } from '../ui/bake-texture';
 
 export const HINT_TEXTURES = { hand: 'tutorial_hand', arrow: 'tutorial_arrow' } as const;
 
-const HAND = { width: 150, height: 200 };
+/** The hand without its outline: the size it is shown at (the picture is padded by the outline all round). */
+export const HAND = { width: 150, height: 200 };
 /** Outline of the hand: the same share of its height as the layers have, logical pixels. */
 const OUTLINE = HAND.height * OUTLINE_SHARE;
+/** Share of the padded hand picture's height above the hand itself, for an origin that ignores the padding. */
+export const HAND_TOP_ORIGIN = OUTLINE / (HAND.height + OUTLINE * 2);
 const ARROW = TUTORIAL_ANIM.arrow;
 const { width: ARROW_W, height: ARROW_H } = ARROW;
 const ARROW_OUTLINE = ARROW_H * OUTLINE_SHARE;
@@ -29,16 +32,28 @@ const HAND_SHAPES: readonly Box[] = [
 ];
 
 function bakeHand(scene: Phaser.Scene): void {
-  bakeTexture(scene, HINT_TEXTURES.hand, HAND.width, HAND.height, (g) => {
-    const fill = (color: number, grow: number): void => {
-      g.fillStyle(color, 1);
-      for (const b of HAND_SHAPES) {
-        g.fillRoundedRect(b.x - grow, b.y - grow, b.w + grow * 2, b.h + grow * 2, b.r + grow);
-      }
-    };
-    fill(outlineColor(PALETTE.panel), OUTLINE);
-    fill(PALETTE.panel, 0);
-  });
+  bakeTexture(
+    scene,
+    HINT_TEXTURES.hand,
+    HAND.width + OUTLINE * 2,
+    HAND.height + OUTLINE * 2,
+    (g) => {
+      const fill = (color: number, grow: number): void => {
+        g.fillStyle(color, 1);
+        for (const b of HAND_SHAPES) {
+          g.fillRoundedRect(
+            OUTLINE + b.x - grow,
+            OUTLINE + b.y - grow,
+            b.w + grow * 2,
+            b.h + grow * 2,
+            b.r + grow,
+          );
+        }
+      };
+      fill(outlineColor(PALETTE.panel), OUTLINE);
+      fill(PALETTE.panel, 0);
+    },
+  );
 }
 
 /** A fat arrow that points down, drawn as stem and head: outline first, then the fill. */

@@ -1,12 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { RAINBOW_LOOK } from '../../../data/rainbow-look';
-import {
-  humpAt,
-  rotatePoints,
-  sparkleAt,
-  sparklePoints,
-  waveProgress,
-} from './rainbow-idle-geometry';
+import { humpAt, rotatePoints, sparkleAt, waveProgress } from './rainbow-idle-geometry';
 
 const { idle } = RAINBOW_LOOK;
 
@@ -42,11 +36,5 @@ describe('rotatePoints', () => {
     const [p] = rotatePoints([{ x: 1, y: 0 }], 0, 0, Math.PI / 2);
     expect(p!.x).toBeCloseTo(0);
     expect(p!.y).toBeCloseTo(1);
-  });
-});
-
-describe('sparklePoints', () => {
-  it('has four points and four notches', () => {
-    expect(sparklePoints(0, 0, 10, 0.25)).toHaveLength(8);
   });
 });
