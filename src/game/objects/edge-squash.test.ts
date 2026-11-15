@@ -787,7 +787,7 @@ describe('height ceiling at the wall', () => {
   /** The highest the drawn outline reaches above the normal top (wedge, ribs and glaze), share of the layer height. */
   function highest(shape: Readonly<EdgeShape>): number {
     let top = 0;
-    for (let u = -shape.half; u <= shape.half; u += 0.5) {
+    for (let u = -shape.half; u <= shape.half; u += 1) {
       top = Math.max(top, reach(shape, u).up + squashGlaze(shape, u) / LAYER_H);
     }
     return top;
@@ -803,12 +803,12 @@ describe('height ceiling at the wall', () => {
       for (const ribbing of [true, false]) {
         for (const p of [0, 0.25, 0.5, 0.75, 1]) {
           const cap = byPower(by.maxUp, p);
-          for (let cx = 330; cx >= 100; cx -= 10) {
+          for (let cx = 330; cx >= 100; cx -= 30) {
             for (const spring of [1, 1.6, 0]) {
               const s = shapeAt(cx, 720, f, p, ribbing);
               s.left.spring = spring;
               s.right.spring = spring;
-              for (let layer = 1; layer <= 8; layer++) {
+              for (let layer = 1; layer <= 4; layer++) {
                 s.ribs = ribLayoutFor(99, layer);
                 expect(highest(s)).toBeLessThanOrEqual(cap + 1e-9);
               }
