@@ -29,7 +29,7 @@ export function setVibrationOn(on: boolean): void {
   gameState.updateSettings({ haptics: on });
 }
 
-/** A tap on the "fewer effects" switch is the player's own choice, so it wins over `auto`. */
+/** A tap on the "fewer effects" switch is the player's own choice: it sets the ceiling of the effects level and wins over `auto`. */
 export function setReducedFxOn(on: boolean): void {
   const setting = on ? 'on' : 'off';
   effectsMode.setChoice(setting);

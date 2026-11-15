@@ -48,37 +48,37 @@ describe('FrameWorkWatch', () => {
   it('turns on when nearly every frame is over budget for the window', () => {
     const { watch, start } = newWatch();
     run(watch, start, A.onWindowMs - 1000, SLOW_FRAME_MS, SLOW_WORK);
-    expect(watch.reduced).toBe(false);
+    expect(watch.level).toBe(0);
     run(watch, start + A.onWindowMs - 1000, 2000, SLOW_FRAME_MS, SLOW_WORK);
-    expect(watch.reduced).toBe(true);
+    expect(watch.level).toBe(1);
   });
 
   it('does not turn on for a throttled 30 fps phone with short frame work', () => {
     const { watch, start } = newWatch();
     run(watch, start, 60_000, 1000 / 30, FAST_WORK);
-    expect(watch.reduced).toBe(false);
+    expect(watch.level).toBe(0);
   });
 
   it('does not turn on for a 120 Hz screen with short frame work', () => {
     const { watch, start } = newWatch();
     run(watch, start, 30_000, 1000 / 120, FAST_WORK);
-    expect(watch.reduced).toBe(false);
+    expect(watch.level).toBe(0);
   });
 
   it('does not turn on when only some frames are over budget', () => {
     const { watch, start } = newWatch();
     run(watch, start, 20_000, FRAME_60, (i) => (i % 5 === 0 ? SLOW_WORK : FAST_WORK));
-    expect(watch.reduced).toBe(false);
+    expect(watch.level).toBe(0);
   });
 
   it('ignores slow frames during the warm-up', () => {
     const watch = new FrameWorkWatch(OPTIONS);
     watch.restart(0, A.warmUpMs);
     const end = run(watch, 0, A.warmUpMs - 100, SLOW_FRAME_MS, SLOW_WORK);
-    expect(watch.reduced).toBe(false);
+    expect(watch.level).toBe(0);
     // The slow frames of the warm-up do not count: the window still needs its full length.
     run(watch, end + 100, A.onWindowMs - 1000, SLOW_FRAME_MS, SLOW_WORK);
-    expect(watch.reduced).toBe(false);
+    expect(watch.level).toBe(0);
   });
 
   it('ignores the frames after a return from the background', () => {
@@ -88,7 +88,7 @@ describe('FrameWorkWatch', () => {
     // The first frames back are slow (everything wakes up), then the device is fine.
     t = run(watch, t, A.resumeIgnoreMs - 50, SLOW_FRAME_MS, SLOW_WORK);
     run(watch, t, 10_000, FRAME_60, FAST_WORK);
-    expect(watch.reduced).toBe(false);
+    expect(watch.level).toBe(0);
   });
 
   it('does not join slow stretches cut by a background gap into one window', () => {
@@ -96,43 +96,119 @@ describe('FrameWorkWatch', () => {
     let t = run(watch, start, 3000, SLOW_FRAME_MS, SLOW_WORK);
     t += 5000;
     t = run(watch, t, 3000, SLOW_FRAME_MS, SLOW_WORK);
-    expect(watch.reduced).toBe(false);
+    expect(watch.level).toBe(0);
     run(watch, t, 3000, SLOW_FRAME_MS, SLOW_WORK);
-    expect(watch.reduced).toBe(true);
+    expect(watch.level).toBe(1);
   });
 
   it('goes back to full effects after 10 s of frames inside the budget with a margin', () => {
     const { watch, start } = newWatch();
     let t = run(watch, start, A.onWindowMs + 1000, SLOW_FRAME_MS, SLOW_WORK);
-    expect(watch.reduced).toBe(true);
+    expect(watch.level).toBe(1);
     // Frames inside the budget but not with the margin: it stays on.
     t = run(watch, t, 40_000, FRAME_60, A.budgetMs - 1);
-    expect(watch.reduced).toBe(true);
+    expect(watch.level).toBe(1);
     run(watch, t, A.offWindowMs + A.minSwitchGapMs, FRAME_60, FAST_WORK);
-    expect(watch.reduced).toBe(false);
+    expect(watch.level).toBe(0);
   });
 
   it('does not go back before the 30 s between switches have passed', () => {
     const { watch, start } = newWatch();
     const t = run(watch, start, A.onWindowMs + 1000, SLOW_FRAME_MS, SLOW_WORK);
-    expect(watch.reduced).toBe(true);
+    expect(watch.level).toBe(1);
     // 12 s of good frames: the recovery window is full, the switch gap is not over.
     const mid = run(watch, t, 12_000, FRAME_60, FAST_WORK);
-    expect(watch.reduced).toBe(true);
+    expect(watch.level).toBe(1);
     run(watch, mid, A.minSwitchGapMs, FRAME_60, FAST_WORK);
-    expect(watch.reduced).toBe(false);
+    expect(watch.level).toBe(0);
   });
 
   it('does not switch again within 30 s when the device turns slow right after', () => {
     const { watch, start } = newWatch();
     let t = run(watch, start, A.onWindowMs + 1000, SLOW_FRAME_MS, SLOW_WORK);
     // Good frames until the mode goes off.
-    while (watch.reduced) t = run(watch, t, 1000, FRAME_60, FAST_WORK);
+    while (watch.level > 0) t = run(watch, t, 1000, FRAME_60, FAST_WORK);
     const offAt = t;
     // Slow again, but the 30 s since the last switch are not over: it stays off.
     while (t - offAt < A.minSwitchGapMs - 3000) t = run(watch, t, 1000, SLOW_FRAME_MS, SLOW_WORK);
-    expect(watch.reduced).toBe(false);
+    expect(watch.level).toBe(0);
     run(watch, t, 10_000, SLOW_FRAME_MS, SLOW_WORK);
-    expect(watch.reduced).toBe(true);
+    expect(watch.level).toBe(1);
+  });
+
+  describe('with two steps down', () => {
+    function newSteppedWatch(): { watch: FrameWorkWatch; start: number } {
+      const watch = new FrameWorkWatch(OPTIONS, 2);
+      watch.restart(0, A.warmUpMs);
+      return { watch, start: A.warmUpMs };
+    }
+
+    it('steps down one level after a slow window', () => {
+      const { watch, start } = newSteppedWatch();
+      run(watch, start, A.onWindowMs + 1000, SLOW_FRAME_MS, SLOW_WORK);
+      expect(watch.level).toBe(1);
+    });
+
+    it('needs a whole slow window of the new level and the switch gap for the second step', () => {
+      const { watch, start } = newSteppedWatch();
+      let t = run(watch, start, A.onWindowMs + 1000, SLOW_FRAME_MS, SLOW_WORK);
+      expect(watch.level).toBe(1);
+      // Still slow, but less than the switch gap has passed since the first step.
+      const firstStepAt = t;
+      while (t - firstStepAt < A.minSwitchGapMs - 3000) {
+        t = run(watch, t, 1000, SLOW_FRAME_MS, SLOW_WORK);
+      }
+      expect(watch.level).toBe(1);
+      run(watch, t, 6000, SLOW_FRAME_MS, SLOW_WORK);
+      expect(watch.level).toBe(2);
+    });
+
+    it('never goes below the lowest level', () => {
+      const { watch, start } = newSteppedWatch();
+      run(watch, start, 3 * A.minSwitchGapMs, SLOW_FRAME_MS, SLOW_WORK);
+      expect(watch.level).toBe(2);
+    });
+
+    it('steps back up one level at a time after calm windows', () => {
+      const { watch, start } = newSteppedWatch();
+      let t = run(watch, start, 2 * A.minSwitchGapMs, SLOW_FRAME_MS, SLOW_WORK);
+      expect(watch.level).toBe(2);
+      const levels = [2];
+      const limit = t + 4 * (A.offWindowMs + A.minSwitchGapMs);
+      while (t < limit && watch.level > 0) {
+        t = run(watch, t, 1000, FRAME_60, FAST_WORK);
+        if (watch.level !== levels[levels.length - 1]) levels.push(watch.level);
+      }
+      expect(levels).toEqual([2, 1, 0]);
+    });
+
+    it('keeps the level in the middle when frames are inside the budget but without the margin', () => {
+      const { watch, start } = newSteppedWatch();
+      let t = run(watch, start, A.onWindowMs + 1000, SLOW_FRAME_MS, SLOW_WORK);
+      expect(watch.level).toBe(1);
+      t = run(watch, t, 3 * A.minSwitchGapMs, FRAME_60, A.budgetMs - 1);
+      expect(watch.level).toBe(1);
+      expect(t).toBeGreaterThan(0);
+    });
+
+    it('lifts the level to a raised floor at once and never steps back up past it', () => {
+      const { watch, start } = newSteppedWatch();
+      watch.setFloor(1);
+      expect(watch.level).toBe(1);
+      // No switch gap is owed for the first step down from the floor: one slow window is enough.
+      const t = run(watch, start, A.onWindowMs + 1000, SLOW_FRAME_MS, SLOW_WORK);
+      expect(watch.level).toBe(2);
+      run(watch, t, 3 * (A.minSwitchGapMs + A.offWindowMs), FRAME_60, FAST_WORK);
+      expect(watch.level).toBe(1);
+    });
+
+    it('leaves the level where it is when the floor is lowered, then steps up after a calm window', () => {
+      const { watch, start } = newSteppedWatch();
+      watch.setFloor(1);
+      watch.setFloor(0);
+      expect(watch.level).toBe(1);
+      run(watch, start, A.offWindowMs + A.minSwitchGapMs, FRAME_60, FAST_WORK);
+      expect(watch.level).toBe(0);
+    });
   });
 });

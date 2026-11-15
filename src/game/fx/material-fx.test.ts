@@ -39,7 +39,7 @@ function throwDrops(count: number, size: number, inwards: 1 | -1): Cone[] {
   return cones;
 }
 
-afterEach(() => effectsMode.setChoice('auto'));
+afterEach(() => effectsMode.pinLevel(null));
 
 describe('glaze drops off the wall', () => {
   it('throws one drop per launch, each its own way and speed, so they fly apart', () => {
@@ -74,7 +74,7 @@ describe('glaze drops off the wall', () => {
       9,
     );
     expect(throwDrops(0, 1, 1)).toHaveLength(0);
-    effectsMode.setChoice('on');
+    effectsMode.pinLevel('minimal');
     expect(throwDrops(3, 1, 1)).toHaveLength(0);
   });
 });

@@ -60,7 +60,7 @@ function hitWall(creature: CreatureId | null, power: number): Hit {
   return { touch, faces, strokes: drawn ? drawn.left.hitGain : 0, shape: drawn, squash };
 }
 
-afterEach(() => effectsMode.setChoice('auto'));
+afterEach(() => effectsMode.pinLevel(null));
 
 describe('speed gating of the wall touch', () => {
   it('a slow layer gives no drops, no strokes and no squint', () => {
@@ -131,7 +131,7 @@ describe('speed gating of the wall touch', () => {
   });
 
   it('fewer effects: only the wedge, no drops, strokes or ribs', () => {
-    effectsMode.setChoice('on');
+    effectsMode.pinLevel('minimal');
     const hit = hitWall(null, 1);
     expect(hit.touch).toBeNull();
     expect(hit.strokes).toBe(0);

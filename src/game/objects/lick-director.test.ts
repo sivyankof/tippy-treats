@@ -34,6 +34,7 @@ class FakeFace {
   constructor(
     private readonly starts: number[],
     private readonly clock: { ms: number },
+    private readonly scenes: LickScene[],
   ) {}
 
   get canLick(): boolean {
@@ -57,6 +58,7 @@ class FakeFace {
     this.scene = scene;
     this.style = style;
     this.starts.push(this.clock.ms);
+    this.scenes.push(scene);
   }
 
   tick(dtMs: number): void {
@@ -109,15 +111,21 @@ class FakeDrips {
   hideLick(): void {}
 }
 
-/** Plays a run of the director over a still tower; returns when each lick started. */
-function playRun(dripsPerLayer: number): { starts: number[]; licks: number; regrown: number } {
+/** Plays a run of the director over a still tower; returns when each lick started and which scene it played. */
+function playRun(dripsPerLayer: number): {
+  starts: number[];
+  scenes: LickScene[];
+  licks: number;
+  regrown: number;
+} {
   const clock = { ms: 0 };
   const starts: number[] = [];
+  const scenes: LickScene[] = [];
   const faces: FakeFace[] = [];
   const drips: FakeDrips[] = [];
   const views = new Map<number, LayerView>();
   for (let i = 0; i < LAYERS; i++) {
-    const face = new FakeFace(starts, clock);
+    const face = new FakeFace(starts, clock, scenes);
     const glaze = new FakeDrips(dripsPerLayer);
     faces.push(face);
     drips.push(glaze);
@@ -149,14 +157,14 @@ function playRun(dripsPerLayer: number): { starts: number[]; licks: number; regr
     director.update(FRAME_MS, ctx);
   }
   const sum = (f: (d: FakeDrips) => number): number => drips.reduce((n, d) => n + f(d), 0);
-  return { starts, licks: sum((d) => d.licks), regrown: sum((d) => d.regrown) };
+  return { starts, scenes, licks: sum((d) => d.licks), regrown: sum((d) => d.regrown) };
 }
 
 describe('LickDirector', () => {
-  afterEach(() => effectsMode.setChoice('auto'));
+  afterEach(() => effectsMode.pinLevel(null));
 
   it('starts a lick only when the common timer says so, never because a drip has grown back', () => {
-    effectsMode.setChoice('off');
+    effectsMode.pinLevel('full');
     const dry = playRun(0);
     const dripping = playRun(5);
     // The tongue licked drips and they grew back many times over.
@@ -171,5 +179,22 @@ describe('LickDirector', () => {
       expect(gap).toBeGreaterThanOrEqual(LICK.intervalMs[0]);
       expect(gap).toBeLessThanOrEqual(LICK.intervalMs[1] + lickDurationMs('big') * 1.2);
     }
+  });
+
+  it('plays the short scene in place of the big one on lite, at the same moments', () => {
+    effectsMode.pinLevel('full');
+    const full = playRun(0);
+    expect(full.scenes).toContain('big');
+    effectsMode.pinLevel('lite');
+    const lite = playRun(0);
+    expect(lite.scenes.length).toBeGreaterThan(5);
+    expect(lite.scenes.every((scene) => scene === 'short')).toBe(true);
+    // The dice are thrown as before, so the ticks of the timer match up to the length of the scene played.
+    expect(lite.starts[0]).toBe(full.starts[0]);
+  });
+
+  it('plays no lick at all on minimal', () => {
+    effectsMode.pinLevel('minimal');
+    expect(playRun(0).starts).toEqual([]);
   });
 });
