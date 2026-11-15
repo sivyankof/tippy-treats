@@ -22,8 +22,10 @@ export interface RewardFlight {
   wallet?: WalletTargets;
   /** The pictures pour out of an opening (a box) in an upward fan instead of scattering all around. */
   pour?: boolean;
-  /** Share of the usual picture size, for a small opening. */
+  /** Share of the usual picture size (`iconSize`), for a small opening. */
   iconScale?: number;
+  /** Waits this long before the first picture appears, e.g. for a lid to finish opening. */
+  startDelayMs?: number;
   /** How far a poured picture rises, in place of the usual reach. */
   reach?: number;
   /** Runs when the last picture has arrived. */
@@ -46,13 +48,15 @@ export function flyReward(scene: Phaser.Scene, flight: RewardFlight): void {
   }
   counter?.addPending(shares.reduce((sum, share) => sum + share, 0));
   const iconScale = flight.iconScale ?? 1;
+  const startDelay = flight.startDelayMs ?? 0;
   let left = shares.length;
   shares.forEach((share, i) => {
     const image = scene.add
       .image(flight.from.x, flight.from.y, texture)
-      .setDisplaySize(cfg.iconSize, cfg.iconSize)
       .setDepth(cfg.depth)
       .setScale(0);
+    // The scale is relative to the native picture, so the target size comes from `iconSize`.
+    const fullScale = (cfg.iconSize / image.width) * iconScale;
     const landing = (): void => {
       image.destroy();
       if (counter) {
@@ -77,11 +81,10 @@ export function flyReward(scene: Phaser.Scene, flight: RewardFlight): void {
       targets: image,
       x: spot.x,
       y: spot.y,
-      scale: iconScale,
+      scale: fullScale,
       duration: flight.pour ? cfg.pour.riseMs : cfg.scatterMs,
       ease: 'Back.easeOut',
-      delay: i * (flight.pour ? cfg.pour.staggerMs : cfg.staggerMs),
-
+      delay: startDelay + i * (flight.pour ? cfg.pour.staggerMs : cfg.staggerMs),
       onComplete: () => {
         if (!counter) {
           scene.tweens.add({

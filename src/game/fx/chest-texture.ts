@@ -12,6 +12,7 @@ import {
   glossFromShares,
   outlineColor,
   drawOpeningRing,
+  openBodyLayout,
   roundShape,
   topEdgeAt,
   type BandLook,
@@ -31,17 +32,14 @@ const pad = Math.ceil(grow) + CHEST_LOOK.texturePad;
 const lidW = size.width + size.lidOverhang * 2;
 const insideH = size.lidHeight * CHEST_LOOK.insideLidShare;
 
-/** Room above the body for the back half of the opening ring of the open chest. */
-const openReach = Math.ceil(size.bodyHeight * CHEST_LOOK.opening.ry + grow);
-const bodyTexW = size.width + pad * 2;
-const bodyTexH = size.bodyHeight + pad * 2 + openReach;
-const bodyCenterY = pad + openReach + size.bodyHeight / 2;
+const bodyLayout = openBodyLayout(size.width, size.bodyHeight, CHEST_LOOK.opening.ry, grow, pad);
+const { texW: bodyTexW, texH: bodyTexH, centerY: bodyCenterY } = bodyLayout;
 const lidTexW = lidW + pad * 2;
 const lidTexH = size.lidHeight + pad * 2;
 const insideTexH = insideH + pad * 2;
 
 /** Where the body picture is anchored: the middle of the body. */
-export const CHEST_BODY_ORIGIN = { x: 0.5, y: bodyCenterY / bodyTexH } as const;
+export const CHEST_BODY_ORIGIN = bodyLayout.origin;
 /** Where the lid pictures hinge: the middle of their bottom edge. */
 export const CHEST_LID_ORIGIN = { x: 0.5, y: (pad + size.lidHeight) / lidTexH } as const;
 export const CHEST_INSIDE_ORIGIN = { x: 0.5, y: (pad + insideH) / insideTexH } as const;
@@ -142,18 +140,33 @@ function drawLid(g: Phaser.GameObjects.Graphics): void {
   );
 }
 
-/** The lid thrown back: seen from inside, a plain panel with the ends of the straps. */
+/** The lid thrown back: the same red-brown dome with a darker lining panel inset, and the ends of the straps. */
 function drawLidInside(g: Phaser.GameObjects.Graphics): void {
   const cx = lidTexW / 2;
   const cy = pad + insideH / 2;
-  drawTwoToneBody(g, roundShape(CHEST_LOOK.insideRound), cx, cy, lidW / 2, insideH / 2, {
-    base: colors.lidInside,
-    shadow: colors.lidInsideShadow,
-    grow,
-    band: CHEST_LOOK.lidBand,
-  });
-  for (const x of strapXs(cx))
-    drawVerticalBand(g, x, cy - insideH / 2, cy + insideH / 2, strap.width, strapLook);
+  const half = insideH / 2;
+  drawTwoToneBody(
+    g,
+    domeShape(CHEST_LOOK.dome.top, CHEST_LOOK.dome.bottom),
+    cx,
+    cy,
+    lidW / 2,
+    half,
+    {
+      base: colors.lid,
+      shadow: colors.lidShadow,
+      grow,
+      band: CHEST_LOOK.lidBand,
+    },
+  );
+  const inset = CHEST_LOOK.insideInset;
+  g.fillStyle(colors.lidInsideShadow, 1);
+  fillPolygon(g, roundShape(CHEST_LOOK.insideRound)(cx, cy, lidW / 2 - inset.x, half - inset.y));
+  const innerRx = lidW / 2 - inset.x - inset.rim;
+  const innerRy = half - inset.y - inset.rim;
+  g.fillStyle(colors.lidInside, 1);
+  fillPolygon(g, roundShape(CHEST_LOOK.insideRound)(cx, cy + inset.rim / 2, innerRx, innerRy));
+  for (const x of strapXs(cx)) drawVerticalBand(g, x, cy - half, cy + half, strap.width, strapLook);
 }
 
 /** Bakes the chest: the body (closed and open), the lid seen from outside and from inside. Does nothing for pictures that exist. */

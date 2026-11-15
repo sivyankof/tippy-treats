@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { domeShape, glossFromShares, roundRectPoints, topEdgeAt } from './plain-style';
+import {
+  domeShape,
+  glossFromShares,
+  openBodyLayout,
+  roundRectPoints,
+  topEdgeAt,
+} from './plain-style';
 
 const CORNER_POINTS = 7;
 
@@ -96,5 +102,15 @@ describe('topEdgeAt', () => {
 
   it('is infinite outside the shape', () => {
     expect(topEdgeAt(domeShape(1, 0.2)(0, 0, 50, 30), 80)).toBe(Infinity);
+  });
+});
+
+describe('openBodyLayout', () => {
+  it('leaves room above the body for the back of the opening ring', () => {
+    const l = openBodyLayout(200, 100, 0.2, 5, 10);
+    expect(l.texW).toBe(220);
+    expect(l.texH).toBe(100 + 20 + 25);
+    expect(l.centerY).toBe(10 + 25 + 50);
+    expect(l.origin.y).toBeCloseTo(l.centerY / l.texH);
   });
 });

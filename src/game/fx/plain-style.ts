@@ -330,3 +330,28 @@ export function drawOpeningRing(
     ellipsePoints(cx, top + ry * (1 - innerShare), rx * innerShare, ry * innerShare, 0),
   );
 }
+
+/** Where an opened body sits inside its picture: room above for the back half of the opening ring. */
+export interface OpenBodyLayout {
+  texW: number;
+  texH: number;
+  /** y of the middle of the body rectangle inside the picture. */
+  centerY: number;
+  /** Image origin that anchors the picture on the middle of the body. */
+  origin: { x: number; y: number };
+}
+
+/** Picture size, body centre and anchor of a body `width` x `bodyHeight` whose opening ring has half height `ryShare` of the body height. */
+export function openBodyLayout(
+  width: number,
+  bodyHeight: number,
+  ryShare: number,
+  grow: number,
+  pad: number,
+): OpenBodyLayout {
+  const openReach = Math.ceil(bodyHeight * ryShare + grow);
+  const texW = width + pad * 2;
+  const texH = bodyHeight + pad * 2 + openReach;
+  const centerY = pad + openReach + bodyHeight / 2;
+  return { texW, texH, centerY, origin: { x: 0.5, y: centerY / texH } };
+}

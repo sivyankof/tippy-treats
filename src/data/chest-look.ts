@@ -24,15 +24,17 @@ export const CHEST_LOOK = {
     /** The dark lip along the bottom edge of the lid. */
     lip: 0x6b3220,
     /** The inside of the lid seen when it is open, and the dark inside of the open body. */
-    lidInside: 0xb8793f,
-    lidInsideShadow: 0x93602f,
+    lidInside: 0x8a4a2c,
+    lidInsideShadow: 0x5e2c1a,
     inside: 0x4a2a1c,
     metal: PALETTE.gold,
     metalShadow: 0xe0a21c,
     gloss: 0xffffff,
     face: PALETTE.textDark,
     /** The flat light rays behind a ready chest. */
-    rays: 0xffd966,
+    rays: 0xffc83d,
+    /** The flat pale-gold disc behind the rays. */
+    burst: 0xffe27a,
   },
   /** Corner shapes: the body, the dome of the lid (top corners as a share of the half sizes), its bottom corners, the open lid. */
   bodyRound: 0.22,
@@ -84,6 +86,8 @@ export const CHEST_LOOK = {
   opening: { widthShare: 0.84, ry: 0.14, innerShare: 0.8 },
   /** The inside of the open lid: its height as a share of the lid height. */
   insideLidShare: 0.8,
+  /** The darker lining panel of the open lid: gap to the lid's edge (x, y) and the rim of the deeper tone. */
+  insideInset: { x: 14, y: 12, rim: 5 },
 } as const;
 
 /** The motion of the chest in the missions window and its light rays. */
@@ -91,6 +95,8 @@ export interface ChestMotion extends HopMotion {
   rays: {
     count: number;
     radius: number;
+    /** Radius of the flat pale disc behind the rays. */
+    burstRadius: number;
     /** The rays are flattened to this share of their height so they stay inside the card. */
     squashY: number;
     /** One full turn of the rays, and the pulse of their scale and alpha (one way). */

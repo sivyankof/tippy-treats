@@ -99,7 +99,11 @@ export class ChestBox extends Phaser.GameObjects.Container {
     const inner = new LightRays(this.scene, CHEST_LOOK.colors.rays, r);
     // The rays start invisible; the holder carries the alpha pulse.
     inner.setAlpha(1);
-    const holder = this.scene.add.container(0, PICTURE_CENTER_Y, [inner]);
+    const burst = this.scene.add
+      .graphics()
+      .fillStyle(CHEST_LOOK.colors.burst, 1)
+      .fillCircle(0, 0, r.burstRadius);
+    const holder = this.scene.add.container(0, PICTURE_CENTER_Y, [burst, inner]);
     this.addAt(holder, 0);
     this.rays = holder;
     this.raysInner = inner;

@@ -110,6 +110,8 @@ export function openMissionsWindow(
           from: chest?.openingPoint() ?? { x: 0, y: 0 },
           wallet,
           pour: true,
+          // The berries wait until the lid has folded and popped, so it can be seen.
+          startDelayMs: cfg.chestMotion.open.foldMs + cfg.chestMotion.open.popMs,
           ...cfg.chestPour,
         });
       },

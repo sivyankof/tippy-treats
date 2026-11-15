@@ -14,6 +14,7 @@ import {
   fillPolygon,
   outlineColor,
   drawOpeningRing,
+  openBodyLayout,
   roundShape,
   type BodyShape,
 } from './plain-style';
@@ -37,19 +38,15 @@ const pad = Math.ceil(grow) + GIFT_LOOK.texturePad;
 /** How far the bow reaches above the top of the lid. */
 const bowReach = Math.ceil(box.bowSize * (bow.loopRise + bow.loopRx) + grow);
 
-/** Room above the body for the back half of the opening ring of the opened box. */
-const openReach = Math.ceil(bodyH * GIFT_LOOK.opening.ry + grow);
-const bodyTexW = box.boxSize + pad * 2;
-const bodyTexH = bodyH + pad * 2 + openReach;
-/** The centre of the body's own rectangle inside its picture. */
-const bodyCenterY = pad + openReach + bodyH / 2;
+const bodyLayout = openBodyLayout(box.boxSize, bodyH, GIFT_LOOK.opening.ry, grow, pad);
+const { texW: bodyTexW, texH: bodyTexH, centerY: bodyCenterY } = bodyLayout;
 const lidTexW = lidW + pad * 2;
 const lidTexH = bowReach + box.lidHeight + pad * 2;
 /** The centre of the lid's own rectangle inside its picture: the lid pivots around it. */
 const lidCenterY = pad + bowReach + box.lidHeight / 2;
 
 /** Where the body picture is anchored (origin of the image): the middle of the body rectangle. */
-export const GIFT_BODY_ORIGIN = { x: 0.5, y: bodyCenterY / bodyTexH } as const;
+export const GIFT_BODY_ORIGIN = bodyLayout.origin;
 
 /** Where the lid picture pivots (origin of the image). */
 export const GIFT_LID_ORIGIN = { x: 0.5, y: lidCenterY / lidTexH } as const;

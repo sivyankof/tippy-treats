@@ -39,7 +39,7 @@ export class MissionsChest extends Phaser.GameObjects.Container {
     this.add(new VolumePlate(scene, 'card', cfg.chestHeight).setBodyWidth(width));
     this.box = new ChestBox(
       scene,
-      left + cfg.chestAreaWidth / 2,
+      left + cfg.chestAreaWidth / 2 + cfg.chestBoxX,
       cfg.chestBoxY,
       cfg.chestMotion,
       opened ? 'opened' : ready ? 'ready' : 'closed',

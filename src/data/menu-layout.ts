@@ -879,26 +879,27 @@ export const MENU = {
     actionButton: { width: 200, height: 88, radius: 30, shadowOffset: 7, font: 38 },
     actionTextPadding: 28,
     noteFont: 28,
-    chestHeight: 350,
+    chestHeight: 400,
     /** The chest picture takes this much of the card on the left; title, reward and bar share the rest. */
     chestAreaWidth: 290,
-    /** Where the middle of the chest body is, and the gap between the chest area and the text column. */
-    chestBoxY: 6,
+    /** Where the middle of the chest body is (x is an offset from the middle of the chest area), and the gap between the chest area and the text column. */
+    chestBoxX: 10,
+    chestBoxY: 30,
     /** The berries poured out of the chest: smaller pictures and a short fan so the heap stays inside the card. */
-    chestPour: { iconScale: 0.5, reach: 110 },
+    chestPour: { iconScale: 0.6, reach: 90 },
     chestColumnGap: 10,
     chestTitleFont: 44,
-    chestTitleY: -112,
-    chestPriceY: -50,
-    chestBarY: 16,
+    chestTitleY: -150,
+    chestPriceY: -88,
+    chestBarY: -22,
     chestBarFont: 32,
-    chestButtonY: 118,
+    chestButtonY: 144,
     /** The chest of the day: calm sway while closed, wider sway and hops while ready, lid flip when opened; the rays behind a ready chest. */
     chestMotion: {
       sway: { idleDeg: 2.5, readyDeg: 5, ms: 1800 },
       hop: {
         everyMs: 2000,
-        rise: 22,
+        rise: 10,
         riseMs: 190,
         fallMs: 170,
         squash: { x: 1.1, y: 0.88, ms: 110 },
@@ -907,11 +908,12 @@ export const MENU = {
       rays: {
         count: 10,
         radius: 170,
-        squashY: 0.62,
+        burstRadius: 145,
+        squashY: 0.92,
         turnMs: 14000,
         pulseMs: 800,
         scale: { from: 0.9, to: 1.08 },
-        alpha: { from: 0.45, to: 0.8 },
+        alpha: { from: 0.6, to: 0.95 },
       },
       open: { foldMs: 110, popMs: 300 },
     },
