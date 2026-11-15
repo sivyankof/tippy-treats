@@ -93,7 +93,7 @@ export const LICK = {
   /** After the loop the tongue stretches sideways out of the cheek to its peak: `px` from the mouth (at most half the layer width), `y` below the eyes. */
   peak: { px: 190, y: 26, overshoot: 1.6 },
 
-  /** The tongue drawn over the face (and over the eyes): a flat wide ribbon, a chain of baked pieces. */
+  /** The tongue drawn over the face (and over the eyes): a flat wide ribbon, drawn every frame as one smooth shape. */
   tongue: {
     segments: 20,
     /**
@@ -121,6 +121,20 @@ export const LICK = {
     tremble: { amp: 2.5, hz: 28 },
     /** The smear of the shot: the tongue starts this narrow and widens over this share of the shot. */
     smear: { width: 0.55, share: 0.5 },
+    /**
+     * How the ribbon is drawn: the points of the body are smoothed (a Catmull-Rom curve) and split
+     * into `sub` samples each; every sample piece overlaps the next by `overlapPx` and has a round
+     * joint under it. The light stripe and the groove run on through `tipStripeShare` of the tip
+     * height; the tip's rim is `tipSteps` straight steps; its shine is `tipShine` (across, along
+     * the tip and size as shares of the width and the tip height).
+     */
+    draw: {
+      sub: 2,
+      overlapPx: 1.5,
+      tipSteps: 16,
+      tipStripeShare: 0.55,
+      tipShine: { across: 0.2, along: 0.7, w: 0.26, h: 0.2, alpha: 0.85, steps: 12 },
+    },
   },
   /** A drop of saliva hangs from the tip at the peak and swells. */
   saliva: { size: 20, color: 0xeaf7ff, alpha: 0.9, hangPx: 8 },
