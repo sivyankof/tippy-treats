@@ -57,7 +57,7 @@ export const HUD_LAYOUT = {
    * The tempo ease chip at the right end of the wobble plate: a see-through plate with the snail and the
    * layers left. `gap` is the space to the wobble plate, `margin` the closest it comes to the screen edge.
    */
-  tempoChip: { width: 132, iconSize: 56, iconInset: 16, font: 46, stroke: 7, gap: 10, margin: 16 },
+  tempoChip: { width: 148, iconSize: 80, iconInset: 10, font: 46, stroke: 7, gap: 10, margin: 16 },
   /** Text of the next-creature indicator. */
   nextFont: 56,
   nextStroke: 8,

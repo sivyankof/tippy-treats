@@ -3,6 +3,7 @@ import { MENU } from '../../../data/menu-layout';
 import { PALETTE } from '../../../data/palette';
 import { t } from '../../../i18n';
 import { services } from '../../../services';
+import { effectsMode } from '../../effects-mode';
 import { createTextButton } from '../button';
 import { createOutlinedText } from '../outlined-text';
 import { PopupWindow } from '../style/dialog-window';
@@ -22,7 +23,18 @@ export function openNoAdsOffer(scene: Phaser.Scene, price: string, onClosed: () 
     contentHeight: cfg.contentHeight,
     onClosed,
   });
-  popup.content.add(createNoAdsIcon(scene, cfg.iconSize).setPosition(0, cfg.iconY));
+  const icon = createNoAdsIcon(scene, cfg.iconSize).setPosition(0, cfg.iconY);
+  popup.content.add(icon);
+  if (!effectsMode.reduced) {
+    scene.tweens.add({
+      targets: icon,
+      angle: { from: -cfg.sway.angle, to: cfg.sway.angle },
+      duration: cfg.sway.ms,
+      ease: 'Sine.easeInOut',
+      yoyo: true,
+      repeat: -1,
+    });
+  }
   const text = createOutlinedText(scene, 0, cfg.textY, t('noAdsOffer.text'), cfg.textFont);
   fitText(text, popup.innerWidth);
   const note = createOutlinedText(scene, 0, cfg.noteY, t('shop.noAds.desc'), cfg.noteFont);
