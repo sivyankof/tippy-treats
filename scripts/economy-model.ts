@@ -122,10 +122,14 @@ export interface Economy {
   upgradeCosts: number[];
   /** Baker level needed to upgrade a creature to level index+2 (index 0: 1 -> 2). */
   upgradeMinBaker: number[];
+  /** Per-creature override of `upgradeMinBaker`. */
+  upgradeMinBakerFor?: Partial<Record<CreatureId, number[]>>;
   /** Coin price and baker gate of every shop creature (others come free). */
   shopPrice: Partial<Record<CreatureId, { coins: number; minBaker: number }>>;
   /** Berries -> coins, best pack only. */
   berryPack: { berries: number; coins: number };
+  /** The rainbow's berry price and baker gate in the shop (it also comes free at level 20). */
+  rainbowBerries: { berries: number; minBaker: number };
 }
 
 const shopPriceFromData = (): Economy['shopPrice'] => {
@@ -139,6 +143,15 @@ const shopPriceFromData = (): Economy['shopPrice'] => {
   }
   return out;
 };
+
+function rainbowBerryPrice(): Economy['rainbowBerries'] {
+  for (const u of CREATURES.rainbow.unlock) {
+    if (u.kind === 'shop' && u.berries !== undefined) {
+      return { berries: u.berries, minBaker: u.minBakerLevel ?? 1 };
+    }
+  }
+  throw new Error('rainbow has no berry price');
+}
 
 const coinSum = (c: CoinsBySource): number =>
   COIN_SOURCES.reduce((sum, source) => sum + c[source], 0);
@@ -168,6 +181,7 @@ export const CURRENT: Economy = {
   upgradeMinBaker: [1, 1, 1, 1],
   shopPrice: shopPriceFromData(),
   berryPack: bestPack,
+  rainbowBerries: rainbowBerryPrice(),
 };
 
 // ---------------------------------------------------------------- player behaviour
@@ -178,6 +192,8 @@ export interface Player {
   minutesPerDay: number;
   /** Watches the "x2" ad after every run (up to the cap), the gift x2, shop free coins, +1 daily attempt. */
   ads: boolean;
+  /** Saves berries for the rainbow and buys it in the shop instead of waiting for level 20. */
+  rainbowByBerries?: boolean;
 }
 
 /** Share of each mission group done per day, by profile (an estimate, see the report). */
@@ -269,7 +285,13 @@ export function walk(eco: Economy, player: Player, samples: RunSample[]): WalkRe
 
   const spend = (day: number): void => {
     for (;;) {
-      if (berries >= eco.berryPack.berries) {
+      if (player.rainbowByBerries && !owned.has('rainbow')) {
+        if (level >= eco.rainbowBerries.minBaker && berries >= eco.rainbowBerries.berries) {
+          berries -= eco.rainbowBerries.berries;
+          grantCreature('rainbow', day);
+          continue;
+        }
+      } else if (berries >= eco.berryPack.berries) {
         berries -= eco.berryPack.berries;
         coins += eco.berryPack.coins;
         continue;
@@ -299,7 +321,8 @@ export function walk(eco: Economy, player: Player, samples: RunSample[]): WalkRe
           }
         }
         const lv = owned.get(id);
-        if (lv !== undefined && lv < 5 && level >= (eco.upgradeMinBaker[lv - 1] ?? 1)) {
+        const gates = eco.upgradeMinBakerFor?.[id] ?? eco.upgradeMinBaker;
+        if (lv !== undefined && lv < 5 && level >= (gates[lv - 1] ?? 1)) {
           const cost = eco.upgradeCosts[lv - 1] ?? Infinity;
           if (!creatureFirst && (!best || cost < best.cost)) {
             best = { cost, act: () => owned.set(id, lv + 1) };
@@ -450,20 +473,34 @@ function perRunTable(eco: Economy, samples: Samples): void {
   }
 }
 
+/** Ads on or off, and whether the player saves berries for the rainbow. */
+const RUN_VARIANTS: ReadonlyArray<readonly [boolean, boolean]> = [
+  [false, false],
+  [true, false],
+  [true, true],
+];
+
 function daysTable(eco: Economy, samples: Samples): void {
   console.log(`\n## ${eco.name}: days to goals`);
   console.log(
-    '| profile | team | min/day | ads | coins/day | XP/day | runs/day | 1st buy | 2nd buy | full (no twins) | twins | lvl 5 | lvl 10 | lvl 15 | lvl 20 |',
+    '| profile | team | min/day | ads | rainbow | coins/day | XP/day | runs/day | 1st buy | 2nd buy | full (no twins) | twins | lvl 5 | lvl 10 | lvl 15 | lvl 20 |',
   );
-  console.log('|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|');
+  console.log('|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|');
   for (const p of PROFILES) {
     for (const setup of SETUPS) {
       for (const minutes of [30, 210]) {
-        for (const ads of [false, true]) {
+        for (const [ads, rainbowByBerries] of RUN_VARIANTS) {
           const runs = samples[`${p}:${setup.key}`] ?? [];
-          const r = walk(eco, { profile: p, team: setup.key, minutesPerDay: minutes, ads }, runs);
+          const player = {
+            profile: p,
+            team: setup.key,
+            minutesPerDay: minutes,
+            ads,
+            rainbowByBerries,
+          };
+          const r = walk(eco, player, runs);
           console.log(
-            `| ${p} | ${setup.key} | ${minutes} | ${ads ? 'x2' : '-'} | ${r.perDay.coins.toFixed(0)} | ${r.perDay.xp.toFixed(0)} | ${r.perDay.runs.toFixed(0)} | ${r.buyDay[0] ?? '-'} | ${r.buyDay[1] ?? '-'} | ${fmt(r.fullDay)} | ${fmt(r.twinsDay)} | ${fmt(r.levelDay[5] ?? null)} | ${fmt(r.levelDay[10] ?? null)} | ${fmt(r.levelDay[15] ?? null)} | ${fmt(r.levelDay[20] ?? null)} |`,
+            `| ${p} | ${setup.key} | ${minutes} | ${ads ? 'x2' : '-'} | ${rainbowByBerries ? 'berries' : 'lvl 20'} | ${r.perDay.coins.toFixed(0)} | ${r.perDay.xp.toFixed(0)} | ${r.perDay.runs.toFixed(0)} | ${r.buyDay[0] ?? '-'} | ${r.buyDay[1] ?? '-'} | ${fmt(r.fullDay)} | ${fmt(r.twinsDay)} | ${fmt(r.levelDay[5] ?? null)} | ${fmt(r.levelDay[10] ?? null)} | ${fmt(r.levelDay[15] ?? null)} | ${fmt(r.levelDay[20] ?? null)} |`,
           );
         }
       }
@@ -499,7 +536,7 @@ export const KNOBS = {
   floating: 1,
   perfect: 1,
   combo: 0.5,
-  golden: 5,
+  golden: 10,
   /** Height bonus: `perStep` coins for every full `step` layers. */
   heightStep: 20,
   heightPerStep: 2,
@@ -514,8 +551,10 @@ export const KNOBS = {
   lateBase: 100,
   lateStep: 810,
   /** Baker level needed for creature level 2, 3, 4, 5. */
-  upgradeMinBaker: [1, 6, 12, 20],
+  upgradeMinBaker: [1, 6, 11, 16],
   upgradeCosts: [200, 600, 1300, 2800],
+  /** Gates of the legendary rainbow, which can be bought for berries before baker level 20. */
+  rainbowMinBaker: [1, 6, 11, 20],
 };
 
 const proposalXpToNext = (level: number): number =>
@@ -539,6 +578,7 @@ export const PROPOSAL: Economy = {
   missionXp: KNOBS.missionXp,
   doubleCap: KNOBS.doubleCap,
   upgradeMinBaker: KNOBS.upgradeMinBaker,
+  upgradeMinBakerFor: { rainbow: KNOBS.rainbowMinBaker },
   upgradeCosts: KNOBS.upgradeCosts,
 };
 
