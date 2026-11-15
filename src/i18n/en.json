@@ -316,5 +316,22 @@
   },
   "resultsMissions": {
     "title": "Missions"
+  },
+  "iap": {
+    "stub": {
+      "confirm": "Buy (test)?",
+      "buy": "Buy",
+      "cancel": "Cancel"
+    }
+  },
+  "shop": {
+    "product": {
+      "remove_ads": "No ads",
+      "starter_pack": "Starter pack",
+      "berries_80": "80 berries",
+      "berries_500": "500 berries",
+      "berries_1200": "1,200 berries",
+      "berries_2800": "2,800 berries"
+    }
   }
 }

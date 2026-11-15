@@ -1,3 +1,6 @@
+import { STUB_PRICES } from '../data/iap-stub';
+import { PRODUCT_KEYS, PRODUCTS } from '../data/shop';
+import { t } from '../i18n';
 import { WebAds } from './rewarded-video/web';
 import type { AdsDevControl, AdsService } from './rewarded-video/types';
 import { WebAudioService } from './audio/web';
@@ -6,6 +9,9 @@ import { WebShare } from './share/web';
 import type { AudioService } from './audio/types';
 import type { HapticsService } from './haptics/types';
 import { WebHaptics } from './haptics/web';
+import { productIds } from './iap/product-ids';
+import type { IapService } from './iap/types';
+import { WebIap, type StubProduct } from './iap/web';
 import type { StorageService } from './storage/types';
 import { WebStorage } from './storage/web';
 
@@ -14,20 +20,37 @@ export interface Services {
   audio: AudioService;
   haptics: HapticsService;
   ads: AdsService;
+  iap: IapService;
   storage: StorageService;
   share: ShareService;
 }
 
 const webAds = new WebAds();
 
+/** The products of the store stub: the ones `.env` gives an id to, at stub prices. */
+const stubCatalog: StubProduct[] = PRODUCT_KEYS.flatMap((key) => {
+  const id = productIds.idOf(key);
+  if (id === null) return [];
+  return [
+    {
+      id,
+      priceString: STUB_PRICES[key],
+      title: () => t(`shop.product.${key}`),
+      consumable: PRODUCTS[key].kind === 'consumable',
+    },
+  ];
+});
+
 /**
  * The single place that picks implementations. Capacitor is not installed yet, so these are
- * the web ones; native haptics and ads chosen by Capacitor.isNativePlatform() arrive in stage M7.
+ * the web ones; native haptics, ads and purchases chosen by Capacitor.isNativePlatform() arrive
+ * in stage M7.
  */
 export const services: Services = {
   audio: new WebAudioService(),
   haptics: new WebHaptics(),
   ads: webAds,
+  iap: new WebIap(stubCatalog),
   storage: new WebStorage(),
   share: new WebShare(),
 };

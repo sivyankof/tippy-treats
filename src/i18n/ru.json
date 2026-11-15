@@ -316,5 +316,22 @@
   },
   "resultsMissions": {
     "title": "Задания"
+  },
+  "iap": {
+    "stub": {
+      "confirm": "Купить (тест)?",
+      "buy": "Купить",
+      "cancel": "Отмена"
+    }
+  },
+  "shop": {
+    "product": {
+      "remove_ads": "Без рекламы",
+      "starter_pack": "Стартовый набор",
+      "berries_80": "80 ягод",
+      "berries_500": "500 ягод",
+      "berries_1200": "1200 ягод",
+      "berries_2800": "2800 ягод"
+    }
   }
 }
