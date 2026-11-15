@@ -76,29 +76,12 @@ export const GIFT_LOOK = {
     smileSpanDeg: 100,
     smileThick: 0.05,
   },
-  /** The opening of the box once the lid is off: a ring and a dark inside along the top edge. */
+  /** The opening of the box once the lid is off: a ring and a dark inside centred on the top edge. */
   opening: {
-    /** Half width as a share of the box width, half height and the centre's drop from the top, as shares of the body height. */
+    /** Half width as a share of the box width, half height as a share of the body height. */
     widthShare: 0.86,
     ry: 0.13,
-    drop: 0.1,
     /** The inside is smaller than the ring by this share. */
     innerShare: 0.78,
   },
 } as const;
-
-/** The idle and invitation motion of a closed box: a sway, and now and then a hop with squash. */
-export interface GiftMotion {
-  sway: { idleDeg: number; readyDeg: number; ms: number };
-  hop: {
-    /** A ready box hops this often. */
-    everyMs: number;
-    /** Pixels in the parent's space. */
-    rise: number;
-    riseMs: number;
-    fallMs: number;
-    /** Scale factors for the crouch before the jump and the landing, and for the stretch in the air. */
-    squash: { x: number; y: number; ms: number };
-    stretch: { x: number; y: number };
-  };
-}

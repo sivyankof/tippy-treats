@@ -448,7 +448,7 @@ export const MENU = {
     /** Without a wallet to fly into the pictures just float up and fade. */
     floatUp: 140,
     /** Pictures poured out of an opening (a box): they rise in a fan around straight up, `reach` px away; they start `staggerMs` apart and wait `holdMs` at the top so the whole fan shows before they fly to the wallet. */
-    pour: { fanDeg: 130, reach: 300, riseMs: 360, staggerMs: 22, holdMs: 200 },
+    pour: { fanDeg: 130, reach: 190, riseMs: 360, staggerMs: 22, holdMs: 200 },
   },
   /** The streak windows: the calendar and the threat window. */
   streak: {
@@ -879,12 +879,42 @@ export const MENU = {
     actionButton: { width: 200, height: 88, radius: 30, shadowOffset: 7, font: 38 },
     actionTextPadding: 28,
     noteFont: 28,
-    chestHeight: 260,
+    chestHeight: 350,
+    /** The chest picture takes this much of the card on the left; title, reward and bar share the rest. */
+    chestAreaWidth: 290,
+    /** Where the middle of the chest body is, and the gap between the chest area and the text column. */
+    chestBoxY: 6,
+    /** The berries poured out of the chest: smaller pictures and a short fan so the heap stays inside the card. */
+    chestPour: { iconScale: 0.5, reach: 110 },
+    chestColumnGap: 10,
     chestTitleFont: 44,
-    chestTitleY: -84,
-    chestBarY: -12,
+    chestTitleY: -112,
+    chestPriceY: -50,
+    chestBarY: 16,
     chestBarFont: 32,
-    chestButtonY: 68,
+    chestButtonY: 118,
+    /** The chest of the day: calm sway while closed, wider sway and hops while ready, lid flip when opened; the rays behind a ready chest. */
+    chestMotion: {
+      sway: { idleDeg: 2.5, readyDeg: 5, ms: 1800 },
+      hop: {
+        everyMs: 2000,
+        rise: 22,
+        riseMs: 190,
+        fallMs: 170,
+        squash: { x: 1.1, y: 0.88, ms: 110 },
+        stretch: { x: 0.94, y: 1.08 },
+      },
+      rays: {
+        count: 10,
+        radius: 170,
+        squashY: 0.62,
+        turnMs: 14000,
+        pulseMs: 800,
+        scale: { from: 0.9, to: 1.08 },
+        alpha: { from: 0.45, to: 0.8 },
+      },
+      open: { foldMs: 110, popMs: 300 },
+    },
     chestButton: { width: 560, height: 88, radius: 32, shadowOffset: 8, font: 42 },
     chestButtonPadding: 40,
     disabledAlpha: 0.5,

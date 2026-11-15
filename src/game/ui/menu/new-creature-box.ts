@@ -1,7 +1,14 @@
 import * as Phaser from 'phaser';
-import type { GiftMotion } from '../../../data/gift-look';
+import type { HopMotion } from '../../../data/hop-motion';
 import { MENU } from '../../../data/menu-layout';
-import { bakeGiftTextures, bodyKey, GIFT_LID_ORIGIN, GIFT_TEXTURES } from '../../fx/gift-texture';
+import {
+  bakeGiftTextures,
+  bodyKey,
+  GIFT_BODY_ORIGIN,
+  GIFT_LID_ORIGIN,
+  GIFT_TEXTURES,
+} from '../../fx/gift-texture';
+import { runHop, startSwayTween } from './hop-motion';
 
 const cfg = MENU.newCreature;
 
@@ -29,7 +36,9 @@ export class GiftBox extends Phaser.GameObjects.Container {
     const lidH = cfg.lidHeight;
     this.openingY = -half + lidH;
     // The body picture is centred on the body, the lid picture pivots around the middle of the lid.
-    this.base = scene.add.image(0, -half + lidH + (cfg.boxSize - lidH) / 2, bodyKey(face, false));
+    this.base = scene.add
+      .image(0, -half + lidH + (cfg.boxSize - lidH) / 2, bodyKey(face, false))
+      .setOrigin(GIFT_BODY_ORIGIN.x, GIFT_BODY_ORIGIN.y);
     this.lid = scene.add
       .image(0, -half + lidH / 2, GIFT_TEXTURES.lid)
       .setOrigin(GIFT_LID_ORIGIN.x, GIFT_LID_ORIGIN.y);
@@ -56,17 +65,9 @@ export class GiftBox extends Phaser.GameObjects.Container {
   }
 
   /** The box rocks from side to side all the time; `ready` rocks wider. */
-  startSway(motion: GiftMotion, ready: boolean): void {
+  startSway(motion: HopMotion, ready: boolean): void {
     this.stopSway();
-    const deg = ready ? motion.sway.readyDeg : motion.sway.idleDeg;
-    this.swayTween = this.scene.tweens.add({
-      targets: this,
-      angle: { from: -deg, to: deg },
-      duration: motion.sway.ms / 2,
-      yoyo: true,
-      repeat: -1,
-      ease: 'Sine.easeInOut',
-    });
+    this.swayTween = startSwayTween(this.scene, this, motion, ready);
   }
 
   stopSway(): void {
@@ -76,47 +77,9 @@ export class GiftBox extends Phaser.GameObjects.Container {
   }
 
   /** One hop: a crouch, a jump with a stretch, a fall and a squash on landing. Ignored while hopping. */
-  hop(motion: GiftMotion): void {
+  hop(motion: HopMotion): void {
     if (this.hopping) return;
     this.hopping = true;
-    const { rise, riseMs, fallMs, squash, stretch } = motion.hop;
-    const sx = this.scaleX;
-    const sy = this.scaleY;
-    const y0 = this.y;
-    const steps: Phaser.Types.Tweens.TweenBuilderConfig[] = [
-      {
-        targets: this,
-        scaleX: sx * squash.x,
-        scaleY: sy * squash.y,
-        duration: squash.ms,
-        ease: 'Sine.easeOut',
-      },
-      {
-        targets: this,
-        y: y0 - rise,
-        scaleX: sx * stretch.x,
-        scaleY: sy * stretch.y,
-        duration: riseMs,
-        ease: 'Quad.easeOut',
-      },
-      { targets: this, y: y0, scaleX: sx, scaleY: sy, duration: fallMs, ease: 'Quad.easeIn' },
-      {
-        targets: this,
-        scaleX: sx * squash.x,
-        scaleY: sy * squash.y,
-        duration: squash.ms,
-        yoyo: true,
-        ease: 'Sine.easeOut',
-      },
-    ];
-    const run = (i: number): void => {
-      const step = steps[i];
-      if (!step || !this.active) {
-        this.hopping = false;
-        return;
-      }
-      this.scene.tweens.add({ ...step, onComplete: () => run(i + 1) });
-    };
-    run(0);
+    runHop(this.scene, this, motion, () => (this.hopping = false));
   }
 }

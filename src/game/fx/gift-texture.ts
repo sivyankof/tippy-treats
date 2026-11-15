@@ -9,10 +9,12 @@ import {
   drawGlossMark,
   glossFromShares,
   drawTwoToneBody,
+  drawVerticalBand,
   ellipsePoints,
   fillPolygon,
   outlineColor,
-  roundRectPoints,
+  drawOpeningRing,
+  roundShape,
   type BodyShape,
 } from './plain-style';
 
@@ -35,40 +37,41 @@ const pad = Math.ceil(grow) + GIFT_LOOK.texturePad;
 /** How far the bow reaches above the top of the lid. */
 const bowReach = Math.ceil(box.bowSize * (bow.loopRise + bow.loopRx) + grow);
 
+/** Room above the body for the back half of the opening ring of the opened box. */
+const openReach = Math.ceil(bodyH * GIFT_LOOK.opening.ry + grow);
 const bodyTexW = box.boxSize + pad * 2;
-const bodyTexH = bodyH + pad * 2;
+const bodyTexH = bodyH + pad * 2 + openReach;
+/** The centre of the body's own rectangle inside its picture. */
+const bodyCenterY = pad + openReach + bodyH / 2;
 const lidTexW = lidW + pad * 2;
 const lidTexH = bowReach + box.lidHeight + pad * 2;
 /** The centre of the lid's own rectangle inside its picture: the lid pivots around it. */
 const lidCenterY = pad + bowReach + box.lidHeight / 2;
 
+/** Where the body picture is anchored (origin of the image): the middle of the body rectangle. */
+export const GIFT_BODY_ORIGIN = { x: 0.5, y: bodyCenterY / bodyTexH } as const;
+
 /** Where the lid picture pivots (origin of the image). */
 export const GIFT_LID_ORIGIN = { x: 0.5, y: lidCenterY / lidTexH } as const;
-
-const roundShape =
-  (share: number): BodyShape =>
-  (cx, cy, rx, ry) =>
-    roundRectPoints(cx, cy, rx, ry, Math.min(rx, ry) * share);
 
 const ellipseShape =
   (rad: number): BodyShape =>
   (cx, cy, rx, ry) =>
     ellipsePoints(cx, cy, rx, ry, rad);
 
-/** The vertical ribbon band from `top` to `bottom`: an outline on both sides and a shadow strip. */
+/** The vertical ribbon band from `top` to `bottom`. */
 function drawRibbon(g: Phaser.GameObjects.Graphics, cx: number, top: number, bottom: number): void {
-  const w = box.ribbonWidth;
-  g.fillStyle(outlineColor(colors.ribbon), 1);
-  g.fillRect(cx - w / 2 - grow, top, w + grow * 2, bottom - top);
-  g.fillStyle(colors.ribbonShadow, 1);
-  g.fillRect(cx - w / 2, top, w, bottom - top);
-  g.fillStyle(colors.ribbon, 1);
-  g.fillRect(cx - w / 2, top, w * (1 - GIFT_LOOK.ribbonBand), bottom - top);
+  drawVerticalBand(g, cx, top, bottom, box.ribbonWidth, {
+    base: colors.ribbon,
+    shadow: colors.ribbonShadow,
+    grow,
+    shadowShare: GIFT_LOOK.ribbonBand,
+  });
 }
 
 function drawBody(g: Phaser.GameObjects.Graphics, withFace: boolean, open: boolean): void {
   const cx = bodyTexW / 2;
-  const cy = bodyTexH / 2;
+  const cy = bodyCenterY;
   drawTwoToneBody(g, roundShape(GIFT_LOOK.bodyRound), cx, cy, box.boxSize / 2, bodyH / 2, {
     base: colors.box,
     shadow: colors.boxShadow,
@@ -76,26 +79,27 @@ function drawBody(g: Phaser.GameObjects.Graphics, withFace: boolean, open: boole
     band: GIFT_LOOK.bodyBand,
   });
   drawRibbon(g, cx, cy - bodyH / 2, cy + bodyH / 2);
+  if (open) drawOpening(g, cx, cy - bodyH / 2);
   drawGlossMark(
     g,
     glossFromShares(GIFT_LOOK.gloss.body, cx, cy, bodyH, colors.gloss, GIFT_LOOK.gloss.alpha),
   );
-  if (open) drawOpening(g, cx, cy - bodyH / 2);
   if (withFace) drawFace(g, bodyH, cx, cy, GIFT_LOOK.face, colors.face);
 }
 
-/** The mouth of the opened box: a ring in the body's outline tone with a dark inside; the ribbon stops at it. */
 function drawOpening(g: Phaser.GameObjects.Graphics, cx: number, top: number): void {
   const o = GIFT_LOOK.opening;
   const rx = (box.boxSize / 2) * o.widthShare;
-  const ry = bodyH * o.ry;
-  const cy = top + bodyH * o.drop + ry;
-  g.fillStyle(outlineColor(colors.box), 1);
-  fillPolygon(g, ellipsePoints(cx, cy, rx + grow, ry + grow, 0));
-  g.fillStyle(colors.inside, 1);
-  fillPolygon(
+  drawOpeningRing(
     g,
-    ellipsePoints(cx, cy + ry * (1 - o.innerShare), rx * o.innerShare, ry * o.innerShare, 0),
+    cx,
+    top,
+    rx,
+    bodyH * o.ry,
+    o.innerShare,
+    outlineColor(colors.box),
+    colors.inside,
+    grow,
   );
 }
 

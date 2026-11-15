@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { glossFromShares, roundRectPoints } from './plain-style';
+import { domeShape, glossFromShares, roundRectPoints, topEdgeAt } from './plain-style';
 
 const CORNER_POINTS = 7;
 
@@ -64,5 +64,37 @@ describe('glossFromShares', () => {
     const m = glossFromShares(spec, 0, 0, 100, 0xffffff, 1);
     expect(m.x).toBeCloseTo(-50);
     expect(m.y).toBeCloseTo(25);
+  });
+});
+
+describe('domeShape', () => {
+  const SIZE = 50;
+  const HEIGHT = 30;
+  const pts = domeShape(0.9, 0.2)(0, 0, SIZE, HEIGHT);
+  const xs = pts.map((p) => p.x);
+  const ys = pts.map((p) => p.y);
+
+  it('spans exactly the half sizes', () => {
+    expect(Math.min(...xs)).toBeCloseTo(-SIZE);
+    expect(Math.max(...xs)).toBeCloseTo(SIZE);
+    expect(Math.min(...ys)).toBeCloseTo(-HEIGHT);
+    expect(Math.max(...ys)).toBeCloseTo(HEIGHT);
+  });
+
+  it('keeps the left side straight only below the middle', () => {
+    const onLeftEdge = pts.filter((p) => p.x < -SIZE + 0.5).map((p) => p.y);
+    expect(Math.min(...onLeftEdge)).toBeGreaterThan(-HEIGHT * 0.2);
+  });
+});
+
+describe('topEdgeAt', () => {
+  it('finds the top of a dome above a given x', () => {
+    const dome = domeShape(1, 0.2)(0, 0, 50, 30);
+    expect(topEdgeAt(dome, 0)).toBeCloseTo(-30, 0);
+    expect(topEdgeAt(dome, 45)).toBeGreaterThan(-15);
+  });
+
+  it('is infinite outside the shape', () => {
+    expect(topEdgeAt(domeShape(1, 0.2)(0, 0, 50, 30), 80)).toBe(Infinity);
   });
 });

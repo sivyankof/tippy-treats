@@ -6,9 +6,9 @@ import { gameState } from '../../../state';
 import type { CreatureId } from '../../../data/creatures';
 import type { LevelUp } from '../../../state/game-state';
 import { msUntilLocalMidnight, now } from '../../../util/clock';
+import type { Button } from '../button';
 import { createOutlinedText } from '../outlined-text';
 import { PopupWindow } from '../style/dialog-window';
-import type { Button } from '../button';
 import { showLevelUps } from './level-up-chain';
 import { newCreaturesOf } from './results-text';
 import { MissionCard } from './missions-card';
@@ -49,6 +49,10 @@ export function openMissionsWindow(
     timerText.setText(t('missions.newIn', { time: formatTimeLeft(msUntilLocalMidnight(now())) }));
   };
 
+  // The chest on screen, and whether the next one is built already opened by a tap just now.
+  let chest: MissionsChest | null = null;
+  let justOpened = false;
+
   const build = (): void => {
     popup.content.each((child: Phaser.GameObjects.GameObject) => {
       if (child !== timerText) child.destroy();
@@ -86,28 +90,32 @@ export function openMissionsWindow(
       y += cfg.cardHeight + cfg.cardGap;
     });
     y += cfg.sectionGap - cfg.cardGap;
-    popup.content.add(
-      new MissionsChest(scene, y + cfg.chestHeight / 2, {
-        width,
-        claimed: items.filter((item) => item.claimed).length,
-        total: items.length,
-        opened: chestClaimed,
-        onOpen: (button) => {
-          const berries = gameState.claimChest();
-          if (berries > 0) {
-            services.audio.berry();
-            services.haptics.play('success');
-            flyReward(scene, {
-              currency: 'berries',
-              amount: berries,
-              from: screenPoint(button),
-              wallet,
-            });
-          }
-          build();
-        },
-      }),
-    );
+    chest = new MissionsChest(scene, y + cfg.chestHeight / 2, {
+      width,
+      claimed: items.filter((item) => item.claimed).length,
+      total: items.length,
+      opened: chestClaimed,
+      justOpened,
+      onOpen: () => {
+        const berries = gameState.claimChest();
+        if (berries <= 0) return;
+        services.audio.berry();
+        services.haptics.play('success');
+        justOpened = true;
+        build();
+        // The berries come out of the chest that was just rebuilt, flipping its lid.
+        flyReward(scene, {
+          currency: 'berries',
+          amount: berries,
+          from: chest?.openingPoint() ?? { x: 0, y: 0 },
+          wallet,
+          pour: true,
+          ...cfg.chestPour,
+        });
+      },
+    });
+    justOpened = false;
+    popup.content.add(chest);
     y += cfg.chestHeight + cfg.sectionGap;
     timerText.setY(y + cfg.timerHeight / 2);
     popup.setContentHeight(y + cfg.timerHeight);

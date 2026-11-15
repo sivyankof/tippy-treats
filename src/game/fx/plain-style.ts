@@ -133,6 +133,33 @@ export function roundRectPoints(
   return points;
 }
 
+/**
+ * A domed shape, a lid: the top corners are quarter ellipses of `topShare` of the half sizes (1 is a half
+ * ellipse), the bottom corners are small circles of `bottomShare` of the smaller half size. Same point
+ * order as `roundRectPoints`.
+ */
+export function domeShape(topShare: number, bottomShare: number): BodyShape {
+  return (cx, cy, rx, ry) => {
+    const ax = rx * topShare;
+    const ay = ry * topShare;
+    const r = Math.min(rx, ry) * bottomShare;
+    const corners = [
+      { x: cx - rx + ax, y: cy - ry + ay, rx: ax, ry: ay, from: Math.PI },
+      { x: cx + rx - ax, y: cy - ry + ay, rx: ax, ry: ay, from: -Math.PI / 2 },
+      { x: cx + rx - r, y: cy + ry - r, rx: r, ry: r, from: 0 },
+      { x: cx - rx + r, y: cy + ry - r, rx: r, ry: r, from: Math.PI / 2 },
+    ];
+    const points: Pt[] = [];
+    for (const c of corners) {
+      for (let i = 0; i <= CORNER_STEPS; i++) {
+        const a = c.from + (Math.PI / 2) * (i / CORNER_STEPS);
+        points.push({ x: c.x + Math.cos(a) * c.rx, y: c.y + Math.sin(a) * c.ry });
+      }
+    }
+    return points;
+  };
+}
+
 /** An outline of a body around (cx, cy) with half sizes `rx`, `ry`. */
 export type BodyShape = (cx: number, cy: number, rx: number, ry: number) => Pt[];
 
@@ -201,4 +228,105 @@ export function drawFace(
   g.beginPath();
   g.arc(cx, cy + size * look.smileY - radius, radius, down - span, down + span);
   g.strokePath();
+}
+
+export interface BandLook {
+  base: number;
+  shadow: number;
+  /** Outline reach beyond the band, pixels. */
+  grow: number;
+  /** The shadow strip on the right as a share of the band width. */
+  shadowShare: number;
+}
+
+/** The smallest y of the outline at `x`: where a vertical line first meets the top of a closed shape. */
+export function topEdgeAt(points: readonly Pt[], x: number): number {
+  let top = Infinity;
+  points.forEach((a, i) => {
+    const b = points[(i + 1) % points.length];
+    if (!b || a.x === b.x) return;
+    const t = (x - a.x) / (b.x - a.x);
+    if (t >= 0 && t <= 1) top = Math.min(top, a.y + (b.y - a.y) * t);
+  });
+  return top;
+}
+
+/** A vertical strip between two x with its own top edge at each side. */
+function fillStrip(
+  g: Phaser.GameObjects.Graphics,
+  x0: number,
+  x1: number,
+  top0: number,
+  top1: number,
+  bottom: number,
+): void {
+  fillPolygon(g, [
+    { x: x0, y: top0 },
+    { x: x1, y: top1 },
+    { x: x1, y: bottom },
+    { x: x0, y: bottom },
+  ]);
+}
+
+/**
+ * A vertical band (ribbon, metal strap) down to `bottom`: an outline on both sides, a shadow strip and the lit part.
+ * `top` is a y, or a function of x for a band that follows a curved top edge (the silhouette of the body under it).
+ */
+export function drawVerticalBand(
+  g: Phaser.GameObjects.Graphics,
+  cx: number,
+  top: number | ((x: number) => number),
+  bottom: number,
+  width: number,
+  look: BandLook,
+): void {
+  const topAt = typeof top === 'number' ? () => top : top;
+  // A curved top edge leaves the band's own outline to show along it, so the fill starts one outline lower.
+  const inset = typeof top === 'number' ? 0 : look.grow;
+  const x0 = cx - width / 2;
+  const x1 = cx + width / 2;
+  const lit = x1 - width * look.shadowShare;
+  g.fillStyle(outlineColor(look.base), 1);
+  fillStrip(
+    g,
+    x0 - look.grow,
+    x1 + look.grow,
+    topAt(x0 - look.grow),
+    topAt(x1 + look.grow),
+    bottom,
+  );
+  g.fillStyle(look.shadow, 1);
+  fillStrip(g, x0, x1, topAt(x0) + inset, topAt(x1) + inset, bottom);
+  g.fillStyle(look.base, 1);
+  fillStrip(g, x0, lit, topAt(x0) + inset, topAt(lit) + inset, bottom);
+}
+
+/** A rounded rectangle body whose corner radius is `share` of its smaller half size. */
+export const roundShape =
+  (share: number): BodyShape =>
+  (cx, cy, rx, ry) =>
+    roundRectPoints(cx, cy, rx, ry, Math.min(rx, ry) * share);
+
+/**
+ * The mouth of an opened box: a ring centred on the top edge `top` of the body, in `ringColor`, with
+ * a dark inside. Its back half forms the top silhouette; `grow` is the outline thickness.
+ */
+export function drawOpeningRing(
+  g: Phaser.GameObjects.Graphics,
+  cx: number,
+  top: number,
+  rx: number,
+  ry: number,
+  innerShare: number,
+  ringColor: number,
+  insideColor: number,
+  grow: number,
+): void {
+  g.fillStyle(ringColor, 1);
+  fillPolygon(g, ellipsePoints(cx, top, rx + grow, ry + grow, 0));
+  g.fillStyle(insideColor, 1);
+  fillPolygon(
+    g,
+    ellipsePoints(cx, top + ry * (1 - innerShare), rx * innerShare, ry * innerShare, 0),
+  );
 }

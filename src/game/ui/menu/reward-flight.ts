@@ -22,6 +22,10 @@ export interface RewardFlight {
   wallet?: WalletTargets;
   /** The pictures pour out of an opening (a box) in an upward fan instead of scattering all around. */
   pour?: boolean;
+  /** Share of the usual picture size, for a small opening. */
+  iconScale?: number;
+  /** How far a poured picture rises, in place of the usual reach. */
+  reach?: number;
   /** Runs when the last picture has arrived. */
   onDone?: () => void;
 }
@@ -41,6 +45,7 @@ export function flyReward(scene: Phaser.Scene, flight: RewardFlight): void {
     return;
   }
   counter?.addPending(shares.reduce((sum, share) => sum + share, 0));
+  const iconScale = flight.iconScale ?? 1;
   let left = shares.length;
   shares.forEach((share, i) => {
     const image = scene.add
@@ -64,7 +69,7 @@ export function flyReward(scene: Phaser.Scene, flight: RewardFlight): void {
       {
         pour: flight.pour === true,
         fanDeg: cfg.pour.fanDeg,
-        reach: flight.pour ? cfg.pour.reach : cfg.scatter,
+        reach: flight.pour ? (flight.reach ?? cfg.pour.reach) : cfg.scatter,
       },
       { x: 0, y: 0 },
     );
@@ -72,7 +77,7 @@ export function flyReward(scene: Phaser.Scene, flight: RewardFlight): void {
       targets: image,
       x: spot.x,
       y: spot.y,
-      scale: 1,
+      scale: iconScale,
       duration: flight.pour ? cfg.pour.riseMs : cfg.scatterMs,
       ease: 'Back.easeOut',
       delay: i * (flight.pour ? cfg.pour.staggerMs : cfg.staggerMs),
