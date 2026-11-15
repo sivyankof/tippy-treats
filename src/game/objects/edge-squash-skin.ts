@@ -16,7 +16,7 @@ import { EdgeMarks, type BodyFrame } from './edge-squash-marks';
 import { bodyLookOf, type BodyLook } from './edge-squash-look';
 import { EdgeSilhouette } from './edge-squash-silhouette';
 import { HALF_LAYER } from './layer-art';
-import { EDGE_PROBE, createColumnView, type Columns, type ColumnView } from './edge-squash-columns';
+import { createColumnView, type Columns, type ColumnView } from './edge-squash-columns';
 
 /**
  * Draws the art of a layer view squashed against the screen edge (`edge-squash.ts`): while a
@@ -89,13 +89,8 @@ export class EdgeSquashSkin {
       tops[i] = edge + (cut * (bottoms[i]! - edge)) / art.height;
     }
     this.view.show(art.texture.key, width, art.height, this.columns, art.alpha);
-    if (EDGE_PROBE === 'nofolds') {
-      this.silhouette.hide();
-      this.marks.hide();
-    } else {
-      this.silhouette.draw(shape, s, this.columns, this.frame(art), this.look(art));
-      this.marks.draw(shape, s, this.columns, this.frame(art));
-    }
+    this.silhouette.draw(shape, s, this.columns, this.frame(art), this.look(art));
+    this.marks.draw(shape, s, this.columns, this.frame(art));
     if (!this.on) this.artWasVisible = art.visible;
     art.setVisible(false);
     this.face.x = (squashMid(shape) * EDGE_SQUASH.faceShare) / s;

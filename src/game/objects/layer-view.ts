@@ -14,7 +14,6 @@ import { idlePose, type IdlePose } from '../ui/idle-motion';
 import { creatureColors } from './creature-art/primitives';
 import type { EdgeShape } from './edge-squash';
 import { EdgeSquashSkin } from './edge-squash-skin';
-import { EDGE_PROBE } from './edge-squash-columns';
 import { LayerFace } from './layer-face';
 import { LayerMaterial, type MaterialMotion } from './layer-material';
 import { LayerRig } from './layer-rig';
@@ -204,7 +203,7 @@ export class LayerView extends Phaser.GameObjects.Container {
    * own units), or as it is for `null`. Only the drawing changes, never the layer's place.
    */
   setEdgeSquash(shape: Readonly<EdgeShape> | null): this {
-    if (!shape || EDGE_PROBE === 'off') {
+    if (!shape) {
       this.edgeSkin?.clear();
       return this;
     }

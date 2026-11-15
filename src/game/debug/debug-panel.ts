@@ -10,7 +10,6 @@ import type { RunInfo } from '../run-info';
 import { adsDev } from '../../services';
 import { gameState } from '../../state';
 import { cycleDebugLevel, cycleDebugSlot, getDebugTeam } from './debug-team';
-import { EDGE_PROBE } from '../objects/edge-squash-columns';
 
 const FONT_SIZE = 30;
 const MARGIN = 20;
@@ -163,7 +162,6 @@ export class DebugPanel {
         `work ${frameWorkStats.average.toFixed(WORK_DECIMALS)} ms, p95 ${frameWorkStats.percentile.toFixed(WORK_DECIMALS)} ms`,
         `fx ${fxLabel()}`,
         `berries ${gameState.berries}`,
-        ...(EDGE_PROBE ? [`edge: ${EDGE_PROBE}`] : []),
       ].join('\n'),
     );
   }

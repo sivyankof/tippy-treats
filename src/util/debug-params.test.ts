@@ -140,12 +140,6 @@ describe('withoutReset', () => {
     );
     expect(withoutReset('http://localhost:5173/?reset=1')).toBe('http://localhost:5173/');
   });
-
-  it('reads the edge probe and opens the debug panel with it', () => {
-    expect(parseDebugParams('?edge=img')).toEqual({ debug: true, edge: 'img' });
-    expect(parseDebugParams('?edge=nofolds').edge).toBe('nofolds');
-    expect(parseDebugParams('?edge=other')).toEqual({ debug: false });
-  });
 });
 
 describe('showsFpsMeter', () => {
