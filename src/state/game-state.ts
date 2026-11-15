@@ -169,12 +169,14 @@ export class GameState {
       today,
       this.clockBehind,
       this.dailyAttemptDay,
+      this.utcToday(),
     );
     const next = withRunCounted(progress.save);
     const summary = {
       ...applied.summary,
       missions: progress.missions,
       dailyTiers: progress.dailyTiers,
+      dailyStale: progress.dailyStale,
     };
     this.noteRun(this.store.save, next, summary, extras);
     this.store.replace(next);

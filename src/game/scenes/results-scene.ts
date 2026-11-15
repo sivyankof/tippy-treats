@@ -24,7 +24,7 @@ import { spacingShare, spreadBlocks } from '../ui/menu/results-layout';
 import { ResultsMissions } from '../ui/menu/results-missions';
 import { resultsFlow } from '../ui/menu/results-flow';
 import { ResultsTiers } from '../ui/menu/results-tiers';
-import { dailyAttemptText, dailyProgressText } from '../ui/menu/daily-text';
+import { dailyResultsText } from '../ui/menu/daily-text';
 import { coinLines, nearMissText, newCreaturesOf } from '../ui/menu/results-text';
 import { ResultsXp } from '../ui/menu/results-xp';
 
@@ -98,9 +98,7 @@ export class ResultsScene extends Phaser.Scene {
       ? createDebugPlate(this)
       : null;
     const hintText = daily
-      ? [dailyAttemptText(result.height), dailyProgressText(gameState.dailyInfo().best, true)].join(
-          '\n',
-        )
+      ? dailyResultsText(result.height, gameState.dailyInfo().best, summary.dailyStale)
       : nearMissText(
           nearMiss({
             height: result.height,

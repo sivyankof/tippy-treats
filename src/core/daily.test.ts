@@ -16,6 +16,7 @@ import {
   nextTier,
   recordDailyRun,
   startAttempt,
+  dailyTowerChanged,
   tierReached,
   type DailyState,
 } from './daily';
@@ -225,8 +226,9 @@ describe('recordDailyRun', () => {
   });
   it('ignores a run that started on an earlier day and crossed midnight', () => {
     const next = dailyForDay({ ...played, day: '2026-11-14' }, '2026-11-15');
-    const { daily, paid } = recordDailyRun(next, 120, '2026-11-14');
+    const { daily, paid, counted } = recordDailyRun(next, 120, '2026-11-14');
     expect(paid).toEqual([]);
+    expect(counted).toBe(false);
     expect(daily).toEqual(next);
     expect(daily.best).toBe(0);
     expect(daily.claimedTiers).toEqual([]);
@@ -291,5 +293,17 @@ describe('nextTier', () => {
     expect(nextTier(15)?.height).toBe(30);
     expect(nextTier(99)?.height).toBe(100);
     expect(nextTier(100)).toBeNull();
+  });
+});
+
+describe('dailyTowerChanged', () => {
+  it('is true only when the UTC day moved past the day of the attempt', () => {
+    expect(dailyTowerChanged('2026-11-14', '2026-11-15')).toBe(true);
+    expect(dailyTowerChanged('2026-11-15', '2026-11-15')).toBe(false);
+  });
+
+  it('is false for a clock set back and for an unknown attempt day', () => {
+    expect(dailyTowerChanged('2026-11-15', '2026-11-14')).toBe(false);
+    expect(dailyTowerChanged('', '2026-11-15')).toBe(false);
   });
 });

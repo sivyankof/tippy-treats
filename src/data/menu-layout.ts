@@ -1186,8 +1186,8 @@ export const MENU = {
     },
     /** Team cards use `MENU.card`; the creatures are drawn at this level. */
     team: { gapX: 28 },
-    /** The one-line explainer under the header; a tap opens the explainer window again. */
-    intro: { width: 960, font: 38, color: 0xfff6ec },
+    /** The explainer under the header: wrapped text on a light plate as high as it needs (at least `minHeight`). */
+    intro: { width: 960, minHeight: 140, font: 40, padX: 36, padY: 18, stroke: 4 },
     /** Reward tiers: five cells in a row. */
     rewards: {
       width: 960,

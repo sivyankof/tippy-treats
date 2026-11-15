@@ -342,7 +342,8 @@
     "tier": "Daily reward for {n} layers",
     "back": "Back to daily",
     "attempt": "This attempt: tier {n}",
-    "attemptNone": "one=This attempt fell short of {n} layer|other=This attempt fell short of {n} layers"
+    "attemptNone": "one=This attempt fell short of {n} layer|other=This attempt fell short of {n} layers",
+    "stale": "The daily tower changed.\nThis attempt does not count"
   },
   "resultsMissions": {
     "title": "Missions"

@@ -274,6 +274,7 @@ describe('daily tower across the day change', () => {
     const summary = state.recordRun(run({ mode: 'daily', height: 40, coins: 0 }));
     const tiers = summary.dailyTiers.length;
     expect(tiers).toBeGreaterThan(0);
+    expect(summary.dailyStale).toBe(false);
     const wallet = { coins: state.coins, berries: state.berries };
     const repeat = state.recordRun(run({ mode: 'daily', height: 40, coins: 0 }));
     expect(repeat.dailyTiers).toEqual([]);
@@ -285,6 +286,8 @@ describe('daily tower across the day change', () => {
     clock.ms += MS_PER_DAY;
     const late = state.recordRun(run({ mode: 'daily', height: 100, coins: 0 }));
     expect(late.dailyTiers).toEqual([]);
+    // The results say the tower changed instead of showing the tier and the new day's progress.
+    expect(late.dailyStale).toBe(true);
     expect(state.coins).toBe(wallet.coins + levelCoins(repeat) + levelCoins(late));
 
     // On the new day the tiers are open again.
@@ -292,5 +295,17 @@ describe('daily tower across the day change', () => {
     expect(state.recordRun(run({ mode: 'daily', height: 40, coins: 0 })).dailyTiers).toHaveLength(
       tiers,
     );
+  });
+
+  it('does not say the tower changed when the clock was only set back', () => {
+    const clock = { ms: T0 };
+    const state = createTestState(clock);
+    state.recordRun(run({ height: layersTo(5), coins: 0 }));
+    expect(state.startDailyAttempt()).toBe(true);
+    state.recordRun(run({ mode: 'daily', height: 20, coins: 0 }));
+    clock.ms -= MS_PER_DAY;
+    expect(state.startDailyAttempt()).toBe(true);
+    const back = state.recordRun(run({ mode: 'daily', height: 40, coins: 0 }));
+    expect(back.dailyStale).toBe(false);
   });
 });

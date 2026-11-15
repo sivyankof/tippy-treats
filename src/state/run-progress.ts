@@ -1,5 +1,5 @@
 // What a finished run adds beyond XP and records: streak day, mission progress and daily tiers.
-import type { DailyPayout } from '../core/daily';
+import { dailyTowerChanged, type DailyPayout } from '../core/daily';
 import type { RunStats } from '../core/missions';
 import type { CoinSource } from '../core/sim-types';
 import type { RunResult } from '../core/run-result';
@@ -23,6 +23,8 @@ export interface RunProgress {
   save: Save;
   missions: { before: MissionProgress[]; after: MissionProgress[] };
   dailyTiers: DailyPayout[];
+  /** A daily run whose tower changed before it ended: it counted for nothing. */
+  dailyStale: boolean;
 }
 
 export function statsOf(result: RunResult, extras: RunExtras): RunStats {
@@ -41,7 +43,7 @@ export function statsOf(result: RunResult, extras: RunExtras): RunStats {
 
 /**
  * Counts the finished run for the streak (local `today`), the missions and, for a daily run,
- * the daily tower (`attemptDay` is the UTC day the attempt was started on). The missions and
+ * the daily tower (`attemptDay` is the UTC day the attempt was started on, `utcDay` today's). The missions and
  * the daily slice must already be refreshed for today.
  */
 export function applyRunProgress(
@@ -51,15 +53,18 @@ export function applyRunProgress(
   today: string,
   clockBack: boolean,
   attemptDay: string,
+  utcDay: string,
 ): RunProgress {
   const before = save.missions.items;
   let next = withRunDayCounted(save, today, clockBack);
   next = withMissionStats(next, statsOf(result, extras));
   let dailyTiers: DailyPayout[] = [];
+  let dailyStale = false;
   if (result.mode === 'daily') {
     const recorded = withDailyRun(next, result.height, attemptDay);
+    dailyStale = !recorded.counted && dailyTowerChanged(attemptDay, utcDay);
     next = recorded.save;
     dailyTiers = recorded.paid;
   }
-  return { save: next, missions: { before, after: next.missions.items }, dailyTiers };
+  return { save: next, missions: { before, after: next.missions.items }, dailyTiers, dailyStale };
 }

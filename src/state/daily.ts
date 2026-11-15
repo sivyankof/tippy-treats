@@ -74,9 +74,9 @@ export function withDailyRun(
   save: Save,
   height: number,
   runDay: string,
-): { save: Save; paid: DailyPayout[] } {
+): { save: Save; paid: DailyPayout[]; counted: boolean } {
   const result = recordDailyRun(save.daily, height, runDay);
   let next: Save = { ...save, daily: result.daily };
   for (const payout of result.paid) next = earn(next, payout.cost);
-  return { save: next, paid: result.paid };
+  return { save: next, paid: result.paid, counted: result.counted };
 }

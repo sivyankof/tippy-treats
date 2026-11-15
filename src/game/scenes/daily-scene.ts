@@ -117,6 +117,8 @@ export class DailyScene extends Phaser.Scene {
     const view = { left: info.attemptsLeft, canAddAttempt: info.canAddAttempt };
     this.adReady = services.ads.isRewardedReady();
     this.attempts?.refresh(view, this.adReady);
+    // One timer on the screen: once the attempts ran out it stands in the Play slot.
+    this.date.showTimer(!this.play || view.left > 0);
     this.play?.refresh(view, this.adReady, info.unlocked && !this.leaving);
     // The buttons may not come back while an ad plays or the screen is leaving.
     if (this.adRunning || this.leaving) this.disableAds();

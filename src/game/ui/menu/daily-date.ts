@@ -25,25 +25,42 @@ export class DailyDate implements DailySection {
   readonly root: Phaser.GameObjects.Container;
   readonly height = cfg.height;
   private readonly timer: Phaser.GameObjects.Text;
+  private readonly date: Phaser.GameObjects.Text;
+  private readonly lift = faceOffsetY('card');
   private shown = '';
 
   constructor(scene: Phaser.Scene, day: string) {
     const plate = new VolumePlate(scene, 'card', cfg.height, { fill: cfg.fill })
       .setBodyWidth(cfg.width)
       .setY(cfg.height / 2);
-    const lift = faceOffsetY('card');
-    const date = fitText(
+    this.date = fitText(
       createOutlinedText(
         scene,
         0,
-        cfg.dateY + lift,
+        cfg.dateY + this.lift,
         t('daily.date', { date: formatDay(day) }),
         cfg.font,
       ),
       cfg.width - cfg.font * 2,
     );
-    this.timer = createOutlinedText(scene, 0, cfg.timerY + lift, '', cfg.timerFont, cfg.timerColor);
-    this.root = scene.add.container(0, 0, [plate, date, this.timer]);
+    this.timer = createOutlinedText(
+      scene,
+      0,
+      cfg.timerY + this.lift,
+      '',
+      cfg.timerFont,
+      cfg.timerColor,
+    );
+    this.root = scene.add.container(0, 0, [plate, this.date, this.timer]);
+  }
+
+  /**
+   * With no attempts left the time to the next tower stands in place of Play, so the plate shows
+   * only the date, centred.
+   */
+  showTimer(shown: boolean): void {
+    this.timer.setVisible(shown);
+    this.date.setY((shown ? cfg.dateY : cfg.height / 2) + this.lift);
   }
 
   /** Shows the time to the next tower; the text is rebuilt only when it changes. */

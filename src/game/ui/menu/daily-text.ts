@@ -31,6 +31,15 @@ export function dailyProgressText(best: number, played: boolean): string {
   }
 }
 
+/**
+ * The lines under a daily run: the tier of the attempt and the progress of the day; only "the
+ * tower changed" when the attempt started on the previous tower and counted for nothing.
+ */
+export function dailyResultsText(height: number, best: number, stale: boolean): string {
+  if (stale) return t('resultsDaily.stale');
+  return [dailyAttemptText(height), dailyProgressText(best, true)].join('\n');
+}
+
 /** The tier one attempt of `height` layers reached, or how far the first tier was. */
 export function dailyAttemptText(height: number): string {
   const tier = tierReached(height);

@@ -23,6 +23,8 @@ export interface DailyPayout {
 
 export interface DailyRunResult {
   daily: DailyState;
+  /** The run started on the slice's day and counted for it. */
+  counted: boolean;
   /** Tiers paid by this run, ascending by height. */
   paid: DailyPayout[];
 }
@@ -93,13 +95,21 @@ export function startAttempt(daily: DailyState): DailyState | null {
 }
 
 /**
+ * The tower of the attempt started on `runDay` is gone: the UTC day `utcDay` is later. A clock
+ * set back (the day is earlier) or an unknown attempt day (`''`) is not a change of the tower.
+ */
+export function dailyTowerChanged(runDay: string, utcDay: string): boolean {
+  return runDay !== '' && runDay < utcDay;
+}
+
+/**
  * Records a finished run: the best height rises and every newly reached tier is paid once.
  * `runDay` is the UTC day the attempt was started on; a run that started on another day than
  * the slice (it crossed midnight) changes nothing and pays nothing.
  */
 export function recordDailyRun(daily: DailyState, height: number, runDay: string): DailyRunResult {
   if (runDay !== daily.day) {
-    return { daily: { ...daily, claimedTiers: [...daily.claimedTiers] }, paid: [] };
+    return { daily: { ...daily, claimedTiers: [...daily.claimedTiers] }, counted: false, paid: [] };
   }
   const reached = Number.isFinite(height) ? Math.max(0, Math.floor(height)) : 0;
   const best = Math.max(daily.best, reached);
@@ -111,7 +121,7 @@ export function recordDailyRun(daily: DailyState, height: number, runDay: string
       paid.push({ height: tier.height, cost: { ...tier.reward } });
     }
   }
-  return { daily: { ...daily, best, claimedTiers }, paid };
+  return { daily: { ...daily, best, claimedTiers }, counted: true, paid };
 }
 
 /** Where the player stands on the reward tiers of the day, for the line under the tiers. */

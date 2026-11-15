@@ -43,6 +43,8 @@ export interface RunSummary {
   missions: { before: MissionProgress[]; after: MissionProgress[] };
   /** Daily tower tiers this run reached and paid (empty outside the daily tower). */
   dailyTiers: DailyPayout[];
+  /** A daily run whose tower changed (midnight UTC) before it ended: it counted for nothing. */
+  dailyStale: boolean;
 }
 
 /** The summary of a run that did not reach the save (dev runs, the creature demo). */
@@ -57,6 +59,7 @@ export const EMPTY_SUMMARY: RunSummary = {
   recordCreatures: [],
   missions: { before: [], after: [] },
   dailyTiers: [],
+  dailyStale: false,
 };
 
 /**
@@ -126,6 +129,7 @@ export function applyRun(
       recordCreatures: rewarded.creatures,
       missions: EMPTY_SUMMARY.missions,
       dailyTiers: EMPTY_SUMMARY.dailyTiers,
+      dailyStale: EMPTY_SUMMARY.dailyStale,
     },
   };
 }
