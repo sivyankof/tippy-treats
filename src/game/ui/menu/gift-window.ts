@@ -4,6 +4,8 @@ import { PALETTE } from '../../../data/palette';
 import { formatNumber, t, tn } from '../../../i18n';
 import { services } from '../../../services';
 import { gameState } from '../../../state';
+import { showRewarded } from '../../rewarded';
+import { markAdUnavailable } from './ad-unavailable';
 import { cssColor } from '../../../util/color';
 import { createTextButton, type Button } from '../button';
 import { createOutlinedText } from '../outlined-text';
@@ -128,13 +130,20 @@ export function openGiftWindow(
   };
 
   const offerDouble = (coins: number): void => {
+    const markAdGone = (button: Button, label: Phaser.GameObjects.Text): void =>
+      markAdUnavailable(
+        button,
+        label,
+        cfg.button.width - cfg.button.radius * 2,
+        cfg.adDisabledAlpha,
+      );
     let busy = false;
     let doubled: ReturnType<typeof addButton> | null = null;
     const watch = async (button: Button, label: Phaser.GameObjects.Text): Promise<void> => {
       if (busy) return;
       busy = true;
       button.setEnabled(false);
-      const result = await services.ads.showRewarded('gift_double');
+      const result = await showRewarded('gift_double');
       if (!button.active) return;
       if (result === 'rewarded') {
         gameState.addCoins(coins);
@@ -144,18 +153,18 @@ export function openGiftWindow(
         label.setText(t('gift.doubled'));
         return;
       }
-      if (result === 'unavailable') label.setText(t('continue.adUnavailable'));
+      if (result === 'unavailable') markAdGone(button, label);
       else {
         busy = false;
         button.setEnabled(true);
       }
-      fitText(label, cfg.button.width - cfg.button.radius * 2);
     };
     scene.time.delayedCall(cfg.pop.ms, () => {
       if (!wait.active) return;
       doubled = addButton(t('gift.double'), PALETTE.accentSecondary, 'ui_gift_double', () => {
         if (doubled) void watch(doubled.button, doubled.label);
       });
+      if (!services.ads.isRewardedReady()) markAdGone(doubled.button, doubled.label);
     });
   };
 

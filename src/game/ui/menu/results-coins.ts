@@ -5,10 +5,12 @@ import { PALETTE } from '../../../data/palette';
 import { formatNumber, t } from '../../../i18n';
 import { services } from '../../../services';
 import { gameState } from '../../../state';
+import { showRewarded } from '../../rewarded';
 import { TREASURE_TEXTURES, createTreasureTextures } from '../../fx/treasure-textures';
 import { createTextButton, type Button } from '../button';
 import { NumberRoll } from '../number-roll';
 import { createOutlinedText } from '../outlined-text';
+import { markAdUnavailable } from './ad-unavailable';
 import { fitText } from './fit-text';
 import { stackRows, type Row } from './results-layout';
 import type { CoinLine } from './results-text';
@@ -30,6 +32,7 @@ export class ResultsCoins {
   private readonly buttonLabel: Phaser.GameObjects.Text | null = null;
   private buttonEnabled = true;
   private busy = false;
+  private adGone = false;
 
   constructor(
     private readonly scene: Phaser.Scene,
@@ -66,13 +69,14 @@ export class ResultsCoins {
       rows.push({ obj: this.button, height: cfg.adButton.height });
     }
     this.height = stackRows(this.container, rows, cfg.rowGap);
+    if (this.button && !services.ads.isRewardedReady()) this.markAdGone();
     this.update(0);
   }
 
   /** The button is live only while the screen is in. */
   setEnabled(enabled: boolean): void {
     this.buttonEnabled = enabled;
-    if (!this.busy) this.button?.setEnabled(enabled);
+    if (!this.busy && !this.adGone) this.button?.setEnabled(enabled);
   }
 
   update(dtMs: number): void {
@@ -106,11 +110,23 @@ export class ResultsCoins {
     return { obj: grid, height: rowCount * cfg.breakdownRowHeight };
   }
 
+  /** No ad can be shown: the button stays, inactive, saying so. */
+  private markAdGone(): void {
+    if (!this.button || !this.buttonLabel) return;
+    this.adGone = true;
+    markAdUnavailable(
+      this.button,
+      this.buttonLabel,
+      cfg.adButton.width - cfg.adTextPadding,
+      cfg.adDisabledAlpha,
+    );
+  }
+
   private async watchAd(): Promise<void> {
     if (this.busy || !this.button) return;
     this.busy = true;
     this.button.setEnabled(false);
-    const result = await services.ads.showRewarded('double_coins');
+    const result = await showRewarded('double_coins');
     if (!this.container.active) return;
     if (result === 'rewarded') {
       gameState.addCoins(this.earned);
@@ -122,18 +138,7 @@ export class ResultsCoins {
       return;
     }
     if (result === 'unavailable') {
-      const { x, y } = this.button;
-      this.button.destroy();
-      const note = createOutlinedText(
-        this.scene,
-        x,
-        y,
-        t('continue.adUnavailable'),
-        cfg.adButton.font,
-        cfg.unavailableColor,
-      );
-      fitText(note, cfg.adButton.width);
-      this.container.add(note);
+      this.markAdGone();
       return;
     }
     this.busy = false;

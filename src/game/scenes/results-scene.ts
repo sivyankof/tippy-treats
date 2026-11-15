@@ -7,6 +7,7 @@ import { PALETTE } from '../../data/palette';
 import { services } from '../../services';
 import { gameState } from '../../state';
 import { RecordCelebration } from '../fx/record-celebration';
+import { leaveResultsAds } from '../interstitial-flow';
 import { SCENES, type ResultsData } from '../scene-keys';
 import { createDimOverlay } from '../ui/dim-overlay';
 import { createPlate, type VolumePlate } from '../ui/style/volume';
@@ -45,6 +46,8 @@ export class ResultsScene extends Phaser.Scene {
   private leaving = false;
   /** The share picture is being made: another tap waits for it. */
   private sharing = false;
+  /** What the interstitial rules need to know about the run on screen. */
+  private runExit = { runMs: 0, recorded: false };
   /** Padding and gap of the panel, shrunk on a short screen. */
   private spacing: { padY: number; gap: number } = { padY: cfg.panel.padY, gap: cfg.panel.gap };
 
@@ -58,6 +61,7 @@ export class ResultsScene extends Phaser.Scene {
     const { width, height } = this.scale.gameSize;
     this.leaving = false;
     this.sharing = false;
+    this.runExit = { runMs: result.durationMs, recorded: data.recorded };
     this.dim = createDimOverlay(this, ANIM.results.overlayAlpha, width, height).setInteractive();
     this.header = new ResultsHeader(this, result, summary.isRecord);
     this.stats = createStats(this, result, tally.abilities, width);
@@ -234,13 +238,17 @@ export class ResultsScene extends Phaser.Scene {
     });
   }
 
-  /** The screen slides away and darkens, then `then` takes over. Buttons stop answering. */
+  /**
+   * The ads that are due are shown over the results (the interstitial, then the "No ads" offer),
+   * then the screen slides away and darkens and `then` takes over. Buttons stop answering.
+   */
   private leave(then: () => void): void {
     if (this.leaving) return;
     this.leaving = true;
     this.xp.stop();
     this.buttons.setEnabled(false);
     this.coins.setEnabled(false);
-    leaveScreen(this, this.content(), then);
+    const slideAway = (): void => leaveScreen(this, this.content(), then);
+    void leaveResultsAds(this, this.runExit).then(slideAway, slideAway);
   }
 }

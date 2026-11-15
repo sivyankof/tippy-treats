@@ -472,6 +472,20 @@ export const MENU = {
       balanceRight: 380,
     },
   },
+  /** The gentle "no ads" offer after the second interstitial of a session. */
+  noAdsOffer: {
+    contentHeight: 700,
+    iconSize: 190,
+    iconY: 110,
+    textY: 290,
+    textFont: 46,
+    /** The note under the text; it also shows why a purchase did not go through. */
+    noteY: 356,
+    noteFont: 36,
+    buyY: 480,
+    buy: { width: 720, height: 124, radius: 44, shadowOffset: 10, font: 52 },
+    laterY: 624,
+  },
   /** The free gift window. */
   gift: {
     /** The box on the window, by its centre from the top of the content, and its scale. */
@@ -485,6 +499,8 @@ export const MENU = {
     buttonY: 570,
     button: { width: 640, height: 124, radius: 44, shadowOffset: 10, font: 52 },
     contentHeight: 640,
+    /** The "x2 for an ad" button while no ad can be shown. */
+    adDisabledAlpha: 0.6,
     /** Shaking before the opening: how long, the waves and the swing. */
     shakeMs: 700,
     shakeWaves: 28,
@@ -872,7 +888,7 @@ export const MENU = {
     breakdownRowHeight: 56,
     adButton: { width: 580, height: 104, radius: 36, shadowOffset: 8, font: 44 },
     adTextPadding: 40,
-    unavailableColor: 0xb9a9c6,
+    adDisabledAlpha: 0.5,
     xpFont: 52,
     nearMissFont: 40,
     nearMissWidth: 900,

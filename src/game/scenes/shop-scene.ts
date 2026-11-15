@@ -9,6 +9,7 @@ import { t } from '../../i18n';
 import { services } from '../../services';
 import { gameState } from '../../state';
 import { buyProduct, loadPrices, restorePurchases, type Prices } from '../purchases';
+import { showRewarded } from '../rewarded';
 import { openScreen, SCENES } from '../scene-keys';
 import type { DailySection } from '../ui/menu/daily-section';
 import { flyReward, type WalletTargets } from '../ui/menu/reward-flight';
@@ -166,7 +167,7 @@ export class ShopScene extends Phaser.Scene {
   private async watchAd(): Promise<void> {
     const from = this.tapPoint();
     this.busy = true;
-    const result = await services.ads.showRewarded('shop_coins');
+    const result = await showRewarded('shop_coins');
     this.busy = false;
     if (!this.scene.isActive()) return;
     if (result === 'rewarded') {

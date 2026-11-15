@@ -4,6 +4,7 @@ import { PALETTE } from '../../data/palette';
 import { t } from '../../i18n';
 import { services } from '../../services';
 import { gameState } from '../../state';
+import { showRewarded } from '../rewarded';
 import { DAILY_RUN } from '../run-request';
 import { openScreen, SCENES, startRunFrom } from '../scene-keys';
 import { createTextButton, type Button } from '../ui/button';
@@ -34,6 +35,8 @@ export class DailyScene extends Phaser.Scene {
   private day = '';
   private leaving = false;
   private adRunning = false;
+  /** Whether an ad was ready the last time the attempts block was drawn. */
+  private adReady = true;
   private clockMs = 0;
 
   constructor() {
@@ -83,6 +86,7 @@ export class DailyScene extends Phaser.Scene {
     this.bg.update(delta);
     this.header.update(time, delta);
     this.team.tick(delta);
+    if (this.attempts && services.ads.isRewardedReady() !== this.adReady) this.refresh();
     this.clockMs += delta;
     if (this.clockMs < cfg.date.tickMs) return;
     this.clockMs = 0;
@@ -112,9 +116,10 @@ export class DailyScene extends Phaser.Scene {
   private refresh(): void {
     const info = gameState.dailyInfo();
     const canPlay = info.unlocked && info.attemptsLeft > 0;
+    this.adReady = services.ads.isRewardedReady();
     this.attempts?.refresh(
       { left: info.attemptsLeft, canAddAttempt: info.canAddAttempt },
-      services.ads.isRewardedReady(),
+      this.adReady,
     );
     if (!this.play || !this.playLabel) return;
     this.playLabel.setText(t(canPlay ? 'daily.play' : 'daily.noAttempts'));
@@ -127,7 +132,7 @@ export class DailyScene extends Phaser.Scene {
     if (this.adRunning) return;
     this.adRunning = true;
     this.attempts?.adButton.setEnabled(false);
-    void services.ads.showRewarded('daily_attempt').then((result) => {
+    void showRewarded('daily_attempt').then((result) => {
       this.adRunning = false;
       if (result === 'rewarded' && this.scene.isActive()) gameState.addDailyAttempt();
       if (this.scene.isActive()) this.refresh();

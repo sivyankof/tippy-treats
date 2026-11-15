@@ -5,6 +5,8 @@ import { STREAK } from '../../../data/streak';
 import { t, tn } from '../../../i18n';
 import { services } from '../../../services';
 import { gameState } from '../../../state';
+import { showRewarded } from '../../rewarded';
+import { markAdUnavailable } from './ad-unavailable';
 import { createTextButton, type Button } from '../button';
 import { createOutlinedText } from '../outlined-text';
 import { BalanceChip } from '../style/balance-chip';
@@ -79,23 +81,24 @@ export function openStreakThreat(scene: Phaser.Scene, onClosed?: () => void): vo
   const ad = make(t('streakThreat.restoreAd'), PALETTE.accentSecondary, 'ui_threat_ad', () => {
     void watchAd();
   });
-  const markAdUnavailable = (): void => {
-    ad.label.setText(t('continue.adUnavailable'));
-    fitText(ad.label, cfg.buttonWidth - cfg.buttonRadius * 2);
-    ad.button.setEnabled(false);
-    ad.button.setAlpha(cfg.disabledAlpha);
-  };
+  const markAdGone = (): void =>
+    markAdUnavailable(
+      ad.button,
+      ad.label,
+      cfg.buttonWidth - cfg.buttonRadius * 2,
+      cfg.disabledAlpha,
+    );
   const watchAd = async (): Promise<void> => {
     if (busy) return;
     busy = true;
     ad.button.setEnabled(false);
-    const result = await services.ads.showRewarded('streak_restore');
+    const result = await showRewarded('streak_restore');
     if (result === 'rewarded' && gameState.restoreStreak('ad')) {
       settle();
       return;
     }
     if (result === 'unavailable') {
-      markAdUnavailable();
+      markAdGone();
       busy = false;
       return;
     }
@@ -103,7 +106,7 @@ export function openStreakThreat(scene: Phaser.Scene, onClosed?: () => void): vo
     ad.button.setEnabled(true);
   };
 
-  if (!services.ads.isRewardedReady()) markAdUnavailable();
+  if (!services.ads.isRewardedReady()) markAdGone();
 
   place(
     createPriceButton(scene, {

@@ -4,6 +4,8 @@ import { MENU } from '../../../data/menu-layout';
 import { PALETTE } from '../../../data/palette';
 import { t } from '../../../i18n';
 import { createTextButton, type Button } from '../button';
+import { markAdUnavailable } from './ad-unavailable';
+import { fitText } from './fit-text';
 import { createCaption, type DailySection } from './daily-section';
 
 const cfg = MENU.daily.attempts;
@@ -29,6 +31,7 @@ export class DailyAttempts implements DailySection {
   readonly root: Phaser.GameObjects.Container;
   readonly height = captionHeight + cfg.rowHeight;
   readonly adButton: Button;
+  private readonly adLabel: Phaser.GameObjects.Text;
   private readonly tokens: Phaser.GameObjects.Graphics;
   private readonly caption: Phaser.GameObjects.Container;
 
@@ -38,7 +41,7 @@ export class DailyAttempts implements DailySection {
   ) {
     this.tokens = scene.add.graphics();
     this.caption = scene.add.container(0, 0);
-    const { button } = createTextButton(scene, {
+    const { button, label } = createTextButton(scene, {
       text: t('daily.extraAttempt'),
       font: cfg.ad.font,
       maxLabelWidth: cfg.ad.width - cfg.adPadding,
@@ -50,6 +53,7 @@ export class DailyAttempts implements DailySection {
       y: captionHeight + cfg.rowHeight / 2,
     });
     this.adButton = button;
+    this.adLabel = label;
     this.root = scene.add.container(0, 0, [this.caption, this.tokens, button]);
   }
 
@@ -65,7 +69,14 @@ export class DailyAttempts implements DailySection {
     this.caption.removeAll(true);
     this.caption.add(createCaption(this.scene, t('daily.attempts', { n: view.left })));
     this.adButton.setVisible(view.canAddAttempt);
-    this.adButton.setEnabled(view.canAddAttempt && adReady);
-    this.adButton.setAlpha(adReady ? 1 : cfg.adDisabledAlpha);
+    const labelWidth = cfg.ad.width - cfg.adPadding;
+    if (adReady) {
+      this.adLabel.setText(t('daily.extraAttempt'));
+      fitText(this.adLabel, labelWidth);
+      this.adButton.setEnabled(view.canAddAttempt);
+      this.adButton.setAlpha(1);
+    } else {
+      markAdUnavailable(this.adButton, this.adLabel, labelWidth, cfg.adDisabledAlpha);
+    }
   }
 }

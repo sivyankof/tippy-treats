@@ -12,6 +12,7 @@ import { Backdrop } from '../objects/backdrop/backdrop';
 import { plainLooks } from '../objects/plain-look';
 import { RunCamera } from '../run-camera';
 import { ContinueFlow } from '../continue-flow';
+import { beginRunRewardedMemo, rewardedAds } from '../rewarded';
 import { extrasOf, RunRecorder } from '../run-recorder';
 import { FlyingTracker } from '../fx/flying-tracker';
 import { placeTutorialTarget } from '../fx/tutorial-target';
@@ -86,6 +87,7 @@ export class GameScene extends Phaser.Scene {
     this.noContinue = setup.noContinue;
     this.mode = setup.mode;
     this.tally = emptyTally();
+    beginRunRewardedMemo();
     this.demoLeaving = false;
     this.exiting = false;
     this.recorder = new RunRecorder(gameState, this.startHeight, this.writesSave, () =>
@@ -105,7 +107,7 @@ export class GameScene extends Phaser.Scene {
     this.flying.reset();
     this.continueFlow?.dispose();
     this.continueFlow = new ContinueFlow({
-      ads: services.ads,
+      ads: rewardedAds,
       audio: services.audio,
       wallet: gameState,
     });

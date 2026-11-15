@@ -19,6 +19,9 @@ export function showStubOverlay(label: string): (() => void) | null {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
+    textAlign: 'center',
+    padding: `${STUB_ADS.paddingPx}px`,
+    boxSizing: 'border-box',
   });
   document.body.appendChild(el);
   return () => el.remove();

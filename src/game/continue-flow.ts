@@ -9,7 +9,7 @@ import type { GameState } from '../state/game-state';
 export type ContinueAction = 'continue' | 'decline';
 
 export interface ContinueFlowDeps {
-  ads: AdsService;
+  ads: Pick<AdsService, 'isRewardedReady' | 'showRewarded'>;
   /** Suspended while an ad shows. */
   audio: Pick<AudioService, 'suspend' | 'resume'>;
   /** The save: the berry balance and the payment. */

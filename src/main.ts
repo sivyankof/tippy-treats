@@ -48,6 +48,7 @@ async function loadSave(): Promise<void> {
   } catch (error) {
     console.warn('Save loading failed', error);
   }
+  gameState.beginSession();
   bindSaveFlush(gameState);
   applySavedSettings();
   await syncPurchases();

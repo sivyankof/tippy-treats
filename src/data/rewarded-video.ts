@@ -8,6 +8,7 @@ export const STUB_ADS = {
   textColor: '#ffffff',
   fontFamily: 'sans-serif',
   fontSizePx: 40,
+  paddingPx: 24,
   zIndex: 10000,
 } as const;
 
