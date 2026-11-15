@@ -95,7 +95,7 @@ export interface AnalyticsService {
 
 В браузере сервис уже есть: `services/telemetry/web.ts` печатает `[telemetry] имя {параметры}` через `console.info` в режиме разработки, в продакшен-сборке молчит; он зарегистрирован как `services.telemetry`. Нативная Firebase-реализация придёт на M8.
 
-Отправляются уже сейчас: `run_start` (сцена забега, не для демо; `team` без пустых слотов, `run_index` = число законченных забегов + 1, `game/run-telemetry.ts`), `checkpoint_offer` (`logCheckpointOffer` в `game/checkpoint-start.ts`, окно вызывает его при открытии; `max_height` = старшая открытая точка), `checkpoint_start` и `currency_spend` (`item` = `checkpoint_<высота>`, только за ягоды) из `payForCheckpoint`, `ad_rewarded_show` и `ad_rewarded_result` для каждого места показа (внутри `showRewarded`). Остальные события таблицы появятся позже.
+Отправляются уже сейчас: `run_start` (сцена забега, только для забегов, которые пишутся в сохранение: не для демо и отладочных `?bot=`, `?start=`, `?team=`, `?level=`; `team` без пустых слотов, `run_index` = число законченных забегов + 1, `game/run-telemetry.ts`), `checkpoint_offer` (`logCheckpointOffer` в `game/checkpoint-start.ts`, окно вызывает его при открытии; `max_height` = старшая открытая точка), `checkpoint_start` и `currency_spend` (`item` = `checkpoint_<высота>`, только за ягоды) из `payForCheckpoint`, `ad_rewarded_show` и `ad_rewarded_result` для каждого места показа (внутри `showRewarded`). Остальные события таблицы появятся позже.
 
 ### События
 
