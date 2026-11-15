@@ -14,11 +14,10 @@ import { CREATURE_ICON_KEYS } from '../creature-icons';
 import type { DailySection } from './daily-section';
 import { createNoAdsIcon } from './shop-premium-icon';
 import {
-  berryIcon,
-  coinIcon,
   createShopRow,
   createShopSection,
   rowPriceButton,
+  pileIcon,
   rowTextButton,
   shopIcon,
 } from './shop-row';
@@ -102,7 +101,7 @@ export function freeSection(scene: Phaser.Scene, a: ShopActions, adReady: boolea
     button = rowTextButton(scene, t('shop.free.watch'), PALETTE.accent, 'wide', () => a.watchAd());
   }
   const item = createShopRow(scene, {
-    icon: coinIcon(scene, row.iconSize),
+    icon: pileIcon(scene, 'coins', amount, row.iconSize),
     title: tn('shop.coinsPlus', amount, { amount: formatNumber(amount) }),
     sub: t('shop.free.left', { left, total: perDay }),
     button,
@@ -117,7 +116,7 @@ export function berriesSection(scene: Phaser.Scene, a: ShopActions, prices: Pric
     const { berries = 0 } = PRODUCTS[key].grant;
     const badge = PRODUCTS[key].badge;
     return createShopRow(scene, {
-      icon: berryIcon(scene, row.iconSize),
+      icon: pileIcon(scene, 'berries', berries, row.iconSize),
       title: tn('shop.berriesN', berries, { amount: formatNumber(berries) }),
       badge:
         badge === undefined
@@ -133,7 +132,7 @@ export function berriesSection(scene: Phaser.Scene, a: ShopActions, prices: Pric
 export function exchangeSection(scene: Phaser.Scene, a: ShopActions): DailySection {
   const rows = BERRY_PACKS.map((pack) =>
     createShopRow(scene, {
-      icon: coinIcon(scene, row.iconSize),
+      icon: pileIcon(scene, 'coins', pack.coins, row.iconSize),
       title: tn('shop.coinsPlus', pack.coins, { amount: formatNumber(pack.coins) }),
       button: rowPriceButton(scene, {
         price: pack.berries,

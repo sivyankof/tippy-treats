@@ -1056,7 +1056,10 @@ export const MENU = {
       iconY: 226,
       lineX: 290,
       lineFont: 44,
-      lineIcon: 64,
+      lineIcon: 76,
+      /** Pile size of the small coin and berry pictures of the lines, and of the big coin pile that replaces an owned creature. */
+      linePileStep: 2,
+      ownedPileStep: 3,
       lineGap: 14,
       linesY: 160,
       lineStep: 72,

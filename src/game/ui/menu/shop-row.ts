@@ -1,7 +1,9 @@
 import * as Phaser from 'phaser';
 import { MENU } from '../../../data/menu-layout';
 import { PALETTE } from '../../../data/palette';
-import { TREASURE_TEXTURES } from '../../fx/treasure-textures';
+import type { PileCurrency, PileSize } from '../../../data/treasure-piles';
+import { pileSizeFor } from '../../fx/pile-size';
+import { createTreasurePile } from '../../fx/treasure-pile';
 import { createTextButton, type Button, type LabelButtonLayout } from '../button';
 import { createOutlinedText } from '../outlined-text';
 import { createPriceButton, type PriceButtonOptions } from '../style/price-button';
@@ -23,13 +25,15 @@ export function shopIcon(
   return scene.add.image(0, 0, texture).setDisplaySize(size, size);
 }
 
-export function coinIcon(scene: Phaser.Scene, size: number): Phaser.GameObjects.Image {
-  return shopIcon(scene, TREASURE_TEXTURES.coin, size);
-}
-
-/** The berry with a face: the shop shows it large (small berries on price buttons stay plain). */
-export function berryIcon(scene: Phaser.Scene, size: number): Phaser.GameObjects.Image {
-  return shopIcon(scene, TREASURE_TEXTURES.berryFace, size);
+/** A pile of coins or berries `size` px across; its size follows `amount` unless `step` is given. */
+export function pileIcon(
+  scene: Phaser.Scene,
+  currency: PileCurrency,
+  amount: number,
+  size: number,
+  step: PileSize = pileSizeFor(currency, amount),
+): Phaser.GameObjects.Container {
+  return createTreasurePile(scene, currency, step, size);
 }
 
 /** Which of the two button sizes of a row. */
