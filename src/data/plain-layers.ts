@@ -122,6 +122,17 @@ export const PLAIN_LAYER = {
     tileWidth: 180,
   },
 
+  /**
+   * Shade a layer lays on the one below it, along the overlap of the two: one flat warm tone at
+   * the top of the lower layer, inside its outline.
+   */
+  overlapShade: {
+    color: 0x4a2412,
+    alpha: 0.34,
+    /** Height of the band below the inner top edge. */
+    height: 17,
+  },
+
   /** The bitten edge: lighter sponge under the cut glaze, with pores. */
   cut: {
     width: 18,

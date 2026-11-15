@@ -43,6 +43,8 @@ export class TowerView {
   private readonly active = new Map<number, LayerView>();
   private readonly pool: LayerView[] = [];
   /** Presentation memory: the bitten edge of each placed layer (0-based). */
+  /** Placement of the layer just placed in `sync`, for the shade of the one under it. */
+  private readonly shadeLower = { index: -1, x: 0, width: 0 };
   private readonly cuts: Array<CutSide | null> = [];
   private state: Readonly<TowerState> | null = null;
   private layerCount = 0;
@@ -207,6 +209,7 @@ export class TowerView {
       view.setLook(pose.look).setLayer(i + 1, pose.width, pose.cut);
       view.setPosition(pose.x + view.slideX, pose.y).setAngle(pose.angle * view.material.tilt);
       if (i === count - 1) this.updateTopSpan(pose.x, pose.width);
+      this.shadeBelow(i, view, pose.x + view.slideX, pose.width);
     }
     if (count === 0) this.updateTopSpan(BALANCE.tray.centerX, BALANCE.tray.width);
   }
@@ -322,6 +325,19 @@ export class TowerView {
     out.cut = this.cuts[index] ?? null;
     out.look = layer;
     return out;
+  }
+
+  /** Where the shade of the layer `index` falls on the one below it, drawn once both are placed. */
+  private shadeBelow(index: number, view: LayerView, x: number, width: number): void {
+    view.setShadeFrom(null, x, width);
+    const below = this.active.get(index - 1);
+    const lower = this.shadeLower;
+    if (below && lower.index === index - 1) {
+      below.setShadeFrom({ x, width }, lower.x, lower.width);
+    }
+    lower.index = index;
+    lower.x = x;
+    lower.width = width;
   }
 
   private updateTopSpan(x: number, width: number): void {
