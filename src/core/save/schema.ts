@@ -1,6 +1,6 @@
 import type { CreatureId } from '../../data/creatures';
 
-export const SAVE_VERSION = 5;
+export const SAVE_VERSION = 6;
 
 export type MissionGroup = 'easy' | 'medium' | 'hard';
 
@@ -24,6 +24,7 @@ export const HINT_IDS = [
   'firstResults',
   'cloud',
   'oven',
+  'dailyIntro',
 ] as const;
 export type HintId = (typeof HINT_IDS)[number];
 
@@ -125,5 +126,13 @@ export interface SaveV5 extends Omit<SaveV4, 'version'> {
   doubles: { day: string; used: number };
 }
 
+/**
+ * Version 6 (clearer daily screen): the shape is the V5 one; the new hint `dailyIntro` marks the
+ * explainer of the daily tower as seen. The migration makes sure every player gets it once.
+ */
+export interface SaveV6 extends Omit<SaveV5, 'version'> {
+  version: 6;
+}
+
 /** The current save version. */
-export type Save = SaveV5;
+export type Save = SaveV6;

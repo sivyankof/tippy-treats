@@ -7,6 +7,7 @@ import {
   migrateV2,
   migrateV3,
   migrateV4,
+  migrateV5,
   SaveError,
   type Migration,
 } from './migrations';
@@ -492,5 +493,38 @@ describe('migration 4 to 5', () => {
     );
     expect(ok.save.oven).toEqual({ day: '2026-11-15', used: 10, carry: 3 });
     expect(ok.save.doubles).toEqual({ day: '2026-11-15', used: 2 });
+  });
+});
+
+describe('migration 5 to 6', () => {
+  const v5 = { ...fresh(), version: 5 };
+
+  it('keeps the shown hints and leaves the daily explainer unseen', () => {
+    const tutorial = { firstRunDone: true, hintsShown: ['tutorial', 'oven', 'dailyIntro'] };
+    const next = migrateV5({ ...v5, tutorial });
+    expect(next.tutorial).toEqual({ firstRunDone: true, hintsShown: ['tutorial', 'oven'] });
+  });
+
+  it('leaves a damaged hint list to the loader', () => {
+    const raw = { ...v5, tutorial: { firstRunDone: true, hintsShown: 'oops' } };
+    expect(migrateV5(raw)).toBe(raw);
+  });
+
+  it('loads a version 5 text into the current save without losing progress', () => {
+    const daily = {
+      day: '2026-11-15',
+      attemptsUsed: 2,
+      extraAttemptUsed: false,
+      best: 34,
+      claimedTiers: [15, 30],
+    };
+    const tutorial = { firstRunDone: true, hintsShown: ['tutorial', 'oven'] };
+    const result = load(JSON.stringify({ ...v5, coins: 210, bakerLevel: 6, daily, tutorial }));
+    expect(result.save.version).toBe(SAVE_VERSION);
+    expect(SAVE_VERSION).toBe(6);
+    expect(result.save.coins).toBe(210);
+    expect(result.save.bakerLevel).toBe(6);
+    expect(result.save.daily).toEqual(daily);
+    expect(result.save.tutorial.hintsShown).toEqual(['tutorial', 'oven']);
   });
 });

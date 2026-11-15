@@ -24,6 +24,8 @@ export interface DailyInfo {
   seed: number;
   team: TeamSlot[];
   attemptsLeft: number;
+  /** At least one attempt was started today. */
+  played: boolean;
   canAddAttempt: boolean;
   best: number;
   claimedTiers: number[];
@@ -44,6 +46,7 @@ export function infoOf(save: Save, utcDay: string, nowMs: number): DailyInfo {
     seed: dailySeed(utcDay),
     team: dailyTeam(utcDay),
     attemptsLeft: attemptsLeft(daily),
+    played: daily.attemptsUsed > 0,
     canAddAttempt: canAddAttempt(daily),
     best: daily.best,
     claimedTiers: daily.claimedTiers,

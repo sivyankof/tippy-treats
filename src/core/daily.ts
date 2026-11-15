@@ -1,5 +1,5 @@
 import { CREATURE_IDS } from '../data/creatures';
-import { DAILY } from '../data/daily';
+import { DAILY, type DailyTier } from '../data/daily';
 import { MS_PER_DAY } from '../data/clock';
 import { LEVEL_REWARDS } from '../data/progression';
 import type { Cost } from './economy';
@@ -112,6 +112,35 @@ export function recordDailyRun(daily: DailyState, height: number, runDay: string
     }
   }
   return { daily: { ...daily, best, claimedTiers }, paid };
+}
+
+/** Where the player stands on the reward tiers of the day, for the line under the tiers. */
+export type DailyProgress =
+  | { kind: 'start'; first: number }
+  | { kind: 'next'; best: number; left: number }
+  | { kind: 'done' };
+
+/**
+ * The progress line of the day: before the first attempt the first tier to reach, after attempts
+ * the best height and the layers to the next tier, or every tier reached.
+ */
+export function dailyProgress(best: number, played: boolean): DailyProgress {
+  const next = nextTier(best);
+  if (!next) return { kind: 'done' };
+  if (!played && best <= 0) return { kind: 'start', first: next.height };
+  return { kind: 'next', best, left: next.height - best };
+}
+
+/** The first tier the best height of the day has not reached yet, or null when all are reached. */
+export function nextTier(best: number): DailyTier | null {
+  return DAILY.tiers.find((tier) => best < tier.height) ?? null;
+}
+
+/** The highest tier `height` reaches, or null below the first one. */
+export function tierReached(height: number): number | null {
+  let reached: number | null = null;
+  for (const tier of DAILY.tiers) if (height >= tier.height) reached = tier.height;
+  return reached;
 }
 
 /** Milliseconds until 00:00 UTC of the next day (a full day exactly at midnight). */

@@ -1,28 +1,26 @@
 import * as Phaser from 'phaser';
 import { MENU } from '../../data/menu-layout';
-import { PALETTE } from '../../data/palette';
 import { t } from '../../i18n';
 import { services } from '../../services';
 import { gameState } from '../../state';
 import { showRewarded } from '../rewarded';
 import { DAILY_RUN } from '../run-request';
 import { openScreen, SCENES, startRunFrom } from '../scene-keys';
-import { createTextButton, type Button } from '../ui/button';
 import { DailyAttempts } from '../ui/menu/daily-attempts';
 import { DailyDate } from '../ui/menu/daily-date';
+import { DailyIntroLine, openDailyIntro } from '../ui/menu/daily-intro';
 import { DailyLock } from '../ui/menu/daily-lock';
+import { DailyPlay } from '../ui/menu/daily-play';
 import { DailyRewards } from '../ui/menu/daily-rewards';
-import { DailyRules } from '../ui/menu/daily-rules';
 import type { DailySection } from '../ui/menu/daily-section';
-import { DailyTeam } from '../ui/menu/daily-team';
-import { fitText } from '../ui/menu/fit-text';
+import { DailyTeam, openAbilityWindow } from '../ui/menu/daily-team';
 import { ScreenHeader } from '../ui/menu/screen-header';
 import { MenuScenery } from '../ui/style/menu-scenery';
 import { enterScreen, leaveScreen, type Movable } from '../ui/transition';
 
 const cfg = MENU.daily;
 
-/** The daily tower screen: team, rules, rewards and attempts of the UTC day (docs/07-ui-screens.md, section 10). */
+/** The daily tower screen: what it is, team, rewards and attempts of the UTC day (docs/07-ui-screens.md, section 10). */
 export class DailyScene extends Phaser.Scene {
   private bg!: MenuScenery;
   private header!: ScreenHeader;
@@ -30,8 +28,7 @@ export class DailyScene extends Phaser.Scene {
   private team!: DailyTeam;
   private sections: DailySection[] = [];
   private attempts: DailyAttempts | null = null;
-  private play: Button | null = null;
-  private playLabel: Phaser.GameObjects.Text | null = null;
+  private play: DailyPlay | null = null;
   private day = '';
   private leaving = false;
   private adRunning = false;
@@ -49,7 +46,6 @@ export class DailyScene extends Phaser.Scene {
     this.clockMs = 0;
     this.attempts = null;
     this.play = null;
-    this.playLabel = null;
     gameState.refreshDay();
     const info = gameState.dailyInfo();
     this.day = info.day;
@@ -57,22 +53,30 @@ export class DailyScene extends Phaser.Scene {
     this.bg = new MenuScenery(this, 'list');
     this.header = new ScreenHeader(this, t('daily.title'), () => this.leave(SCENES.home));
     this.date = new DailyDate(this, info.day);
-    this.team = new DailyTeam(this, info.team);
+    this.team = new DailyTeam(this, info.team, (slot) => {
+      if (!this.leaving) openAbilityWindow(this, slot.id, slot.level);
+    });
     this.sections = [
+      new DailyIntroLine(this, () => {
+        if (!this.leaving) openDailyIntro(this);
+      }),
       this.date,
       this.team,
-      new DailyRules(this),
-      new DailyRewards(this, info.best, info.claimedTiers),
+      new DailyRewards(this, info.best, info.claimedTiers, info.played),
     ];
     if (info.unlocked) {
       this.attempts = new DailyAttempts(this, () => this.watchAd());
-      this.sections.push(this.attempts);
-      this.createPlay();
+      this.play = new DailyPlay(
+        this,
+        () => this.startRun(),
+        () => this.watchAd(),
+      );
+      this.sections.push(this.attempts, this.play);
     } else {
       this.sections.push(new DailyLock(this));
     }
     this.refresh();
-    this.date.update(info.msUntilNext);
+    this.showTime(info.msUntilNext);
 
     this.scale.on(Phaser.Scale.Events.RESIZE, this.layout, this);
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
@@ -80,13 +84,17 @@ export class DailyScene extends Phaser.Scene {
     });
     this.layout();
     enterScreen(this, this.content());
+    // The explainer comes by itself on the first visit of the open tower.
+    if (info.unlocked && !gameState.hasHint('dailyIntro')) openDailyIntro(this);
   }
 
   override update(time: number, delta: number): void {
     this.bg.update(delta);
     this.header.update(time, delta);
     this.team.tick(delta);
-    if (this.attempts && services.ads.isRewardedReady() !== this.adReady) this.refresh();
+    if (this.attempts && !this.leaving && services.ads.isRewardedReady() !== this.adReady) {
+      this.refresh();
+    }
     this.clockMs += delta;
     if (this.clockMs < cfg.date.tickMs) return;
     this.clockMs = 0;
@@ -95,43 +103,34 @@ export class DailyScene extends Phaser.Scene {
       this.scene.restart();
       return;
     }
-    this.date.update(info.msUntilNext);
+    this.showTime(info.msUntilNext);
   }
 
-  private createPlay(): void {
-    const { button, label } = createTextButton(this, {
-      text: t('daily.play'),
-      font: cfg.play.font,
-      maxLabelWidth: cfg.play.width - cfg.playPadding,
-      fill: PALETTE.accent,
-      layout: cfg.play,
-      keyPrefix: 'ui_daily_play',
-      onClick: () => this.startRun(),
-    });
-    this.play = button.breathe();
-    this.playLabel = label;
+  private showTime(msLeft: number): void {
+    this.date.update(msLeft);
+    this.play?.update(msLeft);
   }
 
-  /** Attempts, the ad button and the Play button follow the save. */
+  /** Attempts, the ad buttons and the Play slot follow the save. */
   private refresh(): void {
     const info = gameState.dailyInfo();
-    const canPlay = info.unlocked && info.attemptsLeft > 0;
+    const view = { left: info.attemptsLeft, canAddAttempt: info.canAddAttempt };
     this.adReady = services.ads.isRewardedReady();
-    this.attempts?.refresh(
-      { left: info.attemptsLeft, canAddAttempt: info.canAddAttempt },
-      this.adReady,
-    );
-    if (!this.play || !this.playLabel) return;
-    this.playLabel.setText(t(canPlay ? 'daily.play' : 'daily.noAttempts'));
-    fitText(this.playLabel, cfg.play.width - cfg.playPadding);
-    this.play.setEnabled(canPlay && !this.leaving);
-    this.play.setAlpha(canPlay ? 1 : cfg.playDisabledAlpha);
+    this.attempts?.refresh(view, this.adReady);
+    this.play?.refresh(view, this.adReady, info.unlocked && !this.leaving);
+    // The buttons may not come back while an ad plays or the screen is leaving.
+    if (this.adRunning || this.leaving) this.disableAds();
+  }
+
+  private disableAds(): void {
+    this.attempts?.ad.button.setEnabled(false);
+    this.play?.ad.button.setEnabled(false);
   }
 
   private watchAd(): void {
     if (this.adRunning) return;
     this.adRunning = true;
-    this.attempts?.adButton.setEnabled(false);
+    this.disableAds();
     void showRewarded('daily_attempt').then((result) => {
       this.adRunning = false;
       if (result === 'rewarded' && this.scene.isActive()) gameState.addDailyAttempt();
@@ -142,8 +141,8 @@ export class DailyScene extends Phaser.Scene {
   private startRun(): void {
     if (this.leaving || !gameState.startDailyAttempt()) return;
     this.leaving = true;
-    this.play?.setEnabled(false);
-    this.attempts?.adButton.setEnabled(false);
+    this.play?.play.setEnabled(false);
+    this.disableAds();
     leaveScreen(this, this.content(), () => startRunFrom(this, DAILY_RUN));
   }
 
@@ -154,9 +153,7 @@ export class DailyScene extends Phaser.Scene {
   }
 
   private content(): Movable[] {
-    const items: Movable[] = [...this.header.parts, ...this.sections.map((s) => s.root)];
-    if (this.play) items.push(this.play);
-    return items;
+    return [...this.header.parts, ...this.sections.map((s) => s.root)];
   }
 
   /** Stacks the blocks under the header; spare height widens the gaps (up to `maxGap`). */
@@ -166,10 +163,8 @@ export class DailyScene extends Phaser.Scene {
     this.bg.resize(width, height);
     this.header.layout(width);
     const top = MENU.header.contentTop;
-    const blocks = this.sections.map((s) => s.height);
-    if (this.play) blocks.push(cfg.play.height);
-    const used = blocks.reduce((sum, h) => sum + h, 0);
-    const slots = blocks.length - 1;
+    const used = this.sections.reduce((sum, s) => sum + s.height, 0);
+    const slots = this.sections.length - 1;
     const spare = height - top - cfg.bottom - used;
     const gap = Math.min(cfg.maxGap, Math.max(cfg.minGap, spare / slots));
     let y = top + Math.max(0, (spare - gap * slots) / 2);
@@ -178,6 +173,5 @@ export class DailyScene extends Phaser.Scene {
       section.root.setPosition(cx, y);
       y += section.height + gap;
     }
-    this.play?.setPosition(cx, y + cfg.play.height / 2);
   }
 }

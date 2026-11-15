@@ -188,7 +188,6 @@
     "left": "one={amount} layer left today|other={amount} layers left today",
     "back": "The oven heats up in {time}",
     "explain": "The first {n} layers of every day give {x} times more XP. Bake while the oven is hot!",
-    "ok": "Got it!",
     "mark": "×{n} fresh oven",
     "ranOut": "The fresh oven lights up again tomorrow!"
   },
@@ -316,8 +315,7 @@
   "daily": {
     "title": "Daily tower",
     "date": "Tower of {date}",
-    "team": "Team of the day",
-    "rules": "Rules of the day",
+    "team": "Today's team, the same for everyone",
     "rewards": "Rewards",
     "attempts": "Attempts left: {n}",
     "extraAttempt": "+1 attempt for an ad",
@@ -326,19 +324,25 @@
     "nextIn": "Next tower in {time}",
     "best": "Best today: {n}",
     "bestNone": "Best today: none yet",
-    "noAttempts": "No attempts left",
-    "rule": {
-      "none": "No tricks",
-      "showcase": "Rush layers",
-      "roof": "Wind gusts",
-      "clouds": "Hidden layers",
-      "stars": "Fake-outs",
-      "space": "Random rule"
-    }
+    "explain": "one=One tower for all players. {n} attempt. The higher, the more rewards|other=One tower for all players. {n} attempts. The higher, the more rewards",
+    "progress": {
+      "start": "one=Reach {n} layer to get the first reward|other=Reach {n} layers to get the first reward",
+      "next": "one=Best attempt: {best}. {n} layer to the next reward|other=Best attempt: {best}. {n} layers to the next reward",
+      "done": "All rewards collected today"
+    },
+    "intro": {
+      "same": "• The tower is the same for all players and changes every day.",
+      "team": "• The team is given for the day, the same for everyone.",
+      "attempts": "one=• {n} attempt a day. A run cannot be continued after a miss.|other=• {n} attempts a day. A run cannot be continued after a miss.",
+      "best": "• The reward counts your best attempt."
+    },
+    "level": "Level {n} in the team of the day"
   },
   "resultsDaily": {
     "tier": "Daily reward for {n} layers",
-    "back": "Back to daily"
+    "back": "Back to daily",
+    "attempt": "This attempt: tier {n}",
+    "attemptNone": "one=This attempt fell short of {n} layer|other=This attempt fell short of {n} layers"
   },
   "resultsMissions": {
     "title": "Missions"
@@ -430,5 +434,8 @@
       "text": "This is the last step. The progress is lost for good and the game starts as on the very first launch.",
       "confirm": "Erase progress"
     }
+  },
+  "explainer": {
+    "ok": "Got it!"
   }
 }

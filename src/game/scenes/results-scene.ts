@@ -24,7 +24,8 @@ import { spacingShare, spreadBlocks } from '../ui/menu/results-layout';
 import { ResultsMissions } from '../ui/menu/results-missions';
 import { resultsFlow } from '../ui/menu/results-flow';
 import { ResultsTiers } from '../ui/menu/results-tiers';
-import { coinLines, dailyBestText, nearMissText, newCreaturesOf } from '../ui/menu/results-text';
+import { dailyAttemptText, dailyProgressText } from '../ui/menu/daily-text';
+import { coinLines, nearMissText, newCreaturesOf } from '../ui/menu/results-text';
 import { ResultsXp } from '../ui/menu/results-xp';
 
 const cfg = MENU.results;
@@ -42,6 +43,7 @@ export class ResultsScene extends Phaser.Scene {
   private xp!: ResultsXp;
   private tiers!: ResultsTiers;
   private missions!: ResultsMissions;
+  /** The "so close" line; a daily run shows two: the tier of the attempt and the day's progress. */
   private hint!: Phaser.GameObjects.Text;
   /** The dev-only "not saved" plate, `null` for a normal run. */
   private debugPlate: { obj: Block; height: number } | null = null;
@@ -96,7 +98,9 @@ export class ResultsScene extends Phaser.Scene {
       ? createDebugPlate(this)
       : null;
     const hintText = daily
-      ? dailyBestText(gameState.dailyInfo().best)
+      ? [dailyAttemptText(result.height), dailyProgressText(gameState.dailyInfo().best, true)].join(
+          '\n',
+        )
       : nearMissText(
           nearMiss({
             height: result.height,
@@ -110,6 +114,7 @@ export class ResultsScene extends Phaser.Scene {
           }),
         );
     this.hint = createOutlinedText(this, 0, 0, hintText, cfg.nearMissFont, PALETTE.gold);
+    this.hint.setAlign('center');
     fitText(this.hint, cfg.nearMissWidth);
     this.hint.setVisible(this.recorded);
     // The creatures the levels handed out are presented before anything else.
@@ -207,7 +212,12 @@ export class ResultsScene extends Phaser.Scene {
       { obj: this.tiers.container, height: this.tiers.height },
       { obj: this.xp.container, height: this.recorded ? this.xp.height : 0 },
       { obj: this.missions.container, height: this.missions.height },
-      { obj: this.hint, height: this.recorded ? cfg.nearMissFont * cfg.lineHeight : 0 },
+      {
+        obj: this.hint,
+        height: this.recorded
+          ? cfg.nearMissFont * cfg.lineHeight * this.hint.text.split('\n').length
+          : 0,
+      },
     ];
     return all.filter((b) => b.height > 0);
   }

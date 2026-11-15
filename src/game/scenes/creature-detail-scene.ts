@@ -1,5 +1,5 @@
 import * as Phaser from 'phaser';
-import { abilityChanges, abilityValues } from '../../core/ability-values';
+import { abilityChanges } from '../../core/ability-values';
 import type { Currency } from '../../core/economy';
 import { addToTeam } from '../../core/team';
 import { CREATURES, MAX_CREATURE_LEVEL, type CreatureId } from '../../data/creatures';
@@ -14,7 +14,7 @@ import { demoRun } from '../run-request';
 import { openScreen, SCENES, startRunFrom, type CreatureDetailData } from '../scene-keys';
 import { enterScreen, leaveScreen, type Movable } from '../ui/transition';
 import { DetailActions } from '../ui/menu/detail-actions';
-import { changeText, formatValues } from '../ui/menu/detail-model';
+import { abilityText, changeText } from '../ui/menu/detail-model';
 import { DetailInfo } from '../ui/menu/detail-info';
 import { DetailStage } from '../ui/menu/detail-stage';
 import { TitleRibbon } from '../ui/style/title-ribbon';
@@ -82,7 +82,7 @@ export class CreatureDetailScene extends Phaser.Scene {
     this.info = new DetailInfo(
       this,
       id,
-      t(CREATURES[id].descKey, formatValues(abilityValues(id, level ?? 1), formatDecimal)),
+      abilityText(id, level ?? 1),
       level !== null && level < MAX_CREATURE_LEVEL ? this.nextText(id, level) : null,
     );
 

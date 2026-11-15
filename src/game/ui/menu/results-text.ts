@@ -47,11 +47,6 @@ export function nearMissText(miss: NearMiss): string {
   }
 }
 
-/** The line under a daily run: the best height of the day. */
-export function dailyBestText(best: number): string {
-  return best > 0 ? t('daily.best', { n: best }) : t('daily.bestNone');
-}
-
 /** Creatures to present after the results: the free ones that are new to the player (level rewards, then record rewards). */
 export function newCreaturesOf(
   levelUps: readonly LevelUp[],

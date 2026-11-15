@@ -1186,27 +1186,8 @@ export const MENU = {
     },
     /** Team cards use `MENU.card`; the creatures are drawn at this level. */
     team: { gapX: 28 },
-    /** Zone chips: a grid of `cols` columns. */
-    rules: {
-      cols: 3,
-      width: 960,
-      chipHeight: 124,
-      gap: 20,
-      zoneFont: 36,
-      ruleFont: 30,
-      zoneY: 42,
-      ruleY: 86,
-      padX: 16,
-      ruleColor: 0xfff6ec,
-      fills: {
-        kitchen: 0xe8964a,
-        showcase: 0xe85a9a,
-        roof: 0x7c5cff,
-        clouds: 0x4aa3e8,
-        stars: 0x3a3a8c,
-        space: 0x5a3a8c,
-      },
-    },
+    /** The one-line explainer under the header; a tap opens the explainer window again. */
+    intro: { width: 960, font: 38, color: 0xfff6ec },
     /** Reward tiers: five cells in a row. */
     rewards: {
       width: 960,
@@ -1220,11 +1201,12 @@ export const MENU = {
       /** Tinted fills: reached, not reached yet. */
       reachedFill: 0x2fb97f,
       openFill: 0x7c5cff,
-      bestRim: 0xffc93c,
+      /** Gold rim of the next tier to reach. */
+      nextRim: 0xffc93c,
       tick: { size: 60, inset: 12 },
-      /** A passed tier is drawn this opaque. */
-      doneAlpha: 0.82,
       sideFont: 36,
+      /** The progress line under the tiers ("12 layers to the next reward"). */
+      progress: { gap: 18, font: 36, height: 50, color: 0xffc93c },
     },
     /** Attempts: icons on the left, the ad button on the right. */
     attempts: {
@@ -1239,7 +1221,29 @@ export const MENU = {
     },
     play: { width: 760, height: 150, radius: 48, shadowOffset: 10, font: 64 },
     playPadding: 60,
-    playDisabledAlpha: 0.6,
+    /** In place of Play when the attempts ran out: the time to the next tower and the ad button. */
+    outOfAttempts: {
+      height: 230,
+      timerY: 34,
+      timerFont: 44,
+      timerColor: 0xffc93c,
+      adY: 160,
+      ad: { width: 640, height: 124, radius: 44, shadowOffset: 10, font: 46 },
+      adPadding: 60,
+    },
+    /** The explainer window of the first visit (same build as the fresh oven one). */
+    introWindow: {
+      contentHeight: 960,
+      pictureY: 140,
+      pictureSize: 250,
+      textY: 530,
+      font: 40,
+      lineSpacing: 10,
+      buttonY: 870,
+      button: { width: 640, height: 124, radius: 44, shadowOffset: 10, font: 52 },
+    },
+    /** The ability of a team creature, opened by a tap on its card. */
+    abilityWindow: { font: 44, levelFont: 36, levelY: 26, textTop: 80, padBottom: 20 },
     /** The padlock panel that replaces the attempts and the Play button before level 5. */
     lock: {
       width: 960,

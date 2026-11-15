@@ -8,12 +8,15 @@ import {
   attemptsLeft,
   canAddAttempt,
   dailyForDay,
+  dailyProgress,
   dailySeed,
   dailyTeam,
   dailyUnlocked,
   msUntilNextUtcDay,
+  nextTier,
   recordDailyRun,
   startAttempt,
+  tierReached,
   type DailyState,
 } from './daily';
 
@@ -248,5 +251,45 @@ describe('msUntilNextUtcDay', () => {
   it('works across month and year boundaries and before 1970', () => {
     expect(msUntilNextUtcDay(Date.UTC(2026, 11, 31, 23, 0, 0))).toBe(3600000);
     expect(msUntilNextUtcDay(-1)).toBe(1);
+  });
+});
+
+describe('dailyProgress', () => {
+  const first = DAILY.tiers[0]?.height ?? 0;
+  const second = DAILY.tiers[1]?.height ?? 0;
+  const last = DAILY.tiers[DAILY.tiers.length - 1]?.height ?? 0;
+
+  it('names the first tier before the first attempt', () => {
+    expect(dailyProgress(0, false)).toEqual({ kind: 'start', first });
+  });
+
+  it('counts the layers to the next tier after attempts', () => {
+    expect(dailyProgress(0, true)).toEqual({ kind: 'next', best: 0, left: first });
+    expect(dailyProgress(first - 3, true)).toEqual({ kind: 'next', best: first - 3, left: 3 });
+    expect(dailyProgress(first, true)).toEqual({ kind: 'next', best: first, left: second - first });
+  });
+
+  it('is done once the last tier is reached', () => {
+    expect(dailyProgress(last, true)).toEqual({ kind: 'done' });
+    expect(dailyProgress(last + 40, true)).toEqual({ kind: 'done' });
+  });
+});
+
+describe('tierReached', () => {
+  it('is the highest tier at or below the height', () => {
+    expect(tierReached(0)).toBeNull();
+    expect(tierReached(14)).toBeNull();
+    expect(tierReached(15)).toBe(15);
+    expect(tierReached(49)).toBe(30);
+    expect(tierReached(250)).toBe(100);
+  });
+});
+
+describe('nextTier', () => {
+  it('is the first tier above the best height, or null when all are reached', () => {
+    expect(nextTier(0)?.height).toBe(15);
+    expect(nextTier(15)?.height).toBe(30);
+    expect(nextTier(99)?.height).toBe(100);
+    expect(nextTier(100)).toBeNull();
   });
 });

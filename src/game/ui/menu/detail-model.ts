@@ -1,3 +1,4 @@
+import { abilityValues } from '../../../core/ability-values';
 import { unlockHint, unlockHints, type UnlockHint } from '../../../core/collection';
 import {
   creaturePrice,
@@ -6,7 +7,8 @@ import {
   upgradeLocked,
   type PriceOption,
 } from '../../../core/economy';
-import { MAX_CREATURE_LEVEL, type CreatureId } from '../../../data/creatures';
+import { CREATURES, MAX_CREATURE_LEVEL, type CreatureId } from '../../../data/creatures';
+import { formatDecimal, t } from '../../../i18n';
 
 /** What the main button area of a creature card offers. */
 export type MainAction =
@@ -64,6 +66,11 @@ export function formatValues(
   format: (value: number) => string,
 ): Record<string, string> {
   return Object.fromEntries(Object.entries(values).map(([key, value]) => [key, format(value)]));
+}
+
+/** The ability description of a creature at `level`, with its numbers filled in. */
+export function abilityText(id: CreatureId, level: number): string {
+  return t(CREATURES[id].descKey, formatValues(abilityValues(id, level), formatDecimal));
 }
 
 /** "3 → 4" pairs joined with commas; empty when nothing changes. */

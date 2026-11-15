@@ -1,4 +1,5 @@
 import type * as Phaser from 'phaser';
+import { nextTier } from '../../../core/daily';
 import type { Currency } from '../../../core/economy';
 import { DAILY } from '../../../data/daily';
 import { MENU } from '../../../data/menu-layout';
@@ -9,25 +10,29 @@ import { REWARD_TEXTURES } from '../../fx/reward-pictures';
 import { createOutlinedText } from '../outlined-text';
 import { faceOffsetY, VolumePlate } from '../style/volume';
 import { createCaption, type DailySection } from './daily-section';
+import { dailyProgressText } from './daily-text';
+import { fitText } from './fit-text';
 import { PriceTag } from './price-tag';
 
 const cfg = MENU.daily.rewards;
 const captionHeight = MENU.daily.caption.height;
 const CURRENCIES: readonly Currency[] = ['coins', 'berries'];
 
-/** The reward bar: five tiers with their prizes; reached ones are green, a little muted and badged with a check, the best one has a gold rim, the next one to reach pulses softly. */
+/**
+ * The reward bar: five tiers with their prizes; reached ones are green and badged with a check,
+ * the next one to reach has a gold rim and pulses softly. The progress line of the day sits under
+ * the tiers.
+ */
 export class DailyRewards implements DailySection {
   readonly root: Phaser.GameObjects.Container;
-  readonly height = captionHeight + cfg.cellHeight;
+  readonly height = captionHeight + cfg.cellHeight + cfg.progress.gap + cfg.progress.height;
 
-  constructor(scene: Phaser.Scene, best: number, claimed: readonly number[]) {
+  constructor(scene: Phaser.Scene, best: number, claimed: readonly number[], played: boolean) {
     const tiers = DAILY.tiers;
     const cellWidth = (cfg.width - (tiers.length - 1) * cfg.gap) / tiers.length;
     const lift = faceOffsetY('chip');
-    const reached = tiers.filter((tier) => best >= tier.height);
-    const top = reached[reached.length - 1];
     const side = best > 0 ? t('daily.best', { n: formatNumber(best) }) : t('daily.bestNone');
-    const next = tiers.find((tier) => best < tier.height);
+    const next = nextTier(best);
     const parts: Phaser.GameObjects.GameObject[] = [createCaption(scene, t('daily.rewards'), side)];
     tiers.forEach((tier, i) => {
       const x = -cfg.width / 2 + cellWidth / 2 + i * (cellWidth + cfg.gap);
@@ -36,7 +41,7 @@ export class DailyRewards implements DailySection {
       const tile: Phaser.GameObjects.GameObject[] = [
         new VolumePlate(scene, 'chip', cfg.cellHeight, {
           fill: done ? cfg.reachedFill : cfg.openFill,
-          rim: top === tier ? cfg.bestRim : undefined,
+          rim: tier === next ? cfg.nextRim : undefined,
         })
           .setBodyWidth(cellWidth)
           .setPosition(0, cfg.cellHeight / 2),
@@ -52,8 +57,8 @@ export class DailyRewards implements DailySection {
           ),
         );
       });
-      // A passed tier is a little muted, with the check badge on top of it.
-      const holder = scene.add.container(x, y, tile).setAlpha(done ? cfg.doneAlpha : 1);
+      // A passed tier wears the check badge on top of it.
+      const holder = scene.add.container(x, y, tile);
       parts.push(holder);
       if (done) {
         const size = cfg.tick.size;
@@ -77,6 +82,15 @@ export class DailyRewards implements DailySection {
         holder.once('destroy', () => tween.remove());
       }
     });
+    const line = createOutlinedText(
+      scene,
+      0,
+      captionHeight + cfg.cellHeight + cfg.progress.gap + cfg.progress.height / 2,
+      dailyProgressText(best, played),
+      cfg.progress.font,
+      cfg.progress.color,
+    );
+    parts.push(fitText(line, cfg.width));
     this.root = scene.add.container(0, 0, parts);
   }
 }

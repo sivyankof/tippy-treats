@@ -75,6 +75,17 @@ export function migrateV4(raw: RawSave): RawSave {
   return withRecordCreatures(next);
 }
 
+/**
+ * 5 -> 6: the explainer of the daily tower is new for everyone, players who already played the
+ * daily tower included, so `dailyIntro` starts as not shown. A damaged hint list stays as it is.
+ */
+export function migrateV5(raw: RawSave): RawSave {
+  const tutorial = isRecord(raw.tutorial) ? raw.tutorial : null;
+  if (!tutorial || !Array.isArray(tutorial.hintsShown)) return raw;
+  const hintsShown = tutorial.hintsShown.filter((id) => id !== 'dailyIntro');
+  return { ...raw, tutorial: { ...tutorial, hintsShown } };
+}
+
 /** Hands over creatures whose record way (as of version 5) the best classic height already reached. */
 function withRecordCreatures(raw: RawSave): RawSave {
   const records = isRecord(raw.records) ? raw.records : {};
@@ -98,6 +109,7 @@ export const MIGRATIONS: MigrationChain = {
   2: migrateV2,
   3: migrateV3,
   4: migrateV4,
+  5: migrateV5,
 };
 
 /**
