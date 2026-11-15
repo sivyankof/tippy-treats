@@ -126,7 +126,7 @@ export const EDGE_SQUASH = {
      */
     ribHeight: {
       top: [0.095, 0.37] satisfies ByPower,
-      bottom: [0.03, 0.09] satisfies ByPower,
+      bottom: [0.035, 0.11] satisfies ByPower,
     },
     /** The glaze bulge, times `feel.glazeLiftPx`. */
     glazeMul: [0.4, 1.45] satisfies ByPower,

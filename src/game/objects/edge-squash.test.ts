@@ -719,8 +719,8 @@ describe('rib size and count by speed', () => {
         const s = shapeAt(140, 720, feel.normal, p);
         s.ribs = ribLayoutFor(1234, layer);
         const wall = reach(s, -360);
-        expect(s.left.ribDown).toBeLessThan(s.left.ribUp * 0.35);
-        expect(wall.down).toBeLessThan(wall.up * 0.35);
+        expect(s.left.ribDown).toBeLessThan(s.left.ribUp * 0.4);
+        expect(wall.down).toBeLessThan(wall.up * 0.4);
       }
     }
   });
