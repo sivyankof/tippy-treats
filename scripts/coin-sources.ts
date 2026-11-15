@@ -2,13 +2,8 @@ import { DIFFICULTY, type DifficultyTarget } from '../src/data/balance';
 import { SAVE_DEFAULTS } from '../src/data/save-defaults';
 import { NO_TEAM, allFullTeams, type SimTeamSet } from '../src/data/sim-teams';
 import { COIN_SOURCES, CoinStats, type CoinsBySource } from './coin-stats';
+import { nodeFs, scriptArgs } from './node-env';
 import { mean, percentile, playRun, profileStreams, teamSlots } from './sim-runner';
-
-/** Node globals; the project does not pull in the Node type definitions. */
-declare const process: {
-  argv: string[];
-  getBuiltinModule(id: 'node:fs'): { writeFileSync(path: string, data: string): void };
-};
 
 /**
  * `npm run sim:coins`: coins per run by source, XP (= height) and run duration for every bot
@@ -206,7 +201,7 @@ function row(setup: string, cell: Cell): Record<string, string | number> {
 }
 
 function main(): void {
-  const options = parseArgs(process.argv.slice(2));
+  const options = parseArgs(scriptArgs());
   const targets = DIFFICULTY.targets.filter((t) => !options.profile || t.id === options.profile);
   if (targets.length === 0) throw new Error(`Unknown profile: ${options.profile}`);
 
@@ -266,9 +261,7 @@ function main(): void {
       durationNote:
         'sim seconds up to the landing that ends the run; no slow-motion, continue offer or results screen',
     };
-    process
-      .getBuiltinModule('node:fs')
-      .writeFileSync(options.json, JSON.stringify({ meta, profiles: report }, null, 2));
+    nodeFs().writeFileSync(options.json, JSON.stringify({ meta, profiles: report }, null, 2));
     console.log(`\nJSON written to ${options.json}`);
   }
 }
