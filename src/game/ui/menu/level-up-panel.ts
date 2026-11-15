@@ -9,7 +9,7 @@ import type { LevelUp } from '../../../state/game-state';
 import { CreaturePortrait } from '../../objects/creature-portrait';
 import { createTextButton } from '../button';
 import { createOutlinedText } from '../outlined-text';
-import { PopupWindow } from '../style/popup-window';
+import { PopupWindow } from '../style/dialog-window';
 import { fitText } from './fit-text';
 import { PriceTag } from './price-tag';
 import { rewardLines, type RewardLine } from './results-text';

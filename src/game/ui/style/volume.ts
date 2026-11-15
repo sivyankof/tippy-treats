@@ -11,7 +11,7 @@
  * - A bar along a screen edge: `new VolumePlate(scene, 'bar', height)`.
  * - A screen title: `ScreenHeader` draws it on a `TitleRibbon` (title-ribbon.ts) by itself.
  * - A popup window (veil, plate, ribbon title, open and close animation): `PopupWindow`
- *   (popup-window.ts). Every window of the game is one, the pause and level-up ones too.
+ *   (dialog-window.ts). Every window of the game is one, the pause and level-up ones too.
  * - A button: `createTextButton`, `createIconButton`, `createLabelButton` or `new Button(...)`;
  *   all of them have this look (shape, bevel, gloss, press).
  * - An on/off setting: `ToggleSwitch` (toggle-switch.ts), a label and a sliding switch.

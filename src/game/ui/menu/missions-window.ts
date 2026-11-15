@@ -5,7 +5,7 @@ import { services } from '../../../services';
 import { gameState } from '../../../state';
 import { msUntilLocalMidnight, now } from '../../../util/clock';
 import { createOutlinedText } from '../outlined-text';
-import { PopupWindow } from '../style/popup-window';
+import { PopupWindow } from '../style/dialog-window';
 import type { Button } from '../button';
 import { MissionCard } from './missions-card';
 import { MissionsChest } from './missions-chest';

@@ -3,7 +3,7 @@ import { services } from '../services';
 import { gameState } from '../state';
 import { loadPrices } from './purchases';
 import { rewardedWatchedInRun } from './rewarded';
-import { openNoAdsOffer } from './ui/menu/no-ads-offer';
+import { openNoAdsOffer } from './ui/menu/premium-offer';
 
 /** What this launch of the app has shown so far; a new launch starts over. */
 const session = { shown: 0 };

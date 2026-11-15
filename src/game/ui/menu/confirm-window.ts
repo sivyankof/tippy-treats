@@ -3,7 +3,7 @@ import { MENU } from '../../../data/menu-layout';
 import { PALETTE } from '../../../data/palette';
 import { createTextButton } from '../button';
 import { createOutlinedText } from '../outlined-text';
-import { PopupWindow } from '../style/popup-window';
+import { PopupWindow } from '../style/dialog-window';
 
 const cfg = MENU.confirm;
 

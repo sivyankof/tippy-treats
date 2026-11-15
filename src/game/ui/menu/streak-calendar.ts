@@ -9,7 +9,7 @@ import { gameState } from '../../../state';
 import type { StreakClaim } from '../../../state/game-state';
 import { createTextButton, type Button } from '../button';
 import { createOutlinedText } from '../outlined-text';
-import { PopupWindow } from '../style/popup-window';
+import { PopupWindow } from '../style/dialog-window';
 import { fitText } from './fit-text';
 import { FlameIcon } from './flame-icon';
 import { flyReward, type WalletTargets } from './reward-flight';

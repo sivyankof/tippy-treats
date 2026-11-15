@@ -5,7 +5,7 @@ import { t } from '../../../i18n';
 import { services } from '../../../services';
 import { createTextButton } from '../button';
 import { createOutlinedText } from '../outlined-text';
-import { PopupWindow } from '../style/popup-window';
+import { PopupWindow } from '../style/dialog-window';
 import { buyProduct } from '../../purchases';
 import { fitText } from './fit-text';
 import { createNoAdsIcon } from './shop-premium-icon';

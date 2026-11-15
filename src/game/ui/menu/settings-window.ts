@@ -15,7 +15,7 @@ import {
 import { restorePurchases } from '../../purchases';
 import { createTextButton } from '../button';
 import { createOutlinedText } from '../outlined-text';
-import { PopupWindow } from '../style/popup-window';
+import { PopupWindow } from '../style/dialog-window';
 import { openConfirmWindow } from './confirm-window';
 import { fitText } from './fit-text';
 import { createToggleRows, soundSettingRows, type ToggleRowSpec } from './setting-toggles';

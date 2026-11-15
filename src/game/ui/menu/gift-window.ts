@@ -9,7 +9,7 @@ import { markAdUnavailable } from './ad-unavailable';
 import { cssColor } from '../../../util/color';
 import { createTextButton, type Button } from '../button';
 import { createOutlinedText } from '../outlined-text';
-import { PopupWindow } from '../style/popup-window';
+import { PopupWindow } from '../style/dialog-window';
 import { fitText } from './fit-text';
 import { GiftBox } from './new-creature-box';
 import { shakeAngle } from './new-creature-reveal';

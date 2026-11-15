@@ -10,7 +10,7 @@ import { markAdUnavailable } from './ad-unavailable';
 import { createTextButton, type Button } from '../button';
 import { createOutlinedText } from '../outlined-text';
 import { BalanceChip } from '../style/balance-chip';
-import { PopupWindow } from '../style/popup-window';
+import { PopupWindow } from '../style/dialog-window';
 import { createPriceButton } from '../style/price-button';
 import { fitText } from './fit-text';
 import { FlameIcon } from './flame-icon';

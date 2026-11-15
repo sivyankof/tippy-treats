@@ -9,7 +9,7 @@ import { prepareRemoveAdsOffer } from '../interstitial-flow';
 import { buyProduct, loadPrices, syncPurchases } from '../purchases';
 import { starterPackContents } from '../../core/shop';
 import { startRunFrom, openScreen, SCENES, type HomeData } from '../scene-keys';
-import type { PopupWindow } from '../ui/style/popup-window';
+import type { PopupWindow } from '../ui/style/dialog-window';
 import { createTextButton, type Button } from '../ui/button';
 import { createHintBubble } from '../ui/menu/home-hint';
 import { HomeBadges } from '../ui/menu/home-badges';

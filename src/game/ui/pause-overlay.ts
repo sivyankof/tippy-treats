@@ -6,7 +6,7 @@ import { t } from '../../i18n';
 import { createTextButton, type Button } from './button';
 import { createToggleRows, soundSettingRows } from './menu/setting-toggles';
 import { createOutlinedText } from './outlined-text';
-import { PopupWindow } from './style/popup-window';
+import { PopupWindow } from './style/dialog-window';
 import type { ToggleSwitch } from './style/toggle-switch';
 import { leaveScreen } from './transition';
 

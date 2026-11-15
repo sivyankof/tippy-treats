@@ -14,7 +14,7 @@ import { RunCamera } from '../run-camera';
 import { ContinueFlow } from '../continue-flow';
 import { beginRunRewardedMemo, rewardedAds } from '../rewarded';
 import { extrasOf, RunRecorder } from '../run-recorder';
-import { FlyingTracker } from '../fx/flying-tracker';
+import { FlyingTracker } from '../fx/flying-follow';
 import { placeTutorialTarget } from '../fx/tutorial-target';
 import { driveContinue } from '../objects/continue-driver';
 import { berriesFromEvents } from '../../core/berries';
