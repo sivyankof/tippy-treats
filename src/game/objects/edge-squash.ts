@@ -101,6 +101,22 @@ export function edgeOverflow(
   return { left: wallLeft - (cx - half), right: cx + half - wallRight };
 }
 
+/**
+ * The walls of the squash (world x) for the visible part of the world `[viewLeft, viewRight]`
+ * and the safe-area insets of the two sides: exactly the edge of what the player sees, no gap.
+ * Writes into `out` (reused every frame).
+ */
+export function visibleWalls(
+  viewLeft: number,
+  viewRight: number,
+  sideLeft: number,
+  sideRight: number,
+  out: { left: number; right: number },
+): void {
+  out.left = viewLeft + sideLeft;
+  out.right = viewRight - sideRight;
+}
+
 /** How deep a side would squash for its overflow `e`, before the shape limits it. */
 export function wantedDepth(e: number, knee: number, feel: Readonly<WallFeel>): number {
   return feel.give * softOverflow(e, knee);

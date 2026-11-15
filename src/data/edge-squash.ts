@@ -64,8 +64,6 @@ export interface WallFeel {
 export type ByPower = readonly [slow: number, fast: number];
 
 export const EDGE_SQUASH = {
-  /** Gap kept between the layer and the screen edge (on top of the safe area), logical px. */
-  marginPx: 12,
   /**
    * The squash starts this far before the edge touches and eases in over twice this distance,
    * so the edge slows down smoothly instead of stopping dead.

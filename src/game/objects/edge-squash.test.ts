@@ -22,6 +22,7 @@ import {
   squashTallest,
   squashWidth,
   squashX,
+  visibleWalls,
   wantedDepth,
   type ColumnEdge,
   type EdgeShape,
@@ -597,6 +598,53 @@ describe('ribs of the silhouette', () => {
         const up = wedge(s, u).up;
         expect(up).toBeLessThanOrEqual(last + 1e-9);
         last = up;
+      }
+    }
+  });
+});
+
+describe('walls at the screen edge', () => {
+  const VIEW = { left: 0, right: 1080 };
+  const walls = { left: 0, right: 0 };
+
+  it('puts the walls on the edge of the visible part, less the safe area only', () => {
+    visibleWalls(VIEW.left, VIEW.right, 0, 0, walls);
+    expect(walls).toEqual({ left: 0, right: 1080 });
+    visibleWalls(-40, 1120, 30, 20, walls);
+    expect(walls).toEqual({ left: -10, right: 1100 });
+  });
+
+  it('draws the squashed edge on the screen edge, at most half the outline beyond it', () => {
+    visibleWalls(VIEW.left, VIEW.right, 0, 0, walls);
+    const outline = EDGE_SQUASH.silhouette.outlinePx;
+    for (const kind of ['normal', 'soft', 'hard'] as const) {
+      const f = feel[kind];
+      for (const power of [0, 1]) {
+        for (const width of [500, 720, 900]) {
+          for (const depth of [0, 10, 40, 90]) {
+            for (const side of ['left', 'right'] as const) {
+              const half = width / 2;
+              const cx = side === 'left' ? walls.left + half - depth : walls.right - half + depth;
+              const over = edgeOverflow(cx, half, walls.left, walls.right);
+              const s = fitShape(
+                half,
+                wantedDepth(over.left, kneePx, f),
+                wantedDepth(over.right, kneePx, f),
+                f,
+                flatShape(),
+                power,
+              );
+              s.shift = slideShift(over.left, over.right, kneePx, f);
+              const drawn = side === 'left' ? cx + squashX(s, -half) : cx + squashX(s, half);
+              const wall = side === 'left' ? walls.left : walls.right;
+              // Past the wall (outwards) is positive.
+              const beyond = side === 'left' ? wall - drawn : drawn - wall;
+              expect(beyond).toBeLessThanOrEqual(1e-6);
+              if (depth >= kneePx) expect(Math.abs(beyond)).toBeLessThanOrEqual(1);
+              expect(beyond).toBeLessThanOrEqual(outline / 2);
+            }
+          }
+        }
       }
     }
   });

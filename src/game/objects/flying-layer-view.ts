@@ -2,7 +2,6 @@ import type * as Phaser from 'phaser';
 import type { TowerState } from '../../core/tower-sim';
 import { ANIM } from '../../data/anim';
 import { BALANCE } from '../../data/balance';
-import { EDGE_SQUASH } from '../../data/edge-squash';
 import { HINT_PULSE } from '../../data/idle-motion';
 import { PALETTE } from '../../data/palette';
 import { RULE_ANIM } from '../../data/rule-anim';
@@ -19,6 +18,7 @@ import {
   type Walls,
   type WallTouch,
 } from './flying-edge-squash';
+import { visibleWalls } from './edge-squash';
 import { LayerView } from './layer-view';
 import type { TowerView } from './tower-view';
 
@@ -207,14 +207,13 @@ export class FlyingLayerView {
     }
   }
 
-  /** Screen walls the layer squashes against: the screen edges, the safe area and a margin. */
+  /** Screen walls the layer squashes against: the edges of the visible part of the world less the safe area. */
   private measureWalls(): void {
     const scene = this.view.scene;
     const cam = scene.cameras.main;
-    const width = cam.width / (cam.zoom || 1);
-    const sides = safeSides(scene.game.canvas, width);
-    this.walls.left = cam.scrollX + EDGE_SQUASH.marginPx + sides.left;
-    this.walls.right = cam.scrollX + width - EDGE_SQUASH.marginPx - sides.right;
+    const view = cam.worldView;
+    const sides = safeSides(scene.game.canvas, view.width);
+    visibleWalls(view.left, view.right, sides.left, sides.right, this.walls);
   }
 
   /** Squashes the picture where it is drawn now. */
