@@ -28,7 +28,8 @@
     "decline": "No thanks"
   },
   "ads": {
-    "stub": "Ad (stub)"
+    "stub": "Ad (stub)",
+    "stubInterstitial": "Interstitial ad (stub)"
   },
   "tutorial": {
     "tap": "Tap!",
@@ -278,6 +279,12 @@
     "restoreAd": "Save it for an ad",
     "restoreBerries": "one=Save it for {price} berry|other=Save it for {price} berries",
     "decline": "Start over"
+  },
+  "noAdsOffer": {
+    "title": "No ads",
+    "text": "No ads between runs, ever",
+    "buy": "No ads for {price}",
+    "later": "Not now"
   },
   "gift": {
     "title": "Free gift",

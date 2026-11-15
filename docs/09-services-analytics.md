@@ -39,15 +39,15 @@ export interface AdsService {
   init(): Promise<void>;                       // after consent
   isRewardedReady(): boolean;
   showRewarded(p: RewardedPlacement): Promise<'rewarded' | 'dismissed' | 'unavailable'>;
-  maybeShowInterstitial(): Promise<boolean>;   // checks all rules itself
+  showInterstitial(): Promise<boolean>;        // only shows; the rules are decided by the caller (core/video-policy.ts)
   setRemoveAds(v: boolean): void;
 }
 ```
 
 - После инициализации заранее загружается одна реклама за награду и одна межстраничная; после показа сразу загружается следующая.
-- Правила показа межстраничной рекламы описаны в `05-economy-monetization.md`; решение принимает чистая функция `core/video-policy.ts` (покрыта тестами), сервис только исполняет.
+- Правила показа межстраничной рекламы описаны в `05-economy-monetization.md`; решение принимает чистая функция `core/video-policy.ts` (`canShowInterstitial`, покрыта тестами), а сервис `showInterstitial()` правил не знает и только показывает рекламу (`true`, если показал). Вызывает его единственное место, `game/interstitial-flow.ts`.
 - На время показа рекламы музыка и звуки приостанавливаются, игра на паузе. У `AudioService.suspend(reason)` / `resume(reason)` причина `'app'` (сворачивание) или `'ad'` (реклама); звук возвращается, только когда не держится ни одна причина.
-- Браузерная заглушка: `services/rewarded-video/web.ts` (серый DOM-экран на 2 секунды, затем `'rewarded'`). Режимы `reward`, `dismissed`, `unavailable` переключаются кнопкой в панели отладки через `adsDev` (интерфейс `AdsDevControl`, не входит в `Services`). Нативная реализация появится в M7.
+- Браузерная заглушка: `services/rewarded-video/web.ts` (серый DOM-экран на 2 секунды, затем `'rewarded'`; межстраничная показывает такой же экран на 2 секунды со своей подписью и отвечает `true`, в режиме `unavailable` ничего не показывает и отвечает `false`). Режимы `reward`, `dismissed`, `unavailable` переключаются кнопкой в панели отладки через `adsDev` (интерфейс `AdsDevControl`, не входит в `Services`). Нативная реализация появится в M7.
 - В разработке и во внутренних сборках используются **тестовые идентификаторы** рекламных блоков Google. Боевые идентификаторы берутся из `.env` только в релизной сборке. Нажимать на собственную боевую рекламу нельзя: это ведёт к блокировке аккаунта AdMob.
 - Файл `app-ads.txt` разместить на сайте разработчика (тот же сайт, что с политикой конфиденциальности).
 

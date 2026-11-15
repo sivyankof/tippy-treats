@@ -25,12 +25,14 @@ export function showStubOverlay(label: string): (() => void) | null {
 }
 
 /**
- * Browser stand-in for the ad SDK: a fake rewarded ad that pays out after a couple of seconds.
+ * Browser stand-in for the ad SDK: a fake rewarded ad that pays out after a couple of seconds and
+ * a fake interstitial of the same length.
  * In dev the debug panel switches its answer (`cycleMode`) to try every branch of the flow.
  */
 export class WebAds implements AdsService, AdsDevControl {
   private current: StubAdMode = 'reward';
   private busy = false;
+  private removed = false;
 
   /** `showOverlay` returns the function that removes the overlay it drew. */
   constructor(
@@ -70,11 +72,20 @@ export class WebAds implements AdsService, AdsDevControl {
     });
   }
 
-  maybeShowInterstitial(): Promise<boolean> {
-    return Promise.resolve(false);
+  showInterstitial(): Promise<boolean> {
+    if (this.removed || !this.isRewardedReady()) return Promise.resolve(false);
+    this.busy = true;
+    const hide = this.showOverlay(t('ads.stubInterstitial'));
+    return new Promise((resolve) => {
+      setTimeout(() => {
+        hide?.();
+        this.busy = false;
+        resolve(true);
+      }, STUB_ADS.durationMs);
+    });
   }
 
-  setRemoveAds(): void {
-    // The stub shows no interstitials, so there is nothing to switch off.
+  setRemoveAds(removed: boolean): void {
+    this.removed = removed;
   }
 }

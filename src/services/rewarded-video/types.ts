@@ -9,8 +9,11 @@ export interface AdsService {
   init(): Promise<void>;
   isRewardedReady(): boolean;
   showRewarded(placement: RewardedPlacement): Promise<RewardedResult>;
-  /** Checks all the rules itself; true when an ad was shown. */
-  maybeShowInterstitial(): Promise<boolean>;
+  /**
+   * Shows one interstitial and resolves when it is closed; true when an ad was shown. It knows no
+   * rules: the caller decides in `core/video-policy.ts` that it is time.
+   */
+  showInterstitial(): Promise<boolean>;
   setRemoveAds(removed: boolean): void;
 }
 

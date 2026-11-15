@@ -7,6 +7,7 @@ import type {
   Wallet,
 } from '../core/economy';
 import { exchangeBerries, spend } from '../core/economy';
+import { canShowInterstitial } from '../core/video-policy';
 import type { RunResult } from '../core/run-result';
 import {
   coinCreatureAffordable,
@@ -42,6 +43,7 @@ import {
 } from './missions';
 import { withCreatureBought, withCreatureUpgraded, withTeam } from './creatures';
 import { Hints } from './hints';
+import { withInterstitialShown, withRunCounted, withSessionStarted } from './interstitial';
 import { applyRun, type RunSummary } from './run-record';
 import { applyRunProgress, NO_EXTRAS, type RunExtras } from './run-progress';
 import {
@@ -153,8 +155,37 @@ export class GameState {
       this.clockBehind,
       this.dailyAttemptDay,
     );
-    this.store.replace(progress.save);
+    this.store.replace(withRunCounted(progress.save));
     return { ...applied.summary, missions: progress.missions, dailyTiers: progress.dailyTiers };
+  }
+
+  // --- Interstitial ads ---
+
+  /** The app was launched: the session counter grows; call once per launch, after the save is loaded. */
+  beginSession(): void {
+    this.store.replace(withSessionStarted(this.store.save));
+  }
+
+  /**
+   * The rules of docs/05, section 6 for the player leaving the results of a run that lasted
+   * `runMs` (`rewardedInRun`: a rewarded ad was watched during it).
+   */
+  canShowInterstitial(runMs: number, rewardedInRun: boolean): boolean {
+    const { ads, purchases } = this.store.save;
+    return canShowInterstitial({
+      removeAds: purchases.removeAds,
+      session: ads.sessions,
+      runsSince: ads.runsSinceInterstitial,
+      nowMs: (this.deps.now ?? now)(),
+      lastShownAt: ads.lastInterstitialAt,
+      rewardedInRun,
+      runMs,
+    });
+  }
+
+  /** An interstitial was shown just now. */
+  noteInterstitialShown(): void {
+    this.store.replace(withInterstitialShown(this.store.save, (this.deps.now ?? now)()));
   }
 
   // --- Days ---

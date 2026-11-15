@@ -47,12 +47,38 @@ describe('WebAds', () => {
     expect(show).not.toHaveBeenCalled();
   });
 
-  it('runs without a DOM and has no interstitials', async () => {
+  it('runs without a DOM', async () => {
     const ads = new WebAds();
     const result = ads.showRewarded();
     await vi.advanceTimersByTimeAsync(STUB_ADS.durationMs);
     await expect(result).resolves.toBe('rewarded');
-    await expect(ads.maybeShowInterstitial()).resolves.toBe(false);
     await expect(ads.init()).resolves.toBeUndefined();
+  });
+
+  it('shows a grey interstitial for the same time, then reports it shown', async () => {
+    const hide = vi.fn();
+    const show = vi.fn(() => hide);
+    const ads = new WebAds(show);
+    const result = ads.showInterstitial();
+    expect(show).toHaveBeenCalledOnce();
+    expect(ads.isRewardedReady()).toBe(false);
+    await vi.advanceTimersByTimeAsync(STUB_ADS.durationMs - 1);
+    expect(hide).not.toHaveBeenCalled();
+    await vi.advanceTimersByTimeAsync(1);
+    await expect(result).resolves.toBe(true);
+    expect(hide).toHaveBeenCalledOnce();
+    expect(ads.isRewardedReady()).toBe(true);
+  });
+
+  it('shows no interstitial in the unavailable mode or once ads are removed', async () => {
+    const show = vi.fn(() => null);
+    const off = new WebAds(show);
+    off.cycleMode();
+    off.cycleMode();
+    await expect(off.showInterstitial()).resolves.toBe(false);
+    const removed = new WebAds(show);
+    removed.setRemoveAds(true);
+    await expect(removed.showInterstitial()).resolves.toBe(false);
+    expect(show).not.toHaveBeenCalled();
   });
 });

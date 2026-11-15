@@ -98,6 +98,21 @@ export const BALANCE = {
     extraAttempts: 1,
     teamLevel: 3,
   },
+  /** Interstitial ads (docs/05-economy-monetization.md, section 6); the rules are in core/video-policy.ts. */
+  ads: {
+    interstitial: {
+      /** Sessions 1..firstSessionsFree have no interstitials at all. */
+      firstSessionsFree: 1,
+      /** Finished runs since the last interstitial. */
+      minRuns: 3,
+      /** Time since the last interstitial. */
+      minGapMs: 120_000,
+      /** The run that just ended lasted at least this long. */
+      minRunMs: 15_000,
+    },
+    /** The "no ads" offer comes once per session after this many interstitials shown in it. */
+    removeAdsOfferAfter: 2,
+  },
   tutorial: {
     slowLayers: 3,
     slowSpeedMult: 0.6,

@@ -70,7 +70,7 @@ tippy-treats/
     │   ├── near-miss.ts        строка «почти получилось» на результатах
     │   ├── ability-values.ts   числа текста способности на уровне и что растёт со следующим
     │   ├── run-tally.ts        монеты по источникам, число способностей и наибольшая качка за забег
-    │   ├── video-policy.ts     когда предлагать рекламу за награду (`canOfferDoubleCoins`); правила межстраничной добавятся в M8
+    │   ├── video-policy.ts     когда предлагать рекламу за награду (`canOfferDoubleCoins`) и когда показывать межстраничную (`canShowInterstitial`, `shouldOfferRemoveAds`)
     │   └── save/
     │       ├── schema.ts       типы сохранения, `HINT_IDS`
     │       ├── migrations.ts   цепочка миграций (`migrate`, цепочку можно подменить в тесте)
@@ -469,7 +469,7 @@ interface MissionProgress { id: string; group: 'easy' | 'medium' | 'hard'; targe
 | Сервис | Поведение заглушки в браузере |
 |---|---|
 | storage | `localStorage` |
-| ads | `services/rewarded-video/web.ts`: серый экран (DOM) на 2 секунды, затем `rewarded`. Режимы `reward` / `dismissed` / `unavailable` переключаются кнопкой в панели отладки (`adsDev`, не входит в `Services`) |
+| ads | `services/rewarded-video/web.ts`: серый экран (DOM) на 2 секунды с подписью «Реклама (заглушка)», затем `rewarded`; `showInterstitial()` показывает такой же серый экран на 2 секунды с подписью «Межстраничная реклама (заглушка)» (ключи `ads.stub`, `ads.stubInterstitial`) и отвечает `true`; в режиме `unavailable` не показывает ничего и отвечает `false`. Режимы `reward` / `dismissed` / `unavailable` переключаются кнопкой в панели отладки (`adsDev`, не входит в `Services`) |
 | iap | `services/iap/web.ts`: DOM-окно «Купить (тест)?» с названием и ценой товара и кнопками «Купить» (`'purchased'`) и «Отмена» (`'cancelled'`); `window.confirm` не используется. Заглушка изображает стор: купленные разовые товары помнит под своим ключом `stub_store_owned` (`localStorage`, не в сохранении), поэтому `restore()` и `ownedNonConsumables()` возвращают их и после сброса прогресса `?reset=1`. Разовый товар второй раз не продаёт (`'failed'`). Цены заглушки лежат в `data/iap-stub.ts`. Ид. товаров берутся только из `.env` (`VITE_IAP_*`, `services/iap/product-ids.ts`), товар без ид. в заглушку не попадает |
 | analytics | Печатает события в консоль |
 | haptics | `navigator.vibrate`, если есть |
@@ -755,3 +755,4 @@ interface MissionProgress { id: string; group: 'easy' | 'medium' | 'hard'; targe
 | 2026-11-15 | Версия приложения берётся из `package.json` в `vite.config.ts` (`define: __APP_VERSION__`, читается через `node:fs`, новых зависимостей нет), объявлена в `src/app-globals.d.ts`, читается в `data/app-info.ts` | Один источник версии для окна настроек и тестов |
 | 2026-11-15 | Сброс прогресса: `withProgressReset` (state/reset.ts) делает новое сохранение, оставляя `installId` и `settings`; после него `syncPurchases`, затем старт обучающего забега тем же вызовом, что в `BootScene` (сцена Boot заново не запускается: её текстуры уже созданы) | Игра начинается как при первом запуске без перезагрузки страницы; деньги за `removeAds` не теряются, стор вернёт их |
 | 2026-11-15 | Смена языка: `scene.restart` Home с `reopenSettings` (все тексты Home строятся в `create`, живой перестройки нет), окно открывается заново. Окно настроек умещается без прокрутки (`ScrollList` не нужен, в окнах нет обрезки) | Единственный экран, откуда открываются настройки, это Home |
+| 2026-11-15 | Межстраничная реклама: правила `canShowInterstitial` (нет `remove_ads`, не первая сессия, ≥ 3 забегов и ≥ 120 с с прошлой, в забеге не было рекламы за награду, забег ≥ 15 с) и `shouldOfferRemoveAds` (после второго показа, раз за сессию) лежат в `core/video-policy.ts`, пороги в `BALANCE.ads`. `AdsService.maybeShowInterstitial` переименован в `showInterstitial`: сервис правил не проверяет, только показывает (так сказано в роадмапе M8; документ 09 говорил обратное). Счётчики в сохранении (`ads.sessions` +1 за запуск через `GameState.beginSession`, `ads.runsSinceInterstitial` +1 в `recordRun`, `ads.lastInterstitialAt` через `noteInterstitialShown`), показы за сессию и «реклама за награду в этом забеге» только в памяти (`game/interstitial-flow.ts`); форма сохранения не менялась. Показ при выходе с результатов любой кнопкой, затем (после второго показа) окно предложения из набора стиля | Правило из документа 05, раздел 6; решение в ядре покрыто тестами, сцена только вызывает |
