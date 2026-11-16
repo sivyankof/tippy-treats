@@ -7,7 +7,8 @@ import { capRenderDensity } from './render-density';
 export function followEffectsLevelDensity(game: Phaser.Game): void {
   const density = capRenderDensity(game, densityCapForLevel(effectsMode.level));
   if (!density) return;
-  game.events.on(Phaser.Core.Events.POST_RENDER, () => {
+  // Before the frame is drawn: a new canvas size clears whatever was drawn into it.
+  game.events.on(Phaser.Core.Events.PRE_RENDER, () => {
     density.setCap(densityCapForLevel(effectsMode.level));
   });
 }

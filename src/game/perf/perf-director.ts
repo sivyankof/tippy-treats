@@ -3,6 +3,7 @@ import type { EffectLevel } from '../../data/effect-levels';
 import { PERF, type PerfSegmentDef } from '../../data/perf';
 import { setFrameWorkListener } from '../frame-work';
 import { capRenderDensity } from '../render-density';
+import { densityCapForLevel } from '../../util/density-scale';
 import { CLASSIC_RUN } from '../run-request';
 import type { GameScene } from '../scenes/game-scene';
 import { launchRun, resultsShown, SCENES } from '../scene-keys';
@@ -108,7 +109,8 @@ class PerfDirector {
       canvas: { width: canvas.width, height: canvas.height },
       css: { width: rect.width, height: rect.height },
       devicePixelRatio: window.devicePixelRatio,
-      densityCap: params?.densityCap ?? null,
+      // Without `&dpr=` the game caps the density by the pinned effects level.
+      densityCap: params?.densityCap ?? densityCapForLevel(fx),
       textureUnits: webgl?.renderNodes?.maxParallelTextureUnits ?? 0,
       maxTextureUnits: webgl?.maxTextures ?? 0,
       hidden: params?.hidden ?? [],
