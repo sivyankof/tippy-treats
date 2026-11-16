@@ -59,11 +59,12 @@ export function pickLook(phase: CloudPhase, current: CloudLook, wanted: CloudLoo
 }
 
 /**
- * The densest a bank of `look` is drawn, 0..1: the nebula has its own cap, and `share` (the
- * meringue "Not scary" factor, 1 otherwise) lowers either.
+ * The densest a bank of `look` is drawn, 0..1: the nebula has its own cap, and the meringue
+ * "Not scary" (`ghost`) lowers either by the share of that look (taken from the look the bank
+ * really has, not from the zone of the layer: at a zone boundary they differ).
  */
-export function densityCap(look: CloudLook, share: number): number {
-  return (look === 'nebula' ? nebula.maxDensity : 1) * share;
+export function densityCap(look: CloudLook, ghost: boolean): number {
+  return (look === 'nebula' ? nebula.maxDensity : 1) * ghostShare(ghost, look === 'nebula');
 }
 
 /** How many stars twinkle over a nebula bank on this effects level. */
@@ -138,8 +139,8 @@ export interface CloudInput {
   y: number;
   /** The way the layer flies; the bank comes from behind and drifts that way. */
   dir: 1 | -1;
-  /** The meringue master makes the cloud see-through: the share of the look's own density cap (1 without it). */
-  maxAlpha: number;
+  /** The meringue master makes the cloud see-through: each bank lowers its own look's density cap. */
+  ghost: boolean;
   /** The cloud belongs to a Space layer: a bank that starts now is drawn as the nebula. */
   nebula: boolean;
 }
@@ -314,8 +315,8 @@ class CloudBank {
   }
 
   /** The cap on how dense this bank is drawn, 0..1. */
-  cap(share: number): number {
-    return densityCap(this.look, share);
+  cap(ghost: boolean): number {
+    return densityCap(this.look, ghost);
   }
 
   update(dtMs: number, timeMs: number, input: Readonly<CloudInput>): void {
@@ -341,14 +342,14 @@ class CloudBank {
       .setVisible(shown)
       .setPosition(x, y)
       .setScale(scale)
-      .setAlpha(Math.min(pose.alpha, this.cap(input.maxAlpha)));
+      .setAlpha(Math.min(pose.alpha, this.cap(input.ghost)));
     this.updateStars(
       shown && this.look === 'nebula',
       timeMs,
       level,
       { x, y, scale },
       pose.alpha,
-      input.maxAlpha,
+      ghostShare(input.ghost, this.look === 'nebula'),
     );
   }
 
@@ -389,7 +390,7 @@ export function followInput(passive: CloudInput, input: Readonly<CloudInput>): v
   passive.flying = input.flying;
   passive.y = input.y;
   passive.dir = input.dir;
-  passive.maxAlpha = input.maxAlpha;
+  passive.ghost = input.ghost;
   passive.nebula = input.nebula;
 }
 
@@ -410,11 +411,11 @@ export class CloudCover {
     etaMs: Infinity,
     y: 0,
     dir: 1,
-    maxAlpha: 1,
+    ghost: false,
     nebula: false,
   };
-  /** The share of the density cap that "Not scary" leaves: what the cover reports is scaled by it. */
-  private maxAlpha = 1;
+  /** "Not scary" is on: what the cover reports is scaled by the share of each bank's own look. */
+  private ghost = false;
   /** What a free bank is told when it should start floating in the coming cloud. */
   private readonly coming: CloudInput = { ...this.passive };
 
@@ -426,7 +427,7 @@ export class CloudCover {
 
   /** How much a cloud hides the layer, 0..1 (a see-through cloud hides no more than it shows). */
   get amount(): number {
-    return Math.max(...this.banks.map((bank) => bank.motion.amount * bank.cap(this.maxAlpha)));
+    return Math.max(...this.banks.map((bank) => bank.motion.amount * bank.cap(this.ghost)));
   }
 
   /** A bank drawn as the nebula is on screen. */
@@ -436,7 +437,7 @@ export class CloudCover {
 
   /** Smooth 0..1 density of the densest bank (see `CloudMotion.density`). */
   get density(): number {
-    return Math.max(...this.banks.map((bank) => bank.motion.density * bank.cap(this.maxAlpha)));
+    return Math.max(...this.banks.map((bank) => bank.motion.density * bank.cap(this.ghost)));
   }
 
   /**
@@ -450,7 +451,7 @@ export class CloudCover {
     let needsApproach = !phases.includes('approach') && input.flying && input.etaMs <= cfg.leadMs;
     let needsCover = input.covering && !phases.includes('cover') && !phases.includes('approach');
     followInput(this.passive, input);
-    this.maxAlpha = input.maxAlpha;
+    this.ghost = input.ghost;
     Object.assign(this.coming, input, { covering: false });
     for (const bank of this.banks) {
       const phase = bank.motion.phase;
