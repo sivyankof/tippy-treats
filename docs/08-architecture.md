@@ -847,8 +847,8 @@ interface MissionProgress { id: string; group: 'easy' | 'medium' | 'hard'; targe
 
 | Что | Бюджет | Достигнуто (headless Chromium, 390×844, iPhone user agent) |
 |---|---|---|
-| Отрисовок на кадр, спокойные отрезки (`calm`, `edge`, `perfects`, `results`) | ≤ 40 | 29–36 |
-| Отрисовок на кадр, тяжёлые отрезки (`tower`, `lick-big`, `lick-short`, `rainbow`, `clouds`, `space`, `guest`, `collapse`) | ≤ 60 | 26–46 |
+| Отрисовок на кадр, спокойные отрезки (`calm`, `edge`, `perfects`, `results`) | ≤ 40 | 28–36 |
+| Отрисовок на кадр, тяжёлые отрезки (`tower`, `lick-big`, `lick-short`, `rainbow`, `clouds`, `space`, `guest`, `collapse`) | ≤ 60 | 29–56 (со страницей атласа 4096×2048: высокая башня 42, дуга Радужки 56) |
 | Работа кадра, среднее, телефон без замедления | ≤ 8 мс | iPhone 14 Pro Max: до прохода 5,4–10,9 мс; после — в бюджете во всех отрезках, кроме `rainbow` 9,14 мс (правка дуги — ниже в журнале); headless ×1 0,6–1,3 мс |
 | Интервал между кадрами, среднее, телефон | ≤ 18 мс | iPhone 14 Pro Max: до прохода 17,5–22,8 мс (44–57 кадров); после 16,7–17,4 мс: calm 59,7, tower 59,6, lick-big 59,9, lick-short 59,9, rainbow 57,5, edge 60,0, perfects 59,2, clouds 59,6, space 59,7, guest 59,9, collapse 58,5, results 59,9 кадра |
 | Худший кадр работы, телефон | ≤ 50 мс | iPhone после прохода — в бюджете (с `&units=16` в calm 207 мс) |
