@@ -125,9 +125,10 @@ describe('clearOfSpan', () => {
 
 describe('aimedByShadowOnly', () => {
   it('holds for the cloud rule only, and not for an unknown rule', () => {
-    expect(aimedByShadowOnly('clouds')).toBe(true);
-    expect(aimedByShadowOnly('none')).toBe(false);
-    expect(aimedByShadowOnly('stars')).toBe(false);
+    expect(aimedByShadowOnly({ rule: 'clouds', rule2: null })).toBe(true);
+    expect(aimedByShadowOnly({ rule: 'roof', rule2: 'clouds' })).toBe(true);
+    expect(aimedByShadowOnly({ rule: 'none', rule2: null })).toBe(false);
+    expect(aimedByShadowOnly({ rule: 'stars', rule2: 'roof' })).toBe(false);
     expect(aimedByShadowOnly(null)).toBe(false);
   });
 });

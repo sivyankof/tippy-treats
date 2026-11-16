@@ -384,7 +384,7 @@ export class TowerGuest {
     const flying = ctx.state.flying;
     this.shy.notice(dtMs, flying, this.pos.x);
     // The shadow is the only aim there: a guest it has come to gives the place up.
-    if (this.nearShadow && aimedByShadowOnly(flying?.rule ?? null)) {
+    if (this.nearShadow && aimedByShadowOnly(flying)) {
       this.startLeave('startle');
       return;
     }

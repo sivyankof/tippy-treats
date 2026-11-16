@@ -39,7 +39,7 @@ export class GuestVisitPlanner {
    */
   rollOnPath(state: Readonly<TowerState>): boolean {
     const roll = this.random.next();
-    return roll < TOWER_GUEST.site.pathChance && !aimedByShadowOnly(state.flying?.rule ?? null);
+    return roll < TOWER_GUEST.site.pathChance && !aimedByShadowOnly(state.flying);
   }
 
   /** The shadow a visit that is not bound for the path keeps clear of; `null` for one that is. */

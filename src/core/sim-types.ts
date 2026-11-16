@@ -103,6 +103,8 @@ export interface FlyingLayer extends LayerPlan {
   zoneIndex: number;
   /** Rule this layer follows; `none` in the kitchen. */
   rule: LayerRuleKind;
+  /** Second rule of a Space layer from the double lap, `null` otherwise. */
+  rule2: LayerRuleKind | null;
   /** Rush layer: holds still for the wind-up, then flies faster. */
   rush: boolean;
   /** Wind-up left, ms; the layer does not move while it is above 0. */

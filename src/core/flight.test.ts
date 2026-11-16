@@ -14,6 +14,7 @@ const rules = (overrides: Partial<LayerRules> = {}): LayerRules => ({
   index: 30,
   zoneIndex: 1,
   rule: 'none',
+  rule2: null,
   fromLeft: true,
   rush: false,
   fakeoutX: null,
@@ -51,6 +52,15 @@ describe('roofFactor and flyingSpeed', () => {
     expect(flyingSpeed(layer)).toBeCloseTo(SPEED * ZONE_RULES.roof.centreMult);
     layer.x = minCenterX;
     expect(flyingSpeed(layer)).toBeCloseTo(SPEED * ZONE_RULES.roof.edgeMult);
+  });
+
+  it('applies the roof profile to the second rule too, on top of a rush', () => {
+    const layer = layerOf(rules({ rule: 'showcase', rule2: 'roof', rush: true }));
+    layer.windupMs = 0;
+    layer.x = minCenterX;
+    expect(flyingSpeed(layer)).toBeCloseTo(
+      SPEED * ZONE_RULES.rush.speedMult * ZONE_RULES.roof.edgeMult,
+    );
   });
 
   it('flies a rush layer faster once the wind-up is over and holds still before', () => {

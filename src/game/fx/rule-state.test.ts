@@ -8,6 +8,7 @@ const layer = (over: Partial<RuleFields> = {}): RuleFields => ({
   speed: 600,
   x: 540,
   rule: 'none',
+  rule2: null,
   rush: false,
   windupMs: 0,
   stopMs: 0,
@@ -115,5 +116,34 @@ describe('windStrength', () => {
   it('agrees with the roof profile of the core', () => {
     const { minCenterX, maxCenterX } = BALANCE.layer;
     expect(windStrength(roofFactor((minCenterX + maxCenterX) / 2))).toBeCloseTo(1);
+  });
+});
+
+describe('ruleVisual with two rules', () => {
+  it('shows the rush outline and a roof-modulated dash together', () => {
+    const edge = ruleVisual(
+      layer({ rush: true, rule: 'showcase', rule2: 'roof', x: BALANCE.layer.minCenterX }),
+      'flying',
+      idleVisual(),
+    );
+    const centre = ruleVisual(
+      layer({ rush: true, rule: 'showcase', rule2: 'roof', x: 540 }),
+      'flying',
+      idleVisual(),
+    );
+    expect(edge.outline).toBe(true);
+    expect(edge.streakKind).toBe('rush');
+    expect(edge.streaks).toBeGreaterThan(0);
+    expect(centre.streaks).toBeGreaterThan(edge.streaks);
+  });
+
+  it('shows the roof wind of a roof layer that also carries a cloud', () => {
+    const v = ruleVisual(
+      layer({ rule: 'roof', rule2: 'clouds', coverMs: 200 }),
+      'flying',
+      idleVisual(),
+    );
+    expect(v.streaks).toBeGreaterThan(0);
+    expect(v.covered).toBe(true);
   });
 });

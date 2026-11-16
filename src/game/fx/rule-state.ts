@@ -1,4 +1,5 @@
-import { flyingSpeed, type SpeedFields } from '../../core/flight';
+import { hasRule } from '../../core/zones';
+import { roofFactor, type SpeedFields } from '../../core/flight';
 import type { FlyingLayer, SimPhase } from '../../core/tower-sim';
 import { ZONE_RULES } from '../../data/zones';
 
@@ -44,6 +45,13 @@ export function windStrength(speedRatio: number): number {
   return Math.min(1, Math.max(0, (speedRatio - edgeMult) / (centreMult - edgeMult)));
 }
 
+/** Share of the strongest rush dash that stays at the slow edge of a roof rush layer. */
+const ROOF_RUSH_BASE = 0.5;
+
+function roofWind(layer: Readonly<RuleFields>): number {
+  return windStrength(roofFactor(layer.x));
+}
+
 /**
  * Fills `out` with the rule visual of a flying layer. Everything is read off the layer (the
  * sim decides, the screen only shows): a rush shows its outline from the spawn, the wind-up
@@ -71,10 +79,14 @@ export function ruleVisual(
     return out;
   }
   if (layer.rush) {
-    out.streaks = layer.stopMs > 0 ? 0 : 1;
     out.streakKind = 'rush';
-  } else if (layer.rule === 'roof' && layer.speed > 0) {
-    out.streaks = windStrength(flyingSpeed(layer) / layer.speed);
+    if (layer.stopMs > 0) out.streaks = 0;
+    // Rush on a roof layer: the dash swells and ebbs with the roof profile, so both rules read.
+    else if (hasRule(layer, 'roof'))
+      out.streaks = ROOF_RUSH_BASE + (1 - ROOF_RUSH_BASE) * roofWind(layer);
+    else out.streaks = 1;
+  } else if (hasRule(layer, 'roof') && layer.speed > 0) {
+    out.streaks = layer.stopMs > 0 ? 0 : roofWind(layer);
   }
   return out;
 }
