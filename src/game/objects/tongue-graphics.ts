@@ -13,6 +13,8 @@ export interface TongueParts {
   lay(r: Ribbon): void;
   /** The tongue is in. */
   hide(): void;
+  /** None of the parts has been destroyed. */
+  readonly alive: boolean;
 }
 
 /** The tongue redrawn by two `Graphics` every frame: the fallback where the renderer has no strips (Canvas). */
@@ -40,5 +42,9 @@ export class GraphicsTongue implements TongueParts {
   hide(): void {
     this.trunk.setVisible(false);
     this.tip.setVisible(false);
+  }
+
+  get alive(): boolean {
+    return !this.trunk.isDestroyed && !this.tip.isDestroyed;
   }
 }

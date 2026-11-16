@@ -3,6 +3,7 @@ import { BALANCE } from '../../data/balance';
 import type { CreatureId } from '../../data/creatures';
 import { GLAZE_DRIPS } from '../../data/glaze-drips';
 import { LICK, type LickStyle } from '../../data/lick';
+import { devWarn } from '../dev-warn';
 import { effectsMode } from '../effects-mode';
 import { faceHalfSpan } from '../fx/glaze-growth';
 import { dropOuter } from './glaze-drip-textures';
@@ -87,8 +88,17 @@ export class LickDirector {
     this.scheduler = new LickScheduler(() => this.random.next());
   }
 
-  /** Advances the lick and, when it is time, starts a new one. */
+  /** Advances the lick and, when it is time, starts a new one. A failure drops the lick, not the run. */
   update(dtMs: number, ctx: LickContext): void {
+    try {
+      this.advance(dtMs, ctx);
+    } catch (error) {
+      devWarn('Lick dropped after an error', error);
+      this.drop();
+    }
+  }
+
+  private advance(dtMs: number, ctx: LickContext): void {
     if (effectsMode.reduced || !ctx.calm) {
       this.stop();
       return;
@@ -109,7 +119,13 @@ export class LickDirector {
   /** Starts a lick at once if a layer can lick (a dev tool); returns whether it did. */
   lickNow(ctx: LickContext, scene?: LickScene, kind?: LickKind): boolean {
     if (this.run || effectsMode.reduced) return false;
-    return this.start(ctx, true, scene, kind);
+    try {
+      return this.start(ctx, true, scene, kind);
+    } catch (error) {
+      devWarn('Lick dropped after an error', error);
+      this.drop();
+      return false;
+    }
   }
 
   /** Drops the lick that is going on. */
@@ -118,6 +134,19 @@ export class LickDirector {
     this.run.view.faceView.cancelLick();
     this.run.view.glazeDrips.hideLick();
     this.run = null;
+  }
+
+  /** After a failure: the lick is forgotten first, so a second failure while stopping it cannot repeat. */
+  private drop(): void {
+    const run = this.run;
+    this.run = null;
+    if (!run) return;
+    try {
+      run.view.faceView.cancelLick();
+      run.view.glazeDrips.hideLick();
+    } catch (error) {
+      devWarn('Lick could not be stopped cleanly', error);
+    }
   }
 
   private start(ctx: LickContext, forced: boolean, scene?: LickScene, kind?: LickKind): boolean {
@@ -147,7 +176,11 @@ export class LickDirector {
     const shape = loopShape(view.drawnWidth, face.faceScale, dir, style);
     const own = view.glazeDrips.ownGlaze;
     const above = ctx.views.get(index + 1)?.glazeDrips.ownGlaze ?? -1;
-    face.startLick(lickScene, lickKind, shape, style);
+    if (!face.startLick(lickScene, lickKind, shape, style)) {
+      // No tongue to lay: the lick is a decoration, skipped like a tower with no face free.
+      if (!forced) this.scheduler.retry();
+      return false;
+    }
     this.run = {
       index,
       view,

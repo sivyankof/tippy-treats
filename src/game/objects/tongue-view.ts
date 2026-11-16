@@ -179,6 +179,11 @@ export class TongueView extends Phaser.GameObjects.Container {
     }
   }
 
+  /** The view and every picture of it are alive: the strips may be laid. */
+  get usable(): boolean {
+    return !this.isDestroyed && this.parts.alive && !this.saliva.isDestroyed;
+  }
+
   /** Back to nothing shown, the trail forgotten (a new lick). */
   clear(): void {
     this.hideTongue();
