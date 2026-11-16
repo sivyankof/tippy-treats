@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { cappedBackingSize } from './density-scale';
+import { cappedBackingSize, densityCapForLevel } from './density-scale';
 
 describe('cappedBackingSize', () => {
   const logical = { width: 1080, height: 2337 };
@@ -19,5 +19,13 @@ describe('cappedBackingSize', () => {
 
   it('keeps the logical size for a canvas that has no size yet', () => {
     expect(cappedBackingSize(logical, 0, 3, 1)).toEqual(logical);
+  });
+});
+
+describe('densityCapForLevel', () => {
+  it('gives every poorer level a lower cap', () => {
+    expect(densityCapForLevel('full')).toBe(2);
+    expect(densityCapForLevel('lite')).toBeLessThan(densityCapForLevel('full'));
+    expect(densityCapForLevel('minimal')).toBeLessThan(densityCapForLevel('lite'));
   });
 });

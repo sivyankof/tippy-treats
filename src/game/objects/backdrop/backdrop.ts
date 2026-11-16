@@ -1,8 +1,9 @@
-import type * as Phaser from 'phaser';
+import * as Phaser from 'phaser';
 import { ANIM } from '../../../data/anim';
-import { BACKDROP } from '../../../data/backdrop';
+import { BACKDROP, BD_TEX } from '../../../data/backdrop';
 import { ZONES, type ZoneId } from '../../../data/zones';
 import { DEPTH } from '../../depth';
+import { markPerfPart } from '../../perf/perf-marks';
 import { collectBakeSteps, type BakeStep } from '../../ui/bake-texture';
 import { bakeSharedArt } from './art-kit';
 import { bakeFarArt } from './far-plane';
@@ -46,6 +47,8 @@ export class Backdrop {
   private bakeQueue: BakeStep[] = [];
   private lastNowMs: number;
   private scrollY = 0;
+  /** The picture that stands in for the zones once they are frozen (the results screen). */
+  private still: Phaser.GameObjects.Image | null = null;
 
   /** `zoneIndex` is the zone shown at once (a debug start can begin deep in the tower). */
   constructor(
@@ -81,11 +84,13 @@ export class Backdrop {
     this.ctx.width = width;
     this.ctx.height = height;
     for (const scenery of this.sceneries.values()) scenery.resize(width, height);
+    this.still?.setDisplaySize(width, height);
   }
 
   /** Call every frame with the camera scroll. */
   update(scrollY: number): void {
     this.scrollY = scrollY;
+    if (this.still) return;
     const now = this.scene.time.now;
     const ctx = this.ctx;
     ctx.deltaMs = Math.min(Math.max(now - this.lastNowMs, 0), ANIM.fx.maxSimMs);
@@ -104,6 +109,45 @@ export class Backdrop {
     }
     this.bakeQueue.shift()?.();
     this.counter.update(ctx.timeMs);
+  }
+
+  /**
+   * Replaces the zones by one still picture of what they show now. The results screen darkens the
+   * backdrop, so it pays no more for the layers that nobody can see move. Stays until the scene ends.
+   */
+  freeze(): void {
+    if (this.still) return;
+    const { width, height } = this.ctx;
+    const zones = [...this.sceneries.values()]
+      .filter((scenery) => scenery.root.visible)
+      .sort((a, b) => a.root.depth - b.root.depth);
+    const first = zones[0];
+    if (!first) return;
+    const textures = this.scene.textures;
+    if (textures.exists(BD_TEX.still)) textures.remove(BD_TEX.still);
+    const picture = textures.addDynamicTexture(BD_TEX.still, width, height);
+    if (!picture) return;
+    picture.draw(
+      zones.map((scenery) => scenery.root),
+      0,
+      0,
+    );
+    picture.render();
+    this.still = this.scene.add
+      .image(0, 0, BD_TEX.still)
+      .setOrigin(0)
+      .setScrollFactor(0)
+      .setDepth(first.root.depth)
+      .setDisplaySize(width, height);
+    markPerfPart(this.still, 'bg');
+    for (const scenery of zones) scenery.root.setVisible(false);
+    this.scene.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.release());
+  }
+
+  /** The scene ends: its still picture is not kept. */
+  private release(): void {
+    this.still = null;
+    this.scene.textures.remove(BD_TEX.still);
   }
 
   private ensure(index: number): void {

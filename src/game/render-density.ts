@@ -1,6 +1,11 @@
 import * as Phaser from 'phaser';
 import { cappedBackingSize } from '../util/density-scale';
 
+/** Lets the cap change while the game runs (the effects level moves). */
+export interface DensityCap {
+  setCap(cap: number): void;
+}
+
 type Box = [number, number, number, number];
 
 /**
@@ -10,11 +15,11 @@ type Box = [number, number, number, number];
  * (it maps CSS pixels to the game size) and every texture keep the logical size. The renderer still
  * sets the viewport and the scissor box of the canvas in logical pixels, so the two calls are
  * scaled on the WebGL context while the canvas framebuffer is bound; framebuffers of textures and
- * filters are left alone. Returns false when the game does not draw with WebGL.
+ * filters are left alone. Returns null when the game does not draw with WebGL, else a handle that changes the cap.
  */
-export function capRenderDensity(game: Phaser.Game, cap: number): boolean {
+export function capRenderDensity(game: Phaser.Game, initialCap: number): DensityCap | null {
   const renderer = game.renderer;
-  if (!(renderer instanceof Phaser.Renderer.WebGL.WebGLRenderer)) return false;
+  if (!(renderer instanceof Phaser.Renderer.WebGL.WebGLRenderer)) return null;
   const gl = renderer.gl;
   const canvas = game.canvas;
   const viewport = Array.from(gl.getParameter(gl.VIEWPORT) as Int32Array) as Box;
@@ -23,6 +28,7 @@ export function capRenderDensity(game: Phaser.Game, cap: number): boolean {
   const rawScissor = gl.scissor.bind(gl);
   const rawBind = gl.bindFramebuffer.bind(gl);
   let canvasBound = gl.getParameter(gl.FRAMEBUFFER_BINDING) === null;
+  let cap = initialCap;
   let scaleX = 1;
   let scaleY = 1;
 
@@ -72,5 +78,11 @@ export function capRenderDensity(game: Phaser.Game, cap: number): boolean {
   fit();
   // The scale manager puts the canvas back to the logical size on every resize of the game.
   game.scale.on(Phaser.Scale.Events.RESIZE, fit);
-  return true;
+  return {
+    setCap(next: number): void {
+      if (next === cap) return;
+      cap = next;
+      fit();
+    },
+  };
 }

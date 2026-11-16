@@ -25,7 +25,7 @@ import { gameState } from '../../state';
 import { emptyRunInfo, fillRunInfo, type RunInfo } from '../run-info';
 import { bindPageLeave } from '../../state/page-lifecycle';
 import { logRunStart } from '../run-telemetry';
-import { dropHeldResults, ResultsHandoff, revealResults } from '../results-launch';
+import { dropHeldResults, RESULTS_SETTLED, ResultsHandoff, revealResults } from '../results-launch';
 import { openScreen, restartRun, SCENES } from '../scene-keys';
 import { exitTarget } from '../run-exit';
 import { CLASSIC_RUN, demoFinished, type RunRequest } from '../run-request';
@@ -147,7 +147,10 @@ export class GameScene extends Phaser.Scene {
       // Back from the page cache: that run is already recorded, so start a new one.
       () => restartRun(this, this.request),
     );
+    const freezeBackdrop = (): void => this.background.freeze();
+    this.events.on(RESULTS_SETTLED, freezeBackdrop);
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      this.events.off(RESULTS_SETTLED, freezeBackdrop);
       unbindLeave();
       this.scale.off(Phaser.Scale.Events.RESIZE, this.onResize, this);
       this.continueFlow?.dispose();

@@ -3,6 +3,8 @@ import type { ZoneId } from './zones';
 /** Texture keys of the pictures baked for the backdrops. Shared by the art code and the life data. */
 export const BD_TEX = {
   puff: 'bd_puff',
+  /** The still picture of the whole backdrop that stands in for it behind the results screen. */
+  still: 'bd_still',
   star: 'bd_star4',
   kitchen: {
     wallpaper: 'bd_k_wallpaper',
