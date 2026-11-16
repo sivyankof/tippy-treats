@@ -16,6 +16,16 @@ export const SOAK = {
   resultsDwellMs: 1_500,
   /** How often the driver looks at the scenes while it waits. */
   pollMs: 200,
+  /**
+   * Teams set on the team screen before the first run of each lap, in turn (the tester's crash came
+   * after a team change). Creatures the save does not own become empty slots; each has Rainbow, so
+   * its arc can grow (with `start(true)` every creature is owned).
+   */
+  teams: [
+    ['puff', 'honey', 'rainbow'],
+    ['rainbow', 'jelly', 'caramel'],
+    ['honey', 'rainbow', 'lemon'],
+  ],
   /** Languages the settings step switches to, in turn; the last one must be the language the soak began with (`en`). */
   languages: ['ru', 'en'],
   /** The rich save of `start(true)`: coins and berries given, upgrade steps tried per creature, team size. */

@@ -10,9 +10,8 @@ import type { ResultsData, StartOffer } from '../../scene-keys';
 import { createTextButton, type Button } from '../button';
 import { BalanceChip, followBalance } from '../style/balance-chip';
 import { createPriceButton } from '../style/price-button';
-import { fitText } from './fit-text';
 import { createAdsSpentNote } from './no-more-starts-note';
-import { markAdUnavailable } from './ad-unavailable';
+import { markAdUnavailable, resetAdLabel } from './ad-unavailable';
 import type { ResultsHeader } from './results-header';
 import type { Row } from './results-layout';
 import { adGreyAfter, resultsStartPlan, type ResultsStartPlan } from './results-start-model';
@@ -148,7 +147,7 @@ export class ResultsStart implements ExtraButtons {
     if (!this.ad || !this.adGrey) return;
     this.adGrey = false;
     this.ad.label.setText(t('results.fromPointAd', { n: this.adHeight }));
-    fitText(this.ad.label, pairLabelWidth);
+    resetAdLabel(this.ad.label, pairLabelWidth);
     this.ad.button.setAlpha(1);
   }
 

@@ -39,8 +39,9 @@ export class LayerMaterial {
     return this.material;
   }
 
-  setCreature(creature: CreatureId | null): void {
-    this.material = creature ? creatureMaterial(creature) : null;
+  /** `grown` gives the material of the grown look. */
+  setCreature(creature: CreatureId | null, grown = false): void {
+    this.material = creature ? creatureMaterial(creature, grown) : null;
     this.reset();
   }
 

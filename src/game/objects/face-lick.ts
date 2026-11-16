@@ -1,7 +1,9 @@
-import type * as Phaser from 'phaser';
+import * as Phaser from 'phaser';
 import { LICK, type LickStyle } from '../../data/lick';
 import { frameLerp } from '../../util/math';
+import { devWarn } from '../dev-warn';
 import { effectsMode } from '../effects-mode';
+import { PerScene } from '../per-scene';
 import type { FaceParts } from './face-parts';
 import type { Reaction } from './face-state';
 import {
@@ -44,18 +46,26 @@ export interface LickHost {
 
 const MOUTH_Y = LICK.loop.centerY + LICK.loop.ry;
 const TONGUE_POINTS = LICK.tongue.segments + 1;
-/** One tongue per scene, shared by every face: it is only ever out on one face at a time. */
-const SHARED_TONGUES = new WeakMap<Phaser.Scene, TongueView>();
+/**
+ * One tongue per start of the run scene, shared by every face: it is only ever out on one face at
+ * a time. It is destroyed when the scene shuts down and made again on the next start: Phaser keeps
+ * the scene object, while the shutdown destroys the strips (they are on the update list) even when
+ * the tongue itself is in no face and survives it.
+ */
+const SHARED_TONGUES = new PerScene<Phaser.Scene, TongueView>({
+  make: (scene) => new TongueView(scene),
+  usable: (view) => view.usable,
+  onShutdown: (scene, fn) => scene.events.once(Phaser.Scenes.Events.SHUTDOWN, fn),
+});
 
-/** The tongue of the scene; made (and its pictures baked) on the first call. */
-function sharedTongue(scene: Phaser.Scene): TongueView {
-  let view = SHARED_TONGUES.get(scene);
-  // A view destroyed with the scene of an earlier run has no scene any more.
-  if (!view || !view.scene) {
-    view = new TongueView(scene);
-    SHARED_TONGUES.set(scene, view);
+/** The tongue of the scene, made (and its pictures baked) on the first call; null if it cannot be laid. */
+function sharedTongue(scene: Phaser.Scene): TongueView | null {
+  try {
+    return SHARED_TONGUES.get(scene);
+  } catch (error) {
+    devWarn('Lick tongue could not be made', error);
+    return null;
   }
-  return view;
 }
 
 /** Makes the tongue and bakes its pictures while the run is set up, so the first lick does not. */
@@ -118,8 +128,17 @@ export class FaceLick {
     return this.tongueOut ? this.points : null;
   }
 
-  /** Starts a lick: `scene`, how the drop comes (`kind`), the loop of the tongue and the creature's style. */
-  start(scene: LickScene, kind: LickKind, shape: LoopShape, style: LickStyle): void {
+  /**
+   * Starts a lick: `scene`, how the drop comes (`kind`), the loop of the tongue and the creature's
+   * style. False (nothing starts) when the tongue cannot be laid: the lick is a decoration and is
+   * skipped rather than break the run.
+   */
+  start(scene: LickScene, kind: LickKind, shape: LoopShape, style: LickStyle): boolean {
+    const tongue = this.tongueView();
+    if (!tongue) {
+      devWarn('Lick skipped: the tongue is not available');
+      return false;
+    }
     this.ms = 0;
     this.scene = scene;
     this.kind = kind;
@@ -132,7 +151,8 @@ export class FaceLick {
     lickFrame(scene, 0, style, this.frame);
     const until = scene === 'big' ? 'happy' : 'done';
     this.host.react('lick', beatStartMs(scene, until, style));
-    this.tongueView().clear();
+    tongue.clear();
+    return true;
   }
 
   /** Glances at (`dx`, `dy`) for `ms` (a neighbour licks). */
@@ -157,11 +177,28 @@ export class FaceLick {
     this.glanceMs = 0;
   }
 
-  /** Advances the lick; call after the expression of the frame is resolved. */
+  /**
+   * Advances the lick; call after the expression of the frame is resolved. A failure here drops
+   * the lick and lets the run go on.
+   */
   tick(dtMs: number): void {
+    try {
+      this.step(dtMs);
+    } catch (error) {
+      devWarn('Lick dropped after an error', error);
+      this.abandon();
+    }
+  }
+
+  private step(dtMs: number): void {
     if (this.glanceMs > 0) this.glanceMs -= dtMs;
     if (this.envyMs >= 0) this.tickEnvy(dtMs);
     if (this.ms < 0) return;
+    if (!this.tongue?.usable) {
+      devWarn('Lick dropped: the tongue was destroyed');
+      this.abandon();
+      return;
+    }
     this.ms += dtMs;
     const { scene, style } = this;
     const frame = lickFrame(scene, this.ms, style, this.frame);
@@ -234,7 +271,7 @@ export class FaceLick {
     this.glanceMs = 0;
     this.envyMs = -1;
     this.dentX = this.dentY = this.stretchX = this.stretchY = 0;
-    if (this.tongue?.parentContainer === this.host.container) this.tongue.clear();
+    this.clearTongue();
   }
 
   private enterStage(stage: LickStage): void {
@@ -253,7 +290,8 @@ export class FaceLick {
 
   /** The long tongue, its saliva and trail, and the face denting after its tip. */
   private layTongue(frame: Readonly<LickFrame>, dent: boolean, dtMs: number): void {
-    const view = this.tongueView();
+    const view = this.tongue;
+    if (!view) return;
     const width = this.tongueWidth;
     this.tongueOut = width > 0;
     if (width > 0) {
@@ -320,19 +358,46 @@ export class FaceLick {
     this.stage = null;
     this.tongueOut = false;
     this.dentX = this.dentY = this.stretchX = this.stretchY = 0;
-    if (this.tongue?.parentContainer === this.host.container) this.tongue.clear();
+    this.clearTongue();
     this.host.parts.placeLipsTongue(null);
     if (this.host.reaction() === 'lick') this.host.clearReaction();
     this.host.restore();
   }
 
-  /** The tongue of the scene, moved into this face (one lick plays at a time). */
-  private tongueView(): TongueView {
+  /** Hides the tongue if it is still out on this face. */
+  private clearTongue(): void {
+    const view = this.tongue;
+    if (view?.usable && view.parentContainer === this.host.container) view.clear();
+  }
+
+  /**
+   * After a failure: everything that plays stops, with no step that could fail the same way
+   * again kept from the run (the face goes back to its plain expression on its next frame).
+   */
+  private abandon(): void {
+    this.ms = -1;
+    this.stage = null;
+    this.tongueOut = false;
+    this.glanceMs = 0;
+    this.envyMs = -1;
+    this.dentX = this.dentY = this.stretchX = this.stretchY = 0;
+    try {
+      this.clearTongue();
+      this.host.parts.placeLipsTongue(null);
+      if (this.host.reaction() === 'lick') this.host.clearReaction();
+      this.host.restore();
+    } catch (error) {
+      devWarn('Lick face could not be restored', error);
+    }
+  }
+
+  /** The tongue of the scene, moved into this face (one lick plays at a time); null if it cannot be laid. */
+  private tongueView(): TongueView | null {
     const container = this.host.container;
     const view = sharedTongue(container.scene);
-    // Adding it moves it out of the face that licked before, on top of this face's parts.
-    if (view.parentContainer !== container) container.add(view);
     this.tongue = view;
+    // Adding it moves it out of the face that licked before, on top of this face's parts.
+    if (view && view.parentContainer !== container) container.add(view);
     return view;
   }
 }

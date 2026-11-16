@@ -3,7 +3,14 @@ import type { CutSide } from '../../core/drop';
 import { newLandingPreview, type FlyingLayer, type LandingPreview } from '../../core/sim-types';
 import { collectBakeSteps, type BakeStep } from '../ui/bake-texture';
 import { dripTexturesFor } from './glaze-drip-layer';
-import { cakeColorsFor, creatureOfLayer, lookCodeFor, prepareLayerArt } from './layer-art';
+import {
+  cakeColorsFor,
+  creatureOfLayer,
+  creatureStage,
+  isGrownLevel,
+  lookCodeFor,
+  prepareLayerArt,
+} from './layer-art';
 
 /** The bitten-off piece shows the sponge on the side that faced the tower: the opposite of the cut. */
 const OPPOSITE: Readonly<Record<CutSide, CutSide>> = { left: 'right', right: 'left' };
@@ -52,6 +59,7 @@ export class LandingPrep {
       n.index === preview.index &&
       n.kind === preview.kind &&
       n.creature === preview.creature &&
+      n.level === preview.level &&
       n.width === preview.width &&
       n.cut === preview.cut &&
       n.pieceWidth === preview.pieceWidth
@@ -63,10 +71,11 @@ export class LandingPrep {
     const { scene } = this;
     const look = lookCodeFor(preview.index, preview.kind === 'golden');
     const { creature, width, cut, pieceWidth } = preview;
-    this.landing = [() => prepareLayerArt(scene, look, width, cut, creature)];
+    const stage = creatureStage(creature, isGrownLevel(preview.level), preview.index);
+    this.landing = [() => prepareLayerArt(scene, look, width, cut, creature, false, stage)];
     if (pieceWidth > 0 && cut) {
       this.landing.push(() =>
-        prepareLayerArt(scene, look, pieceWidth, OPPOSITE[cut], creature, true),
+        prepareLayerArt(scene, look, pieceWidth, OPPOSITE[cut], creature, true, stage),
       );
     }
     // The next layer takes off this wide; it is a plain one unless the plan says otherwise (not known yet).

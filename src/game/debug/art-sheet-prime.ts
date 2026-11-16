@@ -4,6 +4,7 @@ import { CREATURE_IDS } from '../../data/creatures';
 import { TOWER_GUESTS } from '../../data/tower-guest';
 import { createAbilityTextures } from '../fx/abilities/ability-textures';
 import { bakeCheckpointTextures } from '../fx/checkpoint-textures';
+import { bakeOfflineIcon } from '../fx/offline-icon-texture';
 import { bakeChestTextures } from '../fx/chest-texture';
 import { createFxTextures } from '../fx/fx-textures';
 import { bakeGiftTextures } from '../fx/gift-texture';
@@ -14,7 +15,10 @@ import { createPileTextures } from '../fx/treasure-pile';
 import { createTreasureTextures } from '../fx/treasure-textures';
 import { bakeSharedArt } from '../objects/backdrop/art-kit';
 import { bakeAllFarArt } from '../objects/backdrop/far-plane';
-import { createCreatureIconTextures } from '../objects/creature-icon-textures';
+import {
+  createCreatureIconTextures,
+  createGrownCreatureIconTextures,
+} from '../objects/creature-icon-textures';
 import { bakeShadeTextures } from '../objects/layer-shade';
 import { ensureSleepTexture } from '../objects/sleep-silhouette';
 import { bakeGuestFlat } from '../objects/tower-guest-art';
@@ -22,6 +26,7 @@ import { bakeTopperTextures } from '../fx/topper-texture';
 import { bakeHintTextures } from '../tutorial/hint-textures';
 import { bakeTongue } from '../objects/tongue-view';
 import { bakeStripTextures } from '../objects/tongue-strip-texture';
+import { bakeMasteryFrame } from '../ui/mastery-frame';
 
 /**
  * Pictures that the game bakes lazily (on first use) or in the boot scene are baked here so they
@@ -36,6 +41,8 @@ const PRIME_STEPS: ReadonlyArray<(scene: Phaser.Scene) => void> = [
   createRewardTextures,
   bakeOvenTextures,
   createCreatureIconTextures,
+  createGrownCreatureIconTextures,
+  bakeMasteryFrame,
   bakeSharedArt,
   bakeAllFarArt,
   bakeTowerSparkle,
@@ -44,6 +51,7 @@ const PRIME_STEPS: ReadonlyArray<(scene: Phaser.Scene) => void> = [
   bakeStripTextures,
   bakeChestTextures,
   bakeCheckpointTextures,
+  bakeOfflineIcon,
   (scene) => bakeShadeTextures(scene),
   bakeTopperTextures,
   (scene) => bakeGiftTextures(scene, false),

@@ -30,6 +30,8 @@ class FakeFace {
   private scene: LickScene = 'big';
   private style: LickStyle = LICK.styles.plain;
   private readonly frame: LickFrame = newLickFrame();
+  /** The tongue cannot be laid: the face refuses to start a lick. */
+  noTongue = false;
 
   constructor(
     private readonly starts: number[],
@@ -53,12 +55,14 @@ class FakeFace {
     return this.ms >= 0 ? TONGUE : null;
   }
 
-  startLick(scene: LickScene, _kind: unknown, _shape: unknown, style: LickStyle): void {
+  startLick(scene: LickScene, _kind: unknown, _shape: unknown, style: LickStyle): boolean {
+    if (this.noTongue) return false;
     this.ms = 0;
     this.scene = scene;
     this.style = style;
     this.starts.push(this.clock.ms);
     this.scenes.push(scene);
+    return true;
   }
 
   tick(dtMs: number): void {
@@ -106,8 +110,15 @@ class FakeDrips {
     }
   }
 
-  showLickDrip(): void {}
-  showLickDrop(): void {}
+  /** The drawing of the drop fails (a broken decoration). */
+  broken = false;
+
+  showLickDrip(): void {
+    if (this.broken) throw new TypeError('broken drip');
+  }
+  showLickDrop(): void {
+    if (this.broken) throw new TypeError('broken drop');
+  }
   hideLick(): void {}
 }
 
@@ -228,5 +239,37 @@ describe('LickDirector', () => {
     director.stop();
     expect(director.lickNow(ctx)).toBe(true);
     expect(asked).toBe(1);
+  });
+
+  it('skips a lick when the face has no tongue to lay, and licks once it has one again', () => {
+    effectsMode.pinLevel('full');
+    const { faces, ctx } = buildTower(0, { ms: 0 }, [], []);
+    for (const face of faces) face.noTongue = true;
+    const director = new LickDirector(SEED);
+    expect(director.lickNow(ctx, 'big', 'fall')).toBe(false);
+    expect(director.stage).toBeNull();
+    for (const face of faces) face.noTongue = false;
+    expect(director.lickNow(ctx, 'big', 'fall')).toBe(true);
+  });
+
+  it('drops a lick whose drawing fails instead of throwing into the run', () => {
+    effectsMode.pinLevel('full');
+    const clock = { ms: 0 };
+    const { faces, drips, ctx } = buildTower(0, clock, [], []);
+    const director = new LickDirector(SEED);
+    expect(director.lickNow(ctx, 'short', 'fall')).toBe(true);
+    for (const glaze of drips) glaze.broken = true;
+    const warn = console.warn;
+    console.warn = (): void => {};
+    try {
+      for (let ms = 0; ms < lickDurationMs('short'); ms += FRAME_MS) {
+        for (const face of faces) face.tick(FRAME_MS);
+        expect(() => director.update(FRAME_MS, ctx)).not.toThrow();
+      }
+    } finally {
+      console.warn = warn;
+    }
+    expect(director.stage).toBeNull();
+    expect(faces.every((face) => !face.licking)).toBe(true);
   });
 });

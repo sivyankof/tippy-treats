@@ -5,6 +5,8 @@ import { ANIM } from '../../data/anim';
 import { BALANCE } from '../../data/balance';
 import { ABILITY_ANIM } from '../../data/ability-anim';
 import { faceRecipe } from '../../data/creature-looks';
+import type { CreatureId } from '../../data/creatures';
+import type { StageMode } from '../../data/mastery-look';
 import { IDLE_MOTION } from '../../data/idle-motion';
 import { effectsMode } from '../effects-mode';
 import { createGlossBand, sweepGloss } from '../fx/gloss-sweep';
@@ -17,7 +19,8 @@ import { LayerFace } from './layer-face';
 import { LayerShade } from './layer-shade';
 import { LayerMaterial, type MaterialMotion } from './layer-material';
 import { LayerRig } from './layer-rig';
-import { artWidth, creatureOfLayer, lookCodeFor } from './layer-art';
+import { artWidth, creatureOfLayer, creatureStage, isGrownLevel, lookCodeFor } from './layer-art';
+import { GrownAccentView } from './grown-accent-view';
 import { LayerArtSlot } from './layer-art-slot';
 import { RAINBOW_LOOK } from '../../data/rainbow-look';
 import { TWO_PI } from '../../util/math';
@@ -73,6 +76,13 @@ export class LayerView extends Phaser.GameObjects.Container {
   private readonly topper: LayerTopper;
   /** The star and the rest wave of the Rainbow layer. */
   private readonly rainbow: RainbowIdle;
+  /** The one small moving sprite of a grown creature (bee, breath, spark). */
+  private readonly accent: GrownAccentView;
+  /** Which picture stage the layer asks for: always usual, always grown, or by the creature level. */
+  private stageMode: StageMode = 'base';
+  /** The creature and look whose face and material are set now. */
+  private styledCreature: CreatureId | null = null;
+  private styledGrown = false;
   /** Extra animations for the abilities: flash, hop, fade, split. */
   readonly rig: LayerRig;
   /** How the material of a creature layer lands, jiggles and rests. */
@@ -95,6 +105,7 @@ export class LayerView extends Phaser.GameObjects.Container {
     this.face = new LayerFace(scene);
     this.shade = new LayerShade(scene);
     this.topper = new LayerTopper(scene);
+    this.accent = new GrownAccentView(scene);
     this.rig = new LayerRig(scene, this.art, this.face);
     this.content = new Phaser.GameObjects.Container(scene, 0, -half, [
       this.art,
@@ -104,6 +115,7 @@ export class LayerView extends Phaser.GameObjects.Container {
       this.glossSweep,
       this.face,
       this.topper.image,
+      this.accent.image,
     ]);
     this.rainbow = new RainbowIdle(scene, this.content, this.art);
     this.shapeRoot = new Phaser.GameObjects.Container(scene, 0, 0, [this.content]);
@@ -126,18 +138,35 @@ export class LayerView extends Phaser.GameObjects.Container {
    */
   setLook(plan: LayerPlan): this {
     const creature = creatureOfLayer(plan);
-    if (creature !== creatureOfLayer(this.lookPlan)) {
-      const recipe = creature ? faceRecipe(creature) : null;
+    const grown = creature !== null && this.isGrown(plan.level);
+    if (creature !== this.styledCreature || grown !== this.styledGrown) {
+      const recipe = creature ? faceRecipe(creature, grown) : null;
       this.face.setRecipe(
         recipe,
         creature && recipe ? creatureColors(creature)[recipe.lidTint] : undefined,
       );
-      this.material.setCreature(creature);
+      this.material.setCreature(creature, grown);
+      this.styledCreature = creature;
+      this.styledGrown = grown;
     }
     this.lookPlan.kind = plan.kind;
     this.lookPlan.creature = plan.creature;
     this.lookPlan.level = plan.level;
     return this;
+  }
+
+  /**
+   * Which picture a creature layer shows: `base` (the default) always the usual one, `grown` always
+   * the grown look, `level` the grown look from `GROWN_LOOK_LEVEL` (the run). Call it before `setLook`.
+   */
+  setStageMode(mode: StageMode): this {
+    if (mode === this.stageMode) return this;
+    this.stageMode = mode;
+    return this.setLook(this.lookPlan);
+  }
+
+  private isGrown(level: number | undefined): boolean {
+    return this.stageMode === 'grown' || (this.stageMode === 'level' && isGrownLevel(level));
   }
 
   /** Width the picture was baked for; -1 while it shows none. */
@@ -167,8 +196,11 @@ export class LayerView extends Phaser.GameObjects.Container {
     this.topper.setFaceless(!this.faceEnabled);
     this.topper.update(index, w, this.lookPlan.kind === 'plain');
     const creature = creatureOfLayer(this.lookPlan);
-    if (!this.artSlot.show(look, w, cut, creature, !this.faceEnabled)) return this;
-    this.rainbow.set(creature === 'rainbow', w);
+    const grown = creature !== null && this.isGrown(this.lookPlan.level);
+    const stage = creatureStage(creature, grown, index);
+    if (!this.artSlot.show(look, w, cut, creature, !this.faceEnabled, stage)) return this;
+    this.rainbow.set(creature === 'rainbow', w, grown);
+    this.accent.set(grown ? creature : null, w);
     this.face.layout(w);
     this.face.setVisible(this.faceEnabled);
     return this;
@@ -218,6 +250,7 @@ export class LayerView extends Phaser.GameObjects.Container {
   /** Gives the baked art back so a pooled view does not keep its texture alive; `setLayer` brings it back. */
   releaseArt(): this {
     this.rainbow.endJoke();
+    this.accent.hide();
     this.artSlot.release();
     return this;
   }
@@ -438,6 +471,7 @@ export class LayerView extends Phaser.GameObjects.Container {
     if (this.face.visible) this.face.tick(dtMs);
     const phaseMs = ((motion?.phase ?? 0) / TWO_PI) * RAINBOW_LOOK.idle.waveEveryMs;
     this.rainbow.draw(this.scene.time.now, phaseMs, true);
+    this.accent.tick(this.scene.time.now, phaseMs);
     if (!this.rainbow.takeSquint()) return false;
     this.face.react('squint', RAINBOW_LOOK.idle.joke.squintMs);
     return true;

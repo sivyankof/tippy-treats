@@ -7,6 +7,7 @@ import { easeFn } from '../fx/ease';
 import { ANIM } from '../../data/anim';
 import { artRecipe } from '../../data/creature-looks';
 import { PALETTE } from '../../data/palette';
+import { GROWN_LOOKS } from '../../data/mastery-look';
 import { RAINBOW_BAND_COLORS as BAND_COLORS, RAINBOW_LOOK } from '../../data/rainbow-look';
 import { mixColor } from '../../util/color';
 import { DEG_TO_RAD, TWO_PI } from '../../util/math';
@@ -82,6 +83,8 @@ export class RainbowIdle {
   private readonly front: Phaser.GameObjects.Graphics;
   private width = 0;
   private on = false;
+  /** The grown look: a bigger star, lifted higher. */
+  private grown = false;
   private hidden = false;
   /** The picture is out of date although nothing moves (a new width, shown again). */
   private dirty = true;
@@ -114,10 +117,12 @@ export class RainbowIdle {
     parent.addAt(this.sparkle, at + 3);
   }
 
-  /** Shows the overlay for a rainbow layer of `width` (a layer of another look hides it). */
-  set(on: boolean, width: number): void {
+  /** Shows the overlay for a rainbow layer of `width` (a layer of another look hides it); `grown` gives it the bigger crown star. */
+  set(on: boolean, width: number, grown = false): void {
     this.on = on;
     this.width = width;
+    this.grown = grown;
+    this.star.setTexture(grown ? RAINBOW_TEXTURES.starGrown : RAINBOW_TEXTURES.star);
     const box = layerBox(width);
     this.rows = on ? this.sponges(box) : [];
     this.glazeFloor = on ? this.sampleGlazeFloor(box) : new Float32Array(0);
@@ -153,7 +158,7 @@ export class RainbowIdle {
     const box = layerBox(this.width);
     this.g.clear();
     if (live) this.drawWave(timeMs + phaseMs, box);
-    const cy = box.top - star.lift;
+    const cy = box.top - this.lift;
     const flash = live ? sparkleAt(timeMs, phaseMs) : 0;
     const sway = live
       ? Math.sin((TWO_PI * (timeMs + phaseMs)) / idle.swayMs) * idle.swayDeg * DEG_TO_RAD
@@ -166,7 +171,7 @@ export class RainbowIdle {
     else this.jokeStart = -1;
     this.sparkle
       .setVisible(flash > 0)
-      .setPosition(idle.sparkleOffset.x * star.radius, cy + idle.sparkleOffset.y * star.radius)
+      .setPosition(idle.sparkleOffset.x * this.radius, cy + idle.sparkleOffset.y * this.radius)
       .setScale(flash);
   }
 
@@ -198,7 +203,17 @@ export class RainbowIdle {
   /** The star of the crown in world pixels (where the neighbours look). */
   starWorld(): Pt {
     const m = this.parent.getWorldTransformMatrix(SCRATCH);
-    return m.transformPoint(0, layerBox(this.width).top - star.lift);
+    return m.transformPoint(0, layerBox(this.width).top - this.lift);
+  }
+
+  /** How far the centre of the star sits above the layer top. */
+  private get lift(): number {
+    return this.grown ? GROWN_LOOKS.rainbow.star.lift : star.lift;
+  }
+
+  /** Outer radius of the star shown. */
+  private get radius(): number {
+    return this.grown ? star.radius * GROWN_LOOKS.rainbow.star.scale : star.radius;
   }
 
   /** The baked glaze (lower edge, scallops, drips, as the picture draws them) sampled across the body, once per width. */
@@ -256,8 +271,8 @@ export class RainbowIdle {
       return;
     }
     const grown = Math.max(0.05, jokeGrow(Math.min(1, age / joke.growMs)));
-    const from = { x: 0, y: cy + star.radius * joke.startY };
-    const to = { x: this.jokeDir * joke.spanPx, y: cy + star.radius * joke.endY };
+    const from = { x: 0, y: cy + this.radius * joke.startY };
+    const to = { x: this.jokeDir * joke.spanPx, y: cy + this.radius * joke.endY };
     const curve = arcCurve(from, to, 0, joke.risePx, grown, joke.steps);
     const fade = age > total - joke.fadeMs ? (total - age) / joke.fadeMs : 1;
     paintBand(this.front, curve, {

@@ -44,7 +44,7 @@ export class FallingPieces {
 
   constructor(scene: Phaser.Scene) {
     this.pool = new TimedPool(
-      () => new LayerView(scene),
+      () => new LayerView(scene).setStageMode('level'),
       (view) => {
         view.setVisible(false).releaseArt();
       },

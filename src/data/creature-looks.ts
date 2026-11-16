@@ -1,4 +1,5 @@
 import type { CreatureId } from './creatures';
+import { GROWN_FACE } from './mastery-look';
 import { RAINBOW_BANDS } from './rainbow-look';
 
 /** Mouth shapes of a face (the pictures are `assets/svg/face_mouth_*.svg`). */
@@ -287,9 +288,19 @@ export const CREATURE_LOOKS: Readonly<Record<CreatureId, CreatureLook>> = {
   },
 };
 
-/** The face recipe of a creature layer. */
-export function faceRecipe(id: CreatureId): FaceRecipe {
-  return CREATURE_LOOKS[id].face;
+const grownFaces = new Map<CreatureId, FaceRecipe>();
+
+/** The face recipe of a creature layer; `grown` gives the face of the grown look (docs/06, "Взрослый вид"). */
+export function faceRecipe(id: CreatureId, grown = false): FaceRecipe {
+  const usual = CREATURE_LOOKS[id].face;
+  const change = grown ? GROWN_FACE[id] : undefined;
+  if (!change) return usual;
+  let face = grownFaces.get(id);
+  if (!face) {
+    face = { ...usual, ...change };
+    grownFaces.set(id, face);
+  }
+  return face;
 }
 
 /** The body drawing recipe of a creature layer. */

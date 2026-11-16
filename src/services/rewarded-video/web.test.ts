@@ -21,12 +21,28 @@ describe('WebAds', () => {
     expect(ads.isRewardedReady()).toBe(true);
   });
 
-  it('cycles reward, dismissed, unavailable', () => {
+  it('cycles reward, dismissed, offline, no_fill', () => {
     const ads = new WebAds(() => null);
     expect(ads.mode).toBe('reward');
     expect(ads.cycleMode()).toBe('dismissed');
-    expect(ads.cycleMode()).toBe('unavailable');
+    expect(ads.cycleMode()).toBe('offline');
+    expect(ads.cycleMode()).toBe('no_fill');
     expect(ads.cycleMode()).toBe('reward');
+  });
+
+  it('reports why the ad is unavailable', async () => {
+    const show = vi.fn(() => null);
+    const ads = new WebAds(show);
+    ads.cycleMode();
+    ads.cycleMode();
+    expect(ads.mode).toBe('offline');
+    expect(ads.isRewardedReady()).toBe(false);
+    expect(ads.unavailableReason()).toBe('offline');
+    await expect(ads.showRewarded()).resolves.toBe('unavailable');
+    ads.cycleMode();
+    expect(ads.unavailableReason()).toBe('no_fill');
+    await expect(ads.showRewarded()).resolves.toBe('unavailable');
+    expect(show).not.toHaveBeenCalled();
   });
 
   it('closes early in the dismissed mode', async () => {
@@ -40,6 +56,7 @@ describe('WebAds', () => {
   it('is unavailable in the unavailable mode and shows nothing', async () => {
     const show = vi.fn(() => null);
     const ads = new WebAds(show);
+    ads.cycleMode();
     ads.cycleMode();
     ads.cycleMode();
     expect(ads.isRewardedReady()).toBe(false);
@@ -73,6 +90,7 @@ describe('WebAds', () => {
   it('shows no interstitial in the unavailable mode or once ads are removed', async () => {
     const show = vi.fn(() => null);
     const off = new WebAds(show);
+    off.cycleMode();
     off.cycleMode();
     off.cycleMode();
     await expect(off.showInterstitial()).resolves.toBe(false);

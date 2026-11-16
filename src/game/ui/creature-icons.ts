@@ -7,6 +7,11 @@ export const CREATURE_ICON_KEYS = Object.fromEntries(
   CREATURE_IDS.map((id) => [id, `icon_${id}`]),
 ) as Readonly<Record<CreatureId, string>>;
 
+/** Texture key of the icon of each creature in its grown look (baked on demand, `creature-icon-textures.ts`). */
+export const CREATURE_GROWN_ICON_KEYS = Object.fromEntries(
+  CREATURE_IDS.map((id) => [id, `icon_${id}_grown`]),
+) as Readonly<Record<CreatureId, string>>;
+
 /** Texture key of the snail icon of the tempo ease (`assets/svg/tempo_ease.svg`). */
 export const TEMPO_ICON_KEY = 'tempo_ease';
 
