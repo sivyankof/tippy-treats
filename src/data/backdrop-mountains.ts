@@ -18,15 +18,15 @@ export const MOUNTAIN_LOOK = {
   texture: 'bd_mountains',
   width: 768,
   height: 540,
-  /** Muted towards the sky so the tower stays the most contrasting thing (docs/06, "Горы"). */
-  rockBack: 0xcdc0e6,
-  rockBackDark: 0xbcaed9,
-  rock: 0xa99bd2,
-  rockDark: 0x9686c2,
-  snow: 0xffefd6,
-  snowDark: 0xf3d9b8,
+  /** Muted to about half the contrast against the sky (a warm mid sky tone) so the tower stays the most contrasting thing (docs/06, "Горы"). */
+  rockBack: 0xe1c4cd,
+  rockBackDark: 0xd9bbc6,
+  rock: 0xcfb2c3,
+  rockDark: 0xc6a7bb,
+  snow: 0xfadcc5,
+  snowDark: 0xf4d1b6,
   /** Warm brown outline of the snow (the dark tone of cream), warmer than the shade of the pale fill. */
-  snowOutline: 0xa8795a,
+  snowOutline: 0xcf9d87,
   /** Outline growth in texture pixels; the outline colour is the dark tone of each fill. */
   outline: 8,
   /**
@@ -43,10 +43,10 @@ export const MOUNTAIN_LOOK = {
   dripDepths: [0.0, 0.34, 0.12, 0.42, 0.18],
   /** Peaks: foot centre x, top y and half width at the bottom of the picture; `back` ones sit behind. */
   peaks: [
-    { x: 248, top: 195, half: 225, back: true },
-    { x: 525, top: 165, half: 225, back: true },
-    { x: 375, top: 45, half: 255, back: false },
-    { x: 518, top: 210, half: 165, back: false },
+    { x: 150, top: 235, half: 140, back: true },
+    { x: 600, top: 225, half: 140, back: true },
+    { x: 178, top: 285, half: 100, back: false },
+    { x: 572, top: 290, half: 100, back: false },
   ],
   /** Share of the peak (from the top) that carries snow, per peak group. */
   capShareBack: 0.2,
@@ -55,8 +55,11 @@ export const MOUNTAIN_LOOK = {
   overshoot: 30,
   /** Gloss mark on the sunlit slope of a front snow cap. */
   gloss: { dx: 0.22, dy: 0.5, length: 16, thick: 5, tilt: -1.0, dotGap: 5, dotRadius: 2.5 },
-  glossAlpha: 0.85,
+  glossAlpha: 0.5,
 } as const;
+
+/** The middle share of the screen width behind the tower: no peak stands in it (checked at the cap base and the apex). */
+export const MOUNTAIN_FREE_BAND = 0.5;
 
 /** Zones whose far plane gives way to the peaks: it fades out as they rise (they replace it, not cover it). */
 export const MOUNTAIN_FAR_ZONES: readonly string[] = ['roof', 'clouds'];
@@ -68,7 +71,7 @@ export const MOUNTAIN_MOTION = {
   /** The picture is as wide as the screen; `bottomShare` is where its bottom edge sits (1: the screen bottom). */
   bottomShare: 1,
   /** The picture is this share of the screen height tall (it is cropped at the sides on a narrow screen). */
-  heightShare: 0.7,
+  heightShare: 0.49,
   /** Full effects: the range sways slowly sideways so it is never still. Lite and minimal: no drift. */
   swayPx: 8,
   swayPeriodMs: 26000,
