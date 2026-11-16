@@ -3,17 +3,14 @@ import type { SimEvent } from '../../core/tower-sim';
 import { MASTER_ANIM } from '../../data/master-anim';
 import {
   captionLook,
-  captionPlace,
+  endCaption,
   idleCaption,
   MasterFeed,
   noteCaption,
-  stackCaption,
   stepCaption,
   type CaptionLook,
-  type CaptionPlace,
   type MasterNote,
 } from './master-caption-state';
-import { badgeCentreX } from './effect-badge-state';
 
 const cfg = MASTER_ANIM.caption;
 const linear = (t: number): number => t;
@@ -90,51 +87,16 @@ describe('caption show', () => {
   });
 });
 
-describe('captionPlace', () => {
-  const out: CaptionPlace = { left: 0, y: 0 };
-  const width = 150;
-
-  it('sits right of the last badge of the row', () => {
-    captionPlace(1, 2, width, out);
-    expect(out.y).toBe(468);
-    expect(out.left).toBeGreaterThan(badgeCentreX(1));
+describe('one caption at a time', () => {
+  it('ends a caption at once', () => {
+    const s = idleCaption();
+    noteCaption(s);
+    endCaption(s);
+    expect(s.phase).toBe('idle');
+    expect(noteCaption(s)).toBe(true);
   });
 
-  it('goes under the row when another badge follows', () => {
-    captionPlace(0, 2, width, out);
-    expect(out.y).toBe(cfg.belowY);
-  });
-
-  it('goes under the row when it would run into the next creature indicator', () => {
-    captionPlace(2, 3, 300, out);
-    expect(out.y).toBe(cfg.belowY);
-  });
-
-  it('takes the first place when the creature has no badge and the row is empty', () => {
-    captionPlace(-1, 0, width, out);
-    expect(out).toEqual({ left: 24, y: 468 });
-  });
-
-  it('goes under the row when it has no badge and others stand in the row', () => {
-    captionPlace(-1, 2, width, out);
-    expect(out.y).toBe(cfg.belowY);
-  });
-});
-
-describe('stackCaption', () => {
-  it('leaves a free line alone and takes it', () => {
-    const taken: number[] = [];
-    const out = stackCaption({ left: 0, y: 468 }, taken);
-    expect(out.y).toBe(468);
-    expect(taken).toEqual([468]);
-  });
-
-  it('moves a second caption of the same line down by one caption', () => {
-    const taken: number[] = [];
-    stackCaption({ left: 0, y: cfg.belowY }, taken);
-    const second = stackCaption({ left: 0, y: cfg.belowY }, taken);
-    const third = stackCaption({ left: 0, y: cfg.belowY }, taken);
-    expect(second.y).toBe(cfg.belowY + cfg.height + cfg.stackGap);
-    expect(third.y).toBe(cfg.belowY + 2 * (cfg.height + cfg.stackGap));
+  it('lasts about 1.2 seconds', () => {
+    expect(cfg.inMs + cfg.holdMs + cfg.outMs).toBe(1200);
   });
 });

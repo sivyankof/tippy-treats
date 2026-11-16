@@ -1,26 +1,25 @@
 import * as Phaser from 'phaser';
 import { CREATURES, type CreatureId } from '../../data/creatures';
+import { HUD_LAYOUT } from '../../data/hud-layout';
 import { MASTERY } from '../../data/mastery';
 import { MASTER_ANIM } from '../../data/master-anim';
-import type { TeamSlot } from '../../core/sim-types';
+import type { TeamSlots } from '../../core/sim-types';
 import { getLang } from '../../i18n';
 import { DEPTH } from '../depth';
 import { effectsMode } from '../effects-mode';
 import { easeFn } from '../fx/ease';
 import { FX_TEXTURES } from '../fx/fx-textures';
-import { creatureBadge } from './effect-badge-state';
-import type { EffectBadges } from './effect-badges';
 import {
   captionLook,
-  captionPlace,
+  endCaption,
   idleCaption,
   noteCaption,
-  stackCaption,
   stepCaption,
   type CaptionLook,
-  type CaptionPlace,
   type MasterFeed,
 } from './master-caption-state';
+import { captionSpot, type CaptionSpot } from './hud-row-layout';
+import { LOGICAL_SIZE } from '../../data/screen';
 import { bakeCaptionArt } from './master-caption-art';
 
 const cfg = MASTER_ANIM.caption;
@@ -61,12 +60,24 @@ class CaptionView {
     if (noteCaption(this.state)) this.sparkMs = 0;
   }
 
-  /** Showing, or about to (it takes a place of the stack). */
+  /** Showing, or about to. */
   get active(): boolean {
     return this.state.phase !== 'idle';
   }
 
-  update(dtMs: number, place: CaptionPlace, look: CaptionLook): void {
+  /** Drops the caption at once. */
+  end(): void {
+    endCaption(this.state);
+    this.sparkMs = Infinity;
+    this.root.setVisible(false);
+  }
+
+  /** True while the plate is on screen. */
+  get visible(): boolean {
+    return this.root.visible;
+  }
+
+  update(dtMs: number, spot: CaptionSpot, look: CaptionLook): void {
     stepCaption(this.state, dtMs);
     captionLook(this.state, effectsMode.reduced, inEase, look);
     const visible = this.state.phase !== 'idle' && look.alpha > 0;
@@ -74,8 +85,8 @@ class CaptionView {
     if (!visible) return;
     // The container is centred on the plate, so the pop scales around its middle.
     this.root
-      .setPosition(place.left + this.width / 2, place.y)
-      .setScale(look.scale)
+      .setPosition(spot.centreX, HUD_LAYOUT.badgeRowY)
+      .setScale(look.scale * spot.scale)
       .setAlpha(look.alpha);
     this.runSpark(dtMs);
   }
@@ -103,21 +114,27 @@ class CaptionView {
 
 /**
  * The master captions of the HUD: one gold plate per team creature that has a master effect
- * (level 5), prepared when the run starts. A `mastery` event shows the plate of its creature next
- * to that creature's badge of the effect row (or under the row, see `captionPlace`).
+ * (level 5), prepared when the run starts. A `mastery` event shows the plate of its creature at
+ * the right end of the badge row strip, where the next-creature chip stands (`captionSpot`). One
+ * caption at a time: a note of another creature replaces the showing one at once (and sparks);
+ * a repeat of the same creature extends its hold.
  */
 export class MasterCaptions {
   private views = new Map<CreatureId, CaptionView>();
-  private team: readonly (TeamSlot | null)[] | null = null;
-  private readonly place: CaptionPlace = { left: 0, y: 0 };
+  private team: TeamSlots | null = null;
+  private readonly spot: CaptionSpot = { centreX: 0, scale: 1 };
   private readonly look: CaptionLook = { scale: 1, alpha: 0 };
-  /** Lines the captions of this frame took (see `stackCaption`). */
-  private readonly taken: number[] = [];
+  private current: CaptionView | null = null;
 
   constructor(private readonly scene: Phaser.Scene) {}
 
+  /** True while a caption is on screen: the next-creature chip gives way to it. */
+  get showing(): boolean {
+    return this.current?.visible === true;
+  }
+
   /** Prepares the plates for the creatures of `team` at the master level (once per run). */
-  prepare(team: readonly (TeamSlot | null)[]): void {
+  prepare(team: TeamSlots): void {
     if (team === this.team) return;
     this.team = team;
     this.clear();
@@ -131,24 +148,27 @@ export class MasterCaptions {
     if (!this.views.has(id) && CREATURES[id]) this.views.set(id, new CaptionView(this.scene, id));
   }
 
-  update(feed: MasterFeed, badges: EffectBadges, dtMs: number): void {
+  /** `badgeCount` is the badges in the row: the plate shrinks rather than cover them. */
+  update(feed: MasterFeed, badgeCount: number, dtMs: number): void {
     feed.drain((note) => {
       // A creature the team does not have at the master level shows a caption only in dev (the debug hook).
       if (import.meta.env.DEV) this.ensure(note.creature);
-      this.views.get(note.creature)?.note();
+      const view = this.views.get(note.creature);
+      if (!view) return;
+      if (this.current && this.current !== view) this.current.end();
+      this.current = view;
+      view.note();
     });
-    this.taken.length = 0;
-    for (const view of this.views.values()) {
-      const index = badges.indexOf(creatureBadge(view.creature));
-      captionPlace(index, badges.count, view.width, this.place);
-      // Captions shown together do not sit on each other.
-      if (view.active) stackCaption(this.place, this.taken);
-      view.update(dtMs, this.place, this.look);
-    }
+    const view = this.current;
+    if (!view) return;
+    captionSpot(view.width, badgeCount, LOGICAL_SIZE.width, this.spot);
+    view.update(dtMs, this.spot, this.look);
+    if (!view.active) this.current = null;
   }
 
   clear(): void {
     for (const view of this.views.values()) view.destroy();
     this.views = new Map();
+    this.current = null;
   }
 }

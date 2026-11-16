@@ -27,14 +27,6 @@ export function hasNewLook(level: number): boolean {
   return lookStage(level) === 'grown';
 }
 
-/** The team has `id` at a level with the new look (the highest slot counts when it stands twice). */
-export function teamHasNewLook(
-  team: readonly ({ id: CreatureId; level: number } | null)[],
-  id: CreatureId,
-): boolean {
-  return team.some((slot) => slot !== null && slot.id === id && hasNewLook(slot.level));
-}
-
 /** Master level: the gold frame, the master effect line, the master captions in a run. */
 export function isMaster(level: number): boolean {
   return clampLevel(level) >= MASTERY.masterLevel;

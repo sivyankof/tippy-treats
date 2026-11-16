@@ -1,6 +1,6 @@
 import { BALANCE } from '../data/balance';
 import { clampLevel, type CreatureId } from '../data/creatures';
-import type { LayerPlan, TeamSlot } from './sim-types';
+import type { LayerPlan, TeamSlot, TeamSlots } from './sim-types';
 
 /** Memory of the planner between layers. */
 export interface PlanState {
@@ -15,7 +15,7 @@ export function isCreatureIndex(index: number): boolean {
 }
 
 /** Slot of the creature at this layer index, `null` for plain layers and for empty slots. */
-export function creatureSlotAt(index: number, team: readonly (TeamSlot | null)[]): TeamSlot | null {
+export function creatureSlotAt(index: number, team: TeamSlots): TeamSlot | null {
   if (!isCreatureIndex(index)) return null;
   const turn = index / BALANCE.team.creatureEvery - 1;
   return team[turn % BALANCE.team.slots] ?? null;
@@ -28,7 +28,7 @@ export function creatureSlotAt(index: number, team: readonly (TeamSlot | null)[]
  */
 export function planLayer(
   index: number,
-  team: readonly (TeamSlot | null)[],
+  team: TeamSlots,
   state: PlanState,
 ): { plan: LayerPlan; state: PlanState } {
   const { every } = BALANCE.golden;
@@ -63,10 +63,7 @@ export interface NextCreature {
  * Next creature layer for a tower of `height` (layers placed plus the bonus height of twins):
  * the flying layer has index `height + 1`. Empty slots are skipped, `null` without creatures.
  */
-export function nextCreature(
-  height: number,
-  team: readonly (TeamSlot | null)[],
-): NextCreature | null {
+export function nextCreature(height: number, team: TeamSlots): NextCreature | null {
   if (!team.some((slot) => slot !== null)) return null;
   const { creatureEvery } = BALANCE.team;
   let index = Math.max(1, height + 1);
@@ -92,7 +89,7 @@ export interface LayerAttempt {
 export function attemptLayer(
   attempt: LayerAttempt | null,
   index: number,
-  team: readonly (TeamSlot | null)[],
+  team: TeamSlots,
   state: PlanState,
 ): { attempt: LayerAttempt; state: PlanState; fresh: boolean } {
   if (attempt?.index === index) return { attempt, state, fresh: false };

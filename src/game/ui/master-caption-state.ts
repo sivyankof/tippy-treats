@@ -1,10 +1,7 @@
 import type { SimEvent } from '../../core/tower-sim';
 import type { CreatureId } from '../../data/creatures';
-import { HUD_LAYOUT } from '../../data/hud-layout';
-import { LOGICAL_SIZE } from '../../data/screen';
 import { MASTER_ANIM } from '../../data/master-anim';
 import type { EaseFn } from '../fx/ease';
-import { badgeCentreX } from './effect-badge-state';
 
 const cfg = MASTER_ANIM.caption;
 
@@ -81,6 +78,12 @@ export function noteCaption(state: CaptionState): boolean {
   return fresh;
 }
 
+/** Ends a caption at once (a newer one of another creature replaces it). */
+export function endCaption(state: CaptionState): void {
+  state.phase = 'idle';
+  state.ageMs = 0;
+}
+
 /** Advances a caption by `dtMs`. */
 export function stepCaption(state: CaptionState, dtMs: number): void {
   if (state.phase === 'idle') return;
@@ -129,55 +132,5 @@ export function captionLook(
     default:
       break;
   }
-  return out;
-}
-
-export interface CaptionPlace {
-  /** Left edge of the plate. */
-  left: number;
-  /** Centre y of the plate. */
-  y: number;
-}
-
-const { badgeSize, badgeRowY } = HUD_LAYOUT;
-
-/**
- * Where a caption of `width` goes. `badgeIndex` is the place of the creature's badge in the row,
- * or -1 when it has none (the plate then takes the first place of the row, so any other badge
- * is "after" it); `badgeCount` is the badges in the row. Right of its badge when nothing follows
- * it and the plate ends clear of the next creature indicator; in the first place of an empty
- * row; otherwise under the row.
- */
-export function captionPlace(
-  badgeIndex: number,
-  badgeCount: number,
-  width: number,
-  out: CaptionPlace,
-  screenWidth: number = LOGICAL_SIZE.width,
-): CaptionPlace {
-  const hasBadge = badgeIndex >= 0;
-  const left = badgeCentreX(Math.max(0, badgeIndex)) - badgeSize / 2;
-  const followed = hasBadge ? badgeIndex < badgeCount - 1 : badgeCount > 0;
-  const plateLeft = hasBadge ? left + badgeSize + cfg.gap : left;
-  const fits = plateLeft + width <= screenWidth - cfg.rightReserve;
-  if (!followed && fits) {
-    out.left = plateLeft;
-    out.y = badgeRowY;
-  } else {
-    out.left = left;
-    out.y = cfg.belowY;
-  }
-  return out;
-}
-
-/**
- * Moves a caption down by whole caption heights until its line is free, and takes the line:
- * `taken` holds the `y` of the captions shown already this frame (it is filled in as it goes).
- * Captions with no badge of their own (or under the row) would otherwise sit on each other.
- */
-export function stackCaption(out: CaptionPlace, taken: number[]): CaptionPlace {
-  const step = cfg.height + cfg.stackGap;
-  while (taken.includes(out.y)) out.y += step;
-  taken.push(out.y);
   return out;
 }

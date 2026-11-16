@@ -1,0 +1,63 @@
+import { describe, expect, it } from 'vitest';
+import { HUD_LAYOUT } from '../../data/hud-layout';
+import { LOGICAL_SIZE } from '../../data/screen';
+import {
+  badgeRowRight,
+  captionSpot,
+  isCompactNext,
+  nextChipClearsRow,
+  nextChipSpan,
+  type CaptionSpot,
+} from './hud-row-layout';
+
+const WIDTH = LOGICAL_SIZE.width;
+const { nextFont, badgeMargin, nextBadgeGap } = HUD_LAYOUT;
+/** A generous width of a text of `chars` characters in the next-creature font. */
+const textWidth = (chars: number): number => chars * nextFont * 0.65;
+const MOST_BADGES = 6;
+
+describe('badge row', () => {
+  it('is empty at 0 and grows by one badge and gap', () => {
+    expect(badgeRowRight(0)).toBe(0);
+    expect(badgeRowRight(2) - badgeRowRight(1)).toBe(HUD_LAYOUT.badgeSize + HUD_LAYOUT.badgeGap);
+  });
+
+  it('turns the next-creature chip compact from three badges', () => {
+    expect([0, 1, 2, 3, 4].map(isCompactNext)).toEqual([false, false, false, true, true]);
+  });
+});
+
+describe('next-creature chip', () => {
+  it('never touches the badges: words with 0-2 badges, icon and number from 3', () => {
+    for (let count = 0; count <= MOST_BADGES; count++) {
+      // "через 5 слоёв" is the widest words (13 letters); the compact text is two digits.
+      const label = textWidth(isCompactNext(count) ? 2 : 13);
+      const span = nextChipSpan(WIDTH, label);
+      expect(nextChipClearsRow(span.chipLeft, count), `${count} badges`).toBe(true);
+    }
+  });
+
+  it('is not clear with the long words and four badges (why it goes compact)', () => {
+    expect(nextChipClearsRow(nextChipSpan(WIDTH, textWidth(13)).chipLeft, 4)).toBe(false);
+  });
+});
+
+describe('captionSpot', () => {
+  const out: CaptionSpot = { centreX: 0, scale: 1 };
+
+  it('sits at the right margin at full size when the badges leave room', () => {
+    captionSpot(400, 2, WIDTH, out);
+    expect(out.scale).toBe(1);
+    expect(out.centreX + 200).toBe(WIDTH - badgeMargin);
+  });
+
+  it('shrinks to stay clear of the badges, never over them', () => {
+    for (let count = 0; count <= MOST_BADGES; count++) {
+      captionSpot(500, count, WIDTH, out);
+      const left = out.centreX - (500 * out.scale) / 2;
+      expect(left, `${count} badges`).toBeGreaterThanOrEqual(
+        badgeRowRight(count) + nextBadgeGap - 1e-9,
+      );
+    }
+  });
+});

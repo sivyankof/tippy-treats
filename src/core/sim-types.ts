@@ -12,6 +12,9 @@ export interface TeamSlot {
   level: number;
 }
 
+/** The team of a run as the HUD and the queue read it: empty slots are `null`. */
+export type TeamSlots = readonly (TeamSlot | null)[];
+
 /** What `RunConfig.speedScale` sees when a layer spawns. */
 export interface SpeedScaleContext {
   /** 1-based number the spawning layer will have. */

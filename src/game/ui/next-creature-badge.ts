@@ -1,19 +1,20 @@
 import type * as Phaser from 'phaser';
 import { nextCreature, type NextCreature } from '../../core/team-queue';
-import type { TeamSlot } from '../../core/sim-types';
+import type { TeamSlots } from '../../core/sim-types';
 import { ANIM } from '../../data/anim';
 import { HUD_LAYOUT } from '../../data/hud-layout';
 import { MENU } from '../../data/menu-layout';
 import { IDLE_MOTION, IDLE_PHASE } from '../../data/idle-motion';
 import { PALETTE } from '../../data/palette';
-import { teamHasNewLook } from '../../core/mastery';
 import { createCreatureIcon, setCreatureIcon } from './creature-icons';
 import { idlePose, type IdlePose } from './idle-motion';
+import { nextChipSpan } from './hud-row-layout';
 import { nextCreatureLabel } from './next-creature-label';
+import { formatNumber } from '../../i18n';
 import { createStrokedText } from './outlined-text';
 import { HudPlate } from './style/hud-plate';
 
-const { badgeSize, badgeGap, badgeMargin, badgeRowY, nextFont, nextStroke, nextChip } = HUD_LAYOUT;
+const { badgeSize, badgeRowY, nextFont, nextStroke, nextChip } = HUD_LAYOUT;
 
 /**
  * "Next creature" at the right of the badge row: the creature icon and how many layers away
@@ -26,9 +27,11 @@ export class NextCreatureBadge {
   private readonly label: Phaser.GameObjects.Text;
   private screenWidth = 0;
   private height = -1;
-  private team: readonly (TeamSlot | null)[] | null = null;
+  private team: TeamSlots | null = null;
   private shown: NextCreature | null = null;
   private visible = false;
+  private compact = false;
+  private suppressed = false;
   private readonly pose: IdlePose = { scaleX: 1, scaleY: 1, angle: 0, bob: 0 };
 
   constructor(private readonly scene: Phaser.Scene) {
@@ -71,30 +74,45 @@ export class NextCreatureBadge {
   }
 
   /** `height` is the tower height (twins count double); recomputed only when it or the team changes. */
-  update(height: number, team: readonly (TeamSlot | null)[]): void {
-    if (height === this.height && team === this.team) return;
+  update(height: number, team: TeamSlots, compact: boolean): void {
+    if (height === this.height && team === this.team && compact === this.compact) return;
     this.height = height;
     this.team = team;
+    const compactChanged = compact !== this.compact;
+    this.compact = compact;
     const next = nextCreature(height, team);
     const visible = next !== null;
     if (visible !== this.visible) {
       this.visible = visible;
-      this.chip.setVisible(visible);
-      this.icon.setVisible(visible);
-      this.label.setVisible(visible);
+      this.applyVisible();
     }
-    if (next) this.show(next);
+    if (next) this.show(next, compactChanged);
     this.shown = next;
   }
 
-  private show(next: NextCreature): void {
+  /** The chip gives way while a master caption shows at its place. */
+  setSuppressed(suppressed: boolean): void {
+    if (suppressed === this.suppressed) return;
+    this.suppressed = suppressed;
+    this.applyVisible();
+  }
+
+  private applyVisible(): void {
+    const on = this.visible && !this.suppressed;
+    this.chip.setVisible(on);
+    this.icon.setVisible(on);
+    this.label.setVisible(on);
+  }
+
+  private show(next: NextCreature, compactChanged: boolean): void {
     const creatureChanged = next.id !== this.shown?.id;
-    const textChanged = creatureChanged || next.inLayers !== this.shown?.inLayers;
+    const textChanged = creatureChanged || compactChanged || next.inLayers !== this.shown?.inLayers;
     if (!textChanged) return;
     if (creatureChanged) {
-      setCreatureIcon(this.icon, next.id, teamHasNewLook(this.team ?? [], next.id));
+      setCreatureIcon(this.icon, next.id);
     }
-    this.label.setText(nextCreatureLabel(next));
+    // A full badge row: the number of layers only (0 on the creature layer itself).
+    this.label.setText(this.compact ? formatNumber(next.inLayers) : nextCreatureLabel(next));
     this.place();
     // The first appearance (no previous value) does not pop.
     if (this.shown) this.pop(creatureChanged ? this.icon : this.label);
@@ -102,12 +120,15 @@ export class NextCreatureBadge {
 
   /** Text hugs the right margin, the icon sits to its left; the chip runs from before the icon to past the text, so the icon never lies on the text. */
   private place(): void {
-    const right = this.screenWidth - badgeMargin - nextChip.padX;
-    this.label.setX(right);
-    this.icon.setX(right - this.label.width - badgeGap - badgeSize / 2);
-    const chipLeft = this.icon.x - badgeSize / 2 - nextChip.padX;
-    const chipRight = right + nextChip.padX;
-    this.chip.place((chipLeft + chipRight) / 2, badgeRowY, chipRight - chipLeft, nextChip.height);
+    const span = nextChipSpan(this.screenWidth, this.label.width);
+    this.label.setX(span.labelRight);
+    this.icon.setX(span.iconX);
+    this.chip.place(
+      (span.chipLeft + span.chipRight) / 2,
+      badgeRowY,
+      span.chipRight - span.chipLeft,
+      nextChip.height,
+    );
   }
 
   private pop(target: Phaser.GameObjects.Image | Phaser.GameObjects.Text): void {

@@ -1,4 +1,4 @@
-const BAR_Y = 360;
+const BAR_Y = 346;
 const BAR_HEIGHT = 30;
 const BADGE_ROW_Y = 468;
 const BADGE_SIZE = 108;
@@ -18,7 +18,7 @@ export const PAUSE = {
 /** Layout of the run HUD in logical pixels (screen width 1080). */
 export const HUD_LAYOUT = {
   heightY: 130,
-  scoreY: 270,
+  scoreY: 262,
   barY: BAR_Y,
   barWidth: 520,
   barHeight: BAR_HEIGHT,
@@ -44,6 +44,15 @@ export const HUD_LAYOUT = {
   /** Side of a creature icon in the row. */
   badgeSize: BADGE_SIZE,
   badgeGap: 16,
+  /** Clear space kept between the wobble plate (its shadow, the badges' bob and pulse included) and the badges. */
+  badgeBarGap: 12,
+  /**
+   * With this many badges in the row (shrinking ones included) the next-creature chip is compact:
+   * the creature icon and a number, no words.
+   */
+  compactNextFrom: 3,
+  /** Closest the next-creature chip may come to the badges of the row. */
+  nextBadgeGap: 16,
   badgeMargin: 24,
   /** Counter of an effect badge: font size, and how far it sits in from the icon's bottom right corner. */
   badgeCounterFont: 52,

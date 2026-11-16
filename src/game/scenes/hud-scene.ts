@@ -12,13 +12,13 @@ import { createIconButton } from '../ui/menu/icon-button';
 import { NumberRoll } from '../ui/number-roll';
 import { createOutlinedText } from '../ui/outlined-text';
 import { PauseOverlay } from '../ui/pause-overlay';
-import { prepareTeamIcons } from '../objects/creature-icon-textures';
 import { EffectBadges } from '../ui/effect-badges';
 import { MasterCaptions } from '../ui/master-captions';
 import { TempoChip } from '../ui/tempo-chip';
 import { ZoneBanner } from '../ui/zone-plate';
 import { ZoneChangeWatch } from '../ui/zone-change-watch';
 import { HudNumbersIdle } from '../ui/hud-idle';
+import { isCompactNext } from '../ui/hud-row-layout';
 import { NextCreatureBadge } from '../ui/next-creature-badge';
 import { TreasureHud } from '../ui/treasure-hud';
 import { enterScreen } from '../ui/transition';
@@ -86,7 +86,6 @@ export class HudScene extends Phaser.Scene {
     const team = this.gameScene()?.getRunInfo()?.team;
     if (team) {
       this.masterCaptions.prepare(team);
-      prepareTeamIcons(this, team);
     }
     this.tempoChip = new TempoChip(this);
     this.zoneBanner = new ZoneBanner(this);
@@ -156,9 +155,9 @@ export class HudScene extends Phaser.Scene {
       this.heightText.setText(formatNumber(this.heightRoll.update(delta)));
       this.scoreText.setText(formatNumber(this.scoreRoll.update(delta)));
       this.wobbleBar.update(info.wobble, time, delta);
-      this.nextBadge.update(info.height, info.team);
+      this.nextBadge.update(info.height, info.team, isCompactNext(this.effectBadges.count));
       this.nextBadge.idle(time);
-      this.effectBadges.update(info.effects, info.shield, time, delta, info.team);
+      this.effectBadges.update(info.effects, info.shield, time, delta);
       this.updateMasterCaptions(info.team, delta);
       this.tempoChip.update(info.tempoLeft, time, delta);
       this.treasure.update(info, time, delta, this.gameScene()?.continueFlow?.isOpen === true);
@@ -181,7 +180,8 @@ export class HudScene extends Phaser.Scene {
     const game = this.gameScene();
     if (!game) return;
     this.masterCaptions.prepare(team);
-    this.masterCaptions.update(game.masterFeed, this.effectBadges, delta);
+    this.masterCaptions.update(game.masterFeed, this.effectBadges.count, delta);
+    this.nextBadge.setSuppressed(this.masterCaptions.showing);
   }
 
   private gameScene(): GameScene | null {

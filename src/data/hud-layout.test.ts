@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { contrastRatio, mixColor } from '../util/color';
+import { ANIM } from './anim';
 import { HUD_LAYOUT } from './hud-layout';
 import { IDLE_MOTION } from './idle-motion';
 import { MENU } from './menu-layout';
@@ -22,8 +23,10 @@ describe('wobble bar plate', () => {
     );
     const plateBottom =
       HUD_LAYOUT.barY + rowHeight / 2 + barPlate.padY + chip.shadowOffset + chip.shadowBlur;
-    const badgeTop = HUD_LAYOUT.badgeRowY - HUD_LAYOUT.badgeSize / 2 - IDLE_MOTION.badge.bobPx;
-    expect(plateBottom).toBeLessThanOrEqual(badgeTop);
+    const pulse = (HUD_LAYOUT.badgeSize * (ANIM.badges.pulseScale - 1)) / 2;
+    const badgeTop =
+      HUD_LAYOUT.badgeRowY - HUD_LAYOUT.badgeSize / 2 - IDLE_MOTION.badge.bobPx - pulse;
+    expect(plateBottom + HUD_LAYOUT.badgeBarGap).toBeLessThanOrEqual(badgeTop);
   });
 
   it('is mostly opaque so the backdrop does not eat the label', () => {
