@@ -93,7 +93,11 @@ function fail(message) {
 
 async function main() {
   // npm swallows a flag given without the `--` separator and exposes it as npm_config_base.
-  const base = arg('base') ?? process.env.npm_config_base ?? 'origin/master';
+  // Without the separator it arrives as npm_config_base=true plus the ref as a plain argument.
+  const fromNpm = process.env.npm_config_base;
+  const positional = process.argv.slice(2).find((a) => !a.startsWith('--'));
+  const base =
+    arg('base') ?? (fromNpm === 'true' ? positional : fromNpm) ?? positional ?? 'origin/master';
   const minutes = Number(arg('minutes') ?? DEFAULT_MINUTES);
   const choice = pickSoakLevel(changedFiles(base));
   const shown =
