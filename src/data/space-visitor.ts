@@ -35,6 +35,8 @@ export interface VisitorSpec {
 }
 
 export const SPACE_VISITOR = {
+  /** Thickness of the warm outline of every part, in picture px (the layers' share of their height, kept thick at this size). */
+  outlinePx: 9,
   /** Chance that a run gets a guest at all (decided once, when the Space backdrop is built). */
   chancePerRun: 0.25,
   /** Wait after the Space backdrop appears before the pass starts. */
@@ -49,6 +51,8 @@ export const SPACE_VISITOR = {
    */
   bandPadPx: 24,
   minFitScale: 0.55,
+  /** The background satellite and comet wait from this share of the pass before it starts to this share after it ends. */
+  holdLead: 0.03,
   /** Share of the picture that sticks out past each screen edge when the pass begins and ends. */
   offscreenShare: 0.6,
   /** The guest fades in and out over this share of the pass at each end (the edges are off-screen anyway). */
@@ -127,8 +131,15 @@ export const SPACE_VISITOR_COLORS = {
   linerStripe: 0x3f86e0,
   frosting: 0xff9ec8,
   frostingLight: 0xffc4de,
-  beam: 0xfff3a8,
-  beamAlpha: 0.32,
+  /** The beam: two flat warm tones, the outer wide and the inner narrow. */
+  beam: 0xffc95c,
+  beamCore: 0xffe9a0,
+  beamAlpha: 0.7,
+  /** Outlines of the pale fills, a dark warm tone of their own colour (the generic shade turns grey on them). */
+  porcelainOutline: 0x8a5a3c,
+  silverOutline: 0x5a5f86,
+  creamOutline: 0xa0703c,
+  linerOutline: 0x1f4a99,
   beacon: 0xff4c4c,
   porcelain: 0xfff0e0,
   porcelainPattern: 0x5c7cff,

@@ -14,12 +14,20 @@ import { bakeTexture } from '../../ui/bake-texture';
 
 type Graphics = Phaser.GameObjects.Graphics;
 
-/** Thickness of the warm outline of every part, in the picture's own pixels. */
-const GROW = 5;
+const GROW = SPACE_VISITOR.outlinePx;
 const NO_TILT = 0;
 
+/** Dark warm outline tones of fills too pale for the generic shade (it turns grey on them). */
+const OUTLINES = new Map<number, number>([
+  [K.porcelain, K.porcelainOutline],
+  [K.silver, K.silverOutline],
+  [K.cream, K.creamOutline],
+  [K.pastry, K.creamOutline],
+  [K.glass, K.silverOutline],
+]);
+
 function blob(g: Graphics, points: readonly Pt[], fill: number, grow = GROW): void {
-  fillOutlinedPolygon(g, points, fill, outlineColor(fill), grow);
+  fillOutlinedPolygon(g, points, fill, OUTLINES.get(fill) ?? outlineColor(fill), grow);
 }
 
 function oval(g: Graphics, cx: number, cy: number, rx: number, ry: number, fill: number): void {
@@ -86,7 +94,7 @@ function drawEclair(g: Graphics): void {
 function drawSaucer(g: Graphics): void {
   const { beam } = K;
   const middle = 140;
-  // The light beam: one flat translucent shape, no blur.
+  // The light beam: two flat warm tones, no blur.
   flat(
     g,
     [
@@ -96,6 +104,17 @@ function drawSaucer(g: Graphics): void {
       { x: 18, y: 292 },
     ],
     beam,
+    K.beamAlpha,
+  );
+  flat(
+    g,
+    [
+      { x: 118, y: 150 },
+      { x: 162, y: 150 },
+      { x: 200, y: 292 },
+      { x: 80, y: 292 },
+    ],
+    K.beamCore,
     K.beamAlpha,
   );
   // The cup liner, upside down: narrow at the top, with stripes.
@@ -129,7 +148,7 @@ function drawSaucer(g: Graphics): void {
 
 function drawTeapot(g: Graphics): void {
   // The spoon antenna with its light, the spout and the handle, then the body and the lid.
-  g.lineStyle(10, outlineColor(K.silver), 1);
+  g.lineStyle(GROW * 2, K.silverOutline, 1);
   g.lineBetween(120, 60, 156, 24);
   g.lineStyle(5, K.silver, 1);
   g.lineBetween(120, 60, 156, 24);
@@ -148,7 +167,7 @@ function drawTeapot(g: Graphics): void {
     ],
     K.porcelain,
   );
-  g.lineStyle(16, outlineColor(K.porcelain), 1);
+  g.lineStyle(8 + GROW * 2, K.porcelainOutline, 1);
   g.strokeEllipse(206, 128, 52, 70);
   g.lineStyle(8, K.porcelain, 1);
   g.strokeEllipse(206, 128, 52, 70);
