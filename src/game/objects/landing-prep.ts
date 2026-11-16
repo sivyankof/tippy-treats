@@ -3,7 +3,7 @@ import type { CutSide } from '../../core/drop';
 import { newLandingPreview, type FlyingLayer, type LandingPreview } from '../../core/sim-types';
 import { collectBakeSteps, type BakeStep } from '../ui/bake-texture';
 import { dripTexturesFor } from './glaze-drip-layer';
-import { cakeColorsFor, lookCodeFor, prepareLayerArt } from './layer-art';
+import { cakeColorsFor, creatureOfLayer, lookCodeFor, prepareLayerArt } from './layer-art';
 
 /** The bitten-off piece shows the sponge on the side that faced the tower: the opposite of the cut. */
 const OPPOSITE: Readonly<Record<CutSide, CutSide>> = { left: 'right', right: 'left' };
@@ -37,7 +37,7 @@ export class LandingPrep {
     }
     if (number === this.flightIndex) return;
     this.flightIndex = number;
-    const creature = layer.kind === 'creature' && layer.creature ? layer.creature : null;
+    const creature = creatureOfLayer(layer);
     const glaze = cakeColorsFor(creature, number, layer.kind === 'golden').glaze;
     this.flight = collectBakeSteps(() => {
       dripTexturesFor(this.scene, creature, glaze);

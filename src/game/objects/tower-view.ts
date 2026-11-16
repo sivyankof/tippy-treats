@@ -1,6 +1,12 @@
 import type * as Phaser from 'phaser';
 import type { CutSide } from '../../core/drop';
-import type { LandingPreview, LayerPlan, PlacedLayer, TowerState } from '../../core/tower-sim';
+import {
+  newLandingPreview,
+  type LayerPlan,
+  type PlacedLayer,
+  type TowerSim,
+  type TowerState,
+} from '../../core/tower-sim';
 import { wobbleAmplitude, wobbleOffset } from '../../core/wobble';
 import { ANIM } from '../../data/anim';
 import { BALANCE } from '../../data/balance';
@@ -94,6 +100,8 @@ export class TowerView {
   private readonly prep: LandingPrep;
   /** Bakes the pictures of the layers below the live ones once the run is ending, for the collapse. */
   private readonly collapsePrep: CollapsePrep;
+  /** How the layer in the fall will land, refilled every frame it falls (the sim works it out once per drop). */
+  private readonly landing = newLandingPreview();
   /** The rare lick of a layer; it draws from the cosmetic stream of the run. */
   readonly licks = new LickDirector(plainLooks.cosmeticSeed);
   private bandTop = -Infinity;
@@ -212,11 +220,11 @@ export class TowerView {
   }
 
   /**
-   * The layer in the fall will land like this (`null`: no layer falls, or it misses): its
-   * pictures are baked over the next frames, so the landing frame finds them ready.
+   * Asks the sim how the layer in the fall will land (nothing falls, or it misses: no preview):
+   * its pictures are baked over the next frames, so the landing frame finds them ready.
    */
-  prepareLanding(preview: Readonly<LandingPreview> | null): void {
-    if (preview) this.prep.noteLanding(preview);
+  prepareLanding(sim: Pick<TowerSim, 'landingPreview'>): void {
+    if (sim.landingPreview(this.landing)) this.prep.noteLanding(this.landing);
     else this.prep.endLanding();
   }
 

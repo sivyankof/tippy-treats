@@ -6,7 +6,7 @@ import { t } from '../../../i18n';
 import { services } from '../../../services';
 import { gameState } from '../../../state';
 import { isLiveRun } from '../../results-data';
-import type { ResultsData } from '../../scene-keys';
+import type { ResultsData, StartOffer } from '../../scene-keys';
 import { createTextButton, type Button } from '../button';
 import { BalanceChip, followBalance } from '../style/balance-chip';
 import { createPriceButton } from '../style/price-button';
@@ -29,6 +29,8 @@ const pairLabelWidth = pair.width - cfg.buttonTextPadding;
 export interface ExtraButtons {
   rows: Row[];
   setEnabled(enabled: boolean): void;
+  /** The screen is about to show: look at the ads again. */
+  refreshAd(): void;
 }
 
 export interface ResultsStartHooks extends PayGuard {
@@ -61,6 +63,13 @@ export class ResultsStart implements ExtraButtons {
 
   setEnabled(enabled: boolean): void {
     for (const button of this.buttons) button.setEnabled(enabled);
+  }
+
+  /** The ad may have loaded (or gone) while the screen was built hidden: show it as it is now. */
+  refreshAd(): void {
+    if (!this.ad) return;
+    if (services.ads.isRewardedReady()) this.unGreyAd();
+    else if (!this.adGrey) this.greyAd();
   }
 
   private addChoose(): void {
@@ -160,6 +169,10 @@ export function createResultsStart(
   hooks: Omit<ResultsStartHooks, 'start'> & { start?: StartRun },
 ): ResultsStart {
   const { start } = hooks;
+  const offer: StartOffer = data.startOffer ?? {
+    opened: gameState.checkpoints,
+    rows: (adReady) => gameState.checkpointRows(adReady),
+  };
   // No way to start a run from here (the daily tower): no start buttons.
   const plan: ResultsStartPlan = !start
     ? { kind: 'none' }
@@ -168,8 +181,8 @@ export function createResultsStart(
         firstRun: data.summary.firstRun,
         recorded: isLiveRun(data),
         checkpoint: data.checkpoint,
-        opened: gameState.checkpoints,
-        rows: gameState.checkpointRows(services.ads.isRewardedReady()),
+        opened: offer.opened,
+        rows: offer.rows(services.ads.isRewardedReady()),
       });
   return new ResultsStart(scene, plan, header, { ...hooks, start: start ?? NO_START });
 }

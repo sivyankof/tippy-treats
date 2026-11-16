@@ -70,8 +70,12 @@ export class ResultsCoins {
       rows.push({ obj: this.button, height: cfg.adButton.height });
     }
     this.height = stackRows(this.container, rows, cfg.rowGap);
-    if (this.button && !services.ads.isRewardedReady()) this.markAdGone();
     this.update(0);
+  }
+
+  /** The screen is about to show: an ad that is not ready by now greys the button out. */
+  refreshAd(): void {
+    if (this.button && !this.adGone && !services.ads.isRewardedReady()) this.markAdGone();
   }
 
   /** The button is live only while the screen is in. */
