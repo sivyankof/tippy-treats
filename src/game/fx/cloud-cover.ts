@@ -80,6 +80,20 @@ export function starActive(slot: number, slots: number, count: number): boolean 
   return Math.floor(((slot + 1) * count) / slots) > Math.floor((slot * count) / slots);
 }
 
+/**
+ * Whether the cloud hides the flying layer (the golden shine and the gaze of the tower go with
+ * it): not under the see-through "Not scary" cloud and not under the nebula, whose density is
+ * low enough to show the silhouette.
+ */
+export function layerHidden(
+  ghostMaster: boolean,
+  nebulaShown: boolean,
+  covered: boolean,
+  amount: number,
+): boolean {
+  return !ghostMaster && !nebulaShown && (covered || amount > 0);
+}
+
 /** Every puff of a nebula bank billows, except on the minimal level; the cloud always does. */
 export function puffsBillow(look: CloudLook, level: EffectLevel): boolean {
   return look === 'cloud' || level !== 'minimal';
@@ -333,7 +347,7 @@ class CloudBank {
         .setScale((minScale + (maxScale - minScale) * scatter(i)) * pose.scale * breathe)
         .setAlpha(alpha);
     }
-    this.updateStars(shown && this.look === 'nebula', timeMs, level, pose, sway);
+    this.updateStars(shown && this.look === 'nebula', timeMs, level, pose, sway, input.maxAlpha);
   }
 
   /** The stars of the nebula ride on the bank and each twinkles on its own phase. */
@@ -343,6 +357,7 @@ class CloudBank {
     level: EffectLevel,
     pose: Readonly<CloudPose>,
     sway: number,
+    share: number,
   ): void {
     const count = shown ? starCount(level) : 0;
     const [minScale, maxScale] = stars.scale;
@@ -360,7 +375,7 @@ class CloudBank {
           this.motion.y - pose.rise + (scatter(i, 0.6) - 0.5) * 2 * stars.spreadPx,
         )
         .setScale((minScale + (maxScale - minScale) * scatter(i)) * pose.scale * scale)
-        .setAlpha(alpha * pose.alpha);
+        .setAlpha(alpha * pose.alpha * share);
     }
   }
 }
@@ -374,6 +389,7 @@ export function followInput(passive: CloudInput, input: Readonly<CloudInput>): v
   passive.y = input.y;
   passive.dir = input.dir;
   passive.maxAlpha = input.maxAlpha;
+  passive.nebula = input.nebula;
 }
 
 /**
@@ -410,6 +426,11 @@ export class CloudCover {
   /** How much a cloud hides the layer, 0..1 (a see-through cloud hides no more than it shows). */
   get amount(): number {
     return Math.max(...this.banks.map((bank) => bank.motion.amount * bank.cap(this.maxAlpha)));
+  }
+
+  /** A bank drawn as the nebula is on screen. */
+  get nebulaShown(): boolean {
+    return this.banks.some((bank) => bank.look === 'nebula' && bank.motion.visible);
   }
 
   /** Smooth 0..1 density of the densest bank (see `CloudMotion.density`). */

@@ -128,6 +128,8 @@ export const RULE_ANIM = {
   cloud: {
     /** Baked puff size, without the soft halo margin. */
     puff: { width: 320, height: 260 },
+    /** How far the lit top of a puff is lifted off its shaded belly, as a share of the puff height. */
+    lift: 0.04,
     /** Width of the pale edge baked around a puff. */
     edge: 6,
     /** Soft halo around a puff: rings this far apart, each fainter, inside a margin of the texture. */
@@ -170,12 +172,10 @@ export const RULE_ANIM = {
      * a lower density cap, with twinkling stars over it.
      */
     nebula: {
-      /** Flat two-tone fills: the pink top lit from above and the blue belly; a pale edge and halo. */
+      /** Flat two-tone fills: the pink top lit from above and the blue belly; soft feathered edges. */
       colors: {
         pink: 0xff9bd2,
         blue: 0x7ab4ff,
-        edge: 0xffc4e6,
-        halo: 0xe2b4ff,
         dot: 0xffffff,
       },
       /**
@@ -186,6 +186,11 @@ export const RULE_ANIM = {
       maxDensity: 0.38,
       /** How far (share of the puff height) the pink top is lifted off the blue belly: the blue shows as a band under it. */
       lift: 0.14,
+      /**
+       * Each colour is a stack of `rings` faint copies of the puff shape from `px` bigger to `px`
+       * smaller, so its edge fades over about 2 x `px` instead of ending hard.
+       */
+      feather: { px: 26, rings: 7, alpha: 0.4 },
       /** Baked star dots on the puff: centre and radius as shares of the puff width, and the height share. */
       dots: [
         { x: 0.3, y: 0.38, r: 0.016 },

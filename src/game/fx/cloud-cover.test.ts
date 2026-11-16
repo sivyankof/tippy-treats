@@ -5,6 +5,7 @@ import {
   CloudMotion,
   densityCap,
   followInput,
+  layerHidden,
   pickLook,
   puffsBillow,
   starActive,
@@ -209,7 +210,7 @@ describe('followInput', () => {
       y: 420,
       dir: -1,
       maxAlpha: 0.7,
-      nebula: false,
+      nebula: true,
     };
     followInput(passive, live);
     expect(passive).toEqual({
@@ -219,7 +220,7 @@ describe('followInput', () => {
       y: 420,
       dir: -1,
       maxAlpha: 0.7,
-      nebula: false,
+      nebula: true,
     });
   });
 });
@@ -278,5 +279,15 @@ describe('nebula look', () => {
       }
     }
     expect(starPulse(100, 0)).not.toBeCloseTo(starPulse(100, 1));
+  });
+});
+
+describe('layerHidden', () => {
+  it('counts the layer as hidden under a dense cloud only', () => {
+    expect(layerHidden(false, false, true, 1)).toBe(true);
+    expect(layerHidden(false, false, false, 0.4)).toBe(true);
+    expect(layerHidden(false, false, false, 0)).toBe(false);
+    expect(layerHidden(true, false, true, 1)).toBe(false);
+    expect(layerHidden(false, true, true, 1)).toBe(false);
   });
 });
