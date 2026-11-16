@@ -1,4 +1,5 @@
 import type { CreatureId } from '../data/creatures';
+import type { PerkId } from '../data/mastery';
 import type { LayerRuleKind } from '../data/zones';
 import type { ActiveEffect, AbilityPayload } from './abilities/types';
 import type { CutSide } from './drop';
@@ -147,12 +148,27 @@ export interface TowerState {
   continuesUsed: number;
   /** Layers left on the brownie shield; 0 means no shield. */
   shield: number;
+  /** Level of the brownie that gave the running shield (master effect "Change"); 0 without a shield. */
+  shieldLevel: number;
   /** Layers of the tempo ease left (the one in the air included); 0 outside an ease. */
   tempoLeft: number;
 }
 
 /** Where a collected coin came from (the scene animates it, the results screen sums it up). */
-export type CoinSource = 'floating' | 'combo' | 'perfect' | 'crumb' | 'golden' | 'height';
+export type CoinSource =
+  | 'floating'
+  | 'combo'
+  | 'perfect'
+  | 'crumb'
+  | 'golden'
+  | 'height'
+  /** Master effects of level-5 creatures (docs/03-creatures.md, "РњР°СЃС‚РµСЂСЃС‚РІРѕ"). */
+  | 'mastery';
+
+/** Where events go: an event list, or anything else that takes them one by one. */
+export interface EventSink {
+  push(event: SimEvent): unknown;
+}
 
 export type SimEvent =
   | { type: 'spawn'; layer: FlyingLayer }
@@ -174,6 +190,14 @@ export type SimEvent =
   | { type: 'coin_spawn'; x: number }
   | { type: 'coin_collect'; amount: number; source: CoinSource }
   | { type: 'ability'; creature: CreatureId; boosted: boolean; payload: AbilityPayload }
+  /**
+   * A master effect did something (paid, extended or returned an effect, started a tail, thinned
+   * a cloud). `coins` and `score` are what it paid, 0 when nothing; the coins also come as a
+   * `coin_collect` with the source `mastery`, the score is already in the run score.
+   */
+  | { type: 'mastery'; creature: CreatureId; coins: number; score: number }
+  /** A ladder property below the master level paid flat score (rainbow from level 2). */
+  | { type: 'perk'; creature: CreatureId; perk: PerkId; score: number }
   | { type: 'effect_end'; effect: string }
   | { type: 'zone_change'; zoneIndex: number }
   | { type: 'cloud'; coverMs: number; pass: number }

@@ -66,3 +66,28 @@ export const dropNow = (sim: TowerSim): SimEvent[] => {
   sim.drop();
   return [...events, ...untilSettled(sim)];
 };
+
+/**
+ * Waits for a layer, makes it narrow and drops it 22 off-centre with the wobble loaded: a sneeze
+ * miss. The sway is timed to cross zero at the landing, so the offset is not shifted by it.
+ */
+export function sneezeDrop(sim: TowerSim): SimEvent[] {
+  untilFlying(sim);
+  const state = mutable(sim);
+  if (state.flying) {
+    state.flying.width = 50;
+    state.flying.speed = 120;
+  }
+  state.wobble = 0;
+  const events = untilFlying(sim);
+  const passed = (): boolean => {
+    const flying = sim.state.flying;
+    return !!flying && (flying.x - sim.topLayerX()) * flying.dir >= 22;
+  };
+  events.push(...runUntil(sim, () => !passed()), ...runUntil(sim, passed));
+  sim.drop();
+  state.wobble = 99;
+  const fallSteps = Math.ceil(BALANCE.layer.fallMs / STEP);
+  state.wobblePhase = -((fallSteps * 2 * Math.PI * STEP) / BALANCE.wobble.periodMs);
+  return [...events, ...untilSettled(sim)];
+}

@@ -7,8 +7,10 @@ import { PALETTE } from '../../../data/palette';
 import { formatNumber, t } from '../../../i18n';
 import { Button, createTextButton, type LabelButtonLayout } from '../button';
 import { createPriceButton } from '../style/price-button';
+import { createIconButton } from './icon-button';
 import { createTextPlate } from './detail-info';
 import { mainAction, type MainAction } from './detail-model';
+import type { DetailPlan } from './detail-rows';
 import { unlockText } from './unlock-text';
 
 const cfg = MENU.detail;
@@ -24,6 +26,8 @@ export interface ActionContext {
   berries: number;
   inTeam: boolean;
   teamFull: boolean;
+  /** What a short screen leaves out. */
+  plan: DetailPlan;
 }
 
 export interface ActionHandlers {
@@ -87,7 +91,19 @@ export class DetailActions {
     this.buildMain(scene, mainAction(ctx.id, ctx.level, ctx.bakerLevel), ctx, handlers);
     const small = (text: string, fill: number, onClick: () => void): Button =>
       textButton(scene, text, fill, smallButton, 'ui_detail_small', onClick);
-    this.secondary.push(small(t('detail.try'), PALETTE.accentSecondary, handlers.tryIt));
+    this.secondary.push(
+      ctx.plan.tryButton === 'text'
+        ? small(t('detail.try'), PALETTE.accentSecondary, handlers.tryIt)
+        : createIconButton(
+            scene,
+            0,
+            0,
+            cfg.tryIcon.size,
+            PALETTE.accentSecondary,
+            'play',
+            handlers.tryIt,
+          ),
+    );
     if (ctx.level === null) return;
     if (ctx.inTeam) {
       this.secondary.push(small(t('detail.inTeam'), cfg.disabledFill, () => {}).setEnabled(false));
@@ -172,7 +188,9 @@ export class DetailActions {
   private addOtherWays(scene: Phaser.Scene, ways: UnlockHint[], ctx: ActionContext): void {
     for (const hint of ways) {
       const way = unlockText(hint, ctx.bakerLevel);
-      if (way !== null) this.main.push(this.infoLine(scene, t('detail.orWay', { way })));
+      if (way !== null && ctx.plan.otherWays) {
+        this.main.push(this.infoLine(scene, t('detail.orWay', { way })));
+      }
     }
   }
 
@@ -204,9 +222,14 @@ export class DetailActions {
   layout(width: number, height: number): void {
     const cx = width / 2;
     const rowY = height - cfg.buttonsBottom - smallButton.height / 2;
+    // The row is centred as a whole: the buttons have different widths when "Try" is an icon.
+    const widths = this.secondary.map((button) => button.width);
+    let left =
+      cx - (widths.reduce((sum, w) => sum + w, 0) + cfg.buttonGap * (widths.length - 1)) / 2;
     this.secondary.forEach((button, i) => {
-      const step = smallButton.width + cfg.buttonGap;
-      button.setPosition(cx + (i - (this.secondary.length - 1) / 2) * step, rowY);
+      const w = widths[i] ?? 0;
+      button.setPosition(left + w / 2, rowY);
+      left += w + cfg.buttonGap;
     });
     const baseY = rowY - smallButton.height / 2 - cfg.buttonGap - wideButton.height / 2;
     this.main.forEach((item, i) => {

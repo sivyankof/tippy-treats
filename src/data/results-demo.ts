@@ -18,7 +18,7 @@ export const RESULTS_DEMO = {
   score: 4820,
   bestCombo: 7,
   perfects: 12,
-  coins: { floating: 120, combo: 80, perfect: 60, crumb: 30, golden: 40, height: 82 },
+  coins: { floating: 120, combo: 80, perfect: 60, crumb: 30, golden: 40, height: 82, mastery: 0 },
   abilities: [
     ['honey', 6],
     ['jelly', 4],

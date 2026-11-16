@@ -4,6 +4,7 @@ import type { RunResult } from '../src/core/run-result';
 import type { RunConfig } from '../src/core/sim-types';
 import { TowerSim } from '../src/core/tower-sim';
 import { BALANCE, type DifficultyTarget } from '../src/data/balance';
+import type { CreatureId } from '../src/data/creatures';
 import type { SimTeamSet } from '../src/data/sim-teams';
 import type { RunObserver } from './run-observer';
 
@@ -67,11 +68,18 @@ export function percentile(sorted: number[], p: number): number {
 export const mean = (values: number[]): number =>
   values.reduce((sum, value) => sum + value, 0) / values.length;
 
-/** The team slots of a set at one creature level; missing creatures leave empty slots. */
-export const teamSlots = (set: SimTeamSet, level: number): RunConfig['team'] =>
+/**
+ * The team slots of a set at one creature level, or at a level per creature; missing creatures
+ * leave empty slots.
+ */
+export const teamSlots = (
+  set: SimTeamSet,
+  level: number | ((id: CreatureId) => number),
+): RunConfig['team'] =>
   Array.from({ length: BALANCE.team.slots }, (_, i) => {
     const id = set.creatures[i];
-    return id ? { id, level } : null;
+    if (!id) return null;
+    return { id, level: typeof level === 'number' ? level : level(id) };
   });
 
 /** Seeds and bot noise of a profile: the same for every team, so teams are compared on equal runs. */

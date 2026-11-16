@@ -1,6 +1,8 @@
 import * as Phaser from 'phaser';
+import { isMaster } from '../../../core/mastery';
 import { MENU } from '../../../data/menu-layout';
 import { attachPressFeedback, type PressFeedback } from '../../ui/button';
+import { bakeMasteryFrame } from '../mastery-frame';
 import { CreatureCard, type CardLayout, type CardState } from './creature-card';
 
 /** The card numbers of the collection: the shared card with the collection's own sizes on top. */
@@ -23,6 +25,9 @@ export class CollectionTile extends CreatureCard {
     onTap: (tile: CollectionTile) => void,
   ) {
     super(scene, x, y, card, COLLECTION_CARD);
+    // A level 5 creature wears the gold frame over its card (docs/07, section 7).
+    if (card.level !== null && isMaster(card.level))
+      this.add(scene.add.image(0, 0, bakeMasteryFrame(scene)));
     this.hit = new Phaser.Geom.Rectangle(0, 0, this.width, this.height);
     this.setInteractive(this.hit, Phaser.Geom.Rectangle.Contains);
     this.press = attachPressFeedback(this, {

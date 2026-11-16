@@ -1,5 +1,6 @@
 import { BALANCE } from '../../data/balance';
-import type { AbilityContext, AbilityPayload } from './types';
+import { gainCoins } from '../run-coins';
+import type { AbilityContext, AbilityPayload, CreatureId, HookContext } from './types';
 
 /** Duration-only effects (ghost, rainbow) carry no strength value. */
 export const NO_EFFECT_VALUE = 0;
@@ -16,6 +17,16 @@ export function boostAmount(amount: number, boosted: boolean): number {
 
 export function emitAbility(ctx: AbilityContext, payload: AbilityPayload): void {
   ctx.emit({ type: 'ability', creature: ctx.creature, boosted: ctx.boosted, payload });
+}
+
+/**
+ * A master effect did something: adds its flat score, announces it (`mastery`) and pays its flat
+ * coins through the run coins with the source `mastery`. Both amounts may be 0.
+ */
+export function payMastery(ctx: HookContext, creature: CreatureId, coins: number, score = 0): void {
+  ctx.state.score += score;
+  ctx.emit({ type: 'mastery', creature, coins, score });
+  gainCoins(ctx.state, { push: ctx.emit }, coins, 'mastery');
 }
 
 /** Starts the creature's effect and announces it; most abilities are just this. */

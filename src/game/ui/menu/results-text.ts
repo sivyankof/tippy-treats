@@ -13,6 +13,7 @@ const SOURCE_ORDER: readonly CoinSource[] = [
   'perfect',
   'crumb',
   'golden',
+  'mastery',
   'height',
 ];
 

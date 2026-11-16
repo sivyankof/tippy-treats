@@ -12,21 +12,36 @@ import { bakeTexture } from './bake-texture';
  */
 export const MASTERY_FRAME_KEY = MASTERY_FRAME.key;
 
-/** Size of the picture: the card plus the room around it for the corner stars. */
-export function masteryFrameSize(): { width: number; height: number } {
-  const { width, height, pad } = MASTERY_FRAME;
-  return { width: width + pad * 2, height: height + pad * 2 };
+/** The plate a frame wraps: the collection card unless given. */
+export interface FrameBody {
+  width: number;
+  height: number;
+}
+
+const COLLECTION_BODY: FrameBody = { width: MASTERY_FRAME.width, height: MASTERY_FRAME.height };
+
+/** Size of the picture: the plate plus the room around it for the corner stars. */
+export function masteryFrameSize(body: FrameBody = COLLECTION_BODY): FrameBody {
+  const { pad } = MASTERY_FRAME;
+  return { width: body.width + pad * 2, height: body.height + pad * 2 };
+}
+
+/** Texture key of the frame of a plate: the shared key for the collection card, one per other size. */
+export function masteryFrameKey(body: FrameBody = COLLECTION_BODY): string {
+  const same = body.width === COLLECTION_BODY.width && body.height === COLLECTION_BODY.height;
+  return same ? MASTERY_FRAME_KEY : `${MASTERY_FRAME_KEY}_${body.width}x${body.height}`;
 }
 
 const STAR_NOTCH = 0.3;
 const STAR_POINTS = 4;
 const GLINT_RADIUS_SHARE = 0.22;
 
-/** Bakes the gold frame once (the key is kept when it exists). Put it at the card centre. */
-export function bakeMasteryFrame(scene: Phaser.Scene): void {
-  const size = masteryFrameSize();
-  bakeTexture(scene, MASTERY_FRAME_KEY, size.width, size.height, (g) => {
-    const f = MASTERY_FRAME;
+/** Bakes the gold frame of a plate once (the key is kept when it exists); returns the key. Put it at the plate centre. */
+export function bakeMasteryFrame(scene: Phaser.Scene, body: FrameBody = COLLECTION_BODY): string {
+  const size = masteryFrameSize(body);
+  const key = masteryFrameKey(body);
+  bakeTexture(scene, key, size.width, size.height, (g) => {
+    const f = { ...MASTERY_FRAME, width: body.width, height: body.height };
     const gold = parseHex(f.gold);
     const light = parseHex(f.goldLight);
     const dark = parseHex(f.goldDark);
@@ -74,4 +89,5 @@ export function bakeMasteryFrame(scene: Phaser.Scene): void {
       g.fillCircle(cx, cy, f.star.r * GLINT_RADIUS_SHARE);
     }
   });
+  return key;
 }

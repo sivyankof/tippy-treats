@@ -14,7 +14,15 @@
  * The income is based on the play volume (runs in the minutes of the day), not on a fixed number
  * of runs a day.
  *
- * `npm run sim:economy -- [--runs=1000] [--cache=path] [--current]`
+ * Mastery (docs/05-economy-monetization.md, section 3): the master effects exist only at creature
+ * level 5, which opens at baker level 16 (a legendary creature at 20). In `CURRENT`, from the day
+ * the player reaches baker level 16 the runs come from samples of the same team at level 5 (a
+ * legendary one at 4 until baker level 20), without checking whether the model player bought
+ * those upgrades: an upper bound of the income, cautious for "strong not before day 28". An extra
+ * acceptance row plays the strong player with the best level-5 coin team of `npm run sim:coins`
+ * from baker level 16 (`--mastery-team=a+b+c` replaces it).
+ *
+ * `npm run sim:economy -- [--runs=1000] [--cache=path] [--current] [--mastery-team=a+b+c] [--set=...]`
  */
 import { SESSION_TIME } from './session-time';
 import {
@@ -24,7 +32,13 @@ import {
 import { legacyXpToNext } from '../src/core/save/frozen-v5';
 import { Rng } from '../src/core/rng';
 import { DIFFICULTY } from '../src/data/balance';
-import { CREATURE_IDS, CREATURES, type CreatureId } from '../src/data/creatures';
+import {
+  CREATURE_IDS,
+  CREATURES,
+  isCreatureId,
+  MAX_CREATURE_LEVEL,
+  type CreatureId,
+} from '../src/data/creatures';
 import { DAILY } from '../src/data/daily';
 import {
   BERRY_PACKS,
@@ -46,6 +60,7 @@ import { playCheckpointRuns } from './checkpoint-runs';
 import { COIN_SOURCES, CoinStats, type CoinsBySource } from './coin-stats';
 import { intArg, nodeFs, scriptArgs } from './node-env';
 import { ANALYSIS_MAX_HEIGHT, mean, playRun, profileStreams, teamSlots } from './sim-runner';
+import { applySets, setArg } from './what-if';
 
 // ---------------------------------------------------------------- samples
 
@@ -72,10 +87,60 @@ const SETUPS: TeamSetup[] = [
 const PROFILES = ['novice', 'regular', 'expert', 'strong'] as const;
 type ProfileId = (typeof PROFILES)[number];
 
-function playSamples(profileId: ProfileId, setup: TeamSetup, runs: number): RunSample[] {
+/** Index of the upgrade to the last level in the upgrade gate lists. */
+const LAST_STEP = MAX_CREATURE_LEVEL - 2;
+const gate = (gates: readonly number[]): number => {
+  const level = gates[LAST_STEP];
+  if (level === undefined) throw new Error('no gate of the last upgrade');
+  return level;
+};
+
+/** Runs of a team from a baker level on: the team at level 5 with the master effects. */
+interface MasteryStage {
+  fromBaker: number;
+  /** Sample key suffix. */
+  key: string;
+  levelOf: (id: CreatureId) => number;
+}
+
+const isLegendary = (id: CreatureId): boolean => CREATURES[id].rarity === 'legendary';
+
+/** Level 5 from baker 16; a legendary creature waits at level 4 for its own gate (baker 20). */
+function masteryStages(creatures: readonly CreatureId[]): MasteryStage[] {
+  const full: MasteryStage = {
+    fromBaker: gate(LEGENDARY_UPGRADE_MIN_BAKER),
+    key: 'L5',
+    levelOf: () => MAX_CREATURE_LEVEL,
+  };
+  if (!creatures.some(isLegendary)) return [{ ...full, fromBaker: gate(UPGRADE_MIN_BAKER) }];
+  return [
+    {
+      fromBaker: gate(UPGRADE_MIN_BAKER),
+      key: 'L5-legendary4',
+      levelOf: (id) => (isLegendary(id) ? MAX_CREATURE_LEVEL - 1 : MAX_CREATURE_LEVEL),
+    },
+    full,
+  ];
+}
+
+/**
+ * The team with the most coins per run at level 5 for the strong profile, master effects
+ * included (`npm run sim:coins -- --profile=strong`, 2026-11-16, before the mastery numbers were
+ * tuned: 398 coins per run). Re-check it after tuning.
+ */
+const BEST_COIN_TEAM_L5: readonly CreatureId[] = ['honey', 'frosty', 'ghost'];
+const BEST_KEY = 'best5';
+
+function playSamples(
+  profileId: ProfileId,
+  key: string,
+  creatures: readonly CreatureId[],
+  level: number | ((id: CreatureId) => number),
+  runs: number,
+): RunSample[] {
   const profile = DIFFICULTY.targets.find((t) => t.id === profileId);
   if (!profile) throw new Error(profileId);
-  const { seeds, noise } = profileStreams(`${profileId}:${setup.key}`);
+  const { seeds, noise } = profileStreams(`${profileId}:${key}`);
   const coins = new CoinStats();
   const out: RunSample[] = [];
   for (let i = 0; i < runs; i += 1) {
@@ -83,7 +148,7 @@ function playSamples(profileId: ProfileId, setup: TeamSetup, runs: number): RunS
       {
         seed: seeds.int(0, 2 ** 31 - 1),
         mode: 'classic',
-        team: teamSlots({ name: setup.key, creatures: setup.creatures }, setup.level),
+        team: teamSlots({ name: key, creatures }, level),
         tutorial: false,
       },
       profile,
@@ -100,16 +165,83 @@ function playSamples(profileId: ProfileId, setup: TeamSetup, runs: number): RunS
 
 type Samples = Record<string, RunSample[]>;
 
-function loadSamples(runs: number, cache: string | null): Samples {
-  if (cache && nodeFs().existsSync(cache)) {
-    return JSON.parse(nodeFs().readFileSync(cache, 'utf8')) as Samples;
-  }
-  const samples: Samples = {};
+/** Key of the samples of the best level-5 coin team: the team is part of it, so a cache follows it. */
+const bestKey = (team: readonly CreatureId[]): string => `${BEST_KEY}=${team.join('+')}`;
+
+interface SampleJob {
+  key: string;
+  play: (runs: number) => RunSample[];
+}
+
+/** Every sample set the report needs: each setup at level 1 and in its mastery stages, the best coin team. */
+function sampleJobs(bestTeam: readonly CreatureId[]): SampleJob[] {
+  const jobs: SampleJob[] = [];
   for (const p of PROFILES) {
-    for (const setup of SETUPS) samples[`${p}:${setup.key}`] = playSamples(p, setup, runs);
+    for (const setup of SETUPS) {
+      const base = setup.key;
+      jobs.push({
+        key: `${p}:${base}`,
+        play: (runs) => playSamples(p, base, setup.creatures, setup.level, runs),
+      });
+      for (const stage of masteryStages(setup.creatures)) {
+        const key = `${base}:${stage.key}`;
+        jobs.push({
+          key: `${p}:${key}`,
+          play: (runs) => playSamples(p, key, setup.creatures, stage.levelOf, runs),
+        });
+      }
+    }
   }
-  if (cache) nodeFs().writeFileSync(cache, JSON.stringify(samples));
+  for (const stage of masteryStages(bestTeam)) {
+    const key = `${bestKey(bestTeam)}:${stage.key}`;
+    jobs.push({
+      key: `strong:${key}`,
+      play: (runs) => playSamples('strong', key, bestTeam, stage.levelOf, runs),
+    });
+  }
+  return jobs;
+}
+
+/** Plays the samples, or reads them from `cache` and plays only the ones it lacks. */
+function loadSamples(runs: number, cache: string | null, bestTeam: readonly CreatureId[]): Samples {
+  const samples: Samples =
+    cache && nodeFs().existsSync(cache)
+      ? (JSON.parse(nodeFs().readFileSync(cache, 'utf8')) as Samples)
+      : {};
+  let played = false;
+  for (const job of sampleJobs(bestTeam)) {
+    if (samples[job.key]) continue;
+    samples[job.key] = job.play(runs);
+    played = true;
+  }
+  if (cache && played) nodeFs().writeFileSync(cache, JSON.stringify(samples));
   return samples;
+}
+
+/** Runs of the mastery stages of a team, ready for `walk`; none in an economy without mastery. */
+interface StageSamples {
+  fromBaker: number;
+  samples: RunSample[];
+}
+
+function stageSamples(
+  eco: Economy,
+  samples: Samples,
+  profile: ProfileId,
+  teamKey: string,
+  creatures: readonly CreatureId[],
+): StageSamples[] {
+  if (!eco.mastery) return [];
+  return masteryStages(creatures).map((stage) => ({
+    fromBaker: stage.fromBaker,
+    samples: samples[`${profile}:${teamKey}:${stage.key}`] ?? [],
+  }));
+}
+
+function setupByKey(key: string): TeamSetup {
+  const setup = SETUPS.find((s) => s.key === key);
+  if (!setup) throw new Error(`setup ${key}`);
+  return setup;
 }
 
 // ---------------------------------------------------------------- economy
@@ -151,6 +283,8 @@ export interface Economy {
   berryPack: { berries: number; coins: number };
   /** The rainbow's berry price and baker gate in the shop (it also comes free at level 20). */
   rainbowBerries: { berries: number; minBaker: number };
+  /** Creature mastery exists: from baker level 16 the runs come from the level-5 samples. */
+  mastery: boolean;
 }
 
 const shopPriceFromData = (): Economy['shopPrice'] => {
@@ -222,6 +356,7 @@ export const CURRENT: Economy = {
   shopPrice: shopPriceFromData(),
   berryPack: bestPack,
   rainbowBerries: rainbowBerryPrice(),
+  mastery: true,
 };
 
 /** The economy before the decisions, for comparison: samples are re-priced to the old coin rules. */
@@ -242,6 +377,7 @@ export const BEFORE: Economy = {
   upgradeCosts: [...BEFORE_RULES.upgradeCosts],
   upgradeMinBaker: [1, 1, 1, 1],
   upgradeMinBakerFor: {},
+  mastery: false,
   // The twins were never sold.
   shopPrice: Object.fromEntries(
     Object.entries(shopPriceFromData()).filter(([id]) => id !== 'twins'),
@@ -307,6 +443,7 @@ export function walk(
   player: Player,
   samples: RunSample[],
   cp?: CheckpointSamples,
+  stages: readonly StageSamples[] = [],
 ): WalkResult {
   const rng = new Rng(7);
   let sampleIdx = 0;
@@ -319,9 +456,18 @@ export function walk(
     if (!r) throw new Error(`no checkpoint samples for ${height}`);
     return r;
   };
+  const stageIdx = stages.map(() => 0);
   const nextRun = (): RunSample => {
-    const r = samples[sampleIdx % samples.length];
-    sampleIdx += 1;
+    // The latest mastery stage the baker level has opened, otherwise the level-1 runs.
+    let stage = -1;
+    stages.forEach((s, i) => {
+      if (level >= s.fromBaker) stage = i;
+    });
+    const list = stages[stage]?.samples ?? samples;
+    const i = stage < 0 ? sampleIdx : (stageIdx[stage] ?? 0);
+    if (stage < 0) sampleIdx += 1;
+    else stageIdx[stage] = i + 1;
+    const r = list[i % list.length];
     if (!r) throw new Error('no samples');
     return r;
   };
@@ -565,15 +711,30 @@ const avg = (coins: number, xp: number, runs: number, days: number) => ({
 
 const fmt = (n: number | null, digits = 0): string => (n === null ? '>400' : n.toFixed(digits));
 
-function perRunTable(eco: Economy, samples: Samples): void {
+/** Sample keys of the per-run table: each setup, then its mastery stages when the economy has them. */
+function perRunKeys(eco: Economy, p: ProfileId, bestTeam: readonly CreatureId[]): string[] {
+  const keys: string[] = [];
+  for (const setup of SETUPS) {
+    keys.push(setup.key);
+    if (eco.mastery) {
+      for (const stage of masteryStages(setup.creatures)) keys.push(`${setup.key}:${stage.key}`);
+    }
+  }
+  if (eco.mastery && p === 'strong') {
+    for (const stage of masteryStages(bestTeam)) keys.push(`${bestKey(bestTeam)}:${stage.key}`);
+  }
+  return keys;
+}
+
+function perRunTable(eco: Economy, samples: Samples, bestTeam: readonly CreatureId[]): void {
   console.log(`\n## ${eco.name}: per run and per hour (results 20 s, ad 30 s)`);
   console.log(
     '| profile | team | coins/run | XP/run | run, s | coins/h | XP/h | coins/h x2 | XP/h x2 | XP/h after fresh |',
   );
   console.log('|---|---|---|---|---|---|---|---|---|---|');
   for (const p of PROFILES) {
-    for (const setup of SETUPS) {
-      const runs = samples[`${p}:${setup.key}`] ?? [];
+    for (const key of perRunKeys(eco, p, bestTeam)) {
+      const runs = samples[`${p}:${key}`] ?? [];
       const c = mean(runs.map(eco.runCoins));
       const x = mean(runs.map(eco.runXp)) * eco.dailyXpBonus.mult;
       const tired = mean(runs.map(eco.runXp));
@@ -581,7 +742,7 @@ function perRunTable(eco: Economy, samples: Samples): void {
       const perH = 3600 / (s + RESULTS_SEC);
       const perH2 = 3600 / (s + RESULTS_SEC + AD_SEC);
       console.log(
-        `| ${p} | ${setup.key} | ${c.toFixed(1)} | ${x.toFixed(1)} | ${s.toFixed(0)} | ${(c * perH).toFixed(0)} | ${(x * perH).toFixed(0)} | ${(2 * c * perH2).toFixed(0)} | ${(x * perH2).toFixed(0)} | ${(tired * perH).toFixed(0)} |`,
+        `| ${p} | ${key} | ${c.toFixed(1)} | ${x.toFixed(1)} | ${s.toFixed(0)} | ${(c * perH).toFixed(0)} | ${(x * perH).toFixed(0)} | ${(2 * c * perH2).toFixed(0)} | ${(x * perH2).toFixed(0)} | ${(tired * perH).toFixed(0)} |`,
       );
     }
   }
@@ -612,7 +773,8 @@ function daysTable(eco: Economy, samples: Samples): void {
             ads,
             rainbowByBerries,
           };
-          const r = walk(eco, player, runs);
+          const stages = stageSamples(eco, samples, p, setup.key, setup.creatures);
+          const r = walk(eco, player, runs, undefined, stages);
           console.log(
             `| ${p} | ${setup.key} | ${minutes} | ${ads ? 'x2' : '-'} | ${rainbowByBerries ? 'berries' : 'lvl 20'} | ${r.perDay.coins.toFixed(0)} | ${r.perDay.xp.toFixed(0)} | ${r.perDay.runs.toFixed(0)} | ${r.buyDay[0] ?? '-'} | ${r.buyDay[1] ?? '-'} | ${fmt(r.fullDay)} | ${fmt(r.fullNoTwinsDay)} | ${fmt(r.twinsDay)} | ${fmt(r.levelDay[5] ?? null)} | ${fmt(r.levelDay[10] ?? null)} | ${fmt(r.levelDay[15] ?? null)} | ${fmt(r.levelDay[20] ?? null)} |`,
           );
@@ -623,18 +785,21 @@ function daysTable(eco: Economy, samples: Samples): void {
 }
 
 /** The acceptance criteria of the 2026-11-15 economy, checked for key players of `eco`. */
-function criteriaTable(eco: Economy, samples: Samples): void {
+function criteriaTable(eco: Economy, samples: Samples, bestTeam: readonly CreatureId[]): void {
   const walkFor = (
     profile: ProfileId,
     team: string,
     minutes: number,
     ads: boolean,
     berries = false,
+    stages = stageSamples(eco, samples, profile, team, setupByKey(team).creatures),
   ) =>
     walk(
       eco,
       { profile, team, minutesPerDay: minutes, ads, rainbowByBerries: berries },
       samples[`${profile}:${team}`] ?? [],
+      undefined,
+      stages,
     );
   const rows: Array<{ name: string; r: WalkResult; rule: string; ok: boolean }> = [];
   for (const ads of [false, true]) {
@@ -655,6 +820,19 @@ function criteriaTable(eco: Economy, samples: Samples): void {
       rule: '>= 28',
       ok: r.fullDay !== null && r.fullDay >= 28,
     });
+  }
+  if (eco.mastery) {
+    // The strong player switches to the best level-5 coin team once baker level 16 opens level 5.
+    for (const berries of [false, true]) {
+      const stages = stageSamples(eco, samples, 'strong', bestKey(bestTeam), bestTeam);
+      const r = walkFor('strong', 'coin', 210, true, berries, stages);
+      rows.push({
+        name: `strong, coin team, from baker ${stages[0]?.fromBaker ?? '-'} the best L5 coin team ${bestTeam.join('+')}, 210 min, x2, rainbow ${berries ? 'by berries' : 'at lvl 20'}`,
+        r,
+        rule: '>= 28',
+        ok: r.fullDay !== null && r.fullDay >= 28,
+      });
+    }
   }
   for (const [profile, team] of [
     ['regular', 'starter'],
@@ -770,6 +948,7 @@ function checkpointTable(eco: Economy, samples: Samples, runs: number): void {
         player,
         samples[`${c.profile}:${c.setup.key}`] ?? [],
         cpSamples[c.profile as 'regular' | 'strong'],
+        stageSamples(eco, samples, c.profile, c.setup.key, c.setup.creatures),
       );
       const lvl20 = r.levelDay[20] ?? null;
       const target =
@@ -794,23 +973,34 @@ function checkpointTable(eco: Economy, samples: Samples, runs: number): void {
 
 // ---------------------------------------------------------------- main
 
+function parseTeam(value: string): CreatureId[] {
+  const ids = value.split('+');
+  if (ids.length === 0 || !ids.every(isCreatureId)) throw new Error(`Invalid team: ${value}`);
+  return ids;
+}
+
 function main(): void {
   let runs = 1000;
   let cache: string | null = null;
   let currentOnly = false;
+  let bestTeam: readonly CreatureId[] = BEST_COIN_TEAM_L5;
   for (const arg of scriptArgs()) {
     const [key, value = ''] = arg.replace(/^--/, '').split('=');
     if (key === 'runs') runs = intArg([arg], 'runs', runs);
     else if (key === 'cache') cache = value;
     else if (key === 'current') currentOnly = true;
+    else if (key === 'mastery-team') bestTeam = parseTeam(value);
+    else if (key === 'set') continue;
     else throw new Error(`Unknown argument: ${arg}`);
   }
-  const samples = loadSamples(runs, cache);
+  const sets = applySets(setArg(scriptArgs()));
+  if (sets.length > 0) console.log(`What-if values: ${sets.join('; ')}`);
+  const samples = loadSamples(runs, cache, bestTeam);
   const economies = currentOnly ? [CURRENT] : [BEFORE, CURRENT];
   for (const eco of economies) {
-    perRunTable(eco, samples);
+    perRunTable(eco, samples, bestTeam);
     daysTable(eco, samples);
-    criteriaTable(eco, samples);
+    criteriaTable(eco, samples, bestTeam);
   }
   checkpointTable(CURRENT, samples, runs);
 }

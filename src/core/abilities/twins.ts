@@ -1,5 +1,7 @@
 import { abilityDef, levelValue } from '../../data/creatures';
-import { boostCount, emitAbility } from './helpers';
+import { MASTERY } from '../../data/mastery';
+import { isMaster } from '../mastery';
+import { boostCount, emitAbility, payMastery } from './helpers';
 import type { Ability } from './types';
 
 const DEF = abilityDef('twins');
@@ -12,5 +14,7 @@ export const twins: Ability = {
     ctx.state.bonusHeight += DEF.bonusHeight;
     ctx.state.score += bonusScore;
     emitAbility(ctx, { bonusScore, bonusHeight: DEF.bonusHeight });
+    // Master "Peace": twins placed perfectly hug and pay coins.
+    if (isMaster(ctx.level) && ctx.boosted) payMastery(ctx, 'twins', MASTERY.twins.perfectCoins);
   },
 };

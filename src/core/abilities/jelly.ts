@@ -1,5 +1,7 @@
 import { abilityDef, levelValue } from '../../data/creatures';
-import { boostAmount, boostCount, emitAbility } from './helpers';
+import { MASTERY } from '../../data/mastery';
+import { isMaster } from '../mastery';
+import { boostAmount, boostCount, emitAbility, payMastery } from './helpers';
 import type { Ability } from './types';
 
 const DEF = abilityDef('jelly');
@@ -21,4 +23,17 @@ export const jelly: Ability = {
     emitAbility(ctx, { wobbleBefore, wobbleAfter: ctx.state.wobble, layers, value });
   },
   modifiers: (effect) => ({ springShare: effect.value }),
+  /** Master "Long bounce": one more layer springs with a part of the spring (no wobble relief). */
+  onEnd(effect, ctx) {
+    if (!isMaster(effect.level)) return null;
+    payMastery(ctx, 'jelly', 0);
+    return {
+      id: 'jelly',
+      layersLeft: MASTERY.jelly.tailLayers,
+      level: effect.level,
+      boosted: effect.boosted,
+      value: effect.value * MASTERY.jelly.tailShareMult,
+      tail: true,
+    };
+  },
 };

@@ -3,6 +3,7 @@ import { CREATURES, type CreatureId } from '../src/data/creatures';
 import { allFullTeams, NO_TEAM, type SimTeamSet } from '../src/data/sim-teams';
 import { intArg, nodeFs, scriptArgs } from './node-env';
 import { ANALYSIS_MAX_HEIGHT, percentile, playRun, profileStreams, teamSlots } from './sim-runner';
+import { applySets, setArg } from './what-if';
 
 /**
  * Team sweep for the balance analysis (`npm run sim:teams`). Plays one profile with the chosen
@@ -14,10 +15,13 @@ import { ANALYSIS_MAX_HEIGHT, percentile, playRun, profileStreams, teamSlots } f
  *   --runs=N             runs per team (default 200)
  *   --team=a+b+c;none    named teams (default: all 220 full teams)
  *   --part=i/n           only the teams with index % n == i, to split a sweep over processes
- *   --set=honey.4=44;puff.5=80
- *                        what-if values for honey tolerance / puff widen at a 1-based level
- *   --report=f1,f2       print the table of saved JSON lines (with the `none` line) instead of playing
- *   --top=N              rows of the table (default 5)
+ *   --set=honey.4=44;puff.5=80;ghost.5=5;mastery.frosty.toleranceAdd=12
+ *                        what-if values (scripts/what-if.ts): honey tolerance, puff widen, ghost
+ *                        layers at a 1-based level, mastery numbers, bot-model assumptions
+ *   --report=f1,f2       print the table of saved JSON lines (with the `none` line) instead of
+ *                        playing: teams without the rainbow (the owner's height targets apply to
+ *                        them) and teams with it, printed apart
+ *   --top=N              rows of each table (default 5)
  */
 
 interface Row {
@@ -35,33 +39,18 @@ interface Row {
 const DEFAULT_RUNS = 200;
 const DEFAULT_TOP = 5;
 const PCT_DIGITS = 1;
-/** Creatures whose levelled value `--set` can replace, and the field that holds it. */
-const TUNABLE = { honey: 'tolerance', puff: 'widen' } as const;
+/**
+ * Owner's height targets of the mastery stage (docs/03-creatures.md, "РџСЂРѕРєР°С‡РєР°"): the best level-5
+ * team without the rainbow lifts the median of the strong profile at most this much over no team,
+ * with the 99th percentile of its heights at most `MAX_P99`. Rainbow teams are only reported.
+ */
+const MAX_RATIO = 2.2;
+const MAX_P99 = 700;
+const RAINBOW: CreatureId = 'rainbow';
 
 const args = scriptArgs();
 const textArg = (name: string): string | undefined =>
   args.find((a) => a.startsWith(`--${name}=`))?.slice(name.length + 3);
-
-function applySets(spec: string): void {
-  for (const item of spec.split(';').filter(Boolean)) {
-    const [target = '', value = ''] = item.split('=');
-    const [id = '', level = ''] = target.split('.');
-    const field = TUNABLE[id as keyof typeof TUNABLE];
-    const ability = CREATURES[id as CreatureId]?.ability as unknown as Record<string, number[]>;
-    const values = field ? ability[field] : undefined;
-    const index = Number(level) - 1;
-    if (
-      !values ||
-      !Number.isInteger(index) ||
-      index < 0 ||
-      index >= values.length ||
-      !Number.isFinite(Number(value))
-    ) {
-      throw new Error(`Invalid --set item: ${item}`);
-    }
-    values[index] = Number(value);
-  }
-}
 
 function parseTeams(): SimTeamSet[] {
   const named = textArg('team');
@@ -91,7 +80,7 @@ function sweep(): void {
   ) {
     throw new Error('Invalid --part, expected i/n with 0 <= i < n');
   }
-  applySets(textArg('set') ?? '');
+  applySets(setArg(args));
 
   for (const [i, set] of parseTeams().entries()) {
     if (i % partCount !== partIndex) continue;
@@ -135,15 +124,38 @@ function report(files: string[]): void {
   const base = rows.find((row) => row.team === 'none');
   const teams = rows.filter((row) => row.team !== 'none').sort((a, b) => b.median - a.median);
   const top = intArg(args, 'top', DEFAULT_TOP);
+  const ratioOf = (row: Row): number | null => (base ? row.median / base.median : null);
   console.log(`teams ${teams.length}, none median ${base?.median ?? 'n/a'}`);
-  for (const row of teams.slice(0, top)) {
-    const ratio = base ? (row.median / base.median).toFixed(2) : 'n/a';
-    console.log(
-      `${row.team.padEnd(26)} median ${row.median} x${ratio} p75 ${row.p75} p99 ${row.p99} cut ${row.cutPct}%`,
-    );
+  const withRainbow = (row: Row): boolean => row.team.split('+').includes(RAINBOW);
+  for (const [title, list] of [
+    ['without rainbow', teams.filter((row) => !withRainbow(row))],
+    ['with rainbow', teams.filter(withRainbow)],
+  ] as const) {
+    console.log(`-- ${title}: ${list.length}`);
+    for (const row of list.slice(0, top)) {
+      const ratio = ratioOf(row)?.toFixed(2) ?? 'n/a';
+      console.log(
+        `${row.team.padEnd(26)} median ${row.median} x${ratio} p75 ${row.p75} p99 ${row.p99} cut ${row.cutPct}%`,
+      );
+    }
   }
   const reaching = teams.filter((row) => row.cutPct > 0).length;
   console.log(`teams with cut runs: ${reaching}`);
+  const best = teams.find((row) => !withRainbow(row));
+  const bestRatio = best ? ratioOf(best) : null;
+  if (best && bestRatio !== null) {
+    const ok = bestRatio <= MAX_RATIO && best.p99 <= MAX_P99 && reaching === 0;
+    console.log(
+      `target (no rainbow: ratio <= ${MAX_RATIO}, p99 <= ${MAX_P99}, no cut runs): ${ok ? 'ok' : 'MISSED'} ` +
+        `(${best.team} x${bestRatio.toFixed(2)}, p99 ${best.p99})`,
+    );
+  }
+  const overRainbow = teams.filter((row) => withRainbow(row) && (ratioOf(row) ?? 0) > MAX_RATIO);
+  if (overRainbow.length > 0) {
+    console.log(
+      `rainbow teams over x${MAX_RATIO} (for the owner): ${overRainbow.map((row) => row.team).join(', ')}`,
+    );
+  }
 }
 
 const reportFiles = textArg('report');

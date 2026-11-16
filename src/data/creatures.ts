@@ -41,7 +41,8 @@ export type AbilityDef =
   | { kind: 'brownie'; layers: LevelValues }
   | { kind: 'sprinkle'; layers: number; scoreMult: LevelValues }
   | { kind: 'crumb'; layers: number; pixelsPerCoin: LevelValues }
-  | { kind: 'ghost'; layers: LevelValues }
+  /** `centreMarkFrom`: from this level the guides also mark the centre of the perfect spot (display only). */
+  | { kind: 'ghost'; layers: LevelValues; centreMarkFrom: number }
   | { kind: 'twins'; bonusScore: LevelValues; bonusHeight: number }
   | {
       kind: 'lemon';
@@ -50,7 +51,17 @@ export type AbilityDef =
       scoreMult: LevelValues;
       perfectCoinAdd: number;
     }
-  | { kind: 'rainbow'; layers: LevelValues; boostExtraLayers: number };
+  /**
+   * `protectedScore`: flat score for every layer that lands under the protection (0 = none);
+   * `ownLayerFrom`: from this level the rainbow layer itself is not cut either.
+   */
+  | {
+      kind: 'rainbow';
+      layers: LevelValues;
+      boostExtraLayers: number;
+      protectedScore: LevelValues;
+      ownLayerFrom: number;
+    };
 
 export type UnlockDef =
   | { kind: 'tutorial' }
@@ -227,7 +238,7 @@ export const CREATURES: Record<CreatureId, CreatureDef> = {
   ghost: {
     ...keys('ghost'),
     rarity: 'epic',
-    ability: { kind: 'ghost', layers: [3, 3, 4, 5, 6] },
+    ability: { kind: 'ghost', layers: [3, 3, 4, 5, 6], centreMarkFrom: 2 },
     unlock: [{ kind: 'shop', coins: 2500, minBakerLevel: 10 }],
     palette: {
       body: '#f6f3ff',
@@ -281,7 +292,13 @@ export const CREATURES: Record<CreatureId, CreatureDef> = {
   rainbow: {
     ...keys('rainbow'),
     rarity: 'legendary',
-    ability: { kind: 'rainbow', layers: [1, 1, 1, 2, 2], boostExtraLayers: 1 },
+    ability: {
+      kind: 'rainbow',
+      layers: [1, 1, 1, 2, 2],
+      boostExtraLayers: 1,
+      protectedScore: [0, 50, 50, 50, 50],
+      ownLayerFrom: 3,
+    },
     unlock: [
       { kind: 'bakerLevel', level: 20 },
       { kind: 'shop', berries: 600, minBakerLevel: 5 },

@@ -1,11 +1,11 @@
 import * as Phaser from 'phaser';
-import { abilityChanges } from '../../core/ability-values';
 import type { Currency } from '../../core/economy';
 import { addToTeam } from '../../core/team';
-import { CREATURES, MAX_CREATURE_LEVEL, type CreatureId } from '../../data/creatures';
+import { CREATURES } from '../../data/creatures';
 import { MENU } from '../../data/menu-layout';
+import { TRANSFORM } from '../../data/transform-scene';
 import { RARITY_COLORS } from '../../data/rarity';
-import { formatDecimal, t } from '../../i18n';
+import { t } from '../../i18n';
 import { services } from '../../services';
 import { gameState } from '../../state';
 import { Particles } from '../fx/particles';
@@ -14,7 +14,11 @@ import { demoRun } from '../run-request';
 import { openScreen, SCENES, startRunFrom, type CreatureDetailData } from '../scene-keys';
 import { enterScreen, leaveScreen, type Movable } from '../ui/transition';
 import { DetailActions } from '../ui/menu/detail-actions';
-import { abilityText, changeText } from '../ui/menu/detail-model';
+import { abilityText } from '../ui/menu/detail-model';
+import { DetailBio } from '../ui/menu/detail-bio';
+import { detailPlan, DETAIL_PLAN_STEPS, masterBlock, upgradeRows } from '../ui/menu/detail-rows';
+import { MasteryTransform } from '../ui/menu/mastery-transform';
+import { transformKind, type TransformKind } from '../ui/menu/transform-plan';
 import { DetailInfo } from '../ui/menu/detail-info';
 import { DetailStage } from '../ui/menu/detail-stage';
 import { TitleRibbon } from '../ui/style/title-ribbon';
@@ -35,6 +39,9 @@ export class CreatureDetailScene extends Phaser.Scene {
   private info!: DetailInfo;
   private actions!: DetailActions;
   private particles!: Particles;
+  private bio: DetailBio | null = null;
+  private bioVeil: Phaser.GameObjects.Zone | null = null;
+  private transform: MasteryTransform | null = null;
 
   constructor() {
     super(SCENES.creatureDetail);
@@ -65,26 +72,49 @@ export class CreatureDetailScene extends Phaser.Scene {
     this.header.update(this.time.now, delta);
     this.stage.portrait.tick(delta);
     this.particles.update(delta);
+    this.transform?.update(delta);
   }
 
-  /** Everything that depends on the owned level: rebuilt after an upgrade. */
+  /**
+   * Everything that depends on the owned level: rebuilt after an upgrade. On a short screen the
+   * window drops its secondary parts one step at a time until it fits (`detailPlan`).
+   */
   private build(): void {
+    const height = this.scale.gameSize.height;
+    for (let step = 0; step < DETAIL_PLAN_STEPS; step++) {
+      this.buildStep(step);
+      if (step === DETAIL_PLAN_STEPS - 1 || this.freeHeight(height) >= 0) return;
+      this.destroyLevelParts();
+    }
+  }
+
+  /** Free height between the hero plate, the text block and the buttons; negative when they overlap. */
+  private freeHeight(height: number): number {
+    const used = cfg.stage.height + cfg.blockGap + this.info.bodyHeight;
+    return this.actions.topY(height) - cfg.blockGap - cfg.stageTop - used;
+  }
+
+  private buildStep(step: number): void {
     const { id } = this.request;
     const level = this.level;
     const { bakerLevel, team } = gameState.data;
+    const plan = detailPlan(step);
+    this.closeBio();
     this.stage = new DetailStage(
       this,
       id,
       level,
       RARITY_COLORS[CREATURES[id].rarity],
       cfg.stage.width,
+      level === null ? null : () => this.toggleBio(),
     );
-    this.info = new DetailInfo(
-      this,
-      id,
-      abilityText(id, level ?? 1),
-      level !== null && level < MAX_CREATURE_LEVEL ? this.nextText(id, level) : null,
-    );
+    const master = level === null ? [] : masterBlock(id, level);
+    this.info = new DetailInfo(this, id, {
+      abilityText: abilityText(id, level ?? 1),
+      master: plan.masterPhrase ? master : master.filter((row) => row.kind !== 'phrase'),
+      next: level === null ? [] : upgradeRows(id, level),
+      trait: plan.trait,
+    });
 
     this.actions = new DetailActions(
       this,
@@ -96,6 +126,7 @@ export class CreatureDetailScene extends Phaser.Scene {
         berries: gameState.berries,
         inTeam: team.includes(id),
         teamFull: addToTeam(team, id, bakerLevel) === team,
+        plan,
       },
       {
         upgrade: () => this.upgrade(),
@@ -106,12 +137,35 @@ export class CreatureDetailScene extends Phaser.Scene {
     );
   }
 
-  /** What the next level changes, for the green line. */
-  private nextText(id: CreatureId, level: number): string {
-    const change = changeText(abilityChanges(id, level, level + 1), formatDecimal);
-    return change
-      ? t('detail.nextLevel', { n: level + 1, change })
-      : t('detail.noChange', { n: level + 1 });
+  /** The funny description opens over the text block and closes on any tap. */
+  private toggleBio(): void {
+    if (this.bio) {
+      this.closeBio();
+      return;
+    }
+    const { width, height } = this.scale.gameSize;
+    this.bioVeil = this.add
+      .zone(0, 0, width, height)
+      .setOrigin(0)
+      .setInteractive()
+      .setDepth(cfg.bio.depth - 1);
+    this.bioVeil.on(Phaser.Input.Events.POINTER_DOWN, () => this.closeBio());
+    this.bio = new DetailBio(this, this.request.id, this.info.bodyHeight, () =>
+      this.closeBio(),
+    ).setDepth(cfg.bio.depth);
+    this.layoutBio();
+    this.stage.portrait.poke();
+  }
+
+  private layoutBio(): void {
+    this.bio?.setPosition(this.info.x, this.info.y);
+  }
+
+  private closeBio(): void {
+    this.bio?.destroy();
+    this.bioVeil?.destroy();
+    this.bio = null;
+    this.bioVeil = null;
   }
 
   private destroyLevelParts(): void {
@@ -137,6 +191,7 @@ export class CreatureDetailScene extends Phaser.Scene {
     this.name.setPosition(cx, cfg.ribbonY + gap);
     this.stage.setPosition(cx, stageTop + cfg.stage.height / 2);
     this.info.setPosition(cx, stageTop + cfg.stage.height + cfg.blockGap + gap);
+    this.layoutBio();
   }
 
   /** Stops taps on the buttons while the screen leaves, then runs `go`. */
@@ -164,10 +219,17 @@ export class CreatureDetailScene extends Phaser.Scene {
   }
 
   private upgrade(): void {
-    const result = gameState.upgradeCreature(this.request.id);
+    const { id } = this.request;
+    const from = this.level ?? 1;
+    const kind = transformKind(id, from);
+    const result = gameState.upgradeCreature(id);
     if (!result.ok) return;
     this.level = result.value;
     this.refresh();
+    if (kind) {
+      this.playTransform(kind, from);
+      return;
+    }
     const { portrait, stars } = this.stage;
     starBurst(
       this.particles,
@@ -188,6 +250,37 @@ export class CreatureDetailScene extends Phaser.Scene {
     }
     services.audio.perfect(1);
     services.haptics.play('success');
+  }
+
+  /** The scene of the new look or the master level; the window under it already shows the new level. */
+  private playTransform(kind: TransformKind, from: number): void {
+    const { frame, portrait } = this.stage;
+    frame?.setVisible(false);
+    portrait.setAlpha(0);
+    this.actions.setEnabled(false);
+    this.header.setBackEnabled(false);
+    this.transform = new MasteryTransform(this, {
+      id: this.request.id,
+      kind,
+      fromLevel: from,
+      toLevel: from + 1,
+      at: { x: this.stage.x, y: this.stage.y + cfg.stage.portraitY },
+      particles: this.particles,
+      onDone: () => {
+        this.transform = null;
+        portrait.setAlpha(1);
+        this.actions.setEnabled(true);
+        this.header.setBackEnabled(true);
+        if (!frame) return;
+        frame.setVisible(true);
+        this.tweens.add({
+          targets: frame,
+          scale: { from: TRANSFORM.framePop.from, to: 1 },
+          duration: TRANSFORM.framePop.ms,
+          ease: 'Back.easeOut',
+        });
+      },
+    });
   }
 
   private buy(currency: Currency): void {

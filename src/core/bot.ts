@@ -10,7 +10,8 @@ import type { SimEvent, TowerSim } from './tower-sim';
  * is capped at the first wall bounce after the target was passed, so a large
  * error never leaves a layer flying forever. While the ghost guides are active the
  * error is scaled by `DIFFICULTY.guidesSdMult`, and while a cloud covers the layer by
- * `DIFFICULTY.cloudSdMult` (both bot-model assumptions). The estimate uses the instantaneous
+ * `DIFFICULTY.cloudSdMult`, or by `DIFFICULTY.ghostCloudSdMult` when the guides of a level-5
+ * ghost make the cloud see-through (all bot-model assumptions). The estimate uses the instantaneous
  * speed (roof profile, rush); a layer that holds still (rush wind-up, fake-out stop) gives
  * no estimate and is never tapped, and a fake-out reversal resets the aim so it is not
  * mistaken for a wall bounce. A tap needs the target to have been approached first, so a
@@ -53,8 +54,11 @@ export class TimingBot {
       this.resetAim();
       return false;
     }
-    let sdMult = sim.currentModifiers().guides ? DIFFICULTY.guidesSdMult : 1;
-    if (flying.coverMs > 0) sdMult *= DIFFICULTY.cloudSdMult;
+    const mods = sim.currentModifiers();
+    let sdMult = mods.guides ? DIFFICULTY.guidesSdMult : 1;
+    if (flying.coverMs > 0) {
+      sdMult *= mods.guidesMaster ? DIFFICULTY.ghostCloudSdMult : DIFFICULTY.cloudSdMult;
+    }
     const errorMs = this.unitError * this.timingSdMs * sdMult;
     const msToTarget = (((sim.topLayerX() - flying.x) * flying.dir) / speed) * MS_PER_SECOND;
     // After a fake-out reversal the target may lie behind the layer: no tap until it has

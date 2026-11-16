@@ -4,7 +4,16 @@ import { Button } from '../button';
 
 /** Icons drawn in code on round buttons. */
 export type IconKind =
-  'back' | 'close' | 'pause' | 'play' | 'shop' | 'collection' | 'daily' | 'missions' | 'settings';
+  | 'back'
+  | 'close'
+  | 'pause'
+  | 'play'
+  | 'shop'
+  | 'collection'
+  | 'daily'
+  | 'missions'
+  | 'settings'
+  | 'about';
 
 /** The gear: how many teeth it has. */
 const GEAR_TEETH = 8;
@@ -94,6 +103,20 @@ export function drawIcon(
           cy + Math.sin(a) * s * 0.95,
         );
       }
+      return;
+    case 'about':
+      // A speech bubble with three dots.
+      g.fillRoundedRect(cx - s * 0.9, cy - s * 0.8, s * 1.8, s * 1.15, s * 0.35);
+      g.fillTriangle(
+        cx - s * 0.45,
+        cy + s * 0.3,
+        cx - s * 0.5,
+        cy + s * 0.95,
+        cx + s * 0.1,
+        cy + s * 0.3,
+      );
+      g.fillStyle(PALETTE.textDark, 1);
+      for (const dx of [-0.45, 0, 0.45]) g.fillCircle(cx + s * dx, cy - s * 0.22, s * 0.14);
       return;
     case 'missions':
       g.beginPath();

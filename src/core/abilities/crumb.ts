@@ -1,5 +1,7 @@
 import { abilityDef, levelValue } from '../../data/creatures';
-import { boostCount, startEffect } from './helpers';
+import { MASTERY } from '../../data/mastery';
+import { isMaster } from '../mastery';
+import { boostCount, payMastery, startEffect } from './helpers';
 import type { Ability } from './types';
 
 const DEF = abilityDef('crumb');
@@ -12,4 +14,17 @@ export const crumb: Ability = {
   },
   modifiers: (effect) => ({ crumbToCoinsPx: effect.value }),
   lowerValueIsStronger: true,
+  /**
+   * Master "Hoarder": a cut piece wider than `pieceShare` of the flying width (counted like the
+   * crumb coins) pays extra coins.
+   */
+  afterLanding(effect, landing, ctx) {
+    if (
+      isMaster(effect.level) &&
+      landing.quality === 'normal' &&
+      landing.pieceWidth > MASTERY.crumb.pieceShare * landing.flyingWidth
+    ) {
+      payMastery(ctx, 'crumb', MASTERY.crumb.coins);
+    }
+  },
 };
