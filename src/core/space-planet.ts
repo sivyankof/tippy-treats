@@ -1,24 +1,9 @@
 import { SPACE_PLANET_IDS, type SpacePlanetId } from '../data/space-planets';
-import { SPACE_ZONE_INDEX } from '../data/zones';
 
 /** The dessert planet of a lap of Space: the nine in order, then again from the first; lap 0 or less counts as lap 1. */
 export function planetOfLap(lap: number): SpacePlanetId {
   const turn = Math.max(lap, 1) - 1;
   return SPACE_PLANET_IDS[turn % SPACE_PLANET_IDS.length] as SpacePlanetId;
-}
-
-/**
- * Key of the backdrop scenery for a zone and a lap: the zone index itself, and one more per extra
- * lap of Space (laps of Space are the zone repeated, with another planet). Space is the last zone,
- * so the keys of its laps follow the keys of the zones.
- */
-export function sceneryKey(zoneIndex: number, lap: number): number {
-  return zoneIndex === SPACE_ZONE_INDEX ? zoneIndex + Math.max(lap - 1, 0) : zoneIndex;
-}
-
-/** The lap of Space a scenery key stands for; 0 for the keys of the zones before Space. */
-export function lapOfKey(key: number): number {
-  return key >= SPACE_ZONE_INDEX ? key - SPACE_ZONE_INDEX + 1 : 0;
 }
 
 /**

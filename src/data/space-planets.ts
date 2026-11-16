@@ -97,19 +97,28 @@ export const PLANET_LOOK = {
 export const PLANET_PLACE = {
   at: { x: 0.11, y: 0.28 },
   scale: 0.85,
+  /** Clear space kept between the HUD (its lowest edge) and the top of the planet, drift included; a short screen pushes the planet down to keep it. */
+  hudGap: 40,
   /** Full and lite levels; the minimal level holds the planet still. */
   drift: {
     bob: { px: 10, ms: 6400 },
     swing: { deg: 3, ms: 8200 },
   },
-} satisfies { at: HoverSpec['at']; scale: number; drift: Pick<HoverSpec, 'bob' | 'swing'> };
+} satisfies {
+  at: HoverSpec['at'];
+  scale: number;
+  hudGap: number;
+  drift: Pick<HoverSpec, 'bob' | 'swing'>;
+};
 
 /** The plate "Lap N" (docs/06, "Смена зоны"): shorter than the zone plate. */
 export const LAP_PLATE = {
-  width: 400,
+  width: 380,
   height: 112,
   fontSize: 60,
   labelPad: 32,
+  /** The plate hangs against the left edge, so it never covers the next-creature chip on the right. */
+  leftMargin: 24,
   holdMs: 900,
   /** The plate shows from this lap on (lap 1 starts with the zone itself). */
   firstLap: 2,

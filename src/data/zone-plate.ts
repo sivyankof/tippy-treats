@@ -21,6 +21,8 @@ function plateSpec(size: {
   fontSize: number;
   labelPad: number;
   holdMs: number;
+  /** Hang against the left edge at this distance from it instead of centring. */
+  leftMargin?: number;
 }) {
   /** Extra drop of a plate corner at the steepest tilt of the sway. */
   const tiltDrop = Math.ceil(
@@ -66,4 +68,5 @@ export const LAP_BANNER = plateSpec({
   fontSize: LAP_PLATE.fontSize,
   labelPad: LAP_PLATE.labelPad,
   holdMs: LAP_PLATE.holdMs,
+  leftMargin: LAP_PLATE.leftMargin,
 });

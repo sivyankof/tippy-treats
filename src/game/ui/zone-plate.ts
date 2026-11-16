@@ -39,9 +39,10 @@ export class ZoneBanner {
       .setRotation(spec.tiltDeg * DEG_TO_RAD);
   }
 
-  /** Centres the plate on a screen `screenWidth` wide. */
+  /** Centres the plate on a screen `screenWidth` wide (or hangs it from the left edge when its spec says so). */
   layout(screenWidth: number): void {
-    this.root.setX(screenWidth / 2);
+    const left = this.spec.leftMargin;
+    this.root.setX(left === undefined ? screenWidth / 2 : left + this.width / 2);
   }
 
   /** Announces the zone with this index. */
