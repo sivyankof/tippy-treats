@@ -118,7 +118,9 @@ export const PERF_SEGMENTS = [
   },
   {
     id: 'perfects',
-    drawClass: 'light',
+    // Heavy since 2026-11-16 (owner): with a team its HUD texts (badge counters, the next-creature
+    // chip) add ~4-5 draws; the game itself stays near 35. See docs/08, section 13.
+    drawClass: 'heavy',
     start: 0,
     team: NO_TEAM,
     level: 1,
