@@ -68,94 +68,83 @@ function bakeCoin(scene: Phaser.Scene): void {
   });
 }
 
-/** The flat fills of a puff, from the outermost ring in. */
-interface PuffColors {
-  halo: number;
-  edge: number;
-  shade: number;
-  top: number;
+/** Fills the puff shape in `color` at `alpha`, grown by `grow` px and moved down by `dropY`. */
+type PuffFill = (color: number, alpha: number, grow: number, dropY: number) => void;
+
+/** What a puff painter gets: the fill, the puff size and the margin around it. */
+interface PuffCanvas {
+  g: Phaser.GameObjects.Graphics;
+  fill: PuffFill;
+  width: number;
+  height: number;
+  margin: number;
 }
 
 /**
- * One puff of a bank: a few overlapping blobs on a flat base, with a pale edge, a shaded belly and
- * a soft halo of fainter rings around it, so the bank has soft edges. The halo lives in a margin
- * around the puff; the texture is centred on the puff all the same. `extra` draws on top of it.
+ * One puff of a bank: a few overlapping blobs on a flat base, centred in a texture with a margin
+ * for the soft edge. `paint` layers the colours (the cloud and the nebula paint it differently).
  */
-function bakePuff(
-  scene: Phaser.Scene,
-  key: string,
-  colors: PuffColors,
-  lift: number,
-  extra?: (g: Phaser.GameObjects.Graphics, width: number, height: number, margin: number) => void,
-): void {
+function bakePuff(scene: Phaser.Scene, key: string, paint: (canvas: PuffCanvas) => void): void {
   const { width, height } = RULE_ANIM.cloud.puff;
-  const { margin, step, alphas } = RULE_ANIM.cloud.halo;
+  const { margin } = RULE_ANIM.cloud.halo;
   const blobs = [
     { x: 0.34, y: 0.5, r: 0.24 },
     { x: 0.53, y: 0.45, r: 0.29 },
     { x: 0.7, y: 0.5, r: 0.23 },
     { x: 0.23, y: 0.54, r: 0.18 },
   ] as const;
-  const { edge } = RULE_ANIM.cloud;
-  const draw = (
-    g: Phaser.GameObjects.Graphics,
-    color: number,
-    alpha: number,
-    grow: number,
-    dropY: number,
-  ): void => {
-    g.fillStyle(color, alpha);
-    for (const b of blobs) {
-      g.fillCircle(margin + b.x * width, margin + b.y * height + dropY, b.r * width + grow);
-    }
-    g.fillRoundedRect(
-      margin + 0.2 * width - grow,
-      margin + 0.5 * height - grow + dropY,
-      0.62 * width + grow * 2,
-      0.3 * height + grow * 2,
-      0.14 * height + grow,
-    );
-  };
   bakeTexture(scene, key, width + margin * 2, height + margin * 2, (g) => {
-    // Outermost ring first: each ring is fainter and wider, so the edge fades out softly.
-    for (let i = alphas.length - 1; i >= 0; i--) {
-      draw(g, colors.halo, alphas[i] ?? 0, edge + step * (i + 1), 0);
-    }
-    draw(g, colors.edge, 1, edge, 0);
-    draw(g, colors.shade, 1, 0, 0);
-    draw(g, colors.top, 1, 0, -height * lift);
-    extra?.(g, width, height, margin);
+    const fill: PuffFill = (color, alpha, grow, dropY) => {
+      g.fillStyle(color, alpha);
+      for (const b of blobs) {
+        g.fillCircle(margin + b.x * width, margin + b.y * height + dropY, b.r * width + grow);
+      }
+      g.fillRoundedRect(
+        margin + 0.2 * width - grow,
+        margin + 0.5 * height - grow + dropY,
+        0.62 * width + grow * 2,
+        0.3 * height + grow * 2,
+        0.14 * height + grow,
+      );
+    };
+    paint({ g, fill, width, height, margin });
   });
 }
 
+/** A cloud puff: a pale edge, a shaded belly and a soft halo of fainter rings around it. */
 function bakeCloud(scene: Phaser.Scene): void {
   const c = RULE_ANIM.colors;
-  bakePuff(
-    scene,
-    TREASURE_TEXTURES.cloud,
-    {
-      halo: c.cloud,
-      edge: c.cloudEdge,
-      shade: c.cloudShade,
-      top: c.cloud,
-    },
-    CLOUD_LIFT,
-  );
+  const { step, alphas } = RULE_ANIM.cloud.halo;
+  const { edge } = RULE_ANIM.cloud;
+  bakePuff(scene, TREASURE_TEXTURES.cloud, ({ fill, height }) => {
+    // Outermost ring first: each ring is fainter and wider, so the edge fades out softly.
+    for (let i = alphas.length - 1; i >= 0; i--) {
+      fill(c.cloud, alphas[i] ?? 0, edge + step * (i + 1), 0);
+    }
+    fill(c.cloudEdge, 1, edge, 0);
+    fill(c.cloudShade, 1, 0, 0);
+    fill(c.cloud, 1, 0, -height * CLOUD_LIFT);
+  });
 }
 
-/** The nebula puff: the cloud puff in pink over blue, with a few star dots baked in. */
+/**
+ * The nebula puff: pink over blue, each colour a feathered shape (a stack of faint, shrinking
+ * copies) instead of a hard-edged one, so overlapping puffs melt into one soft mass without rings
+ * or a pale edge; a few star dots are baked in.
+ */
 function bakeNebula(scene: Phaser.Scene): void {
-  const { colors, dots } = RULE_ANIM.cloud.nebula;
-  bakePuff(
-    scene,
-    TREASURE_TEXTURES.nebula,
-    { halo: colors.halo, edge: colors.edge, shade: colors.blue, top: colors.pink },
-    RULE_ANIM.cloud.nebula.lift,
-    (g, width, height, margin) => {
-      g.fillStyle(colors.dot, 1);
-      for (const d of dots) g.fillCircle(margin + d.x * width, margin + d.y * height, d.r * width);
-    },
-  );
+  const { colors, dots, lift, feather } = RULE_ANIM.cloud.nebula;
+  bakePuff(scene, TREASURE_TEXTURES.nebula, ({ g, fill, width, height, margin }) => {
+    const layer = (color: number, dropY: number): void => {
+      for (let k = 0; k < feather.rings; k++) {
+        fill(color, feather.alpha, feather.px * (1 - (2 * k) / (feather.rings - 1)), dropY);
+      }
+    };
+    layer(colors.blue, 0);
+    layer(colors.pink, -height * lift);
+    g.fillStyle(colors.dot, 1);
+    for (const d of dots) g.fillCircle(margin + d.x * width, margin + d.y * height, d.r * width);
+  });
 }
 
 function bakeStreak(scene: Phaser.Scene): void {
