@@ -1,15 +1,23 @@
 import type * as Phaser from 'phaser';
 import type { CutSide } from '../../core/drop';
 import { ANIM } from '../../data/anim';
+import { zoneIndexOf } from '../../core/zones';
 import { artRecipe } from '../../data/creature-looks';
 import type { CreatureId } from '../../data/creatures';
 import { BALANCE } from '../../data/balance';
+import {
+  GLOW_ZONES,
+  GROWN_LOOKS,
+  GROWN_LOOK_LEVEL,
+  type CreatureStage,
+} from '../../data/mastery-look';
 import type { LayerColors } from '../../data/palette';
 import { PLAIN_LAYER, PLAIN_PAIRS, SPONGES } from '../../data/plain-layers';
+import { ZONES } from '../../data/zones';
 import { TREASURE } from '../../data/treasure-anim';
 import { shade } from '../../util/color';
 import { bakeTexture } from '../ui/bake-texture';
-import { drawCreatureLayer } from './creature-art';
+import { drawCreatureLayer, finishCreatureLayer } from './creature-art';
 import { creatureColors } from './creature-art/primitives';
 import { DARK_OUTLINE, SHADOW_DROP } from './layer-draw';
 import { drawPlainLayer, type PlainArt } from './plain-layer-draw';
@@ -94,12 +102,38 @@ export function artWidth(width: number): number {
 
 const CUT_SUFFIX: Readonly<Record<CutSide | 'none', string>> = { none: 'n', left: 'l', right: 'r' };
 const FACELESS_SUFFIX = '_f';
+const STAGE_SUFFIX: Readonly<Record<CreatureStage, string>> = {
+  base: '',
+  grown: '_g',
+  glow: '_gl',
+};
+
+/** True from the creature level whose layer shows the grown look. */
+export function isGrownLevel(level: number | undefined): boolean {
+  return (level ?? 0) >= GROWN_LOOK_LEVEL;
+}
+
+/**
+ * The picture stage of a layer: `base` for a plain layer or a creature that is not grown; for a
+ * grown creature `grown`, and for the grown Ghost standing in a sky zone (Stars, Space) `glow`.
+ * `index` is the 1-based number the layer has in the tower.
+ */
+export function creatureStage(
+  creature: CreatureId | null,
+  grown: boolean,
+  index: number,
+): CreatureStage {
+  if (!creature || !grown) return 'base';
+  const zone = ZONES[zoneIndexOf(index)];
+  if (creature === 'ghost' && zone && GLOW_ZONES.includes(zone.id)) return 'glow';
+  return 'grown';
+}
 
 /**
  * Texture key of a baked layer: `layer_<look>_<width>_<cut>` for a plain or golden layer (the
  * look code holds the pair and the decoration; `_f` is added for a faceless bitten-off piece)
  * and `layer_c_<creature>_<width>_<cut>` for a creature (its look does not depend on the plain
- * look or the face).
+ * look or the face); the grown look adds `_g`, the lit grown Ghost `_gl`.
  */
 export function layerArtKey(
   look: number,
@@ -107,28 +141,32 @@ export function layerArtKey(
   width: number,
   cut: CutSide | null,
   faceless = false,
+  stage: CreatureStage = 'base',
 ): string {
   const who = creature ? `c_${creature}` : String(look);
   const face = !creature && faceless ? FACELESS_SUFFIX : '';
-  return `layer_${who}_${artWidth(width)}_${CUT_SUFFIX[cut ?? 'none']}${face}`;
+  const grown = creature ? STAGE_SUFFIX[stage] : '';
+  return `layer_${who}_${artWidth(width)}_${CUT_SUFFIX[cut ?? 'none']}${face}${grown}`;
 }
 
 /**
  * Pixels the picture reaches above the top edge of the layer (never less than the shadow
  * margin): the creature's detail, or the decorations of a plain layer.
  */
-export function artTopPad(creature: CreatureId | null): number {
-  return Math.max(SHADOW_MARGIN, creature ? artRecipe(creature).topPad : PLAIN_LAYER.decor.maxRise);
+export function artTopPad(creature: CreatureId | null, stage: CreatureStage = 'base'): number {
+  if (!creature) return Math.max(SHADOW_MARGIN, PLAIN_LAYER.decor.maxRise);
+  const grown = stage === 'base' ? 0 : GROWN_LOOKS[creature].topPad;
+  return Math.max(SHADOW_MARGIN, artRecipe(creature).topPad, grown);
 }
 
 /** Height of the baked picture: the room above the layer, the layer, the room for its shadow. */
-export function artHeight(creature: CreatureId | null): number {
-  return artTopPad(creature) + BALANCE.layer.height + SHADOW_MARGIN;
+export function artHeight(creature: CreatureId | null, stage: CreatureStage = 'base'): number {
+  return artTopPad(creature, stage) + BALANCE.layer.height + SHADOW_MARGIN;
 }
 
 /** Origin y (0..1) of the baked picture: it puts the centre of the layer body on the image position. */
-export function artOriginY(creature: CreatureId | null): number {
-  return (artTopPad(creature) + BALANCE.layer.height / 2) / artHeight(creature);
+export function artOriginY(creature: CreatureId | null, stage: CreatureStage = 'base'): number {
+  return (artTopPad(creature, stage) + BALANCE.layer.height / 2) / artHeight(creature, stage);
 }
 
 /** Opacity of the baked picture: 1 except for the see-through creatures (jelly, meringue). */
@@ -150,8 +188,9 @@ export function layerArtBaked(
   width: number,
   cut: CutSide | null,
   creature: CreatureId | null = null,
+  stage: CreatureStage = 'base',
 ): boolean {
-  return scene.textures.exists(layerArtKey(look, creature, width, cut));
+  return scene.textures.exists(layerArtKey(look, creature, width, cut, false, stage));
 }
 
 /**
@@ -166,17 +205,28 @@ export function acquireLayerArt(
   cut: CutSide | null,
   creature: CreatureId | null = null,
   faceless = false,
+  stage: CreatureStage = 'base',
 ): string {
   const w = artWidth(width);
-  const key = layerArtKey(look, creature, w, cut, faceless);
-  const top = artTopPad(creature);
+  const key = layerArtKey(look, creature, w, cut, faceless, stage);
+  const top = artTopPad(creature, stage);
   const texW = artTextureWidth(w);
-  const texH = artHeight(creature);
-  bakeTexture(scene, key, texW, texH, (g) => {
-    g.translateCanvas(texW / 2, top + BALANCE.layer.height / 2);
-    if (creature) drawCreatureLayer(g, creature, w, cut);
-    else drawPlainLayer(g, w, plainArt(look), cut, faceless);
-  });
+  const texH = artHeight(creature, stage);
+  const centerY = top + BALANCE.layer.height / 2;
+  bakeTexture(
+    scene,
+    key,
+    texW,
+    texH,
+    (g) => {
+      g.translateCanvas(texW / 2, centerY);
+      if (creature) drawCreatureLayer(g, creature, w, cut, false, stage);
+      else drawPlainLayer(g, w, plainArt(look), cut, faceless);
+    },
+    creature && stage !== 'base'
+      ? (context) => finishCreatureLayer(context, creature, w, texW / 2, centerY)
+      : undefined,
+  );
   const users = refs.get(key) ?? 0;
   refs.delete(key);
   refs.set(key, users + 1);
@@ -194,8 +244,9 @@ export function prepareLayerArt(
   cut: CutSide | null,
   creature: CreatureId | null = null,
   faceless = false,
+  stage: CreatureStage = 'base',
 ): void {
-  releaseLayerArt(scene, acquireLayerArt(scene, look, width, cut, creature, faceless));
+  releaseLayerArt(scene, acquireLayerArt(scene, look, width, cut, creature, faceless, stage));
 }
 
 /** Gives a texture back; unused textures beyond the idle limit are removed. */

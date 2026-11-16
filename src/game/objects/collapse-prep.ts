@@ -8,6 +8,8 @@ import {
   acquireLayerArt,
   cakeColorsFor,
   creatureOfLayer,
+  creatureStage,
+  isGrownLevel,
   layerArtBaked,
   lookCodeFor,
   releaseLayerArt,
@@ -19,6 +21,7 @@ function specOf(layer: PlacedLayer, index: number) {
   return {
     look: lookCodeFor(index + 1, golden),
     creature: creatureOfLayer(layer),
+    stage: creatureStage(creatureOfLayer(layer), isGrownLevel(layer.level), index + 1),
     golden,
   };
 }
@@ -60,16 +63,16 @@ export class CollapsePrep {
     const next = nextUnbaked(this.scanFrom, (i) => {
       const layer = layers[i];
       if (!layer) return true;
-      const { look, creature } = specOf(layer, i);
-      return layerArtBaked(this.scene, look, layer.width, cuts[i] ?? null, creature);
+      const { look, creature, stage } = specOf(layer, i);
+      return layerArtBaked(this.scene, look, layer.width, cuts[i] ?? null, creature, stage);
     });
     this.scanFrom = Math.max(0, next);
     const layer = layers[next];
     if (!layer) return;
-    const { look, creature, golden } = specOf(layer, next);
+    const { look, creature, stage, golden } = specOf(layer, next);
     this.ahead.set(
       next,
-      acquireLayerArt(this.scene, look, layer.width, cuts[next] ?? null, creature),
+      acquireLayerArt(this.scene, look, layer.width, cuts[next] ?? null, creature, false, stage),
     );
     dripTexturesFor(this.scene, creature, cakeColorsFor(creature, next + 1, golden).glaze);
   }

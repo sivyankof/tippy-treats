@@ -15,7 +15,8 @@ export function squeakPitch(id: CreatureId): number {
 }
 
 /**
- * A live creature for the menus: its layer with a face that blinks, breathing a little.
+ * A live creature for the menus: its layer with a face that blinks, breathing a little. `grown`
+ * shows its grown look (a crown, a bow...), which the collection gives from `GROWN_LOOK_LEVEL`.
  * `poke()` makes it hop with a happy face and a squeak. Call `tick` every frame.
  */
 export class CreaturePortrait extends Phaser.GameObjects.Container {
@@ -33,9 +34,11 @@ export class CreaturePortrait extends Phaser.GameObjects.Container {
     level: number,
     layerWidth: number,
     scale = 1,
+    grown = false,
   ) {
     super(scene, x, y);
     this.view = new LayerView(scene)
+      .setStageMode(grown ? 'grown' : 'base')
       .setLook({ kind: 'creature', creature, level: clampLevel(level) })
       .setLayer(1, layerWidth);
     this.inner = scene.add.container(0, 0, [this.view]);

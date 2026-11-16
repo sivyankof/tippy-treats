@@ -1,3 +1,4 @@
+import type { TeamSlot } from '../../core/sim-types';
 import { checkpointStartWidth, isCheckpointHeight } from '../../core/checkpoints';
 import { PERF, PERF_SEGMENTS, type PerfSegmentDef, type PerfSegmentId } from '../../data/perf';
 import type { PerfParams } from '../../util/debug-params';
@@ -57,6 +58,13 @@ export function currentSegment(): PerfSegmentDef | null {
   return PERF_SEGMENTS.find((segment) => segment.id === id) ?? null;
 }
 
+/** The team of a segment: its own, or with `&mastery=` the mastery team in a segment that has none. */
+function perfTeam(def: PerfSegmentDef, mastery: PerfParams['mastery']): Array<TeamSlot | null> {
+  if (!mastery || def.team.some((id) => id !== null)) return toTeamSlots(def.team, def.level);
+  const level = mastery === 'on' ? PERF.mastery.levelOn : PERF.mastery.levelOff;
+  return toTeamSlots(PERF.mastery.team, level);
+}
+
 /**
  * The run of the current segment: fixed seed and tower, no save, no hints, no "Continue?" window.
  * `null` when no benchmark is on.
@@ -75,7 +83,7 @@ export function perfRunSetup(request: RunRequest): RunSetup | null {
     startWidth: isCheckpointHeight(def.start) ? checkpointStartWidth(def.start) : undefined,
     checkpoint: null,
     paidByAd: false,
-    team: toTeamSlots(def.team, def.level),
+    team: perfTeam(def, session.params.mastery),
     tutorialRun: false,
     hints: false,
     writesSave: false,

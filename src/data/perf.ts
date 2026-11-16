@@ -1,4 +1,5 @@
 import type { CreatureId } from './creatures';
+import { GROWN_LOOK_LEVEL } from './mastery-look';
 
 /**
  * The `?perf=1` benchmark: an automatic run through fixed scenes with a fixed seed, measuring the
@@ -224,6 +225,12 @@ export const PERF = {
   results: { xpGained: 3, oven: { fresh: 6, left: 14, ranOut: false } },
   /** The table overlay: a small box at the bottom, the table folds out of it. */
   overlay: { zIndex: 99999, fontPx: 11, decimals: 2, maxHeightVh: 60, copiedMs: 1500 },
+  /** `&mastery=on|off`: the team of the segments that have none (the creatures with a moving accent), at the grown level or one below it. */
+  mastery: {
+    team: ['honey', 'frosty', 'sprinkle'] as readonly CreatureId[],
+    levelOn: GROWN_LOOK_LEVEL,
+    levelOff: GROWN_LOOK_LEVEL - 1,
+  },
   /** `&dpr=`: the render densities (canvas pixels per CSS pixel) a comparison run may cap the canvas at. */
   densityCaps: [1, 1.5, 2, 3] as readonly number[],
   /** `&units=`: texture units per batch the renderer may be set to (Phaser takes 1 on phones by default). */

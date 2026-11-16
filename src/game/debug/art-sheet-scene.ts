@@ -36,7 +36,12 @@ export class ArtSheetScene extends Phaser.Scene {
     LIVE_PICTURES.forEach((picture, i) => {
       const x = margin + (i % columns) * (cellWidth + gap);
       const y = margin + gridHeight + Math.floor(i / columns) * (cellHeight + gap);
-      this.drawLiveCell(picture.name, picture.create(this, ART_SHEET.liveSize), x, y);
+      this.drawLiveCell(
+        picture.name,
+        picture.create(this, picture.size ?? ART_SHEET.liveSize),
+        x,
+        y,
+      );
     });
   }
 

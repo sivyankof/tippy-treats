@@ -49,7 +49,7 @@ export class FlyingLayerView {
     scene: Phaser.Scene,
     private readonly tower: TowerView,
   ) {
-    this.view = new LayerView(scene).setDepth(DEPTH.flying).setVisible(false);
+    this.view = new LayerView(scene).setStageMode('level').setDepth(DEPTH.flying).setVisible(false);
     this.hint = scene.add
       .rectangle(0, 0, 1, ANIM.flying.hintHeight, PALETTE.textDark, ANIM.flying.hintShadowAlpha)
       .setOrigin(0, 0)

@@ -68,6 +68,8 @@ export interface LandingPreview {
   kind: LayerKind;
   /** The creature of a creature layer, `null` otherwise. */
   creature: CreatureId | null;
+  /** Level of the creature of a creature layer (0 for another layer). */
+  level: number;
   /** Width of the placed layer. */
   width: number;
   /** Bitten edge of the placed layer; `null` for an intact one. */
@@ -78,7 +80,7 @@ export interface LandingPreview {
 
 /** An empty preview for `TowerSim.landingPreview` to fill (one object, refilled each time). */
 export function newLandingPreview(): LandingPreview {
-  return { index: 0, kind: 'plain', creature: null, width: 0, cut: null, pieceWidth: 0 };
+  return { index: 0, kind: 'plain', creature: null, level: 0, width: 0, cut: null, pieceWidth: 0 };
 }
 
 export interface FlyingLayer extends LayerPlan {

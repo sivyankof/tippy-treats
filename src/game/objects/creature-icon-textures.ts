@@ -3,7 +3,7 @@ import { BALANCE } from '../../data/balance';
 import { CREATURE_ICON } from '../../data/creature-style';
 import { CREATURE_IDS, type CreatureId } from '../../data/creatures';
 import { offList } from '../ui/bake-texture';
-import { CREATURE_ICON_KEYS } from '../ui/creature-icons';
+import { CREATURE_GROWN_ICON_KEYS, CREATURE_ICON_KEYS } from '../ui/creature-icons';
 import { artTopPad } from './layer-art';
 import { iconPlacement } from './creature-icon-fit';
 import { LayerView } from './layer-view';
@@ -27,17 +27,41 @@ export function createCreatureIconTextures(scene: Phaser.Scene): void {
   }
 }
 
-function bakeIcon(scene: Phaser.Scene, view: LayerView, id: CreatureId): void {
-  const key = CREATURE_ICON_KEYS[id];
+/**
+ * The key of the icon of `id`, in its grown look when `grown`; the grown icon is baked here on
+ * first use (call it before the screen that shows it opens, not during a run).
+ */
+export function creatureIconTexture(scene: Phaser.Scene, id: CreatureId, grown = false): string {
+  if (!grown) return CREATURE_ICON_KEYS[id];
+  const key = CREATURE_GROWN_ICON_KEYS[id];
+  if (scene.textures.exists(key)) return key;
+  const view = offList(new LayerView(scene));
+  try {
+    bakeIcon(scene, view, id, true);
+  } finally {
+    view.destroy();
+  }
+  return key;
+}
+
+/** Bakes the grown icons of all creatures (`icon_<id>_grown`); the art sheet shows them. */
+export function createGrownCreatureIconTextures(scene: Phaser.Scene): void {
+  for (const id of CREATURE_IDS) creatureIconTexture(scene, id, true);
+}
+
+function bakeIcon(scene: Phaser.Scene, view: LayerView, id: CreatureId, grown = false): void {
+  const key = grown ? CREATURE_GROWN_ICON_KEYS[id] : CREATURE_ICON_KEYS[id];
   if (scene.textures.exists(key)) return;
+  const stage = grown ? 'grown' : 'base';
   const half = BALANCE.layer.height / 2;
   const { size, marginShare } = CREATURE_ICON;
   const layerWidth = iconLayerWidth(id);
-  const place = iconPlacement(layerWidth, half + artTopPad(id), half, size, marginShare);
+  const place = iconPlacement(layerWidth, half + artTopPad(id, stage), half, size, marginShare);
   const icon = scene.textures.addDynamicTexture(key, size, size);
   if (!icon) throw new Error(`creature icon: no texture for ${id}`);
   view
     .resetAnim()
+    .setStageMode(stage)
     .setScale(place.scale)
     .setLook({ kind: 'creature', creature: id, level: CREATURE_ICON.level })
     .setLayer(1, layerWidth, null)

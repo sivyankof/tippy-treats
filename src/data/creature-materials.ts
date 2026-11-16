@@ -1,6 +1,7 @@
 import { ANIM } from './anim';
 import type { CreatureId, CreaturePalette } from './creatures';
 import { SPRINKLE_COLORS } from './creature-looks';
+import { GROWN_MATERIAL } from './mastery-look';
 import { RAINBOW_BANDS } from './rainbow-look';
 import type { WallFeelKind } from './edge-squash';
 
@@ -293,7 +294,17 @@ export const CREATURE_MATERIALS: Readonly<Record<CreatureId, CreatureMaterial>> 
   },
 };
 
-/** The material of a creature layer. */
-export function creatureMaterial(id: CreatureId): CreatureMaterial {
-  return CREATURE_MATERIALS[id];
+const grownMaterials = new Map<CreatureId, CreatureMaterial>();
+
+/** The material of a creature layer; `grown` gives the one of the grown look (it wobbles, flutters or jostles more). */
+export function creatureMaterial(id: CreatureId, grown = false): CreatureMaterial {
+  const usual = CREATURE_MATERIALS[id];
+  const change = grown ? GROWN_MATERIAL[id] : undefined;
+  if (!change) return usual;
+  let material = grownMaterials.get(id);
+  if (!material) {
+    material = { ...usual, ...change };
+    grownMaterials.set(id, material);
+  }
+  return material;
 }
