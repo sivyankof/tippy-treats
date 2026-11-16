@@ -269,6 +269,8 @@ export const MASTERY_FRAME = {
   /** The second, thin rim outside the band (the "double rim"): gap from the card edge, gold width, dark outline on each side. */
   outerRim: { gap: 4, width: 7, outline: 3 },
   /** The crown-star on the top centre: radius, notch depth (share of the radius), points, how far its centre sits above the card edge, outline width. */
+  /** The crown of any plate other than the collection card (the creature window) moves to the top-left corner, this far from the left edge: the name ribbon covers the top centre and the about button the top right. */
+  windowCrownInset: 44,
   crown: { r: 28, notch: 0.45, points: 5, lift: 6, outline: 4, white: '#ffffff' },
   /** Fine highlight along the top of the band: height, inset from corners. */
   shine: { height: 3, inset: 54, alpha: 0.8 },

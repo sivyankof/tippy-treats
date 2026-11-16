@@ -74,8 +74,9 @@ export function bakeMasteryFrame(scene: Phaser.Scene, body: FrameBody = COLLECTI
     stroke(outerInset, o.width + o.outline * 2, dark);
     stroke(outerInset, o.width, gold);
     stroke(outerInset - o.width * 0.25, o.width * 0.3, light, 0.9);
-    // Crown-star on the top centre, over both rims.
-    const cx = x + f.width / 2;
+    // Crown-star over both rims: top centre on the card, top-left corner on other plates.
+    const onCard = body.width === COLLECTION_BODY.width && body.height === COLLECTION_BODY.height;
+    const cx = onCard ? x + f.width / 2 : x + f.windowCrownInset;
     const cy = y - f.crown.lift;
     fillOutlinedPolygon(
       g,
