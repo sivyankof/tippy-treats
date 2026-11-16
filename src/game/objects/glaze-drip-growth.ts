@@ -7,7 +7,7 @@ import { effectsMode } from '../effects-mode';
 import { GlazeDropFall, type DropLanding } from '../fx/glaze-drop-fall';
 import { belowSpan, DropLimiter, dropChance, type BelowSpan } from '../fx/glaze-growth';
 import { dripTextures, stemOuter } from './glaze-drip-textures';
-import { artWidth, cakeColorsFor } from './layer-art';
+import { artWidth, cakeColorsFor, creatureOfLayer } from './layer-art';
 import type { LayerView } from './layer-view';
 
 /**
@@ -54,7 +54,7 @@ export class GlazeDripGrowth {
     for (const [index, view] of views) {
       const layer = state.layers[index];
       if (!layer) continue;
-      const creature = layer.kind === 'creature' && layer.creature ? layer.creature : null;
+      const creature = creatureOfLayer(layer);
       const glaze = cakeColorsFor(creature, index + 1, layer.kind === 'golden').glaze;
       const drips = view.glazeDrips;
       drips.configure(creature, artWidth(layer.width), glaze, index, view.cutSide);
@@ -186,7 +186,8 @@ export class GlazeDripGrowth {
     const layer = state.layers[index];
     const below = state.layers[index - 1];
     if (!layer || !below) return null;
-    const recipe = below.kind === 'creature' && below.creature ? faceRecipe(below.creature) : null;
+    const belowCreature = creatureOfLayer(below);
+    const recipe = belowCreature ? faceRecipe(belowCreature) : null;
     return belowSpan(below.x - layer.x, artWidth(below.width), recipe, this.below);
   }
 }

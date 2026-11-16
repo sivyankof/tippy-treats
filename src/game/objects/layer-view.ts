@@ -5,7 +5,6 @@ import { ANIM } from '../../data/anim';
 import { BALANCE } from '../../data/balance';
 import { ABILITY_ANIM } from '../../data/ability-anim';
 import { faceRecipe } from '../../data/creature-looks';
-import type { CreatureId } from '../../data/creatures';
 import { IDLE_MOTION } from '../../data/idle-motion';
 import { effectsMode } from '../effects-mode';
 import { createGlossBand, sweepGloss } from '../fx/gloss-sweep';
@@ -18,7 +17,7 @@ import { LayerFace } from './layer-face';
 import { LayerShade } from './layer-shade';
 import { LayerMaterial, type MaterialMotion } from './layer-material';
 import { LayerRig } from './layer-rig';
-import { artWidth, lookCodeFor } from './layer-art';
+import { artWidth, creatureOfLayer, lookCodeFor } from './layer-art';
 import { LayerArtSlot } from './layer-art-slot';
 import { RAINBOW_LOOK } from '../../data/rainbow-look';
 import { TWO_PI } from '../../util/math';
@@ -126,8 +125,8 @@ export class LayerView extends Phaser.GameObjects.Container {
    * Cheap: it copies three fields and hands the face recipe on only when the creature changes.
    */
   setLook(plan: LayerPlan): this {
-    const creature = this.creatureOf(plan);
-    if (creature !== this.creatureOf(this.lookPlan)) {
+    const creature = creatureOfLayer(plan);
+    if (creature !== creatureOfLayer(this.lookPlan)) {
       const recipe = creature ? faceRecipe(creature) : null;
       this.face.setRecipe(
         recipe,
@@ -167,7 +166,7 @@ export class LayerView extends Phaser.GameObjects.Container {
     const w = artWidth(width);
     this.topper.setFaceless(!this.faceEnabled);
     this.topper.update(index, w, this.lookPlan.kind === 'plain');
-    const creature = this.creatureOf(this.lookPlan);
+    const creature = creatureOfLayer(this.lookPlan);
     if (!this.artSlot.show(look, w, cut, creature, !this.faceEnabled)) return this;
     this.rainbow.set(creature === 'rainbow', w);
     this.face.layout(w);
@@ -226,10 +225,6 @@ export class LayerView extends Phaser.GameObjects.Container {
   override destroy(fromScene?: boolean): void {
     this.releaseArt();
     super.destroy(fromScene);
-  }
-
-  private creatureOf(plan: Readonly<LayerPlan>): CreatureId | null {
-    return plan.kind === 'creature' && plan.creature ? plan.creature : null;
   }
 
   /** Pieces that fall off the tower have no face. */

@@ -34,8 +34,12 @@ export const RESULTS_DEMO = {
     { id: 'floating_coins_40', group: 'medium', target: 40, before: 14, after: 34 },
   ] as const,
   /** The best classic height before a run that is not a record, and before one that is. */
-  /** A run of this height is put into the save first, so the checkpoints are open and the start buttons show. */
+  /** The checkpoints this tall a classic tower reached are shown as open, so the start buttons appear (the save is not touched). */
   priorRunHeight: 80,
+  /** The seed, the length and the peak wobble of the demo run. */
+  seed: 1,
+  durationMs: 90_000,
+  maxWobble: 0.5,
   previousRecord: 45,
   previousRecordBeaten: 31,
   checkpoint: { start: 20 as const, height: 58 },

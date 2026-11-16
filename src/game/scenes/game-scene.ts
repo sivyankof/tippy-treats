@@ -6,15 +6,9 @@ import { emptyTally, tallyEvents, type RunTally } from '../../core/run-tally';
 import type { CheckpointHeight } from '../../core/checkpoints';
 import type { RunMode, RunResult } from '../../core/run-result';
 import type { TeamSlot } from '../../core/sim-types';
-import {
-  newLandingPreview,
-  TowerSim,
-  type LandingPreview,
-  type TowerState,
-} from '../../core/tower-sim';
+import { TowerSim, type TowerState } from '../../core/tower-sim';
 import { RunFx } from '../fx/run-fx';
 import { easeFn } from '../fx/ease';
-import { resultsBakeSteps } from '../fx/results-prep';
 import { RunIntro } from '../fx/run-intro';
 import { effectsMode } from '../effects-mode';
 import { Backdrop } from '../objects/backdrop/backdrop';
@@ -31,7 +25,7 @@ import { gameState } from '../../state';
 import { emptyRunInfo, fillRunInfo, type RunInfo } from '../run-info';
 import { bindPageLeave } from '../../state/page-lifecycle';
 import { logRunStart } from '../run-telemetry';
-import { launchResults, revealResults, dropHeldResults } from '../results-launch';
+import { dropHeldResults, ResultsHandoff, revealResults } from '../results-launch';
 import { openScreen, restartRun, SCENES } from '../scene-keys';
 import { exitTarget } from '../run-exit';
 import { CLASSIC_RUN, demoFinished, type RunRequest } from '../run-request';
@@ -39,7 +33,6 @@ import { setupRun } from '../run-setup';
 import type { DropDriver } from '../perf/perf-drivers';
 import { ANIM } from '../../data/anim';
 import { DEMO } from '../../data/demo';
-import type { BakeStep } from '../ui/bake-texture';
 import { enterWorld, leaveScreen } from '../ui/transition';
 import { isOverUi } from '../ui/ui-regions';
 import { TutorialDirector } from '../tutorial/tutorial-director';
@@ -68,8 +61,8 @@ export class GameScene extends Phaser.Scene {
   private tally: RunTally = emptyTally();
   /** The demo has placed its layers and leaves after a short pause. */
   private demoLeaving = false;
-  /** The results scene was started for this run (it builds while the tower falls). */
-  private resultsLaunched = false;
+  /** The results scene of this run (it builds while the tower falls). */
+  private readonly results = new ResultsHandoff();
   /** The run is being left for another screen: only once. */
   private exiting = false;
   /** Puts the run into the save once: when it ends or when the player leaves it. */
@@ -88,10 +81,6 @@ export class GameScene extends Phaser.Scene {
   /** Drop modifiers as the sim last reported them; refreshed whenever a step had events. */
   private mods!: Readonly<Modifiers>;
   private camera!: RunCamera;
-  /** Pictures of the results screen still to bake, one per frame while the layer flies. */
-  private resultsBakes: BakeStep[] = [];
-  /** How the layer in the fall will land, refilled every frame it falls (the sim works it out once per drop). */
-  private readonly landing: LandingPreview = newLandingPreview();
 
   constructor() {
     super(SCENES.game);
@@ -113,7 +102,6 @@ export class GameScene extends Phaser.Scene {
     this.tally = emptyTally();
     beginRunRewardedMemo(setup.paidByAd);
     this.demoLeaving = false;
-    this.resultsLaunched = false;
     this.exiting = false;
     this.recorder = new RunRecorder(gameState, this.startHeight, this.writesSave, () =>
       extrasOf(this.tally),
@@ -177,7 +165,7 @@ export class GameScene extends Phaser.Scene {
       );
     }
     this.camera.snap();
-    this.resultsBakes = resultsBakeSteps(this);
+    this.results.begin(this);
   }
 
   override update(time: number, delta: number): void {
@@ -189,8 +177,8 @@ export class GameScene extends Phaser.Scene {
     const events = held ? [] : this.sim.update(delta);
     this.bot?.observe(events);
     if (!held && this.bot?.shouldDrop(this.sim)) events.push(...this.sim.drop());
-    if (this.sim.state.phase === 'flying') this.resultsBakes.shift()?.();
-    this.fx.tower.prepareLanding(this.sim.landingPreview(this.landing) ? this.landing : null);
+    if (this.sim.state.phase === 'flying') this.results.bakeStep();
+    this.fx.tower.prepareLanding(this.sim);
     this.tutorial?.observe(events, this.sim.state);
     driveContinue(
       {
@@ -236,8 +224,7 @@ export class GameScene extends Phaser.Scene {
 
   /** The run is over: the results scene starts and builds itself hidden (a demo has none). */
   private openResults(result: RunResult): void {
-    if (this.resultsLaunched || this.request.kind === 'demo') return;
-    this.resultsLaunched = true;
+    if (this.request.kind === 'demo') return;
     const outcome = {
       result,
       recorder: this.recorder,
@@ -247,7 +234,7 @@ export class GameScene extends Phaser.Scene {
       checkpoint: this.checkpoint,
       recorded: this.writesSave,
     };
-    launchResults(this, outcome, this.perfRun);
+    this.results.open(this, outcome, this.perfRun);
   }
 
   /**

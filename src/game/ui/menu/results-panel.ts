@@ -50,8 +50,11 @@ export class ResultsPanel {
   constructor(
     private readonly scene: Phaser.Scene,
     private readonly parts: PanelParts,
+    /** The panel stands right under this object, so it is also under everything built after it. */
+    below: Phaser.GameObjects.Container,
   ) {
     this.root = scene.add.container(0, 0);
+    scene.children.moveBelow(this.root, below);
   }
 
   /** Height the panel takes on the screen, scale included. */

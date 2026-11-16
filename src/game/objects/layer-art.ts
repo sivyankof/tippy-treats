@@ -59,6 +59,13 @@ export function lookCodeFor(layerIndex: number, golden: boolean): number {
   return golden ? GOLDEN_LOOK : plainLooks.codeFor(layerIndex);
 }
 
+/** The creature a layer of the tower (placed, planned or flying) is made of, `null` for a cake layer. */
+export function creatureOfLayer(
+  layer: Readonly<{ kind: string; creature?: CreatureId | null }>,
+): CreatureId | null {
+  return layer.kind === 'creature' && layer.creature ? layer.creature : null;
+}
+
 /**
  * Cake and glaze colours of the layer with this 1-based number: the creature's own sponge and
  * glaze for a creature layer, gold for a golden one, the run's plain look otherwise.
@@ -135,13 +142,6 @@ export function artAlpha(creature: CreatureId | null): number {
 // shows it; unused ones stay for a while (widths repeat after perfect landings) and
 // the oldest are removed beyond ANIM.pool.idleLayerTextures. Map order is use order.
 const refs = new Map<string, number>();
-/** Idle pictures kept on top of the limit: the ones baked ahead for the collapse wait here. */
-let idleExtra = 0;
-
-/** Lets `extra` more idle pictures stay than `ANIM.pool.idleLayerTextures` (0: back to the limit). */
-export function setIdleLayerArtExtra(extra: number): void {
-  idleExtra = Math.max(0, extra);
-}
 
 /** Whether the picture for this combination is baked now. */
 export function layerArtBaked(
@@ -205,7 +205,7 @@ export function releaseLayerArt(scene: Phaser.Scene, key: string): void {
   refs.set(key, users - 1);
   let idle = [...refs].filter(([, count]) => count <= 0);
   for (const [oldKey] of idle) {
-    if (idle.length <= ANIM.pool.idleLayerTextures + idleExtra) break;
+    if (idle.length <= ANIM.pool.idleLayerTextures) break;
     refs.delete(oldKey);
     scene.textures.remove(oldKey);
     idle = idle.filter(([k]) => k !== oldKey);

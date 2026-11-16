@@ -164,7 +164,6 @@ export class ResultsScene extends Phaser.Scene {
       ? createDebugPlate(this)
       : null;
     this.parts.hint = createResultsHint(this, this.run);
-    if (summary.isRecord) this.celebration = new RecordCelebration(this);
   }
 
   /** The buttons and the way on: what each of them does. */
@@ -205,8 +204,11 @@ export class ResultsScene extends Phaser.Scene {
 
   /** The plate with the blocks on it, fitted to the screen, and everything put in place. */
   private buildPanel(): void {
-    this.panel = new ResultsPanel(this, this.parts as PanelParts);
+    // The plate and the blocks go under the header and the buttons; the record ribbon, made last,
+    // draws over all of them.
+    this.panel = new ResultsPanel(this, this.parts as PanelParts, this.header.container);
     this.panel.fit(this.scale.gameSize.height, this.header.height, this.buttons.height);
+    if (this.run.summary.isRecord) this.celebration = new RecordCelebration(this);
     this.built = true;
     this.layout();
   }
@@ -225,6 +227,9 @@ export class ResultsScene extends Phaser.Scene {
     }
     // The run HUD (height, wobble bar, next creature) fades out: the results tell the story now.
     const hudCamera = this.scene.get(SCENES.hud).cameras.main;
+    // The ads may have loaded while the screen was built hidden.
+    this.coins.refreshAd();
+    this.buttons.refreshAd();
     this.dim.setAlpha(0);
     this.tweens.add({ targets: this.dim, alpha: 1, duration: ANIM.results.fadeMs });
     this.tweens.add({ targets: hudCamera, alpha: 0, duration: ANIM.results.fadeMs });

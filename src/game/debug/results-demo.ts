@@ -1,3 +1,4 @@
+import { checkpointRows, checkpointsReached } from '../../core/checkpoints';
 import type { RunResult } from '../../core/run-result';
 import type { RunTally } from '../../core/run-tally';
 import { RESULTS_DEMO, type ResultsDemoCase } from '../../data/results-demo';
@@ -15,7 +16,7 @@ function demoResult(kind: ResultsDemoCase): RunResult {
     daily: RESULTS_DEMO.daily.height,
   };
   return {
-    seed: 1,
+    seed: RESULTS_DEMO.seed,
     mode: kind === 'daily' ? 'daily' : 'classic',
     height: heights[kind],
     score: RESULTS_DEMO.score,
@@ -25,7 +26,7 @@ function demoResult(kind: ResultsDemoCase): RunResult {
     bestCombo: RESULTS_DEMO.bestCombo,
     continuesUsed: 0,
     zoneIndex: 0,
-    durationMs: 90_000,
+    durationMs: RESULTS_DEMO.durationMs,
     endReason: 'miss',
   };
 }
@@ -37,7 +38,12 @@ function demoTally(): RunTally {
     abilityByCreature[id] = count;
     abilities += count;
   }
-  return { coins: { ...RESULTS_DEMO.coins }, abilities, abilityByCreature, maxWobble: 0.5 };
+  return {
+    coins: { ...RESULTS_DEMO.coins },
+    abilities,
+    abilityByCreature,
+    maxWobble: RESULTS_DEMO.maxWobble,
+  };
 }
 
 function demoSummary(kind: ResultsDemoCase): RunSummary {
@@ -63,9 +69,8 @@ function demoSummary(kind: ResultsDemoCase): RunSummary {
 
 /** Dev only: the results of a run of `kind` with every block filled (`?resultsDemo=<case>`). */
 export function resultsDemoData(kind: ResultsDemoCase): ResultsData {
-  if (gameState.checkpoints.length === 0) {
-    gameState.recordRun({ ...demoResult('normal'), height: RESULTS_DEMO.priorRunHeight }, 0);
-  }
+  // The checkpoints a run of that height would have opened, worked out here: the save stays as it is.
+  const opened = checkpointsReached(RESULTS_DEMO.priorRunHeight);
   const checkpoint = kind === 'checkpoint';
   return {
     result: demoResult(kind),
@@ -75,5 +80,15 @@ export function resultsDemoData(kind: ResultsDemoCase): ResultsData {
     tower: { layers: [], cuts: [] },
     startHeight: checkpoint ? RESULTS_DEMO.checkpoint.start : 0,
     checkpoint: checkpoint ? RESULTS_DEMO.checkpoint.start : null,
+    startOffer: {
+      opened,
+      rows: (adReady) =>
+        checkpointRows({
+          opened,
+          berries: gameState.berries,
+          adReady,
+          adsLeft: gameState.checkpointAdsLeft,
+        }),
+    },
   };
 }

@@ -95,6 +95,11 @@ export class ResultsButtons {
     this.height = stackRows(this.container, rows, cfg.buttonGap);
   }
 
+  /** The screen is about to show: the ad buttons look at the ads again. */
+  refreshAd(): void {
+    this.extra?.refreshAd();
+  }
+
   setEnabled(enabled: boolean): void {
     for (const button of this.buttons) button.setEnabled(enabled);
     this.extra?.setEnabled(enabled);

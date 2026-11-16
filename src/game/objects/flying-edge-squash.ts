@@ -25,7 +25,7 @@ import {
   wantedDepth,
 } from './edge-squash';
 import { BUBBLE_RIBS, ribLayoutFor, type RibLayout } from './edge-squash-ribs';
-import { artWidth, cakeColorsFor } from './layer-art';
+import { artWidth, cakeColorsFor, creatureOfLayer } from './layer-art';
 import type { LayerView } from './layer-view';
 import { plainLooks } from './plain-look';
 
@@ -106,7 +106,7 @@ export class FlyingEdgeSquash {
    * in the tower, which gives its glaze colour.
    */
   reset(layer: Readonly<FlyingLayer>, walls: Readonly<Walls>, number: number): void {
-    this.creature = (layer.kind === 'creature' && layer.creature) || null;
+    this.creature = creatureOfLayer(layer);
     this.material = this.creature ? creatureMaterial(this.creature) : null;
     this.feel = EDGE_SQUASH.feel[this.material?.wall?.feel ?? 'normal'];
     this.power = speedPower(layer.speed);

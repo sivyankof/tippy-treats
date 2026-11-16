@@ -1,5 +1,5 @@
 import type * as Phaser from 'phaser';
-import type { CheckpointHeight } from '../core/checkpoints';
+import type { CheckpointHeight, CheckpointRow } from '../core/checkpoints';
 import type { RunResult } from '../core/run-result';
 import type { RunTally } from '../core/run-tally';
 import type { CreatureId } from '../data/creatures';
@@ -27,9 +27,24 @@ export const SCENES = {
 
 export type SceneKey = (typeof SCENES)[keyof typeof SCENES];
 
+/** Where the results screen is: not launched, built hidden while the tower collapses, or on show. */
+export function resultsPhase(
+  scenes: Pick<Phaser.Scenes.SceneManager, 'isActive' | 'isVisible'>,
+): 'none' | 'held' | 'shown' {
+  if (!scenes.isActive(SCENES.results)) return 'none';
+  return scenes.isVisible(SCENES.results) ? 'shown' : 'held';
+}
+
 /** The results screen is on show: a screen that is still building itself hidden does not count. */
 export function resultsShown(scenes: Phaser.Scenes.SceneManager): boolean {
-  return scenes.isActive(SCENES.results) && scenes.isVisible(SCENES.results);
+  return resultsPhase(scenes) === 'shown';
+}
+
+/** What the start buttons of the results offer: the opened checkpoints and the rows of the choice. */
+export interface StartOffer {
+  opened: readonly CheckpointHeight[];
+  /** `adReady`: a rewarded ad is loaded now. */
+  rows(adReady: boolean): CheckpointRow[];
 }
 
 /** Data handed to the results scene when it is launched. */
@@ -51,6 +66,8 @@ export interface ResultsData {
   startHeight: number;
   /** The checkpoint the player chose, or null for the zero start (and every unpaid dev start). */
   checkpoint: CheckpointHeight | null;
+  /** Instead of the save's checkpoints (only the `?resultsDemo` screens set it). */
+  startOffer?: StartOffer;
 }
 
 /** Screens a creature card can return to (equal to the keys of the collection and team scenes). */

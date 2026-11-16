@@ -1,30 +1,24 @@
-import type * as Phaser from 'phaser';
+import * as Phaser from 'phaser';
 import type { CutSide } from '../../core/drop';
 import type { PlacedLayer } from '../../core/tower-sim';
 import { ANIM } from '../../data/anim';
-import type { CreatureId } from '../../data/creatures';
 import { nextUnbaked } from './collapse-scan';
 import { dripTexturesFor } from './glaze-drip-layer';
 import {
+  acquireLayerArt,
   cakeColorsFor,
+  creatureOfLayer,
   layerArtBaked,
   lookCodeFor,
-  prepareLayerArt,
-  setIdleLayerArtExtra,
+  releaseLayerArt,
 } from './layer-art';
 
 /** What the picture of a placed layer is made from, as `TowerView.sync` shows it. */
-interface ArtSpec {
-  look: number;
-  creature: CreatureId | null;
-  golden: boolean;
-}
-
-function specOf(layer: PlacedLayer, index: number): ArtSpec {
+function specOf(layer: PlacedLayer, index: number) {
   const golden = layer.kind === 'golden';
   return {
     look: lookCodeFor(index + 1, golden),
-    creature: layer.kind === 'creature' && layer.creature ? layer.creature : null,
+    creature: creatureOfLayer(layer),
     golden,
   };
 }
@@ -35,16 +29,18 @@ function specOf(layer: PlacedLayer, index: number): ArtSpec {
  * below the live ones would be baked in the frame that wakes it, and a slow frame wakes many at
  * once. While the run is ending (the "Continue?" window, the wait before the collapse) and during
  * the collapse this bakes one missing picture per frame, nearest layer first, never more than
- * `ANIM.pool.collapsePrepTextures` ahead of the live layers: that many idle pictures are allowed
- * on top of the idle limit until the collapse takes them.
+ * `ANIM.pool.collapsePrepTextures` ahead of the live layers. Each picture baked here is held (one
+ * user of its texture) until its layer goes live, so the idle limit cannot take it back.
  */
 export class CollapsePrep {
-  /** Layers whose picture was baked here and no live layer has taken yet. */
-  private readonly ahead = new Set<number>();
+  /** The held picture of each layer baked here that no live layer has taken yet. */
+  private readonly ahead = new Map<number, string>();
+  /** Every layer from here up is known to have its picture: the scan goes on below it. */
+  private scanFrom = Infinity;
   private armed = false;
 
   constructor(private readonly scene: Phaser.Scene) {
-    setIdleLayerArtExtra(0);
+    scene.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.stop());
   }
 
   /**
@@ -54,31 +50,36 @@ export class CollapsePrep {
   tick(layers: readonly PlacedLayer[], cuts: ReadonlyArray<CutSide | null>, count: number): void {
     this.armed = true;
     const floor = Math.max(0, count - ANIM.pool.maxLiveLayers);
-    for (const index of this.ahead) {
-      if (index >= floor) this.ahead.delete(index);
+    for (const [index, key] of this.ahead) {
+      if (index < floor) continue;
+      releaseLayerArt(this.scene, key);
+      this.ahead.delete(index);
     }
-    setIdleLayerArtExtra(this.ahead.size);
     if (this.ahead.size >= ANIM.pool.collapsePrepTextures) return;
-    const next = nextUnbaked(floor, (i) => {
+    this.scanFrom = Math.min(this.scanFrom, floor);
+    const next = nextUnbaked(this.scanFrom, (i) => {
       const layer = layers[i];
       if (!layer) return true;
       const { look, creature } = specOf(layer, i);
       return layerArtBaked(this.scene, look, layer.width, cuts[i] ?? null, creature);
     });
+    this.scanFrom = Math.max(0, next);
     const layer = layers[next];
     if (!layer) return;
     const { look, creature, golden } = specOf(layer, next);
-    prepareLayerArt(this.scene, look, layer.width, cuts[next] ?? null, creature);
+    this.ahead.set(
+      next,
+      acquireLayerArt(this.scene, look, layer.width, cuts[next] ?? null, creature),
+    );
     dripTexturesFor(this.scene, creature, cakeColorsFor(creature, next + 1, golden).glaze);
-    this.ahead.add(next);
-    setIdleLayerArtExtra(this.ahead.size);
   }
 
-  /** The run goes on (or is over for good): nothing is baked ahead and the idle limit is the plain one. */
+  /** The run goes on (or is over for good): nothing is held or baked ahead any more. */
   stop(): void {
     if (!this.armed) return;
     this.armed = false;
+    this.scanFrom = Infinity;
+    for (const key of this.ahead.values()) releaseLayerArt(this.scene, key);
     this.ahead.clear();
-    setIdleLayerArtExtra(0);
   }
 }
