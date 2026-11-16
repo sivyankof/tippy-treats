@@ -72,15 +72,15 @@ describe('abilities: effects of every level', () => {
       [3, 30],
       [3, 34],
       [3, 38],
-      [3, 42],
-      [3, 48],
+      [3, 39],
+      [3, 41],
     ],
     [
       [5, 30],
       [5, 34],
       [5, 38],
-      [5, 42],
-      [5, 48],
+      [5, 39],
+      [5, 41],
     ],
   );
   checkEffect(
@@ -156,16 +156,16 @@ describe('abilities: effects of every level', () => {
     [
       [3, 0],
       [3, 0],
+      [3, 0],
       [4, 0],
-      [5, 0],
-      [6, 0],
+      [4, 0],
     ],
     [
       [5, 0],
       [5, 0],
+      [5, 0],
       [6, 0],
-      [8, 0],
-      [9, 0],
+      [6, 0],
     ],
   );
   // The lemon boost grows the multiplier, not the duration.
@@ -247,8 +247,8 @@ describe('abilities: instant ones', () => {
     [1, 45, 67.5],
     [2, 55, 82.5],
     [3, 65, 97.5],
-    [4, 75, 112.5],
-    [5, 90, 135],
+    [4, 70, 105],
+    [5, 75, 112.5],
   ])('puff level %i widens by %d, %d when perfect', (level, normal, perfect) => {
     const plain = fire('puff', level, false);
     expect(plain.layer.width).toBe(300 + normal);
@@ -316,7 +316,7 @@ describe('abilities: instant ones', () => {
 describe('abilities: levels', () => {
   it('clamps a level outside 1..5', () => {
     expect(fire('honey', 0, false).effect?.value).toBe(30);
-    expect(fire('honey', 99, false).effect?.value).toBe(48);
+    expect(fire('honey', 99, false).effect?.value).toBe(41);
     expect(fire('honey', 2.9, false).effect?.value).toBe(34);
     expect(fire('honey', 0, false).effect?.level).toBe(1);
     expect(fire('honey', 99, false).effect?.level).toBe(5);
