@@ -42,12 +42,15 @@ const DEFAULT_RUNS = 200;
 const DEFAULT_TOP = 5;
 const PCT_DIGITS = 1;
 /**
- * Owner's height targets of the mastery stage (docs/03-creatures.md, "Прокачка"): the best level-5
- * team without the rainbow lifts the median of the strong profile at most this much over no team,
- * with the 99th percentile of its heights at most `MAX_P99`. Rainbow teams are only reported.
+ * Owner's height targets for level-5 teams of the strong profile (docs/03-creatures.md, "Цель
+ * бригад с 2026-11-17"): the best team without the rainbow lifts the median at most `MAX_RATIO`
+ * over no team, no run reaches the cut-off, and no team without the rainbow has a 99th percentile
+ * above `MAX_P99`, measured on `P99_RUNS` runs (on 200 runs p99 wanders by 150+ layers).
+ * Rainbow teams are only reported.
  */
 const MAX_RATIO = 2.2;
-const MAX_P99 = 700;
+const MAX_P99 = 900;
+const P99_RUNS = 1000;
 const RAINBOW: CreatureId = 'rainbow';
 
 const args = scriptArgs();
@@ -123,8 +126,16 @@ function report(files: string[]): void {
     .flatMap((file) => fs.readFileSync(file, 'utf8').split('\n'))
     .filter((line) => line.startsWith('{'))
     .map((line) => JSON.parse(line) as Row);
-  const base = rows.find((row) => row.team === 'none');
-  const teams = rows.filter((row) => row.team !== 'none').sort((a, b) => b.median - a.median);
+  // A team (or `none`) measured in several files keeps its line with the most runs.
+  const byTeam = new Map<string, Row>();
+  for (const row of rows) {
+    const known = byTeam.get(row.team);
+    if (!known || row.runs > known.runs) byTeam.set(row.team, row);
+  }
+  const base = byTeam.get('none');
+  const teams = [...byTeam.values()]
+    .filter((row) => row.team !== 'none')
+    .sort((a, b) => b.median - a.median);
   const top = intArg(args, 'top', DEFAULT_TOP);
   const ratioOf = (row: Row): number | null => (base ? row.median / base.median : null);
   const teamRuns = [...new Set(teams.map((row) => row.runs))].join('/');
@@ -150,14 +161,24 @@ function report(files: string[]): void {
   }
   const reaching = teams.filter((row) => row.cutPct > 0).length;
   console.log(`teams with cut runs: ${reaching}`);
-  const best = teams.find((row) => !withRainbow(row));
+  const plain = teams.filter((row) => !withRainbow(row));
+  const best = plain[0];
   const bestRatio = best ? ratioOf(best) : null;
-  if (best && bestRatio !== null) {
-    const ok = bestRatio <= MAX_RATIO && best.p99 <= MAX_P99 && reaching === 0;
+  const worstP99 = [...plain].sort((a, b) => b.p99 - a.p99)[0];
+  if (best && bestRatio !== null && worstP99) {
+    const ok = bestRatio <= MAX_RATIO && worstP99.p99 <= MAX_P99 && reaching === 0;
     console.log(
-      `target (no rainbow: ratio <= ${MAX_RATIO}, p99 <= ${MAX_P99}, no cut runs): ${ok ? 'ok' : 'MISSED'} ` +
-        `(${best.team} x${bestRatio.toFixed(2)}, p99 ${best.p99})`,
+      `target (no rainbow: ratio <= ${MAX_RATIO}, every p99 <= ${MAX_P99} on ${P99_RUNS} runs, no cut runs): ` +
+        `${ok ? 'ok' : 'MISSED'} (${best.team} x${bestRatio.toFixed(2)}; highest p99 ${worstP99.team} ` +
+        `${worstP99.p99} on ${worstP99.runs} runs)`,
     );
+    const short = plain.filter((row) => row.p99 > MAX_P99 * 0.75 && row.runs < P99_RUNS);
+    if (short.length > 0) {
+      console.log(
+        `p99 candidates measured on fewer than ${P99_RUNS} runs (replay with --runs=${P99_RUNS}): ` +
+          short.map((row) => row.team).join(', '),
+      );
+    }
   }
   const overRainbow = teams.filter((row) => withRainbow(row) && (ratioOf(row) ?? 0) > MAX_RATIO);
   if (overRainbow.length > 0) {
