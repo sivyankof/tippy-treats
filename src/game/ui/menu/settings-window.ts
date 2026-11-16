@@ -1,5 +1,5 @@
 import type * as Phaser from 'phaser';
-import { APP_VERSION, MUSIC_AVAILABLE } from '../../../data/app-info';
+import { APP_VERSION, BUILD_HASH, BUILD_TIME, MUSIC_AVAILABLE } from '../../../data/app-info';
 import { MENU } from '../../../data/menu-layout';
 import { PALETTE } from '../../../data/palette';
 import { getLang, t } from '../../../i18n';
@@ -115,6 +115,7 @@ export function openSettingsWindow(scene: Phaser.Scene, handlers: SettingsHandle
 
   const info = [
     t('settings.version', { version: APP_VERSION }),
+    t('settings.build', { hash: BUILD_HASH, date: BUILD_TIME }),
     t('settings.installId', { id: gameState.data.installId.slice(0, cfg.installIdChars) }),
   ].map((line, i) =>
     createOutlinedText(scene, 0, y + cfg.infoLine * (i + 0.5), line, cfg.infoFont).setAlpha(

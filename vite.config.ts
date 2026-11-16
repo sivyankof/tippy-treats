@@ -1,15 +1,34 @@
 import { normalizePath, type Plugin } from 'vite';
 import { defineConfig } from 'vitest/config';
+import { cleanBuildHash, formatBuildStamp, formatBuildTime } from './src/util/build-stamp.ts';
 
 /** Node global; the project does not pull in the Node type definitions. */
 declare const process: {
   getBuiltinModule(id: 'node:fs'): { readFileSync(path: string, encoding: 'utf-8'): string };
+  getBuiltinModule(id: 'node:child_process'): {
+    execSync(
+      command: string,
+      options: { stdio: ['ignore', 'pipe', 'ignore'] },
+    ): { toString(): string };
+  };
 };
 
 /** The `version` of package.json: the one source of the version the game shows. */
 function packageVersion(): string {
   const text = process.getBuiltinModule('node:fs').readFileSync('./package.json', 'utf-8');
   return (JSON.parse(text) as { version: string }).version;
+}
+
+/** The short hash of HEAD; 'unknown' when git or the repository is not there (a source archive). */
+function gitHash(): string {
+  try {
+    const out = process
+      .getBuiltinModule('node:child_process')
+      .execSync('git rev-parse --short HEAD', { stdio: ['ignore', 'pipe', 'ignore'] });
+    return cleanBuildHash(out.toString());
+  } catch {
+    return cleanBuildHash(null);
+  }
 }
 
 /** Wait this long after the last package.json change before restarting the dev server. */
@@ -69,13 +88,30 @@ function restartOnPackageJson(): Plugin {
   };
 }
 
+/** Puts the build stamp into index.html (`%BUILD_STAMP%`), where the dev error box prints it. */
+function buildStampInHtml(stamp: string): Plugin {
+  return {
+    name: 'build-stamp-in-html',
+    transformIndexHtml: (html) => html.replaceAll('%BUILD_STAMP%', stamp),
+  };
+}
+
 export default defineConfig(({ command, mode }) => {
   const devServer = command === 'serve' && mode !== 'test';
+  const buildHash = gitHash();
+  const buildTime = formatBuildTime(new Date());
   return {
     // Relative base so the build also works from the Capacitor webview.
     base: './',
-    define: { __APP_VERSION__: JSON.stringify(packageVersion()) },
-    plugins: devServer ? [leanDevPhaser(), restartOnPackageJson()] : [],
+    define: {
+      __APP_VERSION__: JSON.stringify(packageVersion()),
+      __BUILD_HASH__: JSON.stringify(buildHash),
+      __BUILD_TIME__: JSON.stringify(buildTime),
+    },
+    plugins: [
+      buildStampInHtml(formatBuildStamp(buildHash, buildTime)),
+      ...(devServer ? [leanDevPhaser(), restartOnPackageJson()] : []),
+    ],
     resolve: devServer ? { alias: [{ find: /^phaser$/, replacement: PHASER_MIN }] } : {},
     optimizeDeps: devServer ? { exclude: ['phaser'] } : {},
     build: {

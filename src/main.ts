@@ -1,6 +1,8 @@
 import * as Phaser from 'phaser';
 import './style.css';
+import { APP_VERSION, BUILD_HASH, BUILD_TIME } from './data/app-info';
 import { BOOT } from './data/boot';
+import { formatBuildStamp } from './util/build-stamp';
 import { bindLogicalResize, createGameConfig } from './game/config';
 import { refreshTextsOnFontLoad } from './game/ui/font-refresh';
 import { FONT_FAMILY, FONT_WEIGHT } from './game/ui/fonts';
@@ -58,6 +60,10 @@ async function loadSave(): Promise<void> {
 }
 
 async function start(): Promise<void> {
+  // The first console line of a dev session: which build a tester is running.
+  if (import.meta.env.DEV) {
+    console.info(`Tippy Treats ${APP_VERSION} (${formatBuildStamp(BUILD_HASH, BUILD_TIME)})`);
+  }
   const parent = document.getElementById('app');
   if (!parent) {
     throw new Error('Missing #app container');

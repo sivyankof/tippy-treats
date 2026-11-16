@@ -1,5 +1,6 @@
 import { TOWER_SPARKLES } from '../../data/tower-sparkles';
 import * as Phaser from 'phaser';
+import { fxGuard } from '../fx-guard';
 import type { Modifiers } from '../../core/abilities/types';
 import type { FlyingLayer, SimEvent, TowerState } from '../../core/tower-sim';
 import type { RunResult } from '../../core/run-result';
@@ -244,18 +245,24 @@ export class RunFx {
     cam: CameraInfo,
   ): void {
     if (events.length === 0) return;
-    this.masterFeed.take(events);
-    playCues(cuesForEvents(events, state, memo), services);
+    // Every effect below runs through the safety net; only the result and the miss wait are flow.
+    const guard = fxGuard;
+    guard.run('master-feed', () => this.masterFeed.take(events));
+    guard.run('cues', () => playCues(cuesForEvents(events, state, memo), services));
     const land = events.find((e): e is LandEvent => e.type === 'land');
-    if (land) this.tower.noteCut(state.layers.length - 1, land.cutSide);
-    // The sway of the frame before the sneeze is the one the tower holds.
-    if (events.some((e) => e.type === 'wobble_sneeze')) this.tower.freeze(ANIM.sneeze.freezeMs);
-    this.abilityFx.beforeSync(events);
-    // The topper under the landing layer hops off while its view still shows it.
-    if (land) this.topperFx.hopOffBelow(this.tower, state);
-    // Landings need the view of the new layer, which normally appears on the next sync.
-    if (land) this.tower.sync(state, cam.scrollY + cam.height, cam.scrollY);
-    if (land) this.topperFx.settleOnTop(this.tower, state, memo);
+    guard.run('tower-land-prep', () => {
+      if (land) this.tower.noteCut(state.layers.length - 1, land.cutSide);
+      // The sway of the frame before the sneeze is the one the tower holds.
+      if (events.some((e) => e.type === 'wobble_sneeze')) this.tower.freeze(ANIM.sneeze.freezeMs);
+    });
+    guard.run('ability-before-sync', () => this.abilityFx.beforeSync(events));
+    guard.run('topper-land', () => {
+      // The topper under the landing layer hops off while its view still shows it.
+      if (land) this.topperFx.hopOffBelow(this.tower, state);
+      // Landings need the view of the new layer, which normally appears on the next sync.
+      if (land) this.tower.sync(state, cam.scrollY + cam.height, cam.scrollY);
+      if (land) this.topperFx.settleOnTop(this.tower, state, memo);
+    });
 
     for (const event of events) {
       switch (event.type) {
@@ -264,17 +271,19 @@ export class RunFx {
           this.slowMoMs = 0;
           break;
         case 'land':
-          this.onLand(event, state, memo, cam);
+          guard.run('land-fx', () => this.onLand(event, state, memo, cam));
           break;
         case 'combo':
-          this.onCombo(event.widened, state);
+          guard.run('combo-fx', () => this.onCombo(event.widened, state));
           break;
         case 'wobble_sneeze':
-          this.tower.squashTop();
-          this.debris.sneeze(state);
+          guard.run('sneeze-fx', () => {
+            this.tower.squashTop();
+            this.debris.sneeze(state);
+          });
           break;
         case 'tempo_ease':
-          this.tower.exhale();
+          guard.run('exhale-fx', () => this.tower.exhale());
           break;
         case 'miss':
           this.onMiss(event.shielded, memo, land !== undefined, state);
@@ -286,10 +295,10 @@ export class RunFx {
           break;
       }
     }
-    this.abilityFx.handleEvents(events, state, memo, mods, cam);
-    this.coinFx.handleEvents(events, state, cam);
-    this.flyingFx.handleEvents(events);
-    this.guest.handleEvents(events, state);
+    guard.run('ability-events', () => this.abilityFx.handleEvents(events, state, memo, mods, cam));
+    guard.run('coin-events', () => this.coinFx.handleEvents(events, state, cam));
+    guard.run('flying-events', () => this.flyingFx.handleEvents(events));
+    guard.run('guest-events', () => this.guest.handleEvents(events, state));
   }
 
   /** Per frame: places everything and advances the effects. */
@@ -312,31 +321,41 @@ export class RunFx {
     this.slowMoMs = Math.max(0, this.slowMoMs - realMs);
     this.advanceEnd(realMs, state, cam);
 
-    this.tower.sync(state, cam.scrollY + cam.height, cam.scrollY);
-    this.flyingView.sync(state, timeMs, visualMs);
-    this.flyingFx.update(visualMs, timeMs, state, mods.guidesMaster);
-    this.coinFx.update(visualMs, timeMs, state);
-    this.pointFaces(state);
-    this.tower.setScreenBand(cam.scrollY, cam.scrollY + cam.height);
-    this.tower.tick(visualMs);
-    this.guest.update(visualMs, {
-      state,
-      cam,
-      shadow: this.flyingView.shadowAnchor(),
+    // The views and effects below run through the safety net: a broken one is skipped.
+    const guard = fxGuard;
+    guard.run('tower-sync', () => this.tower.sync(state, cam.scrollY + cam.height, cam.scrollY));
+    guard.run('flying-view', () => this.flyingView.sync(state, timeMs, visualMs));
+    guard.run('flying-fx', () => this.flyingFx.update(visualMs, timeMs, state, mods.guidesMaster));
+    guard.run('coin-fx', () => this.coinFx.update(visualMs, timeMs, state));
+    guard.run('faces', () => this.pointFaces(state));
+    guard.run('tower-tick', () => {
+      this.tower.setScreenBand(cam.scrollY, cam.scrollY + cam.height);
+      this.tower.tick(visualMs);
     });
+    guard.run('guest', () =>
+      this.guest.update(visualMs, {
+        state,
+        cam,
+        shadow: this.flyingView.shadowAnchor(),
+      }),
+    );
 
-    this.debris.update(visualMs);
-    this.topperFx.update(visualMs);
-    this.landingFx.update(visualMs);
-    this.materialFx.update(visualMs, state.wobble);
-    this.abilityFx.update(visualMs, timeMs, state, mods, cam, this.runIsOn(state));
-    this.kick.update(visualMs);
-    this.recordMoment.update(visualMs, timeMs, state, cam);
-    this.placeGlow(timeMs, cam);
-    this.sparkles.update(
-      visualMs,
-      this.sparkleFieldFor(state, cam),
-      this.runIsOn(state) && !effectsMode.reduced,
+    guard.run('debris', () => this.debris.update(visualMs));
+    guard.run('topper-fx', () => this.topperFx.update(visualMs));
+    guard.run('landing-fx', () => this.landingFx.update(visualMs));
+    guard.run('material-fx', () => this.materialFx.update(visualMs, state.wobble));
+    guard.run('ability-fx', () =>
+      this.abilityFx.update(visualMs, timeMs, state, mods, cam, this.runIsOn(state)),
+    );
+    guard.run('kick', () => this.kick.update(visualMs));
+    guard.run('record-moment', () => this.recordMoment.update(visualMs, timeMs, state, cam));
+    guard.run('glow', () => this.placeGlow(timeMs, cam));
+    guard.run('sparkles', () =>
+      this.sparkles.update(
+        visualMs,
+        this.sparkleFieldFor(state, cam),
+        this.runIsOn(state) && !effectsMode.reduced,
+      ),
     );
   }
 
@@ -409,7 +428,7 @@ export class RunFx {
       if (!shielded) this.missWaitMs = ANIM.miss.reactMs;
       return;
     }
-    const piece = this.debris.dropMissed(memo, state);
+    const piece = fxGuard.value('miss-debris', () => this.debris.dropMissed(memo, state), null);
     if (shielded) return;
     this.missPiece = piece;
     this.slowMoMs = BALANCE.continues.missSlowMoMs;

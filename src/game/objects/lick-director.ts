@@ -3,7 +3,7 @@ import { BALANCE } from '../../data/balance';
 import type { CreatureId } from '../../data/creatures';
 import { GLAZE_DRIPS } from '../../data/glaze-drips';
 import { LICK, type LickStyle } from '../../data/lick';
-import { devWarn } from '../dev-warn';
+import { fxGuard } from '../fx-guard';
 import { effectsMode } from '../effects-mode';
 import { faceHalfSpan } from '../fx/glaze-growth';
 import { dropOuter } from './glaze-drip-textures';
@@ -90,12 +90,11 @@ export class LickDirector {
 
   /** Advances the lick and, when it is time, starts a new one. A failure drops the lick, not the run. */
   update(dtMs: number, ctx: LickContext): void {
-    try {
-      this.advance(dtMs, ctx);
-    } catch (error) {
-      devWarn('Lick dropped after an error', error);
-      this.drop();
-    }
+    fxGuard.run(
+      'lick',
+      () => this.advance(dtMs, ctx),
+      () => this.drop(),
+    );
   }
 
   private advance(dtMs: number, ctx: LickContext): void {
@@ -119,13 +118,12 @@ export class LickDirector {
   /** Starts a lick at once if a layer can lick (a dev tool); returns whether it did. */
   lickNow(ctx: LickContext, scene?: LickScene, kind?: LickKind): boolean {
     if (this.run || effectsMode.reduced) return false;
-    try {
-      return this.start(ctx, true, scene, kind);
-    } catch (error) {
-      devWarn('Lick dropped after an error', error);
-      this.drop();
-      return false;
-    }
+    return fxGuard.value(
+      'lick',
+      () => this.start(ctx, true, scene, kind),
+      false,
+      () => this.drop(),
+    );
   }
 
   /** Drops the lick that is going on. */
@@ -141,12 +139,10 @@ export class LickDirector {
     const run = this.run;
     this.run = null;
     if (!run) return;
-    try {
+    fxGuard.run('lick-stop', () => {
       run.view.faceView.cancelLick();
       run.view.glazeDrips.hideLick();
-    } catch (error) {
-      devWarn('Lick could not be stopped cleanly', error);
-    }
+    });
   }
 
   private start(ctx: LickContext, forced: boolean, scene?: LickScene, kind?: LickKind): boolean {

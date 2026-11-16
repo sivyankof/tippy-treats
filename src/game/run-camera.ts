@@ -1,3 +1,4 @@
+import { fxGuard } from './fx-guard';
 import type * as Phaser from 'phaser';
 import { ANIM } from '../data/anim';
 import { frameLerp } from '../util/math';
@@ -90,7 +91,7 @@ export class RunCamera {
   private apply(): void {
     const camera = this.scene.cameras.main;
     camera.scrollY = this.scrollBase - this.fx.cameraOffset + this.entry.offset;
-    this.background.update(camera.scrollY);
+    fxGuard.run('backdrop', () => this.background.update(camera.scrollY));
   }
 
   targetScrollY(): number {
