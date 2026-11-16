@@ -11,7 +11,7 @@ import { setSharedPicturePixels, setSharedPictureStore } from './bake-texture';
  * texture for a whole layer. Removing the texture frees its cell for the next picture.
  *
  * The pixels of a page live only on the GPU. Its canvas stays blank and is never drawn into:
- * writing to a 4096 px canvas in the browser costs a long frame some time later. Every cell keeps
+ * writing to a 4096 px wide canvas in the browser costs a long frame some time later. Every cell keeps
  * its picture instead, to read its pixels and to upload it again after a lost WebGL context.
  */
 

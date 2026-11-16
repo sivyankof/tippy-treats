@@ -7,7 +7,7 @@
 export const SHARED_ATLAS = {
   /** Size of one atlas page, in pixels; a new page is opened only when the last one is full. */
   pageWidth: 4096,
-  pageHeight: 4096,
+  pageHeight: 2048,
   /** Shelf heights are rounded up to this many pixels, so pictures of close heights share a shelf. */
   shelfStep: 8,
   /** The edge pixels of every picture are repeated this far outwards, so a scaled or cropped picture samples like a texture of its own. */
