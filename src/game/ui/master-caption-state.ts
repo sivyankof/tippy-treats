@@ -8,10 +8,9 @@ import { badgeCentreX } from './effect-badge-state';
 
 const cfg = MASTER_ANIM.caption;
 
-/** One master effect that acted: who, and the coins it paid (the plate shows their sum). */
+/** One master effect that acted: whose. The coins it paid fly to the coin counter of the HUD. */
 export interface MasterNote {
   creature: CreatureId;
-  coins: number;
 }
 
 const FEED_CAP = 16;
@@ -27,15 +26,14 @@ export class MasterFeed {
   /** Notes the `mastery` events of one sim step. */
   take(events: readonly SimEvent[]): void {
     for (const event of events) {
-      if (event.type === 'mastery') this.push(event.creature, event.coins);
+      if (event.type === 'mastery') this.push(event.creature);
     }
   }
 
-  push(creature: CreatureId, coins: number): void {
+  push(creature: CreatureId): void {
     if (this.count >= FEED_CAP) return;
-    const note = (this.notes[this.count] ??= { creature, coins });
+    const note = (this.notes[this.count] ??= { creature });
     note.creature = creature;
-    note.coins = coins;
     this.count++;
   }
 
@@ -56,32 +54,29 @@ export class MasterFeed {
 
 export type CaptionPhase = 'idle' | 'in' | 'hold' | 'out';
 
-/** The show of one creature's caption: its phase, its age in the phase and the coin sum. */
+/** The show of one creature's caption: its phase and its age in the phase. */
 export interface CaptionState {
   phase: CaptionPhase;
   ageMs: number;
-  coins: number;
 }
 
 export function idleCaption(): CaptionState {
-  return { phase: 'idle', ageMs: 0, coins: 0 };
+  return { phase: 'idle', ageMs: 0 };
 }
 
 /**
- * A master effect acted. A caption that is not showing (or is fading out) starts over with this
- * payout and returns true: it may spark. One that is showing is extended to a fresh hold and its
- * sum grows, and returns false: a creature that acts again and again (the meringue at every
- * cloud) keeps one caption instead of a stream of them.
+ * A master effect acted. A caption that is not showing (or is fading out) starts over and returns
+ * true: it may spark. One that is showing is extended to a fresh hold and returns false: a
+ * creature that acts again and again (the meringue at every cloud) keeps one caption instead of a
+ * stream of them.
  */
-export function noteCaption(state: CaptionState, coins: number): boolean {
+export function noteCaption(state: CaptionState): boolean {
   const fresh = state.phase === 'idle' || state.phase === 'out';
   if (fresh) {
     state.phase = 'in';
     state.ageMs = 0;
-    state.coins = coins;
-  } else {
-    state.coins += coins;
-    if (state.phase === 'hold') state.ageMs = 0;
+  } else if (state.phase === 'hold') {
+    state.ageMs = 0;
   }
   return fresh;
 }
@@ -101,7 +96,6 @@ export function stepCaption(state: CaptionState, dtMs: number): void {
   if (state.phase === 'out' && state.ageMs >= cfg.outMs) {
     state.phase = 'idle';
     state.ageMs = 0;
-    state.coins = 0;
   }
 }
 
@@ -186,9 +180,4 @@ export function stackCaption(out: CaptionPlace, taken: number[]): CaptionPlace {
   while (taken.includes(out.y)) out.y += step;
   taken.push(out.y);
   return out;
-}
-
-/** The sum a caption shows: coins that pile up past the widest laid-out sum stay at it. */
-export function captionSum(coins: number): number {
-  return Math.min(coins, 10 ** cfg.sumDigits - 1);
 }

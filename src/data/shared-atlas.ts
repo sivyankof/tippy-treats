@@ -5,9 +5,15 @@
  * call (docs/08-architecture.md, section 12).
  */
 export const SHARED_ATLAS = {
-  /** Size of one atlas page, in pixels; a new page is opened only when the last one is full. */
+  /**
+   * Size of one atlas page, in pixels; a new page is opened only when the last one is full. One
+   * 4096 x 4096 page holds every picture of a run, so the pictures of one frame never sit on two
+   * textures (docs/08-architecture.md, section 12, the journal entry of the page size).
+   */
   pageWidth: 4096,
-  pageHeight: 2048,
+  pageHeight: 4096,
+  /** Height of the pages on a device whose GPU cannot make a `pageHeight` page (too small a maximum texture size, or the page failed). */
+  fallbackPageHeight: 2048,
   /** Shelf heights are rounded up to this many pixels, so pictures of close heights share a shelf. */
   shelfStep: 8,
   /** The edge pixels of every picture are repeated this far outwards, so a scaled or cropped picture samples like a texture of its own. */

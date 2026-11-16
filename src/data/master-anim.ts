@@ -24,13 +24,10 @@ export const MASTER_ANIM = {
     height: 70,
     padX: 20,
     nameFont: 40,
-    sumFont: 44,
     starSize: 44,
     starGap: 10,
-    /** The sum is laid out for this many digits (it shows no more than that) so the plate never changes width mid-run. */
-    sumDigits: 3,
     nameStroke: 7,
-    /** Gold star and sum colour. */
+    /** Gold star colour. */
     gold: PALETTE.gold,
     /** The spark at the star when the caption appears (full level only). */
     spark: { ms: 380, scaleTo: 2.2, spinDeg: 120 },

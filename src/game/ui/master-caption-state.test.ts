@@ -4,7 +4,6 @@ import { MASTER_ANIM } from '../../data/master-anim';
 import {
   captionLook,
   captionPlace,
-  captionSum,
   idleCaption,
   MasterFeed,
   noteCaption,
@@ -31,17 +30,14 @@ describe('MasterFeed', () => {
     feed.take([mastery('ghost', 0), { type: 'miss', shielded: false }, mastery('lemon', 10)]);
     const seen: MasterNote[] = [];
     feed.drain((n) => seen.push({ ...n }));
-    expect(seen).toEqual([
-      { creature: 'ghost', coins: 0 },
-      { creature: 'lemon', coins: 10 },
-    ]);
+    expect(seen).toEqual([{ creature: 'ghost' }, { creature: 'lemon' }]);
     feed.drain((n) => seen.push({ ...n }));
     expect(seen).toHaveLength(2);
   });
 
   it('drops notes beyond its cap instead of growing', () => {
     const feed = new MasterFeed();
-    for (let i = 0; i < 100; i++) feed.push('ghost', 0);
+    for (let i = 0; i < 100; i++) feed.push('ghost');
     let count = 0;
     feed.drain(() => count++);
     expect(count).toBe(16);
@@ -51,7 +47,7 @@ describe('MasterFeed', () => {
 describe('caption show', () => {
   it('runs in, hold, out and back to idle', () => {
     const s = idleCaption();
-    expect(noteCaption(s, 5)).toBe(true);
+    expect(noteCaption(s)).toBe(true);
     expect(s.phase).toBe('in');
     stepCaption(s, cfg.inMs);
     expect(s.phase).toBe('hold');
@@ -59,33 +55,30 @@ describe('caption show', () => {
     expect(s.phase).toBe('out');
     stepCaption(s, cfg.outMs);
     expect(s.phase).toBe('idle');
-    expect(s.coins).toBe(0);
   });
 
-  it('extends the hold and adds the coins on a repeat, without a second spark', () => {
+  it('extends the hold on a repeat, without a second spark', () => {
     const s = idleCaption();
-    noteCaption(s, 5);
+    noteCaption(s);
     stepCaption(s, cfg.inMs + cfg.holdMs - 10);
-    expect(noteCaption(s, 5)).toBe(false);
-    expect(s.coins).toBe(10);
+    expect(noteCaption(s)).toBe(false);
     stepCaption(s, cfg.holdMs - 10);
     expect(s.phase).toBe('hold');
   });
 
-  it('restarts a fading caption with the new payout only', () => {
+  it('restarts a fading caption', () => {
     const s = idleCaption();
-    noteCaption(s, 5);
+    noteCaption(s);
     stepCaption(s, cfg.inMs);
     stepCaption(s, cfg.holdMs);
     expect(s.phase).toBe('out');
-    expect(noteCaption(s, 3)).toBe(true);
-    expect(s.coins).toBe(3);
+    expect(noteCaption(s)).toBe(true);
     expect(s.phase).toBe('in');
   });
 
   it('pops while it comes in and only fades on the plain level', () => {
     const s = idleCaption();
-    noteCaption(s, 0);
+    noteCaption(s);
     const look: CaptionLook = { scale: 0, alpha: 0 };
     stepCaption(s, cfg.inMs / 2);
     captionLook(s, false, linear, look);
@@ -143,12 +136,5 @@ describe('stackCaption', () => {
     const third = stackCaption({ left: 0, y: cfg.belowY }, taken);
     expect(second.y).toBe(cfg.belowY + cfg.height + cfg.stackGap);
     expect(third.y).toBe(cfg.belowY + 2 * (cfg.height + cfg.stackGap));
-  });
-});
-
-describe('captionSum', () => {
-  it('shows the coins up to the widest laid-out sum', () => {
-    expect(captionSum(42)).toBe(42);
-    expect(captionSum(10 ** cfg.sumDigits)).toBe(10 ** cfg.sumDigits - 1);
   });
 });

@@ -2,9 +2,8 @@ import * as Phaser from 'phaser';
 import { CREATURES, type CreatureId } from '../../data/creatures';
 import { MASTERY } from '../../data/mastery';
 import { MASTER_ANIM } from '../../data/master-anim';
-import { PALETTE } from '../../data/palette';
 import type { TeamSlot } from '../../core/sim-types';
-import { formatNumber, getLang, t } from '../../i18n';
+import { getLang } from '../../i18n';
 import { DEPTH } from '../depth';
 import { effectsMode } from '../effects-mode';
 import { easeFn } from '../fx/ease';
@@ -14,7 +13,6 @@ import type { EffectBadges } from './effect-badges';
 import {
   captionLook,
   captionPlace,
-  captionSum,
   idleCaption,
   noteCaption,
   stackCaption,
@@ -23,73 +21,49 @@ import {
   type CaptionPlace,
   type MasterFeed,
 } from './master-caption-state';
-import { createStrokedText } from './outlined-text';
 import { bakeCaptionArt } from './master-caption-art';
 
 const cfg = MASTER_ANIM.caption;
 const inEase = easeFn(cfg.inEase);
 
 /**
- * The caption of one creature: one baked picture (plate, gold star and the name of its master
- * effect) and, when the effect paid coins, their sum as a text beside it. Everything is made at
- * the start of the run, so nothing is created while it goes on.
+ * The caption of one creature: one baked picture on the shared atlas (plate, gold star and the
+ * name of its master effect) and the spark of its star. No text of its own: the coins a master
+ * effect pays fly to the coin counter, and a text would cost a draw of its own texture. Everything
+ * is made at the start of the run, so nothing is created while it goes on.
  */
 class CaptionView {
   readonly state = idleCaption();
   readonly root: Phaser.GameObjects.Container;
-  private readonly sum: Phaser.GameObjects.Text;
   private readonly spark: Phaser.GameObjects.Image;
-  private readonly plateWidth: number;
-  private readonly sumWidth: number;
+  readonly width: number;
   private sparkMs = Infinity;
-  private shownCoins = -1;
 
   constructor(
     scene: Phaser.Scene,
     readonly creature: CreatureId,
   ) {
     const art = bakeCaptionArt(scene, creature, getLang());
-    this.plateWidth = art.width;
+    this.width = art.width;
     const plate = scene.add.image(0, 0, art.key);
-    this.sum = createStrokedText(
-      scene,
-      0,
-      0,
-      '',
-      cfg.sumFont,
-      cfg.gold,
-      PALETTE.textDark,
-      cfg.nameStroke,
-    ).setOrigin(0, 0.5);
-    // Measured once with the widest sum it has to hold.
-    this.sum.setText(t('mastery.plus', { n: '9'.repeat(cfg.sumDigits) }));
-    this.sumWidth = this.sum.width;
-    this.sum.setText('');
-    this.sum.setX(art.width / 2 + cfg.starGap);
     this.spark = scene.add
       .image(-art.width / 2 + cfg.padX + cfg.starSize / 2, 0, FX_TEXTURES.star)
       .setTint(0xffffff)
       .setDisplaySize(cfg.starSize, cfg.starSize)
       .setVisible(false);
     this.root = scene.add
-      .container(0, 0, [plate, this.spark, this.sum])
+      .container(0, 0, [plate, this.spark])
       .setDepth(DEPTH.floatText)
       .setVisible(false);
   }
 
-  note(coins: number): void {
-    const fresh = noteCaption(this.state, coins);
-    if (fresh) this.sparkMs = 0;
+  note(): void {
+    if (noteCaption(this.state)) this.sparkMs = 0;
   }
 
-  /** Width the caption takes now: the plate, and the sum beside it while coins are shown. */
   /** Showing, or about to (it takes a place of the stack). */
   get active(): boolean {
     return this.state.phase !== 'idle';
-  }
-
-  get width(): number {
-    return this.state.coins > 0 ? this.plateWidth + cfg.starGap + this.sumWidth : this.plateWidth;
   }
 
   update(dtMs: number, place: CaptionPlace, look: CaptionLook): void {
@@ -98,17 +72,9 @@ class CaptionView {
     const visible = this.state.phase !== 'idle' && look.alpha > 0;
     this.root.setVisible(visible);
     if (!visible) return;
-    const withSum = this.state.coins > 0;
-    if (this.state.coins !== this.shownCoins) {
-      this.shownCoins = this.state.coins;
-      this.sum.setText(
-        withSum ? t('mastery.plus', { n: formatNumber(captionSum(this.state.coins)) }) : '',
-      );
-    }
-    this.sum.setVisible(withSum);
     // The container is centred on the plate, so the pop scales around its middle.
     this.root
-      .setPosition(place.left + this.plateWidth / 2, place.y)
+      .setPosition(place.left + this.width / 2, place.y)
       .setScale(look.scale)
       .setAlpha(look.alpha);
     this.runSpark(dtMs);
@@ -169,7 +135,7 @@ export class MasterCaptions {
     feed.drain((note) => {
       // A creature the team does not have at the master level shows a caption only in dev (the debug hook).
       if (import.meta.env.DEV) this.ensure(note.creature);
-      this.views.get(note.creature)?.note(note.coins);
+      this.views.get(note.creature)?.note();
     });
     this.taken.length = 0;
     for (const view of this.views.values()) {

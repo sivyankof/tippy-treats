@@ -58,24 +58,68 @@ export function usesSharedAtlas(key: string, width: number, height: number): boo
   return SHARED_ATLAS.keyPrefixes.some((prefix) => key.startsWith(prefix));
 }
 
+/** Height of the pages of this game; set by the first page (the fallback after a failed full page). */
+let pageHeight: number | null = null;
+
+/** The full page height when the GPU can make a texture that tall, else the fallback. */
+function firstPageHeight(renderer: Phaser.Game['renderer']): number {
+  const webgl = asWebGLRenderer(renderer);
+  const max = webgl ? webgl.getMaxTextureSize() : Infinity;
+  return max >= SHARED_ATLAS.pageHeight && max >= SHARED_ATLAS.pageWidth
+    ? SHARED_ATLAS.pageHeight
+    : SHARED_ATLAS.fallbackPageHeight;
+}
+
+/** Clears the pending WebGL errors; returns the last one (0 for none). */
+function takeGlError(renderer: Phaser.Game['renderer']): number {
+  const gl = asWebGLRenderer(renderer)?.gl;
+  if (!gl) return 0;
+  let last: number = gl.NO_ERROR;
+  // Bounded: a lost context keeps answering CONTEXT_LOST_WEBGL.
+  for (let i = 0; i < 8; i++) {
+    const error = gl.getError();
+    if (error === gl.NO_ERROR) break;
+    last = error;
+  }
+  return last;
+}
+
 function openPage(scene: Phaser.Scene, pages: Page[]): Page {
-  const manager = scene.sys.textures;
-  const canvas = document.createElement('canvas');
-  canvas.width = SHARED_ATLAS.pageWidth;
-  canvas.height = SHARED_ATLAS.pageHeight;
-  const key = `${PAGE_PREFIX}${pages.length}`;
-  const texture = manager.addCanvas(key, canvas);
-  const source = texture?.source[0];
-  if (!texture || !source) throw new Error(`Texture key ${key} is taken`);
+  const renderer = scene.sys.game.renderer;
   if (pages.length === 0) {
     // A restored context gets the blank pages back from their canvases; the cells go on top.
-    const renderer = scene.sys.game.renderer;
     renderer.on(Phaser.Renderer.Events.RESTORE_WEBGL, () => {
       for (const page of pages) {
         for (const cell of page.cells.values()) uploadCell(renderer, page, cell);
       }
     });
   }
+  const height = (pageHeight ??= firstPageHeight(renderer));
+  if (height > SHARED_ATLAS.fallbackPageHeight) {
+    takeGlError(renderer);
+    try {
+      const page = makePage(scene, pages, height);
+      if (takeGlError(renderer) === 0) return page;
+      // The GPU did not take the page: it goes, and every page of this game is the smaller one.
+      pages.pop();
+      scene.sys.textures.remove(page.key);
+    } catch {
+      // Same: the smaller page below.
+    }
+    pageHeight = SHARED_ATLAS.fallbackPageHeight;
+  }
+  return makePage(scene, pages, pageHeight);
+}
+
+function makePage(scene: Phaser.Scene, pages: Page[], height: number): Page {
+  const manager = scene.sys.textures;
+  const canvas = document.createElement('canvas');
+  canvas.width = SHARED_ATLAS.pageWidth;
+  canvas.height = height;
+  const key = `${PAGE_PREFIX}${pages.length}`;
+  const texture = manager.addCanvas(key, canvas);
+  const source = texture?.source[0];
+  if (!texture || !source) throw new Error(`Texture key ${key} is taken`);
   const page: Page = {
     key,
     source,
