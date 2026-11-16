@@ -36,10 +36,11 @@ describe('cloud figures', () => {
   });
 
   it('is a lump, not a ribbon: the top line rises well above the thin ends and the bumps differ in size', () => {
-    for (const s of [cloudSilhouette(), nebulaSilhouette()]) {
+    const nebula = nebulaSilhouette();
+    for (const s of [cloudSilhouette(), nebula]) {
       const ends = Math.min(silhouetteTopAt(s, 150), silhouetteTopAt(s, 850));
       const hump = Math.min(...[480, 520, 560, 600, 640].map((x) => silhouetteTopAt(s, x)));
-      expect(ends - hump).toBeGreaterThan(60);
+      expect(ends - hump).toBeGreaterThan(s === nebula ? 30 : 60);
       const radii = s.circles.map((c) => c.r);
       expect(Math.max(...radii) / Math.min(...radii)).toBeGreaterThan(2.5);
     }
@@ -52,5 +53,32 @@ describe('cloud figures', () => {
     expect(((b.bottom - b.top) / 2) * figure.scale).toBeGreaterThanOrEqual(rowHalf);
     expect(Math.abs(b.top + b.bottom - 2 * (figure.height / 2))).toBeLessThanOrEqual(1);
     expect(mid).toBe(figure.height / 2);
+  });
+
+  it('keeps the nebula top low above the body: the HUD plates over the row stay clear (390x693)', () => {
+    const top = silhouetteBounds(nebulaSilhouette()).top - figure.outline;
+    // Baked px the figure may reach above the body top; the cloud has its tall hump, the nebula does not.
+    expect(figure.body.top - top).toBeLessThanOrEqual(RULE_ANIM.cloud.nebula.maxRiseAboveBody);
+  });
+
+  it('has one smooth wave for the nebula underside: it only deepens to the middle and shallows after it', () => {
+    const s = nebulaSilhouette();
+    const bottomAt = (x: number): number => {
+      let bottom = x >= s.body.left && x <= s.body.right ? s.body.bottom : -Infinity;
+      for (const c of s.lobes) {
+        const dx = Math.abs(x - c.x);
+        if (dx < c.r) bottom = Math.max(bottom, c.y + Math.sqrt(c.r * c.r - dx * dx));
+      }
+      return bottom;
+    };
+    const centre = RULE_ANIM.cloud.nebula.belly.centre;
+    let worstDip = 0;
+    for (let x = 160; x < 880; x += 4) {
+      const next = x + 4;
+      // Moving away from the middle the edge may only rise (less the scallops of a close row of circles).
+      const outward = x < centre ? bottomAt(x) - bottomAt(next) : bottomAt(next) - bottomAt(x);
+      worstDip = Math.max(worstDip, outward < 0 ? -outward : 0);
+    }
+    expect(worstDip).toBeLessThanOrEqual(3);
   });
 });

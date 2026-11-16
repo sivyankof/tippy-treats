@@ -237,7 +237,9 @@ describe('nebula look', () => {
   });
 
   it('caps the nebula under the cloud, and "Not scary" lowers either by its own share', () => {
-    expect(densityCap('cloud', false)).toBe(1);
+    expect(densityCap('cloud', false)).toBe(cfg.maxDensity);
+    expect(cfg.maxDensity).toBeLessThan(1);
+    expect(densityCap('nebula', false)).toBeLessThan(densityCap('cloud', false));
     expect(densityCap('nebula', false)).toBe(cfg.nebula.maxDensity);
     expect(ghostShare(false, true)).toBe(1);
     expect(ghostShare(true, false)).toBe(cfg.ghostMaxDensity);
@@ -250,7 +252,7 @@ describe('nebula look', () => {
 
   it('takes the "Not scary" share from the look of the bank, not from the zone (Stars to Space boundary)', () => {
     // A bank still drawing the dense cloud while the layer is already in Space keeps the cloud share ...
-    expect(densityCap('cloud', true)).toBe(cfg.ghostMaxDensity);
+    expect(densityCap('cloud', true)).toBeCloseTo(cfg.maxDensity * cfg.ghostMaxDensity);
     // ... and a nebula still on screen after the layer left Space keeps the nebula share.
     expect(densityCap('nebula', true)).toBeCloseTo(
       cfg.nebula.maxDensity * cfg.nebula.ghostMaxDensity,

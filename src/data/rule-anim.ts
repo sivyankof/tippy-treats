@@ -164,8 +164,13 @@ export const RULE_ANIM = {
      */
     leadMs: 650,
     /**
-     * Meringue "Not scary" (guides of level 5): the densest the cloud is drawn while it covers the
-     * layer, so the silhouette of the layer shows through (tuned by eye). Visual only: the bot
+     * The densest the dense cloud of the clouds zone is drawn at rest, 0..1: the layer under it
+     * shows as a pale silhouette (contrast about 1 - this). Visual only.
+     */
+    maxDensity: 0.85,
+    /**
+     * Meringue "Not scary" (guides of level 5): the share of `maxDensity` the cloud is drawn at while it
+     * covers the layer, so the silhouette of the layer shows through (tuned by eye). Visual only: the bot
      * has its own `DIFFICULTY.ghostCloudSdMult`.
      */
     ghostMaxDensity: 0.7,
@@ -175,14 +180,27 @@ export const RULE_ANIM = {
      * lower density cap, with twinkling stars over it.
      */
     nebula: {
-      /** Flat fills: the pink body, a lighter pink top, blue and light-pink blotches, white curls; the rim is a deeper tone of the pink. */
+      /** Flat fills: the pink body, a lighter pink top, the lilac-blue smears (low contrast, no outline), white curls; the rim is a deeper tone of the pink. */
       colors: {
         pink: 0xff9bd2,
         pinkLight: 0xffc4e4,
-        blue: 0x9cc4ff,
-        blotch: 0xffe1f0,
+        smear: 0xe3cff5,
         curl: 0xffffff,
       },
+      /** The most the figure may reach above the body top, baked px (the nebula stays below the HUD plates on a short screen). */
+      maxRiseAboveBody: 46,
+      /** Soft smears on the body, baked px: centre and size of the first ellipse (a second one overlaps it). */
+      smears: [
+        { x: 330, y: 168, w: 150, h: 40 },
+        { x: 560, y: 128, w: 170, h: 46 },
+        { x: 700, y: 196, w: 130, h: 36 },
+      ],
+      /**
+       * The underside: a close row of circles of radius `r` from `from` to `to` every `step` baked px, whose
+       * bottoms follow one smooth bump (a gaussian around `centre`, `spread` wide): `depth` below the body bottom
+       * in the middle, `base` above it at the thin ends.
+       */
+      belly: { from: 150, to: 890, step: 30, r: 54, centre: 520, spread: 190, depth: 86, base: 6 },
       /**
        * The densest the figure is drawn while the nebula covers the layer: one picture, so the
        * layer shows through with a contrast of about 1 - this (tuned by the contrast of the layer
