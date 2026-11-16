@@ -4,10 +4,13 @@ import { CONTINUE_ANIM } from '../../data/continue-anim';
 import { PALETTE } from '../../data/palette';
 import { t } from '../../i18n';
 import { createLabelButton, type Button } from './button';
+import { resetAdLabel, showAdCaption } from './menu/ad-unavailable';
 import { createOutlinedText } from './outlined-text';
 import { createPriceButton } from './style/price-button';
 
 const { window: win, button: btn } = CONTINUE_ANIM;
+/** The ad caption stays clear of the rounded ends of the button. */
+const adLabelWidth = btn.width - btn.radius * 2;
 
 export interface ContinueButtonActions {
   onWatchAd: () => void;
@@ -64,7 +67,10 @@ export class ContinueButtons {
     this.ad.setVisible(offer.ad !== null);
     if (offer.ad !== null) {
       const ready = offer.ad === 'ready';
-      this.adLabel.setText(t(ready ? 'continue.watchAd' : 'continue.adUnavailable'));
+      if (ready) {
+        this.adLabel.setText(t('continue.watchAd'));
+        resetAdLabel(this.adLabel, adLabelWidth);
+      } else showAdCaption(this.adLabel, adLabelWidth);
       this.ad.setAlpha(ready ? 1 : btn.disabledAlpha);
       this.enableAd(ready && !busy);
       this.ad.setY(win.adButtonY + row++ * step);

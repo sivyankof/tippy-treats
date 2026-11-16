@@ -54,16 +54,31 @@ export function rowTextButton(
   size: RowButtonSize,
   onClick: () => void,
 ): Button {
+  return rowTextParts(scene, text, fill, size, onClick).button;
+}
+
+/** `rowTextButton` that also hands back its label and the width the label may take. */
+export function rowTextParts(
+  scene: Phaser.Scene,
+  text: string,
+  fill: number,
+  size: RowButtonSize,
+  onClick: () => void,
+): { button: Button; label: Phaser.GameObjects.Text; labelWidth: number } {
   const layout = rowButtonLayout(size);
-  return createTextButton(scene, {
-    text,
-    font: layout.font,
-    maxLabelWidth: layout.width - row.buttonPad,
-    fill,
-    layout,
-    keyPrefix: `ui_shop_${size}`,
-    onClick,
-  }).button;
+  const labelWidth = layout.width - row.buttonPad;
+  return {
+    ...createTextButton(scene, {
+      text,
+      font: layout.font,
+      maxLabelWidth: labelWidth,
+      fill,
+      layout,
+      keyPrefix: `ui_shop_${size}`,
+      onClick,
+    }),
+    labelWidth,
+  };
 }
 
 /** A row button with a price in coins or berries: the kit's one, grey "Not enough N" when short. */

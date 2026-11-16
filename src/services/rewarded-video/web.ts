@@ -1,8 +1,14 @@
 import { STUB_ADS } from '../../data/rewarded-video';
 import { t } from '../../i18n';
-import type { AdsDevControl, AdsService, RewardedResult, StubAdMode } from './types';
+import type {
+  AdUnavailableReason,
+  AdsDevControl,
+  AdsService,
+  RewardedResult,
+  StubAdMode,
+} from './types';
 
-const MODES: readonly StubAdMode[] = ['reward', 'dismissed', 'unavailable'];
+const MODES: readonly StubAdMode[] = ['reward', 'dismissed', 'offline', 'no_fill'];
 
 /** A grey full-screen DOM overlay with a label; `null` where there is no DOM (tests). */
 export function showStubOverlay(label: string): (() => void) | null {
@@ -57,7 +63,11 @@ export class WebAds implements AdsService, AdsDevControl {
   }
 
   isRewardedReady(): boolean {
-    return this.current !== 'unavailable' && !this.busy;
+    return this.current !== 'offline' && this.current !== 'no_fill' && !this.busy;
+  }
+
+  unavailableReason(): AdUnavailableReason {
+    return this.current === 'offline' ? 'offline' : 'no_fill';
   }
 
   showRewarded(): Promise<RewardedResult> {
