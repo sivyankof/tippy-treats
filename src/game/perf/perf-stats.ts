@@ -109,9 +109,30 @@ function drawLimit(id: string): number {
   return PERF_BUDGET.drawCalls[def?.drawClass ?? 'heavy'];
 }
 
-/** True in a headless or driven browser: its frame intervals jitter and say nothing about a phone. */
-export function isAutomatedBrowser(nav: { webdriver?: boolean; userAgent?: string }): boolean {
-  return nav.webdriver === true || /HeadlessChrome/i.test(nav.userAgent ?? '');
+/** The parts of `navigator` that tell a real phone from a driven or emulated browser. */
+export interface BrowserInfo {
+  webdriver?: boolean;
+  userAgent?: string;
+  platform?: string;
+  userAgentData?: { platform?: string };
+  maxTouchPoints?: number;
+}
+
+const PHONE_UA = /iPhone|iPad|iPod|Android/i;
+const DESKTOP_PLATFORM = /^(Win|Linux( x86| i\d|$)|Mac|Chrome OS|CrOS)/i;
+
+/**
+ * True in a headless, driven or emulated browser: its frame intervals jitter and say nothing about
+ * a phone. Besides `webdriver` and a headless user agent, a phone user agent on a desktop platform
+ * or on a screen without touch points is a desktop browser pretending (devtools emulation).
+ */
+export function isAutomatedBrowser(nav: BrowserInfo): boolean {
+  const ua = nav.userAgent ?? '';
+  if (nav.webdriver === true || /HeadlessChrome/i.test(ua)) return true;
+  if (!PHONE_UA.test(ua)) return false;
+  const platform = nav.userAgentData?.platform ?? nav.platform ?? '';
+  if (DESKTOP_PLATFORM.test(platform)) return true;
+  return nav.maxTouchPoints === 0;
 }
 
 /**

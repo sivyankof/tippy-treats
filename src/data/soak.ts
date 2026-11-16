@@ -8,6 +8,10 @@ export const SOAK = {
   runsPerLap: 3,
   /** A run that has not reached the results by then is left through the pause path. */
   runMaxMs: 45_000,
+  /** First screen of a run: how long its HUD takes to come in before the driver may leave it. */
+  hudEnterMs: 800,
+  /** A run that ended while the driver waited to leave it: how long its results or Home may take to show. */
+  endedWaitMs: 8_000,
   /** A restarted run that is abandoned after this long (the pause "Restart" path). */
   abandonAfterMs: 3_000,
   /** How long a menu screen is looked at before the next one opens. */

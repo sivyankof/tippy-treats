@@ -174,6 +174,8 @@ export class Button extends Phaser.GameObjects.Container {
   private readonly breatheRoot: Phaser.GameObjects.Container;
   private readonly face: Phaser.GameObjects.Image;
   private breathing = false;
+  private gloss: { band: Phaser.GameObjects.Image; timer: Phaser.Time.TimerEvent } | null = null;
+  private plateAlpha = 1;
 
   constructor(
     scene: Phaser.Scene,
@@ -214,8 +216,21 @@ export class Button extends Phaser.GameObjects.Container {
 
   /** Dims only the plate: the label and icon on it keep their full opacity (an unavailable button). */
   setPlateAlpha(alpha: number): this {
+    this.plateAlpha = alpha;
     this.face.setAlpha(alpha);
+    this.applyGloss();
     return this;
+  }
+
+  /** The gloss runs only over a plate at full strength: a dimmed (unavailable) plate stays calm. */
+  private applyGloss(): void {
+    if (!this.gloss) return;
+    const dimmed = this.plateAlpha < 1;
+    this.gloss.timer.paused = dimmed;
+    if (dimmed) {
+      this.scene.tweens.killTweensOf(this.gloss.band);
+      this.gloss.band.setVisible(false);
+    }
   }
 
   /** A disabled button ignores the pointer. */
@@ -253,6 +268,8 @@ export class Button extends Phaser.GameObjects.Container {
       loop: true,
       callback: () => sweepGloss(band, travel, ui.glossMs, ui.glossAlpha),
     });
+    this.gloss = { band, timer };
+    this.applyGloss();
     this.once(Phaser.GameObjects.Events.DESTROY, () => timer.remove(false));
     return this;
   }

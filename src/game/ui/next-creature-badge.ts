@@ -121,10 +121,10 @@ export class NextCreatureBadge {
     this.labelShown = content.text !== null;
     this.applyVisible();
     this.place();
-    // The first appearance (no previous value) does not pop.
+    // The first appearance (no previous value) neither flashes nor pops.
+    if (!this.shown) return;
     if (content.flash) fxGuard.call('hud-next-flash', this, this.flash);
-    else if (this.shown && (content.text !== null || creatureChanged))
-      this.pop(creatureChanged ? this.icon : this.label);
+    else this.pop(creatureChanged ? this.icon : this.label);
   }
 
   /** A short double pulse of the icon: smaller on lite, none on minimal. */

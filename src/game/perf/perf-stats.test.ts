@@ -162,6 +162,31 @@ describe('automated browser', () => {
     expect(isAutomatedBrowser({})).toBe(false);
   });
 
+  it('detects a phone user agent on a desktop platform or without touch', () => {
+    const iphone = 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X)';
+    expect(isAutomatedBrowser({ userAgent: iphone, platform: 'Win32' })).toBe(true);
+    expect(isAutomatedBrowser({ userAgent: iphone, userAgentData: { platform: 'Linux' } })).toBe(
+      true,
+    );
+    expect(isAutomatedBrowser({ userAgent: iphone, platform: 'iPhone', maxTouchPoints: 0 })).toBe(
+      true,
+    );
+    expect(isAutomatedBrowser({ userAgent: iphone, platform: 'iPhone', maxTouchPoints: 5 })).toBe(
+      false,
+    );
+    expect(
+      isAutomatedBrowser({
+        userAgent: 'Mozilla/5.0 (Linux; Android 14)',
+        platform: 'Linux armv8l',
+        userAgentData: { platform: 'Android' },
+        maxTouchPoints: 5,
+      }),
+    ).toBe(false);
+    expect(
+      isAutomatedBrowser({ userAgent: 'Mozilla/5.0 (Windows NT 10.0)', platform: 'Win32' }),
+    ).toBe(false);
+  });
+
   it('keeps the interval out of the verdict and the marks, but still checks the rest', () => {
     const slow = stats({ intervalMeanMs: 20 });
     expect(budgetOver(slow).interval).toBe(true);

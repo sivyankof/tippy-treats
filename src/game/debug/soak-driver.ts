@@ -153,19 +153,29 @@ class SoakDriver implements TippySoak {
     }
   }
 
+  /** A run of the game scene that is being played: past its intro, not over (results may be building). */
+  private runLive(): boolean {
+    if (!this.game.scene.isActive(SCENES.game) || runHooks() === null) return false;
+    const probe = (this.scene(SCENES.game) as GameScene).perfProbe();
+    return probe !== null && !probe.introActive && probe.state.phase !== 'over';
+  }
+
   /**
-   * A `?bot=` page opens with a run: leave it as soon as it is up (waiting for its end made the
-   * first lap start late, and never under load) and get to Home.
+   * A `?bot=` page opens with a run: leave it once it is up and its screen has come in (waiting
+   * for its end made the first lap start late, and never under load) and get to Home. A run that
+   * has already ended is waited out briefly: its results or Home follow.
    */
   private async toHome(): Promise<void> {
     this.stage('to-home');
-    await this.waitFor(
-      () => this.isOn(SCENES.home) || this.isOn(SCENES.results) || runHooks() !== null,
-      SOAK.runMaxMs,
-    );
+    const out = (): boolean => this.isOn(SCENES.home) || this.isOn(SCENES.results);
+    await this.waitFor(() => out() || this.runLive(), SOAK.runMaxMs);
+    if (!out() && this.runLive()) {
+      await sleep(SOAK.hudEnterMs);
+      if (!this.runLive()) await this.waitFor(out, SOAK.endedWaitMs);
+    }
     if (this.isOn(SCENES.home)) return;
     if (this.isOn(SCENES.results)) openScreen(this.scene(SCENES.results), SCENES.home);
-    else (this.scene(SCENES.game) as GameScene).leaveRun();
+    else if (this.runLive()) (this.scene(SCENES.game) as GameScene).leaveRun();
     await this.waitFor(() => this.isOn(SCENES.home), SOAK.runMaxMs);
   }
 

@@ -11,7 +11,7 @@ import {
 } from './hud-row-layout';
 
 const WIDTH = LOGICAL_SIZE.width;
-const { nextFont, badgeMargin, nextBadgeGap } = HUD_LAYOUT;
+const { nextFont, badgeMargin, nextBadgeGap, badgeSize } = HUD_LAYOUT;
 /** A generous width of a text of `chars` characters in the next-creature font. */
 const textWidth = (chars: number): number => chars * nextFont * 0.65;
 const MOST_BADGES = 6;
@@ -68,6 +68,7 @@ describe('icon-only next-creature chip', () => {
     expect(span.chipRight - span.chipLeft).toBeLessThan(
       nextChipSpan(WIDTH, textWidth(1)).chipRight - nextChipSpan(WIDTH, textWidth(1)).chipLeft,
     );
-    expect(span.iconX).toBeLessThan(span.labelRight);
+    expect(span.iconX - badgeSize / 2 - span.chipLeft).toBeCloseTo(HUD_LAYOUT.nextChip.padX);
+    expect(span.chipRight - (span.iconX + badgeSize / 2)).toBeCloseTo(HUD_LAYOUT.nextChip.padX);
   });
 });
