@@ -1,5 +1,6 @@
 import type * as Phaser from 'phaser';
 import { BD_TEX } from '../../../data/backdrop';
+import { MOUNTAIN_SLOT } from '../../../data/backdrop-mountains';
 import { BACKDROP_COLORS } from '../../../data/backdrop-colors';
 import { BACKDROP_LIFE } from '../../../data/backdrop-life';
 import { bakeTexture } from '../../ui/bake-texture';
@@ -165,7 +166,7 @@ export const roofArt: ZoneArt = {
     return {
       layers: [R.far, R.mid, R.near, R.pipes],
       lives: [
-        { slot: 0, life: new Mountains(scene) },
+        { slot: MOUNTAIN_SLOT.roof, life: new Mountains(scene) },
         { slot: 1, life: new Hover(scene, [life.chimney]) },
         { slot: 1, life: new PuffColumn(scene, life.smoke, life.smokeAt, life.smokeOffset) },
         { slot: 2, life: new Hover(scene, [life.rope, ...life.laundry]) },

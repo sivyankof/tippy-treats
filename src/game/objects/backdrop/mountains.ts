@@ -64,8 +64,9 @@ function twoTone(
   shadowPts: readonly Pt[],
   fill: number,
   shadow: number,
+  outline: number,
 ): void {
-  fillOutlinedPolygon(g, pts, fill, outlineColor(fill), L.outline);
+  fillOutlinedPolygon(g, pts, fill, outline, L.outline);
   g.fillStyle(shadow, 1);
   fillPolygon(g, shadowPts);
 }
@@ -85,10 +86,10 @@ function capShadow(p: Peak, cap: readonly Pt[]): Pt[] {
 function drawPeak(g: Graphics, p: Peak): void {
   const rock = p.back ? L.rockBack : L.rock;
   const dark = p.back ? L.rockBackDark : L.rockDark;
-  twoTone(g, peakOutline(p), peakShadow(p), rock, dark);
+  twoTone(g, peakOutline(p), peakShadow(p), rock, dark, outlineColor(dark));
   const share = p.back ? L.capShareBack : L.capShareFront;
   const cap = capOutline(p, share);
-  twoTone(g, cap, capShadow(p, cap), L.snow, L.snowDark);
+  twoTone(g, cap, capShadow(p, cap), L.snow, L.snowDark, L.snowOutline);
   if (p.back) return;
   const m = L.gloss;
   drawGlossMark(g, {
