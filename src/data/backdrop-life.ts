@@ -447,22 +447,6 @@ export const BACKDROP_LIFE = {
     })),
   },
   space: {
-    planets: [
-      {
-        texture: BD_TEX.space.planetA,
-        at: { x: 0.16, y: 0.7 },
-        bob: { px: 12, ms: 5200 },
-        swing: { deg: 5, ms: 6400 },
-      },
-      {
-        texture: BD_TEX.space.planetB,
-        at: { x: 0.86, y: 0.46 },
-        scale: 0.8,
-        phase: 1,
-        bob: { px: 10, ms: 4600 },
-        swing: { deg: 6, ms: 5800 },
-      },
-    ] as HoverSpec[],
     satellite: {
       texture: BD_TEX.space.satellite,
       count: 1,

@@ -68,8 +68,6 @@ export const BD_TEX = {
     nebula: 'bd_p_nebula',
     nebulaTwo: 'bd_p_nebula2',
     sparkles: 'bd_p_sparkles',
-    planetA: 'bd_p_planet_a',
-    planetB: 'bd_p_planet_b',
     satellite: 'bd_p_satellite',
     comet: 'bd_p_comet',
   },
@@ -93,6 +91,10 @@ export const BACKDROP = {
   /** Zone scenery draws between the base of the background and the counter. */
   depthBase: 0.5,
   depthStep: 0.4,
+  /** Extra depth per lap of Space: a later lap draws over the lap it fades in over (stays far below the counter). */
+  depthLapStep: 0.005,
+  /** Laps of Space past this one share a depth (150 laps are 1.5 layers of the tower; none ever gets there). */
+  depthLapCap: 150,
   /**
    * Sideways drift of the four parallax layers in px/s (back to front). Every zone has one
    * wind: all layers move the same way (a positive value slides the picture to the left) and

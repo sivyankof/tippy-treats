@@ -39,6 +39,8 @@ export const SHARED_ATLAS = {
     'ui_icon_',
     'ui_mastery_',
     'bd_mountains',
+    'bd_planet_',
+    'bd_sv_',
   ],
   /** Keys under those prefixes that must keep their own texture (repeated by a TileSprite). */
   ownTexture: ['fx_dash'],

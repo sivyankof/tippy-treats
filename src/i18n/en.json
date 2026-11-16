@@ -70,7 +70,8 @@
     },
     "space": {
       "name": "Space"
-    }
+    },
+    "lap": "Lap {n}"
   },
   "creature": {
     "honey": {

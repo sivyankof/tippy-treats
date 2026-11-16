@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { BACKDROP } from '../../../data/backdrop';
+import { PLANET_PLACE } from '../../../data/space-planets';
 import { BACKDROP_LIFE, type HoverSpec } from '../../../data/backdrop-life';
 import { ZONES } from '../../../data/zones';
 import {
@@ -65,7 +66,6 @@ function allHovers(): HoverSpec[] {
     life.stars.glow,
     life.stars.moon,
     ...life.stars.eyes,
-    ...life.space.planets,
   ];
 }
 
@@ -244,7 +244,7 @@ describe('background life of the zones (docs/06, section 5)', () => {
       roof: [life.roof.birds, life.roof.smoke, life.roof.laundry],
       clouds: [BACKDROP.drift.clouds, life.clouds.balloon, life.clouds.plane],
       stars: [life.stars.twinkle, life.stars.shooting, life.stars.moon],
-      space: [life.space.planets, life.space.satellite, life.space.comet, BACKDROP.layerTint.space],
+      space: [PLANET_PLACE.drift, life.space.satellite, life.space.comet, BACKDROP.layerTint.space],
     };
     for (const zone of ZONES) expect(kinds[zone.id]?.length).toBeGreaterThanOrEqual(3);
     expect(Object.keys(kinds)).toHaveLength(ZONES.length);

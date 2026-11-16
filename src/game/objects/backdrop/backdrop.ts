@@ -2,6 +2,7 @@ import * as Phaser from 'phaser';
 import { ANIM } from '../../../data/anim';
 import { BACKDROP, BD_TEX } from '../../../data/backdrop';
 import { ZONES, type ZoneId } from '../../../data/zones';
+import { lapOfKey, sceneryKey } from '../../../core/space-planet';
 import { DEPTH } from '../../depth';
 import { markPerfPart } from '../../perf/perf-marks';
 import { collectBakeSteps, type BakeStep } from '../../ui/bake-texture';
@@ -54,28 +55,34 @@ export class Backdrop {
   /** The zones the still replaced, shown again when it goes. */
   private frozen: ZoneScenery[] = [];
 
-  /** `zoneIndex` is the zone shown at once (a debug start can begin deep in the tower). */
+  /** `zoneIndex` and `lap` are what is shown at once (a debug start can begin deep in the tower). */
   constructor(
     private readonly scene: Phaser.Scene,
     private readonly trayTopY: number,
     width: number,
     height: number,
     zoneIndex: number,
+    lap = 0,
   ) {
-    this.fade = new ZoneFade(zoneIndex, BACKDROP.fadeMs);
+    const key = sceneryKey(zoneIndex, lap);
+    this.fade = new ZoneFade(key, BACKDROP.fadeMs);
     this.lastNowMs = scene.time.now;
     this.ctx = { timeMs: scene.time.now, deltaMs: 0, width, height, towerLayers: 0 };
     this.counter = new Counter(scene, trayTopY, width);
-    this.ensure(zoneIndex);
-    this.prepareNext(zoneIndex);
+    this.ensure(key);
+    this.prepareNext(key);
   }
 
-  /** The zone the run is in now; a change starts the cross-fade into it. */
-  setZone(zoneIndex: number): void {
-    if (zoneIndex === this.fade.current) return;
-    this.ensure(zoneIndex);
-    this.fade.goTo(zoneIndex);
-    this.prepareNext(zoneIndex);
+  /**
+   * The zone the run is in now (and, in Space, its lap: every lap has its own planet); a change
+   * starts the cross-fade into it.
+   */
+  setZone(zoneIndex: number, lap = 0): void {
+    const key = sceneryKey(zoneIndex, lap);
+    if (key === this.fade.current) return;
+    this.ensure(key);
+    this.fade.goTo(key);
+    this.prepareNext(key);
   }
 
   /** The creature of the current zone that may leave for the tower; `null` when it has none. */
@@ -169,39 +176,45 @@ export class Backdrop {
     if (this.scene.textures.exists(BD_TEX.still)) this.scene.textures.remove(BD_TEX.still);
   }
 
-  private ensure(index: number): void {
-    if (this.sceneries.has(index)) return;
-    const id = zoneIdOf(index);
-    this.bake(id);
-    const depth = DEPTH.background + BACKDROP.depthBase + index * BACKDROP.depthStep;
+  private ensure(key: number): void {
+    if (this.sceneries.has(key)) return;
+    const id = zoneIdOf(key);
+    const lap = lapOfKey(key);
+    this.bake(id, lap);
+    const depth =
+      DEPTH.background +
+      BACKDROP.depthBase +
+      Math.min(key, ZONES.length - 1) * BACKDROP.depthStep +
+      Math.min(lapOfKey(key), BACKDROP.depthLapCap) * BACKDROP.depthLapStep;
     const scenery = new ZoneScenery(
       this.scene,
       id,
       depth,
-      ZONE_ART[id].build(this.scene),
+      ZONE_ART[id].build(this.scene, lap),
       this.ctx.width,
       this.ctx.height,
     );
-    scenery.setAlpha(this.fade.alphaOf(index));
+    scenery.setAlpha(this.fade.alphaOf(key));
     scenery.update(this.ctx, this.scrollY);
-    this.sceneries.set(index, scenery);
+    this.sceneries.set(key, scenery);
   }
 
-  private bake(id: ZoneId): void {
+  private bake(id: ZoneId, lap: number): void {
     bakeSharedArt(this.scene);
     bakeFarArt(this.scene, id);
     ZONE_ART[id].bake(this.scene);
+    if (lap > 0) ZONE_ART[id].bakeLap?.(this.scene, lap);
   }
 
   /**
-   * Queues the pictures of the next zone a little after this one starts, so the change
-   * itself is cheap; the queue is worked off one texture per frame, so no frame hitches.
+   * Queues the pictures of the next zone (or the next lap of Space) a little after this one
+   * starts, so the change itself is cheap; the queue is worked off one texture per frame, so no
+   * frame hitches.
    */
-  private prepareNext(index: number): void {
-    const next = ZONES[index + 1];
-    if (!next) return;
+  private prepareNext(key: number): void {
+    const next = key + 1;
     this.scene.time.delayedCall(BACKDROP.prepareDelayMs, () => {
-      this.bakeQueue = collectBakeSteps(() => this.bake(next.id));
+      this.bakeQueue = collectBakeSteps(() => this.bake(zoneIdOf(next), lapOfKey(next)));
     });
   }
 }
