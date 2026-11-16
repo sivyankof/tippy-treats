@@ -191,6 +191,13 @@ export const DIFFICULTY = {
    * bot's error under it is multiplied by this instead of `cloudSdMult` (tuned).
    */
   ghostCloudSdMult: 1.2,
+  /**
+   * Bot-model assumption, not a game rule, NOT VERIFIED on players (check with testers, M9):
+   * in Space the cloud is a see-through nebula (the layer's silhouette shows about a third), so
+   * the bot's error under it is multiplied by this instead of `cloudSdMult`; under the "Not
+   * scary" guides the smaller of this and `ghostCloudSdMult` applies.
+   */
+  nebulaSdMult: 1.25,
   /** Allowed relative deviation from the expected range before balance must change. */
   tolerance: 0.25,
   targets: [

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { BALANCE, DIFFICULTY } from '../data/balance';
-import { TimingBot } from './bot';
+import { SPACE_ZONE_INDEX, ZONES } from '../data/zones';
+import { coverSdMult, TimingBot } from './bot';
 import { roofFactor } from './flight';
 import { Rng } from './rng';
 import { mutable } from './sim-test-utils';
@@ -304,5 +305,23 @@ describe('TimingBot over the zones', () => {
     }
     expect(drops).toBeGreaterThan(40);
     expect(sim.state.height).toBeGreaterThan(30);
+  });
+});
+
+const CLOUDS_ZONE = ZONES.findIndex((zone) => zone.rule === 'clouds');
+
+describe('coverSdMult', () => {
+  it('uses the dense-cloud multiplier in Clouds and the lighter nebula one in Space', () => {
+    expect(coverSdMult(CLOUDS_ZONE, false)).toBe(DIFFICULTY.cloudSdMult);
+    expect(coverSdMult(SPACE_ZONE_INDEX, false)).toBe(DIFFICULTY.nebulaSdMult);
+    expect(DIFFICULTY.nebulaSdMult).toBeGreaterThan(1);
+    expect(DIFFICULTY.nebulaSdMult).toBeLessThan(DIFFICULTY.cloudSdMult);
+  });
+
+  it('lets "Not scary" lower the multiplier, never raise it', () => {
+    expect(coverSdMult(CLOUDS_ZONE, true)).toBe(DIFFICULTY.ghostCloudSdMult);
+    expect(coverSdMult(SPACE_ZONE_INDEX, true)).toBe(
+      Math.min(DIFFICULTY.nebulaSdMult, DIFFICULTY.ghostCloudSdMult),
+    );
   });
 });

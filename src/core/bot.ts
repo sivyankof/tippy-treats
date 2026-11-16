@@ -1,4 +1,5 @@
 import { DIFFICULTY } from '../data/balance';
+import { SPACE_ZONE_INDEX } from '../data/zones';
 import { flyingSpeed } from './flight';
 import { MS_PER_SECOND } from '../util/math';
 import type { Rng } from './rng';
@@ -11,12 +12,23 @@ import type { SimEvent, TowerSim } from './tower-sim';
  * error never leaves a layer flying forever. While the ghost guides are active the
  * error is scaled by `DIFFICULTY.guidesSdMult`, and while a cloud covers the layer by
  * `DIFFICULTY.cloudSdMult`, or by `DIFFICULTY.ghostCloudSdMult` when the guides of a level-5
- * ghost make the cloud see-through (all bot-model assumptions). The estimate uses the instantaneous
+ * ghost make the cloud see-through; in Space the cloud is a see-through nebula with its own
+ * `DIFFICULTY.nebulaSdMult` (see `coverSdMult`; all bot-model assumptions). The estimate uses the instantaneous
  * speed (roof profile, rush); a layer that holds still (rush wind-up, fake-out stop) gives
  * no estimate and is never tapped, and a fake-out reversal resets the aim so it is not
  * mistaken for a wall bounce. A tap needs the target to have been approached first, so a
  * layer that flies away from it after the reversal is aimed only after its next bounce.
  */
+/**
+ * Bot error multiplier while a cloud covers the layer: the dense cloud of the Clouds zone or the
+ * see-through nebula of Space; the "Not scary" guides (level-5 ghost) lower it to at most
+ * `ghostCloudSdMult`.
+ */
+export function coverSdMult(zoneIndex: number, guidesMaster: boolean): number {
+  const cover = zoneIndex === SPACE_ZONE_INDEX ? DIFFICULTY.nebulaSdMult : DIFFICULTY.cloudSdMult;
+  return guidesMaster ? Math.min(cover, DIFFICULTY.ghostCloudSdMult) : cover;
+}
+
 export class TimingBot {
   /** Standard normal draw of the current layer; scaled by the standard deviation on every tap check. */
   private unitError = 0;
@@ -56,9 +68,7 @@ export class TimingBot {
     }
     const mods = sim.currentModifiers();
     let sdMult = mods.guides ? DIFFICULTY.guidesSdMult : 1;
-    if (flying.coverMs > 0) {
-      sdMult *= mods.guidesMaster ? DIFFICULTY.ghostCloudSdMult : DIFFICULTY.cloudSdMult;
-    }
+    if (flying.coverMs > 0) sdMult *= coverSdMult(flying.zoneIndex, mods.guidesMaster);
     const errorMs = this.unitError * this.timingSdMs * sdMult;
     const msToTarget = (((sim.topLayerX() - flying.x) * flying.dir) / speed) * MS_PER_SECOND;
     // After a fake-out reversal the target may lie behind the layer: no tap until it has
