@@ -1,6 +1,6 @@
 import type * as Phaser from 'phaser';
 import type { CutSide } from '../../core/drop';
-import type { FlyingLayer, LandingPreview } from '../../core/sim-types';
+import { newLandingPreview, type FlyingLayer, type LandingPreview } from '../../core/sim-types';
 import { collectBakeSteps, type BakeStep } from '../ui/bake-texture';
 import { dripTexturesFor } from './glaze-drip-layer';
 import { cakeColorsFor, lookCodeFor, prepareLayerArt } from './layer-art';
@@ -21,14 +21,7 @@ export class LandingPrep {
   /** Bakes for the layer in the air. */
   private flight: BakeStep[] = [];
   private flightIndex = -1;
-  private readonly noted: LandingPreview = {
-    index: 0,
-    kind: 'plain',
-    creature: null,
-    width: 0,
-    cut: null,
-    pieceWidth: 0,
-  };
+  private readonly noted: LandingPreview = newLandingPreview();
   private hasNoted = false;
 
   constructor(private readonly scene: Phaser.Scene) {}

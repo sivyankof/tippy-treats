@@ -1,16 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import type { LandingPreview } from './sim-types';
+import { newLandingPreview, type LandingPreview } from './sim-types';
 import { config, pick, runUntil, untilFlying, untilSettled } from './sim-test-utils';
 import { TowerSim, type SimEvent } from './tower-sim';
 
-const blank = (): LandingPreview => ({
-  index: 0,
-  kind: 'plain',
-  creature: null,
-  width: 0,
-  cut: null,
-  pieceWidth: 0,
-});
+const blank = newLandingPreview;
 
 /** Drops the layer once it has travelled `offset` past the target; returns the preview taken right after the tap. */
 function dropWithPreview(
@@ -74,5 +67,36 @@ describe('TowerSim.landingPreview', () => {
     runUntil(a, () => a.state.phase !== 'falling');
     runUntil(b, () => b.state.phase !== 'falling');
     expect(a.state).toEqual(b.state);
+  });
+
+  it('works the landing out once per drop and hands out the same answer every frame', () => {
+    const sim = new TowerSim(config());
+    untilFlying(sim);
+    sim.drop();
+    const first = blank();
+    expect(sim.landingPreview(first)).toBe(true);
+    let calls = 0;
+    const view = sim as unknown as { computeLanding: (...args: unknown[]) => boolean };
+    const compute = view.computeLanding.bind(sim);
+    view.computeLanding = (...args) => {
+      calls++;
+      return compute(...args);
+    };
+    for (let i = 0; i < 5; i++) {
+      sim.update(16);
+      const again = blank();
+      if (sim.state.phase !== 'falling') break;
+      expect(sim.landingPreview(again)).toBe(true);
+      expect(again).toEqual(first);
+    }
+    expect(calls).toBe(0);
+  });
+
+  it('asks again for the next drop', () => {
+    const sim = new TowerSim(config());
+    const first = dropWithPreview(sim, 0).preview;
+    const second = dropWithPreview(sim, 0).preview;
+    expect(first).not.toBeNull();
+    expect(second?.index).toBe((first?.index ?? 0) + 1);
   });
 });

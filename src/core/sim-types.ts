@@ -76,6 +76,11 @@ export interface LandingPreview {
   pieceWidth: number;
 }
 
+/** An empty preview for `TowerSim.landingPreview` to fill (one object, refilled each time). */
+export function newLandingPreview(): LandingPreview {
+  return { index: 0, kind: 'plain', creature: null, width: 0, cut: null, pieceWidth: 0 };
+}
+
 export interface FlyingLayer extends LayerPlan {
   /** 1-based number this layer will have in the tower. */
   index: number;

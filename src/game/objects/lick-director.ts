@@ -133,9 +133,9 @@ export class LickDirector {
     const [index, view] = picked;
     const face = view.faceView;
     const creature = view.look.kind === 'creature' ? (view.look.creature ?? null) : null;
-    // The scheduler is asked either way, so the stream of random numbers does not depend on the level.
-    const scheduled = this.scheduler.nextScene();
-    const lickScene = scene ?? (effectsMode.atMost('lite') ? 'short' : scheduled);
+    // A forced scene leaves the scheduler alone, so a poke does not change the natural licks after it.
+    // A natural one asks it at every level, so the stream of random numbers does not depend on the level.
+    const lickScene = scene ?? this.naturalScene();
     const random = this.random.next();
     // Creatures (and the short scene) lick only a drop that fell from above.
     const lickKind: LickKind =
@@ -163,6 +163,12 @@ export class LickDirector {
     this.scheduler.started();
     this.follow(this.run, ctx);
     return true;
+  }
+
+  /** The scene the scheduler picks; on lite a big one is swapped for a short one. */
+  private naturalScene(): LickScene {
+    const scheduled = this.scheduler.nextScene();
+    return effectsMode.atMost('lite') ? 'short' : scheduled;
   }
 
   /** Where the drop leaves the glaze above it, in face pixels: the wavy edge, or a creature's top edge. */

@@ -111,16 +111,13 @@ class FakeDrips {
   hideLick(): void {}
 }
 
-/** Plays a run of the director over a still tower; returns when each lick started and which scene it played. */
-function playRun(dripsPerLayer: number): {
-  starts: number[];
-  scenes: LickScene[];
-  licks: number;
-  regrown: number;
-} {
-  const clock = { ms: 0 };
-  const starts: number[] = [];
-  const scenes: LickScene[] = [];
+/** A still tower of faces and drips for the director to lick. */
+function buildTower(
+  dripsPerLayer: number,
+  clock: { ms: number },
+  starts: number[],
+  scenes: LickScene[],
+): { faces: FakeFace[]; drips: FakeDrips[]; ctx: LickContext } {
   const faces: FakeFace[] = [];
   const drips: FakeDrips[] = [];
   const views = new Map<number, LayerView>();
@@ -150,6 +147,20 @@ function playRun(dripsPerLayer: number): {
     bandTop: 0,
     bandBottom: 2000,
   };
+  return { faces, drips, ctx };
+}
+
+/** Plays a run of the director over a still tower; returns when each lick started and which scene it played. */
+function playRun(dripsPerLayer: number): {
+  starts: number[];
+  scenes: LickScene[];
+  licks: number;
+  regrown: number;
+} {
+  const clock = { ms: 0 };
+  const starts: number[] = [];
+  const scenes: LickScene[] = [];
+  const { faces, drips, ctx } = buildTower(dripsPerLayer, clock, starts, scenes);
   const director = new LickDirector(SEED);
   for (; clock.ms < RUN_MS; clock.ms += FRAME_MS) {
     for (const face of faces) face.tick(FRAME_MS);
@@ -196,5 +207,26 @@ describe('LickDirector', () => {
   it('plays no lick at all on minimal', () => {
     effectsMode.pinLevel('minimal');
     expect(playRun(0).starts).toEqual([]);
+  });
+
+  it('leaves the scheduler alone for a forced scene, and asks it for a natural one', () => {
+    effectsMode.pinLevel('full');
+    const clock = { ms: 0 };
+    const scenes: LickScene[] = [];
+    const { ctx } = buildTower(0, clock, [], scenes);
+    const director = new LickDirector(SEED);
+    let asked = 0;
+    const scheduler = (director as unknown as { scheduler: { nextScene(): LickScene } }).scheduler;
+    const nextScene = scheduler.nextScene.bind(scheduler);
+    scheduler.nextScene = () => {
+      asked++;
+      return nextScene();
+    };
+    expect(director.lickNow(ctx, 'short', 'fall')).toBe(true);
+    expect(asked).toBe(0);
+    expect(scenes).toEqual(['short']);
+    director.stop();
+    expect(director.lickNow(ctx)).toBe(true);
+    expect(asked).toBe(1);
   });
 });
