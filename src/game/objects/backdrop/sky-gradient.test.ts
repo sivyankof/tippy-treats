@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { ZONE_SKY } from '../../../data/backdrop-colors';
 import { ZONES } from '../../../data/zones';
-import { gradientBands, gradientColorAt } from './sky-gradient';
+import { ditherNoise, ditheredSky, gradientBands, gradientColorAt } from './sky-gradient';
 
 const TWO_STOPS = [
   { at: 0, color: 0x000000 },
@@ -51,5 +51,38 @@ describe('zone skies', () => {
         expect(stops[i]?.at).toBeGreaterThan(stops[i - 1]?.at ?? 0);
       }
     }
+  });
+});
+
+describe('ditheredSky', () => {
+  it('keeps every pixel within the noise width of the gradient and is repeatable', () => {
+    const pixels = ditheredSky(TWO_STOPS, 8, 8, 1.5);
+    const again = ditheredSky(TWO_STOPS, 8, 8, 1.5);
+    expect(Array.from(pixels)).toEqual(Array.from(again));
+    for (let y = 0; y < 8; y++) {
+      const ideal = (y + 0.5) * 32;
+      for (let x = 0; x < 8; x++) {
+        expect(Math.abs((pixels[(y * 8 + x) * 4] ?? 0) - ideal)).toBeLessThanOrEqual(2.5);
+        expect(pixels[(y * 8 + x) * 4 + 3]).toBe(255);
+      }
+    }
+  });
+
+  it('breaks a flat step into grain: neighbours of one row differ', () => {
+    const pixels = ditheredSky([{ at: 0, color: 0x101010 }], 32, 1, 1.5);
+    const values = new Set(Array.from({ length: 32 }, (_, x) => pixels[x * 4]));
+    expect(values.size).toBeGreaterThan(1);
+  });
+});
+
+describe('ditherNoise', () => {
+  it('stays in -1..1 and averages near 0', () => {
+    let sum = 0;
+    for (let i = 0; i < 2000; i++) {
+      const n = ditherNoise(i % 50, Math.floor(i / 50));
+      expect(Math.abs(n)).toBeLessThanOrEqual(1);
+      sum += n;
+    }
+    expect(Math.abs(sum / 2000)).toBeLessThan(0.1);
   });
 });

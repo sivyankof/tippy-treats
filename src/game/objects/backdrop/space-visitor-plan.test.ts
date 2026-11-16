@@ -1,11 +1,14 @@
 import { describe, expect, it } from 'vitest';
+import { HUD_LAYOUT } from '../../../data/hud-layout';
 import { LOGICAL_SIZE } from '../../../data/screen';
+import { flightClearBand } from '../../camera-layout';
 import { SPACE_VISITOR, SPACE_VISITOR_IDS } from '../../../data/space-visitor';
 import {
   newVisitorPose,
   pickGuest,
   planVisitor,
   visitorBand,
+  visitorLane,
   visitorPose,
   visitorScale,
   type VisitorPlan,
@@ -84,10 +87,13 @@ describe('visitorPose', () => {
     expect(back.flipX).toBe(true);
   });
 
-  it('stays between the HUD and the flying layer row on a tall screen', () => {
-    const band = visitorBand(tall);
+  it('stays in its lane: under the HUD and clear of the stripe around the flying layer line', () => {
+    const clear = flightClearBand(tall);
     for (const id of SPACE_VISITOR_IDS) {
       const spec = SPACE_VISITOR.guests[id];
+      const lane = visitorLane(id, tall);
+      expect(lane).not.toBeNull();
+      const band = visitorBand(tall, lane ?? 'above');
       for (const bandShare of [0, 0.5, 1]) {
         for (let p = 0; p <= 1; p += 0.05) {
           const pose = at({ ...base, guest: id, bandShare }, p, p * 5000);
@@ -95,16 +101,30 @@ describe('visitorPose', () => {
           const half = (spec.height * pose.scale) / 2;
           expect(pose.y - half).toBeGreaterThanOrEqual(band.top - 1);
           expect(pose.y + half).toBeLessThanOrEqual(band.bottom + 1);
+          expect(pose.y - half).toBeGreaterThanOrEqual(HUD_LAYOUT.badgeRowBottom);
+          const crosses = pose.y + half > clear.top && pose.y - half < clear.bottom;
+          expect(crosses).toBe(false);
         }
       }
     }
   });
 
-  it('shows no guest where the band is too short (the shortest screen)', () => {
-    const shortest = LOGICAL_SIZE.minHeight;
-    for (const id of SPACE_VISITOR_IDS) expect(visitorScale(id, shortest)).toBe(0);
-    expect(visitorScale('saucer', tall)).toBeLessThan(1);
-    expect(visitorScale('eclair', tall)).toBe(1);
+  it('never flies in the clear stripe on any screen height', () => {
+    for (let h = LOGICAL_SIZE.minHeight; h <= LOGICAL_SIZE.maxHeight; h += 60) {
+      const clear = flightClearBand(h);
+      for (const id of SPACE_VISITOR_IDS) {
+        const lane = visitorLane(id, h);
+        if (!lane) continue;
+        const band = visitorBand(h, lane);
+        expect(band.bottom <= clear.top || band.top >= clear.bottom).toBe(true);
+      }
+    }
+  });
+
+  it('puts a guest below the flying row when it does not fit above', () => {
+    expect(visitorLane('eclair', tall)).toBe('above');
+    expect(visitorLane('saucer', tall)).toBe('below');
+    expect(visitorScale('saucer', tall)).toBeGreaterThan(0);
   });
 
   it('is invisible at both ends of the pass and solid in the middle', () => {

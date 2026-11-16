@@ -50,6 +50,8 @@ export const SPACE_VISITOR = {
    * the run gets no guest.
    */
   bandPadPx: 24,
+  /** A guest that does not fit above the flying row's clear stripe passes below it, behind the tower top, in a lane this deep. */
+  belowDepthPx: 420,
   minFitScale: 0.55,
   /** The background satellite and comet wait from this share of the pass before it starts to this share after it ends. */
   holdLead: 0.03,

@@ -7,7 +7,7 @@ import {
   type PlanetColors,
   type SpacePlanetId,
 } from '../../../data/space-planets';
-import { mixColor } from '../../../util/color';
+import { fromHsl, mixColor, toHsl } from '../../../util/color';
 import { TWO_PI } from '../../../util/math';
 import {
   drawGlossMark,
@@ -45,7 +45,10 @@ const RINGED: Canvas = {
 
 /** A planet's colours leaned towards the sky, so it reads as far away and stays below the tower in contrast. */
 function muted(colors: PlanetColors): PlanetColors {
-  const mute = (c: number): number => mixColor(c, L.muteTo, L.muteShare);
+  const mute = (c: number): number => {
+    const { s, l, h } = toHsl(mixColor(c, L.muteTo, L.muteShare));
+    return fromHsl({ h, s: s * L.dim.saturation, l: l * L.dim.lightness });
+  };
   const out: PlanetColors = {
     base: mute(colors.base),
     shade: mute(colors.shade),

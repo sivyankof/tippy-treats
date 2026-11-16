@@ -2,6 +2,7 @@ import * as Phaser from 'phaser';
 import { ANIM } from '../../../data/anim';
 import { BACKDROP_FAR } from '../../../data/backdrop-far';
 import { BACKDROP } from '../../../data/backdrop';
+import { LOGICAL_SIZE } from '../../../data/screen';
 import { ZONE_SKY } from '../../../data/backdrop-colors';
 import type { ZoneId } from '../../../data/zones';
 import { mixColor } from '../../../util/color';
@@ -11,7 +12,7 @@ import { bakeTexture } from '../../ui/bake-texture';
 import { bakeFarArt, FarPlane } from './far-plane';
 import type { GuestSource } from './guest-source';
 import type { FrameCtx, Life } from './life';
-import { gradientBands } from './sky-gradient';
+import { gradientBands, ditheredSky } from './sky-gradient';
 
 /** Something in a zone that follows the lap of Space. */
 export interface LapLife {
@@ -41,7 +42,29 @@ export interface ZoneArt {
 
 const skyKey = (zone: ZoneId): string => `bd_sky_${zone}`;
 
+/** The dark sky as a small picture with light noise, so the gradient shows no steps (baked once). */
+function bakeDitheredSky(scene: Phaser.Scene, zone: ZoneId): void {
+  const { skyDither, skyOverscan } = BACKDROP;
+  const width = Math.ceil((LOGICAL_SIZE.width * skyOverscan) / skyDither.scale);
+  const height = Math.ceil((LOGICAL_SIZE.maxHeight * skyOverscan) / skyDither.scale);
+  bakeTexture(
+    scene,
+    skyKey(zone),
+    width,
+    height,
+    () => undefined,
+    (context) => {
+      const pixels = ditheredSky(ZONE_SKY[zone], width, height, skyDither.levels);
+      context.putImageData(new ImageData(pixels, width, height), 0, 0);
+    },
+  );
+}
+
 function bakeSky(scene: Phaser.Scene, zone: ZoneId): void {
+  if ((BACKDROP.skyDither.zones as readonly ZoneId[]).includes(zone)) {
+    bakeDitheredSky(scene, zone);
+    return;
+  }
   const { skyBands, skyBandHeight, skyWidth } = BACKDROP;
   const colors = gradientBands(ZONE_SKY[zone], skyBands);
   bakeTexture(scene, skyKey(zone), skyWidth, skyBands * skyBandHeight, (g) => {
@@ -143,12 +166,12 @@ export class ZoneScenery {
 
   /** The sky is slightly larger than the screen and breathes, so the gradient is never still. */
   private fitSky(width: number, height: number, timeMs: number): void {
-    const { skyOverscan, skyBreathe, skyBands, skyBandHeight, skyWidth } = BACKDROP;
+    const { skyOverscan, skyBreathe } = BACKDROP;
     const breathe =
       1 + skyBreathe.amount * sineWave(timeMs, skyBreathe.periodMs, this.breathePhase);
     this.sky.setScale(
-      ((width * skyOverscan) / skyWidth) * breathe,
-      ((height * skyOverscan) / (skyBands * skyBandHeight)) * breathe,
+      ((width * skyOverscan) / this.sky.width) * breathe,
+      ((height * skyOverscan) / this.sky.height) * breathe,
     );
   }
 

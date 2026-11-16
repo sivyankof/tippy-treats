@@ -1,12 +1,13 @@
 import * as Phaser from 'phaser';
 import { BACKDROP } from '../../../data/backdrop';
 import type { HoverSpec } from '../../../data/backdrop-life';
-import { HUD_LAYOUT } from '../../../data/hud-layout';
-import { PLANET_PLACE, planetKey } from '../../../data/space-planets';
+import { PLANET_PLACE, planetIdOfKey, planetKey } from '../../../data/space-planets';
 import { planetOfLap } from '../../../core/space-planet';
 import { effectsMode } from '../../effects-mode';
 import type { FrameCtx, Life } from './life';
-import { hoverPose, newPose } from './life-motion';
+import { hoverPose, newPose, type Pose } from './life-motion';
+import { planetSize } from './dessert-planets';
+import { planetSpot, type PlanetSpot } from './planet-placement';
 import type { LapLife } from './zone-scenery';
 
 /**
@@ -23,6 +24,8 @@ export class PlanetLife implements Life, LapLife {
   private readonly still: HoverSpec;
   private readonly shown: Phaser.GameObjects.Image;
   private readonly coming: Phaser.GameObjects.Image;
+  private readonly shownSpot = new Spot();
+  private readonly comingSpot = new Spot();
   private shownKey: string;
   /** Texture of the planet that is fading in, and how long it has faded; null when none is. */
   private comingKey: string | null = null;
@@ -33,20 +36,23 @@ export class PlanetLife implements Life, LapLife {
     this.shown = new Phaser.GameObjects.Image(scene, 0, 0, this.shownKey);
     this.coming = new Phaser.GameObjects.Image(scene, 0, 0, this.shownKey).setVisible(false);
     this.objects = [this.shown, this.coming];
-    this.still = { texture: this.shownKey, at: PLANET_PLACE.at, scale: PLANET_PLACE.scale };
+    this.shownSpot.lap = lap;
+    this.still = { texture: this.shownKey, at: { x: 0, y: 0 }, scale: PLANET_PLACE.scale };
     this.moving = { ...this.still, ...PLANET_PLACE.drift };
   }
 
   setLap(lap: number): void {
     const key = planetKey(planetOfLap(lap));
     if (this.comingKey !== null) this.finish();
-    if (key === this.shownKey) return;
+    if (key === this.shownKey && lap === this.shownSpot.lap) return;
     if (effectsMode.reduced) {
       this.shown.setTexture(key);
       this.shownKey = key;
+      this.shownSpot.lap = lap;
       return;
     }
     this.comingKey = key;
+    this.comingSpot.lap = lap;
     this.fadedMs = 0;
     this.coming.setTexture(key).setAlpha(0).setVisible(true);
   }
@@ -58,15 +64,28 @@ export class PlanetLife implements Life, LapLife {
       else this.coming.setAlpha(this.fadedMs / BACKDROP.fadeMs);
     }
     const spec = effectsMode.reduced ? this.still : this.moving;
-    const pose = hoverPose(spec, ctx.width, ctx.height, ctx.timeMs, this.pose);
-    // On a short screen the planet would climb under the HUD: it stays below the HUD's lowest edge.
-    const lowest = HUD_LAYOUT.bottomEdge + PLANET_PLACE.hudGap + this.shown.displayHeight / 2;
-    const y = Math.max(pose.y, lowest);
-    for (const image of this.objects) {
-      image.setPosition(pose.x, y);
-      image.setRotation(pose.rotation);
-      image.setScale(pose.scaleX, pose.scaleY);
+    // The drift is the pose's offset from the spot: it is computed at the origin and added to each planet's spot.
+    const pose = hoverPose(spec, 0, 0, ctx.timeMs, this.pose);
+    this.place(this.shown, this.shownKey, this.shownSpot, ctx, pose);
+    if (this.comingKey !== null && this.comingSpot.lap !== null) {
+      this.place(this.coming, this.comingKey, this.comingSpot, ctx, pose);
     }
+  }
+
+  /** Puts one planet at the spot of its lap; hides it (no lane has room) or shows it. */
+  private place(
+    image: Phaser.GameObjects.Image,
+    key: string,
+    spot: Spot,
+    ctx: FrameCtx,
+    pose: Pose,
+  ): void {
+    const at = spot.at(key, ctx.width, ctx.height);
+    image.setVisible(at !== null);
+    if (!at) return;
+    image.setPosition(at.x + pose.x, at.y + pose.y);
+    image.setRotation(pose.rotation);
+    image.setScale(pose.scaleX, pose.scaleY);
   }
 
   /** The fade is over (or cut short by the next lap): the new planet is the shown one. */
@@ -74,7 +93,36 @@ export class PlanetLife implements Life, LapLife {
     if (this.comingKey === null) return;
     this.shown.setTexture(this.comingKey);
     this.shownKey = this.comingKey;
+    this.shownSpot.lap = this.comingSpot.lap;
     this.comingKey = null;
+    this.comingSpot.lap = null;
     this.coming.setVisible(false);
+  }
+}
+
+/** The cached spot of a planet for its lap on the current screen size (see `planetSpot`). */
+class Spot {
+  lap: number | null = null;
+  private cachedLap: number | null = null;
+  private cachedW = 0;
+  private cachedH = 0;
+  private spot: PlanetSpot | null = null;
+
+  at(key: string, width: number, height: number): PlanetSpot | null {
+    if (this.lap === null) return null;
+    if (this.cachedLap !== this.lap || this.cachedW !== width || this.cachedH !== height) {
+      this.cachedLap = this.lap;
+      this.cachedW = width;
+      this.cachedH = height;
+      const size = planetSize(planetIdOfKey(key));
+      this.spot = planetSpot(
+        this.lap,
+        width,
+        height,
+        size.width * PLANET_PLACE.scale,
+        size.height * PLANET_PLACE.scale,
+      );
+    }
+    return this.spot;
   }
 }

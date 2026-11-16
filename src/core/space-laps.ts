@@ -9,6 +9,11 @@ export function spaceLap(index: number): number {
   return Math.floor((index - first) / BALANCE.zones.length) + 1;
 }
 
+/** Index of the first layer of a lap of Space (lap 1 starts with the zone). */
+export function lapFirstIndex(lap: number): number {
+  return zoneStartIndex(SPACE_ZONE_INDEX) + (Math.max(lap, 1) - 1) * BALANCE.zones.length;
+}
+
 /** Lap of Space of the layer in flight when `height` layers are placed (the layer with index `height + 1`); 0 before Space. */
 export function flyingLap(height: number): number {
   return spaceLap(height + 1);

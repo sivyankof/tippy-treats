@@ -1,9 +1,10 @@
 import type * as Phaser from 'phaser';
-import { BD_TEX } from '../../../data/backdrop';
+import { BACKDROP, BD_TEX } from '../../../data/backdrop';
 import { BACKDROP_COLORS } from '../../../data/backdrop-colors';
 import { BACKDROP_LIFE } from '../../../data/backdrop-life';
 import { bakeTexture } from '../../ui/bake-texture';
 import { glow, scatterPoints, sparkle, tiled } from './art-kit';
+import { ditherNoise } from './sky-gradient';
 import { Traveler } from './life';
 import { SpaceVisitor } from './space-visitor';
 import { bakeSpaceVisitors } from './space-visitor-art';
@@ -17,14 +18,46 @@ const P = BD_TEX.space;
 const C = BACKDROP_COLORS.space;
 const WHITE = BACKDROP_COLORS.shared.white;
 
+/** A smooth white blob: a radial gradient with light alpha noise, so no rings of stacked discs show. */
+function smoothBlob(
+  context: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  radius: number,
+  alpha: number,
+): void {
+  const gradient = context.createRadialGradient(x, y, 0, x, y, radius);
+  gradient.addColorStop(0, `rgba(255,255,255,${alpha})`);
+  gradient.addColorStop(1, 'rgba(255,255,255,0)');
+  context.fillStyle = gradient;
+  context.fillRect(x - radius, y - radius, radius * 2, radius * 2);
+}
+
 function bakeNebula(scene: Phaser.Scene, key: string, count: number, radius: number): void {
   // White blobs: the layer is tinted, and the tint slowly shifts (docs/06, section 5).
-  bakeTexture(scene, key, TILE, TILE, (g) => {
-    for (const { x, y } of scatterPoints(count, TILE)) {
-      const r = radius * (0.7 + Math.random() * 0.5);
-      tiled(TILE, x, y, r, (px, py) => glow(g, px, py, r, WHITE, 0.55));
-    }
-  });
+  const { blobAlpha, alphaNoise } = BACKDROP.nebula;
+  bakeTexture(
+    scene,
+    key,
+    TILE,
+    TILE,
+    () => undefined,
+    (context) => {
+      for (const { x, y } of scatterPoints(count, TILE)) {
+        const r = radius * (0.7 + Math.random() * 0.5);
+        tiled(TILE, x, y, r, (px, py) => smoothBlob(context, px, py, r, blobAlpha));
+      }
+      // Noise on the alpha breaks up the 8-bit steps of the soft edge.
+      const image = context.getImageData(0, 0, TILE, TILE);
+      for (let i = 3; i < image.data.length; i += 4) {
+        const a = image.data[i] ?? 0;
+        const pixel = i >> 2;
+        if (a > 0)
+          image.data[i] = a + ditherNoise(pixel % TILE, Math.floor(pixel / TILE)) * alphaNoise;
+      }
+      context.putImageData(image, 0, 0);
+    },
+  );
 }
 
 function bakeLayers(scene: Phaser.Scene): void {
