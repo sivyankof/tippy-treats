@@ -1,12 +1,19 @@
 import type * as Phaser from 'phaser';
+import type { EffectLevel } from '../../data/effect-levels';
 import { RULE_ANIM } from '../../data/rule-anim';
 import { LOGICAL_SIZE } from '../../data/screen';
-import { clamp01, sineWave, smoothstep } from '../../util/math';
+import { clamp01, lerp, oscillate01, sineWave, smoothstep } from '../../util/math';
+import { effectsMode } from '../effects-mode';
 import { scatter } from '../objects/creature-art/primitives';
 import { FLYING_FX_DEPTH } from './flying-fx-depth';
+import { createFxTextures, FX_TEXTURES } from './fx-textures';
 import { createTreasureTextures, TREASURE_TEXTURES } from './treasure-textures';
 
 const cfg = RULE_ANIM.cloud;
+const nebula = cfg.nebula;
+const stars = nebula.stars;
+/** Stars a bank keeps ready: the most any level shows. */
+const STAR_SLOTS = Math.max(...Object.values(stars.count));
 
 /** The bank spans the whole screen plus the padding: the flying layer is always inside it. */
 const BANK_SPAN = LOGICAL_SIZE.width + cfg.pad * 2;
@@ -46,6 +53,51 @@ function easeOutCubic(t: number): number {
 
 export type CloudPhase = 'idle' | 'approach' | 'cover' | 'leave';
 
+/** What a bank is drawn as: the dense white cloud, or the see-through nebula of the Space zone. */
+export type CloudLook = 'cloud' | 'nebula';
+
+/** A bank takes the wanted look only while it is idle (unseen): it keeps its look until it has left. */
+export function pickLook(phase: CloudPhase, current: CloudLook, wanted: CloudLook): CloudLook {
+  return phase === 'idle' ? wanted : current;
+}
+
+/**
+ * The densest a bank of `look` is drawn, 0..1: the nebula has its own cap, and `share` (the
+ * meringue "Not scary" factor, 1 otherwise) lowers either.
+ */
+export function densityCap(look: CloudLook, share: number): number {
+  return (look === 'nebula' ? nebula.maxDensity : 1) * share;
+}
+
+/** How many stars twinkle over a nebula bank on this effects level. */
+export function starCount(level: EffectLevel): number {
+  return stars.count[level];
+}
+
+/** Whether star `slot` of `slots` twinkles when `count` of them do: the shown ones are spread evenly. */
+export function starActive(slot: number, slots: number, count: number): boolean {
+  if (count <= 0 || slots <= 0) return false;
+  return Math.floor(((slot + 1) * count) / slots) > Math.floor((slot * count) / slots);
+}
+
+/** Every puff of a nebula bank billows, except on the minimal level; the cloud always does. */
+export function puffsBillow(look: CloudLook, level: EffectLevel): boolean {
+  return look === 'cloud' || level !== 'minimal';
+}
+
+/** Where a star is in its pulse, 0..1; each star has its own phase. */
+export function starPulse(timeMs: number, slot: number): number {
+  return oscillate01(timeMs, stars.periodMs, slot * stars.phaseStep);
+}
+
+/** The scale (multiplier of the star's own scale) and alpha of a star at `pulse` (0..1). */
+export function starLook(pulse: number): { scale: number; alpha: number } {
+  return {
+    scale: 1 + stars.pulse * (pulse - 0.5) * 2,
+    alpha: lerp(stars.alpha[0], stars.alpha[1], pulse),
+  };
+}
+
 /** What the bank looks like this frame: offset along its drift, rise, opacity and size. */
 export interface CloudPose {
   x: number;
@@ -66,8 +118,10 @@ export interface CloudInput {
   y: number;
   /** The way the layer flies; the bank comes from behind and drifts that way. */
   dir: 1 | -1;
-  /** The densest the puffs are drawn (1 for normal clouds; the meringue master makes them see-through). */
+  /** The meringue master makes the cloud see-through: the share of the look's own density cap (1 without it). */
   maxAlpha: number;
+  /** The cloud belongs to a Space layer: a bank that starts now is drawn as the nebula. */
+  nebula: boolean;
 }
 
 /**
@@ -217,7 +271,10 @@ export class CloudMotion {
 /** A bank of puffs and the motion that drives it. */
 class CloudBank {
   private readonly puffs: Phaser.GameObjects.Image[] = [];
+  /** Twinkling stars of the nebula, made up front and only shown, moved and tinted afterwards. */
+  private readonly stars: Phaser.GameObjects.Image[] = [];
   readonly motion = new CloudMotion();
+  look: CloudLook = 'cloud';
 
   constructor(scene: Phaser.Scene) {
     for (let i = 0; i < PUFF_COUNT; i++) {
@@ -228,29 +285,82 @@ class CloudBank {
           .setVisible(false),
       );
     }
+    for (let i = 0; i < STAR_SLOTS; i++) {
+      const tint = stars.tints[i % stars.tints.length] ?? 0xffffff;
+      this.stars.push(
+        scene.add
+          .image(0, 0, FX_TEXTURES.star)
+          .setDepth(FLYING_FX_DEPTH.cloudStars)
+          .setTint(tint)
+          .setVisible(false),
+      );
+    }
+  }
+
+  /** The cap on how dense this bank is drawn, 0..1. */
+  cap(share: number): number {
+    return densityCap(this.look, share);
   }
 
   update(dtMs: number, timeMs: number, input: Readonly<CloudInput>): void {
+    const look = pickLook(this.motion.phase, this.look, input.nebula ? 'nebula' : 'cloud');
+    if (look !== this.look) {
+      this.look = look;
+      const key = look === 'nebula' ? TREASURE_TEXTURES.nebula : TREASURE_TEXTURES.cloud;
+      for (const puff of this.puffs) puff.setTexture(key);
+    }
     const pose = this.motion.update(dtMs, input);
     const shown = this.motion.visible;
+    const level = effectsMode.level;
+    const billow = puffsBillow(this.look, level);
     const sway = sineWave(timeMs, cfg.driftPeriodMs) * cfg.driftPx;
     const [minScale, maxScale] = cfg.scale;
+    const alpha = Math.min(pose.alpha, this.cap(input.maxAlpha));
     for (let i = 0; i < this.puffs.length; i++) {
       const puff = this.puffs[i];
       if (!puff) continue;
       puff.setVisible(shown);
       if (!shown) continue;
       const phase = i * cfg.bobPhaseStep;
-      const bob = sineWave(timeMs, cfg.bobPeriodMs, phase) * cfg.bobPx;
-      const own = sineWave(timeMs, cfg.swayPeriodMs, phase) * cfg.swayPx;
-      const breathe = 1 + sineWave(timeMs, cfg.breathePeriodMs, phase) * cfg.breathe;
+      const bob = billow ? sineWave(timeMs, cfg.bobPeriodMs, phase) * cfg.bobPx : 0;
+      const own = billow ? sineWave(timeMs, cfg.swayPeriodMs, phase) * cfg.swayPx : 0;
+      const breathe = billow ? 1 + sineWave(timeMs, cfg.breathePeriodMs, phase) * cfg.breathe : 1;
       puff
         .setPosition(
           -cfg.pad + PUFF_STEP * i + pose.x + sway + own,
           this.motion.y + bob - pose.rise,
         )
         .setScale((minScale + (maxScale - minScale) * scatter(i)) * pose.scale * breathe)
-        .setAlpha(Math.min(pose.alpha, input.maxAlpha));
+        .setAlpha(alpha);
+    }
+    this.updateStars(shown && this.look === 'nebula', timeMs, level, pose, sway);
+  }
+
+  /** The stars of the nebula ride on the bank and each twinkles on its own phase. */
+  private updateStars(
+    shown: boolean,
+    timeMs: number,
+    level: EffectLevel,
+    pose: Readonly<CloudPose>,
+    sway: number,
+  ): void {
+    const count = shown ? starCount(level) : 0;
+    const [minScale, maxScale] = stars.scale;
+    for (let i = 0; i < this.stars.length; i++) {
+      const star = this.stars[i];
+      if (!star) continue;
+      const on = starActive(i, STAR_SLOTS, count);
+      star.setVisible(on);
+      if (!on) continue;
+      const { scale, alpha } = starLook(starPulse(timeMs, i));
+      const x = -cfg.pad + (BANK_SPAN * (i + 0.5)) / STAR_SLOTS;
+      star
+        .setPosition(
+          x + (scatter(i, 0.3) - 0.5) * PUFF_STEP + pose.x + sway,
+          this.motion.y - pose.rise + (scatter(i, 0.6) - 0.5) * 2 * stars.spreadPx,
+        )
+        .setScale((minScale + (maxScale - minScale) * scatter(i)) * pose.scale * scale)
+        .setAlpha(alpha * pose.alpha);
     }
   }
 }
@@ -284,25 +394,27 @@ export class CloudCover {
     y: 0,
     dir: 1,
     maxAlpha: 1,
+    nebula: false,
   };
-  /** The density cap of the clouds now: what the cover reports is scaled by it. */
+  /** The share of the density cap that "Not scary" leaves: what the cover reports is scaled by it. */
   private maxAlpha = 1;
   /** What a free bank is told when it should start floating in the coming cloud. */
   private readonly coming: CloudInput = { ...this.passive };
 
   constructor(scene: Phaser.Scene) {
     createTreasureTextures(scene);
+    createFxTextures(scene);
     this.banks = [new CloudBank(scene), new CloudBank(scene)];
   }
 
   /** How much a cloud hides the layer, 0..1 (a see-through cloud hides no more than it shows). */
   get amount(): number {
-    return Math.max(...this.banks.map((bank) => bank.motion.amount)) * this.maxAlpha;
+    return Math.max(...this.banks.map((bank) => bank.motion.amount * bank.cap(this.maxAlpha)));
   }
 
   /** Smooth 0..1 density of the densest bank (see `CloudMotion.density`). */
   get density(): number {
-    return Math.max(...this.banks.map((bank) => bank.motion.density)) * this.maxAlpha;
+    return Math.max(...this.banks.map((bank) => bank.motion.density * bank.cap(this.maxAlpha)));
   }
 
   /**

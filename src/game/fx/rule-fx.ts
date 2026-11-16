@@ -2,7 +2,7 @@ import type * as Phaser from 'phaser';
 import type { SimEvent, TowerState } from '../../core/tower-sim';
 import { RULE_ANIM } from '../../data/rule-anim';
 import { LOGICAL_SIZE } from '../../data/screen';
-import { ZONE_RULES } from '../../data/zones';
+import { SPACE_ZONE_INDEX, ZONE_RULES } from '../../data/zones';
 import { clamp01 } from '../../util/math';
 import { effectsMode } from '../effects-mode';
 import type { FlyingLayerView } from '../objects/flying-layer-view';
@@ -55,6 +55,7 @@ export class RuleFx {
     y: 0,
     dir: 1,
     maxAlpha: 1,
+    nebula: false,
   };
   private readonly windup = new RushWindup();
   /** What the layer is drawn like this frame (the squash is dropped in "fewer effects"). */
@@ -143,6 +144,7 @@ export class RuleFx {
     input.y = at.y;
     input.dir = at.dir;
     input.maxAlpha = ghostMaster ? RULE_ANIM.cloud.ghostMaxDensity : 1;
+    input.nebula = layer !== null && layer.zoneIndex === SPACE_ZONE_INDEX;
     this.cloud.update(dtMs, timeMs, input);
     this.flying.emphasizeShadow(this.cloud.density, timeMs, dtMs);
     // A see-through cloud (ghost master) shows the layer, so the layer does not count as hidden.
