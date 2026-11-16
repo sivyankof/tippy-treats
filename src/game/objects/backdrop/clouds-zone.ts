@@ -1,5 +1,6 @@
 import type * as Phaser from 'phaser';
 import { BD_TEX } from '../../../data/backdrop';
+import { MOUNTAIN_SLOT } from '../../../data/backdrop-mountains';
 import { BACKDROP_COLORS } from '../../../data/backdrop-colors';
 import { BACKDROP_LIFE } from '../../../data/backdrop-life';
 import { bakeTexture } from '../../ui/bake-texture';
@@ -107,7 +108,7 @@ export const cloudsArt: ZoneArt = {
     return {
       layers: [CL.far, CL.mid, CL.near, CL.haze],
       lives: [
-        { slot: 0, life: new Mountains(scene) },
+        { slot: MOUNTAIN_SLOT.clouds, life: new Mountains(scene) },
         { slot: 1, life: new Traveler(scene, life.balloon) },
         { slot: 2, life: new Traveler(scene, life.plane) },
       ],

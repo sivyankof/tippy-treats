@@ -97,14 +97,16 @@ export const spaceArt: ZoneArt = {
   build(scene, lap = 1) {
     const life = BACKDROP_LIFE.space;
     const planet = new PlanetLife(scene, lap);
+    const satellite = new Traveler(scene, life.satellite);
+    const comet = new Traveler(scene, life.comet);
     return {
       lapLife: planet,
       layers: [P.dust, P.nebula, P.nebulaTwo, P.sparkles],
       lives: [
         { slot: 2, life: planet },
-        { slot: 2, life: new Traveler(scene, life.satellite) },
-        { slot: 3, life: new Traveler(scene, life.comet) },
-        { slot: 3, life: new SpaceVisitor(scene) },
+        { slot: 2, life: satellite },
+        { slot: 3, life: comet },
+        { slot: 3, life: new SpaceVisitor(scene, [satellite, comet]) },
       ],
     };
   },

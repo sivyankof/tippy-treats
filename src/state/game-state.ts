@@ -181,7 +181,6 @@ export class GameState {
       missions: progress.missions,
       dailyTiers: progress.dailyTiers,
       dailyStale: progress.dailyStale,
-      lapBerries: applied.summary.lapBerries,
     };
     this.noteRun(this.store.save, next, summary, extras);
     this.store.replace(next);

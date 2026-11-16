@@ -93,11 +93,10 @@ export function migrateV5(raw: RawSave): RawSave {
  * used. A damaged record counts as 0.
  */
 export function migrateV6(raw: RawSave): RawSave {
-  const records = isRecord(raw.records) ? raw.records : {};
-  const height = typeof records.classicHeight === 'number' ? records.classicHeight : 0;
+  const height = rawClassicHeight(raw);
   return {
     ...raw,
-    checkpoints: v7CheckpointsReached(Number.isFinite(height) ? height : 0),
+    checkpoints: v7CheckpointsReached(height),
     checkpointAds: { day: '', used: 0 },
   };
 }
@@ -107,15 +106,13 @@ export function migrateV6(raw: RawSave): RawSave {
  * retroactively. A damaged record counts as 0.
  */
 export function migrateV7(raw: RawSave): RawSave {
-  const records = isRecord(raw.records) ? raw.records : {};
-  const height = typeof records.classicHeight === 'number' ? records.classicHeight : 0;
+  const height = rawClassicHeight(raw);
   return { ...raw, bestLap: v8LapReached(height) };
 }
 
 /** Hands over creatures whose record way (as of version 5) the best classic height already reached. */
 function withRecordCreatures(raw: RawSave): RawSave {
-  const records = isRecord(raw.records) ? raw.records : {};
-  const height = typeof records.classicHeight === 'number' ? records.classicHeight : 0;
+  const height = rawClassicHeight(raw);
   if (!isRecord(raw.creatures)) return raw;
   const owned = raw.creatures;
   const creatures: RawSave = { ...owned };
@@ -163,4 +160,11 @@ export function migrate(
     version += 1;
   }
   return current as unknown as Save;
+}
+
+/** Best classic height of a raw save; a missing or damaged record counts as 0. */
+function rawClassicHeight(raw: RawSave): number {
+  const records = isRecord(raw.records) ? raw.records : {};
+  const height = records.classicHeight;
+  return typeof height === 'number' && Number.isFinite(height) ? height : 0;
 }
