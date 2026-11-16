@@ -27,6 +27,7 @@ import { CoinFx } from './coin-fx';
 import { ComboGlow } from './combo-glow';
 import { DebrisFx } from './debris-fx';
 import { FlyingFx } from './flying-fx';
+import { LapEdges } from './lap-edges';
 import { LandingFx } from './landing-fx';
 import { MaterialFx } from './material-fx';
 import { RecordMoment } from './record-moment';
@@ -74,6 +75,7 @@ export class RunFx {
   private readonly materialFx: MaterialFx;
   private readonly coinFx: CoinFx;
   private readonly flyingFx: FlyingFx;
+  private readonly lapEdges: LapEdges;
   private readonly recordMoment: RecordMoment;
   private readonly guest: TowerGuest;
   private readonly sparkles: TowerSparkles;
@@ -121,6 +123,7 @@ export class RunFx {
     this.materialFx = new MaterialFx(this.tower, this.landingFx.particles);
     this.coinFx = new CoinFx(scene, this.tower, this.landingFx.particles);
     this.flyingFx = new FlyingFx(scene, this.tower, this.flyingView, this.landingFx.particles);
+    this.lapEdges = new LapEdges(scene, this.tower);
     this.recordMoment = new RecordMoment(
       scene,
       this.tower,
@@ -342,6 +345,7 @@ export class RunFx {
     const flyingFx = this.flyingFx;
     const ghost = mods.guidesMaster;
     fxGuard.call('flying-fx', flyingFx, flyingFx.update, visualMs, timeMs, state, ghost);
+    fxGuard.call('lap-edges', this.lapEdges, this.lapEdges.update, visualMs, timeMs, state);
     fxGuard.call('coin-fx', this.coinFx, this.coinFx.update, visualMs, timeMs, state);
     fxGuard.call('faces', this, this.pointFaces, state);
     fxGuard.call('tower-tick', this, this.tickTower, visualMs, cam);
