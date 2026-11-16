@@ -6,7 +6,7 @@ import { SPACE_ZONE_INDEX, ZONE_RULES } from '../../data/zones';
 import { clamp01 } from '../../util/math';
 import { effectsMode } from '../effects-mode';
 import type { FlyingLayerView } from '../objects/flying-layer-view';
-import { cloudEtaMs, CloudCover, ghostShare, layerHidden, type CloudInput } from './cloud-cover';
+import { cloudEtaMs, CloudCover, layerHidden, type CloudInput } from './cloud-cover';
 import { flyingSpeed } from '../../core/flight';
 import { hopHeight, type Point } from './coin-flight-math';
 import { FLYING_FX_DEPTH } from './flying-fx-depth';
@@ -54,7 +54,7 @@ export class RuleFx {
     etaMs: Infinity,
     y: 0,
     dir: 1,
-    maxAlpha: 1,
+    ghost: false,
     nebula: false,
   };
   private readonly windup = new RushWindup();
@@ -144,7 +144,7 @@ export class RuleFx {
     input.y = at.y;
     input.dir = at.dir;
     input.nebula = layer !== null && layer.zoneIndex === SPACE_ZONE_INDEX;
-    input.maxAlpha = ghostShare(ghostMaster, input.nebula);
+    input.ghost = ghostMaster;
     this.cloud.update(dtMs, timeMs, input);
     this.flying.emphasizeShadow(this.cloud.density, timeMs, dtMs);
     // A see-through cloud (ghost master) or the nebula shows the layer, so it does not count as hidden.

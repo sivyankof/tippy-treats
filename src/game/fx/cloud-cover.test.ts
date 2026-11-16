@@ -89,7 +89,7 @@ function film(dts: readonly number[], coverMs = 300, dropAfterCover = false): Fr
       // The flying row moves up when a new layer comes: the bank must not follow it.
       y: t > 1500 ? 380 : 500,
       dir: 1,
-      maxAlpha: 1,
+      ghost: false,
       nebula: false,
     };
     const pose = motion.update(dt, input);
@@ -157,7 +157,7 @@ describe('CloudMotion', () => {
       etaMs: 300,
       y: 400,
       dir: -1,
-      maxAlpha: 1,
+      ghost: false,
       nebula: false,
     };
     for (let i = 0; i < 5; i++) motion.update(20, base);
@@ -184,7 +184,7 @@ describe('CloudMotion', () => {
       etaMs: Infinity,
       y: 400,
       dir: 1,
-      maxAlpha: 1,
+      ghost: false,
       nebula: false,
     });
     expect(motion.phase).toBe('cover');
@@ -201,7 +201,7 @@ describe('followInput', () => {
       etaMs: Infinity,
       y: 0,
       dir: 1,
-      maxAlpha: 1,
+      ghost: false,
       nebula: false,
     };
     const live: CloudInput = {
@@ -210,7 +210,7 @@ describe('followInput', () => {
       etaMs: 100,
       y: 420,
       dir: -1,
-      maxAlpha: 0.7,
+      ghost: true,
       nebula: true,
     };
     followInput(passive, live);
@@ -220,7 +220,7 @@ describe('followInput', () => {
       etaMs: Infinity,
       y: 420,
       dir: -1,
-      maxAlpha: 0.7,
+      ghost: true,
       nebula: true,
     });
   });
@@ -237,15 +237,24 @@ describe('nebula look', () => {
   });
 
   it('caps the nebula under the cloud, and "Not scary" lowers either by its own share', () => {
-    expect(densityCap('cloud', 1)).toBe(1);
-    expect(densityCap('nebula', 1)).toBe(cfg.nebula.maxDensity);
+    expect(densityCap('cloud', false)).toBe(1);
+    expect(densityCap('nebula', false)).toBe(cfg.nebula.maxDensity);
     expect(ghostShare(false, true)).toBe(1);
     expect(ghostShare(true, false)).toBe(cfg.ghostMaxDensity);
     expect(ghostShare(true, true)).toBe(cfg.nebula.ghostMaxDensity);
     // One picture lets through about 1 - density: ~1/3 plain, at least ~0.7 with "Not scary".
-    expect(1 - densityCap('nebula', 1)).toBeGreaterThan(0.28);
-    expect(1 - densityCap('nebula', 1)).toBeLessThan(0.38);
-    expect(1 - densityCap('nebula', ghostShare(true, true))).toBeGreaterThanOrEqual(0.7);
+    expect(1 - densityCap('nebula', false)).toBeGreaterThan(0.28);
+    expect(1 - densityCap('nebula', false)).toBeLessThan(0.38);
+    expect(1 - densityCap('nebula', true)).toBeGreaterThanOrEqual(0.7);
+  });
+
+  it('takes the "Not scary" share from the look of the bank, not from the zone (Stars to Space boundary)', () => {
+    // A bank still drawing the dense cloud while the layer is already in Space keeps the cloud share ...
+    expect(densityCap('cloud', true)).toBe(cfg.ghostMaxDensity);
+    // ... and a nebula still on screen after the layer left Space keeps the nebula share.
+    expect(densityCap('nebula', true)).toBeCloseTo(
+      cfg.nebula.maxDensity * cfg.nebula.ghostMaxDensity,
+    );
   });
 
   it('shows 4, 2 and 0 stars on full, lite and minimal, spread evenly over the slots', () => {
