@@ -3,8 +3,11 @@ import { SPACE_VISITOR } from '../../../data/space-visitor';
 import { readDebugParams, readPerfParams } from '../../../util/debug-params';
 import { effectsMode } from '../../effects-mode';
 import { fxGuard } from '../../fx-guard';
+import type { GuestSource } from './guest-source';
 import type { FrameCtx, Life } from './life';
 import { newVisitorPose, planVisitor, visitorPose, type VisitorPlan } from './space-visitor-plan';
+
+const HOLD_LEAD = SPACE_VISITOR.holdLead;
 
 /**
  * The rare guest of Space: one pass per run at most, on a decorative random stream (never the
@@ -17,7 +20,11 @@ export class SpaceVisitor implements Life {
   private readonly pose = newVisitorPose();
   private clockMs = 0;
 
-  constructor(scene: Phaser.Scene) {
+  /** `held`: the background travellers that wait while the guest crosses, so none flies over it. */
+  constructor(
+    scene: Phaser.Scene,
+    private readonly held: readonly GuestSource[] = [],
+  ) {
     this.plan = rollPlan();
     this.objects = this.plan
       ? [
@@ -40,6 +47,15 @@ export class SpaceVisitor implements Life {
 
   private hide(): void {
     this.objects[0]?.setVisible(false);
+    this.hold(false);
+  }
+
+  private holding = false;
+
+  private hold(on: boolean): void {
+    if (this.holding === on) return;
+    this.holding = on;
+    for (const other of this.held) other.suspend(on);
   }
 
   private step(ctx: FrameCtx): void {
@@ -50,6 +66,8 @@ export class SpaceVisitor implements Life {
     const progress = (this.clockMs - plan.delayMs) / plan.durationMs;
     const flying = progress >= 0 && progress < 1 && !effectsMode.reduced;
     if (image.visible !== flying) image.setVisible(flying);
+    // Held a moment before and after, so a traveller already in view does not meet the guest at the edge.
+    this.hold(progress > -HOLD_LEAD && progress < 1 + HOLD_LEAD && !effectsMode.reduced);
     if (!flying) return;
     const pose = visitorPose(plan, progress, ctx.timeMs, ctx.width, ctx.height, this.pose);
     // A screen too short for the band shows no guest.
