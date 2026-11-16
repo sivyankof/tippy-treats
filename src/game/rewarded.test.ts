@@ -4,7 +4,10 @@ import { createTestState } from '../state/test-state';
 
 const h = vi.hoisted(() => ({
   audio: { suspend: vi.fn(), resume: vi.fn() },
-  ads: { showRewarded: vi.fn<(placement: string) => Promise<RewardedResult>>() },
+  ads: {
+    showRewarded: vi.fn<(placement: string) => Promise<RewardedResult>>(),
+    rewardedUnavailableReason: vi.fn<() => 'offline' | 'no_fill' | null>(() => null),
+  },
   telemetry: { logEvent: vi.fn(), setUserProperty: vi.fn() },
 }));
 const state = createTestState();
@@ -67,5 +70,17 @@ describe('showRewarded', () => {
       ['ad_rewarded_show', { placement: 'checkpoint_start' }],
       ['ad_rewarded_result', { placement: 'checkpoint_start', result: 'dismissed' }],
     ]);
+  });
+
+  it('logs why the ad was unavailable', async () => {
+    const { showRewarded } = await import('./rewarded');
+    h.ads.showRewarded.mockResolvedValue('unavailable');
+    h.ads.rewardedUnavailableReason.mockReturnValue('offline');
+    await showRewarded('shop_coins');
+    expect(h.telemetry.logEvent).toHaveBeenLastCalledWith('ad_rewarded_result', {
+      placement: 'shop_coins',
+      result: 'unavailable',
+      reason: 'offline',
+    });
   });
 });

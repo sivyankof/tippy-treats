@@ -1,7 +1,7 @@
 import { STUB_ADS } from '../../data/rewarded-video';
 import { t } from '../../i18n';
 import type {
-  AdUnavailableReason,
+  RewardedUnavailableReason,
   AdsDevControl,
   AdsService,
   RewardedResult,
@@ -66,7 +66,8 @@ export class WebAds implements AdsService, AdsDevControl {
     return this.current !== 'offline' && this.current !== 'no_fill' && !this.busy;
   }
 
-  unavailableReason(): AdUnavailableReason {
+  rewardedUnavailableReason(): RewardedUnavailableReason | null {
+    if (this.isRewardedReady()) return null;
     return this.current === 'offline' ? 'offline' : 'no_fill';
   }
 

@@ -37,12 +37,15 @@ describe('WebAds', () => {
     ads.cycleMode();
     expect(ads.mode).toBe('offline');
     expect(ads.isRewardedReady()).toBe(false);
-    expect(ads.unavailableReason()).toBe('offline');
+    expect(ads.rewardedUnavailableReason()).toBe('offline');
     await expect(ads.showRewarded()).resolves.toBe('unavailable');
     ads.cycleMode();
-    expect(ads.unavailableReason()).toBe('no_fill');
+    expect(ads.rewardedUnavailableReason()).toBe('no_fill');
     await expect(ads.showRewarded()).resolves.toBe('unavailable');
     expect(show).not.toHaveBeenCalled();
+    ads.cycleMode();
+    expect(ads.isRewardedReady()).toBe(true);
+    expect(ads.rewardedUnavailableReason()).toBeNull();
   });
 
   it('closes early in the dismissed mode', async () => {

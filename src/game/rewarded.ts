@@ -38,7 +38,12 @@ export async function showRewarded(placement: RewardedPlacement): Promise<Reward
   } finally {
     services.audio.resume('ad');
   }
-  services.telemetry.logEvent('ad_rewarded_result', { placement, result });
+  services.telemetry.logEvent(
+    'ad_rewarded_result',
+    result === 'unavailable'
+      ? { placement, result, reason: services.ads.rewardedUnavailableReason() ?? 'no_fill' }
+      : { placement, result },
+  );
   if (result === 'rewarded') {
     watchedInRun = true;
     gameState.countAdWatched();

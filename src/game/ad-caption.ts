@@ -1,5 +1,5 @@
 import { services } from '../services';
-import type { AdUnavailableReason } from '../services/rewarded-video/types';
+import type { RewardedUnavailableReason } from '../services/rewarded-video/types';
 
 /** What a rewarded-ad button says while no ad can be shown. */
 export interface AdCaption {
@@ -10,7 +10,7 @@ export interface AdCaption {
 }
 
 /** The caption for an unavailable ad: "No internet" with an icon when offline, else the old one. */
-export function adCaptionFor(reason: AdUnavailableReason): AdCaption {
+export function adCaptionFor(reason: RewardedUnavailableReason | null): AdCaption {
   return reason === 'offline'
     ? { key: 'continue.noInternet', offline: true }
     : { key: 'continue.adUnavailable', offline: false };
@@ -18,5 +18,5 @@ export function adCaptionFor(reason: AdUnavailableReason): AdCaption {
 
 /** The caption for the ad service's current answer. */
 export function currentAdCaption(): AdCaption {
-  return adCaptionFor(services.ads.unavailableReason());
+  return adCaptionFor(services.ads.rewardedUnavailableReason());
 }
