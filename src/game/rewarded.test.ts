@@ -83,4 +83,15 @@ describe('showRewarded', () => {
       reason: 'offline',
     });
   });
+
+  it('leaves the reason out when the service names none (busy, or the ad call threw)', async () => {
+    const { showRewarded } = await import('./rewarded');
+    h.ads.showRewarded.mockRejectedValue(new Error('boom'));
+    h.ads.rewardedUnavailableReason.mockReturnValue(null);
+    await showRewarded('shop_coins');
+    expect(h.telemetry.logEvent).toHaveBeenLastCalledWith('ad_rewarded_result', {
+      placement: 'shop_coins',
+      result: 'unavailable',
+    });
+  });
 });

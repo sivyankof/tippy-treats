@@ -38,11 +38,10 @@ export async function showRewarded(placement: RewardedPlacement): Promise<Reward
   } finally {
     services.audio.resume('ad');
   }
+  const reason = result === 'unavailable' ? services.ads.rewardedUnavailableReason() : null;
   services.telemetry.logEvent(
     'ad_rewarded_result',
-    result === 'unavailable'
-      ? { placement, result, reason: services.ads.rewardedUnavailableReason() ?? 'no_fill' }
-      : { placement, result },
+    reason ? { placement, result, reason } : { placement, result },
   );
   if (result === 'rewarded') {
     watchedInRun = true;

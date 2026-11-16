@@ -19,7 +19,8 @@ import { LayerFace } from './layer-face';
 import { LayerShade } from './layer-shade';
 import { LayerMaterial, type MaterialMotion } from './layer-material';
 import { LayerRig } from './layer-rig';
-import { artWidth, creatureOfLayer, creatureStage, isGrownLevel, lookCodeFor } from './layer-art';
+import { hasNewLook } from '../../core/mastery';
+import { artWidth, creatureOfLayer, creatureStage, lookCodeFor } from './layer-art';
 import { GrownAccentView } from './grown-accent-view';
 import { LayerArtSlot } from './layer-art-slot';
 import { RAINBOW_LOOK } from '../../data/rainbow-look';
@@ -157,7 +158,7 @@ export class LayerView extends Phaser.GameObjects.Container {
 
   /**
    * Which picture a creature layer shows: `base` (the default) always the usual one, `grown` always
-   * the grown look, `level` the grown look from `GROWN_LOOK_LEVEL` (the run). Call it before `setLook`.
+   * the grown look, `level` the grown look from `MASTERY.lookLevel` (the run). Call it before `setLook`.
    */
   setStageMode(mode: StageMode): this {
     if (mode === this.stageMode) return this;
@@ -166,7 +167,7 @@ export class LayerView extends Phaser.GameObjects.Container {
   }
 
   private isGrown(level: number | undefined): boolean {
-    return this.stageMode === 'grown' || (this.stageMode === 'level' && isGrownLevel(level));
+    return this.stageMode === 'grown' || (this.stageMode === 'level' && hasNewLook(level ?? 0));
   }
 
   /** Width the picture was baked for; -1 while it shows none. */

@@ -1,4 +1,4 @@
-import type { Modifiers } from '../../../core/abilities/types';
+import type { ActiveEffect, Modifiers } from '../../../core/abilities/types';
 import type { TowerState } from '../../../core/tower-sim';
 import { ABILITY_ANIM } from '../../../data/ability-anim';
 import { HUD_LAYOUT } from '../../../data/hud-layout';
@@ -15,6 +15,12 @@ import { Guides } from './guides';
 import { RainbowRim } from './rainbow-rim';
 import { ShieldBubble, type BubbleTarget } from './shield-bubble';
 import { Vignette } from './vignette';
+
+/** The slow-freeze coat belongs to the real effect; the tail ("Rime") flies at normal speed and has none. */
+function slowFrostActive(effects: readonly ActiveEffect[]): boolean {
+  for (const e of effects) if (e.id === 'frosty' && !e.tail && e.layersLeft > 0) return true;
+  return false;
+}
 
 type Scene = ConstructorParameters<typeof Guides>[0];
 
@@ -89,7 +95,7 @@ export class WhileActiveFx {
     const guidesOn = running && mods.guides;
     const flyingX = state.flying?.x ?? null;
 
-    this.coatState.frost = flags.frosty;
+    this.coatState.frost = flags.frosty && slowFrostActive(state.effects);
     this.coatState.rainbow = flags.rainbow;
     this.coatState.glow = guideGlow(
       guidesOn,

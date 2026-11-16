@@ -26,7 +26,7 @@ export function emitAbility(ctx: AbilityContext, payload: AbilityPayload): void 
 export function payMastery(ctx: HookContext, creature: CreatureId, coins: number, score = 0): void {
   ctx.state.score += score;
   ctx.emit({ type: 'mastery', creature, coins, score });
-  gainCoins(ctx.state, { push: ctx.emit }, coins, 'mastery');
+  gainCoins(ctx.state, ctx.emit, coins, 'mastery');
 }
 
 /** Starts the creature's effect and announces it; most abilities are just this. */

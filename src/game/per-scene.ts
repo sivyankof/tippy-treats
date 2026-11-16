@@ -21,21 +21,37 @@ export interface PerSceneSpec<S extends object, T extends SceneOwned> {
  */
 export class PerScene<S extends object, T extends SceneOwned> {
   private readonly items = new WeakMap<S, T>();
+  /** Scenes that already have a shutdown listener for this start. */
+  private readonly listening = new WeakSet<S>();
+  /** Scenes where even a fresh object was unusable in this start: not rebuilt until the next one. */
+  private readonly failed = new WeakSet<S>();
 
   constructor(private readonly spec: PerSceneSpec<S, T>) {}
 
   get(scene: S): T | null {
+    if (this.failed.has(scene)) return null;
     const held = this.items.get(scene);
     if (held) {
       if (this.spec.usable(held)) return held;
       this.drop(scene, held);
     }
+    if (!this.listening.has(scene)) {
+      this.listening.add(scene);
+      this.spec.onShutdown(scene, () => this.shutdown(scene));
+    }
     const made = this.spec.make(scene);
     this.items.set(scene, made);
-    this.spec.onShutdown(scene, () => this.drop(scene, made));
     if (this.spec.usable(made)) return made;
     this.drop(scene, made);
+    this.failed.add(scene);
     return null;
+  }
+
+  private shutdown(scene: S): void {
+    this.listening.delete(scene);
+    this.failed.delete(scene);
+    const held = this.items.get(scene);
+    if (held) this.drop(scene, held);
   }
 
   private drop(scene: S, item: T): void {

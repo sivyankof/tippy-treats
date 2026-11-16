@@ -1,5 +1,6 @@
 import type * as Phaser from 'phaser';
 import type { CutSide } from '../../core/drop';
+import { hasNewLook } from '../../core/mastery';
 import { newLandingPreview, type FlyingLayer, type LandingPreview } from '../../core/sim-types';
 import { collectBakeSteps, type BakeStep } from '../ui/bake-texture';
 import { dripTexturesFor } from './glaze-drip-layer';
@@ -7,7 +8,6 @@ import {
   cakeColorsFor,
   creatureOfLayer,
   creatureStage,
-  isGrownLevel,
   lookCodeFor,
   prepareLayerArt,
 } from './layer-art';
@@ -71,7 +71,7 @@ export class LandingPrep {
     const { scene } = this;
     const look = lookCodeFor(preview.index, preview.kind === 'golden');
     const { creature, width, cut, pieceWidth } = preview;
-    const stage = creatureStage(creature, isGrownLevel(preview.level), preview.index);
+    const stage = creatureStage(creature, hasNewLook(preview.level ?? 0), preview.index);
     this.landing = [() => prepareLayerArt(scene, look, width, cut, creature, false, stage)];
     if (pieceWidth > 0 && cut) {
       this.landing.push(() =>

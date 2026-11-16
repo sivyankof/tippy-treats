@@ -1,6 +1,6 @@
 import { ART_SHEET } from '../../data/art-sheet';
 import { CREATURE_IDS } from '../../data/creatures';
-import { GROWN_LOOK_LEVEL } from '../../data/mastery-look';
+import { MASTERY } from '../../data/mastery';
 import { artTopPad } from '../objects/layer-art';
 import { LayerView } from '../objects/layer-view';
 import type { LivePicture } from './art-sheet-live';
@@ -15,7 +15,7 @@ function creatureLayerPicture(id: (typeof CREATURE_IDS)[number], grown: boolean)
     create: (scene, size) => {
       const view = new LayerView(scene)
         .setStageMode(grown ? 'grown' : 'base')
-        .setLook({ kind: 'creature', creature: id, level: grown ? GROWN_LOOK_LEVEL : 1 })
+        .setLook({ kind: 'creature', creature: id, level: grown ? MASTERY.lookLevel : 1 })
         .setLayer(1, ART_SHEET.grownLayerWidth);
       const scale = size / ART_SHEET.grownLayerWidth;
       const stage = grown ? 'grown' : 'base';

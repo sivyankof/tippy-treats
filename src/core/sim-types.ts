@@ -165,10 +165,8 @@ export type CoinSource =
   /** Master effects of level-5 creatures (docs/03-creatures.md, "Мастерство"). */
   | 'mastery';
 
-/** Where events go: an event list, or anything else that takes them one by one. */
-export interface EventSink {
-  push(event: SimEvent): unknown;
-}
+/** Where events go, one by one (a list's `push` wrapped, or a hook context's `emit`). */
+export type EmitEvent = (event: SimEvent) => unknown;
 
 export type SimEvent =
   | { type: 'spawn'; layer: FlyingLayer }

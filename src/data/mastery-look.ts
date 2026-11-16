@@ -1,16 +1,8 @@
 import type { FaceRecipe } from './creature-looks';
 import type { CreatureMaterial } from './creature-materials';
 import type { CreatureId } from './creatures';
-import { MASTERY } from './mastery';
 import { MENU } from './menu-layout';
 import type { ZoneId } from './zones';
-
-/**
- * The "grown" look of a creature (docs/06, "Взрослый вид"): from this creature level the layer
- * is drawn with its extra details (a crown, a bow, bubbles, a sparkler...). The detail is baked
- * into a second picture of the creature on the shared atlas, so it adds no draws in the run.
- */
-export const GROWN_LOOK_LEVEL = MASTERY.lookLevel;
 
 /** Which picture of a creature a layer shows: the usual one, the grown one, or the grown ghost lit up by the sky. */
 export type CreatureStage = 'base' | 'grown' | 'glow';

@@ -1,20 +1,17 @@
 import { describe, expect, it } from 'vitest';
 import { artRecipe } from '../../data/creature-looks';
+import { hasNewLook } from '../../core/mastery';
+import { MASTERY } from '../../data/mastery';
 import { CREATURE_IDS } from '../../data/creatures';
-import {
-  GROWN_ACCENTS,
-  GROWN_LOOKS,
-  GROWN_LOOK_LEVEL,
-  MASTERY_FRAME,
-} from '../../data/mastery-look';
-import { artTopPad, creatureStage, isGrownLevel, layerArtKey } from './layer-art';
+import { GROWN_ACCENTS, GROWN_LOOKS, MASTERY_FRAME } from '../../data/mastery-look';
+import { artTopPad, creatureStage, layerArtKey } from './layer-art';
 
 describe('grown look', () => {
   it('starts at level 3', () => {
-    expect(GROWN_LOOK_LEVEL).toBe(3);
-    expect(isGrownLevel(2)).toBe(false);
-    expect(isGrownLevel(3)).toBe(true);
-    expect(isGrownLevel(undefined)).toBe(false);
+    expect(MASTERY.lookLevel).toBe(3);
+    expect(hasNewLook(2)).toBe(false);
+    expect(hasNewLook(3)).toBe(true);
+    expect(hasNewLook(0)).toBe(false);
   });
 
   it('has a picture for every creature, at least as tall as the usual one', () => {

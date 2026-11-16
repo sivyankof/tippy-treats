@@ -67,8 +67,10 @@ export class WebAds implements AdsService, AdsDevControl {
   }
 
   rewardedUnavailableReason(): RewardedUnavailableReason | null {
-    if (this.isRewardedReady()) return null;
-    return this.current === 'offline' ? 'offline' : 'no_fill';
+    if (this.current === 'offline') return 'offline';
+    if (this.current === 'no_fill') return 'no_fill';
+    // Ready, or only busy showing another ad: no reason to give.
+    return null;
   }
 
   showRewarded(): Promise<RewardedResult> {

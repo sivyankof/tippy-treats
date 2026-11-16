@@ -21,6 +21,11 @@ export const TRANSFORM = {
   veilAlpha: 0.88,
   /** Scale of the creature when it starts to pop out of the cloud. */
   popFrom: 0.5,
+  /** The creature is hidden behind the cloud from this share of the cloud time (until it ends). */
+  hideAtPuffShare: 0.35,
+  /** The cloud's scale at the start of the scene and how much it grows by the end of the pop. */
+  puffScaleFrom: 0.6,
+  puffScaleGrow: 0.6,
   /** Overshoot of the pop (the standard back curve). */
   backOvershoot: 1.70158,
   /** Puff cloud: the number and radius of the soft discs, and how far they spread. */

@@ -1,5 +1,6 @@
 import * as Phaser from 'phaser';
 import type { CutSide } from '../../core/drop';
+import { hasNewLook } from '../../core/mastery';
 import type { PlacedLayer } from '../../core/tower-sim';
 import { ANIM } from '../../data/anim';
 import { nextUnbaked } from './collapse-scan';
@@ -9,7 +10,6 @@ import {
   cakeColorsFor,
   creatureOfLayer,
   creatureStage,
-  isGrownLevel,
   layerArtBaked,
   lookCodeFor,
   releaseLayerArt,
@@ -21,7 +21,7 @@ function specOf(layer: PlacedLayer, index: number) {
   return {
     look: lookCodeFor(index + 1, golden),
     creature: creatureOfLayer(layer),
-    stage: creatureStage(creatureOfLayer(layer), isGrownLevel(layer.level), index + 1),
+    stage: creatureStage(creatureOfLayer(layer), hasNewLook(layer.level ?? 0), index + 1),
     golden,
   };
 }

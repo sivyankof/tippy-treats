@@ -102,12 +102,12 @@ export function transformFrame(ms: number, kind: TransformKind, minimal: boolean
     fade,
     angle: shakeAngle(share(ms, 0, t.shakeMs), t.shakeWaves, t.shakeDeg),
     mix: swapped ? 1 : 0,
-    hidden: ms >= t.shakeMs + t.puffMs * 0.35 && ms < t.shakeMs + t.puffMs,
+    hidden: ms >= t.shakeMs + t.puffMs * t.hideAtPuffShare && ms < t.shakeMs + t.puffMs,
     scale: ms < t.shakeMs + t.puffMs ? 1 : t.popFrom + (1 - t.popFrom) * backOut(pop),
     puff: {
       // Grows to full over the first part of the cloud, then thins out while the creature jumps.
       alpha: ms < cues.burstMs ? cloud : 1 - pop,
-      scale: 0.6 + 0.6 * clamp01(share(ms, t.shakeMs, t.puffMs + t.popMs)),
+      scale: t.puffScaleFrom + t.puffScaleGrow * clamp01(share(ms, t.shakeMs, t.puffMs + t.popMs)),
     },
     labels: share(ms, t.shakeMs + t.puffMs, t.popMs),
     rays,

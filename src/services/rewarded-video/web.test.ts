@@ -48,6 +48,20 @@ describe('WebAds', () => {
     expect(ads.rewardedUnavailableReason()).toBeNull();
   });
 
+  it('gives no reason while the stub is only busy showing an ad', async () => {
+    vi.useFakeTimers();
+    try {
+      const ads = new WebAds(() => null);
+      const shown = ads.showRewarded();
+      expect(ads.isRewardedReady()).toBe(false);
+      expect(ads.rewardedUnavailableReason()).toBeNull();
+      await vi.runAllTimersAsync();
+      await shown;
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it('closes early in the dismissed mode', async () => {
     const ads = new WebAds(() => null);
     ads.cycleMode();

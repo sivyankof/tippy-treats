@@ -5,12 +5,7 @@ import { zoneIndexOf } from '../../core/zones';
 import { artRecipe } from '../../data/creature-looks';
 import type { CreatureId } from '../../data/creatures';
 import { BALANCE } from '../../data/balance';
-import {
-  GLOW_ZONES,
-  GROWN_LOOKS,
-  GROWN_LOOK_LEVEL,
-  type CreatureStage,
-} from '../../data/mastery-look';
+import { GLOW_ZONES, GROWN_LOOKS, type CreatureStage } from '../../data/mastery-look';
 import type { LayerColors } from '../../data/palette';
 import { PLAIN_LAYER, PLAIN_PAIRS, SPONGES } from '../../data/plain-layers';
 import { ZONES } from '../../data/zones';
@@ -107,11 +102,6 @@ const STAGE_SUFFIX: Readonly<Record<CreatureStage, string>> = {
   grown: '_g',
   glow: '_gl',
 };
-
-/** True from the creature level whose layer shows the grown look. */
-export function isGrownLevel(level: number | undefined): boolean {
-  return (level ?? 0) >= GROWN_LOOK_LEVEL;
-}
 
 /**
  * The picture stage of a layer: `base` for a plain layer or a creature that is not grown; for a

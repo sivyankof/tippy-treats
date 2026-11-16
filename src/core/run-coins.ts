@@ -9,18 +9,23 @@ import {
   rollFloatingCoin,
 } from './coins';
 import type { Rng } from './rng';
-import type { CoinSource, EventSink, PlacedLayer, SimEvent, TowerState } from './sim-types';
+import type { CoinSource, EmitEvent, PlacedLayer, SimEvent, TowerState } from './sim-types';
+
+/** Wraps an event list as an emitter. */
+function into(events: SimEvent[]): EmitEvent {
+  return (event) => events.push(event);
+}
 
 /** Adds coins to the run and announces them; zero and negative amounts are ignored. */
 export function gainCoins(
   s: TowerState,
-  events: EventSink,
+  emit: EmitEvent,
   amount: number,
   source: CoinSource,
 ): void {
   if (amount <= 0) return;
   s.coins += amount;
-  events.push({ type: 'coin_collect', amount, source });
+  emit({ type: 'coin_collect', amount, source });
 }
 
 /** Rolls the floating coin of a new layer index above the tower top at `restX`. */
@@ -45,7 +50,7 @@ export function collectFloatingCoin(
   mods: Readonly<Modifiers>,
 ): void {
   if (coinX !== null && coinCovered(coinX, layer.x, layer.width)) {
-    gainCoins(s, events, floatingCoinAmount(mods), 'floating');
+    gainCoins(s, into(events), floatingCoinAmount(mods), 'floating');
   }
 }
 
@@ -62,10 +67,10 @@ export function payLanding(
   mods: Readonly<Modifiers>,
 ): void {
   if (perfect) {
-    gainCoins(s, events, comboCoinAmount(s.combo, mods), 'combo');
-    gainCoins(s, events, mods.perfectCoinAdd, 'perfect');
+    gainCoins(s, into(events), comboCoinAmount(s.combo, mods), 'combo');
+    gainCoins(s, into(events), mods.perfectCoinAdd, 'perfect');
   } else {
-    gainCoins(s, events, crumbCoinAmount(cutWidth, mods.crumbToCoinsPx), 'crumb');
+    gainCoins(s, into(events), crumbCoinAmount(cutWidth, mods.crumbToCoinsPx), 'crumb');
   }
   if (!golden) return;
   events.push({ type: 'golden', perfect });
@@ -73,7 +78,7 @@ export function payLanding(
     s.berries += BALANCE.golden.perfectBerries;
     s.score += BALANCE.score.goldenPerfectBonus;
   } else {
-    gainCoins(s, events, BALANCE.golden.normalCoins, 'golden');
+    gainCoins(s, into(events), BALANCE.golden.normalCoins, 'golden');
   }
 }
 
@@ -82,5 +87,5 @@ export function payLanding(
  * counts only the layers above `startHeight`.
  */
 export function payHeightBonus(s: TowerState, events: SimEvent[], startHeight = 0): void {
-  gainCoins(s, events, heightBonusCoins(s.height - startHeight), 'height');
+  gainCoins(s, into(events), heightBonusCoins(s.height - startHeight), 'height');
 }

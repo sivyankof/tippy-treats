@@ -4,6 +4,9 @@ import { PerScene } from './per-scene';
 /** A scene stand-in: Phaser reuses the same scene object on every start, so does this one. */
 class FakeScene {
   private listeners: Array<() => void> = [];
+  get listenerCount(): number {
+    return this.listeners.length;
+  }
   onShutdown(fn: () => void): void {
     this.listeners.push(fn);
   }
@@ -114,5 +117,28 @@ describe('PerScene', () => {
     scene.shutdown();
     expect(second.destroyed).toBe(true);
     expect(per.get(scene)).not.toBe(second);
+  });
+
+  it('registers one shutdown listener per scene start, however many objects are made', () => {
+    const { per } = holder();
+    const scene = new FakeScene();
+    const first = per.get(scene)!;
+    first.partsAlive = false;
+    per.get(scene);
+    expect(scene.listenerCount).toBe(1);
+    scene.shutdown();
+    per.get(scene);
+    expect(scene.listenerCount).toBe(1);
+  });
+
+  it('does not rebuild an unusable object again in the same start, but tries on the next one', () => {
+    const { per, made } = holder({ usableFresh: false });
+    const scene = new FakeScene();
+    expect(per.get(scene)).toBeNull();
+    expect(per.get(scene)).toBeNull();
+    expect(made).toHaveLength(1);
+    scene.shutdown();
+    expect(per.get(scene)).toBeNull();
+    expect(made).toHaveLength(2);
   });
 });
