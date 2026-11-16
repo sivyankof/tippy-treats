@@ -6,6 +6,7 @@ import type { Save } from '../core/save/schema';
 import { SAVE_WRITE_DEBOUNCE_MS, STORAGE_KEYS } from '../data/storage';
 import { MemoryStorage } from '../services/storage/memory';
 import { xpToNext } from '../core/progression';
+import { LAP_REWARD } from '../data/zones';
 import { GameState, type LoadInfo, type Scheduler } from './game-state';
 import { layersForXp } from './test-state';
 
@@ -380,8 +381,11 @@ describe('GameState runs', () => {
   });
 
   it('pays coins and berries of several levels gained at once', async () => {
-    const { state } = setup();
-    await state.load();
+    const { state, storage } = setup();
+    // Every rewarded lap is behind this player, so the huge tower pays no lap berries.
+    const saved: Save = { ...createDefaultSave(T0, 'a'), bestLap: LAP_REWARD.toLap };
+    await storage.set(STORAGE_KEYS.save, serializeSave(saved));
+    await loaded(state);
     let total = 0;
     for (let level = 1; level < 5; level++) total += xpToNext(level);
     const summary = state.recordRun(run({ height: layersForXp(total), coins: 0 }));
@@ -398,6 +402,7 @@ describe('GameState runs', () => {
       ...createDefaultSave(T0, 'a'),
       bakerLevel: 19,
       bakerXp: 0,
+      bestLap: LAP_REWARD.toLap,
       creatures: { honey: { level: 1 }, rainbow: { level: 2 } },
     };
     await storage.set(STORAGE_KEYS.save, serializeSave(saved));
@@ -412,7 +417,12 @@ describe('GameState runs', () => {
 
   it('hands over the Rainbow at level 20 to a player without it', async () => {
     const { state, storage } = setup();
-    const saved: Save = { ...createDefaultSave(T0, 'a'), bakerLevel: 19, bakerXp: 0 };
+    const saved: Save = {
+      ...createDefaultSave(T0, 'a'),
+      bakerLevel: 19,
+      bakerXp: 0,
+      bestLap: LAP_REWARD.toLap,
+    };
     await storage.set(STORAGE_KEYS.save, serializeSave(saved));
     await loaded(state);
     const [up] = state.recordRun(run({ height: layersForXp(xpToNext(19)), coins: 0 })).levelUps;

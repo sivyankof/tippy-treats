@@ -1,6 +1,7 @@
 import { CREATURE_IDS, MAX_CREATURE_LEVEL } from '../../data/creatures';
 import { MAX_BAKER_LEVEL, OVEN } from '../../data/progression';
 import { SAVE_DEFAULTS } from '../../data/save-defaults';
+import { spaceLap } from '../space-laps';
 import { isCheckpointHeight, withReached, type CheckpointHeight } from '../checkpoints';
 import { xpToNext } from '../progression';
 import { pickTeam } from '../team';
@@ -208,6 +209,8 @@ function normalize(raw: Obj, d: Save): Save {
     // come from a checkpoint run); a missing or damaged one is derived from the record.
     checkpoints: normalizeCheckpoints(raw.checkpoints, classicHeight),
     checkpointAds: { day: day(checkpointAds.day), used: uint(checkpointAds.used, 0) },
+    // A missing or damaged lap is derived from the record, so nothing is paid again.
+    bestLap: uint(raw.bestLap, spaceLap(classicHeight)),
     consent: {
       attAsked: bool(consent.attAsked, false),
       notifAsked: bool(consent.notifAsked, false),

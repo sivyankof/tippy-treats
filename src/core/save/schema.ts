@@ -1,6 +1,6 @@
 import type { CreatureId } from '../../data/creatures';
 
-export const SAVE_VERSION = 7;
+export const SAVE_VERSION = 8;
 
 export type MissionGroup = 'easy' | 'medium' | 'hard';
 
@@ -146,5 +146,15 @@ export interface SaveV7 extends Omit<SaveV6, 'version'> {
   checkpointAds: { day: string; used: number };
 }
 
+/**
+ * Version 8 (Space laps): `bestLap` is the highest Space lap a Classic run ever reached; the
+ * first-time lap berries are paid for laps above it. The migration derives it from the record.
+ */
+export interface SaveV8 extends Omit<SaveV7, 'version'> {
+  version: 8;
+  /** Highest Space lap reached (`spaceLap` of the tallest Classic tower); 0 below Space. */
+  bestLap: number;
+}
+
 /** The current save version. */
-export type Save = SaveV7;
+export type Save = SaveV8;

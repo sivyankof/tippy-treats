@@ -619,5 +619,8 @@
   },
   "explainer": {
     "ok": "Got it!"
+  },
+  "resultsLap": {
+    "reward": "one=New lap: +{n} berry|other=New lap: +{n} berries"
   }
 }

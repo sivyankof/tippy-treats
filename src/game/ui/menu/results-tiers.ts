@@ -1,7 +1,7 @@
 import type * as Phaser from 'phaser';
 import type { DailyPayout } from '../../../core/daily';
 import { MENU } from '../../../data/menu-layout';
-import { formatNumber, t } from '../../../i18n';
+import { formatNumber, t, tn } from '../../../i18n';
 import { createOutlinedText } from '../outlined-text';
 import { fitText } from './fit-text';
 import { PriceTag } from './price-tag';
@@ -14,13 +14,14 @@ const TAG_SHARE = 0.4;
 
 /**
  * The daily tiers a daily run paid: "Daily reward for 30 layers" with the coins and berries at
- * the right, one compact row each. `height` is 0 when the run paid nothing.
+ * the right, one compact row each, and the first-time lap berries of a Classic run ("New lap:
+ * +3 berries"). `height` is 0 when the run paid nothing.
  */
 export class ResultsTiers {
   readonly container: Phaser.GameObjects.Container;
   readonly height: number;
 
-  constructor(scene: Phaser.Scene, paid: readonly DailyPayout[]) {
+  constructor(scene: Phaser.Scene, paid: readonly DailyPayout[], lapBerries = 0) {
     this.container = scene.add.container(0, 0);
     const rows: Row[] = paid.map((tier) => {
       const row = scene.add.container(0, 0);
@@ -46,6 +47,18 @@ export class ResultsTiers {
       }
       return { obj: row, height: cfg.rowHeight };
     });
+    if (lapBerries > 0) {
+      const row = scene.add.container(0, 0);
+      const text = createOutlinedText(
+        scene,
+        0,
+        0,
+        tn('resultsLap.reward', lapBerries),
+        cfg.font,
+      ).setOrigin(0.5);
+      row.add(fitText(text, cfg.width));
+      rows.push({ obj: row, height: cfg.rowHeight });
+    }
     this.height = rows.length === 0 ? 0 : stackRows(this.container, rows, cfg.rowGap);
     this.container.setVisible(rows.length > 0);
   }

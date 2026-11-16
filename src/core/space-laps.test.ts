@@ -1,7 +1,14 @@
 import { describe, expect, it } from 'vitest';
 import { BALANCE } from '../data/balance';
 import { ZONE_RULES } from '../data/zones';
-import { spaceLap, spaceWidthLimit } from './space-laps';
+import { LAP_REWARD } from '../data/zones';
+import {
+  lapRewardBerries,
+  lapScoreBonus,
+  layerZoneScoreMult,
+  spaceLap,
+  spaceWidthLimit,
+} from './space-laps';
 
 const { maxWidth } = BALANCE.layer;
 
@@ -47,5 +54,44 @@ describe('spaceWidthLimit', () => {
       Math.round((spaceWidthLimit(101 + i * 20, { step: 0.06, floor: 0.5 }) / maxWidth) * 100),
     );
     expect(shares).toEqual([100, 94, 88, 82, 76, 70, 64, 58, 52, 50, 50]);
+  });
+});
+
+describe('lapScoreBonus', () => {
+  it('is 0 outside Space and on lap 1, then grows by 0.1 per lap up to +1', () => {
+    expect(lapScoreBonus(0)).toBe(0);
+    expect(lapScoreBonus(1)).toBe(0);
+    expect(lapScoreBonus(2)).toBeCloseTo(0.1);
+    expect(lapScoreBonus(6)).toBeCloseTo(0.5);
+    expect(lapScoreBonus(11)).toBeCloseTo(1);
+    expect(lapScoreBonus(40)).toBe(1);
+  });
+
+  it('adds to the zone multiplier of the layer', () => {
+    expect(layerZoneScoreMult(100, 2.2)).toBe(2.2);
+    expect(layerZoneScoreMult(120, 2.5)).toBe(2.5);
+    expect(layerZoneScoreMult(121, 2.5)).toBeCloseTo(2.6);
+    expect(layerZoneScoreMult(10_000, 2.5)).toBeCloseTo(3.5);
+  });
+});
+
+describe('lapRewardBerries', () => {
+  const { berries } = LAP_REWARD;
+
+  it('pays nothing before lap 2 and for laps already reached', () => {
+    expect(lapRewardBerries(0, 100)).toBe(0);
+    expect(lapRewardBerries(1, 140 - 20)).toBe(0);
+    expect(lapRewardBerries(3, 150)).toBe(0);
+  });
+
+  it('pays once for each new lap from 2 to 10', () => {
+    expect(lapRewardBerries(1, 121)).toBe(berries);
+    expect(lapRewardBerries(0, 141)).toBe(2 * berries);
+    expect(lapRewardBerries(2, 200)).toBe(3 * berries);
+  });
+
+  it('stops at the last rewarded lap', () => {
+    expect(lapRewardBerries(0, 5000)).toBe(9 * berries);
+    expect(lapRewardBerries(10, 5000)).toBe(0);
   });
 });

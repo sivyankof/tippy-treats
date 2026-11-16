@@ -48,6 +48,7 @@ export function createDefaultSave(nowMs: number, installId: string): Save {
     doubles: { day: '', used: 0 },
     checkpoints: [],
     checkpointAds: { day: '', used: 0 },
+    bestLap: 0,
     consent: { attAsked: false, notifAsked: false },
   };
 }

@@ -79,6 +79,14 @@ export const ZONE_RULES = {
     step: 0.06,
     floor: 0.5,
   },
+  /**
+   * Score bonus of Space laps (docs/02-gameplay.md, section 4): from lap 2 on the Space score
+   * multiplier grows by `perLap` per lap beyond the first, up to `maxBonus` in all. Only the score.
+   */
+  spaceScore: {
+    perLap: 0.1,
+    maxBonus: 1,
+  },
   /** Stars "fake-out": once in the life of a layer it stops, then reverses. */
   stars: {
     chance: 0.3,
@@ -89,3 +97,9 @@ export const ZONE_RULES = {
     spaceChance: 1,
   },
 } as const;
+
+/**
+ * Berries for reaching a Space lap for the first time (docs/05-economy-monetization.md): `berries`
+ * for each lap from `fromLap` to `toLap` that a Classic run reaches, once per lap for the whole save.
+ */
+export const LAP_REWARD = { berries: 3, fromLap: 2, toLap: 10 } as const;

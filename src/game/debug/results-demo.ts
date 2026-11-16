@@ -14,6 +14,7 @@ function demoResult(kind: ResultsDemoCase): RunResult {
     checkpoint: RESULTS_DEMO.checkpoint.height,
     record: RESULTS_DEMO.record.height,
     daily: RESULTS_DEMO.daily.height,
+    lap: RESULTS_DEMO.lap.height,
   };
   return {
     seed: RESULTS_DEMO.seed,
@@ -63,6 +64,7 @@ function demoSummary(kind: ResultsDemoCase): RunSummary {
     xpGained: RESULTS_DEMO.xpGained,
     oven: { ...RESULTS_DEMO.oven },
     missions: { before: items.map((m) => m.before), after: items.map((m) => m.after) },
+    lapBerries: kind === 'lap' ? RESULTS_DEMO.lap.berries : 0,
     dailyTiers: daily ? RESULTS_DEMO.daily.tiers.map((t) => ({ ...t, cost: { ...t.cost } })) : [],
   };
 }

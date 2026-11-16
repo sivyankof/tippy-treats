@@ -16,6 +16,7 @@ export type CreditSource =
   | 'gift_double'
   | 'daily_tier'
   | 'level_reward'
+  | 'lap_reward'
   | 'shop_free'
   | 'berry_exchange'
   | 'purchase'

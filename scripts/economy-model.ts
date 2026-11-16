@@ -53,6 +53,7 @@ import { OVEN, type LevelReward } from '../src/data/progression';
 import { REWARDED_OFFERS } from '../src/data/rewarded-video';
 import { SHOP } from '../src/data/shop';
 import { STREAK_REWARDS } from '../src/data/streak';
+import { lapRewardBerries, spaceLap } from '../src/core/space-laps';
 import { checkpointBerryPrice, checkpointHasAd } from '../src/core/checkpoints';
 import { BALANCE } from '../src/data/balance';
 import { CHECKPOINT_HEIGHTS, type CheckpointHeight } from '../src/data/checkpoints';
@@ -262,6 +263,8 @@ export interface Economy {
   runCoins: (r: RunSample) => number;
   /** Berries one run pays. */
   runBerries: (r: RunSample) => number;
+  /** Berries for Space laps a Classic run reaches for the first time, given the best lap so far and the run's full height. */
+  lapBerries: (bestLap: number, height: number) => number;
   /** Baker XP one run pays before the daily bonus. */
   runXp: (r: RunSample) => number;
   /** The first `firstXp` raw XP of each local day are multiplied by `mult` (1 = no bonus). */
@@ -338,6 +341,7 @@ export const CURRENT: Economy = {
   // The samples are played by the current sim, so their coins already follow the current rules.
   runCoins: (r) => coinSum(r.c),
   runBerries: (r) => r.b,
+  lapBerries: lapRewardBerries,
   // Layers beyond the fresh ones pay 1 XP per `layersPerXp`; the fresh ones are a daily bonus
   // that lifts the first `freshLayers / layersPerXp` raw XP of the day back to 1 XP per layer.
   runXp: (r) => r.h / OVEN.layersPerXp,
@@ -373,6 +377,7 @@ export const CURRENT: Economy = {
 export const BEFORE: Economy = {
   ...CURRENT,
   name: 'before',
+  lapBerries: () => 0,
   runCoins: (r) =>
     coinSum(r.c) -
     r.c.combo -
@@ -488,6 +493,8 @@ export function walk(
   let level = 1;
   let xp = 0;
   let record = 0;
+  /** Highest Space lap reached by a Classic run (first-time lap berries). */
+  let bestLap = 0;
   /** Best height of a run from zero: only such a run opens checkpoints. */
   let zeroBest = 0;
   const levelDay: Record<number, number | null> = {};
@@ -663,6 +670,8 @@ export function walk(
       berries += eco.runBerries(r);
       runXp(r);
       record = Math.max(record, r.top ?? r.h);
+      berries += eco.lapBerries(bestLap, r.top ?? r.h);
+      bestLap = Math.max(bestLap, spaceLap(r.top ?? r.h));
       if (r.top === undefined) zeroBest = Math.max(zeroBest, r.h);
       totalRuns += 1;
       budget -= cost;

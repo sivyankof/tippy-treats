@@ -21,7 +21,7 @@ import {
   type SimPhase,
   type TowerState,
 } from './sim-types';
-import { spaceWidthLimit } from './space-laps';
+import { layerZoneScoreMult, spaceWidthLimit } from './space-laps';
 import { TempoEase } from './tempo-ease';
 import { attemptLayer, type LayerAttempt, type PlanState } from './team-queue';
 import { cloudRoll, layerRules, zoneIndexOf } from './zones';
@@ -424,7 +424,8 @@ export class TowerSim {
 
     collectFloatingCoin(s, events, coinX, layer, mods);
     // Zone and ability multipliers multiply together; the zone is that of the landing layer.
-    const scoreMult = mods.scoreMult * (ZONES[flying.zoneIndex]?.scoreMult ?? 1);
+    const zoneMult = layerZoneScoreMult(flying.index, ZONES[flying.zoneIndex]?.scoreMult ?? 1);
+    const scoreMult = mods.scoreMult * zoneMult;
     this.score(events, layer, outcome.dx, flying.width, perfect, scoreMult);
     // What a normal drop bit off, also when the rainbow kept it (crumb counts it either way).
     const pieceWidth = outcome.cutWidth + outcome.savedWidth;
