@@ -1,12 +1,15 @@
 import { normalizePath, type Plugin } from 'vite';
 import { defineConfig } from 'vitest/config';
-import { cleanBuildHash, formatBuildStamp, formatBuildTime } from './src/util/build-stamp';
+import { cleanBuildHash, formatBuildStamp, formatBuildTime } from './src/util/build-stamp.ts';
 
 /** Node global; the project does not pull in the Node type definitions. */
 declare const process: {
   getBuiltinModule(id: 'node:fs'): { readFileSync(path: string, encoding: 'utf-8'): string };
   getBuiltinModule(id: 'node:child_process'): {
-    execSync(command: string, options: { stdio: ['ignore', 'pipe', 'ignore'] }): { toString(): string };
+    execSync(
+      command: string,
+      options: { stdio: ['ignore', 'pipe', 'ignore'] },
+    ): { toString(): string };
   };
 };
 

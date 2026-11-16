@@ -2,6 +2,7 @@ import * as Phaser from 'phaser';
 import { LICK, type LickStyle } from '../../data/lick';
 import { frameLerp } from '../../util/math';
 import { devWarn } from '../dev-warn';
+import { fxGuard } from '../fx-guard';
 import { effectsMode } from '../effects-mode';
 import { PerScene } from '../per-scene';
 import type { FaceParts } from './face-parts';
@@ -182,12 +183,11 @@ export class FaceLick {
    * the lick and lets the run go on.
    */
   tick(dtMs: number): void {
-    try {
-      this.step(dtMs);
-    } catch (error) {
-      devWarn('Lick dropped after an error', error);
-      this.abandon();
-    }
+    fxGuard.run(
+      'lick-face',
+      () => this.step(dtMs),
+      () => this.abandon(),
+    );
   }
 
   private step(dtMs: number): void {
@@ -381,14 +381,12 @@ export class FaceLick {
     this.glanceMs = 0;
     this.envyMs = -1;
     this.dentX = this.dentY = this.stretchX = this.stretchY = 0;
-    try {
+    fxGuard.run('lick-restore', () => {
       this.clearTongue();
       this.host.parts.placeLipsTongue(null);
       if (this.host.reaction() === 'lick') this.host.clearReaction();
       this.host.restore();
-    } catch (error) {
-      devWarn('Lick face could not be restored', error);
-    }
+    });
   }
 
   /** The tongue of the scene, moved into this face (one lick plays at a time); null if it cannot be laid. */

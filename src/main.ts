@@ -62,9 +62,7 @@ async function loadSave(): Promise<void> {
 async function start(): Promise<void> {
   // The first console line of a dev session: which build a tester is running.
   if (import.meta.env.DEV) {
-    console.info(
-      `Tippy Treats ${APP_VERSION} (${formatBuildStamp(BUILD_HASH, BUILD_TIME)})`,
-    );
+    console.info(`Tippy Treats ${APP_VERSION} (${formatBuildStamp(BUILD_HASH, BUILD_TIME)})`);
   }
   const parent = document.getElementById('app');
   if (!parent) {

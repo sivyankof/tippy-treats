@@ -22,6 +22,8 @@ describe('build stamp', () => {
   });
 
   it('joins the hash and the time', () => {
-    expect(formatBuildStamp('e6c2dbc', '2026-11-16 09:05 UTC')).toBe('e6c2dbc, 2026-11-16 09:05 UTC');
+    expect(formatBuildStamp('e6c2dbc', '2026-11-16 09:05 UTC')).toBe(
+      'e6c2dbc, 2026-11-16 09:05 UTC',
+    );
   });
 });

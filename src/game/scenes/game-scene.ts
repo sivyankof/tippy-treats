@@ -7,6 +7,7 @@ import type { CheckpointHeight } from '../../core/checkpoints';
 import type { RunMode, RunResult } from '../../core/run-result';
 import type { TeamSlot } from '../../core/sim-types';
 import { TowerSim, type TowerState } from '../../core/tower-sim';
+import { fxGuard } from '../fx-guard';
 import { RunFx } from '../fx/run-fx';
 import type { MasterFeed } from '../ui/master-caption-state';
 import { easeFn } from '../fx/ease';
@@ -90,6 +91,7 @@ export class GameScene extends Phaser.Scene {
   /** `data` is the run request; Phaser hands an empty object when there is none. */
   create(data?: Partial<RunRequest>): void {
     this.tweens.timeScale = 1;
+    fxGuard.reset();
     this.request = data && 'kind' in data ? (data as RunRequest) : CLASSIC_RUN;
     const setup = setupRun(this.request);
     this.seed = setup.seed;
@@ -211,7 +213,7 @@ export class GameScene extends Phaser.Scene {
     this.fx.handleEvents(events, this.sim.state, this.flying.current, dropMods, cam);
     if (events.length > 0) this.mods = this.sim.currentModifiers();
     this.fx.update(delta, time, this.sim.state, this.mods, cam);
-    this.background.setZone(this.sim.state.zoneIndex);
+    fxGuard.run('backdrop-zone', () => this.background.setZone(this.sim.state.zoneIndex));
     // Slow motion slows the tweens and the camera too; the HUD scene keeps its own clock.
     this.tweens.timeScale = this.fx.timeScale;
     this.camera.follow(delta * this.fx.timeScale);
