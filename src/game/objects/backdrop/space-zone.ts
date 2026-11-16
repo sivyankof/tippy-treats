@@ -5,6 +5,8 @@ import { BACKDROP_LIFE } from '../../../data/backdrop-life';
 import { bakeTexture } from '../../ui/bake-texture';
 import { glow, scatterPoints, sparkle, tiled } from './art-kit';
 import { Hover, Traveler } from './life';
+import { SpaceVisitor } from './space-visitor';
+import { bakeSpaceVisitors } from './space-visitor-art';
 import type { ZoneArt } from './zone-scenery';
 
 type Graphics = Phaser.GameObjects.Graphics;
@@ -127,6 +129,7 @@ export const spaceArt: ZoneArt = {
     bakeLayers(scene);
     bakePlanets(scene);
     bakeTravelers(scene);
+    bakeSpaceVisitors(scene);
   },
   build(scene) {
     const life = BACKDROP_LIFE.space;
@@ -136,6 +139,7 @@ export const spaceArt: ZoneArt = {
         { slot: 2, life: new Hover(scene, life.planets) },
         { slot: 2, life: new Traveler(scene, life.satellite) },
         { slot: 3, life: new Traveler(scene, life.comet) },
+        { slot: 3, life: new SpaceVisitor(scene) },
       ],
     };
   },

@@ -1,5 +1,6 @@
 import { isCreatureId, MAX_CREATURE_LEVEL, type CreatureId } from '../data/creatures';
 import { BALANCE } from '../data/balance';
+import { isSpaceVisitorId, type SpaceVisitorId } from '../data/space-visitor';
 import { isEffectLevel, type EffectLevel } from '../data/effect-levels';
 import { isPerfSegmentId, PERF, PERF_PARTS, type PerfPart, type PerfSegmentId } from '../data/perf';
 import { isResultsDemoCase, type ResultsDemoCase } from '../data/results-demo';
@@ -27,6 +28,8 @@ export interface DebugParams {
   tutorial?: boolean;
   /** Shifts the game clock by whole days (may be negative) to test the streak, missions and daily tower. */
   dayOffset?: number;
+  /** `?spaceGuest=eclair|saucer|teapot|comet` makes that rare guest of Space cross the screen soon (a dev tool for screenshots). */
+  spaceGuest?: SpaceVisitorId;
   /** `?reset=1` makes the state layer start from a fresh save. */
   reset?: boolean;
 }
@@ -98,6 +101,8 @@ export function parseDebugParams(search: string): DebugParams {
   const dayOffset = parseDayOffset(params.get('dayOffset'));
   if (dayOffset !== undefined) result.dayOffset = dayOffset;
   if (params.get('reset') === '1') result.reset = true;
+  const spaceGuest = params.get('spaceGuest');
+  if (isSpaceVisitorId(spaceGuest)) result.spaceGuest = spaceGuest;
   return result;
 }
 
