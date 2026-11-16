@@ -207,6 +207,6 @@ export const DIFFICULTY = {
     { id: 'expert', timingSdMs: 25, medianHeight: [80, 120] },
     // Live-player calibration (a tester's runs, no ads, no debug), not a design target:
     // sd 20 ms puts the median near 100 layers and a 100-layer run near 80 coins (docs/02, section 12).
-    { id: 'strong', timingSdMs: 20, medianHeight: [90, 115], analysisOnly: true },
+    { id: 'strong', timingSdMs: 20, medianHeight: [110, 130], analysisOnly: true },
   ] satisfies DifficultyTarget[],
 } as const;
