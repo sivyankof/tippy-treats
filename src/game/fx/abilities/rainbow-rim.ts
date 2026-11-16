@@ -114,11 +114,21 @@ export class RainbowRim {
       Math.max(1, ANIM.layer.cornerRadius - HALF),
       cfg.segmentPx,
     );
+    // A run of segments of one colour is one stroked path, not a line per segment.
+    const g = this.gfx;
+    let run = -1;
     for (let i = 1; i < pts.length; i++) {
       const a = pts[i - 1]!;
       const b = pts[i]!;
-      const color = colors[bandAt((a.u + b.u) / 2, phase, cfg.cycles, colors.length)]!;
-      this.gfx.lineStyle(cfg.width, color, cfg.alpha * fade).lineBetween(a.x, a.y, b.x, b.y);
+      const band = bandAt((a.u + b.u) / 2, phase, cfg.cycles, colors.length);
+      if (band !== run) {
+        if (run >= 0) g.strokePath();
+        run = band;
+        g.lineStyle(cfg.width, colors[band]!, cfg.alpha * fade).beginPath();
+        g.moveTo(a.x, a.y);
+      }
+      g.lineTo(b.x, b.y);
     }
+    if (run >= 0) g.strokePath();
   }
 }

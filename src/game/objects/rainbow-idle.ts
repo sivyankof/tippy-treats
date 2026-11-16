@@ -12,9 +12,10 @@ import { mixColor } from '../../util/color';
 import { DEG_TO_RAD, TWO_PI } from '../../util/math';
 import { DEPTH } from '../depth';
 import { effectsMode } from '../effects-mode';
-import { fillPolygon, fillQuad, type Pt } from '../fx/plain-style';
-import { paintStar, rainbowGlaze } from './creature-art/rainbow';
-import { bodySpan, spongeRows, starPoints, waveAt } from './creature-art/rainbow-geometry';
+import { fillQuad, type Pt } from '../fx/plain-style';
+import { RAINBOW_TEXTURES, STAR_BAKE_SCALE } from '../fx/abilities/rainbow-textures';
+import { rainbowGlaze } from './creature-art/rainbow';
+import { bodySpan, spongeRows, waveAt } from './creature-art/rainbow-geometry';
 import {
   glazeFloorAt,
   humpAt,
@@ -28,8 +29,6 @@ const { joke } = idle;
 const SCRATCH = new Phaser.GameObjects.Components.TransformMatrix();
 const JOKE_OUTLINE = outlineColor(BAND_COLORS[1] ?? 0);
 const jokeGrow = easeFn(joke.growEase);
-/** Points of the white sparkle. */
-const SPARKLE_POINTS = 4;
 const jokeRng = new Rng(joke.seed).fork('rainbow-joke');
 /** When the next joke may start (scene time, ms); shared, so only one Rainbow tells it at a time. */
 let nextJokeAt = -1;
@@ -66,16 +65,21 @@ class JokeGraphics extends Phaser.GameObjects.Graphics {
 /**
  * What the Rainbow layer does besides its baked picture: the gold star (it is not baked, so it
  * can sway and flash) behind the body, so the body hides its foot, and, while it rests, a colour
- * wave in which the sponges swell one after another over the body. Two small `Graphics` per layer
- * redrawn from their own clock (only while something moves), and a third at scene level for the
- * joke, so the small rainbow shows over the layer above; "fewer effects" leaves the star still and
- * the wave and the joke off. Both are hidden while the body is squashed against the screen edge.
+ * wave in which the sponges swell one after another over the body. The star and its sparkle are
+ * baked pictures that only turn and scale; one small `Graphics` per layer is redrawn while the wave
+ * runs, and another at scene level for the joke, so the small rainbow shows over the layer above;
+ * "fewer effects" leaves the star still and the wave and the joke off. All of it is hidden while
+ * the body is squashed against the screen edge.
  */
 export class RainbowIdle {
-  /** The star and the joke, under the body. */
-  private readonly back: Phaser.GameObjects.Graphics;
-  /** The wave and the sparkle, over the body. */
+  /** The crown star, under the body. */
+  private readonly star: Phaser.GameObjects.Image;
+  /** The wave, over the body (empty while no wave runs). */
   private readonly g: Phaser.GameObjects.Graphics;
+  /** The white sparkle of the star's flash, over the wave. */
+  private readonly sparkle: Phaser.GameObjects.Image;
+  /** A wave is on the `Graphics` and must be cleared when it ends. */
+  private waveDrawn = false;
   /** The joke, over every layer of the tower (it follows the layer's own transform). */
   private readonly front: Phaser.GameObjects.Graphics;
   private width = 0;
@@ -99,14 +103,17 @@ export class RainbowIdle {
     private readonly parent: Phaser.GameObjects.Container,
     art: Phaser.GameObjects.GameObject,
   ) {
-    this.back = new Phaser.GameObjects.Graphics(scene).setVisible(false);
+    this.star = new Phaser.GameObjects.Image(scene, 0, 0, RAINBOW_TEXTURES.star).setVisible(false);
     this.g = new Phaser.GameObjects.Graphics(scene).setVisible(false);
+    this.sparkle = new Phaser.GameObjects.Image(scene, 0, 0, RAINBOW_TEXTURES.sparkle);
+    this.sparkle.setVisible(false);
     this.front = new JokeGraphics(scene, parent).setVisible(false).setDepth(DEPTH.rainbowJoke);
     scene.add.existing(this.front);
     parent.once(Phaser.GameObjects.Events.DESTROY, () => this.front.destroy());
     const at = parent.getIndex(art);
-    parent.addAt(this.back, at);
+    parent.addAt(this.star, at);
     parent.addAt(this.g, at + 2);
+    parent.addAt(this.sparkle, at + 3);
   }
 
   /** Shows the overlay for a rainbow layer of `width` (a layer of another look hides it). */
@@ -144,40 +151,41 @@ export class RainbowIdle {
     if (!live && !this.dirty && !this.wasLive) return;
     this.dirty = false;
     this.wasLive = live;
-    this.clear();
-    const star0 = this.back;
-    const g = this.g;
+    this.front.clear();
     const box = layerBox(this.width);
-    if (live) this.drawWave(timeMs + phaseMs, box);
+    if (this.waveDrawn) this.g.clear();
+    this.waveDrawn = live && this.drawWave(timeMs + phaseMs, box);
     const cy = box.top - star.lift;
     const flash = live ? sparkleAt(timeMs, phaseMs) : 0;
     const sway = live
       ? Math.sin((TWO_PI * (timeMs + phaseMs)) / idle.swayMs) * idle.swayDeg * DEG_TO_RAD
       : 0;
-    paintStar(star0, cy, sway, 1 + flash * idle.sparkleScale);
+    this.star
+      .setPosition(0, cy)
+      .setRotation(sway)
+      .setScale((1 + flash * idle.sparkleScale) / STAR_BAKE_SCALE);
     if (live && this.jokeAllowed) this.drawJoke(timeMs, cy);
     else this.jokeStart = -1;
-    if (flash > 0) {
-      const size = star.radius * idle.sparkleSize * flash;
-      const x = idle.sparkleOffset.x * star.radius;
-      const y = cy + idle.sparkleOffset.y * star.radius;
-      g.fillStyle(PALETTE.textLight, 1);
-      fillPolygon(g, starPoints(x, y, size, idle.sparkleNotch, SPARKLE_POINTS));
-    }
+    this.sparkle
+      .setVisible(flash > 0)
+      .setPosition(idle.sparkleOffset.x * star.radius, cy + idle.sparkleOffset.y * star.radius)
+      .setScale(flash);
   }
 
   private show(): void {
     const visible = this.on && !this.hidden;
-    this.back.setVisible(visible);
+    this.star.setVisible(visible);
     this.g.setVisible(visible);
     this.front.setVisible(visible);
+    if (!visible) this.sparkle.setVisible(false);
     if (!visible) this.endJoke();
   }
 
   private clear(): void {
-    this.back.clear();
     this.g.clear();
+    this.waveDrawn = false;
     this.front.clear();
+    this.sparkle.setVisible(false);
   }
 
   /** Stops a joke at once (the layer goes back to the pool). */
@@ -262,8 +270,9 @@ export class RainbowIdle {
     });
   }
 
-  /** Each sponge swells and brightens in a window that runs across it left to right, top sponge first. */
-  private drawWave(timeMs: number, box: LayerBox): void {
+  /** Each sponge swells and brightens in a window that runs across it left to right, top sponge first; false when no sponge is in the wave. */
+  private drawWave(timeMs: number, box: LayerBox): boolean {
+    let drawn = false;
     const column = (x: number, row: { top: number; bottom: number }, bulge: number): Pt[] => {
       const span = bodySpan(box, x);
       const down = Math.min(span.bottom, row.bottom + waveAt(x));
@@ -288,7 +297,9 @@ export class RainbowIdle {
         const b = column(x2, row, idle.bulgePx * humpAt(x2, center, idle.halfPx));
         this.g.fillStyle(mixColor(color, PALETTE.textLight, idle.brighten * mid), 1);
         fillQuad(this.g, a[0]!, b[0]!, b[1]!, a[1]!);
+        drawn = true;
       }
     });
+    return drawn;
   }
 }

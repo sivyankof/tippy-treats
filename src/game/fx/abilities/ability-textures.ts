@@ -5,6 +5,7 @@ import { BALANCE } from '../../../data/balance';
 import { PALETTE } from '../../../data/palette';
 import { DEG_TO_RAD } from '../../../util/math';
 import { bakeTexture } from '../../ui/bake-texture';
+import { bakeRainbowTextures } from './rainbow-textures';
 
 /** Keys of the textures the ability effects share. All but the bubble are white and meant to be tinted. */
 export const ABILITY_TEXTURES = {
@@ -35,6 +36,7 @@ export const DASH_SIZE = dash;
 /** Bakes the ability textures. Safe to call again: existing keys are kept. */
 export function createAbilityTextures(scene: Phaser.Scene): void {
   const white = PALETTE.textLight;
+  bakeRainbowTextures(scene);
 
   bakeTexture(scene, ABILITY_TEXTURES.strand, strand.width, strand.height, (g) => {
     g.fillStyle(white, 1).fillRoundedRect(0, 0, strand.width, strand.height, strand.width / 2);
