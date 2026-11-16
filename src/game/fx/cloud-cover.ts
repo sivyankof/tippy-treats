@@ -13,12 +13,9 @@ const cfg = RULE_ANIM.cloud;
 const nebula = cfg.nebula;
 const stars = nebula.stars;
 /** Stars a bank keeps ready: the most any level shows. */
-const STAR_SLOTS = Math.max(...Object.values(stars.count));
+const STAR_SLOTS = stars.spots.length;
+const LOGICAL_CENTER_X = LOGICAL_SIZE.width / 2;
 
-/** The bank spans the whole screen plus the padding: the flying layer is always inside it. */
-const BANK_SPAN = LOGICAL_SIZE.width + cfg.pad * 2;
-const PUFF_COUNT = Math.min(cfg.maxPuffs, Math.ceil(BANK_SPAN / cfg.spacing) + 1);
-const PUFF_STEP = BANK_SPAN / (PUFF_COUNT - 1);
 const MS_PER_S = 1000;
 /** A rise of the time to arrival bigger than this means the awaited cloud has come. */
 const ARRIVAL_JUMP_MS = 30;
@@ -94,17 +91,16 @@ export function layerHidden(
   return !ghostMaster && !nebulaShown && (covered || amount > 0);
 }
 
-/** Where a puff of the nebula bank sits off its place in the row, and its size: a pure function of the index. */
-export function nebulaJitter(index: number): { dx: number; dy: number; scale: number } {
-  const j = nebula.jitter;
-  return {
-    dx: (scatter(index, 0.2) * 2 - 1) * j.x,
-    dy: (scatter(index, 0.55) * 2 - 1) * j.y,
-    scale: lerp(j.scale[0], j.scale[1], scatter(index, 0.8)),
-  };
+/**
+ * The share of the density cap that "Not scary" leaves, 1 without it. The nebula has its own
+ * (it is lighter than the cloud to begin with and has to read clearly more see-through).
+ */
+export function ghostShare(ghostMaster: boolean, nebulaLook: boolean): number {
+  if (!ghostMaster) return 1;
+  return nebulaLook ? nebula.ghostMaxDensity : cfg.ghostMaxDensity;
 }
 
-/** Every puff of a nebula bank billows, except on the minimal level; the cloud always does. */
+/** The figure of a nebula bank billows, except on the minimal level; the cloud always does. */
 export function puffsBillow(look: CloudLook, level: EffectLevel): boolean {
   return look === 'cloud' || level !== 'minimal';
 }
@@ -292,23 +288,19 @@ export class CloudMotion {
   }
 }
 
-/** A bank of puffs and the motion that drives it. */
+/** A bank: one figure (the cloud or the nebula) with its twinkling stars, and the motion that drives it. */
 class CloudBank {
-  private readonly puffs: Phaser.GameObjects.Image[] = [];
+  private readonly figure: Phaser.GameObjects.Image;
   /** Twinkling stars of the nebula, made up front and only shown, moved and tinted afterwards. */
   private readonly stars: Phaser.GameObjects.Image[] = [];
   readonly motion = new CloudMotion();
   look: CloudLook = 'cloud';
 
   constructor(scene: Phaser.Scene) {
-    for (let i = 0; i < PUFF_COUNT; i++) {
-      this.puffs.push(
-        scene.add
-          .image(0, 0, TREASURE_TEXTURES.cloud)
-          .setDepth(FLYING_FX_DEPTH.cloud)
-          .setVisible(false),
-      );
-    }
+    this.figure = scene.add
+      .image(LOGICAL_CENTER_X, 0, TREASURE_TEXTURES.cloud)
+      .setDepth(FLYING_FX_DEPTH.cloud)
+      .setVisible(false);
     for (let i = 0; i < STAR_SLOTS; i++) {
       const tint = stars.tints[i % stars.tints.length] ?? 0xffffff;
       this.stars.push(
@@ -330,47 +322,43 @@ class CloudBank {
     const look = pickLook(this.motion.phase, this.look, input.nebula ? 'nebula' : 'cloud');
     if (look !== this.look) {
       this.look = look;
-      const key = look === 'nebula' ? TREASURE_TEXTURES.nebula : TREASURE_TEXTURES.cloud;
-      for (const puff of this.puffs) puff.setTexture(key);
+      this.figure.setTexture(
+        look === 'nebula' ? TREASURE_TEXTURES.nebula : TREASURE_TEXTURES.cloud,
+      );
     }
     const pose = this.motion.update(dtMs, input);
     const shown = this.motion.visible;
     const level = effectsMode.level;
     const billow = puffsBillow(this.look, level);
     const sway = sineWave(timeMs, cfg.driftPeriodMs) * cfg.driftPx;
-    const [minScale, maxScale] = cfg.scale;
-    const alpha = Math.min(pose.alpha, this.cap(input.maxAlpha));
-    for (let i = 0; i < this.puffs.length; i++) {
-      const puff = this.puffs[i];
-      if (!puff) continue;
-      puff.setVisible(shown);
-      if (!shown) continue;
-      const phase = i * cfg.bobPhaseStep;
-      const bob = billow ? sineWave(timeMs, cfg.bobPeriodMs, phase) * cfg.bobPx : 0;
-      const own = billow ? sineWave(timeMs, cfg.swayPeriodMs, phase) * cfg.swayPx : 0;
-      const breathe = billow ? 1 + sineWave(timeMs, cfg.breathePeriodMs, phase) * cfg.breathe : 1;
-      const shape =
-        this.look === 'nebula'
-          ? nebulaJitter(i)
-          : { dx: 0, dy: 0, scale: minScale + (maxScale - minScale) * scatter(i) };
-      puff
-        .setPosition(
-          -cfg.pad + PUFF_STEP * i + pose.x + sway + own + shape.dx,
-          this.motion.y + bob - pose.rise + shape.dy,
-        )
-        .setScale(shape.scale * pose.scale * breathe)
-        .setAlpha(alpha);
-    }
-    this.updateStars(shown && this.look === 'nebula', timeMs, level, pose, sway, input.maxAlpha);
+    const bob = billow ? sineWave(timeMs, cfg.bobPeriodMs) * cfg.bobPx : 0;
+    const own = billow ? sineWave(timeMs, cfg.swayPeriodMs) * cfg.swayPx : 0;
+    const breathe = billow ? 1 + sineWave(timeMs, cfg.breathePeriodMs) * cfg.breathe : 1;
+    const x = LOGICAL_CENTER_X + pose.x + sway + own;
+    const y = this.motion.y + bob - pose.rise;
+    const scale = cfg.figure.scale * pose.scale * breathe;
+    this.figure
+      .setVisible(shown)
+      .setPosition(x, y)
+      .setScale(scale)
+      .setAlpha(Math.min(pose.alpha, this.cap(input.maxAlpha)));
+    this.updateStars(
+      shown && this.look === 'nebula',
+      timeMs,
+      level,
+      { x, y, scale },
+      pose.alpha,
+      input.maxAlpha,
+    );
   }
 
-  /** The stars of the nebula ride on the bank and each twinkles on its own phase. */
+  /** The stars of the nebula sit on the figure and ride on it; each twinkles on its own phase. */
   private updateStars(
     shown: boolean,
     timeMs: number,
     level: EffectLevel,
-    pose: Readonly<CloudPose>,
-    sway: number,
+    at: { x: number; y: number; scale: number },
+    poseAlpha: number,
     share: number,
   ): void {
     const count = shown ? starCount(level) : 0;
@@ -378,18 +366,17 @@ class CloudBank {
     for (let i = 0; i < this.stars.length; i++) {
       const star = this.stars[i];
       if (!star) continue;
-      const on = starActive(i, STAR_SLOTS, count);
+      const spot = stars.spots[i];
+      const on = spot !== undefined && starActive(i, STAR_SLOTS, count);
       star.setVisible(on);
       if (!on) continue;
       const { scale, alpha } = starLook(starPulse(timeMs, i));
-      const x = -cfg.pad + (BANK_SPAN * (i + 0.5)) / STAR_SLOTS;
       star
-        .setPosition(
-          x + (scatter(i, 0.3) - 0.5) * PUFF_STEP + pose.x + sway,
-          this.motion.y - pose.rise + (scatter(i, 0.6) - 0.5) * 2 * stars.spreadPx,
+        .setPosition(at.x + spot.x * cfg.figure.width * at.scale, at.y + spot.y * at.scale)
+        .setScale(
+          (minScale + (maxScale - minScale) * scatter(i)) * (at.scale / cfg.figure.scale) * scale,
         )
-        .setScale((minScale + (maxScale - minScale) * scatter(i)) * pose.scale * scale)
-        .setAlpha(alpha * pose.alpha * share);
+        .setAlpha(alpha * poseAlpha * Math.min(1, share));
     }
   }
 }
