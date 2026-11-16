@@ -13,6 +13,7 @@ import { bakeOvenTextures } from '../fx/oven-texture';
 import { createRewardTextures } from '../fx/reward-pictures';
 import { createPileTextures } from '../fx/treasure-pile';
 import { createTreasureTextures } from '../fx/treasure-textures';
+import { bakeLapEdge } from '../fx/lap-edges';
 import { bakeSharedArt } from '../objects/backdrop/art-kit';
 import { bakeAllFarArt } from '../objects/backdrop/far-plane';
 import {
@@ -37,6 +38,7 @@ const PRIME_STEPS: ReadonlyArray<(scene: Phaser.Scene) => void> = [
   createFxTextures,
   createAbilityTextures,
   createTreasureTextures,
+  bakeLapEdge,
   createPileTextures,
   createRewardTextures,
   bakeOvenTextures,
