@@ -78,6 +78,11 @@ export interface TravelSpec {
   fadeEdge: number;
   /** The picture points along its path (comet, shooting star). */
   alongPath: boolean;
+  /**
+   * Keeps the path out of the stripe around the flying layer's line (Space, `flightClearBand`):
+   * `halfPx` is the most the picture reaches above or below its path (its half height, tail and tilt).
+   */
+  avoidFlight?: { halfPx: number };
   rock?: { deg: number; ms: number };
   bob?: Wave;
   /** Loops of a buzzing flight. */
@@ -462,6 +467,7 @@ export const BACKDROP_LIFE = {
       alpha: 1,
       fadeEdge: 0.02,
       alongPath: false,
+      avoidFlight: { halfPx: 50 },
       rock: { deg: 5, ms: 1800 },
     } as TravelSpec,
     comet: {
@@ -479,6 +485,7 @@ export const BACKDROP_LIFE = {
       alpha: 1,
       fadeEdge: 0.15,
       alongPath: true,
+      avoidFlight: { halfPx: 70 },
     } as TravelSpec,
   },
 } as const;

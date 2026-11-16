@@ -72,8 +72,6 @@ export const PLANET_LOOK = {
   radius: 190,
   /** Share of the sky colour mixed into every colour of the planet, so it stays below the tower in contrast. */
   muteShare: 0.4,
-  /** After the mute: saturation and lightness of every colour are cut to this share, so the planet stays well behind the tower. */
-  dim: { saturation: 0.8, lightness: 0.8 },
   /** The sky colour that mix leans towards (the middle of the Space sky). */
   muteTo: 0x120a2e,
   /** Outline thickness as a share of the body radius (the layers' manner). */

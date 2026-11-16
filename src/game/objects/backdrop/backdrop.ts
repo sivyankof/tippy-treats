@@ -6,7 +6,7 @@ import { flyingLap } from '../../../core/space-laps';
 import { DEPTH } from '../../depth';
 import { markPerfPart } from '../../perf/perf-marks';
 import { collectBakeSteps, type BakeStep } from '../../ui/bake-texture';
-import { surfaceScreenY } from '../../camera-layout';
+import { flightClearBand, surfaceScreenY } from '../../camera-layout';
 import { bakeSharedArt } from './art-kit';
 import { towerLayersAt } from './mountain-placement';
 import { bakeFarArt } from './far-plane';
@@ -74,7 +74,14 @@ export class Backdrop {
     this.lap = flyingLap(state.height);
     this.fade = new ZoneFade(state.zoneIndex, BACKDROP.fadeMs);
     this.lastNowMs = scene.time.now;
-    this.ctx = { timeMs: scene.time.now, deltaMs: 0, width, height, towerLayers: 0 };
+    this.ctx = {
+      timeMs: scene.time.now,
+      deltaMs: 0,
+      width,
+      height,
+      clearBand: flightClearBand(height),
+      towerLayers: 0,
+    };
     this.counter = new Counter(scene, trayTopY, width);
     this.ensure(state.zoneIndex);
     this.prepareNext(state.zoneIndex);
@@ -116,6 +123,7 @@ export class Backdrop {
   resize(width: number, height: number): void {
     this.ctx.width = width;
     this.ctx.height = height;
+    this.ctx.clearBand = flightClearBand(height);
     for (const scenery of this.sceneries.values()) scenery.resize(width, height);
     // The still has the old size; the zones draw again and lay out for the new one.
     this.unfreeze();

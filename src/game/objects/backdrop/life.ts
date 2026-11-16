@@ -15,6 +15,7 @@ import {
   travelPose,
   twinklePose,
   type Pose,
+  type YBand,
   type TravelPass,
 } from './life-motion';
 
@@ -25,6 +26,8 @@ export interface FrameCtx {
   /** Logical screen size. */
   width: number;
   height: number;
+  /** The stripe around the flying layer's line that Space travellers keep out of; null outside Space. */
+  clearBand: YBand | null;
   /** Tower height in layers, from the camera scroll (drives the mountain peaks). */
   towerLayers: number;
 }
@@ -175,6 +178,7 @@ export class Traveler implements Life, GuestSource {
           ctx.height,
           ctx.timeMs,
           this.pose,
+          ctx.clearBand,
         ),
       );
     });

@@ -114,6 +114,38 @@ export interface TravelPass {
   direction: 1 | -1;
 }
 
+/** A stripe of the screen (px). */
+export interface YBand {
+  top: number;
+  bottom: number;
+}
+
+/**
+ * The two end heights of a straight path (`y0` to `y1`, px) moved out of `band`: a picture reaching
+ * `half` px above and below its path stays fully above the band, or fully below it. It goes to the
+ * side nearer the path's middle that has room on a screen `screenH` tall (above first on a tie);
+ * a path already clear on one side is left alone. Both ends are pressed against the band's edge, so
+ * the path flattens where it would have crossed.
+ */
+export function clearBandPath(
+  y0: number,
+  y1: number,
+  half: number,
+  band: YBand,
+  screenH: number,
+): [number, number] {
+  const above = band.top - half;
+  const below = band.bottom + half;
+  if (Math.max(y0, y1) <= above || Math.min(y0, y1) >= below) return [y0, y1];
+  const roomAbove = above >= half;
+  const roomBelow = below <= screenH - half;
+  const mid = (y0 + y1) / 2;
+  const goAbove = roomAbove && (!roomBelow || mid - above <= below - mid);
+  if (goAbove) return [Math.min(y0, above), Math.min(y1, above)];
+  if (roomBelow) return [Math.max(y0, below), Math.max(y1, below)];
+  return [y0, y1];
+}
+
 /** Pose of member `index` of a travelling flock, `progress` (0..1) of the way along its path. */
 export function travelPose(
   spec: TravelSpec,
@@ -124,16 +156,22 @@ export function travelPose(
   height: number,
   timeMs: number,
   out: Pose,
+  clear: YBand | null = null,
 ): Pose {
   const flip = pass.direction < 0 && spec.bothWays;
   const fromX = flip ? 1 - spec.from.x : spec.from.x;
   const toX = flip ? 1 - spec.to.x : spec.to.x;
   const pathDx = (toX - fromX) * width;
-  const pathDy = (spec.to.y - spec.from.y) * height;
+  let y0 = (spec.from.y + pass.shiftY) * height;
+  let y1 = (spec.to.y + pass.shiftY) * height;
+  if (clear && spec.avoidFlight) {
+    [y0, y1] = clearBandPath(y0, y1, spec.avoidFlight.halfPx, clear, height);
+  }
+  const pathDy = y1 - y0;
   const side = index % 2 === 1 ? 1 : -1;
   const rank = Math.ceil(index / 2);
   let x = lerp(fromX, toX, progress) * width + pass.shiftX * width;
-  let y = lerp(spec.from.y, spec.to.y, progress) * height + pass.shiftY * height;
+  let y = lerp(y0, y1, progress);
   x -= Math.sign(pathDx) * rank * spec.spreadPx.x;
   y += side * rank * spec.spreadPx.y;
   const memberPhase = index * MOTION.flockPhase;

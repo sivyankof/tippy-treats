@@ -3,8 +3,10 @@ import { BACKDROP } from '../../../data/backdrop';
 import { PLANET_PLACE } from '../../../data/space-planets';
 import { BACKDROP_LIFE, type HoverSpec } from '../../../data/backdrop-life';
 import { ZONES } from '../../../data/zones';
+import { flightClearBand } from '../../camera-layout';
 import {
   blinkFactor,
+  clearBandPath,
   hoverPose,
   newPose,
   puffPose,
@@ -248,5 +250,51 @@ describe('background life of the zones (docs/06, section 5)', () => {
     };
     for (const zone of ZONES) expect(kinds[zone.id]?.length).toBeGreaterThanOrEqual(3);
     expect(Object.keys(kinds)).toHaveLength(ZONES.length);
+  });
+});
+
+describe('clearBandPath', () => {
+  const band = { top: 800, bottom: 1000 };
+
+  it('leaves a path that is already clear on one side alone', () => {
+    expect(clearBandPath(100, 600, 50, band, 2300)).toEqual([100, 600]);
+    expect(clearBandPath(1200, 1500, 50, band, 2300)).toEqual([1200, 1500]);
+  });
+
+  it('presses a path that would cross the band against the near edge, above or below', () => {
+    expect(clearBandPath(500, 1100, 50, band, 2300)).toEqual([500, 750]);
+    expect(clearBandPath(1400, 900, 50, band, 2300)).toEqual([1400, 1050]);
+  });
+
+  it('goes below when there is no room above', () => {
+    expect(clearBandPath(60, 900, 50, { top: 90, bottom: 300 }, 2300)).toEqual([350, 900]);
+  });
+});
+
+describe('travelPose in Space', () => {
+  const { satellite, comet } = BACKDROP_LIFE.space;
+  const screenW = 1080;
+
+  it('keeps the satellite and the comet out of the stripe on every screen height and path shift', () => {
+    for (const screenH of [1919, 2337, 2520]) {
+      const clear = flightClearBand(screenH);
+      for (const spec of [satellite, comet]) {
+        const half = spec.avoidFlight?.halfPx ?? 0;
+        for (const shiftY of [-0.1, 0, 0.1]) {
+          for (let p = 0; p <= 1; p += 0.05) {
+            const pass = { shiftX: 0, shiftY, direction: 1 as const };
+            const pose = travelPose(spec, pass, 0, p, screenW, screenH, 0, newPose(), clear);
+            const crosses = pose.y + half > clear.top && pose.y - half < clear.bottom;
+            expect(crosses).toBe(false);
+          }
+        }
+      }
+    }
+  });
+
+  it('is unchanged without a clear stripe', () => {
+    const pass = { shiftX: 0, shiftY: 0, direction: 1 as const };
+    const free = travelPose(satellite, pass, 0, 0.5, screenW, 2337, 0, newPose());
+    expect(free.y).toBeCloseTo(((satellite.from.y + satellite.to.y) / 2) * 2337);
   });
 });
