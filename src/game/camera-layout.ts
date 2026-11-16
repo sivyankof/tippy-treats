@@ -1,5 +1,6 @@
 import { ANIM } from '../data/anim';
 import { BALANCE } from '../data/balance';
+import { FLIGHT_CLEAR } from '../data/flight-clear';
 import { HUD_LAYOUT } from '../data/hud-layout';
 
 /**
@@ -28,4 +29,16 @@ export function surfaceScreenY(screenH: number): number {
     screenH - ANIM.camera.visibleLayers * BALANCE.layer.height,
     HUD_LAYOUT.badgeRowBottom + ANIM.camera.hudClearance + FLYING_REACH,
   );
+}
+
+/**
+ * The stripe of the screen the background travellers keep out of: the line of the incoming layer
+ * (its centre when the tower top stands at `surfaceScreenY`) and `aroundLayers` layer heights
+ * above and below it. Space only, where the tower is always tall, so the row stands still.
+ */
+export function flightClearBand(screenH: number): { top: number; bottom: number } {
+  const { gapAboveTower, height } = BALANCE.layer;
+  const centre = surfaceScreenY(screenH) - gapAboveTower - height / 2;
+  const reach = height * FLIGHT_CLEAR.aroundLayers;
+  return { top: centre - reach, bottom: centre + reach };
 }

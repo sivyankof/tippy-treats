@@ -4,6 +4,7 @@ import { ZONE_RULES } from '../data/zones';
 import { LAP_REWARD } from '../data/zones';
 import {
   flyingLap,
+  lapFirstIndex,
   lapRewardBerries,
   lapScoreBonus,
   layerZoneScoreMult,
@@ -103,5 +104,15 @@ describe('lapRewardBerries', () => {
   it('stops at the last rewarded lap', () => {
     expect(lapRewardBerries(0, 5000)).toBe(9 * berries);
     expect(lapRewardBerries(10, 5000)).toBe(0);
+  });
+});
+
+describe('lapFirstIndex', () => {
+  it('is the first layer of the lap and round-trips through spaceLap', () => {
+    for (let lap = 1; lap <= 12; lap++) {
+      expect(spaceLap(lapFirstIndex(lap))).toBe(lap);
+      expect(spaceLap(lapFirstIndex(lap) - 1)).toBe(lap - 1);
+    }
+    expect(lapFirstIndex(0)).toBe(lapFirstIndex(1));
   });
 });

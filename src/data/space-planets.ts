@@ -15,7 +15,13 @@ export const SPACE_PLANET_IDS = [
 
 export type SpacePlanetId = (typeof SPACE_PLANET_IDS)[number];
 
-export const planetKey = (id: SpacePlanetId): string => `bd_planet_${id}`;
+const PLANET_KEY_PREFIX = 'bd_planet_';
+
+export const planetKey = (id: SpacePlanetId): string => `${PLANET_KEY_PREFIX}${id}`;
+
+/** The planet a texture key belongs to (the key of `planetKey`). */
+export const planetIdOfKey = (key: string): SpacePlanetId =>
+  (SPACE_PLANET_IDS.find((id) => planetKey(id) === key) ?? SPACE_PLANET_IDS[0]) as SpacePlanetId;
 
 /** Colours of one planet: `base` and `shade` are the two flat tones of the body, the rest are its details. */
 export interface PlanetColors {
@@ -93,21 +99,40 @@ export const PLANET_LOOK = {
   },
 } as const;
 
-/** Where the planet hangs on the screen (shares of the screen) and how it drifts. */
+/**
+ * Where the planet hangs on the screen and how it drifts (docs/06, section 5). It sits in a free
+ * lane: outside the dashed lap corridor (the width cap of its lap, centred on the tower) and
+ * below the HUD; where no lane has room it is not shown.
+ */
 export const PLANET_PLACE = {
-  at: { x: 0.11, y: 0.28 },
-  scale: 0.85,
-  /** Clear space kept between the HUD (its lowest edge) and the top of the planet, drift included; a short screen pushes the planet down to keep it. */
+  /** Start x (left) and y as shares of the screen; the HUD pushes the planet down. */
+  x: 0.11,
+  y: 0.28,
+  scale: 0.6,
+  /** Clear space kept between the HUD (its lowest edge, counter chips included) and the top of the planet, drift included. */
   hudGap: 40,
+  /** Clear space between the planet (drift included) and the stripe around the flying layer's line. */
+  rowGap: 24,
+  /** Clear space between the planet and a dashed edge line, drift included. */
+  lineGap: 40,
+  /** How far the top layer may stand off the screen centre, so the corridor is widened by this on each side. */
+  swayPx: 40,
+  /** A planet may hang off the screen edge, but at least this share of its width stays in view. */
+  minVisible: 0.5,
   /** Full and lite levels; the minimal level holds the planet still. */
   drift: {
     bob: { px: 10, ms: 6400 },
     swing: { deg: 3, ms: 8200 },
   },
 } satisfies {
-  at: HoverSpec['at'];
+  x: number;
+  y: number;
   scale: number;
   hudGap: number;
+  rowGap: number;
+  lineGap: number;
+  swayPx: number;
+  minVisible: number;
   drift: Pick<HoverSpec, 'bob' | 'swing'>;
 };
 

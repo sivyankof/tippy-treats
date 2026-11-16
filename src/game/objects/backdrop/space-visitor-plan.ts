@@ -5,7 +5,7 @@ import {
   type VisitorFlight,
 } from '../../../data/space-visitor';
 import { HUD_LAYOUT } from '../../../data/hud-layout';
-import { FLYING_REACH, surfaceScreenY } from '../../camera-layout';
+import { flightClearBand } from '../../camera-layout';
 import { DEG_TO_RAD, lerp, pickRange, sineWave } from '../../../util/math';
 import { edgeFade } from './pass-timer';
 
@@ -65,13 +65,24 @@ export function newVisitorPose(): VisitorPose {
   return { x: 0, y: 0, rotation: 0, alpha: 1, scale: 1, flipX: false };
 }
 
-/** The free stripe of a screen `screenH` tall: under the HUD, above the row of the flying layer. */
-export function visitorBand(screenH: number): { top: number; bottom: number } {
+export type VisitorLane = 'above' | 'below';
+
+/**
+ * The free stripe of a screen `screenH` tall for a lane. Above: under the HUD, above the clear
+ * stripe around the line of the flying layer. Below: under that stripe, `belowDepthPx` deep. Each
+ * is `bandPadPx` clear of what it borders.
+ */
+export function visitorBand(
+  screenH: number,
+  lane: VisitorLane = 'above',
+): { top: number; bottom: number } {
   const pad = SPACE_VISITOR.bandPadPx;
-  return {
-    top: HUD_LAYOUT.badgeRowBottom + pad,
-    bottom: surfaceScreenY(screenH) - FLYING_REACH - pad,
-  };
+  const clear = flightClearBand(screenH);
+  if (lane === 'below') {
+    const top = clear.bottom + pad;
+    return { top, bottom: Math.min(screenH - pad, top + SPACE_VISITOR.belowDepthPx) };
+  }
+  return { top: HUD_LAYOUT.badgeRowBottom + pad, bottom: clear.top - pad };
 }
 
 /** Height a guest takes up in flight: its picture, the slope of its path and its sway. */
@@ -80,11 +91,24 @@ function extentOf(guest: SpaceVisitorId): number {
   return spec.height + spec.flight.slopePx + spec.flight.bob.px * 2;
 }
 
-/** How much the guest is drawn at on a screen `screenH` tall; 0 when even the smallest size would not fit. */
-export function visitorScale(guest: SpaceVisitorId, screenH: number): number {
-  const band = visitorBand(screenH);
+function scaleIn(guest: SpaceVisitorId, band: { top: number; bottom: number }): number {
   const scale = Math.min(1, (band.bottom - band.top) / extentOf(guest));
   return scale >= SPACE_VISITOR.minFitScale ? scale : 0;
+}
+
+/** The lane a guest flies in on a screen `screenH` tall: above the flying row when it fits there, else below; null when neither, and on a short screen. */
+export function visitorLane(guest: SpaceVisitorId, screenH: number): VisitorLane | null {
+  if (screenH < SPACE_VISITOR.minScreenH) return null;
+  for (const lane of ['above', 'below'] as const) {
+    if (scaleIn(guest, visitorBand(screenH, lane)) > 0) return lane;
+  }
+  return null;
+}
+
+/** How much the guest is drawn at on a screen `screenH` tall; 0 when even the smallest size would not fit. */
+export function visitorScale(guest: SpaceVisitorId, screenH: number): number {
+  const lane = visitorLane(guest, screenH);
+  return lane ? scaleIn(guest, visitorBand(screenH, lane)) : 0;
 }
 
 /**
@@ -106,7 +130,7 @@ export function visitorPose(
   const margin = spec.width * scale * SPACE_VISITOR.offscreenShare;
   const from = plan.leftward ? width + margin : -margin;
   const to = plan.leftward ? -margin : width + margin;
-  const band = visitorBand(screenH);
+  const band = visitorBand(screenH, visitorLane(plan.guest, screenH) ?? 'above');
   const room = (band.bottom - band.top - extentOf(plan.guest) * scale) / 2;
   const centre = (band.top + band.bottom) / 2 + room * (plan.bandShare * 2 - 1);
   const slopeY = flight.slopePx * scale * (progress - 0.5);
