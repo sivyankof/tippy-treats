@@ -54,9 +54,9 @@ const cloud = (x: number, y: number, scale: number, tone: number): FarShape => (
 });
 
 /**
- * The far plane behind every parallax layer (docs/06, "Дальний план и лучи"): paler flat
- * silhouettes of the zone's own objects in 2-3 tone steps close to the sky, and soft light
- * rays behind the tower. Everything is baked once; the frame only moves two pictures.
+ * The far plane behind every parallax layer (docs/06, "Дальний план"): paler flat
+ * silhouettes of the zone's own objects in 2-3 tone steps close to the sky. Everything is
+ * baked once; the frame only moves one picture.
  */
 export const BACKDROP_FAR = {
   /** Side of the square silhouette tile. */
@@ -65,7 +65,7 @@ export const BACKDROP_FAR = {
   toneShares: [0.15, 0.27, 0.39],
   /** Where on the sky gradient (0 top, 1 bottom) the base colour is taken. */
   skyAt: 0.55,
-  /** Pale colour the silhouettes and rays lean towards, per zone. */
+  /** Pale colour the silhouettes lean towards, per zone. */
   light: {
     kitchen: 0xfff1d6,
     showcase: 0xffffff,
@@ -90,37 +90,6 @@ export const BACKDROP_FAR = {
   parallax: 0.02,
   driftPxPerSec: 1.5,
   alpha: 1,
-  /** Rays: one baked picture, turned slowly about a point behind the tower. */
-  rays: {
-    texture: 'bd_far_rays',
-    size: 1024,
-    wedges: 7,
-    /** Angle of the widest step of one wedge, in degrees. */
-    wedgeDeg: 15,
-    /** Steps of one wedge, wide and faint to narrow and bright: [angle share, length share, alpha]. */
-    steps: [
-      [1, 1, 0.09],
-      [0.7, 0.9, 0.09],
-      [0.4, 0.78, 0.09],
-    ],
-    /** Turn period of one full circle, in ms. */
-    periodMs: 240000,
-    /** Height of the turning point as a share of the screen height. */
-    centerY: 0.5,
-    /** The rays reach this share of the screen diagonal from the centre. */
-    reach: 0.62,
-    alpha: 1,
-    /** Per zone: scales the alpha of the rays. 0 = no rays at all (the object is not even created). */
-    strength: {
-      kitchen: 1,
-      showcase: 1,
-      roof: 1,
-      // At full strength the rays read as a searchlight on the bright cloud sky.
-      clouds: 0.5,
-      stars: 0,
-      space: 0,
-    } satisfies Record<ZoneId, number>,
-  },
   /** Silhouettes per zone on the square tile; the order is the drawing order (back to front). */
   shapes: {
     kitchen: [
@@ -180,6 +149,3 @@ export const BACKDROP_FAR = {
     ],
   } satisfies Record<ZoneId, readonly FarShape[]>,
 } as const;
-
-/** Whether the far plane of a zone has rays (strength above 0). */
-export const zoneHasFarRays = (zone: ZoneId): boolean => BACKDROP_FAR.rays.strength[zone] > 0;
