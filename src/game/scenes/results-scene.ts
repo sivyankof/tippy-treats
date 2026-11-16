@@ -8,7 +8,7 @@ import { RecordCelebration } from '../fx/record-celebration';
 import { leaveResultsAds, type RunExit } from '../interstitial-flow';
 import { isDebugRun, isLiveRun } from '../results-data';
 import { SCENES, type ResultsData } from '../scene-keys';
-import { settleResults } from '../results-launch';
+import { fadeInResultsDim } from '../results-launch';
 import { createDimOverlay } from '../ui/dim-overlay';
 import { enterScreen, leaveScreen, type Movable } from '../ui/transition';
 import { createDebugPlate } from '../ui/menu/results-debug-plate';
@@ -234,13 +234,7 @@ export class ResultsScene extends Phaser.Scene {
     // The ads may have loaded while the screen was built hidden.
     this.coins.refreshAd();
     this.buttons.refreshAd();
-    this.dim.setAlpha(0);
-    this.tweens.add({
-      targets: this.dim,
-      alpha: 1,
-      duration: ANIM.results.fadeMs,
-      onComplete: () => settleResults(this),
-    });
+    fadeInResultsDim(this, this.dim);
     this.tweens.add({ targets: this.hudCamera, alpha: 0, duration: ANIM.results.fadeMs });
     enterScreen(this, this.content(), () => {
       // The buttons wake up once the screen is in, so taps made during the run cannot hit them.

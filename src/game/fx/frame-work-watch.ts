@@ -1,3 +1,6 @@
+/** What made the level step down: the frame work time or the frame interval (GPU). */
+export type FrameWorkCause = 'work' | 'gpu';
+
 export interface FrameWorkWatchOptions {
   /** A frame whose work takes longer than this is over budget. */
   budgetMs: number;
@@ -16,7 +19,7 @@ export interface FrameWorkWatchOptions {
   gpuOnShare: number;
   /** ...and at least this share is quick (a steady 30 fps phone has none, so it never trips). */
   gpuQuickShare: number;
-  /** Stepping up also needs at most this share of late frames in `offWindowMs`. */
+  /** Where the device can do 60 (quick share as above), stepping up also needs at most this share of late frames in `offWindowMs`. */
   gpuOffShare: number;
   /** After a step down by the GPU signal, the level does not step up for this long. */
   gpuUpHoldMs: number;
@@ -56,7 +59,7 @@ export class FrameWorkWatch {
   private lastSwitchMs = Number.NEGATIVE_INFINITY;
   private stepped = 0;
   private floor = 0;
-  private cause: 'work' | 'gpu' = 'work';
+  private cause: FrameWorkCause = 'work';
   private gpuStepMs = Number.NEGATIVE_INFINITY;
 
   constructor(
@@ -75,7 +78,7 @@ export class FrameWorkWatch {
   }
 
   /** What caused the last step down: the frame work time or the frame interval (GPU). */
-  get lastCause(): 'work' | 'gpu' {
+  get lastCause(): FrameWorkCause {
     return this.cause;
   }
 
@@ -167,15 +170,18 @@ export class FrameWorkWatch {
       const { frames, over: bad } = this.sum(this.bad, this.offBuckets);
       const held = nowMs - this.gpuStepMs < this.options.gpuUpHoldMs;
       if (!held && (frames === 0 || bad / frames <= this.options.offBadShare)) {
+        // Late frames hold it down only where the device can do 60 (a steady 30 fps phone is all late).
         const late = this.sum(this.late, this.offBuckets).over;
-        if (frames === 0 || late / frames <= this.options.gpuOffShare) {
+        const quick = this.sum(this.quick, this.offBuckets).over;
+        const canDo60 = frames > 0 && quick / frames >= this.options.gpuQuickShare;
+        if (frames === 0 || !canDo60 || late / frames <= this.options.gpuOffShare) {
           this.switchTo(this.stepped - 1, nowMs, this.cause);
         }
       }
     }
   }
 
-  private switchTo(level: number, nowMs: number, cause: 'work' | 'gpu'): void {
+  private switchTo(level: number, nowMs: number, cause: FrameWorkCause): void {
     if (level > this.stepped) {
       this.cause = cause;
       if (cause === 'gpu') this.gpuStepMs = nowMs;

@@ -12,7 +12,7 @@ interface Showable {
 /**
  * `&nobg`, `&nofar`, `&nohud`, `&notower`: the parts are hidden only while the frame is drawn and
  * shown again right after it, so the game logic (and its own visibility switches) never sees it.
- * Backdrop and far plane are the marked children of the zone containers, the tower is every layer
+ * Backdrop and far plane are the marked children of the zone containers (and the frozen backdrop still, a marked picture of the scene), the tower is every layer
  * view of the run scene (the flying and falling layers too), the HUD is its whole scene.
  */
 export function hidePartsWhileDrawing(game: Phaser.Game, parts: readonly PerfPart[]): void {
@@ -24,15 +24,19 @@ export function hidePartsWhileDrawing(game: Phaser.Game, parts: readonly PerfPar
     object.setVisible(false);
     hidden.push(object);
   };
+  const hideMarked = (object: object): void => {
+    const part = perfPartOf(object);
+    if (part && parts.includes(part)) hide(object as unknown as Showable);
+  };
   const hideRunParts = (list: readonly Phaser.GameObjects.GameObject[]): void => {
     for (const object of list) {
       if (object instanceof LayerView) {
         if (parts.includes('tower')) hide(object);
       } else if (object instanceof Phaser.GameObjects.Container) {
-        for (const child of object.list) {
-          const part = perfPartOf(child);
-          if (part && parts.includes(part)) hide(child as unknown as Showable);
-        }
+        for (const child of object.list) hideMarked(child);
+      } else {
+        // The frozen backdrop is a marked picture of the scene itself, not a child of a zone.
+        hideMarked(object);
       }
     }
   };

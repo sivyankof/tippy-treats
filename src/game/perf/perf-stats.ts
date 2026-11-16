@@ -159,7 +159,7 @@ export interface PerfHeader {
   /** Size of the canvas on the page, CSS pixels. */
   css: { width: number; height: number };
   devicePixelRatio: number;
-  /** `&dpr=`, `null` when the canvas keeps the logical size. */
+  /** The density cap in force: `&dpr=`, or the cap of the effects level (`densityCapForLevel`) without it. */
   densityCap: number | null;
   /** Texture units a batch may use, and the most the device has. */
   textureUnits: number;

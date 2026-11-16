@@ -24,20 +24,23 @@ export function setFrameWorkListener(next: FrameWorkListener | null): void {
 /**
  * Measures the work of every frame, from the start of the game step to the end of its render
  * (CPU time: the video chip works on its own and shows up in the following frames), and feeds
- * it to the "fewer effects" mode and the stats. Also tells the mode when a scene is created and
+ * it to the "fewer effects" mode and the stats. The frame's time stamp is the loop time of its
+ * step (the rAF stamp), not the end of the render, so the interval between frames is the vsync
+ * to vsync distance and does not move with the work time. Also tells the mode when a scene is created and
  * when the page comes back from the background, so their first frames are not judged.
  */
 export function bindFrameWork(game: Phaser.Game): void {
   let stepStartMs = 0;
-  game.events.on(Phaser.Core.Events.PRE_STEP, () => {
+  let frameMs = 0;
+  game.events.on(Phaser.Core.Events.PRE_STEP, (time: number) => {
+    frameMs = time;
     stepStartMs = performance.now();
   });
   game.events.on(Phaser.Core.Events.POST_RENDER, () => {
-    const nowMs = performance.now();
-    const workMs = nowMs - stepStartMs;
+    const workMs = performance.now() - stepStartMs;
     frameWorkStats.add(workMs);
-    effectsMode.noteFrame(workMs, nowMs);
-    listener?.(workMs, nowMs);
+    effectsMode.noteFrame(workMs, frameMs);
+    listener?.(workMs, frameMs);
   });
   // The scenes exist from the start; each one reports its own creation, restarts included.
   for (const scene of game.scene.scenes) {

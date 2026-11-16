@@ -267,6 +267,15 @@ describe('FrameWorkWatch', () => {
       expect(levels).toEqual([2, 1, 0]);
     });
 
+    it('steps back up on a steady 30 fps phone that was stepped down by the work signal', () => {
+      const { watch, start } = newSteppedWatch();
+      const t = run(watch, start, A.onWindowMs + 1000, 1000 / 30, SLOW_WORK);
+      expect(watch.level).toBe(1);
+      expect(watch.lastCause).toBe('work');
+      run(watch, t, 3 * (A.minSwitchGapMs + A.offWindowMs), 1000 / 30, FAST_WORK);
+      expect(watch.level).toBe(0);
+    });
+
     it('keeps the level in the middle when frames are inside the budget but without the margin', () => {
       const { watch, start } = newSteppedWatch();
       let t = run(watch, start, A.onWindowMs + 1000, SLOW_FRAME_MS, SLOW_WORK);
