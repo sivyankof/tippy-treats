@@ -71,6 +71,11 @@ describe('parseDebugParams', () => {
     expect(parseDebugParams('?dayOffset').dayOffset).toBeUndefined();
   });
 
+  it('reads a rare guest of Space and drops unknown names', () => {
+    expect(parseDebugParams('?spaceGuest=comet').spaceGuest).toBe('comet');
+    expect(parseDebugParams('?spaceGuest=bus').spaceGuest).toBeUndefined();
+  });
+
   it('reads the reset flag only when it is 1', () => {
     expect(parseDebugParams('?reset=1').reset).toBe(true);
     expect(parseDebugParams('?reset=0').reset).toBeUndefined();

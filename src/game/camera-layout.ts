@@ -19,9 +19,13 @@ export function trayScrollY(trayTopY: number, screenH: number): number {
  * whole flying layer (with its bob) stays below the HUD, counter chips of the badge row included. `towerTopY` is the world y of the top.
  */
 export function targetScrollY(trayTopY: number, screenH: number, towerTopY: number): number {
-  const surfaceScreenY = Math.max(
+  return Math.min(trayScrollY(trayTopY, screenH), towerTopY - surfaceScreenY(screenH));
+}
+
+/** Screen y the top of a tall tower stands at: the flying layer is above it, the HUD above that. */
+export function surfaceScreenY(screenH: number): number {
+  return Math.max(
     screenH - ANIM.camera.visibleLayers * BALANCE.layer.height,
     HUD_LAYOUT.badgeRowBottom + ANIM.camera.hudClearance + FLYING_REACH,
   );
-  return Math.min(trayScrollY(trayTopY, screenH), towerTopY - surfaceScreenY);
 }
