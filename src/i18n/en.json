@@ -195,6 +195,45 @@
     }
   },
   "mastery": {
+    "stat": {
+      "honey": {
+        "value": "Tolerance: {from} → {to} px"
+      },
+      "puff": {
+        "value": "Widen: {from} → {to} px"
+      },
+      "jelly": {
+        "value": "Wobble relief: {from} → {to}",
+        "percent": "Spring: {from}% → {to}%"
+      },
+      "caramel": {
+        "value": "Double-coin layers: {from} → {to}"
+      },
+      "frosty": {
+        "value": "Slow-down: {from}% → {to}%"
+      },
+      "brownie": {
+        "value": "Shield lasts: {from} → {to} layers"
+      },
+      "sprinkle": {
+        "value": "Score: ×{from} → ×{to}"
+      },
+      "crumb": {
+        "value": "Pixels per coin: {from} → {to} px"
+      },
+      "ghost": {
+        "value": "Guided layers: {from} → {to}"
+      },
+      "twins": {
+        "value": "Score per layer: {from} → {to}"
+      },
+      "lemon": {
+        "value": "Score: ×{from} → ×{to}"
+      },
+      "rainbow": {
+        "value": "Protected layers: {from} → {to}"
+      }
+    },
     "plus": "+{n}",
     "honey": {
       "name": "Sweet Trail",
@@ -305,7 +344,7 @@
     "toTeam": "To team",
     "inTeam": "In team",
     "teamFull": "Team is full",
-    "nextLevel": "Lv {n}: {change}",
+    "nextLevel": "Lv {n} · {change}",
     "shopFromCoins": "Shop: {price} coins from baker lv {n}",
     "shopFromBerries": "Shop: {price} berries from baker lv {n}",
     "upgradeFrom": "Upgrade from baker lv {n}",

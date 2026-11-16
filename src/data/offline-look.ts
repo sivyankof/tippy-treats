@@ -14,19 +14,23 @@ export const OFFLINE_LOOK = {
     slash: PALETTE.berry,
     slashShadow: 0xc41c36,
     gloss: 0xffffff,
+    /** Dark outline round the cloud and the stroke, so the icon holds on a grey button. */
+    outline: PALETTE.textDark,
   },
+  /** Thickness of that outline as a share of the picture size. */
+  outlineShare: 0.055,
   /** Puffs of the cloud: centre and radius. */
   puffs: [
-    { x: 0.3, y: 0.56, r: 0.17 },
-    { x: 0.5, y: 0.42, r: 0.23 },
-    { x: 0.71, y: 0.56, r: 0.17 },
+    { x: 0.28, y: 0.58, r: 0.19 },
+    { x: 0.5, y: 0.4, r: 0.25 },
+    { x: 0.72, y: 0.58, r: 0.19 },
   ],
   /** The flat belly of the cloud: centre, half sizes and corner radius. */
-  belly: { x: 0.5, y: 0.64, rx: 0.33, ry: 0.13, radius: 0.12 },
+  belly: { x: 0.5, y: 0.66, rx: 0.36, ry: 0.14, radius: 0.13 },
   /** Offset of the light tone from the shadow tone (up and left). */
   bandShare: 0.04,
   /** The stroke across the cloud: end points and half thickness. */
-  slash: { fromX: 0.14, fromY: 0.14, toX: 0.86, toY: 0.88, halfThick: 0.045, steps: 20 },
+  slash: { fromX: 0.12, fromY: 0.12, toX: 0.88, toY: 0.9, halfThick: 0.06, steps: 24 },
   gloss: {
     x: 0.36,
     y: 0.38,
@@ -42,7 +46,7 @@ export const OFFLINE_LOOK = {
 /** How the icon sits next to the caption of a button. */
 export const OFFLINE_CAPTION_LAYOUT = {
   /** Icon side as a share of the caption's own text height. */
-  sizeShare: 1.3,
+  sizeShare: 1.5,
   /** Gap between the icon and the text, as a share of the icon side. */
   gapShare: 0.2,
 } as const;

@@ -195,6 +195,45 @@
     }
   },
   "mastery": {
+    "stat": {
+      "honey": {
+        "value": "Допуск: {from} → {to} px"
+      },
+      "puff": {
+        "value": "Расширение: {from} → {to} px"
+      },
+      "jelly": {
+        "value": "Гашение качки: {from} → {to}",
+        "percent": "Пружина: {from}% → {to}%"
+      },
+      "caramel": {
+        "value": "Слоёв с монетами ×2: {from} → {to}"
+      },
+      "frosty": {
+        "value": "Замедление: {from}% → {to}%"
+      },
+      "brownie": {
+        "value": "Срок щита: {from} → {to} сл."
+      },
+      "sprinkle": {
+        "value": "Очки: ×{from} → ×{to}"
+      },
+      "crumb": {
+        "value": "Пикселей на монету: {from} → {to} px"
+      },
+      "ghost": {
+        "value": "Слоёв с подсказкой: {from} → {to}"
+      },
+      "twins": {
+        "value": "Очки за слой: {from} → {to}"
+      },
+      "lemon": {
+        "value": "Очки: ×{from} → ×{to}"
+      },
+      "rainbow": {
+        "value": "Защищённых слоёв: {from} → {to}"
+      }
+    },
     "plus": "+{n}",
     "honey": {
       "name": "Медовый след",
@@ -305,7 +344,7 @@
     "toTeam": "В бригаду",
     "inTeam": "В бригаде",
     "teamFull": "Бригада полна",
-    "nextLevel": "Ур. {n}: {change}",
+    "nextLevel": "Ур. {n} · {change}",
     "shopFromCoins": "Магазин: {price} монет с ур. пекаря {n}",
     "shopFromBerries": "Магазин: {price} ягод с ур. пекаря {n}",
     "upgradeFrom": "Улучшить с {n}-го уровня пекаря",

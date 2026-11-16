@@ -7,8 +7,8 @@ import { bakeTexture } from './bake-texture';
 
 /**
  * Texture key of the gold mastery frame (docs/06, "Золотая рамка"): a ring the shape and size of
- * the rarity rim of a collection card, with four stars on the corners, drawn over the card of a
- * level-5 creature. Its centre is transparent; bake it with `bakeMasteryFrame` first.
+ * the rarity rim of a collection card with a second thin rim outside it and a crown-star on the top
+ * centre, drawn over the card of a level-5 creature. Its centre is transparent; bake it with `bakeMasteryFrame` first.
  */
 export const MASTERY_FRAME_KEY = MASTERY_FRAME.key;
 
@@ -20,7 +20,7 @@ export interface FrameBody {
 
 const COLLECTION_BODY: FrameBody = { width: MASTERY_FRAME.width, height: MASTERY_FRAME.height };
 
-/** Size of the picture: the plate plus the room around it for the corner stars. */
+/** Size of the picture: the plate plus the room around it for the outer rim and the crown. */
 export function masteryFrameSize(body: FrameBody = COLLECTION_BODY): FrameBody {
   const { pad } = MASTERY_FRAME;
   return { width: body.width + pad * 2, height: body.height + pad * 2 };
@@ -32,8 +32,8 @@ export function masteryFrameKey(body: FrameBody = COLLECTION_BODY): string {
   return same ? MASTERY_FRAME_KEY : `${MASTERY_FRAME_KEY}_${body.width}x${body.height}`;
 }
 
-const STAR_NOTCH = 0.3;
-const STAR_POINTS = 4;
+/** The light inner star of the crown, as a share of its radius. */
+const CROWN_LIGHT_SHARE = 0.55;
 const GLINT_RADIUS_SHARE = 0.22;
 
 /** Bakes the gold frame of a plate once (the key is kept when it exists); returns the key. Put it at the plate centre. */
@@ -68,26 +68,31 @@ export function bakeMasteryFrame(scene: Phaser.Scene, body: FrameBody = COLLECTI
     g.moveTo(x + f.shine.inset, y + f.outline + f.band * 0.5);
     g.lineTo(x + f.width - f.shine.inset, y + f.outline + f.band * 0.5);
     g.strokePath();
-    // Stars on the corners, on the middle of the band.
-    const arc = f.radius - ring / 2;
-    const lean = arc * (1 - Math.SQRT1_2);
-    const corners: ReadonlyArray<readonly [number, number]> = [
-      [x + lean, y + lean],
-      [x + f.width - lean, y + lean],
-      [x + lean, y + f.height - lean],
-      [x + f.width - lean, y + f.height - lean],
-    ];
-    for (const [cx, cy] of corners) {
-      fillOutlinedPolygon(
-        g,
-        starPoints(cx, cy, f.star.r, STAR_NOTCH, STAR_POINTS),
-        light,
-        dark,
-        2.5,
-      );
-      g.fillStyle(parseHex(f.star.white), 1);
-      g.fillCircle(cx, cy, f.star.r * GLINT_RADIUS_SHARE);
-    }
+    // Second thin rim outside the band.
+    const o = f.outerRim;
+    const outerInset = -(o.gap + o.width / 2 + o.outline);
+    stroke(outerInset, o.width + o.outline * 2, dark);
+    stroke(outerInset, o.width, gold);
+    stroke(outerInset - o.width * 0.25, o.width * 0.3, light, 0.9);
+    // Crown-star on the top centre, over both rims.
+    const cx = x + f.width / 2;
+    const cy = y - f.crown.lift;
+    fillOutlinedPolygon(
+      g,
+      starPoints(cx, cy, f.crown.r, f.crown.notch, f.crown.points),
+      gold,
+      dark,
+      f.crown.outline,
+    );
+    fillOutlinedPolygon(
+      g,
+      starPoints(cx, cy, f.crown.r * CROWN_LIGHT_SHARE, f.crown.notch, f.crown.points),
+      light,
+      light,
+      0,
+    );
+    g.fillStyle(parseHex(f.crown.white), 1);
+    g.fillCircle(cx, cy, f.crown.r * GLINT_RADIUS_SHARE);
   });
   return key;
 }

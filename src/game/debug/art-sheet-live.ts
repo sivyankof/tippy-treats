@@ -1,4 +1,7 @@
 import type * as Phaser from 'phaser';
+import { MENU } from '../../data/menu-layout';
+import { PALETTE } from '../../data/palette';
+import { createIconButton } from '../ui/menu/icon-button';
 import { createNoAdsIcon } from '../ui/menu/shop-premium-icon';
 import { GROWN_PICTURES } from './art-sheet-grown';
 
@@ -14,5 +17,21 @@ export interface LivePicture {
 /** Pictures with no texture of their own that still belong on the art sheet; a new one needs one line. */
 export const LIVE_PICTURES: readonly LivePicture[] = [
   { name: 'no_ads_icon', create: createNoAdsIcon },
+  {
+    name: 'about_icon',
+    create: (scene, size) => {
+      const { size: buttonSize } = MENU.detail.about;
+      const button = createIconButton(
+        scene,
+        0,
+        0,
+        buttonSize,
+        PALETTE.accentSecondary,
+        'about',
+        () => undefined,
+      );
+      return scene.add.container(0, 0, [button]).setScale(size / buttonSize);
+    },
+  },
   ...GROWN_PICTURES,
 ];

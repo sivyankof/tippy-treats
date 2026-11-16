@@ -261,13 +261,15 @@ export const MASTERY_FRAME = {
   radius: MENU.style.looks.card.radius,
   outline: MENU.style.looks.card.outline,
   band: MENU.style.looks.card.rimWidth,
-  /** Room around the card the picture keeps for stars that stick out. */
-  pad: 14,
+  /** Room around the card the picture keeps for the outer rim and the crown that stick out. */
+  pad: 30,
   gold: '#ffc93c',
   goldLight: '#fff0a0',
   goldDark: '#c98a12',
-  /** Four-point stars on the corners: radius and the share of the band they sit on. */
-  star: { r: 13, white: '#ffffff' },
+  /** The second, thin rim outside the band (the "double rim"): gap from the card edge, gold width, dark outline on each side. */
+  outerRim: { gap: 4, width: 7, outline: 3 },
+  /** The crown-star on the top centre: radius, notch depth (share of the radius), points, how far its centre sits above the card edge, outline width. */
+  crown: { r: 28, notch: 0.45, points: 5, lift: 6, outline: 4, white: '#ffffff' },
   /** Fine highlight along the top of the band: height, inset from corners. */
   shine: { height: 3, inset: 54, alpha: 0.8 },
 } as const;
