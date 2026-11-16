@@ -7,6 +7,7 @@ import {
   nebulaSilhouette,
   requiredBodyWidth,
   silhouetteBounds,
+  silhouetteTopAt,
 } from './cloud-figure';
 
 const figure = RULE_ANIM.cloud.figure;
@@ -34,9 +35,22 @@ describe('cloud figures', () => {
     }
   });
 
-  it('makes the nebula lumpier than the cloud', () => {
-    const c = silhouetteBounds(cloudSilhouette());
-    const n = silhouetteBounds(nebulaSilhouette());
-    expect(n.bottom - n.top).toBeGreaterThan(c.bottom - c.top);
+  it('is a lump, not a ribbon: the top line rises well above the thin ends and the bumps differ in size', () => {
+    for (const s of [cloudSilhouette(), nebulaSilhouette()]) {
+      const ends = Math.min(silhouetteTopAt(s, 150), silhouetteTopAt(s, 850));
+      const hump = Math.min(...[480, 520, 560, 600, 640].map((x) => silhouetteTopAt(s, x)));
+      expect(ends - hump).toBeGreaterThan(60);
+      const radii = s.circles.map((c) => c.r);
+      expect(Math.max(...radii) / Math.min(...radii)).toBeGreaterThan(2.5);
+    }
+  });
+
+  it('keeps the whole cover row inside the body wherever the layer is on the screen', () => {
+    const b = figure.body;
+    const rowHalf = BALANCE.layer.height / 2 + RULE_ANIM.cloud.bobPx + figure.layerMargin;
+    const mid = (b.top + b.bottom) / 2;
+    expect(((b.bottom - b.top) / 2) * figure.scale).toBeGreaterThanOrEqual(rowHalf);
+    expect(Math.abs(b.top + b.bottom - 2 * (figure.height / 2))).toBeLessThanOrEqual(1);
+    expect(mid).toBe(figure.height / 2);
   });
 });

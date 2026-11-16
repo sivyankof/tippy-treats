@@ -137,7 +137,7 @@ export const RULE_ANIM = {
       height: 360,
       scale: 1.4,
       /** The flat body (the part that always covers the layer row): left, right, top and bottom edges in baked px. */
-      body: { left: 44, right: 956, top: 100, bottom: 260 },
+      body: { left: 44, right: 956, top: 110, bottom: 250 },
       /** Thick warm outline around the figure, baked px. */
       outline: 7,
       /** Margin the layer height, bob and shake leave inside the body, display px, on each side. */
