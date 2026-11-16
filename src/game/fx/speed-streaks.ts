@@ -43,10 +43,19 @@ export class SpeedStreaks {
     width: number,
     dir: 1 | -1,
     timeMs: number,
+    space = false,
   ): void {
     const shown = strength > 0 ? Math.ceil(strength * cfg.count) : 0;
-    const tint = kind === 'rush' ? RULE_ANIM.colors.rushStreak : RULE_ANIM.colors.windStreak;
-    const peak = (kind === 'rush' ? cfg.rushAlpha : cfg.windAlpha) * strength;
+    const windSpace = kind === 'wind' && space;
+    const tint =
+      kind === 'rush'
+        ? RULE_ANIM.colors.rushStreak
+        : windSpace
+          ? RULE_ANIM.colors.windStreakSpace
+          : RULE_ANIM.colors.windStreak;
+    const baseAlpha =
+      kind === 'rush' ? cfg.rushAlpha : windSpace ? cfg.windSpaceAlpha : cfg.windAlpha;
+    const peak = baseAlpha * strength;
     const envelope = kind === 'rush' ? cfg.rushEnvelope : cfg.windEnvelope;
     const boost = kind === 'rush' ? burstBoost(timeMs - this.burstAtMs) : 0;
     const [shortest, longest] = cfg.lengthShare;
