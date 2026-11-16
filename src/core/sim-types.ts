@@ -155,6 +155,11 @@ export interface TowerState {
   shieldLevel: number;
   /** Layers of the tempo ease left (the one in the air included); 0 outside an ease. */
   tempoLeft: number;
+  /**
+   * The widest the current layer may grow (and spawn): `maxWidth`, narrower from lap 2 of Space
+   * (core/space-laps.ts). Set when a layer spawns; every widening of that layer respects it.
+   */
+  widthCap: number;
 }
 
 /** Where a collected coin came from (the scene animates it, the results screen sums it up). */

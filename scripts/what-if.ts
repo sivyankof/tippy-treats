@@ -1,6 +1,7 @@
 import { DIFFICULTY } from '../src/data/balance';
 import { CREATURES, type CreatureId } from '../src/data/creatures';
 import { MASTERY } from '../src/data/mastery';
+import { ZONE_RULES } from '../src/data/zones';
 
 /**
  * What-if values for the balance analysis (`--set=...` of `sim:teams`, `sim:coins`, `sim:economy`).
@@ -13,6 +14,7 @@ import { MASTERY } from '../src/data/mastery';
  *                              a number of `MASTERY` (data/mastery.ts)
  *   difficulty.ghostCloudSdMult=1.1
  *                              a bot-model number of `DIFFICULTY` (data/balance.ts)
+ *   zones.spaceLaps.step=0.08  a number of `ZONE_RULES` (data/zones.ts)
  */
 
 /** Creatures whose main levelled value the short `--set=<id>.<level>=N` replaces, and its field. */
@@ -62,6 +64,7 @@ export function applySets(spec: string): string[] {
     const [head = '', ...rest] = target.split('.');
     if (head === 'mastery') setNumber(MASTERY as unknown as Tree, rest, value, item);
     else if (head === 'difficulty') setNumber(DIFFICULTY as unknown as Tree, rest, value, item);
+    else if (head === 'zones') setNumber(ZONE_RULES as unknown as Tree, rest, value, item);
     else if (rest.length === 1) {
       setLevelled(head, LEVELLED[head as keyof typeof LEVELLED], rest[0] ?? '', value, item);
     } else if (rest.length === 2) setLevelled(head, rest[0], rest[1] ?? '', value, item);

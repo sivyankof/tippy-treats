@@ -70,6 +70,15 @@ export const ZONE_RULES = {
     /** Space: a cloud on the first pass is guaranteed. */
     spaceFirstPassChance: 1,
   },
+  /**
+   * Space laps (docs/02-gameplay.md, section 8): a lap is one zone length of Space layers (101-120
+   * is lap 1). From lap 2 on the widest a layer may be shrinks by `step` of the full width per lap,
+   * down to `floor`: `max(floor, 1 - step * (lap - 1)) * BALANCE.layer.maxWidth`.
+   */
+  spaceLaps: {
+    step: 0.06,
+    floor: 0.5,
+  },
   /** Stars "fake-out": once in the life of a layer it stops, then reverses. */
   stars: {
     chance: 0.3,

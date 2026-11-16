@@ -21,6 +21,7 @@ import {
   type SimPhase,
   type TowerState,
 } from './sim-types';
+import { spaceWidthLimit } from './space-laps';
 import { TempoEase } from './tempo-ease';
 import { attemptLayer, type LayerAttempt, type PlanState } from './team-queue';
 import { cloudRoll, layerRules, zoneIndexOf } from './zones';
@@ -127,6 +128,7 @@ export class TowerSim {
       shield: 0,
       shieldLevel: 0,
       tempoLeft: 0,
+      widthCap: BALANCE.layer.maxWidth,
     };
     const startHeight = Math.max(0, Math.floor(config.startHeight ?? 0));
     this.startHeight = startHeight;
@@ -285,7 +287,10 @@ export class TowerSim {
       this.tutorialSpeedMult(index) *
       tempo.mult *
       this.analysisSpeedScale(index, zoneIndex);
-    const layer = newFlyingLayer(planned.attempt.plan, rules, this.nextWidth, speed);
+    // Lap narrowing of Space: a layer wider than the cap of its lap spawns trimmed to it, evenly.
+    s.widthCap = spaceWidthLimit(index);
+    const width = Math.min(this.nextWidth, s.widthCap);
+    const layer = newFlyingLayer(planned.attempt.plan, rules, width, speed);
     this.flight = new Flight(layer, rules.fakeoutX, (pass) =>
       cloudRoll(this.zonesRng, rules, pass),
     );
@@ -361,13 +366,14 @@ export class TowerSim {
     if (outcome.quality === 'miss') return false;
     const perfect = outcome.quality === 'perfect';
     const x = this.topRestX() + outcome.centerOffset;
-    const placed = growInField(x, outcome.newWidth, 0);
-    const widening = perfect ? comboWidening(nextCombo(this.s.combo, true), placed.width) : 0;
+    const cap = this.s.widthCap;
+    const placed = growInField(x, outcome.newWidth, 0, cap);
+    const widening = perfect ? comboWidening(nextCombo(this.s.combo, true), placed.width, cap) : 0;
     out.index = this.s.layers.length + 1;
     out.kind = flying.kind;
     out.creature = flying.kind === 'creature' && flying.creature ? flying.creature : null;
     out.level = out.creature ? (flying.level ?? 1) : 0;
-    out.width = growInField(placed.x, placed.width, widening).width;
+    out.width = growInField(placed.x, placed.width, widening, cap).width;
     out.cut = outcome.cutSide;
     out.pieceWidth = outcome.cutSide ? outcome.cutWidth : 0;
     return true;
@@ -400,7 +406,7 @@ export class TowerSim {
       quality: outcome.quality,
     };
     // A layer that came back wider than the one below (restore width) still sits inside the field.
-    Object.assign(layer, growInField(layer.x, layer.width, 0));
+    Object.assign(layer, growInField(layer.x, layer.width, 0, s.widthCap));
     if (flying.creature) layer.creature = flying.creature;
     if (flying.level !== undefined) layer.level = flying.level;
     s.layers.push(layer);
@@ -465,7 +471,8 @@ export class TowerSim {
       this.perfects += 1;
       s.bestCombo = Math.max(s.bestCombo, s.combo);
       const before = layer.width;
-      Object.assign(layer, growInField(layer.x, before, comboWidening(s.combo, before)));
+      const cap = s.widthCap;
+      Object.assign(layer, growInField(layer.x, before, comboWidening(s.combo, before, cap), cap));
       const widened = layer.width - before;
       s.wobble = wobbleAfterPerfect(s.wobble);
       s.score += perfectScore(s.combo, scoreMult);
