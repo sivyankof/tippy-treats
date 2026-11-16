@@ -70,7 +70,9 @@ describe('level rewards', () => {
       Array.from({ length: 14 }, (_, i) => i + 2),
     );
     const expectedCoins = summary.levelUps.reduce((sum, up) => sum + (up.reward.coins ?? 0), 0);
-    const expectedBerries = summary.levelUps.reduce((sum, up) => sum + (up.reward.berries ?? 0), 0);
+    // The tall tower also reaches new Space laps: those berries are paid once, with the levels.
+    const levelBerries = summary.levelUps.reduce((sum, up) => sum + (up.reward.berries ?? 0), 0);
+    const expectedBerries = levelBerries + summary.lapBerries;
     expect(state.coins).toBe(expectedCoins);
     expect(state.berries).toBe(expectedBerries);
     expect(state.data.bakerLevel).toBe(15);

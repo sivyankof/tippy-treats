@@ -143,7 +143,7 @@ export class ResultsScene extends Phaser.Scene {
     const canDouble = isLiveRun(this.run) && result.mode !== 'daily';
     this.coins = new ResultsCoins(this, result.coins, coinLines(tally), canDouble);
     this.parts.coins = this.coins;
-    this.parts.tiers = new ResultsTiers(this, summary.dailyTiers);
+    this.parts.tiers = new ResultsTiers(this, summary.dailyTiers, summary.lapBerries);
     this.missions = new ResultsMissions(
       this,
       summary.missions.before,

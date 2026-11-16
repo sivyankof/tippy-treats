@@ -181,6 +181,7 @@ export class GameState {
       missions: progress.missions,
       dailyTiers: progress.dailyTiers,
       dailyStale: progress.dailyStale,
+      lapBerries: applied.summary.lapBerries,
     };
     this.noteRun(this.store.save, next, summary, extras);
     this.store.replace(next);
@@ -612,6 +613,7 @@ export class GameState {
       tally.add('berries', 'level_reward', (up.reward.berries ?? 0) + (up.duplicate?.berries ?? 0));
     }
     tally.add('coins', 'level_reward', levelCoins);
+    tally.add('berries', 'lap_reward', summary.lapBerries);
     let tierCoins = 0;
     for (const tier of summary.dailyTiers) {
       tierCoins += tier.cost.coins ?? 0;

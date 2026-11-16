@@ -1,6 +1,7 @@
 import { recordCreaturesReached } from '../record-unlocks';
 import { legacyXpToNext, V5_RECORD_UNLOCKS, v5XpToNext } from './frozen-v5';
 import { v7CheckpointsReached } from './frozen-v7';
+import { v8LapReached } from './frozen-v8';
 import { SAVE_VERSION, type Save } from './schema';
 
 export type SaveErrorCode = 'not_object' | 'bad_version' | 'future_version' | 'missing_migration';
@@ -101,6 +102,16 @@ export function migrateV6(raw: RawSave): RawSave {
   };
 }
 
+/**
+ * 7 -> 8: the laps the best classic height already reached count as reached, so nothing is paid
+ * retroactively. A damaged record counts as 0.
+ */
+export function migrateV7(raw: RawSave): RawSave {
+  const records = isRecord(raw.records) ? raw.records : {};
+  const height = typeof records.classicHeight === 'number' ? records.classicHeight : 0;
+  return { ...raw, bestLap: v8LapReached(height) };
+}
+
 /** Hands over creatures whose record way (as of version 5) the best classic height already reached. */
 function withRecordCreatures(raw: RawSave): RawSave {
   const records = isRecord(raw.records) ? raw.records : {};
@@ -126,6 +137,7 @@ export const MIGRATIONS: MigrationChain = {
   4: migrateV4,
   5: migrateV5,
   6: migrateV6,
+  7: migrateV7,
 };
 
 /**

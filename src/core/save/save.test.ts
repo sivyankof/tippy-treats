@@ -9,6 +9,7 @@ import {
   migrateV4,
   migrateV5,
   migrateV6,
+  migrateV7,
   SaveError,
   type Migration,
 } from './migrations';
@@ -16,6 +17,7 @@ import { MAX_BAKER_LEVEL } from '../../data/progression';
 import { xpToNext } from '../progression';
 import { legacyXpToNext, V5_RECORD_UNLOCKS, v5XpToNext } from './frozen-v5';
 import { V7_CHECKPOINT_HEIGHTS, v7CheckpointsReached } from './frozen-v7';
+import { V8_LAP_LENGTH, V8_SPACE_FIRST_LAYER, v8LapReached } from './frozen-v8';
 import { SAVE_VERSION, type Save } from './schema';
 
 const NOW = 1_700_000_000_000;
@@ -632,5 +634,60 @@ describe('checkpoint fields of the loader', () => {
       checkpointAds: { day: '2026-11-15', used: 3 },
     };
     expect(load(serializeSave(save)).save).toEqual(save);
+  });
+});
+
+describe('migration 7 to 8', () => {
+  const v7 = { ...fresh(), version: 7 } as Record<string, unknown>;
+  delete v7.bestLap;
+  const withRecord = (classicHeight: number) => ({
+    ...v7,
+    records: { classicHeight, classicScore: 900, bestCombo: 7 },
+  });
+
+  it('derives the best lap from the record, so nothing is paid retroactively', () => {
+    expect(migrateV7(withRecord(100)).bestLap).toBe(0);
+    expect(migrateV7(withRecord(101)).bestLap).toBe(1);
+    expect(migrateV7(withRecord(120)).bestLap).toBe(1);
+    expect(migrateV7(withRecord(121)).bestLap).toBe(2);
+    expect(migrateV7(withRecord(300)).bestLap).toBe(10);
+  });
+
+  it('survives a damaged record', () => {
+    expect(migrateV7({ ...v7, records: 'oops' }).bestLap).toBe(0);
+    expect(migrateV7(withRecord(Number.NaN)).bestLap).toBe(0);
+  });
+
+  it('uses the frozen lap rules of version 8, not the live data', () => {
+    expect(V8_SPACE_FIRST_LAYER).toBe(101);
+    expect(V8_LAP_LENGTH).toBe(20);
+    expect(v8LapReached(140.9)).toBe(2);
+  });
+
+  it('loads a version 7 text into the current save without losing progress', () => {
+    const result = load(JSON.stringify({ ...withRecord(145), coins: 55 }));
+    expect(result.save.version).toBe(SAVE_VERSION);
+    expect(result.save.coins).toBe(55);
+    expect(result.save.bestLap).toBe(3);
+  });
+
+  it('carries a version 1 save through the whole chain', () => {
+    const result = load(JSON.stringify({ version: 1, records: { classicHeight: 125 } }));
+    expect(result.save.bestLap).toBe(2);
+  });
+});
+
+describe('best lap of the loader', () => {
+  it('starts a new save at 0 and keeps a valid value', () => {
+    expect(fresh().bestLap).toBe(0);
+    expect(load(JSON.stringify({ ...fresh(), bestLap: 4 })).save.bestLap).toBe(4);
+  });
+
+  it('derives a missing or damaged value from the record', () => {
+    const records = { classicHeight: 130, classicScore: 0, bestCombo: 0 };
+    const noField: Record<string, unknown> = { ...fresh(), records };
+    delete noField.bestLap;
+    expect(load(JSON.stringify(noField)).save.bestLap).toBe(2);
+    expect(load(JSON.stringify({ ...noField, bestLap: 'x' })).save.bestLap).toBe(2);
   });
 });

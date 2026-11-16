@@ -4,7 +4,7 @@ import type { CreatureId } from './creatures';
  * Synthetic runs for `?resultsDemo=<case>` (dev builds only): the results screen with every block
  * filled, to check how it fits short screens (docs/07-ui-screens.md, section 6).
  */
-export const RESULTS_DEMO_CASES = ['normal', 'checkpoint', 'record', 'daily'] as const;
+export const RESULTS_DEMO_CASES = ['normal', 'checkpoint', 'record', 'daily', 'lap'] as const;
 
 export type ResultsDemoCase = (typeof RESULTS_DEMO_CASES)[number];
 
@@ -44,6 +44,8 @@ export const RESULTS_DEMO = {
   previousRecordBeaten: 31,
   checkpoint: { start: 20 as const, height: 58 },
   record: { height: 52 },
+  /** A Classic run into a new Space lap: lap 4 reached for the first time after lap 1 (3 berries a lap). */
+  lap: { height: 165, berries: 9 },
   daily: {
     height: 52,
     tiers: [

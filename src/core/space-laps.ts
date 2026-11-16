@@ -1,5 +1,5 @@
 import { BALANCE } from '../data/balance';
-import { SPACE_ZONE_INDEX, ZONE_RULES } from '../data/zones';
+import { LAP_REWARD, SPACE_ZONE_INDEX, ZONE_RULES } from '../data/zones';
 import { zoneStartIndex } from './zones';
 
 /** Lap of Space a 1-based layer index lies in: 1 for layers 101-120, 2 for 121-140…; 0 before Space. */
@@ -22,4 +22,32 @@ export function spaceWidthLimit(
   if (lap <= 1) return maxWidth;
   const { step, floor } = laps;
   return Math.max(floor, 1 - step * (lap - 1)) * maxWidth;
+}
+
+/** Extra score multiplier of a lap, on top of the Space one: `min(maxBonus, perLap * (lap - 1))`, 0 outside Space. */
+export function lapScoreBonus(
+  lap: number,
+  rules: { perLap: number; maxBonus: number } = ZONE_RULES.spaceScore,
+): number {
+  if (lap <= 1) return 0;
+  return Math.min(rules.maxBonus, rules.perLap * (lap - 1));
+}
+
+/** The score multiplier a layer of this index earns from its zone: the zone one plus the lap bonus. */
+export function layerZoneScoreMult(index: number, zoneMult: number): number {
+  return zoneMult + lapScoreBonus(spaceLap(index));
+}
+
+/**
+ * Berries for the laps a Classic run reached for the first time: `LAP_REWARD.berries` for each lap
+ * above `bestLap` (the highest lap ever reached) up to the run's lap, within the rewarded laps.
+ */
+export function lapRewardBerries(
+  bestLap: number,
+  height: number,
+  reward: { berries: number; fromLap: number; toLap: number } = LAP_REWARD,
+): number {
+  const reached = Math.min(spaceLap(Math.floor(height)), reward.toLap);
+  const from = Math.max(reward.fromLap, Math.floor(bestLap) + 1);
+  return reached < from ? 0 : (reached - from + 1) * reward.berries;
 }

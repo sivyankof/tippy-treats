@@ -5,6 +5,7 @@ import type { DailyPayout } from '../core/daily';
 import { bakeLayers } from '../core/oven';
 import { runLayers } from '../core/progression';
 import { recordCreaturesReached } from '../core/record-unlocks';
+import { lapRewardBerries, spaceLap } from '../core/space-laps';
 import type { RunResult } from '../core/run-result';
 import type { MissionProgress, Save } from '../core/save/schema';
 import type { CreatureId } from '../data/creatures';
@@ -46,6 +47,8 @@ export interface RunSummary {
   dailyTiers: DailyPayout[];
   /** A daily run whose tower changed (midnight UTC) before it ended: it counted for nothing. */
   dailyStale: boolean;
+  /** Berries paid for Space laps this run reached for the first time (0 when none). */
+  lapBerries: number;
 }
 
 /** The summary of a run that did not reach the save (dev runs, the creature demo). */
@@ -61,6 +64,7 @@ export const EMPTY_SUMMARY: RunSummary = {
   missions: { before: [], after: [] },
   dailyTiers: [],
   dailyStale: false,
+  lapBerries: 0,
 };
 
 /**
@@ -86,8 +90,11 @@ export function applyRun(
   const previousRecord = before.stats.runs === 0 ? null : before.records.classicHeight;
   const layers = runLayers(result.height, startHeight);
   const baked = bakeLayers(before.oven, layers, day, clockBack);
+  // Only a Classic run pays the first-time lap berries (also one from a checkpoint).
+  const classic = result.mode === 'classic';
+  const lapBerries = classic ? lapRewardBerries(before.bestLap, result.height) : 0;
   let next: Save = {
-    ...earn(before, { coins: result.coins }),
+    ...earn(before, { coins: result.coins, berries: lapBerries }),
     oven: baked.oven,
     stats: {
       ...before.stats,
@@ -97,13 +104,14 @@ export function applyRun(
     },
     tutorial: { ...before.tutorial, firstRunDone: true },
   };
-  if (result.mode === 'classic') {
+  if (classic) {
     const todayBest = before.today.day === day ? before.today.bestHeight : 0;
     next = {
       ...next,
       today: { day, bestHeight: Math.max(todayBest, result.height) },
       // Only a tower built from zero opens checkpoints (its full height); a run from a checkpoint
       // opens nothing new, though its height still counts for the record below.
+      bestLap: Math.max(before.bestLap, spaceLap(result.height)),
       checkpoints: withReached(before.checkpoints, startHeight === 0 ? result.height : 0),
       records: {
         classicHeight: Math.max(before.records.classicHeight, result.height),
@@ -134,6 +142,7 @@ export function applyRun(
       missions: EMPTY_SUMMARY.missions,
       dailyTiers: EMPTY_SUMMARY.dailyTiers,
       dailyStale: EMPTY_SUMMARY.dailyStale,
+      lapBerries,
     },
   };
 }
