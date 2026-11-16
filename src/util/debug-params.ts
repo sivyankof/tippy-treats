@@ -120,6 +120,8 @@ export interface PerfParams {
   textureUnits?: number;
   /** `nobg`, `nofar`, `nohud`, `notower`: parts of the run screen not drawn; absent when nothing is hidden. */
   hidden?: PerfPart[];
+  /** `mastery=on|off`: every segment without a team plays the mastery team at the grown level (`on`) or one level below it (`off`, the control); absent keeps the segments as they are. */
+  mastery?: 'on' | 'off';
 }
 
 /** A number of the query that is one of `allowed`; `undefined` otherwise. */
@@ -155,6 +157,8 @@ export function parsePerfParams(search: string): PerfParams | null {
   if (densityCap !== undefined) result.densityCap = densityCap;
   if (textureUnits !== undefined) result.textureUnits = textureUnits;
   if (hidden.length > 0) result.hidden = hidden;
+  const mastery = params.get('mastery');
+  if (mastery === 'on' || mastery === 'off') result.mastery = mastery;
   return result;
 }
 

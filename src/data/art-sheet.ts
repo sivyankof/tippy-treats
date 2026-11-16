@@ -16,6 +16,9 @@ export const ART_SHEET = {
   cellColor: 0xcdbfe0,
   /** Size a picture with no texture (a drawn container) is built at. */
   liveSize: 120,
+  /** The creature layers of both looks are drawn this wide, scaled to this size across. */
+  grownLayerWidth: 340,
+  grownPictureSize: 190,
   /** Width of the layer the sleeping silhouettes are primed at. */
   sleepLayerWidth: 420,
 } as const;

@@ -346,6 +346,7 @@ export class TowerSim {
     out.index = this.s.layers.length + 1;
     out.kind = flying.kind;
     out.creature = flying.kind === 'creature' && flying.creature ? flying.creature : null;
+    out.level = out.creature ? (flying.level ?? 1) : 0;
     out.width = growInField(placed.x, placed.width, widening).width;
     out.cut = outcome.cutSide;
     out.pieceWidth = outcome.cutSide ? outcome.cutWidth : 0;

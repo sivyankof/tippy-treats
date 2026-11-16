@@ -1,6 +1,7 @@
 import type * as Phaser from 'phaser';
 import { ABILITY_ANIM } from '../../../data/ability-anim';
 import { PALETTE } from '../../../data/palette';
+import { GROWN_LOOKS } from '../../../data/mastery-look';
 import { RAINBOW_LOOK } from '../../../data/rainbow-look';
 import { paintStar } from '../../objects/creature-art/rainbow';
 import { starPoints } from '../../objects/creature-art/rainbow-geometry';
@@ -11,6 +12,8 @@ import { fillPolygon, outlineColor } from '../plain-style';
 export const RAINBOW_TEXTURES = {
   /** The gold crown star of an awake Rainbow layer, centred. */
   star: 'fx_rainbow_star',
+  /** The bigger crown star of a grown Rainbow layer, baked at its own size. */
+  starGrown: 'fx_rainbow_star_grown',
   /** The white four-point sparkle of the star's flash, centred. */
   sparkle: 'fx_rainbow_sparkle',
   /** The cream cloud with a face at the foot of the ability arc, centred on its puff. */
@@ -27,6 +30,8 @@ const SPARKLE_POINTS = 4;
 
 /** Half the side of the star picture: baked at its rest size (drawn 1:1), the short flash only upscales it. */
 const STAR_HALF = Math.ceil(star.radius + star.outline + PAD);
+const GROWN_STAR_SCALE = GROWN_LOOKS.rainbow.star.scale;
+const GROWN_STAR_HALF = Math.ceil((star.radius + star.outline) * GROWN_STAR_SCALE + PAD);
 const SPARKLE_HALF = Math.ceil(star.radius * idle.sparkleSize + PAD);
 
 /** How far the cloud lumps (with their outline) reach from the centre at scale 1. */
@@ -61,6 +66,12 @@ export function bakeRainbowTextures(scene: Phaser.Scene): void {
   const side = STAR_HALF * 2;
   bakeTexture(scene, RAINBOW_TEXTURES.star, side, side, (g) => {
     g.translateCanvas(STAR_HALF, STAR_HALF);
+    paintStar(g, 0);
+  });
+  const grownSide = GROWN_STAR_HALF * 2;
+  bakeTexture(scene, RAINBOW_TEXTURES.starGrown, grownSide, grownSide, (g) => {
+    g.translateCanvas(GROWN_STAR_HALF, GROWN_STAR_HALF);
+    g.scaleCanvas(GROWN_STAR_SCALE, GROWN_STAR_SCALE);
     paintStar(g, 0);
   });
   const sparkleSide = SPARKLE_HALF * 2;

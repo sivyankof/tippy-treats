@@ -66,6 +66,7 @@ export function collectBakeSteps(record: () => void): BakeStep[] {
  * Draws with a hidden Graphics once and stores the result as a texture.
  * Does nothing when the key already exists (inside `collectBakeSteps` it is only recorded). Sizes are rounded up to whole pixels.
  * (0, 0) of the texture is its top-left corner; use translateCanvas to move the origin.
+ * `finish` may then edit the pixels of the canvas (erase a piece) before the texture is made.
  */
 export function bakeTexture(
   scene: Phaser.Scene,
@@ -73,6 +74,7 @@ export function bakeTexture(
   width: number,
   height: number,
   draw: (g: Phaser.GameObjects.Graphics) => void,
+  finish?: (context: CanvasRenderingContext2D) => void,
 ): void {
   if (scene.textures.exists(key)) return;
   if (sink) {
@@ -81,7 +83,7 @@ export function bakeTexture(
       const previous = sink;
       sink = null;
       try {
-        bakeTexture(scene, key, width, height, draw);
+        bakeTexture(scene, key, width, height, draw, finish);
       } finally {
         sink = previous;
       }
@@ -97,6 +99,9 @@ export function bakeTexture(
     canvas.width = Math.ceil(width);
     canvas.height = Math.ceil(height);
     g.generateTexture(canvas, canvas.width, canvas.height);
+    // `finish` edits the finished pixels (cuts a piece out of the picture).
+    const context = finish ? canvas.getContext('2d') : null;
+    if (finish && context) finish(context);
     // Small pictures drawn many times per frame share an atlas page (see shared-atlas.ts).
     if (!sharedStore?.(scene, key, canvas)) scene.textures.addCanvas(key, canvas);
   } finally {

@@ -4,6 +4,7 @@ import { PALETTE } from '../../data/palette';
 import { LICK } from '../../data/lick';
 import { DEG_TO_RAD, TWO_PI } from '../../util/math';
 import { bakeTexture } from '../ui/bake-texture';
+import { bakeGrownAccentTextures } from './grown-accent-textures';
 
 /** Keys of the small shared effect textures. All are white and meant to be tinted, except the heart. */
 export const FX_TEXTURES = {
@@ -202,4 +203,5 @@ export function createFxTextures(scene: Phaser.Scene): void {
       heartSize * HEART_SHINE.h,
     );
   });
+  bakeGrownAccentTextures(scene);
 }
