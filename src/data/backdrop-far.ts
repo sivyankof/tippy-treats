@@ -110,6 +110,16 @@ export const BACKDROP_FAR = {
     /** The rays reach this share of the screen diagonal from the centre. */
     reach: 0.62,
     alpha: 1,
+    /** Per zone: scales the alpha of the rays. 0 = no rays at all (the object is not even created). */
+    strength: {
+      kitchen: 1,
+      showcase: 1,
+      roof: 1,
+      // At full strength the rays read as a searchlight on the bright cloud sky.
+      clouds: 0.5,
+      stars: 0,
+      space: 0,
+    } satisfies Record<ZoneId, number>,
   },
   /** Silhouettes per zone on the square tile; the order is the drawing order (back to front). */
   shapes: {
@@ -155,8 +165,7 @@ export const BACKDROP_FAR = {
       cloud(420, 460, 0.6, 0),
     ],
     stars: [
-      circle(380, 140, 58, 2),
-      circle(90, 380, 120, 0),
+      circle(400, 150, 24, 0),
       star(60, 90, 16, 1),
       star(200, 220, 12, 1),
       star(300, 60, 10, 2),
@@ -164,12 +173,13 @@ export const BACKDROP_FAR = {
       star(250, 440, 12, 2),
     ],
     space: [
-      circle(130, 150, 96, 0),
-      circle(380, 360, 64, 1),
-      circle(430, 90, 26, 2),
-      circle(120, 430, 32, 2),
+      circle(430, 90, 26, 1),
+      circle(120, 430, 28, 0),
       star(260, 250, 10, 1),
       star(330, 60, 8, 2),
     ],
   } satisfies Record<ZoneId, readonly FarShape[]>,
 } as const;
+
+/** Whether the far plane of a zone has rays (strength above 0). */
+export const zoneHasFarRays = (zone: ZoneId): boolean => BACKDROP_FAR.rays.strength[zone] > 0;

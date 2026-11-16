@@ -1,5 +1,5 @@
 import * as Phaser from 'phaser';
-import { BACKDROP_FAR, type FarShape } from '../../../data/backdrop-far';
+import { BACKDROP_FAR, zoneHasFarRays, type FarShape } from '../../../data/backdrop-far';
 import { ZONE_SKY } from '../../../data/backdrop-colors';
 import { ZONES, type ZoneId } from '../../../data/zones';
 import { BALANCE } from '../../../data/balance';
@@ -77,6 +77,7 @@ export function bakeFarArt(scene: Phaser.Scene, zone: ZoneId): void {
   bakeTexture(scene, farKey(zone), FAR.tile, FAR.tile, (g) => {
     for (const shape of FAR.shapes[zone]) drawShape(g, shape, toneColor(zone, shape.tone));
   });
+  if (!zoneHasFarRays(zone)) return;
   bakeTexture(scene, RAYS.texture, RAYS.size, RAYS.size, (g) => {
     const reach = RAYS.size / 2;
     for (let i = 0; i < RAYS.wedges; i++) {
@@ -106,36 +107,39 @@ export function bakeAllFarArt(scene: Phaser.Scene): void {
 export class FarPlane {
   readonly objects: Phaser.GameObjects.GameObject[];
   private readonly tiles: Phaser.GameObjects.TileSprite;
-  private readonly rays: Phaser.GameObjects.Image;
+  /** Absent in zones without rays (strength 0): nothing is created or drawn there. */
+  private readonly rays: Phaser.GameObjects.Image | null;
 
   constructor(scene: Phaser.Scene, zone: ZoneId, width: number, height: number) {
     this.tiles = new Phaser.GameObjects.TileSprite(scene, 0, 0, width, height, farKey(zone))
       .setOrigin(0)
       .setAlpha(FAR.alpha);
-    this.rays = new Phaser.GameObjects.Image(scene, BALANCE.tray.centerX, 0, RAYS.texture)
-      .setTint(FAR.light[zone])
-      .setAlpha(RAYS.alpha);
-    this.objects = [this.tiles, this.rays];
+    this.rays = zoneHasFarRays(zone)
+      ? new Phaser.GameObjects.Image(scene, BALANCE.tray.centerX, 0, RAYS.texture)
+          .setTint(FAR.light[zone])
+          .setAlpha(RAYS.alpha * RAYS.strength[zone])
+      : null;
+    this.objects = this.rays ? [this.tiles, this.rays] : [this.tiles];
     this.resize(width, height);
   }
 
   /** Call when the logical screen size changes. */
   resize(width: number, height: number): void {
     this.tiles.setSize(width, height);
-    this.rays.setY(height * RAYS.centerY);
-    this.rays.setScale((2 * Math.hypot(width, height) * RAYS.reach) / RAYS.size);
+    this.rays?.setY(height * RAYS.centerY);
+    this.rays?.setScale((2 * Math.hypot(width, height) * RAYS.reach) / RAYS.size);
   }
 
   update(ctx: FrameCtx, scrollY: number): void {
     // Lite and minimal effects: the far plane stands still; the minimal level also hides the rays.
     if (effectsMode.atMost('lite')) {
-      this.rays.setVisible(!effectsMode.reduced);
+      this.rays?.setVisible(!effectsMode.reduced);
       return;
     }
     this.tiles.tilePositionY = scrollY * FAR.parallax;
     this.tiles.tilePositionX = (FAR.driftPxPerSec * ctx.timeMs) / MS_PER_SECOND;
     const showRays = !effectsMode.reduced;
-    this.rays.setVisible(showRays);
-    if (showRays) this.rays.setRotation((ctx.timeMs / RAYS.periodMs) * TWO_PI);
+    this.rays?.setVisible(showRays);
+    if (showRays) this.rays?.setRotation((ctx.timeMs / RAYS.periodMs) * TWO_PI);
   }
 }
