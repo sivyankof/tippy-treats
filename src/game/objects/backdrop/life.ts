@@ -26,7 +26,7 @@ export interface FrameCtx {
   /** Logical screen size. */
   width: number;
   height: number;
-  /** The stripe around the flying layer's line that Space travellers keep out of; null outside Space. */
+  /** The stripe around the flying layer's line that Space travellers keep out of (the stripe of a tall tower, set by the run backdrop in every zone but read only by travellers that ask for it, i.e. Space's); null only for the menu scenery. */
   clearBand: YBand | null;
   /** Tower height in layers, from the camera scroll (drives the mountain peaks). */
   towerLayers: number;

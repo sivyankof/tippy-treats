@@ -19,10 +19,6 @@ const PLANET_KEY_PREFIX = 'bd_planet_';
 
 export const planetKey = (id: SpacePlanetId): string => `${PLANET_KEY_PREFIX}${id}`;
 
-/** The planet a texture key belongs to (the key of `planetKey`). */
-export const planetIdOfKey = (key: string): SpacePlanetId =>
-  (SPACE_PLANET_IDS.find((id) => planetKey(id) === key) ?? SPACE_PLANET_IDS[0]) as SpacePlanetId;
-
 /** Colours of one planet: `base` and `shade` are the two flat tones of the body, the rest are its details. */
 export interface PlanetColors {
   base: number;

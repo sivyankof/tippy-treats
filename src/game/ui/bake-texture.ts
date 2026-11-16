@@ -63,6 +63,15 @@ export function collectBakeSteps(record: () => void): BakeStep[] {
 }
 
 /**
+ * Runs one piece of a bake that is not a texture itself (a slice of pixel work) now, or, inside
+ * `collectBakeSteps`, as one of the recorded steps, so a big job can be spread over frames.
+ */
+export function deferStep(step: BakeStep): void {
+  if (sink) sink.push(step);
+  else step();
+}
+
+/**
  * Draws with a hidden Graphics once and stores the result as a texture.
  * Does nothing when the key already exists (inside `collectBakeSteps` it is only recorded). Sizes are rounded up to whole pixels.
  * (0, 0) of the texture is its top-left corner; use translateCanvas to move the origin.

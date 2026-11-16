@@ -1,6 +1,5 @@
 import { spaceWidthLimit, lapFirstIndex } from '../../../core/space-laps';
 import { HUD_LAYOUT } from '../../../data/hud-layout';
-import { LAP_EDGE } from '../../../data/lap-edge';
 import { LOGICAL_SIZE } from '../../../data/screen';
 import { PLANET_PLACE } from '../../../data/space-planets';
 import { flightClearBand } from '../../camera-layout';
@@ -14,9 +13,8 @@ export interface PlanetSpot {
 /** Half of a picture: its centre to its edge. */
 const HALF = 0.5;
 
-/** Half width of the dashed corridor of a lap, swing of the top layer included; 0 where the lap shows no dashes. */
+/** Half width of the corridor the planet keeps out of: half the width cap of the lap (the dashed lines from lap 2, the layers themselves on lap 1), swing of the top layer included. */
 export function corridorHalf(lap: number): number {
-  if (lap < LAP_EDGE.firstLap) return 0;
   return spaceWidthLimit(lapFirstIndex(lap)) / 2 + PLANET_PLACE.swayPx;
 }
 

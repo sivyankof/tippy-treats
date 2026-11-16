@@ -11,8 +11,8 @@ const ROUND = PLANET_LOOK.size * PLANET_PLACE.scale;
 const RINGED = PLANET_LOOK.ringedWidth * PLANET_PLACE.scale;
 
 describe('corridorHalf', () => {
-  it('is 0 before the dashes show and narrows with the laps', () => {
-    expect(corridorHalf(1)).toBe(0);
+  it('is the width cap of the lap (lap 1 uses the full layer width) and narrows with the laps', () => {
+    expect(corridorHalf(1)).toBeGreaterThan(corridorHalf(2));
     expect(corridorHalf(3)).toBeLessThan(corridorHalf(2));
     expect(corridorHalf(30)).toBe(corridorHalf(20));
   });
@@ -36,8 +36,7 @@ describe('planetSpot', () => {
           expect(bottom + bob <= clear.top - rowGap || top - bob >= clear.bottom + rowGap).toBe(
             true,
           );
-          const clearOfLines =
-            half === 0 || right <= W / 2 - half || left >= W / 2 + half || bottom <= clear.top;
+          const clearOfLines = right <= W / 2 - half || left >= W / 2 + half || bottom <= clear.top;
           expect(clearOfLines).toBe(true);
           expect(top).toBeGreaterThanOrEqual(HUD_LAYOUT.badgeRowBottom + PLANET_PLACE.hudGap);
           expect(Math.min(right, W) - Math.max(left, 0)).toBeGreaterThanOrEqual(
@@ -49,9 +48,9 @@ describe('planetSpot', () => {
     }
   });
 
-  it('shows a planet on lap 1 where the old place was, and on the narrow late laps', () => {
+  it('shows a planet on the narrow late laps, none on lap 1 where the full-width layers leave no lane', () => {
     for (const h of SCREENS) {
-      expect(planetSpot(1, W, h, ROUND, ROUND)).not.toBeNull();
+      expect(planetSpot(1, W, h, ROUND, ROUND)).toBeNull();
       expect(planetSpot(10, W, h, RINGED, ROUND)).not.toBeNull();
     }
   });
