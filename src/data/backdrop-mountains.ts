@@ -29,6 +29,14 @@ export const MOUNTAIN_LOOK = {
   snowOutline: 0xa8795a,
   /** Outline growth in texture pixels; the outline colour is the dark tone of each fill. */
   outline: 8,
+  /**
+   * The apex is a curve of `apexPoints` points `apexRound` px down each slope (at least
+   * `apexMinOutlines` outline widths): the outline is stamped copies of the shape, and a sharp
+   * apex would show one small tip per copy.
+   */
+  apexRound: 0.06,
+  apexMinOutlines: 2.5,
+  apexPoints: 9,
   /** How deep the drips hang, as a share of the cap height. */
   dripShare: 0.7,
   /** The snow edge hangs in rounded drips of these depths (share of the cap height) from left to right. */

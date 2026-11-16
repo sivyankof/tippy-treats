@@ -20,17 +20,37 @@ type Graphics = Phaser.GameObjects.Graphics;
 /** Tolerance when picking the points right of a peak's centre line. */
 const SHADOW_EPS = 0.01;
 
-/** The rounded silhouette of a peak, from the left foot to the right foot (below the picture). */
+/** Rounding of a peak's apex along each slope, px. */
+function apexRadius(p: Peak): number {
+  return Math.max(p.half * L.apexRound, L.outline * L.apexMinOutlines);
+}
+
+/** The rounded apex from the left slope to the right one (a quadratic curve through the corner). */
+function apexCurve(p: Peak): Pt[] {
+  const r = apexRadius(p);
+  const slope = (L.height + L.overshoot - p.top) / p.half;
+  const pts: Pt[] = [];
+  for (let i = 0; i < L.apexPoints; i++) {
+    const t = i / (L.apexPoints - 1);
+    const u = 1 - t;
+    // Ends on the slopes `r` px from the corner on each side, control point at the corner.
+    pts.push({
+      x: u * u * (p.x - r) + 2 * u * t * p.x + t * t * (p.x + r),
+      y: (u * u + t * t) * (p.top + r * slope) + 2 * u * t * p.top,
+    });
+  }
+  return pts;
+}
+
+/** The right half of the apex curve, from its top to the right slope. */
+function apexRight(p: Peak): Pt[] {
+  return apexCurve(p).slice((L.apexPoints - 1) / 2);
+}
+
+/** The silhouette of a peak with a rounded apex, from the left foot to the right foot (below the picture). */
 function peakOutline(p: Peak): Pt[] {
   const bottom = L.height + L.overshoot;
-  const round = (p.half * 0.05) | 0;
-  return [
-    { x: p.x - p.half, y: bottom },
-    { x: p.x - round, y: p.top + round * 1.6 },
-    { x: p.x, y: p.top },
-    { x: p.x + round, y: p.top + round * 1.6 },
-    { x: p.x + p.half, y: bottom },
-  ];
+  return [{ x: p.x - p.half, y: bottom }, ...apexCurve(p), { x: p.x + p.half, y: bottom }];
 }
 
 /** Half width of the peak at depth `y` of the picture. */
@@ -38,23 +58,27 @@ function halfAt(p: Peak, y: number): number {
   return (p.half * (y - p.top)) / (L.height + L.overshoot - p.top);
 }
 
-/** The snow cap: the top of the peak with a lower edge that hangs in rounded drips, like icing. */
+/** The snow cap: the rounded top of the peak with a lower edge that hangs in rounded drips, like icing. */
 function capOutline(p: Peak, share: number): Pt[] {
   const capBase = p.top + (L.height - p.top) * share;
   const dripPx = (L.height - p.top) * share * L.dripShare;
   const steps = 24;
   const drips = L.dripDepths;
-  const pts: Pt[] = [{ x: p.x, y: p.top }];
   const half = halfAt(p, capBase);
-  pts.push({ x: p.x - half, y: capBase });
+  const edge: Pt[] = [];
   for (let i = 0; i <= steps; i++) {
     const t = (i / steps) * (drips.length - 1);
     const k = Math.min(Math.floor(t), drips.length - 2);
     const depth = lerp(drips[k] ?? 0, drips[k + 1] ?? 0, smoothstep(t - k));
-    pts.push({ x: p.x - half + (2 * half * i) / steps, y: capBase + depth * dripPx });
+    edge.push({ x: p.x - half + (2 * half * i) / steps, y: capBase + depth * dripPx });
   }
-  pts.push({ x: p.x + half, y: capBase });
-  return pts;
+  // Apex left to right, down the right slope, the drip edge right to left, up the left slope.
+  return [
+    ...apexCurve(p),
+    { x: p.x + half, y: capBase },
+    ...edge.reverse(),
+    { x: p.x - half, y: capBase },
+  ];
 }
 
 /** Draws a polygon outlined in the dark tone of its fill, then its shadow side on top. */
@@ -73,14 +97,14 @@ function twoTone(
 
 /** The right half of a peak silhouette: the side away from the light. */
 function peakShadow(p: Peak): Pt[] {
-  const o = peakOutline(p);
-  return [o[2], o[3], o[4], { x: p.x, y: L.height + L.overshoot }].filter((pt): pt is Pt => !!pt);
+  const bottom = L.height + L.overshoot;
+  return [...apexRight(p), { x: p.x + p.half, y: bottom }, { x: p.x, y: bottom }];
 }
 
-/** The right half of a snow cap, from its apex to the right corner. */
+/** The right half of a snow cap, from the top of its apex down to the drips right of the centre line. */
 function capShadow(p: Peak, cap: readonly Pt[]): Pt[] {
-  const apex = cap[0];
-  return [...(apex ? [apex] : []), ...cap.filter((pt, i) => i > 0 && pt.x >= p.x - SHADOW_EPS)];
+  const rest = cap.slice(L.apexPoints).filter((pt) => pt.x >= p.x - SHADOW_EPS);
+  return [...apexRight(p), ...rest];
 }
 
 function drawPeak(g: Graphics, p: Peak): void {
