@@ -115,7 +115,8 @@ export const BACKDROP_FAR = {
       kitchen: 1,
       showcase: 1,
       roof: 1,
-      clouds: 1,
+      // At full strength the rays read as a searchlight on the bright cloud sky.
+      clouds: 0.5,
       stars: 0,
       space: 0,
     } satisfies Record<ZoneId, number>,
