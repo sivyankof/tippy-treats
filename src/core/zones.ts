@@ -37,8 +37,10 @@ export function zoneStartIndex(zoneIndex: number): number {
 export interface LayerRules {
   index: number;
   zoneIndex: number;
-  /** The rule of this layer; for Space the rule drawn from the pool. */
+  /** The rule of this layer; for Space the rule drawn from the pool (the first of the pair). */
   rule: LayerRuleKind;
+  /** Space from the double lap: the second rule of the pair, `null` for a layer with one rule. */
+  rule2: LayerRuleKind | null;
   /** The layer spawns at the left end of the track. */
   fromLeft: boolean;
   /** The layer waits, then flies faster (showcase only). */
@@ -73,10 +75,50 @@ export function rushIndices(zonesRng: Rng): number[] {
   return result;
 }
 
-function ruleOf(zoneIndex: number, stream: Rng): LayerRuleKind {
+/** First layer index that follows two rules (Space, lap `spaceDouble.fromLap`). */
+export function doubleRuleStartIndex(): number {
+  return (
+    zoneStartIndex(SPACE_ZONE_INDEX) + (ZONE_RULES.spaceDouble.fromLap - 1) * BALANCE.zones.length
+  );
+}
+
+/** Pairs of Space rules a double layer may draw: all pairs of the pool minus the excluded ones. */
+export function allowedRulePairs(): [LayerRuleKind, LayerRuleKind][] {
+  const { excludedPairs } = ZONE_RULES.spaceDouble;
+  const pairs: [LayerRuleKind, LayerRuleKind][] = [];
+  for (let i = 0; i < SPACE_RULE_POOL.length; i++) {
+    for (let j = i + 1; j < SPACE_RULE_POOL.length; j++) {
+      const a = SPACE_RULE_POOL[i] as LayerRuleKind;
+      const b = SPACE_RULE_POOL[j] as LayerRuleKind;
+      const excluded = excludedPairs.some(([x, y]) => (x === a && y === b) || (x === b && y === a));
+      if (!excluded) pairs.push([a, b]);
+    }
+  }
+  return pairs;
+}
+
+/** The rule(s) of a layer: one, or a pair from the double lap of Space on. */
+function rulesOf(
+  zoneIndex: number,
+  index: number,
+  stream: Rng,
+): [LayerRuleKind, LayerRuleKind | null] {
   const rule = (ZONES[zoneIndex] as ZoneDef).rule;
-  if (rule !== 'random') return rule;
-  return SPACE_RULE_POOL[stream.fork('rule').int(0, SPACE_RULE_POOL.length - 1)] ?? 'none';
+  if (rule !== 'random') return [rule, null];
+  if (index >= doubleRuleStartIndex()) {
+    const pairs = allowedRulePairs();
+    const pair = pairs[stream.fork('rulepair').int(0, pairs.length - 1)];
+    return pair ?? ['none', null];
+  }
+  return [SPACE_RULE_POOL[stream.fork('rule').int(0, SPACE_RULE_POOL.length - 1)] ?? 'none', null];
+}
+
+/** Whether the layer follows this rule (as its first or its second one). */
+export function hasRule(
+  layer: { rule: LayerRuleKind; rule2: LayerRuleKind | null },
+  kind: LayerRuleKind,
+): boolean {
+  return layer.rule === kind || layer.rule2 === kind;
 }
 
 function fakeoutPoint(zoneIndex: number, stream: Rng): number | null {
@@ -91,8 +133,9 @@ function fakeoutPoint(zoneIndex: number, stream: Rng): number | null {
 export function layerRules(zonesRng: Rng, index: number): LayerRules {
   const zoneIndex = zoneIndexOf(index);
   const stream = layerStream(zonesRng, index);
-  const rule = ruleOf(zoneIndex, stream);
-  const showcase = rule === 'showcase';
+  const [rule, rule2] = rulesOf(zoneIndex, index, stream);
+  const pair = { rule, rule2 };
+  const showcase = hasRule(pair, 'showcase');
   // Parity of the index outside the showcase rule: odd layers start on the left.
   const fromLeft = showcase
     ? stream.fork('side').chance(ZONE_RULES.showcase.leftChance)
@@ -103,15 +146,16 @@ export function layerRules(zonesRng: Rng, index: number): LayerRules {
     index,
     zoneIndex,
     rule,
+    rule2,
     fromLeft,
     rush,
-    fakeoutX: rule === 'stars' ? fakeoutPoint(zoneIndex, stream) : null,
+    fakeoutX: hasRule(pair, 'stars') ? fakeoutPoint(zoneIndex, stream) : null,
   };
 }
 
 /** The cloud of one pass (1-based) of a layer, or `null` when no cloud comes in this pass. */
 export function cloudRoll(zonesRng: Rng, rules: LayerRules, pass: number): CloudRoll | null {
-  if (rules.rule !== 'clouds') return null;
+  if (!hasRule(rules, 'clouds')) return null;
   const { chance, spaceFirstPassChance, coverMs, startProgress } = ZONE_RULES.clouds;
   const rng = layerStream(zonesRng, rules.index).fork(`cloud:${pass}`);
   const guaranteed = rules.zoneIndex === SPACE_ZONE_INDEX && pass === 1;

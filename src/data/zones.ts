@@ -77,7 +77,15 @@ export const ZONE_RULES = {
    */
   spaceLaps: {
     step: 0.06,
-    floor: 0.5,
+    floor: 0.6,
+  },
+  /**
+   * Space "second rule" (docs/02-gameplay.md, section 8): from lap `fromLap` a layer follows TWO
+   * rules of the pool instead of one. A pair of `excludedPairs` is never drawn (either order).
+   */
+  spaceDouble: {
+    fromLap: 4,
+    excludedPairs: [['clouds', 'stars']] as readonly (readonly [LayerRuleKind, LayerRuleKind])[],
   },
   /**
    * Score bonus of Space laps (docs/02-gameplay.md, section 4): from lap 2 on the Space score

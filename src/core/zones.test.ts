@@ -3,7 +3,17 @@ import { BALANCE } from '../data/balance';
 import { SHOWCASE_ZONE_INDEX, SPACE_RULE_POOL, ZONE_RULES, ZONES } from '../data/zones';
 import { layerSpeed } from './drop';
 import { Rng } from './rng';
-import { cloudRoll, layerRules, rushIndices, zoneIndexOf, zoneOf, zoneStartIndex } from './zones';
+import {
+  allowedRulePairs,
+  cloudRoll,
+  doubleRuleStartIndex,
+  hasRule,
+  layerRules,
+  rushIndices,
+  zoneIndexOf,
+  zoneOf,
+  zoneStartIndex,
+} from './zones';
 
 const zonesRng = (seed: number): Rng => new Rng(seed).fork('zones');
 const SEEDS = Array.from({ length: 300 }, (_, i) => 1000 + i * 7919);
@@ -202,6 +212,51 @@ describe('layer rules', () => {
         if (r.rule !== 'showcase') expect(r.fromLeft).toBe(r.index % 2 === 1);
       }
     });
+  });
+});
+
+describe('Space double rules', () => {
+  const start = doubleRuleStartIndex();
+  const late = SEEDS.flatMap((seed) =>
+    range(start, start + 79).map((i) => layerRules(zonesRng(seed), i)),
+  );
+
+  it('starts on layer 161 (lap 4) and leaves earlier layers with a single rule', () => {
+    expect(start).toBe(161);
+    for (const seed of SEEDS.slice(0, 40)) {
+      for (const i of range(1, start - 1)) expect(layerRules(zonesRng(seed), i).rule2).toBeNull();
+    }
+  });
+
+  it('draws a pair of the pool, never an excluded one, and uses every allowed pair', () => {
+    const seen = new Set<string>();
+    for (const r of late) {
+      expect(r.rule2).not.toBeNull();
+      expect(r.rule2).not.toBe(r.rule);
+      expect(SPACE_RULE_POOL).toContain(r.rule);
+      expect(SPACE_RULE_POOL).toContain(r.rule2);
+      expect(hasRule(r, 'clouds') && hasRule(r, 'stars')).toBe(false);
+      seen.add(`${r.rule}+${r.rule2}`);
+    }
+    expect(seen.size).toBe(allowedRulePairs().length);
+  });
+
+  it('is a pure function of the seed and the layer', () => {
+    for (const seed of SEEDS.slice(0, 20)) {
+      for (const i of [161, 175, 199]) {
+        expect(layerRules(zonesRng(seed), i)).toEqual(layerRules(zonesRng(seed), i));
+      }
+    }
+  });
+
+  it('keeps every mechanic of each rule of the pair active on the one layer', () => {
+    for (const r of late) {
+      expect(r.rush).toBe(hasRule(r, 'showcase'));
+      expect(r.fakeoutX !== null).toBe(hasRule(r, 'stars'));
+      expect(cloudRoll(zonesRng(1), r, 1) !== null).toBe(hasRule(r, 'clouds'));
+    }
+    const both = late.find((r) => hasRule(r, 'showcase') && hasRule(r, 'roof'));
+    expect(both).toBeDefined();
   });
 });
 

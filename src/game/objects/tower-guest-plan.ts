@@ -1,4 +1,5 @@
 import { TOWER_GUEST } from '../../data/tower-guest';
+import { hasRule } from '../../core/zones';
 import type { LayerRuleKind } from '../../data/zones';
 import {
   DEG_TO_RAD,
@@ -61,8 +62,10 @@ export function clearOfSpan(x: number, halfBody: number, span: Span | null): boo
 }
 
 /** The next layer with this rule (`null`: not known yet) is aimed by its shadow alone. */
-export function aimedByShadowOnly(rule: LayerRuleKind | null): boolean {
-  return rule !== null && TOWER_GUEST.shadowOnlyRules.includes(rule);
+export function aimedByShadowOnly(
+  layer: { rule: LayerRuleKind; rule2: LayerRuleKind | null } | null,
+): boolean {
+  return layer !== null && TOWER_GUEST.shadowOnlyRules.some((rule) => hasRule(layer, rule));
 }
 
 /**

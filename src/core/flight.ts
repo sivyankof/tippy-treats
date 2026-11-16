@@ -2,7 +2,7 @@ import { BALANCE } from '../data/balance';
 import { SPACE_ZONE_INDEX, ZONE_RULES } from '../data/zones';
 import { MS_PER_SECOND } from '../util/math';
 import type { FlyingLayer, LayerPlan, SimEvent } from './sim-types';
-import type { CloudRoll, LayerRules } from './zones';
+import { hasRule, type CloudRoll, type LayerRules } from './zones';
 
 /** Absorbs floating point drift so a timer of exactly N steps ends after N steps. */
 const TIMER_EPSILON_MS = 1e-6;
@@ -16,7 +16,7 @@ function countDown(leftMs: number, dtMs: number): number {
 /** The fields `flyingSpeed` reads. */
 export type SpeedFields = Pick<
   FlyingLayer,
-  'speed' | 'x' | 'rule' | 'rush' | 'windupMs' | 'stopMs' | 'zoneIndex'
+  'speed' | 'x' | 'rule' | 'rule2' | 'rush' | 'windupMs' | 'stopMs' | 'zoneIndex'
 >;
 
 /** Roof profile factor at `x`: `edgeMult` at the walls, `centreMult` in the middle (sine). */
@@ -45,7 +45,7 @@ export function flyingSpeed(layer: SpeedFields): number {
   if (layer.windupMs > 0 || layer.stopMs > 0) return 0;
   let speed = layer.speed;
   if (layer.rush) speed = rushSpeed(speed, layer.zoneIndex);
-  if (layer.rule === 'roof') speed *= roofFactor(layer.x);
+  if (hasRule(layer, 'roof')) speed *= roofFactor(layer.x);
   return speed;
 }
 
@@ -66,6 +66,7 @@ export function newFlyingLayer(
     speed,
     zoneIndex: rules.zoneIndex,
     rule: rules.rule,
+    rule2: rules.rule2,
     rush: rules.rush,
     windupMs: rules.rush ? ZONE_RULES.rush.windupMs : 0,
     stopMs: 0,
