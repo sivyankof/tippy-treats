@@ -6,6 +6,7 @@ import { ZONE_SKY } from '../../../data/backdrop-colors';
 import type { ZoneId } from '../../../data/zones';
 import { mixColor } from '../../../util/color';
 import { MS_PER_SECOND, oscillate01, sineWave } from '../../../util/math';
+import { markPerfPart } from '../../perf/perf-marks';
 import { bakeTexture } from '../../ui/bake-texture';
 import { bakeFarArt, FarPlane } from './far-plane';
 import type { GuestSource } from './guest-source';
@@ -89,6 +90,8 @@ export class ZoneScenery {
         if (slot === i) children.push(...life.objects);
       }
     });
+    for (const child of children)
+      markPerfPart(child, this.far.objects.includes(child) ? 'far' : 'bg');
     this.root = new Phaser.GameObjects.Container(scene, 0, 0, children);
     this.root.setScrollFactor(0).setDepth(depth);
     scene.add.existing(this.root);

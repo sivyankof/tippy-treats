@@ -1,7 +1,8 @@
-import type * as Phaser from 'phaser';
+import * as Phaser from 'phaser';
 import type { EffectLevel } from '../../data/effect-levels';
 import { PERF, type PerfSegmentDef } from '../../data/perf';
 import { setFrameWorkListener } from '../frame-work';
+import { capRenderDensity } from '../render-density';
 import { CLASSIC_RUN } from '../run-request';
 import type { GameScene } from '../scenes/game-scene';
 import { launchRun, resultsShown, SCENES } from '../scene-keys';
@@ -9,7 +10,8 @@ import { countDrawCalls } from './draw-calls';
 import { MissDriver } from './perf-drivers';
 import { PerfOverlay } from './perf-overlay';
 import { currentSegment, endPerfSession, perfSession } from './perf-session';
-import { formatTable, SegmentSamples, type SegmentStats } from './perf-stats';
+import { hidePartsWhileDrawing } from './perf-parts';
+import { formatHeader, formatTable, SegmentSamples, type SegmentStats } from './perf-stats';
 import { runHooks } from './run-hooks';
 
 /** What the page reads from `window.__tippyPerf`. */
@@ -24,6 +26,8 @@ export interface PerfReport {
   /** Draw calls could be counted (WebGL context). */
   drawCallsCounted?: boolean;
   segments?: SegmentStats[];
+  /** What the table was measured on: canvas and CSS size, density, texture units, hidden parts. */
+  header?: string;
   table?: string;
 }
 
@@ -62,8 +66,43 @@ class PerfDirector {
   private finished = false;
 
   constructor(private readonly game: Phaser.Game) {
-    this.overlay = perfSession()?.params.still ? null : new PerfOverlay();
+    const params = perfSession()?.params;
+    this.overlay = params?.still ? null : new PerfOverlay();
     this.drawTotal = countDrawCalls(game);
+    if (params) {
+      if (params.densityCap !== undefined) capRenderDensity(game, params.densityCap);
+      hidePartsWhileDrawing(game, params.hidden ?? []);
+      const units = params.textureUnits;
+      if (units !== undefined) {
+        // The render nodes come with the renderer's boot, when the textures are ready.
+        const setUnits = (): void => this.webgl?.renderNodes.setMaxParallelTextureUnits(units);
+        if (this.webgl?.renderNodes) setUnits();
+        else game.events.once(Phaser.Core.Events.READY, setUnits);
+      }
+    }
+  }
+
+  private get webgl(): Phaser.Renderer.WebGL.WebGLRenderer | null {
+    const renderer = this.game.renderer;
+    return renderer instanceof Phaser.Renderer.WebGL.WebGLRenderer ? renderer : null;
+  }
+
+  /** The line above the table; read at the end, after the last resize. */
+  private header(fx: EffectLevel): string {
+    const canvas = this.game.canvas;
+    const rect = canvas.getBoundingClientRect();
+    const params = perfSession()?.params;
+    const webgl = this.webgl;
+    return formatHeader({
+      fx,
+      canvas: { width: canvas.width, height: canvas.height },
+      css: { width: rect.width, height: rect.height },
+      devicePixelRatio: window.devicePixelRatio,
+      densityCap: params?.densityCap ?? null,
+      textureUnits: webgl?.renderNodes?.maxParallelTextureUnits ?? 0,
+      maxTextureUnits: webgl?.maxTextures ?? 0,
+      hidden: params?.hidden ?? [],
+    });
   }
 
   start(): void {
@@ -206,6 +245,7 @@ class PerfDirector {
     setFrameWorkListener(null);
     // Read before the session ends: the runs after the benchmark are normal ones.
     const fx = perfSession()?.params.fx ?? 'full';
+    const header = this.header(fx);
     endPerfSession();
     const table = formatTable(this.rows, PERF.overlay.decimals);
     this.publish({
@@ -214,11 +254,12 @@ class PerfDirector {
       fx,
       drawCallsCounted: this.drawTotal !== null,
       segments: this.rows,
+      header,
       table,
     });
     console.log(`[perf] ${JSON.stringify((window as PerfWindow).__tippyPerf)}`);
-    console.log(table);
-    this.overlay?.table(`fx=${fx}\n${table}`);
+    console.log(`${header}\n${table}`);
+    this.overlay?.table(`perf done, ${this.rows.length} segments`, `${header}\n${table}`);
   }
 
   /** The progress line: changes only between segments, so it costs the frames nothing. */

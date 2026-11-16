@@ -203,4 +203,22 @@ describe('parsePerfParams', () => {
     });
     expect(parsePerfParams('?perf=1&only=nope')?.only).toBeNull();
   });
+
+  it('reads the density cap, the texture units and the hidden parts', () => {
+    expect(parsePerfParams('?perf=1&dpr=1.5&units=16&nobg&nohud=1&notower')).toEqual({
+      fx: 'full',
+      only: null,
+      still: null,
+      densityCap: 1.5,
+      textureUnits: 16,
+      hidden: ['bg', 'hud', 'tower'],
+    });
+    expect(parsePerfParams('?perf=1&nofar')?.hidden).toEqual(['far']);
+  });
+
+  it('drops a density cap, texture units or a part outside the lists', () => {
+    const params = parsePerfParams('?perf=1&dpr=2.5&units=3&nobg=0&nosky');
+    expect(params).toEqual({ fx: 'full', only: null, still: null });
+    expect(parsePerfParams('?perf=1&dpr=&units=')).toEqual({ fx: 'full', only: null, still: null });
+  });
 });

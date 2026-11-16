@@ -101,3 +101,38 @@ export function formatTable(rows: readonly SegmentStats[], decimals: number): st
   }
   return lines.join('\n');
 }
+
+/** What a benchmark was drawn on: the line above its table. */
+export interface PerfHeader {
+  fx: string;
+  /** Backing store of the canvas, pixels. */
+  canvas: { width: number; height: number };
+  /** Size of the canvas on the page, CSS pixels. */
+  css: { width: number; height: number };
+  devicePixelRatio: number;
+  /** `&dpr=`, `null` when the canvas keeps the logical size. */
+  densityCap: number | null;
+  /** Texture units a batch may use, and the most the device has. */
+  textureUnits: number;
+  maxTextureUnits: number;
+  /** Parts not drawn (`&nobg` and the like). */
+  hidden: readonly string[];
+}
+
+/** One line: effects level, canvas and CSS size, density, texture units and the hidden parts. */
+export function formatHeader(header: PerfHeader): string {
+  const { canvas, css } = header;
+  const density = css.width > 0 ? canvas.width / css.width : 0;
+  const hidden =
+    header.hidden.length > 0 ? header.hidden.map((part) => `no${part}`).join(',') : '-';
+  return [
+    `fx=${header.fx}`,
+    `canvas=${canvas.width}x${canvas.height}px`,
+    `css=${Math.round(css.width)}x${Math.round(css.height)}`,
+    `dpr=${header.devicePixelRatio}`,
+    `density=${density.toFixed(2)}`,
+    `cap=${header.densityCap ?? '-'}`,
+    `units=${header.textureUnits}/${header.maxTextureUnits}`,
+    `hidden=${hidden}`,
+  ].join(' ');
+}
