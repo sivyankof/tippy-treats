@@ -195,7 +195,7 @@ export class DebugPanel {
   }
 
   private showAdsMode(): void {
-    this.adsEntry.setText(`ads ${adsDev.mode}`);
+    this.adsEntry.setText(`ads: ${adsDev.mode}`);
   }
 
   private change(apply: () => void): void {
