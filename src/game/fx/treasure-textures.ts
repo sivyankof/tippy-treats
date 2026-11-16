@@ -131,15 +131,18 @@ function bakeCloud(scene: Phaser.Scene): void {
  * or a pale edge; a few star dots are baked in.
  */
 function bakeNebula(scene: Phaser.Scene): void {
-  const { colors, dots, lift, feather } = RULE_ANIM.cloud.nebula;
+  const { colors, dots, lift, feather, bellyFadePx } = RULE_ANIM.cloud.nebula;
   bakePuff(scene, TREASURE_TEXTURES.nebula, ({ g, fill, width, height, margin }) => {
-    const layer = (color: number, dropY: number): void => {
+    // Each copy is smaller than the last; `riseFor` also lifts it, so the lowest copies are the
+    // faintest: the pink top is only feathered, the blue belly also fades out downwards.
+    const layer = (color: number, dropY: number, riseFor: (share: number) => number): void => {
       for (let k = 0; k < feather.rings; k++) {
-        fill(color, feather.alpha, feather.px * (1 - (2 * k) / (feather.rings - 1)), dropY);
+        const share = k / (feather.rings - 1);
+        fill(color, feather.alpha, feather.px * (1 - 2 * share), dropY - riseFor(share));
       }
     };
-    layer(colors.blue, 0);
-    layer(colors.pink, -height * lift);
+    layer(colors.blue, 0, (share) => bellyFadePx * share);
+    layer(colors.pink, -height * lift, () => 0);
     g.fillStyle(colors.dot, 1);
     for (const d of dots) g.fillCircle(margin + d.x * width, margin + d.y * height, d.r * width);
   });
