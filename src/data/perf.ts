@@ -191,6 +191,14 @@ export const PERF = {
   towerStillMs: 600,
   /** The results screen of the benchmark shows a fresh oven: what its summary claims. */
   results: { xpGained: 3, oven: { fresh: 6, left: 14, ranOut: false } },
-  /** The table overlay. */
-  overlay: { zIndex: 99999, fontPx: 11, decimals: 2 },
+  /** The table overlay: a small box at the bottom, the table folds out of it. */
+  overlay: { zIndex: 99999, fontPx: 11, decimals: 2, maxHeightVh: 60, copiedMs: 1500 },
+  /** `&dpr=`: the render densities (canvas pixels per CSS pixel) a comparison run may cap the canvas at. */
+  densityCaps: [1, 1.5, 2, 3] as readonly number[],
+  /** `&units=`: texture units per batch the renderer may be set to (Phaser takes 1 on phones by default). */
+  textureUnits: [1, 2, 4, 8, 16] as readonly number[],
 } as const;
+
+/** Parts of the run screen `&nobg`, `&nofar`, `&nohud` and `&notower` hide while the benchmark draws. */
+export const PERF_PARTS = ['bg', 'far', 'hud', 'tower'] as const;
+export type PerfPart = (typeof PERF_PARTS)[number];

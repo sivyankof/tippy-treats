@@ -1,7 +1,7 @@
 import { isCreatureId, MAX_CREATURE_LEVEL, type CreatureId } from '../data/creatures';
 import { BALANCE } from '../data/balance';
 import { isEffectLevel, type EffectLevel } from '../data/effect-levels';
-import { isPerfSegmentId, PERF, type PerfSegmentId } from '../data/perf';
+import { isPerfSegmentId, PERF, PERF_PARTS, type PerfPart, type PerfSegmentId } from '../data/perf';
 import { isResultsDemoCase, type ResultsDemoCase } from '../data/results-demo';
 import { UINT32_RANGE } from './math';
 
@@ -114,11 +114,25 @@ export interface PerfParams {
   only: PerfSegmentId[] | null;
   /** `still=tower|tongue|arc` (or a segment id): play that segment and freeze at a fixed moment, no measuring. */
   still: PerfSegmentId | null;
+  /** `dpr=1|1.5|2|3`: canvas pixels per CSS pixel at most; absent keeps the canvas at the logical size. */
+  densityCap?: number;
+  /** `units=1|2|4|8|16`: texture units per batch; absent keeps what Phaser picked. */
+  textureUnits?: number;
+  /** `nobg`, `nofar`, `nohud`, `notower`: parts of the run screen not drawn; absent when nothing is hidden. */
+  hidden?: PerfPart[];
+}
+
+/** A number of the query that is one of `allowed`; `undefined` otherwise. */
+function pickNumber(raw: string | null, allowed: readonly number[]): number | undefined {
+  if (raw === null || raw.trim() === '') return undefined;
+  const value = Number(raw);
+  return allowed.includes(value) ? value : undefined;
 }
 
 /**
- * Reads `?perf=1&fx=lite&only=calm,edge&still=tongue`; `null` when `?perf=1` is absent. It works in dev
- * and production builds alike, like `?fps=1`. Unknown segment names are dropped.
+ * Reads `?perf=1&fx=lite&only=calm,edge&still=tongue&dpr=2&units=16&nobg&nohud`; `null` when `?perf=1`
+ * is absent. It works in dev and production builds alike, like `?fps=1`. Unknown segment names and
+ * values outside the allowed lists are dropped.
  */
 export function parsePerfParams(search: string): PerfParams | null {
   const params = new URLSearchParams(search);
@@ -128,11 +142,20 @@ export function parsePerfParams(search: string): PerfParams | null {
   const still = params.get('still')?.trim() ?? '';
   const named = Object.entries(PERF.stills).find(([name]) => name === still)?.[1];
   const stillId = named ?? (isPerfSegmentId(still) ? still : null);
-  return {
+  const result: PerfParams = {
     fx: perfFx(params.get('fx')),
     only: only.length > 0 ? only : null,
     still: stillId,
   };
+  const densityCap = pickNumber(params.get('dpr'), PERF.densityCaps);
+  const textureUnits = pickNumber(params.get('units'), PERF.textureUnits);
+  const hidden = PERF_PARTS.filter(
+    (part) => params.has(`no${part}`) && params.get(`no${part}`) !== '0',
+  );
+  if (densityCap !== undefined) result.densityCap = densityCap;
+  if (textureUnits !== undefined) result.textureUnits = textureUnits;
+  if (hidden.length > 0) result.hidden = hidden;
+  return result;
 }
 
 /** The pinned level of `fx=`: a level name, `reduced` as another name of `minimal`, else full. */

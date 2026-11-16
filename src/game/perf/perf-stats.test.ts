@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { formatTable, percentile, SegmentSamples } from './perf-stats';
+import { formatHeader, formatTable, percentile, SegmentSamples } from './perf-stats';
 
 describe('percentile', () => {
   it('takes the nearest rank', () => {
@@ -85,5 +85,39 @@ describe('formatTable', () => {
     const lines = text.split('\n');
     expect(lines).toHaveLength(3);
     expect(lines[2]).toBe('| calm | 3.00 | 4.00 | 4.00 | 16.00 | 16.00 | 2 | 13.0 | 62.5 | ok |');
+  });
+});
+
+describe('formatHeader', () => {
+  it('names the canvas, the density and what was changed for the run', () => {
+    const line = formatHeader({
+      fx: 'full',
+      canvas: { width: 780, height: 1688 },
+      css: { width: 390, height: 843.9 },
+      devicePixelRatio: 3,
+      densityCap: 2,
+      textureUnits: 1,
+      maxTextureUnits: 16,
+      hidden: ['bg', 'hud'],
+    });
+    expect(line).toBe(
+      'fx=full canvas=780x1688px css=390x844 dpr=3 density=2.00 cap=2 units=1/16 hidden=nobg,nohud',
+    );
+  });
+
+  it('marks what was left as it is', () => {
+    const line = formatHeader({
+      fx: 'lite',
+      canvas: { width: 1080, height: 2337 },
+      css: { width: 0, height: 0 },
+      devicePixelRatio: 1,
+      densityCap: null,
+      textureUnits: 16,
+      maxTextureUnits: 16,
+      hidden: [],
+    });
+    expect(line).toBe(
+      'fx=lite canvas=1080x2337px css=0x0 dpr=1 density=0.00 cap=- units=16/16 hidden=-',
+    );
   });
 });
