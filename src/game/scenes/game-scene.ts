@@ -4,7 +4,7 @@ import type { Modifiers } from '../../core/abilities/types';
 import { Rng } from '../../core/rng';
 import { emptyTally, tallyEvents, type RunTally } from '../../core/run-tally';
 import type { CheckpointHeight } from '../../core/checkpoints';
-import type { RunMode } from '../../core/run-result';
+import type { RunMode, RunResult } from '../../core/run-result';
 import type { TeamSlot } from '../../core/sim-types';
 import {
   newLandingPreview,
@@ -31,13 +31,12 @@ import { gameState } from '../../state';
 import { emptyRunInfo, fillRunInfo, type RunInfo } from '../run-info';
 import { bindPageLeave } from '../../state/page-lifecycle';
 import { logRunStart } from '../run-telemetry';
-import { buildResultsData } from '../results-data';
+import { launchResults, revealResults, dropHeldResults } from '../results-launch';
 import { openScreen, restartRun, SCENES } from '../scene-keys';
 import { exitTarget } from '../run-exit';
 import { CLASSIC_RUN, demoFinished, type RunRequest } from '../run-request';
 import { setupRun } from '../run-setup';
 import type { DropDriver } from '../perf/perf-drivers';
-import { perfResultsData } from '../perf/perf-session';
 import { ANIM } from '../../data/anim';
 import { DEMO } from '../../data/demo';
 import type { BakeStep } from '../ui/bake-texture';
@@ -69,6 +68,8 @@ export class GameScene extends Phaser.Scene {
   private tally: RunTally = emptyTally();
   /** The demo has placed its layers and leaves after a short pause. */
   private demoLeaving = false;
+  /** The results scene was started for this run (it builds while the tower falls). */
+  private resultsLaunched = false;
   /** The run is being left for another screen: only once. */
   private exiting = false;
   /** Puts the run into the save once: when it ends or when the player leaves it. */
@@ -112,6 +113,7 @@ export class GameScene extends Phaser.Scene {
     this.tally = emptyTally();
     beginRunRewardedMemo(setup.paidByAd);
     this.demoLeaving = false;
+    this.resultsLaunched = false;
     this.exiting = false;
     this.recorder = new RunRecorder(gameState, this.startHeight, this.writesSave, () =>
       extrasOf(this.tally),
@@ -162,6 +164,7 @@ export class GameScene extends Phaser.Scene {
       this.scale.off(Phaser.Scale.Events.RESIZE, this.onResize, this);
       this.continueFlow?.dispose();
       this.recorder.recordQuit(this.sim);
+      dropHeldResults(this);
     });
 
     this.camera.setEntry(enterWorld(this));
@@ -219,23 +222,32 @@ export class GameScene extends Phaser.Scene {
       placeTutorialTarget(this.tutorial, this.fx, this.camera, this.cameras.main);
     }
 
-    const result = this.fx.takeResult();
-    if (!result) return;
+    // The run is over and recorded: the results screen builds itself hidden while the tower falls.
+    for (const event of events) {
+      if (event.type === 'run_over') this.openResults(event.result);
+    }
+    if (!this.fx.takeResult()) return;
     if (this.request.kind === 'demo') {
       this.leaveRun();
       return;
     }
-    const { tower } = this.fx;
+    revealResults(this);
+  }
+
+  /** The run is over: the results scene starts and builds itself hidden (a demo has none). */
+  private openResults(result: RunResult): void {
+    if (this.resultsLaunched || this.request.kind === 'demo') return;
+    this.resultsLaunched = true;
     const outcome = {
       result,
       recorder: this.recorder,
       tally: this.tally,
-      tower: tower.snapshot(),
+      tower: this.fx.tower.snapshot(),
       startHeight: this.startHeight,
       checkpoint: this.checkpoint,
+      recorded: this.writesSave,
     };
-    const data = buildResultsData({ ...outcome, recorded: this.writesSave }, gameState);
-    this.scene.launch(SCENES.results, this.perfRun ? perfResultsData(data) : data);
+    launchResults(this, outcome, this.perfRun);
   }
 
   /**

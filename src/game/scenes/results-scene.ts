@@ -1,8 +1,6 @@
 import * as Phaser from 'phaser';
-import { nearMiss } from '../../core/near-miss';
 import { ANIM } from '../../data/anim';
 import { MENU } from '../../data/menu-layout';
-import { PALETTE } from '../../data/palette';
 import { t } from '../../i18n';
 import { services } from '../../services';
 import { gameState } from '../../state';
@@ -11,48 +9,49 @@ import { leaveResultsAds, type RunExit } from '../interstitial-flow';
 import { isDebugRun, isLiveRun } from '../results-data';
 import { SCENES, type ResultsData } from '../scene-keys';
 import { createDimOverlay } from '../ui/dim-overlay';
-import { createPlate, type VolumePlate } from '../ui/style/volume';
-import { createOutlinedText } from '../ui/outlined-text';
 import { enterScreen, leaveScreen, type Movable } from '../ui/transition';
-import { fitText } from '../ui/menu/fit-text';
 import { createDebugPlate } from '../ui/menu/results-debug-plate';
 import { ResultsButtons } from '../ui/menu/results-buttons';
 import { ResultsCoins } from '../ui/menu/results-coins';
 import { ResultsHeader, createStats } from '../ui/menu/results-header';
+import { createResultsHint } from '../ui/menu/results-hint';
 import { createResultsStart } from '../ui/menu/results-start';
 import { startedLine } from '../ui/menu/results-start-model';
 import { shareResult } from '../ui/menu/results-share';
-import { spacingShare, spreadBlocks } from '../ui/menu/results-layout';
 import { ResultsMissions } from '../ui/menu/results-missions';
+import { ResultsPanel, type PanelParts } from '../ui/menu/results-panel';
 import { resultsFlow } from '../ui/menu/results-flow';
 import { ResultsTiers } from '../ui/menu/results-tiers';
-import { dailyResultsText } from '../ui/menu/daily-text';
-import { coinLines, nearMissText, presentedCreatures } from '../ui/menu/results-text';
+import { coinLines, presentedCreatures } from '../ui/menu/results-text';
 import { ResultsXp } from '../ui/menu/results-xp';
 
 const cfg = MENU.results;
 
-type Block = Phaser.GameObjects.Container | Phaser.GameObjects.Text;
-
-/** The end of a run: height, stats, coins, XP and the way on (docs/07-ui-screens.md, section 6). */
+/**
+ * The end of a run: height, stats, coins, XP and the way on (docs/07-ui-screens.md, section 6).
+ * A run that holds the screen (`ResultsData.hold`) builds it hidden, one piece per frame, while the
+ * tower collapses; `reveal` shows it when it is time (docs/08-architecture.md, section 12).
+ */
 export class ResultsScene extends Phaser.Scene {
+  private run!: ResultsData;
   private dim!: Phaser.GameObjects.Rectangle;
-  /** The window plate of the kit under the blocks below the header. */
-  private plate!: VolumePlate;
+  /** The window plate of the kit with the blocks below the header. */
+  private panel!: ResultsPanel;
   private header!: ResultsHeader;
-  private stats!: ReturnType<typeof createStats>;
   private coins!: ResultsCoins;
-  private xp!: ResultsXp;
-  private tiers!: ResultsTiers;
   private missions!: ResultsMissions;
-  /** The "so close" line; a daily run shows two: the tier of the attempt and the day's progress. */
-  private hint!: Phaser.GameObjects.Text;
-  /** The dev-only "not saved" plate, `null` for a normal run. */
-  private debugPlate: { obj: Block; height: number } | null = null;
-  /** The run reached the save. */
-  private recorded = true;
+  private xp!: ResultsXp;
   private buttons!: ResultsButtons;
+  private parts: Partial<PanelParts> = {};
+  /** The pieces are built and placed. */
+  private built = false;
   private celebration: RecordCelebration | null = null;
+  /** The pieces of the screen still to build, one per frame while it is hidden. */
+  private steps: Array<() => void> = [];
+  /** The screen is on show (not hidden while it builds). */
+  private shown = false;
+  /** `reveal` was called: the screen shows as soon as it is built. */
+  private revealWanted = false;
   private leaving = false;
   /** The share picture is being made: another tap waits for it. */
   private sharing = false;
@@ -64,66 +63,114 @@ export class ResultsScene extends Phaser.Scene {
     levelUp: false,
     newCreature: false,
   };
-  /** Padding and gap of the panel, shrunk on a short screen. */
-  private spacing: { padY: number; gap: number } = { padY: cfg.panel.padY, gap: cfg.panel.gap };
 
   constructor() {
     super(SCENES.results);
   }
 
   create(data: ResultsData): void {
-    const { result, summary, tally } = data;
-    const daily = result.mode === 'daily';
-    const { width, height } = this.scale.gameSize;
+    this.run = data;
     this.leaving = false;
     this.sharing = false;
+    this.shown = false;
+    this.built = false;
+    this.celebration = null;
+    this.parts = {};
+    this.steps = [
+      () => this.buildTop(),
+      () => this.buildBlocks(),
+      () => this.buildFoot(),
+      () => this.buildButtons(),
+      () => this.buildPanel(),
+    ];
+    this.scale.on(Phaser.Scale.Events.RESIZE, this.layout, this);
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      this.scale.off(Phaser.Scale.Events.RESIZE, this.layout, this);
+      this.revealWanted = false;
+      if (this.shown) this.scene.get(SCENES.hud).cameras.main.setAlpha(1);
+    });
+    if (data.hold) {
+      this.sys.setVisible(false);
+      this.input.enabled = false;
+    } else {
+      this.revealWanted = true;
+      this.show();
+    }
+  }
+
+  /** The screen may appear: at once when it is built, else as soon as it is. */
+  reveal(): void {
+    this.revealWanted = true;
+  }
+
+  override update(_time: number, delta: number): void {
+    if (!this.shown) {
+      this.steps.shift()?.();
+      if (this.revealWanted) this.show();
+      return;
+    }
+    this.header.update(delta);
+    this.coins.update(delta);
+    this.xp.update(delta);
+    this.missions.update(delta);
+    this.celebration?.update(delta);
+  }
+
+  /** The dim veil, the header and the stats. */
+  private buildTop(): void {
+    const { result, summary, tally } = this.run;
+    const { width, height } = this.scale.gameSize;
     this.dim = createDimOverlay(this, ANIM.results.overlayAlpha, width, height).setInteractive();
-    const started = data.checkpoint === null ? null : startedLine(data.startHeight, result.height);
+    const started =
+      this.run.checkpoint === null ? null : startedLine(this.run.startHeight, result.height);
     this.header = new ResultsHeader(
       this,
       result,
       summary.isRecord,
       started && t('results.startedAt', started),
     );
-    this.stats = createStats(this, result, tally, width);
+    this.parts.stats = createStats(this, result, tally, width);
+  }
+
+  /** The coins, the daily tiers and the missions. */
+  private buildBlocks(): void {
+    const { result, summary, tally } = this.run;
     // The coins of a daily run are not doubled by an ad: that place is for the classic run only.
-    const live = isLiveRun(data);
-    this.coins = new ResultsCoins(this, result.coins, coinLines(tally), live && !daily);
-    this.tiers = new ResultsTiers(this, summary.dailyTiers);
+    const canDouble = isLiveRun(this.run) && result.mode !== 'daily';
+    this.coins = new ResultsCoins(this, result.coins, coinLines(tally), canDouble);
+    this.parts.coins = this.coins;
+    this.parts.tiers = new ResultsTiers(this, summary.dailyTiers);
     this.missions = new ResultsMissions(
       this,
       summary.missions.before,
       summary.missions.after,
       cfg.missions.maxRows,
     );
+    this.parts.missions = this.missions;
+  }
+
+  /** The XP bar, the dev plate and the "so close" line. */
+  private buildFoot(): void {
+    const { recorded, summary } = this.run;
     this.xp = new ResultsXp(this, summary, {
       level: gameState.data.bakerLevel,
       xp: gameState.data.bakerXp,
     });
     // A run that is not saved gained no XP and set no record: the XP block and the hint stay out.
-    this.recorded = data.recorded;
-    this.xp.container.setVisible(this.recorded);
-    this.debugPlate = isDebugRun(this.recorded, import.meta.env.DEV)
+    this.xp.container.setVisible(recorded);
+    this.parts.xp = this.xp;
+    this.parts.recorded = recorded;
+    this.parts.debugPlate = isDebugRun(recorded, import.meta.env.DEV)
       ? createDebugPlate(this)
       : null;
-    const hintText = daily
-      ? dailyResultsText(result.height, gameState.dailyInfo().best, summary.dailyStale)
-      : nearMissText(
-          nearMiss({
-            height: result.height,
-            previousRecord: summary.previousRecord,
-            bakerLevel: gameState.data.bakerLevel,
-            bakerXp: gameState.data.bakerXp,
-            coins: gameState.coins,
-            owned: gameState.data.creatures,
-            todayBest: gameState.todayBest,
-            missions: summary.missions.after,
-          }),
-        );
-    this.hint = createOutlinedText(this, 0, 0, hintText, cfg.nearMissFont, PALETTE.gold);
-    this.hint.setAlign('center');
-    fitText(this.hint, cfg.nearMissWidth);
-    this.hint.setVisible(this.recorded);
+    this.parts.hint = createResultsHint(this, this.run);
+    if (summary.isRecord) this.celebration = new RecordCelebration(this);
+  }
+
+  /** The buttons and the way on: what each of them does. */
+  private buildButtons(): void {
+    const { summary, result } = this.run;
+    const live = isLiveRun(this.run);
     // The creatures the levels handed out are presented before anything else.
     const fresh = presentedCreatures(summary);
     this.runExit = {
@@ -136,16 +183,16 @@ export class ResultsScene extends Phaser.Scene {
     const flow = resultsFlow({
       scene: this,
       summary,
-      daily,
+      daily: result.mode === 'daily',
       fresh,
       leave: (then) => this.leave(then),
     });
     // Runs that do not reach the save (bot, start height) and the tutorial run have nothing to share.
     const handlers =
       live && !summary.firstRun
-        ? { ...flow.handlers, share: () => this.share(data) }
+        ? { ...flow.handlers, share: () => this.share(this.run) }
         : flow.handlers;
-    const start = createResultsStart(this, data, this.header, {
+    const start = createResultsStart(this, this.run, this.header, {
       start: flow.start,
       leaving: () => this.leaving,
       busy: (on) => {
@@ -154,25 +201,30 @@ export class ResultsScene extends Phaser.Scene {
     });
     this.buttons = new ResultsButtons(this, summary.firstRun, handlers, flow.labels, start);
     this.lock(true);
-    this.spacing = this.fitSpacing(height);
-    this.plate = createPlate(this, 'window', 0, 0, cfg.panel.width, this.panelHeight());
-    // Under the blocks, over the veil.
-    this.children.moveBelow(this.plate, this.header.container);
+  }
 
-    this.celebration = null;
-    if (summary.isRecord) this.celebrate(width, height);
+  /** The plate with the blocks on it, fitted to the screen, and everything put in place. */
+  private buildPanel(): void {
+    this.panel = new ResultsPanel(this, this.parts as PanelParts);
+    this.panel.fit(this.scale.gameSize.height, this.header.height, this.buttons.height);
+    this.built = true;
+    this.layout();
+  }
+
+  /** Builds what is left, then lets the screen in: the veil fades, the content slides, the XP fills. */
+  private show(): void {
+    for (let step = this.steps.shift(); step; step = this.steps.shift()) step();
+    this.shown = true;
+    this.revealWanted = false;
+    this.sys.setVisible(true);
+    this.input.enabled = true;
+    const { width, height } = this.scale.gameSize;
+    if (this.run.summary.isRecord) this.celebrate(width, height);
     if (import.meta.env.DEV) {
       this.input.keyboard?.on('keydown-R', () => this.celebrate(width, height));
     }
-
-    this.scale.on(Phaser.Scale.Events.RESIZE, this.layout, this);
     // The run HUD (height, wobble bar, next creature) fades out: the results tell the story now.
     const hudCamera = this.scene.get(SCENES.hud).cameras.main;
-    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
-      this.scale.off(Phaser.Scale.Events.RESIZE, this.layout, this);
-      hudCamera.setAlpha(1);
-    });
-    this.layout();
     this.dim.setAlpha(0);
     this.tweens.add({ targets: this.dim, alpha: 1, duration: ANIM.results.fadeMs });
     this.tweens.add({ targets: hudCamera, alpha: 0, duration: ANIM.results.fadeMs });
@@ -187,22 +239,9 @@ export class ResultsScene extends Phaser.Scene {
     });
   }
 
-  override update(_time: number, delta: number): void {
-    this.header.update(delta);
-    this.coins.update(delta);
-    this.xp.update(delta);
-    this.missions.update(delta);
-    this.celebration?.update(delta);
-  }
-
   /** What slides in and out with the screen, top to bottom; the dim veil stays. */
   private content(): Movable[] {
-    return [
-      this.header.container,
-      this.plate,
-      ...this.blocks().map((b) => b.obj),
-      this.buttons.container,
-    ];
+    return [this.header.container, ...this.panel.content(), this.buttons.container];
   }
 
   /** Confetti, the ribbon, the fanfare and the three-hit vibration of a new record. */
@@ -213,66 +252,13 @@ export class ResultsScene extends Phaser.Scene {
     services.haptics.play('triple');
   }
 
-  /** The blocks on the panel, top to bottom; empty ones are left out. */
-  private blocks(): Array<{ obj: Block; height: number }> {
-    const all: Array<{ obj: Block; height: number }> = [
-      ...(this.debugPlate ? [this.debugPlate] : []),
-      { obj: this.stats.obj, height: this.stats.height },
-      { obj: this.coins.container, height: this.coins.height },
-      { obj: this.tiers.container, height: this.tiers.height },
-      { obj: this.xp.container, height: this.recorded ? this.xp.height : 0 },
-      { obj: this.missions.container, height: this.missions.height },
-      {
-        obj: this.hint,
-        height: this.recorded
-          ? cfg.nearMissFont * cfg.lineHeight * this.hint.text.split('\n').length
-          : 0,
-      },
-    ];
-    return all.filter((b) => b.height > 0);
-  }
-
-  /** The panel wraps its blocks: they stand `panel.gap` apart, `panel.padY` from its edges. */
-  private panelHeight(): number {
-    const { padY, gap } = this.spacing;
-    const blocks = this.blocks();
-    const sum = blocks.reduce((total, b) => total + b.height, 0);
-    return sum + gap * Math.max(0, blocks.length - 1) + padY * 2;
-  }
-
-  /** The panel's padding and gaps, shrunk when the header and the panel would not fit above the buttons. */
-  private fitSpacing(screenHeight: number): { padY: number; gap: number } {
-    const { padY, gap } = cfg.panel;
-    const blocks = this.blocks();
-    const sum = blocks.reduce((total, b) => total + b.height, 0);
-    const spacing = gap * Math.max(0, blocks.length - 1) + padY * 2;
-    const room = screenHeight - cfg.buttonsBottom - this.buttons.height - cfg.top - cfg.sectionGap;
-    const share = spacingShare(sum, spacing, this.header.height, room, cfg.panelMinSpacing);
-    return { padY: padY * share, gap: gap * share };
-  }
-
   /** Buttons stand at the bottom; the header and the panel above them share the free room evenly. */
   private layout(): void {
+    if (!this.built) return;
     const { width, height } = this.scale.gameSize;
-    const cx = width / 2;
     this.cameras.main.setSize(width, height);
     this.dim.setSize(width, height);
-    const buttonsY = height - cfg.buttonsBottom - this.buttons.height / 2;
-    const panelHeight = this.plate.bodyHeight;
-    const [headerY = 0, panelY = 0] = spreadBlocks(
-      [this.header.height, panelHeight],
-      cfg.top,
-      buttonsY - this.buttons.height / 2,
-      cfg.sectionGap,
-    );
-    this.header.container.setPosition(cx, headerY);
-    this.plate.setPosition(cx, panelY);
-    let y = panelY - panelHeight / 2 + this.spacing.padY;
-    for (const b of this.blocks()) {
-      b.obj.setPosition(cx, y + b.height / 2);
-      y += b.height + this.spacing.gap;
-    }
-    this.buttons.container.setPosition(cx, buttonsY);
+    this.panel.layout(width, height, this.header, this.buttons);
   }
 
   /** Every way out and the doubling answer no taps (while a start is paid for, while leaving). */

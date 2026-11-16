@@ -47,6 +47,12 @@ describe('parseDebugParams', () => {
     expect(parseDebugParams('?artsheet').artsheet).toBeUndefined();
   });
 
+  it('reads the results demo case only when it is known', () => {
+    expect(parseDebugParams('?resultsDemo=record').resultsDemo).toBe('record');
+    expect(parseDebugParams('?resultsDemo=nope').resultsDemo).toBeUndefined();
+    expect(parseDebugParams('').resultsDemo).toBeUndefined();
+  });
+
   it('reads the tutorial switch only as 1 or 0', () => {
     expect(parseDebugParams('?tutorial=1').tutorial).toBe(true);
     expect(parseDebugParams('?tutorial=0').tutorial).toBe(false);

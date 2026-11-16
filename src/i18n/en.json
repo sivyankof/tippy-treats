@@ -362,7 +362,8 @@
     "stale": "The daily tower changed.\nThis attempt does not count"
   },
   "resultsMissions": {
-    "title": "Missions"
+    "title": "Missions",
+    "folded": "Missions: {done}/{total}"
   },
   "iap": {
     "stub": {

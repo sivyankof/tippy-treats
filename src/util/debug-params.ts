@@ -2,6 +2,7 @@ import { isCreatureId, MAX_CREATURE_LEVEL, type CreatureId } from '../data/creat
 import { BALANCE } from '../data/balance';
 import { isEffectLevel, type EffectLevel } from '../data/effect-levels';
 import { isPerfSegmentId, PERF, type PerfSegmentId } from '../data/perf';
+import { isResultsDemoCase, type ResultsDemoCase } from '../data/results-demo';
 import { UINT32_RANGE } from './math';
 
 export interface DebugParams {
@@ -20,6 +21,8 @@ export interface DebugParams {
   lineup?: boolean;
   /** Show the art sheet: every picture of the texture registry in one grid (a dev tool). */
   artsheet?: boolean;
+  /** Open the results screen on a synthetic run with every block filled (a dev tool for the short-screen fit). */
+  resultsDemo?: ResultsDemoCase;
   /** `?tutorial=1` forces the tutorial run with every hint fresh, `?tutorial=0` turns all hints off. */
   tutorial?: boolean;
   /** Shifts the game clock by whole days (may be negative) to test the streak, missions and daily tower. */
@@ -87,6 +90,8 @@ export function parseDebugParams(search: string): DebugParams {
   if (level !== undefined) result.level = level;
   if (params.get('lineup') === '1') result.lineup = true;
   if (params.get('artsheet') === '1') result.artsheet = true;
+  const resultsDemo = params.get('resultsDemo');
+  if (isResultsDemoCase(resultsDemo)) result.resultsDemo = resultsDemo;
   const tutorial = params.get('tutorial');
   if (tutorial === '1') result.tutorial = true;
   else if (tutorial === '0') result.tutorial = false;

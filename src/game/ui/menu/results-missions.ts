@@ -1,5 +1,5 @@
 import * as Phaser from 'phaser';
-import { share } from '../../../core/missions';
+import { isComplete, share } from '../../../core/missions';
 import type { MissionProgress } from '../../../core/save/schema';
 import { MENU } from '../../../data/menu-layout';
 import { PALETTE } from '../../../data/palette';
@@ -25,6 +25,29 @@ function easeOut(x: number): number {
   return 1 - (1 - x) * (1 - x);
 }
 
+/** A row: the text on the left and a progress bar on the right. */
+function createRow(
+  scene: Phaser.Scene,
+  label: string,
+  colour?: number,
+): { row: Phaser.GameObjects.Container; bar: ProgressBar } {
+  const text = createOutlinedText(scene, -cfg.width / 2, 0, label, cfg.textFont, colour).setOrigin(
+    0,
+    0.5,
+  );
+  fitText(text, cfg.textWidth);
+  const bar = new ProgressBar(
+    scene,
+    cfg.width / 2 - cfg.barWidth / 2,
+    0,
+    cfg.barWidth,
+    cfg.barHeight,
+    cfg.barFont,
+    PALETTE.success,
+  );
+  return { row: scene.add.container(0, 0, [text, bar]), bar };
+}
+
 /**
  * The missions this run moved: a title and up to three compact rows, each with a bar that fills
  * from where the run began to where it ended and a "Done!" mark on a mission it completed.
@@ -33,8 +56,13 @@ function easeOut(x: number): number {
 export class ResultsMissions {
   readonly container: Phaser.GameObjects.Container;
   /** Height of the block; 0 when it is empty. */
-  readonly height: number;
-  private readonly rows: MissionRow[] = [];
+  height: number;
+  /** What the block takes less when folded into one line (0: nothing to fold). */
+  readonly foldSaving: number;
+  private readonly full: Phaser.GameObjects.Container;
+  private readonly moved: ReadonlyArray<{ before: MissionProgress; after: MissionProgress }>;
+  private fullRows: MissionRow[] = [];
+  private rows: MissionRow[] = [];
   private elapsedMs = 0;
   private started = false;
 
@@ -45,9 +73,13 @@ export class ResultsMissions {
     rowLimit: number,
   ) {
     this.container = scene.add.container(0, 0);
+    this.full = scene.add.container(0, 0);
+    this.container.add(this.full);
     const moved = movedMissions(before, after).slice(0, rowLimit);
+    this.moved = moved;
     if (moved.length === 0) {
       this.height = 0;
+      this.foldSaving = 0;
       this.container.setVisible(false);
       return;
     }
@@ -65,30 +97,42 @@ export class ResultsMissions {
       },
     ];
     for (const { before: from, after: to } of moved) {
-      const row = scene.add.container(0, 0);
-      const text = createOutlinedText(
-        scene,
-        -cfg.width / 2,
-        0,
-        t(`mission.${to.id}`, { n: formatNumber(to.target) }),
-        cfg.textFont,
-      ).setOrigin(0, 0.5);
-      fitText(text, cfg.textWidth);
-      const bar = new ProgressBar(
-        scene,
-        cfg.width / 2 - cfg.barWidth / 2,
-        0,
-        cfg.barWidth,
-        cfg.barHeight,
-        cfg.barFont,
-        PALETTE.success,
-      );
-      row.add([text, bar]);
-      this.rows.push({ bar, from, to, done: false });
-      this.show(this.rows[this.rows.length - 1], 0);
+      const { row, bar } = createRow(scene, t(`mission.${to.id}`, { n: formatNumber(to.target) }));
+      this.fullRows.push({ bar, from, to, done: false });
+      this.show(this.fullRows[this.fullRows.length - 1], 0);
       list.push({ obj: row, height: cfg.rowHeight });
     }
-    this.height = stackRows(this.container, list, cfg.rowGap);
+    this.rows = this.fullRows;
+    this.height = stackRows(this.full, list, cfg.rowGap);
+    // One line is not worth it when the block already is one row.
+    this.foldSaving = moved.length > 1 ? this.height - cfg.rowHeight : 0;
+  }
+
+  /**
+   * Folds the block into one line ("Missions: N/M" and the bar of the most advanced mission that
+   * is not done yet) for a short screen; `height` becomes one row. Call before the screen is shown.
+   */
+  fold(scene: Phaser.Scene): void {
+    if (this.foldSaving <= 0 || this.rows !== this.fullRows) return;
+    const open = this.moved.filter(({ after }) => !isComplete(after));
+    const pick = open.reduce<MissionProgress | null>((best, { after }) => {
+      const better = !best || share(after) > share(best);
+      return better ? after : best;
+    }, null);
+    const shown =
+      this.moved.find(({ after }) => after === pick) ?? this.moved[this.moved.length - 1];
+    if (!shown) return;
+    const done = this.moved.length - open.length;
+    const { row, bar } = createRow(
+      scene,
+      t('resultsMissions.folded', { done, total: this.moved.length }),
+      PALETTE.gold,
+    );
+    this.container.add(row);
+    this.full.setVisible(false);
+    this.rows = [{ bar, from: shown.before, to: shown.after, done: false }];
+    this.show(this.rows[0], 0);
+    this.height = cfg.rowHeight;
   }
 
   /** The bars begin to fill (after the screen is in). */

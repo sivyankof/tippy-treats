@@ -4,7 +4,7 @@ import { PERF, type PerfSegmentDef } from '../../data/perf';
 import { setFrameWorkListener } from '../frame-work';
 import { CLASSIC_RUN } from '../run-request';
 import type { GameScene } from '../scenes/game-scene';
-import { launchRun, SCENES } from '../scene-keys';
+import { launchRun, resultsShown, SCENES } from '../scene-keys';
 import { countDrawCalls } from './draw-calls';
 import { MissDriver } from './perf-drivers';
 import { PerfOverlay } from './perf-overlay';
@@ -77,7 +77,7 @@ class PerfDirector {
   }
 
   private get resultsUp(): boolean {
-    return this.game.scene.isActive(SCENES.results);
+    return resultsShown(this.game.scene);
   }
 
   private onFrame(workMs: number, nowMs: number): void {
@@ -197,7 +197,7 @@ class PerfDirector {
     this.phaseStartMs = nowMs;
     this.showLabel();
     // The results screen of the last segment goes away with the run that made it.
-    if (this.resultsUp) this.game.scene.stop(SCENES.results);
+    if (this.game.scene.isActive(SCENES.results)) this.game.scene.stop(SCENES.results);
     launchRun(this.gameScene, CLASSIC_RUN);
   }
 

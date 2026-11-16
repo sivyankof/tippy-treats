@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { cellWidths, spacingShare, spreadBlocks } from './results-layout';
+import { cellWidths, fitPanel, spreadBlocks } from './results-layout';
 
 describe('cellWidths', () => {
   it('keeps the wanted widths when they fit', () => {
@@ -33,21 +33,61 @@ describe('spreadBlocks', () => {
   });
 });
 
-describe('spacingShare', () => {
-  it('keeps the full spacing when everything fits', () => {
-    expect(spacingShare(500, 100, 200, 1000, 0.3)).toBe(1);
+const BASE = {
+  blocksHeight: 650,
+  foldSaving: 100,
+  spacing: 200,
+  headerHeight: 200,
+  room: 1000,
+  minShare: 0.3,
+  minScale: 0.85,
+  floorScale: 0.6,
+};
+
+describe('fitPanel', () => {
+  it('changes nothing when everything fits', () => {
+    expect(fitPanel({ ...BASE, blocksHeight: 500 })).toEqual({ share: 1, scale: 1, fold: false });
   });
 
   it('shrinks the spacing by what is missing', () => {
-    // free = 1000 - 200 - 650 = 150 of the 200 the spacing wants
-    expect(spacingShare(650, 200, 200, 1000, 0.3)).toBe(0.75);
+    // free = 1000 - 200 = 800: 650 of blocks leave 150 of the 200 the spacing wants
+    expect(fitPanel(BASE)).toEqual({ share: 0.75, scale: 1, fold: false });
   });
 
-  it('never goes below the minimum share', () => {
-    expect(spacingShare(900, 200, 200, 1000, 0.3)).toBe(0.3);
+  it('scales the panel once the spacing is at its minimum', () => {
+    // 800 / (700 + 60) = 1.0526: still 1; 800 / (800 + 60) = 0.93
+    const fit = fitPanel({ ...BASE, blocksHeight: 800 });
+    expect(fit.share).toBe(0.3);
+    expect(fit.scale).toBeCloseTo(800 / 860, 6);
+    expect(fit.fold).toBe(false);
+  });
+
+  it('folds the missions when 0.85 is not enough, then scales again', () => {
+    // plain: 800 / (900 + 60) = 0.83 < 0.85; folded: 800 / (800 + 60) = 0.93
+    const fit = fitPanel({ ...BASE, blocksHeight: 900 });
+    expect(fit.fold).toBe(true);
+    expect(fit.share).toBe(0.3);
+    expect(fit.scale).toBeCloseTo(800 / 860, 6);
+  });
+
+  it('may go below 0.85 only after the fold', () => {
+    const fit = fitPanel({ ...BASE, blocksHeight: 1100 });
+    expect(fit.fold).toBe(true);
+    expect(fit.scale).toBeCloseTo(800 / 1060, 6);
+    expect(fit.scale).toBeLessThan(0.85);
+  });
+
+  it('goes below 0.85 without a fold when there are no missions', () => {
+    const fit = fitPanel({ ...BASE, blocksHeight: 1000, foldSaving: 0 });
+    expect(fit.fold).toBe(false);
+    expect(fit.scale).toBeCloseTo(800 / 1060, 6);
+  });
+
+  it('never scales below the floor', () => {
+    expect(fitPanel({ ...BASE, blocksHeight: 3000 }).scale).toBe(0.6);
   });
 
   it('has nothing to shrink without spacing', () => {
-    expect(spacingShare(900, 0, 200, 1000, 0.3)).toBe(1);
+    expect(fitPanel({ ...BASE, spacing: 0, blocksHeight: 500 }).share).toBe(1);
   });
 });
