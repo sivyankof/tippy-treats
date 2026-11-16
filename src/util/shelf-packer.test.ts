@@ -26,6 +26,18 @@ describe('ShelfPacker', () => {
     expect(p.alloc(1, 1)).toBeNull();
   });
 
+  it('reports a full page, then serves a freed cell again', () => {
+    const p = new ShelfPacker(4096, 2048, 8);
+    const boxes: Array<{ x: number; y: number }> = [];
+    for (let box = p.alloc(1024, 1024); box; box = p.alloc(1024, 1024)) boxes.push(box);
+    expect(boxes).toHaveLength(8);
+    expect(p.alloc(1024, 1024)).toBeNull();
+    const freed = boxes[3]!;
+    p.free(freed, 1024);
+    expect(p.alloc(1024, 1024)).toEqual(freed);
+    expect(p.alloc(1, 1)).toBeNull();
+  });
+
   it('reuses freed runs and merges neighbours', () => {
     const p = new ShelfPacker(100, 100, 10);
     const a = p.alloc(30, 10)!;
