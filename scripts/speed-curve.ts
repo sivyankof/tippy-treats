@@ -1,15 +1,17 @@
-import { nominalSpeed, zoneIndexOf } from '../src/core/zones';
+import { layerSpeed } from '../src/core/drop';
+import { zoneIndexOf } from '../src/core/zones';
 import { BALANCE } from '../src/data/balance';
 import { ZONES } from '../src/data/zones';
 import { MS_PER_SECOND } from '../src/util/math';
 
 /**
- * `npm run sim:speed` part 1: the nominal flying speed of every layer from 1 to 160 and the time a
+ * `npm run sim:speed` part 1: the nominal flying speed of every layer from 1 to 165 and the time a
  * layer needs to cross the field. Nominal means without the ability multiplier, the rush
- * (x1.35 on rush layers of Showcase) and the roof profile (x0.8 at the walls, x1 in the middle).
+ * (x1.35, in Space at most 1500) and the roof profile (x0.8 at the walls, x1 in the middle).
+ * One speed curve for the whole tower (core/speed-curve.ts): zones do not change the speed.
  */
 
-const LAST_LAYER = 160;
+const LAST_LAYER = 165;
 const TABLE_STEP = 5;
 const CROSSING_LAYERS = [1, 20, 40, 60, 80, 100, 120];
 
@@ -17,37 +19,18 @@ const CROSSING_LAYERS = [1, 20, 40, 60, 80, 100, 120];
 const TRACK_PX = BALANCE.layer.maxCenterX - BALANCE.layer.minCenterX;
 
 /** Layer `n` spawns above a tower of `n - 1` layers. */
-const speedOfLayer = (layer: number): number => nominalSpeed(layer - 1, zoneIndexOf(layer), 1);
+const speedOfLayer = (layer: number): number => layerSpeed(layer - 1, 1);
 
-const rawCapLayer = Array.from({ length: LAST_LAYER }, (_, i) => i + 1).find(
-  (layer) => BALANCE.speed.base + BALANCE.speed.perLayer * (layer - 1) >= BALANCE.speed.max,
-);
-
-/** The zone cap (Space) limits the speed of this layer. */
-function isCapped(layer: number): boolean {
-  const cap = ZONES[zoneIndexOf(layer)]?.speedCap ?? null;
-  return cap !== null && nominalSpeedUncapped(layer) >= cap;
-}
-
-/** What changes at this layer; a cap is marked where it first takes hold. */
+/** What changes at this layer: the start of a zone and the bends of the curve. */
 function notes(layer: number): string {
   const zone = ZONES[zoneIndexOf(layer)];
+  const { arcFrom, arcTo, max } = BALANCE.speed;
   const marks: string[] = [];
-  if (layer === rawCapLayer) marks.push(`base growth hits the cap ${BALANCE.speed.max}`);
-  if (isCapped(layer) && !isCapped(layer - 1))
-    marks.push(`${zone?.id} cap ${zone?.speedCap} in force`);
+  if (layer - 1 === arcFrom) marks.push('the arc starts: growth eases off');
+  if (layer - 1 === arcTo) marks.push(`the curve reaches ${max}`);
   if (layer > 1 && zoneIndexOf(layer) !== zoneIndexOf(layer - 1))
     marks.push(`zone ${zone?.id} starts`);
   return marks.join('; ');
-}
-
-/** Speed the layer would have without the zone cap (raw growth capped at `max`, times the zone). */
-function nominalSpeedUncapped(layer: number): number {
-  const raw = Math.min(
-    BALANCE.speed.max,
-    BALANCE.speed.base + BALANCE.speed.perLayer * (layer - 1),
-  );
-  return raw * (ZONES[zoneIndexOf(layer)]?.speedMult ?? 1);
 }
 
 console.log(

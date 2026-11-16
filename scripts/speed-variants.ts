@@ -1,10 +1,8 @@
-import { layerSpeed } from '../src/core/drop';
 import type { SpeedScaleContext } from '../src/core/sim-types';
 import { zoneStartIndex } from '../src/core/zones';
 import { BALANCE, DIFFICULTY, type DifficultyTarget } from '../src/data/balance';
 import { SAVE_DEFAULTS } from '../src/data/save-defaults';
 import { NO_TEAM, type SimTeamSet } from '../src/data/sim-teams';
-import { ZONES } from '../src/data/zones';
 import { MS_PER_SECOND } from '../src/util/math';
 import { intArg, scriptArgs } from './node-env';
 import {
@@ -31,8 +29,6 @@ interface Variant {
   make: () => SpeedScale | undefined;
 }
 
-const LAST_ZONE_INDEX = ZONES.length - 1;
-
 /** Tempo wave: the first layer of a zone (the kitchen excluded) is `drop` slower, back to nominal by the zone's last layer. */
 const tempoWave =
   (drop: number): SpeedScale =>
@@ -42,21 +38,10 @@ const tempoWave =
     return 1 - drop * (1 - progress);
   };
 
-/** Space speed multiplier replaced by `mult`, same cap: the ratio of the new capped speed to the old one. */
-const SPACE_MULT = 1.05;
-const spaceMult: SpeedScale = ({ zoneIndex, height }) => {
-  if (zoneIndex !== LAST_ZONE_INDEX) return 1;
-  const zone = ZONES[LAST_ZONE_INDEX];
-  const cap = zone?.speedCap ?? Infinity;
-  const raw = layerSpeed(height, 1);
-  return Math.min(cap, raw * SPACE_MULT) / Math.min(cap, raw * (zone?.speedMult ?? 1));
-};
-
 const VARIANTS: Variant[] = [
   { name: 'baseline', make: () => undefined },
   { name: 'wave -10%', make: () => tempoWave(0.1) },
   { name: 'wave -15%', make: () => tempoWave(0.15) },
-  { name: `space x${SPACE_MULT}`, make: () => spaceMult },
 ];
 
 const PROFILE_IDS = ['strong', 'regular', 'expert'] as const;

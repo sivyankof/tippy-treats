@@ -1,23 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { BALANCE } from '../data/balance';
-import {
-  SHOWCASE_ZONE_INDEX,
-  SPACE_RULE_POOL,
-  SPACE_ZONE_INDEX,
-  ZONE_RULES,
-  ZONES,
-} from '../data/zones';
+import { SHOWCASE_ZONE_INDEX, SPACE_RULE_POOL, ZONE_RULES, ZONES } from '../data/zones';
 import { layerSpeed } from './drop';
 import { Rng } from './rng';
-import {
-  cloudRoll,
-  layerRules,
-  nominalSpeed,
-  rushIndices,
-  zoneIndexOf,
-  zoneOf,
-  zoneStartIndex,
-} from './zones';
+import { cloudRoll, layerRules, rushIndices, zoneIndexOf, zoneOf, zoneStartIndex } from './zones';
 
 const zonesRng = (seed: number): Rng => new Rng(seed).fork('zones');
 const SEEDS = Array.from({ length: 300 }, (_, i) => 1000 + i * 7919);
@@ -27,13 +13,13 @@ const range = (from: number, to: number): number[] =>
 
 describe('zone table', () => {
   it('lists the six zones with the numbers of the design document', () => {
-    expect(ZONES.map((z) => [z.id, z.speedMult, z.scoreMult])).toEqual([
-      ['kitchen', 1, 1],
-      ['showcase', 1, 1.2],
-      ['roof', 1, 1.5],
-      ['clouds', 1, 1.8],
-      ['stars', 1.05, 2.2],
-      ['space', 1.15, 2.5],
+    expect(ZONES.map((z) => [z.id, z.scoreMult])).toEqual([
+      ['kitchen', 1],
+      ['showcase', 1.2],
+      ['roof', 1.5],
+      ['clouds', 1.8],
+      ['stars', 2.2],
+      ['space', 2.5],
     ]);
     expect(ZONES.map((z) => z.rule)).toEqual([
       'none',
@@ -43,7 +29,6 @@ describe('zone table', () => {
       'stars',
       'random',
     ]);
-    expect(ZONES.filter((z) => z.speedCap !== null).map((z) => z.id)).toEqual(['space']);
   });
 
   it('maps layer indices to zones, the last zone going on forever', () => {
@@ -69,34 +54,13 @@ describe('zone table', () => {
   });
 });
 
-describe('nominalSpeed', () => {
-  it('is the plain layer speed in the kitchen', () => {
-    expect(nominalSpeed(0, 0, 1)).toBe(layerSpeed(0, 1));
-    expect(nominalSpeed(15, 0, 1)).toBe(layerSpeed(15, 1));
-  });
-
-  it('multiplies by the zone and does not cap outside Space', () => {
-    expect(nominalSpeed(30, 1, 1)).toBeCloseTo(layerSpeed(30, 1));
-    expect(nominalSpeed(50, 2, 1)).toBeCloseTo(layerSpeed(50, 1) * (ZONES[2]?.speedMult ?? 0));
-    // 1392 * 1.05 is above the Space cap of 1400 and still allowed in the stars zone.
-    expect(nominalSpeed(88, 4, 1)).toBeCloseTo(1392 * 1.05);
-  });
-
-  it('caps the base at 1400 in every zone, so Space is slower than late Stars', () => {
-    expect(layerSpeed(89, 1)).toBe(BALANCE.speed.max);
-    // Stars: the base is already at 1400 from height 89 and the zone multiplier lifts it above.
-    expect(nominalSpeed(95, 4, 1)).toBeCloseTo(BALANCE.speed.max * 1.05);
-    expect(nominalSpeed(99, 4, 1)).toBeCloseTo(1470);
-    // Space: base times 1.15 is capped back to 1400, so its multiplier changes nothing.
-    expect(nominalSpeed(100, SPACE_ZONE_INDEX, 1)).toBe(1400);
-    expect(nominalSpeed(100, SPACE_ZONE_INDEX, 1)).toBeLessThan(nominalSpeed(99, 4, 1));
-  });
-
-  it('caps base times zone in Space, and abilities come on top of the cap', () => {
-    expect(nominalSpeed(100, SPACE_ZONE_INDEX, 1)).toBe(BALANCE.speed.max);
-    expect(nominalSpeed(400, SPACE_ZONE_INDEX, 1)).toBe(BALANCE.speed.max);
-    expect(nominalSpeed(100, SPACE_ZONE_INDEX, 1.2)).toBeCloseTo(BALANCE.speed.max * 1.2);
-    expect(nominalSpeed(100, SPACE_ZONE_INDEX, 0.8)).toBeCloseTo(BALANCE.speed.max * 0.8);
+describe('zone speed', () => {
+  it('zones do not change the speed: one curve for the whole tower', () => {
+    for (const zone of ZONES) expect(Object.keys(zone).sort()).toEqual(['id', 'rule', 'scoreMult']);
+    // Late Stars are no faster than early Space any more (it used to drop from 1470 to 1400).
+    expect(layerSpeed(99, 1)).toBeLessThan(layerSpeed(100, 1));
+    expect(layerSpeed(400, 1)).toBe(BALANCE.speed.max);
+    expect(layerSpeed(100, 1.2)).toBeCloseTo(layerSpeed(100, 1) * 1.2);
   });
 });
 

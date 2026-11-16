@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { BALANCE } from '../data/balance';
-import { ZONE_RULES } from '../data/zones';
-import { Flight, flyingSpeed, newFlyingLayer, roofFactor } from './flight';
+import { SHOWCASE_ZONE_INDEX, SPACE_ZONE_INDEX, ZONE_RULES } from '../data/zones';
+import { Flight, flyingSpeed, newFlyingLayer, roofFactor, rushSpeed } from './flight';
 import type { FlyingLayer, SimEvent } from './sim-types';
 import type { CloudRoll, LayerRules } from './zones';
 
@@ -58,6 +58,22 @@ describe('roofFactor and flyingSpeed', () => {
     expect(flyingSpeed(layer)).toBe(0);
     layer.windupMs = 0;
     expect(flyingSpeed(layer)).toBeCloseTo(SPEED * ZONE_RULES.rush.speedMult);
+  });
+
+  it('caps a Space rush at spaceMaxSpeed, never below the nominal speed; Showcase is not capped', () => {
+    const { speedMult, spaceMaxSpeed } = ZONE_RULES.rush;
+    expect(rushSpeed(1400, SHOWCASE_ZONE_INDEX)).toBeCloseTo(1400 * speedMult);
+    expect(rushSpeed(1290, SPACE_ZONE_INDEX)).toBe(spaceMaxSpeed);
+    expect(rushSpeed(1400, SPACE_ZONE_INDEX)).toBe(spaceMaxSpeed);
+    expect(rushSpeed(1000, SPACE_ZONE_INDEX)).toBeCloseTo(1000 * speedMult);
+    // Lemon: the nominal speed is already above the cap, the rush adds nothing and takes nothing.
+    expect(rushSpeed(1680, SPACE_ZONE_INDEX)).toBe(1680);
+    const space = layerOf(
+      rules({ zoneIndex: SPACE_ZONE_INDEX, rule: 'showcase', rush: true }),
+      1400,
+    );
+    space.windupMs = 0;
+    expect(flyingSpeed(space)).toBe(spaceMaxSpeed);
   });
 
   it('is zero during a fake-out stop', () => {

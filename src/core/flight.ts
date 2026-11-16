@@ -1,5 +1,5 @@
 import { BALANCE } from '../data/balance';
-import { ZONE_RULES } from '../data/zones';
+import { SPACE_ZONE_INDEX, ZONE_RULES } from '../data/zones';
 import { MS_PER_SECOND } from '../util/math';
 import type { FlyingLayer, LayerPlan, SimEvent } from './sim-types';
 import type { CloudRoll, LayerRules } from './zones';
@@ -16,7 +16,7 @@ function countDown(leftMs: number, dtMs: number): number {
 /** The fields `flyingSpeed` reads. */
 export type SpeedFields = Pick<
   FlyingLayer,
-  'speed' | 'x' | 'rule' | 'rush' | 'windupMs' | 'stopMs'
+  'speed' | 'x' | 'rule' | 'rush' | 'windupMs' | 'stopMs' | 'zoneIndex'
 >;
 
 /** Roof profile factor at `x`: `edgeMult` at the walls, `centreMult` in the middle (sine). */
@@ -28,13 +28,23 @@ export function roofFactor(x: number): number {
 }
 
 /**
+ * Speed of a rush layer after the wind-up: its nominal speed times the rush multiplier; in Space
+ * no faster than `spaceMaxSpeed`, but never slower than the nominal speed itself.
+ */
+export function rushSpeed(nominal: number, zoneIndex: number): number {
+  const rushed = nominal * ZONE_RULES.rush.speedMult;
+  if (zoneIndex !== SPACE_ZONE_INDEX) return rushed;
+  return Math.min(rushed, Math.max(ZONE_RULES.rush.spaceMaxSpeed, nominal));
+}
+
+/**
  * Speed of the layer right now, px/s: zero during the rush wind-up and the fake-out stop,
  * otherwise the nominal speed times the rush multiplier and the roof profile where they apply.
  */
 export function flyingSpeed(layer: SpeedFields): number {
   if (layer.windupMs > 0 || layer.stopMs > 0) return 0;
   let speed = layer.speed;
-  if (layer.rush) speed *= ZONE_RULES.rush.speedMult;
+  if (layer.rush) speed = rushSpeed(speed, layer.zoneIndex);
   if (layer.rule === 'roof') speed *= roofFactor(layer.x);
   return speed;
 }

@@ -4,7 +4,7 @@ import { TimingBot } from './bot';
 import { Rng } from './rng';
 import { config, STEP } from './sim-test-utils';
 import { TowerSim, type RunConfig, type SimEvent } from './tower-sim';
-import { nominalSpeed } from './zones';
+import { layerSpeed } from './drop';
 
 const { afterPerfects, layers, speedMult, minGapLayers } = BALANCE.tempoEase;
 
@@ -34,7 +34,7 @@ describe('tempo ease in the run', () => {
     for (const event of events) {
       if (event.type === 'spawn') {
         index = event.layer.index;
-        const plain = nominalSpeed(index - 1, event.layer.zoneIndex, 1);
+        const plain = layerSpeed(index - 1, 1);
         if (Math.abs(event.layer.speed - plain * speedMult) < 1e-6) eased.push(index);
         else expect(event.layer.speed).toBeCloseTo(plain, 6);
       } else if (event.type === 'tempo_ease') {

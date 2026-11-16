@@ -1,5 +1,3 @@
-import { BALANCE } from './balance';
-
 /** Rule a single layer follows. Zones 2-5 each have one; in Space every layer draws one. */
 export type LayerRuleKind = 'none' | 'showcase' | 'roof' | 'clouds' | 'stars';
 
@@ -8,25 +6,22 @@ export type ZoneRuleKind = LayerRuleKind | 'random';
 
 export type ZoneId = 'kitchen' | 'showcase' | 'roof' | 'clouds' | 'stars' | 'space';
 
+/** Zones have no speed multipliers: one speed curve for the whole tower (core/speed-curve.ts). */
 export interface ZoneDef {
   id: ZoneId;
-  /** Multiplies the nominal layer speed (before the cap and the ability multiplier). */
-  speedMult: number;
   /** Multiplies the score of a landing layer of this zone. */
   scoreMult: number;
   rule: ZoneRuleKind;
-  /** Upper bound of the nominal speed (base speed times the zone multiplier); `null` for none. */
-  speedCap: number | null;
 }
 
 /** Zone table of docs/02-gameplay.md, section 8. Zone `i` starts at layer `i * BALANCE.zones.length + 1`. */
 export const ZONES: readonly ZoneDef[] = [
-  { id: 'kitchen', speedMult: 1, scoreMult: 1, rule: 'none', speedCap: null },
-  { id: 'showcase', speedMult: 1, scoreMult: 1.2, rule: 'showcase', speedCap: null },
-  { id: 'roof', speedMult: 1, scoreMult: 1.5, rule: 'roof', speedCap: null },
-  { id: 'clouds', speedMult: 1, scoreMult: 1.8, rule: 'clouds', speedCap: null },
-  { id: 'stars', speedMult: 1.05, scoreMult: 2.2, rule: 'stars', speedCap: null },
-  { id: 'space', speedMult: 1.15, scoreMult: 2.5, rule: 'random', speedCap: BALANCE.speed.max },
+  { id: 'kitchen', scoreMult: 1, rule: 'none' },
+  { id: 'showcase', scoreMult: 1.2, rule: 'showcase' },
+  { id: 'roof', scoreMult: 1.5, rule: 'roof' },
+  { id: 'clouds', scoreMult: 1.8, rule: 'clouds' },
+  { id: 'stars', scoreMult: 2.2, rule: 'stars' },
+  { id: 'space', scoreMult: 2.5, rule: 'random' },
 ];
 
 /** Index of the zone whose rule is `showcase` (the rush schedule lives in it). */
@@ -55,6 +50,11 @@ export const ZONE_RULES = {
     windupMs: 300,
     /** Speed of the rush layer after the wind-up, times its nominal speed. */
     speedMult: 1.35,
+    /**
+     * Space only: a rush layer flies no faster than this, px/s, unless its nominal speed is
+     * already higher (then the rush adds nothing). Showcase rushes are not capped.
+     */
+    spaceMaxSpeed: 1500,
   },
   /** Roof: speed is `edge` at the walls and `centre` in the middle of the track (sine profile). */
   roof: {

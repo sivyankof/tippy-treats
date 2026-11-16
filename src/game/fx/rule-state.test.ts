@@ -12,6 +12,7 @@ const layer = (over: Partial<RuleFields> = {}): RuleFields => ({
   windupMs: 0,
   stopMs: 0,
   coverMs: 0,
+  zoneIndex: 0,
   ...over,
 });
 

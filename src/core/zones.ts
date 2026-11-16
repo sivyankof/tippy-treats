@@ -8,7 +8,6 @@ import {
   type LayerRuleKind,
   type ZoneDef,
 } from '../data/zones';
-import { layerSpeed } from './drop';
 import type { Rng } from './rng';
 
 /**
@@ -32,18 +31,6 @@ export function zoneOf(index: number): ZoneDef {
 /** First layer index of a zone. */
 export function zoneStartIndex(zoneIndex: number): number {
   return zoneIndex * BALANCE.zones.length + 1;
-}
-
-/**
- * Nominal speed of a layer above a tower of `height`: base speed times the zone multiplier,
- * capped where the zone has a cap (Space), then times the ability multiplier. The rush
- * multiplier and the roof profile come on top of this number (see core/flight.ts), so the
- * speed of a layer may exceed the cap through abilities and rush.
- */
-export function nominalSpeed(height: number, zoneIndex: number, abilitySpeedMult: number): number {
-  const zone = ZONES[zoneIndex] as ZoneDef;
-  const zoned = layerSpeed(height, 1) * zone.speedMult;
-  return Math.min(zone.speedCap ?? Infinity, zoned) * abilitySpeedMult;
 }
 
 /** What the zone rules decided for one layer. */

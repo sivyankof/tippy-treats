@@ -3,7 +3,7 @@ import { ZONES } from '../data/zones';
 import { collectModifiers, dropModifiers } from './abilities/modifiers';
 import { runAbility, runCloudHooks, runLandingHooks, tickRunEffects } from './abilities/run';
 import type { Modifiers } from './abilities/types';
-import { resolveDrop, type DropInput } from './drop';
+import { layerSpeed, resolveDrop, type DropInput } from './drop';
 import { growInField } from './field';
 import { Flight, newFlyingLayer } from './flight';
 import { applyContinue, applyMiss } from './miss';
@@ -23,7 +23,7 @@ import {
 } from './sim-types';
 import { TempoEase } from './tempo-ease';
 import { attemptLayer, type LayerAttempt, type PlanState } from './team-queue';
-import { cloudRoll, layerRules, nominalSpeed, zoneIndexOf } from './zones';
+import { cloudRoll, layerRules, zoneIndexOf } from './zones';
 import {
   advanceWobblePhase,
   decayWobble,
@@ -281,7 +281,7 @@ export class TowerSim {
       : this.tempoEase.next(index, s.combo);
     s.tempoLeft = tempo.left;
     const speed =
-      nominalSpeed(s.height, zoneIndex, this.currentModifiers().speedMult) *
+      layerSpeed(s.height, this.currentModifiers().speedMult) *
       this.tutorialSpeedMult(index) *
       tempo.mult *
       this.analysisSpeedScale(index, zoneIndex);

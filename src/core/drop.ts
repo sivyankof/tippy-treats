@@ -1,4 +1,5 @@
 import { BALANCE } from '../data/balance';
+import { speedCurve } from './speed-curve';
 
 export type DropQuality = 'perfect' | 'normal' | 'miss';
 export type CutSide = 'left' | 'right';
@@ -34,10 +35,13 @@ export interface DropOutcome {
   savedWidth: number;
 }
 
-/** Speed of the layer that flies above a tower of the given height. */
+/**
+ * Nominal speed of the layer that flies above a tower of the given height: the speed curve times
+ * the ability multiplier. The rush and the roof profile come on top (core/flight.ts), so a layer
+ * may fly faster than the curve's ceiling.
+ */
 export function layerSpeed(height: number, speedMult: number): number {
-  const { base, perLayer, max } = BALANCE.speed;
-  return Math.min(max, base + perLayer * height) * speedMult;
+  return speedCurve(height) * speedMult;
 }
 
 /** Side a layer thrown with offset `dx` overhangs, so the side its cut would be on. */

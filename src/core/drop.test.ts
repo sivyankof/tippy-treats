@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { BALANCE } from '../data/balance';
+import { speedCurve } from './speed-curve';
 import { layerSpeed, overhangSide, resolveDrop, type DropInput } from './drop';
 
 const TARGET = 540;
@@ -183,15 +184,15 @@ describe('overhangSide', () => {
 });
 
 describe('layerSpeed', () => {
-  it('grows with height and is capped', () => {
+  it('follows the speed curve', () => {
     expect(layerSpeed(0, 1)).toBe(600);
     expect(layerSpeed(10, 1)).toBe(690);
-    expect(layerSpeed(88, 1)).toBe(1392);
-    expect(layerSpeed(89, 1)).toBe(1400);
+    expect(layerSpeed(88, 1)).toBeCloseTo(speedCurve(88));
+    expect(layerSpeed(160, 1)).toBe(1400);
     expect(layerSpeed(500, 1)).toBe(1400);
   });
 
-  it('applies the zone multiplier after the cap', () => {
+  it('applies the ability multiplier on top of the curve', () => {
     expect(layerSpeed(0, 1.05)).toBeCloseTo(630);
     expect(layerSpeed(500, 1.1)).toBeCloseTo(1540);
   });

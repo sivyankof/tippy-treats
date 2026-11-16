@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { BALANCE } from '../data/balance';
 import { ZONE_RULES } from '../data/zones';
+import { layerSpeed } from './drop';
 import { Rng } from './rng';
 import {
   STEP,
@@ -14,7 +15,7 @@ import {
 } from './sim-test-utils';
 import type { FlyingLayer, SimEvent } from './sim-types';
 import { TowerSim } from './tower-sim';
-import { cloudRoll, layerRules, nominalSpeed, rushIndices } from './zones';
+import { cloudRoll, layerRules, rushIndices } from './zones';
 
 const zonesOf = (seed: number): Rng => new Rng(seed).fork('zones');
 const newSim = (seed: number, startHeight: number): TowerSim =>
@@ -136,22 +137,14 @@ describe('TowerSim: zones', () => {
 });
 
 describe('TowerSim: zone speed and score', () => {
-  it('gives the nominal speed of the zone, the cap in Space, abilities on top', () => {
-    for (const [start, zone] of [
-      [0, 0],
-      [25, 1],
-      [45, 2],
-      [65, 3],
-      [88, 4],
-      [100, 5],
-      [150, 5],
-    ] as const) {
+  it('gives the speed curve in every zone, the ceiling from height 160, abilities on top', () => {
+    for (const start of [0, 25, 45, 65, 88, 100, 150]) {
       const sim = newSim(3, start);
-      expect(spawnOf(sim.update(STEP)).speed).toBeCloseTo(nominalSpeed(start, zone, 1));
+      expect(spawnOf(sim.update(STEP)).speed).toBeCloseTo(layerSpeed(start, 1));
     }
-    expect(spawnOf(newSim(3, 150).update(STEP)).speed).toBe(BALANCE.speed.max);
+    expect(spawnOf(newSim(3, 160).update(STEP)).speed).toBe(BALANCE.speed.max);
 
-    const lemon = newSim(3, 150);
+    const lemon = newSim(3, 160);
     mutable(lemon).effects.push({
       id: 'frosty',
       layersLeft: 3,
