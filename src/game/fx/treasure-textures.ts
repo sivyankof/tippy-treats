@@ -18,12 +18,16 @@ export const TREASURE_TEXTURES = {
   berryFace: 'tr_berry_face',
   /** One puff of a cloud bank; not meant for tinting. */
   cloud: 'tr_cloud',
+  /** One puff of the space nebula bank (pink and blue, with star dots); not meant for tinting. */
+  nebula: 'tr_nebula',
   /** A speed streak: solid at the right end, gone at the left; white, for tinting. */
   streak: 'tr_streak',
   /** The outline of a rush layer, stretchable sideways; white, for tinting. */
   outline: 'tr_outline',
 } as const;
 
+/** How far the lit top of a cloud puff is lifted off its shaded belly, as a share of the puff height. */
+const CLOUD_LIFT = 0.04;
 const colors = TREASURE.colors;
 const coinLook = TREASURE.textures;
 const OUTLINE_GLOW = RULE_ANIM.outline.glow;
@@ -64,12 +68,26 @@ function bakeCoin(scene: Phaser.Scene): void {
   });
 }
 
+/** The flat fills of a puff, from the outermost ring in. */
+interface PuffColors {
+  halo: number;
+  edge: number;
+  shade: number;
+  top: number;
+}
+
 /**
- * One cloud puff: a few overlapping blobs on a flat base, with a pale edge, a shaded belly and a
- * soft halo of fainter rings around it, so the bank has soft edges. The halo lives in a margin
- * around the puff; the texture is centred on the puff all the same.
+ * One puff of a bank: a few overlapping blobs on a flat base, with a pale edge, a shaded belly and
+ * a soft halo of fainter rings around it, so the bank has soft edges. The halo lives in a margin
+ * around the puff; the texture is centred on the puff all the same. `extra` draws on top of it.
  */
-function bakeCloud(scene: Phaser.Scene): void {
+function bakePuff(
+  scene: Phaser.Scene,
+  key: string,
+  colors: PuffColors,
+  lift: number,
+  extra?: (g: Phaser.GameObjects.Graphics, width: number, height: number, margin: number) => void,
+): void {
   const { width, height } = RULE_ANIM.cloud.puff;
   const { margin, step, alphas } = RULE_ANIM.cloud.halo;
   const blobs = [
@@ -98,15 +116,46 @@ function bakeCloud(scene: Phaser.Scene): void {
       0.14 * height + grow,
     );
   };
-  bakeTexture(scene, TREASURE_TEXTURES.cloud, width + margin * 2, height + margin * 2, (g) => {
+  bakeTexture(scene, key, width + margin * 2, height + margin * 2, (g) => {
     // Outermost ring first: each ring is fainter and wider, so the edge fades out softly.
     for (let i = alphas.length - 1; i >= 0; i--) {
-      draw(g, RULE_ANIM.colors.cloud, alphas[i] ?? 0, edge + step * (i + 1), 0);
+      draw(g, colors.halo, alphas[i] ?? 0, edge + step * (i + 1), 0);
     }
-    draw(g, RULE_ANIM.colors.cloudEdge, 1, edge, 0);
-    draw(g, RULE_ANIM.colors.cloudShade, 1, 0, 0);
-    draw(g, RULE_ANIM.colors.cloud, 1, 0, -height * 0.04);
+    draw(g, colors.edge, 1, edge, 0);
+    draw(g, colors.shade, 1, 0, 0);
+    draw(g, colors.top, 1, 0, -height * lift);
+    extra?.(g, width, height, margin);
   });
+}
+
+function bakeCloud(scene: Phaser.Scene): void {
+  const c = RULE_ANIM.colors;
+  bakePuff(
+    scene,
+    TREASURE_TEXTURES.cloud,
+    {
+      halo: c.cloud,
+      edge: c.cloudEdge,
+      shade: c.cloudShade,
+      top: c.cloud,
+    },
+    CLOUD_LIFT,
+  );
+}
+
+/** The nebula puff: the cloud puff in pink over blue, with a few star dots baked in. */
+function bakeNebula(scene: Phaser.Scene): void {
+  const { colors, dots } = RULE_ANIM.cloud.nebula;
+  bakePuff(
+    scene,
+    TREASURE_TEXTURES.nebula,
+    { halo: colors.halo, edge: colors.edge, shade: colors.blue, top: colors.pink },
+    RULE_ANIM.cloud.nebula.lift,
+    (g, width, height, margin) => {
+      g.fillStyle(colors.dot, 1);
+      for (const d of dots) g.fillCircle(margin + d.x * width, margin + d.y * height, d.r * width);
+    },
+  );
 }
 
 function bakeStreak(scene: Phaser.Scene): void {
@@ -146,6 +195,7 @@ export function createTreasureTextures(scene: Phaser.Scene): void {
   bakeBerry(scene, TREASURE_TEXTURES.berry, false);
   bakeBerry(scene, TREASURE_TEXTURES.berryFace, true);
   bakeCloud(scene);
+  bakeNebula(scene);
   bakeStreak(scene);
   bakeOutline(scene);
 }

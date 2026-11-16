@@ -3,7 +3,14 @@ import { RULE_ANIM } from '../../data/rule-anim';
 import {
   cloudEtaMs,
   CloudMotion,
+  densityCap,
   followInput,
+  pickLook,
+  puffsBillow,
+  starActive,
+  starCount,
+  starLook,
+  starPulse,
   stepApproach,
   type CloudInput,
   type CloudPhase,
@@ -81,6 +88,7 @@ function film(dts: readonly number[], coverMs = 300, dropAfterCover = false): Fr
       y: t > 1500 ? 380 : 500,
       dir: 1,
       maxAlpha: 1,
+      nebula: false,
     };
     const pose = motion.update(dt, input);
     frames.push({ t, phase: motion.phase, pose: { ...pose }, y: motion.y });
@@ -148,6 +156,7 @@ describe('CloudMotion', () => {
       y: 400,
       dir: -1,
       maxAlpha: 1,
+      nebula: false,
     };
     for (let i = 0; i < 5; i++) motion.update(20, base);
     expect(motion.phase).toBe('approach');
@@ -174,6 +183,7 @@ describe('CloudMotion', () => {
       y: 400,
       dir: 1,
       maxAlpha: 1,
+      nebula: false,
     });
     expect(motion.phase).toBe('cover');
     expect(Math.abs(pose.x)).toBeLessThan(5);
@@ -190,6 +200,7 @@ describe('followInput', () => {
       y: 0,
       dir: 1,
       maxAlpha: 1,
+      nebula: false,
     };
     const live: CloudInput = {
       covering: true,
@@ -198,6 +209,7 @@ describe('followInput', () => {
       y: 420,
       dir: -1,
       maxAlpha: 0.7,
+      nebula: false,
     };
     followInput(passive, live);
     expect(passive).toEqual({
@@ -207,6 +219,64 @@ describe('followInput', () => {
       y: 420,
       dir: -1,
       maxAlpha: 0.7,
+      nebula: false,
     });
+  });
+});
+
+describe('nebula look', () => {
+  it('keeps the look of a bank until it has left, and takes the wanted one only while idle', () => {
+    expect(pickLook('idle', 'cloud', 'nebula')).toBe('nebula');
+    expect(pickLook('idle', 'nebula', 'cloud')).toBe('cloud');
+    for (const phase of ['approach', 'cover', 'leave'] as const) {
+      expect(pickLook(phase, 'nebula', 'cloud')).toBe('nebula');
+      expect(pickLook(phase, 'cloud', 'nebula')).toBe('cloud');
+    }
+  });
+
+  it('caps the nebula under the cloud, and "Not scary" lowers either by its share', () => {
+    expect(densityCap('cloud', 1)).toBe(1);
+    expect(densityCap('nebula', 1)).toBe(cfg.nebula.maxDensity);
+    expect(densityCap('cloud', cfg.ghostMaxDensity)).toBe(cfg.ghostMaxDensity);
+    expect(densityCap('nebula', cfg.ghostMaxDensity)).toBeCloseTo(
+      cfg.nebula.maxDensity * cfg.ghostMaxDensity,
+    );
+    expect(cfg.nebula.maxDensity).toBeLessThan(cfg.ghostMaxDensity);
+  });
+
+  it('shows 8, 4 and 0 stars on full, lite and minimal, spread evenly over the slots', () => {
+    expect(starCount('full')).toBe(8);
+    expect(starCount('lite')).toBe(4);
+    expect(starCount('minimal')).toBe(0);
+    for (const level of ['full', 'lite', 'minimal'] as const) {
+      const on = Array.from({ length: 8 }, (_, i) => starActive(i, 8, starCount(level)));
+      expect(on.filter(Boolean)).toHaveLength(starCount(level));
+    }
+    const lite = Array.from({ length: 8 }, (_, i) => starActive(i, 8, 4));
+    expect(lite).toEqual([false, true, false, true, false, true, false, true]);
+  });
+
+  it('billows the cloud always and the nebula except on minimal', () => {
+    expect(puffsBillow('cloud', 'minimal')).toBe(true);
+    expect(puffsBillow('nebula', 'full')).toBe(true);
+    expect(puffsBillow('nebula', 'lite')).toBe(true);
+    expect(puffsBillow('nebula', 'minimal')).toBe(false);
+  });
+
+  it('twinkles within its bounds, each star on its own phase', () => {
+    const low = starLook(0);
+    const high = starLook(1);
+    expect(low.alpha).toBe(cfg.nebula.stars.alpha[0]);
+    expect(high.alpha).toBe(cfg.nebula.stars.alpha[1]);
+    expect(low.scale).toBeLessThan(1);
+    expect(high.scale).toBeGreaterThan(1);
+    for (let t = 0; t < 3000; t += 70) {
+      for (let slot = 0; slot < 8; slot++) {
+        const pulse = starPulse(t, slot);
+        expect(pulse).toBeGreaterThanOrEqual(0);
+        expect(pulse).toBeLessThanOrEqual(1);
+      }
+    }
+    expect(starPulse(100, 0)).not.toBeCloseTo(starPulse(100, 1));
   });
 });

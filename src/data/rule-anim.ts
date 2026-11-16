@@ -164,6 +164,52 @@ export const RULE_ANIM = {
      * layer, so the silhouette of the layer shows through (tuned by eye).
      */
     ghostMaxDensity: 0.7,
+    /**
+     * The space nebula: the cloud of the Space zone is a see-through cotton-candy bank. It has the
+     * same motion and the same puff geometry as the cloud, only another picture (`tr_nebula`) and
+     * a lower density cap, with twinkling stars over it.
+     */
+    nebula: {
+      /** Flat two-tone fills: the pink top lit from above and the blue belly; a pale edge and halo. */
+      colors: {
+        pink: 0xff9bd2,
+        blue: 0x7ab4ff,
+        edge: 0xffc4e6,
+        halo: 0xe2b4ff,
+        dot: 0xffffff,
+      },
+      /**
+       * The densest a puff is drawn while the nebula covers the layer. Neighbouring puffs overlap
+       * two to three deep, so this is far under the 0.67 that would leave a third of the layer:
+       * tuned by the contrast of the layer behind the bank (docs/08-architecture.md, section 12).
+       */
+      maxDensity: 0.38,
+      /** How far (share of the puff height) the pink top is lifted off the blue belly: the blue shows as a band under it. */
+      lift: 0.14,
+      /** Baked star dots on the puff: centre and radius as shares of the puff width, and the height share. */
+      dots: [
+        { x: 0.3, y: 0.38, r: 0.016 },
+        { x: 0.66, y: 0.3, r: 0.02 },
+        { x: 0.52, y: 0.6, r: 0.014 },
+      ],
+      /** Twinkling stars over the bank (the shared `fx_star` picture), one pool per bank. */
+      stars: {
+        /** How many twinkle per bank on each effects level. */
+        count: { full: 8, lite: 4, minimal: 0 },
+        /** Texture scale of a star, from the smallest to the largest. */
+        scale: [0.35, 0.7],
+        /** Share of the base scale a star swells by at the top of its pulse. */
+        pulse: 0.35,
+        /** Alpha at the low and the high point of the pulse. */
+        alpha: [0.25, 1],
+        periodMs: 1500,
+        /** Phase step between the stars, radians. */
+        phaseStep: 2.1,
+        /** How far from the row line a star sits, up and down. */
+        spreadPx: 70,
+        tints: [0xffffff, 0xfff1a8],
+      },
+    },
     enterPx: 420,
     approachAlpha: 0.55,
     enterScale: 0.88,
