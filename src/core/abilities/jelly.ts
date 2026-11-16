@@ -2,10 +2,10 @@ import { abilityDef, levelValue } from '../../data/creatures';
 import { MASTERY } from '../../data/mastery';
 import { isMaster } from '../mastery';
 import { boostAmount, boostCount, emitAbility, payMastery } from './helpers';
+import { PERCENT } from '../../util/math';
 import type { Ability } from './types';
 
 const DEF = abilityDef('jelly');
-const PERCENT = 100;
 
 /**
  * Takes wobble points off the tower, then makes the next layers spring towards the centre

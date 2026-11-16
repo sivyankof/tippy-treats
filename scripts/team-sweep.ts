@@ -15,12 +15,14 @@ import { applySets, setArg } from './what-if';
  *   --runs=N             runs per team (default 200)
  *   --team=a+b+c;none    named teams (default: all 220 full teams)
  *   --part=i/n           only the teams with index % n == i, to split a sweep over processes
- *   --set=honey.4=44;puff.5=80;ghost.5=5;mastery.frosty.toleranceAdd=12
- *                        what-if values (scripts/what-if.ts): honey tolerance, puff widen, ghost
- *                        layers at a 1-based level, mastery numbers, bot-model assumptions
+ *   --set=honey.4=44;frosty.slowPercent.5=33;mastery.frosty.toleranceAdd=12
+ *                        what-if values (scripts/what-if.ts): levelled ability values at a 1-based
+ *                        level, mastery numbers, bot-model assumptions
  *   --report=f1,f2       print the table of saved JSON lines (with the `none` line) instead of
  *                        playing: teams without the rainbow (the owner's height targets apply to
- *                        them) and teams with it, printed apart
+ *                        them) and teams with it, printed apart. The ratios divide by the median
+ *                        of the `none` line, so the header prints its run count and warns when it
+ *                        differs from the teams' one
  *   --top=N              rows of each table (default 5)
  */
 
@@ -40,7 +42,7 @@ const DEFAULT_RUNS = 200;
 const DEFAULT_TOP = 5;
 const PCT_DIGITS = 1;
 /**
- * Owner's height targets of the mastery stage (docs/03-creatures.md, "РџСЂРѕРєР°С‡РєР°"): the best level-5
+ * Owner's height targets of the mastery stage (docs/03-creatures.md, "Прокачка"): the best level-5
  * team without the rainbow lifts the median of the strong profile at most this much over no team,
  * with the 99th percentile of its heights at most `MAX_P99`. Rainbow teams are only reported.
  */
@@ -125,7 +127,14 @@ function report(files: string[]): void {
   const teams = rows.filter((row) => row.team !== 'none').sort((a, b) => b.median - a.median);
   const top = intArg(args, 'top', DEFAULT_TOP);
   const ratioOf = (row: Row): number | null => (base ? row.median / base.median : null);
-  console.log(`teams ${teams.length}, none median ${base?.median ?? 'n/a'}`);
+  const teamRuns = [...new Set(teams.map((row) => row.runs))].join('/');
+  const baseText = base ? `${base.median} (${base.runs} runs)` : 'n/a';
+  console.log(`teams ${teams.length} (${teamRuns} runs), none median ${baseText}`);
+  if (base && teams.some((row) => row.runs !== base.runs)) {
+    console.log(
+      'note: the none line has another run count than the teams, the ratios depend on it',
+    );
+  }
   const withRainbow = (row: Row): boolean => row.team.split('+').includes(RAINBOW);
   for (const [title, list] of [
     ['without rainbow', teams.filter((row) => !withRainbow(row))],

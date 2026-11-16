@@ -2,7 +2,8 @@
  * Day-by-day economy model (analysis only, nothing here is used by the game).
  *
  * 1. Plays bot runs per profile and team with the real sim and keeps per-run samples
- *    (height, coins by source, berries, duration). The samples can be cached with `--cache=path`.
+ *    (height, coins by source, berries, duration). The samples can be cached with `--cache=path`;
+ *    a cache keeps the run count and the `--set` values it was played with and is refused with others.
  * 2. Prices every sample with an economy and walks days: runs fill the daily play time, fixed
  *    daily income is added, coins are spent greedily on creatures and upgrades, berries are
  *    exchanged for coins. `CURRENT` reads the rules of the game from src/data (fresh oven, XP
@@ -60,6 +61,7 @@ import { playCheckpointRuns } from './checkpoint-runs';
 import { COIN_SOURCES, CoinStats, type CoinsBySource } from './coin-stats';
 import { intArg, nodeFs, scriptArgs } from './node-env';
 import { ANALYSIS_MAX_HEIGHT, mean, playRun, profileStreams, teamSlots } from './sim-runner';
+import { readSampleCache, sampleCacheText } from './sample-cache';
 import { applySets, setArg } from './what-if';
 
 // ---------------------------------------------------------------- samples
@@ -202,19 +204,25 @@ function sampleJobs(bestTeam: readonly CreatureId[]): SampleJob[] {
   return jobs;
 }
 
-/** Plays the samples, or reads them from `cache` and plays only the ones it lacks. */
-function loadSamples(runs: number, cache: string | null, bestTeam: readonly CreatureId[]): Samples {
-  const samples: Samples =
-    cache && nodeFs().existsSync(cache)
-      ? (JSON.parse(nodeFs().readFileSync(cache, 'utf8')) as Samples)
-      : {};
+/**
+ * Plays the samples, or reads them from `cache` and plays only the ones it lacks. A cache played
+ * with another run count or other what-if values is refused (scripts/sample-cache.ts).
+ */
+function loadSamples(
+  runs: number,
+  sets: readonly string[],
+  cache: string | null,
+  bestTeam: readonly CreatureId[],
+): Samples {
+  const text = cache && nodeFs().existsSync(cache) ? nodeFs().readFileSync(cache, 'utf8') : null;
+  const samples: Samples = cache ? readSampleCache<RunSample[]>(text, runs, sets, cache) : {};
   let played = false;
   for (const job of sampleJobs(bestTeam)) {
     if (samples[job.key]) continue;
     samples[job.key] = job.play(runs);
     played = true;
   }
-  if (cache && played) nodeFs().writeFileSync(cache, JSON.stringify(samples));
+  if (cache && played) nodeFs().writeFileSync(cache, sampleCacheText(runs, sets, samples));
   return samples;
 }
 
@@ -995,7 +1003,7 @@ function main(): void {
   }
   const sets = applySets(setArg(scriptArgs()));
   if (sets.length > 0) console.log(`What-if values: ${sets.join('; ')}`);
-  const samples = loadSamples(runs, cache, bestTeam);
+  const samples = loadSamples(runs, sets, cache, bestTeam);
   const economies = currentOnly ? [CURRENT] : [BEFORE, CURRENT];
   for (const eco of economies) {
     perRunTable(eco, samples, bestTeam);
