@@ -1,7 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import { ZONE_SKY } from '../../../data/backdrop-colors';
 import { ZONES } from '../../../data/zones';
-import { ditherNoise, ditheredSky, gradientBands, gradientColorAt } from './sky-gradient';
+import {
+  ditherNoise,
+  ditheredSky,
+  fillDitheredRows,
+  gradientBands,
+  gradientColorAt,
+} from './sky-gradient';
 
 const TWO_STOPS = [
   { at: 0, color: 0x000000 },
@@ -84,5 +90,17 @@ describe('ditherNoise', () => {
       sum += n;
     }
     expect(Math.abs(sum / 2000)).toBeLessThan(0.1);
+  });
+});
+
+describe('fillDitheredRows', () => {
+  it('fills only the asked rows and matches the whole picture', () => {
+    const whole = ditheredSky(TWO_STOPS, 6, 6, 1.5);
+    const out = new Uint8ClampedArray(6 * 6 * 4);
+    fillDitheredRows(out, TWO_STOPS, 6, 6, 1.5, 0, 2);
+    expect(out.slice(0, 2 * 6 * 4)).toEqual(whole.slice(0, 2 * 6 * 4));
+    expect(out[2 * 6 * 4 + 3]).toBe(0);
+    fillDitheredRows(out, TWO_STOPS, 6, 6, 1.5, 2, 6);
+    expect(Array.from(out)).toEqual(Array.from(whole));
   });
 });

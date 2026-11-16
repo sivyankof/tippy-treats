@@ -84,12 +84,18 @@ export const BACKDROP = {
   skyBandHeight: 4,
   skyWidth: 4,
   /**
-   * Zones whose dark sky is baked as a small 2D picture with light noise (dither) so the 8-bit gradient
-   * shows no steps; `scale` is how many screen px one picture pixel covers, `levels` the noise width in colour levels.
+   * Zones whose dark sky is baked as a small 2D picture with light noise (dither) so the 8-bit
+   * gradient shows no steps. `scale`: screen px covered by one picture pixel. `levels`: width of the
+   * noise in 8-bit colour levels. `rowsPerStep`: picture rows filled per bake step, so the work is
+   * spread over frames when the zone is prepared ahead.
    */
-  /** Space nebulae: peak opacity of a blob (0..255 scale of alpha is applied by the gradient) and the alpha noise in 8-bit levels. */
-  nebula: { blobAlpha: 0.36, alphaNoise: 1.5 },
-  skyDither: { zones: ['space'], scale: 4, levels: 1.5 },
+  skyDither: { zones: ['space'], scale: 4, levels: 1.5, rowsPerStep: 96 },
+  /**
+   * Space nebulae: soft white blobs computed straight into pixels. `blobAlpha`: opacity at a blob's
+   * centre (0..1). `alphaNoise`: noise on the alpha in 8-bit levels, against steps in the soft edge.
+   * `rowsPerStep`: tile rows filled per bake step.
+   */
+  nebula: { blobAlpha: 0.36, alphaNoise: 1.5, rowsPerStep: 128 },
   /** The sky picture is a bit larger than the screen so its slow breathing never shows an edge. */
   skyOverscan: 1.06,
   skyBreathe: { amount: 0.012, periodMs: 1800 },

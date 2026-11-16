@@ -20,7 +20,7 @@ import { showcaseArt } from './showcase-zone';
 import { spaceArt } from './space-zone';
 import { starsArt } from './stars-zone';
 import { ZoneFade } from './zone-fade';
-import { ZoneScenery, type ZoneArt } from './zone-scenery';
+import { bakeSky, ZoneScenery, type ZoneArt } from './zone-scenery';
 
 /** What the backdrop needs of the run state: the zone and the placed height (the lap follows from it). */
 export interface RunBackdropState {
@@ -227,6 +227,7 @@ export class Backdrop {
   private bake(id: ZoneId, lap: number): void {
     bakeSharedArt(this.scene);
     bakeFarArt(this.scene, id);
+    bakeSky(this.scene, id);
     ZONE_ART[id].bake(this.scene);
     ZONE_ART[id].bakeLap?.(this.scene, Math.max(lap, 1));
   }

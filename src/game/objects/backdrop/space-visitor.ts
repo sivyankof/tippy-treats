@@ -1,11 +1,17 @@
 import * as Phaser from 'phaser';
-import { SPACE_VISITOR } from '../../../data/space-visitor';
+import { SPACE_VISITOR, type SpaceVisitorId } from '../../../data/space-visitor';
 import { readDebugParams, readPerfParams } from '../../../util/debug-params';
 import { effectsMode } from '../../effects-mode';
 import { fxGuard } from '../../fx-guard';
 import type { GuestSource } from './guest-source';
 import type { FrameCtx, Life } from './life';
-import { newVisitorPose, planVisitor, visitorPose, type VisitorPlan } from './space-visitor-plan';
+import {
+  newVisitorPose,
+  planVisitor,
+  visitorFit,
+  visitorPose,
+  type VisitorPlan,
+} from './space-visitor-plan';
 
 const HOLD_LEAD = SPACE_VISITOR.holdLead;
 
@@ -51,6 +57,17 @@ export class SpaceVisitor implements Life {
   }
 
   private holding = false;
+  private fitH = -1;
+  private fitsScreen = false;
+
+  /** Whether the guest has a lane on a screen `screenH` tall; remembered per screen height. */
+  private fits(guest: SpaceVisitorId, screenH: number): boolean {
+    if (this.fitH !== screenH) {
+      this.fitH = screenH;
+      this.fitsScreen = visitorFit(guest, screenH) !== null;
+    }
+    return this.fitsScreen;
+  }
 
   private hold(on: boolean): void {
     if (this.holding === on) return;
@@ -62,6 +79,11 @@ export class SpaceVisitor implements Life {
     const { plan } = this;
     const image = this.objects[0];
     if (!plan || !image) return;
+    // A screen that cannot show this guest (too short, or no lane fits) holds nothing back either.
+    if (!this.fits(plan.guest, ctx.height)) {
+      this.hide();
+      return;
+    }
     this.clockMs += ctx.deltaMs;
     const progress = (this.clockMs - plan.delayMs) / plan.durationMs;
     const flying = progress >= 0 && progress < 1 && !effectsMode.reduced;

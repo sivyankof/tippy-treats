@@ -1,7 +1,12 @@
 import * as Phaser from 'phaser';
 import { BACKDROP } from '../../../data/backdrop';
 import type { HoverSpec } from '../../../data/backdrop-life';
-import { PLANET_PLACE, planetIdOfKey, planetKey } from '../../../data/space-planets';
+import {
+  PLANET_PLACE,
+  planetKey,
+  SPACE_PLANET_IDS,
+  type SpacePlanetId,
+} from '../../../data/space-planets';
 import { planetOfLap } from '../../../core/space-planet';
 import { effectsMode } from '../../effects-mode';
 import type { FrameCtx, Life } from './life';
@@ -26,61 +31,56 @@ export class PlanetLife implements Life, LapLife {
   private readonly coming: Phaser.GameObjects.Image;
   private readonly shownSpot = new Spot();
   private readonly comingSpot = new Spot();
-  private shownKey: string;
-  /** Texture of the planet that is fading in, and how long it has faded; null when none is. */
-  private comingKey: string | null = null;
+  /** The planet that is fading in (with its spot), and how long it has faded; null when none is. */
+  private comingId: SpacePlanetId | null = null;
   private fadedMs = 0;
 
   constructor(scene: Phaser.Scene, lap: number) {
-    this.shownKey = planetKey(planetOfLap(lap));
-    this.shown = new Phaser.GameObjects.Image(scene, 0, 0, this.shownKey);
-    this.coming = new Phaser.GameObjects.Image(scene, 0, 0, this.shownKey).setVisible(false);
+    const id = planetOfLap(lap);
+    this.shown = new Phaser.GameObjects.Image(scene, 0, 0, planetKey(id));
+    this.coming = new Phaser.GameObjects.Image(scene, 0, 0, planetKey(id)).setVisible(false);
     this.objects = [this.shown, this.coming];
-    this.shownSpot.lap = lap;
-    this.still = { texture: this.shownKey, at: { x: 0, y: 0 }, scale: PLANET_PLACE.scale };
+    this.shownSpot.set(id, lap);
+    this.still = { texture: planetKey(id), at: { x: 0, y: 0 }, scale: PLANET_PLACE.scale };
     this.moving = { ...this.still, ...PLANET_PLACE.drift };
   }
 
   setLap(lap: number): void {
-    const key = planetKey(planetOfLap(lap));
-    if (this.comingKey !== null) this.finish();
-    if (key === this.shownKey && lap === this.shownSpot.lap) return;
+    const id = planetOfLap(lap);
+    if (this.comingId !== null) this.finish();
+    if (id === this.shownSpot.id && lap === this.shownSpot.lap) return;
     if (effectsMode.reduced) {
-      this.shown.setTexture(key);
-      this.shownKey = key;
-      this.shownSpot.lap = lap;
+      this.shown.setTexture(planetKey(id));
+      this.shownSpot.set(id, lap);
       return;
     }
-    this.comingKey = key;
-    this.comingSpot.lap = lap;
+    this.comingId = id;
+    this.comingSpot.set(id, lap);
     this.fadedMs = 0;
-    this.coming.setTexture(key).setAlpha(0).setVisible(true);
+    this.coming.setTexture(planetKey(id)).setAlpha(0).setVisible(true);
   }
 
   update(ctx: FrameCtx): void {
-    if (this.comingKey !== null) {
+    if (this.comingId !== null) {
       this.fadedMs += ctx.deltaMs;
       if (this.fadedMs >= BACKDROP.fadeMs) this.finish();
-      else this.coming.setAlpha(this.fadedMs / BACKDROP.fadeMs);
+      else {
+        const t = this.fadedMs / BACKDROP.fadeMs;
+        // Crossfade: the old planet fades out as the new one fades in, so neither pops.
+        this.coming.setAlpha(t);
+        this.shown.setAlpha(1 - t);
+      }
     }
     const spec = effectsMode.reduced ? this.still : this.moving;
     // The drift is the pose's offset from the spot: it is computed at the origin and added to each planet's spot.
     const pose = hoverPose(spec, 0, 0, ctx.timeMs, this.pose);
-    this.place(this.shown, this.shownKey, this.shownSpot, ctx, pose);
-    if (this.comingKey !== null && this.comingSpot.lap !== null) {
-      this.place(this.coming, this.comingKey, this.comingSpot, ctx, pose);
-    }
+    this.place(this.shown, this.shownSpot, ctx, pose);
+    if (this.comingId !== null) this.place(this.coming, this.comingSpot, ctx, pose);
   }
 
   /** Puts one planet at the spot of its lap; hides it (no lane has room) or shows it. */
-  private place(
-    image: Phaser.GameObjects.Image,
-    key: string,
-    spot: Spot,
-    ctx: FrameCtx,
-    pose: Pose,
-  ): void {
-    const at = spot.at(key, ctx.width, ctx.height);
+  private place(image: Phaser.GameObjects.Image, spot: Spot, ctx: FrameCtx, pose: Pose): void {
+    const at = spot.at(ctx.width, ctx.height);
     image.setVisible(at !== null);
     if (!at) return;
     image.setPosition(at.x + pose.x, at.y + pose.y);
@@ -90,31 +90,42 @@ export class PlanetLife implements Life, LapLife {
 
   /** The fade is over (or cut short by the next lap): the new planet is the shown one. */
   private finish(): void {
-    if (this.comingKey === null) return;
-    this.shown.setTexture(this.comingKey);
-    this.shownKey = this.comingKey;
-    this.shownSpot.lap = this.comingSpot.lap;
-    this.comingKey = null;
-    this.comingSpot.lap = null;
+    if (this.comingId === null) return;
+    this.shown.setTexture(planetKey(this.comingId)).setAlpha(1);
+    this.shownSpot.set(this.comingId, this.comingSpot.lap);
+    this.comingId = null;
+    this.comingSpot.clear();
     this.coming.setVisible(false);
   }
 }
 
-/** The cached spot of a planet for its lap on the current screen size (see `planetSpot`). */
+/** The planet of one lap and its cached spot on the current screen size (see `planetSpot`). */
 class Spot {
+  id: SpacePlanetId = SPACE_PLANET_IDS[0];
   lap: number | null = null;
   private cachedLap: number | null = null;
   private cachedW = 0;
   private cachedH = 0;
   private spot: PlanetSpot | null = null;
 
-  at(key: string, width: number, height: number): PlanetSpot | null {
+  set(id: SpacePlanetId, lap: number | null): void {
+    this.id = id;
+    this.lap = lap;
+    this.cachedLap = null;
+  }
+
+  clear(): void {
+    this.lap = null;
+    this.cachedLap = null;
+  }
+
+  at(width: number, height: number): PlanetSpot | null {
     if (this.lap === null) return null;
     if (this.cachedLap !== this.lap || this.cachedW !== width || this.cachedH !== height) {
       this.cachedLap = this.lap;
       this.cachedW = width;
       this.cachedH = height;
-      const size = planetSize(planetIdOfKey(key));
+      const size = planetSize(this.id);
       this.spot = planetSpot(
         this.lap,
         width,

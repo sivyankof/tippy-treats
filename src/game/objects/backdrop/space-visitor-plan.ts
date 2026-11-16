@@ -96,19 +96,34 @@ function scaleIn(guest: SpaceVisitorId, band: { top: number; bottom: number }): 
   return scale >= SPACE_VISITOR.minFitScale ? scale : 0;
 }
 
-/** The lane a guest flies in on a screen `screenH` tall: above the flying row when it fits there, else below; null when neither, and on a short screen. */
-export function visitorLane(guest: SpaceVisitorId, screenH: number): VisitorLane | null {
+/** Where and how large a guest flies on a screen `screenH` tall. */
+export interface VisitorFit {
+  lane: VisitorLane;
+  band: { top: number; bottom: number };
+  scale: number;
+}
+
+/**
+ * The lane a guest flies in: above the flying row when it fits there, else below; null when
+ * neither fits, and on a short screen (`minScreenH`).
+ */
+export function visitorFit(guest: SpaceVisitorId, screenH: number): VisitorFit | null {
   if (screenH < SPACE_VISITOR.minScreenH) return null;
   for (const lane of ['above', 'below'] as const) {
-    if (scaleIn(guest, visitorBand(screenH, lane)) > 0) return lane;
+    const band = visitorBand(screenH, lane);
+    const scale = scaleIn(guest, band);
+    if (scale > 0) return { lane, band, scale };
   }
   return null;
 }
 
+export function visitorLane(guest: SpaceVisitorId, screenH: number): VisitorLane | null {
+  return visitorFit(guest, screenH)?.lane ?? null;
+}
+
 /** How much the guest is drawn at on a screen `screenH` tall; 0 when even the smallest size would not fit. */
 export function visitorScale(guest: SpaceVisitorId, screenH: number): number {
-  const lane = visitorLane(guest, screenH);
-  return lane ? scaleIn(guest, visitorBand(screenH, lane)) : 0;
+  return visitorFit(guest, screenH)?.scale ?? 0;
 }
 
 /**
@@ -125,12 +140,13 @@ export function visitorPose(
 ): VisitorPose {
   const spec = SPACE_VISITOR.guests[plan.guest];
   const flight: VisitorFlight = spec.flight;
-  const scale = visitorScale(plan.guest, screenH);
+  const fit = visitorFit(plan.guest, screenH);
+  const scale = fit?.scale ?? 0;
   out.scale = scale;
   const margin = spec.width * scale * SPACE_VISITOR.offscreenShare;
   const from = plan.leftward ? width + margin : -margin;
   const to = plan.leftward ? -margin : width + margin;
-  const band = visitorBand(screenH, visitorLane(plan.guest, screenH) ?? 'above');
+  const band = fit?.band ?? visitorBand(screenH);
   const room = (band.bottom - band.top - extentOf(plan.guest) * scale) / 2;
   const centre = (band.top + band.bottom) / 2 + room * (plan.bandShare * 2 - 1);
   const slopeY = flight.slopePx * scale * (progress - 0.5);

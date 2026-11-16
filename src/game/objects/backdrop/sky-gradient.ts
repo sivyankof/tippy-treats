@@ -23,21 +23,55 @@ export function gradientBands(stops: readonly GradientStop[], count: number): nu
   return Array.from({ length: count }, (_, i) => gradientColorAt(stops, (i + 0.5) / count));
 }
 
+const NOISE_A = 0x9e3779b9;
+const NOISE_B = 0x7f4a7c15;
+const NOISE_SKEW = 7919;
+const NOISE_SKEW_B = 104729;
+const UINT32 = 0x100000000;
+
+function hash(a: number, b: number): number {
+  let h = Math.imul(a ^ NOISE_A, 0x85ebca6b) ^ Math.imul(b + NOISE_B, 0xc2b2ae35);
+  h = Math.imul(h ^ (h >>> 15), 0x2c1b3c6d);
+  h = Math.imul(h ^ (h >>> 12), 0x297a2d39);
+  return ((h ^ (h >>> 15)) >>> 0) / UINT32;
+}
+
 /** Light noise in -1..1 (triangular, so it averages out), the same for the same cell. */
 export function ditherNoise(x: number, y: number): number {
-  const hash = (a: number, b: number): number => {
-    let h = Math.imul(a ^ 0x9e3779b9, 0x85ebca6b) ^ Math.imul(b + 0x7f4a7c15, 0xc2b2ae35);
-    h = Math.imul(h ^ (h >>> 15), 0x2c1b3c6d);
-    h = Math.imul(h ^ (h >>> 12), 0x297a2d39);
-    return ((h ^ (h >>> 15)) >>> 0) / 0x100000000;
-  };
-  return hash(x, y) + hash(y + 7919, x + 104729) - 1;
+  return hash(x, y) + hash(y + NOISE_SKEW, x + NOISE_SKEW_B) - 1;
 }
 
 /**
- * RGBA pixels of a `width` x `height` picture of the gradient with `levels` of colour noise added
- * before the rounding to 8 bits: the steps of a dark gradient break up into fine grain.
+ * Fills the rows `from`..`to` (exclusive) of the RGBA pixels `out` of a `width` x `height`
+ * picture of the gradient with `levels` of colour noise added before the rounding to 8 bits: the
+ * steps of a dark gradient break up into fine grain.
  */
+export function fillDitheredRows(
+  out: Uint8ClampedArray,
+  stops: readonly GradientStop[],
+  width: number,
+  height: number,
+  levels: number,
+  from: number,
+  to: number,
+): void {
+  for (let y = from; y < to; y++) {
+    const base = gradientColorAt(stops, (y + 0.5) / height);
+    const r = (base >> 16) & 0xff;
+    const g = (base >> 8) & 0xff;
+    const b = base & 0xff;
+    for (let x = 0; x < width; x++) {
+      const noise = ditherNoise(x, y) * levels;
+      const at = (y * width + x) * 4;
+      out[at] = r + noise;
+      out[at + 1] = g + noise;
+      out[at + 2] = b + noise;
+      out[at + 3] = 255;
+    }
+  }
+}
+
+/** The whole dithered picture at once (see `fillDitheredRows`). */
 export function ditheredSky(
   stops: readonly GradientStop[],
   width: number,
@@ -45,17 +79,6 @@ export function ditheredSky(
   levels: number,
 ): Uint8ClampedArray<ArrayBuffer> {
   const out = new Uint8ClampedArray(new ArrayBuffer(width * height * 4));
-  const shift = [16, 8, 0] as const;
-  for (let y = 0; y < height; y++) {
-    const base = gradientColorAt(stops, (y + 0.5) / height);
-    for (let x = 0; x < width; x++) {
-      const noise = ditherNoise(x, y) * levels;
-      const at = (y * width + x) * 4;
-      shift.forEach((bits, c) => {
-        out[at + c] = ((base >> bits) & 0xff) + noise;
-      });
-      out[at + 3] = 255;
-    }
-  }
+  fillDitheredRows(out, stops, width, height, levels, 0, height);
   return out;
 }

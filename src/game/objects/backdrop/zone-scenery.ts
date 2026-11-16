@@ -8,11 +8,11 @@ import type { ZoneId } from '../../../data/zones';
 import { mixColor } from '../../../util/color';
 import { MS_PER_SECOND, oscillate01, sineWave } from '../../../util/math';
 import { markPerfPart } from '../../perf/perf-marks';
-import { bakeTexture } from '../../ui/bake-texture';
+import { bakeTexture, deferStep } from '../../ui/bake-texture';
 import { bakeFarArt, FarPlane } from './far-plane';
 import type { GuestSource } from './guest-source';
 import type { FrameCtx, Life } from './life';
-import { gradientBands, ditheredSky } from './sky-gradient';
+import { fillDitheredRows, gradientBands } from './sky-gradient';
 
 /** Something in a zone that follows the lap of Space. */
 export interface LapLife {
@@ -42,25 +42,31 @@ export interface ZoneArt {
 
 const skyKey = (zone: ZoneId): string => `bd_sky_${zone}`;
 
-/** The dark sky as a small picture with light noise, so the gradient shows no steps (baked once). */
+/** The dark sky as a small picture with light noise, so the gradient shows no steps (baked once, in row slices over several frames). */
 function bakeDitheredSky(scene: Phaser.Scene, zone: ZoneId): void {
+  if (scene.textures.exists(skyKey(zone))) return;
   const { skyDither, skyOverscan } = BACKDROP;
   const width = Math.ceil((LOGICAL_SIZE.width * skyOverscan) / skyDither.scale);
   const height = Math.ceil((LOGICAL_SIZE.maxHeight * skyOverscan) / skyDither.scale);
+  const pixels = new Uint8ClampedArray(new ArrayBuffer(width * height * 4));
+  for (let from = 0; from < height; from += skyDither.rowsPerStep) {
+    const to = Math.min(from + skyDither.rowsPerStep, height);
+    deferStep(() =>
+      fillDitheredRows(pixels, ZONE_SKY[zone], width, height, skyDither.levels, from, to),
+    );
+  }
   bakeTexture(
     scene,
     skyKey(zone),
     width,
     height,
     () => undefined,
-    (context) => {
-      const pixels = ditheredSky(ZONE_SKY[zone], width, height, skyDither.levels);
-      context.putImageData(new ImageData(pixels, width, height), 0, 0);
-    },
+    (context) => context.putImageData(new ImageData(pixels, width, height), 0, 0),
   );
 }
 
-function bakeSky(scene: Phaser.Scene, zone: ZoneId): void {
+/** Bakes the sky picture of a zone (once; the scenery also calls it, so a zone built without the run backdrop has its sky). */
+export function bakeSky(scene: Phaser.Scene, zone: ZoneId): void {
   if ((BACKDROP.skyDither.zones as readonly ZoneId[]).includes(zone)) {
     bakeDitheredSky(scene, zone);
     return;
