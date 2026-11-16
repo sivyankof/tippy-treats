@@ -10,6 +10,12 @@ const OPTIONS = {
   offWindowMs: A.offWindowMs,
   offMarginMs: A.offMarginMs,
   offBadShare: A.offBadShare,
+  lateIntervalMs: A.lateIntervalMs,
+  quickIntervalMs: A.quickIntervalMs,
+  gpuOnShare: A.gpuOnShare,
+  gpuQuickShare: A.gpuQuickShare,
+  gpuOffShare: A.gpuOffShare,
+  gpuUpHoldMs: A.gpuUpHoldMs,
   minSwitchGapMs: A.minSwitchGapMs,
   resumeIgnoreMs: A.resumeIgnoreMs,
   gapMs: A.gapMs,
@@ -134,6 +140,85 @@ describe('FrameWorkWatch', () => {
     expect(watch.level).toBe(0);
     run(watch, t, 10_000, SLOW_FRAME_MS, SLOW_WORK);
     expect(watch.level).toBe(1);
+  });
+
+  describe('GPU signal (frame interval with low work)', () => {
+    /** 60 Hz pattern: every third frame is doubled to 33.3 ms (a third of the frames are late). */
+    const gpuBound = (i: number): number => (i % 3 === 0 ? 2 * FRAME_60 : FRAME_60);
+    const GPU_WORK = 6;
+
+    /** Feeds frames whose interval comes from `frameMs(i)`; returns the end time. */
+    function runIntervals(
+      watch: FrameWorkWatch,
+      from: number,
+      ms: number,
+      frameMs: (i: number) => number,
+      workMs: number,
+    ): number {
+      let t = from;
+      for (let i = 0; t < from + ms; i++) {
+        t += frameMs(i);
+        watch.note(workMs, t);
+      }
+      return t;
+    }
+
+    it('steps down on a GPU-bound 60 Hz pattern with low work', () => {
+      const { watch, start } = newWatch();
+      runIntervals(watch, start, A.onWindowMs + 1000, gpuBound, GPU_WORK);
+      expect(watch.level).toBe(1);
+      expect(watch.lastCause).toBe('gpu');
+    });
+
+    it('never steps down at a steady 30 fps (low power)', () => {
+      const { watch, start } = newWatch();
+      runIntervals(watch, start, 60_000, () => 1000 / 30, GPU_WORK);
+      expect(watch.level).toBe(0);
+    });
+
+    it('never steps down at a steady 120 Hz', () => {
+      const { watch, start } = newWatch();
+      runIntervals(watch, start, 60_000, () => 1000 / 120, GPU_WORK);
+      expect(watch.level).toBe(0);
+    });
+
+    it('never steps down at a steady 60 fps', () => {
+      const { watch, start } = newWatch();
+      runIntervals(watch, start, 60_000, () => FRAME_60, GPU_WORK);
+      expect(watch.level).toBe(0);
+    });
+
+    it('does not step up before the hold has passed, steps up after it', () => {
+      const { watch, start } = newWatch();
+      let t = runIntervals(watch, start, A.onWindowMs + 1000, gpuBound, GPU_WORK);
+      expect(watch.level).toBe(1);
+      const downAt = t;
+      // Calm frames: the recovery window and the switch gap are over, the hold is not.
+      t = runIntervals(watch, t, A.gpuUpHoldMs - 5000, () => FRAME_60, FAST_WORK);
+      expect(t - downAt).toBeLessThan(A.gpuUpHoldMs);
+      expect(watch.level).toBe(1);
+      runIntervals(watch, t, 10_000, () => FRAME_60, FAST_WORK);
+      expect(watch.level).toBe(0);
+    });
+
+    it('does not step up while late frames continue', () => {
+      const { watch, start } = newWatch();
+      const t = runIntervals(watch, start, A.onWindowMs + 1000, gpuBound, GPU_WORK);
+      runIntervals(watch, t, A.gpuUpHoldMs + 30_000, gpuBound, GPU_WORK);
+      expect(watch.level).toBeGreaterThanOrEqual(1);
+    });
+
+    it('does not count high-work frames with long intervals for the GPU signal', () => {
+      const { watch, start } = newWatch();
+      // Over budget in half of the frames: the work signal (95%) does not trip, and those frames
+      // are not late, so the GPU signal does not trip either.
+      runIntervals(watch, start, 30_000, gpuBound, A.budgetMs + 2);
+      // All frames over budget: only the work signal steps down.
+      const other = newWatch();
+      runIntervals(other.watch, other.start, A.onWindowMs + 1000, gpuBound, A.budgetMs + 2);
+      expect(other.watch.level).toBe(1);
+      expect(other.watch.lastCause).toBe('work');
+    });
   });
 
   describe('with two steps down', () => {

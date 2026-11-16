@@ -8,6 +8,18 @@ export interface FrameWorkWatchOptions {
   offWindowMs: number;
   offMarginMs: number;
   offBadShare: number;
+  /** A frame with an interval longer than this and work in budget is late (a 60 Hz vsync was missed). */
+  lateIntervalMs: number;
+  /** A frame with an interval at most this long is quick (the device can do 60 fps). */
+  quickIntervalMs: number;
+  /** The level steps down when this share of the frames of `onWindowMs` is late... */
+  gpuOnShare: number;
+  /** ...and at least this share is quick (a steady 30 fps phone has none, so it never trips). */
+  gpuQuickShare: number;
+  /** Stepping up also needs at most this share of late frames in `offWindowMs`. */
+  gpuOffShare: number;
+  /** After a step down by the GPU signal, the level does not step up for this long. */
+  gpuUpHoldMs: number;
   /** The level changes at most once in this long (between any two changes). */
   minSwitchGapMs: number;
   /** Frames this long after a return from the background are not counted. */
@@ -21,8 +33,9 @@ export interface FrameWorkWatchOptions {
 /**
  * Decides from the frame work time (ms spent in update and render) how many steps the effects
  * must be cut by on this device: 0 is full, `maxLevel` the lowest. It moves one step at a time,
- * down after a slow window and up after a calm one. The frame rate is not used: a phone that
- * limits its own rate is not slow. The last frames are kept as counters in a ring of time
+ * down after a slow window and up after a calm one. A second signal is the frame interval while
+ * the work is low (a GPU-bound phone): it needs many late frames and also many quick ones, so a
+ * phone that limits its own rate (steady 30 fps, 120 Hz) is not slow. The last frames are kept as counters in a ring of time
  * buckets, so feeding a frame allocates nothing and the windows are checked once per bucket.
  */
 export class FrameWorkWatch {
@@ -32,6 +45,8 @@ export class FrameWorkWatch {
   private readonly frames: Int32Array;
   private readonly over: Int32Array;
   private readonly bad: Int32Array;
+  private readonly late: Int32Array;
+  private readonly quick: Int32Array;
   /** Absolute index of the bucket being filled; -1 while the history is empty. */
   private head = -1;
   /** Buckets finished since the history was last cleared. */
@@ -41,6 +56,8 @@ export class FrameWorkWatch {
   private lastSwitchMs = Number.NEGATIVE_INFINITY;
   private stepped = 0;
   private floor = 0;
+  private cause: 'work' | 'gpu' = 'work';
+  private gpuStepMs = Number.NEGATIVE_INFINITY;
 
   constructor(
     private readonly options: FrameWorkWatchOptions,
@@ -53,6 +70,13 @@ export class FrameWorkWatch {
     this.frames = new Int32Array(this.size);
     this.over = new Int32Array(this.size);
     this.bad = new Int32Array(this.size);
+    this.late = new Int32Array(this.size);
+    this.quick = new Int32Array(this.size);
+  }
+
+  /** What caused the last step down: the frame work time or the frame interval (GPU). */
+  get lastCause(): 'work' | 'gpu' {
+    return this.cause;
   }
 
   /** Steps the effects are cut by now: 0 while the device keeps up, up to `maxLevel` while it is slow. */
@@ -85,6 +109,7 @@ export class FrameWorkWatch {
     if (this.lastNowMs >= 0 && nowMs - this.lastNowMs > this.options.gapMs) {
       this.restart(nowMs, this.options.resumeIgnoreMs);
     }
+    const intervalMs = this.lastNowMs >= 0 ? nowMs - this.lastNowMs : 0;
     this.lastNowMs = nowMs;
     if (nowMs < this.ignoreUntilMs) return this.stepped;
     const bucket = Math.floor(nowMs / this.options.bucketMs);
@@ -94,6 +119,13 @@ export class FrameWorkWatch {
     if (workMs > this.options.budgetMs) this.over[slot] = (this.over[slot] ?? 0) + 1;
     if (workMs > this.options.budgetMs - this.options.offMarginMs) {
       this.bad[slot] = (this.bad[slot] ?? 0) + 1;
+    }
+    if (intervalMs > 0) {
+      if (intervalMs > this.options.lateIntervalMs && workMs <= this.options.budgetMs) {
+        this.late[slot] = (this.late[slot] ?? 0) + 1;
+      }
+      if (intervalMs <= this.options.quickIntervalMs)
+        this.quick[slot] = (this.quick[slot] ?? 0) + 1;
     }
     if (rolled && nowMs - this.lastSwitchMs >= this.options.minSwitchGapMs) this.evaluate(nowMs);
     return this.stepped;
@@ -118,19 +150,36 @@ export class FrameWorkWatch {
     if (this.stepped < this.maxLevel && this.finished >= this.onBuckets) {
       const { frames, over } = this.sum(this.over, this.onBuckets);
       if (frames > 0 && over / frames >= this.options.onShare) {
-        this.switchTo(this.stepped + 1, nowMs);
+        this.switchTo(this.stepped + 1, nowMs, 'work');
+        return;
+      }
+      const lateFrames = this.sum(this.late, this.onBuckets);
+      if (
+        lateFrames.frames > 0 &&
+        lateFrames.over / lateFrames.frames >= this.options.gpuOnShare &&
+        this.sum(this.quick, this.onBuckets).over / lateFrames.frames >= this.options.gpuQuickShare
+      ) {
+        this.switchTo(this.stepped + 1, nowMs, 'gpu');
         return;
       }
     }
     if (this.stepped > this.floor && this.finished >= this.offBuckets) {
       const { frames, over: bad } = this.sum(this.bad, this.offBuckets);
-      if (frames === 0 || bad / frames <= this.options.offBadShare) {
-        this.switchTo(this.stepped - 1, nowMs);
+      const held = nowMs - this.gpuStepMs < this.options.gpuUpHoldMs;
+      if (!held && (frames === 0 || bad / frames <= this.options.offBadShare)) {
+        const late = this.sum(this.late, this.offBuckets).over;
+        if (frames === 0 || late / frames <= this.options.gpuOffShare) {
+          this.switchTo(this.stepped - 1, nowMs, this.cause);
+        }
       }
     }
   }
 
-  private switchTo(level: number, nowMs: number): void {
+  private switchTo(level: number, nowMs: number, cause: 'work' | 'gpu'): void {
+    if (level > this.stepped) {
+      this.cause = cause;
+      if (cause === 'gpu') this.gpuStepMs = nowMs;
+    }
     this.stepped = level;
     this.lastSwitchMs = nowMs;
     // The next decision looks at frames of the new level only.
@@ -153,6 +202,8 @@ export class FrameWorkWatch {
     this.frames[slot] = 0;
     this.over[slot] = 0;
     this.bad[slot] = 0;
+    this.late[slot] = 0;
+    this.quick[slot] = 0;
   }
 
   private clearHistory(): void {
