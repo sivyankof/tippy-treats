@@ -44,8 +44,8 @@ export const RESULTS_DEMO = {
   previousRecordBeaten: 31,
   checkpoint: { start: 20 as const, height: 58 },
   record: { height: 52 },
-  /** A Classic run into a new Space lap: lap 4 reached for the first time after lap 1 (3 berries a lap). */
-  lap: { height: 165, berries: 9 },
+  /** A Classic run into new Space laps: `height` reached for the first time, the best lap before was `bestLap`. */
+  lap: { height: 165, bestLap: 1 },
   daily: {
     height: 52,
     tiers: [

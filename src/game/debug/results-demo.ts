@@ -1,3 +1,4 @@
+import { lapRewardBerries } from '../../core/space-laps';
 import { checkpointRows, checkpointsReached } from '../../core/checkpoints';
 import type { RunResult } from '../../core/run-result';
 import type { RunTally } from '../../core/run-tally';
@@ -64,7 +65,8 @@ function demoSummary(kind: ResultsDemoCase): RunSummary {
     xpGained: RESULTS_DEMO.xpGained,
     oven: { ...RESULTS_DEMO.oven },
     missions: { before: items.map((m) => m.before), after: items.map((m) => m.after) },
-    lapBerries: kind === 'lap' ? RESULTS_DEMO.lap.berries : 0,
+    lapBerries:
+      kind === 'lap' ? lapRewardBerries(RESULTS_DEMO.lap.bestLap, RESULTS_DEMO.lap.height) : 0,
     dailyTiers: daily ? RESULTS_DEMO.daily.tiers.map((t) => ({ ...t, cost: { ...t.cost } })) : [],
   };
 }
