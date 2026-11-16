@@ -94,6 +94,16 @@ export function layerHidden(
   return !ghostMaster && !nebulaShown && (covered || amount > 0);
 }
 
+/** Where a puff of the nebula bank sits off its place in the row, and its size: a pure function of the index. */
+export function nebulaJitter(index: number): { dx: number; dy: number; scale: number } {
+  const j = nebula.jitter;
+  return {
+    dx: (scatter(index, 0.2) * 2 - 1) * j.x,
+    dy: (scatter(index, 0.55) * 2 - 1) * j.y,
+    scale: lerp(j.scale[0], j.scale[1], scatter(index, 0.8)),
+  };
+}
+
 /** Every puff of a nebula bank billows, except on the minimal level; the cloud always does. */
 export function puffsBillow(look: CloudLook, level: EffectLevel): boolean {
   return look === 'cloud' || level !== 'minimal';
@@ -339,12 +349,16 @@ class CloudBank {
       const bob = billow ? sineWave(timeMs, cfg.bobPeriodMs, phase) * cfg.bobPx : 0;
       const own = billow ? sineWave(timeMs, cfg.swayPeriodMs, phase) * cfg.swayPx : 0;
       const breathe = billow ? 1 + sineWave(timeMs, cfg.breathePeriodMs, phase) * cfg.breathe : 1;
+      const shape =
+        this.look === 'nebula'
+          ? nebulaJitter(i)
+          : { dx: 0, dy: 0, scale: minScale + (maxScale - minScale) * scatter(i) };
       puff
         .setPosition(
-          -cfg.pad + PUFF_STEP * i + pose.x + sway + own,
-          this.motion.y + bob - pose.rise,
+          -cfg.pad + PUFF_STEP * i + pose.x + sway + own + shape.dx,
+          this.motion.y + bob - pose.rise + shape.dy,
         )
-        .setScale((minScale + (maxScale - minScale) * scatter(i)) * pose.scale * breathe)
+        .setScale(shape.scale * pose.scale * breathe)
         .setAlpha(alpha);
     }
     this.updateStars(shown && this.look === 'nebula', timeMs, level, pose, sway, input.maxAlpha);

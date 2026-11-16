@@ -190,7 +190,14 @@ export const RULE_ANIM = {
        * Each colour is a stack of `rings` faint copies of the puff shape from `px` bigger to `px`
        * smaller, so its edge fades over about 2 x `px` instead of ending hard.
        */
-      feather: { px: 26, rings: 7, alpha: 0.4 },
+      feather: { px: 40, rings: 9, alpha: 0.32 },
+      /** The blue belly fades out downwards over this many px, so it has no straight bottom edge. */
+      bellyFadePx: 46,
+      /**
+       * Every puff of the nebula bank sits a little off the line, in its own size: no row of equal
+       * ovals. Offsets in px (each way), scale from the smallest to the largest.
+       */
+      jitter: { x: 34, y: 24, scale: [0.8, 1.3] },
       /** Baked star dots on the puff: centre and radius as shares of the puff width, and the height share. */
       dots: [
         { x: 0.3, y: 0.38, r: 0.016 },

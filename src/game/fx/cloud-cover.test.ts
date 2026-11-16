@@ -6,6 +6,7 @@ import {
   densityCap,
   followInput,
   layerHidden,
+  nebulaJitter,
   pickLook,
   puffsBillow,
   starActive,
@@ -289,5 +290,22 @@ describe('layerHidden', () => {
     expect(layerHidden(false, false, false, 0)).toBe(false);
     expect(layerHidden(true, false, true, 1)).toBe(false);
     expect(layerHidden(false, true, true, 1)).toBe(false);
+  });
+});
+
+describe('nebulaJitter', () => {
+  it('stays in its bounds and differs from puff to puff', () => {
+    const j = cfg.nebula.jitter;
+    const seen = new Set<number>();
+    for (let i = 0; i < 12; i++) {
+      const p = nebulaJitter(i);
+      expect(Math.abs(p.dx)).toBeLessThanOrEqual(j.x);
+      expect(Math.abs(p.dy)).toBeLessThanOrEqual(j.y);
+      expect(p.scale).toBeGreaterThanOrEqual(j.scale[0]);
+      expect(p.scale).toBeLessThanOrEqual(j.scale[1]);
+      seen.add(Math.round(p.scale * 1000));
+    }
+    expect(seen.size).toBeGreaterThan(8);
+    expect(nebulaJitter(3)).toEqual(nebulaJitter(3));
   });
 });
