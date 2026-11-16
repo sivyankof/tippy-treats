@@ -19,6 +19,33 @@ export function setSharedPictureStore(store: SharedPictureStore): void {
   sharedStore = store;
 }
 
+/** The colour (0xRRGGBB) of a pixel of a picture on the shared atlas; null when `key` is not there. */
+export type SharedPicturePixels = (
+  textures: Phaser.Textures.TextureManager,
+  x: number,
+  y: number,
+  key: string,
+) => number | null;
+
+let sharedPixels: SharedPicturePixels | null = null;
+
+export function setSharedPicturePixels(read: SharedPicturePixels): void {
+  sharedPixels = read;
+}
+
+/**
+ * The colour (0xRRGGBB, 0 outside the picture) of a pixel of the texture `key`. Reads the
+ * picture an atlas cell keeps, since an atlas page holds its pixels only on the GPU.
+ */
+export function picturePixel(
+  textures: Phaser.Textures.TextureManager,
+  x: number,
+  y: number,
+  key: string,
+): number {
+  return sharedPixels?.(textures, x, y, key) ?? textures.getPixel(x, y, key)?.color ?? 0;
+}
+
 /**
  * Runs `record` and returns the bakes it asked for instead of doing them, one step per
  * texture, so a caller can spread a big set of textures over several frames.

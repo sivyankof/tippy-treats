@@ -2,21 +2,32 @@ import * as Phaser from 'phaser';
 import { SHARED_ATLAS } from '../../data/shared-atlas';
 import { ShelfPacker, type PackedBox } from '../../util/shelf-packer';
 import { asWebGLRenderer } from '../webgl-renderer';
-import { setSharedPictureStore } from './bake-texture';
+import { setSharedPicturePixels, setSharedPictureStore } from './bake-texture';
 
 /**
  * Small baked pictures share a few big textures ("pages"). Each picture stays a texture of its
  * own under its usual key, but that texture holds no image: its only frame is cut from a page,
  * so code that shows `scene.add.image(x, y, key)` does not change, while the renderer sees one
  * texture for a whole layer. Removing the texture frees its cell for the next picture.
+ *
+ * The pixels of a page live only on the GPU. Its canvas stays blank and is never drawn into:
+ * writing to a 4096 px canvas in the browser costs a long frame some time later. Every cell keeps
+ * its picture instead, to read its pixels and to upload it again after a lost WebGL context.
  */
+
+interface Cell {
+  box: PackedBox;
+  picture: CanvasImageSource;
+  width: number;
+  height: number;
+}
 
 interface Page {
   key: string;
-  canvas: HTMLCanvasElement;
-  texture: Phaser.Textures.Texture;
   source: Phaser.Textures.TextureSource;
   packer: ShelfPacker;
+  /** The live cells by texture key. */
+  cells: Map<string, Cell>;
 }
 
 const PAGE_PREFIX = 'shared_atlas_';
@@ -47,7 +58,8 @@ export function usesSharedAtlas(key: string, width: number, height: number): boo
   return SHARED_ATLAS.keyPrefixes.some((prefix) => key.startsWith(prefix));
 }
 
-function openPage(manager: Phaser.Textures.TextureManager, pages: Page[]): Page {
+function openPage(scene: Phaser.Scene, pages: Page[]): Page {
+  const manager = scene.sys.textures;
   const canvas = document.createElement('canvas');
   canvas.width = SHARED_ATLAS.pageWidth;
   canvas.height = SHARED_ATLAS.pageHeight;
@@ -55,24 +67,39 @@ function openPage(manager: Phaser.Textures.TextureManager, pages: Page[]): Page 
   const texture = manager.addCanvas(key, canvas);
   const source = texture?.source[0];
   if (!texture || !source) throw new Error(`Texture key ${key} is taken`);
+  if (pages.length === 0) {
+    // A restored context gets the blank pages back from their canvases; the cells go on top.
+    const renderer = scene.sys.game.renderer;
+    renderer.on(Phaser.Renderer.Events.RESTORE_WEBGL, () => {
+      for (const page of pages) {
+        for (const cell of page.cells.values()) uploadCell(renderer, page, cell);
+      }
+    });
+  }
   const page: Page = {
     key,
-    canvas,
-    texture,
     source,
     packer: new ShelfPacker(canvas.width, canvas.height, SHARED_ATLAS.shelfStep),
+    cells: new Map(),
   };
   pages.push(page);
   return page;
 }
 
-/** The picture with its edge pixels repeated `e` pixels outwards on every side. */
+// One canvas for every extruded cell: a new canvas per picture costs more than resizing this one.
+let scratch: HTMLCanvasElement | null = null;
+
+/** The picture with its edge pixels repeated `e` pixels outwards on every side, on a shared canvas. */
 function extruded(source: CanvasImageSource, w: number, h: number, e: number): HTMLCanvasElement {
-  const cell = document.createElement('canvas');
-  cell.width = w + e * 2;
-  cell.height = h + e * 2;
+  const cell = (scratch ??= document.createElement('canvas'));
   const ctx = cell.getContext('2d');
   if (!ctx) throw new Error('No 2d context');
+  if (cell.width === w + e * 2 && cell.height === h + e * 2) {
+    ctx.clearRect(0, 0, cell.width, cell.height);
+  } else {
+    cell.width = w + e * 2;
+    cell.height = h + e * 2;
+  }
   ctx.imageSmoothingEnabled = false;
   ctx.drawImage(source, 0, 0, w, h, e, e, w, h);
   if (e > 0) {
@@ -85,34 +112,27 @@ function extruded(source: CanvasImageSource, w: number, h: number, e: number): H
   return cell;
 }
 
-/** Copies a finished cell to the page canvas and to the part of the GPU texture under it. */
-function upload(
-  renderer: Phaser.Game['renderer'],
-  page: Page,
-  cell: HTMLCanvasElement,
-  box: PackedBox,
-): void {
-  const ctx = page.canvas.getContext('2d');
-  if (!ctx) throw new Error('No 2d context');
-  // The page canvas keeps the pixels for a lost and restored WebGL context.
-  ctx.clearRect(box.x, box.y, cell.width, cell.height);
-  ctx.drawImage(cell, box.x, box.y);
+/** Copies a cell's extruded picture to the part of the page's GPU texture under it. */
+function uploadCell(renderer: Phaser.Game['renderer'], page: Page, cell: Cell): void {
   const source = page.source;
   const gl = source.glTexture;
   const webgl = asWebGLRenderer(renderer);
   if (!webgl || !gl) return;
+  const image = extruded(cell.picture, cell.width, cell.height, SHARED_ATLAS.extrude);
   webgl.glTextureUnits.bind(gl, 0);
   webgl.glWrapper.updateTexturing({
     texturing: { flipY: source.flipY, premultiplyAlpha: gl.pma },
   });
-  const y = source.flipY ? page.canvas.height - box.y - cell.height : box.y;
+  const { x, y: top } = cell.box;
+  const y = source.flipY ? source.height - top - image.height : top;
   const ctxGl = webgl.gl;
-  ctxGl.texSubImage2D(ctxGl.TEXTURE_2D, 0, box.x, y, gl.format, ctxGl.UNSIGNED_BYTE, cell);
+  ctxGl.texSubImage2D(ctxGl.TEXTURE_2D, 0, x, y, gl.format, ctxGl.UNSIGNED_BYTE, image);
 }
 
 /**
  * Stores `source` (`width` x `height` pixels from its top-left corner) as the texture `key` on a
- * shared atlas page. Returns false when it does not fit a page; the caller then keeps a texture of its own.
+ * shared atlas page. The atlas keeps `source` while the texture lives, so it must not be drawn
+ * into afterwards. Returns false when it does not fit a page; the caller then keeps a texture of its own.
  */
 export function addSharedPicture(
   scene: Phaser.Scene,
@@ -137,19 +157,21 @@ export function addSharedPicture(
     }
   }
   if (!page || !box) {
-    page = openPage(manager, pages);
+    page = openPage(scene, pages);
     box = page.packer.alloc(cellW, cellH);
     if (!box) return false;
   }
   const home = page;
-  const at = box;
-  upload(scene.sys.game.renderer, home, extruded(source, width, height, e), at);
+  const cell: Cell = { box, picture: source, width, height };
+  uploadCell(scene.sys.game.renderer, home, cell);
+  home.cells.set(key, cell);
   const texture = new AtlasCellTexture(manager, key, () => {
-    home.packer.free(at, cellW);
-    home.canvas.getContext('2d')?.clearRect(at.x, at.y, cellW, cellH);
+    // The cell is not cleared: the next picture in it overwrites the whole cell.
+    home.packer.free(cell.box, cellW);
+    home.cells.delete(key);
   });
   texture.source.push(home.source);
-  texture.add('__BASE', 0, at.x + e, at.y + e, width, height);
+  texture.add('__BASE', 0, box.x + e, box.y + e, width, height);
   (manager.list as Record<string, Phaser.Textures.Texture>)[key] = texture;
   manager.emit(Phaser.Textures.Events.ADD, key, texture);
   manager.emit(Phaser.Textures.Events.ADD_KEY + key, texture);
@@ -165,12 +187,46 @@ export function moveToSharedAtlas(scene: Phaser.Scene, keys: readonly string[]):
     if (!source) continue;
     const { width, height } = source;
     if (!usesSharedAtlas(key, width, height)) continue;
-    const image = source.image as CanvasImageSource;
-    // The cell is drawn before the loaded texture goes, the key is then free for the atlas frame.
-    const copy = extruded(image, width, height, 0);
+    // The copy is drawn before the loaded texture goes, the key is then free for the atlas frame.
+    const copy = document.createElement('canvas');
+    copy.width = width;
+    copy.height = height;
+    copy.getContext('2d')?.drawImage(source.image as CanvasImageSource, 0, 0);
     manager.remove(key);
     if (!addSharedPicture(scene, key, copy, width, height)) manager.addCanvas(key, copy);
   }
+}
+
+/** The colour (0xRRGGBB) of a pixel of an atlas picture, read from the picture the cell keeps; null for other keys. */
+function sharedPicturePixel(
+  textures: Phaser.Textures.TextureManager,
+  x: number,
+  y: number,
+  key: string,
+): number | null {
+  for (const page of pagesOf.get(textures) ?? []) {
+    const cell = page.cells.get(key);
+    if (!cell) continue;
+    if (x < 0 || y < 0 || x >= cell.width || y >= cell.height) return 0;
+    const ctx = pixelContext();
+    ctx.clearRect(0, 0, 1, 1);
+    ctx.drawImage(cell.picture, x, y, 1, 1, 0, 0, 1, 1);
+    const [r = 0, g = 0, b = 0] = ctx.getImageData(0, 0, 1, 1).data;
+    return Phaser.Display.Color.GetColor(r, g, b);
+  }
+  return null;
+}
+
+let pixelCtx: CanvasRenderingContext2D | null = null;
+
+function pixelContext(): CanvasRenderingContext2D {
+  if (pixelCtx) return pixelCtx;
+  const canvas = document.createElement('canvas');
+  canvas.width = 1;
+  canvas.height = 1;
+  const ctx = canvas.getContext('2d', { willReadFrequently: true });
+  if (!ctx) throw new Error('No 2d context');
+  return (pixelCtx = ctx);
 }
 
 setSharedPictureStore(
@@ -178,3 +234,4 @@ setSharedPictureStore(
     usesSharedAtlas(key, canvas.width, canvas.height) &&
     addSharedPicture(scene, key, canvas, canvas.width, canvas.height),
 );
+setSharedPicturePixels(sharedPicturePixel);

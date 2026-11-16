@@ -1,5 +1,6 @@
 import type * as Phaser from 'phaser';
 import { ANIM } from '../../data/anim';
+import { picturePixel } from '../ui/bake-texture';
 import type { BodyFrame } from './edge-squash-marks';
 
 /** The colours the rounded silhouette of the crumpled part is drawn in: what the body of the picture has at its top and bottom edge. */
@@ -33,7 +34,7 @@ export function bodyLookOf(
   const outline = ANIM.layer.outline;
   const x = Math.floor(width * MIDDLE);
   const bottom = frame.height - frame.padBottom;
-  const at = (y: number): number => textures.getPixel(x, Math.round(y), key)?.color ?? 0;
+  const at = (y: number): number => picturePixel(textures, x, Math.round(y), key);
   look = {
     topFill: at(frame.pad + outline + FILL_INSET_PX),
     topLine: at(frame.pad + outline / 2),
