@@ -53,34 +53,6 @@ export function bodyDisplaySize(): { width: number; height: number } {
   };
 }
 
-/** A tail: `n` circles shrinking along the way (`dx`, `dy` per step), curled by `bend` per step. */
-function tail(
-  x: number,
-  y: number,
-  dx: number,
-  dy: number,
-  r: number,
-  n: number,
-  bend: number,
-): Circle[] {
-  const out: Circle[] = [];
-  let sx = dx;
-  let sy = dy;
-  let cx = x;
-  let cy = y;
-  let cr = r;
-  for (let i = 0; i < n; i++) {
-    out.push({ x: cx, y: cy, r: cr });
-    cx += sx;
-    cy += sy;
-    const nx = sx * Math.cos(bend) - sy * Math.sin(bend);
-    sy = sx * Math.sin(bend) + sy * Math.cos(bend);
-    sx = nx;
-    cr *= 0.72;
-  }
-  return out;
-}
-
 /** The cloud: a cumulus mass, two big domes with the tallest hump right of the middle, smaller bumps between, an uneven belly. */
 export function cloudSilhouette(): Silhouette {
   return {

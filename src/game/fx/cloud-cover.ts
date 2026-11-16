@@ -64,7 +64,9 @@ export function pickLook(phase: CloudPhase, current: CloudLook, wanted: CloudLoo
  * really has, not from the zone of the layer: at a zone boundary they differ).
  */
 export function densityCap(look: CloudLook, ghost: boolean): number {
-  return (look === 'nebula' ? nebula.maxDensity : cfg.maxDensity) * ghostShare(ghost, look === 'nebula');
+  return (
+    (look === 'nebula' ? nebula.maxDensity : cfg.maxDensity) * ghostShare(ghost, look === 'nebula')
+  );
 }
 
 /** How many stars twinkle over a nebula bank on this effects level. */

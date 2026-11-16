@@ -72,8 +72,13 @@ function bakeStreak(scene: Phaser.Scene): void {
   bakeTexture(scene, TREASURE_TEXTURES.streak, width, height, (g) => {
     for (let x = 0; x < width; x += STREAK_SLICE) {
       const k = (x + STREAK_SLICE / 2) / width;
-      // The tail thins out as well as fading.
-      const thick = height * (0.35 + 0.65 * k);
+      // The tail thins out as well as fading, and the head is rounded.
+      const { headShare, tailThickness } = RULE_ANIM.streaks;
+      const round =
+        k > 1 - headShare
+          ? Math.sqrt(Math.max(0, 1 - ((k - (1 - headShare)) / headShare) ** 2))
+          : 1;
+      const thick = height * (tailThickness + (1 - tailThickness) * k) * round;
       g.fillStyle(0xffffff, Math.pow(k, STREAK_FADE_POWER));
       g.fillRect(x, (height - thick) / 2, STREAK_SLICE, thick);
     }

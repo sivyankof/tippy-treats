@@ -12,6 +12,8 @@ export const RULE_ANIM = {
     rushStreak: 0xff7a68,
     /** A dark slate: it stands out from both the pale roof sky and the salmon houses. */
     windStreak: 0x3d5a80,
+    /** The roof wind streaks of a Space layer: light, so they read on the dark sky and stay a soft trail. */
+    windStreakSpace: 0xc9dbff,
     /** The puff that flashes behind a rush layer when it lets go. */
     rushPuff: 0xffe9e3,
   },
@@ -95,14 +97,19 @@ export const RULE_ANIM = {
     roofRushBase: 0.5,
     /** Size of the baked streak: long, thin, solid at the head and gone at the tail. */
     width: 260,
-    height: 26,
+    height: 18,
     /** One streak runs from the back edge of the layer to `travelPx` behind it this often. */
     cyclePeriodMs: 420,
     travelPx: 140,
     /** The streaks spread over this share of the layer height; above 1 the outer ones run past its top and bottom edges. */
     spreadShare: 1.3,
-    rushAlpha: 1,
+    rushAlpha: 0.7,
     windAlpha: 0.85,
+    /** The wind of a Space layer: fainter, a light trail on the dark sky. */
+    windSpaceAlpha: 0.5,
+    /** The head of the baked streak is rounded over this share of its length; the thinnest the tail gets, as a share of the height. */
+    headShare: 0.12,
+    tailThickness: 0.2,
     /** Length of a streak as a share of the baked picture, at the start and the end of its run. */
     lengthShare: [0.55, 1],
     /**
@@ -115,7 +122,7 @@ export const RULE_ANIM = {
     /** At the release of a rush the streaks fly out longer and farther, easing back over `ms`. */
     burst: { ms: 260, lengthBoost: 0.45, travelBoost: 0.6 },
     /** The baked streak is cut into slices this wide, each with its own thickness and alpha. */
-    slice: 4,
+    slice: 2,
     /** Alpha along the streak grows with this power of the distance from its tail. */
     fadePower: 1.6,
   },
