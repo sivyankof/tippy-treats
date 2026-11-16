@@ -1,6 +1,6 @@
 import * as Phaser from 'phaser';
 import { SHARED_ATLAS } from '../../data/shared-atlas';
-import { pageVerdict } from '../../util/gl-page-error';
+import { bigPageFails } from '../../util/gl-page-error';
 import { ShelfPacker, type PackedBox } from '../../util/shelf-packer';
 import { devWarn } from '../dev-warn';
 import { asWebGLRenderer } from '../webgl-renderer';
@@ -22,6 +22,10 @@ interface Cell {
   picture: CanvasImageSource;
   width: number;
   height: number;
+  /** The page the cell is on (it moves when the pages are rebuilt smaller). */
+  page: Page;
+  /** The texture whose frame is cut from the cell. */
+  texture: Phaser.Textures.Texture | null;
 }
 
 interface Page {
@@ -34,6 +38,10 @@ interface Page {
 
 const PAGE_PREFIX = 'shared_atlas_';
 const pagesOf = new WeakMap<Phaser.Textures.TextureManager, Page[]>();
+/** The texture managers whose context the atlas listens to. */
+const watched = new WeakSet<Phaser.Textures.TextureManager>();
+/** Numbers the page keys: a rebuilt page never takes the key of the one it replaces. */
+let pageSerial = 0;
 
 /** A texture whose one frame lives on an atlas page; destroying it frees the cell, not the page. */
 class AtlasCellTexture extends Phaser.Textures.Texture {
@@ -62,6 +70,8 @@ export function usesSharedAtlas(key: string, width: number, height: number): boo
 
 /** Height of the pages of this game; set by the first page (the fallback after a failed full page). */
 let pageHeight: number | null = null;
+/** When the big page was made (`performance.now()`); null when there is none. */
+let bigPageMadeAt: number | null = null;
 
 /** The full page height when the GPU can make a texture that tall, else the fallback. */
 function firstPageHeight(renderer: Phaser.Game['renderer']): number {
@@ -84,15 +94,35 @@ function drainGlErrors(gl: WebGLRenderingContext | null): number[] {
   return errors;
 }
 
+/** Listens to the context of the game once: the cells go back on restore, a loss may shrink the pages. */
+function watchContext(scene: Phaser.Scene, pages: Page[]): void {
+  const renderer = scene.sys.game.renderer;
+  const manager = scene.sys.textures;
+  // A context lost just after the big page counts against it. The pages are rebuilt smaller while
+  // the context is down, so the restore makes the small textures and never the big one again.
+  renderer.on(Phaser.Renderer.Events.LOSE_WEBGL, () => {
+    const since = bigPageMadeAt === null ? null : performance.now() - bigPageMadeAt;
+    const event = { kind: 'context_lost', msSinceBigPage: since } as const;
+    if (!bigPageFails(event, SHARED_ATLAS.bigPageStrikeMs)) return;
+    devWarn('WebGL context lost just after the big atlas page: the pages go to the fallback size');
+    pageHeight = SHARED_ATLAS.fallbackPageHeight;
+    bigPageMadeAt = null;
+    rebuildPages(manager, pages);
+  });
+  // A restored context gets the blank pages back from their canvases; the cells go on top.
+  renderer.on(Phaser.Renderer.Events.RESTORE_WEBGL, () => {
+    for (const page of pages) {
+      for (const cell of page.cells.values()) uploadCell(renderer, page, cell);
+    }
+  });
+}
+
 function openPage(scene: Phaser.Scene, pages: Page[]): Page {
   const renderer = scene.sys.game.renderer;
-  if (pages.length === 0) {
-    // A restored context gets the blank pages back from their canvases; the cells go on top.
-    renderer.on(Phaser.Renderer.Events.RESTORE_WEBGL, () => {
-      for (const page of pages) {
-        for (const cell of page.cells.values()) uploadCell(renderer, page, cell);
-      }
-    });
+  const manager = scene.sys.textures;
+  if (!watched.has(manager)) {
+    watched.add(manager);
+    watchContext(scene, pages);
   }
   const height = (pageHeight ??= firstPageHeight(renderer));
   if (height > SHARED_ATLAS.fallbackPageHeight) {
@@ -100,27 +130,34 @@ function openPage(scene: Phaser.Scene, pages: Page[]): Page {
     // Errors left by other code are not the page's: take them out first (and show them in dev).
     const earlier = drainGlErrors(gl);
     if (earlier.length > 0) devWarn(`GL errors before the first atlas page: ${earlier.join(', ')}`);
+    let page: Page | null = null;
     try {
-      const page = makePage(scene, pages, height);
-      // A lost context is no verdict on the page: the restore path uploads it again.
-      if (pageVerdict(drainGlErrors(gl), gl?.isContextLost() ?? false) !== 'too_big') return page;
-      // The GPU did not take the page: it goes, and every page of this game is the smaller one.
-      pages.pop();
-      scene.sys.textures.remove(page.key);
+      page = makePage(manager, pages, height);
+      const errors = drainGlErrors(gl);
+      const event = { kind: 'made', errors, contextLost: gl?.isContextLost() ?? false } as const;
+      if (!bigPageFails(event, SHARED_ATLAS.bigPageStrikeMs)) {
+        bigPageMadeAt = performance.now();
+        return page;
+      }
+      devWarn(`The big atlas page failed (GL errors: ${errors.join(', ') || 'context lost'})`);
     } catch {
       // Same: the smaller page below.
     }
+    // The GPU did not take the page: it goes, and every page of this game is the smaller one.
+    if (page) {
+      pages.splice(pages.indexOf(page), 1);
+      manager.remove(page.key);
+    }
     pageHeight = SHARED_ATLAS.fallbackPageHeight;
   }
-  return makePage(scene, pages, pageHeight);
+  return makePage(manager, pages, pageHeight);
 }
 
-function makePage(scene: Phaser.Scene, pages: Page[], height: number): Page {
-  const manager = scene.sys.textures;
+function makePage(manager: Phaser.Textures.TextureManager, pages: Page[], height: number): Page {
   const canvas = document.createElement('canvas');
   canvas.width = SHARED_ATLAS.pageWidth;
   canvas.height = height;
-  const key = `${PAGE_PREFIX}${pages.length}`;
+  const key = `${PAGE_PREFIX}${pageSerial++}`;
   const texture = manager.addCanvas(key, canvas);
   const source = texture?.source[0];
   if (!texture || !source) throw new Error(`Texture key ${key} is taken`);
@@ -132,6 +169,52 @@ function makePage(scene: Phaser.Scene, pages: Page[], height: number): Page {
   };
   pages.push(page);
   return page;
+}
+
+/** A free spot for a `w` x `h` cell on one of the pages, or null when none has room. */
+function findSpot(
+  pages: readonly Page[],
+  w: number,
+  h: number,
+): { page: Page; box: PackedBox } | null {
+  for (const page of pages) {
+    const box = page.packer.alloc(w, h);
+    if (box) return { page, box };
+  }
+  return null;
+}
+
+/**
+ * Moves every cell to new pages of the current `pageHeight` and drops the old pages. Run while the
+ * context is lost: the cells' pixels go up again on restore. The frames keep their objects, so
+ * the pictures on screen follow their cells.
+ */
+function rebuildPages(manager: Phaser.Textures.TextureManager, pages: Page[]): void {
+  const height = pageHeight ?? SHARED_ATLAS.fallbackPageHeight;
+  if (pages.every((page) => page.source.height <= height)) return;
+  const old = pages.splice(0);
+  const e = SHARED_ATLAS.extrude;
+  for (const from of old) {
+    for (const [key, cell] of from.cells) {
+      const w = cell.width + e * 2;
+      const h = cell.height + e * 2;
+      const spot = findSpot(pages, w, h) ?? findSpot([makePage(manager, pages, height)], w, h);
+      const texture = cell.texture;
+      if (!spot || !texture) {
+        devWarn(`Atlas picture ${key} did not fit the smaller pages`);
+        continue;
+      }
+      cell.page = spot.page;
+      cell.box = spot.box;
+      spot.page.cells.set(key, cell);
+      texture.source[0] = spot.page.source;
+      const frame = texture.get('__BASE');
+      frame.source = spot.page.source;
+      frame.setSize(cell.width, cell.height, spot.box.x + e, spot.box.y + e);
+    }
+    from.cells.clear();
+    manager.remove(from.key);
+  }
 }
 
 // One canvas for every extruded cell: a new canvas per picture costs more than resizing this one.
@@ -195,30 +278,19 @@ export function addSharedPicture(
   const cellH = height + e * 2;
   const pages = pagesOf.get(manager) ?? [];
   pagesOf.set(manager, pages);
-  let page: Page | null = null;
-  let box: PackedBox | null = null;
-  for (const p of pages) {
-    box = p.packer.alloc(cellW, cellH);
-    if (box) {
-      page = p;
-      break;
-    }
-  }
-  if (!page || !box) {
-    page = openPage(scene, pages);
-    box = page.packer.alloc(cellW, cellH);
-    if (!box) return false;
-  }
-  const home = page;
-  const cell: Cell = { box, picture: source, width, height };
-  uploadCell(scene.sys.game.renderer, home, cell);
-  home.cells.set(key, cell);
+  const spot = findSpot(pages, cellW, cellH) ?? findSpot([openPage(scene, pages)], cellW, cellH);
+  if (!spot) return false;
+  const { box } = spot;
+  const cell: Cell = { box, picture: source, width, height, page: spot.page, texture: null };
+  uploadCell(scene.sys.game.renderer, cell.page, cell);
+  cell.page.cells.set(key, cell);
   const texture = new AtlasCellTexture(manager, key, () => {
     // The cell is not cleared: the next picture in it overwrites the whole cell.
-    home.packer.free(cell.box, cellW);
-    home.cells.delete(key);
+    cell.page.packer.free(cell.box, cellW);
+    cell.page.cells.delete(key);
   });
-  texture.source.push(home.source);
+  cell.texture = texture;
+  texture.source.push(cell.page.source);
   texture.add('__BASE', 0, box.x + e, box.y + e, width, height);
   (manager.list as Record<string, Phaser.Textures.Texture>)[key] = texture;
   manager.emit(Phaser.Textures.Events.ADD, key, texture);

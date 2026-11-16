@@ -14,6 +14,8 @@ export const SHARED_ATLAS = {
   pageHeight: 4096,
   /** Height of the pages on a device whose GPU cannot make a `pageHeight` page (too small a maximum texture size, or the page failed). */
   fallbackPageHeight: 2048,
+  /** A WebGL context lost within this many ms after the big page was made counts against it: the pages are rebuilt at the fallback height. */
+  bigPageStrikeMs: 5000,
   /** Shelf heights are rounded up to this many pixels, so pictures of close heights share a shelf. */
   shelfStep: 8,
   /** The edge pixels of every picture are repeated this far outwards, so a scaled or cropped picture samples like a texture of its own. */

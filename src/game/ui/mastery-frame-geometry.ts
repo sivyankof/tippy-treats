@@ -47,7 +47,8 @@ export function outerRimReach(): number {
 export function masteryFramePad(): number {
   const crowns = [
     crownReach(crownSpot(COLLECTION_BODY)),
-    crownReach({ cx: 0, cy: -MASTERY_FRAME.windowCrown.lift, r: MASTERY_FRAME.windowCrown.r }),
+    // Any plate other than the card wears the window crown; its size does not move the crown.
+    crownReach(crownSpot({ width: 0, height: 0 })),
   ];
   return Math.ceil(Math.max(outerRimReach(), ...crowns));
 }

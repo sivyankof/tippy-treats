@@ -183,11 +183,9 @@ export class FaceLick {
    * the lick and lets the run go on.
    */
   tick(dtMs: number): void {
-    fxGuard.run(
-      'lick-face',
-      () => this.step(dtMs),
-      () => this.abandon(),
-    );
+    if (!fxGuard.call('lick-face', this, this.step, dtMs)) {
+      fxGuard.cleanup('lick-face', this, this.abandon);
+    }
   }
 
   private step(dtMs: number): void {

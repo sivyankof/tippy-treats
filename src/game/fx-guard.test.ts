@@ -73,4 +73,43 @@ describe('FxGuard', () => {
       ),
     ).toBe(7);
   });
+
+  it('calls a method on its target with the arguments, and reports a failure', () => {
+    const warn = vi.fn();
+    const guard = new FxGuard(warn);
+    const target = {
+      sum: 0,
+      add(a: number, b: number, c: number, d: number, e: number): void {
+        this.sum += a + b + c + d + e;
+      },
+      boom(): void {
+        throw new Error('x');
+      },
+    };
+    expect(guard.call('add', target, target.add, 1, 2, 3, 4, 5)).toBe(true);
+    expect(target.sum).toBe(15);
+    expect(guard.call('boom', target, target.boom)).toBe(false);
+    expect(guard.call('boom', target, target.boom)).toBe(false);
+    expect(warn).toHaveBeenCalledOnce();
+    expect(warn.mock.calls[0]?.[0]).toContain('boom');
+  });
+
+  it('runs a cleanup under its own name and survives its failure', () => {
+    const warn = vi.fn();
+    const guard = new FxGuard(warn);
+    const target = {
+      cleaned: false,
+      clean(): void {
+        this.cleaned = true;
+      },
+      fail(): void {
+        throw new Error('y');
+      },
+    };
+    guard.cleanup('lick', target, target.clean);
+    expect(target.cleaned).toBe(true);
+    guard.cleanup('lick', target, target.fail);
+    expect(warn).toHaveBeenCalledOnce();
+    expect(warn.mock.calls[0]?.[0]).toContain('lick (cleanup)');
+  });
 });

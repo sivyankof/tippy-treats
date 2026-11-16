@@ -17,7 +17,7 @@ import type { LayerView } from '../objects/layer-view';
 import { startRainbowJokeNow } from '../objects/rainbow-idle';
 import type { LickKind, LickScene } from '../objects/lick-plan';
 import type { GuestSource } from '../objects/backdrop/guest-source';
-import { TowerGuest } from '../objects/tower-guest';
+import { TowerGuest, type GuestContext } from '../objects/tower-guest';
 import { MasterFeed } from '../ui/master-caption-state';
 import type { CreatureId } from '../../data/creatures';
 import { TowerView } from '../objects/tower-view';
@@ -42,6 +42,9 @@ import { clearRunHooks, runHooks, setRunHooks, type RunHooks } from '../perf/run
 /** The flying layer as it was before the sim step that just ran. */
 export type FlyingMemo = Pick<FlyingLayer, 'x' | 'width' | 'kind' | 'creature' | 'level'>;
 type LandEvent = Extract<SimEvent, { type: 'land' }>;
+
+const isLand = (e: SimEvent): e is LandEvent => e.type === 'land';
+const isSneeze = (e: SimEvent): boolean => e.type === 'wobble_sneeze';
 
 /** The camera as the effects need it: world scroll without the kick, and the screen size. */
 export interface CameraInfo {
@@ -84,6 +87,7 @@ export class RunFx {
     avoid: null,
   };
   private readonly flyColumn = { left: 0, right: 0 };
+  private guestCtx: GuestContext | null = null;
   private readonly topperFx: TopperFx;
   /** The master effects that acted, for the captions of the HUD. */
   readonly masterFeed = new MasterFeed();
@@ -246,23 +250,28 @@ export class RunFx {
   ): void {
     if (events.length === 0) return;
     // Every effect below runs through the safety net; only the result and the miss wait are flow.
-    const guard = fxGuard;
-    guard.run('master-feed', () => this.masterFeed.take(events));
-    guard.run('cues', () => playCues(cuesForEvents(events, state, memo), services));
-    const land = events.find((e): e is LandEvent => e.type === 'land');
-    guard.run('tower-land-prep', () => {
-      if (land) this.tower.noteCut(state.layers.length - 1, land.cutSide);
-      // The sway of the frame before the sneeze is the one the tower holds.
-      if (events.some((e) => e.type === 'wobble_sneeze')) this.tower.freeze(ANIM.sneeze.freezeMs);
-    });
-    guard.run('ability-before-sync', () => this.abilityFx.beforeSync(events));
-    guard.run('topper-land', () => {
+    fxGuard.call('master-feed', this.masterFeed, this.masterFeed.take, events);
+    fxGuard.call('cues', this, this.playEventCues, events, state, memo);
+    const land = events.find(isLand);
+    const tower = this.tower;
+    if (land) {
+      fxGuard.call('tower-land-cut', tower, tower.noteCut, state.layers.length - 1, land.cutSide);
+    }
+    // The sway of the frame before the sneeze is the one the tower holds.
+    if (events.some(isSneeze)) {
+      fxGuard.call('sneeze-freeze', tower, tower.freeze, ANIM.sneeze.freezeMs);
+    }
+    fxGuard.call('ability-before-sync', this.abilityFx, this.abilityFx.beforeSync, events);
+    if (land) {
+      const topper = this.topperFx;
       // The topper under the landing layer hops off while its view still shows it.
-      if (land) this.topperFx.hopOffBelow(this.tower, state);
-      // Landings need the view of the new layer, which normally appears on the next sync.
-      if (land) this.tower.sync(state, cam.scrollY + cam.height, cam.scrollY);
-      if (land) this.topperFx.settleOnTop(this.tower, state, memo);
-    });
+      fxGuard.call('topper-hop', topper, topper.hopOffBelow, tower, state);
+      // Landings need the view of the new layer, which normally appears on the next sync. This is
+      // the view's own sync, not a decoration: it has a guard of its own, like the per-frame one.
+      const bottom = cam.scrollY + cam.height;
+      fxGuard.call('tower-land-sync', tower, tower.sync, state, bottom, cam.scrollY);
+      fxGuard.call('topper-settle', topper, topper.settleOnTop, tower, state, memo);
+    }
 
     for (const event of events) {
       switch (event.type) {
@@ -271,19 +280,16 @@ export class RunFx {
           this.slowMoMs = 0;
           break;
         case 'land':
-          guard.run('land-fx', () => this.onLand(event, state, memo, cam));
+          fxGuard.call('land-fx', this, this.onLand, event, state, memo, cam);
           break;
         case 'combo':
-          guard.run('combo-fx', () => this.onCombo(event.widened, state));
+          fxGuard.call('combo-fx', this, this.onCombo, event.widened, state);
           break;
         case 'wobble_sneeze':
-          guard.run('sneeze-fx', () => {
-            this.tower.squashTop();
-            this.debris.sneeze(state);
-          });
+          fxGuard.call('sneeze-fx', this, this.onSneeze, state);
           break;
         case 'tempo_ease':
-          guard.run('exhale-fx', () => this.tower.exhale());
+          fxGuard.call('exhale-fx', tower, tower.exhale);
           break;
         case 'miss':
           this.onMiss(event.shielded, memo, land !== undefined, state);
@@ -295,10 +301,11 @@ export class RunFx {
           break;
       }
     }
-    guard.run('ability-events', () => this.abilityFx.handleEvents(events, state, memo, mods, cam));
-    guard.run('coin-events', () => this.coinFx.handleEvents(events, state, cam));
-    guard.run('flying-events', () => this.flyingFx.handleEvents(events));
-    guard.run('guest-events', () => this.guest.handleEvents(events, state));
+    const ability = this.abilityFx;
+    fxGuard.call('ability-events', ability, ability.handleEvents, events, state, memo, mods, cam);
+    fxGuard.call('coin-events', this.coinFx, this.coinFx.handleEvents, events, state, cam);
+    fxGuard.call('flying-events', this.flyingFx, this.flyingFx.handleEvents, events);
+    fxGuard.call('guest-events', this.guest, this.guest.handleEvents, events, state);
   }
 
   /** Per frame: places everything and advances the effects. */
@@ -322,41 +329,71 @@ export class RunFx {
     this.advanceEnd(realMs, state, cam);
 
     // The views and effects below run through the safety net: a broken one is skipped.
-    const guard = fxGuard;
-    guard.run('tower-sync', () => this.tower.sync(state, cam.scrollY + cam.height, cam.scrollY));
-    guard.run('flying-view', () => this.flyingView.sync(state, timeMs, visualMs));
-    guard.run('flying-fx', () => this.flyingFx.update(visualMs, timeMs, state, mods.guidesMaster));
-    guard.run('coin-fx', () => this.coinFx.update(visualMs, timeMs, state));
-    guard.run('faces', () => this.pointFaces(state));
-    guard.run('tower-tick', () => {
-      this.tower.setScreenBand(cam.scrollY, cam.scrollY + cam.height);
-      this.tower.tick(visualMs);
-    });
-    guard.run('guest', () =>
-      this.guest.update(visualMs, {
-        state,
-        cam,
-        shadow: this.flyingView.shadowAnchor(),
-      }),
-    );
+    // `call` takes the method and its arguments, so a frame makes no closures.
+    const tower = this.tower;
+    const bottom = cam.scrollY + cam.height;
+    fxGuard.call('tower-sync', tower, tower.sync, state, bottom, cam.scrollY);
+    fxGuard.call('flying-view', this.flyingView, this.flyingView.sync, state, timeMs, visualMs);
+    const flyingFx = this.flyingFx;
+    const ghost = mods.guidesMaster;
+    fxGuard.call('flying-fx', flyingFx, flyingFx.update, visualMs, timeMs, state, ghost);
+    fxGuard.call('coin-fx', this.coinFx, this.coinFx.update, visualMs, timeMs, state);
+    fxGuard.call('faces', this, this.pointFaces, state);
+    fxGuard.call('tower-tick', this, this.tickTower, visualMs, cam);
+    fxGuard.call('guest', this, this.updateGuest, visualMs, state, cam);
+    fxGuard.call('debris', this.debris, this.debris.update, visualMs);
+    fxGuard.call('topper-fx', this.topperFx, this.topperFx.update, visualMs);
+    fxGuard.call('landing-fx', this.landingFx, this.landingFx.update, visualMs);
+    fxGuard.call('material-fx', this.materialFx, this.materialFx.update, visualMs, state.wobble);
+    fxGuard.call('ability-fx', this, this.updateAbilityFx, visualMs, timeMs, state, mods, cam);
+    fxGuard.call('kick', this.kick, this.kick.update, visualMs);
+    const record = this.recordMoment;
+    fxGuard.call('record-moment', record, record.update, visualMs, timeMs, state, cam);
+    fxGuard.call('glow', this, this.placeGlow, timeMs, cam);
+    fxGuard.call('sparkles', this, this.updateSparkles, visualMs, state, cam);
+  }
 
-    guard.run('debris', () => this.debris.update(visualMs));
-    guard.run('topper-fx', () => this.topperFx.update(visualMs));
-    guard.run('landing-fx', () => this.landingFx.update(visualMs));
-    guard.run('material-fx', () => this.materialFx.update(visualMs, state.wobble));
-    guard.run('ability-fx', () =>
-      this.abilityFx.update(visualMs, timeMs, state, mods, cam, this.runIsOn(state)),
-    );
-    guard.run('kick', () => this.kick.update(visualMs));
-    guard.run('record-moment', () => this.recordMoment.update(visualMs, timeMs, state, cam));
-    guard.run('glow', () => this.placeGlow(timeMs, cam));
-    guard.run('sparkles', () =>
-      this.sparkles.update(
-        visualMs,
-        this.sparkleFieldFor(state, cam),
-        this.runIsOn(state) && !effectsMode.reduced,
-      ),
-    );
+  private playEventCues(
+    events: readonly SimEvent[],
+    state: Readonly<TowerState>,
+    memo: FlyingMemo | null,
+  ): void {
+    playCues(cuesForEvents(events, state, memo), services);
+  }
+
+  private onSneeze(state: Readonly<TowerState>): void {
+    this.tower.squashTop();
+    this.debris.sneeze(state);
+  }
+
+  private tickTower(visualMs: number, cam: CameraInfo): void {
+    this.tower.setScreenBand(cam.scrollY, cam.scrollY + cam.height);
+    this.tower.tick(visualMs);
+  }
+
+  /** The guest's view of the frame; the object is made once and refilled. */
+  private updateGuest(visualMs: number, state: Readonly<TowerState>, cam: CameraInfo): void {
+    const shadow = this.flyingView.shadowAnchor();
+    const ctx = (this.guestCtx ??= { state, cam, shadow });
+    ctx.state = state;
+    ctx.cam = cam;
+    ctx.shadow = shadow;
+    this.guest.update(visualMs, ctx);
+  }
+
+  private updateAbilityFx(
+    visualMs: number,
+    timeMs: number,
+    state: Readonly<TowerState>,
+    mods: Readonly<Modifiers>,
+    cam: CameraInfo,
+  ): void {
+    this.abilityFx.update(visualMs, timeMs, state, mods, cam, this.runIsOn(state));
+  }
+
+  private updateSparkles(visualMs: number, state: Readonly<TowerState>, cam: CameraInfo): void {
+    const on = this.runIsOn(state) && !effectsMode.reduced;
+    this.sparkles.update(visualMs, this.sparkleFieldFor(state, cam), on);
   }
 
   /** The tower as the sparkles need it; the object is reused. */

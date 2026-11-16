@@ -1,5 +1,15 @@
 import { devWarn } from './dev-warn';
 
+/** A method called by `FxGuard.call` with up to five arguments. */
+type GuardedMethod = (
+  this: unknown,
+  a?: unknown,
+  b?: unknown,
+  c?: unknown,
+  d?: unknown,
+  e?: unknown,
+) => unknown;
+
 /**
  * The safety net of the decorations (docs/08, "Страховочная обёртка декораций"): a failure in an
  * effect (particles, captions, a lick, the backdrop) skips that effect for the frame and the game
@@ -11,19 +21,81 @@ export class FxGuard {
 
   constructor(private readonly warn: (message: string, error?: unknown) => void) {}
 
+  /**
+   * The per-frame form: calls `method` on `target` with the given arguments, so no closure is
+   * made per call. Returns false when it threw (the caller may then clean up with `cleanup`).
+   */
+  call<T>(name: string, target: T, method: (this: T) => unknown): boolean;
+  call<T, A>(name: string, target: T, method: (this: T, a: A) => unknown, a: A): boolean;
+  call<T, A, B>(
+    name: string,
+    target: T,
+    method: (this: T, a: A, b: B) => unknown,
+    a: A,
+    b: B,
+  ): boolean;
+  call<T, A, B, C>(
+    name: string,
+    target: T,
+    method: (this: T, a: A, b: B, c: C) => unknown,
+    a: A,
+    b: B,
+    c: C,
+  ): boolean;
+  call<T, A, B, C, D>(
+    name: string,
+    target: T,
+    method: (this: T, a: A, b: B, c: C, d: D) => unknown,
+    a: A,
+    b: B,
+    c: C,
+    d: D,
+  ): boolean;
+  call<T, A, B, C, D, E>(
+    name: string,
+    target: T,
+    method: (this: T, a: A, b: B, c: C, d: D, e: E) => unknown,
+    a: A,
+    b: B,
+    c: C,
+    d: D,
+    e: E,
+  ): boolean;
+  call(
+    name: string,
+    target: unknown,
+    method: GuardedMethod,
+    a?: unknown,
+    b?: unknown,
+    c?: unknown,
+    d?: unknown,
+    e?: unknown,
+  ): boolean {
+    try {
+      method.call(target, a, b, c, d, e);
+      return true;
+    } catch (error) {
+      this.report(name, error);
+      return false;
+    }
+  }
+
+  /** The cleanup after a failed `call` of `name`: itself guarded, it warns as "<name> (cleanup)". */
+  cleanup<T>(name: string, target: T, method: (this: T) => unknown): void {
+    try {
+      method.call(target);
+    } catch (error) {
+      this.report(`${name} (cleanup)`, error);
+    }
+  }
+
   /** Runs `fn`; on a throw calls `onFail` (cleanup, itself guarded) and warns once per name. */
   run(name: string, fn: () => void, onFail?: () => void): void {
     try {
       fn();
     } catch (error) {
       this.report(name, error);
-      if (onFail) {
-        try {
-          onFail();
-        } catch (cleanupError) {
-          this.report(`${name} (cleanup)`, cleanupError);
-        }
-      }
+      if (onFail) this.cleanup(name, null, onFail);
     }
   }
 

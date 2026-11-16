@@ -14,7 +14,6 @@ import {
   badgeCreature,
   BadgeTracker,
   badgeVisual,
-  type BadgeKey,
   badgeCentreX,
   type BadgeState,
   type BadgeVisual,
@@ -120,11 +119,6 @@ export class EffectBadges {
   private readonly slots: BadgeSlot[] = [];
   private readonly visual: BadgeVisual = { scale: 1, alpha: 1 };
   constructor(private readonly scene: Phaser.Scene) {}
-
-  /** Place of the badge of `key` in the row, -1 when it has none. */
-  indexOf(key: BadgeKey): number {
-    return this.tracker.items.findIndex((badge) => badge.key === key);
-  }
 
   /** Badges in the row (those shrinking away included). */
   get count(): number {

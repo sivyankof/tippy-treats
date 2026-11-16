@@ -166,6 +166,13 @@ export class MasterCaptions {
     if (!view.active) this.current = null;
   }
 
+  /** Drops the showing caption at once (after a failure: nothing of it stays on screen). */
+  hide(): void {
+    const view = this.current;
+    this.current = null;
+    view?.end();
+  }
+
   clear(): void {
     for (const view of this.views.values()) view.destroy();
     this.views = new Map();

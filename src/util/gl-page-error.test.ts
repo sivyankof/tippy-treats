@@ -1,28 +1,43 @@
 import { describe, expect, it } from 'vitest';
 import {
+  bigPageFails,
   GL_CONTEXT_LOST_WEBGL,
+  GL_INVALID_ENUM,
+  GL_INVALID_OPERATION,
   GL_INVALID_VALUE,
   GL_OUT_OF_MEMORY,
-  pageVerdict,
 } from './gl-page-error';
 
-describe('pageVerdict', () => {
-  it('accepts a page with no errors', () => {
-    expect(pageVerdict([], false)).toBe('ok');
+const WINDOW = 5000;
+const made = (errors: number[], contextLost = false): boolean =>
+  bigPageFails({ kind: 'made', errors, contextLost }, WINDOW);
+const lost = (msSinceBigPage: number | null): boolean =>
+  bigPageFails({ kind: 'context_lost', msSinceBigPage }, WINDOW);
+
+describe('bigPageFails', () => {
+  it('keeps a page made with no error', () => {
+    expect(made([])).toBe(false);
   });
 
-  it('falls back only on a real allocation error', () => {
-    expect(pageVerdict([GL_OUT_OF_MEMORY], false)).toBe('too_big');
-    expect(pageVerdict([GL_INVALID_VALUE], false)).toBe('too_big');
+  it('falls back on any GL error after the page was made', () => {
+    expect(made([GL_OUT_OF_MEMORY])).toBe(true);
+    expect(made([GL_INVALID_VALUE])).toBe(true);
+    expect(made([GL_INVALID_OPERATION])).toBe(true);
+    expect(made([GL_INVALID_ENUM])).toBe(true);
   });
 
-  it('does not blame the page for a lost context', () => {
-    expect(pageVerdict([GL_CONTEXT_LOST_WEBGL], false)).toBe('lost');
-    expect(pageVerdict([], true)).toBe('lost');
-    expect(pageVerdict([GL_OUT_OF_MEMORY], true)).toBe('lost');
+  it('falls back when the context was lost while the page was made', () => {
+    expect(made([], true)).toBe(true);
+    expect(made([GL_CONTEXT_LOST_WEBGL])).toBe(true);
   });
 
-  it('ignores errors that are not about allocation', () => {
-    expect(pageVerdict([0x0502], false)).toBe('ok');
+  it('falls back when the context is lost just after the page was made', () => {
+    expect(lost(0)).toBe(true);
+    expect(lost(WINDOW)).toBe(true);
+  });
+
+  it('keeps the big page through a later, unrelated loss', () => {
+    expect(lost(WINDOW + 1)).toBe(false);
+    expect(lost(null)).toBe(false);
   });
 });

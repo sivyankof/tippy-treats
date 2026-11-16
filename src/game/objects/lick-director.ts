@@ -90,11 +90,8 @@ export class LickDirector {
 
   /** Advances the lick and, when it is time, starts a new one. A failure drops the lick, not the run. */
   update(dtMs: number, ctx: LickContext): void {
-    fxGuard.run(
-      'lick',
-      () => this.advance(dtMs, ctx),
-      () => this.drop(),
-    );
+    if (!fxGuard.call('lick', this, this.advance, dtMs, ctx))
+      fxGuard.cleanup('lick', this, this.drop);
   }
 
   private advance(dtMs: number, ctx: LickContext): void {

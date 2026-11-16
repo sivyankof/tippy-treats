@@ -148,26 +148,31 @@ export class HudScene extends Phaser.Scene {
   override update(time: number, delta: number): void {
     const info = this.gameScene()?.getRunInfo() ?? null;
     const announced = this.zoneWatch.observe(info && info.phase !== 'over' ? info.zoneIndex : null);
-    fxGuard.run('hud-zone-banner', () => {
-      if (announced !== null) this.zoneBanner.show(announced);
-      this.zoneBanner.update(time);
-    });
+    fxGuard.call('hud-zone-banner', this, this.updateZoneBanner, announced, time);
     if (info) {
       this.heightRoll.set(info.height);
       this.scoreRoll.set(info.score);
       this.heightText.setText(formatNumber(this.heightRoll.update(delta)));
       this.scoreText.setText(formatNumber(this.scoreRoll.update(delta)));
       this.wobbleBar.update(info.wobble, time, delta);
-      this.nextBadge.update(info.height, info.team, isCompactNext(this.effectBadges.count));
-      fxGuard.run('hud-next-idle', () => this.nextBadge.idle(time));
-      fxGuard.run('hud-effect-badges', () =>
-        this.effectBadges.update(info.effects, info.shield, time, delta),
+      // The badges go first: the next chip turns compact on the frame a third badge comes in.
+      const badges = this.effectBadges;
+      fxGuard.call(
+        'hud-effect-badges',
+        badges,
+        badges.update,
+        info.effects,
+        info.shield,
+        time,
+        delta,
       );
+      this.nextBadge.update(info.height, info.team, isCompactNext(badges.count));
+      fxGuard.call('hud-next-idle', this.nextBadge, this.nextBadge.idle, time);
       this.updateMasterCaptions(info.team, delta);
       this.tempoChip.update(info.tempoLeft, time, delta);
       this.treasure.update(info, time, delta, this.gameScene()?.continueFlow?.isOpen === true);
     }
-    fxGuard.run('hud-numbers-idle', () => this.numbersIdle.update(time));
+    fxGuard.call('hud-numbers-idle', this.numbersIdle, this.numbersIdle.update, time);
     this.tutorialHints.update(
       time,
       delta,
@@ -184,16 +189,22 @@ export class HudScene extends Phaser.Scene {
   private updateMasterCaptions(team: RunInfo['team'], delta: number): void {
     const game = this.gameScene();
     if (!game) return;
-    const showing = fxGuard.value(
-      'hud-master-captions',
-      () => {
-        this.masterCaptions.prepare(team);
-        this.masterCaptions.update(game.masterFeed, this.effectBadges.count, delta);
-        return this.masterCaptions.showing;
-      },
-      false,
-    );
-    this.nextBadge.setSuppressed(showing);
+    const captions = this.masterCaptions;
+    // A failure drops the caption, so a plate left on screen cannot sit over the un-hidden chip.
+    if (!fxGuard.call('hud-master-captions', this, this.stepMasterCaptions, team, game, delta)) {
+      fxGuard.cleanup('hud-master-captions', captions, captions.hide);
+    }
+    this.nextBadge.setSuppressed(captions.showing);
+  }
+
+  private stepMasterCaptions(team: RunInfo['team'], game: GameScene, delta: number): void {
+    this.masterCaptions.prepare(team);
+    this.masterCaptions.update(game.masterFeed, this.effectBadges.count, delta);
+  }
+
+  private updateZoneBanner(announced: number | null, time: number): void {
+    if (announced !== null) this.zoneBanner.show(announced);
+    this.zoneBanner.update(time);
   }
 
   private gameScene(): GameScene | null {

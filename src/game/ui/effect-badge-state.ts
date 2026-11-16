@@ -13,11 +13,6 @@ export function badgeCreature(key: BadgeKey): CreatureId {
   return key === 'shield' ? 'brownie' : key;
 }
 
-/** The badge key of a creature's effect (the brownie's is the shield). */
-export function creatureBadge(id: CreatureId): BadgeKey {
-  return id === 'brownie' ? 'shield' : id;
-}
-
 /** Centre x of the badge at `index` of the row once it has settled. */
 export function badgeCentreX(index: number): number {
   const { badgeMargin, badgeSize, badgeGap } = HUD_LAYOUT;

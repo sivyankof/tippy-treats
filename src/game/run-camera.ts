@@ -91,7 +91,7 @@ export class RunCamera {
   private apply(): void {
     const camera = this.scene.cameras.main;
     camera.scrollY = this.scrollBase - this.fx.cameraOffset + this.entry.offset;
-    fxGuard.run('backdrop', () => this.background.update(camera.scrollY));
+    fxGuard.call('backdrop', this.background, this.background.update, camera.scrollY);
   }
 
   targetScrollY(): number {
