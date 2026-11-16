@@ -13,7 +13,7 @@ import { DEG_TO_RAD, TWO_PI } from '../../util/math';
 import { DEPTH } from '../depth';
 import { effectsMode } from '../effects-mode';
 import { fillQuad, type Pt } from '../fx/plain-style';
-import { RAINBOW_TEXTURES, STAR_BAKE_SCALE } from '../fx/abilities/rainbow-textures';
+import { RAINBOW_TEXTURES } from '../fx/abilities/rainbow-textures';
 import { rainbowGlaze } from './creature-art/rainbow';
 import { bodySpan, spongeRows, waveAt } from './creature-art/rainbow-geometry';
 import {
@@ -78,8 +78,6 @@ export class RainbowIdle {
   private readonly g: Phaser.GameObjects.Graphics;
   /** The white sparkle of the star's flash, over the wave. */
   private readonly sparkle: Phaser.GameObjects.Image;
-  /** A wave is on the `Graphics` and must be cleared when it ends. */
-  private waveDrawn = false;
   /** The joke, over every layer of the tower (it follows the layer's own transform). */
   private readonly front: Phaser.GameObjects.Graphics;
   private width = 0;
@@ -153,8 +151,8 @@ export class RainbowIdle {
     this.wasLive = live;
     this.front.clear();
     const box = layerBox(this.width);
-    if (this.waveDrawn) this.g.clear();
-    this.waveDrawn = live && this.drawWave(timeMs + phaseMs, box);
+    this.g.clear();
+    if (live) this.drawWave(timeMs + phaseMs, box);
     const cy = box.top - star.lift;
     const flash = live ? sparkleAt(timeMs, phaseMs) : 0;
     const sway = live
@@ -163,7 +161,7 @@ export class RainbowIdle {
     this.star
       .setPosition(0, cy)
       .setRotation(sway)
-      .setScale((1 + flash * idle.sparkleScale) / STAR_BAKE_SCALE);
+      .setScale(1 + flash * idle.sparkleScale);
     if (live && this.jokeAllowed) this.drawJoke(timeMs, cy);
     else this.jokeStart = -1;
     this.sparkle
@@ -177,13 +175,16 @@ export class RainbowIdle {
     this.star.setVisible(visible);
     this.g.setVisible(visible);
     this.front.setVisible(visible);
-    if (!visible) this.sparkle.setVisible(false);
-    if (!visible) this.endJoke();
+    if (!visible) {
+      // Back to rest, so a later show never brings back a swollen, tilted star or a stray sparkle.
+      this.star.setRotation(0).setScale(1);
+      this.sparkle.setVisible(false);
+      this.endJoke();
+    }
   }
 
   private clear(): void {
     this.g.clear();
-    this.waveDrawn = false;
     this.front.clear();
     this.sparkle.setVisible(false);
   }
@@ -270,9 +271,8 @@ export class RainbowIdle {
     });
   }
 
-  /** Each sponge swells and brightens in a window that runs across it left to right, top sponge first; false when no sponge is in the wave. */
-  private drawWave(timeMs: number, box: LayerBox): boolean {
-    let drawn = false;
+  /** Each sponge swells and brightens in a window that runs across it left to right, top sponge first. */
+  private drawWave(timeMs: number, box: LayerBox): void {
     const column = (x: number, row: { top: number; bottom: number }, bulge: number): Pt[] => {
       const span = bodySpan(box, x);
       const down = Math.min(span.bottom, row.bottom + waveAt(x));
@@ -297,9 +297,7 @@ export class RainbowIdle {
         const b = column(x2, row, idle.bulgePx * humpAt(x2, center, idle.halfPx));
         this.g.fillStyle(mixColor(color, PALETTE.textLight, idle.brighten * mid), 1);
         fillQuad(this.g, a[0]!, b[0]!, b[1]!, a[1]!);
-        drawn = true;
       }
     });
-    return drawn;
   }
 }
