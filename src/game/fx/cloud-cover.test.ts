@@ -6,7 +6,7 @@ import {
   densityCap,
   followInput,
   layerHidden,
-  nebulaJitter,
+  ghostShare,
   pickLook,
   puffsBillow,
   starActive,
@@ -236,26 +236,30 @@ describe('nebula look', () => {
     }
   });
 
-  it('caps the nebula under the cloud, and "Not scary" lowers either by its share', () => {
+  it('caps the nebula under the cloud, and "Not scary" lowers either by its own share', () => {
     expect(densityCap('cloud', 1)).toBe(1);
     expect(densityCap('nebula', 1)).toBe(cfg.nebula.maxDensity);
-    expect(densityCap('cloud', cfg.ghostMaxDensity)).toBe(cfg.ghostMaxDensity);
-    expect(densityCap('nebula', cfg.ghostMaxDensity)).toBeCloseTo(
-      cfg.nebula.maxDensity * cfg.ghostMaxDensity,
-    );
-    expect(cfg.nebula.maxDensity).toBeLessThan(cfg.ghostMaxDensity);
+    expect(ghostShare(false, true)).toBe(1);
+    expect(ghostShare(true, false)).toBe(cfg.ghostMaxDensity);
+    expect(ghostShare(true, true)).toBe(cfg.nebula.ghostMaxDensity);
+    // One picture lets through about 1 - density: ~1/3 plain, at least ~0.7 with "Not scary".
+    expect(1 - densityCap('nebula', 1)).toBeGreaterThan(0.28);
+    expect(1 - densityCap('nebula', 1)).toBeLessThan(0.38);
+    expect(1 - densityCap('nebula', ghostShare(true, true))).toBeGreaterThanOrEqual(0.7);
   });
 
-  it('shows 8, 4 and 0 stars on full, lite and minimal, spread evenly over the slots', () => {
-    expect(starCount('full')).toBe(8);
-    expect(starCount('lite')).toBe(4);
+  it('shows 4, 2 and 0 stars on full, lite and minimal, spread evenly over the slots', () => {
+    const slots = cfg.nebula.stars.spots.length;
+    expect(slots).toBe(4);
+    expect(starCount('full')).toBe(4);
+    expect(starCount('lite')).toBe(2);
     expect(starCount('minimal')).toBe(0);
     for (const level of ['full', 'lite', 'minimal'] as const) {
-      const on = Array.from({ length: 8 }, (_, i) => starActive(i, 8, starCount(level)));
+      const on = Array.from({ length: slots }, (_, i) => starActive(i, slots, starCount(level)));
       expect(on.filter(Boolean)).toHaveLength(starCount(level));
     }
-    const lite = Array.from({ length: 8 }, (_, i) => starActive(i, 8, 4));
-    expect(lite).toEqual([false, true, false, true, false, true, false, true]);
+    const lite = Array.from({ length: slots }, (_, i) => starActive(i, slots, 2));
+    expect(lite).toEqual([false, true, false, true]);
   });
 
   it('billows the cloud always and the nebula except on minimal', () => {
@@ -273,7 +277,7 @@ describe('nebula look', () => {
     expect(low.scale).toBeLessThan(1);
     expect(high.scale).toBeGreaterThan(1);
     for (let t = 0; t < 3000; t += 70) {
-      for (let slot = 0; slot < 8; slot++) {
+      for (let slot = 0; slot < 4; slot++) {
         const pulse = starPulse(t, slot);
         expect(pulse).toBeGreaterThanOrEqual(0);
         expect(pulse).toBeLessThanOrEqual(1);
@@ -290,22 +294,5 @@ describe('layerHidden', () => {
     expect(layerHidden(false, false, false, 0)).toBe(false);
     expect(layerHidden(true, false, true, 1)).toBe(false);
     expect(layerHidden(false, true, true, 1)).toBe(false);
-  });
-});
-
-describe('nebulaJitter', () => {
-  it('stays in its bounds and differs from puff to puff', () => {
-    const j = cfg.nebula.jitter;
-    const seen = new Set<number>();
-    for (let i = 0; i < 12; i++) {
-      const p = nebulaJitter(i);
-      expect(Math.abs(p.dx)).toBeLessThanOrEqual(j.x);
-      expect(Math.abs(p.dy)).toBeLessThanOrEqual(j.y);
-      expect(p.scale).toBeGreaterThanOrEqual(j.scale[0]);
-      expect(p.scale).toBeLessThanOrEqual(j.scale[1]);
-      seen.add(Math.round(p.scale * 1000));
-    }
-    expect(seen.size).toBeGreaterThan(8);
-    expect(nebulaJitter(3)).toEqual(nebulaJitter(3));
   });
 });

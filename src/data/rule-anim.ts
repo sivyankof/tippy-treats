@@ -14,9 +14,6 @@ export const RULE_ANIM = {
     windStreak: 0x3d5a80,
     /** The puff that flashes behind a rush layer when it lets go. */
     rushPuff: 0xffe9e3,
-    cloud: 0xffffff,
-    cloudEdge: 0xb9c9e6,
-    cloudShade: 0xdbe6f6,
   },
 
   /** Red outline of a rush layer, pulsing from its spawn. */
@@ -126,30 +123,33 @@ export const RULE_ANIM = {
    * It is fixed in the world while it hangs there (it does not follow the layer) and drifts on.
    */
   cloud: {
-    /** Baked puff size, without the soft halo margin. */
-    puff: { width: 320, height: 260 },
-    /** How far the lit top of a puff is lifted off its shaded belly, as a share of the puff height. */
-    lift: 0.04,
-    /** Width of the pale edge baked around a puff. */
-    edge: 6,
-    /** Soft halo around a puff: rings this far apart, each fainter, inside a margin of the texture. */
-    halo: { margin: 44, step: 13, alphas: [0.22, 0.12, 0.05] },
-    /** Distance between neighbouring puffs. */
-    spacing: 130,
-    /** The bank reaches this far past both screen edges, so that it covers the row while it hangs. */
-    pad: 80,
-    /** Upper cap of puffs: covers the screen width plus the padding. */
-    maxPuffs: 11,
-    scale: [0.9, 1.15],
-    /** Every puff bobs, sways and breathes on its own phase: the bank billows. */
+    /**
+     * The picture of the cloud and of the nebula: ONE baked figure each, on the shared atlas
+     * (the atlas takes pictures up to 1024 px a side). `scale` is how much bigger than baked it is
+     * shown. The layer is hidden while the cloud hangs in the world (it does not follow the layer)
+     * and the layer is up to `BALANCE.layer.maxWidth` (720) wide and flies up to ~1500 px/s for up
+     * to 350 ms (525 px more), so it can be anywhere on the screen: the body has to span the whole
+     * logical width plus the sway and the drift, with the breathing taken off
+     * (`cloud-figure.ts`, `requiredBodyWidth`; docs/08-architecture.md, section 12).
+     */
+    figure: {
+      width: 1000,
+      height: 360,
+      scale: 1.4,
+      /** The flat body (the part that always covers the layer row): left, right, top and bottom edges in baked px. */
+      body: { left: 44, right: 956, top: 100, bottom: 260 },
+      /** Thick warm outline around the figure, baked px. */
+      outline: 7,
+      /** Margin the layer height, bob and shake leave inside the body, display px, on each side. */
+      layerMargin: 24,
+    },
+    /** The whole figure bobs, sways and breathes: it billows (not on the minimal level for the nebula). */
     bobPx: 7,
     bobPeriodMs: 1100,
     swayPx: 6,
     swayPeriodMs: 1900,
     breathe: 0.035,
     breathePeriodMs: 2300,
-    /** Phase step between neighbouring puffs, radians. */
-    bobPhaseStep: 1.3,
     /** The whole bank sways a little ... */
     driftPx: 26,
     driftPeriodMs: 1700,
@@ -163,53 +163,51 @@ export const RULE_ANIM = {
     leadMs: 650,
     /**
      * Meringue "Not scary" (guides of level 5): the densest the cloud is drawn while it covers the
-     * layer, so the silhouette of the layer shows through (tuned by eye).
+     * layer, so the silhouette of the layer shows through (tuned by eye). Visual only: the bot
+     * has its own `DIFFICULTY.ghostCloudSdMult`.
      */
     ghostMaxDensity: 0.7,
     /**
-     * The space nebula: the cloud of the Space zone is a see-through cotton-candy bank. It has the
-     * same motion and the same puff geometry as the cloud, only another picture (`tr_nebula`) and
-     * a lower density cap, with twinkling stars over it.
+     * The space nebula: the cloud of the Space zone is a see-through cotton-candy lump. It has the
+     * same motion and the same figure size as the cloud, only another picture (`tr_nebula`) and a
+     * lower density cap, with twinkling stars over it.
      */
     nebula: {
-      /** Flat two-tone fills: the pink top lit from above and the blue belly; soft feathered edges. */
+      /** Flat fills: the pink body, a lighter pink top, blue and light-pink blotches, white curls; the rim is a deeper tone of the pink. */
       colors: {
         pink: 0xff9bd2,
-        blue: 0x7ab4ff,
-        dot: 0xffffff,
+        pinkLight: 0xffc4e4,
+        blue: 0x9cc4ff,
+        blotch: 0xffe1f0,
+        curl: 0xffffff,
       },
       /**
-       * The densest a puff is drawn while the nebula covers the layer. Neighbouring puffs overlap
-       * two to three deep, so this is far under the 0.67 that would leave a third of the layer:
-       * tuned by the contrast of the layer behind the bank (docs/08-architecture.md, section 12).
+       * The densest the figure is drawn while the nebula covers the layer: one picture, so the
+       * layer shows through with a contrast of about 1 - this (tuned by the contrast of the layer
+       * behind the figure, docs/08-architecture.md, section 12).
        */
-      maxDensity: 0.38,
-      /** How far (share of the puff height) the pink top is lifted off the blue belly: the blue shows as a band under it. */
-      lift: 0.14,
+      maxDensity: 0.68,
       /**
-       * Each colour is a stack of `rings` faint copies of the puff shape from `px` bigger to `px`
-       * smaller, so its edge fades over about 2 x `px` instead of ending hard.
+       * The densest it is drawn with "Not scary", as a share of `maxDensity` (the cloud keeps
+       * `ghostMaxDensity`): the layer then shows with a contrast of at least ~0.7.
        */
-      feather: { px: 40, rings: 9, alpha: 0.32 },
-      /** The blue belly fades out downwards over this many px, so it has no straight bottom edge. */
-      bellyFadePx: 46,
-      /**
-       * Every puff of the nebula bank sits a little off the line, in its own size: no row of equal
-       * ovals. Offsets in px (each way), scale from the smallest to the largest.
-       */
-      jitter: { x: 34, y: 24, scale: [0.8, 1.3] },
-      /** Baked star dots on the puff: centre and radius as shares of the puff width, and the height share. */
-      dots: [
-        { x: 0.3, y: 0.38, r: 0.016 },
-        { x: 0.66, y: 0.3, r: 0.02 },
-        { x: 0.52, y: 0.6, r: 0.014 },
-      ],
-      /** Twinkling stars over the bank (the shared `fx_star` picture), one pool per bank. */
+      ghostMaxDensity: 0.4,
+      /** Twinkling stars over the figure (the shared `fx_star` picture), one pool per bank. */
       stars: {
         /** How many twinkle per bank on each effects level. */
-        count: { full: 8, lite: 4, minimal: 0 },
+        count: { full: 4, lite: 2, minimal: 0 },
+        /**
+         * Where the stars sit on the figure, from its centre: x as a share of the figure width,
+         * y in px of the figure; they ride on it.
+         */
+        spots: [
+          { x: -0.32, y: -34 },
+          { x: -0.1, y: 40 },
+          { x: 0.14, y: -48 },
+          { x: 0.34, y: 30 },
+        ],
         /** Texture scale of a star, from the smallest to the largest. */
-        scale: [0.35, 0.7],
+        scale: [0.4, 0.75],
         /** Share of the base scale a star swells by at the top of its pulse. */
         pulse: 0.35,
         /** Alpha at the low and the high point of the pulse. */
@@ -217,11 +215,11 @@ export const RULE_ANIM = {
         periodMs: 1500,
         /** Phase step between the stars, radians. */
         phaseStep: 2.1,
-        /** How far from the row line a star sits, up and down. */
-        spreadPx: 70,
         tints: [0xffffff, 0xfff1a8],
       },
     },
+    /** Cloud colours: dense white, a pinkish top, a lilac belly; the outline is a dark tone of the lilac. */
+    colors: { white: 0xffffff, pink: 0xffd3e6, lilac: 0xcfc0f0, curl: 0xb8a6e6 },
     enterPx: 420,
     approachAlpha: 0.55,
     enterScale: 0.88,

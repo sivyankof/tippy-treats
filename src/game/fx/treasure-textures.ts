@@ -6,6 +6,7 @@ import { TREASURE } from '../../data/treasure-anim';
 import { bakeTexture } from '../ui/bake-texture';
 import { bakeBerry } from './berry-texture';
 import { shade } from '../../util/color';
+import { bakeCloudFigure, bakeNebulaFigure } from './cloud-figure';
 import { OUTLINE_SHARE, drawGlossMark, glossFromShares } from './plain-style';
 
 /** Keys of the pictures of coins, berries and the zone rules. */
@@ -16,9 +17,9 @@ export const TREASURE_TEXTURES = {
   berry: 'tr_berry',
   /** The same strawberry with the small face: reward windows, the Continue flight, the shop. */
   berryFace: 'tr_berry_face',
-  /** One puff of a cloud bank; not meant for tinting. */
+  /** The cloud of the clouds zone: one whole figure; not meant for tinting. */
   cloud: 'tr_cloud',
-  /** One puff of the space nebula bank (pink and blue, with star dots); not meant for tinting. */
+  /** The nebula of Space: one whole pink and blue figure; not meant for tinting. */
   nebula: 'tr_nebula',
   /** A speed streak: solid at the right end, gone at the left; white, for tinting. */
   streak: 'tr_streak',
@@ -66,88 +67,6 @@ function bakeCoin(scene: Phaser.Scene): void {
   });
 }
 
-/** Fills the puff shape in `color` at `alpha`, grown by `grow` px and moved down by `dropY`. */
-type PuffFill = (color: number, alpha: number, grow: number, dropY: number) => void;
-
-/** What a puff painter gets: the fill, the puff size and the margin around it. */
-interface PuffCanvas {
-  g: Phaser.GameObjects.Graphics;
-  fill: PuffFill;
-  width: number;
-  height: number;
-  margin: number;
-}
-
-/**
- * One puff of a bank: a few overlapping blobs on a flat base, centred in a texture with a margin
- * for the soft edge. `paint` layers the colours (the cloud and the nebula paint it differently).
- */
-function bakePuff(scene: Phaser.Scene, key: string, paint: (canvas: PuffCanvas) => void): void {
-  const { width, height } = RULE_ANIM.cloud.puff;
-  const { margin } = RULE_ANIM.cloud.halo;
-  const blobs = [
-    { x: 0.34, y: 0.5, r: 0.24 },
-    { x: 0.53, y: 0.45, r: 0.29 },
-    { x: 0.7, y: 0.5, r: 0.23 },
-    { x: 0.23, y: 0.54, r: 0.18 },
-  ] as const;
-  bakeTexture(scene, key, width + margin * 2, height + margin * 2, (g) => {
-    const fill: PuffFill = (color, alpha, grow, dropY) => {
-      g.fillStyle(color, alpha);
-      for (const b of blobs) {
-        g.fillCircle(margin + b.x * width, margin + b.y * height + dropY, b.r * width + grow);
-      }
-      g.fillRoundedRect(
-        margin + 0.2 * width - grow,
-        margin + 0.5 * height - grow + dropY,
-        0.62 * width + grow * 2,
-        0.3 * height + grow * 2,
-        0.14 * height + grow,
-      );
-    };
-    paint({ g, fill, width, height, margin });
-  });
-}
-
-/** A cloud puff: a pale edge, a shaded belly and a soft halo of fainter rings around it. */
-function bakeCloud(scene: Phaser.Scene): void {
-  const c = RULE_ANIM.colors;
-  const { step, alphas } = RULE_ANIM.cloud.halo;
-  const { edge } = RULE_ANIM.cloud;
-  bakePuff(scene, TREASURE_TEXTURES.cloud, ({ fill, height }) => {
-    // Outermost ring first: each ring is fainter and wider, so the edge fades out softly.
-    for (let i = alphas.length - 1; i >= 0; i--) {
-      fill(c.cloud, alphas[i] ?? 0, edge + step * (i + 1), 0);
-    }
-    fill(c.cloudEdge, 1, edge, 0);
-    fill(c.cloudShade, 1, 0, 0);
-    fill(c.cloud, 1, 0, -height * RULE_ANIM.cloud.lift);
-  });
-}
-
-/**
- * The nebula puff: pink over blue, each colour a feathered shape (a stack of faint, shrinking
- * copies) instead of a hard-edged one, so overlapping puffs melt into one soft mass without rings
- * or a pale edge; a few star dots are baked in.
- */
-function bakeNebula(scene: Phaser.Scene): void {
-  const { colors, dots, lift, feather, bellyFadePx } = RULE_ANIM.cloud.nebula;
-  bakePuff(scene, TREASURE_TEXTURES.nebula, ({ g, fill, width, height, margin }) => {
-    // Each copy is smaller than the last; `riseFor` also lifts it, so the lowest copies are the
-    // faintest: the pink top is only feathered, the blue belly also fades out downwards.
-    const layer = (color: number, dropY: number, riseFor: (share: number) => number): void => {
-      for (let k = 0; k < feather.rings; k++) {
-        const share = k / (feather.rings - 1);
-        fill(color, feather.alpha, feather.px * (1 - 2 * share), dropY - riseFor(share));
-      }
-    };
-    layer(colors.blue, 0, (share) => bellyFadePx * share);
-    layer(colors.pink, -height * lift, () => 0);
-    g.fillStyle(colors.dot, 1);
-    for (const d of dots) g.fillCircle(margin + d.x * width, margin + d.y * height, d.r * width);
-  });
-}
-
 function bakeStreak(scene: Phaser.Scene): void {
   const { width, height } = RULE_ANIM.streaks;
   bakeTexture(scene, TREASURE_TEXTURES.streak, width, height, (g) => {
@@ -184,8 +103,8 @@ export function createTreasureTextures(scene: Phaser.Scene): void {
   bakeCoin(scene);
   bakeBerry(scene, TREASURE_TEXTURES.berry, false);
   bakeBerry(scene, TREASURE_TEXTURES.berryFace, true);
-  bakeCloud(scene);
-  bakeNebula(scene);
+  bakeCloudFigure(scene, TREASURE_TEXTURES.cloud);
+  bakeNebulaFigure(scene, TREASURE_TEXTURES.nebula);
   bakeStreak(scene);
   bakeOutline(scene);
 }
