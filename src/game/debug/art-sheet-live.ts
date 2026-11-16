@@ -18,7 +18,7 @@ export interface LivePicture {
 export const LIVE_PICTURES: readonly LivePicture[] = [
   { name: 'no_ads_icon', create: createNoAdsIcon },
   {
-    name: 'about_icon',
+    name: 'about_bubble_icon',
     create: (scene, size) => {
       const { size: buttonSize } = MENU.detail.about;
       const button = createIconButton(

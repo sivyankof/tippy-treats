@@ -197,10 +197,10 @@
   "mastery": {
     "stat": {
       "honey": {
-        "value": "Допуск: {from} → {to} px"
+        "value": "Допуск: {from} → {to} пикс."
       },
       "puff": {
-        "value": "Расширение: {from} → {to} px"
+        "value": "Расширение: {from} → {to} пикс."
       },
       "jelly": {
         "value": "Гашение качки: {from} → {to}",
@@ -219,7 +219,7 @@
         "value": "Очки: ×{from} → ×{to}"
       },
       "crumb": {
-        "value": "Пикселей на монету: {from} → {to} px"
+        "value": "Пикселей на монету: {from} → {to} пикс."
       },
       "ghost": {
         "value": "Слоёв с подсказкой: {from} → {to}"

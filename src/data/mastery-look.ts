@@ -262,7 +262,7 @@ export const MASTERY_FRAME = {
   outline: MENU.style.looks.card.outline,
   band: MENU.style.looks.card.rimWidth,
   /** Room around the card the picture keeps for the outer rim and the crown that stick out. */
-  pad: 30,
+  pad: 52,
   gold: '#ffc93c',
   goldLight: '#fff0a0',
   goldDark: '#c98a12',
@@ -270,7 +270,9 @@ export const MASTERY_FRAME = {
   outerRim: { gap: 4, width: 7, outline: 3 },
   /** The crown-star on the top centre: radius, notch depth (share of the radius), points, how far its centre sits above the card edge, outline width. */
   /** The crown of any plate other than the collection card (the creature window) moves to the top-left corner, this far from the left edge: the name ribbon covers the top centre and the about button the top right. */
-  windowCrownInset: 44,
+  windowCrownInset: 62,
+  /** Radius of that crown: the window plate is shown larger than a card, so the crown is bigger to look as big. */
+  windowCrownRadius: 44,
   crown: { r: 28, notch: 0.45, points: 5, lift: 6, outline: 4, white: '#ffffff' },
   /** Fine highlight along the top of the band: height, inset from corners. */
   shine: { height: 3, inset: 54, alpha: 0.8 },

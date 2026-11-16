@@ -77,23 +77,24 @@ export function bakeMasteryFrame(scene: Phaser.Scene, body: FrameBody = COLLECTI
     // Crown-star over both rims: top centre on the card, top-left corner on other plates.
     const onCard = body.width === COLLECTION_BODY.width && body.height === COLLECTION_BODY.height;
     const cx = onCard ? x + f.width / 2 : x + f.windowCrownInset;
-    const cy = y - f.crown.lift;
+    const r = onCard ? f.crown.r : f.windowCrownRadius;
+    const cy = y - f.crown.lift * (r / f.crown.r);
     fillOutlinedPolygon(
       g,
-      starPoints(cx, cy, f.crown.r, f.crown.notch, f.crown.points),
+      starPoints(cx, cy, r, f.crown.notch, f.crown.points),
       gold,
       dark,
       f.crown.outline,
     );
     fillOutlinedPolygon(
       g,
-      starPoints(cx, cy, f.crown.r * CROWN_LIGHT_SHARE, f.crown.notch, f.crown.points),
+      starPoints(cx, cy, r * CROWN_LIGHT_SHARE, f.crown.notch, f.crown.points),
       light,
       light,
       0,
     );
     g.fillStyle(parseHex(f.crown.white), 1);
-    g.fillCircle(cx, cy, f.crown.r * GLINT_RADIUS_SHARE);
+    g.fillCircle(cx, cy, r * GLINT_RADIUS_SHARE);
   });
   return key;
 }
