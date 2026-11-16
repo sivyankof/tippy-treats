@@ -6,7 +6,7 @@ import { SPACE_ZONE_INDEX, ZONE_RULES } from '../../data/zones';
 import { clamp01 } from '../../util/math';
 import { effectsMode } from '../effects-mode';
 import type { FlyingLayerView } from '../objects/flying-layer-view';
-import { cloudEtaMs, CloudCover, type CloudInput } from './cloud-cover';
+import { cloudEtaMs, CloudCover, layerHidden, type CloudInput } from './cloud-cover';
 import { flyingSpeed } from '../../core/flight';
 import { hopHeight, type Point } from './coin-flight-math';
 import { FLYING_FX_DEPTH } from './flying-fx-depth';
@@ -147,8 +147,8 @@ export class RuleFx {
     input.nebula = layer !== null && layer.zoneIndex === SPACE_ZONE_INDEX;
     this.cloud.update(dtMs, timeMs, input);
     this.flying.emphasizeShadow(this.cloud.density, timeMs, dtMs);
-    // A see-through cloud (ghost master) shows the layer, so the layer does not count as hidden.
-    return !ghostMaster && (v.covered || this.cloud.amount > 0);
+    // A see-through cloud (ghost master) or the nebula shows the layer, so it does not count as hidden.
+    return layerHidden(ghostMaster, this.cloud.nebulaShown, v.covered, this.cloud.amount);
   }
 
   /** A fresh layer starts: a rush one gathers itself with a scrunched face. */

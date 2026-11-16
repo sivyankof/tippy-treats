@@ -26,8 +26,6 @@ export const TREASURE_TEXTURES = {
   outline: 'tr_outline',
 } as const;
 
-/** How far the lit top of a cloud puff is lifted off its shaded belly, as a share of the puff height. */
-const CLOUD_LIFT = 0.04;
 const colors = TREASURE.colors;
 const coinLook = TREASURE.textures;
 const OUTLINE_GLOW = RULE_ANIM.outline.glow;
@@ -123,7 +121,7 @@ function bakeCloud(scene: Phaser.Scene): void {
     }
     fill(c.cloudEdge, 1, edge, 0);
     fill(c.cloudShade, 1, 0, 0);
-    fill(c.cloud, 1, 0, -height * CLOUD_LIFT);
+    fill(c.cloud, 1, 0, -height * RULE_ANIM.cloud.lift);
   });
 }
 

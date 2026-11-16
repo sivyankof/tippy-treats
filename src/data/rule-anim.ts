@@ -128,6 +128,8 @@ export const RULE_ANIM = {
   cloud: {
     /** Baked puff size, without the soft halo margin. */
     puff: { width: 320, height: 260 },
+    /** How far the lit top of a puff is lifted off its shaded belly, as a share of the puff height. */
+    lift: 0.04,
     /** Width of the pale edge baked around a puff. */
     edge: 6,
     /** Soft halo around a puff: rings this far apart, each fainter, inside a margin of the texture. */
