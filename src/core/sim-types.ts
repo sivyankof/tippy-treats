@@ -160,7 +160,7 @@ export type CoinSource =
   | 'crumb'
   | 'golden'
   | 'height'
-  /** Master effects of level-5 creatures (docs/03-creatures.md, "РњР°СЃС‚РµСЂСЃС‚РІРѕ"). */
+  /** Master effects of level-5 creatures (docs/03-creatures.md, "Мастерство"). */
   | 'mastery';
 
 /** Where events go: an event list, or anything else that takes them one by one. */

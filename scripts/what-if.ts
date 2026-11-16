@@ -7,14 +7,15 @@ import { MASTERY } from '../src/data/mastery';
  * The values are written over the data in memory before any run, so every script plays the real
  * sim with them; nothing is saved. Items are separated by `;`:
  *
- *   honey.4=44                 levelled ability value at a 1-based level (see `LEVELLED`)
+ *   frosty.slowPercent.5=33    any levelled ability value: <creature>.<field>.<1-based level>
+ *   honey.4=44                 short form for the main levelled value (see `LEVELLED`)
  *   mastery.frosty.toleranceAdd=12
  *                              a number of `MASTERY` (data/mastery.ts)
  *   difficulty.ghostCloudSdMult=1.1
  *                              a bot-model number of `DIFFICULTY` (data/balance.ts)
  */
 
-/** Creatures whose levelled value `--set=<id>.<level>=N` can replace, and the field that holds it. */
+/** Creatures whose main levelled value the short `--set=<id>.<level>=N` replaces, and its field. */
 const LEVELLED = { honey: 'tolerance', puff: 'widen', ghost: 'layers' } as const;
 
 /** Writable view of a nested data object for the what-if values. */
@@ -33,10 +34,17 @@ function setNumber(root: Tree, path: string[], value: number, item: string): voi
   node[leaf] = value;
 }
 
-function setLevelled(id: string, level: string, value: number, item: string): void {
-  const field = LEVELLED[id as keyof typeof LEVELLED];
-  const ability = CREATURES[id as CreatureId]?.ability as unknown as Record<string, number[]>;
-  const values = field ? ability[field] : undefined;
+/** Writes a levelled ability value (a `LevelValues` field of the creature's ability). */
+function setLevelled(
+  id: string,
+  field: string | undefined,
+  level: string,
+  value: number,
+  item: string,
+): void {
+  const ability = CREATURES[id as CreatureId]?.ability as Record<string, unknown> | undefined;
+  const found = field === undefined ? undefined : ability?.[field];
+  const values = Array.isArray(found) ? (found as number[]) : undefined;
   const index = Number(level) - 1;
   if (!values || !Number.isInteger(index) || index < 0 || index >= values.length) {
     throw new Error(`Invalid --set item: ${item}`);
@@ -54,7 +62,9 @@ export function applySets(spec: string): string[] {
     const [head = '', ...rest] = target.split('.');
     if (head === 'mastery') setNumber(MASTERY as unknown as Tree, rest, value, item);
     else if (head === 'difficulty') setNumber(DIFFICULTY as unknown as Tree, rest, value, item);
-    else if (rest.length === 1) setLevelled(head, rest[0] ?? '', value, item);
+    else if (rest.length === 1) {
+      setLevelled(head, LEVELLED[head as keyof typeof LEVELLED], rest[0] ?? '', value, item);
+    } else if (rest.length === 2) setLevelled(head, rest[0], rest[1] ?? '', value, item);
     else throw new Error(`Invalid --set item: ${item}`);
   }
   return items;

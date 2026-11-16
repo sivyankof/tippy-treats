@@ -6,6 +6,7 @@ import {
   type CreatureId,
 } from '../data/creatures';
 import { MASTERY, type PerkId } from '../data/mastery';
+import { PERCENT } from '../util/math';
 import { abilityChanges } from './ability-values';
 
 /**
@@ -99,8 +100,6 @@ export interface MasterInfo {
   shortKey: string;
   values: Record<string, number>;
 }
-
-const PERCENT = 100;
 
 /** The numbers of the master phrases, read from `MASTERY` so the text follows the balance. */
 function masterValues(id: CreatureId): Record<string, number> {

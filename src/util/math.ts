@@ -15,6 +15,9 @@ export const GOLDEN = 0.618034;
 /** Multiply degrees by this to get radians. */
 export const DEG_TO_RAD = Math.PI / 180;
 
+/** Hundred: converts percent values to shares and back. */
+export const PERCENT = 100;
+
 /** Milliseconds in one second. */
 export const MS_PER_SECOND = 1000;
 
