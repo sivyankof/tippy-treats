@@ -9,6 +9,7 @@
     "preview": "vite preview",
     "test": "vitest run",
     "coverage": "vitest run --coverage",
+    "soak:auto": "node scripts/soak-auto.cjs",
     "sim": "tsx scripts/sim.ts",
     "sim:strong": "tsx scripts/strong-fit.ts",
     "sim:coins": "tsx scripts/coin-sources.ts",

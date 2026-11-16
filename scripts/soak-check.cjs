@@ -5,6 +5,7 @@
  *
  *   PLAYWRIGHT_PATH=<path to the playwright package> node scripts/soak-check.cjs \
  *     --url http://localhost:5173/ --minutes 10 [--rich]
+ *   ... --url <dev> --smoke     one fast lap through every screen and run kind (tippySoak.smoke())
  *
  * Without PLAYWRIGHT_PATH it tries `require('playwright')`. Memory sampling with a forced garbage
  * collection is a separate, longer harness kept outside the repository (docs/08, section 9).
@@ -23,6 +24,25 @@ function arg(name, fallback) {
   if (i < 0) return fallback;
   const next = process.argv[i + 1];
   return next === undefined || next.startsWith('--') ? true : next;
+}
+
+/** Prints the smoke result and returns the exit code: 0 only with every step done, equal counts and no messages. */
+function smokeVerdict(report, problems) {
+  const done = report.steps.filter((step) => step.ok).length;
+  const { before: b, after: a } = report;
+  const equal = b.objects === a.objects && b.listeners === a.listeners && b.tweens === a.tweens;
+  const total = report.steps.length;
+  const ok = report.ok && done === total && total > 0 && equal && problems.length === 0;
+  if (!report.ok) console.log(`  report: ${JSON.stringify(report)}`);
+  for (const step of report.steps) if (!step.ok) console.log(`  unfinished step: ${step.name}`);
+  for (const line of problems.slice(0, 20)) console.log(`  ${line}`);
+  const pair = (name, x, y) => `${name} ${x}${x === y ? '=' : '!='}${y}`;
+  console.log(
+    `smoke: ${ok ? 'ok' : 'FAIL'}, steps ${done}/${total}, ${problems.length} messages, ` +
+      `${pair('objects', b.objects, a.objects)}, ${pair('listeners', b.listeners, a.listeners)}, ` +
+      `${pair('tweens', b.tweens, a.tweens)}, ${report.seconds} s`,
+  );
+  return ok ? 0 : 1;
 }
 
 async function main() {
@@ -45,6 +65,11 @@ async function main() {
   page.on('pageerror', (error) => problems.push(`pageerror: ${error.message}`));
   await page.goto(`${url}${url.includes('?') ? '&' : '?'}bot=120`);
   await page.waitForFunction(() => window.tippySoak !== undefined, null, { timeout: 60000 });
+  if (arg('smoke', false) === true) {
+    const report = await page.evaluate(() => window.tippySoak.smoke());
+    await browser.close();
+    process.exit(smokeVerdict(report, problems));
+  }
   await page.evaluate((withRich) => window.tippySoak.start(withRich), rich);
   const end = Date.now() + minutes * 60000;
   while (Date.now() < end) await page.waitForTimeout(Math.min(30000, end - Date.now()));

@@ -41,4 +41,18 @@ export const SOAK = {
   textureDigitMark: '#',
   /** How many texture groups a sample lists (the biggest first). */
   textureGroupLimit: 25,
+  /** The smoke lap (`tippySoak.smoke()`): one fixed pass through every screen and run kind. */
+  smoke: {
+    /** Game-time multiplier of the runs in the lap (headless only; 1 outside the lap). */
+    speed: 4,
+    /** Shorter looks at the menu screens than in the soak. */
+    screenDwellMs: 400,
+    resultsDwellMs: 500,
+    abandonAfterMs: 1_500,
+    /** Checkpoint the checkpoint run starts from. */
+    checkpointIndex: 0,
+    /** Counts are read until two reads in a row agree: at most this many reads, this far apart. */
+    settleReads: 10,
+    settleMs: 600,
+  },
 } as const;
