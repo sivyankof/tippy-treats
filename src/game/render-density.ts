@@ -1,5 +1,6 @@
 import * as Phaser from 'phaser';
 import { cappedBackingSize } from '../util/density-scale';
+import { webglRendererOf, type WebGLRenderer } from './webgl-renderer';
 
 /** Lets the cap change while the game runs (the effects level moves). */
 export interface DensityCap {
@@ -16,10 +17,33 @@ type Box = [number, number, number, number];
  * sets the viewport and the scissor box of the canvas in logical pixels, so the two calls are
  * scaled on the WebGL context while the canvas framebuffer is bound; framebuffers of textures and
  * filters are left alone. Returns null when the game does not draw with WebGL, else a handle that changes the cap.
+ * The patches, the first fit and the RESIZE listener go in once the renderer has booted (on READY, when the
+ * game has not got there yet): the renderer reads the drawing buffer size while it boots and registers its own
+ * RESIZE listener, and ours must run after it. Until then `setCap` only stores the cap.
  */
 export function capRenderDensity(game: Phaser.Game, initialCap: number): DensityCap | null {
-  const renderer = game.renderer;
-  if (!(renderer instanceof Phaser.Renderer.WebGL.WebGLRenderer)) return null;
+  // The render nodes appear with the renderer's own boot, when the textures are ready.
+  const booted = (): boolean => !!webglRendererOf(game)?.renderNodes;
+  if (game.isBooted && !webglRendererOf(game)) return null;
+  let cap = initialCap;
+  let fit: (() => void) | null = null;
+  const install = (): void => {
+    const renderer = webglRendererOf(game);
+    if (renderer) fit = installCap(game, renderer, () => cap);
+  };
+  if (booted()) install();
+  else game.events.once(Phaser.Core.Events.READY, install);
+  return {
+    setCap(next: number): void {
+      if (next === cap) return;
+      cap = next;
+      fit?.();
+    },
+  };
+}
+
+/** Patches the context and the canvas; returns the function that fits the canvas to the current cap. */
+function installCap(game: Phaser.Game, renderer: WebGLRenderer, getCap: () => number): () => void {
   const gl = renderer.gl;
   const canvas = game.canvas;
   const viewport = Array.from(gl.getParameter(gl.VIEWPORT) as Int32Array) as Box;
@@ -28,7 +52,6 @@ export function capRenderDensity(game: Phaser.Game, initialCap: number): Density
   const rawScissor = gl.scissor.bind(gl);
   const rawBind = gl.bindFramebuffer.bind(gl);
   let canvasBound = gl.getParameter(gl.FRAMEBUFFER_BINDING) === null;
-  let cap = initialCap;
   let scaleX = 1;
   let scaleY = 1;
 
@@ -67,7 +90,7 @@ export function capRenderDensity(game: Phaser.Game, initialCap: number): Density
   const fit = (): void => {
     const logical = { width: game.scale.baseSize.width, height: game.scale.baseSize.height };
     const css = canvas.getBoundingClientRect().width || game.scale.displaySize.width;
-    const backing = cappedBackingSize(logical, css, window.devicePixelRatio, cap);
+    const backing = cappedBackingSize(logical, css, window.devicePixelRatio, getCap());
     // Setting the size clears the canvas, so only a real change does it.
     if (canvas.width !== backing.width) canvas.width = backing.width;
     if (canvas.height !== backing.height) canvas.height = backing.height;
@@ -78,11 +101,5 @@ export function capRenderDensity(game: Phaser.Game, initialCap: number): Density
   fit();
   // The scale manager puts the canvas back to the logical size on every resize of the game.
   game.scale.on(Phaser.Scale.Events.RESIZE, fit);
-  return {
-    setCap(next: number): void {
-      if (next === cap) return;
-      cap = next;
-      fit();
-    },
-  };
+  return fit;
 }

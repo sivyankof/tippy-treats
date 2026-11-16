@@ -1,4 +1,5 @@
 import type * as Phaser from 'phaser';
+import { ANIM } from '../data/anim';
 import { gameState } from '../state';
 import { resultsBakeSteps } from './fx/results-prep';
 import type { BakeStep } from './ui/bake-texture';
@@ -59,4 +60,15 @@ export const RESULTS_SETTLED = 'results_settled';
 /** Tells the run scene that the results screen covers it now. */
 export function settleResults(scene: Phaser.Scene): void {
   scene.scene.get(SCENES.game).events.emit(RESULTS_SETTLED);
+}
+
+/** Fades the dim veil of the results in; when it is full the run scene is told the screen covers it. */
+export function fadeInResultsDim(scene: Phaser.Scene, dim: Phaser.GameObjects.Rectangle): void {
+  dim.setAlpha(0);
+  scene.tweens.add({
+    targets: dim,
+    alpha: 1,
+    duration: ANIM.results.fadeMs,
+    onComplete: () => settleResults(scene),
+  });
 }

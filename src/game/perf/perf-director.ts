@@ -4,6 +4,7 @@ import { PERF, type PerfSegmentDef } from '../../data/perf';
 import { setFrameWorkListener } from '../frame-work';
 import { capRenderDensity } from '../render-density';
 import { densityCapForLevel } from '../../util/density-scale';
+import { webglRendererOf, type WebGLRenderer } from '../webgl-renderer';
 import { CLASSIC_RUN } from '../run-request';
 import type { GameScene } from '../scenes/game-scene';
 import { launchRun, resultsShown, SCENES } from '../scene-keys';
@@ -93,9 +94,8 @@ class PerfDirector {
     }
   }
 
-  private get webgl(): Phaser.Renderer.WebGL.WebGLRenderer | null {
-    const renderer = this.game.renderer;
-    return renderer instanceof Phaser.Renderer.WebGL.WebGLRenderer ? renderer : null;
+  private get webgl(): WebGLRenderer | null {
+    return webglRendererOf(this.game);
   }
 
   /** The line above the table; read at the end, after the last resize. */

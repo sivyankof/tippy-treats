@@ -1,6 +1,7 @@
 import * as Phaser from 'phaser';
 import { SHARED_ATLAS } from '../../data/shared-atlas';
 import { ShelfPacker, type PackedBox } from '../../util/shelf-packer';
+import { asWebGLRenderer } from '../webgl-renderer';
 import { setSharedPictureStore } from './bake-texture';
 
 /**
@@ -98,13 +99,14 @@ function upload(
   ctx.drawImage(cell, box.x, box.y);
   const source = page.source;
   const gl = source.glTexture;
-  if (!(renderer instanceof Phaser.Renderer.WebGL.WebGLRenderer) || !gl) return;
-  renderer.glTextureUnits.bind(gl, 0);
-  renderer.glWrapper.updateTexturing({
+  const webgl = asWebGLRenderer(renderer);
+  if (!webgl || !gl) return;
+  webgl.glTextureUnits.bind(gl, 0);
+  webgl.glWrapper.updateTexturing({
     texturing: { flipY: source.flipY, premultiplyAlpha: gl.pma },
   });
   const y = source.flipY ? page.canvas.height - box.y - cell.height : box.y;
-  const ctxGl = renderer.gl;
+  const ctxGl = webgl.gl;
   ctxGl.texSubImage2D(ctxGl.TEXTURE_2D, 0, box.x, y, gl.format, ctxGl.UNSIGNED_BYTE, cell);
 }
 

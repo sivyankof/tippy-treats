@@ -114,7 +114,7 @@ export interface PerfParams {
   only: PerfSegmentId[] | null;
   /** `still=tower|tongue|arc` (or a segment id): play that segment and freeze at a fixed moment, no measuring. */
   still: PerfSegmentId | null;
-  /** `dpr=1|1.5|2|3`: canvas pixels per CSS pixel at most; absent keeps the canvas at the logical size. */
+  /** `dpr=1|1.5|2|3`: canvas pixels per CSS pixel at most; absent leaves the cap to the effects level (`followEffectsLevelDensity`). */
   densityCap?: number;
   /** `units=1|2|4|8|16`: texture units per batch; absent keeps what Phaser picked. */
   textureUnits?: number;

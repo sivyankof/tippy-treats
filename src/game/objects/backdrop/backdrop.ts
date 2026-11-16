@@ -49,6 +49,8 @@ export class Backdrop {
   private scrollY = 0;
   /** The picture that stands in for the zones once they are frozen (the results screen). */
   private still: Phaser.GameObjects.Image | null = null;
+  /** The zones the still replaced, shown again when it goes. */
+  private frozen: ZoneScenery[] = [];
 
   /** `zoneIndex` is the zone shown at once (a debug start can begin deep in the tower). */
   constructor(
@@ -84,7 +86,8 @@ export class Backdrop {
     this.ctx.width = width;
     this.ctx.height = height;
     for (const scenery of this.sceneries.values()) scenery.resize(width, height);
-    this.still?.setDisplaySize(width, height);
+    // The still has the old size; the zones draw again and lay out for the new one.
+    this.unfreeze();
   }
 
   /** Call every frame with the camera scroll. */
@@ -113,7 +116,8 @@ export class Backdrop {
 
   /**
    * Replaces the zones by one still picture of what they show now. The results screen darkens the
-   * backdrop, so it pays no more for the layers that nobody can see move. Stays until the scene ends.
+   * backdrop, so it pays no more for the layers that nobody can see move. Stays until the scene ends
+   * or the screen is resized.
    */
   freeze(): void {
     if (this.still) return;
@@ -141,13 +145,25 @@ export class Backdrop {
       .setDisplaySize(width, height);
     markPerfPart(this.still, 'bg');
     for (const scenery of zones) scenery.root.setVisible(false);
+    this.frozen = zones;
     this.scene.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.release());
+  }
+
+  /** The still goes (the screen size changed, or the scene ends); the zones it replaced show again. */
+  private unfreeze(): void {
+    if (!this.still) return;
+    this.still.destroy();
+    this.still = null;
+    this.scene.textures.remove(BD_TEX.still);
+    for (const scenery of this.frozen) scenery.root.setVisible(true);
+    this.frozen = [];
   }
 
   /** The scene ends: its still picture is not kept. */
   private release(): void {
     this.still = null;
-    this.scene.textures.remove(BD_TEX.still);
+    this.frozen = [];
+    if (this.scene.textures.exists(BD_TEX.still)) this.scene.textures.remove(BD_TEX.still);
   }
 
   private ensure(index: number): void {
