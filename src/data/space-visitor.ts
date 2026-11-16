@@ -50,6 +50,8 @@ export const SPACE_VISITOR = {
    * the run gets no guest.
    */
   bandPadPx: 24,
+  /** Owner decision 2026-11-17: no guests on a short screen (logical height under this; 390x693 is 1919, 390x844 is 2337). */
+  minScreenH: 2100,
   /** A guest that does not fit above the flying row's clear stripe passes below it, behind the tower top, in a lane this deep. */
   belowDepthPx: 420,
   minFitScale: 0.55,

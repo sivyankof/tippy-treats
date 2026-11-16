@@ -96,8 +96,9 @@ function scaleIn(guest: SpaceVisitorId, band: { top: number; bottom: number }): 
   return scale >= SPACE_VISITOR.minFitScale ? scale : 0;
 }
 
-/** The lane a guest flies in on a screen `screenH` tall: above the flying row when it fits there, else below; null when neither. */
+/** The lane a guest flies in on a screen `screenH` tall: above the flying row when it fits there, else below; null when neither, and on a short screen. */
 export function visitorLane(guest: SpaceVisitorId, screenH: number): VisitorLane | null {
+  if (screenH < SPACE_VISITOR.minScreenH) return null;
   for (const lane of ['above', 'below'] as const) {
     if (scaleIn(guest, visitorBand(screenH, lane)) > 0) return lane;
   }

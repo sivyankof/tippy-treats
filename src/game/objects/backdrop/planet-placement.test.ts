@@ -1,9 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { HUD_LAYOUT } from '../../../data/hud-layout';
-import { LAP_EDGE_HEIGHT } from '../../../data/lap-edge';
 import { LOGICAL_SIZE } from '../../../data/screen';
 import { PLANET_LOOK, PLANET_PLACE } from '../../../data/space-planets';
-import { surfaceScreenY } from '../../camera-layout';
+import { flightClearBand } from '../../camera-layout';
 import { corridorHalf, planetSpot } from './planet-placement';
 
 const W = LOGICAL_SIZE.width;
@@ -31,7 +30,12 @@ describe('planetSpot', () => {
           const right = spot.x + size / 2;
           const top = spot.y - ROUND / 2;
           const bottom = spot.y + ROUND / 2;
-          const corridorTop = surfaceScreenY(h) - LAP_EDGE_HEIGHT;
+          const clear = flightClearBand(h);
+          const bob = PLANET_PLACE.drift.bob.px;
+          const rowGap = PLANET_PLACE.rowGap;
+          expect(bottom + bob <= clear.top - rowGap || top - bob >= clear.bottom + rowGap).toBe(
+            true,
+          );
           const clearOfLines =
             half === 0 || right <= W / 2 - half || left >= W / 2 + half || bottom <= corridorTop;
           expect(clearOfLines).toBe(true);

@@ -121,6 +121,10 @@ describe('visitorPose', () => {
     }
   });
 
+  it('shows no guest on the shortest screen (390x693)', () => {
+    for (const id of SPACE_VISITOR_IDS) expect(visitorScale(id, LOGICAL_SIZE.minHeight)).toBe(0);
+  });
+
   it('puts a guest below the flying row when it does not fit above', () => {
     expect(visitorLane('eclair', tall)).toBe('above');
     expect(visitorLane('saucer', tall)).toBe('below');
