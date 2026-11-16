@@ -33,10 +33,10 @@ export class FlyingFx {
     this.rules.handleEvents(events);
   }
 
-  /** Call after the flying view was synced for this frame. */
-  update(dtMs: number, timeMs: number, state: Readonly<TowerState>): void {
+  /** Call after the flying view was synced for this frame. `ghostMaster`: the clouds are see-through (meringue level 5). */
+  update(dtMs: number, timeMs: number, state: Readonly<TowerState>, ghostMaster: boolean): void {
     const pos = this.flying.position();
-    const hidden = this.rules.update(dtMs, timeMs, state, pos);
+    const hidden = this.rules.update(dtMs, timeMs, state, pos, ghostMaster);
     this.golden.update(dtMs, timeMs, state, pos, hidden);
     const touch = this.flying.takeWallTouch();
     if (touch && !hidden) {

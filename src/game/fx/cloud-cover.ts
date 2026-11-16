@@ -66,6 +66,8 @@ export interface CloudInput {
   y: number;
   /** The way the layer flies; the bank comes from behind and drifts that way. */
   dir: 1 | -1;
+  /** The densest the puffs are drawn (1 for normal clouds; the meringue master makes them see-through). */
+  maxAlpha: number;
 }
 
 /**
@@ -248,7 +250,7 @@ class CloudBank {
           this.motion.y + bob - pose.rise,
         )
         .setScale((minScale + (maxScale - minScale) * scatter(i)) * pose.scale * breathe)
-        .setAlpha(pose.alpha);
+        .setAlpha(Math.min(pose.alpha, input.maxAlpha));
     }
   }
 }
@@ -270,6 +272,7 @@ export class CloudCover {
     etaMs: Infinity,
     y: 0,
     dir: 1,
+    maxAlpha: 1,
   };
   /** What a free bank is told when it should start floating in the coming cloud. */
   private readonly coming: CloudInput = { ...this.passive };

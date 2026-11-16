@@ -17,6 +17,8 @@ import { startRainbowJokeNow } from '../objects/rainbow-idle';
 import type { LickKind, LickScene } from '../objects/lick-plan';
 import type { GuestSource } from '../objects/backdrop/guest-source';
 import { TowerGuest } from '../objects/tower-guest';
+import { MasterFeed } from '../ui/master-caption-state';
+import type { CreatureId } from '../../data/creatures';
 import { TowerView } from '../objects/tower-view';
 import { AbilityFx } from './abilities/ability-fx';
 import { CameraKick } from './camera-kick';
@@ -82,6 +84,14 @@ export class RunFx {
   };
   private readonly flyColumn = { left: 0, right: 0 };
   private readonly topperFx: TopperFx;
+  /** The master effects that acted, for the captions of the HUD. */
+  readonly masterFeed = new MasterFeed();
+  /** The latest frame's inputs, for the debug hook. */
+  private lastFrame: {
+    state: Readonly<TowerState>;
+    mods: Readonly<Modifiers>;
+    cam: CameraInfo;
+  } | null = null;
 
   private glowOn = false;
   private missPiece: LayerView | null = null;
@@ -147,6 +157,7 @@ export class RunFx {
         tippyLick?: (scene?: LickScene, kind?: LickKind) => boolean;
         tippyRainbowJoke?: () => void;
         tippyFly?: () => boolean;
+        tippyMaster?: (creature: CreatureId, coins?: number, score?: number) => boolean;
       };
       // window.tippyLick('big' | 'short', 'run' | 'fall'): a layer licks right away; true when one could.
       win.tippyLick = (scene, kind) => runHooks()?.lick(scene, kind) ?? false;
@@ -154,7 +165,24 @@ export class RunFx {
       win.tippyRainbowJoke = () => runHooks()?.rainbowJoke();
       // window.tippyFly(): the guest of the zone sits on the top layer right away; true when it could.
       win.tippyFly = () => runHooks()?.guest() ?? false;
+      // window.tippyMaster('lemon', 10): the master effect of that creature acts right away; true when it could.
+      win.tippyMaster = (creature, coins = 0, score = 0) =>
+        this.debugMaster(creature, coins, score);
     }
+  }
+
+  /** Debug: plays a `mastery` event of `creature` as if the sim had sent it. */
+  private debugMaster(creature: CreatureId, coins: number, score: number): boolean {
+    const frame = this.lastFrame;
+    if (!frame) return false;
+    this.handleEvents(
+      [{ type: 'mastery', creature, coins, score }],
+      frame.state,
+      null,
+      frame.mods,
+      frame.cam,
+    );
+    return true;
   }
 
   /** The backdrop creature the tower's guest flies out of (it is hidden there while the guest is out). */
@@ -216,6 +244,7 @@ export class RunFx {
     cam: CameraInfo,
   ): void {
     if (events.length === 0) return;
+    this.masterFeed.take(events);
     playCues(cuesForEvents(events, state, memo), services);
     const land = events.find((e): e is LandEvent => e.type === 'land');
     if (land) this.tower.noteCut(state.layers.length - 1, land.cutSide);
@@ -271,6 +300,12 @@ export class RunFx {
     mods: Readonly<Modifiers>,
     cam: CameraInfo,
   ): void {
+    if (import.meta.env.DEV) {
+      const frame = (this.lastFrame ??= { state, mods, cam });
+      frame.state = state;
+      frame.mods = mods;
+      frame.cam = cam;
+    }
     // Waits and the collapse run on real time, everything that moves on visual time.
     const realMs = dtMs;
     const visualMs = realMs * this.timeScale;
@@ -279,7 +314,7 @@ export class RunFx {
 
     this.tower.sync(state, cam.scrollY + cam.height, cam.scrollY);
     this.flyingView.sync(state, timeMs, visualMs);
-    this.flyingFx.update(visualMs, timeMs, state);
+    this.flyingFx.update(visualMs, timeMs, state, mods.guidesMaster);
     this.coinFx.update(visualMs, timeMs, state);
     this.pointFaces(state);
     this.tower.setScreenBand(cam.scrollY, cam.scrollY + cam.height);

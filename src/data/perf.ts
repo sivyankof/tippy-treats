@@ -1,4 +1,5 @@
 import type { CreatureId } from './creatures';
+import { MASTERY } from './mastery';
 import { GROWN_LOOK_LEVEL } from './mastery-look';
 
 /**
@@ -230,6 +231,8 @@ export const PERF = {
     team: ['honey', 'frosty', 'sprinkle'] as readonly CreatureId[],
     levelOn: GROWN_LOOK_LEVEL,
     levelOff: GROWN_LOOK_LEVEL - 1,
+    /** `&mastery=master`: the master level, where the master effects and their captions act. */
+    levelMaster: MASTERY.masterLevel,
   },
   /** `&dpr=`: the render densities (canvas pixels per CSS pixel) a comparison run may cap the canvas at. */
   densityCaps: [1, 1.5, 2, 3] as readonly number[],

@@ -61,7 +61,12 @@ export function currentSegment(): PerfSegmentDef | null {
 /** The team of a segment: its own, or with `&mastery=` the mastery team in a segment that has none. */
 function perfTeam(def: PerfSegmentDef, mastery: PerfParams['mastery']): Array<TeamSlot | null> {
   if (!mastery || def.team.some((id) => id !== null)) return toTeamSlots(def.team, def.level);
-  const level = mastery === 'on' ? PERF.mastery.levelOn : PERF.mastery.levelOff;
+  const level =
+    mastery === 'master'
+      ? PERF.mastery.levelMaster
+      : mastery === 'on'
+        ? PERF.mastery.levelOn
+        : PERF.mastery.levelOff;
   return toTeamSlots(PERF.mastery.team, level);
 }
 

@@ -20,6 +20,17 @@ const miss: SimEvent = { type: 'miss', shielded: false };
 const memo = { width: 200 };
 
 describe('cuesForEvents', () => {
+  it('rings the coin chime once and taps lightly for a master effect with its coins', () => {
+    const events: SimEvent[] = [
+      { type: 'mastery', creature: 'lemon', coins: 10, score: 0 },
+      { type: 'coin_collect', amount: 10, source: 'mastery' },
+    ];
+    expect(cuesForEvents(events, { combo: 0 }, memo)).toEqual({
+      sounds: [{ kind: 'coin' }],
+      haptics: ['light'],
+    });
+  });
+
   it('maps a normal landing to a drop and a light haptic', () => {
     expect(cuesForEvents([land()], { combo: 0 }, memo)).toEqual({
       sounds: [{ kind: 'drop' }],

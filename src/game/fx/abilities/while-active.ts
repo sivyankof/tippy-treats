@@ -49,6 +49,11 @@ export class WhileActiveFx {
     this.bubble = new ShieldBubble(scene, this.bursts);
   }
 
+  /** The lemon's vignette flares once (the master salute). */
+  flareVignette(): void {
+    this.vignette.flare();
+  }
+
   /** The shield caught a miss. */
   popShield(): void {
     this.bubble.pop(this.target());
@@ -107,6 +112,8 @@ export class WhileActiveFx {
       this.tower.topSpan(),
       this.tower.topY(),
       cam.scrollY + HUD_LAYOUT.bottomEdge,
+      running && mods.centreMark ? this.tower.topViewX() : null,
+      timeMs,
     );
     this.vignette.update(dtMs, timeMs, flags.lemon, cam.width, cam.height);
     this.bubble.update(dtMs, timeMs, state.shield > 0, running, this.target());

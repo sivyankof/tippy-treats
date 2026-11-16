@@ -69,6 +69,11 @@ export function cuesForEvents(
         // Several payouts of one step ring once.
         if (!cues.sounds.some((s) => s.kind === 'coin')) cues.sounds.push({ kind: 'coin' });
         break;
+      case 'mastery':
+        // A master effect acted: the golden chime of the coins (once with the payout), a light tap.
+        if (!cues.sounds.some((s) => s.kind === 'coin')) cues.sounds.push({ kind: 'coin' });
+        cues.haptics.push('light');
+        break;
       case 'golden':
         if (event.perfect) cues.sounds.push({ kind: 'berry' });
         break;

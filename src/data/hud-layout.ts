@@ -53,6 +53,8 @@ export const HUD_LAYOUT = {
   badgeCounterStroke: 8,
   /** The see-through wallet chip under that counter: its height and the room beside the digits. */
   badgeChip: { height: 58, padX: 12 },
+  /** Side of the gold star on the corner of the badge of a mastery tail (jelly, frosty). */
+  badgeTailDot: 36,
   /**
    * The tempo ease chip at the right end of the wobble plate: a see-through plate with the snail and the
    * layers left. `gap` is the space to the wobble plate, `margin` the closest it comes to the screen edge.

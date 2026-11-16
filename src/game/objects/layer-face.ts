@@ -61,6 +61,11 @@ export class LayerFace extends Phaser.GameObjects.Container {
   private driftX = 0;
   /** The two faces of a pair rise by this much (the top shell of the twins lifting). */
   private pairLift = 0;
+  /** The faces of a pair lean together: the time left and the whole time of the hug, and how far they lean. */
+  private hugMs = 0;
+  private hugTotalMs = 0;
+  private hugShare = 0;
+  private pairLean = 0;
   /** The lick played on this face, a glance at a neighbour's, an envious lick of the lips. */
   private readonly lick: FaceLick;
 
@@ -124,9 +129,10 @@ export class LayerFace extends Phaser.GameObjects.Container {
   private placeFaces(): void {
     const pair = this.recipe?.pair;
     if (pair) {
-      this.mainFace.setPosition(-pair.spread, -this.pairLift).setScale(pair.scale);
+      const spread = pair.spread * (1 - this.pairLean);
+      this.mainFace.setPosition(-spread, -this.pairLift).setScale(pair.scale);
       this.mainFace.setGaze(pair.gaze);
-      this.pairFace?.setPosition(pair.spread, -this.pairLift).setScale(pair.scale);
+      this.pairFace?.setPosition(spread, -this.pairLift).setScale(pair.scale);
       this.pairFace?.setGaze(-pair.gaze);
     } else {
       this.mainFace.setPosition(0, 0).setScale(1);
@@ -256,8 +262,26 @@ export class LayerFace extends Phaser.GameObjects.Container {
     return this;
   }
 
+  /** The two faces of a pair lean together by `share` of their distance and back, over `ms` (the twins' hug). */
+  hug(share: number, ms: number): this {
+    if (!this.recipe?.pair) return this;
+    this.hugShare = share;
+    this.hugTotalMs = ms;
+    this.hugMs = ms;
+    this.react('joy', ms);
+    return this;
+  }
+
+  private runHug(dtMs: number): void {
+    if (this.hugMs <= 0) return;
+    this.hugMs = Math.max(0, this.hugMs - dtMs);
+    this.pairLean = this.hugShare * Math.sin(Math.PI * (1 - this.hugMs / this.hugTotalMs));
+    this.placeFaces();
+  }
+
   /** Advances blinking and reactions, the pupils and the sweat drop. */
   tick(dtMs: number): void {
+    this.runHug(dtMs);
     this.timers.update(dtMs);
     this.refresh();
     // Last, so the pose of the lick lies over the expression of this frame.
@@ -278,6 +302,9 @@ export class LayerFace extends Phaser.GameObjects.Container {
     this.mouthHint = undefined;
     this.targetX = this.targetY = this.lookX = this.lookY = this.driftX = 0;
     this.setPairLift(0);
+    this.hugMs = 0;
+    this.pairLean = 0;
+    this.placeFaces();
     this.mainFace.resetSweat();
     this.pairFace?.resetSweat();
     this.expression = null;

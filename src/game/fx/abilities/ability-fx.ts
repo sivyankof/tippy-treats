@@ -16,6 +16,7 @@ import { CrumbFlight } from './crumb-flight';
 import { effectsMode } from '../../effects-mode';
 import { FX_TEXTURES } from '../fx-textures';
 import { HALF_LAYER, UP_DEG, type FxKit, type SignatureContext } from './kit';
+import { MasterFx } from './master-fx';
 import { RainbowArc } from './rainbow-arc';
 import { SIGNATURES } from './signatures';
 import { SpriteFx } from './sprite-fx';
@@ -34,6 +35,7 @@ export class AbilityFx {
   private readonly kit: FxKit;
   private readonly active: WhileActiveFx;
   private readonly crumbs: CrumbFlight;
+  private readonly master: MasterFx;
   /** Sounds of the rainbow, set by the run effects. */
   onRainbowPuff: (() => void) | null = null;
   private trailMs = 0;
@@ -55,6 +57,7 @@ export class AbilityFx {
     };
     this.active = new WhileActiveFx(scene, tower, this.flying, bursts);
     this.crumbs = new CrumbFlight(this.kit);
+    this.master = new MasterFx(this.kit, tower, landing, () => this.active.flareVignette());
     this.kit.arc.onDeflate = () => this.onRainbowPuff?.();
   }
 
@@ -95,6 +98,12 @@ export class AbilityFx {
           break;
         case 'ability':
           this.onAbility(event, state, cam);
+          break;
+        case 'mastery':
+          this.master.onMastery(event, state.layers.length - 1);
+          break;
+        case 'perk':
+          this.master.onPerk(event, state.layers.length - 1);
           break;
         case 'miss':
           if (event.shielded) this.active.popShield();

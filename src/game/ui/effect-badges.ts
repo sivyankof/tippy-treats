@@ -7,12 +7,14 @@ import { PALETTE } from '../../data/palette';
 import { formatNumber } from '../../i18n';
 import { frameLerp } from '../../util/math';
 import { easeFn } from '../fx/ease';
+import { FX_TEXTURES } from '../fx/fx-textures';
 import { createCreatureIcon, setCreatureIcon } from './creature-icons';
 import { idlePose, type IdlePose } from './idle-motion';
 import {
   badgeCreature,
   BadgeTracker,
   badgeVisual,
+  type BadgeKey,
   type BadgeState,
   type BadgeVisual,
 } from './effect-badge-state';
@@ -46,6 +48,8 @@ class BadgeSlot {
   private readonly icon: Phaser.GameObjects.Image;
   private readonly chip: HudPlate;
   private readonly counter: Phaser.GameObjects.Text;
+  /** The gold dot of a mastery tail, on the top right corner of the icon. */
+  private readonly dot: Phaser.GameObjects.Image;
   private key: BadgeState['key'] | null = null;
   private shownCount = -1;
   private readonly pose: IdlePose = { scaleX: 1, scaleY: 1, angle: 0, bob: 0 };
@@ -63,8 +67,14 @@ class BadgeSlot {
       HUD_LAYOUT.badgeCounterStroke,
     );
     this.chip = new HudPlate(scene, MENU.style.wallet.fill);
+    const dotSize = HUD_LAYOUT.badgeTailDot;
+    this.dot = scene.add
+      .image(badgeSize / 2 - dotSize / 3, -badgeSize / 2 + dotSize / 3, FX_TEXTURES.star)
+      .setTint(PALETTE.gold)
+      .setDisplaySize(dotSize, dotSize)
+      .setVisible(false);
     this.root = scene.add
-      .container(0, badgeRowY, [this.icon, this.chip, this.counter])
+      .container(0, badgeRowY, [this.icon, this.chip, this.counter, this.dot])
       .setVisible(false);
   }
 
@@ -81,6 +91,7 @@ class BadgeSlot {
       const width = Math.max(height, this.counter.width + padX * 2);
       this.chip.place(COUNTER_OFFSET_X, COUNTER_OFFSET_Y, width, height);
     }
+    this.dot.setVisible(badge.tail);
     const pop =
       badge.counterAgeMs < badges.counterPopMs
         ? 1 +
@@ -115,6 +126,16 @@ export class EffectBadges {
   private readonly slots: BadgeSlot[] = [];
   private readonly visual: BadgeVisual = { scale: 1, alpha: 1 };
   constructor(private readonly scene: Phaser.Scene) {}
+
+  /** Place of the badge of `key` in the row, -1 when it has none. */
+  indexOf(key: BadgeKey): number {
+    return this.tracker.items.findIndex((badge) => badge.key === key);
+  }
+
+  /** Badges in the row (those shrinking away included). */
+  get count(): number {
+    return this.tracker.items.length;
+  }
 
   /** Left edge of the row; badges follow each other to the right. */
   private targetX(index: number): number {

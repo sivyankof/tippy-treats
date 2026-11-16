@@ -8,6 +8,7 @@ import type { RunMode, RunResult } from '../../core/run-result';
 import type { TeamSlot } from '../../core/sim-types';
 import { TowerSim, type TowerState } from '../../core/tower-sim';
 import { RunFx } from '../fx/run-fx';
+import type { MasterFeed } from '../ui/master-caption-state';
 import { easeFn } from '../fx/ease';
 import { RunIntro } from '../fx/run-intro';
 import { effectsMode } from '../effects-mode';
@@ -266,6 +267,11 @@ export class GameScene extends Phaser.Scene {
   /** A look at the run for the `?perf=1` director: the intro is over, and the sim state. */
   perfProbe(): { introActive: boolean; state: Readonly<TowerState> } | null {
     return this.sim ? { introActive: this.camera.introActive, state: this.sim.state } : null;
+  }
+
+  /** The master effects that acted, for the captions of the HUD. */
+  get masterFeed(): MasterFeed {
+    return this.fx.masterFeed;
   }
 
   /** The state of the run for the HUD. The object is reused: read it at once, do not keep it. */

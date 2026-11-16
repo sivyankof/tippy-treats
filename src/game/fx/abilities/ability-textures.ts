@@ -2,6 +2,7 @@ import type * as Phaser from 'phaser';
 import { ABILITY_ANIM } from '../../../data/ability-anim';
 import { ANIM } from '../../../data/anim';
 import { BALANCE } from '../../../data/balance';
+import { MASTER_ANIM } from '../../../data/master-anim';
 import { PALETTE } from '../../../data/palette';
 import { DEG_TO_RAD } from '../../../util/math';
 import { bakeTexture } from '../../ui/bake-texture';
@@ -13,6 +14,8 @@ export const ABILITY_TEXTURES = {
   strand: 'fx_strand',
   /** The body of a layer without its outline: a tinted overlay on a layer. */
   coat: 'fx_coat',
+  /** A diamond: the meringue's mark of the centre of the perfect spot (white, meant to be tinted). */
+  diamond: 'fx_diamond',
   /** A vertical line of dashes. */
   dash: 'fx_dash',
   /** A frame of soft light along the edges of a picture. */
@@ -102,6 +105,20 @@ export function createAbilityTextures(scene: Phaser.Scene): void {
       bubble.size * bubble.sparkY,
       bubble.size * bubble.sparkR,
     );
+  });
+
+  // Baked last, so the pictures baked before it keep their places on the shared atlas.
+  const mark = MASTER_ANIM.centreMark.size;
+  bakeTexture(scene, ABILITY_TEXTURES.diamond, mark, mark, (g) => {
+    const mid = mark / 2;
+    g.fillStyle(white, 1);
+    g.beginPath();
+    g.moveTo(mid, 0);
+    g.lineTo(mark, mid);
+    g.lineTo(mid, mark);
+    g.lineTo(0, mid);
+    g.closePath();
+    g.fillPath();
   });
 }
 

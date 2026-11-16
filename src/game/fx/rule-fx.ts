@@ -54,6 +54,7 @@ export class RuleFx {
     etaMs: Infinity,
     y: 0,
     dir: 1,
+    maxAlpha: 1,
   };
   private readonly windup = new RushWindup();
   /** What the layer is drawn like this frame (the squash is dropped in "fewer effects"). */
@@ -95,6 +96,7 @@ export class RuleFx {
     timeMs: number,
     state: Readonly<TowerState>,
     pos: Readonly<Point> | null,
+    ghostMaster = false,
   ): boolean {
     const layer = state.flying;
     const v = ruleVisual(layer, state.phase, this.visual);
@@ -140,6 +142,7 @@ export class RuleFx {
       : Infinity;
     input.y = at.y;
     input.dir = at.dir;
+    input.maxAlpha = ghostMaster ? RULE_ANIM.cloud.ghostMaxDensity : 1;
     this.cloud.update(dtMs, timeMs, input);
     this.flying.emphasizeShadow(this.cloud.density, timeMs, dtMs);
     return v.covered || this.cloud.amount > 0;
