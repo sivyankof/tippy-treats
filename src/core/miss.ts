@@ -1,4 +1,5 @@
 import { BALANCE } from '../data/balance';
+import { runMissHooks } from './abilities/run';
 import type { RunConfig, SimEvent, SimPhase, TowerState } from './sim-types';
 
 /** What the sim does after a miss. */
@@ -12,7 +13,8 @@ export interface MissOutcome {
 /**
  * Applies a miss: breaks the combo, lets the brownie shield eat it, or decides between the
  * continue offer and the end of the run. Pushes the `miss` event; the caller enters the phase.
- * `shielded` is the shield of the landing the miss belongs to (a sneeze passes its own).
+ * `shielded` is the shield of the landing the miss belongs to (a sneeze passes its own), and
+ * `shieldLevel` the level of that shield (master effect "Change").
  */
 export function applyMiss(
   s: TowerState,
@@ -20,17 +22,22 @@ export function applyMiss(
   mode: RunConfig['mode'],
   nextWidth: number,
   shielded: boolean,
+  shieldLevel = s.shieldLevel,
 ): MissOutcome {
   s.combo = 0;
+  const emit = (event: SimEvent): number => events.push(event);
   if (shielded) {
     // The shield eats the miss: the run goes on and the same layer (drop miss) comes back,
     // or the narrow layer stays and the next one is restored (sneeze miss). Either way the
     // next layer is at least `shieldRestoreWidth` wide.
     s.shield = 0;
+    s.shieldLevel = 0;
     events.push({ type: 'miss', shielded: true });
+    runMissHooks(s, emit, shieldLevel);
     return { nextWidth: Math.max(nextWidth, BALANCE.team.shieldRestoreWidth), next: 'pause' };
   }
   events.push({ type: 'miss', shielded: false });
+  runMissHooks(s, emit, null);
   const canContinue = mode === 'classic' && s.continuesUsed < BALANCE.continues.max;
   return { nextWidth, next: canContinue ? 'await_continue' : 'over' };
 }

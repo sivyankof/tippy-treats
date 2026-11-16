@@ -14,7 +14,7 @@ export interface RunTally {
 
 export function emptyTally(): RunTally {
   return {
-    coins: { floating: 0, combo: 0, perfect: 0, crumb: 0, golden: 0, height: 0 },
+    coins: { floating: 0, combo: 0, perfect: 0, crumb: 0, golden: 0, height: 0, mastery: 0 },
     abilities: 0,
     abilityByCreature: {},
     maxWobble: 0,

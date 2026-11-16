@@ -133,6 +133,63 @@
       "trait": "Majestic"
     }
   },
+  "mastery": {
+    "honey": {
+      "name": "Sweet Trail",
+      "short": "Sticky perfect drops: coins +{coins}"
+    },
+    "puff": {
+      "name": "Sugar Dust",
+      "short": "+{score} points per pixel puffed"
+    },
+    "jelly": {
+      "name": "Encore Bounce",
+      "short": "One more half-bounce after the spring"
+    },
+    "caramel": {
+      "name": "Gold Rush",
+      "short": "Golden layers pay ×{mult}"
+    },
+    "frosty": {
+      "name": "Hoarfrost",
+      "short": "After the freeze: +{px} px of perfect"
+    },
+    "brownie": {
+      "name": "Small Change",
+      "short": "Shield saves you: coins +{coins}"
+    },
+    "sprinkle": {
+      "name": "Grand Finale",
+      "short": "Perfects stretch the show, up to +{layers}"
+    },
+    "crumb": {
+      "name": "Stash It",
+      "short": "Big bites (over {percent}%): coins +{coins}"
+    },
+    "ghost": {
+      "name": "Fear Not",
+      "short": "Clouds turn see-through"
+    },
+    "twins": {
+      "name": "Truce",
+      "short": "Perfect landing: a hug and coins +{coins}"
+    },
+    "lemon": {
+      "name": "Swagger",
+      "short": "All {layers} perfect: coins +{coins}"
+    },
+    "rainbow": {
+      "name": "After the Rain",
+      "short": "A perfect drop keeps the protection"
+    },
+    "perk": {
+      "ghost_centre_mark": "Centre mark",
+      "rainbow_protected_score": "+{value} points per protected layer",
+      "rainbow_own_layer": "Its own layer is not cut"
+    },
+    "newLook": "New look",
+    "master": "Master: {name}"
+  },
   "meta": {
     "levelShort": "Lv {n}"
   },
@@ -219,6 +276,7 @@
       "perfect": "Perfect drops",
       "crumb": "Crumbs",
       "golden": "Golden layers",
+      "mastery": "Mastery",
       "height": "Height bonus"
     },
     "doubleLeft": "×2 for an ad · {n} left",

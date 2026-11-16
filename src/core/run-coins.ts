@@ -9,12 +9,12 @@ import {
   rollFloatingCoin,
 } from './coins';
 import type { Rng } from './rng';
-import type { CoinSource, PlacedLayer, SimEvent, TowerState } from './sim-types';
+import type { CoinSource, EventSink, PlacedLayer, SimEvent, TowerState } from './sim-types';
 
 /** Adds coins to the run and announces them; zero and negative amounts are ignored. */
 export function gainCoins(
   s: TowerState,
-  events: SimEvent[],
+  events: EventSink,
   amount: number,
   source: CoinSource,
 ): void {

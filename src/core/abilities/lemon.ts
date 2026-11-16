@@ -1,5 +1,7 @@
 import { abilityDef, levelValue } from '../../data/creatures';
-import { boostAmount, startEffect } from './helpers';
+import { MASTERY } from '../../data/mastery';
+import { isMaster } from '../mastery';
+import { boostAmount, payMastery, startEffect } from './helpers';
 import type { Ability } from './types';
 
 const DEF = abilityDef('lemon');
@@ -15,4 +17,18 @@ export const lemon: Ability = {
     scoreMult: effect.value,
     perfectCoinAdd: DEF.perfectCoinAdd,
   }),
+  /**
+   * Master "Swagger": every layer of one trigger perfect pays coins on the last of them; a normal
+   * drop (a protected one too) or any miss spoils the trigger.
+   */
+  afterLanding(effect, landing, ctx) {
+    if (!isMaster(effect.level)) return;
+    if (landing.quality !== 'perfect') effect.spoiled = true;
+    else if (effect.layersLeft === 1 && !effect.spoiled) {
+      payMastery(ctx, 'lemon', MASTERY.lemon.allPerfectCoins);
+    }
+  },
+  onMiss(effect) {
+    if (isMaster(effect.level)) effect.spoiled = true;
+  },
 };

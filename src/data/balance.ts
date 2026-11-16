@@ -177,6 +177,12 @@ export const DIFFICULTY = {
    * timing error is this many times larger (the player cannot see the layer).
    */
   cloudSdMult: 1.5,
+  /**
+   * Bot-model assumption, not a game rule, NOT VERIFIED on players (check with testers, M9):
+   * while the guides of a level-5 ghost are on ("Not scary"), the cloud is see-through and the
+   * bot's error under it is multiplied by this instead of `cloudSdMult` (tuned).
+   */
+  ghostCloudSdMult: 1.2,
   /** Allowed relative deviation from the expected range before balance must change. */
   tolerance: 0.25,
   targets: [

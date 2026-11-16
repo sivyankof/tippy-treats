@@ -50,11 +50,43 @@ describe('addOrExtendEffect', () => {
 describe('tickEffects', () => {
   it('counts down and removes the finished ones in order', () => {
     const effects = [effect('honey', 1, 1), effect('ghost', 0, 2), effect('lemon', 3, 1)];
-    expect(tickEffects(effects)).toEqual(['honey', 'lemon']);
+    const ids = (ended: ActiveEffect[]) => ended.map((e) => e.id);
+    expect(ids(tickEffects(effects))).toEqual(['honey', 'lemon']);
     expect(effects.map((e) => [e.id, e.layersLeft])).toEqual([['ghost', 1]]);
-    expect(tickEffects(effects)).toEqual(['ghost']);
+    expect(ids(tickEffects(effects))).toEqual(['ghost']);
     expect(effects).toEqual([]);
     expect(tickEffects(effects)).toEqual([]);
+  });
+
+  it('puts the successor of a finished effect in its place and does not report it as ended', () => {
+    const effects = [effect('jelly', 0.55, 1, 5), effect('ghost', 0, 2), effect('honey', 30, 1)];
+    const ended = tickEffects(effects, (e) =>
+      e.id === 'jelly' ? { ...e, layersLeft: 1, value: 0.275, tail: true } : null,
+    );
+    expect(ended.map((e) => e.id)).toEqual(['honey']);
+    expect(effects).toEqual([
+      { id: 'jelly', layersLeft: 1, level: 5, boosted: false, value: 0.275, tail: true },
+      { id: 'ghost', layersLeft: 1, level: 1, boosted: false, value: 0 },
+    ]);
+  });
+});
+
+describe('addOrExtendEffect: mastery', () => {
+  it('starts the per-trigger counters over when the effect is extended', () => {
+    const effects = [
+      { ...effect('sprinkle', 3, 2, 5), uses: 2 },
+      { ...effect('lemon', 5, 2, 5), spoiled: true },
+    ];
+    addOrExtendEffect(effects, effect('sprinkle', 3, 5, 5));
+    addOrExtendEffect(effects, effect('lemon', 5, 4, 5));
+    expect(effects[0]).toEqual(effect('sprinkle', 3, 5, 5));
+    expect(effects[1]).toEqual(effect('lemon', 5, 4, 5));
+  });
+
+  it('replaces a tail as a whole, in its place', () => {
+    const effects = [effect('ghost', 0, 2), { ...effect('frosty', 0.62, 1, 5), tail: true }];
+    addOrExtendEffect(effects, effect('frosty', 0.8, 3, 1), true);
+    expect(effects).toEqual([effect('ghost', 0, 2), effect('frosty', 0.8, 3, 1)]);
   });
 });
 

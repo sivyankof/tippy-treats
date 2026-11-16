@@ -1,7 +1,7 @@
 import { BALANCE } from '../data/balance';
 import { ZONES } from '../data/zones';
-import { collectModifiers } from './abilities/modifiers';
-import { runAbility, tickRunEffects } from './abilities/run';
+import { collectModifiers, dropModifiers } from './abilities/modifiers';
+import { runAbility, runCloudHooks, runLandingHooks, tickRunEffects } from './abilities/run';
 import type { Modifiers } from './abilities/types';
 import { resolveDrop, type DropInput } from './drop';
 import { growInField } from './field';
@@ -125,6 +125,7 @@ export class TowerSim {
       zoneIndex: 0,
       continuesUsed: 0,
       shield: 0,
+      shieldLevel: 0,
       tempoLeft: 0,
     };
     const startHeight = Math.max(0, Math.floor(config.startHeight ?? 0));
@@ -144,6 +145,16 @@ export class TowerSim {
   /** Modifiers of the active effects: what the next drop and spawn use. */
   currentModifiers(): Readonly<Modifiers> {
     return collectModifiers(this.s.effects);
+  }
+
+  /**
+   * Modifiers of the drop of the layer in the air (flying or falling): the active effects plus
+   * what a creature layer gives its own drop (a rainbow layer from level 3 is not cut). Without a
+   * layer in the air, the same as `currentModifiers`.
+   */
+  flyingModifiers(): Readonly<Modifiers> {
+    const flying = this.s.flying;
+    return flying ? dropModifiers(this.s.effects, flying) : this.currentModifiers();
   }
 
   /** Advances the run in fixed steps so the outcome does not depend on the frame rate. */
@@ -234,11 +245,20 @@ export class TowerSim {
     s.wobblePhase = advanceWobblePhase(s.wobblePhase, STEP_MS);
 
     if (s.phase === 'flying') {
+      const from = events.length;
       this.flight?.step(STEP_MS, events);
+      this.noteClouds(events, from);
     } else if (s.phase === 'falling') {
       if (s.phaseMs >= BALANCE.layer.fallMs) this.resolveLanding(events);
     } else if (s.phase === 'pause') {
       if (s.phaseMs >= BALANCE.layer.spawnPauseMs) this.spawn(events);
+    }
+  }
+
+  /** Tells the effects about a cloud that began to cover the layer in this step. */
+  private noteClouds(events: SimEvent[], from: number): void {
+    for (let i = from; i < events.length; i++) {
+      if (events[i]?.type === 'cloud') runCloudHooks(this.s, (event) => events.push(event));
     }
   }
 
@@ -336,7 +356,7 @@ export class TowerSim {
 
   private computeLanding(flying: FlyingLayer, out: LandingPreview): boolean {
     const outcome = resolveDrop(
-      this.dropInput(flying, this.currentModifiers(), this.topLayerXAtLanding()),
+      this.dropInput(flying, dropModifiers(this.s.effects, flying), this.topLayerXAtLanding()),
     );
     if (outcome.quality === 'miss') return false;
     const perfect = outcome.quality === 'perfect';
@@ -357,7 +377,7 @@ export class TowerSim {
     const flying = s.flying;
     if (!flying) return;
     // Modifiers come from the effects that were active before this layer.
-    const mods = this.currentModifiers();
+    const mods = dropModifiers(s.effects, flying);
     const outcome = resolveDrop(this.dropInput(flying, mods, this.topLayerX()));
     s.flying = null;
     this.flight = null;
@@ -399,19 +419,18 @@ export class TowerSim {
     // Zone and ability multipliers multiply together; the zone is that of the landing layer.
     const scoreMult = mods.scoreMult * (ZONES[flying.zoneIndex]?.scoreMult ?? 1);
     this.score(events, layer, outcome.dx, flying.width, perfect, scoreMult);
-    payLanding(
-      s,
-      events,
-      flying.kind === 'golden',
-      perfect,
-      outcome.cutWidth + outcome.savedWidth,
-      mods,
-    );
+    // What a normal drop bit off, also when the rainbow kept it (crumb counts it either way).
+    const pieceWidth = outcome.cutWidth + outcome.savedWidth;
+    const golden = flying.kind === 'golden';
+    payLanding(s, events, golden, perfect, pieceWidth, mods);
 
     const emit = (event: SimEvent): number => events.push(event);
     // The shield covers the N layers after the brownie, so this layer counts with the shield
     // it had before the countdown below (a shield that runs out here still saves a sneeze here).
     const shieldedLanding = s.shield > 0;
+    const landingShieldLevel = s.shieldLevel;
+    const landing = { quality: layer.quality, pieceWidth, flyingWidth: flying.width, golden };
+    runLandingHooks(s, emit, landing);
     tickRunEffects(s, emit);
     if (flying.creature) runAbility(s, emit, layer, flying.creature, flying.level ?? 1, perfect);
     s.height = s.layers.length + s.bonusHeight;
@@ -424,7 +443,7 @@ export class TowerSim {
 
     this.nextWidth = layer.width;
     if (layer.width < BALANCE.drop.missMargin) {
-      this.miss(events, 'sneeze', shieldedLanding);
+      this.miss(events, 'sneeze', shieldedLanding, landingShieldLevel);
     } else {
       this.enter('pause');
     }
@@ -456,10 +475,22 @@ export class TowerSim {
     }
   }
 
-  /** `shielded` defaults to the live shield; a sneeze passes the shield of its landing. */
-  private miss(events: SimEvent[], reason: RunEndReason, shielded = this.s.shield > 0): void {
+  /** `shielded` defaults to the live shield; a sneeze passes the shield (and its level) of its landing. */
+  private miss(
+    events: SimEvent[],
+    reason: RunEndReason,
+    shielded = this.s.shield > 0,
+    shieldLevel = this.s.shieldLevel,
+  ): void {
     if (!shielded) this.endReason = reason;
-    const outcome = applyMiss(this.s, events, this.config.mode, this.nextWidth, shielded);
+    const outcome = applyMiss(
+      this.s,
+      events,
+      this.config.mode,
+      this.nextWidth,
+      shielded,
+      shieldLevel,
+    );
     this.nextWidth = outcome.nextWidth;
     if (outcome.next === 'over') this.finish(events);
     else this.enter(outcome.next);

@@ -341,7 +341,9 @@ describe('abilities: modifiers of one effect', () => {
     expect(mods('frosty', 1)?.speedMult).toBeCloseTo(0.8);
     expect(mods('sprinkle', 5)).toEqual({ scoreMult: 3 });
     expect(mods('crumb', 4)).toEqual({ crumbToCoinsPx: 13 });
-    expect(mods('ghost')).toEqual({ guides: true });
+    expect(mods('ghost')).toEqual({ guides: true, centreMark: false, guidesMaster: false });
+    expect(mods('ghost', 2)).toEqual({ guides: true, centreMark: true, guidesMaster: false });
+    expect(mods('ghost', 5)).toEqual({ guides: true, centreMark: true, guidesMaster: true });
     expect(mods('rainbow')).toEqual({ protectCut: true });
     expect(mods('lemon', 2)).toEqual({ speedMult: 1.2, scoreMult: 3.5, perfectCoinAdd: 1 });
   });
