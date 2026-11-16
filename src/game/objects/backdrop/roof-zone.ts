@@ -165,7 +165,7 @@ export const roofArt: ZoneArt = {
     return {
       layers: [R.far, R.mid, R.near, R.pipes],
       lives: [
-        { slot: -1, life: new Mountains(scene) },
+        { slot: 0, life: new Mountains(scene) },
         { slot: 1, life: new Hover(scene, [life.chimney]) },
         { slot: 1, life: new PuffColumn(scene, life.smoke, life.smokeAt, life.smokeOffset) },
         { slot: 2, life: new Hover(scene, [life.rope, ...life.laundry]) },

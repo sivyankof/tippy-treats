@@ -107,7 +107,7 @@ export const cloudsArt: ZoneArt = {
     return {
       layers: [CL.far, CL.mid, CL.near, CL.haze],
       lives: [
-        { slot: -1, life: new Mountains(scene) },
+        { slot: 0, life: new Mountains(scene) },
         { slot: 1, life: new Traveler(scene, life.balloon) },
         { slot: 2, life: new Traveler(scene, life.plane) },
       ],

@@ -19,14 +19,16 @@ export const MOUNTAIN_LOOK = {
   width: 768,
   height: 540,
   /** Muted towards the sky so the tower stays the most contrasting thing (docs/06, "Горы"). */
-  rockBack: 0xd6cbe8,
-  rockBackDark: 0xc7badd,
-  rock: 0xb5a8d6,
-  rockDark: 0xa294c6,
-  snow: 0xfff8ee,
-  snowDark: 0xf0e2da,
+  rockBack: 0xcdc0e6,
+  rockBackDark: 0xbcaed9,
+  rock: 0xa99bd2,
+  rockDark: 0x9686c2,
+  snow: 0xffefd6,
+  snowDark: 0xf3d9b8,
   /** Outline growth in texture pixels; the outline colour is the dark tone of each fill. */
   outline: 4,
+  /** How deep the drips hang, as a share of the cap height. */
+  dripShare: 0.7,
   /** The snow edge hangs in rounded drips of these depths (share of the cap height) from left to right. */
   dripDepths: [0.0, 0.34, 0.12, 0.42, 0.18],
   /** Peaks: foot centre x, top y and half width at the bottom of the picture; `back` ones sit behind. */
@@ -45,6 +47,9 @@ export const MOUNTAIN_LOOK = {
   gloss: { dx: 0.22, dy: 0.5, length: 30, thick: 9, tilt: -1.0, dotGap: 9, dotRadius: 4.5 },
   glossAlpha: 0.85,
 } as const;
+
+/** Zones whose far plane gives way to the peaks: it fades out as they rise (they replace it, not cover it). */
+export const MOUNTAIN_FAR_ZONES: readonly string[] = ['roof', 'clouds'];
 
 export const MOUNTAIN_MOTION = {
   /** The picture is as wide as the screen; `bottomShare` is where its bottom edge sits (1: the screen bottom). */

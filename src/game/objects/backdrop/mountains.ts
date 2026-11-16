@@ -41,7 +41,7 @@ function halfAt(p: Peak, y: number): number {
 /** The snow cap: the top of the peak with a lower edge that hangs in rounded drips, like icing. */
 function capOutline(p: Peak, share: number): Pt[] {
   const capBase = p.top + (L.height - p.top) * share;
-  const dripPx = (L.height - p.top) * share * 0.45;
+  const dripPx = (L.height - p.top) * share * L.dripShare;
   const steps = 24;
   const drips = L.dripDepths;
   const pts: Pt[] = [{ x: p.x, y: p.top }];
