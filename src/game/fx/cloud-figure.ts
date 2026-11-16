@@ -96,14 +96,20 @@ export function nebulaSilhouette(): Silhouette {
   return {
     body: figure.body,
     circles: [
-      { x: 140, y: 150, r: 40 },
-      { x: 235, y: 142, r: 52 },
-      { x: 345, y: 138, r: 54 },
-      { x: 505, y: 158, r: 84 },
-      { x: 640, y: 148, r: 70 },
-      { x: 745, y: 150, r: 48 },
-      { x: 840, y: 150, r: 38 },
-      { x: 905, y: 168, r: 30 },
+      // Many bumps of different sizes inside the allowed rise: no long straight run on the top edge.
+      { x: 130, y: 142, r: 30 },
+      { x: 195, y: 128, r: 34 },
+      { x: 262, y: 126, r: 24 },
+      { x: 320, y: 122, r: 40 },
+      { x: 400, y: 128, r: 28 },
+      { x: 460, y: 122, r: 36 },
+      { x: 535, y: 142, r: 70 },
+      { x: 610, y: 130, r: 34 },
+      { x: 665, y: 126, r: 44 },
+      { x: 740, y: 130, r: 28 },
+      { x: 800, y: 128, r: 38 },
+      { x: 865, y: 142, r: 26 },
+      { x: 910, y: 168, r: 30 },
     ],
     lobes,
   };

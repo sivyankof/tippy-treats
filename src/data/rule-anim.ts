@@ -191,16 +191,16 @@ export const RULE_ANIM = {
       colors: {
         pink: 0xff9bd2,
         pinkLight: 0xffc4e4,
-        smear: 0xe3cff5,
+        smear: 0xd2c8ff,
         curl: 0xffffff,
       },
       /** The most the figure may reach above the body top, baked px (the nebula stays below the HUD plates on a short screen). */
       maxRiseAboveBody: 46,
       /** Soft smears on the body, baked px: centre and size of the first ellipse (a second one overlaps it). */
       smears: [
-        { x: 330, y: 168, w: 150, h: 40 },
-        { x: 560, y: 128, w: 170, h: 46 },
-        { x: 700, y: 196, w: 130, h: 36 },
+        { x: 300, y: 170, w: 100, h: 62 },
+        { x: 580, y: 150, w: 110, h: 66 },
+        { x: 720, y: 205, w: 90, h: 56 },
       ],
       /**
        * The underside: a close row of circles of radius `r` from `from` to `to` every `step` baked px, whose
