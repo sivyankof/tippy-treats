@@ -5,9 +5,12 @@ import { starPoints } from '../objects/creature-art/rainbow-geometry';
 import { bakeTexture } from '../ui/bake-texture';
 import { fillPolygon } from './plain-style';
 
-/** Colours of the little bee and the spark (the bee is drawn in its own colours, the breath and the spark are white). */
+/** Colours of the little bee and the spark (the bee is drawn in its own colours, the breath is white with a pale rim, the spark is pale yellow). */
 const BEE = { body: 0xffcf3a, stripe: 0x5a3a12, wing: 0xe9f6ff, outline: 0x6b4a14 } as const;
 const SPARK_COLOR = 0xfff3b0;
+/** The rim of a breath puff: it leaves the white frosty layer, so a white puff alone would not show. */
+const BREATH_RIM = 0x8fc3e6;
+const BREATH_RIM_WIDTH = 0.05;
 const SPARK_NOTCH = 0.26;
 const BREATH_PUFFS: ReadonlyArray<readonly [number, number, number]> = [
   [0.34, 0.58, 0.26],
@@ -38,6 +41,10 @@ export function bakeGrownAccentTextures(scene: Phaser.Scene): void {
     g.fillCircle(cx - 6, cy - 1, 1.6);
   });
   bakeTexture(scene, breath.key, breath.w, breath.h, (g) => {
+    g.fillStyle(BREATH_RIM, 1);
+    for (const [x, y, r] of BREATH_PUFFS) {
+      g.fillCircle(x * breath.w, y * breath.h, (r + BREATH_RIM_WIDTH) * breath.w);
+    }
     g.fillStyle(PALETTE.textLight, 1);
     for (const [x, y, r] of BREATH_PUFFS) g.fillCircle(x * breath.w, y * breath.h, r * breath.w);
   });
