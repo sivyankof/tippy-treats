@@ -30,6 +30,8 @@ const SAVE_LEVEL = 'save';
 const DEBUG_BERRIES = 50;
 const COINS_LABEL = '+500 coins';
 const DEBUG_COINS = 500;
+const BAKER_LABEL = 'baker +1';
+const CREATURES_LABEL = 'creatures +1';
 const CHECKPOINT_LABEL = 'Checkpoint window';
 const RESET_PURCHASES_LABEL = 'Reset stub purchases';
 
@@ -48,6 +50,8 @@ export class DebugPanel {
   private readonly applyEntry: Phaser.GameObjects.Text;
   private readonly berriesEntry: Phaser.GameObjects.Text;
   private readonly coinsEntry: Phaser.GameObjects.Text;
+  private readonly bakerEntry: Phaser.GameObjects.Text;
+  private readonly creaturesEntry: Phaser.GameObjects.Text;
   private readonly adsEntry: Phaser.GameObjects.Text;
   private readonly checkpointEntry: Phaser.GameObjects.Text;
   private readonly purchasesEntry: Phaser.GameObjects.Text;
@@ -106,6 +110,12 @@ export class DebugPanel {
     this.coinsEntry = entry(() => gameState.addCoins(DEBUG_COINS, 'debug'), PALETTE.panel).setText(
       COINS_LABEL,
     );
+    this.bakerEntry = entry(() => gameState.debugBumpBakerLevel(), PALETTE.panel).setText(
+      BAKER_LABEL,
+    );
+    this.creaturesEntry = entry(() => gameState.debugBumpCreatures(), PALETTE.panel).setText(
+      CREATURES_LABEL,
+    );
     this.adsEntry = entry(() => {
       adsDev.cycleMode();
       this.showAdsMode();
@@ -123,6 +133,8 @@ export class DebugPanel {
       this.levelEntry,
       this.berriesEntry,
       this.coinsEntry,
+      this.bakerEntry,
+      this.creaturesEntry,
       this.adsEntry,
       this.checkpointEntry,
       this.purchasesEntry,
