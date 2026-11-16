@@ -1,3 +1,6 @@
+import { RENDER_DENSITY } from '../data/screen';
+import type { EffectLevel } from '../data/effect-levels';
+
 /** Size of the canvas backing store for a render density cap. */
 export interface BackingSize {
   width: number;
@@ -22,4 +25,9 @@ export function cappedBackingSize(
     width: Math.max(1, Math.round(logical.width * scale)),
     height: Math.max(1, Math.round(logical.height * scale)),
   };
+}
+
+/** The density cap of an effects level. */
+export function densityCapForLevel(level: EffectLevel): number {
+  return RENDER_DENSITY.capByLevel[level];
 }

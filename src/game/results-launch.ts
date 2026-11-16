@@ -52,3 +52,11 @@ export function revealResults(scene: Phaser.Scene): void {
 export function dropHeldResults(scene: Phaser.Scene): void {
   if (resultsPhase(scene.scene) === 'held') scene.scene.stop(SCENES.results);
 }
+
+/** The results screen is fully on show: the run scene may freeze what stands behind it. */
+export const RESULTS_SETTLED = 'results_settled';
+
+/** Tells the run scene that the results screen covers it now. */
+export function settleResults(scene: Phaser.Scene): void {
+  scene.scene.get(SCENES.game).events.emit(RESULTS_SETTLED);
+}

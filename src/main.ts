@@ -9,6 +9,7 @@ import { detectLang, setLang } from './i18n';
 import { syncPurchases } from './game/purchases';
 import { gameState } from './state';
 import { bindSaveFlush } from './state/page-lifecycle';
+import { followEffectsLevelDensity } from './game/follow-density';
 import { beginPerfSession } from './game/perf/perf-session';
 import { readDebugParams, readPerfParams, showsFpsMeter, withoutReset } from './util/debug-params';
 
@@ -74,6 +75,8 @@ async function start(): Promise<void> {
   bootStage('game');
   const game = new Phaser.Game(createGameConfig(parent));
   perfDirector?.startPerfDirector(game);
+  // The benchmark's `&dpr=` sets its own cap, to compare the variants.
+  if (perf?.densityCap === undefined) followEffectsLevelDensity(game);
   bindLogicalResize(game, parent);
   refreshTextsOnFontLoad(game);
   bootStage('started');
