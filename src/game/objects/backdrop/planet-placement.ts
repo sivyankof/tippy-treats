@@ -10,6 +10,11 @@ export interface PlanetSpot {
   y: number;
 }
 
+/** A spot and the scale the planet is shown at there. */
+export interface PlanetFit extends PlanetSpot {
+  scale: number;
+}
+
 /** Half of a picture: its centre to its edge. */
 const HALF = 0.5;
 
@@ -56,6 +61,28 @@ export function planetSpot(
   ];
   for (const lane of lanes) {
     if (lane.lo <= lane.hi) return { x: Math.min(Math.max(lane.prefer, lane.lo), lane.hi), y };
+  }
+  return null;
+}
+
+/**
+ * The spot of the planet of a lap at the largest scale from `PLANET_PLACE.scale` down to
+ * `minScale` (in `scaleStep` steps) that has room; `width` x `height` is the unscaled picture.
+ * `null` when it has no room even at `minScale`.
+ */
+export function planetFit(
+  lap: number,
+  screenW: number,
+  screenH: number,
+  width: number,
+  height: number,
+): PlanetFit | null {
+  const { scale, minScale, scaleStep } = PLANET_PLACE;
+  const steps = Math.round((scale - minScale) / scaleStep);
+  for (let i = 0; i <= steps; i++) {
+    const k = scale - i * scaleStep;
+    const spot = planetSpot(lap, screenW, screenH, width * k, height * k);
+    if (spot) return { ...spot, scale: k };
   }
   return null;
 }

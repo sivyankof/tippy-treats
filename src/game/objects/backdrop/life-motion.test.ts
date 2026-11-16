@@ -253,6 +253,25 @@ describe('background life of the zones (docs/06, section 5)', () => {
   });
 });
 
+describe('clearBandPath with a HUD ceiling', () => {
+  const band = { top: 800, bottom: 1300, ceiling: 500 };
+
+  it('presses a path above the band down under the ceiling, bob and wobble included', () => {
+    expect(clearBandPath(300, 700, 50, band, 2300, 10)).toEqual([560, 700]);
+    expect(clearBandPath(400, 450, 50, band, 2300, 0)).toEqual([550, 550]);
+  });
+
+  it('keeps a path clear of both alone', () => {
+    expect(clearBandPath(600, 700, 50, band, 2300, 10)).toEqual([600, 700]);
+    expect(clearBandPath(1400, 1500, 50, band, 2300)).toEqual([1400, 1500]);
+  });
+
+  it('goes below the band when there is no room between the ceiling and the band', () => {
+    const tight = { top: 600, bottom: 900, ceiling: 520 };
+    expect(clearBandPath(500, 700, 50, tight, 2300, 10)).toEqual([950, 950]);
+  });
+});
+
 describe('clearBandPath', () => {
   const band = { top: 800, bottom: 1000 };
 

@@ -118,6 +118,8 @@ export interface TravelPass {
 export interface YBand {
   top: number;
   bottom: number;
+  /** The highest a picture's top edge may go (under the HUD plates); none when absent. */
+  ceiling?: number;
 }
 
 /**
@@ -125,7 +127,9 @@ export interface YBand {
  * `half` px above and below its path stays fully above the band, or fully below it. It goes to the
  * side nearer the path's middle that has room on a screen `screenH` tall (above first on a tie);
  * a path already clear on one side is left alone. Both ends are pressed against the band's edge, so
- * the path flattens where it would have crossed.
+ * the path flattens where it would have crossed. With a `ceiling` the picture, moving `margin` px
+ * more up and down on its own (bob, wobble), also stays under it: a path above the band is pressed
+ * down to it, and "above" has room only between the ceiling and the band.
  */
 export function clearBandPath(
   y0: number,
@@ -133,15 +137,20 @@ export function clearBandPath(
   half: number,
   band: YBand,
   screenH: number,
+  margin = 0,
 ): [number, number] {
   const above = band.top - half;
   const below = band.bottom + half;
-  if (Math.max(y0, y1) <= above || Math.min(y0, y1) >= below) return [y0, y1];
-  const roomAbove = above >= half;
+  const top = band.ceiling === undefined ? -Infinity : band.ceiling + half + margin;
+  const lowest = Math.min(y0, y1);
+  if (lowest >= below) return [y0, y1];
+  if (Math.max(y0, y1) <= above && lowest >= top) return [y0, y1];
+  const roomAbove = above >= Math.max(half, top);
   const roomBelow = below <= screenH - half;
   const mid = (y0 + y1) / 2;
   const goAbove = roomAbove && (!roomBelow || mid - above <= below - mid);
-  if (goAbove) return [Math.min(y0, above), Math.min(y1, above)];
+  const fit = (y: number): number => Math.min(Math.max(y, top), above);
+  if (goAbove) return [fit(y0), fit(y1)];
   if (roomBelow) return [Math.max(y0, below), Math.max(y1, below)];
   return [y0, y1];
 }
@@ -165,7 +174,8 @@ export function travelPose(
   let y0 = (spec.from.y + pass.shiftY) * height;
   let y1 = (spec.to.y + pass.shiftY) * height;
   if (clear && spec.avoidFlight) {
-    [y0, y1] = clearBandPath(y0, y1, spec.avoidFlight.halfPx, clear, height);
+    const margin = (spec.bob?.px ?? 0) + (spec.wobble?.px ?? 0);
+    [y0, y1] = clearBandPath(y0, y1, spec.avoidFlight.halfPx, clear, height, margin);
   }
   const pathDy = y1 - y0;
   const side = index % 2 === 1 ? 1 : -1;

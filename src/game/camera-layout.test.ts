@@ -49,6 +49,7 @@ describe('travellerClearBand', () => {
       expect(band.top).toBe(flight.top);
       expect(band.bottom).toBeGreaterThanOrEqual(flight.bottom);
       expect(band.bottom).toBe(surfaceScreenY(screenH) + FLIGHT_CLEAR.travellerBelowTopPx);
+      expect(band.ceiling).toBe(HUD_LAYOUT.badgeRowBottom + FLIGHT_CLEAR.hudGapPx);
     }
   });
 });

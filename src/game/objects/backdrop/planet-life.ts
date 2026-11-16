@@ -12,7 +12,7 @@ import { effectsMode } from '../../effects-mode';
 import type { FrameCtx, Life } from './life';
 import { hoverPose, newPose, type Pose } from './life-motion';
 import { planetSize } from './dessert-planets';
-import { planetSpot, type PlanetSpot } from './planet-placement';
+import { planetFit, type PlanetFit } from './planet-placement';
 import type { LapLife } from './zone-scenery';
 
 /**
@@ -85,7 +85,9 @@ export class PlanetLife implements Life, LapLife {
     if (!at) return;
     image.setPosition(at.x + pose.x, at.y + pose.y);
     image.setRotation(pose.rotation);
-    image.setScale(pose.scaleX, pose.scaleY);
+    // The pose carries the drift's breathing around `PLANET_PLACE.scale`; a planet shown smaller keeps it.
+    const k = at.scale / PLANET_PLACE.scale;
+    image.setScale(pose.scaleX * k, pose.scaleY * k);
   }
 
   /** The fade is over (or cut short by the next lap): the new planet is the shown one. */
@@ -99,14 +101,14 @@ export class PlanetLife implements Life, LapLife {
   }
 }
 
-/** The planet of one lap and its cached spot on the current screen size (see `planetSpot`). */
+/** The planet of one lap and its cached spot and scale on the current screen size (see `planetFit`). */
 class Spot {
   id: SpacePlanetId = SPACE_PLANET_IDS[0];
   lap: number | null = null;
   private cachedLap: number | null = null;
   private cachedW = 0;
   private cachedH = 0;
-  private spot: PlanetSpot | null = null;
+  private spot: PlanetFit | null = null;
 
   set(id: SpacePlanetId, lap: number | null): void {
     this.id = id;
@@ -119,20 +121,14 @@ class Spot {
     this.cachedLap = null;
   }
 
-  at(width: number, height: number): PlanetSpot | null {
+  at(width: number, height: number): PlanetFit | null {
     if (this.lap === null) return null;
     if (this.cachedLap !== this.lap || this.cachedW !== width || this.cachedH !== height) {
       this.cachedLap = this.lap;
       this.cachedW = width;
       this.cachedH = height;
       const size = planetSize(this.id);
-      this.spot = planetSpot(
-        this.lap,
-        width,
-        height,
-        size.width * PLANET_PLACE.scale,
-        size.height * PLANET_PLACE.scale,
-      );
+      this.spot = planetFit(this.lap, width, height, size.width, size.height);
     }
     return this.spot;
   }

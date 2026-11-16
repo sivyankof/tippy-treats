@@ -38,13 +38,19 @@ export function surfaceScreenY(screenH: number): number {
  */
 /**
  * The stripe the background satellite and comet keep out of: the flight stripe stretched down past
- * the top of the tower (`FLIGHT_CLEAR.travellerBelowTopPx`).
+ * the top of the tower (`FLIGHT_CLEAR.travellerBelowTopPx`), and a ceiling `hudGapPx` under the
+ * lowest HUD plate.
  */
-export function travellerClearBand(screenH: number): { top: number; bottom: number } {
+export function travellerClearBand(screenH: number): {
+  top: number;
+  bottom: number;
+  ceiling: number;
+} {
   const band = flightClearBand(screenH);
   return {
     top: band.top,
     bottom: Math.max(band.bottom, surfaceScreenY(screenH) + FLIGHT_CLEAR.travellerBelowTopPx),
+    ceiling: HUD_LAYOUT.badgeRowBottom + FLIGHT_CLEAR.hudGapPx,
   };
 }
 

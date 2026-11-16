@@ -3,7 +3,9 @@ import { HUD_LAYOUT } from '../../../data/hud-layout';
 import { LOGICAL_SIZE } from '../../../data/screen';
 import { PLANET_LOOK, PLANET_PLACE } from '../../../data/space-planets';
 import { flightClearBand } from '../../camera-layout';
-import { corridorHalf, planetSpot } from './planet-placement';
+import { planetOfLap } from '../../../core/space-planet';
+import { planetSize } from './dessert-planets';
+import { corridorHalf, planetFit, planetSpot } from './planet-placement';
 
 const W = LOGICAL_SIZE.width;
 const SCREENS = [2337, 1919]; // 390x844 and 390x693 at the logical width
@@ -65,5 +67,39 @@ describe('planetSpot', () => {
   it('prefers the left lane and uses the right one when the left is too narrow', () => {
     const left = planetSpot(10, W, 2337, ROUND, ROUND);
     expect(left?.x).toBeLessThan(W / 2);
+  });
+});
+
+describe('planetFit', () => {
+  const fit = (lap: number, h: number) => {
+    const size = planetSize(planetOfLap(lap));
+    return planetFit(lap, W, h, size.width, size.height);
+  };
+
+  it('shows the planet of every lap from 2 on, smaller where the full size has no room', () => {
+    for (const h of SCREENS) {
+      for (let lap = 2; lap <= 20; lap++) {
+        const f = fit(lap, h);
+        expect(f).not.toBeNull();
+        expect(f!.scale).toBeLessThanOrEqual(PLANET_PLACE.scale);
+        expect(f!.scale).toBeGreaterThanOrEqual(PLANET_PLACE.minScale - 1e-9);
+      }
+      expect(fit(4, h)!.scale).toBeLessThan(PLANET_PLACE.scale);
+      expect(fit(6, h)!.scale).toBeCloseTo(PLANET_PLACE.scale);
+    }
+  });
+
+  it('keeps the spot rules at the chosen scale and hides lap 1 even at the smallest scale', () => {
+    for (const h of SCREENS) {
+      for (let lap = 2; lap <= 9; lap++) {
+        const size = planetSize(planetOfLap(lap));
+        const f = fit(lap, h)!;
+        expect(planetSpot(lap, W, h, size.width * f.scale, size.height * f.scale)).toEqual({
+          x: f.x,
+          y: f.y,
+        });
+      }
+      expect(fit(1, h)).toBeNull();
+    }
   });
 });

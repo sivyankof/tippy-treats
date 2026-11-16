@@ -105,6 +105,13 @@ export const PLANET_PLACE = {
   x: 0.11,
   y: 0.28,
   scale: 0.6,
+  /**
+   * Where the planet has no room at `scale`, it is shown smaller, in steps of `scaleStep`, down to
+   * `minScale`: 40% below the first size of the planets (0.85, until 2026-11-17). Below that it is
+   * not shown (owner's ladder: hang off the edge up to half, then shrink, then hide).
+   */
+  minScale: 0.51,
+  scaleStep: 0.01,
   /** Clear space kept between the HUD (its lowest edge, counter chips included) and the top of the planet, drift included. */
   hudGap: 40,
   /** Clear space between the planet (drift included) and the stripe around the flying layer's line. */
@@ -124,6 +131,8 @@ export const PLANET_PLACE = {
   x: number;
   y: number;
   scale: number;
+  minScale: number;
+  scaleStep: number;
   hudGap: number;
   rowGap: number;
   lineGap: number;

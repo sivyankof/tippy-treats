@@ -10,4 +10,6 @@ export const FLIGHT_CLEAR = {
    * this far below the tower top (a traveller resting on the top layer looked like it sat on it).
    */
   travellerBelowTopPx: 90,
+  /** ... and keep at least this far below the lowest HUD plate. */
+  hudGapPx: 40,
 } as const;
