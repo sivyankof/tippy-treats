@@ -75,7 +75,7 @@ function drawLayers(
   centerX: number,
   trayY: number,
 ): void {
-  const view = offList(new LayerView(scene));
+  const view = offList(new LayerView(scene).setStageMode('level'));
   try {
     tower.layers.forEach((layer, i) => {
       view

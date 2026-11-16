@@ -25,6 +25,7 @@
     "height": "Height {n}",
     "watchAd": "Watch an ad",
     "adUnavailable": "Ad unavailable",
+    "noInternet": "No internet",
     "decline": "No thanks"
   },
   "checkpoint": {

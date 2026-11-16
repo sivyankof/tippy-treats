@@ -446,7 +446,7 @@ export class TowerView {
   }
 
   private acquire(index: number): LayerView {
-    const view = this.pool.pop() ?? new LayerView(this.scene);
+    const view = this.pool.pop() ?? new LayerView(this.scene).setStageMode('level');
     // The depth follows the index, so a view acquired for a lower layer (during the collapse)
     // still draws under the layers above it.
     view

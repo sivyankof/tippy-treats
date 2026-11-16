@@ -226,10 +226,11 @@ export class LayerFace extends Phaser.GameObjects.Container {
     return this.scaleX;
   }
 
-  /** Starts a lick (docs/06, "Слизывание глазури"). */
-  startLick(scene: LickScene, kind: LickKind, shape: LoopShape, style: LickStyle): void {
-    this.lick.start(scene, kind, shape, style);
+  /** Starts a lick (docs/06, "Слизывание глазури"); false when it could not (no tongue to lay). */
+  startLick(scene: LickScene, kind: LickKind, shape: LoopShape, style: LickStyle): boolean {
+    if (!this.lick.start(scene, kind, shape, style)) return false;
     this.refresh();
+    return true;
   }
 
   /** Glances at (`dx`, `dy`) (face pixels) for `ms`, whatever the look target is meanwhile. */

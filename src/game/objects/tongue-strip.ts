@@ -84,6 +84,11 @@ export class StripTongue implements TongueParts {
     this.trunk.setVisible(false);
     this.tip.setVisible(false);
   }
+
+  // A destroyed rope has no vertices left to write.
+  get alive(): boolean {
+    return !this.outline.isDestroyed && !this.trunk.isDestroyed && !this.tip.isDestroyed;
+  }
 }
 
 /** The way to draw the tongue the renderer supports: strips on WebGL, redrawn Graphics on Canvas (it has no ropes). */

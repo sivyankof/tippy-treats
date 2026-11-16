@@ -25,6 +25,7 @@
     "height": "Высота {n}",
     "watchAd": "Смотреть рекламу",
     "adUnavailable": "Реклама недоступна",
+    "noInternet": "Нет интернета",
     "decline": "Нет, спасибо"
   },
   "checkpoint": {

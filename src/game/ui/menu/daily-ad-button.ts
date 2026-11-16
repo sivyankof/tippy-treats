@@ -2,8 +2,7 @@ import type * as Phaser from 'phaser';
 import { PALETTE } from '../../../data/palette';
 import { t } from '../../../i18n';
 import { createTextButton, type Button } from '../button';
-import { markAdUnavailable } from './ad-unavailable';
-import { fitText } from './fit-text';
+import { markAdUnavailable, resetAdLabel } from './ad-unavailable';
 
 type Layout = { width: number; height: number; radius: number; shadowOffset: number; font: number };
 
@@ -44,7 +43,7 @@ export class DailyAdButton {
     this.button.setVisible(shown);
     if (adReady) {
       this.label.setText(t('daily.extraAttempt'));
-      fitText(this.label, this.labelWidth);
+      resetAdLabel(this.label, this.labelWidth);
       this.button.setEnabled(shown);
       this.button.setAlpha(1);
     } else {

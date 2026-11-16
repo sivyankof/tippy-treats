@@ -1,5 +1,6 @@
 import type * as Phaser from 'phaser';
 import type { Currency } from '../../../core/economy';
+import { markAdUnavailable } from './ad-unavailable';
 import { productOwned } from '../../../core/shop';
 import { BERRY_PACKS } from '../../../data/economy';
 import { CREATURES, type CreatureId } from '../../../data/creatures';
@@ -19,6 +20,7 @@ import {
   rowPriceButton,
   pileIcon,
   rowTextButton,
+  rowTextParts,
   shopIcon,
 } from './shop-row';
 
@@ -89,14 +91,9 @@ export function freeSection(scene: Phaser.Scene, a: ShopActions, adReady: boolea
     button = rowTextButton(scene, t('shop.free.done'), MENU.style.shortFill, 'wide', () => {});
     button.setEnabled(false);
   } else if (!adReady) {
-    button = rowTextButton(
-      scene,
-      t('continue.adUnavailable'),
-      MENU.style.shortFill,
-      'wide',
-      () => {},
-    );
-    button.setEnabled(false);
+    const parts = rowTextParts(scene, t('shop.free.watch'), MENU.style.shortFill, 'wide', () => {});
+    markAdUnavailable(parts.button, parts.label, parts.labelWidth, 1);
+    button = parts.button;
   } else {
     button = rowTextButton(scene, t('shop.free.watch'), PALETTE.accent, 'wide', () => a.watchAd());
   }
