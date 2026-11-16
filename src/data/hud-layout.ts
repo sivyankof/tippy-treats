@@ -51,7 +51,7 @@ export const HUD_LAYOUT = {
   badgeBarGap: 12,
   /**
    * With this many badges in the row (shrinking ones included) the next-creature chip is compact:
-   * the creature icon and a number, no words.
+   * the creature icon and a number, no words (the icon alone, flashing, on the creature layer).
    */
   compactNextFrom: 3,
   /** Closest the next-creature chip may come to the badges of the row. */

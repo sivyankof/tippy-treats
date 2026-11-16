@@ -61,3 +61,13 @@ describe('captionSpot', () => {
     }
   });
 });
+
+describe('icon-only next-creature chip', () => {
+  it('hugs the icon with no gap for text', () => {
+    const span = nextChipSpan(WIDTH, null);
+    expect(span.chipRight - span.chipLeft).toBeLessThan(
+      nextChipSpan(WIDTH, textWidth(1)).chipRight - nextChipSpan(WIDTH, textWidth(1)).chipLeft,
+    );
+    expect(span.iconX).toBeLessThan(span.labelRight);
+  });
+});

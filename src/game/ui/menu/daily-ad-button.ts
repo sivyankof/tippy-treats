@@ -45,7 +45,7 @@ export class DailyAdButton {
       this.label.setText(t('daily.extraAttempt'));
       resetAdLabel(this.label, this.labelWidth);
       this.button.setEnabled(shown);
-      this.button.setAlpha(1);
+      this.button.setPlateAlpha(1);
     } else {
       markAdUnavailable(this.button, this.label, this.labelWidth, this.disabledAlpha);
     }

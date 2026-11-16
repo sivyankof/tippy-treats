@@ -172,6 +172,7 @@ export class Button extends Phaser.GameObjects.Container {
   private readonly press: PressFeedback;
   private readonly hitArea: Phaser.Geom.Rectangle;
   private readonly breatheRoot: Phaser.GameObjects.Container;
+  private readonly face: Phaser.GameObjects.Image;
   private breathing = false;
 
   constructor(
@@ -180,8 +181,8 @@ export class Button extends Phaser.GameObjects.Container {
   ) {
     super(scene, options.x, options.y);
     const { width, height } = options;
-    const face = Button.createFace(scene, options);
-    this.breatheRoot = new Phaser.GameObjects.Container(scene, 0, 0, [face]);
+    this.face = Button.createFace(scene, options);
+    this.breatheRoot = new Phaser.GameObjects.Container(scene, 0, 0, [this.face]);
     if (options.content) this.breatheRoot.add(options.content);
     this.add(this.breatheRoot);
 
@@ -209,6 +210,12 @@ export class Button extends Phaser.GameObjects.Container {
       { fill },
       options.decorate ? (g) => options.decorate?.(g, width, height) : undefined,
     ).setY(shadowOffset / 2);
+  }
+
+  /** Dims only the plate: the label and icon on it keep their full opacity (an unavailable button). */
+  setPlateAlpha(alpha: number): this {
+    this.face.setAlpha(alpha);
+    return this;
   }
 
   /** A disabled button ignores the pointer. */
