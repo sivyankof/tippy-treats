@@ -18,7 +18,7 @@ import { TempoChip } from '../ui/tempo-chip';
 import { ZoneBanner } from '../ui/zone-plate';
 import { LAP_BANNER } from '../../data/zone-plate';
 import { LAP_PLATE } from '../../data/space-planets';
-import { spaceLap } from '../../core/space-laps';
+import { flyingLap } from '../../core/space-laps';
 import { LapChangeWatch } from '../../core/space-planet';
 import { ZoneChangeWatch } from '../ui/zone-change-watch';
 import { HudNumbersIdle } from '../ui/hud-idle';
@@ -155,9 +155,9 @@ export class HudScene extends Phaser.Scene {
 
   override update(time: number, delta: number): void {
     const info = this.gameScene()?.getRunInfo() ?? null;
-    const announced = this.zoneWatch.observe(info && info.phase !== 'over' ? info.zoneIndex : null);
     const live = info && info.phase !== 'over' ? info : null;
-    const lap = this.lapWatch.observe(live ? spaceLap(live.height + 1) : null);
+    const announced = this.zoneWatch.observe(live ? live.zoneIndex : null);
+    const lap = this.lapWatch.observe(live ? flyingLap(live.height) : null);
     fxGuard.call('hud-zone-banner', this, this.updateZoneBanner, announced, lap, time);
     if (info) {
       this.heightRoll.set(info.height);

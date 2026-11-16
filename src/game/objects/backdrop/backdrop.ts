@@ -1,8 +1,8 @@
 import * as Phaser from 'phaser';
 import { ANIM } from '../../../data/anim';
 import { BACKDROP, BD_TEX } from '../../../data/backdrop';
-import { ZONES, type ZoneId } from '../../../data/zones';
-import { lapOfKey, sceneryKey } from '../../../core/space-planet';
+import { SPACE_ZONE_INDEX, ZONES, type ZoneId } from '../../../data/zones';
+import { flyingLap } from '../../../core/space-laps';
 import { DEPTH } from '../../depth';
 import { markPerfPart } from '../../perf/perf-marks';
 import { collectBakeSteps, type BakeStep } from '../../ui/bake-texture';
@@ -21,6 +21,12 @@ import { spaceArt } from './space-zone';
 import { starsArt } from './stars-zone';
 import { ZoneFade } from './zone-fade';
 import { ZoneScenery, type ZoneArt } from './zone-scenery';
+
+/** What the backdrop needs of the run state: the zone and the placed height (the lap follows from it). */
+export interface RunBackdropState {
+  zoneIndex: number;
+  height: number;
+}
 
 const ZONE_ART: Record<ZoneId, ZoneArt> = {
   kitchen: kitchenArt,
@@ -50,6 +56,8 @@ export class Backdrop {
   private bakeQueue: BakeStep[] = [];
   private lastNowMs: number;
   private scrollY = 0;
+  /** Lap of Space of the layer in flight; 0 before Space. */
+  private lap: number;
   /** The picture that stands in for the zones once they are frozen (the results screen). */
   private still: Phaser.GameObjects.Image | null = null;
   /** The zones the still replaced, shown again when it goes. */
@@ -61,28 +69,42 @@ export class Backdrop {
     private readonly trayTopY: number,
     width: number,
     height: number,
-    zoneIndex: number,
-    lap = 0,
+    state: RunBackdropState,
   ) {
-    const key = sceneryKey(zoneIndex, lap);
-    this.fade = new ZoneFade(key, BACKDROP.fadeMs);
+    this.lap = flyingLap(state.height);
+    this.fade = new ZoneFade(state.zoneIndex, BACKDROP.fadeMs);
     this.lastNowMs = scene.time.now;
     this.ctx = { timeMs: scene.time.now, deltaMs: 0, width, height, towerLayers: 0 };
     this.counter = new Counter(scene, trayTopY, width);
-    this.ensure(key);
-    this.prepareNext(key);
+    this.ensure(state.zoneIndex);
+    this.prepareNext(state.zoneIndex);
   }
 
   /**
-   * The zone the run is in now (and, in Space, its lap: every lap has its own planet); a change
-   * starts the cross-fade into it.
+   * Follows the run: the zone it is in (a change starts the cross-fade into it) and, in Space, the
+   * lap (the planet changes). One Space scenery serves every lap.
    */
-  setZone(zoneIndex: number, lap = 0): void {
-    const key = sceneryKey(zoneIndex, lap);
-    if (key === this.fade.current) return;
-    this.ensure(key);
-    this.fade.goTo(key);
-    this.prepareNext(key);
+  follow(state: RunBackdropState): void {
+    this.setLap(flyingLap(state.height));
+    this.setZone(state.zoneIndex);
+  }
+
+  private setZone(zoneIndex: number): void {
+    if (zoneIndex === this.fade.current) return;
+    this.ensure(zoneIndex);
+    this.fade.goTo(zoneIndex);
+    this.prepareNext(zoneIndex);
+  }
+
+  private setLap(lap: number): void {
+    if (lap === this.lap) return;
+    this.lap = lap;
+    const space = this.sceneries.get(SPACE_ZONE_INDEX);
+    if (!space || lap === 0) return;
+    // Normally baked a lap ahead; a jump (a debug start) bakes here.
+    ZONE_ART.space.bakeLap?.(this.scene, lap);
+    space.setLap(lap);
+    this.prepareNext(SPACE_ZONE_INDEX);
   }
 
   /** The creature of the current zone that may leave for the tower; `null` when it has none. */
@@ -176,45 +198,43 @@ export class Backdrop {
     if (this.scene.textures.exists(BD_TEX.still)) this.scene.textures.remove(BD_TEX.still);
   }
 
-  private ensure(key: number): void {
-    if (this.sceneries.has(key)) return;
-    const id = zoneIdOf(key);
-    const lap = lapOfKey(key);
-    this.bake(id, lap);
-    const depth =
-      DEPTH.background +
-      BACKDROP.depthBase +
-      Math.min(key, ZONES.length - 1) * BACKDROP.depthStep +
-      Math.min(lapOfKey(key), BACKDROP.depthLapCap) * BACKDROP.depthLapStep;
+  private ensure(index: number): void {
+    if (this.sceneries.has(index)) return;
+    const id = zoneIdOf(index);
+    this.bake(id, this.lap);
+    const depth = DEPTH.background + BACKDROP.depthBase + index * BACKDROP.depthStep;
     const scenery = new ZoneScenery(
       this.scene,
       id,
       depth,
-      ZONE_ART[id].build(this.scene, lap),
+      ZONE_ART[id].build(this.scene, Math.max(this.lap, 1)),
       this.ctx.width,
       this.ctx.height,
     );
-    scenery.setAlpha(this.fade.alphaOf(key));
+    scenery.setAlpha(this.fade.alphaOf(index));
     scenery.update(this.ctx, this.scrollY);
-    this.sceneries.set(key, scenery);
+    this.sceneries.set(index, scenery);
   }
 
   private bake(id: ZoneId, lap: number): void {
     bakeSharedArt(this.scene);
     bakeFarArt(this.scene, id);
     ZONE_ART[id].bake(this.scene);
-    if (lap > 0) ZONE_ART[id].bakeLap?.(this.scene, lap);
+    ZONE_ART[id].bakeLap?.(this.scene, Math.max(lap, 1));
   }
 
   /**
-   * Queues the pictures of the next zone (or the next lap of Space) a little after this one
-   * starts, so the change itself is cheap; the queue is worked off one texture per frame, so no
-   * frame hitches.
+   * Queues the pictures of the next zone (in Space: of the next lap's planet) a little after this
+   * one starts, so the change itself is cheap; the queue is worked off one texture per frame, so
+   * no frame hitches.
    */
-  private prepareNext(key: number): void {
-    const next = key + 1;
+  private prepareNext(index: number): void {
     this.scene.time.delayedCall(BACKDROP.prepareDelayMs, () => {
-      this.bakeQueue = collectBakeSteps(() => this.bake(zoneIdOf(next), lapOfKey(next)));
+      const next = ZONES[index + 1];
+      this.bakeQueue = collectBakeSteps(() => {
+        if (next) this.bake(next.id, 1);
+        else ZONE_ART.space.bakeLap?.(this.scene, this.lap + 1);
+      });
     });
   }
 }

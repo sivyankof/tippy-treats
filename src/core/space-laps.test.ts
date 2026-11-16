@@ -3,6 +3,7 @@ import { BALANCE } from '../data/balance';
 import { ZONE_RULES } from '../data/zones';
 import { LAP_REWARD } from '../data/zones';
 import {
+  flyingLap,
   lapRewardBerries,
   lapScoreBonus,
   layerZoneScoreMult,
@@ -11,6 +12,15 @@ import {
 } from './space-laps';
 
 const { maxWidth } = BALANCE.layer;
+
+describe('flyingLap', () => {
+  it('is the lap of the next layer to fly', () => {
+    expect(flyingLap(99)).toBe(0);
+    expect(flyingLap(100)).toBe(1);
+    expect(flyingLap(119)).toBe(1);
+    expect(flyingLap(120)).toBe(2);
+  });
+});
 
 describe('spaceLap', () => {
   it('counts laps of 20 layers from layer 101', () => {

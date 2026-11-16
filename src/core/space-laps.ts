@@ -9,6 +9,11 @@ export function spaceLap(index: number): number {
   return Math.floor((index - first) / BALANCE.zones.length) + 1;
 }
 
+/** Lap of Space of the layer in flight when `height` layers are placed (the layer with index `height + 1`); 0 before Space. */
+export function flyingLap(height: number): number {
+  return spaceLap(height + 1);
+}
+
 /**
  * The widest a layer of this index may be: the full `maxWidth` up to lap 1 of Space, then
  * `max(floor, 1 - step * (lap - 1))` of it (docs/02-gameplay.md, section 8, "Сужение витков").

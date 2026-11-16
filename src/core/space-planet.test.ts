@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { SPACE_PLANET_IDS } from '../data/space-planets';
-import { SPACE_ZONE_INDEX } from '../data/zones';
-import { LapChangeWatch, lapOfKey, planetOfLap, sceneryKey } from './space-planet';
+import { LapChangeWatch, planetOfLap } from './space-planet';
 import { spaceLap } from './space-laps';
 
 describe('planetOfLap', () => {
@@ -26,20 +25,6 @@ describe('planetOfLap', () => {
     expect(planetOfLap(spaceLap(101))).toBe('marshmallow_moon');
     expect(planetOfLap(spaceLap(121))).toBe('cookie');
     expect(planetOfLap(spaceLap(100 + 20 * 9 + 1))).toBe('marshmallow_moon');
-  });
-});
-
-describe('sceneryKey', () => {
-  it('is the zone index before Space and for the first lap', () => {
-    expect(sceneryKey(0, 0)).toBe(0);
-    expect(sceneryKey(SPACE_ZONE_INDEX - 1, 0)).toBe(SPACE_ZONE_INDEX - 1);
-    expect(sceneryKey(SPACE_ZONE_INDEX, 1)).toBe(SPACE_ZONE_INDEX);
-  });
-
-  it('grows with every lap of Space and maps back to the lap', () => {
-    expect(sceneryKey(SPACE_ZONE_INDEX, 3)).toBe(SPACE_ZONE_INDEX + 2);
-    expect(lapOfKey(sceneryKey(SPACE_ZONE_INDEX, 3))).toBe(3);
-    expect(lapOfKey(0)).toBe(0);
   });
 });
 
