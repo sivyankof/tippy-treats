@@ -18,6 +18,11 @@ export function addUiRegion(source: RegionSource): () => void {
   return () => sources.delete(source);
 }
 
+/** How many regions are registered right now (the dev soak run watches it for leaks). */
+export function uiRegionCount(): number {
+  return sources.size;
+}
+
 export function isOverUi(x: number, y: number): boolean {
   for (const source of sources) {
     const region = source();
