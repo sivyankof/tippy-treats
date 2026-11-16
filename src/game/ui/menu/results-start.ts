@@ -5,6 +5,7 @@ import { PALETTE } from '../../../data/palette';
 import { t } from '../../../i18n';
 import { services } from '../../../services';
 import { gameState } from '../../../state';
+import { isLiveRun } from '../../results-data';
 import type { ResultsData } from '../../scene-keys';
 import { createTextButton, type Button } from '../button';
 import { BalanceChip, followBalance } from '../style/balance-chip';
@@ -165,7 +166,7 @@ export function createResultsStart(
     : resultsStartPlan({
         daily: data.result.mode === 'daily',
         firstRun: data.summary.firstRun,
-        recorded: data.recorded,
+        recorded: isLiveRun(data),
         checkpoint: data.checkpoint,
         opened: gameState.checkpoints,
         rows: gameState.checkpointRows(services.ads.isRewardedReady()),

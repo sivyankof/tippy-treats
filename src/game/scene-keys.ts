@@ -36,6 +36,8 @@ export interface ResultsData {
   tally: RunTally;
   /** The run reached the save (false for dev bot and start-height runs). */
   recorded: boolean;
+  /** A `?perf=1` benchmark run: shown as if saved, but nothing real (doubling, ads, share, paid starts) may act on it. */
+  benchmark?: boolean;
   /** The finished tower, for the picture of "Share". */
   tower: TowerSnapshot;
   /** Height the run began from (0, a checkpoint or a dev start); layers up to it were not placed. */

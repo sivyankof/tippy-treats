@@ -204,9 +204,10 @@ class PerfDirector {
   private finish(): void {
     this.finished = true;
     setFrameWorkListener(null);
+    // Read before the session ends: the runs after the benchmark are normal ones.
+    const fx = perfSession()?.params.fx ?? 'full';
     endPerfSession();
     const table = formatTable(this.rows, PERF.overlay.decimals);
-    const fx = perfSession()?.params.fx ?? 'full';
     this.publish({
       done: true,
       segment: null,

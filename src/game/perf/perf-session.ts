@@ -43,6 +43,7 @@ export function beginPerfSession(params: PerfParams): PerfSession {
 /** Lets the effects mode decide again; the benchmark is over. */
 export function endPerfSession(): void {
   effectsMode.pinLevel(null);
+  session = null;
 }
 
 /** The benchmark of this page, `null` for a normal start. */
@@ -84,8 +85,16 @@ export function perfRunSetup(request: RunRequest): RunSetup | null {
   };
 }
 
-/** The results of a benchmark run: shown as if saved, with the fresh oven of the screen (the save itself is untouched). */
+/**
+ * The results of a benchmark run: shown as if saved, with the fresh oven of the screen (the save
+ * itself is untouched); `benchmark` keeps the doubling, the interstitial, sharing and paid starts off.
+ */
 export function perfResultsData(data: ResultsData): ResultsData {
   const { xpGained, oven } = PERF.results;
-  return { ...data, recorded: true, summary: { ...data.summary, xpGained, oven: { ...oven } } };
+  return {
+    ...data,
+    recorded: true,
+    benchmark: true,
+    summary: { ...data.summary, xpGained, oven: { ...oven } },
+  };
 }

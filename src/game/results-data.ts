@@ -27,6 +27,11 @@ export function isDebugRun(recorded: boolean, dev: boolean): boolean {
   return dev && !recorded;
 }
 
+/** The run reached the save for real: only such a run may double coins, show ads, share or start paid runs. */
+export function isLiveRun(data: Pick<ResultsData, 'recorded' | 'benchmark'>): boolean {
+  return data.recorded && data.benchmark !== true;
+}
+
 /**
  * Bundles a finished run for the results scene. A run that did not reach the save (dev bot,
  * start height) keeps the experience bar where it is.

@@ -36,8 +36,10 @@ export interface SoakSample {
   sounds: number;
   /** WebGL objects the renderer keeps (textures, framebuffers, buffers); zeros on the canvas renderer. */
   gl: { textures: number; framebuffers: number; buffers: number };
-  /** `<canvas>` elements in the page (the game's own and every 2D canvas a texture or a picture made). */
-  canvases: number;
+  /** 2D canvases the texture manager holds (baked and canvas textures); they are detached from the page, so the DOM does not show them. */
+  textureCanvases: number;
+  /** `<canvas>` elements attached to the page (the game's own and the ones the interface adds). */
+  domCanvases: number;
   /** Interface regions registered in `ui-regions` (a module-level set). */
   uiRegions: number;
 }
@@ -61,6 +63,22 @@ function listenersOf(emitter: unknown): number {
 function hidden(target: unknown, name: string): unknown[] {
   const value = (target as Record<string, unknown> | null)?.[name];
   return Array.isArray(value) ? value : [];
+}
+
+interface TextureLike {
+  source?: Array<{ source?: unknown }>;
+}
+
+/** How many texture sources are backed by a canvas (an image or a video source has no `getContext`). */
+export function countTextureCanvases(textures: readonly TextureLike[]): number {
+  let total = 0;
+  for (const texture of textures) {
+    for (const entry of texture.source ?? []) {
+      const image = entry.source as { getContext?: unknown } | null | undefined;
+      if (typeof image?.getContext === 'function') total += 1;
+    }
+  }
+  return total;
 }
 
 /** Counts a display list recursively through the objects that hold others (containers, layers). */
@@ -152,7 +170,10 @@ export function readSoakSample(game: Phaser.Game): SoakSample {
       framebuffers: hidden(game.renderer, 'glFramebufferWrappers').length,
       buffers: hidden(game.renderer, 'glBufferWrappers').length,
     },
-    canvases: document.querySelectorAll('canvas').length,
+    textureCanvases: countTextureCanvases(
+      Object.values(game.textures.list as Record<string, TextureLike>),
+    ),
+    domCanvases: document.querySelectorAll('canvas').length,
     uiRegions: uiRegionCount(),
   };
 }
