@@ -117,7 +117,7 @@ export const CREATURES: Record<CreatureId, CreatureDef> = {
   honey: {
     ...keys('honey'),
     rarity: 'common',
-    ability: { kind: 'honey', layers: 3, tolerance: [30, 34, 38, 42, 48] },
+    ability: { kind: 'honey', layers: 3, tolerance: [30, 34, 38, 39, 41] },
     unlock: [{ kind: 'tutorial' }],
     palette: {
       body: '#e8b04a',
@@ -131,7 +131,7 @@ export const CREATURES: Record<CreatureId, CreatureDef> = {
   puff: {
     ...keys('puff'),
     rarity: 'common',
-    ability: { kind: 'puff', widen: [45, 55, 65, 75, 90] },
+    ability: { kind: 'puff', widen: [45, 55, 65, 70, 75] },
     unlock: [{ kind: 'bakerLevel', level: 2 }],
     palette: {
       body: '#fff0f5',
@@ -238,7 +238,7 @@ export const CREATURES: Record<CreatureId, CreatureDef> = {
   ghost: {
     ...keys('ghost'),
     rarity: 'epic',
-    ability: { kind: 'ghost', layers: [3, 3, 4, 5, 6], centreMarkFrom: 2 },
+    ability: { kind: 'ghost', layers: [3, 3, 3, 4, 4], centreMarkFrom: 2 },
     unlock: [{ kind: 'shop', coins: 2500, minBakerLevel: 10 }],
     palette: {
       body: '#f6f3ff',

@@ -127,10 +127,10 @@ function masteryStages(creatures: readonly CreatureId[]): MasteryStage[] {
 
 /**
  * The team with the most coins per run at level 5 for the strong profile, master effects
- * included (`npm run sim:coins -- --profile=strong`, 2026-11-16, before the mastery numbers were
- * tuned: 398 coins per run). Re-check it after tuning.
+ * included (`npm run sim:coins`, 2026-11-16, owner's variant V2a of the mastery numbers: 234.7
+ * coins per run). Re-check it whenever the ability or mastery numbers change.
  */
-const BEST_COIN_TEAM_L5: readonly CreatureId[] = ['honey', 'frosty', 'ghost'];
+const BEST_COIN_TEAM_L5: readonly CreatureId[] = ['honey', 'caramel', 'crumb'];
 const BEST_KEY = 'best5';
 
 function playSamples(

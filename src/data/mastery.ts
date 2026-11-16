@@ -18,7 +18,7 @@ export const MASTERY = {
   /** Gold vein: a normal drop on a golden layer pays its coins this many times (tuned). */
   caramel: { goldenCoinMult: 3 },
   /** Rime: the first layer after the freeze gets the base perfect tolerance plus this many px. */
-  frosty: { tailLayers: 1, toleranceAdd: 10 },
+  frosty: { tailLayers: 1, toleranceAdd: 5 },
   /** Change: coins when the shield saves a miss or a sneeze. */
   brownie: { shieldCoins: 5 },
   /** Volley: a perfect drop under the fireworks extends them, at most `maxExtend` per trigger. */

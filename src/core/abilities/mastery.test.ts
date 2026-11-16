@@ -84,8 +84,9 @@ describe('honey: Honey trail', () => {
 
 describe('puff: Sugar dust', () => {
   it.each([
-    [false, 300, 90],
-    [true, 300, 135],
+    [false, 300, 75],
+    // 75 * 1.5 = 112.5 px of widening, the score is rounded.
+    [true, 300, 113],
     [false, 700, 20],
   ])('boosted %s on a layer %d wide pays %d score', (boosted, width, score) => {
     const r = run();
