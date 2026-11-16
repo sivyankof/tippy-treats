@@ -91,6 +91,8 @@ export const RULE_ANIM = {
   /** Streaks behind a fast layer: a rush dash at full strength, the roof wind by its speed. */
   streaks: {
     count: 6,
+    /** Space rush layer that also has the roof rule: share of the strongest rush dash kept at the slow edge. */
+    roofRushBase: 0.5,
     /** Size of the baked streak: long, thin, solid at the head and gone at the tail. */
     width: 260,
     height: 26,
