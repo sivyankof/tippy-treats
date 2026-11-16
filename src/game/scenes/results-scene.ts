@@ -52,6 +52,8 @@ export class ResultsScene extends Phaser.Scene {
   private shown = false;
   /** `reveal` was called: the screen shows as soon as it is built. */
   private revealWanted = false;
+  /** The HUD camera faded out on show; kept, because the HUD may shut down before this scene. */
+  private hudCamera: Phaser.Cameras.Scene2D.Camera | null = null;
   private leaving = false;
   /** The share picture is being made: another tap waits for it. */
   private sharing = false;
@@ -87,7 +89,8 @@ export class ResultsScene extends Phaser.Scene {
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       this.scale.off(Phaser.Scale.Events.RESIZE, this.layout, this);
       this.revealWanted = false;
-      if (this.shown) this.scene.get(SCENES.hud).cameras.main.setAlpha(1);
+      this.hudCamera?.setAlpha(1);
+      this.hudCamera = null;
     });
     if (data.hold) {
       this.sys.setVisible(false);
@@ -226,13 +229,13 @@ export class ResultsScene extends Phaser.Scene {
       this.input.keyboard?.on('keydown-R', () => this.celebrate(width, height));
     }
     // The run HUD (height, wobble bar, next creature) fades out: the results tell the story now.
-    const hudCamera = this.scene.get(SCENES.hud).cameras.main;
+    this.hudCamera = this.scene.get(SCENES.hud).cameras.main;
     // The ads may have loaded while the screen was built hidden.
     this.coins.refreshAd();
     this.buttons.refreshAd();
     this.dim.setAlpha(0);
     this.tweens.add({ targets: this.dim, alpha: 1, duration: ANIM.results.fadeMs });
-    this.tweens.add({ targets: hudCamera, alpha: 0, duration: ANIM.results.fadeMs });
+    this.tweens.add({ targets: this.hudCamera, alpha: 0, duration: ANIM.results.fadeMs });
     enterScreen(this, this.content(), () => {
       // The buttons wake up once the screen is in, so taps made during the run cannot hit them.
       this.coins.setEnabled(true);
