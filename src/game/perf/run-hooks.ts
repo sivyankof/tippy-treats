@@ -14,6 +14,8 @@ export interface RunHooks {
   guest(): boolean;
   /** The next Rainbow star pops its small rainbow right away. */
   rainbowJoke(): void;
+  /** How many Rainbow jokes have actually played in this run. */
+  jokesPlayed(): number;
   /** The Rainbow arc has grown out fully. */
   arcGrown(): boolean;
 }

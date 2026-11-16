@@ -35,7 +35,7 @@ export interface SoakStatus {
   /** Licks the driver started in the runs, by scene. */
   bigLicks: number;
   shortLicks: number;
-  /** Rainbow jokes asked for (one per run). */
+  /** Runs in which a Rainbow joke played. */
   jokes: number;
   /** Runs in which the Rainbow arc grew out. */
   arcs: number;
@@ -66,23 +66,61 @@ export interface SmokeCounts {
   timers: number;
 }
 
+/** The counts compared before and after the lap (timers are reported, not compared). */
+const COMPARED = ['objects', 'listeners', 'tweens'] as const;
+
+/** Names of the compared counts that differ between `a` and `b`; empty when they agree. */
+function differing(a: SmokeCounts, b: SmokeCounts): string[] {
+  return COMPARED.filter((name) => a[name] !== b[name]);
+}
+
+/** The steps of the smoke lap, in order. */
+const SMOKE_STEPS = [
+  'team',
+  'run-licks-rainbow',
+  'results-again',
+  'pause-restart',
+  'checkpoint-run',
+  'daily',
+  'shop',
+  'collection-creature',
+  'settings-language',
+] as const;
+type SmokeStep = (typeof SMOKE_STEPS)[number];
+
 export interface SmokeReport {
   /** Every step done and the counts equal. */
   ok: boolean;
+  /** Names of the counts that differ before and after (empty when equal). */
+  differing: string[];
   steps: Array<{ name: string; ok: boolean }>;
   before: SmokeCounts;
   after: SmokeCounts;
   seconds: number;
-  /** Licks, jokes and arcs seen in the lap (`SoakStatus` counters). */
+  /** Licks, jokes and arcs of the whole driver so far (`SoakStatus` counters; the steps use deltas). */
   status: SoakStatus;
 }
 
 type SoakWindow = Window & { tippySoak?: TippySoak };
 
+/** The pauses of the soak laps; the smoke lap swaps them for `SOAK.smoke` ones. */
+interface Dwell {
+  screenMs: number;
+  resultsMs: number;
+  abandonMs: number;
+}
+
+const DEFAULT_DWELL: Readonly<Dwell> = {
+  screenMs: SOAK.screenDwellMs,
+  resultsMs: SOAK.resultsDwellMs,
+  abandonMs: SOAK.abandonAfterMs,
+};
+
 const sleep = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
 
 /** Buys and upgrades every creature and puts a full team on the run, so the menus show a rich save. */
 function enrichSave(): void {
+  gameState.debugSetBakerLevel(SOAK.richBakerLevel);
   gameState.addCoins(SOAK.richCoins);
   gameState.addBerries(SOAK.richBerries);
   for (const id of CREATURE_IDS) {
@@ -114,11 +152,7 @@ class SoakDriver implements TippySoak {
     stage: 'idle',
   };
 
-  private dwell: { screenMs: number; resultsMs: number; abandonMs: number } = {
-    screenMs: SOAK.screenDwellMs,
-    resultsMs: SOAK.resultsDwellMs,
-    abandonMs: SOAK.abandonAfterMs,
-  };
+  private dwell: Dwell = { ...DEFAULT_DWELL };
 
   constructor(private readonly game: Phaser.Game) {}
 
@@ -154,28 +188,31 @@ class SoakDriver implements TippySoak {
 
   /** Home reached, the save rich, the game time sped up: one pass through the fixed list of steps. */
   async smoke(): Promise<SmokeReport> {
+    if (this.active)
+      throw new Error('tippySoak.smoke(): the soak loop is running, stop() it first');
     const started = performance.now();
     const steps: SmokeReport['steps'] = [];
     const once = (): SmokeCounts => {
       const { objects, listeners, tweens, timers } = this.sample();
       return { objects, listeners, tweens, timers };
     };
-    // Entrance tweens of a screen still run for a moment: read until two reads in a row agree.
+    // Entrance tweens of a screen still run for a moment, and a Home has short idle tweens that
+    // come and go: read until two reads in a row agree (at least `settleMinReads` reads), and take
+    // the fewest tweens seen, as a tween that is left behind does not go away.
     const read = async (): Promise<SmokeCounts> => {
       let last = once();
+      let tweens = last.tweens;
       for (let i = 0; i < SOAK.smoke.settleReads; i++) {
         await sleep(SOAK.smoke.settleMs);
         const next = once();
-        const same =
-          next.objects === last.objects &&
-          next.listeners === last.listeners &&
-          next.tweens === last.tweens;
+        const same = differing(last, next).length === 0;
         last = next;
-        if (same) break;
+        tweens = Math.min(tweens, next.tweens);
+        if (same && i + 1 >= SOAK.smoke.settleMinReads) break;
       }
-      return last;
+      return { ...last, tweens };
     };
-    const step = async (name: string, body: () => Promise<boolean>): Promise<void> => {
+    const step = async (name: SmokeStep, body: () => Promise<boolean>): Promise<void> => {
       this.stage(`smoke-${name}`);
       let ok: boolean;
       try {
@@ -193,7 +230,7 @@ class SoakDriver implements TippySoak {
       resultsMs: SOAK.smoke.resultsDwellMs,
       abandonMs: SOAK.smoke.abandonAfterMs,
     };
-    setSoakSpeed(SOAK.smoke.speed);
+    setSoakSpeed(this.game, SOAK.smoke.speed);
     const home = (): boolean => this.isOn(SCENES.home);
     const game = (): GameScene => this.scene(SCENES.game) as GameScene;
     const live = (): Promise<boolean> => this.waitFor(() => this.runLive(), SOAK.runMaxMs);
@@ -207,18 +244,38 @@ class SoakDriver implements TippySoak {
     let after: SmokeCounts;
     try {
       await this.toHome();
+      // The lap ends on a Home opened from Home (the settings step) with the team of the team
+      // step: open it the same way now, so the counts before and after are read on the same Home.
+      gameState.setTeam([...SOAK.teams[SOAK.smoke.teamIndex]!]);
+      await this.visit(SCENES.home, SCENES.home);
       await sleep(this.dwell.screenMs);
       before = await read();
       await step('team', async () => {
-        await this.changeTeam();
+        await this.changeTeam(SOAK.smoke.teamIndex);
         return home();
       });
       await step('run-licks-rainbow', async () => {
-        this.beginRun(SCENES.home, CLASSIC_RUN);
-        const reached = await results();
-        const c = this.counts;
-        // The arc grows on its own clock: `arcs` is reported, not required.
-        return reached && c.bigLicks >= 1 && c.shortLicks >= 1 && c.jokes >= 1;
+        // The counters are the driver's totals: this step needs what its own runs added. The bot
+        // misses at random, so a run may end before the Rainbow layer (layer 6) comes: try again.
+        const from = { ...this.counts };
+        let at: SceneKey = SCENES.home;
+        for (let attempt = 1; attempt <= SOAK.smoke.rainbowAttempts; attempt++) {
+          this.beginRun(at, CLASSIC_RUN);
+          if (!(await results())) return false;
+          // The poke polls: give it one more look at the run that has just ended.
+          await sleep(SOAK.pokeMs * 4);
+          const c = this.counts;
+          const done =
+            c.bigLicks > from.bigLicks &&
+            c.shortLicks > from.shortLicks &&
+            c.jokes > from.jokes &&
+            c.arcs > from.arcs;
+          if (done) return true;
+          this.counts.results += 1;
+          await sleep(this.dwell.resultsMs);
+          at = SCENES.results;
+        }
+        return false;
       });
       await step('results-again', async () => {
         this.counts.results += 1;
@@ -227,8 +284,18 @@ class SoakDriver implements TippySoak {
         return live();
       });
       await step('pause-restart', async () => {
+        // At the accelerated speed the run may already be over: begin a fresh one if so.
+        if (!this.runLive()) {
+          if (this.isOn(SCENES.results)) this.beginRun(SCENES.results, CLASSIC_RUN);
+          else if (home()) this.beginRun(SCENES.home, CLASSIC_RUN);
+          if (!(await live())) return false;
+        }
         await sleep(this.dwell.abandonMs);
+        if (!this.runLive()) return false;
         this.game.events.emit(Phaser.Core.Events.HIDDEN);
+        if (!(await this.waitFor(() => this.game.scene.isPaused(SCENES.game), SOAK.runMaxMs))) {
+          return false;
+        }
         await sleep(this.dwell.screenMs);
         this.counts.runs += 1;
         this.pokeNextRun();
@@ -270,21 +337,15 @@ class SoakDriver implements TippySoak {
       await sleep(this.dwell.screenMs);
       after = await read();
     } finally {
-      setSoakSpeed(1);
+      setSoakSpeed(this.game, 1);
       this.active = false;
       this.counts.running = false;
-      this.dwell = {
-        screenMs: SOAK.screenDwellMs,
-        resultsMs: SOAK.resultsDwellMs,
-        abandonMs: SOAK.abandonAfterMs,
-      };
+      this.dwell = { ...DEFAULT_DWELL };
     }
-    const equal =
-      before.objects === after.objects &&
-      before.listeners === after.listeners &&
-      before.tweens === after.tweens;
+    const unequal = differing(before, after);
     return {
-      ok: steps.length === 9 && steps.every((s) => s.ok) && equal,
+      ok: steps.length === SMOKE_STEPS.length && steps.every((s) => s.ok) && unequal.length === 0,
+      differing: unequal,
       steps,
       before,
       after,
@@ -306,11 +367,15 @@ class SoakDriver implements TippySoak {
   }
 
   /** Waits until `done()` or the time is up; false on the time-out. */
-  private async waitFor(done: () => boolean, timeoutMs: number): Promise<boolean> {
+  private async waitFor(
+    done: () => boolean,
+    timeoutMs: number,
+    pollMs: number = SOAK.pollMs,
+  ): Promise<boolean> {
     const until = performance.now() + timeoutMs;
     while (this.active && performance.now() < until) {
       if (done()) return true;
-      await sleep(SOAK.pollMs);
+      await sleep(pollMs);
     }
     return this.active && done();
   }
@@ -376,10 +441,10 @@ class SoakDriver implements TippySoak {
   }
 
   /** Goes to the team screen, sets the next team of `SOAK.teams` and comes back to Home. */
-  private async changeTeam(): Promise<void> {
+  private async changeTeam(index = this.counts.teamChanges): Promise<void> {
     await this.visit(SCENES.home, SCENES.team);
     const teams = SOAK.teams;
-    gameState.setTeam([...teams[this.counts.teamChanges % teams.length]!]);
+    gameState.setTeam([...teams[index % teams.length]!]);
     this.counts.teamChanges += 1;
     await this.visit(SCENES.team, SCENES.home);
   }
@@ -402,33 +467,46 @@ class SoakDriver implements TippySoak {
     if (!started || !hooks) return;
     const live = (): boolean => this.active && runHooks() === hooks;
     let arc = false;
-    const watchArc = (): void => {
-      if (arc || !live() || !hooks.arcGrown()) return;
-      arc = true;
-      this.counts.arcs += 1;
+    let joke = false;
+    const watch = (): void => {
+      if (!arc && live() && hooks.arcGrown()) {
+        arc = true;
+        this.counts.arcs += 1;
+      }
+      if (!joke && live() && hooks.jokesPlayed() > 0) {
+        joke = true;
+        this.counts.jokes += 1;
+      }
     };
-    // The next Rainbow star tells its joke as soon as one is on screen.
+    // The next Rainbow star tells its joke as soon as one is on screen; it counts once it played.
     hooks.rainbowJoke();
-    this.counts.jokes += 1;
     // Whenever no lick plays, the scenes still to do are tried, the big one first.
     const left = new Set<LickScene>(['big', 'short']);
-    await this.waitFor(() => {
-      watchArc();
-      if (!live()) return true;
-      if (hooks.lickStage() !== null) return false;
-      for (const scene of left) {
-        if (!hooks.lick(scene)) continue;
-        left.delete(scene);
-        if (scene === 'big') this.counts.bigLicks += 1;
-        else this.counts.shortLicks += 1;
-        break;
-      }
-      return left.size === 0;
-    }, SOAK.runMaxMs);
-    await this.waitFor(() => {
-      watchArc();
-      return !live();
-    }, SOAK.runMaxMs);
+    await this.waitFor(
+      () => {
+        watch();
+        if (!live()) return true;
+        if (hooks.lickStage() !== null) return false;
+        for (const scene of left) {
+          if (!hooks.lick(scene)) continue;
+          left.delete(scene);
+          if (scene === 'big') this.counts.bigLicks += 1;
+          else this.counts.shortLicks += 1;
+          break;
+        }
+        return left.size === 0;
+      },
+      SOAK.runMaxMs,
+      SOAK.pokeMs,
+    );
+    await this.waitFor(
+      () => {
+        watch();
+        return !live();
+      },
+      SOAK.runMaxMs,
+      SOAK.pokeMs,
+    );
   }
 
   /**

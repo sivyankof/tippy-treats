@@ -395,6 +395,11 @@ export class GameState {
     return runTeam(save.team, save.creatures, save.bakerLevel);
   }
 
+  /** Dev soak only: sets the baker level, which opens the shop, the upgrades and the team slots. */
+  debugSetBakerLevel(level: number): void {
+    this.store.replace({ ...this.store.save, bakerLevel: level, bakerXp: 0 });
+  }
+
   /** Saves the team; creatures the player does not own and repeats become empty slots. */
   setTeam(team: TeamIds): void {
     this.store.replace(withTeam(this.store.save, team));

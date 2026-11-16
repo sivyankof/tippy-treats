@@ -7,6 +7,7 @@ function hooks(): RunHooks {
     lickStage: () => null,
     guest: () => true,
     rainbowJoke: () => undefined,
+    jokesPlayed: () => 0,
     arcGrown: () => true,
   };
 }

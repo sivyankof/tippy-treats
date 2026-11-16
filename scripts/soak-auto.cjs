@@ -1,4 +1,4 @@
-/* global process, console, fetch, setTimeout, require */
+/* global process, console, fetch, setTimeout, require, __dirname */
 /*
  * End-of-session soak: picks the level from the files changed since --base (default origin/master)
  * plus uncommitted files, runs scripts/soak-check.cjs accordingly and prints ONE final line.
@@ -11,15 +11,43 @@
 /* eslint-disable @typescript-eslint/no-require-imports */
 const { spawn, spawnSync } = require('node:child_process');
 const { createServer } = require('node:net');
+const { join } = require('node:path');
 const { pickSoakLevel } = require('./soak-level.cjs');
 
 const DEFAULT_MINUTES = 5;
 const SERVER_WAIT_MS = 60_000;
 
-function arg(name) {
-  const i = process.argv.indexOf(`--${name}`);
-  const next = i < 0 ? undefined : process.argv[i + 1];
-  return next === undefined || next.startsWith('--') ? undefined : next;
+const OPTIONS_WITH_VALUE = ['base', 'url', 'playwright', 'minutes'];
+
+/** `--name value` and `--name=value` options, plus the plain arguments that are not an option's value. */
+function parseArgs(argv) {
+  const options = {};
+  const positional = [];
+  for (let i = 0; i < argv.length; i++) {
+    const item = argv[i];
+    const match = /^--([^=]+)(?:=(.*))?$/.exec(item);
+    if (!match) {
+      positional.push(item);
+    } else if (OPTIONS_WITH_VALUE.includes(match[1])) {
+      const next = argv[i + 1];
+      if (match[2] !== undefined) options[match[1]] = match[2];
+      else if (next !== undefined && !next.startsWith('--')) {
+        options[match[1]] = next;
+        i++;
+      }
+    }
+  }
+  return { options, positional };
+}
+
+const { options: opts, positional: positionals } = parseArgs(process.argv.slice(2));
+const arg = (name) => opts[name];
+
+/** A failed run: reported as the final line and the exit code, after the cleanup has run. */
+class Failure extends Error {}
+
+function fail(message) {
+  throw new Failure(message);
 }
 
 function git(args) {
@@ -30,12 +58,26 @@ function git(args) {
 
 function changedFiles(base) {
   const committed = git(['diff', '--name-only', `${base}...HEAD`]).split('\n');
-  // `--porcelain` lines are "XY path" (or "XY old -> new").
-  const dirty = git(['status', '--porcelain'])
-    .split('\n')
-    .filter((line) => line !== '')
-    .map((line) => line.slice(3).split(' -> ').pop() ?? '');
+  // `-z` entries are "XY path" separated by NUL, unquoted; a rename or copy is followed by an
+  // extra entry holding the old path. `-uall` lists the files of untracked directories.
+  const entries = git(['status', '--porcelain', '-uall', '-z']).split('\0');
+  const dirty = [];
+  for (let i = 0; i < entries.length; i++) {
+    const entry = entries[i];
+    if (entry.length < 4) continue;
+    dirty.push(entry.slice(3));
+    if (/[RC]/.test(entry.slice(0, 2)) && entries[i + 1]) dirty.push(entries[++i]);
+  }
   return [...new Set([...committed, ...dirty].filter((f) => f !== ''))];
+}
+
+/** The ref as a commit, or a clear failure. */
+function checkedBase(ref) {
+  const out = spawnSync('git', ['rev-parse', '--verify', '--quiet', `${ref}^{commit}`], {
+    encoding: 'utf8',
+  });
+  if (out.status !== 0) fail(`--base ${ref} is not a commit of this repository`);
+  return ref;
 }
 
 function freePort() {
@@ -52,19 +94,32 @@ function freePort() {
 
 async function startVite() {
   const port = await freePort();
-  const child = spawn('npx', ['vite', '--port', String(port), '--strictPort'], {
+  // No shell: `child.pid` is vite itself. On Windows the tree is killed by taskkill, elsewhere
+  // vite leads its own process group (detached) and the whole group gets the signal.
+  const vite = join(__dirname, '..', 'node_modules', 'vite', 'bin', 'vite.js');
+  const child = spawn(process.execPath, [vite, '--port', String(port), '--strictPort'], {
     stdio: 'ignore',
-    shell: true,
+    detached: process.platform !== 'win32',
+  });
+  let exited = false;
+  child.once('exit', () => {
+    exited = true;
   });
   const stop = () => {
-    if (child.pid === undefined) return;
+    if (child.pid === undefined || exited) return;
     if (process.platform === 'win32')
       spawnSync('taskkill', ['/PID', String(child.pid), '/T', '/F']);
-    else child.kill();
+    else {
+      try {
+        process.kill(-child.pid);
+      } catch {
+        /* already gone */
+      }
+    }
   };
   const url = `http://localhost:${port}/`;
   const until = Date.now() + SERVER_WAIT_MS;
-  while (Date.now() < until) {
+  while (Date.now() < until && !exited) {
     try {
       if ((await fetch(url)).ok) return { url, stop };
     } catch {
@@ -86,18 +141,15 @@ function runCheck(url, extra, env) {
   return { code: out.status ?? 1, out: text };
 }
 
-function fail(message) {
-  console.log(`soak:auto: FAIL ${message}`);
-  process.exit(1);
-}
-
 async function main() {
   // npm swallows a flag given without the `--` separator and exposes it as npm_config_base.
   // Without the separator it arrives as npm_config_base=true plus the ref as a plain argument.
+  // Preferred form: `npm run soak:auto -- --base <ref>` (npm then prints no "Unknown cli config").
   const fromNpm = process.env.npm_config_base;
-  const positional = process.argv.slice(2).find((a) => !a.startsWith('--'));
-  const base =
-    arg('base') ?? (fromNpm === 'true' ? positional : fromNpm) ?? positional ?? 'origin/master';
+  const positional = positionals[0];
+  const base = checkedBase(
+    arg('base') ?? (fromNpm === 'true' ? positional : fromNpm) ?? positional ?? 'origin/master',
+  );
   const minutes = Number(arg('minutes') ?? DEFAULT_MINUTES);
   const choice = pickSoakLevel(changedFiles(base));
   const shown =
@@ -119,11 +171,11 @@ async function main() {
   try {
     const smoke = runCheck(server.url, ['--smoke'], env);
     const line = smoke.out.split('\n').find((l) => l.startsWith('smoke:')) ?? 'smoke: no result';
-    if (smoke.code !== 0) fail(`${line}`);
-    const counts = /objects (\d+)=\1/.test(line)
-      ? 'object counts unchanged'
-      : 'object counts CHANGED';
+    // soak-check exits non-zero on any message, unfinished step or unequal count.
+    if (smoke.code !== 0) fail(line);
     const messages = /(\d+) messages/.exec(line)?.[1] ?? '?';
+    const number = (name) => new RegExp(name + ' ([0-9]+)=[0-9]+').exec(line)?.[1] ?? '?';
+    const counts = `objects ${number('objects')}, listeners ${number('listeners')}, tweens ${number('tweens')} unchanged`;
     let tail = '';
     if (choice.level === 'smoke+5min') {
       const soak = runCheck(server.url, ['--minutes', String(minutes), '--rich'], env);
@@ -140,4 +192,7 @@ async function main() {
   }
 }
 
-main().catch((error) => fail(String(error)));
+main().catch((error) => {
+  console.log(`soak:auto: FAIL ${error instanceof Failure ? error.message : String(error)}`);
+  process.exitCode = 1;
+});

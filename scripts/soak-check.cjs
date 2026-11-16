@@ -30,17 +30,17 @@ function arg(name, fallback) {
 function smokeVerdict(report, problems) {
   const done = report.steps.filter((step) => step.ok).length;
   const { before: b, after: a } = report;
-  const equal = b.objects === a.objects && b.listeners === a.listeners && b.tweens === a.tweens;
+  // Equality of the counts is decided once, in the game (`differing` in soak-driver.ts).
   const total = report.steps.length;
-  const ok = report.ok && done === total && total > 0 && equal && problems.length === 0;
+  const ok = report.ok && done === total && total > 0 && problems.length === 0;
   if (!report.ok) console.log(`  report: ${JSON.stringify(report)}`);
   for (const step of report.steps) if (!step.ok) console.log(`  unfinished step: ${step.name}`);
   for (const line of problems.slice(0, 20)) console.log(`  ${line}`);
-  const pair = (name, x, y) => `${name} ${x}${x === y ? '=' : '!='}${y}`;
+  const pair = (name, x, y) => `${name} ${x}${report.differing.includes(name) ? '!=' : '='}${y}`;
   console.log(
     `smoke: ${ok ? 'ok' : 'FAIL'}, steps ${done}/${total}, ${problems.length} messages, ` +
       `${pair('objects', b.objects, a.objects)}, ${pair('listeners', b.listeners, a.listeners)}, ` +
-      `${pair('tweens', b.tweens, a.tweens)}, ${report.seconds} s`,
+      `${pair('tweens', b.tweens, a.tweens)}, jokes ${report.status.jokes}, arcs ${report.status.arcs}, ${report.seconds} s`,
   );
   return ok ? 0 : 1;
 }

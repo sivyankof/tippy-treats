@@ -138,7 +138,11 @@ export class RunFx {
     this.topperFx = new TopperFx(scene, () => services.audio.topperHop());
     const licks = this.tower.licks;
     this.abilityFx.onRainbowPuff = () => services.audio.cloudPuff();
-    this.tower.onRainbowJoke = () => services.audio.rainbowJoke();
+    let jokesPlayed = 0;
+    this.tower.onRainbowJoke = () => {
+      jokesPlayed += 1;
+      services.audio.rainbowJoke();
+    };
     licks.onSlurp = () => services.audio.lickSlurp();
     licks.onSlurpLong = () => services.audio.lickSlurpLong();
     licks.onSmack = () => services.audio.lickSmack();
@@ -152,6 +156,7 @@ export class RunFx {
       lickStage: () => licks.stage,
       guest: () => this.guest.landNow(),
       rainbowJoke: startRainbowJokeNow,
+      jokesPlayed: () => jokesPlayed,
       arcGrown: () => this.abilityFx.rainbowArcGrown,
     };
     setRunHooks(hooks);

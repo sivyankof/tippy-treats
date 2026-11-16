@@ -20,6 +20,8 @@ export const SOAK = {
   resultsDwellMs: 1_500,
   /** How often the driver looks at the scenes while it waits. */
   pollMs: 200,
+  /** How often the poke of a run looks at its hooks: a Rainbow arc is fully grown for only a short while. */
+  pokeMs: 50,
   /**
    * Teams set on the team screen before the first run of each lap, in turn (the tester's crash came
    * after a team change). Creatures the save does not own become empty slots; each has Rainbow, so
@@ -33,6 +35,8 @@ export const SOAK = {
   /** Languages the settings step switches to, in turn; the last one must be the language the soak began with (`en`). */
   languages: ['ru', 'en'],
   /** The rich save of `start(true)`: coins and berries given, upgrade steps tried per creature, team size. */
+  /** Baker level of the rich save: the shop, upgrades and the last team slot are gated by it. */
+  richBakerLevel: 30,
   richCoins: 10_000_000,
   richBerries: 100_000,
   richUpgrades: 6,
@@ -49,10 +53,16 @@ export const SOAK = {
     screenDwellMs: 400,
     resultsDwellMs: 500,
     abandonAfterMs: 1_500,
+    /** Team of `teams` the lap plays with: Rainbow in the first slot, so it comes at layer 6 and its arc and joke happen in a short run. */
+    teamIndex: 1,
+    /** Runs the Rainbow step may play to get a run that reaches the Rainbow layer. */
+    rainbowAttempts: 4,
     /** Checkpoint the checkpoint run starts from. */
     checkpointIndex: 0,
     /** Counts are read until two reads in a row agree: at most this many reads, this far apart. */
     settleReads: 10,
+    /** Reads taken at least, whatever they show: idle tweens come and go, a leaked one stays. */
+    settleMinReads: 4,
     settleMs: 600,
   },
 } as const;
