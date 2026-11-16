@@ -16,6 +16,10 @@ import { EffectBadges } from '../ui/effect-badges';
 import { MasterCaptions } from '../ui/master-captions';
 import { TempoChip } from '../ui/tempo-chip';
 import { ZoneBanner } from '../ui/zone-plate';
+import { LAP_BANNER } from '../../data/zone-plate';
+import { LAP_PLATE } from '../../data/space-planets';
+import { spaceLap } from '../../core/space-laps';
+import { LapChangeWatch } from '../../core/space-planet';
 import { ZoneChangeWatch } from '../ui/zone-change-watch';
 import { HudNumbersIdle } from '../ui/hud-idle';
 import { isCompactNext } from '../ui/hud-row-layout';
@@ -44,9 +48,11 @@ export class HudScene extends Phaser.Scene {
   private masterCaptions!: MasterCaptions;
   private tempoChip!: TempoChip;
   private zoneBanner!: ZoneBanner;
+  private lapBanner!: ZoneBanner;
   /** "Demo: <name>" during a creature demo. */
   private demoLabel!: Phaser.GameObjects.Text;
   private zoneWatch = new ZoneChangeWatch();
+  private lapWatch = new LapChangeWatch(LAP_PLATE.firstLap);
   private treasure!: TreasureHud;
   private numbersIdle!: HudNumbersIdle;
   private tutorialHints!: TutorialHints;
@@ -90,8 +96,10 @@ export class HudScene extends Phaser.Scene {
     }
     this.tempoChip = new TempoChip(this);
     this.zoneBanner = new ZoneBanner(this);
+    this.lapBanner = new ZoneBanner(this, LAP_BANNER, 'ui_lap_banner');
     this.demoLabel = createOutlinedText(this, 0, 0, '', HUD_LAYOUT.demoLabelFont, PALETTE.gold);
     this.zoneWatch = new ZoneChangeWatch();
+    this.lapWatch = new LapChangeWatch(LAP_PLATE.firstLap);
     this.treasure = new TreasureHud(this);
     this.tutorialHints = new TutorialHints(this);
     // Breathing only: a gloss band has nowhere to run on a button this small.
@@ -148,7 +156,9 @@ export class HudScene extends Phaser.Scene {
   override update(time: number, delta: number): void {
     const info = this.gameScene()?.getRunInfo() ?? null;
     const announced = this.zoneWatch.observe(info && info.phase !== 'over' ? info.zoneIndex : null);
-    fxGuard.call('hud-zone-banner', this, this.updateZoneBanner, announced, time);
+    const live = info && info.phase !== 'over' ? info : null;
+    const lap = this.lapWatch.observe(live ? spaceLap(live.height + 1) : null);
+    fxGuard.call('hud-zone-banner', this, this.updateZoneBanner, announced, lap, time);
     if (info) {
       this.heightRoll.set(info.height);
       this.scoreRoll.set(info.score);
@@ -202,9 +212,11 @@ export class HudScene extends Phaser.Scene {
     this.masterCaptions.update(game.masterFeed, this.effectBadges.count, delta);
   }
 
-  private updateZoneBanner(announced: number | null, time: number): void {
+  private updateZoneBanner(announced: number | null, lap: number | null, time: number): void {
     if (announced !== null) this.zoneBanner.show(announced);
+    if (lap !== null) this.lapBanner.showLap(lap);
     this.zoneBanner.update(time);
+    this.lapBanner.update(time);
   }
 
   private gameScene(): GameScene | null {
@@ -258,6 +270,7 @@ export class HudScene extends Phaser.Scene {
     this.tempoChip.layout(this.wobbleBar.plateEdge);
     this.nextBadge.layout(width);
     this.zoneBanner.layout(width);
+    this.lapBanner.layout(width);
     this.treasure.layout(width);
     this.tutorialHints.layout(width, height);
     this.debugPanel.layout(height);

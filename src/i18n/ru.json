@@ -70,7 +70,8 @@
     },
     "space": {
       "name": "Космос"
-    }
+    },
+    "lap": "Виток {n}"
   },
   "creature": {
     "honey": {

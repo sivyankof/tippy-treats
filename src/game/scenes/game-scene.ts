@@ -2,6 +2,7 @@ import * as Phaser from 'phaser';
 import { TimingBot } from '../../core/bot';
 import type { Modifiers } from '../../core/abilities/types';
 import { Rng } from '../../core/rng';
+import { spaceLap } from '../../core/space-laps';
 import { emptyTally, tallyEvents, type RunTally } from '../../core/run-tally';
 import type { CheckpointHeight } from '../../core/checkpoints';
 import type { RunMode, RunResult } from '../../core/run-result';
@@ -133,7 +134,14 @@ export class GameScene extends Phaser.Scene {
     });
 
     const { width, height } = this.scale.gameSize;
-    this.background = new Backdrop(this, TRAY_TOP_Y, width, height, this.sim.state.zoneIndex);
+    this.background = new Backdrop(
+      this,
+      TRAY_TOP_Y,
+      width,
+      height,
+      this.sim.state.zoneIndex,
+      spaceLap(this.sim.state.height + 1),
+    );
     this.fx = new RunFx(this, TRAY_TOP_Y, this.seed);
     this.fx.setGuestSource(() => this.background.guestSource());
     this.camera = new RunCamera(this, this.fx, this.background, TRAY_TOP_Y);
@@ -213,7 +221,9 @@ export class GameScene extends Phaser.Scene {
     this.fx.handleEvents(events, this.sim.state, this.flying.current, dropMods, cam);
     if (events.length > 0) this.mods = this.sim.currentModifiers();
     this.fx.update(delta, time, this.sim.state, this.mods, cam);
-    fxGuard.run('backdrop-zone', () => this.background.setZone(this.sim.state.zoneIndex));
+    fxGuard.run('backdrop-zone', () =>
+      this.background.setZone(this.sim.state.zoneIndex, spaceLap(this.sim.state.height + 1)),
+    );
     // Slow motion slows the tweens and the camera too; the HUD scene keeps its own clock.
     this.tweens.timeScale = this.fx.timeScale;
     this.camera.follow(delta * this.fx.timeScale);

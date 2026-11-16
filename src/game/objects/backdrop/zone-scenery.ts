@@ -25,7 +25,10 @@ export interface SceneryDef {
 /** One zone's art: baking is separate so the next zone can be prepared ahead of the change. */
 export interface ZoneArt {
   bake(scene: Phaser.Scene): void;
-  build(scene: Phaser.Scene): SceneryDef;
+  /** Bakes what only one lap of the zone shows (the planet of a lap of Space); `lap` is 1-based. */
+  bakeLap?(scene: Phaser.Scene, lap: number): void;
+  /** `lap` is the 1-based lap of Space; only Space reads it. */
+  build(scene: Phaser.Scene, lap?: number): SceneryDef;
 }
 
 const skyKey = (zone: ZoneId): string => `bd_sky_${zone}`;
