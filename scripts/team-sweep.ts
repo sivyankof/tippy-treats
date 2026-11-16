@@ -166,13 +166,15 @@ function report(files: string[]): void {
   const bestRatio = best ? ratioOf(best) : null;
   const worstP99 = [...plain].sort((a, b) => b.p99 - a.p99)[0];
   if (best && bestRatio !== null && worstP99) {
+    // A team whose p99 could break the target counts only when it was measured on P99_RUNS runs.
+    const short = plain.filter((row) => row.p99 > MAX_P99 * 0.75 && row.runs < P99_RUNS);
     const ok = bestRatio <= MAX_RATIO && worstP99.p99 <= MAX_P99 && reaching === 0;
+    const verdict = !ok ? 'MISSED' : short.length > 0 ? 'UNVERIFIED' : 'ok';
     console.log(
       `target (no rainbow: ratio <= ${MAX_RATIO}, every p99 <= ${MAX_P99} on ${P99_RUNS} runs, no cut runs): ` +
-        `${ok ? 'ok' : 'MISSED'} (${best.team} x${bestRatio.toFixed(2)}; highest p99 ${worstP99.team} ` +
+        `${verdict} (${best.team} x${bestRatio.toFixed(2)}; highest p99 ${worstP99.team} ` +
         `${worstP99.p99} on ${worstP99.runs} runs)`,
     );
-    const short = plain.filter((row) => row.p99 > MAX_P99 * 0.75 && row.runs < P99_RUNS);
     if (short.length > 0) {
       console.log(
         `p99 candidates measured on fewer than ${P99_RUNS} runs (replay with --runs=${P99_RUNS}): ` +

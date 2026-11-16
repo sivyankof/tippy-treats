@@ -70,7 +70,7 @@ import {
   type RestorePayment,
   type StreakClaim,
 } from './streak';
-import { withBakerLevelBumped, withCreaturesBumped } from './debug-grants';
+import { withBakerLevel, withBakerLevelBumped, withCreaturesBumped } from './debug-grants';
 import { withProgressReset } from './reset';
 import { runCoinCredits, type CreditSource } from './session-tally';
 import { SaveStore, type GameStateDeps, type LoadOptions, type LoadOutcome } from './save-store';
@@ -398,7 +398,7 @@ export class GameState {
 
   /** Dev soak only: sets the baker level, which opens the shop, the upgrades and the team slots. */
   debugSetBakerLevel(level: number): void {
-    this.store.replace({ ...this.store.save, bakerLevel: level, bakerXp: 0 });
+    this.store.replace(withBakerLevel(this.store.save, level));
   }
 
   /** Dev only: baker level +1, level XP reset, no reward. */

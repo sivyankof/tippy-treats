@@ -5,15 +5,19 @@ import type { SimEvent } from './sim-types';
 import { spaceWidthLimit } from './space-laps';
 import { TowerSim } from './tower-sim';
 
-const newSim = (startHeight: number): TowerSim =>
-  new TowerSim(config({ seed: 77, startHeight }));
+const newSim = (startHeight: number): TowerSim => new TowerSim(config({ seed: 77, startHeight }));
 
-function perfect(sim: TowerSim): SimEvent[] {
-  const events = untilFlying(sim);
+/** Drops the layer already in the air exactly over the tower top. */
+function perfectNow(sim: TowerSim): SimEvent[] {
   const flying = mutable(sim).flying;
   if (flying) flying.x = sim.topLayerX();
   sim.drop();
-  events.push(...untilSettled(sim));
+  return untilSettled(sim);
+}
+
+function perfect(sim: TowerSim): SimEvent[] {
+  const events = untilFlying(sim);
+  events.push(...perfectNow(sim));
   return events;
 }
 
@@ -38,12 +42,24 @@ describe('TowerSim: lap narrowing of Space', () => {
     expect(sim.state.layers.at(-1)?.width).toBe(BALANCE.layer.firstWidth);
   });
 
-  it('never lets a perfect streak widen a layer beyond the lap cap', () => {
+  it('lets a perfect streak widen a narrower layer up to the lap cap, never beyond', () => {
     const sim = newSim(120);
-    for (let i = 0; i < 8; i++) perfect(sim);
-    const cap = spaceWidthLimit(sim.state.height);
-    for (const layer of sim.state.layers.slice(120)) {
-      expect(layer.width).toBeLessThanOrEqual(cap + 1e-9);
+    const cap = spaceWidthLimit(121);
+    untilFlying(sim);
+    const flying = mutable(sim).flying;
+    if (flying) flying.width = cap - 100;
+    const events: SimEvent[] = [];
+    mutable(sim).wobble = 0;
+    events.push(...perfectNow(sim));
+    for (let i = 0; i < 6; i++) {
+      mutable(sim).wobble = 0;
+      events.push(...perfect(sim));
     }
+    const combos = pick(events, 'combo');
+    expect(combos).toHaveLength(7);
+    expect(combos.some((e) => e.widened > 0)).toBe(true);
+    const widths = sim.state.layers.slice(120).map((layer) => layer.width);
+    expect(Math.max(...widths)).toBeCloseTo(cap);
+    for (const width of widths) expect(width).toBeLessThanOrEqual(cap + 1e-9);
   });
 });

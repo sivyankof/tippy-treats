@@ -6,6 +6,16 @@ import type { Rng } from './rng';
 import type { SimEvent, TowerSim } from './tower-sim';
 
 /**
+ * Bot error multiplier while a cloud covers the layer: the dense cloud of the Clouds zone or the
+ * see-through nebula of Space; the "Not scary" guides (level-5 ghost) lower it to at most
+ * `ghostCloudSdMult`.
+ */
+export function coverSdMult(zoneIndex: number, guidesMaster: boolean): number {
+  const cover = zoneIndex === SPACE_ZONE_INDEX ? DIFFICULTY.nebulaSdMult : DIFFICULTY.cloudSdMult;
+  return guidesMaster ? Math.min(cover, DIFFICULTY.ghostCloudSdMult) : cover;
+}
+
+/**
  * Bot player: aims at the first pass over the tower top and taps with a
  * normally distributed timing error drawn once per spawned layer. A late tap
  * is capped at the first wall bounce after the target was passed, so a large
@@ -19,16 +29,6 @@ import type { SimEvent, TowerSim } from './tower-sim';
  * mistaken for a wall bounce. A tap needs the target to have been approached first, so a
  * layer that flies away from it after the reversal is aimed only after its next bounce.
  */
-/**
- * Bot error multiplier while a cloud covers the layer: the dense cloud of the Clouds zone or the
- * see-through nebula of Space; the "Not scary" guides (level-5 ghost) lower it to at most
- * `ghostCloudSdMult`.
- */
-export function coverSdMult(zoneIndex: number, guidesMaster: boolean): number {
-  const cover = zoneIndex === SPACE_ZONE_INDEX ? DIFFICULTY.nebulaSdMult : DIFFICULTY.cloudSdMult;
-  return guidesMaster ? Math.min(cover, DIFFICULTY.ghostCloudSdMult) : cover;
-}
-
 export class TimingBot {
   /** Standard normal draw of the current layer; scaled by the standard deviation on every tap check. */
   private unitError = 0;

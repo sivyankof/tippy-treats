@@ -6,11 +6,7 @@ export function nextCombo(combo: number, perfect: boolean): number {
 }
 
 /** How much a layer of this width can still grow: `amount`, capped at `cap` (the maximum width). */
-export function cappedWidening(
-  width: number,
-  amount: number,
-  cap: number = BALANCE.layer.maxWidth,
-): number {
+export function cappedWidening(width: number, amount: number, cap: number): number {
   return Math.min(amount, Math.max(0, cap - width));
 }
 
@@ -18,11 +14,7 @@ export function cappedWidening(
  * How much a perfect drop widens the layer at the given combo
  * (the combo value already includes this drop).
  */
-export function comboWidening(
-  combo: number,
-  width: number,
-  cap: number = BALANCE.layer.maxWidth,
-): number {
+export function comboWidening(combo: number, width: number, cap: number): number {
   if (combo < BALANCE.combo.widenFrom) return 0;
   return cappedWidening(width, BALANCE.combo.widenBy, cap);
 }

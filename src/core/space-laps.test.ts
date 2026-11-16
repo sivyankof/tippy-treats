@@ -46,8 +46,6 @@ describe('spaceWidthLimit', () => {
     const shares = Array.from({ length: 11 }, (_, i) =>
       Math.round((spaceWidthLimit(101 + i * 20, { step: 0.06, floor: 0.5 }) / maxWidth) * 100),
     );
-    expect(shares).toEqual([
-      100, 94, 88, 82, 76, 70, 64, 58, 52, 50, 50,
-    ]);
+    expect(shares).toEqual([100, 94, 88, 82, 76, 70, 64, 58, 52, 50, 50]);
   });
 });

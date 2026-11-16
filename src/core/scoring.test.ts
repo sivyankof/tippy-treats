@@ -1,5 +1,8 @@
+import { BALANCE } from '../data/balance';
 import { describe, expect, it } from 'vitest';
 import { comboWidening, nextCombo, normalScore, perfectScore } from './scoring';
+
+const MAX = BALANCE.layer.maxWidth;
 
 describe('combo', () => {
   it('counts perfect drops and resets on a normal one', () => {
@@ -9,14 +12,14 @@ describe('combo', () => {
   });
 
   it('widens the layer by 30 from the second perfect drop in a row', () => {
-    expect(comboWidening(1, 400)).toBe(0);
-    expect(comboWidening(2, 400)).toBe(30);
-    expect(comboWidening(12, 400)).toBe(30);
+    expect(comboWidening(1, 400, MAX)).toBe(0);
+    expect(comboWidening(2, 400, MAX)).toBe(30);
+    expect(comboWidening(12, 400, MAX)).toBe(30);
   });
 
   it('never widens past the tray width', () => {
-    expect(comboWidening(5, 710)).toBe(10);
-    expect(comboWidening(5, 720)).toBe(0);
+    expect(comboWidening(5, 710, MAX)).toBe(10);
+    expect(comboWidening(5, 720, MAX)).toBe(0);
   });
 });
 
