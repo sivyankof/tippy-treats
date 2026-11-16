@@ -4,7 +4,14 @@ import { SOAK } from '../../data/soak';
 import { gameState } from '../../state';
 import { setLang, type Lang } from '../../i18n';
 import { CLASSIC_RUN, DAILY_RUN, demoRun, type RunRequest } from '../run-request';
-import { openScreen, restartRun, SCENES, startRunFrom, type SceneKey } from '../scene-keys';
+import {
+  openScreen,
+  restartRun,
+  resultsShown,
+  SCENES,
+  startRunFrom,
+  type SceneKey,
+} from '../scene-keys';
 import type { GameScene } from '../scenes/game-scene';
 import { readSoakSample, type SoakSample } from './soak-metrics';
 
@@ -101,7 +108,7 @@ class SoakDriver implements TippySoak {
   }
 
   private isOn(key: SceneKey): boolean {
-    return this.game.scene.isActive(key);
+    return key === SCENES.results ? resultsShown(this.game.scene) : this.game.scene.isActive(key);
   }
 
   private scene(key: SceneKey): Phaser.Scene {

@@ -27,6 +27,11 @@ export const SCENES = {
 
 export type SceneKey = (typeof SCENES)[keyof typeof SCENES];
 
+/** The results screen is on show: a screen that is still building itself hidden does not count. */
+export function resultsShown(scenes: Phaser.Scenes.SceneManager): boolean {
+  return scenes.isActive(SCENES.results) && scenes.isVisible(SCENES.results);
+}
+
 /** Data handed to the results scene when it is launched. */
 export interface ResultsData {
   result: RunResult;
@@ -38,6 +43,8 @@ export interface ResultsData {
   recorded: boolean;
   /** A `?perf=1` benchmark run: shown as if saved, but nothing real (doubling, ads, share, paid starts) may act on it. */
   benchmark?: boolean;
+  /** The screen builds itself hidden (while the tower collapses) and waits for `ResultsScene.reveal`. */
+  hold?: boolean;
   /** The finished tower, for the picture of "Share". */
   tower: TowerSnapshot;
   /** Height the run began from (0, a checkpoint or a dev start); layers up to it were not placed. */

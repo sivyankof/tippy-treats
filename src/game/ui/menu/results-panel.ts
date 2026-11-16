@@ -3,7 +3,7 @@ import { MENU } from '../../../data/menu-layout';
 import { createPlate, type VolumePlate } from '../style/volume';
 import type { Movable } from '../transition';
 import type { ResultsCoins } from './results-coins';
-import { fitPanel } from './results-layout';
+import { fitPanel, spreadBlocks } from './results-layout';
 import type { ResultsMissions } from './results-missions';
 import type { ResultsTiers } from './results-tiers';
 import type { ResultsXp } from './results-xp';
@@ -14,6 +14,12 @@ type BlockObject = Phaser.GameObjects.Container | Phaser.GameObjects.Text;
 
 interface PanelBlock {
   obj: BlockObject;
+  height: number;
+}
+
+/** A block of the screen that takes part in the vertical layout. */
+interface Placed {
+  container: Phaser.GameObjects.Container;
   height: number;
 }
 
@@ -78,9 +84,11 @@ export class ResultsPanel {
 
   /**
    * Chooses the spacing, the scale and the fold of the missions so that the header and the panel
-   * fit into `room`, builds the plate and stands the blocks on it.
+   * fit above the buttons (with a gap above and below the pair), builds the plate and stands the
+   * blocks on it.
    */
-  fit(room: number, headerHeight: number): void {
+  fit(screenHeight: number, headerHeight: number, buttonsHeight: number): void {
+    const room = screenHeight - cfg.buttonsBottom - buttonsHeight - cfg.top - cfg.sectionGap * 2;
     const { padY, gap } = cfg.panel;
     const { missions } = this.parts;
     const before = this.blocks();
@@ -110,5 +118,20 @@ export class ResultsPanel {
       y += b.height + between;
     }
     this.root.setScale(fit.scale);
+  }
+
+  /** Buttons stand at the bottom; the header and the panel above them share the free room evenly. */
+  layout(width: number, height: number, header: Placed, buttons: Placed): void {
+    const cx = width / 2;
+    const buttonsY = height - cfg.buttonsBottom - buttons.height / 2;
+    const [headerY = 0, panelY = 0] = spreadBlocks(
+      [header.height, this.height],
+      cfg.top,
+      buttonsY - buttons.height / 2,
+      cfg.sectionGap,
+    );
+    header.container.setPosition(cx, headerY);
+    this.root.setPosition(cx, panelY);
+    buttons.container.setPosition(cx, buttonsY);
   }
 }
