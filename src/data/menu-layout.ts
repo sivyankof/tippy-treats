@@ -1004,6 +1004,8 @@ export const MENU = {
     statColumns: 3,
     /** Width a stat label may take before it shrinks. */
     statWidth: 300,
+    /** Room kept free at each side of the stats row, so its outer texts and their strokes stay off the panel edge. */
+    statEdgePad: 36,
     /** The abilities tile is wider; its creature icons with their counts stand in a row. */
     abilityCellWidth: 470,
     abilityIconSize: 72,

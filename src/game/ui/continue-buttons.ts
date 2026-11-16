@@ -71,7 +71,7 @@ export class ContinueButtons {
         this.adLabel.setText(t('continue.watchAd'));
         resetAdLabel(this.adLabel, adLabelWidth);
       } else showAdCaption(this.adLabel, adLabelWidth);
-      this.ad.setAlpha(ready ? 1 : btn.disabledAlpha);
+      this.ad.setPlateAlpha(ready ? 1 : btn.disabledAlpha);
       this.enableAd(ready && !busy);
       this.ad.setY(win.adButtonY + row++ * step);
     }

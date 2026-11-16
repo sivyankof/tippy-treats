@@ -148,7 +148,7 @@ export class ResultsStart implements ExtraButtons {
     this.adGrey = false;
     this.ad.label.setText(t('results.fromPointAd', { n: this.adHeight }));
     resetAdLabel(this.ad.label, pairLabelWidth);
-    this.ad.button.setAlpha(1);
+    this.ad.button.setPlateAlpha(1);
   }
 
   private async pay(height: CheckpointHeight, method: CheckpointMethod): Promise<void> {

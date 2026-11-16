@@ -9,7 +9,9 @@ import { PALETTE } from '../../data/palette';
 import { createCreatureIcon, setCreatureIcon } from './creature-icons';
 import { idlePose, type IdlePose } from './idle-motion';
 import { nextChipSpan } from './hud-row-layout';
-import { nextCreatureLabel } from './next-creature-label';
+import { nextChipContent } from './next-creature-label';
+import { effectsMode } from '../effects-mode';
+import { fxGuard } from '../fx-guard';
 import { formatNumber } from '../../i18n';
 import { createStrokedText } from './outlined-text';
 import { HudPlate } from './style/hud-plate';
@@ -32,6 +34,8 @@ export class NextCreatureBadge {
   private visible = false;
   private compact = false;
   private suppressed = false;
+  /** False while the chip shows the icon alone. */
+  private labelShown = true;
   private readonly pose: IdlePose = { scaleX: 1, scaleY: 1, angle: 0, bob: 0 };
 
   constructor(private readonly scene: Phaser.Scene) {
@@ -101,7 +105,7 @@ export class NextCreatureBadge {
     const on = this.visible && !this.suppressed;
     this.chip.setVisible(on);
     this.icon.setVisible(on);
-    this.label.setVisible(on);
+    this.label.setVisible(on && this.labelShown);
   }
 
   private show(next: NextCreature, compactChanged: boolean): void {
@@ -111,16 +115,38 @@ export class NextCreatureBadge {
     if (creatureChanged) {
       setCreatureIcon(this.icon, next.id);
     }
-    // A full badge row: the number of layers only (0 on the creature layer itself).
-    this.label.setText(this.compact ? formatNumber(next.inLayers) : nextCreatureLabel(next));
+    // A full badge row: the number of layers only; on the creature layer the icon alone, flashing.
+    const content = nextChipContent(next, this.compact, formatNumber);
+    this.label.setText(content.text ?? '');
+    this.labelShown = content.text !== null;
+    this.applyVisible();
     this.place();
     // The first appearance (no previous value) does not pop.
-    if (this.shown) this.pop(creatureChanged ? this.icon : this.label);
+    if (content.flash) fxGuard.call('hud-next-flash', this, this.flash);
+    else if (this.shown && (content.text !== null || creatureChanged))
+      this.pop(creatureChanged ? this.icon : this.label);
+  }
+
+  /** A short double pulse of the icon: smaller on lite, none on minimal. */
+  private flash(): void {
+    if (effectsMode.reduced) return;
+    const { scale, liteScale, ms, ease } = ANIM.badges.nextFlash;
+    const rest = badgeSize / this.icon.width;
+    this.scene.tweens.killTweensOf(this.icon);
+    this.icon.setScale(rest);
+    this.scene.tweens.add({
+      targets: this.icon,
+      scale: rest * (effectsMode.atMost('lite') ? liteScale : scale),
+      duration: ms,
+      ease,
+      yoyo: true,
+      repeat: 1,
+    });
   }
 
   /** Text hugs the right margin, the icon sits to its left; the chip runs from before the icon to past the text, so the icon never lies on the text. */
   private place(): void {
-    const span = nextChipSpan(this.screenWidth, this.label.width);
+    const span = nextChipSpan(this.screenWidth, this.labelShown ? this.label.width : null);
     this.label.setX(span.labelRight);
     this.icon.setX(span.iconX);
     this.chip.place(

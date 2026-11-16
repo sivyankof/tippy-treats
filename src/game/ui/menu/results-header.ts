@@ -92,7 +92,7 @@ export function createStats(
   ];
   const widths = cellWidths(
     [...cells.map((c) => c.wanted), ...(triggered.length > 0 ? [cfg.abilityCellWidth] : [])],
-    Math.min(cfg.panel.width, width),
+    Math.min(cfg.panel.width, width) - cfg.statEdgePad * 2,
   );
   const stats = scene.add.container(0, 0);
   const cellHeight = (cfg.labelFont + cfg.statFont) * cfg.lineHeight;

@@ -93,7 +93,7 @@ export function showAdCaption(label: Phaser.GameObjects.Text, maxWidth: number):
 }
 
 /**
- * A rewarded-ad button while no ad can be shown: inactive, dimmed to `alpha` and labelled
+ * A rewarded-ad button while no ad can be shown: inactive, its plate dimmed to `alpha` (the caption and icon stay at full opacity) and labelled
  * "Ad unavailable", or "No internet" with a small icon when the reason is no network
  * (docs/05-economy-monetization.md, section 6). With `disable` false the button only looks so
  * and still takes a tap (the caller looks at the ad again then).
@@ -107,5 +107,5 @@ export function markAdUnavailable(
 ): void {
   showAdCaption(label, maxWidth);
   if (disable) button.setEnabled(false);
-  button.setAlpha(alpha);
+  button.setPlateAlpha(alpha);
 }

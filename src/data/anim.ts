@@ -515,6 +515,12 @@ export const ANIM = {
     nextPopScale: 1.25,
     nextPopMs: 200,
     nextPopEase: 'Back.easeOut',
+    /**
+     * The compact next-creature chip (no words) on the creature's own layer: the icon alone, with a
+     * short double pulse. `scale` is the pulse size on full effects, `liteScale` on the lite level;
+     * the minimal level shows no flash.
+     */
+    nextFlash: { scale: 1.45, liteScale: 1.2, ms: 150, ease: 'Sine.easeInOut' },
   },
   results: {
     /** Pause between the end of the collapse and the results screen. */

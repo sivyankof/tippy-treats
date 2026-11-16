@@ -23,9 +23,13 @@ export interface NextChipSpan {
   chipRight: number;
 }
 
-export function nextChipSpan(screenWidth: number, labelWidth: number): NextChipSpan {
+/** `labelWidth` is null for the icon alone: the chip then hugs the icon, with no gap for text. */
+export function nextChipSpan(screenWidth: number, labelWidth: number | null): NextChipSpan {
   const labelRight = screenWidth - badgeMargin - nextChip.padX;
-  const iconX = labelRight - labelWidth - badgeGap - badgeSize / 2;
+  const iconX =
+    labelWidth === null
+      ? labelRight - badgeSize / 2
+      : labelRight - labelWidth - badgeGap - badgeSize / 2;
   return {
     labelRight,
     iconX,
