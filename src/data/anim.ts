@@ -391,8 +391,10 @@ export const ANIM = {
     /** Shared cap of live particles. */
     particleLimit: 250,
     /**
-     * The automatic "fewer effects" decides by the frame work time (update and render, in ms), not
-     * by the frame rate: a phone that limits its own rate (low power, 120 Hz) is not a slow one.
+     * The automatic "fewer effects" decides by the frame work time (update and render, in ms) and,
+     * as a second signal, by the frame interval while the work is low (a GPU-bound phone). A phone
+     * that limits its own rate (low power at a steady 30 fps, 120 Hz) is not a slow one: the GPU
+     * signal also needs a share of quick frames, which such a phone does not have.
      */
     auto: {
       /** A frame whose work takes longer than this is over budget. */
@@ -404,6 +406,18 @@ export const ANIM = {
       offWindowMs: 10_000,
       offMarginMs: 4,
       offBadShare: 0.02,
+      /** A frame whose interval is longer than this (and whose work is in budget) is late: a 60 Hz vsync was missed. */
+      lateIntervalMs: 25,
+      /** A frame whose interval is at most this long is quick: the device can do 60 fps. */
+      quickIntervalMs: 20,
+      /** The level steps down when this share of the frames of `onWindowMs` is late... */
+      gpuOnShare: 0.2,
+      /** ...and at least this share is quick (a steady 30 fps phone has none). */
+      gpuQuickShare: 0.25,
+      /** It steps back up only when at most this share of the frames of `offWindowMs` is late. */
+      gpuOffShare: 0.05,
+      /** After a step down by the GPU signal, it does not step up for this long. */
+      gpuUpHoldMs: 60_000,
       /** The mode changes at most once in this long. */
       minSwitchGapMs: 30_000,
       /** Frames this long after a scene is created are not counted (textures bake, the scene settles). */
