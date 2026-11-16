@@ -563,6 +563,7 @@
     },
     "noAds": "No ads · {price}",
     "version": "Version {version}",
+    "build": "Build {hash} · {date}",
     "installId": "ID {id}",
     "reset": "Reset progress",
     "resetAsk": {

@@ -563,6 +563,7 @@
     },
     "noAds": "Без рекламы · {price}",
     "version": "Версия {version}",
+    "build": "Сборка {hash} · {date}",
     "installId": "ID {id}",
     "reset": "Сбросить прогресс",
     "resetAsk": {

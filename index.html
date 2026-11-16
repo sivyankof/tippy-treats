@@ -60,7 +60,9 @@
               return '  ' + name + ' ' + kb + ' KB ' + Math.round(entry.duration) + ' ms';
             });
             show(
-              'The game did not start within ' +
+              'Build %BUILD_STAMP%
+' +
+                'The game did not start within ' +
                 seconds +
                 ' s. Last stage: ' +
                 (window.__bootStage || 'main.ts not running') +
