@@ -135,6 +135,24 @@ export function artAlpha(creature: CreatureId | null): number {
 // shows it; unused ones stay for a while (widths repeat after perfect landings) and
 // the oldest are removed beyond ANIM.pool.idleLayerTextures. Map order is use order.
 const refs = new Map<string, number>();
+/** Idle pictures kept on top of the limit: the ones baked ahead for the collapse wait here. */
+let idleExtra = 0;
+
+/** Lets `extra` more idle pictures stay than `ANIM.pool.idleLayerTextures` (0: back to the limit). */
+export function setIdleLayerArtExtra(extra: number): void {
+  idleExtra = Math.max(0, extra);
+}
+
+/** Whether the picture for this combination is baked now. */
+export function layerArtBaked(
+  scene: Phaser.Scene,
+  look: number,
+  width: number,
+  cut: CutSide | null,
+  creature: CreatureId | null = null,
+): boolean {
+  return scene.textures.exists(layerArtKey(look, creature, width, cut));
+}
 
 /**
  * Bakes (or finds) the art for a plain look code (or a creature), width and cut side (`null`: an
@@ -187,7 +205,7 @@ export function releaseLayerArt(scene: Phaser.Scene, key: string): void {
   refs.set(key, users - 1);
   let idle = [...refs].filter(([, count]) => count <= 0);
   for (const [oldKey] of idle) {
-    if (idle.length <= ANIM.pool.idleLayerTextures) break;
+    if (idle.length <= ANIM.pool.idleLayerTextures + idleExtra) break;
     refs.delete(oldKey);
     scene.textures.remove(oldKey);
     idle = idle.filter(([k]) => k !== oldKey);

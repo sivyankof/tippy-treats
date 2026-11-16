@@ -9,6 +9,7 @@ import { DEPTH } from '../depth';
 import { effectsMode } from '../effects-mode';
 import { waveStep } from '../fx/anim-curves';
 import { moodForWobble, type MouthKind, type Reaction } from './face-state';
+import { CollapsePrep } from './collapse-prep';
 import { GlazeDripGrowth } from './glaze-drip-growth';
 import { LandingPrep } from './landing-prep';
 import { LickDirector, type LickContext } from './lick-director';
@@ -91,6 +92,8 @@ export class TowerView {
   private readonly glazeGrowth: GlazeDripGrowth;
   /** Bakes the pictures of the layer in the air and in the fall before it lands. */
   private readonly prep: LandingPrep;
+  /** Bakes the pictures of the layers below the live ones once the run is ending, for the collapse. */
+  private readonly collapsePrep: CollapsePrep;
   /** The rare lick of a layer; it draws from the cosmetic stream of the run. */
   readonly licks = new LickDirector(plainLooks.cosmeticSeed);
   private bandTop = -Infinity;
@@ -107,6 +110,7 @@ export class TowerView {
     this.tray = new Tray(scene, trayTopY);
     this.glazeGrowth = new GlazeDripGrowth(scene);
     this.prep = new LandingPrep(scene);
+    this.collapsePrep = new CollapsePrep(scene);
     // The pictures of the lick tongue are baked now, not at the first lick.
     prepareTongue(scene);
   }
@@ -301,6 +305,11 @@ export class TowerView {
     if (!state) return;
     this.sway.advance(dtMs);
     this.prep.tick();
+    if (state.phase === 'await_continue' || state.phase === 'over') {
+      this.collapsePrep.tick(state.layers, this.cuts, this.layerCount);
+    } else {
+      this.collapsePrep.stop();
+    }
     this.clockMs += dtMs;
     this.tray.tick(this.clockMs);
     this.motion.timeMs = this.clockMs;
