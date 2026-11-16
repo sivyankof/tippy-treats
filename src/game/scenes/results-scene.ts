@@ -11,7 +11,6 @@ import { leaveResultsAds, type RunExit } from '../interstitial-flow';
 import { isDebugRun, isLiveRun } from '../results-data';
 import { SCENES, type ResultsData } from '../scene-keys';
 import { createDimOverlay } from '../ui/dim-overlay';
-import { createPlate, type VolumePlate } from '../ui/style/volume';
 import { createOutlinedText } from '../ui/outlined-text';
 import { enterScreen, leaveScreen, type Movable } from '../ui/transition';
 import { fitText } from '../ui/menu/fit-text';
@@ -22,7 +21,8 @@ import { ResultsHeader, createStats } from '../ui/menu/results-header';
 import { createResultsStart } from '../ui/menu/results-start';
 import { startedLine } from '../ui/menu/results-start-model';
 import { shareResult } from '../ui/menu/results-share';
-import { spacingShare, spreadBlocks } from '../ui/menu/results-layout';
+import { spreadBlocks } from '../ui/menu/results-layout';
+import { ResultsPanel } from '../ui/menu/results-panel';
 import { ResultsMissions } from '../ui/menu/results-missions';
 import { resultsFlow } from '../ui/menu/results-flow';
 import { ResultsTiers } from '../ui/menu/results-tiers';
@@ -32,25 +32,17 @@ import { ResultsXp } from '../ui/menu/results-xp';
 
 const cfg = MENU.results;
 
-type Block = Phaser.GameObjects.Container | Phaser.GameObjects.Text;
-
 /** The end of a run: height, stats, coins, XP and the way on (docs/07-ui-screens.md, section 6). */
 export class ResultsScene extends Phaser.Scene {
   private dim!: Phaser.GameObjects.Rectangle;
-  /** The window plate of the kit under the blocks below the header. */
-  private plate!: VolumePlate;
+  /** The window plate of the kit with the blocks below the header. */
+  private panel!: ResultsPanel;
   private header!: ResultsHeader;
   private stats!: ReturnType<typeof createStats>;
   private coins!: ResultsCoins;
   private xp!: ResultsXp;
   private tiers!: ResultsTiers;
   private missions!: ResultsMissions;
-  /** The "so close" line; a daily run shows two: the tier of the attempt and the day's progress. */
-  private hint!: Phaser.GameObjects.Text;
-  /** The dev-only "not saved" plate, `null` for a normal run. */
-  private debugPlate: { obj: Block; height: number } | null = null;
-  /** The run reached the save. */
-  private recorded = true;
   private buttons!: ResultsButtons;
   private celebration: RecordCelebration | null = null;
   private leaving = false;
@@ -64,8 +56,6 @@ export class ResultsScene extends Phaser.Scene {
     levelUp: false,
     newCreature: false,
   };
-  /** Padding and gap of the panel, shrunk on a short screen. */
-  private spacing: { padY: number; gap: number } = { padY: cfg.panel.padY, gap: cfg.panel.gap };
 
   constructor() {
     super(SCENES.results);
@@ -101,11 +91,9 @@ export class ResultsScene extends Phaser.Scene {
       xp: gameState.data.bakerXp,
     });
     // A run that is not saved gained no XP and set no record: the XP block and the hint stay out.
-    this.recorded = data.recorded;
-    this.xp.container.setVisible(this.recorded);
-    this.debugPlate = isDebugRun(this.recorded, import.meta.env.DEV)
-      ? createDebugPlate(this)
-      : null;
+    const recorded = data.recorded;
+    this.xp.container.setVisible(recorded);
+    const debugPlate = isDebugRun(recorded, import.meta.env.DEV) ? createDebugPlate(this) : null;
     const hintText = daily
       ? dailyResultsText(result.height, gameState.dailyInfo().best, summary.dailyStale)
       : nearMissText(
@@ -120,10 +108,10 @@ export class ResultsScene extends Phaser.Scene {
             missions: summary.missions.after,
           }),
         );
-    this.hint = createOutlinedText(this, 0, 0, hintText, cfg.nearMissFont, PALETTE.gold);
-    this.hint.setAlign('center');
-    fitText(this.hint, cfg.nearMissWidth);
-    this.hint.setVisible(this.recorded);
+    const hint = createOutlinedText(this, 0, 0, hintText, cfg.nearMissFont, PALETTE.gold);
+    hint.setAlign('center');
+    fitText(hint, cfg.nearMissWidth);
+    hint.setVisible(recorded);
     // The creatures the levels handed out are presented before anything else.
     const fresh = presentedCreatures(summary);
     this.runExit = {
@@ -154,10 +142,17 @@ export class ResultsScene extends Phaser.Scene {
     });
     this.buttons = new ResultsButtons(this, summary.firstRun, handlers, flow.labels, start);
     this.lock(true);
-    this.spacing = this.fitSpacing(height);
-    this.plate = createPlate(this, 'window', 0, 0, cfg.panel.width, this.panelHeight());
-    // Under the blocks, over the veil.
-    this.children.moveBelow(this.plate, this.header.container);
+    this.panel = new ResultsPanel(this, {
+      debugPlate,
+      stats: this.stats,
+      coins: this.coins,
+      tiers: this.tiers,
+      xp: this.xp,
+      missions: this.missions,
+      hint,
+      recorded,
+    });
+    this.panel.fit(this.panelRoom(height), this.header.height);
 
     this.celebration = null;
     if (summary.isRecord) this.celebrate(width, height);
@@ -197,12 +192,7 @@ export class ResultsScene extends Phaser.Scene {
 
   /** What slides in and out with the screen, top to bottom; the dim veil stays. */
   private content(): Movable[] {
-    return [
-      this.header.container,
-      this.plate,
-      ...this.blocks().map((b) => b.obj),
-      this.buttons.container,
-    ];
+    return [this.header.container, ...this.panel.content(), this.buttons.container];
   }
 
   /** Confetti, the ribbon, the fanfare and the three-hit vibration of a new record. */
@@ -213,42 +203,9 @@ export class ResultsScene extends Phaser.Scene {
     services.haptics.play('triple');
   }
 
-  /** The blocks on the panel, top to bottom; empty ones are left out. */
-  private blocks(): Array<{ obj: Block; height: number }> {
-    const all: Array<{ obj: Block; height: number }> = [
-      ...(this.debugPlate ? [this.debugPlate] : []),
-      { obj: this.stats.obj, height: this.stats.height },
-      { obj: this.coins.container, height: this.coins.height },
-      { obj: this.tiers.container, height: this.tiers.height },
-      { obj: this.xp.container, height: this.recorded ? this.xp.height : 0 },
-      { obj: this.missions.container, height: this.missions.height },
-      {
-        obj: this.hint,
-        height: this.recorded
-          ? cfg.nearMissFont * cfg.lineHeight * this.hint.text.split('\n').length
-          : 0,
-      },
-    ];
-    return all.filter((b) => b.height > 0);
-  }
-
-  /** The panel wraps its blocks: they stand `panel.gap` apart, `panel.padY` from its edges. */
-  private panelHeight(): number {
-    const { padY, gap } = this.spacing;
-    const blocks = this.blocks();
-    const sum = blocks.reduce((total, b) => total + b.height, 0);
-    return sum + gap * Math.max(0, blocks.length - 1) + padY * 2;
-  }
-
-  /** The panel's padding and gaps, shrunk when the header and the panel would not fit above the buttons. */
-  private fitSpacing(screenHeight: number): { padY: number; gap: number } {
-    const { padY, gap } = cfg.panel;
-    const blocks = this.blocks();
-    const sum = blocks.reduce((total, b) => total + b.height, 0);
-    const spacing = gap * Math.max(0, blocks.length - 1) + padY * 2;
-    const room = screenHeight - cfg.buttonsBottom - this.buttons.height - cfg.top - cfg.sectionGap;
-    const share = spacingShare(sum, spacing, this.header.height, room, cfg.panelMinSpacing);
-    return { padY: padY * share, gap: gap * share };
+  /** Room for the header and the panel together: what the buttons leave, less a gap above and below the pair. */
+  private panelRoom(screenHeight: number): number {
+    return screenHeight - cfg.buttonsBottom - this.buttons.height - cfg.top - cfg.sectionGap * 2;
   }
 
   /** Buttons stand at the bottom; the header and the panel above them share the free room evenly. */
@@ -258,20 +215,14 @@ export class ResultsScene extends Phaser.Scene {
     this.cameras.main.setSize(width, height);
     this.dim.setSize(width, height);
     const buttonsY = height - cfg.buttonsBottom - this.buttons.height / 2;
-    const panelHeight = this.plate.bodyHeight;
     const [headerY = 0, panelY = 0] = spreadBlocks(
-      [this.header.height, panelHeight],
+      [this.header.height, this.panel.height],
       cfg.top,
       buttonsY - this.buttons.height / 2,
       cfg.sectionGap,
     );
     this.header.container.setPosition(cx, headerY);
-    this.plate.setPosition(cx, panelY);
-    let y = panelY - panelHeight / 2 + this.spacing.padY;
-    for (const b of this.blocks()) {
-      b.obj.setPosition(cx, y + b.height / 2);
-      y += b.height + this.spacing.gap;
-    }
+    this.panel.root.setPosition(cx, panelY);
     this.buttons.container.setPosition(cx, buttonsY);
   }
 

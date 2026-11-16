@@ -963,6 +963,13 @@ export const MENU = {
     panel: { width: 1000, padY: 40, gap: 24 },
     /** On a short screen the panel's padding and gaps shrink to this share at the least. */
     panelMinSpacing: 0.3,
+    /**
+     * When even that is not enough the whole panel (plate and blocks) scales down uniformly, first
+     * to `panelMinScale`; the missions then fold into one line and the scale is chosen again, and
+     * only after that may it go below `panelMinScale`, never below `panelFloorScale`.
+     */
+    panelMinScale: 0.85,
+    panelFloorScale: 0.6,
     /** The dev-only plate over a run that is not saved. */
     debugPlate: { width: 900, height: 84, font: 38 },
     heightFont: 200,

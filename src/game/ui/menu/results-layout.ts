@@ -27,20 +27,57 @@ export function spreadBlocks(
   });
 }
 
-/**
- * How much of the panel's padding and gaps survives so that the header and the panel fit into
- * `room` (1 when they fit as they are). The spacing shrinks together, never below `minShare`.
- */
-export function spacingShare(
+/** What the panel needs to fit above the buttons. */
+export interface PanelFit {
+  /** Share of the panel's padding and gaps that survives. */
+  share: number;
+  /** Uniform scale of the whole panel. */
+  scale: number;
+  /** The missions block is folded into one line. */
+  fold: boolean;
+}
+
+/** The sizes `fitPanel` works with, all in unscaled units. */
+export interface PanelFitInput {
+  /** Sum of the block heights. */
+  blocksHeight: number;
+  /** What the missions block takes less when folded (0: it cannot be folded). */
+  foldSaving: number;
+  /** Padding and gaps at full share. */
+  spacing: number;
+  headerHeight: number;
+  /** Room for the header and the panel together. */
+  room: number;
+  minShare: number;
+  minScale: number;
+  floorScale: number;
+}
+
+/** Spacing share and scale for blocks of `blocksHeight`: the spacing shrinks first, then the scale. */
+function attemptFit(
   blocksHeight: number,
-  spacing: number,
-  headerHeight: number,
-  room: number,
-  minShare: number,
-): number {
-  if (spacing <= 0) return 1;
-  const free = room - headerHeight - blocksHeight;
-  return Math.min(1, Math.max(minShare, free / spacing));
+  { spacing, headerHeight, room, minShare }: PanelFitInput,
+): { share: number; scale: number } {
+  const free = room - headerHeight;
+  if (blocksHeight + spacing * minShare <= free) {
+    return { share: spacing <= 0 ? 1 : Math.min(1, (free - blocksHeight) / spacing), scale: 1 };
+  }
+  return { share: minShare, scale: free / (blocksHeight + spacing * minShare) };
+}
+
+/**
+ * Chooses how the header and the panel fit into `room`: the spacing shrinks to `minShare` first,
+ * then the panel scales down to `minScale`; if that is not enough the missions fold (when they
+ * can) and the same is tried again; only then may the scale go below `minScale`, down to
+ * `floorScale` (the panel overflows below that). Nothing changes when everything fits.
+ */
+export function fitPanel(input: PanelFitInput): PanelFit {
+  const plain = attemptFit(input.blocksHeight, input);
+  if (plain.scale >= input.minScale || input.foldSaving <= 0) {
+    return { ...plain, scale: Math.max(input.floorScale, plain.scale), fold: false };
+  }
+  const folded = attemptFit(input.blocksHeight - input.foldSaving, input);
+  return { ...folded, scale: Math.max(input.floorScale, folded.scale), fold: true };
 }
 
 /**

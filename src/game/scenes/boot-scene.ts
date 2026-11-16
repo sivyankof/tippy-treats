@@ -16,6 +16,7 @@ import { createRewardTextures } from '../fx/reward-pictures';
 import { createPileTextures } from '../fx/treasure-pile';
 import { createTreasureTextures } from '../fx/treasure-textures';
 import { opensWithRun } from '../run-setup';
+import { resultsDemoData } from '../debug/results-demo';
 import { gameState } from '../../state';
 
 /**
@@ -50,6 +51,11 @@ export class BootScene extends Phaser.Scene {
     createPileTextures(this);
     createRewardTextures(this);
     createCreatureIconTextures(this);
+    const resultsDemo = import.meta.env.DEV ? readDebugParams().resultsDemo : undefined;
+    if (resultsDemo) {
+      this.scene.start(SCENES.results, resultsDemoData(resultsDemo));
+      return;
+    }
     if (opensWithRun() || !gameState.hasHint('tutorial')) {
       startRunFrom(this);
       return;
