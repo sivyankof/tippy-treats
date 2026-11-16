@@ -3,6 +3,7 @@ import { SAVE_DEFAULTS } from '../src/data/save-defaults';
 import { NO_TEAM, allFullTeams, type SimTeamSet } from '../src/data/sim-teams';
 import { COIN_SOURCES, CoinStats, type CoinsBySource } from './coin-stats';
 import { nodeFs, scriptArgs } from './node-env';
+import { applySets } from './what-if';
 import { MS_PER_SECOND } from '../src/util/math';
 import {
   ANALYSIS_MAX_HEIGHT,
@@ -16,7 +17,10 @@ import {
 /**
  * `npm run sim:coins`: coins per run by source, XP (= height) and run duration for every bot
  * profile, for three team setups: no team, the starter team of a new save, and the team with
- * the most coins per run found by brute force over all full teams, at creature levels 1 and 5.
+ * the most coins per run found by brute force over all full teams, at creature levels 1 and 5
+ * (the master effects of level 5 included: column `mastery`).
+ *
+ * `--set=...` applies what-if values first (scripts/what-if.ts).
  *
  * Duration is the sim clock of the run: spawn pauses, flight, fall and landing of every layer up
  * to the landing that ends the run. It does not include the miss slow-motion, the continue offer
@@ -34,6 +38,7 @@ interface CliOptions {
   maxHeight: number;
   profile: string | null;
   json: string | null;
+  set: string;
 }
 
 function parseArgs(argv: string[]): CliOptions {
@@ -44,6 +49,7 @@ function parseArgs(argv: string[]): CliOptions {
     maxHeight: ANALYSIS_MAX_HEIGHT,
     profile: null,
     json: null,
+    set: '',
   };
   for (const arg of argv) {
     const [key = '', ...rest] = arg.replace(/^--/, '').split('=');
@@ -56,6 +62,7 @@ function parseArgs(argv: string[]): CliOptions {
       options.maxHeight = Math.floor(Number(value));
     else if (key === 'profile' && value) options.profile = value;
     else if (key === 'json' && value) options.json = value;
+    else if (key === 'set' && value) options.set = value;
     else throw new Error(`Unknown or invalid argument: ${arg}`);
   }
   return options;
@@ -186,7 +193,16 @@ function bestTeam(
   };
 }
 
-const LABELS = ['floating', 'combo', 'golden', 'height', 'perfect', 'crumb', 'total'] as const;
+const LABELS = [
+  'floating',
+  'combo',
+  'golden',
+  'height',
+  'perfect',
+  'crumb',
+  'mastery',
+  'total',
+] as const;
 
 function row(setup: string, cell: Cell): Record<string, string | number> {
   const { height, coins, durationSec } = cell.distribution;
@@ -207,6 +223,8 @@ function row(setup: string, cell: Cell): Record<string, string | number> {
 
 function main(): void {
   const options = parseArgs(scriptArgs());
+  const sets = applySets(options.set);
+  if (sets.length > 0) console.log(`What-if values: ${sets.join('; ')}`);
   const targets = DIFFICULTY.targets.filter((t) => !options.profile || t.id === options.profile);
   if (targets.length === 0) throw new Error(`Unknown profile: ${options.profile}`);
 
@@ -218,7 +236,8 @@ function main(): void {
   );
   console.log(
     'Columns: floating = floating coins; combo = perfect drops at combo >= 5; golden = normal drops of golden layers; height = height bonus; ' +
-      'perfect and crumb = coins of the sprinkle-style and crumb abilities; XP = height; time = sim seconds up to the landing that ends the run ' +
+      'perfect and crumb = coins of the sprinkle-style and crumb abilities; mastery = master effects of level-5 creatures; ' +
+      'XP = height; time = sim seconds up to the landing that ends the run ' +
       '(no miss slow-motion, continue offer or results screen).',
   );
 
