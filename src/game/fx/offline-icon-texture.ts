@@ -2,13 +2,7 @@ import type * as Phaser from 'phaser';
 import { OFFLINE_LOOK } from '../../data/offline-look';
 import { DEG_TO_RAD } from '../../util/math';
 import { bakeTexture } from '../ui/bake-texture';
-import {
-  OUTLINE_SHARE,
-  drawGlossMark,
-  fillPolygon,
-  outlineColor,
-  roundRectPoints,
-} from './plain-style';
+import { drawGlossMark, fillPolygon, roundRectPoints } from './plain-style';
 
 const { textureSize: size, colors, puffs, belly, slash, bandShare, gloss } = OFFLINE_LOOK;
 
@@ -42,13 +36,13 @@ function paintSlash(g: Phaser.GameObjects.Graphics, color: number, grow: number,
 }
 
 function drawIcon(g: Phaser.GameObjects.Graphics): void {
-  const grow = size * OUTLINE_SHARE;
+  const grow = size * OFFLINE_LOOK.outlineShare;
   const d = -bandShare;
-  paintCloud(g, outlineColor(colors.cloudShadow), grow, 0);
+  paintCloud(g, colors.outline, grow, 0);
   paintCloud(g, colors.cloudShadow, 0, 0);
   paintCloud(g, colors.cloud, 0, d);
   // The cloud is cut by a thin outline of the stroke, then the stroke itself in two tones.
-  paintSlash(g, outlineColor(colors.slash), grow, 0);
+  paintSlash(g, colors.outline, grow, 0);
   paintSlash(g, colors.slashShadow, 0, 0);
   paintSlash(g, colors.slash, 0, d);
   drawGlossMark(g, {

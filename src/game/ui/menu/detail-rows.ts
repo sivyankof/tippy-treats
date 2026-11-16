@@ -1,7 +1,7 @@
 import { isMaster, masterInfo, upgradePreview } from '../../../core/mastery';
 import type { CreatureId } from '../../../data/creatures';
 import { formatDecimal, t } from '../../../i18n';
-import { changeText, formatValues } from './detail-model';
+import { formatValues } from './detail-model';
 
 /**
  * One line of the "what the next level gives" block and of the master block. The kinds set the
@@ -26,6 +26,17 @@ export function masterBlock(id: CreatureId, level: number): DetailRow[] {
   return isMaster(level) ? masterRows(id) : [];
 }
 
+/** Number changes of the next level as one labelled line each: "Tolerance: 38 → 39 px", the label and unit from i18n by creature and stat key. */
+export function changeRows(
+  id: CreatureId,
+  changes: ReadonlyArray<readonly [string, number, number]>,
+): DetailRow[] {
+  return changes.map(([key, from, to]) => ({
+    kind: 'change',
+    text: t(`mastery.stat.${id}.${key}`, formatValues({ from, to }, formatDecimal)),
+  }));
+}
+
 /**
  * What the next level gives, all from the core preview: the changed numbers, the new properties,
  * the new look and, on the step to the master level, the master effect. Empty at the maximum
@@ -36,7 +47,7 @@ export function upgradeRows(id: CreatureId, level: number): DetailRow[] {
   if (!preview) return [];
   const rows: DetailRow[] = [];
   if (preview.changes.length > 0) {
-    rows.push({ kind: 'change', text: changeText(preview.changes, formatDecimal) });
+    rows.push(...changeRows(id, preview.changes));
   }
   for (const perk of preview.perks) {
     rows.push({
