@@ -20,7 +20,6 @@ import {
   starPoints,
   waveLine,
 } from './rainbow-geometry';
-import { rotatePoints } from './rainbow-idle-geometry';
 import {
   countFor,
   drawFinish,
@@ -40,31 +39,26 @@ export function rainbowGlaze(): Pick<GlazeOptions, 'dripCount' | 'dripLength' | 
 }
 
 /**
- * The gold star of the crown with its centre at (0, `cy`): outlined, with a gloss stroke and a dot;
- * turned by `rad` and swollen by `scale` (the awake layer star sways and flashes).
+ * The gold star of the crown with its centre at (0, `cy`): outlined, with a gloss stroke and a dot
+ * (the awake layer star bakes it once; `RainbowIdle` sways and flashes the picture).
  */
 export function paintStar(
   g: ArtContext['g'],
   cy: number,
-  rad = 0,
-  scale = 1,
   fill: number = star.color,
   line: number = outlineColor(star.color),
   gloss = true,
 ): void {
-  const r = star.radius * scale;
-  const points = rotatePoints(starPoints(0, cy, r, star.notch), 0, cy, rad);
-  fillOutlinedPolygon(g, points, fill, line, star.outline);
+  const r = star.radius;
+  fillOutlinedPolygon(g, starPoints(0, cy, r, star.notch), fill, line, star.outline);
   if (!gloss) return;
   const mark = star.gloss;
-  const [at] = rotatePoints([{ x: mark.x * r, y: cy + mark.y * r }], 0, cy, rad);
-  if (!at) return;
   drawGlossMark(g, {
-    x: at.x,
-    y: at.y,
+    x: mark.x * r,
+    y: cy + mark.y * r,
     length: mark.length * r,
     thick: mark.thick * r,
-    tilt: mark.tilt + rad,
+    tilt: mark.tilt,
     dotGap: mark.dotGap,
     dotRadius: mark.dotRadius,
     color: PALETTE.textLight,
@@ -74,7 +68,7 @@ export function paintStar(
 
 /** The sleeping silhouette star: still and muted. The awake layer star is drawn by `RainbowIdle`. */
 function drawStar(ctx: ArtContext): void {
-  paintStar(ctx.g, ctx.box.top - star.lift, 0, 1, ctx.colors.accent, ctx.colors.outline, false);
+  paintStar(ctx.g, ctx.box.top - star.lift, ctx.colors.accent, ctx.colors.outline, false);
 }
 
 /** Five thin coloured sponges, each in two tones, with a white cream strip under each. */

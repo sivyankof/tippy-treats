@@ -23,12 +23,10 @@ const { star, idle } = RAINBOW_LOOK;
 const cloud = ABILITY_ANIM.rainbow.cloud;
 /** Spare pixels around every picture, so antialiased edges are not cut. */
 const PAD = 2;
-/** The star is baked at its largest (flash) size and shown smaller at rest. */
-export const STAR_BAKE_SCALE = 1 + idle.sparkleScale;
 const SPARKLE_POINTS = 4;
 
-/** Half the side of the star picture at bake scale. */
-const STAR_HALF = Math.ceil((star.radius + star.outline + PAD) * STAR_BAKE_SCALE);
+/** Half the side of the star picture: baked at its rest size (drawn 1:1), the short flash only upscales it. */
+const STAR_HALF = Math.ceil(star.radius + star.outline + PAD);
 const SPARKLE_HALF = Math.ceil(star.radius * idle.sparkleSize + PAD);
 
 /** How far the cloud lumps (with their outline) reach from the centre at scale 1. */
@@ -63,7 +61,6 @@ export function bakeRainbowTextures(scene: Phaser.Scene): void {
   const side = STAR_HALF * 2;
   bakeTexture(scene, RAINBOW_TEXTURES.star, side, side, (g) => {
     g.translateCanvas(STAR_HALF, STAR_HALF);
-    g.scaleCanvas(STAR_BAKE_SCALE, STAR_BAKE_SCALE);
     paintStar(g, 0);
   });
   const sparkleSide = SPARKLE_HALF * 2;
