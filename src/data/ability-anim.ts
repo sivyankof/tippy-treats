@@ -366,6 +366,8 @@ export const ABILITY_ANIM = {
       deflateMs: 420,
       bobPx: 2,
       bobMs: 700,
+      /** The cloud is baked once this much larger than its rest size, so the pop-in overshoot stays sharp. */
+      bakeScale: 1.2,
     },
     sparks: { count: 12, style: SPARKLE },
   },

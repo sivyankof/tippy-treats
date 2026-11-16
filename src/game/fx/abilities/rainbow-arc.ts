@@ -10,6 +10,7 @@ import type { AbilityBursts } from './ability-bursts';
 import { paintBand } from './rainbow-band';
 import { arcCurve, arcSide, swell, towerNearness, type Point } from './rainbow-arc-geometry';
 import { HALF_LAYER } from './kit';
+import { RAINBOW_TEXTURES } from './rainbow-textures';
 
 const cfg = ABILITY_ANIM.rainbow;
 const arc = cfg.arc;
@@ -30,6 +31,9 @@ type Phase = 'idle' | 'live' | 'deflate';
  */
 export class RainbowArc {
   private readonly gfx: Phaser.GameObjects.Graphics;
+  /** The baked clouds: the one with a face at the foot, the plain one at the far end. */
+  private readonly lowerCloud: Phaser.GameObjects.Image;
+  private readonly upperCloud: Phaser.GameObjects.Image;
   private phase: Phase = 'idle';
   private ageMs = 0;
   private lostMs = 0;
@@ -51,6 +55,11 @@ export class RainbowArc {
     private readonly bursts: AbilityBursts,
   ) {
     this.gfx = scene.add.graphics().setDepth(ARC_DEPTH);
+    // Added after the band at the same depth, so the clouds cover its ends.
+    this.lowerCloud = scene.add.image(0, 0, RAINBOW_TEXTURES.cloudFace).setDepth(ARC_DEPTH);
+    this.upperCloud = scene.add.image(0, 0, RAINBOW_TEXTURES.cloud).setDepth(ARC_DEPTH);
+    this.lowerCloud.setVisible(false);
+    this.upperCloud.setVisible(false);
   }
 
   /** The arc has grown out fully and is in the air. */
@@ -97,6 +106,8 @@ export class RainbowArc {
   /** `target` is the middle of the top edge of the flying layer (`null` while none flies). */
   update(dtMs: number, target: Point | null, viewBottom = Infinity, towerTop = Infinity): void {
     this.gfx.clear();
+    this.lowerCloud.setVisible(false);
+    this.upperCloud.setVisible(false);
     this.viewBottom = viewBottom;
     this.near = target ? towerNearness(towerTop - target.y, arc.near.gapPx) : 0;
     if (this.phase === 'idle') return;
@@ -161,29 +172,13 @@ export class RainbowArc {
     }
   }
 
-  /** A cream cloud of lumps with an outline; the lower one has a face and bobs. */
+  /** A baked cream cloud scaled to `scale`; the lower one has a face and bobs. */
   private cloud(x: number, y: number, scale: number, face: boolean): void {
-    const r = cloud.radius * scale;
-    if (r <= 0) return;
+    if (scale <= 0) return;
     const bob = face ? Math.sin((this.ageMs / cloud.bobMs) * Math.PI * 2) * cloud.bobPx : 0;
-    const cy = y + bob;
-    const line = outlineColor(cloud.fill);
-    const lumps = cloud.lumps.map(([dx, dy, lr]) => ({
-      x: x + dx * r,
-      y: cy + dy * r,
-      r: lr * r,
-    }));
-    this.gfx.fillStyle(line, 1);
-    for (const l of lumps) this.gfx.fillCircle(l.x, l.y, l.r + cloud.outlinePx * scale);
-    this.gfx.fillStyle(cloud.fill, 1);
-    for (const l of lumps) this.gfx.fillCircle(l.x, l.y, l.r);
-    if (!face) return;
-    this.gfx.fillStyle(line, 1);
-    for (const s of [-1, 1]) {
-      this.gfx.fillCircle(x + s * cloud.eye.x * r, cy + cloud.eye.y * r, cloud.eye.radius * r);
-    }
-    this.gfx.lineStyle(cloud.smile.thick * scale, line, 1).beginPath();
-    this.gfx.arc(x, cy + cloud.smile.y * r, cloud.smile.radius * r, 0.2, Math.PI - 0.2);
-    this.gfx.strokePath();
+    (face ? this.lowerCloud : this.upperCloud)
+      .setPosition(x, y + bob)
+      .setScale(scale / cloud.bakeScale)
+      .setVisible(true);
   }
 }
