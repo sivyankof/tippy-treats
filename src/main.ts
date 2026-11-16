@@ -85,6 +85,8 @@ async function start(): Promise<void> {
     (window as Window & { tippyGame?: Phaser.Game }).tippyGame = game;
     // window.tippyIdleAudit(seconds): lists objects of the run screen that stand still for over 2 s.
     void import('./game/debug/idle-audit').then((audit) => audit.registerIdleAudit(game));
+    // window.tippySoak: the long play-through of the leak check (scripts keep the harness).
+    void import('./game/debug/soak-driver').then((soak) => soak.registerSoak(game));
   }
 }
 
