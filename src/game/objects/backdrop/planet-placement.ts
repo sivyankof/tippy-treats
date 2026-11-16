@@ -1,8 +1,7 @@
 import { spaceWidthLimit, lapFirstIndex } from '../../../core/space-laps';
-import { HUD_LAYOUT } from '../../../data/hud-layout';
 import { LOGICAL_SIZE } from '../../../data/screen';
 import { PLANET_PLACE } from '../../../data/space-planets';
-import { flightClearBand } from '../../camera-layout';
+import { flightClearBand, hudFloor } from '../../camera-layout';
 
 /** Where the centre of a planet hangs, before its drift. */
 export interface PlanetSpot {
@@ -37,14 +36,14 @@ export function planetSpot(
   width: number,
   height: number,
 ): PlanetSpot | null {
-  const { y: preferY, hudGap, lineGap, minVisible, drift, rowGap } = PLANET_PLACE;
+  const { y: preferY, lineGap, minVisible, drift, rowGap } = PLANET_PLACE;
   const clear = flightClearBand(screenH);
   const bob = drift.bob.px;
   const hang = width * (minVisible - HALF);
   const preferLeft = screenW * PLANET_PLACE.x;
   // Above the flight row: under the HUD, clear of the stripe around the flying layer's line; any x
   // (the dashed lines start at the top of that stripe).
-  const high = HUD_LAYOUT.badgeRowBottom + hudGap + bob + height / 2;
+  const high = hudFloor() + bob + height / 2;
   const roof = clear.top - rowGap - bob - height / 2;
   if (high <= roof) {
     const y = Math.min(Math.max(preferY * screenH, high), roof);
@@ -78,7 +77,9 @@ export function planetFit(
   height: number,
 ): PlanetFit | null {
   const { scale, minScale, scaleStep } = PLANET_PLACE;
-  const steps = Math.round((scale - minScale) / scaleStep);
+  // A misconfigured ladder (min above the scale, no step) tries the scale alone.
+  const span = (scale - minScale) / scaleStep;
+  const steps = Number.isFinite(span) && span > 0 ? Math.round(span) : 0;
   for (let i = 0; i <= steps; i++) {
     const k = scale - i * scaleStep;
     const spot = planetSpot(lap, screenW, screenH, width * k, height * k);

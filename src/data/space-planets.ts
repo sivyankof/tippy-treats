@@ -112,8 +112,6 @@ export const PLANET_PLACE = {
    */
   minScale: 0.51,
   scaleStep: 0.01,
-  /** Clear space kept between the HUD (its lowest edge, counter chips included) and the top of the planet, drift included. */
-  hudGap: 40,
   /** Clear space between the planet (drift included) and the stripe around the flying layer's line. */
   rowGap: 24,
   /** Clear space between the planet and a dashed edge line, drift included. */
@@ -133,7 +131,6 @@ export const PLANET_PLACE = {
   scale: number;
   minScale: number;
   scaleStep: number;
-  hudGap: number;
   rowGap: number;
   lineGap: number;
   swayPx: number;

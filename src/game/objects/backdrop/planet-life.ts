@@ -41,7 +41,7 @@ export class PlanetLife implements Life, LapLife {
     this.coming = new Phaser.GameObjects.Image(scene, 0, 0, planetKey(id)).setVisible(false);
     this.objects = [this.shown, this.coming];
     this.shownSpot.set(id, lap);
-    this.still = { texture: planetKey(id), at: { x: 0, y: 0 }, scale: PLANET_PLACE.scale };
+    this.still = { texture: planetKey(id), at: { x: 0, y: 0 }, scale: 1 };
     this.moving = { ...this.still, ...PLANET_PLACE.drift };
   }
 
@@ -85,9 +85,8 @@ export class PlanetLife implements Life, LapLife {
     if (!at) return;
     image.setPosition(at.x + pose.x, at.y + pose.y);
     image.setRotation(pose.rotation);
-    // The pose carries the drift's breathing around `PLANET_PLACE.scale`; a planet shown smaller keeps it.
-    const k = at.scale / PLANET_PLACE.scale;
-    image.setScale(pose.scaleX * k, pose.scaleY * k);
+    // The pose carries the drift's breathing around 1; the spot gives the size the planet fits at.
+    image.setScale(pose.scaleX * at.scale, pose.scaleY * at.scale);
   }
 
   /** The fade is over (or cut short by the next lap): the new planet is the shown one. */

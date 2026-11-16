@@ -31,11 +31,11 @@ export function surfaceScreenY(screenH: number): number {
   );
 }
 
-/**
- * The stripe of the screen the background travellers keep out of: the line of the incoming layer
- * (its centre when the tower top stands at `surfaceScreenY`) and `aroundLayers` layer heights
- * above and below it. Space only, where the tower is always tall, so the row stands still.
- */
+/** The highest the top of a background picture may go: `FLIGHT_CLEAR.hudGapPx` under the lowest HUD plate. */
+export function hudFloor(): number {
+  return HUD_LAYOUT.badgeRowBottom + FLIGHT_CLEAR.hudGapPx;
+}
+
 /**
  * The stripe the background satellite and comet keep out of: the flight stripe stretched down past
  * the top of the tower (`FLIGHT_CLEAR.travellerBelowTopPx`), and a ceiling `hudGapPx` under the
@@ -50,10 +50,15 @@ export function travellerClearBand(screenH: number): {
   return {
     top: band.top,
     bottom: Math.max(band.bottom, surfaceScreenY(screenH) + FLIGHT_CLEAR.travellerBelowTopPx),
-    ceiling: HUD_LAYOUT.badgeRowBottom + FLIGHT_CLEAR.hudGapPx,
+    ceiling: hudFloor(),
   };
 }
 
+/**
+ * The stripe of the screen the background travellers keep out of: the line of the incoming layer
+ * (its centre when the tower top stands at `surfaceScreenY`) and `aroundLayers` layer heights
+ * above and below it. Space only, where the tower is always tall, so the row stands still.
+ */
 export function flightClearBand(screenH: number): { top: number; bottom: number } {
   const { gapAboveTower, height } = BALANCE.layer;
   const centre = surfaceScreenY(screenH) - gapAboveTower - height / 2;

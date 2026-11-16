@@ -268,7 +268,12 @@ describe('clearBandPath with a HUD ceiling', () => {
 
   it('goes below the band when there is no room between the ceiling and the band', () => {
     const tight = { top: 600, bottom: 900, ceiling: 520 };
-    expect(clearBandPath(500, 700, 50, tight, 2300, 10)).toEqual([950, 950]);
+    expect(clearBandPath(500, 700, 50, tight, 2300, 10)).toEqual([960, 960]);
+  });
+
+  it('widens the band by the bob and wobble margin too', () => {
+    expect(clearBandPath(700, 760, 50, band, 2300, 20)).toEqual([700, 730]);
+    expect(clearBandPath(1340, 1400, 50, band, 2300, 20)).toEqual([1370, 1400]);
   });
 });
 

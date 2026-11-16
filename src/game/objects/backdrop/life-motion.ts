@@ -127,9 +127,10 @@ export interface YBand {
  * `half` px above and below its path stays fully above the band, or fully below it. It goes to the
  * side nearer the path's middle that has room on a screen `screenH` tall (above first on a tie);
  * a path already clear on one side is left alone. Both ends are pressed against the band's edge, so
- * the path flattens where it would have crossed. With a `ceiling` the picture, moving `margin` px
- * more up and down on its own (bob, wobble), also stays under it: a path above the band is pressed
- * down to it, and "above" has room only between the ceiling and the band.
+ * the path flattens where it would have crossed. `margin` is how far the picture moves up and down
+ * on its own (bob, wobble); it widens the band and the ceiling. With a `ceiling` the picture also
+ * stays under it: a path above the band is pressed down to it, and "above" has room only between
+ * the ceiling and the band (otherwise the path goes below).
  */
 export function clearBandPath(
   y0: number,
@@ -139,9 +140,10 @@ export function clearBandPath(
   screenH: number,
   margin = 0,
 ): [number, number] {
-  const above = band.top - half;
-  const below = band.bottom + half;
-  const top = band.ceiling === undefined ? -Infinity : band.ceiling + half + margin;
+  const reach = half + margin;
+  const above = band.top - reach;
+  const below = band.bottom + reach;
+  const top = band.ceiling === undefined ? -Infinity : band.ceiling + reach;
   const lowest = Math.min(y0, y1);
   if (lowest >= below) return [y0, y1];
   if (Math.max(y0, y1) <= above && lowest >= top) return [y0, y1];
@@ -149,8 +151,9 @@ export function clearBandPath(
   const roomBelow = below <= screenH - half;
   const mid = (y0 + y1) / 2;
   const goAbove = roomAbove && (!roomBelow || mid - above <= below - mid);
-  const fit = (y: number): number => Math.min(Math.max(y, top), above);
-  if (goAbove) return [fit(y0), fit(y1)];
+  if (goAbove) {
+    return [Math.min(Math.max(y0, top), above), Math.min(Math.max(y1, top), above)];
+  }
   if (roomBelow) return [Math.max(y0, below), Math.max(y1, below)];
   return [y0, y1];
 }

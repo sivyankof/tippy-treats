@@ -1,8 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { HUD_LAYOUT } from '../../../data/hud-layout';
 import { LOGICAL_SIZE } from '../../../data/screen';
 import { PLANET_LOOK, PLANET_PLACE } from '../../../data/space-planets';
-import { flightClearBand } from '../../camera-layout';
+import { flightClearBand, hudFloor } from '../../camera-layout';
 import { planetOfLap } from '../../../core/space-planet';
 import { planetSize } from './dessert-planets';
 import { corridorHalf, planetFit, planetSpot } from './planet-placement';
@@ -40,7 +39,7 @@ describe('planetSpot', () => {
           );
           const clearOfLines = right <= W / 2 - half || left >= W / 2 + half || bottom <= clear.top;
           expect(clearOfLines).toBe(true);
-          expect(top).toBeGreaterThanOrEqual(HUD_LAYOUT.badgeRowBottom + PLANET_PLACE.hudGap);
+          expect(top).toBeGreaterThanOrEqual(hudFloor());
           expect(Math.min(right, W) - Math.max(left, 0)).toBeGreaterThanOrEqual(
             size * PLANET_PLACE.minVisible - 1e-6,
           );
