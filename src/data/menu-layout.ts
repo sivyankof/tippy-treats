@@ -732,6 +732,14 @@ export const MENU = {
     portraitWidth: 600,
     traitFont: 40,
     abilityFont: 40,
+    /** The one phrase under the master name. */
+    phraseFont: 34,
+    /** The round "About" button in the corner of the hero plate: size and distance of its centre from the corner. */
+    about: { size: 104, inset: 76 },
+    /** The small icon button that replaces "Try" on a short screen. */
+    tryIcon: { size: 104 },
+    /** The panel with the funny description: font, gap between lines, depth. */
+    bio: { font: 38, lineGap: 10, depth: 20 },
     /** Centre of the name ribbon; it sits on the upper edge of the hero plate. */
     ribbonY: 320,
     /** Keeps the ribbon above the hero plate that is rebuilt after an upgrade. */
@@ -765,6 +773,11 @@ export const MENU = {
       padY: 36,
       gap: 18,
       nextGap: 16,
+      /** Gap between the rows of the master and next-level blocks. */
+      rowGap: 6,
+      /** The small gold star in front of the "New look" row: scale of the star picture and the gap. */
+      starScale: 0.9,
+      starGap: 14,
       minHeight: 200,
       rarityFont: 40,
       chipHeight: 64,

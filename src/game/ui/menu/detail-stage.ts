@@ -3,8 +3,11 @@ import type { CreatureId } from '../../../data/creatures';
 import { MENU } from '../../../data/menu-layout';
 import { PALETTE } from '../../../data/palette';
 import { shade } from '../../../util/color';
+import { hasNewLook, isMaster } from '../../../core/mastery';
 import { CreaturePortrait } from '../../objects/creature-portrait';
 import { bakeTexture } from '../bake-texture';
+import { bakeMasteryFrame } from '../mastery-frame';
+import { createIconButton } from './icon-button';
 import { VolumePlate } from '../style/volume';
 import { LevelStars } from './stars';
 
@@ -43,6 +46,8 @@ function bakePedestal(scene: Phaser.Scene, key: string, color: number): void {
 export class DetailStage extends Phaser.GameObjects.Container {
   readonly portrait: CreaturePortrait;
   readonly stars: LevelStars | null;
+  /** The gold frame of a level 5 creature, over the plate; `null` below that level. */
+  readonly frame: Phaser.GameObjects.Image | null;
 
   constructor(
     scene: Phaser.Scene,
@@ -50,6 +55,8 @@ export class DetailStage extends Phaser.GameObjects.Container {
     level: number | null,
     rarityColor: number,
     width: number,
+    /** Taps on the round "About" button; none for a locked creature. */
+    onAbout: (() => void) | null = null,
   ) {
     super(scene, 0, 0);
     const plate = new VolumePlate(scene, 'window', stage.height, { rim: rarityColor });
@@ -70,6 +77,8 @@ export class DetailStage extends Phaser.GameObjects.Container {
       id,
       level ?? 1,
       cfg.portraitWidth,
+      1,
+      level !== null && hasNewLook(level),
     );
     const lockedAlpha = level === null ? cfg.lockedAlpha : 1;
     this.portrait.setAlpha(lockedAlpha);
@@ -88,6 +97,25 @@ export class DetailStage extends Phaser.GameObjects.Container {
       level === null ? null : new LevelStars(scene, 0, stage.starsY, level, cfg.starsScale);
     this.add([plate, glow, pedestal, this.portrait]);
     if (this.stars) this.add(this.stars);
+    this.frame =
+      level !== null && isMaster(level)
+        ? scene.add.image(0, 0, bakeMasteryFrame(scene, { width, height: stage.height }))
+        : null;
+    if (this.frame) this.add(this.frame);
+    if (onAbout) {
+      const { size, inset } = cfg.about;
+      this.add(
+        createIconButton(
+          scene,
+          width / 2 - inset,
+          -stage.height / 2 + inset,
+          size,
+          PALETTE.accentSecondary,
+          'about',
+          onAbout,
+        ),
+      );
+    }
     scene.add.existing(this);
   }
 

@@ -76,62 +76,122 @@
     "honey": {
       "name": "Honey",
       "desc": "Sticky: for the next {layers} layers a drop within {value} pixels of the target counts as perfect.",
-      "trait": "A sleepy sweetheart"
+      "trait": "A sleepy sweetheart",
+      "bio": {
+        "character": "Naps between two words",
+        "likes": "Warm ovens, polite bees",
+        "dislikes": "Alarm clocks. Mornings. Both."
+      }
     },
     "puff": {
       "name": "Puff",
       "desc": "Puffs up and widens this layer by {value}.",
-      "trait": "Always delighted"
+      "trait": "Always delighted",
+      "bio": {
+        "character": "Cheers for every crumb",
+        "likes": "Hugs and puffing up",
+        "dislikes": "Forks. Rude, pointy forks"
+      }
     },
     "jelly": {
       "name": "Jelly",
       "desc": "Shock absorber: calms the wobble by {value}, and for the next {layers} layers a normal drop springs back to the centre: the offset shrinks by {percent}%.",
-      "trait": "Never ruffled"
+      "trait": "Never ruffled",
+      "bio": {
+        "character": "Wobbly, but not scared",
+        "likes": "Quiet rooms, level towers",
+        "dislikes": "Being poked with spoons"
+      }
     },
     "caramel": {
       "name": "Caramel",
       "desc": "Sweet vein: coins are doubled for the next {value} layers.",
-      "trait": "Sly one"
+      "trait": "Sly one",
+      "bio": {
+        "character": "Winks at its reflection",
+        "likes": "Anything shiny or jingly",
+        "dislikes": "Dentists. Obviously."
+      }
     },
     "frosty": {
       "name": "Frosty",
       "desc": "Freeze: layers fly {value}% slower for the next 3 layers.",
-      "trait": "Cool and calm"
+      "trait": "Cool and calm",
+      "bio": {
+        "character": "Cool as a fridge at night",
+        "likes": "Drafts and snowflakes",
+        "dislikes": "Radiators and August"
+      }
     },
     "brownie": {
       "name": "Brownie",
       "desc": "Sturdy: a shield saves you from the next miss. It lasts {value} layers.",
-      "trait": "A stern defender"
+      "trait": "A stern defender",
+      "bio": {
+        "character": "Smiled once. By accident.",
+        "likes": "Tidy shelves and nuts",
+        "dislikes": "A wobbly tower"
+      }
     },
     "sprinkle": {
       "name": "Sprinkle",
       "desc": "Fireworks: score is multiplied by {value} for the next 5 layers.",
-      "trait": "Can't sit still"
+      "trait": "Can't sit still",
+      "bio": {
+        "character": "Sits still for zero seconds",
+        "likes": "Fireworks and drums",
+        "dislikes": "The word \"later\""
+      }
     },
     "crumb": {
       "name": "Crumb",
       "desc": "Not a crumb wasted: for the next 6 layers every {value} px of a bitten-off edge becomes a coin.",
-      "trait": "A greedy little hamster"
+      "trait": "A greedy little hamster",
+      "bio": {
+        "character": "Shares crumbs with nobody",
+        "likes": "Whatever hit the floor",
+        "dislikes": "Vacuum cleaners"
+      }
     },
     "ghost": {
       "name": "Meringue",
       "desc": "See-through: guides show the perfect spot for the next {value} layers.",
-      "trait": "A shy ghost"
+      "trait": "A shy ghost",
+      "bio": {
+        "character": "Scared of its own shadow",
+        "likes": "Dotted lines and quiet",
+        "dislikes": "Clouds with no windows"
+      }
     },
     "twins": {
       "name": "Twins",
       "desc": "Double portion: counts as 2 layers of height and gives {value} points.",
-      "trait": "Always arguing"
+      "trait": "Always arguing",
+      "bio": {
+        "character": "Arguing since breakfast",
+        "likes": "Each other (shh)",
+        "dislikes": "Splitting the cream"
+      }
     },
     "lemon": {
       "name": "Zesty",
       "desc": "Risk: for the next 4 layers the speed is +20%, score is multiplied by {value} and every perfect drop gives +1 coin.",
-      "trait": "Bold and sour"
+      "trait": "Bold and sour",
+      "bio": {
+        "character": "Winces but never quits",
+        "likes": "Risk and speed",
+        "dislikes": "Sugar with no zing"
+      }
     },
     "rainbow": {
       "name": "Rainbow",
       "desc": "Miracle: the next layers are not cut, wherever they land. Layers protected: {value}. A complete miss is still a miss.",
-      "trait": "Majestic"
+      "trait": "Majestic",
+      "bio": {
+        "character": "Only walks on rainbows",
+        "likes": "Sun right after rain",
+        "dislikes": "Gray Mondays"
+      }
     }
   },
   "mastery": {
@@ -245,12 +305,16 @@
     "inTeam": "In team",
     "teamFull": "Team is full",
     "nextLevel": "Lv {n}: {change}",
-    "noChange": "Lv {n}: no change",
     "shopFromCoins": "Shop: {price} coins from baker lv {n}",
     "shopFromBerries": "Shop: {price} berries from baker lv {n}",
     "upgradeFrom": "Upgrade from baker lv {n}",
     "orWay": "Or: {way}",
-    "howTo": "How to get: {way}"
+    "howTo": "How to get: {way}",
+    "about": "About",
+    "bioCharacter": "Mood: {text}",
+    "bioLikes": "Likes: {text}",
+    "bioDislikes": "Dislikes: {text}",
+    "transformLook": "New look!"
   },
   "oven": {
     "title": "Fresh oven",

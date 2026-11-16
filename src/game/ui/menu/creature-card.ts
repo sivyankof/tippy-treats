@@ -1,5 +1,6 @@
 import * as Phaser from 'phaser';
 import { unlockHint, unlockHints, type UnlockHint } from '../../../core/collection';
+import { hasNewLook } from '../../../core/mastery';
 import { CREATURES, type CreatureId } from '../../../data/creatures';
 import { MENU } from '../../../data/menu-layout';
 import { PALETTE } from '../../../data/palette';
@@ -65,6 +66,7 @@ export class CreatureCard extends Phaser.GameObjects.Container {
         card.level ?? 1,
         cfg.layerWidth,
         cfg.layerScale,
+        hasNewLook(card.level ?? 1),
       );
       this.silhouette = null;
       this.add(this.portrait);

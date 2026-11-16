@@ -1,6 +1,7 @@
 import type { FaceRecipe } from './creature-looks';
 import type { CreatureMaterial } from './creature-materials';
 import type { CreatureId } from './creatures';
+import { MASTERY } from './mastery';
 import { MENU } from './menu-layout';
 import type { ZoneId } from './zones';
 
@@ -9,7 +10,7 @@ import type { ZoneId } from './zones';
  * is drawn with its extra details (a crown, a bow, bubbles, a sparkler...). The detail is baked
  * into a second picture of the creature on the shared atlas, so it adds no draws in the run.
  */
-export const GROWN_LOOK_LEVEL = 3;
+export const GROWN_LOOK_LEVEL = MASTERY.lookLevel;
 
 /** Which picture of a creature a layer shows: the usual one, the grown one, or the grown ghost lit up by the sky. */
 export type CreatureStage = 'base' | 'grown' | 'glow';
@@ -263,8 +264,8 @@ export const MASTERY_FRAME = {
   /** Texture key on the shared sheet; the collection screen shows this picture over the card. */
   key: 'ui_mastery_frame',
   /** Size of the card the ring wraps (the collection card), the corner radius, the dark outline and the width of the band: those of the rarity rim of the card plate. */
-  width: MENU.card.width,
-  height: MENU.card.height,
+  width: MENU.collection.card.width,
+  height: MENU.collection.card.height,
   radius: MENU.style.looks.card.radius,
   outline: MENU.style.looks.card.outline,
   band: MENU.style.looks.card.rimWidth,
