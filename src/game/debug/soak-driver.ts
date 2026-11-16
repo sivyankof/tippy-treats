@@ -153,10 +153,16 @@ class SoakDriver implements TippySoak {
     }
   }
 
-  /** A `?bot=` page opens with a run: let it end (or leave it) and get to Home. */
+  /**
+   * A `?bot=` page opens with a run: leave it as soon as it is up (waiting for its end made the
+   * first lap start late, and never under load) and get to Home.
+   */
   private async toHome(): Promise<void> {
     this.stage('to-home');
-    await this.waitFor(() => this.isOn(SCENES.home) || this.isOn(SCENES.results), SOAK.runMaxMs);
+    await this.waitFor(
+      () => this.isOn(SCENES.home) || this.isOn(SCENES.results) || runHooks() !== null,
+      SOAK.runMaxMs,
+    );
     if (this.isOn(SCENES.home)) return;
     if (this.isOn(SCENES.results)) openScreen(this.scene(SCENES.results), SCENES.home);
     else (this.scene(SCENES.game) as GameScene).leaveRun();

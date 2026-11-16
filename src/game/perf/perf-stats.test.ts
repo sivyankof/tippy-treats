@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   budgetOver,
+  isAutomatedBrowser,
   budgetVerdict,
   formatBudgetLine,
   formatHeader,
@@ -153,6 +154,26 @@ describe('budget', () => {
   });
 });
 
+describe('automated browser', () => {
+  it('detects webdriver and a headless user agent', () => {
+    expect(isAutomatedBrowser({ webdriver: true, userAgent: 'iPhone' })).toBe(true);
+    expect(isAutomatedBrowser({ userAgent: 'Mozilla HeadlessChrome/120' })).toBe(true);
+    expect(isAutomatedBrowser({ webdriver: false, userAgent: 'iPhone' })).toBe(false);
+    expect(isAutomatedBrowser({})).toBe(false);
+  });
+
+  it('keeps the interval out of the verdict and the marks, but still checks the rest', () => {
+    const slow = stats({ intervalMeanMs: 20 });
+    expect(budgetOver(slow).interval).toBe(true);
+    expect(budgetOver(slow, true).interval).toBe(false);
+    expect(budgetVerdict([slow])).toEqual({ ok: false, over: ['calm'] });
+    expect(budgetVerdict([slow], true)).toEqual({ ok: true, over: [] });
+    expect(formatTable([slow], 1, true)).not.toContain('!');
+    expect(budgetVerdict([stats({ intervalMeanMs: 20, meanMs: 9 })], true).ok).toBe(false);
+    expect(budgetVerdict([stats({ drawCallsMean: 99 })], true).ok).toBe(false);
+  });
+});
+
 describe('formatHeader', () => {
   it('names the canvas, the density and what was changed for the run', () => {
     const line = formatHeader({
@@ -164,9 +185,10 @@ describe('formatHeader', () => {
       textureUnits: 1,
       maxTextureUnits: 16,
       hidden: ['bg', 'hud'],
+      automated: false,
     });
     expect(line).toBe(
-      'fx=full canvas=780x1688px css=390x844 dpr=3 density=2.00 cap=2 units=1/16 hidden=nobg,nohud',
+      'fx=full canvas=780x1688px css=390x844 dpr=3 density=2.00 cap=2 units=1/16 hidden=nobg,nohud intervals: counted (device)',
     );
   });
 
@@ -180,9 +202,10 @@ describe('formatHeader', () => {
       textureUnits: 16,
       maxTextureUnits: 16,
       hidden: [],
+      automated: true,
     });
     expect(line).toBe(
-      'fx=lite canvas=1080x2337px css=0x0 dpr=1 density=0.00 cap=- units=16/16 hidden=-',
+      'fx=lite canvas=1080x2337px css=0x0 dpr=1 density=0.00 cap=- units=16/16 hidden=- intervals: reference (automated)',
     );
   });
 });

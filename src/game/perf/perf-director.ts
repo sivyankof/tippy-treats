@@ -18,6 +18,7 @@ import {
   formatBudgetLine,
   formatHeader,
   formatTable,
+  isAutomatedBrowser,
   SegmentSamples,
   type BudgetVerdict,
   type SegmentStats,
@@ -94,6 +95,9 @@ class PerfDirector {
     }
   }
 
+  /** Headless or driven browser: the frame intervals are for reference only. */
+  private readonly automated = isAutomatedBrowser(navigator);
+
   private get webgl(): WebGLRenderer | null {
     return webglRendererOf(this.game);
   }
@@ -114,6 +118,7 @@ class PerfDirector {
       textureUnits: webgl?.renderNodes?.maxParallelTextureUnits ?? 0,
       maxTextureUnits: webgl?.maxTextures ?? 0,
       hidden: params?.hidden ?? [],
+      automated: this.automated,
     });
   }
 
@@ -259,8 +264,8 @@ class PerfDirector {
     const fx = perfSession()?.params.fx ?? 'full';
     const header = this.header(fx);
     endPerfSession();
-    const budget = budgetVerdict(this.rows);
-    const table = `${formatTable(this.rows, PERF.overlay.decimals)}\n${formatBudgetLine(budget)}`;
+    const budget = budgetVerdict(this.rows, this.automated);
+    const table = `${formatTable(this.rows, PERF.overlay.decimals, this.automated)}\n${formatBudgetLine(budget)}`;
     this.publish({
       done: true,
       segment: null,
