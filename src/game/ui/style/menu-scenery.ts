@@ -48,7 +48,7 @@ export class MenuScenery {
     bakeSharedArt(scene);
     kitchenArt.bake(scene);
     bakeShade(scene);
-    this.ctx = { timeMs: scene.time.now, deltaMs: 0, width, height };
+    this.ctx = { timeMs: scene.time.now, deltaMs: 0, width, height, towerLayers: 0 };
     this.scenery = new ZoneScenery(
       scene,
       'kitchen',

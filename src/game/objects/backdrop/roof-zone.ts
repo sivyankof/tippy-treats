@@ -5,6 +5,7 @@ import { BACKDROP_LIFE } from '../../../data/backdrop-life';
 import { bakeTexture } from '../../ui/bake-texture';
 import { tiled } from './art-kit';
 import { Hover, PuffColumn, Traveler } from './life';
+import { bakeMountains, Mountains } from './mountains';
 import type { ZoneArt } from './zone-scenery';
 
 type Graphics = Phaser.GameObjects.Graphics;
@@ -157,12 +158,14 @@ export const roofArt: ZoneArt = {
   bake(scene) {
     bakeLayers(scene);
     bakeLife(scene);
+    bakeMountains(scene);
   },
   build(scene) {
     const life = BACKDROP_LIFE.roof;
     return {
       layers: [R.far, R.mid, R.near, R.pipes],
       lives: [
+        { slot: 0, life: new Mountains(scene) },
         { slot: 1, life: new Hover(scene, [life.chimney]) },
         { slot: 1, life: new PuffColumn(scene, life.smoke, life.smokeAt, life.smokeOffset) },
         { slot: 2, life: new Hover(scene, [life.rope, ...life.laundry]) },

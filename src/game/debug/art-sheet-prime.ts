@@ -17,6 +17,7 @@ import { bakeLapEdge } from '../fx/lap-edges';
 import { bakeSharedArt } from '../objects/backdrop/art-kit';
 import { bakeSpaceVisitors } from '../objects/backdrop/space-visitor-art';
 import { bakeAllFarArt } from '../objects/backdrop/far-plane';
+import { bakeMountains } from '../objects/backdrop/mountains';
 import {
   createCreatureIconTextures,
   createGrownCreatureIconTextures,
@@ -49,6 +50,7 @@ const PRIME_STEPS: ReadonlyArray<(scene: Phaser.Scene) => void> = [
   bakeSharedArt,
   bakeAllFarArt,
   bakeSpaceVisitors,
+  bakeMountains,
   bakeTowerSparkle,
   bakeHintTextures,
   bakeTongue,

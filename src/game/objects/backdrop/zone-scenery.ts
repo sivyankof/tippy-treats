@@ -16,7 +16,7 @@ import { gradientBands } from './sky-gradient';
 /** Pictures of the four parallax layers (back to front) and the living elements between them. */
 export interface SceneryDef {
   layers: readonly string[];
-  /** `slot` is the parallax layer the element is drawn right above (0..3). */
+  /** `slot` is the parallax layer the element is drawn right above (0..3); -1 is behind them all. */
   lives: readonly { slot: number; life: Life }[];
   /** The creature of the zone that may leave for the tower, when there is one. */
   guest?: GuestSource;
@@ -83,6 +83,10 @@ export class ZoneScenery {
     const children: Phaser.GameObjects.GameObject[] = [this.sky];
     const farSlot = BACKDROP_FAR.slot[zone];
     if (farSlot < 0) children.push(...this.far.objects);
+    // Slot -1 is behind every parallax layer (above the far plane).
+    for (const { slot, life } of def.lives) {
+      if (slot < 0) children.push(...life.objects);
+    }
     this.layers.forEach((layer, i) => {
       children.push(layer);
       if (i === farSlot) children.push(...this.far.objects);

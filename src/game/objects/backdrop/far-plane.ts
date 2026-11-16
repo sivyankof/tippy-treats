@@ -1,5 +1,6 @@
 import * as Phaser from 'phaser';
 import { BACKDROP_FAR, type FarShape } from '../../../data/backdrop-far';
+import { MOUNTAIN_FAR_ZONES } from '../../../data/backdrop-mountains';
 import { ZONE_SKY } from '../../../data/backdrop-colors';
 import { ZONES, type ZoneId } from '../../../data/zones';
 import { mixColor } from '../../../util/color';
@@ -8,6 +9,7 @@ import { effectsMode } from '../../effects-mode';
 import { bakeTexture } from '../../ui/bake-texture';
 import { cloudShape, sparkle } from './art-kit';
 import type { FrameCtx } from './life';
+import { mountainRise } from './mountain-placement';
 import { gradientColorAt } from './sky-gradient';
 
 const FAR = BACKDROP_FAR;
@@ -70,12 +72,14 @@ export function bakeAllFarArt(scene: Phaser.Scene): void {
 export class FarPlane {
   readonly objects: Phaser.GameObjects.GameObject[];
   private readonly tiles: Phaser.GameObjects.TileSprite;
+  private readonly givesWayToPeaks: boolean;
 
   constructor(scene: Phaser.Scene, zone: ZoneId, width: number, height: number) {
     this.tiles = new Phaser.GameObjects.TileSprite(scene, 0, 0, width, height, farKey(zone))
       .setOrigin(0)
       .setAlpha(FAR.alpha);
     this.objects = [this.tiles];
+    this.givesWayToPeaks = MOUNTAIN_FAR_ZONES.includes(zone);
   }
 
   /** Call when the logical screen size changes. */
@@ -84,6 +88,11 @@ export class FarPlane {
   }
 
   update(ctx: FrameCtx, scrollY: number): void {
+    if (this.givesWayToPeaks) {
+      // The mountain peaks replace the far plane while they stand: it fades out as they rise.
+      const alpha = FAR.alpha * (1 - mountainRise(ctx.towerLayers));
+      this.tiles.setAlpha(alpha).setVisible(alpha > 0);
+    }
     // Lite and minimal effects: the far plane stands still.
     if (effectsMode.atMost('lite')) return;
     this.tiles.tilePositionY = scrollY * FAR.parallax;

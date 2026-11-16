@@ -5,7 +5,9 @@ import { ZONES, type ZoneId } from '../../../data/zones';
 import { DEPTH } from '../../depth';
 import { markPerfPart } from '../../perf/perf-marks';
 import { collectBakeSteps, type BakeStep } from '../../ui/bake-texture';
+import { surfaceScreenY } from '../../camera-layout';
 import { bakeSharedArt } from './art-kit';
+import { towerLayersAt } from './mountain-placement';
 import { bakeFarArt } from './far-plane';
 import { cloudsArt } from './clouds-zone';
 import { Counter } from './worktop';
@@ -55,14 +57,14 @@ export class Backdrop {
   /** `zoneIndex` is the zone shown at once (a debug start can begin deep in the tower). */
   constructor(
     private readonly scene: Phaser.Scene,
-    trayTopY: number,
+    private readonly trayTopY: number,
     width: number,
     height: number,
     zoneIndex: number,
   ) {
     this.fade = new ZoneFade(zoneIndex, BACKDROP.fadeMs);
     this.lastNowMs = scene.time.now;
-    this.ctx = { timeMs: scene.time.now, deltaMs: 0, width, height };
+    this.ctx = { timeMs: scene.time.now, deltaMs: 0, width, height, towerLayers: 0 };
     this.counter = new Counter(scene, trayTopY, width);
     this.ensure(zoneIndex);
     this.prepareNext(zoneIndex);
@@ -93,6 +95,7 @@ export class Backdrop {
   /** Call every frame with the camera scroll. */
   update(scrollY: number): void {
     this.scrollY = scrollY;
+    this.ctx.towerLayers = towerLayersAt(scrollY, this.trayTopY, surfaceScreenY(this.ctx.height));
     if (this.still) return;
     const now = this.scene.time.now;
     const ctx = this.ctx;
