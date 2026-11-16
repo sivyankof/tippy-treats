@@ -109,19 +109,27 @@ function drawLimit(id: string): number {
   return PERF_BUDGET.drawCalls[def?.drawClass ?? 'heavy'];
 }
 
-/** Which values of a row are over the budget (no draw call count: nothing to compare there). */
-export function budgetOver(row: SegmentStats): BudgetOver {
+/** True in a headless or driven browser: its frame intervals jitter and say nothing about a phone. */
+export function isAutomatedBrowser(nav: { webdriver?: boolean; userAgent?: string }): boolean {
+  return nav.webdriver === true || /HeadlessChrome/i.test(nav.userAgent ?? '');
+}
+
+/**
+ * Which values of a row are over the budget (no draw call count: nothing to compare there). In an
+ * automated browser the interval is for reference only and never counts as over.
+ */
+export function budgetOver(row: SegmentStats, automated = false): BudgetOver {
   return {
     draws: row.drawCallsMean !== null && row.drawCallsMean > drawLimit(row.id),
     mean: row.meanMs > PERF_BUDGET.workMeanMs,
     worst: row.worstMs > PERF_BUDGET.workWorstMs,
-    interval: row.intervalMeanMs > PERF_BUDGET.intervalMeanMs,
+    interval: !automated && row.intervalMeanMs > PERF_BUDGET.intervalMeanMs,
   };
 }
 
-export function budgetVerdict(rows: readonly SegmentStats[]): BudgetVerdict {
+export function budgetVerdict(rows: readonly SegmentStats[], automated = false): BudgetVerdict {
   const over = rows
-    .filter((row) => Object.values(budgetOver(row)).some(Boolean))
+    .filter((row) => Object.values(budgetOver(row, automated)).some(Boolean))
     .map((row) => row.id);
   return { ok: over.length === 0, over };
 }
@@ -134,13 +142,17 @@ export function formatBudgetLine(verdict: BudgetVerdict): string {
 }
 
 /** The result table as markdown (the console and the overlay show it as it is). Values over the budget end in `!`. */
-export function formatTable(rows: readonly SegmentStats[], decimals: number): string {
+export function formatTable(
+  rows: readonly SegmentStats[],
+  decimals: number,
+  automated = false,
+): string {
   const lines = [
     '| segment | mean ms | p95 ms | worst ms | interval mean ms | interval p95 ms | frames | draws/frame | fps | note |',
     '|---|---|---|---|---|---|---|---|---|---|',
   ];
   for (const row of rows) {
-    const over = budgetOver(row);
+    const over = budgetOver(row, automated);
     const mark = (text: string, flag: boolean): string => (flag ? `${text}!` : text);
     const draws = row.drawCallsMean === null ? '-' : row.drawCallsMean.toFixed(1);
     const id = Object.values(over).some(Boolean) ? `${row.id} !` : row.id;
@@ -166,6 +178,8 @@ export interface PerfHeader {
   maxTextureUnits: number;
   /** Parts not drawn (`&nobg` and the like). */
   hidden: readonly string[];
+  /** Automated browser: the frame intervals are printed for reference and do not count. */
+  automated: boolean;
 }
 
 /** One line: effects level, canvas and CSS size, density, texture units and the hidden parts. */
@@ -183,5 +197,6 @@ export function formatHeader(header: PerfHeader): string {
     `cap=${header.densityCap ?? '-'}`,
     `units=${header.textureUnits}/${header.maxTextureUnits}`,
     `hidden=${hidden}`,
+    header.automated ? 'intervals: reference (automated)' : 'intervals: counted (device)',
   ].join(' ');
 }

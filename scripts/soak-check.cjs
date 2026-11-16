@@ -55,7 +55,13 @@ async function main() {
   );
   console.log(`console errors and warnings: ${problems.length}`);
   for (const line of problems.slice(0, 20)) console.log(`  ${line}`);
-  process.exit(problems.length === 0 ? 0 : 1);
+  // A soak that did nothing proves nothing: fail it instead of reporting a clean pass.
+  const idle = status.runs === 0 || status.laps === 0;
+  if (idle)
+    console.error(
+      `FAIL: the soak did not play (laps ${status.laps}, runs ${status.runs}, stuck at stage "${status.stage}"); the result says nothing about leaks`,
+    );
+  process.exit(problems.length === 0 && !idle ? 0 : 1);
 }
 
 main().catch((error) => {
