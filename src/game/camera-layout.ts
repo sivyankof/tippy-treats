@@ -36,6 +36,18 @@ export function surfaceScreenY(screenH: number): number {
  * (its centre when the tower top stands at `surfaceScreenY`) and `aroundLayers` layer heights
  * above and below it. Space only, where the tower is always tall, so the row stands still.
  */
+/**
+ * The stripe the background satellite and comet keep out of: the flight stripe stretched down past
+ * the top of the tower (`FLIGHT_CLEAR.travellerBelowTopPx`).
+ */
+export function travellerClearBand(screenH: number): { top: number; bottom: number } {
+  const band = flightClearBand(screenH);
+  return {
+    top: band.top,
+    bottom: Math.max(band.bottom, surfaceScreenY(screenH) + FLIGHT_CLEAR.travellerBelowTopPx),
+  };
+}
+
 export function flightClearBand(screenH: number): { top: number; bottom: number } {
   const { gapAboveTower, height } = BALANCE.layer;
   const centre = surfaceScreenY(screenH) - gapAboveTower - height / 2;

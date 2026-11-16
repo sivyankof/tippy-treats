@@ -6,7 +6,7 @@ import { flyingLap } from '../../../core/space-laps';
 import { DEPTH } from '../../depth';
 import { markPerfPart } from '../../perf/perf-marks';
 import { collectBakeSteps, type BakeStep } from '../../ui/bake-texture';
-import { flightClearBand, surfaceScreenY } from '../../camera-layout';
+import { surfaceScreenY, travellerClearBand } from '../../camera-layout';
 import { bakeSharedArt } from './art-kit';
 import { towerLayersAt } from './mountain-placement';
 import { bakeFarArt } from './far-plane';
@@ -79,7 +79,7 @@ export class Backdrop {
       deltaMs: 0,
       width,
       height,
-      clearBand: flightClearBand(height),
+      clearBand: travellerClearBand(height),
       towerLayers: 0,
     };
     this.counter = new Counter(scene, trayTopY, width);
@@ -123,7 +123,7 @@ export class Backdrop {
   resize(width: number, height: number): void {
     this.ctx.width = width;
     this.ctx.height = height;
-    this.ctx.clearBand = flightClearBand(height);
+    this.ctx.clearBand = travellerClearBand(height);
     for (const scenery of this.sceneries.values()) scenery.resize(width, height);
     // The still has the old size; the zones draw again and lay out for the new one.
     this.unfreeze();

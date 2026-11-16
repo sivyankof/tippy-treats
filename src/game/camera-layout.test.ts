@@ -2,7 +2,15 @@ import { describe, expect, it } from 'vitest';
 import { ANIM } from '../data/anim';
 import { BALANCE } from '../data/balance';
 import { HUD_LAYOUT } from '../data/hud-layout';
-import { FLYING_REACH, targetScrollY, trayScrollY } from './camera-layout';
+import { FLIGHT_CLEAR } from '../data/flight-clear';
+import {
+  FLYING_REACH,
+  flightClearBand,
+  surfaceScreenY,
+  targetScrollY,
+  travellerClearBand,
+  trayScrollY,
+} from './camera-layout';
 
 const SCREEN_H = 2337;
 
@@ -30,5 +38,17 @@ describe('camera layout', () => {
     expect(surfaceOnScreen).toBeGreaterThanOrEqual(
       SCREEN_H - ANIM.camera.visibleLayers * BALANCE.layer.height,
     );
+  });
+});
+
+describe('travellerClearBand', () => {
+  it('starts where the flight stripe starts and reaches below the top of the tower', () => {
+    for (const screenH of [1919, 2337, 2520]) {
+      const flight = flightClearBand(screenH);
+      const band = travellerClearBand(screenH);
+      expect(band.top).toBe(flight.top);
+      expect(band.bottom).toBeGreaterThanOrEqual(flight.bottom);
+      expect(band.bottom).toBe(surfaceScreenY(screenH) + FLIGHT_CLEAR.travellerBelowTopPx);
+    }
   });
 });
