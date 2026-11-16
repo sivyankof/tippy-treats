@@ -18,7 +18,7 @@ export class PlanetLife implements Life {
   constructor(scene: Phaser.Scene, id: SpacePlanetId) {
     const texture = planetKey(id);
     this.objects = [new Phaser.GameObjects.Image(scene, 0, 0, texture)];
-    this.still = { texture, at: PLANET_PLACE.at };
+    this.still = { texture, at: PLANET_PLACE.at, scale: PLANET_PLACE.scale };
     this.moving = { ...this.still, ...PLANET_PLACE.drift };
   }
 

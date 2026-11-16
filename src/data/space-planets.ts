@@ -65,7 +65,7 @@ export const PLANET_LOOK = {
   /** Radius of the body. */
   radius: 190,
   /** Share of the sky colour mixed into every colour of the planet, so it stays below the tower in contrast. */
-  muteShare: 0.24,
+  muteShare: 0.4,
   /** The sky colour that mix leans towards (the middle of the Space sky). */
   muteTo: 0x120a2e,
   /** Outline thickness as a share of the body radius (the layers' manner). */
@@ -95,13 +95,14 @@ export const PLANET_LOOK = {
 
 /** Where the planet hangs on the screen (shares of the screen) and how it drifts. */
 export const PLANET_PLACE = {
-  at: { x: 0.72, y: 0.37 },
+  at: { x: 0.11, y: 0.28 },
+  scale: 0.85,
   /** Full and lite levels; the minimal level holds the planet still. */
   drift: {
     bob: { px: 10, ms: 6400 },
     swing: { deg: 3, ms: 8200 },
   },
-} satisfies { at: HoverSpec['at']; drift: Pick<HoverSpec, 'bob' | 'swing'> };
+} satisfies { at: HoverSpec['at']; scale: number; drift: Pick<HoverSpec, 'bob' | 'swing'> };
 
 /** The plate "Lap N" (docs/06, "Смена зоны"): shorter than the zone plate. */
 export const LAP_PLATE = {
