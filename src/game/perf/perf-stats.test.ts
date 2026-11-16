@@ -1,5 +1,14 @@
 import { describe, expect, it } from 'vitest';
-import { formatHeader, formatTable, percentile, SegmentSamples } from './perf-stats';
+import {
+  budgetOver,
+  budgetVerdict,
+  formatBudgetLine,
+  formatHeader,
+  formatTable,
+  percentile,
+  SegmentSamples,
+  type SegmentStats,
+} from './perf-stats';
 
 describe('percentile', () => {
   it('takes the nearest rank', () => {
@@ -85,6 +94,62 @@ describe('formatTable', () => {
     const lines = text.split('\n');
     expect(lines).toHaveLength(3);
     expect(lines[2]).toBe('| calm | 3.00 | 4.00 | 4.00 | 16.00 | 16.00 | 2 | 13.0 | 62.5 | ok |');
+  });
+});
+
+function stats(over: Partial<SegmentStats>): SegmentStats {
+  return {
+    id: 'calm',
+    frames: 100,
+    meanMs: 3,
+    p95Ms: 4,
+    worstMs: 10,
+    intervalMeanMs: 16,
+    intervalP95Ms: 17,
+    drawCallsMean: 30,
+    wallMs: 1600,
+    fps: 60,
+    note: '',
+    ...over,
+  };
+}
+
+describe('budget', () => {
+  it('holds light and heavy segments to different draw call limits', () => {
+    expect(budgetOver(stats({ id: 'calm', drawCallsMean: 41 })).draws).toBe(true);
+    expect(budgetOver(stats({ id: 'calm', drawCallsMean: 40 })).draws).toBe(false);
+    expect(budgetOver(stats({ id: 'tower', drawCallsMean: 59 })).draws).toBe(false);
+    expect(budgetOver(stats({ id: 'tower', drawCallsMean: 61 })).draws).toBe(true);
+  });
+
+  it('skips the draw calls of a segment that has no count', () => {
+    expect(budgetOver(stats({ drawCallsMean: null })).draws).toBe(false);
+  });
+
+  it('marks the values over and the row', () => {
+    const lines = formatTable([stats({ meanMs: 9, worstMs: 60, intervalMeanMs: 20 })], 1).split(
+      '\n',
+    );
+    expect(lines[2]).toBe('| calm ! | 9.0! | 4.0 | 60.0! | 20.0! | 17.0 | 100 | 30.0 | 60.0 |  |');
+  });
+
+  it('leaves a row within the budget unmarked', () => {
+    expect(formatTable([stats({})], 1)).not.toContain('!');
+  });
+
+  it('gives the verdict line', () => {
+    expect(formatBudgetLine(budgetVerdict([]))).toBe('budget: ok');
+    expect(formatBudgetLine(budgetVerdict([stats({})]))).toBe('budget: ok');
+    const rows = [
+      stats({ id: 'edge', meanMs: 9 }),
+      stats({ id: 'tower' }),
+      stats({ id: 'space', worstMs: 51 }),
+    ];
+    expect(budgetVerdict(rows)).toEqual({ ok: false, over: ['edge', 'space'] });
+    expect(formatBudgetLine(budgetVerdict(rows))).toBe('budget: over in 2 segments (edge, space)');
+    expect(formatBudgetLine(budgetVerdict([stats({ meanMs: 9 })]))).toBe(
+      'budget: over in 1 segment (calm)',
+    );
   });
 });
 

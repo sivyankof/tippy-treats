@@ -11,7 +11,15 @@ import { MissDriver } from './perf-drivers';
 import { PerfOverlay } from './perf-overlay';
 import { currentSegment, endPerfSession, perfSession } from './perf-session';
 import { hidePartsWhileDrawing } from './perf-parts';
-import { formatHeader, formatTable, SegmentSamples, type SegmentStats } from './perf-stats';
+import {
+  budgetVerdict,
+  formatBudgetLine,
+  formatHeader,
+  formatTable,
+  SegmentSamples,
+  type BudgetVerdict,
+  type SegmentStats,
+} from './perf-stats';
 import { runHooks } from './run-hooks';
 
 /** What the page reads from `window.__tippyPerf`. */
@@ -29,6 +37,8 @@ export interface PerfReport {
   /** What the table was measured on: canvas and CSS size, density, texture units, hidden parts. */
   header?: string;
   table?: string;
+  /** The frame budget verdict (`PERF.budget`): `over` lists the segments with a value over it. */
+  budget?: BudgetVerdict;
 }
 
 type PerfWindow = Window & { __tippyPerf?: PerfReport };
@@ -247,7 +257,8 @@ class PerfDirector {
     const fx = perfSession()?.params.fx ?? 'full';
     const header = this.header(fx);
     endPerfSession();
-    const table = formatTable(this.rows, PERF.overlay.decimals);
+    const budget = budgetVerdict(this.rows);
+    const table = `${formatTable(this.rows, PERF.overlay.decimals)}\n${formatBudgetLine(budget)}`;
     this.publish({
       done: true,
       segment: null,
@@ -256,6 +267,7 @@ class PerfDirector {
       segments: this.rows,
       header,
       table,
+      budget,
     });
     console.log(`[perf] ${JSON.stringify((window as PerfWindow).__tippyPerf)}`);
     console.log(`${header}\n${table}`);
