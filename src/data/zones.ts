@@ -77,7 +77,7 @@ export const ZONE_RULES = {
    */
   spaceLaps: {
     step: 0.06,
-    floor: 0.5,
+    floor: 0.6,
   },
   /**
    * Space "second rule" (docs/02-gameplay.md, section 8): from lap `fromLap` a layer follows TWO
