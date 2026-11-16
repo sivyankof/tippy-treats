@@ -9,6 +9,7 @@ import { createAbilityTextures } from '../fx/abilities/ability-textures';
 import { createFxTextures } from '../fx/fx-textures';
 import { FACE_TEXTURES } from '../objects/face-textures';
 import { loadSvgTextures } from '../objects/svg-textures';
+import { moveToSharedAtlas } from '../ui/shared-atlas';
 import { TEMPO_ICON_KEY } from '../ui/creature-icons';
 import { createCreatureIconTextures } from '../objects/creature-icon-textures';
 import { SCENES, startRunFrom } from '../scene-keys';
@@ -34,6 +35,7 @@ export class BootScene extends Phaser.Scene {
   }
 
   create(): void {
+    moveToSharedAtlas(this, [...Object.values(FACE_TEXTURES), TEMPO_ICON_KEY]);
     createFxTextures(this);
     createAbilityTextures(this);
     bindAudioLifecycle(this.game, services.audio);

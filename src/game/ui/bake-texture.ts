@@ -5,6 +5,20 @@ export type BakeStep = () => void;
 
 let sink: BakeStep[] | null = null;
 
+/** Stores a finished canvas on the shared atlas; false when the key keeps a texture of its own. */
+export type SharedPictureStore = (
+  scene: Phaser.Scene,
+  key: string,
+  canvas: HTMLCanvasElement,
+) => boolean;
+
+// Set by shared-atlas.ts when it loads; kept apart so this module does not load Phaser itself.
+let sharedStore: SharedPictureStore | null = null;
+
+export function setSharedPictureStore(store: SharedPictureStore): void {
+  sharedStore = store;
+}
+
 /**
  * Runs `record` and returns the bakes it asked for instead of doing them, one step per
  * texture, so a caller can spread a big set of textures over several frames.
@@ -56,7 +70,8 @@ export function bakeTexture(
     canvas.width = Math.ceil(width);
     canvas.height = Math.ceil(height);
     g.generateTexture(canvas, canvas.width, canvas.height);
-    scene.textures.addCanvas(key, canvas);
+    // Small pictures drawn many times per frame share an atlas page (see shared-atlas.ts).
+    if (!sharedStore?.(scene, key, canvas)) scene.textures.addCanvas(key, canvas);
   } finally {
     g.destroy();
   }
