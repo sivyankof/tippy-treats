@@ -6,7 +6,12 @@ import { emptyTally, tallyEvents, type RunTally } from '../../core/run-tally';
 import type { CheckpointHeight } from '../../core/checkpoints';
 import type { RunMode } from '../../core/run-result';
 import type { TeamSlot } from '../../core/sim-types';
-import { TowerSim, type LandingPreview, type TowerState } from '../../core/tower-sim';
+import {
+  newLandingPreview,
+  TowerSim,
+  type LandingPreview,
+  type TowerState,
+} from '../../core/tower-sim';
 import { RunFx } from '../fx/run-fx';
 import { easeFn } from '../fx/ease';
 import { resultsBakeSteps } from '../fx/results-prep';
@@ -84,15 +89,8 @@ export class GameScene extends Phaser.Scene {
   private camera!: RunCamera;
   /** Pictures of the results screen still to bake, one per frame while the layer flies. */
   private resultsBakes: BakeStep[] = [];
-  /** How the layer in the fall will land, refilled every frame it falls. */
-  private readonly landing: LandingPreview = {
-    index: 0,
-    kind: 'plain',
-    creature: null,
-    width: 0,
-    cut: null,
-    pieceWidth: 0,
-  };
+  /** How the layer in the fall will land, refilled every frame it falls (the sim works it out once per drop). */
+  private readonly landing: LandingPreview = newLandingPreview();
 
   constructor() {
     super(SCENES.game);

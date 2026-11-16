@@ -278,10 +278,12 @@ export class FaceLick {
       view.hideTongue();
     }
     if (!dent) this.follow(dtMs, 0, 0, 0, 0);
-    if (this.scene === 'big' && !effectsMode.atMost('lite')) {
+    if (this.scene === 'big') {
       const reached = reachedPhase(frame, this.style);
       const to = this.style.sweep >= 1 ? LICK.loop.loopTo : this.style.sweep;
-      view.updateTrail(reached, LICK.loop.shootTo, to, this.shape, frame.tMs);
+      // On lite no new blob is laid; the ones already down keep drying.
+      const lay = !effectsMode.atMost('lite');
+      view.updateTrail(reached, LICK.loop.shootTo, to, this.shape, frame.tMs, lay);
     }
   }
 

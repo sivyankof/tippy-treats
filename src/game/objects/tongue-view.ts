@@ -146,15 +146,23 @@ export class TongueView extends Phaser.GameObjects.Container {
 
   /**
    * The wet trail: a blob appears where the tip has passed (`reached` of the way round `shape`,
-   * between `from` and `to`) at lick time `nowMs`, and dries in `LICK.trail.dryMs`.
+   * between `from` and `to`) at lick time `nowMs`, and dries in `LICK.trail.dryMs`. With `lay`
+   * off no new blob is laid, the ones already down keep drying.
    */
-  updateTrail(reached: number, from: number, to: number, shape: LoopShape, nowMs: number): void {
+  updateTrail(
+    reached: number,
+    from: number,
+    to: number,
+    shape: LoopShape,
+    nowMs: number,
+    lay = true,
+  ): void {
     const { count, alpha, dryMs } = LICK.trail;
     for (let k = 0; k < count; k++) {
       const image = this.wet[k]!;
       const phase = from + ((to - from) * k) / (count - 1);
       if (this.wetAt[k]! < 0) {
-        if (reached < phase) continue;
+        if (!lay || reached < phase) continue;
         this.wetAt[k] = nowMs;
         loopPoint(phase - TANGENT_STEP, shape, this.a);
         loopPoint(phase + TANGENT_STEP, shape, this.b);

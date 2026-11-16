@@ -11,14 +11,15 @@ import { Rng } from './rng';
 import { collectFloatingCoin, payHeightBonus, payLanding, spawnFloatingCoin } from './run-coins';
 import type { RunEndReason, RunResult } from './run-result';
 import { comboWidening, nextCombo, normalScore, perfectScore } from './scoring';
-import type {
-  FlyingLayer,
-  LandingPreview,
-  PlacedLayer,
-  RunConfig,
-  SimEvent,
-  SimPhase,
-  TowerState,
+import {
+  newLandingPreview,
+  type FlyingLayer,
+  type LandingPreview,
+  type PlacedLayer,
+  type RunConfig,
+  type SimEvent,
+  type SimPhase,
+  type TowerState,
 } from './sim-types';
 import { TempoEase } from './tempo-ease';
 import { attemptLayer, type LayerAttempt, type PlanState } from './team-queue';
@@ -49,6 +50,7 @@ export type {
   TeamSlot,
   TowerState,
 } from './sim-types';
+export { newLandingPreview } from './sim-types';
 
 const STEP_MS = BALANCE.sim.stepMs;
 
@@ -91,6 +93,12 @@ export class TowerSim {
   private flight: Flight | null = null;
   /** Streak reward: slower layers after a run of perfects. */
   private readonly tempoEase = new TempoEase();
+  /** The landing worked out for the layer in the fall; it cannot change until that layer lands. */
+  private readonly landingMemo = newLandingPreview();
+  /** The falling layer `landingMemo` was made for, `null` when there is none. */
+  private landingMemoFor: FlyingLayer | null = null;
+  /** The memo is a landing (true) or a miss (false). */
+  private landingMemoHit = false;
 
   constructor(config: RunConfig) {
     this.config = config;
@@ -307,12 +315,26 @@ export class TowerSim {
   /**
    * Fills `out` with how the falling layer will land (the drop is settled the moment it is
    * dropped: the layer no longer moves) and returns true; false when no layer falls or it will
-   * miss. Changes nothing. Only the abilities of the landing and a sneeze can still alter the
-   * width, so a view may prepare its picture from this but must cope with another one.
+   * miss. Changes nothing in the run. Only the abilities of the landing and a sneeze can still
+   * alter the width, so a view may prepare its picture from this but must cope with another one.
+   * The answer is fixed once the layer drops, so it is worked out once per drop.
    */
   landingPreview(out: LandingPreview): boolean {
     const flying = this.s.flying;
-    if (this.s.phase !== 'falling' || !flying) return false;
+    if (this.s.phase !== 'falling' || !flying) {
+      this.landingMemoFor = null;
+      return false;
+    }
+    if (this.landingMemoFor !== flying) {
+      this.landingMemoFor = flying;
+      this.landingMemoHit = this.computeLanding(flying, this.landingMemo);
+    }
+    if (!this.landingMemoHit) return false;
+    Object.assign(out, this.landingMemo);
+    return true;
+  }
+
+  private computeLanding(flying: FlyingLayer, out: LandingPreview): boolean {
     const outcome = resolveDrop(
       this.dropInput(flying, this.currentModifiers(), this.topLayerXAtLanding()),
     );

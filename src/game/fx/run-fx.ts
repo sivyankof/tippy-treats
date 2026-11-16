@@ -1,5 +1,5 @@
 import { TOWER_SPARKLES } from '../../data/tower-sparkles';
-import type * as Phaser from 'phaser';
+import * as Phaser from 'phaser';
 import type { Modifiers } from '../../core/abilities/types';
 import type { FlyingLayer, SimEvent, TowerState } from '../../core/tower-sim';
 import type { RunResult } from '../../core/run-result';
@@ -34,7 +34,7 @@ import { TowerSparkles } from './tower-sparkles';
 import type { SparkleField } from './tower-sparkle-spot';
 import { TowerCollapse } from './tower-collapse';
 import { TopperFx } from './topper-fx';
-import { setRunHooks } from '../perf/run-hooks';
+import { clearRunHooks, runHooks, setRunHooks, type RunHooks } from '../perf/run-hooks';
 
 /** The flying layer as it was before the sim step that just ran. */
 export type FlyingMemo = Pick<FlyingLayer, 'x' | 'width' | 'kind' | 'creature' | 'level'>;
@@ -131,23 +131,29 @@ export class RunFx {
       services.audio.lickHum();
       heartPop(this.landingFx.particles, x, y);
     };
-    // The benchmark's way in, in every build (the window hooks below are for dev only).
-    setRunHooks({
+    // The benchmark's way in, in every build; it holds the run, so the scene lets go of it on shutdown.
+    const hooks: RunHooks = {
       lick: (scene, kind) => this.tower.lickNow(scene, kind),
       lickStage: () => licks.stage,
       guest: () => this.guest.landNow(),
       rainbowJoke: startRainbowJokeNow,
       arcGrown: () => this.abilityFx.rainbowArcGrown,
-    });
+    };
+    setRunHooks(hooks);
+    scene.events.once(Phaser.Scenes.Events.SHUTDOWN, () => clearRunHooks(hooks));
     if (import.meta.env.DEV) {
+      // The same hooks for the console of the dev server.
+      const win = window as Window & {
+        tippyLick?: (scene?: LickScene, kind?: LickKind) => boolean;
+        tippyRainbowJoke?: () => void;
+        tippyFly?: () => boolean;
+      };
       // window.tippyLick('big' | 'short', 'run' | 'fall'): a layer licks right away; true when one could.
-      (
-        window as Window & { tippyLick?: (scene?: LickScene, kind?: LickKind) => boolean }
-      ).tippyLick = (scene, kind) => this.tower.lickNow(scene, kind);
+      win.tippyLick = (scene, kind) => runHooks()?.lick(scene, kind) ?? false;
       // window.tippyRainbowJoke(): the next Rainbow star pops its small rainbow right away.
-      (window as Window & { tippyRainbowJoke?: () => void }).tippyRainbowJoke = startRainbowJokeNow;
+      win.tippyRainbowJoke = () => runHooks()?.rainbowJoke();
       // window.tippyFly(): the guest of the zone sits on the top layer right away; true when it could.
-      (window as Window & { tippyFly?: () => boolean }).tippyFly = () => this.guest.landNow();
+      win.tippyFly = () => runHooks()?.guest() ?? false;
     }
   }
 
