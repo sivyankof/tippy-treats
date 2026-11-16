@@ -36,19 +36,26 @@ export type RewardedPlacement =
   | 'continue' | 'double_coins' | 'gift_double' | 'daily_attempt' | 'streak_restore' | 'shop_coins'
   | 'checkpoint_start';
 
+/** Why no rewarded ad can be shown: the device has no network, or there is no ad for any other reason. */
+export type RewardedUnavailableReason = 'offline' | 'no_fill';
+
 export interface AdsService {
   init(): Promise<void>;                       // after consent
   isRewardedReady(): boolean;
+  /** null while an ad is ready; otherwise why not. Read when an ad button is built and after 'unavailable'. */
+  rewardedUnavailableReason(): RewardedUnavailableReason | null;
   showRewarded(p: RewardedPlacement): Promise<'rewarded' | 'dismissed' | 'unavailable'>;
   showInterstitial(): Promise<boolean>;        // only shows; the rules are decided by the caller (core/video-policy.ts)
   setRemoveAds(v: boolean): void;
 }
 ```
 
+- **Причина недоступности** (решение владельца 2026-11-16, этап «Мастерство существ»). `rewardedUnavailableReason()` возвращает `null`, пока реклама готова (`isRewardedReady()` истинно), иначе причину. `'offline'` — только когда устройство само сообщает, что сети нет (`navigator.onLine === false` в WebView; новых плагинов не нужно); всё остальное — `'no_fill'`: реклама не загрузилась, сеть рекламы не ответила, домены рекламы закрыты блокировщиком (при DNS-блокировщике сеть у устройства есть, поэтому кнопка честно пишет «Реклама недоступна», как требует критерий M8). Ответ `showRewarded` прежний: `'unavailable'` без причины, причину вызывающий читает отдельно. Подпись кнопки по причине делает одна функция (`07-ui-screens.md`, общие правила интерфейса).
 - После инициализации заранее загружается одна реклама за награду и одна межстраничная; после показа сразу загружается следующая.
 - Правила показа межстраничной рекламы описаны в `05-economy-monetization.md`; решение принимает чистая функция `core/video-policy.ts` (`canShowInterstitial`, покрыта тестами), а сервис `showInterstitial()` правил не знает и только показывает рекламу (`true`, если показал). Вызывает его единственное место, `game/interstitial-flow.ts`.
 - На время показа рекламы музыка и звуки приостанавливаются, игра на паузе. У `AudioService.suspend(reason)` / `resume(reason)` причина `'app'` (сворачивание) или `'ad'` (реклама); звук возвращается, только когда не держится ни одна причина.
-- Браузерная заглушка: `services/rewarded-video/web.ts` (серый DOM-экран на 2 секунды, затем `'rewarded'`; межстраничная показывает такой же экран на 2 секунды со своей подписью и отвечает `true`, в режиме `unavailable` ничего не показывает и отвечает `false`). Режимы `reward`, `dismissed`, `unavailable` переключаются кнопкой в панели отладки через `adsDev` (интерфейс `AdsDevControl`, не входит в `Services`). Нативная реализация появится в M7.
+- Браузерная заглушка: `services/rewarded-video/web.ts` (серый DOM-экран на 2 секунды, затем `'rewarded'`; межстраничная показывает такой же экран на 2 секунды со своей подписью и отвечает `true`, в режимах недоступности ничего не показывает и отвечает `false`). Режимы `reward`, `dismissed`, `no_fill` (прежний `unavailable`) и `offline` переключаются кнопкой в панели отладки (`?debug=1`) через `adsDev` (интерфейс `AdsDevControl`, не входит в `Services`); в режимах `no_fill` и `offline` `isRewardedReady()` ложно, `showRewarded` отвечает `'unavailable'`, а `rewardedUnavailableReason()` — `'no_fill'` или `'offline'` соответственно. Настоящее состояние сети браузера заглушка не читает: обе причины проверяются только переключателем. Нативная реализация появится в M7.
+- Аналитика: у `ad_rewarded_result` с `result` = `unavailable` есть параметр `reason` (`offline` / `no_fill`).
 - В разработке и во внутренних сборках используются **тестовые идентификаторы** рекламных блоков Google. Боевые идентификаторы берутся из `.env` только в релизной сборке. Нажимать на собственную боевую рекламу нельзя: это ведёт к блокировке аккаунта AdMob.
 - Файл `app-ads.txt` разместить на сайте разработчика (тот же сайт, что с политикой конфиденциальности).
 
@@ -122,7 +129,7 @@ export interface AnalyticsService {
 | `daily_attempt` | `attempt`, `height` | Попытка в башне дня |
 | `gift_open` | `doubled` | Открыт подарок |
 | `ad_rewarded_show` | `placement` | Начат показ |
-| `ad_rewarded_result` | `placement`, `result` | Итог показа |
+| `ad_rewarded_result` | `placement`, `result`, `reason` (только при `unavailable`: `offline`/`no_fill`) | Итог показа |
 | `ad_interstitial_show` | — | Показана межстраничная |
 | `shop_open` | `source` | Открыт магазин |
 | `iap_start` | `product` | Нажата покупка |
