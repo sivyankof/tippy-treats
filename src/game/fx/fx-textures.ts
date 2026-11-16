@@ -2,6 +2,7 @@ import type * as Phaser from 'phaser';
 import { ANIM } from '../../data/anim';
 import { PALETTE } from '../../data/palette';
 import { LICK } from '../../data/lick';
+import { TRANSFORM } from '../../data/transform-scene';
 import { DEG_TO_RAD, TWO_PI } from '../../util/math';
 import { bakeTexture } from '../ui/bake-texture';
 import { bakeGrownAccentTextures } from './grown-accent-textures';
@@ -19,6 +20,10 @@ export const FX_TEXTURES = {
   spark: 'fx_spark',
   confetti: 'fx_confetti',
   ring: 'fx_ring',
+  /** Flat gold rim of the transform flash, in its own colours. */
+  rim: 'fx_rim',
+  /** Round puff lobe: white with a warm outline, in its own colours. */
+  puffLobe: 'fx_puff_lobe',
   /** A pink heart with a dark outline and a shine, drawn in its own colours. */
   heart: 'fx_heart',
 } as const;
@@ -172,6 +177,29 @@ export function createFxTextures(scene: Phaser.Scene): void {
     for (const { widthScale, alpha } of RING_GLOW) {
       g.lineStyle(stroke * widthScale, white, alpha).strokeCircle(ringHalf, ringHalf, radius);
     }
+  });
+
+  const { rim, puff } = TRANSFORM;
+  const rimHalf = rim.size / 2;
+  const rimRadius = rimHalf - rim.width / 2 - rim.outlineWidth;
+  bakeTexture(scene, FX_TEXTURES.rim, rim.size, rim.size, (g) => {
+    g.lineStyle(rim.width + rim.outlineWidth * 2, rim.outline, 1).strokeCircle(
+      rimHalf,
+      rimHalf,
+      rimRadius,
+    );
+    g.lineStyle(rim.width, rim.fill, 1).strokeCircle(rimHalf, rimHalf, rimRadius);
+  });
+
+  const lobeSize = puff.textureSize;
+  const lobeHalf = lobeSize / 2;
+  bakeTexture(scene, FX_TEXTURES.puffLobe, lobeSize, lobeSize, (g) => {
+    g.fillStyle(puff.outline, 1).fillCircle(lobeHalf, lobeHalf, lobeHalf);
+    g.fillStyle(puff.fill, 1).fillCircle(
+      lobeHalf,
+      lobeHalf,
+      lobeHalf * (1 - puff.outlineWidth / (puff.radius + puff.outlineWidth)),
+    );
   });
 
   const { size: heartSize, outline: heartOutline } = LICK.heart;

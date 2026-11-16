@@ -273,7 +273,7 @@ export const MASTERY_FRAME = {
   /** Shared look of the crown-star: notch depth (share of the radius), points, outline width, glint colour. */
   crown: { notch: 0.45, points: 5, outline: 4, white: '#ffffff' },
   /** The crown on a collection card: radius and how far its centre sits above the card edge (below when negative). Small and low, so it stays inside the grid gap and clear of the card above. */
-  cardCrown: { r: 20, lift: -2 },
+  cardCrown: { r: 18, lift: -10 },
   /** The crown of any plate other than the collection card (the creature window) moves to the top-left corner, `inset` from the left edge: the name ribbon covers the top centre and the about button the top right. The window plate is shown larger than a card, so the crown is bigger to look as big. */
   windowCrown: { r: 44, lift: 9, inset: 62 },
   /** Fine highlight along the top of the band: height, inset from corners. */

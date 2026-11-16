@@ -27,6 +27,7 @@ export class HudPlate extends Phaser.GameObjects.Container {
   constructor(
     scene: Phaser.Scene,
     private readonly fill: number = PALETTE.panel,
+    private readonly plateAlpha: number = cfg.alpha,
   ) {
     super(scene, 0, 0);
     scene.add.existing(this);
@@ -43,7 +44,7 @@ export class HudPlate extends Phaser.GameObjects.Container {
       const key = `ui_hud_plate_${size}_${this.fill.toString(16)}`;
       this.plate = createVolumeImage(this.scene, key, w, h, lookOf('chip'), {
         fill: this.fill,
-      }).setAlpha(cfg.alpha);
+      }).setAlpha(this.plateAlpha);
       this.add(this.plate);
     }
     return this.setPosition(x, y);

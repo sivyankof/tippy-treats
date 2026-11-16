@@ -45,8 +45,14 @@ export const OFFLINE_LOOK = {
 
 /** How the icon sits next to the caption of a button. */
 export const OFFLINE_CAPTION_LAYOUT = {
-  /** Icon side as a share of the caption's own text height. */
-  sizeShare: 1.5,
+  /** Icon side as a share of the caption's own text height: about 70% of the button's inner height, so the stroke stays inside the plate. */
+  sizeShare: 1.0,
   /** Gap between the icon and the text, as a share of the icon side. */
   gapShare: 0.2,
+} as const;
+
+/** The caption of an unavailable ad button: dark plum on a light outline, so it reads on the dimmed lavender plate. */
+export const AD_UNAVAILABLE_CAPTION = {
+  color: 0x24133a,
+  stroke: PALETTE.panel,
 } as const;

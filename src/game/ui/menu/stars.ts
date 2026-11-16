@@ -3,7 +3,7 @@ import { MAX_CREATURE_LEVEL } from '../../../data/creatures';
 import { MENU } from '../../../data/menu-layout';
 import { PALETTE } from '../../../data/palette';
 
-const { size, gap, on, off } = MENU.stars;
+const { size, gap, on, off, master } = MENU.stars;
 const POINTS = 5;
 const INNER = 0.45;
 const OUTLINE_ALPHA = 0.6;
@@ -30,13 +30,17 @@ export class LevelStars extends Phaser.GameObjects.Graphics {
 
   setLevel(level: number, scale = 1): this {
     this.clear();
-    const r = (size * scale) / 2;
-    const step = (size + gap) * scale;
+    const isMaster = level >= MAX_CREATURE_LEVEL;
+    const unit = isMaster ? size * master.sizeScale : size;
+    const r = (unit * scale) / 2;
+    const step = (unit + gap) * scale;
     const left = -((MAX_CREATURE_LEVEL - 1) * step) / 2;
     for (let i = 0; i < MAX_CREATURE_LEVEL; i++) {
       const points = starPoints(left + i * step, 0, r);
       this.fillStyle(i < level ? on : off, 1).fillPoints(points, true);
-      this.lineStyle(2 * scale, PALETTE.textDark, OUTLINE_ALPHA).strokePoints(points, true);
+      if (isMaster) this.lineStyle(master.outlineWidth * scale, master.outline, 1);
+      else this.lineStyle(2 * scale, PALETTE.textDark, OUTLINE_ALPHA);
+      this.strokePoints(points, true);
     }
     return this;
   }

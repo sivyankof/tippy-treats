@@ -15,12 +15,17 @@ describe('camera layout', () => {
     expect(targetScrollY(0, SCREEN_H, -BALANCE.layer.height)).toBe(trayScrollY(0, SCREEN_H));
   });
 
+  it('keeps a gap under the counter chips of the badge row', () => {
+    expect(HUD_LAYOUT.badgeRowBottom).toBeGreaterThan(HUD_LAYOUT.bottomEdge);
+    expect(ANIM.camera.hudClearance).toBeGreaterThanOrEqual(8);
+  });
+
   it('follows a tall tower and keeps the flying row below the HUD', () => {
     const towerTopY = -100 * BALANCE.layer.height;
     const scroll = targetScrollY(0, SCREEN_H, towerTopY);
     const surfaceOnScreen = towerTopY - scroll;
     expect(surfaceOnScreen - FLYING_REACH).toBeGreaterThanOrEqual(
-      HUD_LAYOUT.bottomEdge + ANIM.camera.hudClearance - 1e-9,
+      HUD_LAYOUT.badgeRowBottom + ANIM.camera.hudClearance - 1e-9,
     );
     expect(surfaceOnScreen).toBeGreaterThanOrEqual(
       SCREEN_H - ANIM.camera.visibleLayers * BALANCE.layer.height,

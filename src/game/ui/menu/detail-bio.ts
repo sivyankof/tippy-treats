@@ -24,15 +24,15 @@ export function bioLines(id: CreatureId): string[] {
 export class DetailBio extends Phaser.GameObjects.Container {
   readonly bodyHeight: number;
 
-  constructor(scene: Phaser.Scene, id: CreatureId, minHeight: number, onClose: () => void) {
+  constructor(scene: Phaser.Scene, id: CreatureId, onClose: () => void) {
     super(scene, 0, 0);
     const lines = bioLines(id).map((line) =>
       fitText(createBodyText(scene, line, cfg.bio.font, false), info.wrap),
     );
     const lineHeight = Math.max(...lines.map((line) => line.height * line.scaleY));
     const textHeight = lines.length * lineHeight + (lines.length - 1) * cfg.bio.lineGap;
-    // The panel covers the whole text block it opens over, so nothing of it peeks out below.
-    this.bodyHeight = Math.max(minHeight, textHeight + info.padY * 2);
+    // The panel hugs its text; the scene hides the text block it opens over.
+    this.bodyHeight = Math.max(cfg.bio.minHeight, textHeight + info.padY * 2);
     const plate = new VolumePlate(scene, 'window', this.bodyHeight).setBodyWidth(info.width);
     plate.setPosition(0, this.bodyHeight / 2);
     this.add(plate);

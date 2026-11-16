@@ -261,7 +261,14 @@ export const MENU = {
     /** Scale of the level stars on the card. */
     starsScale: 1,
   },
-  stars: { size: 26, gap: 6, on: 0xffc93c, off: 0xe9d5c3 },
+  stars: {
+    size: 26,
+    gap: 6,
+    on: 0xffc93c,
+    off: 0xe9d5c3,
+    /** Five gold stars on the gold plate of a master: a bigger star with a darker warm outline so they read. */
+    master: { sizeScale: 1.2, outline: 0x8a4f00, outlineWidth: 3 },
+  },
   portrait: {
     /** Tap: a hop this high, a squeak and a happy face. */
     hopHeight: 60,
@@ -738,8 +745,8 @@ export const MENU = {
     about: { size: 104, inset: 76 },
     /** The small icon button that replaces "Try" on a short screen. */
     tryIcon: { size: 104 },
-    /** The panel with the funny description: font, gap between lines, depth. */
-    bio: { font: 38, lineGap: 10, depth: 20 },
+    /** The panel with the funny description: font, gap between lines, depth, least height (it hugs its text, the text block under it hides). */
+    bio: { font: 38, lineGap: 10, depth: 20, minHeight: 240 },
     /** Centre of the name ribbon; it sits on the upper edge of the hero plate. */
     ribbonY: 320,
     /** Keeps the ribbon above the hero plate that is rebuilt after an upgrade. */
@@ -747,6 +754,8 @@ export const MENU = {
     /** Top of the hero plate and the gap between the blocks. */
     stageTop: 330,
     blockGap: 40,
+    /** On a screen too short even for the smallest window, the gap under the hero plate shrinks to this to keep the text block clear of the buttons. */
+    minStageGap: 14,
     /** The hero block: plate, glow, pedestal, creature, stars. Numbers are relative to its middle. */
     stage: {
       width: 920,

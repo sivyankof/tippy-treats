@@ -16,12 +16,12 @@ export function trayScrollY(trayTopY: number, screenH: number): number {
 
 /**
  * Scroll that keeps the tray low at the start and later shows as many layers as fit while the
- * whole flying layer (with its bob) stays below the HUD. `towerTopY` is the world y of the top.
+ * whole flying layer (with its bob) stays below the HUD, counter chips of the badge row included. `towerTopY` is the world y of the top.
  */
 export function targetScrollY(trayTopY: number, screenH: number, towerTopY: number): number {
   const surfaceScreenY = Math.max(
     screenH - ANIM.camera.visibleLayers * BALANCE.layer.height,
-    HUD_LAYOUT.bottomEdge + ANIM.camera.hudClearance + FLYING_REACH,
+    HUD_LAYOUT.badgeRowBottom + ANIM.camera.hudClearance + FLYING_REACH,
   );
   return Math.min(trayScrollY(trayTopY, screenH), towerTopY - surfaceScreenY);
 }

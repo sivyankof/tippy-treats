@@ -2,6 +2,9 @@ const BAR_Y = 346;
 const BAR_HEIGHT = 30;
 const BADGE_ROW_Y = 468;
 const BADGE_SIZE = 108;
+const BADGE_COUNTER_INSET = 10;
+const BADGE_COUNTER_DROP = 22;
+const BADGE_CHIP_HEIGHT = 58;
 
 /** The pause window: three buttons and the switches under them (a `PopupWindow` of the kit). */
 export const PAUSE = {
@@ -56,12 +59,12 @@ export const HUD_LAYOUT = {
   badgeMargin: 24,
   /** Counter of an effect badge: font size, and how far it sits in from the icon's bottom right corner. */
   badgeCounterFont: 52,
-  badgeCounterInset: 10,
+  badgeCounterInset: BADGE_COUNTER_INSET,
   /** How far the counter hangs below the icon's bottom edge, so it clears the face. */
-  badgeCounterDrop: 22,
+  badgeCounterDrop: BADGE_COUNTER_DROP,
   badgeCounterStroke: 8,
   /** The see-through wallet chip under that counter: its height and the room beside the digits. */
-  badgeChip: { height: 58, padX: 12 },
+  badgeChip: { height: BADGE_CHIP_HEIGHT, padX: 12 },
   /** Side of the gold star on the corner of the badge of a mastery tail (jelly, frosty). */
   badgeTailDot: 36,
   /**
@@ -78,4 +81,7 @@ export const HUD_LAYOUT = {
   iconTextureScale: 2,
   /** Lowest screen y the HUD (height, score, wobble bar, badge row) reaches. */
   bottomEdge: BADGE_ROW_Y + BADGE_SIZE / 2,
+  /** Lowest screen y of the badge row including the counter chips that hang under the icons. */
+  badgeRowBottom:
+    BADGE_ROW_Y + BADGE_SIZE / 2 - BADGE_COUNTER_INSET + BADGE_COUNTER_DROP + BADGE_CHIP_HEIGHT / 2,
 } as const;

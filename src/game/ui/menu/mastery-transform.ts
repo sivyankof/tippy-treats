@@ -8,11 +8,12 @@ import { TRANSFORM } from '../../../data/transform-scene';
 import { formatDecimal, t } from '../../../i18n';
 import { services } from '../../../services';
 import { effectsMode } from '../../effects-mode';
-import { FX_TEXTURES, RING_DIAMETER } from '../../fx/fx-textures';
+import { FX_TEXTURES } from '../../fx/fx-textures';
 import type { Particles } from '../../fx/particles';
 import { starBurst } from '../../fx/sparkle-fx';
 import { CreaturePortrait, squeakPitch } from '../../objects/creature-portrait';
 import { createDimOverlay } from '../dim-overlay';
+import { HudPlate } from '../style/hud-plate';
 import { TitleRibbon } from '../style/title-ribbon';
 import { createBodyText } from './detail-info';
 import { formatValues } from './detail-model';
@@ -74,8 +75,7 @@ export class MasteryTransform {
             .setDepth(DEPTH + 1)
         : null;
     this.ring = scene.add
-      .image(x, y, FX_TEXTURES.ring)
-      .setTint(cfg.gold)
+      .image(x, y, FX_TEXTURES.rim)
       .setDepth(DEPTH + 2)
       .setVisible(false);
     this.before = this.portrait(x, y, o.fromLevel);
@@ -145,9 +145,21 @@ export class MasteryTransform {
     const group = this.scene.add.container(x, y + cfg.labelGap, [ribbon]).setDepth(DEPTH + 5);
     if (master) {
       const phrase = t(info.shortKey, formatValues(info.values, formatDecimal));
-      group.add(
-        createBodyText(this.scene, phrase, cfg.phraseFont).setOrigin(0.5, 0).setY(cfg.lineGap),
+      const text = createBodyText(this.scene, phrase, cfg.phraseFont)
+        .setOrigin(0.5, 0)
+        .setY(cfg.lineGap);
+      // A plate keeps the ribbon and the phrase readable over the window text before the veil lands.
+      const { padX, padY, alpha } = cfg.plate;
+      const top = -MENU.style.ribbon.height / 2 - padY;
+      const bottom = cfg.lineGap + text.height + padY;
+      const plate = new HudPlate(this.scene, PALETTE.panel, alpha).place(
+        0,
+        (top + bottom) / 2,
+        Math.max(ribbon.fullWidth, text.width) + padX * 2,
+        bottom - top,
       );
+      group.addAt(plate, 0);
+      group.add(text);
     }
     return group;
   }
@@ -166,24 +178,24 @@ export class MasteryTransform {
     );
   }
 
-  /** Soft white discs around the creature that make the cloud. */
+  /** Flat round lobes (white, warm outline) around the creature that make the cloud. */
   private createPuff(x: number, y: number): Phaser.GameObjects.Container {
-    const { discs, radius, spread, tint } = cfg.puff;
+    const { discs, radius, spread, outlineWidth } = cfg.puff;
+    const size = (radius + outlineWidth) * 2;
     const parts: Phaser.GameObjects.Image[] = [];
     for (let i = 0; i < discs; i++) {
       const angle = (i / discs) * Math.PI * 2;
       const at = i === 0 ? 0 : spread;
       parts.push(
         this.scene.add
-          .image(Math.cos(angle) * at, Math.sin(angle) * at * cfg.puff.squash, FX_TEXTURES.halo)
-          .setTint(tint)
-          .setDisplaySize(radius * 2, radius * 2),
+          .image(Math.cos(angle) * at, Math.sin(angle) * at * cfg.puff.squash, FX_TEXTURES.puffLobe)
+          .setDisplaySize(size, size),
       );
     }
     return this.scene.add
       .container(x, y, parts)
       .setDepth(DEPTH + 4)
-      .setAlpha(0);
+      .setVisible(false);
   }
 
   private apply(): void {
@@ -194,15 +206,19 @@ export class MasteryTransform {
     const shown = !f.hidden && f.fade > 0;
     this.before.setVisible(shown && (this.minimal || f.mix < 1)).setAlpha(f.fade);
     this.after.setVisible(shown && f.mix > 0).setAlpha((this.minimal ? f.mix : 1) * f.fade);
-    this.puff.setAlpha(f.puff.alpha * f.fade).setScale(f.puff.scale);
+    // The cloud grows and shrinks instead of fading: see-through lobes would show each other's outlines.
+    this.puff
+      .setVisible(f.puff.alpha > 0 && f.fade > 0)
+      .setAlpha(f.fade)
+      .setScale(f.puff.scale * (cfg.puffFadeScale + (1 - cfg.puffFadeScale) * f.puff.alpha));
     this.rays?.setAlpha(f.rays * f.fade);
     const showRing = f.ring >= 0 && f.ring < 1;
     this.ring.setVisible(showRing);
     if (showRing) {
       const size =
         MENU.detail.portraitWidth * cfg.ringScale * (cfg.ringFrom + (1 - cfg.ringFrom) * f.ring);
-      const sx = (size * ring.widthRatio) / RING_DIAMETER;
-      const sy = (size * ring.heightRatio) / RING_DIAMETER;
+      const sx = (size * ring.widthRatio) / cfg.rim.size;
+      const sy = (size * ring.heightRatio) / cfg.rim.size;
       this.ring.setScale(sx, sy).setAlpha((1 - f.ring) * f.fade);
     }
     for (const label of this.labels) label.setAlpha(f.labels * f.fade);

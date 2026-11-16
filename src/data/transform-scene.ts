@@ -28,8 +28,21 @@ export const TRANSFORM = {
   puffScaleGrow: 0.6,
   /** Overshoot of the pop (the standard back curve). */
   backOvershoot: 1.70158,
-  /** Puff cloud: the number and radius of the soft discs, and how far they spread. */
-  puff: { discs: 7, radius: 150, spread: 130, squash: 0.6, tint: 0xffffff },
+  /** Puff cloud: flat round lobes (centre one first) with a warm outline; radius (without the outline), outline width and spread in logical px, texture size in texture px. Fades by shrinking, so the lobes never show through each other. */
+  puff: {
+    discs: 5,
+    radius: 105,
+    spread: 135,
+    squash: 0.7,
+    fill: 0xffffff,
+    outline: 0xd9a98a,
+    outlineWidth: 9,
+    textureSize: 256,
+  },
+  /** Flat gold rim of the level-5 flash: fill, warm darker outline, and the stroke widths in texture px. */
+  rim: { fill: 0xffc93c, outline: 0xc4871a, size: 256, width: 14, outlineWidth: 5 },
+  /** The cloud shrinks to this share of its size as it thins out. */
+  puffFadeScale: 0.5,
   /** Sparkles on the swap and the burst of the gold flash. */
   burst: { count: 26, hold: 8 },
   /** Gold of the flash and the rays (the gold of the mastery frame), the ring size relative to the layer. */
@@ -41,6 +54,8 @@ export const TRANSFORM = {
   ringScale: 3.2,
   /** The ring starts at this share of its full size. */
   ringFrom: 0.3,
+  /** Plate behind the ribbon and the phrase of the master: padding, corner radius and alpha. */
+  plate: { padX: 36, padY: 20, radius: 40, alpha: 0.95 },
   /** Labels under the creature: gap below its centre, line gap, fonts. */
   labelGap: 330,
   ribbonFont: 64,

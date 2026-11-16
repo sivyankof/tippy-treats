@@ -150,9 +150,8 @@ export class CreatureDetailScene extends Phaser.Scene {
       .setInteractive()
       .setDepth(cfg.bio.depth - 1);
     this.bioVeil.on(Phaser.Input.Events.POINTER_DOWN, () => this.closeBio());
-    this.bio = new DetailBio(this, this.request.id, this.info.bodyHeight, () =>
-      this.closeBio(),
-    ).setDepth(cfg.bio.depth);
+    this.bio = new DetailBio(this, this.request.id, () => this.closeBio()).setDepth(cfg.bio.depth);
+    this.info.setVisible(false);
     this.layoutBio();
     this.stage.portrait.poke();
   }
@@ -162,6 +161,7 @@ export class CreatureDetailScene extends Phaser.Scene {
   }
 
   private closeBio(): void {
+    if (this.bio) this.info.setVisible(true);
     this.bio?.destroy();
     this.bioVeil?.destroy();
     this.bio = null;
@@ -190,7 +190,9 @@ export class CreatureDetailScene extends Phaser.Scene {
     const stageTop = cfg.stageTop + gap;
     this.name.setPosition(cx, cfg.ribbonY + gap);
     this.stage.setPosition(cx, stageTop + cfg.stage.height / 2);
-    this.info.setPosition(cx, stageTop + cfg.stage.height + cfg.blockGap + gap);
+    // Too short a screen: the gap under the hero plate gives way before the text meets the buttons.
+    const squeeze = Math.min(Math.max(0, -free), cfg.blockGap - cfg.minStageGap);
+    this.info.setPosition(cx, stageTop + cfg.stage.height + cfg.blockGap + gap - squeeze);
     this.layoutBio();
   }
 
