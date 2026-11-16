@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import { BALANCE } from '../../../data/balance';
-import { MOUNTAIN_SPAN } from '../../../data/backdrop-mountains';
+import {
+  MOUNTAIN_FREE_BAND,
+  MOUNTAIN_LOOK,
+  MOUNTAIN_MOTION,
+  MOUNTAIN_SPAN,
+} from '../../../data/backdrop-mountains';
 import { mountainRise, towerLayersAt } from './mountain-placement';
 
 describe('mountain placement', () => {
@@ -47,5 +52,27 @@ describe('mountain placement', () => {
       55,
     );
     expect(towerLayersAt(tray, tray, surface)).toBe(0);
+  });
+
+  it('keeps the middle of the screen behind the tower free of peaks', () => {
+    const L = MOUNTAIN_LOOK;
+    const screen = { w: 390, h: 844 };
+    const scale = Math.max(
+      (MOUNTAIN_MOTION.heightShare * screen.h) / L.height,
+      (screen.w + 2 * MOUNTAIN_MOTION.swayPx) / L.width,
+    );
+    const bandHalf = (MOUNTAIN_FREE_BAND * screen.w) / 2 / scale + MOUNTAIN_MOTION.swayPx / scale;
+    const mid = L.width / 2;
+    for (const p of L.peaks) {
+      const share = p.back ? L.capShareBack : L.capShareFront;
+      const capBase = p.top + (L.height - p.top) * share;
+      const widthAt = (y: number) => (p.half * (y - p.top)) / (L.height + L.overshoot - p.top);
+      // The apex and the snow cap stay outside the band.
+      expect(Math.abs(p.x - mid)).toBeGreaterThan(bandHalf);
+      expect(Math.abs(p.x - mid) - widthAt(capBase)).toBeGreaterThan(bandHalf);
+      // The rock too, down to the middle of the visible picture height.
+      const midY = (p.top + L.height) / 2;
+      expect(Math.abs(p.x - mid) - widthAt(midY)).toBeGreaterThan(bandHalf);
+    }
   });
 });
