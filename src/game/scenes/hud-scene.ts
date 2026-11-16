@@ -13,6 +13,7 @@ import { NumberRoll } from '../ui/number-roll';
 import { createOutlinedText } from '../ui/outlined-text';
 import { PauseOverlay } from '../ui/pause-overlay';
 import { EffectBadges } from '../ui/effect-badges';
+import { MasterCaptions } from '../ui/master-captions';
 import { TempoChip } from '../ui/tempo-chip';
 import { ZoneBanner } from '../ui/zone-plate';
 import { ZoneChangeWatch } from '../ui/zone-change-watch';
@@ -23,6 +24,7 @@ import { enterScreen } from '../ui/transition';
 import { addUiRegion } from '../ui/ui-regions';
 import { WobbleBar } from '../ui/wobble-bar';
 import { TutorialHints } from '../tutorial/tutorial-hints';
+import type { RunInfo } from '../run-info';
 import type { GameScene } from './game-scene';
 
 const { pauseSize, pauseMargin } = HUD_LAYOUT;
@@ -37,6 +39,7 @@ export class HudScene extends Phaser.Scene {
   private continueWindow!: ContinueWindow;
   private nextBadge!: NextCreatureBadge;
   private effectBadges!: EffectBadges;
+  private masterCaptions!: MasterCaptions;
   private tempoChip!: TempoChip;
   private zoneBanner!: ZoneBanner;
   /** "Demo: <name>" during a creature demo. */
@@ -77,6 +80,7 @@ export class HudScene extends Phaser.Scene {
     this.wobbleBar = new WobbleBar(this);
     this.nextBadge = new NextCreatureBadge(this);
     this.effectBadges = new EffectBadges(this);
+    this.masterCaptions = new MasterCaptions(this);
     this.tempoChip = new TempoChip(this);
     this.zoneBanner = new ZoneBanner(this);
     this.demoLabel = createOutlinedText(this, 0, 0, '', HUD_LAYOUT.demoLabelFont, PALETTE.gold);
@@ -119,6 +123,7 @@ export class HudScene extends Phaser.Scene {
       unregisterOverlay();
       unregisterPanel();
       this.treasure.destroy();
+      this.masterCaptions.clear();
       unregisterContinue();
       this.game.events.off(Phaser.Core.Events.HIDDEN, this.pause, this);
       this.scale.off(Phaser.Scale.Events.RESIZE, this.layout, this);
@@ -147,6 +152,7 @@ export class HudScene extends Phaser.Scene {
       this.nextBadge.update(info.height, info.team);
       this.nextBadge.idle(time);
       this.effectBadges.update(info.effects, info.shield, time, delta);
+      this.updateMasterCaptions(info.team, delta);
       this.tempoChip.update(info.tempoLeft, time, delta);
       this.treasure.update(info, time, delta, this.gameScene()?.continueFlow?.isOpen === true);
     }
@@ -161,6 +167,14 @@ export class HudScene extends Phaser.Scene {
     this.pauseButton.setVisible(this.pauseEnabled());
     this.showDemoLabel();
     this.debugPanel.update(info, this.game.loop.actualFps);
+  }
+
+  /** The master captions: prepared once per run, shown for the `mastery` events the run scene noted. */
+  private updateMasterCaptions(team: RunInfo['team'], delta: number): void {
+    const game = this.gameScene();
+    if (!game) return;
+    this.masterCaptions.prepare(team);
+    this.masterCaptions.update(game.masterFeed, this.effectBadges, delta);
   }
 
   private gameScene(): GameScene | null {

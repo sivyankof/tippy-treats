@@ -18,6 +18,8 @@ export type BadgePhase = 'in' | 'live' | 'out';
 export interface BadgeState {
   key: BadgeKey;
   layersLeft: number;
+  /** A mastery tail (jelly, frosty): the badge wears a gold dot. */
+  tail: boolean;
   phase: BadgePhase;
   /** Time in the current phase. */
   ageMs: number;
@@ -49,8 +51,8 @@ export class BadgeTracker {
   /** Brings the badges in line with the effects and the shield. */
   sync(effects: readonly ActiveEffect[], shield: number): void {
     for (const badge of this.items) badge.seen = false;
-    for (const effect of effects) this.note(effect.id, effect.layersLeft);
-    if (shield > 0) this.note('shield', shield);
+    for (const effect of effects) this.note(effect.id, effect.layersLeft, effect.tail === true);
+    if (shield > 0) this.note('shield', shield, false);
     for (const badge of this.items) {
       if (!badge.seen && badge.phase !== 'out') this.setPhase(badge, 'out');
     }
@@ -73,12 +75,13 @@ export class BadgeTracker {
     return dropped;
   }
 
-  private note(key: BadgeKey, layersLeft: number): void {
+  private note(key: BadgeKey, layersLeft: number, tail: boolean): void {
     const badge = this.findBadge(key);
     if (!badge) {
       this.items.push({
         key,
         layersLeft,
+        tail,
         phase: 'in',
         ageMs: 0,
         counterAgeMs: Infinity,
@@ -88,6 +91,7 @@ export class BadgeTracker {
       return;
     }
     badge.seen = true;
+    badge.tail = tail;
     // An effect that came back while its badge was leaving brings it back in.
     if (badge.phase === 'out') this.setPhase(badge, 'in');
     if (badge.layersLeft !== layersLeft) {

@@ -1,5 +1,6 @@
 import type * as Phaser from 'phaser';
 import { ABILITY_ANIM } from '../../../data/ability-anim';
+import { MASTER_ANIM } from '../../../data/master-anim';
 import { effectsMode } from '../../effects-mode';
 import { DEPTH } from '../../depth';
 import { oscillate01 } from '../../../util/math';
@@ -12,6 +13,8 @@ const cfg = ABILITY_ANIM.active;
 export class Vignette {
   private readonly image: Phaser.GameObjects.Image;
   private fade = 0;
+  /** Time left of the flare of the lemon's master salute. */
+  private flareMs = 0;
 
   constructor(scene: Phaser.Scene) {
     this.image = scene.add
@@ -23,15 +26,22 @@ export class Vignette {
       .setVisible(false);
   }
 
+  /** The light flares once, brighter than it ever pulses (not at the minimal level). */
+  flare(): void {
+    if (!effectsMode.reduced) this.flareMs = MASTER_ANIM.lemon.flashMs;
+  }
+
   update(dtMs: number, timeMs: number, on: boolean, width: number, height: number): void {
     this.fade = fadeToward(this.fade, on, cfg.fadeLerp, dtMs);
-    const visible = isFadedIn(this.fade);
+    this.flareMs = Math.max(0, this.flareMs - dtMs);
+    const flare = (this.flareMs / MASTER_ANIM.lemon.flashMs) * MASTER_ANIM.lemon.flashAlpha;
+    const visible = isFadedIn(this.fade) || flare > 0;
     this.image.setVisible(visible);
     if (!visible) return;
     const [minAlpha, maxAlpha] = cfg.lemon.alpha;
     const alpha = effectsMode.reduced
       ? cfg.lemon.reducedAlpha
       : minAlpha + (maxAlpha - minAlpha) * oscillate01(timeMs, cfg.lemon.periodMs);
-    this.image.setDisplaySize(width, height).setAlpha(alpha * this.fade);
+    this.image.setDisplaySize(width, height).setAlpha(Math.max(alpha * this.fade, flare));
   }
 }

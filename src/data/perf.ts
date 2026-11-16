@@ -230,6 +230,8 @@ export const PERF = {
     team: ['honey', 'frosty', 'sprinkle'] as readonly CreatureId[],
     levelOn: MASTERY.lookLevel,
     levelOff: MASTERY.lookLevel - 1,
+    /** `&mastery=master`: the master level, where the master effects and their captions act. */
+    levelMaster: MASTERY.masterLevel,
   },
   /** `&dpr=`: the render densities (canvas pixels per CSS pixel) a comparison run may cap the canvas at. */
   densityCaps: [1, 1.5, 2, 3] as readonly number[],

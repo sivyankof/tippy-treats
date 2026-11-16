@@ -79,6 +79,7 @@ function film(dts: readonly number[], coverMs = 300, dropAfterCover = false): Fr
       // The flying row moves up when a new layer comes: the bank must not follow it.
       y: t > 1500 ? 380 : 500,
       dir: 1,
+      maxAlpha: 1,
     };
     const pose = motion.update(dt, input);
     frames.push({ t, phase: motion.phase, pose: { ...pose }, y: motion.y });
@@ -139,7 +140,14 @@ describe('CloudMotion', () => {
 
   it('fades away a cloud that never came because the layer was dropped', () => {
     const motion = new CloudMotion();
-    const base: CloudInput = { covering: false, flying: true, etaMs: 300, y: 400, dir: -1 };
+    const base: CloudInput = {
+      covering: false,
+      flying: true,
+      etaMs: 300,
+      y: 400,
+      dir: -1,
+      maxAlpha: 1,
+    };
     for (let i = 0; i < 5; i++) motion.update(20, base);
     expect(motion.phase).toBe('approach');
     const alpha = motion.pose.alpha;
@@ -164,6 +172,7 @@ describe('CloudMotion', () => {
       etaMs: Infinity,
       y: 400,
       dir: 1,
+      maxAlpha: 1,
     });
     expect(motion.phase).toBe('cover');
     expect(Math.abs(pose.x)).toBeLessThan(5);

@@ -77,11 +77,22 @@ describe('BadgeTracker', () => {
   });
 });
 
+describe('BadgeTracker tail', () => {
+  it('marks the badge of a mastery tail and clears the mark when the effect is a normal one again', () => {
+    const tracker = new BadgeTracker();
+    tracker.sync([{ ...effect('jelly', 1), tail: true }], 0);
+    expect(tracker.items[0]?.tail).toBe(true);
+    tracker.sync([effect('jelly', 4)], 0);
+    expect(tracker.items[0]?.tail).toBe(false);
+  });
+});
+
 describe('badgeVisual', () => {
   function badge(patch: Partial<BadgeState>): BadgeState {
     return {
       key: 'honey',
       layersLeft: 3,
+      tail: false,
       phase: 'live',
       ageMs: 5000,
       counterAgeMs: Infinity,

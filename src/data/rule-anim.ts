@@ -159,6 +159,11 @@ export const RULE_ANIM = {
      * `enterScale`. Its progress only moves forward and reaches 1 when the cloud arrives.
      */
     leadMs: 650,
+    /**
+     * Meringue "Not scary" (guides of level 5): the densest the cloud is drawn while it covers the
+     * layer, so the silhouette of the layer shows through (tuned by eye).
+     */
+    ghostMaxDensity: 0.7,
     enterPx: 420,
     approachAlpha: 0.55,
     enterScale: 0.88,
