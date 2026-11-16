@@ -30,7 +30,12 @@ export const TREASURE_TEXTURES = {
 const colors = TREASURE.colors;
 const coinLook = TREASURE.textures;
 const OUTLINE_GLOW = RULE_ANIM.outline.glow;
-const { slice: STREAK_SLICE, fadePower: STREAK_FADE_POWER } = RULE_ANIM.streaks;
+const {
+  slice: STREAK_SLICE,
+  fadePower: STREAK_FADE_POWER,
+  headShare: STREAK_HEAD_SHARE,
+  tailThickness: STREAK_TAIL_THICKNESS,
+} = RULE_ANIM.streaks;
 
 /** Room around the outline stroke for its glow, on every side. */
 export const OUTLINE_MARGIN = Math.ceil(
@@ -73,12 +78,11 @@ function bakeStreak(scene: Phaser.Scene): void {
     for (let x = 0; x < width; x += STREAK_SLICE) {
       const k = (x + STREAK_SLICE / 2) / width;
       // The tail thins out as well as fading, and the head is rounded.
-      const { headShare, tailThickness } = RULE_ANIM.streaks;
       const round =
-        k > 1 - headShare
-          ? Math.sqrt(Math.max(0, 1 - ((k - (1 - headShare)) / headShare) ** 2))
+        k > 1 - STREAK_HEAD_SHARE
+          ? Math.sqrt(Math.max(0, 1 - ((k - (1 - STREAK_HEAD_SHARE)) / STREAK_HEAD_SHARE) ** 2))
           : 1;
-      const thick = height * (tailThickness + (1 - tailThickness) * k) * round;
+      const thick = height * (STREAK_TAIL_THICKNESS + (1 - STREAK_TAIL_THICKNESS) * k) * round;
       g.fillStyle(0xffffff, Math.pow(k, STREAK_FADE_POWER));
       g.fillRect(x, (height - thick) / 2, STREAK_SLICE, thick);
     }
