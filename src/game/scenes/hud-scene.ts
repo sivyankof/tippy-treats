@@ -12,6 +12,7 @@ import { createIconButton } from '../ui/menu/icon-button';
 import { NumberRoll } from '../ui/number-roll';
 import { createOutlinedText } from '../ui/outlined-text';
 import { PauseOverlay } from '../ui/pause-overlay';
+import { prepareTeamIcons } from '../objects/creature-icon-textures';
 import { EffectBadges } from '../ui/effect-badges';
 import { MasterCaptions } from '../ui/master-captions';
 import { TempoChip } from '../ui/tempo-chip';
@@ -83,7 +84,10 @@ export class HudScene extends Phaser.Scene {
     this.masterCaptions = new MasterCaptions(this);
     // Built before the first frame of the run, not inside it (the plates are baked and measured).
     const team = this.gameScene()?.getRunInfo()?.team;
-    if (team) this.masterCaptions.prepare(team);
+    if (team) {
+      this.masterCaptions.prepare(team);
+      prepareTeamIcons(this, team);
+    }
     this.tempoChip = new TempoChip(this);
     this.zoneBanner = new ZoneBanner(this);
     this.demoLabel = createOutlinedText(this, 0, 0, '', HUD_LAYOUT.demoLabelFont, PALETTE.gold);
@@ -154,7 +158,7 @@ export class HudScene extends Phaser.Scene {
       this.wobbleBar.update(info.wobble, time, delta);
       this.nextBadge.update(info.height, info.team);
       this.nextBadge.idle(time);
-      this.effectBadges.update(info.effects, info.shield, time, delta);
+      this.effectBadges.update(info.effects, info.shield, time, delta, info.team);
       this.updateMasterCaptions(info.team, delta);
       this.tempoChip.update(info.tempoLeft, time, delta);
       this.treasure.update(info, time, delta, this.gameScene()?.continueFlow?.isOpen === true);

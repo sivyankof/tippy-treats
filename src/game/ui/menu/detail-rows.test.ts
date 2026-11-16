@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { upgradePreview } from '../../../core/mastery';
 import { CREATURE_IDS, MAX_CREATURE_LEVEL } from '../../../data/creatures';
 import { setLang, t } from '../../../i18n';
-import { detailPlan, DETAIL_PLAN_STEPS, masterBlock, upgradeRows } from './detail-rows';
+import { changeRows, detailPlan, DETAIL_PLAN_STEPS, masterBlock, upgradeRows } from './detail-rows';
 
 afterEach(() => setLang('en'));
 
@@ -35,10 +35,40 @@ describe('upgradeRows', () => {
       for (let level = 1; level < MAX_CREATURE_LEVEL; level++) {
         const preview = upgradePreview(id, level);
         const [first] = upgradeRows(id, level);
-        expect(first?.text.startsWith(`Ур. ${preview?.toLevel}:`)).toBe(true);
+        expect(first?.text.startsWith(`Ур. ${preview?.toLevel} ·`)).toBe(true);
         expect(first?.text).not.toContain('без изменений');
       }
     }
+  });
+});
+
+describe('changeRows', () => {
+  it('labels every changed number, one line per number', () => {
+    setLang('ru');
+    expect(
+      changeRows('jelly', [
+        ['value', 75, 100],
+        ['percent', 45, 55],
+      ]).map((r) => r.text),
+    ).toEqual(['Гашение качки: 75 → 100', 'Пружина: 45% → 55%']);
+    setLang('en');
+    expect(changeRows('honey', [['value', 38, 39]])[0]?.text).toBe('Tolerance: 38 → 39 px');
+    setLang('ru');
+  });
+
+  it('has a label for every number that changes on any step of any creature', () => {
+    for (const lang of ['ru', 'en'] as const) {
+      setLang(lang);
+      for (const id of CREATURE_IDS) {
+        for (let level = 1; level < MAX_CREATURE_LEVEL; level++) {
+          for (const row of changeRows(id, upgradePreview(id, level)?.changes ?? [])) {
+            expect(row.text).not.toContain('mastery.stat');
+            expect(row.text).toContain('→');
+          }
+        }
+      }
+    }
+    setLang('ru');
   });
 });
 

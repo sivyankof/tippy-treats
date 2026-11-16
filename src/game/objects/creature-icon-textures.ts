@@ -1,4 +1,5 @@
 import type * as Phaser from 'phaser';
+import { teamHasNewLook } from '../../core/mastery';
 import { BALANCE } from '../../data/balance';
 import { CREATURE_ICON } from '../../data/creature-style';
 import { CREATURE_IDS, type CreatureId } from '../../data/creatures';
@@ -47,6 +48,16 @@ export function creatureIconTexture(scene: Phaser.Scene, id: CreatureId, grown =
 /** Bakes the grown icons of all creatures (`icon_<id>_grown`); the art sheet shows them. */
 export function createGrownCreatureIconTextures(scene: Phaser.Scene): void {
   for (const id of CREATURE_IDS) creatureIconTexture(scene, id, true);
+}
+
+/** Bakes the grown icons of the team's creatures that have the new look, before the run shows them. */
+export function prepareTeamIcons(
+  scene: Phaser.Scene,
+  team: readonly ({ id: CreatureId; level: number } | null)[],
+): void {
+  for (const id of CREATURE_IDS) {
+    if (teamHasNewLook(team, id)) creatureIconTexture(scene, id, true);
+  }
 }
 
 function bakeIcon(scene: Phaser.Scene, view: LayerView, id: CreatureId, grown = false): void {

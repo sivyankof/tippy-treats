@@ -19,7 +19,9 @@ describe('ability values', () => {
 
   it('lists what grows with the next level', () => {
     expect(abilityChanges('ghost', 1, 2)).toEqual([]);
-    expect(abilityChanges('ghost', 2, 3)).toEqual([['value', 3, 4]]);
+    expect(abilityChanges('ghost', 2, 3)).toEqual([]);
+    expect(abilityChanges('ghost', 3, 4)).toEqual([['value', 3, 4]]);
+    expect(abilityChanges('ghost', 4, 5)).toEqual([]);
     expect(abilityChanges('rainbow', 1, 2)).toEqual([]);
     expect(abilityChanges('rainbow', 4, 5)).toEqual([]);
   });
