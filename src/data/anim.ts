@@ -463,6 +463,11 @@ export const ANIM = {
     windowMarginLayers: 3,
     /** Unused baked layer textures kept for reuse before the oldest are removed. */
     idleLayerTextures: 48,
+    /**
+     * Pictures of the layers below the live ones that are baked ahead while the run ends, so the
+     * collapse finds them; they may stay idle on top of `idleLayerTextures` until it takes them.
+     */
+    collapsePrepTextures: 16,
     /** Cap of live falling pieces; when a collapse needs more, the oldest piece goes first. */
     maxLivePieces: 40,
   },
