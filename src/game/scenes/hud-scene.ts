@@ -21,6 +21,7 @@ import { HudNumbersIdle } from '../ui/hud-idle';
 import { isCompactNext } from '../ui/hud-row-layout';
 import { NextCreatureBadge } from '../ui/next-creature-badge';
 import { TreasureHud } from '../ui/treasure-hud';
+import { fxGuard } from '../fx-guard';
 import { enterScreen } from '../ui/transition';
 import { addUiRegion } from '../ui/ui-regions';
 import { WobbleBar } from '../ui/wobble-bar';
@@ -147,8 +148,10 @@ export class HudScene extends Phaser.Scene {
   override update(time: number, delta: number): void {
     const info = this.gameScene()?.getRunInfo() ?? null;
     const announced = this.zoneWatch.observe(info && info.phase !== 'over' ? info.zoneIndex : null);
-    if (announced !== null) this.zoneBanner.show(announced);
-    this.zoneBanner.update(time);
+    fxGuard.run('hud-zone-banner', () => {
+      if (announced !== null) this.zoneBanner.show(announced);
+      this.zoneBanner.update(time);
+    });
     if (info) {
       this.heightRoll.set(info.height);
       this.scoreRoll.set(info.score);
@@ -156,13 +159,15 @@ export class HudScene extends Phaser.Scene {
       this.scoreText.setText(formatNumber(this.scoreRoll.update(delta)));
       this.wobbleBar.update(info.wobble, time, delta);
       this.nextBadge.update(info.height, info.team, isCompactNext(this.effectBadges.count));
-      this.nextBadge.idle(time);
-      this.effectBadges.update(info.effects, info.shield, time, delta);
+      fxGuard.run('hud-next-idle', () => this.nextBadge.idle(time));
+      fxGuard.run('hud-effect-badges', () =>
+        this.effectBadges.update(info.effects, info.shield, time, delta),
+      );
       this.updateMasterCaptions(info.team, delta);
       this.tempoChip.update(info.tempoLeft, time, delta);
       this.treasure.update(info, time, delta, this.gameScene()?.continueFlow?.isOpen === true);
     }
-    this.numbersIdle.update(time);
+    fxGuard.run('hud-numbers-idle', () => this.numbersIdle.update(time));
     this.tutorialHints.update(
       time,
       delta,
@@ -179,9 +184,16 @@ export class HudScene extends Phaser.Scene {
   private updateMasterCaptions(team: RunInfo['team'], delta: number): void {
     const game = this.gameScene();
     if (!game) return;
-    this.masterCaptions.prepare(team);
-    this.masterCaptions.update(game.masterFeed, this.effectBadges.count, delta);
-    this.nextBadge.setSuppressed(this.masterCaptions.showing);
+    const showing = fxGuard.value(
+      'hud-master-captions',
+      () => {
+        this.masterCaptions.prepare(team);
+        this.masterCaptions.update(game.masterFeed, this.effectBadges.count, delta);
+        return this.masterCaptions.showing;
+      },
+      false,
+    );
+    this.nextBadge.setSuppressed(showing);
   }
 
   private gameScene(): GameScene | null {
