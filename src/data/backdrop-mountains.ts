@@ -43,10 +43,10 @@ export const MOUNTAIN_LOOK = {
   dripDepths: [0.0, 0.34, 0.12, 0.42, 0.18],
   /** Peaks: foot centre x, top y and half width at the bottom of the picture; `back` ones sit behind. */
   peaks: [
-    { x: 200, top: 195, half: 225, back: true },
-    { x: 545, top: 150, half: 225, back: true },
+    { x: 248, top: 195, half: 225, back: true },
+    { x: 525, top: 165, half: 225, back: true },
     { x: 375, top: 45, half: 255, back: false },
-    { x: 690, top: 250, half: 165, back: false },
+    { x: 518, top: 210, half: 165, back: false },
   ],
   /** Share of the peak (from the top) that carries snow, per peak group. */
   capShareBack: 0.2,
