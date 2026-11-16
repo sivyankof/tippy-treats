@@ -3,6 +3,7 @@ import { RULE_ANIM } from '../../data/rule-anim';
 import {
   cloudEtaMs,
   CloudMotion,
+  followInput,
   stepApproach,
   type CloudInput,
   type CloudPhase,
@@ -177,5 +178,35 @@ describe('CloudMotion', () => {
     expect(motion.phase).toBe('cover');
     expect(Math.abs(pose.x)).toBeLessThan(5);
     expect(pose.alpha).toBeLessThan(0.5);
+  });
+});
+
+describe('followInput', () => {
+  it('hands a leaving bank the density cap of the live input, so it stays see-through', () => {
+    const passive: CloudInput = {
+      covering: false,
+      flying: true,
+      etaMs: Infinity,
+      y: 0,
+      dir: 1,
+      maxAlpha: 1,
+    };
+    const live: CloudInput = {
+      covering: true,
+      flying: false,
+      etaMs: 100,
+      y: 420,
+      dir: -1,
+      maxAlpha: 0.7,
+    };
+    followInput(passive, live);
+    expect(passive).toEqual({
+      covering: false,
+      flying: false,
+      etaMs: Infinity,
+      y: 420,
+      dir: -1,
+      maxAlpha: 0.7,
+    });
   });
 });

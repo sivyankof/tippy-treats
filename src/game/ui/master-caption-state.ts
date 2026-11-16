@@ -4,6 +4,7 @@ import { HUD_LAYOUT } from '../../data/hud-layout';
 import { LOGICAL_SIZE } from '../../data/screen';
 import { MASTER_ANIM } from '../../data/master-anim';
 import type { EaseFn } from '../fx/ease';
+import { badgeCentreX } from './effect-badge-state';
 
 const cfg = MASTER_ANIM.caption;
 
@@ -144,12 +145,7 @@ export interface CaptionPlace {
   y: number;
 }
 
-const { badgeSize, badgeGap, badgeMargin, badgeRowY } = HUD_LAYOUT;
-
-/** Centre x of the badge at `index` of the row when it has settled. */
-export function badgeCentreX(index: number): number {
-  return badgeMargin + badgeSize / 2 + index * (badgeSize + badgeGap);
-}
+const { badgeSize, badgeRowY } = HUD_LAYOUT;
 
 /**
  * Where a caption of `width` goes. `badgeIndex` is the place of the creature's badge in the row,
@@ -178,4 +174,21 @@ export function captionPlace(
     out.y = cfg.belowY;
   }
   return out;
+}
+
+/**
+ * Moves a caption down by whole caption heights until its line is free, and takes the line:
+ * `taken` holds the `y` of the captions shown already this frame (it is filled in as it goes).
+ * Captions with no badge of their own (or under the row) would otherwise sit on each other.
+ */
+export function stackCaption(out: CaptionPlace, taken: number[]): CaptionPlace {
+  const step = cfg.height + cfg.stackGap;
+  while (taken.includes(out.y)) out.y += step;
+  taken.push(out.y);
+  return out;
+}
+
+/** The sum a caption shows: coins that pile up past the widest laid-out sum stay at it. */
+export function captionSum(coins: number): number {
+  return Math.min(coins, 10 ** cfg.sumDigits - 1);
 }

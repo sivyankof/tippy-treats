@@ -145,7 +145,8 @@ export class RuleFx {
     input.maxAlpha = ghostMaster ? RULE_ANIM.cloud.ghostMaxDensity : 1;
     this.cloud.update(dtMs, timeMs, input);
     this.flying.emphasizeShadow(this.cloud.density, timeMs, dtMs);
-    return v.covered || this.cloud.amount > 0;
+    // A see-through cloud (ghost master) shows the layer, so the layer does not count as hidden.
+    return !ghostMaster && (v.covered || this.cloud.amount > 0);
   }
 
   /** A fresh layer starts: a rush one gathers itself with a scrunched face. */

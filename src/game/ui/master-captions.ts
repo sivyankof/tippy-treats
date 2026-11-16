@@ -9,12 +9,15 @@ import { DEPTH } from '../depth';
 import { effectsMode } from '../effects-mode';
 import { easeFn } from '../fx/ease';
 import { FX_TEXTURES } from '../fx/fx-textures';
+import { creatureBadge } from './effect-badge-state';
 import type { EffectBadges } from './effect-badges';
 import {
   captionLook,
   captionPlace,
+  captionSum,
   idleCaption,
   noteCaption,
+  stackCaption,
   stepCaption,
   type CaptionLook,
   type CaptionPlace,
@@ -80,6 +83,11 @@ class CaptionView {
   }
 
   /** Width the caption takes now: the plate, and the sum beside it while coins are shown. */
+  /** Showing, or about to (it takes a place of the stack). */
+  get active(): boolean {
+    return this.state.phase !== 'idle';
+  }
+
   get width(): number {
     return this.state.coins > 0 ? this.plateWidth + cfg.starGap + this.sumWidth : this.plateWidth;
   }
@@ -93,7 +101,9 @@ class CaptionView {
     const withSum = this.state.coins > 0;
     if (this.state.coins !== this.shownCoins) {
       this.shownCoins = this.state.coins;
-      this.sum.setText(withSum ? t('mastery.plus', { n: formatNumber(this.state.coins) }) : '');
+      this.sum.setText(
+        withSum ? t('mastery.plus', { n: formatNumber(captionSum(this.state.coins)) }) : '',
+      );
     }
     this.sum.setVisible(withSum);
     // The container is centred on the plate, so the pop scales around its middle.
@@ -135,6 +145,8 @@ export class MasterCaptions {
   private team: readonly (TeamSlot | null)[] | null = null;
   private readonly place: CaptionPlace = { left: 0, y: 0 };
   private readonly look: CaptionLook = { scale: 1, alpha: 0 };
+  /** Lines the captions of this frame took (see `stackCaption`). */
+  private readonly taken: number[] = [];
 
   constructor(private readonly scene: Phaser.Scene) {}
 
@@ -159,10 +171,12 @@ export class MasterCaptions {
       if (import.meta.env.DEV) this.ensure(note.creature);
       this.views.get(note.creature)?.note(note.coins);
     });
+    this.taken.length = 0;
     for (const view of this.views.values()) {
-      // The brownie's badge is the shield's.
-      const index = badges.indexOf(view.creature === 'brownie' ? 'shield' : view.creature);
+      const index = badges.indexOf(creatureBadge(view.creature));
       captionPlace(index, badges.count, view.width, this.place);
+      // Captions shown together do not sit on each other.
+      if (view.active) stackCaption(this.place, this.taken);
       view.update(dtMs, this.place, this.look);
     }
   }

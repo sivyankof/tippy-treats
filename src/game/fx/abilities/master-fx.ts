@@ -12,14 +12,14 @@ import { HALF_LAYER, UP_DEG, type FxKit } from './kit';
 import { makeSpec } from './sprite-motion';
 
 type MasteryEvent = Extract<SimEvent, { type: 'mastery' }>;
-type PerkEvent = Extract<SimEvent, { type: 'perk' }>;
 
 const cfg = MASTER_ANIM;
 const heartEase = easeFn('Sine.easeOut');
 
 /**
  * What the master effects add in the world, beyond the caption of the HUD: the lemon's salute,
- * the twins' hug, the sugar dust of the puff and the score of the rainbow's protected layer.
+ * the twins' hug and the sugar dust of the puff. The score the rainbow's protected layer pays has
+ * no label of its own: the score counter of the HUD shows it.
  * The caption is the general answer to every `mastery` event; the other master effects have only
  * that for now. All of it is drawn from pools that exist already (particles, sprites, texts).
  */
@@ -48,12 +48,6 @@ export class MasterFx {
       default:
         break;
     }
-  }
-
-  /** The rainbow's protected layer paid score: the same "+N" as a bonus. */
-  onPerk(event: PerkEvent, index: number): void {
-    const pose = this.tower.layerPose(index);
-    if (pose) this.scoreLabel(pose.x, pose.y, event.score);
   }
 
   /** Lemon "Swagger": a fan of lemon wedges and confetti from the top layer, the vignette flares. */

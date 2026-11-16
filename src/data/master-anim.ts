@@ -27,7 +27,7 @@ export const MASTER_ANIM = {
     sumFont: 44,
     starSize: 44,
     starGap: 10,
-    /** The sum is laid out for this many digits, so the baked plate never changes width mid-run. */
+    /** The sum is laid out for this many digits (it shows no more than that) so the plate never changes width mid-run. */
     sumDigits: 3,
     nameStroke: 7,
     /** Gold star and sum colour. */
@@ -42,6 +42,8 @@ export const MASTER_ANIM = {
     gap: 14,
     rightReserve: 620,
     belowY: HUD_LAYOUT.bottomEdge + 96,
+    /** Gap between captions stacked on one place. */
+    stackGap: 8,
   },
   /** Ghost centre mark (level 2+): a small diamond on the middle of the top edge of the top layer. */
   centreMark: {
@@ -96,8 +98,7 @@ export const MASTER_ANIM = {
       spreadDeg: 80,
       tiltDeg: 25,
     },
-    textLiftY: 40,
   },
-  /** Score label of the master effects and of the rainbow protected layer ("+N"). */
+  /** Score label of the master effects ("+N"). */
   scoreLabel: { liftY: 50 },
 } as const;

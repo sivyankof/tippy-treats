@@ -102,9 +102,6 @@ export class AbilityFx {
         case 'mastery':
           this.master.onMastery(event, state.layers.length - 1);
           break;
-        case 'perk':
-          this.master.onPerk(event, state.layers.length - 1);
-          break;
         case 'miss':
           if (event.shielded) this.active.popShield();
           break;

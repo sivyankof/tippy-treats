@@ -178,9 +178,14 @@ export class GameScene extends Phaser.Scene {
     // The tutorial holds the sim for a moment while it explains the creature layer.
     this.tutorial?.tick(delta);
     const held = (this.tutorial?.holding ?? false) || this.camera.introActive;
+    // What the drop that lands in this step is resolved with: read before the step, while its layer still flies.
+    let dropMods = this.sim.flyingModifiers();
     const events = held ? [] : this.sim.update(delta);
     this.bot?.observe(events);
-    if (!held && this.bot?.shouldDrop(this.sim)) events.push(...this.sim.drop());
+    if (!held && this.bot?.shouldDrop(this.sim)) {
+      dropMods = this.sim.flyingModifiers();
+      events.push(...this.sim.drop());
+    }
     if (this.sim.state.phase === 'flying') this.results.bakeStep();
     this.fx.tower.prepareLanding(this.sim);
     this.tutorial?.observe(events, this.sim.state);
@@ -203,7 +208,7 @@ export class GameScene extends Phaser.Scene {
     this.watchDemo();
 
     const cam = this.camera.cameraInfo();
-    this.fx.handleEvents(events, this.sim.state, this.flying.current, this.mods, cam);
+    this.fx.handleEvents(events, this.sim.state, this.flying.current, dropMods, cam);
     if (events.length > 0) this.mods = this.sim.currentModifiers();
     this.fx.update(delta, time, this.sim.state, this.mods, cam);
     this.background.setZone(this.sim.state.zoneIndex);

@@ -20,6 +20,15 @@ const miss: SimEvent = { type: 'miss', shielded: false };
 const memo = { width: 200 };
 
 describe('cuesForEvents', () => {
+  it('adds no tap of its own to a step that already has a landing haptic', () => {
+    const events: SimEvent[] = [
+      { type: 'mastery', creature: 'lemon', coins: 10, score: 0 },
+      { type: 'mastery', creature: 'twins', coins: 0, score: 0 },
+      land({ quality: 'perfect' }),
+    ];
+    expect(cuesForEvents(events, { combo: 1 }, memo).haptics).toEqual(['medium']);
+  });
+
   it('rings the coin chime once and taps lightly for a master effect with its coins', () => {
     const events: SimEvent[] = [
       { type: 'mastery', creature: 'lemon', coins: 10, score: 0 },

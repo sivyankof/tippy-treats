@@ -1,6 +1,7 @@
 import type { ActiveEffect } from '../../core/abilities/types';
 import { ANIM } from '../../data/anim';
 import type { CreatureId } from '../../data/creatures';
+import { HUD_LAYOUT } from '../../data/hud-layout';
 import { oscillate01 } from '../../util/math';
 import type { EaseFn } from '../fx/ease';
 
@@ -10,6 +11,17 @@ export type BadgeKey = CreatureId | 'shield';
 /** The creature whose icon a badge shows (the shield is the brownie's). */
 export function badgeCreature(key: BadgeKey): CreatureId {
   return key === 'shield' ? 'brownie' : key;
+}
+
+/** The badge key of a creature's effect (the brownie's is the shield). */
+export function creatureBadge(id: CreatureId): BadgeKey {
+  return id === 'brownie' ? 'shield' : id;
+}
+
+/** Centre x of the badge at `index` of the row once it has settled. */
+export function badgeCentreX(index: number): number {
+  const { badgeMargin, badgeSize, badgeGap } = HUD_LAYOUT;
+  return badgeMargin + badgeSize / 2 + index * (badgeSize + badgeGap);
 }
 
 export type BadgePhase = 'in' | 'live' | 'out';

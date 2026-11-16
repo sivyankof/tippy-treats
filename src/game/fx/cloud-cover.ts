@@ -256,6 +256,17 @@ class CloudBank {
 }
 
 /**
+ * What a bank that only finishes leaving takes from the live input: where the layer flies and how
+ * dense the puffs may be (a leaving see-through cloud stays see-through), never a new cover.
+ */
+export function followInput(passive: CloudInput, input: Readonly<CloudInput>): void {
+  passive.flying = input.flying;
+  passive.y = input.y;
+  passive.dir = input.dir;
+  passive.maxAlpha = input.maxAlpha;
+}
+
+/**
  * The cloud that hides the flying layer: a bank of cloud puffs side by side across the whole
  * flying row. It is fixed in the world while it hangs there (it does not follow the layer, so
  * the player cannot aim by it) and billows: every puff bobs, sways and breathes on its own phase.
@@ -274,6 +285,8 @@ export class CloudCover {
     dir: 1,
     maxAlpha: 1,
   };
+  /** The density cap of the clouds now: what the cover reports is scaled by it. */
+  private maxAlpha = 1;
   /** What a free bank is told when it should start floating in the coming cloud. */
   private readonly coming: CloudInput = { ...this.passive };
 
@@ -282,14 +295,14 @@ export class CloudCover {
     this.banks = [new CloudBank(scene), new CloudBank(scene)];
   }
 
-  /** How much a cloud hides the layer, 0..1. */
+  /** How much a cloud hides the layer, 0..1 (a see-through cloud hides no more than it shows). */
   get amount(): number {
-    return Math.max(...this.banks.map((bank) => bank.motion.amount));
+    return Math.max(...this.banks.map((bank) => bank.motion.amount)) * this.maxAlpha;
   }
 
   /** Smooth 0..1 density of the densest bank (see `CloudMotion.density`). */
   get density(): number {
-    return Math.max(...this.banks.map((bank) => bank.motion.density));
+    return Math.max(...this.banks.map((bank) => bank.motion.density)) * this.maxAlpha;
   }
 
   /**
@@ -302,9 +315,8 @@ export class CloudCover {
     const phases = this.banks.map((bank) => bank.motion.phase);
     let needsApproach = !phases.includes('approach') && input.flying && input.etaMs <= cfg.leadMs;
     let needsCover = input.covering && !phases.includes('cover') && !phases.includes('approach');
-    this.passive.flying = input.flying;
-    this.passive.y = input.y;
-    this.passive.dir = input.dir;
+    followInput(this.passive, input);
+    this.maxAlpha = input.maxAlpha;
     Object.assign(this.coming, input, { covering: false });
     for (const bank of this.banks) {
       const phase = bank.motion.phase;

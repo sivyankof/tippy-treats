@@ -4,8 +4,7 @@ import { MASTER_ANIM } from '../../data/master-anim';
 import { PALETTE } from '../../data/palette';
 import { t } from '../../i18n';
 import { cssColor } from '../../util/color';
-import { DEG_TO_RAD, TWO_PI } from '../../util/math';
-import { starRadii } from '../fx/fx-textures';
+import { fillFan, starRadii } from '../fx/fx-textures';
 import { bakeTexture } from './bake-texture';
 import { FONT_FAMILY, FONT_WEIGHT } from './fonts';
 
@@ -53,7 +52,7 @@ export function bakeCaptionArt(
   const textWidth = Math.ceil(measure(name)) + cfg.nameStroke * 2;
   const width = Math.ceil(cfg.padX * 2 + cfg.starSize + cfg.starGap + textWidth);
   const height = cfg.height;
-  const key = `ui_master_caption_${creature}_${lang}`;
+  const key = `ui_hud_master_caption_${creature}_${lang}`;
   bakeTexture(
     scene,
     key,
@@ -72,24 +71,8 @@ export function bakeCaptionArt(
       // The star: filled gold fan with a darker outline.
       const cx = cfg.padX + cfg.starSize / 2;
       const cy = height / 2;
-      const radii = starRadii(cfg.starSize / 2);
       g.fillStyle(cfg.gold, 1);
-      const step = TWO_PI / radii.length;
-      const start = -90 * DEG_TO_RAD;
-      for (let i = 0; i < radii.length; i++) {
-        const r0 = radii[i] ?? 0;
-        const r1 = radii[(i + 1) % radii.length] ?? 0;
-        const a0 = start + i * step;
-        const a1 = start + (i + 1) * step;
-        g.fillTriangle(
-          cx,
-          cy,
-          cx + Math.cos(a0) * r0,
-          cy + Math.sin(a0) * r0,
-          cx + Math.cos(a1) * r1,
-          cy + Math.sin(a1) * r1,
-        );
-      }
+      fillFan(g, cx, cy, starRadii(cfg.starSize / 2));
     },
     (context) => {
       // The name: light letters with the dark outline of the HUD texts.

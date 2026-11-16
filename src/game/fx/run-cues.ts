@@ -45,6 +45,7 @@ export function cuesForEvents(
 ): RunCues {
   const cues: RunCues = { sounds: [], haptics: [] };
   let errorFelt = false;
+  let mastered = false;
   for (const event of events) {
     switch (event.type) {
       case 'land':
@@ -70,9 +71,10 @@ export function cuesForEvents(
         if (!cues.sounds.some((s) => s.kind === 'coin')) cues.sounds.push({ kind: 'coin' });
         break;
       case 'mastery':
-        // A master effect acted: the golden chime of the coins (once with the payout), a light tap.
+        // A master effect acted: the golden chime of the coins (once with the payout). The light
+        // tap is added after the loop, only when nothing else of the step already taps.
         if (!cues.sounds.some((s) => s.kind === 'coin')) cues.sounds.push({ kind: 'coin' });
-        cues.haptics.push('light');
+        mastered = true;
         break;
       case 'golden':
         if (event.perfect) cues.sounds.push({ kind: 'berry' });
@@ -90,6 +92,7 @@ export function cuesForEvents(
         break;
     }
   }
+  if (mastered && cues.haptics.length === 0) cues.haptics.push('light');
   return cues;
 }
 

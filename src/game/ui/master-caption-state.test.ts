@@ -2,17 +2,19 @@ import { describe, expect, it } from 'vitest';
 import type { SimEvent } from '../../core/tower-sim';
 import { MASTER_ANIM } from '../../data/master-anim';
 import {
-  badgeCentreX,
   captionLook,
   captionPlace,
+  captionSum,
   idleCaption,
   MasterFeed,
   noteCaption,
+  stackCaption,
   stepCaption,
   type CaptionLook,
   type CaptionPlace,
   type MasterNote,
 } from './master-caption-state';
+import { badgeCentreX } from './effect-badge-state';
 
 const cfg = MASTER_ANIM.caption;
 const linear = (t: number): number => t;
@@ -123,5 +125,30 @@ describe('captionPlace', () => {
   it('goes under the row when it has no badge and others stand in the row', () => {
     captionPlace(-1, 2, width, out);
     expect(out.y).toBe(cfg.belowY);
+  });
+});
+
+describe('stackCaption', () => {
+  it('leaves a free line alone and takes it', () => {
+    const taken: number[] = [];
+    const out = stackCaption({ left: 0, y: 468 }, taken);
+    expect(out.y).toBe(468);
+    expect(taken).toEqual([468]);
+  });
+
+  it('moves a second caption of the same line down by one caption', () => {
+    const taken: number[] = [];
+    stackCaption({ left: 0, y: cfg.belowY }, taken);
+    const second = stackCaption({ left: 0, y: cfg.belowY }, taken);
+    const third = stackCaption({ left: 0, y: cfg.belowY }, taken);
+    expect(second.y).toBe(cfg.belowY + cfg.height + cfg.stackGap);
+    expect(third.y).toBe(cfg.belowY + 2 * (cfg.height + cfg.stackGap));
+  });
+});
+
+describe('captionSum', () => {
+  it('shows the coins up to the widest laid-out sum', () => {
+    expect(captionSum(42)).toBe(42);
+    expect(captionSum(10 ** cfg.sumDigits)).toBe(10 ** cfg.sumDigits - 1);
   });
 });

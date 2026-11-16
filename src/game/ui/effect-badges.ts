@@ -15,6 +15,7 @@ import {
   BadgeTracker,
   badgeVisual,
   type BadgeKey,
+  badgeCentreX,
   type BadgeState,
   type BadgeVisual,
 } from './effect-badge-state';
@@ -22,15 +23,7 @@ import { createStrokedText } from './outlined-text';
 import { HudPlate } from './style/hud-plate';
 import type { ActiveEffect } from '../../core/abilities/types';
 
-const {
-  badgeSize,
-  badgeGap,
-  badgeMargin,
-  badgeRowY,
-  badgeCounterFont,
-  badgeCounterInset,
-  badgeCounterDrop,
-} = HUD_LAYOUT;
+const { badgeSize, badgeRowY, badgeCounterFont, badgeCounterInset, badgeCounterDrop } = HUD_LAYOUT;
 const { badges } = ANIM;
 const inEase = easeFn(badges.inEase);
 const counterEase = easeFn(badges.counterPopEase);
@@ -137,11 +130,6 @@ export class EffectBadges {
     return this.tracker.items.length;
   }
 
-  /** Left edge of the row; badges follow each other to the right. */
-  private targetX(index: number): number {
-    return badgeMargin + badgeSize / 2 + index * (badgeSize + badgeGap);
-  }
-
   update(effects: readonly ActiveEffect[], shield: number, timeMs: number, deltaMs: number): void {
     this.tracker.sync(effects, shield);
     this.tracker.step(deltaMs);
@@ -151,7 +139,7 @@ export class EffectBadges {
       const badge = items[i];
       if (!badge) continue;
       const slot = (this.slots[i] ??= new BadgeSlot(this.scene));
-      const target = this.targetX(i);
+      const target = badgeCentreX(i);
       // A new badge starts in place; the others slide over when one before them leaves.
       const x = Number.isNaN(badge.x) ? target : badge.x + (target - badge.x) * k;
       badge.x = Math.abs(target - x) < SETTLE_EPSILON ? target : x;

@@ -81,6 +81,9 @@ export class HudScene extends Phaser.Scene {
     this.nextBadge = new NextCreatureBadge(this);
     this.effectBadges = new EffectBadges(this);
     this.masterCaptions = new MasterCaptions(this);
+    // Built before the first frame of the run, not inside it (the plates are baked and measured).
+    const team = this.gameScene()?.getRunInfo()?.team;
+    if (team) this.masterCaptions.prepare(team);
     this.tempoChip = new TempoChip(this);
     this.zoneBanner = new ZoneBanner(this);
     this.demoLabel = createOutlinedText(this, 0, 0, '', HUD_LAYOUT.demoLabelFont, PALETTE.gold);

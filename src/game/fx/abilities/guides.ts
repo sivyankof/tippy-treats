@@ -17,6 +17,8 @@ export class Guides {
   private readonly mark: Phaser.GameObjects.Image;
   private fade = 0;
   private height = -1;
+  /** Where the diamond stood last; it fades out there with the lines. `NaN` when it has none. */
+  private markX = Number.NaN;
 
   constructor(scene: Phaser.Scene) {
     this.lines = [0, 1].map(() =>
@@ -64,7 +66,10 @@ export class Guides {
       line.tilePositionY += run;
     }
     if (visible) this.height = height;
-    const showMark = visible && markX !== null;
+    // The lines fade out over `fade`: the diamond stays where it was and fades with them.
+    if (markX !== null) this.markX = markX;
+    else if (on) this.markX = Number.NaN;
+    const showMark = visible && !Number.isNaN(this.markX);
     this.mark.setVisible(showMark);
     if (showMark) {
       const [from, to] = markCfg.pulse;
@@ -72,7 +77,7 @@ export class Guides {
         ? 1
         : from + (to - from) * oscillate01(timeMs, markCfg.periodMs);
       this.mark
-        .setPosition(markX, surfaceY)
+        .setPosition(this.markX, surfaceY)
         .setScale(scale)
         .setAlpha(markCfg.alpha * this.fade);
     }
