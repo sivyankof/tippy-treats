@@ -1,6 +1,5 @@
 import { parseHex } from '../util/color';
 import { CREATURES } from './creatures';
-import { HUD_LAYOUT } from './hud-layout';
 import { PALETTE } from './palette';
 
 const LEMON = parseHex(CREATURES.lemon.palette.glaze);
@@ -13,12 +12,16 @@ const LEMON_PALE = 0xfff3a0;
  * distances logical pixels.
  */
 export const MASTER_ANIM = {
-  /** The master caption: a small gold plate by the effect badge row of the HUD. */
+  /**
+   * The master caption: a small gold plate (star and master name, no sum) in the strip of the badge
+   * row, at the right margin where the next-creature chip stands (it gives way while the caption
+   * shows). One caption at a time: a newer one of another creature replaces the showing one.
+   */
   caption: {
     /** Appears with `backOut` from `fromScale`, holds, fades. A repeat during the show extends the hold. */
     inMs: 160,
-    holdMs: 900,
-    outMs: 250,
+    holdMs: 800,
+    outMs: 240,
     inEase: 'Back.easeOut',
     fromScale: 0.6,
     height: 70,
@@ -31,16 +34,6 @@ export const MASTER_ANIM = {
     gold: PALETTE.gold,
     /** The spark at the star when the caption appears (full level only). */
     spark: { ms: 380, scaleTo: 2.2, spinDeg: 120 },
-    /**
-     * Placement: at the right of the badge when the badge is the last of the row and the plate
-     * ends before `rightReserve` pixels from the right edge (the next creature indicator lives
-     * there; "через 5 слоёв" is its widest text); otherwise under the row, centre y `belowY`.
-     */
-    gap: 14,
-    rightReserve: 620,
-    belowY: HUD_LAYOUT.bottomEdge + 96,
-    /** Gap between captions stacked on one place. */
-    stackGap: 8,
   },
   /** Ghost centre mark (level 2+): a small diamond on the middle of the top edge of the top layer. */
   centreMark: {

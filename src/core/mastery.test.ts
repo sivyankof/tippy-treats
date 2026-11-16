@@ -1,15 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { CREATURE_IDS, MAX_CREATURE_LEVEL } from '../data/creatures';
 import { MASTERY } from '../data/mastery';
-import {
-  hasNewLook,
-  isMaster,
-  lookStage,
-  masterInfo,
-  perksAt,
-  teamHasNewLook,
-  upgradePreview,
-} from './mastery';
+import { hasNewLook, isMaster, lookStage, masterInfo, perksAt, upgradePreview } from './mastery';
 
 const STEPS = [1, 2, 3, 4] as const;
 
@@ -18,22 +10,6 @@ describe('look and master level', () => {
     expect([1, 2, 3, 4, 5].map(lookStage)).toEqual(['base', 'base', 'grown', 'grown', 'grown']);
     expect([1, 2, 3, 4, 5].map(hasNewLook)).toEqual([false, false, true, true, true]);
     expect(MASTERY.lookLevel).toBe(3);
-  });
-
-  it('finds the new look of a creature in a team', () => {
-    const team = [{ id: 'brownie', level: 2 }, null, { id: 'jelly', level: 3 }] as const;
-    expect(teamHasNewLook(team, 'jelly')).toBe(true);
-    expect(teamHasNewLook(team, 'brownie')).toBe(false);
-    expect(teamHasNewLook(team, 'frosty')).toBe(false);
-    expect(
-      teamHasNewLook(
-        [
-          { id: 'jelly', level: 1 },
-          { id: 'jelly', level: 4 },
-        ],
-        'jelly',
-      ),
-    ).toBe(true);
   });
 
   it('is master only at level 5', () => {
