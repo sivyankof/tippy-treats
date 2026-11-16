@@ -1,9 +1,10 @@
 import * as Phaser from 'phaser';
+import { CHECKPOINT_HEIGHTS } from '../../core/checkpoints';
 import { CREATURE_IDS } from '../../data/creatures';
 import { SOAK } from '../../data/soak';
 import { gameState } from '../../state';
 import { setLang, type Lang } from '../../i18n';
-import { CLASSIC_RUN, DAILY_RUN, demoRun, type RunRequest } from '../run-request';
+import { checkpointRun, CLASSIC_RUN, DAILY_RUN, demoRun, type RunRequest } from '../run-request';
 import {
   openScreen,
   restartRun,
@@ -15,6 +16,7 @@ import {
 import type { LickScene } from '../objects/lick-plan';
 import { runHooks } from '../perf/run-hooks';
 import type { GameScene } from '../scenes/game-scene';
+import { setSoakSpeed } from './soak-speed';
 import { readSoakSample, type SoakSample } from './soak-metrics';
 
 /** What the harness reads between laps. */
@@ -52,6 +54,27 @@ export interface TippySoak {
   parkNext(): void;
   release(): void;
   sample(): SoakSample;
+  /** One fixed lap through every screen and run kind at accelerated game time; see `SmokeReport`. */
+  smoke(): Promise<SmokeReport>;
+}
+
+/** The numbers that must be equal at Home before and after the smoke lap. */
+export interface SmokeCounts {
+  objects: number;
+  listeners: number;
+  tweens: number;
+  timers: number;
+}
+
+export interface SmokeReport {
+  /** Every step done and the counts equal. */
+  ok: boolean;
+  steps: Array<{ name: string; ok: boolean }>;
+  before: SmokeCounts;
+  after: SmokeCounts;
+  seconds: number;
+  /** Licks, jokes and arcs seen in the lap (`SoakStatus` counters). */
+  status: SoakStatus;
 }
 
 type SoakWindow = Window & { tippySoak?: TippySoak };
@@ -91,6 +114,12 @@ class SoakDriver implements TippySoak {
     stage: 'idle',
   };
 
+  private dwell: { screenMs: number; resultsMs: number; abandonMs: number } = {
+    screenMs: SOAK.screenDwellMs,
+    resultsMs: SOAK.resultsDwellMs,
+    abandonMs: SOAK.abandonAfterMs,
+  };
+
   constructor(private readonly game: Phaser.Game) {}
 
   start(rich = false): void {
@@ -121,6 +150,147 @@ class SoakDriver implements TippySoak {
 
   sample(): SoakSample {
     return readSoakSample(this.game);
+  }
+
+  /** Home reached, the save rich, the game time sped up: one pass through the fixed list of steps. */
+  async smoke(): Promise<SmokeReport> {
+    const started = performance.now();
+    const steps: SmokeReport['steps'] = [];
+    const once = (): SmokeCounts => {
+      const { objects, listeners, tweens, timers } = this.sample();
+      return { objects, listeners, tweens, timers };
+    };
+    // Entrance tweens of a screen still run for a moment: read until two reads in a row agree.
+    const read = async (): Promise<SmokeCounts> => {
+      let last = once();
+      for (let i = 0; i < SOAK.smoke.settleReads; i++) {
+        await sleep(SOAK.smoke.settleMs);
+        const next = once();
+        const same =
+          next.objects === last.objects &&
+          next.listeners === last.listeners &&
+          next.tweens === last.tweens;
+        last = next;
+        if (same) break;
+      }
+      return last;
+    };
+    const step = async (name: string, body: () => Promise<boolean>): Promise<void> => {
+      this.stage(`smoke-${name}`);
+      let ok: boolean;
+      try {
+        ok = await body();
+      } catch {
+        ok = false;
+      }
+      steps.push({ name, ok });
+    };
+    this.active = true;
+    this.counts.running = true;
+    enrichSave();
+    this.dwell = {
+      screenMs: SOAK.smoke.screenDwellMs,
+      resultsMs: SOAK.smoke.resultsDwellMs,
+      abandonMs: SOAK.smoke.abandonAfterMs,
+    };
+    setSoakSpeed(SOAK.smoke.speed);
+    const home = (): boolean => this.isOn(SCENES.home);
+    const game = (): GameScene => this.scene(SCENES.game) as GameScene;
+    const live = (): Promise<boolean> => this.waitFor(() => this.runLive(), SOAK.runMaxMs);
+    const results = (): Promise<boolean> =>
+      this.waitFor(() => this.isOn(SCENES.results), SOAK.runMaxMs);
+    const leave = async (): Promise<boolean> => {
+      game().leaveRun();
+      return this.waitFor(home, SOAK.runMaxMs);
+    };
+    let before: SmokeCounts;
+    let after: SmokeCounts;
+    try {
+      await this.toHome();
+      await sleep(this.dwell.screenMs);
+      before = await read();
+      await step('team', async () => {
+        await this.changeTeam();
+        return home();
+      });
+      await step('run-licks-rainbow', async () => {
+        this.beginRun(SCENES.home, CLASSIC_RUN);
+        const reached = await results();
+        const c = this.counts;
+        // The arc grows on its own clock: `arcs` is reported, not required.
+        return reached && c.bigLicks >= 1 && c.shortLicks >= 1 && c.jokes >= 1;
+      });
+      await step('results-again', async () => {
+        this.counts.results += 1;
+        await sleep(this.dwell.resultsMs);
+        this.beginRun(SCENES.results, CLASSIC_RUN);
+        return live();
+      });
+      await step('pause-restart', async () => {
+        await sleep(this.dwell.abandonMs);
+        this.game.events.emit(Phaser.Core.Events.HIDDEN);
+        await sleep(this.dwell.screenMs);
+        this.counts.runs += 1;
+        this.pokeNextRun();
+        restartRun(game());
+        return live();
+      });
+      await step('checkpoint-run', async () => {
+        if (!(await leave())) return false;
+        const height = CHECKPOINT_HEIGHTS[SOAK.smoke.checkpointIndex]!;
+        this.beginRun(SCENES.home, checkpointRun(height));
+        if (!(await live())) return false;
+        await sleep(this.dwell.abandonMs);
+        return leave();
+      });
+      await step('daily', async () => {
+        await this.visit(SCENES.home, SCENES.daily);
+        await this.dailyRun();
+        return home();
+      });
+      await step('shop', async () => {
+        await this.visit(SCENES.home, SCENES.shop);
+        await this.visit(SCENES.shop, SCENES.home);
+        return home();
+      });
+      await step('collection-creature', async () => {
+        await this.visit(SCENES.home, SCENES.collection);
+        await this.visit(SCENES.collection, SCENES.creatureDetail, {
+          id: 'honey',
+          back: 'collection',
+        });
+        await this.visit(SCENES.creatureDetail, SCENES.collection);
+        await this.visit(SCENES.collection, SCENES.home);
+        return home();
+      });
+      await step('settings-language', async () => {
+        await this.settingsAndLanguage();
+        return home();
+      });
+      await sleep(this.dwell.screenMs);
+      after = await read();
+    } finally {
+      setSoakSpeed(1);
+      this.active = false;
+      this.counts.running = false;
+      this.dwell = {
+        screenMs: SOAK.screenDwellMs,
+        resultsMs: SOAK.resultsDwellMs,
+        abandonMs: SOAK.abandonAfterMs,
+      };
+    }
+    const equal =
+      before.objects === after.objects &&
+      before.listeners === after.listeners &&
+      before.tweens === after.tweens;
+    return {
+      ok: steps.length === 9 && steps.every((s) => s.ok) && equal,
+      steps,
+      before,
+      after,
+      seconds: Math.round((performance.now() - started) / 100) / 10,
+      status: this.status(),
+    };
   }
 
   private isOn(key: SceneKey): boolean {
@@ -188,7 +358,7 @@ class SoakDriver implements TippySoak {
   /** Between laps, at Home: holds still while the harness reads the counts. */
   private async parkIfAsked(): Promise<void> {
     this.stage('home');
-    await sleep(SOAK.screenDwellMs);
+    await sleep(this.dwell.screenMs);
     if (!this.parkRequested || !this.active) return;
     this.parkRequested = false;
     this.counts.parked = true;
@@ -275,7 +445,7 @@ class SoakDriver implements TippySoak {
       if (reached) {
         this.counts.results += 1;
         this.stage('results');
-        await sleep(SOAK.resultsDwellMs);
+        await sleep(this.dwell.resultsMs);
         this.beginRun(SCENES.results, CLASSIC_RUN);
       } else {
         this.counts.abandoned += 1;
@@ -286,14 +456,14 @@ class SoakDriver implements TippySoak {
     }
     // The last run is left half-way, through the pause window's two exits: restart, then leave.
     this.stage('abandon');
-    await sleep(SOAK.abandonAfterMs);
+    await sleep(this.dwell.abandonMs);
     // The page going to the background opens the pause window, as it does for a player.
     this.game.events.emit(Phaser.Core.Events.HIDDEN);
-    await sleep(SOAK.screenDwellMs);
+    await sleep(this.dwell.screenMs);
     this.counts.runs += 1;
     this.pokeNextRun();
     restartRun(this.scene(SCENES.game));
-    await sleep(SOAK.abandonAfterMs);
+    await sleep(this.dwell.abandonMs);
     this.counts.abandoned += 1;
     (this.scene(SCENES.game) as GameScene).leaveRun();
     await this.waitFor(() => this.isOn(SCENES.home), SOAK.runMaxMs);
@@ -308,7 +478,7 @@ class SoakDriver implements TippySoak {
     this.stage('demo');
     startRunFrom(this.scene(SCENES.creatureDetail), demoRun('honey', 1, 'collection'));
     await this.waitFor(() => this.isOn(SCENES.creatureDetail), SOAK.runMaxMs);
-    await sleep(SOAK.screenDwellMs);
+    await sleep(this.dwell.screenMs);
     await this.visit(SCENES.creatureDetail, SCENES.collection);
     await this.visit(SCENES.collection, SCENES.home);
     await this.visit(SCENES.home, SCENES.team);
@@ -333,14 +503,14 @@ class SoakDriver implements TippySoak {
     const reached = await this.waitFor(() => this.isOn(SCENES.results), SOAK.runMaxMs);
     if (reached) {
       this.counts.results += 1;
-      await sleep(SOAK.resultsDwellMs);
+      await sleep(this.dwell.resultsMs);
       openScreen(this.scene(SCENES.results), SCENES.daily);
     } else {
       this.counts.abandoned += 1;
       (this.scene(SCENES.game) as GameScene).leaveRun();
     }
     await this.waitFor(() => this.isOn(SCENES.daily), SOAK.runMaxMs);
-    await sleep(SOAK.screenDwellMs);
+    await sleep(this.dwell.screenMs);
     await this.visit(SCENES.daily, SCENES.home);
   }
 
@@ -362,7 +532,7 @@ class SoakDriver implements TippySoak {
     this.stage(to);
     openScreen(this.scene(from), to, data);
     await this.waitFor(() => this.isOn(to), SOAK.runMaxMs);
-    await sleep(SOAK.screenDwellMs);
+    await sleep(this.dwell.screenMs);
   }
 }
 

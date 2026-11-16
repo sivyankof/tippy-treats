@@ -7,6 +7,7 @@ import type { CheckpointHeight } from '../../core/checkpoints';
 import type { RunMode, RunResult } from '../../core/run-result';
 import type { TeamSlot } from '../../core/sim-types';
 import { TowerSim, type TowerState } from '../../core/tower-sim';
+import { soakSpeed } from '../debug/soak-speed';
 import { fxGuard } from '../fx-guard';
 import { RunFx } from '../fx/run-fx';
 import type { MasterFeed } from '../ui/master-caption-state';
@@ -174,7 +175,8 @@ export class GameScene extends Phaser.Scene {
     this.results.begin(this);
   }
 
-  override update(time: number, delta: number): void {
+  override update(time: number, rawDelta: number): void {
+    const delta = rawDelta * soakSpeed();
     this.flying.note(this.sim.state);
 
     // The tutorial holds the sim for a moment while it explains the creature layer.
@@ -215,7 +217,7 @@ export class GameScene extends Phaser.Scene {
     this.fx.update(delta, time, this.sim.state, this.mods, cam);
     fxGuard.run('backdrop-zone', () => this.background.setZone(this.sim.state.zoneIndex));
     // Slow motion slows the tweens and the camera too; the HUD scene keeps its own clock.
-    this.tweens.timeScale = this.fx.timeScale;
+    this.tweens.timeScale = this.fx.timeScale * soakSpeed();
     this.camera.follow(delta * this.fx.timeScale);
     if (this.tutorial) {
       placeTutorialTarget(this.tutorial, this.fx, this.camera, this.cameras.main);
