@@ -6,6 +6,7 @@ import { HUD_LAYOUT } from '../../data/hud-layout';
 import { MENU } from '../../data/menu-layout';
 import { IDLE_MOTION, IDLE_PHASE } from '../../data/idle-motion';
 import { PALETTE } from '../../data/palette';
+import { teamHasNewLook } from '../../core/mastery';
 import { createCreatureIcon, setCreatureIcon } from './creature-icons';
 import { idlePose, type IdlePose } from './idle-motion';
 import { nextCreatureLabel } from './next-creature-label';
@@ -91,7 +92,7 @@ export class NextCreatureBadge {
     const textChanged = creatureChanged || next.inLayers !== this.shown?.inLayers;
     if (!textChanged) return;
     if (creatureChanged) {
-      setCreatureIcon(this.icon, next.id);
+      setCreatureIcon(this.icon, next.id, teamHasNewLook(this.team ?? [], next.id));
     }
     this.label.setText(nextCreatureLabel(next));
     this.place();

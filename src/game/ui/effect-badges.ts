@@ -22,6 +22,10 @@ import {
 import { createStrokedText } from './outlined-text';
 import { HudPlate } from './style/hud-plate';
 import type { ActiveEffect } from '../../core/abilities/types';
+import { teamHasNewLook } from '../../core/mastery';
+import type { TeamSlot } from '../../core/sim-types';
+
+type TeamSlots = readonly (TeamSlot | null)[];
 
 const { badgeSize, badgeRowY, badgeCounterFont, badgeCounterInset, badgeCounterDrop } = HUD_LAYOUT;
 const { badges } = ANIM;
@@ -72,10 +76,11 @@ class BadgeSlot {
   }
 
   /** Shows the badge for its state; picture and text change only when they differ from the last call. */
-  show(badge: Readonly<BadgeState>, visual: Readonly<BadgeVisual>): void {
+  show(badge: Readonly<BadgeState>, visual: Readonly<BadgeVisual>, team: TeamSlots): void {
     if (badge.key !== this.key) {
       this.key = badge.key;
-      setCreatureIcon(this.icon, badgeCreature(badge.key));
+      const id = badgeCreature(badge.key);
+      setCreatureIcon(this.icon, id, teamHasNewLook(team, id));
     }
     if (badge.layersLeft !== this.shownCount) {
       this.shownCount = badge.layersLeft;
@@ -130,7 +135,13 @@ export class EffectBadges {
     return this.tracker.items.length;
   }
 
-  update(effects: readonly ActiveEffect[], shield: number, timeMs: number, deltaMs: number): void {
+  update(
+    effects: readonly ActiveEffect[],
+    shield: number,
+    timeMs: number,
+    deltaMs: number,
+    team: TeamSlots,
+  ): void {
     this.tracker.sync(effects, shield);
     this.tracker.step(deltaMs);
     const items = this.tracker.items;
@@ -144,7 +155,7 @@ export class EffectBadges {
       const x = Number.isNaN(badge.x) ? target : badge.x + (target - badge.x) * k;
       badge.x = Math.abs(target - x) < SETTLE_EPSILON ? target : x;
       slot.root.setX(badge.x);
-      slot.show(badge, badgeVisual(badge, timeMs, inEase, this.visual));
+      slot.show(badge, badgeVisual(badge, timeMs, inEase, this.visual), team);
       slot.idle(timeMs, i * IDLE_PHASE.badgeStep);
     }
     for (let i = items.length; i < this.slots.length; i++) {

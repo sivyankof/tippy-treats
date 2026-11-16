@@ -16,9 +16,15 @@ export const CREATURE_GROWN_ICON_KEYS = Object.fromEntries(
 export const TEMPO_ICON_KEY = 'tempo_ease';
 
 /** Shows the icon of `id` at the size the HUD uses for creature icons. */
-export function setCreatureIcon(image: Phaser.GameObjects.Image, id: CreatureId): void {
+export function setCreatureIcon(
+  image: Phaser.GameObjects.Image,
+  id: CreatureId,
+  grown = false,
+): void {
   const size = HUD_LAYOUT.badgeSize;
-  image.setTexture(CREATURE_ICON_KEYS[id]).setDisplaySize(size, size);
+  image
+    .setTexture((grown ? CREATURE_GROWN_ICON_KEYS : CREATURE_ICON_KEYS)[id])
+    .setDisplaySize(size, size);
 }
 
 /** A new HUD creature icon at (x, y); it shows `id` (the first creature until told otherwise). */
