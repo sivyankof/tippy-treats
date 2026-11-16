@@ -1,5 +1,7 @@
 import * as Phaser from 'phaser';
+import { CREATURE_IDS } from '../../data/creatures';
 import { SOAK } from '../../data/soak';
+import { gameState } from '../../state';
 import { setLang, type Lang } from '../../i18n';
 import { CLASSIC_RUN, DAILY_RUN, demoRun, type RunRequest } from '../run-request';
 import { openScreen, restartRun, SCENES, startRunFrom, type SceneKey } from '../scene-keys';
@@ -24,8 +26,8 @@ export interface SoakStatus {
 }
 
 export interface TippySoak {
-  /** Starts the lap loop (once). */
-  start(): void;
+  /** Starts the lap loop (once). `rich` first fills the save: every creature bought and upgraded, a full team. */
+  start(rich?: boolean): void;
   stop(): void;
   status(): SoakStatus;
   /** The next time the driver is at Home between laps it parks there until `release()`. */
@@ -37,6 +39,19 @@ export interface TippySoak {
 type SoakWindow = Window & { tippySoak?: TippySoak };
 
 const sleep = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
+
+/** Buys and upgrades every creature and puts a full team on the run, so the menus show a rich save. */
+function enrichSave(): void {
+  gameState.addCoins(SOAK.richCoins);
+  gameState.addBerries(SOAK.richBerries);
+  for (const id of CREATURE_IDS) {
+    if (!gameState.buyCreature(id, 'coins').ok) gameState.buyCreature(id, 'berries');
+    for (let step = 0; step < SOAK.richUpgrades; step++) {
+      if (!gameState.upgradeCreature(id).ok) break;
+    }
+  }
+  gameState.setTeam(CREATURE_IDS.slice(0, SOAK.richTeamSize));
+}
 
 /** Plays laps of: runs with restarts, a quit through the pause path, a tour of the menu screens. */
 class SoakDriver implements TippySoak {
@@ -55,8 +70,9 @@ class SoakDriver implements TippySoak {
 
   constructor(private readonly game: Phaser.Game) {}
 
-  start(): void {
+  start(rich = false): void {
     if (this.active) return;
+    if (rich) enrichSave();
     this.active = true;
     this.counts.running = true;
     void this.loop();

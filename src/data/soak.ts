@@ -18,6 +18,11 @@ export const SOAK = {
   pollMs: 200,
   /** Languages the settings step switches to, in turn; the last one must be the language the soak began with (`en`). */
   languages: ['ru', 'en'],
+  /** The rich save of `start(true)`: coins and berries given, upgrade steps tried per creature, team size. */
+  richCoins: 10_000_000,
+  richBerries: 100_000,
+  richUpgrades: 6,
+  richTeamSize: 3,
   /** Texture keys are grouped by their name with digit runs replaced by this mark. */
   textureDigitMark: '#',
   /** How many texture groups a sample lists (the biggest first). */
