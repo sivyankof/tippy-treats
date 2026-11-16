@@ -284,7 +284,7 @@ describe('TimingBot with zone rules', () => {
     const covered = approach(300);
     expect(covered.bot.shouldDrop(covered.sim)).toBe(false);
     mutable(covered.sim).flying!.x = pastTarget(160);
-    expect(DIFFICULTY.cloudSdMult).toBe(1.5);
+    expect(DIFFICULTY.cloudSdMult).toBe(1.4);
     expect(covered.bot.shouldDrop(covered.sim)).toBe(true);
   });
 });
@@ -311,11 +311,11 @@ describe('TimingBot over the zones', () => {
 const CLOUDS_ZONE = ZONES.findIndex((zone) => zone.rule === 'clouds');
 
 describe('coverSdMult', () => {
-  it('uses the dense-cloud multiplier in Clouds and the lighter nebula one in Space', () => {
+  it('uses the cloud multiplier in Clouds and the nebula one (never above it) in Space', () => {
     expect(coverSdMult(CLOUDS_ZONE, false)).toBe(DIFFICULTY.cloudSdMult);
     expect(coverSdMult(SPACE_ZONE_INDEX, false)).toBe(DIFFICULTY.nebulaSdMult);
     expect(DIFFICULTY.nebulaSdMult).toBeGreaterThan(1);
-    expect(DIFFICULTY.nebulaSdMult).toBeLessThan(DIFFICULTY.cloudSdMult);
+    expect(DIFFICULTY.nebulaSdMult).toBeLessThanOrEqual(DIFFICULTY.cloudSdMult);
   });
 
   it('lets "Not scary" lower the multiplier, never raise it', () => {

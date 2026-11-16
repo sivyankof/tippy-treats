@@ -53,34 +53,6 @@ export function bodyDisplaySize(): { width: number; height: number } {
   };
 }
 
-/** A tail: `n` circles shrinking along the way (`dx`, `dy` per step), curled by `bend` per step. */
-function tail(
-  x: number,
-  y: number,
-  dx: number,
-  dy: number,
-  r: number,
-  n: number,
-  bend: number,
-): Circle[] {
-  const out: Circle[] = [];
-  let sx = dx;
-  let sy = dy;
-  let cx = x;
-  let cy = y;
-  let cr = r;
-  for (let i = 0; i < n; i++) {
-    out.push({ x: cx, y: cy, r: cr });
-    cx += sx;
-    cy += sy;
-    const nx = sx * Math.cos(bend) - sy * Math.sin(bend);
-    sy = sx * Math.sin(bend) + sy * Math.cos(bend);
-    sx = nx;
-    cr *= 0.72;
-  }
-  return out;
-}
-
 /** The cloud: a cumulus mass, two big domes with the tallest hump right of the middle, smaller bumps between, an uneven belly. */
 export function cloudSilhouette(): Silhouette {
   return {
@@ -109,37 +81,37 @@ export function cloudSilhouette(): Silhouette {
 }
 
 /**
- * The nebula: a swollen middle with a lobe hanging down, thinning out towards both ends, with
- * wisps trailing off the thin parts (the ends of the body are the row that always covers the layer).
+ * The nebula: a swollen middle thinning out towards both ends. Its top stays low above the body
+ * (`nebulaTopMin`) so that on a short screen it does not reach the HUD plates over the row, and
+ * its underside is ONE smooth wave (a close row of circles along `nebulaBelly`), no small lumps.
  */
 export function nebulaSilhouette(): Silhouette {
+  const belly = cfg.nebula.belly;
+  const lobes: Circle[] = [];
+  for (let x = belly.from; x <= belly.to; x += belly.step) {
+    const k = (x - belly.centre) / belly.spread;
+    const bottom = figure.body.bottom - belly.base + (belly.depth + belly.base) * Math.exp(-k * k);
+    lobes.push({ x, y: bottom - belly.r, r: belly.r });
+  }
   return {
     body: figure.body,
     circles: [
-      { x: 140, y: 150, r: 40 },
-      { x: 235, y: 142, r: 52 },
-      { x: 345, y: 116, r: 70 },
-      { x: 438, y: 62, r: 46 },
-      { x: 505, y: 112, r: 100 },
-      { x: 640, y: 126, r: 82 },
-      { x: 745, y: 138, r: 56 },
-      { x: 840, y: 150, r: 38 },
-      { x: 905, y: 168, r: 30 },
+      // Many bumps of different sizes inside the allowed rise: no long straight run on the top edge.
+      { x: 130, y: 142, r: 30 },
+      { x: 195, y: 128, r: 34 },
+      { x: 262, y: 126, r: 24 },
+      { x: 320, y: 122, r: 40 },
+      { x: 400, y: 128, r: 28 },
+      { x: 460, y: 122, r: 36 },
+      { x: 535, y: 142, r: 70 },
+      { x: 610, y: 130, r: 34 },
+      { x: 665, y: 126, r: 44 },
+      { x: 740, y: 130, r: 28 },
+      { x: 800, y: 128, r: 38 },
+      { x: 865, y: 142, r: 26 },
+      { x: 910, y: 168, r: 30 },
     ],
-    lobes: [
-      // Underside: a lobe hanging low in the middle and smaller ones beside it.
-      { x: 520, y: 268, r: 72 },
-      { x: 395, y: 250, r: 46 },
-      { x: 665, y: 250, r: 40 },
-      { x: 300, y: 240, r: 28 },
-      { x: 790, y: 244, r: 24 },
-      { x: 190, y: 238, r: 20 },
-      // Wisps: small shrinking curls trailing off the thin parts, inside the visible screen.
-      ...tail(215, 232, -22, 20, 24, 4, 0.45),
-      ...tail(790, 118, 20, -22, 24, 4, -0.5),
-      ...tail(120, 175, -22, -4, 24, 3, 0.4),
-      ...tail(880, 188, 20, 8, 22, 3, -0.4),
-    ],
+    lobes,
   };
 }
 
@@ -236,38 +208,23 @@ export function bakeCloudFigure(scene: Phaser.Scene, key: string): void {
   });
 }
 
-/** The nebula: pink body with a lighter top, blue and light-pink blotches, white curls. */
+/** The nebula: pink body with a lighter top, a few soft lilac-blue smears without an outline, white curls. */
 export function bakeNebulaFigure(scene: Phaser.Scene, key: string): void {
   const n = cfg.nebula.colors;
   const s = nebulaSilhouette();
   const edge = outlineColor(n.pink);
-  const blotches: ReadonlyArray<{ x: number; y: number; r: number; blue: boolean }> = [
-    { x: 380, y: 100, r: 22, blue: true },
-    { x: 520, y: 70, r: 26, blue: true },
-    { x: 650, y: 100, r: 19, blue: true },
-    { x: 300, y: 150, r: 14, blue: true },
-    { x: 800, y: 160, r: 11, blue: true },
-    { x: 440, y: 135, r: 17, blue: false },
-    { x: 575, y: 140, r: 21, blue: false },
-    { x: 705, y: 165, r: 14, blue: false },
-    { x: 230, y: 155, r: 12, blue: false },
-    { x: 520, y: 225, r: 20, blue: false },
-    { x: 400, y: 235, r: 12, blue: true },
-  ];
   bakeTexture(scene, key, figure.width, figure.height, (g) => {
     fillSilhouette(g, s, edge, figure.outline, 0);
     fillSilhouette(g, s, n.pink, 0, 0);
     fillSilhouette(g, s, n.pinkLight, -16, -16);
-    for (const b of blotches) {
-      // A blotch is a little cluster of three overlapping circles, so it reads as a soft lump.
-      g.fillStyle(b.blue ? n.blue : n.blotch, 1);
-      g.fillCircle(b.x, b.y, b.r);
-      g.fillCircle(b.x + b.r * 0.9, b.y + b.r * 0.25, b.r * 0.7);
-      g.fillCircle(b.x - b.r * 0.8, b.y + b.r * 0.35, b.r * 0.6);
+    // A smear: two flat overlapping ellipses of one tone, so it reads as a soft stain, not a shape.
+    g.fillStyle(n.smear, 1);
+    for (const m of cfg.nebula.smears) {
+      g.fillEllipse(m.x, m.y, m.w, m.h);
+      g.fillEllipse(m.x + m.w * 0.32, m.y + m.h * 0.22, m.w * 0.7, m.h * 0.8);
     }
     strokeCurl(g, 430, 165, 36, 1.4, 0.2, 8, n.curl);
     strokeCurl(g, 600, 175, 42, 1.4, 2.8, 8, n.curl);
-    strokeCurl(g, 530, 240, 30, 1.4, 4.4, 8, n.curl);
     strokeCurl(g, 760, 175, 26, 1.3, 1.2, 7, n.curl);
   });
 }

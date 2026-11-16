@@ -181,10 +181,12 @@ export const DIFFICULTY = {
    */
   guidesSdMult: 0.7,
   /**
-   * Bot-model assumption, not a game rule: while a cloud covers the flying layer the bot's
-   * timing error is this many times larger (the player cannot see the layer).
+   * Bot-model assumption, not a game rule, NOT VERIFIED on players: while a cloud covers the
+   * flying layer the bot's timing error is this many times larger. The cloud is drawn at
+   * density 0.85, so the layer shows as a pale silhouette (1.5 while it was opaque, until
+   * 2026-11-17).
    */
-  cloudSdMult: 1.5,
+  cloudSdMult: 1.4,
   /**
    * Bot-model assumption, not a game rule, NOT VERIFIED on players (check with testers, M9):
    * while the guides of a level-5 ghost are on ("Not scary"), the cloud is see-through and the

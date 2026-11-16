@@ -133,7 +133,16 @@ export class RuleFx {
       pose.scaleX,
       pose.scaleY * at.tall,
     );
-    this.streaks.update(shown ? v.streaks : 0, v.streakKind, at.x, at.y, at.width, at.dir, timeMs);
+    this.streaks.update(
+      shown ? v.streaks : 0,
+      v.streakKind,
+      at.x,
+      at.y,
+      at.width,
+      at.dir,
+      timeMs,
+      layer?.zoneIndex === SPACE_ZONE_INDEX,
+    );
     const flying = shown && state.phase === 'flying';
     const input = this.cloudInput;
     input.covering = shown && v.covered;

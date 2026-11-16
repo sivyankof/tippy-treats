@@ -12,6 +12,8 @@ export const RULE_ANIM = {
     rushStreak: 0xff7a68,
     /** A dark slate: it stands out from both the pale roof sky and the salmon houses. */
     windStreak: 0x3d5a80,
+    /** The roof wind streaks of a Space layer: light, so they read on the dark sky and stay a soft trail. */
+    windStreakSpace: 0xc9dbff,
     /** The puff that flashes behind a rush layer when it lets go. */
     rushPuff: 0xffe9e3,
   },
@@ -95,14 +97,19 @@ export const RULE_ANIM = {
     roofRushBase: 0.5,
     /** Size of the baked streak: long, thin, solid at the head and gone at the tail. */
     width: 260,
-    height: 26,
+    height: 18,
     /** One streak runs from the back edge of the layer to `travelPx` behind it this often. */
     cyclePeriodMs: 420,
     travelPx: 140,
     /** The streaks spread over this share of the layer height; above 1 the outer ones run past its top and bottom edges. */
     spreadShare: 1.3,
-    rushAlpha: 1,
+    rushAlpha: 0.7,
     windAlpha: 0.85,
+    /** The wind of a Space layer: fainter, a light trail on the dark sky. */
+    windSpaceAlpha: 0.5,
+    /** The head of the baked streak is rounded over this share of its length; the thinnest the tail gets, as a share of the height. */
+    headShare: 0.12,
+    tailThickness: 0.2,
     /** Length of a streak as a share of the baked picture, at the start and the end of its run. */
     lengthShare: [0.55, 1],
     /**
@@ -115,7 +122,7 @@ export const RULE_ANIM = {
     /** At the release of a rush the streaks fly out longer and farther, easing back over `ms`. */
     burst: { ms: 260, lengthBoost: 0.45, travelBoost: 0.6 },
     /** The baked streak is cut into slices this wide, each with its own thickness and alpha. */
-    slice: 4,
+    slice: 2,
     /** Alpha along the streak grows with this power of the distance from its tail. */
     fadePower: 1.6,
   },
@@ -164,8 +171,13 @@ export const RULE_ANIM = {
      */
     leadMs: 650,
     /**
-     * Meringue "Not scary" (guides of level 5): the densest the cloud is drawn while it covers the
-     * layer, so the silhouette of the layer shows through (tuned by eye). Visual only: the bot
+     * The densest the dense cloud of the clouds zone is drawn at rest, 0..1: the layer under it
+     * shows as a pale silhouette (contrast about 1 - this). Visual only.
+     */
+    maxDensity: 0.85,
+    /**
+     * Meringue "Not scary" (guides of level 5): the share of `maxDensity` the cloud is drawn at while it
+     * covers the layer, so the silhouette of the layer shows through (tuned by eye). Visual only: the bot
      * has its own `DIFFICULTY.ghostCloudSdMult`.
      */
     ghostMaxDensity: 0.7,
@@ -175,14 +187,27 @@ export const RULE_ANIM = {
      * lower density cap, with twinkling stars over it.
      */
     nebula: {
-      /** Flat fills: the pink body, a lighter pink top, blue and light-pink blotches, white curls; the rim is a deeper tone of the pink. */
+      /** Flat fills: the pink body, a lighter pink top, the lilac-blue smears (low contrast, no outline), white curls; the rim is a deeper tone of the pink. */
       colors: {
         pink: 0xff9bd2,
         pinkLight: 0xffc4e4,
-        blue: 0x9cc4ff,
-        blotch: 0xffe1f0,
+        smear: 0xd2c8ff,
         curl: 0xffffff,
       },
+      /** The most the figure may reach above the body top, baked px (the nebula stays below the HUD plates on a short screen). */
+      maxRiseAboveBody: 46,
+      /** Soft smears on the body, baked px: centre and size of the first ellipse (a second one overlaps it). */
+      smears: [
+        { x: 300, y: 170, w: 100, h: 62 },
+        { x: 580, y: 150, w: 110, h: 66 },
+        { x: 720, y: 205, w: 90, h: 56 },
+      ],
+      /**
+       * The underside: a close row of circles of radius `r` from `from` to `to` every `step` baked px, whose
+       * bottoms follow one smooth bump (a gaussian around `centre`, `spread` wide): `depth` below the body bottom
+       * in the middle, `base` above it at the thin ends.
+       */
+      belly: { from: 150, to: 890, step: 30, r: 54, centre: 520, spread: 190, depth: 86, base: 6 },
       /**
        * The densest the figure is drawn while the nebula covers the layer: one picture, so the
        * layer shows through with a contrast of about 1 - this (tuned by the contrast of the layer
