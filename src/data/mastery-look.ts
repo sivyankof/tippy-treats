@@ -261,19 +261,21 @@ export const MASTERY_FRAME = {
   radius: MENU.style.looks.card.radius,
   outline: MENU.style.looks.card.outline,
   band: MENU.style.looks.card.rimWidth,
-  /** Room around the card the picture keeps for the outer rim and the crown that stick out. */
-  pad: 52,
   gold: '#ffc93c',
   goldLight: '#fff0a0',
   goldDark: '#c98a12',
-  /** The second, thin rim outside the band (the "double rim"): gap from the card edge, gold width, dark outline on each side. */
-  outerRim: { gap: 4, width: 7, outline: 3 },
-  /** The crown-star on the top centre: radius, notch depth (share of the radius), points, how far its centre sits above the card edge, outline width. */
-  /** The crown of any plate other than the collection card (the creature window) moves to the top-left corner, this far from the left edge: the name ribbon covers the top centre and the about button the top right. */
-  windowCrownInset: 62,
-  /** Radius of that crown: the window plate is shown larger than a card, so the crown is bigger to look as big. */
-  windowCrownRadius: 44,
-  crown: { r: 28, notch: 0.45, points: 5, lift: 6, outline: 4, white: '#ffffff' },
+  /**
+   * The second, thin rim outside the band (the "double rim"): gap from the card edge, gold width, dark outline on each side.
+   * Its whole reach (gap + width + 2 * outline) stays within half the collection grid gap, so neighbours' rims do not cross.
+   * `shineShift`, `shineWidth` and `shineAlpha` are the light line on it: shift and width as shares of the gold width.
+   */
+  outerRim: { gap: 2, width: 5, outline: 2, shineShift: 0.25, shineWidth: 0.3, shineAlpha: 0.9 },
+  /** Shared look of the crown-star: notch depth (share of the radius), points, outline width, glint colour. */
+  crown: { notch: 0.45, points: 5, outline: 4, white: '#ffffff' },
+  /** The crown on a collection card: radius and how far its centre sits above the card edge (below when negative). Small and low, so it stays inside the grid gap and clear of the card above. */
+  cardCrown: { r: 20, lift: -2 },
+  /** The crown of any plate other than the collection card (the creature window) moves to the top-left corner, `inset` from the left edge: the name ribbon covers the top centre and the about button the top right. The window plate is shown larger than a card, so the crown is bigger to look as big. */
+  windowCrown: { r: 44, lift: 9, inset: 62 },
   /** Fine highlight along the top of the band: height, inset from corners. */
   shine: { height: 3, inset: 54, alpha: 0.8 },
 } as const;

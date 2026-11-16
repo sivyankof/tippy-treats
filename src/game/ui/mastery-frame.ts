@@ -4,6 +4,13 @@ import { parseHex } from '../../util/color';
 import { fillOutlinedPolygon } from '../fx/plain-style';
 import { starPoints } from '../objects/creature-art/rainbow-geometry';
 import { bakeTexture } from './bake-texture';
+import {
+  COLLECTION_BODY,
+  crownSpot,
+  isCollectionBody,
+  masteryFramePad,
+  type FrameBody,
+} from './mastery-frame-geometry';
 
 /**
  * Texture key of the gold mastery frame (docs/06, "Золотая рамка"): a ring the shape and size of
@@ -12,24 +19,17 @@ import { bakeTexture } from './bake-texture';
  */
 export const MASTERY_FRAME_KEY = MASTERY_FRAME.key;
 
-/** The plate a frame wraps: the collection card unless given. */
-export interface FrameBody {
-  width: number;
-  height: number;
-}
-
-const COLLECTION_BODY: FrameBody = { width: MASTERY_FRAME.width, height: MASTERY_FRAME.height };
-
 /** Size of the picture: the plate plus the room around it for the outer rim and the crown. */
 export function masteryFrameSize(body: FrameBody = COLLECTION_BODY): FrameBody {
-  const { pad } = MASTERY_FRAME;
+  const pad = masteryFramePad();
   return { width: body.width + pad * 2, height: body.height + pad * 2 };
 }
 
 /** Texture key of the frame of a plate: the shared key for the collection card, one per other size. */
 export function masteryFrameKey(body: FrameBody = COLLECTION_BODY): string {
-  const same = body.width === COLLECTION_BODY.width && body.height === COLLECTION_BODY.height;
-  return same ? MASTERY_FRAME_KEY : `${MASTERY_FRAME_KEY}_${body.width}x${body.height}`;
+  return isCollectionBody(body)
+    ? MASTERY_FRAME_KEY
+    : `${MASTERY_FRAME_KEY}_${body.width}x${body.height}`;
 }
 
 /** The light inner star of the crown, as a share of its radius. */
@@ -46,8 +46,8 @@ export function bakeMasteryFrame(scene: Phaser.Scene, body: FrameBody = COLLECTI
     const light = parseHex(f.goldLight);
     const dark = parseHex(f.goldDark);
     const ring = f.outline + f.band;
-    const x = f.pad;
-    const y = f.pad;
+    const x = masteryFramePad();
+    const y = x;
     const stroke = (inset: number, width: number, color: number, alpha = 1): void => {
       g.lineStyle(width, color, alpha);
       g.strokeRoundedRect(
@@ -73,12 +73,12 @@ export function bakeMasteryFrame(scene: Phaser.Scene, body: FrameBody = COLLECTI
     const outerInset = -(o.gap + o.width / 2 + o.outline);
     stroke(outerInset, o.width + o.outline * 2, dark);
     stroke(outerInset, o.width, gold);
-    stroke(outerInset - o.width * 0.25, o.width * 0.3, light, 0.9);
+    stroke(outerInset - o.width * o.shineShift, o.width * o.shineWidth, light, o.shineAlpha);
     // Crown-star over both rims: top centre on the card, top-left corner on other plates.
-    const onCard = body.width === COLLECTION_BODY.width && body.height === COLLECTION_BODY.height;
-    const cx = onCard ? x + f.width / 2 : x + f.windowCrownInset;
-    const r = onCard ? f.crown.r : f.windowCrownRadius;
-    const cy = y - f.crown.lift * (r / f.crown.r);
+    const spot = crownSpot(body);
+    const cx = x + spot.cx;
+    const cy = y + spot.cy;
+    const r = spot.r;
     fillOutlinedPolygon(
       g,
       starPoints(cx, cy, r, f.crown.notch, f.crown.points),

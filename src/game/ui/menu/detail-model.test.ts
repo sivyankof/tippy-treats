@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { upgradeCost } from '../../../core/economy';
 import { CREATURE_IDS, MAX_CREATURE_LEVEL } from '../../../data/creatures';
-import { changeText, formatValues, mainAction, missingAmount } from './detail-model';
+import { formatValues, mainAction, missingAmount } from './detail-model';
 
 describe('mainAction', () => {
   it('upgrades an owned creature until the maximum level', () => {
@@ -97,18 +97,8 @@ describe('helpers', () => {
     expect(missingAmount(400, 900)).toBe(0);
   });
 
-  it('formats values and changes', () => {
+  it('formats values', () => {
     const f = (n: number): string => `<${n}>`;
     expect(formatValues({ value: 2 }, f)).toEqual({ value: '<2>' });
-    expect(
-      changeText(
-        [
-          ['value', 3, 4],
-          ['percent', 10, 20],
-        ],
-        f,
-      ),
-    ).toBe('<3> → <4>, <10> → <20>');
-    expect(changeText([], f)).toBe('');
   });
 });

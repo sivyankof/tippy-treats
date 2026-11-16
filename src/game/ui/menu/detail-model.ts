@@ -72,11 +72,3 @@ export function formatValues(
 export function abilityText(id: CreatureId, level: number): string {
   return t(CREATURES[id].descKey, formatValues(abilityValues(id, level), formatDecimal));
 }
-
-/** "3 → 4" pairs joined with commas; empty when nothing changes. */
-export function changeText(
-  changes: ReadonlyArray<readonly [string, number, number]>,
-  format: (value: number) => string,
-): string {
-  return changes.map(([, from, to]) => `${format(from)} → ${format(to)}`).join(', ');
-}

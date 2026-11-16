@@ -1,6 +1,8 @@
 import * as Phaser from 'phaser';
 import { SHARED_ATLAS } from '../../data/shared-atlas';
+import { pageVerdict } from '../../util/gl-page-error';
 import { ShelfPacker, type PackedBox } from '../../util/shelf-packer';
+import { devWarn } from '../dev-warn';
 import { asWebGLRenderer } from '../webgl-renderer';
 import { setSharedPicturePixels, setSharedPictureStore } from './bake-texture';
 
@@ -70,18 +72,16 @@ function firstPageHeight(renderer: Phaser.Game['renderer']): number {
     : SHARED_ATLAS.fallbackPageHeight;
 }
 
-/** Clears the pending WebGL errors; returns the last one (0 for none). */
-function takeGlError(renderer: Phaser.Game['renderer']): number {
-  const gl = asWebGLRenderer(renderer)?.gl;
-  if (!gl) return 0;
-  let last: number = gl.NO_ERROR;
-  // Bounded: a lost context keeps answering CONTEXT_LOST_WEBGL.
+/** Reads and clears the pending WebGL errors (bounded: a lost context keeps answering CONTEXT_LOST_WEBGL). */
+function drainGlErrors(gl: WebGLRenderingContext | null): number[] {
+  const errors: number[] = [];
+  if (!gl) return errors;
   for (let i = 0; i < 8; i++) {
     const error = gl.getError();
     if (error === gl.NO_ERROR) break;
-    last = error;
+    errors.push(error);
   }
-  return last;
+  return errors;
 }
 
 function openPage(scene: Phaser.Scene, pages: Page[]): Page {
@@ -96,10 +96,14 @@ function openPage(scene: Phaser.Scene, pages: Page[]): Page {
   }
   const height = (pageHeight ??= firstPageHeight(renderer));
   if (height > SHARED_ATLAS.fallbackPageHeight) {
-    takeGlError(renderer);
+    const gl = asWebGLRenderer(renderer)?.gl ?? null;
+    // Errors left by other code are not the page's: take them out first (and show them in dev).
+    const earlier = drainGlErrors(gl);
+    if (earlier.length > 0) devWarn(`GL errors before the first atlas page: ${earlier.join(', ')}`);
     try {
       const page = makePage(scene, pages, height);
-      if (takeGlError(renderer) === 0) return page;
+      // A lost context is no verdict on the page: the restore path uploads it again.
+      if (pageVerdict(drainGlErrors(gl), gl?.isContextLost() ?? false) !== 'too_big') return page;
       // The GPU did not take the page: it goes, and every page of this game is the smaller one.
       pages.pop();
       scene.sys.textures.remove(page.key);
