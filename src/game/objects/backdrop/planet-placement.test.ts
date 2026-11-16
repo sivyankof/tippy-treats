@@ -37,7 +37,7 @@ describe('planetSpot', () => {
             true,
           );
           const clearOfLines =
-            half === 0 || right <= W / 2 - half || left >= W / 2 + half || bottom <= corridorTop;
+            half === 0 || right <= W / 2 - half || left >= W / 2 + half || bottom <= clear.top;
           expect(clearOfLines).toBe(true);
           expect(top).toBeGreaterThanOrEqual(HUD_LAYOUT.badgeRowBottom + PLANET_PLACE.hudGap);
           expect(Math.min(right, W) - Math.max(left, 0)).toBeGreaterThanOrEqual(
