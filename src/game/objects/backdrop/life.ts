@@ -25,6 +25,8 @@ export interface FrameCtx {
   /** Logical screen size. */
   width: number;
   height: number;
+  /** Tower height in layers, from the camera scroll (drives the mountain peaks). */
+  towerLayers: number;
 }
 
 /** A group of pictures that move on their own: part of a zone backdrop. */

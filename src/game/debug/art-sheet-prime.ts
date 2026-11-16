@@ -16,6 +16,7 @@ import { createTreasureTextures } from '../fx/treasure-textures';
 import { bakeLapEdge } from '../fx/lap-edges';
 import { bakeSharedArt } from '../objects/backdrop/art-kit';
 import { bakeAllFarArt } from '../objects/backdrop/far-plane';
+import { bakeMountains } from '../objects/backdrop/mountains';
 import {
   createCreatureIconTextures,
   createGrownCreatureIconTextures,
@@ -47,6 +48,7 @@ const PRIME_STEPS: ReadonlyArray<(scene: Phaser.Scene) => void> = [
   bakeMasteryFrame,
   bakeSharedArt,
   bakeAllFarArt,
+  bakeMountains,
   bakeTowerSparkle,
   bakeHintTextures,
   bakeTongue,
