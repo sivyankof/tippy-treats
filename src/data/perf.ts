@@ -22,8 +22,13 @@ export type PerfTrigger =
 /** When the measured window of a segment opens: right after the warm-up, at the miss, or when the results screen is up. */
 export type PerfStartOn = 'ready' | 'miss' | 'results';
 
+/** Which draw call limit of `PERF.budget` a segment is held to. */
+export type PerfDrawClass = 'light' | 'heavy';
+
 export interface PerfSegmentDef {
   id: string;
+  /** Light segments are quiet scenes, heavy ones carry many effects or a tall tower. */
+  drawClass: PerfDrawClass;
   /** Layers already placed (a checkpoint height takes the checkpoint width). */
   start: number;
   team: ReadonlyArray<CreatureId | null>;
@@ -44,6 +49,7 @@ const NO_TEAM: ReadonlyArray<CreatureId | null> = [null, null, null];
 export const PERF_SEGMENTS = [
   {
     id: 'calm',
+    drawClass: 'light',
     start: 0,
     team: NO_TEAM,
     level: 1,
@@ -54,6 +60,7 @@ export const PERF_SEGMENTS = [
   },
   {
     id: 'tower',
+    drawClass: 'heavy',
     start: 59,
     team: NO_TEAM,
     level: 1,
@@ -64,6 +71,7 @@ export const PERF_SEGMENTS = [
   },
   {
     id: 'lick-big',
+    drawClass: 'heavy',
     start: 30,
     team: NO_TEAM,
     level: 1,
@@ -75,6 +83,7 @@ export const PERF_SEGMENTS = [
   },
   {
     id: 'lick-short',
+    drawClass: 'heavy',
     start: 30,
     team: NO_TEAM,
     level: 1,
@@ -86,6 +95,7 @@ export const PERF_SEGMENTS = [
   },
   {
     id: 'rainbow',
+    drawClass: 'heavy',
     start: 53,
     team: ['rainbow', 'rainbow', 'rainbow'],
     level: 5,
@@ -96,6 +106,7 @@ export const PERF_SEGMENTS = [
   },
   {
     id: 'edge',
+    drawClass: 'light',
     start: 80,
     team: NO_TEAM,
     level: 1,
@@ -106,6 +117,7 @@ export const PERF_SEGMENTS = [
   },
   {
     id: 'perfects',
+    drawClass: 'light',
     start: 0,
     team: NO_TEAM,
     level: 1,
@@ -116,6 +128,7 @@ export const PERF_SEGMENTS = [
   },
   {
     id: 'clouds',
+    drawClass: 'heavy',
     start: 60,
     team: NO_TEAM,
     level: 1,
@@ -126,6 +139,7 @@ export const PERF_SEGMENTS = [
   },
   {
     id: 'space',
+    drawClass: 'heavy',
     start: 100,
     team: NO_TEAM,
     level: 1,
@@ -136,6 +150,7 @@ export const PERF_SEGMENTS = [
   },
   {
     id: 'guest',
+    drawClass: 'heavy',
     start: 40,
     team: NO_TEAM,
     level: 1,
@@ -147,6 +162,7 @@ export const PERF_SEGMENTS = [
   },
   {
     id: 'collapse',
+    drawClass: 'heavy',
     start: 80,
     team: NO_TEAM,
     level: 1,
@@ -158,6 +174,7 @@ export const PERF_SEGMENTS = [
   },
   {
     id: 'results',
+    drawClass: 'light',
     start: 80,
     team: NO_TEAM,
     level: 1,
@@ -174,8 +191,22 @@ export function isPerfSegmentId(value: string): value is PerfSegmentId {
   return PERF_SEGMENTS.some((segment) => segment.id === value);
 }
 
+/** The frame budget a segment is compared with (provisional numbers; one place to change them). */
+export const PERF_BUDGET = {
+  /** Draw calls per frame on average, by the class of the segment. */
+  drawCalls: { light: 40, heavy: 60 } as Readonly<Record<PerfDrawClass, number>>,
+  /** Mean frame work time, ms. */
+  workMeanMs: 8,
+  /** Worst frame work time, ms. */
+  workWorstMs: 50,
+  /** Mean time between frames, ms (about 55 fps). */
+  intervalMeanMs: 18,
+} as const;
+
 /** The knobs of the benchmark that are not per segment. */
 export const PERF = {
+  /** The frame budget (see `PERF_BUDGET`). */
+  budget: PERF_BUDGET,
   /** Share of frames at or below the "p95" column. */
   percentile: 0.95,
   /** Run seed of every segment: the same tower, layers and looks on every machine. */

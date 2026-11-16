@@ -1,3 +1,5 @@
+import { PERF_BUDGET, PERF_SEGMENTS } from '../../data/perf';
+
 /** The share of frames at or below the returned value (nearest rank), `share` in 0..1; `sorted` is ascending. */
 export function percentile(sorted: ArrayLike<number>, share: number): number {
   if (sorted.length === 0) return 0;
@@ -86,17 +88,64 @@ export class SegmentSamples {
   }
 }
 
-/** The result table as markdown (the console and the overlay show it as it is). */
+/** The values of a row that are over the frame budget. */
+export interface BudgetOver {
+  draws: boolean;
+  mean: boolean;
+  worst: boolean;
+  interval: boolean;
+}
+
+/** What a benchmark says about the budget as a whole. */
+export interface BudgetVerdict {
+  ok: boolean;
+  /** Ids of the segments with something over the budget. */
+  over: string[];
+}
+
+/** Draw call limit of a segment by its class; a segment the data does not know is held to the heavy one. */
+function drawLimit(id: string): number {
+  const def = PERF_SEGMENTS.find((segment) => segment.id === id);
+  return PERF_BUDGET.drawCalls[def?.drawClass ?? 'heavy'];
+}
+
+/** Which values of a row are over the budget (no draw call count: nothing to compare there). */
+export function budgetOver(row: SegmentStats): BudgetOver {
+  return {
+    draws: row.drawCallsMean !== null && row.drawCallsMean > drawLimit(row.id),
+    mean: row.meanMs > PERF_BUDGET.workMeanMs,
+    worst: row.worstMs > PERF_BUDGET.workWorstMs,
+    interval: row.intervalMeanMs > PERF_BUDGET.intervalMeanMs,
+  };
+}
+
+export function budgetVerdict(rows: readonly SegmentStats[]): BudgetVerdict {
+  const over = rows
+    .filter((row) => Object.values(budgetOver(row)).some(Boolean))
+    .map((row) => row.id);
+  return { ok: over.length === 0, over };
+}
+
+/** The line under the table: `budget: ok` or `budget: over in N segments (id, id)`. */
+export function formatBudgetLine(verdict: BudgetVerdict): string {
+  if (verdict.ok) return 'budget: ok';
+  const count = verdict.over.length;
+  return `budget: over in ${count} segment${count === 1 ? '' : 's'} (${verdict.over.join(', ')})`;
+}
+
+/** The result table as markdown (the console and the overlay show it as it is). Values over the budget end in `!`. */
 export function formatTable(rows: readonly SegmentStats[], decimals: number): string {
-  const fixed = (value: number): string => value.toFixed(decimals);
   const lines = [
     '| segment | mean ms | p95 ms | worst ms | interval mean ms | interval p95 ms | frames | draws/frame | fps | note |',
     '|---|---|---|---|---|---|---|---|---|---|',
   ];
   for (const row of rows) {
+    const over = budgetOver(row);
+    const mark = (text: string, flag: boolean): string => (flag ? `${text}!` : text);
     const draws = row.drawCallsMean === null ? '-' : row.drawCallsMean.toFixed(1);
+    const id = Object.values(over).some(Boolean) ? `${row.id} !` : row.id;
     lines.push(
-      `| ${row.id} | ${fixed(row.meanMs)} | ${fixed(row.p95Ms)} | ${fixed(row.worstMs)} | ${fixed(row.intervalMeanMs)} | ${fixed(row.intervalP95Ms)} | ${row.frames} | ${draws} | ${row.fps.toFixed(1)} | ${row.note} |`,
+      `| ${id} | ${mark(row.meanMs.toFixed(decimals), over.mean)} | ${row.p95Ms.toFixed(decimals)} | ${mark(row.worstMs.toFixed(decimals), over.worst)} | ${mark(row.intervalMeanMs.toFixed(decimals), over.interval)} | ${row.intervalP95Ms.toFixed(decimals)} | ${row.frames} | ${mark(draws, over.draws)} | ${row.fps.toFixed(1)} | ${row.note} |`,
     );
   }
   return lines.join('\n');
