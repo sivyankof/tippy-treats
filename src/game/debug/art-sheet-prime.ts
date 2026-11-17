@@ -19,6 +19,8 @@ import { bakeSpaceVisitors } from '../objects/backdrop/space-visitor-art';
 import { bakeAllPlanets } from '../objects/backdrop/dessert-planets';
 import { bakeAllFarArt } from '../objects/backdrop/far-plane';
 import { bakeMountains } from '../objects/backdrop/mountains';
+import { roofArt } from '../objects/backdrop/roof-zone';
+import { bakeWeatherArt } from '../objects/backdrop/weather-art';
 import {
   createCreatureIconTextures,
   createGrownCreatureIconTextures,
@@ -52,6 +54,9 @@ const PRIME_STEPS: ReadonlyArray<(scene: Phaser.Scene) => void> = [
   bakeAllFarArt,
   bakeSpaceVisitors,
   bakeMountains,
+  (scene) => bakeWeatherArt(scene, 'all'),
+  // The night house layers of the Roof (lit windows).
+  (scene) => roofArt.bake(scene, { lap: 1, weather: 'night', place: 'kitchen' }),
   bakeAllPlanets,
   bakeTowerSparkle,
   bakeHintTextures,

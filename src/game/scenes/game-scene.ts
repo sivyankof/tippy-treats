@@ -14,6 +14,7 @@ import { easeFn } from '../fx/ease';
 import { RunIntro } from '../fx/run-intro';
 import { effectsMode } from '../effects-mode';
 import { Backdrop } from '../objects/backdrop/backdrop';
+import { RunWeather } from '../objects/backdrop/run-weather';
 import { plainLooks } from '../objects/plain-look';
 import { RunCamera } from '../run-camera';
 import { ContinueFlow } from '../continue-flow';
@@ -76,6 +77,7 @@ export class GameScene extends Phaser.Scene {
   /** The "Continue?" offer after a miss; the HUD draws its window. */
   continueFlow: ContinueFlow | null = null;
   private background!: Backdrop;
+  private weather: RunWeather | null = null;
   /** The flying layer before each step, for the sound and effect cues. */
   private readonly flying = new FlyingTracker();
   /** Handed out by `getRunInfo` every frame: one object, refilled each time. */
@@ -135,6 +137,10 @@ export class GameScene extends Phaser.Scene {
     const { width, height } = this.scale.gameSize;
     this.background = new Backdrop(this, TRAY_TOP_Y, width, height, this.sim.state, setup.look);
     this.fx = new RunFx(this, TRAY_TOP_Y, this.seed);
+    const look = setup.look;
+    this.weather = RunWeather.needed(look.weather)
+      ? new RunWeather(this, look.weather, this.seed, this.background, this.fx.tower)
+      : null;
     this.fx.setGuestSource(() => this.background.guestSource());
     this.camera = new RunCamera(this, this.fx, this.background, TRAY_TOP_Y);
 
@@ -214,6 +220,10 @@ export class GameScene extends Phaser.Scene {
     if (events.length > 0) this.mods = this.sim.currentModifiers();
     this.fx.update(delta, time, this.sim.state, this.mods, cam);
     fxGuard.run('backdrop-zone', () => this.background.follow(this.sim.state));
+    fxGuard.run('weather', () => {
+      const { width, height } = this.scale.gameSize;
+      this.weather?.update(time, delta, width, height, this.sim.state);
+    });
     // Slow motion slows the tweens and the camera too; the HUD scene keeps its own clock.
     this.tweens.timeScale = this.fx.timeScale;
     this.camera.follow(delta * this.fx.timeScale);

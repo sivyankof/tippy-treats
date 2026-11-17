@@ -3,11 +3,14 @@ import { BD_TEX } from '../../../data/backdrop';
 import { MOUNTAIN_SLOT } from '../../../data/backdrop-mountains';
 import { BACKDROP_COLORS } from '../../../data/backdrop-colors';
 import { BACKDROP_LIFE } from '../../../data/backdrop-life';
+import { WEATHER_LOOK } from '../../../data/weather-look';
+import type { WeatherId } from '../../../data/weather';
 import { bakeTexture } from '../../ui/bake-texture';
 import { tiled } from './art-kit';
 import { Hover, PuffColumn, Traveler } from './life';
 import { bakeMountains, Mountains } from './mountains';
-import type { ZoneArt } from './zone-scenery';
+import { fixtureTintOf, mountainTintOf } from './weather-palette';
+import type { SceneryDef, ZoneArt } from './zone-scenery';
 
 type Graphics = Phaser.GameObjects.Graphics;
 
@@ -34,35 +37,68 @@ function house(
   g.fillTriangle(x - 10, y + rise, x + w + 10, y + rise, x + w / 2, y);
 }
 
-function bakeLayers(scene: Phaser.Scene): void {
-  bakeTexture(scene, R.far, TILE, TILE, (g) => {
-    const houses = [
-      { x: 20, y: 90, w: 120, h: 130 },
-      { x: 190, y: 250, w: 100, h: 110 },
-      { x: 330, y: 40, w: 130, h: 150 },
-      { x: 90, y: 360, w: 110, h: 100 },
-      { x: 360, y: 330, w: 100, h: 120 },
-    ];
-    for (const b of houses) {
-      tiled(TILE, b.x, b.y, b.w + b.h, (x, y) => house(g, x, y, b.w, b.h, C.far, C.far));
+const FAR_HOUSES = [
+  { x: 20, y: 90, w: 120, h: 130 },
+  { x: 190, y: 250, w: 100, h: 110 },
+  { x: 330, y: 40, w: 130, h: 150 },
+  { x: 90, y: 360, w: 110, h: 100 },
+  { x: 360, y: 330, w: 100, h: 120 },
+];
+const MID_HOUSES = [
+  { x: 40, y: 40, w: 170, h: 150 },
+  { x: 270, y: 200, w: 190, h: 170 },
+  { x: 60, y: 340, w: 150, h: 120 },
+];
+const NIGHT = WEATHER_LOOK.nightRoof;
+const WINDOW_ROUND = 8;
+/** Key of a house layer picture of the roof: the night picture has its own. */
+const layerKey = (key: string, weather: WeatherId): string =>
+  weather === 'night' ? `${key}_night` : key;
+
+/** A lit window with a soft glow around it (night). */
+function litWindow(g: Graphics, x: number, y: number, w: number, h: number): void {
+  g.fillStyle(NIGHT.windowGlow, NIGHT.windowGlowAlpha);
+  g.fillRoundedRect(x - 7, y - 7, w + 14, h + 14, WINDOW_ROUND + 6);
+  g.fillStyle(NIGHT.window, 1);
+  g.fillRoundedRect(x, y, w, h, WINDOW_ROUND);
+}
+
+function bakeLayers(scene: Phaser.Scene, weather: WeatherId): void {
+  const night = weather === 'night';
+  bakeTexture(scene, layerKey(R.far, weather), TILE, TILE, (g) => {
+    for (const b of FAR_HOUSES) {
+      tiled(TILE, b.x, b.y, b.w + b.h, (x, y) => {
+        house(g, x, y, b.w, b.h, night ? NIGHT.farWall : C.far, night ? NIGHT.farRoof : C.far);
+        if (!night) return;
+        // A few small lit windows far away.
+        g.fillStyle(NIGHT.farWindow, NIGHT.farWindowAlpha);
+        const top = y + b.w * ROOF_RISE + 26;
+        for (let k = 0; k < NIGHT.farWindows; k++) {
+          g.fillRoundedRect(x + 22 + k * (b.w * 0.42), top + (k % 2) * 28, 14, 18, 4);
+        }
+      });
     }
   });
 
-  bakeTexture(scene, R.mid, TILE, TILE, (g) => {
-    const houses = [
-      { x: 40, y: 40, w: 170, h: 150 },
-      { x: 270, y: 200, w: 190, h: 170 },
-      { x: 60, y: 340, w: 150, h: 120 },
-    ];
-    for (const b of houses) {
+  bakeTexture(scene, layerKey(R.mid, weather), TILE, TILE, (g) => {
+    MID_HOUSES.forEach((b, index) => {
       tiled(TILE, b.x, b.y, b.w + b.h, (x, y) => {
-        house(g, x, y, b.w, b.h, C.mid, C.midDark);
-        g.fillStyle(BACKDROP_COLORS.shared.warmWhite, 0.85);
+        house(g, x, y, b.w, b.h, night ? NIGHT.midWall : C.mid, night ? NIGHT.midRoof : C.midDark);
         const top = y + b.w * ROOF_RISE + 28;
+        if (night) {
+          litWindow(g, x + 24, top, NIGHT.windowW, NIGHT.windowH);
+          // Not every window is lit: one house keeps its second window dark.
+          if (index === 1) {
+            g.fillStyle(NIGHT.darkWindow, 1);
+            g.fillRoundedRect(x + b.w - 60, top + 40, NIGHT.windowW, NIGHT.windowH, WINDOW_ROUND);
+          } else litWindow(g, x + b.w - 60, top + 40, NIGHT.windowW, NIGHT.windowH);
+          return;
+        }
+        g.fillStyle(BACKDROP_COLORS.shared.warmWhite, 0.85);
         g.fillRoundedRect(x + 24, top, 36, 44, 8);
         g.fillRoundedRect(x + b.w - 60, top, 36, 44, 8);
       });
-    }
+    });
   });
 
   bakeTexture(scene, R.near, TILE, TILE, (g) => {
@@ -154,24 +190,34 @@ function bakeCloths(scene: Phaser.Scene): void {
   });
 }
 
-/** Rooftops: skyline and roofs with birds, chimney smoke and washing in the wind. */
+/** Rooftops: skyline and roofs with birds, chimney smoke and washing in the wind (taken in at night). */
 export const roofArt: ZoneArt = {
-  bake(scene) {
-    bakeLayers(scene);
+  bake(scene, look) {
+    bakeLayers(scene, look.weather);
     bakeLife(scene);
     bakeMountains(scene);
   },
-  build(scene) {
+  build(scene, look) {
     const life = BACKDROP_LIFE.roof;
-    return {
-      layers: [R.far, R.mid, R.near, R.pipes],
-      lives: [
-        { slot: MOUNTAIN_SLOT.roof, life: new Mountains(scene) },
-        { slot: 1, life: new Hover(scene, [life.chimney]) },
-        { slot: 1, life: new PuffColumn(scene, life.smoke, life.smokeAt, life.smokeOffset) },
+    const { weather } = look;
+    const night = weather === 'night';
+    const fixture = fixtureTintOf(weather);
+    const chimney = fixture === null ? life.chimney : { ...life.chimney, tint: fixture };
+    const lives: SceneryDef['lives'][number][] = [
+      { slot: MOUNTAIN_SLOT.roof, life: new Mountains(scene, mountainTintOf(weather)) },
+      { slot: 1, life: new Hover(scene, [chimney]) },
+      { slot: 1, life: new PuffColumn(scene, life.smoke, life.smokeAt, life.smokeOffset) },
+    ];
+    // The washing is taken in and the birds are asleep at night.
+    if (!night) {
+      lives.push(
         { slot: 2, life: new Hover(scene, [life.rope, ...life.laundry]) },
         { slot: 2, life: new Traveler(scene, life.birds) },
-      ],
+      );
+    }
+    return {
+      layers: [layerKey(R.far, weather), layerKey(R.mid, weather), R.near, R.pipes],
+      lives,
     };
   },
 };

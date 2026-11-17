@@ -147,8 +147,10 @@ export class Mountains implements Life {
   readonly objects: Phaser.GameObjects.Image[];
   private readonly image: Phaser.GameObjects.Image;
 
-  constructor(scene: Phaser.Scene) {
+  /** `tint` multiplies the picture (a weather's colour); `null` leaves it as baked. */
+  constructor(scene: Phaser.Scene, tint: number | null = null) {
     this.image = new Phaser.GameObjects.Image(scene, 0, 0, L.texture).setOrigin(0.5, 1);
+    if (tint !== null) this.image.setTint(tint);
     this.image.setVisible(false);
     this.objects = [this.image];
   }
