@@ -137,6 +137,8 @@ export interface PerfParams {
   hidden?: PerfPart[];
   /** `mastery=on|off`: every segment without a team plays the mastery team at the grown level (`on`) or one level below it (`off`, the control); `master` plays it at the master level (the captions and master effects of a run); absent keeps the segments as they are. */
   mastery?: 'on' | 'off' | 'master';
+  /** `marks=1`: every layer of the starting tower carries a juice stain (the trace benchmark); absent leaves the layers clean. */
+  marks?: boolean;
   /** `weather=<id>`: the weather of every benchmark run; absent is clear. */
   weather?: WeatherId;
   /** `place=<id>`: the start place of every benchmark run; absent is the kitchen. */
@@ -178,6 +180,7 @@ export function parsePerfParams(search: string): PerfParams | null {
   if (hidden.length > 0) result.hidden = hidden;
   const mastery = params.get('mastery');
   if (mastery === 'on' || mastery === 'off' || mastery === 'master') result.mastery = mastery;
+  if (params.get('marks') === '1') result.marks = true;
   const weather = params.get('weather');
   if (isWeatherId(weather)) result.weather = weather;
   const place = params.get('place');
