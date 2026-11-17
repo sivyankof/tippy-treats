@@ -1,5 +1,5 @@
 /**
- * Rare guests of Space (docs/06, section 5, "Редкие гости Космоса"): once in several runs one
+ * Rare guests of Space (docs/06, section 5, "Редкие гости Космоса"): on about every second lap one
  * object crosses the screen behind the tower. Decoration only; the run never knows about it.
  */
 
@@ -39,9 +39,9 @@ export interface VisitorSpec {
 export const SPACE_VISITOR = {
   /** Thickness of the warm outline of every part, in picture px (the layers' share of their height, kept thick at this size). */
   outlinePx: 9,
-  /** Chance that a run gets a guest at all (decided once, when the Space backdrop is built). */
-  chancePerRun: 0.25,
-  /** Wait after the Space backdrop appears before the pass starts. */
+  /** Chance that a lap of Space gets a guest (docs/06; decided per lap from the run's seed, `core/space-visitor-pick.ts`). */
+  chancePerLap: 0.5,
+  /** Wait after the lap begins before the pass starts. */
   delayMs: [6000, 26000],
   /** With `?spaceGuest=` the pass starts this soon. */
   forcedDelayMs: 800,

@@ -1,6 +1,5 @@
 import {
   SPACE_VISITOR,
-  SPACE_VISITOR_IDS,
   type SpaceVisitorId,
   type VisitorFlight,
 } from '../../../data/space-visitor';
@@ -21,15 +20,14 @@ export interface VisitorPlan {
 }
 
 /**
- * Rolls the pass of a run from a decorative random stream (never the run's own stream, so the run
- * stays the same). `forced` (the debug parameter) always gives a pass, soon.
+ * Rolls the pass of `guest` on a decorative random stream (never the run's own stream, so the run
+ * stays the same). `forced` (the debug parameter) makes the pass come soon.
  */
 export function planVisitor(
+  guest: SpaceVisitorId,
   random: () => number,
-  forced: SpaceVisitorId | null = null,
-): VisitorPlan | null {
-  if (!forced && random() >= SPACE_VISITOR.chancePerRun) return null;
-  const guest = forced ?? pickGuest(random());
+  forced = false,
+): VisitorPlan {
   const spec = SPACE_VISITOR.guests[guest];
   const delayMs = forced ? SPACE_VISITOR.forcedDelayMs : pickRange(SPACE_VISITOR.delayMs, random);
   return {
@@ -39,17 +37,6 @@ export function planVisitor(
     leftward: random() < 0.5,
     bandShare: random(),
   };
-}
-
-/** The guest whose share of the total weight `roll` (0..1) falls into. */
-export function pickGuest(roll: number): SpaceVisitorId {
-  const total = SPACE_VISITOR_IDS.reduce((sum, id) => sum + SPACE_VISITOR.guests[id].weight, 0);
-  let left = roll * total;
-  for (const id of SPACE_VISITOR_IDS) {
-    left -= SPACE_VISITOR.guests[id].weight;
-    if (left < 0) return id;
-  }
-  return SPACE_VISITOR_IDS[SPACE_VISITOR_IDS.length - 1] as SpaceVisitorId;
 }
 
 export interface VisitorPose {
