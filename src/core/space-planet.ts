@@ -23,7 +23,8 @@ export type PlanetFits = (id: SpacePlanetId, lap: number) => boolean;
 /**
  * The dessert planet of a lap of Space. The laps walk the seeded order of a block of nine planets (`blockOrder`):
  * each lap takes the first planet of the order that has not been shown yet and fits the lap whole (`fits`); while
- * one fits, a planet that does not waits for a later, narrower lap. When none of the planets not yet shown fits,
+ * one fits, a planet that does not waits for a later, narrower lap. When none of the planets not yet shown fits
+ * (or only the one just shown does),
  * the first of them in the order is taken all the same (its caller places it by a fallback rule), so every lap has
  * a planet. A block is over when all nine have been shown, then the next block begins with a new order (its first
  * pick is not the planet just shown). So no planet repeats before all nine were shown. Lap 0 or less counts as
@@ -60,9 +61,11 @@ export class PlanetWalk {
   private step(at: number): void {
     const fresh = this.order.filter((id) => !this.shown.has(id));
     const fitting = fresh.filter((id) => this.fits(id, at));
-    const pool = fitting.length > 0 ? fitting : fresh;
-    // A block holds nine, and `shown` is reset as the ninth is shown: `fresh` is never empty.
-    const pick = pool.find((id) => id !== this.previous) ?? pool[0] ?? this.order[0]!;
+    const notPrevious = (id: SpacePlanetId): boolean => id !== this.previous;
+    // A block holds nine, and `shown` is reset as the ninth is shown: `fresh` is never empty. When the only
+    // fitting planet is the one just shown (a new block begins with it), the fallback rule takes the first
+    // fresh one that is not, as when nothing fits.
+    const pick = fitting.find(notPrevious) ?? fresh.find(notPrevious) ?? fresh[0] ?? this.order[0]!;
     this.picks.push(pick);
     this.previous = pick;
     this.shown.add(pick);

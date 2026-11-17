@@ -81,6 +81,16 @@ describe('planetOfLap', () => {
     }
   });
 
+  it('does not open a new block with the planet just shown, even when only it fits', () => {
+    for (let seed = 0; seed < 200; seed++) {
+      const last = lapsOf(seed, everywhere, 9)[8]!;
+      const onlyLast: PlanetFits = (id, lap) => (lap === 10 ? id === last : true);
+      const ids = lapsOf(seed, onlyLast, 12);
+      expect(ids[9], `seed ${seed}`).not.toBe(last);
+      for (let lap = 1; lap < ids.length; lap++) expect(ids[lap]).not.toBe(ids[lap - 1]);
+    }
+  });
+
   it('is a pure function of the seed, the lap and the fit, and differs between seeds', () => {
     expect(planetOfLap(5, 4, wideLater)).toBe(planetOfLap(5, 4, wideLater));
     const orders = new Set(seeds.map((seed) => lapsOf(seed, everywhere, 9).join()));
