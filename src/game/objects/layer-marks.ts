@@ -81,6 +81,8 @@ export class LayerMarkPictures {
     if (this.shown[slot] !== mark) {
       this.shown[slot] = mark;
       image.setTexture(mark.texture).setOrigin(mark.originX, mark.originY);
+      if (mark.tint === undefined) image.clearTint();
+      else image.setTint(mark.tint);
     }
     image.setPosition(mark.dx, mark.dy).setVisible(true);
     this.pose(slot, image.scene.time.now, image.alpha);

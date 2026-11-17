@@ -24,6 +24,8 @@ export interface LayerMark {
   width: number;
   height: number;
   flipX?: boolean;
+  /** Colour the picture is tinted with (a picture baked light, shown in the glaze colour of its layer); none keeps its own colours. */
+  tint?: number;
   /** Rest rotation, degrees. */
   angleDeg?: number;
   /** Scene time (ms) the mark was made: it grows in from there and the swing starts there. */
