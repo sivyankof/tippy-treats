@@ -128,36 +128,33 @@ export class DebrisFx {
         pickInt(plan.crumbs),
         plan.strands ? DEPTH.cutCrumbs : undefined,
       );
-      if (variant.piece && memo.kind === 'plain') {
+      if (memo.kind === 'plain') {
         this.decorBits(index + 1, event.cutWidth, pieceCut, edgeX, y, side);
       }
     };
-    if (variant.piece) {
-      this.cuts.play({
-        pieces: this.pieces,
-        layerNumber: index + 1,
-        side,
-        edgeX,
-        y,
-        layerWidth: pose.width,
-        pieceX,
-        pieceWidth: event.cutWidth,
-        look: memo,
-        cake: colors.cake,
-        glaze: colors.glaze,
-        plan,
-        crumbs,
-        layerCenter: (out) => {
-          const now = this.tower.layerPoseInto(this.cutPose, index);
-          if (!now) return false;
-          out.x = now.x;
-          out.y = now.y;
-          return true;
-        },
-      });
-    } else {
-      crumbs();
-    }
+    this.cuts.play({
+      pieces: this.pieces,
+      layerNumber: index + 1,
+      side,
+      edgeX,
+      y,
+      layerWidth: pose.width,
+      pieceX,
+      pieceWidth: event.cutWidth,
+      look: memo,
+      cake: colors.cake,
+      glaze: colors.glaze,
+      creature: memo.creature ?? null,
+      plan,
+      crumbs,
+      layerCenter: (out) => {
+        const now = this.tower.layerPoseInto(this.cutPose, index);
+        if (!now) return false;
+        out.x = now.x;
+        out.y = now.y;
+        return true;
+      },
+    });
     // With strands the glaze leaves in them and as the drop that stays; otherwise a drop runs down.
     if (!plan.strands) this.runDrips(pose, y, edgeX, side, colors.glaze, memo);
     return true;

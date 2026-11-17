@@ -14,32 +14,7 @@ import {
   writeTrunkRows,
 } from './tongue-strip-geometry';
 import { bakeStripTextures, STRIP_TEXTURES } from './tongue-strip-texture';
-
-/** A rope whose vertices are written by the owner every frame and whose picture never changes. */
-class StripRope extends Phaser.GameObjects.Rope {
-  constructor(scene: Phaser.Scene, texture: string, uv: Float32Array) {
-    super(scene, 0, 0, texture, undefined, uv.length / 4);
-    // The uv are shares of the picture; the frame knows where its corners are in the texture
-    // (a baked picture can sit upside down in it).
-    const { u0, v0, u1, v1 } = this.frame;
-    for (let i = 0; i < uv.length; i += 2) {
-      this.uv[i] = u0 + uv[i]! * (u1 - u0);
-      this.uv[i + 1] = v0 + uv[i + 1]! * (v1 - v0);
-    }
-    this.setVisible(false);
-  }
-
-  /** The vertices are the owner's: nothing is recomputed from the points. */
-  override updateVertices(): this {
-    this.dirty = false;
-    return this;
-  }
-
-  /** The uv are set once and kept. */
-  override updateUVs(): this {
-    return this;
-  }
-}
+import { StripRope } from './strip-rope';
 
 /**
  * The tongue as three baked triangle strips that only bend (WebGL): the outline (the whole

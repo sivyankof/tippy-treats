@@ -54,7 +54,7 @@ export const ZONE_RULES = {
      * Space only: a rush layer flies no faster than this, px/s, unless its nominal speed is
      * already higher (then the rush adds nothing). Showcase rushes are not capped.
      */
-    spaceMaxSpeed: 1500,
+    spaceMaxSpeed: 1350,
   },
   /** Roof: speed is `edge` at the walls and `centre` in the middle of the track (sine profile). */
   roof: {

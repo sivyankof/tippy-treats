@@ -1,40 +1,9 @@
 import * as Phaser from 'phaser';
 import { CUT_LOOK, CUT_PICTURE, CUT_TEXTURES } from '../../data/cut-look';
-import { smoothstep } from '../../util/math';
 import { bakeTexture } from '../ui/bake-texture';
 
 const { pad, outline } = CUT_PICTURE;
 const WHITE = 0xffffff;
-
-/** Half-thickness of the strand picture at distance `x` from its open end, for the stage `midShare`. */
-export function strandHalfThickness(x: number, midShare: number): number {
-  const { length, thick, flareHold } = CUT_PICTURE.strand;
-  const t = Math.min(1, Math.max(0, (x / length - flareHold) / (1 - flareHold)));
-  return (thick * (1 - (1 - midShare) * smoothstep(t))) / 2;
-}
-
-/** The outline of a strand as a polygon, grown by `grow` on both sides; open at the left end. */
-function strandPoints(midShare: number, grow: number): Phaser.Math.Vector2[] {
-  const { length, thick } = CUT_PICTURE.strand;
-  const cy = pad + outline + thick / 2;
-  const steps = 24;
-  const top: Phaser.Math.Vector2[] = [];
-  const bottom: Phaser.Math.Vector2[] = [];
-  for (let i = 0; i <= steps; i++) {
-    const x = (i / steps) * length;
-    const half = strandHalfThickness(x, midShare) + grow;
-    top.push(new Phaser.Math.Vector2(pad + x, cy - half));
-    bottom.push(new Phaser.Math.Vector2(pad + x, cy + half));
-  }
-  return [...top, ...bottom.reverse()];
-}
-
-/** Size of one strand picture, and where its thick end sits (origin share). */
-export function strandPictureSize(): { width: number; height: number; originY: number } {
-  const { length, thick } = CUT_PICTURE.strand;
-  const height = thick + 2 * (pad + outline);
-  return { width: length + 2 * pad, height, originY: 0.5 };
-}
 
 type Painter = (g: Phaser.GameObjects.Graphics, grow: number) => void;
 
@@ -92,81 +61,32 @@ function teardrop(
 }
 
 /**
- * Bakes the pictures of the cuts. Safe to call again: baked keys stay. Every one is white (the
- * outline picture too), so one picture serves every colour: the fill is tinted with the colour of
- * the body, the outline with its warm dark tone.
+ * Bakes the pictures of the cuts. Safe to call again: baked keys stay. Every one is white, so one
+ * picture serves every colour: it is tinted with the colour of the body.
  */
 export function bakeCutTextures(scene: Phaser.Scene): void {
-  const { width, height } = strandPictureSize();
-  CUT_PICTURE.strand.midShare.forEach((share, stage) => {
-    // The open left end has no cap line: both pictures start at the same x.
-    bakeBody(
-      scene,
-      CUT_TEXTURES.strand[stage]!,
-      CUT_TEXTURES.strandOutline[stage]!,
-      width,
-      height,
-      (g, grow) => g.fillPoints(strandPoints(share, grow), true),
-    );
+  const rib = ribbonPicture();
+  const { soft } = CUT_PICTURE.ribbon;
+  bakeTexture(scene, CUT_TEXTURES.ribbon, rib.width, rib.height, (g) => {
+    // Opaque in the middle, softening to nothing over `soft` px on both long sides: the edge of a
+    // bending strip is smooth without antialiasing of its triangles.
+    const inner = rib.width - 2 * pad;
+    for (let x = 0; x < inner; x++) {
+      const alpha = Math.min(1, (Math.min(x, inner - 1 - x) + 0.5) / soft);
+      g.fillStyle(WHITE, alpha).fillRect(pad + x, pad, 1, rib.height - 2 * pad);
+    }
   });
 
-  const { length, gloss } = CUT_PICTURE.strand;
-  bakeTexture(scene, CUT_TEXTURES.gloss, width, height, (g) => {
-    const cy = height / 2;
-    g.fillStyle(WHITE, 1).fillRoundedRect(
-      pad + length * gloss.from,
-      cy - gloss.thick / 2,
-      length * (gloss.to - gloss.from),
-      gloss.thick,
-      gloss.thick / 2,
-    );
+  const bead = beadPicture();
+  bakeTexture(scene, CUT_TEXTURES.bead, bead.width, bead.height, (g) => {
+    g.fillStyle(WHITE, 1).fillCircle(bead.width / 2, bead.height / 2, CUT_PICTURE.bead.size / 2);
   });
 
-  const bead = CUT_PICTURE.bead.size;
-  const beadSize = bead + 2 * (pad + outline);
-  bakeBody(scene, CUT_TEXTURES.bead, CUT_TEXTURES.beadOutline, beadSize, beadSize, (g, grow) =>
-    g.fillCircle(beadSize / 2, beadSize / 2, bead / 2 + grow),
-  );
-
-  const dot = CUT_PICTURE.dot;
-  bakeTexture(scene, CUT_TEXTURES.dot, dot.width + 2 * pad, dot.height + 2 * pad, (g) => {
-    g.fillStyle(WHITE, 1).fillEllipse(
-      pad + dot.width / 2,
-      pad + dot.height / 2,
-      dot.width,
-      dot.height,
-    );
-  });
-
-  const { width: blobW, height: blobH } = blobPictureSize();
-  bakeBody(scene, CUT_TEXTURES.blob, CUT_TEXTURES.blobOutline, blobW, blobH, (g, grow) => {
-    const { width: w, height: h } = CUT_PICTURE.blob;
-    const margin = pad + outline;
-    g.fillRoundedRect(margin - grow, margin - grow, w + 2 * grow, h + 2 * grow, w / 2 + grow);
-  });
-
-  const { width: dropW, height: dropH } = dropPictureSize();
-  bakeBody(scene, CUT_TEXTURES.drop, CUT_TEXTURES.dropOutline, dropW, dropH, (g, grow) => {
+  const drop = dropPicture();
+  bakeTexture(scene, CUT_TEXTURES.drop, drop.width, drop.height, (g) => {
     const { width: w, height: h } = CUT_PICTURE.drop;
-    teardrop(g, dropW / 2, pad + outline, w, h, grow);
-  });
-
-  const { width: hw, height: hh } = CUT_PICTURE.hang;
-  const { width: hangW, height: hangH } = hangPictureSize();
-  // The outline and the fill are separate pictures (outline tinted with the warm outline tone of
-  // the glaze, fill with the glaze), like every glaze body of the strands. The neck is open at the
-  // top: it grows out of the glaze, so the outline does not close over it.
-  bakeBody(scene, CUT_TEXTURES.hang, CUT_TEXTURES.hangOutline, hangW, hangH, (g, grow) => {
-    const cx = hangW / 2;
-    const r = hw / 2;
-    const top = pad + outline;
-    const neckTop = grow > 0 ? top : pad;
-    g.fillCircle(cx, top + hh - r, r + grow);
-    // The middle of the neck as one block: no seams where the triangles meet.
-    g.fillRect(cx - r * 0.45 - grow, neckTop, r * 0.9 + 2 * grow, top + hh - r - neckTop);
-    // A neck that widens into the round bottom: a drop that hangs on the glaze.
-    g.fillTriangle(cx - r * 0.45 - grow, top, cx - r - grow, top + hh - r, cx, top + hh - r);
-    g.fillTriangle(cx + r * 0.45 + grow, top, cx + r + grow, top + hh - r, cx, top + hh - r);
+    g.fillStyle(WHITE, 1);
+    teardrop(g, drop.width / 2, pad, w, h, 0);
   });
 
   const arm = CUT_LOOK.panic.arm;
@@ -205,22 +125,24 @@ export function bakeCutTextures(scene: Phaser.Scene): void {
   });
 }
 
-/** Size of the teardrop picture. */
-export function dropPictureSize(): { width: number; height: number } {
-  const margin = pad + outline;
-  const { width, height } = CUT_PICTURE.drop;
-  return { width: width + 2 * margin, height: height + 2 * margin };
+/** Size of a picture whose shape is `w` x `h` with the empty field around it. */
+function padded(w: number, h: number): { width: number; height: number } {
+  return { width: w + 2 * pad, height: h + 2 * pad };
 }
 
-/** Size of the hanging drop picture and where its neck starts (share of its height from the top). */
-export function hangPictureSize(): { width: number; height: number; originY: number } {
-  const margin = pad + outline;
-  const { width, height } = CUT_PICTURE.hang;
-  return {
-    width: width + 2 * margin,
-    height: height + 2 * margin,
-    originY: margin / (height + 2 * margin),
-  };
+/** Size of the strip picture (its strip is the middle, `pad` in from every side). */
+export function ribbonPicture(): { width: number; height: number } {
+  return padded(CUT_PICTURE.ribbon.width, CUT_PICTURE.ribbon.height);
+}
+
+/** Size of the disc picture. */
+export function beadPicture(): { width: number; height: number } {
+  return padded(CUT_PICTURE.bead.size, CUT_PICTURE.bead.size);
+}
+
+/** Size of the teardrop picture. */
+export function dropPicture(): { width: number; height: number } {
+  return padded(CUT_PICTURE.drop.width, CUT_PICTURE.drop.height);
 }
 
 /** Size of the arm picture and where its shoulder is (share of its height from the top). */
@@ -233,11 +155,4 @@ export function armPictureSize(): { width: number; height: number; originY: numb
     height: length + handPx / 2 + 2 * margin,
     originY: (margin + thick / 2) / (length + handPx / 2 + 2 * margin),
   };
-}
-
-/** Size of the picture of the bridge blob. */
-export function blobPictureSize(): { width: number; height: number } {
-  const margin = pad + outline;
-  const { width, height } = CUT_PICTURE.blob;
-  return { width: width + 2 * margin, height: height + 2 * margin };
 }

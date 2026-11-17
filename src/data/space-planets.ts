@@ -96,14 +96,15 @@ export const PLANET_LOOK = {
 } as const;
 
 /**
- * Where the planet hangs on the screen and how it drifts (docs/06, section 5). It sits in a free
- * lane: outside the dashed lap corridor (the width cap of its lap, centred on the tower) and
- * below the HUD; where no lane has room it is not shown.
+ * How the planet crosses the screen (docs/06, section 5). It floats down with the background: the progress of the
+ * tower through its lap (not the clock) carries it from above the top of the screen to below the bottom, one planet
+ * per lap, on alternating sides. It stays in a free lane: outside the dashed lap corridor (the width cap of its
+ * lap, centred on the tower); where no lane has room at `minScale` it is not shown. While it would overlap the
+ * stripe of the flying layer or come within the HUD gap it is faded out, and it is visible elsewhere.
  */
 export const PLANET_PLACE = {
-  /** Start x (left) and y as shares of the screen; the HUD pushes the planet down. */
+  /** The planet's centre in its lane, as a share of the screen width from the screen edge on its side. */
   x: 0.11,
-  y: 0.28,
   scale: 0.6,
   /**
    * Where the planet has no room at `scale`, it is shown smaller, in steps of `scaleStep`, down to
@@ -114,27 +115,32 @@ export const PLANET_PLACE = {
   scaleStep: 0.01,
   /** Clear space between the planet (drift included) and the stripe around the flying layer's line. */
   rowGap: 24,
+  /** The planet fades out toward the stripe and the HUD plates over this many px (it is fully faded where it would touch them). */
+  fadeFeatherPx: 60,
   /** Clear space between the planet and a dashed edge line, drift included. */
   lineGap: 40,
   /** How far the top layer may stand off the screen centre, so the corridor is widened by this on each side. */
   swayPx: 40,
   /** A planet may hang off the screen edge, but at least this share of its width stays in view. */
   minVisible: 0.5,
-  /** Full and lite levels; the minimal level holds the planet still. */
+  /** The planet enters above the top edge; by a seeded draw it starts up to this share of the screen height higher (it comes into view later in the lap). */
+  enterVary: 0.08,
+  /** Full and lite levels, on top of the scroll; the minimal level has no drift. */
   drift: {
     bob: { px: 10, ms: 6400 },
     swing: { deg: 3, ms: 8200 },
   },
 } satisfies {
   x: number;
-  y: number;
   scale: number;
   minScale: number;
   scaleStep: number;
   rowGap: number;
+  fadeFeatherPx: number;
   lineGap: number;
   swayPx: number;
   minVisible: number;
+  enterVary: number;
   drift: Pick<HoverSpec, 'bob' | 'swing'>;
 };
 

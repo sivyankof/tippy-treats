@@ -13,6 +13,7 @@ import {
   dropPoint,
   lickFace,
   lickFrame,
+  lickStartMs,
   lipsTongue,
   newLickFace,
   newLickFrame,
@@ -140,7 +141,7 @@ export class FaceLick {
       devWarn('Lick skipped: the tongue is not available');
       return false;
     }
-    this.ms = 0;
+    this.ms = lickStartMs(scene, kind, style);
     this.scene = scene;
     this.kind = kind;
     this.shape = shape;
@@ -149,9 +150,9 @@ export class FaceLick {
     this.glanceMs = 0;
     this.envyMs = -1;
     this.sinceCoverL = this.sinceCoverR = Infinity;
-    lickFrame(scene, 0, style, this.frame);
+    lickFrame(scene, this.ms, style, this.frame);
     const until = scene === 'big' ? 'happy' : 'done';
-    this.host.react('lick', beatStartMs(scene, until, style));
+    this.host.react('lick', beatStartMs(scene, until, style) - this.ms);
     tongue.clear();
     return true;
   }

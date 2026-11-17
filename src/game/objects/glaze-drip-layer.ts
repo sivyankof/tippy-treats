@@ -6,6 +6,7 @@ import { artRecipe, faceRecipe } from '../../data/creature-looks';
 import type { CreatureId } from '../../data/creatures';
 import { GLAZE_DRIPS } from '../../data/glaze-drips';
 import { backOut, clamp01 } from '../../util/math';
+import { shade } from '../../util/color';
 import {
   dripCountFor,
   dripDurationMs,
@@ -32,7 +33,13 @@ import { glazeWave, waveDripSpots, type WaveDripSpot } from './glaze-wave';
 import { plainLooks } from './plain-look';
 import { chainDistance, lickedDripShare } from './lick-plan';
 import { RAINBOW_LOOK } from '../../data/rainbow-look';
-import { DRIP_MIN_LAYER_WIDTH, dripSpots, glazeBottomY, layerBox } from './layer-draw';
+import {
+  DRIP_MIN_LAYER_WIDTH,
+  dripSpots,
+  GLAZE_OUTLINE,
+  glazeBottomY,
+  layerBox,
+} from './layer-draw';
 
 /** The baked drips of a layer. */
 interface DripRecipe {
@@ -71,6 +78,11 @@ function sizeFor(creature: CreatureId | null): DripSize {
 /** Outline of the growing drips of a creature layer (none for a plain layer: the default tone). */
 function outlineOf(creature: CreatureId | null): number | undefined {
   return creature ? creatureColors(creature).glazeOutline : undefined;
+}
+
+/** The dark tone of the glaze edge of a layer (the line under the glaze wave, the outline of its drips). */
+export function glazeEdgeTone(creature: CreatureId | null, glaze: number): number {
+  return outlineOf(creature) ?? shade(glaze, GLAZE_OUTLINE);
 }
 
 /**

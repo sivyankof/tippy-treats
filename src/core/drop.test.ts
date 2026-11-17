@@ -186,14 +186,14 @@ describe('overhangSide', () => {
 describe('layerSpeed', () => {
   it('follows the speed curve', () => {
     expect(layerSpeed(0, 1)).toBe(600);
-    expect(layerSpeed(10, 1)).toBe(690);
+    expect(layerSpeed(10, 1)).toBeCloseTo(678.7, 1);
     expect(layerSpeed(88, 1)).toBeCloseTo(speedCurve(88));
-    expect(layerSpeed(160, 1)).toBe(1400);
-    expect(layerSpeed(500, 1)).toBe(1400);
+    expect(layerSpeed(160, 1)).toBe(1250);
+    expect(layerSpeed(500, 1)).toBe(1250);
   });
 
   it('applies the ability multiplier on top of the curve', () => {
     expect(layerSpeed(0, 1.05)).toBeCloseTo(630);
-    expect(layerSpeed(500, 1.1)).toBeCloseTo(1540);
+    expect(layerSpeed(500, 1.1)).toBeCloseTo(1375);
   });
 });

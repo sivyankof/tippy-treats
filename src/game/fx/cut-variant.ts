@@ -2,10 +2,8 @@ import { Rng } from '../../core/rng';
 import { CUT_LOOK, type CutVariantName } from '../../data/cut-look';
 import type { EffectLevel } from '../../data/effect-levels';
 
-/** What a cut shows besides the crumbs. */
+/** What a cut shows besides the falling piece and the crumbs (a piece always falls, thin ones too). */
 export interface CutVariant {
-  /** The bitten-off part falls as a piece; a thin sliver gives only crumbs. */
-  piece: boolean;
   /** Glaze strands between the layer and the piece. */
   strands: boolean;
   /** The piece is scared and waves its arms. */
@@ -27,7 +25,7 @@ export interface CutChoice {
   lastBigLayer: number | null;
 }
 
-const PLAIN: CutVariant = { piece: true, strands: false, panic: false, big: false };
+const PLAIN: CutVariant = { strands: false, panic: false, big: false };
 
 /** A piece wide enough to carry a face. */
 export function roomForFace(pieceWidth: number): boolean {
@@ -40,7 +38,6 @@ export function roomForFace(pieceWidth: number): boolean {
  * it. Both chances are drawn every time, so one never shifts the other.
  */
 export function chooseCutVariant(choice: CutChoice): CutVariant {
-  if (choice.share < CUT_LOOK.thinShare) return { ...PLAIN, piece: false };
   const random = new Rng(choice.seed).fork(CUT_LOOK.stream).fork(String(choice.layerNumber));
   const strandRoll = random.next();
   const panicRoll = random.next();
@@ -49,10 +46,9 @@ export function chooseCutVariant(choice: CutChoice): CutVariant {
     choice.lastBigLayer === null ||
     choice.layerNumber - choice.lastBigLayer >= CUT_LOOK.bigEveryLayers;
   if (choice.share > CUT_LOOK.bigShare && bigAllowed) {
-    return { piece: true, strands: true, panic: face, big: true };
+    return { strands: true, panic: face, big: true };
   }
   return {
-    piece: true,
     strands: strandRoll < CUT_LOOK.strandChance,
     panic: face && panicRoll < CUT_LOOK.panicChance,
     big: false,
@@ -69,7 +65,7 @@ export function forcedCutVariant(name: CutVariantName): CutVariant {
     case 'panic':
       return { ...PLAIN, panic: true };
     case 'big':
-      return { piece: true, strands: true, panic: true, big: true };
+      return { strands: true, panic: true, big: true };
   }
 }
 

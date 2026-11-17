@@ -72,15 +72,15 @@ describe('roofFactor and flyingSpeed', () => {
 
   it('caps a Space rush at spaceMaxSpeed, never below the nominal speed; Showcase is not capped', () => {
     const { speedMult, spaceMaxSpeed } = ZONE_RULES.rush;
-    expect(rushSpeed(1400, SHOWCASE_ZONE_INDEX)).toBeCloseTo(1400 * speedMult);
-    expect(rushSpeed(1290, SPACE_ZONE_INDEX)).toBe(spaceMaxSpeed);
-    expect(rushSpeed(1400, SPACE_ZONE_INDEX)).toBe(spaceMaxSpeed);
+    expect(rushSpeed(1250, SHOWCASE_ZONE_INDEX)).toBeCloseTo(1250 * speedMult);
+    expect(rushSpeed(1178, SPACE_ZONE_INDEX)).toBe(spaceMaxSpeed);
+    expect(rushSpeed(1250, SPACE_ZONE_INDEX)).toBe(spaceMaxSpeed);
     expect(rushSpeed(1000, SPACE_ZONE_INDEX)).toBeCloseTo(1000 * speedMult);
     // Lemon: the nominal speed is already above the cap, the rush adds nothing and takes nothing.
-    expect(rushSpeed(1680, SPACE_ZONE_INDEX)).toBe(1680);
+    expect(rushSpeed(1500, SPACE_ZONE_INDEX)).toBe(1500);
     const space = layerOf(
       rules({ zoneIndex: SPACE_ZONE_INDEX, rule: 'showcase', rush: true }),
-      1400,
+      1250,
     );
     space.windupMs = 0;
     expect(flyingSpeed(space)).toBe(spaceMaxSpeed);

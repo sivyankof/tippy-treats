@@ -11,6 +11,12 @@ import { adsDev, iapDev } from '../../services';
 import { gameState, sessionTally } from '../../state';
 import { openCheckpointDemo } from './checkpoint-demo';
 import { cycleDebugLevel, cycleDebugSlot, getDebugTeam } from './debug-team';
+import {
+  CUT_BUTTON_VARIANTS,
+  SQUASH_BUTTON_KINDS,
+  triggerCut,
+  triggerSquash,
+} from './debug-triggers';
 
 const FONT_SIZE = 30;
 const MARGIN = 20;
@@ -34,6 +40,9 @@ const BAKER_LABEL = 'baker +1';
 const CREATURES_LABEL = 'creatures +1';
 const CHECKPOINT_LABEL = 'Checkpoint window';
 const RESET_PURCHASES_LABEL = 'Reset stub purchases';
+/** Prefixes of the buttons that start an effect in the run (there is no console on a phone). */
+const CUT_PREFIX = 'cut';
+const TOPPER_PREFIX = 'top';
 
 /** The effects level, with a mark when the automatic mode set it. */
 function fxLabel(): string {
@@ -55,6 +64,7 @@ export class DebugPanel {
   private readonly adsEntry: Phaser.GameObjects.Text;
   private readonly checkpointEntry: Phaser.GameObjects.Text;
   private readonly purchasesEntry: Phaser.GameObjects.Text;
+  private readonly effectEntries: Phaser.GameObjects.Text[] = [];
   private readonly entries: Phaser.GameObjects.Text[];
   private teamKey = '';
 
@@ -127,6 +137,16 @@ export class DebugPanel {
     this.purchasesEntry = entry(() => iapDev?.resetPurchases(), PALETTE.panel).setText(
       RESET_PURCHASES_LABEL,
     );
+    for (const variant of CUT_BUTTON_VARIANTS) {
+      this.effectEntries.push(
+        entry(() => triggerCut(variant), PALETTE.panel).setText(`${CUT_PREFIX} ${variant}`),
+      );
+    }
+    for (const kind of SQUASH_BUTTON_KINDS) {
+      this.effectEntries.push(
+        entry(() => triggerSquash(kind), PALETTE.panel).setText(`${TOPPER_PREFIX} ${kind}`),
+      );
+    }
     this.showAdsMode();
     this.entries = [
       ...this.slotEntries,
@@ -138,6 +158,7 @@ export class DebugPanel {
       this.adsEntry,
       this.checkpointEntry,
       this.purchasesEntry,
+      ...this.effectEntries,
       this.applyEntry,
     ];
   }

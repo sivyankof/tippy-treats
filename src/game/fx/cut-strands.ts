@@ -1,81 +1,90 @@
 import type * as Phaser from 'phaser';
 import type { Rng } from '../../core/rng';
 import { CUT_LOOK, CUT_PICTURE, CUT_TEXTURES } from '../../data/cut-look';
-import { mixColor } from '../../util/color';
-import { clamp01, DEG_TO_RAD, lerp, smoothstep } from '../../util/math';
+import { shade } from '../../util/color';
+import { clamp01, lerp, smoothstep, TWO_PI } from '../../util/math';
 import { DEPTH } from '../depth';
 import type { LayerView } from '../objects/layer-view';
+import { StripRope } from '../objects/strip-rope';
 import {
-  middleShare,
-  recoilAlpha,
+  beadGrow,
+  beadShare,
+  curvePoint,
+  HalfShape,
+  halfUvs,
+  middleThickness,
+  outlineOf,
+  profileThickness,
+  quadUvs,
+  recoilAnchorScale,
   recoilLength,
-  snapDue,
+  recoilWhip,
+  sagControl,
   snapTimeMs,
-  stagePair,
-  strandClock,
-  type StagePair,
-  type StrandClock,
-} from './cut-timeline';
-import { strandPictureSize } from './cut-textures';
-import { outlineColor } from './plain-style';
+  writeHalf,
+  writeQuad,
+  type StrandTrait,
+  type Vec,
+} from './cut-strand-geometry';
+import { beadPicture, dropPicture, ribbonPicture } from './cut-textures';
 
 const S = CUT_LOOK.strands;
 const MAX_STRANDS = S.traits.length;
-const MAX_BEADS = 2;
-const MAX_DROPS = 3;
-const LENGTH = CUT_PICTURE.strand.length;
-const BEAD_SIZE = CUT_PICTURE.bead.size;
-const BLOB_W = CUT_PICTURE.blob.width;
-const DROP_W = CUT_PICTURE.drop.width;
-const THICK = CUT_PICTURE.strand.thick;
-const STAGES = CUT_PICTURE.strand.midShare;
-const WHITE = 0xffffff;
+const PAD = CUT_PICTURE.pad;
+/** A snapped half never gets shorter than this share: its direction stays known. */
+const MIN_LENGTH = 0.03;
 
-interface Vec {
-  x: number;
-  y: number;
+/** The three strips of a half: outline under, fill over, a light stripe on top. */
+interface Half {
+  shape: HalfShape;
+  outline: StripRope;
+  fill: StripRope;
+  gloss: StripRope;
+  /** After the snap: the free end and the control point from the anchor (the piece half's in the piece's own turn). */
+  end: Vec;
+  control: Vec;
+  /** Thickness at the break when it snapped. */
+  tip: number;
 }
 
-type Image = Phaser.GameObjects.Image;
-/** A body: its outline picture (under) and its fill picture (over). */
-type Pair = [outline: Image, fill: Image];
+/** A round body: outline, fill inside it and a light dot (quads on the disc or the drop picture). */
+interface Body {
+  outline: StripRope;
+  fill: StripRope;
+  dot: StripRope;
+}
 
-/** One strand: where it holds on, its look and what it remembers of the snap. */
+interface Bead {
+  on: boolean;
+  half: 0 | 1;
+  start: number;
+  /** Where it is: share of its half from the anchor. */
+  share: number;
+  size: number;
+  body: Body;
+}
+
 interface Strand {
   on: boolean;
-  trait: (typeof S.traits)[number];
-  /** Where it holds on the layer (world, follows the layer) and on the piece (local, from the piece centre). */
+  trait: StrandTrait;
+  /** Where it holds on the layer (world) and from the layer centre; on the piece (from its centre, unturned) and now (world). */
   a: Vec;
-  /** Where it holds on the layer, from the centre of the layer. */
   layerOff: Vec;
   local: Vec;
-  beads: number;
-  beadPhase: number;
+  b: Vec;
+  halves: [Half, Half];
+  beads: [Bead, Bead];
   snapped: boolean;
-  snapRot: number;
-  /** The halves at the snap: from the layer anchor and from the piece anchor to the middle. */
-  stubA: Vec;
-  stubB: Vec;
-  /** Two halves (layer side, piece side), two pictures each: the neighbouring stages blend. */
-  halves: [[Pair, Pair], [Pair, Pair]];
-  /** A light stripe along each half. */
-  gloss: [Image, Image];
-  /** Round caps: where it holds on the layer and on the piece; the knuckle in the middle, or the tips of the stubs. */
-  caps: [Pair, Pair, Pair, Pair];
-  beadPics: { pair: Pair; dot: Image }[];
-  /** The bridge of glaze at the let-go. */
-  blob: Pair;
-  /** Every picture of the strand, to hide it. */
-  all: Image[];
 }
 
 interface Drop {
-  pair: Pair;
   on: boolean;
+  body: Body;
   x: number;
   y: number;
   vx: number;
   vy: number;
+  size: number;
   ageMs: number;
 }
 
@@ -96,123 +105,101 @@ export interface StrandStart {
   /** Centre y of the layer and of the piece at the start. */
   y: number;
   pieceWidth: number;
+  /** Sideways speed of the piece (px/s): the drops take a share of it. */
+  driftSpeed: number;
   glaze: number;
+  /** The dark tone of the glaze edge of this layer: the outline. */
+  outline: number;
 }
 
-const tmpClock: StrandClock = { phase: 'bridge', stretch: 0, recoil: 0 };
-const tmpPair: StagePair = { low: 0, high: 1, weight: 0 };
-
-/** Pictures of a pair are placed together. */
-function placePair(
-  pair: Pair,
-  x: number,
-  y: number,
-  rotation: number,
-  scaleX: number,
-  scaleY: number,
-  alpha: number,
-): void {
-  const shown = alpha > 0.01;
-  for (const image of pair) {
-    image.setPosition(x, y).setRotation(rotation).setScale(scaleX, scaleY).setAlpha(alpha);
-    image.setVisible(shown);
-  }
-}
-
-function hidePair(pair: Pair): void {
-  pair[0].setVisible(false);
-  pair[1].setVisible(false);
-}
+const tmp: Vec = { x: 0, y: 0 };
+const control: Vec = { x: 0, y: 0 };
+const freeEnd: Vec = { x: 0, y: 0 };
 
 /**
- * The glaze strands of one cut: a few tapered ribbons (baked pictures stretched and turned between a
- * point on the layer and a point on the piece), beads sliding down them, the snap with the stubs
- * springing back, and the drops that fall. Every body is an outline picture under and a fill picture
- * over, and all outlines lie under all fills, so the glaze has no seams inside; a light stripe runs
- * along each strand. Pooled pictures of the shared atlas, nothing is redrawn.
+ * The glaze strands of one cut (docs/06, "Срезы с характером"): 2-3 thin ribbons that sag between
+ * the cut edge of the layer and the piece, beads sliding down them, a snap at the thinnest point
+ * one strand after another, the ends springing back into the glaze and the beads falling as drops.
+ * Every ribbon is a bending strip (`Rope`) of one white picture of the shared atlas, tinted: all
+ * outlines first, then all fills, then the light stripes, so the strands are one batch of strips and
+ * the glaze has no seams. Nothing is redrawn; only vertices move.
  */
 export class CutStrands {
   private readonly strands: Strand[] = [];
   private readonly drops: Drop[] = [];
+  private readonly ropes: StripRope[] = [];
   private start: StrandStart | null = null;
   private snapCount = 0;
-  private readonly mid: Vec = { x: 0, y: 0 };
-  private readonly point: Vec = { x: 0, y: 0 };
-  /** Centre of the layer the strands hold on to, now and when the cut began. */
   private readonly center: Vec = { x: 0, y: 0 };
   private readonly center0: Vec = { x: 0, y: 0 };
-  private readonly originX: number;
+  private readonly ribbonUv: Float32Array;
+  private readonly quadUv = quadUvs();
 
   constructor(private readonly scene: Phaser.Scene) {
-    this.originX = CUT_PICTURE.pad / strandPictureSize().width;
-    for (let i = 0; i < MAX_STRANDS; i++) this.strands.push(this.makeStrand(i));
-    for (let i = 0; i < MAX_DROPS; i++) {
+    const rib = ribbonPicture();
+    this.ribbonUv = halfUvs(PAD / rib.width, (rib.width - PAD) / rib.width);
+    for (let i = 0; i < MAX_STRANDS; i++) this.strands.push(this.makeStrand(S.traits[i]!));
+    for (let i = 0; i < MAX_STRANDS; i++) {
       this.drops.push({
-        pair: this.pair(CUT_TEXTURES.dropOutline, CUT_TEXTURES.drop),
         on: false,
+        body: this.body(CUT_TEXTURES.drop),
         x: 0,
         y: 0,
         vx: 0,
         vy: 0,
+        size: 0,
         ageMs: 0,
       });
     }
   }
 
-  private image(key: string, depth: number, originX = 0.5): Image {
-    return this.scene.add
-      .image(0, 0, key)
-      .setOrigin(originX, 0.5)
-      .setDepth(depth)
-      .setVisible(false);
+  private rope(key: string, uv: Float32Array, depth: number): StripRope {
+    const rope = new StripRope(this.scene, key, uv);
+    this.scene.add.existing(rope);
+    rope.setDepth(depth);
+    this.ropes.push(rope);
+    return rope;
   }
 
-  private pair(outlineKey: string, fillKey: string, originX = 0.5): Pair {
-    return [
-      this.image(outlineKey, DEPTH.cutGlazeOutline, originX),
-      this.image(fillKey, DEPTH.cutGlazeFill, originX),
-    ];
+  private body(key: string): Body {
+    return {
+      outline: this.rope(key, this.quadUv, DEPTH.cutGlazeOutline),
+      fill: this.rope(key, this.quadUv, DEPTH.cutGlazeFill),
+      dot: this.rope(CUT_TEXTURES.bead, this.quadUv, DEPTH.cutGlazeGloss),
+    };
   }
 
-  private makeStrand(i: number): Strand {
-    const all: Image[] = [];
-    const track = (pair: Pair): Pair => {
-      all.push(pair[0], pair[1]);
-      return pair;
+  private half(): Half {
+    return {
+      shape: new HalfShape(),
+      outline: this.rope(CUT_TEXTURES.ribbon, this.ribbonUv, DEPTH.cutGlazeOutline),
+      fill: this.rope(CUT_TEXTURES.ribbon, this.ribbonUv, DEPTH.cutGlazeFill),
+      gloss: this.rope(CUT_TEXTURES.ribbon, this.ribbonUv, DEPTH.cutGlazeGloss),
+      end: { x: 0, y: 0 },
+      control: { x: 0, y: 0 },
+      tip: 0,
     };
-    const half = (): Pair =>
-      track(this.pair(CUT_TEXTURES.strandOutline[0], CUT_TEXTURES.strand[0], this.originX));
-    const cap = (): Pair => track(this.pair(CUT_TEXTURES.beadOutline, CUT_TEXTURES.bead));
-    const gloss = (): Image => {
-      const image = this.image(CUT_TEXTURES.gloss, DEPTH.cutGlazeGloss, this.originX);
-      all.push(image);
-      return image;
-    };
+  }
+
+  private makeStrand(trait: StrandTrait): Strand {
+    const bead = (half: 0 | 1): Bead => ({
+      on: false,
+      half,
+      start: 0,
+      share: 0,
+      size: 0,
+      body: this.body(CUT_TEXTURES.bead),
+    });
     return {
       on: false,
-      trait: S.traits[i]!,
+      trait,
       a: { x: 0, y: 0 },
       layerOff: { x: 0, y: 0 },
       local: { x: 0, y: 0 },
-      beads: 0,
-      beadPhase: 0,
+      b: { x: 0, y: 0 },
+      halves: [this.half(), this.half()],
+      beads: [bead(0), bead(1)],
       snapped: false,
-      snapRot: 0,
-      stubA: { x: 0, y: 0 },
-      stubB: { x: 0, y: 0 },
-      halves: [
-        [half(), half()],
-        [half(), half()],
-      ],
-      gloss: [gloss(), gloss()],
-      caps: [cap(), cap(), cap(), cap()],
-      beadPics: Array.from({ length: MAX_BEADS }, () => {
-        const dot = this.image(CUT_TEXTURES.dot, DEPTH.cutGlazeGloss);
-        all.push(dot);
-        return { pair: track(this.pair(CUT_TEXTURES.beadOutline, CUT_TEXTURES.bead)), dot };
-      }),
-      blob: track(this.pair(CUT_TEXTURES.blobOutline, CUT_TEXTURES.blob)),
-      all,
     };
   }
 
@@ -220,56 +207,52 @@ export class CutStrands {
     this.stop();
     this.start = start;
     this.snapCount = 0;
-    const light = mixColor(start.glaze, WHITE, S.gloss.mix);
-    const outline = outlineColor(start.glaze);
+    const light = shade(start.glaze, S.gloss.lightLift);
     const count = random.int(S.count[0], S.count[1]);
     const inset = Math.min(S.inset, start.pieceWidth * S.insetMaxShare);
-    this.center.x = this.center0.x = 0;
-    this.center.y = this.center0.y = 0;
-    if (start.layerCenter(this.center0)) {
-      this.center.x = this.center0.x;
-      this.center.y = this.center0.y;
-    }
-    const tintPair = (pair: Pair): void => {
-      pair[0].setTint(outline);
-      pair[1].setTint(start.glaze);
+    this.center0.x = 0;
+    this.center0.y = start.y;
+    start.layerCenter(this.center0);
+    const tint = (body: { outline: StripRope; fill: StripRope }): void => {
+      body.outline.setColors(start.outline);
+      body.fill.setColors(start.glaze);
     };
-    for (const drop of this.drops) tintPair(drop.pair);
+    for (const drop of this.drops) {
+      tint(drop.body);
+      drop.body.dot.setColors(light);
+    }
     this.strands.forEach((strand, i) => {
       strand.on = i < count;
       if (!strand.on) return;
-      for (const pair of strand.halves) for (const p of pair) tintPair(p);
-      for (const pair of strand.caps) tintPair(pair);
-      for (const bead of strand.beadPics) {
-        tintPair(bead.pair);
-        bead.dot.setTint(light);
+      for (const half of strand.halves) {
+        tint(half);
+        half.gloss.setColors(light);
       }
-      tintPair(strand.blob);
-      for (const g of strand.gloss) g.setTint(light);
-      const bandY = lerp(S.bandTop, S.bandBottom, strand.trait.band);
-      const step = i * S.anchorStepPx;
-      strand.a.x = start.edgeX - start.side * (inset + step);
-      strand.a.y = start.y + bandY;
+      const { trait } = strand;
+      strand.a.x = start.edgeX - start.side * inset;
+      strand.a.y = start.y + lerp(S.bandTop, S.bandBottom, trait.layerBand);
       strand.layerOff.x = strand.a.x - this.center0.x;
       strand.layerOff.y = strand.a.y - this.center0.y;
-      strand.local.x = -start.side * (start.pieceWidth / 2 - inset - step);
-      strand.local.y = bandY;
-      strand.beads = random.int(S.beads.count[0], S.beads.count[1]);
-      strand.beadPhase = random.next();
+      strand.local.x = -start.side * (start.pieceWidth / 2 - inset);
+      strand.local.y = lerp(S.bandTop, S.bandBottom, trait.pieceBand);
       strand.snapped = false;
+      const second = random.next() < S.beads.secondShare;
+      strand.beads.forEach((bead, b) => {
+        tint(bead.body);
+        bead.body.dot.setColors(light);
+        bead.on = b === 0 || second;
+        bead.start = S.beads.from + random.next() * S.beads.fromSpread;
+        bead.share = bead.start;
+        bead.size = S.beads.sizePx[b]! - i * S.beads.stepPx;
+      });
     });
   }
 
   stop(): void {
     this.start = null;
-    for (const strand of this.strands) {
-      strand.on = false;
-      this.hideStrand(strand);
-    }
-    for (const drop of this.drops) {
-      drop.on = false;
-      hidePair(drop.pair);
-    }
+    for (const strand of this.strands) strand.on = false;
+    for (const drop of this.drops) drop.on = false;
+    for (const rope of this.ropes) rope.setVisible(false);
   }
 
   /**
@@ -279,7 +262,6 @@ export class CutStrands {
   update(sinceMs: number, dtMs: number, piece: LayerView, hooks: StrandHooks): void {
     const start = this.start;
     if (!start) return;
-    let live = false;
     // The layer sways: the anchors on it go with it.
     if (start.layerCenter(this.center)) {
       for (const strand of this.strands) {
@@ -287,422 +269,313 @@ export class CutStrands {
         strand.a.y = this.center.y + strand.layerOff.y;
       }
     }
-    for (const strand of this.strands) {
-      if (strand.on && this.poseStrand(strand, start, sinceMs, piece, hooks)) live = true;
-    }
-    if (this.updateDrops(dtMs)) live = true;
-    if (!live && sinceMs > snapTimeMs(0) + S.recoilMs) this.stop();
-  }
-
-  private poseStrand(
-    strand: Strand,
-    start: StrandStart,
-    sinceMs: number,
-    piece: LayerView,
-    hooks: StrandHooks,
-  ): boolean {
-    const { trait } = strand;
-    const clock = strandClock(sinceMs, trait.snapShift, tmpClock);
-    if (sinceMs < 0) {
-      this.hideStrand(strand);
-      return false;
-    }
     const cos = Math.cos(piece.rotation);
     const sin = Math.sin(piece.rotation);
-    const bx = piece.x + cos * strand.local.x - sin * strand.local.y;
-    const by = piece.y + sin * strand.local.x + cos * strand.local.y;
-    const thick = trait.thick * (S.endThick / THICK);
-    // A long frame can jump over the whole recoil: the snap still happens (the drop on the layer, the cue).
-    if (snapDue(clock.phase) && !strand.snapped) {
-      this.snap(strand, start, sinceMs, bx, by, piece.rotation, hooks);
-    }
-    if (clock.phase === 'gone') {
-      this.hideStrand(strand);
-      return false;
-    }
-    if (clock.phase === 'recoil') {
-      this.poseRecoil(strand, start, clock.recoil, bx, by, piece.rotation, thick);
-      return true;
-    }
-    const mid = this.middlePoint(strand, start, bx, by, sinceMs, clock.stretch);
-    const share = middleShare(clock.stretch);
-    stagePair(share, tmpPair);
-    // The caps hold the ends round: they grow with the bridge, so nothing pops in.
-    const grow = smoothstep(sinceMs / S.bridgeMs);
-    const anchor = this.capScale(thick * THICK * S.anchorCap) * grow;
-    placePair(strand.caps[0], strand.a.x, strand.a.y, 0, anchor, anchor, 1);
-    placePair(strand.caps[1], bx, by, 0, anchor, anchor, 1);
-    const knuckle = this.capScale(thick * THICK * share);
-    placePair(strand.caps[2], mid.x, mid.y, 0, knuckle, knuckle, 1);
-    hidePair(strand.caps[3]);
-    this.poseHalf(strand, 0, strand.a.x, strand.a.y, mid.x, mid.y, thick, 0, 1, share, tmpPair);
-    this.poseHalf(strand, 1, bx, by, mid.x, mid.y, thick, 0, 1, share, tmpPair);
-    this.poseBeads(strand, mid, bx, by, sinceMs, clock.stretch, thick);
-    this.poseBlob(strand, mid, sinceMs);
-    return true;
-  }
-
-  /** Scale of a cap picture for a round body of `diameter` px. */
-  private capScale(diameter: number): number {
-    return diameter / BEAD_SIZE;
-  }
-
-  /** The middle of a strand: halfway, bowed outwards (the piece drifts out), drooping, wobbling a little. */
-  private middlePoint(
-    strand: Strand,
-    start: StrandStart,
-    bx: number,
-    by: number,
-    sinceMs: number,
-    stretch: number,
-  ): Vec {
-    const ax = strand.a.x;
-    const ay = strand.a.y;
-    const dx = bx - ax;
-    const dy = by - ay;
-    const len = Math.hypot(dx, dy);
-    const mid = this.mid;
-    mid.x = (ax + bx) / 2;
-    mid.y = (ay + by) / 2 + Math.min(S.droopMaxPx, len * S.droopShare) * strand.trait.sag;
-    if (len > 1) {
-      let nx = -dy / len;
-      let ny = dx / len;
-      if (nx * start.side < 0) {
-        nx = -nx;
-        ny = -ny;
-      }
-      const bow =
-        Math.min(S.bowMaxPx, len * S.bowShare) *
-        strand.trait.sag *
-        smoothstep(stretch / S.bowRampShare);
-      const phase = (sinceMs / S.wobbleMs) * Math.PI * 2 + strand.trait.band * S.wobbleBandPhase;
-      const shift = bow + Math.sin(phase) * S.wobblePx * stretch;
-      mid.x += nx * shift;
-      mid.y += ny * shift;
-    }
-    return mid;
-  }
-
-  /**
-   * Poses half `h` of a strand from (fx, fy) to (tx, ty), turned by `turn`: the two stage pictures of
-   * `pair` blend, the light stripe runs along the upper side. `share` is the thickness of its far end.
-   */
-  private poseHalf(
-    strand: Strand,
-    h: 0 | 1,
-    fx: number,
-    fy: number,
-    tx: number,
-    ty: number,
-    thick: number,
-    turn: number,
-    alpha: number,
-    share: number,
-    pair: StagePair,
-  ): void {
-    const dx = tx - fx;
-    const dy = ty - fy;
-    const len = Math.hypot(dx, dy);
-    const [low, high] = strand.halves[h];
-    const gloss = strand.gloss[h];
-    if (len < 1.5) {
-      hidePair(low);
-      hidePair(high);
-      gloss.setVisible(false);
-      return;
-    }
-    const angle = Math.atan2(dy, dx) + turn;
-    this.showStage(low, pair.low, fx, fy, angle, len, thick, alpha * (1 - pair.weight));
-    this.showStage(high, pair.high, fx, fy, angle, len, thick, alpha * pair.weight);
-    // The stripe lifts to the side that is up in the world and thins with the strand.
-    let nx = Math.sin(angle);
-    let ny = -Math.cos(angle);
-    if (ny > 0) {
-      nx = -nx;
-      ny = -ny;
-    }
-    const lift = (CUT_PICTURE.strand.gloss.lift * THICK * thick * (1 + share)) / 4;
-    gloss
-      .setPosition(fx + nx * lift, fy + ny * lift)
-      .setRotation(angle)
-      .setScale(len / LENGTH, thick * share)
-      .setAlpha(alpha * S.gloss.alpha * smoothstep((share - STAGES[STAGES.length - 1]!) * 4))
-      .setVisible(alpha > 0.05);
-  }
-
-  private showStage(
-    pair: Pair,
-    stage: number,
-    x: number,
-    y: number,
-    angle: number,
-    len: number,
-    thick: number,
-    alpha: number,
-  ): void {
-    if (alpha <= 0.01) {
-      hidePair(pair);
-      return;
-    }
-    const [outline, fill] = pair;
-    const key = CUT_TEXTURES.strand[stage]!;
-    if (fill.texture.key !== key) {
-      fill.setTexture(key).setOrigin(this.originX, 0.5);
-      outline.setTexture(CUT_TEXTURES.strandOutline[stage]!).setOrigin(this.originX, 0.5);
-    }
-    placePair(pair, x, y, angle, len / LENGTH, thick, alpha);
-  }
-
-  private poseBeads(
-    strand: Strand,
-    mid: Vec,
-    bx: number,
-    by: number,
-    sinceMs: number,
-    stretch: number,
-    thick: number,
-  ): void {
-    for (let b = 0; b < strand.beadPics.length; b++) {
-      const { pair, dot } = strand.beadPics[b]!;
-      if (b >= strand.beads || sinceMs < S.bridgeMs) {
-        hidePair(pair);
-        dot.setVisible(false);
+    for (const strand of this.strands) {
+      if (!strand.on) continue;
+      // The piece half grows out of the piece's cut face, which turns with it.
+      strand.halves[1].shape.faceX = -sin;
+      strand.halves[1].shape.faceY = cos;
+      strand.b.x = piece.x + cos * strand.local.x - sin * strand.local.y;
+      strand.b.y = piece.y + sin * strand.local.x + cos * strand.local.y;
+      if (sinceMs < 0) {
+        this.hideStrand(strand);
         continue;
       }
-      // A bead slides from the layer towards the piece, the second one a little behind.
-      const slide = (sinceMs - S.bridgeMs) * S.beads.speed * (1 - b * S.beads.lag);
-      const u = clamp01(S.beads.startShare + strand.beadPhase * S.beads.phaseShare + slide);
-      const size =
-        S.beads.sizePx *
-        (S.beads.sizeBase + S.beads.sizeThick * thick) *
-        (1 - S.beads.shrink * stretch);
-      const grow = smoothstep((sinceMs - S.bridgeMs) / S.beads.growMs);
-      const scale = (size / BEAD_SIZE) * grow;
-      this.pathPoint(strand, mid, bx, by, u);
-      placePair(pair, this.point.x, this.point.y, 0, scale, scale, 1);
-      dot
-        .setPosition(
-          this.point.x - size * S.beads.shine.dx * grow,
-          this.point.y - size * S.beads.shine.dy * grow,
-        )
-        .setScale(scale * S.gloss.beadScale)
-        .setAlpha(S.gloss.alpha)
-        .setVisible(true);
+      const snapAt = snapTimeMs(strand.trait);
+      // A long frame can jump over the whole recoil: the snap still happens (the drop on the layer, the cue).
+      if (sinceMs >= snapAt && !strand.snapped) this.snap(strand, start, piece, hooks);
+      if (strand.snapped) this.poseRecoil(strand, (sinceMs - snapAt) / S.recoilMs, piece);
+      else this.poseStretch(strand, sinceMs);
+      this.setAlpha(strand, piece.alpha);
+    }
+    this.updateDrops(dtMs);
+  }
+
+  /** The path of an intact strand now: its anchors and the sagging control point (into `control`). */
+  private path(strand: Strand, sinceMs: number): void {
+    const amount = smoothstep(sinceMs / snapTimeMs(strand.trait));
+    sagControl(strand.a, strand.b, strand.trait.sag, amount, control);
+    const phase = (sinceMs / S.wobbleMs) * TWO_PI + strand.trait.breakU * S.wobblePhase;
+    control.x += Math.sin(phase) * S.wobblePx * amount;
+  }
+
+  private poseStretch(strand: Strand, sinceMs: number): void {
+    const { trait } = strand;
+    this.path(strand, sinceMs);
+    const mid = middleThickness(trait, sinceMs);
+    const grow = beadGrow(sinceMs);
+    const chord = Math.hypot(strand.b.x - strand.a.x, strand.b.y - strand.a.y);
+    for (let h = 0; h < 2; h++) {
+      const half = strand.halves[h]!;
+      const bead = strand.beads[h]!;
+      if (bead.on) bead.share = beadShare(sinceMs, bead.start, S.beads.to[h]!);
+      const along = chord * (h === 0 ? trait.breakU : 1 - trait.breakU);
+      const bump = bead.on ? S.beads.bump * bead.size * grow : 0;
+      const at = bead.share;
+      half.shape.capped = false;
+      half.shape.sample(strand.a, control, strand.b, h === 0 ? 0 : 1, trait.breakU, (s) => {
+        const d = ((s - at) * along) / S.beads.bumpPx;
+        return profileThickness(s, trait.end, mid) + bump * Math.exp(-d * d);
+      });
+      this.writeStrips(half);
+      if (bead.on) this.poseBead(bead, half.shape, bead.share, grow);
+      else this.hideBody(bead.body);
     }
   }
 
-  /** The bridge: a blob of glaze on the cut that grows at once, then shrinks and fades as the strands take over. */
-  private poseBlob(strand: Strand, mid: Vec, sinceMs: number): void {
-    const { growMs, settleMs, widthPx, endScaleX, endScaleY } = S.blob;
-    const settle = smoothstep((sinceMs - growMs) / settleMs);
-    const alpha = 1 - settle;
-    if (alpha <= 0.01) {
-      hidePair(strand.blob);
+  /** Writes the outline, fill and gloss strips of a half from its shape. */
+  private writeStrips(half: Half): void {
+    writeHalf(half.shape, half.outline.vertices, halfWidth, noLift);
+    writeHalf(half.shape, half.fill.vertices, fillHalf, noLift);
+    // The light stripe stops short of a round end.
+    writeHalf(half.shape, half.gloss.vertices, glossHalf, glossLift, false);
+    half.outline.setVisible(true);
+    half.fill.setVisible(true);
+    half.gloss.setVisible(true);
+  }
+
+  /** A bead (or what is left of it) at `share` of a half, `scale` of its size. */
+  private poseBead(bead: Bead, shape: HalfShape, share: number, scale: number): void {
+    const size = bead.size * scale;
+    if (size < 1) {
+      this.hideBody(bead.body);
       return;
     }
-    const scale = strand.trait.thick * (widthPx / BLOB_W) * smoothstep(sinceMs / growMs);
-    placePair(
-      strand.blob,
-      mid.x,
-      mid.y,
-      0,
-      scale * lerp(1, endScaleX, settle),
-      scale * lerp(1, endScaleY, settle),
-      alpha,
-    );
-  }
-
-  /** The point at `u` (0..1) along the strand: layer anchor, middle, piece anchor. */
-  private pathPoint(strand: Strand, mid: Vec, bx: number, by: number, u: number): void {
-    const p = this.point;
-    if (u < 0.5) {
-      p.x = lerp(strand.a.x, mid.x, u * 2);
-      p.y = lerp(strand.a.y, mid.y, u * 2);
-    } else {
-      p.x = lerp(mid.x, bx, (u - 0.5) * 2);
-      p.y = lerp(mid.y, by, (u - 0.5) * 2);
-    }
-  }
-
-  private snap(
-    strand: Strand,
-    start: StrandStart,
-    sinceMs: number,
-    bx: number,
-    by: number,
-    rotation: number,
-    hooks: StrandHooks,
-  ): void {
-    strand.snapped = true;
-    strand.snapRot = rotation;
-    const mid = this.middlePoint(strand, start, bx, by, sinceMs, 1);
-    strand.stubA.x = mid.x - strand.a.x;
-    strand.stubA.y = mid.y - strand.a.y;
-    strand.stubB.x = mid.x - bx;
-    strand.stubB.y = mid.y - by;
-    this.snapCount++;
-    const main = strand.trait === S.traits[0];
-    if (main) this.spawnDrops(start, mid.x, mid.y);
-    hooks.snapped(mid.x, mid.y, this.snapCount === 1, main);
+    shape.pointAt(share, tmp);
+    this.poseBody(bead.body, tmp.x, tmp.y, size, size, BEAD_SHAPE, 0, 1);
   }
 
   /**
-   * The stubs spring back and curl; each ends in a round bulb that swells from the width of the
-   * thread to a droplet, then the stub shrinks and fades.
+   * Places a body of outer width `w` and height `h` at (x, y), its picture's bottom pointing
+   * along (dirX, dirY): the outline quad, the fill quad inside it by the outline, and the light dot.
    */
-  private poseRecoil(
-    strand: Strand,
-    start: StrandStart,
-    u: number,
-    bx: number,
-    by: number,
-    rotation: number,
-    thick: number,
+  private poseBody(
+    body: Body,
+    x: number,
+    y: number,
+    w: number,
+    h: number,
+    shape: PictureShape,
+    dirX: number,
+    dirY: number,
   ): void {
-    this.hideBeads(strand);
-    hidePair(strand.blob);
-    const { recoil } = S;
-    const length = recoilLength(u);
-    const alpha = recoilAlpha(u);
-    const stub = thick * lerp(recoil.thickStart, recoil.thickEnd, smoothstep(u));
-    // The thread thickens from the snapped thinness to a thick stub.
-    const lastShare = STAGES[STAGES.length - 1]!;
-    const share = lerp(lastShare, STAGES[recoil.stage]!, smoothstep(u / recoil.thickenU));
-    stagePair(share, tmpPair);
-    const bulb = lerp(
-      THICK * lastShare * thick,
-      THICK * STAGES[recoil.stage]! * stub * recoil.tip,
-      smoothstep(u / recoil.bulbU),
-    );
-    const curl = recoil.curlDeg * DEG_TO_RAD * (1 - (1 - u) * (1 - u));
-    const a = strand.stubA;
-    const ax = strand.a.x;
-    const ay = strand.a.y;
-    const turnA = -start.side * curl;
-    this.poseHalf(
-      strand,
-      0,
-      ax,
-      ay,
-      ax + a.x * length,
-      ay + a.y * length,
-      stub,
-      turnA,
-      alpha,
-      share,
-      tmpPair,
-    );
-    this.poseTip(strand.caps[2], ax, ay, a.x * length, a.y * length, turnA, bulb, alpha);
-    // The stub on the piece turns with the piece.
-    const turn = rotation - strand.snapRot;
-    const cos = Math.cos(turn);
-    const sin = Math.sin(turn);
-    const b = strand.stubB;
-    const sx = b.x * cos - b.y * sin;
-    const sy = b.x * sin + b.y * cos;
-    const turnB = start.side * curl;
-    this.poseHalf(
-      strand,
-      1,
-      bx,
-      by,
-      bx + sx * length,
-      by + sy * length,
-      stub,
-      turnB,
-      alpha,
-      share,
-      tmpPair,
-    );
-    this.poseTip(strand.caps[3], bx, by, sx * length, sy * length, turnB, bulb, alpha);
-    const anchor =
-      this.capScale(thick * THICK * S.anchorCap) * lerp(1, recoil.anchorEnd, smoothstep(u));
-    placePair(strand.caps[0], ax, ay, 0, anchor, anchor, alpha);
-    placePair(strand.caps[1], bx, by, 0, anchor, anchor, alpha);
+    const o = outlineOf(w);
+    const sx = shape.picture.width / shape.width;
+    const sy = shape.picture.height / shape.height;
+    writeQuad(body.outline.vertices, x, y, w * sx, h * sy, dirX, dirY);
+    const inner = (w - 2 * o) / w;
+    writeQuad(body.fill.vertices, x, y, w * inner * sx, (h - 2 * o) * sy, dirX, dirY);
+    const dot = (w * S.dot.size * BEAD_SHAPE.picture.width) / BEAD_SHAPE.width;
+    writeQuad(body.dot.vertices, x - w * S.dot.dx, y - h * S.dot.dy, dot, dot * S.dot.flat);
+    body.outline.setVisible(true);
+    body.fill.setVisible(true);
+    body.dot.setVisible(true);
   }
 
-  /** Puts a round bulb of `diameter` px on the far end of a stub from (fx, fy) by (dx, dy), turned by `turn`. */
-  private poseTip(
-    cap: Pair,
-    fx: number,
-    fy: number,
-    dx: number,
-    dy: number,
-    turn: number,
-    diameter: number,
-    alpha: number,
-  ): void {
-    const len = Math.hypot(dx, dy);
-    const angle = Math.atan2(dy, dx) + turn;
-    const scale = this.capScale(diameter);
-    placePair(cap, fx + Math.cos(angle) * len, fy + Math.sin(angle) * len, 0, scale, scale, alpha);
+  private snap(strand: Strand, start: StrandStart, piece: LayerView, hooks: StrandHooks): void {
+    strand.snapped = true;
+    const { trait } = strand;
+    const t = trait.breakU;
+    // The path as it was at the snap, even if a long frame jumped past it.
+    this.path(strand, snapTimeMs(trait));
+    curvePoint(strand.a, control, strand.b, t, tmp);
+    const breakX = tmp.x;
+    const breakY = tmp.y;
+    const cos = Math.cos(-piece.rotation);
+    const sin = Math.sin(-piece.rotation);
+    for (let h = 0; h < 2; h++) {
+      const half = strand.halves[h]!;
+      const anchor = h === 0 ? strand.a : strand.b;
+      // The control point of the part of the curve from the anchor to the break (its blossom).
+      const t0 = h === 0 ? 0 : 1;
+      const c0 = (1 - t0) * (1 - t);
+      const c1 = (1 - t0) * t + t0 * (1 - t);
+      const c2 = t0 * t;
+      let cx = c0 * strand.a.x + c1 * control.x + c2 * strand.b.x - anchor.x;
+      let cy = c0 * strand.a.y + c1 * control.y + c2 * strand.b.y - anchor.y;
+      let ex = breakX - anchor.x;
+      let ey = breakY - anchor.y;
+      if (h === 1) {
+        // The piece half turns with the piece: kept in the piece's own turn.
+        [cx, cy] = [cx * cos - cy * sin, cx * sin + cy * cos];
+        [ex, ey] = [ex * cos - ey * sin, ex * sin + ey * cos];
+      }
+      half.control.x = cx;
+      half.control.y = cy;
+      half.end.x = ex;
+      half.end.y = ey;
+      half.tip = trait.mid;
+    }
+    // The bead nearest the break falls as a drop; the other one rides its half back.
+    const [b0, b1] = strand.beads;
+    const falling = !b1.on || b0.share >= b1.share ? b0 : b1;
+    if (falling.on) {
+      strand.halves[falling.half].shape.pointAt(falling.share, tmp);
+      this.spawnDrop(start, tmp.x, tmp.y, falling.size);
+      falling.on = false;
+      this.hideBody(falling.body);
+    }
+    this.snapCount++;
+    const main = trait === S.traits[0];
+    hooks.snapped(breakX, breakY, this.snapCount === 1, main);
   }
 
-  private spawnDrops(start: StrandStart, x: number, y: number): void {
-    const { drops } = S;
-    const count = drops.count[0] + (this.snapCount % 2);
-    for (let n = 0; n < count && n < this.drops.length; n++) {
-      const drop = this.drops[n]!;
-      drop.on = true;
-      drop.x = x + (n - (count - 1) / 2) * S.drops.spreadPx;
-      drop.y = y + n * drops.dropStepPx;
-      drop.vx =
-        start.side *
-        drops.speedX *
-        (drops.sideBase + drops.sideStep * n) *
-        (n % 2 === 0 ? 1 : drops.backShare);
-      drop.vy = drops.upSpeed + n * drops.upStepPx;
-      // Born one after another, so two never fall stacked into one fork.
-      drop.ageMs = -n * S.drops.staggerMs;
-      hidePair(drop.pair);
+  /** The halves spring back to their anchors (`u` 0..1 of the recoil) and go into the glaze; the piece keeps a small dot. */
+  private poseRecoil(strand: Strand, u: number, piece: LayerView): void {
+    const { trait } = strand;
+    const k = clamp01(u);
+    const length = Math.max(MIN_LENGTH, recoilLength(k));
+    const whip = recoilWhip(k);
+    const cos = Math.cos(piece.rotation);
+    const sin = Math.sin(piece.rotation);
+    for (let h = 0; h < 2; h++) {
+      const half = strand.halves[h]!;
+      const bead = strand.beads[h]!;
+      if (h === 0 && u >= 1) {
+        this.hideHalf(half);
+        this.hideBody(bead.body);
+        continue;
+      }
+      const anchor = h === 0 ? strand.a : strand.b;
+      let ex = half.end.x;
+      let ey = half.end.y;
+      let cx = half.control.x;
+      let cy = half.control.y;
+      if (h === 1) {
+        [ex, ey] = [ex * cos - ey * sin, ex * sin + ey * cos];
+        [cx, cy] = [cx * cos - cy * sin, cx * sin + cy * cos];
+      }
+      freeEnd.x = anchor.x + ex * length;
+      freeEnd.y = anchor.y + ey * length - whip;
+      control.x = anchor.x + cx * length;
+      control.y = anchor.y + cy * length - whip / 2;
+      // The layer half goes into the glaze; the piece half leaves a small dot on the piece.
+      const keep = h === 0 ? 0 : S.recoil.nubPx / trait.end;
+      const scale = recoilAnchorScale(k, keep);
+      const end = trait.end * scale;
+      const round = trait.end * S.recoil.tipShare;
+      const tip = Math.min(end, lerp(half.tip, round, smoothstep(k / S.recoil.springU)) * scale);
+      half.shape.capped = true;
+      half.shape.sample(anchor, control, freeEnd, 0, 1, (s) => profileThickness(s, end, tip));
+      this.writeStrips(half);
+      if (bead.on) this.poseBead(bead, half.shape, bead.share, scale);
+      else this.hideBody(bead.body);
     }
   }
 
-  private updateDrops(dtMs: number): boolean {
-    let any = false;
+  private spawnDrop(start: StrandStart, x: number, y: number, size: number): void {
+    const drop = this.drops.find((d) => !d.on);
+    if (!drop) return;
+    const { drops } = S;
+    drop.on = true;
+    drop.x = x;
+    drop.y = y;
+    drop.vx = start.side * start.driftSpeed * drops.driftShare;
+    drop.vy = drops.downSpeed;
+    drop.size = size;
+    drop.ageMs = 0;
+  }
+
+  private updateDrops(dtMs: number): void {
     const dt = dtMs / 1000;
+    const { drops } = S;
     for (const drop of this.drops) {
       if (!drop.on) continue;
       drop.ageMs += dtMs;
-      if (drop.ageMs < 0) {
-        any = true;
-        continue;
-      }
-      if (drop.ageMs >= S.drops.lifeMs) {
+      if (drop.ageMs >= drops.lifeMs) {
         drop.on = false;
-        hidePair(drop.pair);
+        this.hideBody(drop.body);
         continue;
       }
-      any = true;
-      drop.vy += S.drops.gravity * dt;
+      drop.vy += drops.gravity * dt;
       drop.x += drop.vx * dt;
       drop.y += drop.vy * dt;
       // A teardrop: its point trails against the way it goes, and it stretches with the speed.
       const speed = Math.hypot(drop.vx, drop.vy);
-      const stretch = Math.min(S.drops.maxStretch, speed * S.drops.stretchPerSpeed);
-      const age = drop.ageMs / S.drops.lifeMs;
-      const size = (S.drops.sizePx / DROP_W) * lerp(1, S.drops.endScale, smoothstep(age));
-      placePair(
-        drop.pair,
-        drop.x,
-        drop.y,
-        Math.atan2(-drop.vx, drop.vy),
-        size / Math.sqrt(1 + stretch),
-        size * (1 + stretch),
-        1 - smoothstep((age - S.drops.fadeFrom) / (1 - S.drops.fadeFrom)),
-      );
+      const stretch = Math.min(drops.maxStretch, speed * drops.stretchPerSpeed);
+      const age = drop.ageMs / drops.lifeMs;
+      const w = drop.size * lerp(1, drops.endScale, smoothstep(age));
+      const h = w * drops.tall * (1 + stretch);
+      const dirX = speed > 0 ? drop.vx / speed : 0;
+      const dirY = speed > 0 ? drop.vy / speed : 1;
+      this.poseBody(drop.body, drop.x, drop.y, w, h, DROP_SHAPE, dirX, dirY);
+      const alpha = 1 - smoothstep((age - drops.fadeFrom) / (1 - drops.fadeFrom));
+      drop.body.outline.setAlpha(alpha);
+      drop.body.fill.setAlpha(alpha);
+      drop.body.dot.setAlpha(alpha);
     }
-    return any;
+  }
+
+  private setAlpha(strand: Strand, alpha: number): void {
+    for (const half of strand.halves) {
+      half.outline.setAlpha(alpha);
+      half.fill.setAlpha(alpha);
+      half.gloss.setAlpha(alpha);
+    }
+    for (const bead of strand.beads) {
+      bead.body.outline.setAlpha(alpha);
+      bead.body.fill.setAlpha(alpha);
+      bead.body.dot.setAlpha(alpha);
+    }
+  }
+
+  private hideHalf(half: Half): void {
+    half.outline.setVisible(false);
+    half.fill.setVisible(false);
+    half.gloss.setVisible(false);
+  }
+
+  private hideBody(body: Body): void {
+    body.outline.setVisible(false);
+    body.fill.setVisible(false);
+    body.dot.setVisible(false);
   }
 
   private hideStrand(strand: Strand): void {
-    for (const image of strand.all) image.setVisible(false);
+    for (const half of strand.halves) this.hideHalf(half);
+    for (const bead of strand.beads) this.hideBody(bead.body);
   }
+}
 
-  private hideBeads(strand: Strand): void {
-    for (const { pair, dot } of strand.beadPics) {
-      hidePair(pair);
-      dot.setVisible(false);
-    }
-  }
+/** A picture and the size of the shape drawn in it (the rest is its empty field). */
+interface PictureShape {
+  picture: { width: number; height: number };
+  width: number;
+  height: number;
+}
+
+const BEAD_SHAPE: PictureShape = {
+  picture: beadPicture(),
+  width: CUT_PICTURE.bead.size,
+  height: CUT_PICTURE.bead.size,
+};
+
+const DROP_SHAPE: PictureShape = {
+  picture: dropPicture(),
+  width: CUT_PICTURE.drop.width,
+  height: CUT_PICTURE.drop.height,
+};
+
+/** Half widths of the strips of a strand of thickness `w`: the outline (all of it), the fill and the light stripe. */
+function halfWidth(w: number): number {
+  return w / 2;
+}
+
+function fillHalf(w: number): number {
+  return w / 2 - outlineOf(w);
+}
+
+function glossHalf(w: number): number {
+  const fill = fillHalf(w);
+  const show = smoothstep((2 * fill - S.gloss.minFillPx) / 2);
+  return fill * S.gloss.width * show;
+}
+
+function glossLift(w: number): number {
+  return fillHalf(w) * S.gloss.lift;
+}
+
+function noLift(): number {
+  return 0;
 }

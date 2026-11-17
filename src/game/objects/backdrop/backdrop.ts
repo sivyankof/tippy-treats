@@ -133,7 +133,7 @@ export class Backdrop {
     const space = this.sceneries.get(SPACE_ZONE_INDEX);
     if (!space || lap === 0) return;
     // Normally baked ahead (`planAhead`); a jump (a debug start) bakes here.
-    ZONE_ART.space.bakeLap?.(this.scene, lap);
+    ZONE_ART.space.bakeLap?.(this.scene, lap, this.look.planetSeed);
     space.setLap(lap, topWidth);
   }
 
@@ -150,7 +150,11 @@ export class Backdrop {
     const prep: Prep = { target, scenery: null };
     this.prep = prep;
     if (target.kind === 'lap') {
-      this.prepQueue.add(collectBakeSteps(() => ZONE_ART.space.bakeLap?.(this.scene, target.lap)));
+      this.prepQueue.add(
+        collectBakeSteps(() =>
+          ZONE_ART.space.bakeLap?.(this.scene, target.lap, this.look.planetSeed),
+        ),
+      );
       return;
     }
     this.prepQueue.add(collectBakeSteps(() => this.bake(zoneIdOf(target.index), this.lap)));
@@ -335,11 +339,16 @@ export class Backdrop {
     if (!art.ownSky?.(this.look.weather)) bakeSky(this.scene, id, this.look.weather);
     const look = this.sceneryLook(Math.max(lap, 1));
     art.bake(this.scene, look);
-    art.bakeLap?.(this.scene, look.lap);
+    art.bakeLap?.(this.scene, look.lap, look.planetSeed);
   }
 
   private sceneryLook(lap: number): SceneryLook {
-    return { lap, weather: this.look.weather, place: this.look.place };
+    return {
+      lap,
+      weather: this.look.weather,
+      place: this.look.place,
+      planetSeed: this.look.planetSeed,
+    };
   }
 
   /** Zone 1 is the art of the start place of the run; the others are fixed. */

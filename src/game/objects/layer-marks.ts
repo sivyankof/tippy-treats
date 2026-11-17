@@ -3,6 +3,7 @@ import { DEG_TO_RAD } from '../../util/math';
 import {
   layerMarks,
   markGrow,
+  markVanish,
   markSwingDeg,
   MAX_CUT_PICTURES,
   MAX_PRESS_PICTURES,
@@ -83,7 +84,7 @@ export class LayerMarkPictures {
     const image = this.images[slot]!;
     if (!mark || !image.visible) return;
     const age = nowMs - mark.bornMs;
-    const grow = markGrow(mark, age);
+    const grow = markGrow(mark, age) * markVanish(mark, nowMs);
     image
       .setScale(
         (mark.width / image.frame.width) * grow * (mark.flipX ? -1 : 1),
