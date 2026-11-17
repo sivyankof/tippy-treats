@@ -79,7 +79,9 @@ export class WeatherFall implements WeatherPart {
     const count = Math.min(look.count, WEATHER_LOOK.particleCount.full);
     const strip = look.sideShare ?? WEATHER_LOOK.sideShare;
     const snow = kind === 'snow';
+    // Snow starts anywhere across the whole width (behind the tower it is simply hidden); the rest keep to the sides.
     const drawU = (): number => {
+      if (snow) return rng.next();
       const sideStrip = rng.chance(look.sideBias ?? WEATHER_LOOK.sideBias);
       const left = rng.chance(0.5);
       return sideStrip ? (left ? rng.range(0, strip) : rng.range(1 - strip, 1)) : rng.next();
