@@ -34,6 +34,9 @@ interface FallLook {
   swayMs?: Range;
   spinMs?: Range;
   tiltRad?: number;
+  swayLag?: number;
+  turnMin?: number;
+  sizeCuts?: readonly [number, number];
 }
 
 const FRAME_SETS: Record<string, readonly string[]> = {
@@ -41,9 +44,6 @@ const FRAME_SETS: Record<string, readonly string[]> = {
   flake: WEATHER_TEX.flake,
   leaf: WEATHER_TEX.leaf,
 };
-/** Chance of each flake size (small, middle, big). */
-const FLAKE_SIZE_CUTS = [0.5, 0.85] as const;
-const LEAF_SWAY_LAG = 1.2;
 
 function draw(rng: Rng, range: Range | undefined, fallback: number): number {
   return range ? rng.range(range[0], range[1]) : fallback;
@@ -95,7 +95,8 @@ export class WeatherFall implements WeatherPart {
 
   private flakeSize(rng: Rng): number {
     const r = rng.next();
-    return r < FLAKE_SIZE_CUTS[0] ? 0 : r < FLAKE_SIZE_CUTS[1] ? 1 : 2;
+    const [small, middle] = WEATHER_LOOK.snow.sizeCuts;
+    return r < small ? 0 : r < middle ? 1 : 2;
   }
 
   update(frame: WeatherFrame): void {
@@ -114,6 +115,8 @@ export class WeatherFall implements WeatherPart {
     const rain = this.kind === 'rain' || this.kind === 'storm';
     const slant = this.look.slant ?? 0;
     const tilt = this.look.tiltRad ?? 0;
+    const swayLag = this.look.swayLag ?? 0;
+    const turnMin = this.look.turnMin ?? 1;
     for (let i = 0; i < this.objects.length; i++) {
       const image = this.objects[i];
       const p = this.specs[i];
@@ -140,8 +143,10 @@ export class WeatherFall implements WeatherPart {
         image.setRotation(this.slantRad).setScale(p.scale);
       } else if (leaf) {
         const turn = Math.abs(Math.cos((TWO_PI * t) / p.spinMs + p.phase));
-        const sway = Math.sin((TWO_PI * t) / p.swayMs + p.phase + LEAF_SWAY_LAG);
-        image.setRotation(tilt * sway + p.phase).setScale(p.scale, p.scale * (0.55 + 0.45 * turn));
+        const sway = Math.sin((TWO_PI * t) / p.swayMs + p.phase + swayLag);
+        image
+          .setRotation(tilt * sway + p.phase)
+          .setScale(p.scale, p.scale * (turnMin + (1 - turnMin) * turn));
       } else {
         image.setScale(p.scale);
       }

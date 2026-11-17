@@ -191,6 +191,8 @@ export const WEATHER_LOOK = {
       readonly [number, number] | null
     >,
     lifeMs: 340,
+    /** Where along the tower top a splash may land (share of its width). */
+    spanShare: [0.08, 0.92] as readonly [number, number],
     startScale: 0.5,
     endScale: 1.1,
     alpha: 0.85,
@@ -229,6 +231,8 @@ export const WEATHER_LOOK = {
     swayMs: [3200, 6500],
     alpha: [0.85, 1],
     scale: [1, 1],
+    /** Cumulative chance of the small and the middle flake size; the rest are big. */
+    sizeCuts: [0.5, 0.85] as readonly [number, number],
     count: 34,
   },
   leaves: {
@@ -238,6 +242,10 @@ export const WEATHER_LOOK = {
     swayMs: [2600, 4800],
     spinMs: [2400, 5200],
     tiltRad: 0.9,
+    /** The sway of the tilt lags the sway of the position by this many radians. */
+    swayLag: 1.2,
+    /** A turning leaf is this share of its height at its thinnest. */
+    turnMin: 0.55,
     alpha: [0.92, 1],
     scale: [0.9, 1.25],
     count: 26,
@@ -286,6 +294,8 @@ export const WEATHER_LOOK = {
     firstMs: [3000, 6000],
     everyMs: [8000, 15000],
     flashMs: [120, 180],
+    /** Share of a flash over which it rises to its peak; it falls over the rest. */
+    riseShare: 0.2,
     /** Alpha of the pale lump overlay at the peak. */
     flashAlpha: 0.75,
     /** The bolt stands in one of these x ranges (share of the screen width). */
@@ -301,13 +311,15 @@ export const WEATHER_LOOK = {
     /** Inside the cloud: the bolt starts this share of the cloud's height at that x down, is at most this share of it long, and ends at least `endGapPx` above its lower edge. */
     topShare: 0.22,
     lengthShare: 0.6,
+    /** A bolt shorter than this share of the picture height is not shown. */
+    minLengthShare: 0.25,
     endGapPx: 25,
     /** The cloud must be at least this tall (px) at the strike point, and the strike point is drawn up to this many times to clear the HUD. */
     minCloudPx: 150,
     tries: 12,
   },
 
-  /** Stars and the crescent moon of the night (both stand in the sky, behind the houses). */
+  /** Stars and the crescent moon of the night (both stand in the sky, drawn over the four parallax layers). */
   night: {
     stars: 14,
     starAlpha: [0.6, 1],

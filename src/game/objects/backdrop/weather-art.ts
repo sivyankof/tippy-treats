@@ -1,9 +1,9 @@
 import type * as Phaser from 'phaser';
 import { MOUNTAIN_LOOK } from '../../../data/backdrop-mountains';
 import type { WeatherId } from '../../../data/weather';
-import { WEATHER_LOOK, WEATHER_TEX as TEX, type WeatherZone } from '../../../data/weather-look';
+import { WEATHER_LOOK, WEATHER_TEX as TEX } from '../../../data/weather-look';
 import type { ZoneId } from '../../../data/zones';
-import { mixColor, shade } from '../../../util/color';
+import { cssColor, mixColor, shade } from '../../../util/color';
 import { TWO_PI } from '../../../util/math';
 import { drawGlossMark, fillPolygon, outlineColor, type Pt } from '../../fx/plain-style';
 import { bakeTexture } from '../../ui/bake-texture';
@@ -44,9 +44,10 @@ const FLASH_LOBE_SIZE = 128;
 const BOLT_CORE = 0xfffbe6;
 const BOLT_RIM = 0xcfdcff;
 
-/** Key of the cloud bank picture of a zone and weather, and of its pale flash twin. */
-export function bankKey(zone: WeatherZone, weather: WeatherId, flash = false): string {
-  return `fx_wx_bank_${flash ? 'flash_' : ''}${weather}_${zone}`;
+/** Key of the cloud bank picture of a weather (the same in both zones), and of its pale flash twin. */
+export function bankKey(weather: WeatherId, flash = false): string {
+  if (flash) return TEX.bankFlash;
+  return weather === 'storm' ? TEX.bankStorm : TEX.bankRain;
 }
 
 function bakeFlakes(scene: Phaser.Scene): void {
@@ -198,7 +199,7 @@ function bakeMoon(scene: Phaser.Scene): void {
       ctx.fill();
       // The outline along the bite, only where the moon is.
       ctx.globalCompositeOperation = 'source-atop';
-      ctx.strokeStyle = `#${edge.toString(16).padStart(6, '0')}`;
+      ctx.strokeStyle = cssColor(edge);
       ctx.lineWidth = outlineW * 2;
       ctx.beginPath();
       ctx.arc(bite.x, bite.y, bite.r, 0, TWO_PI);
@@ -304,8 +305,6 @@ export function bakeWeatherArt(scene: Phaser.Scene, weather: WeatherId | 'all'):
   if (is('leaves')) bakeLeaves(scene);
 }
 
-const WEATHER_ZONES: readonly WeatherZone[] = ['roof', 'clouds'];
-
 /** Bakes what one zone's sky shows in this weather: the cloud bank (and bolt) or the stars and moon. */
 export function bakeWeatherSky(
   scene: Phaser.Scene,
@@ -322,11 +321,11 @@ export function bakeWeatherSky(
   for (const kind of ['rain', 'storm'] as const) {
     if (!is(kind)) continue;
     const color = bankColor(kind);
-    bakeBank(scene, bankKey(zone, kind), color);
+    bakeBank(scene, bankKey(kind), color);
     if (kind === 'storm') {
       bakeFlashLobe(
         scene,
-        bankKey(zone, kind, true),
+        bankKey(kind, true),
         mixColor(color, WEATHER_LOOK.bank.flashColor, WEATHER_LOOK.bank.flashMix),
       );
       bakeBolt(scene);
@@ -334,7 +333,7 @@ export function bakeWeatherSky(
   }
 }
 
-/** Every zone's sky pictures for the art sheet. */
+/** Every weather sky picture for the art sheet (the two zones share them). */
 export function bakeAllWeatherSky(scene: Phaser.Scene): void {
-  for (const zone of WEATHER_ZONES) bakeWeatherSky(scene, zone, 'all');
+  bakeWeatherSky(scene, 'roof', 'all');
 }

@@ -143,7 +143,20 @@ export const GLASS_LOOK = {
   /** Share of the cycle over which an item fades in and out. */
   fadeShare: 0.1,
   /** The sway of a flake or a leaf: share of the glass width, and its period (ms). */
-  sway: { flake: { share: 0.07, ms: 3600 }, leaf: { share: 0.16, ms: 4200 } },
+  sway: {
+    flake: { share: 0.07, ms: 3600, phaseStep: 0.17 },
+    leaf: { share: 0.16, ms: 4200, phaseStep: 0.29, turnRad: 0.9, spinTurns: 0.4 },
+  },
+  /** How the items of one picture differ: period spread, phase and size steps per item index. */
+  motion: {
+    laneShift: 0.2,
+    periodStep: 0.37,
+    periodShift: 0.11,
+    phaseShift: 0.1,
+    sizeBase: 0.85,
+    sizeSpread: 0.3,
+    sizeStep: 0.61,
+  },
   /** Share of the glass an item may use, from the outer edge (the tower hides the inner part): `[from, to]` of the width, per place. */
   windowSpan: { kitchen: [0.15, 1], shop: [0, 0.85] },
   /** Items keep this share of the glass away from its edges. */
@@ -208,18 +221,23 @@ export const SHOP_LOOK = {
   },
   /** Stand silhouettes: x in the 512 tile. */
   standsX: [70, 250],
-  awning: { height: 60, stripe: 64 },
+  /** The awning is `count` strips that bob `bobPx` over `bobMs`, each `phaseStep` radians behind the last. */
+  awning: { height: 60, stripe: 64, count: 3, bobPx: 2, bobMs: 2600, phaseStep: 0.5 },
   lamp: {
     width: 60,
     height: 150,
     cord: 86,
     globe: 26,
-    at: [0.26, 0.76],
-    /** The lamps hang at different heights (extra px under the awning) and are drawn smaller than the picture. */
-    drop: [0, 44],
+    /** Each lamp: x as a share of the screen, extra px it hangs under the awning (they differ in height) and its swing period. */
+    items: [
+      { x: 0.26, drop: 0, ms: 2300 },
+      { x: 0.76, drop: 44, ms: 2700 },
+    ],
+    /** The cord starts this many px up inside the awning; the lamps are drawn smaller than the picture. */
+    tuckPx: 8,
     scale: 0.75,
     swingDeg: 4,
-    ms: [2300, 2700],
+    phaseStep: 1.3,
   },
   /** Alpha of the wash that tints the far silhouettes of the wall pink. */
   farWash: 0.72,

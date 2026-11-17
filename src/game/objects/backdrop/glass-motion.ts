@@ -38,23 +38,24 @@ export function glassPose(
   out: GlassPose,
 ): GlassPose {
   const [fast, slow] = spec.periodMs;
-  const period = lerp(fast, slow, frac(i * 0.37 + 0.11));
-  const p = frac(timeMs / period + frac(i * PLASTIC + 0.1));
-  const lane = frac(i * GOLDEN + 0.2);
+  const motion = GLASS_LOOK.motion;
+  const period = lerp(fast, slow, frac(i * motion.periodStep + motion.periodShift));
+  const p = frac(timeMs / period + frac(i * PLASTIC + motion.phaseShift));
+  const lane = frac(i * GOLDEN + motion.laneShift);
   const margin = GLASS_LOOK.margin;
   out.v = margin + (1 - 2 * margin) * p;
   out.u = margin + (1 - 2 * margin) * lane;
   out.alpha = cycleFade(p);
-  out.scale = 0.85 + 0.3 * frac(i * 0.61);
+  out.scale = motion.sizeBase + motion.sizeSpread * frac(i * motion.sizeStep);
   out.rotation = 0;
   if (spec.item === 'flake') {
     const sway = GLASS_LOOK.sway.flake;
-    out.u += sway.share * Math.sin(TWO_PI * (timeMs / sway.ms + i * 0.17));
+    out.u += sway.share * Math.sin(TWO_PI * (timeMs / sway.ms + i * sway.phaseStep));
   } else if (spec.item === 'leaf') {
     const sway = GLASS_LOOK.sway.leaf;
-    const wave = Math.sin(TWO_PI * (timeMs / sway.ms + i * 0.29));
+    const wave = Math.sin(TWO_PI * (timeMs / sway.ms + i * sway.phaseStep));
     out.u += sway.share * wave;
-    out.rotation = 0.9 * wave + TWO_PI * 0.4 * p;
+    out.rotation = sway.turnRad * wave + TWO_PI * sway.spinTurns * p;
   }
   return out;
 }

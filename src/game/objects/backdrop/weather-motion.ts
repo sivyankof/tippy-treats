@@ -34,7 +34,8 @@ export function nextBoltAt(now: number, range: readonly [number, number], u: num
 export function flashEnvelope(elapsed: number, length: number): number {
   if (elapsed < 0 || elapsed >= length) return 0;
   const t = elapsed / length;
-  return t < 0.2 ? t / 0.2 : 1 - (t - 0.2) / 0.8;
+  const rise = WEATHER_LOOK.lightning.riseShare;
+  return t < rise ? t / rise : 1 - (t - rise) / (1 - rise);
 }
 
 /** Height of the cloud bank's lower edge (picture px) at picture x `px`: the lowest of the band and the lobes there. */

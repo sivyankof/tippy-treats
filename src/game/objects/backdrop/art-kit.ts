@@ -2,6 +2,7 @@ import type * as Phaser from 'phaser';
 import { BD_TEX } from '../../../data/backdrop';
 import { BACKDROP_COLORS } from '../../../data/backdrop-colors';
 import type { Point } from '../../../data/backdrop-life';
+import { shade } from '../../../util/color';
 import { bakeTexture } from '../../ui/bake-texture';
 
 type Graphics = Phaser.GameObjects.Graphics;
@@ -12,6 +13,40 @@ const STAR_SIZE = 64;
 const STAR_OUTER = 30;
 const STAR_INNER = 7;
 const STAR_POINTS = 4;
+
+/** The two kinds of wooden board of the wall art: a long shelf across the wall and a short bracket under one thing. */
+const PLANK = {
+  shelf: { shadow: 34, face: 24, glossInset: 40, glossW: 150, glossH: 5 },
+  bracket: { shadow: 30, face: 22, glossInset: 12, glossW: 40, glossH: 4 },
+} as const;
+const PLANK_RADIUS = 10;
+const PLANK_SHADE = -0.25;
+const PLANK_GLOSS_ALPHA = 0.3;
+const PLANK_GLOSS_TOP = 4;
+
+/** A board: a dark underside, the lit face and a short gloss stroke; its top edge is at `y`, its left at `x`. */
+export function drawPlank(
+  g: Graphics,
+  kind: keyof typeof PLANK,
+  x: number,
+  y: number,
+  width: number,
+  color: number,
+): void {
+  const look = PLANK[kind];
+  g.fillStyle(shade(color, PLANK_SHADE), 1);
+  g.fillRoundedRect(x, y, width, look.shadow, PLANK_RADIUS);
+  g.fillStyle(color, 1);
+  g.fillRoundedRect(x, y, width, look.face, PLANK_RADIUS);
+  g.fillStyle(0xffffff, PLANK_GLOSS_ALPHA);
+  g.fillRoundedRect(
+    x + look.glossInset,
+    y + PLANK_GLOSS_TOP,
+    look.glossW,
+    look.glossH,
+    look.glossH / 2,
+  );
+}
 
 /** Calls `draw` for every copy of a shape that touches a square tile, so the tile repeats without seams. */
 export function tiled(

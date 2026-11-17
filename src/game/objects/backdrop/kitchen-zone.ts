@@ -6,6 +6,7 @@ import { KITCHEN_COLORS, PALETTE } from '../../../data/palette';
 import { mixColor, shade } from '../../../util/color';
 import { outlineColor } from '../../fx/plain-style';
 import { bakeTexture } from '../../ui/bake-texture';
+import { drawPlank } from './art-kit';
 import { Hover, PuffColumn, Traveler } from './life';
 import type { ZoneArt } from './zone-scenery';
 import { RunOnly, bakeGlassItems, bakeWindow, windowGlassLife } from './window-weather';
@@ -51,12 +52,7 @@ function bakeJar(scene: Phaser.Scene): void {
     g.fillStyle(PALETTE.textLight, 0.42);
     g.fillRoundedRect(left + 11, top + 12, 9, h * 0.46, 4.5);
     g.fillCircle(left + 15.5, top + 12 + h * 0.46 + 10, 4.5);
-    g.fillStyle(shade(KITCHEN_COLORS.shelf, -0.25), 1);
-    g.fillRoundedRect(4, plankY, board, 30, 10);
-    g.fillStyle(KITCHEN_COLORS.shelf, 1);
-    g.fillRoundedRect(4, plankY, board, 22, 10);
-    g.fillStyle(PALETTE.textLight, 0.3);
-    g.fillRoundedRect(16, plankY + 4, 40, 4, 2);
+    drawPlank(g, 'bracket', 4, plankY, board, KITCHEN_COLORS.shelf);
   });
 }
 
@@ -65,13 +61,7 @@ const JAR_KEY = 'bd_win_kjar';
 /** The boards across the wall; none stands near the chip of the start view (see `KITCHEN_SHELF`). */
 function bakeShelves(scene: Phaser.Scene): void {
   bakeTexture(scene, K.shelves, TILE, TILE, (g) => {
-    const plankY = SHELF.plank;
-    g.fillStyle(shade(KITCHEN_COLORS.shelf, -0.25), 1);
-    g.fillRoundedRect(-20, plankY, TILE + 40, 34, 10);
-    g.fillStyle(KITCHEN_COLORS.shelf, 1);
-    g.fillRoundedRect(-20, plankY, TILE + 40, 24, 10);
-    g.fillStyle(PALETTE.textLight, 0.3);
-    g.fillRoundedRect(20, plankY + 4, 150, 5, 2.5);
+    drawPlank(g, 'shelf', -20, SHELF.plank, TILE + 40, KITCHEN_COLORS.shelf);
   });
 }
 

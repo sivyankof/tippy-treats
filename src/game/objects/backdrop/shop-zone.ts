@@ -10,6 +10,7 @@ import { mixColor, shade } from '../../../util/color';
 import { outlineColor } from '../../fx/plain-style';
 import { bakeTexture } from '../../ui/bake-texture';
 import { BACKDROP_LIFE } from '../../../data/backdrop-life';
+import { drawPlank } from './art-kit';
 import { Hover, Traveler } from './life';
 import { bakeFly } from './kitchen-zone';
 import { bakeStopsSky, type ZoneArt } from './zone-scenery';
@@ -20,8 +21,6 @@ type Graphics = Phaser.GameObjects.Graphics;
 const TILE = SHOP_LOOK.tile;
 const C = SHOP_COLORS;
 const OUTLINE = 4;
-/** The awning sways this many px (it never stands still). */
-const AWNING_BOB = 2;
 
 /** A body with the dark outline of its own colour: the outline shape is drawn first, `fill` on top. */
 function outlined(g: Graphics, color: number, outline: (grow: number) => void): void {
@@ -88,13 +87,7 @@ function bakeShelves(scene: Phaser.Scene): void {
   bakeTexture(scene, SHOP_TEX.shelves, TILE, TILE, (g) => {
     g.fillStyle(C.skyBottom, SHOP_LOOK.farWash);
     g.fillRect(0, 0, TILE, TILE);
-    const y = SHOP_LOOK.plank;
-    g.fillStyle(shade(C.shelf, -0.25), 1);
-    g.fillRoundedRect(-20, y, TILE + 40, 34, 10);
-    g.fillStyle(C.shelf, 1);
-    g.fillRoundedRect(-20, y, TILE + 40, 24, 10);
-    g.fillStyle(0xffffff, 0.3);
-    g.fillRoundedRect(24, y + 4, 150, 5, 2.5);
+    drawPlank(g, 'shelf', -20, SHOP_LOOK.plank, TILE + 40, C.shelf);
   });
 }
 
@@ -121,12 +114,7 @@ function bakeSweets(scene: Phaser.Scene): void {
         );
       }
     });
-    g.fillStyle(shade(C.shelf, -0.25), 1);
-    g.fillRoundedRect(4, SWEETS_PAD, board, 30, 10);
-    g.fillStyle(C.shelf, 1);
-    g.fillRoundedRect(4, SWEETS_PAD, board, 22, 10);
-    g.fillStyle(0xffffff, 0.3);
-    g.fillRoundedRect(16, SWEETS_PAD + 4, 40, 4, 2);
+    drawPlank(g, 'bracket', 4, SWEETS_PAD, board, C.shelf);
   });
 }
 
@@ -190,6 +178,7 @@ function bakeLamp(scene: Phaser.Scene): void {
 
 /** The confectioner's shop: a striped awning, shelves of round sweets and a window to the street with the sky of the weather. */
 export const shopArt: ZoneArt = {
+  ownSky: () => true,
   bake(scene, look) {
     bakeStopsSky(scene, SHOP_TEX.sky, [
       { at: 0, color: C.skyTop },
@@ -206,23 +195,25 @@ export const shopArt: ZoneArt = {
     bakeFly(scene);
   },
   build(scene, look) {
-    const strips = [0, 1, 2].map((i) => ({
+    const awningLook = SHOP_LOOK.awning;
+    // The awning sways a little (it never stands still).
+    const strips = Array.from({ length: awningLook.count }, (_, i) => ({
       texture: SHOP_TEX.awning,
       at: { x: 0, y: 0 },
-      offset: { x: TILE * (i + 0.5), y: -AWNING_BOB },
+      offset: { x: TILE * (i + 0.5), y: -awningLook.bobPx },
       origin: [0.5, 0] as const,
-      bob: { px: AWNING_BOB, ms: 2600 },
-      phase: i * 0.5,
+      bob: { px: awningLook.bobPx, ms: awningLook.bobMs },
+      phase: i * awningLook.phaseStep,
     }));
     const lamp = SHOP_LOOK.lamp;
-    const lamps = lamp.at.map((x, i) => ({
+    const lamps = lamp.items.map((item, i) => ({
       texture: SHOP_TEX.lamp,
-      at: { x, y: 0 },
-      offset: { x: 0, y: SHOP_LOOK.awning.height - 8 + (lamp.drop[i] ?? 0) },
+      at: { x: item.x, y: 0 },
+      offset: { x: 0, y: awningLook.height - lamp.tuckPx + item.drop },
       origin: [0.5, 0] as const,
       scale: lamp.scale,
-      swing: { deg: lamp.swingDeg, ms: lamp.ms[i] ?? 2500 },
-      phase: i * 1.3,
+      swing: { deg: lamp.swingDeg, ms: item.ms },
+      phase: i * lamp.phaseStep,
     }));
     const awning = new Hover(scene, strips);
     const window = new Hover(scene, [
