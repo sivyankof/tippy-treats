@@ -7,7 +7,12 @@ import { bakeTexture } from '../../ui/bake-texture';
 import { glow, tiled } from './art-kit';
 import { Hover, Traveler, Twinkles } from './life';
 import { bakeStopsSky, type ZoneArt } from './zone-scenery';
-import { NIGHT_AWNING, STREET_LOOK, WINDOW_SKY, type StreetLook } from '../../../data/window-look';
+import {
+  AWNING_WEATHER,
+  STREET_LOOK,
+  WINDOW_SKY,
+  type StreetLook,
+} from '../../../data/window-look';
 import type { WeatherId } from '../../../data/weather';
 import { BACKDROP_FAR } from '../../../data/backdrop-far';
 import { channels, mixColor, shade } from '../../../util/color';
@@ -49,9 +54,15 @@ function farTint(weather: WeatherId): number | undefined {
     Math.round(255 * ratio(b, cb))
   );
 }
-/** The awning picture: at night its own (muted, opaque), otherwise the usual one. */
+/** The awning picture: its own (muted towards the sky) where `AWNING_WEATHER` has an entry, otherwise the usual one. */
 const awningKey = (weather: WeatherId): string =>
-  weather === 'night' ? `${S.awning}_night` : S.awning;
+  AWNING_WEATHER[weather] ? `${S.awning}_${weather}` : S.awning;
+/** An opaque awning layer where the weather asks for it (night), otherwise the zone's own alphas. */
+function awningAlpha(weather: WeatherId): number[] | undefined {
+  const alpha = AWNING_WEATHER[weather]?.alpha;
+  if (alpha === undefined) return undefined;
+  return BACKDROP.layerAlpha.showcase.map((own, i) => (i === 3 ? alpha : own));
+}
 const skyKey = (weather: WeatherId): string => `bd_sky_showcase_${weather}`;
 
 const BUILDINGS = [
@@ -122,13 +133,13 @@ function bakeLayers(
     });
   });
 
-  const night = weather === 'night';
-  const toNight = (color: number): number =>
-    night ? mixColor(color, WINDOW_SKY.night.top, NIGHT_AWNING.mute) : color;
+  const mute = AWNING_WEATHER[weather];
+  const toSky = (color: number): number =>
+    mute ? mixColor(color, WINDOW_SKY[weather].top, mute.mute) : color;
   bakeTexture(scene, awningKey(weather), TILE, TILE, (g) => {
     const stripe = 64;
     for (let x = 0; x < TILE; x += stripe) {
-      g.fillStyle(toNight((x / stripe) % 2 === 0 ? C.awningA : C.awningB), night ? 1 : 0.9);
+      g.fillStyle(toSky((x / stripe) % 2 === 0 ? C.awningA : C.awningB), mute?.alpha ? 1 : 0.9);
       g.fillRect(x, 0, stripe, 64);
       g.fillCircle(x + stripe / 2, 64, stripe / 2);
     }
@@ -226,10 +237,7 @@ export const showcaseArt: ZoneArt = {
       sky: skyKey(look.weather),
       farTint: farTint(look.weather),
       layers: [keys.street, keys.panes, S.treats, awningKey(look.weather)],
-      layerAlpha:
-        look.weather === 'night'
-          ? BACKDROP.layerAlpha.showcase.map((alpha, i) => (i === 3 ? NIGHT_AWNING.alpha : alpha))
-          : undefined,
+      layerAlpha: awningAlpha(look.weather),
       lives: [
         ...life.walkers.map((spec) => ({ slot: 0, life: new Traveler(scene, spec) })),
         { slot: 2, life: new Hover(scene, [life.garland.wire]) },

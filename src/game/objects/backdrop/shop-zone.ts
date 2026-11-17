@@ -83,35 +83,50 @@ function bakeWall(scene: Phaser.Scene): void {
   });
 }
 
+/** The boards across the wall, under the pale wash that tints the far silhouettes pink; no sweets here (they scroll into the HUD). */
 function bakeShelves(scene: Phaser.Scene): void {
-  const { shelfTile, planks, sweetsPlank, sweets, sweetsMute } = SHOP_LOOK;
-  bakeTexture(scene, SHOP_TEX.shelves, shelfTile.width, shelfTile.height, (g) => {
-    // A pale wash over the far silhouettes of the wall (they sit under this layer), so they take the pink of the shop.
+  bakeTexture(scene, SHOP_TEX.shelves, TILE, TILE, (g) => {
     g.fillStyle(C.skyBottom, SHOP_LOOK.farWash);
-    g.fillRect(0, 0, shelfTile.width, shelfTile.height);
-    const mute = (color: number): number => mixColor(color, C.skyBottom, sweetsMute);
-    const plankY = planks[sweetsPlank] ?? 0;
-    sweets.forEach((sweet, i) => {
-      if (sweet.kind === 'candy') {
-        candy(g, plankY, sweet.x, mute(C.sweets.candy[1]), sweet.size);
+    g.fillRect(0, 0, TILE, TILE);
+    const y = SHOP_LOOK.plank;
+    g.fillStyle(shade(C.shelf, -0.25), 1);
+    g.fillRoundedRect(-20, y, TILE + 40, 34, 10);
+    g.fillStyle(C.shelf, 1);
+    g.fillRoundedRect(-20, y, TILE + 40, 24, 10);
+    g.fillStyle(0xffffff, 0.3);
+    g.fillRoundedRect(24, y + 4, 150, 5, 2.5);
+  });
+}
+
+const SWEETS_PAD = 70;
+
+/** A short bracket in the right outer column with a round candy and a macaron on it, muted towards the wall. */
+function bakeSweets(scene: Phaser.Scene): void {
+  const { board, mute, items } = SHOP_LOOK.sweets;
+  const width = board + 8;
+  const height = SWEETS_PAD + 36;
+  bakeTexture(scene, SHOP_TEX.sweets, width, height, (g) => {
+    const tint = (color: number): number => mixColor(color, C.skyBottom, mute);
+    items.forEach((item, i) => {
+      const x = width / 2 + item.x;
+      if (item.kind === 'candy') {
+        candy(g, SWEETS_PAD, x, tint(C.sweets.candy[1]), item.size);
       } else {
         macaron(
           g,
-          plankY,
-          sweet.x,
-          mute(C.sweets.macaron[i % C.sweets.macaron.length] ?? 0),
-          sweet.size,
+          SWEETS_PAD,
+          x,
+          tint(C.sweets.macaron[(i + 1) % C.sweets.macaron.length] ?? 0),
+          item.size,
         );
       }
     });
-    for (const y of planks) {
-      g.fillStyle(shade(C.shelf, -0.25), 1);
-      g.fillRoundedRect(-20, y, shelfTile.width + 40, 34, 10);
-      g.fillStyle(C.shelf, 1);
-      g.fillRoundedRect(-20, y, shelfTile.width + 40, 24, 10);
-      g.fillStyle(0xffffff, 0.3);
-      g.fillRoundedRect(24, y + 4, 150, 5, 2.5);
-    }
+    g.fillStyle(shade(C.shelf, -0.25), 1);
+    g.fillRoundedRect(4, SWEETS_PAD, board, 30, 10);
+    g.fillStyle(C.shelf, 1);
+    g.fillRoundedRect(4, SWEETS_PAD, board, 22, 10);
+    g.fillStyle(0xffffff, 0.3);
+    g.fillRoundedRect(16, SWEETS_PAD + 4, 40, 4, 2);
   });
 }
 
@@ -184,6 +199,7 @@ export const shopArt: ZoneArt = {
     bakeGlassItems(scene, look.weather);
     bakeWall(scene);
     bakeShelves(scene);
+    bakeSweets(scene);
     bakeStands(scene);
     bakeAwning(scene);
     bakeLamp(scene);
@@ -202,8 +218,9 @@ export const shopArt: ZoneArt = {
     const lamps = lamp.at.map((x, i) => ({
       texture: SHOP_TEX.lamp,
       at: { x, y: 0 },
-      offset: { x: 0, y: SHOP_LOOK.awning.height - 8 },
+      offset: { x: 0, y: SHOP_LOOK.awning.height - 8 + (lamp.drop[i] ?? 0) },
       origin: [0.5, 0] as const,
+      scale: lamp.scale,
       swing: { deg: lamp.swingDeg, ms: lamp.ms[i] ?? 2500 },
       phase: i * 1.3,
     }));
@@ -216,6 +233,14 @@ export const shopArt: ZoneArt = {
         pulse: WINDOW_LOOK.pulse,
       },
     ]);
+    const sweets = new Hover(scene, [
+      {
+        texture: SHOP_TEX.sweets,
+        at: SHOP_LOOK.sweets.at,
+        offset: { x: 0, y: 0 },
+        pulse: WINDOW_LOOK.pulse,
+      },
+    ]);
     const glass = windowGlassLife(scene, 'shop', look.weather);
     const fly = new Traveler(scene, BACKDROP_LIFE.kitchen.fly);
     return {
@@ -225,6 +250,7 @@ export const shopArt: ZoneArt = {
         { slot: 3, life: new Hover(scene, lamps) },
         { slot: 3, life: window },
         ...(glass ? [{ slot: 3, life: glass }] : []),
+        { slot: 3, life: sweets },
         { slot: 3, life: fly },
       ],
       guest: fly,

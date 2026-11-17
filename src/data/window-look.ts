@@ -95,6 +95,7 @@ export const WINDOW_LOOK = {
     kitchen: {
       frame: 0xd9a070,
       valance: 0xfff0e0,
+      valanceOutline: 0x9a5a38,
       valanceStripe: 0xf6b8a0,
     },
     shop: {
@@ -122,10 +123,10 @@ export interface GlassWeather {
 }
 
 export const GLASS_WEATHER: Partial<Record<WeatherId, GlassWeather>> = {
-  rain: { item: 'drop', window: 5, showcase: 7, periodMs: [11000, 17000] },
-  storm: { item: 'drop', window: 8, showcase: 10, periodMs: [7000, 11000] },
-  snow: { item: 'flake', window: 7, showcase: 9, periodMs: [12000, 19000] },
-  leaves: { item: 'leaf', window: 2, showcase: 3, periodMs: [15000, 21000] },
+  rain: { item: 'drop', window: 7, showcase: 7, periodMs: [11000, 17000] },
+  storm: { item: 'drop', window: 10, showcase: 10, periodMs: [7000, 11000] },
+  snow: { item: 'flake', window: 11, showcase: 9, periodMs: [12000, 19000] },
+  leaves: { item: 'leaf', window: 3, showcase: 3, periodMs: [15000, 21000] },
 };
 
 /** The pictures that move on the glass, all on the shared atlas (one key per kind, baked for the weather of the run). */
@@ -143,6 +144,8 @@ export const GLASS_LOOK = {
   fadeShare: 0.1,
   /** The sway of a flake or a leaf: share of the glass width, and its period (ms). */
   sway: { flake: { share: 0.07, ms: 3600 }, leaf: { share: 0.16, ms: 4200 } },
+  /** Share of the glass an item may use, from the outer edge (the tower hides the inner part): `[from, to]` of the width, per place. */
+  windowSpan: { kitchen: [0.15, 1], shop: [0, 0.85] },
   /** Items keep this share of the glass away from its edges. */
   margin: 0.1,
   /** Showcase: items fade this far (px) before the clear band and the HUD floor. */
@@ -184,23 +187,25 @@ export const SHOP_TEX = {
   stands: 'bd_shop_stands',
   awning: 'bd_win_shop_awning',
   lamp: 'bd_win_shop_lamp',
+  sweets: 'bd_win_shop_sweets',
   sky: 'bd_sky_shop',
 } as const;
 
 export const SHOP_LOOK = {
   tile: 512,
-  /** The shelves and the sweets on them: a wide tile, so a row of sweets shows once per `width`. */
-  shelfTile: { width: 1024, height: 1024 },
-  planks: [410, 922],
-  /** The plank that carries sweets; the other stays bare. */
-  sweetsPlank: 0,
-  /** Sweets stand in the right outer column only: x, kind, size (the window and the HUD are on the left). */
-  sweets: [
-    { x: 868, kind: 'candy', size: 40 },
-    { x: 968, kind: 'macaron', size: 84 },
-  ] as const,
-  /** Share the sweets' colours lean towards the wall. */
-  sweetsMute: 0.35,
+  /** The boards of the wall (512 tile; `plank` px from the top, see `KITCHEN_SHELF`). */
+  plank: 110,
+  /** The sweets stand on a bracket in the right outer column, below the row of the flying layer. */
+  sweets: {
+    at: { x: 0.915, y: 0.72 },
+    board: 150,
+    /** Share the sweets' colours lean towards the wall. */
+    mute: 0.35,
+    items: [
+      { x: -34, kind: 'candy', size: 36 },
+      { x: 36, kind: 'macaron', size: 76 },
+    ],
+  },
   /** Stand silhouettes: x in the 512 tile. */
   standsX: [70, 250],
   awning: { height: 60, stripe: 64 },
@@ -210,6 +215,9 @@ export const SHOP_LOOK = {
     cord: 86,
     globe: 26,
     at: [0.26, 0.76],
+    /** The lamps hang at different heights (extra px under the awning) and are drawn smaller than the picture. */
+    drop: [0, 44],
+    scale: 0.75,
     swingDeg: 4,
     ms: [2300, 2700],
   },
@@ -217,14 +225,20 @@ export const SHOP_LOOK = {
   farWash: 0.72,
 } as const;
 
-/** The shelf of the home kitchen: one jar, at the right edge, on one plank of two (docs/06, «Места старта»). */
+/**
+ * The shelves of the home kitchen are bare boards (512 tile, the board `plank` px from the top: with the camera
+ * of layers 1-10 no board comes within 40 px of the next-creature chip on 390x844 and 390x693). The jar stands
+ * on its own bracket in the right outer column, below the row of the flying layer.
+ */
 export const KITCHEN_SHELF = {
-  width: 1024,
-  height: 1024,
-  planks: [400, 912],
-  jarPlank: 0,
-  jar: { x: 902, w: 52, h: 112, color: 0xe58fa0, mute: 0.5 },
+  plank: 110,
+  /** Jar picture on its bracket; `at` is the centre as shares of the screen, `offset` in logical px. */
+  jar: { w: 52, h: 112, color: 0xe58fa0, mute: 0.5, board: 150, at: { x: 0.915, y: 0.72 } },
 } as const;
 
-/** The Showcase awning at night: stripes lean towards the night sky and the layer is opaque, so house windows do not show through. */
-export const NIGHT_AWNING = { mute: 0.65, alpha: 1 } as const;
+/** The Showcase awning in the weather: stripes lean towards the sky of the weather; at night the layer is also opaque, so house windows do not show through. */
+export const AWNING_WEATHER: Partial<Record<WeatherId, { mute: number; alpha?: number }>> = {
+  night: { mute: 0.65, alpha: 1 },
+  rain: { mute: 0.3 },
+  storm: { mute: 0.3 },
+};

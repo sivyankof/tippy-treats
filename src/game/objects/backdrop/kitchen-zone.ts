@@ -20,50 +20,60 @@ const C = BACKDROP_COLORS.kitchen;
 
 const SHELF = KITCHEN_SHELF;
 const JAR_LOWER = 0.38;
+const JAR_PAD = 26;
 
-/** A jar in the house style: dark outline of its own colour, two tones, a lid and a gloss mark. Muted towards the wall. */
-function drawJar(g: Phaser.GameObjects.Graphics, plankY: number): void {
-  const { x, w, h, color: base, mute } = SHELF.jar;
-  const color = mixColor(base, KITCHEN_COLORS.wall, mute);
-  const left = x - w / 2;
-  const top = plankY - h;
-  const lid = shade(KITCHEN_COLORS.shelf, -0.2);
-  g.fillStyle(outlineColor(color), 1);
-  g.fillRoundedRect(left - 4, top - 4, w + 8, h + 4, 18);
-  g.fillStyle(color, 1);
-  g.fillRoundedRect(left, top, w, h, 14);
-  g.fillStyle(shade(color, -0.13), 1);
-  g.fillRoundedRect(left, top + h * (1 - JAR_LOWER), w, h * JAR_LOWER, {
-    tl: 0,
-    tr: 0,
-    bl: 14,
-    br: 14,
-  });
-  g.fillStyle(outlineColor(lid), 1);
-  g.fillRoundedRect(left + 6, top - 22, w - 12, 24, 9);
-  g.fillStyle(lid, 1);
-  g.fillRoundedRect(left + 9, top - 19, w - 18, 16, 7);
-  g.fillStyle(PALETTE.textLight, 0.42);
-  g.fillRoundedRect(left + 11, top + 12, 9, h * 0.46, 4.5);
-  g.fillCircle(left + 15.5, top + 12 + h * 0.46 + 10, 4.5);
-}
-
-/** The shelf picture: planks across, and (in a run) one jar at the right edge on one plank of two. */
-function bakeShelves(scene: Phaser.Scene, bare: boolean): void {
-  bakeTexture(scene, shelvesKey(bare), SHELF.width, SHELF.height, (g) => {
-    SHELF.planks.forEach((plankY, i) => {
-      if (!bare && i === SHELF.jarPlank) drawJar(g, plankY);
-      g.fillStyle(shade(KITCHEN_COLORS.shelf, -0.25), 1);
-      g.fillRoundedRect(-20, plankY, SHELF.width + 40, 34, 10);
-      g.fillStyle(KITCHEN_COLORS.shelf, 1);
-      g.fillRoundedRect(-20, plankY, SHELF.width + 40, 24, 10);
-      g.fillStyle(PALETTE.textLight, 0.3);
-      g.fillRoundedRect(20, plankY + 4, 150, 5, 2.5);
+/** The jar on its own bracket in the house style: dark outline of its own colour, two tones, a lid and a gloss mark. Muted towards the wall. */
+function bakeJar(scene: Phaser.Scene): void {
+  const { w, h, color: base, mute, board } = SHELF.jar;
+  const width = board + 8;
+  const height = h + JAR_PAD + 40;
+  bakeTexture(scene, JAR_KEY, width, height, (g) => {
+    const color = mixColor(base, KITCHEN_COLORS.wall, mute);
+    const plankY = JAR_PAD + h;
+    const left = width / 2 - w / 2;
+    const top = JAR_PAD;
+    const lid = shade(KITCHEN_COLORS.shelf, -0.2);
+    g.fillStyle(outlineColor(color), 1);
+    g.fillRoundedRect(left - 4, top - 4, w + 8, h + 4, 18);
+    g.fillStyle(color, 1);
+    g.fillRoundedRect(left, top, w, h, 14);
+    g.fillStyle(shade(color, -0.13), 1);
+    g.fillRoundedRect(left, top + h * (1 - JAR_LOWER), w, h * JAR_LOWER, {
+      tl: 0,
+      tr: 0,
+      bl: 14,
+      br: 14,
     });
+    g.fillStyle(outlineColor(lid), 1);
+    g.fillRoundedRect(left + 6, top - 22, w - 12, 24, 9);
+    g.fillStyle(lid, 1);
+    g.fillRoundedRect(left + 9, top - 19, w - 18, 16, 7);
+    g.fillStyle(PALETTE.textLight, 0.42);
+    g.fillRoundedRect(left + 11, top + 12, 9, h * 0.46, 4.5);
+    g.fillCircle(left + 15.5, top + 12 + h * 0.46 + 10, 4.5);
+    g.fillStyle(shade(KITCHEN_COLORS.shelf, -0.25), 1);
+    g.fillRoundedRect(4, plankY, board, 30, 10);
+    g.fillStyle(KITCHEN_COLORS.shelf, 1);
+    g.fillRoundedRect(4, plankY, board, 22, 10);
+    g.fillStyle(PALETTE.textLight, 0.3);
+    g.fillRoundedRect(16, plankY + 4, 40, 4, 2);
   });
 }
 
-const shelvesKey = (bare: boolean): string => (bare ? `${K.shelves}_bare` : K.shelves);
+const JAR_KEY = 'bd_win_kjar';
+
+/** The boards across the wall; none stands near the chip of the start view (see `KITCHEN_SHELF`). */
+function bakeShelves(scene: Phaser.Scene): void {
+  bakeTexture(scene, K.shelves, TILE, TILE, (g) => {
+    const plankY = SHELF.plank;
+    g.fillStyle(shade(KITCHEN_COLORS.shelf, -0.25), 1);
+    g.fillRoundedRect(-20, plankY, TILE + 40, 34, 10);
+    g.fillStyle(KITCHEN_COLORS.shelf, 1);
+    g.fillRoundedRect(-20, plankY, TILE + 40, 24, 10);
+    g.fillStyle(PALETTE.textLight, 0.3);
+    g.fillRoundedRect(20, plankY + 4, 150, 5, 2.5);
+  });
+}
 
 function bakeLayers(scene: Phaser.Scene): void {
   bakeTexture(scene, K.wallpaper, TILE, TILE, (g) => {
@@ -210,7 +220,8 @@ export const kitchenArt: ZoneArt = {
     bakeWindow(scene, 'kitchen', look.weather);
     bakeGlassItems(scene, look.weather);
     bakeLayers(scene);
-    bakeShelves(scene, look.menu === true);
+    bakeShelves(scene);
+    bakeJar(scene);
     bakePot(scene);
     bakeRack(scene);
     bakeClock(scene);
@@ -226,18 +237,21 @@ export const kitchenArt: ZoneArt = {
         pulse: WINDOW_LOOK.pulse,
       },
     ]);
+    const jar = new Hover(scene, [
+      { texture: JAR_KEY, at: SHELF.jar.at, offset: { x: 0, y: 0 }, pulse: WINDOW_LOOK.pulse },
+    ]);
     const glass = windowGlassLife(scene, 'kitchen', look.weather);
     const steam = new PuffColumn(scene, life.steam, life.steamAt, life.steamOffset);
     const fly = new Traveler(scene, life.fly);
     return {
-      layers: [K.wallpaper, K.tiles, shelvesKey(look.menu === true), K.utensils],
+      layers: [K.wallpaper, K.tiles, K.shelves, K.utensils],
       lives: [
         { slot: 1, life: new Hover(scene, [life.pot, life.clock, life.rail]) },
         { slot: 1, life: new Hover(scene, [life.clockHand, life.pendulum]) },
         { slot: 1, life: new Hover(scene, life.ladles) },
         { slot: 1, life: new Hover(scene, [life.lid]) },
         { slot: 1, life: steam },
-        { slot: 3, life: new RunOnly(glass ? [window, glass] : [window]) },
+        { slot: 3, life: new RunOnly(glass ? [window, glass, jar] : [window, jar]) },
         { slot: 3, life: fly },
       ],
       guest: fly,
