@@ -22,8 +22,8 @@ const K = BD_TEX.kitchen;
 const C = BACKDROP_COLORS.kitchen;
 
 const SHELF = KITCHEN_SHELF;
-/** The tiled wall (layer 1) carries the clock, the pot and the ladle rail; they are drawn right above it. */
-const KITCHEN_LAYER = 1;
+/** The clock, the pot and the ladle rail hang on the wall with the shelves (the same layer as the window), drawn in front of the boards, so the boards never slide through them. */
+const KITCHEN_LAYER = WALL_LOOK.layer;
 const JAR_LOWER = 0.38;
 const JAR_PAD = 26;
 
@@ -259,16 +259,16 @@ export const kitchenArt: ZoneArt = {
       layers: [K.wallpaper, K.tiles, K.shelves, K.utensils],
       lives: [
         {
-          slot: 1,
+          slot: 2,
           life: new Hover(scene, [life.pot, life.clock, life.rail], onLayer(KITCHEN_LAYER)),
         },
         {
-          slot: 1,
+          slot: 2,
           life: new Hover(scene, [life.clockHand, life.pendulum], onLayer(KITCHEN_LAYER)),
         },
-        { slot: 1, life: new Hover(scene, life.ladles, onLayer(KITCHEN_LAYER)) },
-        { slot: 1, life: new Hover(scene, [life.lid], onLayer(KITCHEN_LAYER)) },
-        { slot: 1, life: steam },
+        { slot: 2, life: new Hover(scene, life.ladles, onLayer(KITCHEN_LAYER)) },
+        { slot: 2, life: new Hover(scene, [life.lid], onLayer(KITCHEN_LAYER)) },
+        { slot: 2, life: steam },
         { slot: 3, life: new RunOnly([window, ...glass, jar], onLayer(WALL_LOOK.layer)) },
         { slot: 3, life: fly },
       ],
