@@ -3,7 +3,7 @@ import { Rng } from '../../../core/rng';
 import { BALANCE } from '../../../data/balance';
 import { EFFECT_LEVELS } from '../../../data/effect-levels';
 import { LOGICAL_SIZE } from '../../../data/screen';
-import { STREET_WEATHER } from '../../../data/street-weather';
+import { STREET_WEATHER, streetFallView } from '../../../data/street-weather';
 import { WEATHER_LOOK } from '../../../data/weather-look';
 import { GLASS_WEATHER } from '../../../data/window-look';
 import { clamp01 } from '../../../util/math';
@@ -12,11 +12,7 @@ import { laneCount, snowSpots, startU } from './weather-lanes';
 import { fallShown, particleFade, rainSpots, rainX, rainY } from './weather-motion';
 
 const KINDS = ['rain', 'storm', 'snow', 'leaves'] as const;
-const view = (kind: (typeof KINDS)[number]) => ({
-  count: STREET_WEATHER.count[kind],
-  alpha: STREET_WEATHER.alpha,
-  scale: STREET_WEATHER.scale,
-});
+const view = streetFallView;
 
 /** The logical height of a 390 px wide screen `css` px tall. */
 const heightOf = (css: number): number =>
@@ -45,10 +41,24 @@ describe('street weather of the Showcase', () => {
   });
 
   it('mutes the street more than the Roof', () => {
-    expect(STREET_WEATHER.alpha).toBeLessThan(1);
-    expect(STREET_WEATHER.scale).toBeLessThan(1);
+    for (const kind of KINDS) {
+      expect(view(kind).alpha, kind).toBeLessThan(1);
+      expect(view(kind).scale, kind).toBeLessThan(1);
+    }
     expect(STREET_WEATHER.bank.alpha).toBeLessThan(1);
     expect(STREET_WEATHER.bank.scaleY).toBeLessThan(WEATHER_LOOK.bank.scale);
+  });
+
+  it('keeps the white flakes plainer than the rest of the street, which stays at the shared share', () => {
+    expect(view('snow').alpha).toBeGreaterThan(STREET_WEATHER.alpha);
+    expect(view('snow').scale).toBeGreaterThan(STREET_WEATHER.scale);
+    for (const kind of ['rain', 'storm', 'leaves'] as const) {
+      expect(view(kind)).toEqual({
+        count: STREET_WEATHER.count[kind],
+        alpha: STREET_WEATHER.alpha,
+        scale: STREET_WEATHER.scale,
+      });
+    }
   });
 
   it('throws the flash light wider than the lit patch of the cloud and keeps it soft', () => {

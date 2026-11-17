@@ -4,15 +4,31 @@
  * over the houses smaller and paler, and in snow the house roofs wear white caps. It is further away than
  * the weather of the Roof, so everything here is more muted.
  */
+
+/** The kinds of falling pictures the street shows. */
+export type StreetFallKind = 'rain' | 'storm' | 'snow' | 'leaves';
+
+/** A share of the Roof alpha and size of the falling pictures. */
+interface StreetFallLook {
+  alpha: number;
+  scale: number;
+}
+
 export const STREET_WEATHER = {
   /**
    * Falling pictures on the full level (lite shows half, minimal none). With the drops and flakes on the
    * glass (`GLASS_LOOK`: 7 / 10 / 9 / 3) the zone stays within `WEATHER_LOOK.particleCount` on every level.
    */
-  count: { rain: 24, storm: 20, snow: 22, leaves: 18 },
+  count: { rain: 24, storm: 20, snow: 22, leaves: 18 } satisfies Record<StreetFallKind, number>,
   /** The falling pictures are this share of their Roof alpha and size: they are out on the street. */
   alpha: 0.6,
   scale: 0.85,
+  /**
+   * A kind whose pictures get lost at that share keeps more of its Roof look. White flakes on the pale street
+   * of a tall screen all but vanished at 0.6 / 0.85 (their count cannot grow: the lite level is full with the
+   * flakes on the glass), so snow is only a little muted.
+   */
+  own: { snow: { alpha: 0.9, scale: 0.95 } } as Partial<Record<StreetFallKind, StreetFallLook>>,
   /** The cloud bank of the Roof over the houses: smaller (the Roof shows it at 1.27) and paler; it still spans the screen and its drift. */
   bank: {
     scaleX: 1.1,
@@ -53,4 +69,12 @@ export const STREET_WEATHER = {
   },
 } as const;
 
-export type StreetFallKind = keyof typeof STREET_WEATHER.count;
+/** How many pictures of a kind fall on the street, and the share of their Roof alpha and size they show at. */
+export function streetFallView(kind: StreetFallKind): StreetFallLook & { count: number } {
+  const own = STREET_WEATHER.own[kind];
+  return {
+    count: STREET_WEATHER.count[kind],
+    alpha: own?.alpha ?? STREET_WEATHER.alpha,
+    scale: own?.scale ?? STREET_WEATHER.scale,
+  };
+}
