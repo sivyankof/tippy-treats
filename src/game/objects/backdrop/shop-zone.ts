@@ -10,7 +10,7 @@ import { mixColor, shade } from '../../../util/color';
 import { outlineColor } from '../../fx/plain-style';
 import { bakeTexture } from '../../ui/bake-texture';
 import { BACKDROP_LIFE } from '../../../data/backdrop-life';
-import { OUTLINE, drawPlank, outlined } from './art-kit';
+import { OUTLINE, circle, drawPlank, ellipse, outlined, roundRect, tint } from './art-kit';
 import { Hover, Traveler } from './life';
 import { bakeDisplay, displayLife } from './shop-display';
 import { bakeFly } from './kitchen-zone';
@@ -30,25 +30,17 @@ function macaron(g: Graphics, plankY: number, x: number, color: number, w: numbe
     [plankY - shell / 2, shell],
   ];
   for (const [cy, h] of parts) {
-    outlined(g, color, (grow) => g.fillEllipse(x, cy, w + grow * 2, h + grow * 2));
+    outlined(g, color, ellipse(g, x, cy, w, h));
   }
   const gap = plankY - shell - (top + shell);
-  outlined(g, cream, (grow) =>
-    g.fillRoundedRect(
-      x - w * 0.43 - grow,
-      top + shell - 2 - grow,
-      w * 0.86 + grow * 2,
-      gap + 4 + grow * 2,
-      8,
-    ),
-  );
+  outlined(g, cream, roundRect(g, x - w * 0.43, top + shell - 2, w * 0.86, gap + 4, 8));
   g.fillStyle(shade(color, 0.28), 0.8);
   g.fillEllipse(x - w * 0.18, top + shell * 0.36, w * 0.32, shell * 0.26);
 }
 
 function candy(g: Graphics, plankY: number, x: number, color: number, r: number): void {
   const cy = plankY - r;
-  outlined(g, color, (grow) => g.fillCircle(x, cy, r + grow));
+  outlined(g, color, circle(g, x, cy, r));
   g.fillStyle(shade(color, 0.2), 1);
   g.fillCircle(x + r * 0.05, cy + r * 0.05, r * 0.6);
   g.fillStyle(shade(color, -0.1), 1);
@@ -90,17 +82,16 @@ function bakeSweets(scene: Phaser.Scene): void {
   const width = board + 8;
   const height = SWEETS_PAD + 36;
   bakeTexture(scene, SHOP_TEX.sweets, width, height, (g) => {
-    const tint = (color: number): number => mixColor(color, C.skyBottom, mute);
     items.forEach((item, i) => {
       const x = width / 2 + item.x;
       if (item.kind === 'candy') {
-        candy(g, SWEETS_PAD, x, tint(C.sweets.candy[1]), item.size);
+        candy(g, SWEETS_PAD, x, tint(C.sweets.candy[1], mute), item.size);
       } else {
         macaron(
           g,
           SWEETS_PAD,
           x,
-          tint(C.sweets.macaron[(i + 1) % C.sweets.macaron.length] ?? 0),
+          tint(C.sweets.macaron[(i + 1) % C.sweets.macaron.length] ?? 0, mute),
           item.size,
         );
       }
@@ -159,7 +150,7 @@ function bakeLamp(scene: Phaser.Scene): void {
     g.fillRoundedRect(cx - 9, cord - 6, 18, 12, 4);
     g.fillStyle(0xfff0c0, 0.3);
     g.fillCircle(cx, cy, globe + 12);
-    outlined(g, C.sweets.glaze, (grow) => g.fillCircle(cx, cy, globe + grow));
+    outlined(g, C.sweets.glaze, circle(g, cx, cy, globe));
     g.fillStyle(shade(C.sweets.glaze, 0.35), 1);
     g.fillCircle(cx - 2, cy - 2, globe * 0.62);
     g.fillStyle(0xffffff, 0.6);

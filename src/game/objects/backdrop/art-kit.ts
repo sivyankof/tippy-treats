@@ -2,7 +2,8 @@ import type * as Phaser from 'phaser';
 import { BD_TEX } from '../../../data/backdrop';
 import { BACKDROP_COLORS } from '../../../data/backdrop-colors';
 import type { Point } from '../../../data/backdrop-life';
-import { shade } from '../../../util/color';
+import { SHOP_COLORS } from '../../../data/window-look';
+import { mixColor, shade } from '../../../util/color';
 import { outlineColor } from '../../fx/plain-style';
 import { bakeTexture } from '../../ui/bake-texture';
 
@@ -145,6 +146,32 @@ export function bakeSharedArt(scene: Phaser.Scene): void {
 
 /** Width of the dark outline of the shop pictures (px). */
 export const OUTLINE = 4;
+
+/** A colour of a shop picture muted towards the wall behind it by `mute` (0..1). */
+export function tint(color: number, mute: number): number {
+  return mixColor(color, SHOP_COLORS.skyBottom, mute);
+}
+
+/** An ellipse as a grow-able shape for `outlined()`. */
+export function ellipse(g: Graphics, cx: number, cy: number, w: number, h: number) {
+  return (grow: number): void => {
+    g.fillEllipse(cx, cy, w + grow * 2, h + grow * 2);
+  };
+}
+
+/** A rounded rectangle as a grow-able shape for `outlined()`. */
+export function roundRect(g: Graphics, x: number, y: number, w: number, h: number, r: number) {
+  return (grow: number): void => {
+    g.fillRoundedRect(x - grow, y - grow, w + grow * 2, h + grow * 2, r);
+  };
+}
+
+/** A circle as a grow-able shape for `outlined()`. */
+export function circle(g: Graphics, cx: number, cy: number, r: number) {
+  return (grow: number): void => {
+    g.fillCircle(cx, cy, r + grow);
+  };
+}
 
 /** A body with the dark outline of its own colour: the outline shape is drawn first, `fill` on top. */
 export function outlined(

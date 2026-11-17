@@ -1,9 +1,9 @@
 import type * as Phaser from 'phaser';
 import { SHOP_COLORS, SHOP_LOOK, SHOP_TEX, WINDOW_LOOK } from '../../../data/window-look';
-import { mixColor, shade } from '../../../util/color';
+import { shade } from '../../../util/color';
 import { bakeTexture } from '../../ui/bake-texture';
 import { Hover, type FrameCtx, type Life } from './life';
-import { outlined } from './art-kit';
+import { circle, ellipse, outlined, roundRect, tint as muteTint } from './art-kit';
 
 type Graphics = Phaser.GameObjects.Graphics;
 
@@ -22,26 +22,14 @@ const BASE = { x: 5, y: 78, w: 46, h: 22 };
 const COLUMNS = [18, 38] as const;
 
 function tint(color: number): number {
-  return mixColor(color, C.skyBottom, D.mute);
-}
-
-function ellipse(g: Graphics, cx: number, cy: number, w: number, h: number) {
-  return (grow: number): void => {
-    g.fillEllipse(cx, cy, w + grow * 2, h + grow * 2);
-  };
-}
-
-function roundRect(g: Graphics, x: number, y: number, w: number, h: number, r: number) {
-  return (grow: number): void => {
-    g.fillRoundedRect(x - grow, y - grow, w + grow * 2, h + grow * 2, r);
-  };
+  return muteTint(color, D.mute);
 }
 
 /** A small round cake: a sponge tier, a glaze cap and a cherry. */
 function cake(g: Graphics, x: number, floor: number): void {
   outlined(g, tint(C.sweets.cake), ellipse(g, x, floor - 7, 22, 15), THIN);
   outlined(g, tint(D.cake.glaze), ellipse(g, x, floor - 12, 22, 9), THIN);
-  outlined(g, tint(D.cake.cherry), (grow) => g.fillCircle(x, floor - 18, 3 + grow), THIN);
+  outlined(g, tint(D.cake.cherry), circle(g, x, floor - 18, 3), THIN);
   g.fillStyle(GLOSS, GLOSS_ALPHA);
   g.fillEllipse(x - 5, floor - 13, 6, 2.5);
 }
@@ -62,7 +50,7 @@ function cupcake(g: Graphics, x: number, floor: number): void {
 function donut(g: Graphics, x: number, floor: number): void {
   const dough = tint(D.donut.dough);
   const cy = floor - 9;
-  outlined(g, dough, (grow) => g.fillCircle(x, cy, 10 + grow), THIN);
+  outlined(g, dough, circle(g, x, cy, 10), THIN);
   g.fillStyle(tint(D.donut.icing), 1);
   g.fillCircle(x, cy - 1, 8.5);
   g.fillStyle(shade(dough, -0.35), 1);
