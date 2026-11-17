@@ -5,8 +5,8 @@ import { stainOrigin, stainPictureSize } from '../fx/squash-textures';
 import { stainSpot } from '../fx/topper-squash-plan';
 import { layerMarks } from '../objects/layer-marks';
 
-/** Colours the demo stains cycle through. */
-const TINTS = [0xe8344c, 0xf2465c] as const;
+/** The pictures the demo stains cycle through. */
+const TEXTURES = [SQUASH_TEXTURES.stainCherry, SQUASH_TEXTURES.stainStrawberry] as const;
 
 /**
  * `?perf=1&marks=1`: leaves a juice stain on every layer of the starting tower, so the benchmark
@@ -20,14 +20,13 @@ export function leaveDemoMarks(layers: readonly PlacedLayer[]): void {
     if (!spot) return;
     layerMarks.addPress(i + 1, [
       {
-        texture: SQUASH_TEXTURES.stain,
+        texture: TEXTURES[i % TEXTURES.length]!,
         dx: spot.dx,
         dy: spot.dy,
         originX,
         originY,
         width,
         height,
-        tint: TINTS[i % TINTS.length],
         angleDeg: spot.angleDeg,
         bornMs: 0,
         growMs: TOPPER_SQUASH.stain.growMs,

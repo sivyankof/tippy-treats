@@ -28,6 +28,7 @@ import { ensureTopperTexture } from './topper-texture';
 import {
   burstCount,
   burstStates,
+  launchX,
   rollSpots,
   squashLevelPlan,
   stainSpot,
@@ -44,6 +45,7 @@ interface Crushed {
   offX: number;
   offY: number;
   /** Scale and tilt at the impact, and how far it sinks to lie below the seam. */
+  rotation: number;
   scaleX: number;
   scaleY: number;
   sinkPx: number;
@@ -58,8 +60,6 @@ interface Pending {
   dipDx: number | null;
   squintMs: number;
 }
-
-const SIDE_FALLBACK = 1;
 
 /**
  * What a layer landing on a big topper does to it (docs/06, section 4, "Придавливание
@@ -93,20 +93,25 @@ export class TopperSquashFx {
     const look = TOPPER_SQUASH.kinds[kind];
     const rng = this.rngFor(lowerIndex + 2);
     const local = world.x - lowerView.x;
-    const side = local < 0 ? -1 : local > 0 ? 1 : SIDE_FALLBACK;
+    // The juice and the rest come out of the seam at the side of the new layer, between the two layers.
+    const topperX = lower.x + local;
+    const side = topperX < layer.x ? -1 : 1;
     effectCues.emit({ kind: 'topperSquash', topper: kind });
     if (look.flatten) this.flatten(kind, world, lowerIndex, look.flatten);
-    // Everything comes out of the seam: the top edge of the lower layer, under the new layer.
     const seamY = world.y - PLAIN_TOPPERS.sinkPx + TOPPER_SQUASH.burstBelowSeamPx;
-    if (kind === 'wafer') this.waferHalves(world.x, seamY, world.scaleX, side, rng);
+    const x =
+      lowerView.x +
+      launchX(topperX, layer.x, layer.width, faceHalfSpan(layer.width, null)) -
+      lower.x;
+    const depth = DEPTH.tower + (lowerIndex + 0.5) * DEPTH.towerLayerStep;
+    if (kind === 'wafer') this.waferHalves(x, seamY, world.scaleX, side, rng, depth);
     else if (look.burst && look.burstTexture) {
-      this.burst(look.burst, look.burstTexture, world.x, seamY, side, rng);
+      this.burst(look.burst, look.burstTexture, x, seamY, side, rng, depth);
     }
-    if (look.extra && look.extraTexture) {
-      this.burst(look.extra, look.extraTexture, world.x, seamY, side, rng);
-    }
-    if (plan.trace && look.stainTint !== null) {
-      this.leaveStain(lowerIndex, lower.width, local, look.stainTint);
+    for (const extra of look.extras)
+      this.burst(extra.burst, extra.texture, x, seamY, side, rng, depth);
+    if (plan.trace && look.stainTexture !== null) {
+      this.leaveStain(lowerIndex, lower.width, local, look.stainTexture);
     }
     this.pending = {
       index: lowerIndex + 1,
@@ -199,6 +204,7 @@ export class TopperSquashFx {
     c.index = lowerIndex;
     c.offX = world.x - view.x;
     c.offY = world.y - view.y;
+    c.rotation = world.rotation;
     c.scaleX = world.scaleX;
     c.scaleY = world.scaleY;
     // It is squeezed so that only a thin splat of `peekPx` shows below the seam, under the new layer.
@@ -227,6 +233,7 @@ export class TopperSquashFx {
     if (view) c.image.setPosition(view.x + c.offX, view.y + c.offY + sink);
     c.image
       .setScale(c.scaleX * lerp(1, look.scaleX, squash), c.scaleY * lerp(1, look.scaleY, squash))
+      .setRotation(c.rotation * (1 - squash))
       .setAlpha(1 - fade);
   }
 
@@ -243,6 +250,7 @@ export class TopperSquashFx {
         index: 0,
         offX: 0,
         offY: 0,
+        rotation: 0,
         scaleX: 1,
         scaleY: 1,
         sinkPx: 0,
@@ -263,6 +271,7 @@ export class TopperSquashFx {
     y: number,
     side: -1 | 1,
     rng: Rng,
+    depth: number,
   ): void {
     const count = burstCount(burst, rng);
     const tints = burst.tints.length > 0 ? burst.tints : [0xffffff];
@@ -277,12 +286,19 @@ export class TopperSquashFx {
           p.scaleFrom *= shown;
           return p;
         }),
-      { texture, tints, depth: DEPTH.particles },
+      { texture, tints, depth },
     );
   }
 
   /** The wafer breaks: the two halves start exactly where the whole wafer stood and fly apart, and crumbs fly. */
-  private waferHalves(x: number, y: number, scale: number, side: -1 | 1, rng: Rng): void {
+  private waferHalves(
+    x: number,
+    y: number,
+    scale: number,
+    side: -1 | 1,
+    rng: Rng,
+    depth: number,
+  ): void {
     const burst = TOPPER_SQUASH.kinds.wafer.burst;
     if (!burst) return;
     const halves = [
@@ -300,12 +316,12 @@ export class TopperSquashFx {
             p.spin = Math.abs(p.spin) * half.spin * side;
             return p;
           }),
-        { texture: half.texture, tints: [0xffffff], depth: DEPTH.particles },
+        { texture: half.texture, tints: [0xffffff], depth },
       );
     }
   }
 
-  private leaveStain(lowerIndex: number, width: number, topperDx: number, tint: number): void {
+  private leaveStain(lowerIndex: number, width: number, topperDx: number, texture: string): void {
     const spot = stainSpot(width, faceHalfSpan(width, null), topperDx);
     if (!spot) return;
     const { stain } = TOPPER_SQUASH;
@@ -313,14 +329,13 @@ export class TopperSquashFx {
     const [originX, originY] = stainOrigin();
     layerMarks.addPress(lowerIndex + 1, [
       {
-        texture: SQUASH_TEXTURES.stain,
+        texture,
         dx: spot.dx,
         dy: spot.dy,
         originX,
         originY,
         width: pictureWidth,
         height: pictureHeight,
-        tint,
         angleDeg: spot.angleDeg,
         bornMs: this.scene.time.now + stain.delayMs,
         growMs: stain.growMs,

@@ -6,7 +6,6 @@ import { DEG_TO_RAD } from '../../util/math';
 import { bakeTexture } from '../ui/bake-texture';
 import {
   drawGlossMark,
-  drawTwoToneBody,
   ellipsePoints,
   fillOutlinedPolygon,
   fillPolygon,
@@ -57,9 +56,10 @@ function drawBlobs(
   blobs: readonly Blob[],
   base: number,
   shadow: number,
+  outline: number,
   band: number,
 ): void {
-  g.fillStyle(outlineColor(base), 1);
+  g.fillStyle(outline, 1);
   for (const b of blobs)
     fillPolygon(g, ellipsePoints(b.cx, b.cy, b.rx + outlinePx, b.ry + outlinePx, 0));
   g.fillStyle(shadow, 1);
@@ -84,62 +84,121 @@ function glossAt(
   x: number,
   y: number,
   unit: number,
+  color: number,
   alpha: number,
 ): void {
-  drawGlossMark(g, glossFromShares({ ...gloss, x: 0, y: 0 }, x, y, unit, stainColors.gloss, alpha));
+  drawGlossMark(g, glossFromShares({ ...gloss, x: 0, y: 0 }, x, y, unit, color, alpha));
 }
 
-/** The juice stain: a splat with a drip running down. Drawn light, shown tinted in the colour of the juice. */
-function drawStain(g: Phaser.GameObjects.Graphics): void {
-  const { width: w } = stain;
-  const mid = w / 2;
+type StainTones = (typeof stainColors)[keyof typeof stainColors];
+
+/** The juice stain: a wide flat splash with a short drip running down, in the colours of the juice. */
+function drawStain(g: Phaser.GameObjects.Graphics, tones: StainTones): void {
+  const mid = stain.width / 2;
   const top = stain.originY * stain.height;
   drawBlobs(
     g,
     [
-      { cx: mid, cy: top + 12, rx: 21, ry: 12 },
-      { cx: mid - 17, cy: top + 15, rx: 9, ry: 7.5 },
-      { cx: mid + 16, cy: top + 16, rx: 9.5, ry: 8 },
-      { cx: mid + 4, cy: top + 6, rx: 11, ry: 6 },
-      { cx: mid - 4, cy: top + 27, rx: 5.2, ry: 7 },
-      { cx: mid - 4, cy: top + 33, rx: 6, ry: 6.2 },
+      { cx: mid, cy: top + 8, rx: 25, ry: 7.5 },
+      { cx: mid - 21, cy: top + 10, rx: 8.5, ry: 5.2 },
+      { cx: mid + 20, cy: top + 10.5, rx: 9, ry: 5.5 },
+      { cx: mid + 6, cy: top + 3.5, rx: 12, ry: 4 },
+      { cx: mid - 6, cy: top + 14, rx: 4.2, ry: 4.4 },
+      { cx: mid - 6, cy: top + 17.5, rx: 3.6, ry: 3.6 },
     ],
-    stainColors.base,
-    stainColors.shadow,
+    tones.base,
+    tones.shadow,
+    outlineColor(tones.shadow),
     0.12,
   );
-  glossAt(g, mid - 8, top + 6, 36, 0.95);
-  glossAt(g, mid - 6, top + 31, 9, 0.9);
+  glossAt(g, mid - 11, top + 5, 30, tones.gloss, 0.95);
+}
+
+/** A flying drop of juice: a teardrop with an outline, drawn light and shown tinted (see `SQUASH_PICTURES.drop`). */
+function drawDrop(g: Phaser.GameObjects.Graphics): void {
+  const { width: w, height: h, outline, shadow } = SQUASH_PICTURES.drop;
+  const r = w / 2 - outlinePx * 0.6;
+  const cy = h - w / 2 - outlinePx * 0.2;
+  // A round head and a pointed tip: the arc leaves out the top wedge, the tip closes it.
+  const shape = (grow: number, dx: number, dy: number): Array<{ x: number; y: number }> => {
+    const points: Array<{ x: number; y: number }> = [];
+    for (let deg = -50; deg <= 230; deg += 10) {
+      const a = deg * DEG_TO_RAD;
+      points.push({
+        x: w / 2 + dx + Math.cos(a) * (r + grow),
+        y: cy + dy + Math.sin(a) * (r + grow),
+      });
+    }
+    points.push({ x: w / 2 + dx, y: outlinePx * 0.4 + dy - grow * 0.8 });
+    return points;
+  };
+  g.fillStyle(outline, 1);
+  fillPolygon(g, shape(outlinePx * 0.6, 0, 0));
+  g.fillStyle(shadow, 1);
+  fillPolygon(g, shape(0, 0, 0));
+  g.fillStyle(0xffffff, 1);
+  fillPolygon(g, shape(-1.2, -0.9, -0.9));
+}
+
+/** A strawberry seed: a small outlined teardrop, in its own colours. */
+function drawSeed(g: Phaser.GameObjects.Graphics): void {
+  const { width: w, height: h, color, dark } = SQUASH_PICTURES.seed;
+  const cx = w / 2;
+  const body = (grow: number): Array<{ x: number; y: number }> =>
+    ellipsePoints(cx, h / 2, w / 2 - 1.2 + grow, h / 2 - 1.2 + grow, 0);
+  g.fillStyle(dark, 1);
+  fillPolygon(g, body(1.2));
+  g.fillStyle(color, 1);
+  fillPolygon(
+    g,
+    ellipsePoints(cx - 0.6, h / 2 - 0.6, (w / 2 - 1.2) * 0.75, (h / 2 - 1.2) * 0.8, 0),
+  );
+}
+
+/** The bit of a cherry stem: a curved green stroke with a dark outline, in its own colours. */
+function drawStemBit(g: Phaser.GameObjects.Graphics): void {
+  const { width: w, height: h, thick, color, dark } = SQUASH_PICTURES.stem;
+  const pad = thick / 2 + 1.5;
+  const curve = (t: number): { x: number; y: number } => ({
+    x: pad + (w - pad * 2) * t,
+    y: h - pad - (h - pad * 2) * Math.sin(Math.PI * 0.5 * t) * (t < 0.5 ? 1 : 1 - (t - 0.5) * 0.8),
+  });
+  for (const [width, tone] of [
+    [thick + outlinePx, dark],
+    [thick, color],
+  ] as const) {
+    g.lineStyle(width, tone, 1);
+    g.beginPath();
+    for (let i = 0; i <= 12; i++) {
+      const p = curve(i / 12);
+      if (i === 0) g.moveTo(p.x, p.y);
+      else g.lineTo(p.x, p.y);
+    }
+    g.strokePath();
+  }
 }
 
 const capsule: BodyShape = (cx, cy, rx, ry) => roundRectPoints(cx, cy, rx, ry, ry);
 
-/** The cream roll squeezed out between two layers: a plump capsule with two ridges. */
+/** The cream roll squeezed out between two layers: a plump capsule, two tones, a warm outline and a gloss. */
 function drawCreamRoll(g: Phaser.GameObjects.Graphics): void {
   const { color, shadow } = PLAIN_LAYER.decor.cream;
   const cx = roll.width / 2;
   const cy = roll.height / 2;
   const rx = roll.width / 2 - rollOutlinePx;
   const ry = roll.height / 2 - rollOutlinePx;
-  drawTwoToneBody(g, capsule, cx, cy, rx, ry, {
-    base: color,
-    shadow,
-    grow: rollOutlinePx,
-    band: 0.14,
-  });
-  g.lineStyle(3, shadow, 1);
-  for (const x of [cx - rx * 0.1, cx + rx * 0.42]) {
-    g.beginPath();
-    g.moveTo(x - 3, cy - ry * 0.8);
-    g.lineTo(x + 3, cy + ry * 0.8);
-    g.strokePath();
-  }
+  g.fillStyle(SQUASH_PICTURES.rollOutline, 1);
+  fillPolygon(g, capsule(cx, cy, rx + rollOutlinePx, ry + rollOutlinePx));
+  g.fillStyle(shadow, 1);
+  fillPolygon(g, capsule(cx, cy, rx, ry));
+  g.fillStyle(color, 1);
+  fillPolygon(g, capsule(cx - rx * 0.05, cy - ry * 0.16, rx * 0.95, ry * 0.8));
   drawGlossMark(
     g,
     glossFromShares(
       { ...gloss, x: 0, y: 0 },
-      cx - rx * 0.45,
-      cy - ry * 0.4,
+      cx - rx * 0.4,
+      cy - ry * 0.45,
       roll.height * 1.5,
       0xffffff,
       gloss.alpha,
@@ -251,11 +310,28 @@ function bakeWaferHalf(scene: Phaser.Scene, key: string, keep: 'top' | 'bottom')
 /** Bakes the pictures of the squash (once); the art sheet shows them. */
 export function bakeSquashTextures(scene: Phaser.Scene): void {
   const [sw, sh] = stainPictureSize();
-  bakeTexture(scene, SQUASH_TEXTURES.stain, sw * bake, sh * bake, (g) => {
-    g.scaleCanvas(bake, bake);
-    g.translateCanvas(field, field);
-    drawStain(g);
-  });
+  for (const [key, tones] of [
+    [SQUASH_TEXTURES.stainCherry, stainColors.cherry],
+    [SQUASH_TEXTURES.stainStrawberry, stainColors.strawberry],
+  ] as const) {
+    bakeTexture(scene, key, sw * bake, sh * bake, (g) => {
+      g.scaleCanvas(bake, bake);
+      g.translateCanvas(field, field);
+      drawStain(g, tones);
+    });
+  }
+  const { drop, seed, stem: stemLook } = SQUASH_PICTURES;
+  for (const [key, w, h, draw] of [
+    [SQUASH_TEXTURES.drop, drop.width, drop.height, drawDrop],
+    [SQUASH_TEXTURES.seed, seed.width, seed.height, drawSeed],
+    [SQUASH_TEXTURES.stem, stemLook.width, stemLook.height, drawStemBit],
+  ] as const) {
+    bakeTexture(scene, key, (w + field * 2) * bake, (h + field * 2) * bake, (g) => {
+      g.scaleCanvas(bake, bake);
+      g.translateCanvas(field, field);
+      draw(g);
+    });
+  }
   const [rw, rh] = rollPictureSize();
   bakeTexture(scene, SQUASH_TEXTURES.creamRoll, rw * bake, rh * bake, (g) => {
     g.scaleCanvas(bake, bake);

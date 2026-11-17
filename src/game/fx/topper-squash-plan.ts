@@ -95,6 +95,24 @@ export function stainSpot(width: number, faceHalf: number, topperDx: number): St
   return { dx: side * reach, dy: deepest + stain.belowGlazePx, angleDeg: side * stain.tiltDeg };
 }
 
+/**
+ * Where the juice, leaves and halves are born along the seam: at the topper (`topperX`) but at the
+ * side of the new layer (centre `layerX`, `layerWidth` wide), clear of its face (`faceHalf`) and
+ * a little in from its edge, so they come out of the seam past the edge and never over the front.
+ */
+export function launchX(
+  topperX: number,
+  layerX: number,
+  layerWidth: number,
+  faceHalf: number,
+): number {
+  const { launch } = TOPPER_SQUASH;
+  const side = topperX < layerX ? -1 : 1;
+  const far = layerWidth / 2 - launch.edgeInsetPx;
+  const near = Math.min(faceHalf + launch.faceGapPx, far);
+  return layerX + side * Math.min(Math.max(Math.abs(topperX - layerX), near), far);
+}
+
 /** A cream roll at one end of the seam: offset of its anchor from the lower layer's centre, and which way it points. */
 export interface RollSpot {
   dx: number;
@@ -119,9 +137,14 @@ export function rollSpots(
   const right = Math.min(lowerX + lowerWidth / 2, upperX + upperWidth / 2);
   if (right - left < roll.minOverlapPx) return null;
   const dy = -BALANCE.layer.height / 2 + roll.seamDropPx;
+  // The outer end of a roll never reaches further past the lower layer's edge than `overhangPx`.
+  const outer = (1 - roll.originX) * roll.width;
+  const reach = lowerWidth / 2 + roll.overhangPx - outer;
+  const leftDx = Math.max(left - lowerX, -reach);
+  const rightDx = Math.min(right - lowerX, reach);
   return [
-    { dx: left - lowerX, dy, side: -1, angleDeg: -roll.droopDeg },
-    { dx: right - lowerX, dy, side: 1, angleDeg: roll.droopDeg },
+    { dx: leftDx, dy, side: -1, angleDeg: -roll.droopDeg },
+    { dx: rightDx, dy, side: 1, angleDeg: roll.droopDeg },
   ];
 }
 

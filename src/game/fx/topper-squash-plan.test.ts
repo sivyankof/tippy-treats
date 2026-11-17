@@ -11,6 +11,7 @@ import {
   crouchScale,
   crouchStep,
   edgeLaunch,
+  launchX,
   rollSpots,
   squashLevelPlan,
   stainSpot,
@@ -142,10 +143,12 @@ describe('rollSpots', () => {
     expect(right.side).toBe(1);
   });
 
-  it('uses the edges of the lower layer when the upper one is wider', () => {
+  it('keeps the outer end within the overhang past the lower layer when the upper one is wider', () => {
     const [left, right] = rollSpots(500, 300, 500, 600)!;
-    expect(left.dx).toBeCloseTo(-150);
-    expect(right.dx).toBeCloseTo(150);
+    const { roll } = TOPPER_SQUASH;
+    const reach = 150 + roll.overhangPx - (1 - roll.originX) * roll.width;
+    expect(left.dx).toBeCloseTo(-reach);
+    expect(right.dx).toBeCloseTo(reach);
   });
 
   it('sits at the seam', () => {
@@ -193,5 +196,18 @@ describe('squash data', () => {
     expect(TOPPER_SQUASH.kinds.cherry.burst.count).toEqual([5, 7]);
     expect(TOPPER_SQUASH.kinds.strawberry.burst.count).toEqual([5, 7]);
     expect(TOPPER_SQUASH.kinds.mint.burst.count).toEqual([3, 4]);
+  });
+});
+
+describe('launchX', () => {
+  it('keeps the launch clear of the face and inside the edge, on the topper side', () => {
+    const { launch } = TOPPER_SQUASH;
+    // Topper at the middle: pushed out of the face zone to its side.
+    expect(launchX(500, 500, 300, 40) - 500).toBeCloseTo(40 + launch.faceGapPx);
+    expect(launchX(480, 500, 300, 40) - 500).toBeCloseTo(-(40 + launch.faceGapPx));
+    // Topper near the edge: held inside it.
+    expect(launchX(700, 500, 300, 40) - 500).toBeCloseTo(150 - launch.edgeInsetPx);
+    // A topper already between the two stays where it is.
+    expect(launchX(600, 500, 300, 40)).toBeCloseTo(600);
   });
 });
