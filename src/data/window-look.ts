@@ -201,6 +201,7 @@ export const SHOP_TEX = {
   awning: 'bd_win_shop_awning',
   lamp: 'bd_win_shop_lamp',
   sweets: 'bd_win_shop_sweets',
+  display: 'bd_win_shop_display',
   sky: 'bd_sky_shop',
 } as const;
 
@@ -219,10 +220,44 @@ export const SHOP_LOOK = {
       { x: 36, kind: 'macaron', size: 76 },
     ],
   },
+  /**
+   * The glass-front counter with four sweets in the left outer column, under the window and clear of the tower
+   * (`at` is the centre as shares of the screen, `offset` in logical px). It is shown only on screens at least
+   * `minHeight` tall: on a short screen it is left out, not shrunk. It breathes like the window.
+   */
+  display: {
+    /** The picture is drawn on a 56x104 grid and baked `unit` times bigger. */
+    w: 56,
+    h: 104,
+    unit: 2.7,
+    at: { x: 0, y: 0.72 },
+    offset: { x: 83, y: 0 },
+    minHeight: 2000,
+    /** Share the colours lean towards the wall, so the counter stays quieter than the tower. */
+    mute: 0.3,
+    glass: 0xe4f1f4,
+    glassAlpha: 0.5,
+    wood: 0xe8b89a,
+    cap: 0xf3a8c0,
+    cake: { glaze: 0xffb6cb, cherry: 0xe86a7e },
+    cupcake: { liner: 0xc9b4f0, frosting: 0xffe0a8 },
+    donut: { dough: 0xf3c9a0, icing: 0xa8dcc8 },
+    jar: { glass: 0xfff3e6, candies: [0xff9db8, 0x9edcc0, 0xffd77a] },
+    bob: { px: 5, ms: 2300 },
+  },
   /** Stand silhouettes: x in the 512 tile. */
   standsX: [70, 250],
   /** The awning is `count` strips that bob `bobPx` over `bobMs`, each `phaseStep` radians behind the last. */
-  awning: { height: 60, stripe: 64, count: 3, bobPx: 2, bobMs: 2600, phaseStep: 0.5 },
+  awning: {
+    height: 60,
+    stripe: 64,
+    count: 3,
+    bobPx: 2,
+    bobMs: 2600,
+    phaseStep: 0.5,
+  },
+  /** Share of its brightness the awning loses at night. */
+  awningNightDim: 0.15,
   lamp: {
     width: 60,
     height: 150,

@@ -3,6 +3,7 @@ import { BD_TEX } from '../../../data/backdrop';
 import { BACKDROP_COLORS } from '../../../data/backdrop-colors';
 import type { Point } from '../../../data/backdrop-life';
 import { shade } from '../../../util/color';
+import { outlineColor } from '../../fx/plain-style';
 import { bakeTexture } from '../../ui/bake-texture';
 
 type Graphics = Phaser.GameObjects.Graphics;
@@ -140,4 +141,20 @@ export function bakeSharedArt(scene: Phaser.Scene): void {
     glow(g, STAR_SIZE / 2, STAR_SIZE / 2, STAR_SIZE / 4, BACKDROP_COLORS.shared.white, 0.5);
     sparkle(g, STAR_SIZE / 2, STAR_SIZE / 2, STAR_SIZE / 2, BACKDROP_COLORS.shared.white);
   });
+}
+
+/** Width of the dark outline of the shop pictures (px). */
+export const OUTLINE = 4;
+
+/** A body with the dark outline of its own colour: the outline shape is drawn first, `fill` on top. */
+export function outlined(
+  g: Graphics,
+  color: number,
+  outline: (grow: number) => void,
+  width = OUTLINE,
+): void {
+  g.fillStyle(outlineColor(color), 1);
+  outline(width);
+  g.fillStyle(color, 1);
+  outline(0);
 }

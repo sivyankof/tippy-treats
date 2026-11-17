@@ -10,8 +10,9 @@ import { mixColor, shade } from '../../../util/color';
 import { outlineColor } from '../../fx/plain-style';
 import { bakeTexture } from '../../ui/bake-texture';
 import { BACKDROP_LIFE } from '../../../data/backdrop-life';
-import { drawPlank } from './art-kit';
+import { OUTLINE, drawPlank, outlined } from './art-kit';
 import { Hover, Traveler } from './life';
+import { bakeDisplay, displayLife } from './shop-display';
 import { bakeFly } from './kitchen-zone';
 import { bakeStopsSky, type ZoneArt } from './zone-scenery';
 import { bakeGlassItems, bakeWindow, windowGlassLife } from './window-weather';
@@ -20,16 +21,6 @@ type Graphics = Phaser.GameObjects.Graphics;
 
 const TILE = SHOP_LOOK.tile;
 const C = SHOP_COLORS;
-const OUTLINE = 4;
-
-/** A body with the dark outline of its own colour: the outline shape is drawn first, `fill` on top. */
-function outlined(g: Graphics, color: number, outline: (grow: number) => void): void {
-  g.fillStyle(outlineColor(color), 1);
-  outline(OUTLINE);
-  g.fillStyle(color, 1);
-  outline(0);
-}
-
 function macaron(g: Graphics, plankY: number, x: number, color: number, w: number): void {
   const shell = w * 0.36;
   const cream = C.sweets.cream;
@@ -189,6 +180,7 @@ export const shopArt: ZoneArt = {
     bakeWall(scene);
     bakeShelves(scene);
     bakeSweets(scene);
+    bakeDisplay(scene);
     bakeStands(scene);
     bakeAwning(scene);
     bakeLamp(scene);
@@ -197,6 +189,9 @@ export const shopArt: ZoneArt = {
   build(scene, look) {
     const awningLook = SHOP_LOOK.awning;
     // The awning sways a little (it never stands still).
+    // At night the awning is dimmed (a multiply tint).
+    const dim =
+      look.weather === 'night' ? mixColor(0xffffff, 0, SHOP_LOOK.awningNightDim) : undefined;
     const strips = Array.from({ length: awningLook.count }, (_, i) => ({
       texture: SHOP_TEX.awning,
       at: { x: 0, y: 0 },
@@ -204,6 +199,7 @@ export const shopArt: ZoneArt = {
       origin: [0.5, 0] as const,
       bob: { px: awningLook.bobPx, ms: awningLook.bobMs },
       phase: i * awningLook.phaseStep,
+      tint: dim,
     }));
     const lamp = SHOP_LOOK.lamp;
     const lamps = lamp.items.map((item, i) => ({
@@ -242,6 +238,7 @@ export const shopArt: ZoneArt = {
         { slot: 3, life: window },
         ...(glass ? [{ slot: 3, life: glass }] : []),
         { slot: 3, life: sweets },
+        { slot: 3, life: displayLife(scene) },
         { slot: 3, life: fly },
       ],
       guest: fly,
