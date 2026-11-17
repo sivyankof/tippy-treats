@@ -51,17 +51,22 @@ export interface SquashFlatten {
   ease: string;
 }
 
+/** A burst of one more picture. */
+export interface SquashExtra {
+  burst: SquashBurst;
+  texture: string;
+}
+
 /** What a kind does at the impact. */
 export interface SquashKindLook {
   flatten: SquashFlatten | null;
   burst: SquashBurst | null;
-  /** A second burst (crumbs of the wafer). */
-  extra: SquashBurst | null;
+  /** More bursts of other pictures (stem, seeds, leaf bits, crumbs). */
+  extras: readonly SquashExtra[];
   /** The picture the burst flies as (a key of `SQUASH_TEXTURES` or `fx_*`). */
   burstTexture: string | null;
-  extraTexture: string | null;
-  /** Juice stain left on the front of the lower layer: its tint; none for kinds that leave no stain. */
-  stainTint: number | null;
+  /** Juice stain left on the front of the lower layer: its picture; none for kinds that leave no stain. */
+  stainTexture: string | null;
   /** Both layers squint for this long (0: no squint). */
   squintMs: number;
 }
@@ -74,9 +79,22 @@ export const SQUASH_PICTURES = {
   bake: 2,
   outlinePx: 2.2,
   /** The cream roll's outline is thicker so the pale roll reads on a pale glaze. */
-  rollOutlinePx: 3.4,
-  /** The stain is drawn light and shown tinted: its tones are light greys that the tint turns into the tones of the juice. */
-  stainColors: { base: 0xf4f4f4, shadow: 0xcdcdcd, gloss: 0xffffff },
+  rollOutlinePx: 3,
+  /** Warm outline of the cream roll, in the tone of the cream (a pale outline would vanish on a pale glaze). */
+  rollOutline: 0xcaa883,
+  /** Tones of the juice stains: the lit tone, the shadow tone (the outline is the shadow tone darkened) and the gloss. */
+  stainColors: {
+    cherry: { base: 0xea4f66, shadow: 0xc93550, gloss: 0xffd0d8 },
+    strawberry: { base: 0xff7a8e, shadow: 0xe8566e, gloss: 0xffe0e5 },
+  },
+  /**
+   * The flying juice drop is drawn light and shown tinted: the base is white and the outline a
+   * mid grey, so the tint turns the outline into the dark tone of the drop's own colour.
+   */
+  drop: { width: 12, height: 17, outline: 0x8c8c8c, shadow: 0xd6d6d6 },
+  /** A seed of the strawberry and the stem bit of the cherry, drawn pixels, in their own colours. */
+  seed: { width: 8, height: 11, color: 0xffd860, dark: 0xb88a1c },
+  stem: { width: 30, height: 18, thick: 4.5, color: 0x8aa83a, dark: 0x55701c },
   /** A mint leaf: the picture, its length and half width, drawn pixels; a flying leaf is shown `shownScale` times bigger. */
   leafSize: { width: 26, height: 42, length: 36, half: 10, shownScale: 2.1 },
   /** The break of the wafer: tilt of the tube, how far the break is above the resting spot, its width and the jag. */
@@ -92,9 +110,13 @@ export const SQUASH_PICTURES = {
 
 /** Keys of the pictures of the squash on the shared atlas. */
 export const SQUASH_TEXTURES = {
-  stain: 'fx_sq_stain',
+  stainCherry: 'fx_sq_stain_cherry',
+  stainStrawberry: 'fx_sq_stain_strawberry',
   creamRoll: 'fx_sq_cream_roll',
   leaf: 'fx_sq_leaf',
+  drop: 'fx_sq_drop',
+  seed: 'fx_sq_seed',
+  stem: 'fx_sq_stem',
   waferTop: 'fx_sq_wafer_top',
   waferBottom: 'fx_sq_wafer_bottom',
 } as const;
@@ -102,11 +124,11 @@ export const SQUASH_TEXTURES = {
 const BERRY_DROPS: SquashBurst = {
   count: [5, 7],
   speed: [620, 1000],
-  liftDeg: [6, 60],
+  liftDeg: [4, 34],
   gravity: 2600,
   drag: 0.6,
   spin: [110, 170],
-  scale: [1.6, 2.6],
+  scale: [1.5, 2.3],
   scaleTo: 0.55,
   lifeMs: [420, 560],
   holdShare: 0.55,
@@ -145,7 +167,12 @@ export const TOPPER_SQUASH = {
   squintReaction: 'squint',
   /** The juice, leaves, halves and crumbs start at the seam, this many px below it. */
   burstBelowSeamPx: 6,
-  /** The flat remains pass from over the new layer to between the two layers after this long. */
+  /**
+   * They are born between the two layers (behind the new one, like the pressed pancake of the fly)
+   * at the side of the new layer: at least this far (plus the half span of its face) from its
+   * middle and this far in from its edge, and fly outwards, so nothing stays over its front.
+   */
+  launch: { faceGapPx: 18, edgeInsetPx: 4 },
   /** The topper shot sideways by a layer that sits on its body only: it flies off in an arc with spin. */
   edge: {
     speedX: [950, 1250],
@@ -161,38 +188,89 @@ export const TOPPER_SQUASH = {
   kinds: {
     cherry: {
       flatten: {
-        scaleX: 1.6,
+        scaleX: 1.8,
         scaleY: 0.13,
         squashMs: 85,
-        holdMs: 90,
+        holdMs: 150,
         fadeMs: 320,
         sinkPx: 2,
-        peekPx: 7,
+        peekPx: 15,
         ease: 'Quad.easeOut',
       },
-      burst: { ...BERRY_DROPS, tints: [0xe0243f, 0xff5a6e, 0xc4162f] },
-      extra: null,
-      burstTexture: 'fx_drop',
-      extraTexture: null,
-      stainTint: 0xe8344c,
+      // Dark cherry juice and a bit of the stem flying off.
+      burst: { ...BERRY_DROPS, tints: [0xc8203c, 0xe23a52, 0xa8142c] },
+      extras: [
+        {
+          texture: SQUASH_TEXTURES.stem,
+          burst: {
+            count: [1, 2],
+            speed: [520, 800],
+            liftDeg: [14, 40],
+            gravity: 1500,
+            drag: 0.7,
+            spin: [-420, 420],
+            scale: [0.7, 0.9],
+            scaleTo: 0.8,
+            lifeMs: [520, 700],
+            holdShare: 0.6,
+            tints: [0xffffff],
+          },
+        },
+      ],
+      burstTexture: SQUASH_TEXTURES.drop,
+      stainTexture: SQUASH_TEXTURES.stainCherry,
       squintMs: 0,
     },
     strawberry: {
       flatten: {
-        scaleX: 1.6,
+        scaleX: 1.7,
         scaleY: 0.14,
         squashMs: 85,
-        holdMs: 90,
+        holdMs: 150,
         fadeMs: 320,
         sinkPx: 2,
-        peekPx: 7,
+        peekPx: 15,
         ease: 'Quad.easeOut',
       },
-      burst: { ...BERRY_DROPS, tints: [0xf0344c, 0xff7084, 0xd02040] },
-      extra: null,
-      burstTexture: 'fx_drop',
-      extraTexture: null,
-      stainTint: 0xf2465c,
+      // Lighter juice, yellow seeds and a leaf bit.
+      burst: { ...BERRY_DROPS, tints: [0xff5a70, 0xff8a9c, 0xf03e58] },
+      extras: [
+        {
+          texture: SQUASH_TEXTURES.seed,
+          burst: {
+            count: [4, 6],
+            speed: [520, 900],
+            liftDeg: [4, 38],
+            gravity: 2200,
+            drag: 0.6,
+            spin: [-300, 300],
+            scale: [0.8, 1.1],
+            scaleTo: 0.7,
+            lifeMs: [420, 600],
+            holdShare: 0.55,
+            tints: [0xffffff],
+          },
+        },
+        {
+          texture: SQUASH_TEXTURES.leaf,
+          burst: {
+            count: [2, 2],
+            speed: [520, 800],
+            liftDeg: [8, 36],
+            gravity: 900,
+            drag: 0.9,
+            spin: [-260, 260],
+            scale: [0.55, 0.7],
+            scaleTo: 0.9,
+            lifeMs: [800, 1000],
+            holdShare: 0.6,
+            tints: [0xffffff],
+            sway: { amplitude: [8, 14], periodMs: [600, 800] },
+          },
+        },
+      ],
+      burstTexture: SQUASH_TEXTURES.drop,
+      stainTexture: SQUASH_TEXTURES.stainStrawberry,
       squintMs: 0,
     },
     lemon: {
@@ -203,7 +281,7 @@ export const TOPPER_SQUASH = {
         holdMs: 120,
         fadeMs: 300,
         sinkPx: 2,
-        peekPx: 6,
+        peekPx: 11,
         ease: 'Cubic.easeOut',
       },
       burst: {
@@ -213,17 +291,16 @@ export const TOPPER_SQUASH = {
         gravity: 2100,
         drag: 0.9,
         spin: [110, 170],
-        scale: [1.5, 2.6],
+        scale: [1.1, 1.8],
         scaleTo: 0.5,
         lifeMs: [360, 520],
         holdShare: 0.5,
         tints: [0xf4e04a, 0xfff6a0, 0xe8cc2c],
         alignToFlight: true,
       },
-      extra: null,
-      burstTexture: 'fx_drop',
-      extraTexture: null,
-      stainTint: null,
+      extras: [],
+      burstTexture: SQUASH_TEXTURES.drop,
+      stainTexture: null,
       squintMs: 520,
     },
     mint: {
@@ -234,13 +311,13 @@ export const TOPPER_SQUASH = {
         holdMs: 100,
         fadeMs: 300,
         sinkPx: 2,
-        peekPx: 6,
+        peekPx: 11,
         ease: 'Back.easeOut',
       },
       burst: {
         count: [3, 4],
-        speed: [760, 1100],
-        liftDeg: [-8, 34],
+        speed: [1000, 1400],
+        liftDeg: [6, 42],
         gravity: 760,
         drag: 0.9,
         spin: [-300, 300],
@@ -251,10 +328,9 @@ export const TOPPER_SQUASH = {
         tints: [0xffffff],
         sway: { amplitude: [12, 22], periodMs: [650, 900] },
       },
-      extra: null,
+      extras: [],
       burstTexture: SQUASH_TEXTURES.leaf,
-      extraTexture: null,
-      stainTint: null,
+      stainTexture: null,
       squintMs: 0,
     },
     wafer: {
@@ -262,7 +338,7 @@ export const TOPPER_SQUASH = {
       burst: {
         // The two halves: one count, they fly to opposite sides (see `waferHalves`).
         count: [2, 2],
-        speed: [800, 1100],
+        speed: [900, 1150],
         liftDeg: [50, 75],
         gravity: 1900,
         drag: 0.35,
@@ -273,42 +349,46 @@ export const TOPPER_SQUASH = {
         holdShare: 0.55,
         tints: [0xffffff],
       },
-      extra: {
-        count: [5, 7],
-        speed: [420, 800],
-        liftDeg: [0, 62],
-        gravity: 1800,
-        drag: 0.8,
-        spin: [-220, 220],
-        scale: [0.9, 1.5],
-        scaleTo: 0.6,
-        lifeMs: [420, 620],
-        holdShare: 0.5,
-        tints: [0xe9b87a, 0xc98d4c, 0xfff4d8],
-      },
+      extras: [
+        {
+          texture: 'fx_crumb',
+          burst: {
+            count: [5, 7],
+            speed: [420, 800],
+            liftDeg: [0, 62],
+            gravity: 1800,
+            drag: 0.8,
+            spin: [-220, 220],
+            scale: [0.9, 1.5],
+            scaleTo: 0.6,
+            lifeMs: [420, 620],
+            holdShare: 0.5,
+            tints: [0xe9b87a, 0xc98d4c, 0xfff4d8],
+          },
+        },
+      ],
       burstTexture: SQUASH_TEXTURES.waferTop,
-      extraTexture: 'fx_crumb',
-      stainTint: null,
+      stainTexture: null,
       squintMs: 0,
     },
   } satisfies Record<Exclude<SquashKind, 'cream'>, SquashKindLook>,
   /** Mouths of the wafer halves: the break is shown by two pictures, the first flies up and out, the second along the layer. */
   wafer: {
-    topLiftDeg: [42, 62],
-    bottomLiftDeg: [4, 24],
+    topLiftDeg: [36, 52],
+    bottomLiftDeg: [8, 22],
   },
   /** The juice stain on the front of the lower layer. */
   stain: {
-    /** Picture drawn size in layer pixels (the drip is part of it). */
-    width: 52,
-    height: 46,
-    /** Anchor: the top of the blob. */
+    /** Picture drawn size in layer pixels (the drip is part of it): a wide flat splash with a short drip. */
+    width: 62,
+    height: 34,
+    /** Anchor: the top of the splash. */
     originX: 0.5,
-    originY: 0.16,
+    originY: 0.15,
     /** How far below the glaze edge (the deepest tongue) the anchor sits. */
     belowGlazePx: 3,
     /** Clear space between the stain and the face, and between the stain and the side of the layer. */
-    faceGapPx: 10,
+    faceGapPx: 18,
     edgeGapPx: 6,
     growMs: 520,
     /** The mark is born this long after the impact, so the juice seems to arrive from the squash. */
@@ -318,8 +398,8 @@ export const TOPPER_SQUASH = {
   },
   /** The cream roll squeezed out at both ends of the seam. */
   roll: {
-    width: 110,
-    height: 58,
+    width: 66,
+    height: 30,
     /** Where the picture is held: the tucked end under the upper layer. */
     originX: 0.4,
     originY: 0.5,
@@ -329,6 +409,8 @@ export const TOPPER_SQUASH = {
     delayMs: 40,
     /** Slight droop of the outer end, degrees. */
     droopDeg: 8,
+    /** The outer end of a roll goes at most this far past the lower layer's edge, so it lies on the lower glaze. */
+    overhangPx: 9,
     /** The upper layer must overlap the lower by at least this much for the rolls to have room. */
     minOverlapPx: 120,
   },

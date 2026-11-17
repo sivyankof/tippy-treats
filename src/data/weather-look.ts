@@ -229,7 +229,7 @@ export const WEATHER_LOOK = {
     frames: ['drop'],
     speed: [1500, 1900],
     slant: 0.15,
-    alpha: [0.7, 0.8],
+    alpha: [0.85, 0.95],
     scale: [0.85, 1.1],
     count: 37,
     /** Rain falls only in the two side strips the tower leaves free (each of this share of the width); a drop leans with its height, so it stays near its strip. */
@@ -239,7 +239,7 @@ export const WEATHER_LOOK = {
     frames: ['drop'],
     speed: [1900, 2400],
     slant: 0.38,
-    alpha: [0.7, 0.8],
+    alpha: [0.85, 0.95],
     scale: [0.95, 1.15],
     count: 37,
     sideShare: 0.15,

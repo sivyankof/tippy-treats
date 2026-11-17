@@ -33,7 +33,7 @@ const FLAKE_RAYS = {
 const DROP_W = 30;
 const DROP_H = 96;
 const DROP_COLOR = 0xf4f9ff;
-const DROP_RIM = 0x4f84d6;
+const DROP_RIM = 0x3f74c8;
 /** Half widths of the drop: at the thin top, in the round head, and the rim; the taper swells over the length into the head. */
 const DROP_HALF = { top: 4.4, bottom: 6.4, rim: 2.6 };
 const DROP_TAPER_POWER = 1.4;

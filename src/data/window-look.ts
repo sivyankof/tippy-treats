@@ -299,7 +299,7 @@ export const SHOP_LOOK = {
     cord: 86,
     globe: 26,
     /** The flat warm rim ring round the globe (one opaque tone, no soft glow): gap from the globe and ring width, px. */
-    rim: { gap: 4, width: 3, color: 0xffe9a8 },
+    rim: { gap: 4, width: 4.4, color: 0xffe9a8 },
     /** Each lamp: x as a share of the screen, extra px it hangs under the awning (they differ in height) and its swing period. */
     items: [
       { x: 0.26, drop: 0, ms: 2300 },
