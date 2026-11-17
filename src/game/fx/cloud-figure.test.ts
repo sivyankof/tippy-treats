@@ -91,13 +91,24 @@ describe('cloud figures', () => {
   it('keeps the full-width cover row covered on every screen height', () => {
     const rowTop = figure.height / 2 - ROW_HALF;
     const rowBottom = figure.height / 2 + ROW_HALF;
+    // The top of the layer itself at its highest bob and the cloud's: the valleys of low puffs stay clear above it.
+    const layerTop =
+      figure.height / 2 -
+      (BALANCE.layer.height / 2 + cloud.bobPx + ANIM.flying.bobAmplitude) / figure.scale;
     for (const design of [cloudSilhouette()]) {
       for (const h of [SHORT, TALL, LOGICAL_SIZE.maxHeight]) {
         const s = forScreen(design, h);
-        for (let x = figure.body.left + 70; x <= figure.body.right - 70; x += 4) {
-          expect(silhouetteTopAt(s, x)).toBeLessThanOrEqual(rowTop + 0.01);
+        let covered = 0;
+        let columns = 0;
+        for (let x = figure.body.left + 70; x <= figure.body.right - 70; x += 2) {
+          const top = silhouetteTopAt(s, x);
+          columns++;
+          if (top <= rowTop + 0.01) covered++;
+          expect(top).toBeLessThanOrEqual(layerTop - 6);
           expect(silhouetteBottomAt(s, x)).toBeGreaterThanOrEqual(rowBottom);
         }
+        // Only the narrow valleys between low puffs dip into the spare of the row.
+        expect(covered / columns).toBeGreaterThan(h === SHORT ? 0.6 : 0.999);
       }
     }
   });
@@ -142,9 +153,13 @@ describe('top line on short screens', () => {
         expect(c.x + c.r).toBeLessThanOrEqual(flat.body.right - corner + 0.01);
       }
       const tops = topLine(flat);
-      // The crests reach the cover body top and no higher; the valleys dip at most `topDip` into it.
+      // The crests reach the cover body top and no higher; the valleys dip down to the line the puffs stand on.
       expect(Math.min(...tops)).toBeGreaterThanOrEqual(figure.body.top - 0.5);
-      expect(Math.max(...tops)).toBeLessThanOrEqual(figure.body.top + figure.topDip + 0.01);
+      expect(Math.max(...tops)).toBeLessThanOrEqual(
+        figure.body.top + figure.topDip + figure.lowPuffs.notchDip + 0.01,
+      );
+      // Bumps clearly taller than a hairline: the crests stand 8 px and more over the valleys.
+      expect(Math.max(...tops) - Math.min(...tops)).toBeGreaterThanOrEqual(8);
       let turns = 0;
       for (let i = 2; i < tops.length; i++) {
         const a = (tops[i - 1] ?? 0) - (tops[i - 2] ?? 0);
@@ -187,7 +202,9 @@ describe('low puffs of the cloud on a short screen', () => {
   });
 
   it('stands every puff on the drawn body top and parts neighbours by a valley down to it', () => {
-    for (const c of flat.circles) expect(c.y).toBe(figure.body.top + figure.topDip);
+    for (const c of flat.circles) {
+      expect(c.y).toBe(figure.body.top + figure.topDip + figure.lowPuffs.notchDip);
+    }
     for (let i = 1; i < flat.circles.length; i++) {
       const a = flat.circles[i - 1];
       const b = flat.circles[i];

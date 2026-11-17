@@ -197,15 +197,18 @@ function joinNarrow(spans: TopSpan[], minSpan: number): TopSpan[] {
 
 /**
  * The silhouette with its top line squashed by `share` toward the drawn body top. The domes are redrawn
- * as low puffs standing on the drawn body top: each is as wide as the stretch of the line its dome made
- * (so the puffs keep their different sizes and every valley reaches down between them), and the wider and
- * the taller the dome was, the higher its puff, up to `share` of the crest height. The puffs are kept
- * inside the straight part of the top: no thin spit sticks out past the rounded ends of the body.
+ * as low puffs standing on a line `lowPuffs.notchDip` under the drawn body top (the body top moves down to
+ * it): each is as wide as the stretch of the line its dome made (so the puffs keep their different sizes
+ * and every valley reaches down between them), and the wider and the taller the dome was, the higher its
+ * puff, its crest at most `share` of the crest height above the drawn body top. The puffs are kept inside
+ * the straight part of the top: no thin spit sticks out past the rounded ends of the body.
  */
 export function squashTop(s: Silhouette, share: number): Silhouette {
   if (share >= 1) return s;
   const low = figure.lowPuffs;
-  const room = crestHeight(s) * share;
+  // From the line the domes stand on up to the highest crest the screen allows.
+  const room = crestHeight(s) * share + low.notchDip;
+  const base = TOP_BASE + low.notchDip;
   const corner = cornerRadius(s.body);
   const spans = joinNarrow(topSpans(s, s.body.left + corner, s.body.right - corner), low.minSpan);
   const widest = Math.max(...spans.map((p) => p.b - p.a));
@@ -217,11 +220,11 @@ export function squashTop(s: Silhouette, share: number): Silhouette {
     const ry = Math.min(
       room * (low.heightFloor + (1 - low.heightFloor) * size),
       rx * low.aspect,
-      p.crest,
+      p.crest + low.notchDip,
     );
-    if (rx > 0 && ry > 0) circles.push({ x: (p.a + p.b) / 2, y: TOP_BASE, r: rx, ry });
+    if (rx > 0 && ry > 0) circles.push({ x: (p.a + p.b) / 2, y: base, r: rx, ry });
   }
-  return { ...s, circles, toneDip: low.toneDip };
+  return { ...s, body: { ...s.body, top: base }, circles, toneDip: low.toneDip };
 }
 
 /** The half-height of the arc of `c` at `dx` from its centre, or -1 outside it. */

@@ -5,10 +5,18 @@ import { LOGICAL_SIZE } from '../../data/screen';
 import { clamp01, lerp, oscillate01, sineWave, smoothstep } from '../../util/math';
 import { effectsMode } from '../effects-mode';
 import { scatter } from '../objects/creature-art/primitives';
-import { collectBakeSteps, type BakeStep } from '../ui/bake-texture';
+import { PrepQueue } from '../objects/backdrop/zone-prep';
+import { collectBakeSteps } from '../ui/bake-texture';
 import { bakeCloudFigure } from './cloud-figure';
 import { FLYING_FX_DEPTH } from './flying-fx-depth';
-import { bakeNebulaArms, NEBULA_FRAMES } from './nebula-arms';
+import {
+  bakeNebulaArms,
+  frameOrigin,
+  NEBULA_FRAMES,
+  nebulaFrameRects,
+  nebulaLayout,
+  nebulaYScale,
+} from './nebula-arms';
 import { createFxTextures, FX_TEXTURES } from './fx-textures';
 import { createTreasureTextures, TREASURE_TEXTURES } from './treasure-textures';
 
@@ -44,8 +52,9 @@ export function cloudEtaMs(aheadPx: number, speed: number, nominalSpeed: number)
  */
 export function stepApproach(progress: number, dtMs: number, etaMs: number): number {
   if (dtMs <= 0) return progress;
-  if (etaMs <= dtMs) return 1;
-  return clamp01(progress + ((1 - progress) * dtMs) / etaMs);
+  const step = etaMs <= dtMs ? 1 - progress : ((1 - progress) * dtMs) / etaMs;
+  // Never faster than `approachMinMs` for the whole way: a late look-ahead does not jump the cloud in.
+  return clamp01(progress + Math.min(step, dtMs / cfg.approachMinMs));
 }
 
 /** Smooth start, sharper end: how a value that should ease out goes from 0 to 1. */
@@ -333,6 +342,22 @@ export class CloudMotion {
   }
 }
 
+/** How the nebula pictures sit on this screen: their origins (the figure centre) and the stars' offset share. */
+interface NebulaFit {
+  origins: Record<'veil' | 'blue' | 'pink', { x: number; y: number }>;
+  yScale: number;
+}
+
+/**
+ * Dev only: `window.tippyCloudHold = true` keeps a covering cloud or nebula on screen at full density
+ * (for looking at its motion); never in a build.
+ */
+function cloudHeld(): boolean {
+  return (
+    import.meta.env.DEV && (globalThis as { tippyCloudHold?: boolean }).tippyCloudHold === true
+  );
+}
+
 /** A bank: one figure (the cloud or the nebula) with its twinkling stars, and the motion that drives it. */
 class CloudBank {
   private readonly figure: Phaser.GameObjects.Image;
@@ -343,7 +368,11 @@ class CloudBank {
   readonly motion = new CloudMotion();
   look: CloudLook = 'cloud';
 
-  constructor(scene: Phaser.Scene) {
+  constructor(
+    scene: Phaser.Scene,
+    /** Where the nebula pictures are cut and how far its stars sit from the row on this screen. */
+    private readonly nebulaFit: NebulaFit,
+  ) {
     this.figure = scene.add
       .image(LOGICAL_CENTER_X, 0, TREASURE_TEXTURES.cloud)
       .setDepth(FLYING_FX_DEPTH.cloud)
@@ -382,9 +411,15 @@ class CloudBank {
     if (look !== this.look || this.figure.texture.key !== figureKey(look)) {
       this.look = look;
       this.figure.setTexture(figureKey(look), figureFrame(look));
+      const o = this.nebulaFit.origins;
       if (look === 'nebula') {
+        this.figure.setOrigin(o.veil.x, o.veil.y);
         this.arms[0]?.setTexture(TREASURE_TEXTURES.nebula, NEBULA_FRAMES.blue);
+        this.arms[0]?.setOrigin(o.blue.x, o.blue.y);
         this.arms[1]?.setTexture(TREASURE_TEXTURES.nebula, NEBULA_FRAMES.pink);
+        this.arms[1]?.setOrigin(o.pink.x, o.pink.y);
+      } else {
+        this.figure.setOrigin(0.5, 0.5);
       }
     }
     const pose = this.motion.update(dtMs, input);
@@ -465,7 +500,10 @@ class CloudBank {
       const { scale, alpha } = starLook(pulse);
       const base = isCore ? stars.core.scale : minScale + (maxScale - minScale) * scatter(i);
       star
-        .setPosition(at.x + spot.x * cfg.figure.width * at.scale, at.y + spot.y * at.scale)
+        .setPosition(
+          at.x + spot.x * cfg.figure.width * at.scale,
+          at.y + spot.y * this.nebulaFit.yScale * at.scale,
+        )
         .setScale(base * (at.scale / cfg.figure.scale) * scale)
         .setAlpha(alpha * poseAlpha * Math.min(1, share));
     }
@@ -504,8 +542,12 @@ export class CloudCover {
     ghost: false,
     nebula: false,
   };
-  /** The slices of the nebula bake still to run, one per frame. */
-  private nebulaPrep: BakeStep[];
+  /** The slices of the nebula bake, run within a small budget each frame from run load. */
+  private readonly nebulaPrep = new PrepQueue();
+  /** The first frame of the run has passed (a run that starts in Space bakes the nebula at it). */
+  private started = false;
+  /** What a covering bank is told while the dev hold keeps it on screen. */
+  private readonly held: CloudInput = { ...this.passive };
   /** "Not scary" is on: what the cover reports is scaled by the share of each bank's own look. */
   private ghost = false;
   /** What a free bank is told when it should start floating in the coming cloud. */
@@ -514,21 +556,38 @@ export class CloudCover {
   constructor(scene: Phaser.Scene) {
     // At run load the figures are baked again if the screen height asks for another top line.
     bakeCloudFigure(scene, TREASURE_TEXTURES.cloud, true);
-    // The nebula is computed pixel by pixel: in slices over the first frames of the run (it shows only
-    // in Space), or all at once when it is needed before that.
-    this.nebulaPrep = collectBakeSteps(() =>
-      bakeNebulaArms(scene, TREASURE_TEXTURES.nebula, scene.scale.height),
+    // The nebula is computed pixel by pixel, in slices within a small budget a frame from run load:
+    // done long before Space (it shows only there).
+    this.nebulaPrep.add(
+      collectBakeSteps(() => bakeNebulaArms(scene, TREASURE_TEXTURES.nebula, scene.scale.height)),
     );
     createTreasureTextures(scene);
     createFxTextures(scene);
-    this.banks = [new CloudBank(scene), new CloudBank(scene)];
+    const layout = nebulaLayout(scene.scale.height);
+    const rects = nebulaFrameRects(layout);
+    const fit: NebulaFit = {
+      origins: {
+        veil: frameOrigin(rects.veil),
+        blue: frameOrigin(rects.blue),
+        pink: frameOrigin(rects.pink),
+      },
+      yScale: nebulaYScale(layout),
+    };
+    this.banks = [new CloudBank(scene, fit), new CloudBank(scene, fit)];
   }
 
-  /** Runs the next slices of the nebula bake, or all of them when a nebula is due now. */
-  private prepNebula(due: boolean): void {
-    if (this.nebulaPrep.length === 0) return;
-    const steps = due ? this.nebulaPrep.length : nebula.bakeStepsPerFrame;
-    for (const step of this.nebulaPrep.splice(0, steps)) step();
+  /**
+   * Runs this frame's share of the nebula bake. A run that starts in Space (a debug start) bakes it at
+   * its first frame, still part of the load; a nebula due before the slices are done (never in play: Space
+   * is minutes away) gets the rest at once rather than no picture.
+   */
+  private prepNebula(input: Readonly<CloudInput>): void {
+    const first = !this.started;
+    this.started = true;
+    if (this.nebulaPrep.pending === 0) return;
+    const due = input.nebula && (input.covering || input.etaMs <= cfg.leadMs);
+    if (due || (first && input.nebula)) this.nebulaPrep.flush();
+    else this.nebulaPrep.work(nebula.bake.budgetMs, () => performance.now());
   }
 
   /** How much a cloud hides the layer, 0..1 (a see-through cloud hides no more than it shows). */
@@ -553,7 +612,9 @@ export class CloudCover {
    * full warning; a cloud that comes without one grows in place in a free bank.
    */
   update(dtMs: number, timeMs: number, input: Readonly<CloudInput>): void {
-    this.prepNebula(input.nebula && (input.covering || input.etaMs <= cfg.leadMs));
+    this.prepNebula(input);
+    const hold = cloudHeld();
+    if (hold) Object.assign(this.held, input, { covering: true });
     const phases = this.banks.map((bank) => bank.motion.phase);
     let needsApproach = !phases.includes('approach') && input.flying && input.etaMs <= cfg.leadMs;
     let needsCover = input.covering && !phases.includes('cover') && !phases.includes('approach');
@@ -563,7 +624,7 @@ export class CloudCover {
     for (const bank of this.banks) {
       const phase = bank.motion.phase;
       if (phase === 'cover' || phase === 'approach') {
-        bank.update(dtMs, timeMs, input);
+        bank.update(dtMs, timeMs, hold && phase === 'cover' ? this.held : input);
       } else if (phase === 'idle' && needsApproach) {
         needsApproach = false;
         bank.update(dtMs, timeMs, this.coming);

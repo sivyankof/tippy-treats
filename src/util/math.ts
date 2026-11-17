@@ -87,6 +87,12 @@ export function smoothstep(t: number): number {
   return c * c * (3 - 2 * c);
 }
 
+/** Smooth 0..1 as `value` goes from `from` to `full` (either way round); a step at `from` when they meet. */
+export function rampBetween(value: number, from: number, full: number): number {
+  if (full === from) return value >= from ? 1 : 0;
+  return smoothstep((value - from) / (full - from));
+}
+
 /** The value `t` of the way from `a` to `b` (`t` is not limited to 0..1). */
 export function lerp(a: number, b: number, t: number): number {
   return a + (b - a) * t;

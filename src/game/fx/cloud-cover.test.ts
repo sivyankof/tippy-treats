@@ -45,6 +45,12 @@ describe('stepApproach', () => {
     expect(p).toBe(1);
   });
 
+  it('never jumps the cloud in, even when it is found late at a high speed', () => {
+    // The cloud is due in less than a frame: it still takes at least approachMinMs to float in.
+    expect(stepApproach(0, 33, 10)).toBeCloseTo(33 / cfg.approachMinMs);
+    expect(stepApproach(0.2, 33, 40)).toBeLessThanOrEqual(0.2 + 33 / cfg.approachMinMs + 1e-9);
+  });
+
   it('never steps back when the estimate jumps', () => {
     const p = stepApproach(0.5, 20, 100);
     expect(stepApproach(p, 20, 2000)).toBeGreaterThanOrEqual(p);

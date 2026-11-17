@@ -166,13 +166,15 @@ export const RULE_ANIM = {
       topDip: 5,
       /**
        * A squashed top (a short screen) is redrawn as low puffs: each dome of the drawn top line becomes a
-       * flat dome as wide as the stretch of the line it made, standing on the drawn body top. Stretches
-       * narrower than `minSpan` baked px join a neighbour; the smallest dome is `heightFloor` of the room
-       * high, the widest takes all of it; a dome is never taller than `aspect` of its half width. The lighter
-       * tones start `toneDip` px lower and their domes reach up to the same crests, so valleys of the base tone
-       * part the low puffs and their sizes read even on the flattest top.
+       * flat dome as wide as the stretch of the line it made. The domes stand on a line `notchDip` px under
+       * the drawn body top, so the valleys between them dip into the spare of the cover row (still well
+       * above the layer at its highest bob); stretches narrower than `minSpan` baked px join a neighbour;
+       * the smallest dome is `heightFloor` of the height from that line to the highest crest, the widest
+       * and tallest takes all of it; a dome is never taller than `aspect` of its half width. The lighter
+       * tones start `toneDip` px lower and their domes reach up to the same crests, so valleys of the base
+       * tone part the low puffs and their sizes read even on the flattest top.
        */
-      lowPuffs: { minSpan: 16, heightFloor: 0.4, aspect: 0.8, toneDip: 12 },
+      lowPuffs: { minSpan: 16, heightFloor: 0.4, aspect: 0.8, toneDip: 14, notchDip: 5 },
     },
     /** The whole figure bobs, sways and breathes: it billows (not on the minimal level for the nebula). */
     bobPx: 7,
@@ -192,6 +194,12 @@ export const RULE_ANIM = {
      * `enterScale`. Its progress only moves forward and reaches 1 when the cloud arrives.
      */
     leadMs: 650,
+    /**
+     * The approach never runs faster than 0 to 1 in this time, even when the look-ahead finds the cloud
+     * late (a fast layer): no frame jumps the cloud far across or flashes it in. Whatever is left closes
+     * at the cover (`inMs`); the sim's cover timing does not depend on it.
+     */
+    approachMinMs: 220,
     /**
      * The densest the dense cloud of the clouds zone is drawn at rest, 0..1: the layer under it
      * shows as a pale silhouette (contrast about 1 - this). Visual only.
@@ -214,12 +222,28 @@ export const RULE_ANIM = {
       /**
        * The veil: an even see-through haze along the row, opaque in the picture over the whole cover row
        * (the row half, `figure.layerMargin` included, in the full width of `figure.body`), so the layer is
-       * muted the same everywhere (contrast 1 - `maxDensity`); it fades out over `fade` px above and below
-       * and `fadeX` px past the ends of the body. `tones` drift along it in long soft waves (`waveX` px).
+       * muted the same everywhere (contrast 1 - `maxDensity`). Above and below the row it melts away as a
+       * faint lilac glow (`fringe`) over up to `fade` px; the reach of the fringe swells and shrinks along the
+       * row in long waves (`waveX` px, from `fadeMin` of `fade`), so no straight edge shows; `fadeX` px past
+       * the ends of the body. `tones` drift along it in the same long waves.
        */
-      veil: { tones: [0x5c3488, 0x6e3a8c], waveX: 560, fade: 24, fadeX: 40 },
+      veil: {
+        tones: [0x5c3488, 0x6e3a8c],
+        fringe: 0x9d7ad8,
+        waveX: 330,
+        fade: 76,
+        fadeMin: 0.45,
+        fadeX: 40,
+      },
       /** The faint lilac glow round everything: an ellipse of half sizes `rx`, `ry`, `alpha` at the centre. */
-      halo: { color: 0xa27ce0, alpha: 0.3, rx: 470, ry: 160 },
+      halo: { color: 0xa27ce0, alpha: 0.22, rx: 470, ry: 150 },
+      /**
+       * A short screen re-lays the drawing lower instead of squashing it: the wave is `fit` as high (0..1,
+       * the most that fits the HUD gap), the curls `curlFloor + (1 - curlFloor) * fit` as big and still round,
+       * the glow reaches `glowFloor + (1 - glowFloor) * fit` as far, the arms' light is `lightFloor + (1 -
+       * lightFloor) * fit` (they lie over the row there); the arms keep their width.
+       */
+      layout: { curlFloor: 0.4, glowFloor: 0.6, lightFloor: 0.8 },
       /** Thin pale lilac haze arcs above and below the arms: crest `y` from the centre, `sag` to the ends at `reach`. */
       arcs: { color: 0xdcccff, alpha: 0.42, width: 2.4, soft: 4, y: 126, sag: 26, reach: 330 },
       /**
@@ -234,7 +258,7 @@ export const RULE_ANIM = {
         glow: 3.4,
         step: 1.5,
         pink: {
-          reach: 268,
+          reach: 248,
           amplitude: 62,
           width: [27, 13],
           tones: { glow: 0xa070ff, middle: 0xff5fb4, core: 0xffb3dc, thread: 0xfff4fa },
@@ -249,22 +273,41 @@ export const RULE_ANIM = {
           },
         },
         blue: {
-          reach: 312,
+          reach: 296,
           amplitude: 40,
           width: [15, 8],
           tones: { glow: 0x4f6dff, middle: 0x8a9cff, core: 0xc9d3ff, thread: 0xf0f3ff },
           alpha: 0.6,
           end: { turns: 0.45, radius: 15, tighten: 0.6, endWidth: 0.6, tone: 0x8a9cff, from: 1 },
         },
-        /** Where the pink arm crosses, the blue one behind it is shaded: `alpha` darker, the shade `drop` px lower. */
-        shade: { alpha: 0.55, drop: 5, reach: 2.2 },
+        /**
+         * The soft shadow the pink arm throws on the blue one behind it at the crossing: the pink arm's shape
+         * `drop` px lower, from `inner` to `outer` half widths, within `reach` px of the centre; the blue arm
+         * loses `alpha` of its light there and the veil under it darkens to `color` by `veilAlpha`.
+         */
+        shade: {
+          color: 0x22103a,
+          alpha: 0.8,
+          veilAlpha: 0.3,
+          drop: 12,
+          inner: 0.9,
+          outer: 2.6,
+          reach: 110,
+        },
       },
-      /** The core at the crossing: a warm cream glow, denser to the centre, and a thin dark dust vein through it. */
+      /**
+       * The core at the crossing: a warm cream glow in the veil, denser to the centre; the arms' light is
+       * dimmed there by up to `cap` (no white-out, the cream, the star and the vein read); a crisp four-ray
+       * star of radius `star.r` (rays `star.waist` wide at the middle) in a warm glow `star.warm` radii wide;
+       * a thin dark dust vein through it (the arms are not lit along it).
+       */
       core: {
-        color: 0xffe2a8,
-        alpha: 0.4,
-        radius: 64,
-        vein: { color: 0x2e1840, alpha: 0.6, width: 2.6, length: 70, tilt: -0.35, bend: 8 },
+        color: 0xffd89a,
+        alpha: 0.95,
+        radius: 80,
+        cap: 0.85,
+        star: { r: 26, waist: 0.16, color: 0xfff3d6, glow: 0xffb45c, warm: 1.9, warmAlpha: 0.35 },
+        vein: { color: 0x2a1238, alpha: 0.95, width: 3, length: 78, tilt: -0.35, bend: 9 },
       },
       /**
        * Short sprinkle strokes on the arms in the sprinkle colours of the layers: the arm, x from the
@@ -274,7 +317,7 @@ export const RULE_ANIM = {
         length: 13,
         width: 4.2,
         spots: [
-          { arm: 'pink', u: -262, across: 0.5, turn: 0.7 },
+          { arm: 'pink', u: -232, across: 0.5, turn: 0.7 },
           { arm: 'pink', u: -168, across: -0.6, turn: -0.5 },
           { arm: 'pink', u: -74, across: 0.4, turn: 0.9 },
           { arm: 'pink', u: 52, across: -0.5, turn: -0.8 },
@@ -282,7 +325,7 @@ export const RULE_ANIM = {
           { arm: 'pink', u: 226, across: -0.4, turn: -0.6 },
           { arm: 'blue', u: -214, across: 0.3, turn: 0.6 },
           { arm: 'blue', u: 96, across: -0.3, turn: -0.7 },
-          { arm: 'blue', u: 262, across: 0.3, turn: 0.5 },
+          { arm: 'blue', u: 250, across: 0.3, turn: 0.5 },
         ],
       },
       /** Sparks baked on the arms: dots (`r` < 5) and small four-ray stars, denser near the core. */
@@ -296,8 +339,11 @@ export const RULE_ANIM = {
         { x: -230, y: -40, r: 5.5 },
         { x: 250, y: 30, r: 3 },
       ],
-      /** Slices of the nebula bake run per frame at the start of a run (all at once if a nebula is due sooner). */
-      bakeStepsPerFrame: 2,
+      /**
+       * The bake: `rowsPerStep` rows of pixels per step, steps run from run load within `budgetMs` a frame,
+       * long before Space (a run that starts in Space bakes at its first frame).
+       */
+      bake: { rowsPerStep: 4, budgetMs: 2 },
       /**
        * The motion of the arms (not on the minimal level): they flow towards each other along their wave
        * by up to `flowPx` baked px, over `flowPeriodMs`, and sway (turn by up to `swayRad` round the centre),

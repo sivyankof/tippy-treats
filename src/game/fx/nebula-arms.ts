@@ -2,19 +2,20 @@ import type * as Phaser from 'phaser';
 import { BALANCE } from '../../data/balance';
 import { PLAIN_LAYER } from '../../data/plain-layers';
 import { RULE_ANIM } from '../../data/rule-anim';
-import { mixColor } from '../../util/color';
-import { smoothstep, TWO_PI } from '../../util/math';
+import { cssColor } from '../../util/color';
+import { clamp01, rampBetween, TWO_PI } from '../../util/math';
 import { ditherNoise } from '../objects/backdrop/sky-gradient';
 import { deferStep } from '../ui/bake-texture';
 import { riseRoom } from './cloud-figure';
 
 /**
  * The nebula of the Space zone: two glowing arms of a nebula that wind round each other across the
- * flying row and cross in the middle, on the row. Three pictures in one texture of its own, frames of
- * the figure size (centre on the row): the veil (an even haze over the row that mutes the layer the
- * same everywhere, the faint halo, two haze arcs, the blue arm's shade is not here), and the two arms,
- * drawn additively over it. Everything is computed into pixels (smooth fall-offs with a little alpha
- * noise, no outline, no steps), in slices of rows, at run load.
+ * flying row and cross in the middle, on the row. Three pictures (frames of one texture of its own, each
+ * cut to what it holds, placed by the figure centre): the veil (an even haze over the row that mutes the
+ * layer the same everywhere and melts away above and below as a faint lilac glow, with the halo, the haze
+ * arcs, the warm core, the dust vein and the shadow of the pink arm), and the two arms, drawn additively
+ * over it. Every pixel is computed once (the nearest point of each arm: Newton steps on the wave, a short
+ * polyline on the curls), with smooth fall-offs and a little alpha noise: no outline, no steps.
  */
 
 const cfg = RULE_ANIM.cloud;
@@ -26,20 +27,107 @@ const H = figure.height;
 const CX = W / 2;
 const CY = H / 2;
 
-/** Smooth 0..1 as `x` goes from `a` to `b`. */
-function ramp(a: number, b: number, x: number): number {
-  return b > a ? smoothstep((x - a) / (b - a)) : x >= a ? 1 : 0;
-}
-
 export const NEBULA_FRAMES = { veil: 'veil', blue: 'blue', pink: 'pink' } as const;
+export type NebulaFrame = keyof typeof NEBULA_FRAMES;
 
 /** Half of the cover row, baked px from the figure centre: the layer with its bob and margin. */
 export const ROW_HALF = (BALANCE.layer.height / 2 + cfg.bobPx + figure.layerMargin) / figure.scale;
 
-type ArmName = 'pink' | 'blue';
+export type ArmName = 'pink' | 'blue';
 type ArmSpec = (typeof ARMS)[ArmName];
+const ARM_NAMES: readonly ArmName[] = ['blue', 'pink'];
 
-/** A sample of an arm, baked px from the figure centre (unsquashed): its half width and how far it turned to its end tone, 0..1. */
+/** The pink arm runs one way, the blue one the other (antiphase). */
+const SIGN: Record<ArmName, number> = { pink: 1, blue: -1 };
+/** How the ends turn: the pink arm curls one way (heading angle falls), the blue one hooks the other. */
+const CURL: Record<ArmName, number> = { pink: -1, blue: 1 };
+
+/** How the drawing is laid out on a screen: the wave and curls lower on a short screen, the arms as wide. */
+export interface NebulaLayout {
+  /** Share of the full wave height, 0..1 (1 on tall screens). */
+  fit: number;
+  /** How far above the centre the drawing may reach, baked px. */
+  room: number;
+  amplitude: Record<ArmName, number>;
+  curlRadius: Record<ArmName, number>;
+  /** How far the glow reaches, in half widths of the arm. */
+  glow: number;
+  /** Share of the arms' light: the low arms of a short screen lie over the row and are a little dimmer. */
+  light: number;
+  arcY: number;
+  haloRy: number;
+  veilFade: number;
+}
+
+/**
+ * How far above the centre the nebula may reach on a screen `screenH` tall, baked px: as far as the
+ * HUD gap allows at the highest bob (`riseRoom`), and never less than the cloud's flattened top on the
+ * shortest screen (the body top and the outline; the gap to the plates there is the accepted one).
+ */
+export function nebulaHeadroom(screenH: number): number {
+  const least = H / 2 - figure.body.top + figure.outline;
+  return Math.max(least, least + riseRoom(screenH));
+}
+
+function layoutAt(fit: number, room: number): NebulaLayout {
+  const l = N.layout;
+  const curl = l.curlFloor + (1 - l.curlFloor) * fit;
+  return {
+    fit,
+    room,
+    amplitude: { pink: ARMS.pink.amplitude * fit, blue: ARMS.blue.amplitude * fit },
+    curlRadius: { pink: ARMS.pink.end.radius * curl, blue: ARMS.blue.end.radius * curl },
+    glow: ARMS.glow * (l.glowFloor + (1 - l.glowFloor) * fit),
+    light: l.lightFloor + (1 - l.lightFloor) * fit,
+    arcY: Math.min(N.arcs.y, room - N.arcs.width / 2 - N.arcs.soft),
+    haloRy: Math.min(N.halo.ry, room),
+    veilFade: Math.max(0, Math.min(N.veil.fade, room - ROW_HALF)),
+  };
+}
+
+/** The layout for a screen `screenH` tall: the full drawing if it fits the headroom, else the highest wave that does. */
+export function nebulaLayout(screenH: number): NebulaLayout {
+  const room = nebulaHeadroom(screenH);
+  const full = layoutAt(1, room);
+  if (armsReach(full) <= room) return full;
+  let lo = 0;
+  let hi = 1;
+  for (let i = 0; i < 18; i++) {
+    const mid = (lo + hi) / 2;
+    if (armsReach(layoutAt(mid, room)) <= room) lo = mid;
+    else hi = mid;
+  }
+  return layoutAt(lo, room);
+}
+
+/** How far the stars and sparks sit from the row with this layout, as a share of their full offset. */
+export function nebulaYScale(layout: NebulaLayout): number {
+  return 0.4 + 0.6 * layout.fit;
+}
+
+/** The axis of an arm at `u` px from the centre (y down), inside its reach. */
+export function armAxisY(arm: ArmName, u: number, layout: NebulaLayout): number {
+  return -SIGN[arm] * layout.amplitude[arm] * Math.sin((Math.PI * u) / ARMS[arm].reach);
+}
+
+function armSlope(arm: ArmName, u: number, layout: NebulaLayout): number {
+  const k = Math.PI / ARMS[arm].reach;
+  return -SIGN[arm] * layout.amplitude[arm] * k * Math.cos(k * u);
+}
+
+/** Half width of an arm at `u`: widest in the middle, tapering to the ends (the same on every screen). */
+export function armWidth(arm: ArmName, u: number): number {
+  const [middle, end] = ARMS[arm].width;
+  const k = Math.min(1, (u / ARMS[arm].reach) ** 2);
+  return middle + (end - middle) * k;
+}
+
+/** How far the main run of an arm at `u` has turned to its end tone (the spirals finish the turn). */
+function mainEnd(spec: ArmSpec, u: number): number {
+  return spec.end.from < 1 ? 0.5 * rampBetween(Math.abs(u) / spec.reach, spec.end.from, 1) : 0;
+}
+
+/** A sample of an arm, baked px from the figure centre: its half width and how far it turned to its end tone, 0..1. */
 export interface ArmPoint {
   x: number;
   y: number;
@@ -47,87 +135,62 @@ export interface ArmPoint {
   end: number;
 }
 
-/** The pink arm runs up on the left and down on the right; the blue one the other way round (antiphase). */
-const SIGN: Record<ArmName, number> = { pink: 1, blue: -1 };
-/** How the ends turn: the pink arm curls one way (heading angle falls), the blue one hooks the other. */
-const CURL: Record<ArmName, number> = { pink: -1, blue: 1 };
-
-/** The axis of an arm at `u` px from the centre (y down), inside its reach. */
-export function armAxisY(arm: ArmName, u: number): number {
-  const s = ARMS[arm];
-  return SIGN[arm] * -s.amplitude * Math.sin((Math.PI * u) / s.reach);
-}
-
-/** The slope dy/du of the axis of an arm at `u`. */
-function armSlope(arm: ArmName, u: number): number {
-  const s = ARMS[arm];
-  return ((SIGN[arm] * -s.amplitude * Math.PI) / s.reach) * Math.cos((Math.PI * u) / s.reach);
-}
-
-/** Half width of an arm at `u`: widest in the middle, tapering to the ends. */
-export function armWidth(arm: ArmName, u: number): number {
-  const [middle, end] = ARMS[arm].width;
-  const k = Math.min(1, (u / ARMS[arm].reach) ** 2);
-  return middle + (end - middle) * k;
-}
-
-/** A curl at an arm end: from (`x`, `y`) heading `heading`, it turns `curl`-wise, tighter and thinner as it goes. */
+/** A curl at an arm end: from `start` heading `heading`, it turns `curl`-wise, tighter and thinner as it goes. */
 function curlFrom(
   spec: ArmSpec,
-  x: number,
-  y: number,
+  start: ArmPoint,
   heading: number,
-  width: number,
   curl: number,
+  radius: number,
 ): ArmPoint[] {
   const e = spec.end;
   const total = e.turns * TWO_PI;
   const pts: ArmPoint[] = [];
   let turned = 0;
   let a = heading;
-  let px = x;
-  let py = y;
+  let { x, y } = start;
   while (turned < total) {
     const k = turned / total;
-    const rho = e.radius * (1 - (1 - e.tighten) * k);
+    const rho = radius * (1 - (1 - e.tighten) * k);
     const da = ARMS.step / rho;
     a += curl * da;
     turned += da;
-    px += Math.cos(a) * ARMS.step;
-    py += Math.sin(a) * ARMS.step;
+    x += Math.cos(a) * ARMS.step;
+    y += Math.sin(a) * ARMS.step;
     pts.push({
-      x: px,
-      y: py,
-      w: width * (1 - (1 - e.endWidth) * k),
-      end: e.from < 1 ? 0.5 + 0.5 * ramp(0, 0.5, k) : 0,
+      x,
+      y,
+      w: start.w * (1 - (1 - e.endWidth) * k),
+      end: e.from < 1 ? 0.5 + 0.5 * rampBetween(k, 0, 0.5) : 0,
     });
   }
   return pts;
 }
 
-/** The samples of an arm, from its left end curl through the wave to its right end curl. */
-export function armPoints(arm: ArmName): { main: ArmPoint[]; left: ArmPoint[]; right: ArmPoint[] } {
+/** The samples of an arm: its wave and its two end curls (the left one is the right one turned half round). */
+export function armPoints(
+  arm: ArmName,
+  layout: NebulaLayout,
+): { main: ArmPoint[]; left: ArmPoint[]; right: ArmPoint[] } {
   const s = ARMS[arm];
   const main: ArmPoint[] = [];
   for (let u = -s.reach; u <= s.reach;) {
-    const along = Math.abs(u) / s.reach;
-    main.push({
-      x: u,
-      y: armAxisY(arm, u),
-      w: armWidth(arm, u),
-      end: s.end.from < 1 ? 0.5 * ramp(s.end.from, 1, along) : 0,
-    });
-    u += ARMS.step / Math.hypot(1, armSlope(arm, u));
+    main.push({ x: u, y: armAxisY(arm, u, layout), w: armWidth(arm, u), end: mainEnd(s, u) });
+    u += ARMS.step / Math.hypot(1, armSlope(arm, u, layout));
   }
-  const slope = armSlope(arm, s.reach);
-  const endW = armWidth(arm, s.reach);
-  const right = curlFrom(s, s.reach, armAxisY(arm, s.reach), Math.atan2(slope, 1), endW, CURL[arm]);
-  // The left end is the right one turned half round the centre (the wave is odd): same turning sense.
+  const end: ArmPoint = {
+    x: s.reach,
+    y: armAxisY(arm, s.reach, layout),
+    w: armWidth(arm, s.reach),
+    end: mainEnd(s, s.reach),
+  };
+  const heading = Math.atan2(armSlope(arm, s.reach, layout), 1);
+  const right = curlFrom(s, end, heading, CURL[arm], layout.curlRadius[arm]);
   const left = right.map((p) => ({ ...p, x: -p.x, y: -p.y }));
   return { main, left, right };
 }
 
-/** The total turn of a curl, in turns (1.5 for the pink spirals). */
+/** The total turn of a curl, in turns, from the heading `start`. */
 export function curlTurns(pts: readonly ArmPoint[], start: number): number {
   let turned = 0;
   let prev = start;
@@ -145,49 +208,102 @@ export function curlTurns(pts: readonly ArmPoint[], start: number): number {
   return turned / TWO_PI;
 }
 
-function allPoints(arm: ArmName): ArmPoint[] {
-  const { main, left, right } = armPoints(arm);
-  return [...left, ...main, ...right];
-}
-
-/** How far up (and down) from the centre the drawing reaches, unsquashed, baked px. */
-export function designReach(): number {
-  let reach = Math.max(N.halo.ry, N.arcs.y + N.arcs.width / 2 + N.arcs.soft, N.core.radius);
-  for (const arm of ['pink', 'blue'] as const) {
-    for (const p of allPoints(arm)) reach = Math.max(reach, Math.abs(p.y) + ARMS.glow * p.w);
+/** How far up (and down) from the centre the arms with their glow reach, baked px. */
+export function armsReach(layout: NebulaLayout): number {
+  let reach = 0;
+  for (const arm of ARM_NAMES) {
+    const { main, left, right } = armPoints(arm, layout);
+    for (const p of [...left, ...main, ...right]) {
+      reach = Math.max(reach, Math.abs(p.y) + layout.glow * p.w);
+    }
   }
   return reach;
 }
 
+/** How far above the centre the whole drawing reaches with this layout, baked px. */
+export function nebulaTop(layout: NebulaLayout): number {
+  return Math.max(
+    armsReach(layout),
+    layout.haloRy,
+    ROW_HALF + layout.veilFade,
+    layout.arcY + N.arcs.width / 2 + N.arcs.soft,
+  );
+}
+
+/** How the reach of the veil's fringe swells along the row, 0..1 (top and bottom out of step). */
+function fringeWave(u: number, top: boolean): number {
+  const v = N.veil;
+  return (
+    0.5 + 0.5 * Math.sin((TWO_PI * u) / v.waveX + (top ? 0 : Math.PI) + 0.7 * Math.sin(u / 97))
+  );
+}
+
 /**
- * How far above the centre the nebula may reach on a screen `screenH` tall, baked px: as far as the
- * HUD gap allows at the highest bob (`riseRoom`), and never less than the cloud's flattened top on the
- * shortest screen (the body top and the outline; the gap to the plates there is the accepted one).
+ * Opacity of the veil in its picture at (`u`, `y`) px from the centre: 1 over the whole cover row (the
+ * layer is muted the same everywhere), melting away above and below over a reach that swells along the row.
  */
-export function nebulaHeadroom(screenH: number): number {
-  const least = H / 2 - figure.body.top + figure.outline;
-  return Math.max(least, least + riseRoom(screenH));
-}
-
-/** The vertical squash of the drawing on a screen `screenH` tall (1 keeps it): the veil's fade and everything else fit the headroom. */
-export function nebulaSquash(screenH: number): number {
-  const room = nebulaHeadroom(screenH);
-  return Math.min(1, room / designReach(), (room - ROW_HALF) / N.veil.fade);
-}
-
-/** How far above the centre the drawing reaches with squash `v`, baked px. */
-export function nebulaTop(v: number): number {
-  return Math.max(designReach() * v, ROW_HALF + N.veil.fade * v);
-}
-
-/** Opacity of the veil in its picture at (`u`, `y`) px from the centre with squash `v`: 1 over the whole cover row. */
-export function veilAlpha(u: number, y: number, v: number): number {
+export function veilAlpha(u: number, y: number, layout: NebulaLayout): number {
   const b = figure.body;
   const x = u + CX;
   const outX = Math.max(b.left - x, x - b.right, 0);
-  const outY = Math.max(Math.abs(y) - ROW_HALF, 0);
-  return (1 - ramp(0, N.veil.fade * v, outY)) * (1 - ramp(0, N.veil.fadeX, outX));
+  const sideX = 1 - rampBetween(outX, 0, N.veil.fadeX);
+  const out = Math.abs(y) - ROW_HALF;
+  if (out <= 0) return sideX;
+  const reach = layout.veilFade * (N.veil.fadeMin + (1 - N.veil.fadeMin) * fringeWave(u, y < 0));
+  if (reach <= 0) return 0;
+  return sideX * (1 - rampBetween(out, 0, reach)) ** 2;
 }
+
+/** Where a picture is cut from the figure frame, figure px. */
+export interface FrameRect {
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+}
+
+/** Where each picture is cut from the figure frame: only as big as what it holds (less to fill on screen). */
+export function nebulaFrameRects(layout: NebulaLayout): Record<NebulaFrame, FrameRect> {
+  const veilTop = Math.ceil(Math.max(nebulaTop(layout), N.core.radius)) + 2;
+  const veil = { x: 0, y: Math.max(0, CY - veilTop), w: W, h: Math.min(H, veilTop * 2) };
+  const yScale = nebulaYScale(layout);
+  const cut = (arm: ArmName): FrameRect => {
+    const { main, left, right } = armPoints(arm, layout);
+    let x0 = Infinity;
+    let x1 = -Infinity;
+    let y0 = Infinity;
+    let y1 = -Infinity;
+    for (const p of [...left, ...main, ...right]) {
+      const r = layout.glow * p.w;
+      x0 = Math.min(x0, p.x - r);
+      x1 = Math.max(x1, p.x + r);
+      y0 = Math.min(y0, p.y - r);
+      y1 = Math.max(y1, p.y + r);
+    }
+    if (arm === 'pink') {
+      for (const s of N.sparks) {
+        y0 = Math.min(y0, s.y * yScale - s.r);
+        y1 = Math.max(y1, s.y * yScale + s.r);
+      }
+    }
+    const left0 = Math.max(0, Math.floor(CX + x0) - 3);
+    const top0 = Math.max(0, Math.floor(CY + y0) - 3);
+    return {
+      x: left0,
+      y: top0,
+      w: Math.min(W, Math.ceil(CX + x1) + 3) - left0,
+      h: Math.min(H, Math.ceil(CY + y1) + 3) - top0,
+    };
+  };
+  return { veil, blue: cut('blue'), pink: cut('pink') };
+}
+
+/** The origin that puts the figure centre of a picture cut by `rect` where the figure's centre is. */
+export function frameOrigin(rect: FrameRect): { x: number; y: number } {
+  return { x: (CX - rect.x) / rect.w, y: (CY - rect.y) / rect.h };
+}
+
+// ---- Pixels ----------------------------------------------------------------------------------------
 
 /** Premultiplied paint: layers are put over one another like paint ("over"). */
 interface Paint {
@@ -197,13 +313,36 @@ interface Paint {
   a: number;
 }
 
-function over(p: Paint, color: number, alpha: number): void {
+type Rgb = readonly [number, number, number];
+
+function rgb(color: number): Rgb {
+  return [(color >> 16) & 255, (color >> 8) & 255, color & 255];
+}
+
+function over(p: Paint, c: Rgb, alpha: number): void {
   if (alpha <= 0) return;
   const k = 1 - alpha;
-  p.r = p.r * k + ((color >> 16) & 255) * alpha;
-  p.g = p.g * k + ((color >> 8) & 255) * alpha;
-  p.b = p.b * k + (color & 255) * alpha;
+  p.r = p.r * k + c[0] * alpha;
+  p.g = p.g * k + c[1] * alpha;
+  p.b = p.b * k + c[2] * alpha;
   p.a = p.a * k + alpha;
+}
+
+/** `over` with the colour mixed from `a` to `b` by `t`. */
+function overMix(p: Paint, a: Rgb, b: Rgb, t: number, alpha: number): void {
+  if (alpha <= 0) return;
+  const k = 1 - alpha;
+  p.r = p.r * k + (a[0] + (b[0] - a[0]) * t) * alpha;
+  p.g = p.g * k + (a[1] + (b[1] - a[1]) * t) * alpha;
+  p.b = p.b * k + (a[2] + (b[2] - a[2]) * t) * alpha;
+  p.a = p.a * k + alpha;
+}
+
+function scalePaint(p: Paint, k: number): void {
+  p.r *= k;
+  p.g *= k;
+  p.b *= k;
+  p.a *= k;
 }
 
 function put(out: Uint8ClampedArray, at: number, p: Paint, x: number, y: number): void {
@@ -215,100 +354,261 @@ function put(out: Uint8ClampedArray, at: number, p: Paint, x: number, y: number)
   out[at + 3] = a * 255;
 }
 
-/** The glow tones of an arm at `n` half widths from its axis, `end` of the way to its end tone. */
-export function armPaint(spec: ArmSpec, n: number, end: number, p: Paint): void {
+/** The tones of an arm as channels. */
+interface ArmTones {
+  glow: Rgb;
+  middle: Rgb;
+  core: Rgb;
+  thread: Rgb;
+  end: Rgb;
+}
+
+function armTones(spec: ArmSpec): ArmTones {
   const t = spec.tones;
-  const G = ARMS.glow;
-  if (n >= G) return;
-  over(p, t.glow, 0.5 * (1 - n / G) ** 2);
-  over(p, mixColor(t.middle, spec.end.tone, end), 0.85 * (1 - ramp(0.5, 1.05, n)));
-  over(p, mixColor(t.core, spec.end.tone, end * 0.5), 0.9 * (1 - ramp(0.18, 0.5, n)));
-  over(p, t.thread, 0.95 * (1 - ramp(0.05, 0.14, n)));
+  return {
+    glow: rgb(t.glow),
+    middle: rgb(t.middle),
+    core: rgb(t.core),
+    thread: rgb(t.thread),
+    end: rgb(spec.end.tone),
+  };
 }
 
-/** The nearest arm sample of every pixel: its distance in half widths and its end share. */
-interface Field {
-  n: Float32Array;
-  end: Float32Array;
+/** The glow tones of an arm at `n` half widths from its axis, `end` of the way to its end tone; `glow` the reach. */
+function armPaint(tones: ArmTones, n: number, end: number, glow: number, p: Paint): void {
+  if (n >= glow) return;
+  over(p, tones.glow, 0.5 * (1 - n / glow) ** 2);
+  overMix(p, tones.middle, tones.end, end, 0.85 * (1 - rampBetween(n, 0.5, 1.05)));
+  overMix(p, tones.core, tones.end, end * 0.5, 0.9 * (1 - rampBetween(n, 0.18, 0.5)));
+  over(p, tones.thread, 0.95 * (1 - rampBetween(n, 0.05, 0.14)));
 }
 
-function newField(): Field {
-  return { n: new Float32Array(W * H).fill(Infinity), end: new Float32Array(W * H) };
+/** The nearest point of an arm found for a pixel: its distance in half widths and its end share. */
+interface Hit {
+  n: number;
+  end: number;
 }
 
-function stamp(field: Field, pts: readonly ArmPoint[], v: number): void {
-  for (const p of pts) {
-    const px = CX + p.x;
-    const py = CY + p.y * v;
-    const reach = ARMS.glow * p.w;
-    const x0 = Math.max(0, Math.floor(px - reach));
-    const x1 = Math.min(W - 1, Math.ceil(px + reach));
-    const y0 = Math.max(0, Math.floor(py - reach * v));
-    const y1 = Math.min(H - 1, Math.ceil(py + reach * v));
-    for (let y = y0; y <= y1; y++) {
-      const dy = (y + 0.5 - py) / v;
-      for (let x = x0; x <= x1; x++) {
-        const dx = x + 0.5 - px;
-        const n = Math.sqrt(dx * dx + dy * dy) / p.w;
-        const at = y * W + x;
-        if (n < (field.n[at] ?? Infinity)) {
-          field.n[at] = n;
-          field.end[at] = p.end;
-        }
+/** A curl as short segments with its bounds (glow included), for the nearest-point search. */
+interface CurlPath {
+  pts: ArmPoint[];
+  x0: number;
+  x1: number;
+  y0: number;
+  y1: number;
+}
+
+/** Every this many samples make one segment of a curl's polyline (about 6 px). */
+const CURL_STRIDE = 4;
+
+function curlPath(pts: readonly ArmPoint[], glow: number, start: ArmPoint): CurlPath {
+  const kept = [start, ...pts.filter((_, i) => i % CURL_STRIDE === CURL_STRIDE - 1)];
+  const last = pts[pts.length - 1];
+  if (last && kept[kept.length - 1] !== last) kept.push(last);
+  let x0 = Infinity;
+  let x1 = -Infinity;
+  let y0 = Infinity;
+  let y1 = -Infinity;
+  for (const p of kept) {
+    const r = glow * p.w;
+    x0 = Math.min(x0, p.x - r);
+    x1 = Math.max(x1, p.x + r);
+    y0 = Math.min(y0, p.y - r);
+    y1 = Math.max(y1, p.y + r);
+  }
+  return { pts: kept, x0, x1, y0, y1 };
+}
+
+/** One arm ready to be searched: its wave and its two curls. */
+interface ArmShape {
+  arm: ArmName;
+  curls: CurlPath[];
+}
+
+function armShape(arm: ArmName, layout: NebulaLayout): ArmShape {
+  const { main, left, right } = armPoints(arm, layout);
+  const first = main[0];
+  const last = main[main.length - 1];
+  const curls: CurlPath[] = [];
+  if (last) curls.push(curlPath(right, layout.glow, last));
+  if (first) curls.push(curlPath(left, layout.glow, first));
+  return { arm, curls };
+}
+
+/** Finds the nearest point of an arm to (`x`, `y`) (from the centre): Newton steps on the wave, segments on the curls. */
+function nearest(shape: ArmShape, layout: NebulaLayout, x: number, y: number, hit: Hit): void {
+  hit.n = Infinity;
+  hit.end = 0;
+  const arm = shape.arm;
+  const spec = ARMS[arm];
+  const reach = spec.reach;
+  const amp = -SIGN[arm] * layout.amplitude[arm];
+  const k = Math.PI / reach;
+  if (Math.abs(y) <= Math.abs(amp) + layout.glow * spec.width[0]) {
+    let u = Math.max(-reach, Math.min(reach, x));
+    for (let i = 0; i < 3; i++) {
+      const sn = Math.sin(k * u);
+      const f = amp * sn;
+      const f1 = amp * k * Math.cos(k * u);
+      const f2 = -amp * k * k * sn;
+      const g = u - x + (f - y) * f1;
+      const g1 = 1 + f1 * f1 + (f - y) * f2;
+      if (g1 <= 1e-6) break;
+      u = Math.max(-reach, Math.min(reach, u - g / g1));
+    }
+    const n = Math.hypot(x - u, y - amp * Math.sin(k * u)) / armWidth(arm, u);
+    if (n < hit.n) {
+      hit.n = n;
+      hit.end = mainEnd(spec, u);
+    }
+  }
+  for (const c of shape.curls) {
+    if (x < c.x0 || x > c.x1 || y < c.y0 || y > c.y1) continue;
+    for (let i = 1; i < c.pts.length; i++) {
+      const a = c.pts[i - 1];
+      const b = c.pts[i];
+      if (!a || !b) continue;
+      const dx = b.x - a.x;
+      const dy = b.y - a.y;
+      const len2 = dx * dx + dy * dy;
+      const t = len2 > 0 ? clamp01(((x - a.x) * dx + (y - a.y) * dy) / len2) : 0;
+      const d = Math.hypot(x - (a.x + dx * t), y - (a.y + dy * t));
+      const n = d / (a.w + (b.w - a.w) * t);
+      if (n < hit.n) {
+        hit.n = n;
+        hit.end = a.end + (b.end - a.end) * t;
       }
     }
   }
 }
 
-/** The veil frame: the halo, the even haze over the row, the haze arcs and the dust vein through the core. */
-function paintVeil(p: Paint, u: number, y: number, v: number): void {
+/** Everything a slice of pixels needs, made once per bake. */
+interface BakeKit {
+  layout: NebulaLayout;
+  shapes: Record<ArmName, ArmShape>;
+  tones: Record<ArmName, ArmTones>;
+  veilTones: readonly [Rgb, Rgb];
+  fringe: Rgb;
+  halo: Rgb;
+  arc: Rgb;
+  cream: Rgb;
+  shade: Rgb;
+  vein: Rgb;
+}
+
+function bakeKit(layout: NebulaLayout): BakeKit {
+  return {
+    layout,
+    shapes: { pink: armShape('pink', layout), blue: armShape('blue', layout) },
+    tones: { pink: armTones(ARMS.pink), blue: armTones(ARMS.blue) },
+    veilTones: [rgb(N.veil.tones[0]), rgb(N.veil.tones[1])],
+    fringe: rgb(N.veil.fringe),
+    halo: rgb(N.halo.color),
+    arc: rgb(N.arcs.color),
+    cream: rgb(N.core.color),
+    shade: rgb(ARMS.shade.color),
+    vein: rgb(N.core.vein.color),
+  };
+}
+
+/** How much the pink arm shades what lies behind it at (`u`, `y`): its shape moved down, near the crossing only. */
+function shadeAt(kit: BakeKit, u: number, y: number, hit: Hit): number {
+  const s = ARMS.shade;
+  if (Math.abs(u) >= s.reach) return 0;
+  nearest(kit.shapes.pink, kit.layout, u, y - s.drop, hit);
+  return (
+    (1 - rampBetween(hit.n, s.inner, s.outer)) *
+    (1 - rampBetween(Math.abs(u), s.reach * 0.5, s.reach))
+  );
+}
+
+/** How much of the arms' light is left at `c` core radii from the centre: dimmed at the crossing (no white-out). */
+export function coreDim(c: number): number {
+  return c >= 1 ? 1 : 1 - N.core.cap * (1 - c) ** 1.2;
+}
+
+function paintVeil(kit: BakeKit, p: Paint, u: number, y: number, hit: Hit): void {
+  const L = kit.layout;
   const h = N.halo;
-  const e2 = (u / h.rx) ** 2 + (y / (h.ry * v)) ** 2;
-  if (e2 < 1) over(p, h.color, h.alpha * (1 - e2) ** 2);
-  const [toneA, toneB] = N.veil.tones;
-  const wave = 0.5 + 0.5 * Math.sin((TWO_PI * u) / N.veil.waveX + Math.sin(y / 40) * 0.6);
-  over(p, mixColor(toneA, toneB, wave), veilAlpha(u, y, v));
-  const a = N.arcs;
-  const along = Math.abs(u) / a.reach;
-  if (along < 1) {
-    const arcY = (a.y - a.sag * along * along) * v;
-    const d = Math.abs(Math.abs(y) - arcY);
-    const fade = 1 - ramp(0.7, 1, along);
-    over(p, a.color, a.alpha * fade * (1 - ramp(a.width / 2, a.width / 2 + a.soft, d)));
+  const e2 = (u / h.rx) ** 2 + (L.haloRy > 0 ? (y / L.haloRy) ** 2 : Infinity);
+  if (e2 < 1) over(p, kit.halo, h.alpha * (1 - e2) ** 2);
+  const a = veilAlpha(u, y, L);
+  if (a > 0) {
+    const wave = fringeWave(u, true);
+    const [toneA, toneB] = kit.veilTones;
+    const tone: Rgb = [
+      toneA[0] + (toneB[0] - toneA[0]) * wave,
+      toneA[1] + (toneB[1] - toneA[1]) * wave,
+      toneA[2] + (toneB[2] - toneA[2]) * wave,
+    ];
+    // The body of the veil, turning to the faint lilac of its fringe as it melts away.
+    overMix(p, tone, kit.fringe, 1 - a, a);
   }
+  const arcs = N.arcs;
+  const along = Math.abs(u) / arcs.reach;
+  // The arcs only where there is room for them above the fringe (not on the shortest screens).
+  if (along < 1 && L.arcY >= arcs.y * 0.8) {
+    const d = Math.abs(Math.abs(y) - (L.arcY - arcs.sag * along * along * L.fit));
+    const fade = 1 - rampBetween(along, 0.7, 1);
+    const line = 1 - rampBetween(d, arcs.width / 2, arcs.width / 2 + arcs.soft);
+    over(p, kit.arc, arcs.alpha * fade * line);
+  }
+  const core = N.core;
+  const c = Math.hypot(u, y) / core.radius;
+  if (c < 1) over(p, kit.cream, core.alpha * (1 - c) ** 1.6);
+  const shade = shadeAt(kit, u, y, hit);
+  if (shade > 0) over(p, kit.shade, ARMS.shade.veilAlpha * shade);
+  over(p, kit.vein, core.vein.alpha * veinAt(L, u, y));
+}
+
+/** How much of the dark dust vein through the core lies at (`u`, `y`), 0..1. */
+function veinAt(L: NebulaLayout, u: number, y: number): number {
   const vein = N.core.vein;
   const k = u / vein.length;
-  if (Math.abs(k) < 1) {
-    const veinY = (u * vein.tilt + vein.bend * Math.sin(Math.PI * k)) * v;
-    const d = Math.abs(y - veinY);
-    const fade = 1 - ramp(0.55, 1, Math.abs(k));
-    over(p, vein.color, vein.alpha * fade * (1 - ramp(vein.width / 2, vein.width / 2 + 1.2, d)));
-  }
+  if (Math.abs(k) >= 1) return 0;
+  const veinY = u * vein.tilt * Math.max(L.fit, 0.4) + vein.bend * Math.sin(Math.PI * k);
+  const fade = 1 - rampBetween(Math.abs(k), 0.55, 1);
+  return fade * (1 - rampBetween(Math.abs(y - veinY), vein.width / 2, vein.width / 2 + 1.2));
 }
+
+function paintArm(kit: BakeKit, arm: ArmName, p: Paint, u: number, y: number, hit: Hit): void {
+  nearest(kit.shapes[arm], kit.layout, u, y, hit);
+  if (hit.n >= kit.layout.glow) return;
+  armPaint(kit.tones[arm], hit.n, hit.end, kit.layout.glow, p);
+  // Dimmed at the core and cut along the dust vein, so the cream, the star and the dark vein read.
+  let k = ARMS[arm].alpha * coreDim(Math.hypot(u, y) / N.core.radius) * kit.layout.light;
+  k *= 1 - veinAt(kit.layout, u, y);
+  if (arm === 'blue') k *= 1 - ARMS.shade.alpha * shadeAt(kit, u, y, hit);
+  scalePaint(p, k);
+}
+
+// ---- Strokes over the pixels ------------------------------------------------------------------------
 
 /** Sprinkle colours of the layers, white left out. */
 const SPRINKLE_COLORS = PLAIN_LAYER.decor.sprinkles.colors.filter((c) => c !== 0xffffff);
 
-function css(color: number): string {
-  return `#${color.toString(16).padStart(6, '0')}`;
-}
-
-/** The sprinkle strokes of `arm` drawn on its frame (top-left of the frame at `oy`). */
-function drawSprinkles(ctx: CanvasRenderingContext2D, arm: ArmName, oy: number, v: number): void {
+/** The sprinkle strokes of `arm`, the figure centre at (`cx`, `cy`) of the canvas. */
+function drawSprinkles(
+  ctx: CanvasRenderingContext2D,
+  arm: ArmName,
+  layout: NebulaLayout,
+  cx: number,
+  cy: number,
+): void {
   const s = N.sprinkles;
   ctx.lineCap = 'round';
   ctx.lineWidth = s.width;
   s.spots.forEach((spot, i) => {
     if (spot.arm !== arm) return;
-    const slope = armSlope(arm, spot.u) * v;
+    const slope = armSlope(arm, spot.u, layout);
     const len = Math.hypot(1, slope);
     const w = armWidth(arm, spot.u) * spot.across;
-    const x = CX + spot.u - (slope / len) * w;
-    const y = oy + CY + armAxisY(arm, spot.u) * v + w / len;
+    const x = cx + spot.u - (slope / len) * w;
+    const y = cy + armAxisY(arm, spot.u, layout) + w / len;
     const a = Math.atan2(slope, 1) + spot.turn;
     const dx = (Math.cos(a) * s.length) / 2;
     const dy = (Math.sin(a) * s.length) / 2;
-    ctx.strokeStyle = css(SPRINKLE_COLORS[i % SPRINKLE_COLORS.length] ?? 0xffd35c);
+    ctx.strokeStyle = cssColor(SPRINKLE_COLORS[i % SPRINKLE_COLORS.length] ?? 0xffd35c);
     ctx.beginPath();
     ctx.moveTo(x - dx, y - dy);
     ctx.lineTo(x + dx, y + dy);
@@ -316,113 +616,139 @@ function drawSprinkles(ctx: CanvasRenderingContext2D, arm: ArmName, oy: number, 
   });
 }
 
-/** The sparks: soft dots and small four-ray stars, white, on the pink frame. */
-function drawSparks(ctx: CanvasRenderingContext2D, oy: number, v: number): void {
-  for (const s of N.sparks) {
-    const x = CX + s.x;
-    const y = oy + CY + s.y * v;
-    const dot = ctx.createRadialGradient(x, y, 0, x, y, s.r < 5 ? s.r : s.r * 0.45);
-    dot.addColorStop(0, 'rgba(255,255,255,1)');
-    dot.addColorStop(1, 'rgba(255,255,255,0)');
-    ctx.fillStyle = dot;
-    ctx.beginPath();
-    ctx.arc(x, y, s.r < 5 ? s.r : s.r * 0.45, 0, TWO_PI);
-    ctx.fill();
-    if (s.r < 5) continue;
-    ctx.fillStyle = 'rgba(255,255,255,0.95)';
-    ctx.beginPath();
-    ctx.moveTo(x, y - s.r);
-    ctx.quadraticCurveTo(x, y, x + s.r, y);
-    ctx.quadraticCurveTo(x, y, x, y + s.r);
-    ctx.quadraticCurveTo(x, y, x - s.r, y);
-    ctx.quadraticCurveTo(x, y, x, y - s.r);
-    ctx.fill();
-  }
+/** A four-ray star: concave rays of radius `r`, `waist` of it wide at the middle. */
+function fourRays(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  r: number,
+  waist: number,
+): void {
+  const w = r * waist;
+  ctx.beginPath();
+  ctx.moveTo(x, y - r);
+  ctx.quadraticCurveTo(x + w, y - w, x + r, y);
+  ctx.quadraticCurveTo(x + w, y + w, x, y + r);
+  ctx.quadraticCurveTo(x - w, y + w, x - r, y);
+  ctx.quadraticCurveTo(x - w, y - w, x, y - r);
+  ctx.fill();
 }
 
-/** The squash each nebula texture was baked with: it is baked again when the screen asks for another. */
-const bakedSquash = new Map<string, number>();
+function softDot(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  r: number,
+  color: string,
+): void {
+  const dot = ctx.createRadialGradient(x, y, 0, x, y, r);
+  dot.addColorStop(0, color);
+  dot.addColorStop(1, 'rgba(255,255,255,0)');
+  ctx.fillStyle = dot;
+  ctx.beginPath();
+  ctx.arc(x, y, r, 0, TWO_PI);
+  ctx.fill();
+}
 
-/** Rows of pixels painted per deferred step. */
-const ROWS_PER_STEP = 24;
-/** Arm samples stamped per deferred step. */
-const POINTS_PER_STEP = 160;
+/** The sparks (soft dots and small four-ray stars) and the crisp star of the core, on the pink picture. */
+function drawSparks(
+  ctx: CanvasRenderingContext2D,
+  layout: NebulaLayout,
+  cx: number,
+  cy: number,
+): void {
+  const yScale = nebulaYScale(layout);
+  for (const s of N.sparks) {
+    const x = cx + s.x;
+    const y = cy + s.y * yScale;
+    if (s.r < 5) {
+      softDot(ctx, x, y, s.r, 'rgba(255,255,255,1)');
+      continue;
+    }
+    softDot(ctx, x, y, s.r * 0.5, 'rgba(255,255,255,0.9)');
+    ctx.fillStyle = 'rgba(255,255,255,0.95)';
+    fourRays(ctx, x, y, s.r, 0.12);
+  }
+  const star = N.core.star;
+  // The warm glow round the star, then its bright middle.
+  const [r, g, b] = rgb(star.glow);
+  softDot(ctx, cx, cy, star.r * star.warm, `rgba(${r},${g},${b},${star.warmAlpha})`);
+  softDot(ctx, cx, cy, star.r * 0.55, cssColor(star.color));
+  ctx.fillStyle = cssColor(star.color);
+  fourRays(ctx, cx, cy, star.r, star.waist);
+  fourRays(ctx, cx, cy, star.r * 0.45, star.waist * 2);
+}
+
+// ---- The bake ---------------------------------------------------------------------------------------
+
+/** The layout each nebula texture was baked with: it is baked again when the screen asks for another. */
+const bakedFit = new Map<string, number>();
+
+/** Rows of the texture taken by each picture, top to bottom with a 2 px gap. */
+function textureRows(rects: Record<NebulaFrame, FrameRect>): Record<NebulaFrame, number> {
+  const blue = rects.veil.h + 2;
+  return { veil: 0, blue, pink: blue + rects.blue.h + 2 };
+}
 
 /**
- * Bakes the nebula for a screen `screenH` tall into texture `key` (frames `NEBULA_FRAMES`), in deferred
- * steps when called inside `collectBakeSteps`. A texture baked for another squash is replaced (only at
- * run load, when nothing shows it).
+ * Bakes the nebula for a screen `screenH` tall into texture `key` (frames `NEBULA_FRAMES`, each cut to what
+ * it holds), as deferred steps of `bake.rowsPerStep` rows when called inside `collectBakeSteps`. A texture
+ * baked for another layout is replaced (only at run load, when nothing shows it).
  */
 export function bakeNebulaArms(scene: Phaser.Scene, key: string, screenH: number): void {
-  const v = nebulaSquash(screenH);
+  const layout = nebulaLayout(screenH);
   if (scene.textures.exists(key)) {
-    if (bakedSquash.get(key) === v) return;
+    if (bakedFit.get(key) === layout.fit) return;
     scene.textures.remove(key);
   }
-  bakedSquash.set(key, v);
-  const fields = { pink: newField(), blue: newField() };
-  for (const arm of ['pink', 'blue'] as const) {
-    const pts = allPoints(arm);
-    for (let i = 0; i < pts.length; i += POINTS_PER_STEP) {
-      const slice = pts.slice(i, i + POINTS_PER_STEP);
-      deferStep(() => stamp(fields[arm], slice, v));
+  bakedFit.set(key, layout.fit);
+  const rects = nebulaFrameRects(layout);
+  const rows = textureRows(rects);
+  const height = rows.pink + rects.pink.h;
+  const pixels = new Uint8ClampedArray(new ArrayBuffer(W * height * 4));
+  const image = new ImageData(pixels, W, height);
+  const canvas = document.createElement('canvas');
+  canvas.width = W;
+  canvas.height = height;
+  const ctx = canvas.getContext('2d');
+  let kit: BakeKit | null = null;
+  const p: Paint = { r: 0, g: 0, b: 0, a: 0 };
+  const hit: Hit = { n: Infinity, end: 0 };
+  for (const frame of ['veil', 'blue', 'pink'] as const) {
+    const rect = rects[frame];
+    for (let from = 0; from < rect.h; from += N.bake.rowsPerStep) {
+      const to = Math.min(from + N.bake.rowsPerStep, rect.h);
+      deferStep(() => {
+        kit ??= bakeKit(layout);
+        for (let row = from; row < to; row++) {
+          const y = rect.y + row + 0.5 - CY;
+          const outRow = rows[frame] + row;
+          for (let col = 0; col < rect.w; col++) {
+            const u = rect.x + col + 0.5 - CX;
+            p.r = p.g = p.b = p.a = 0;
+            if (frame === 'veil') paintVeil(kit, p, u, y, hit);
+            else paintArm(kit, frame, p, u, y, hit);
+            put(pixels, (outRow * W + col) * 4, p, col, outRow);
+          }
+        }
+        // Each slice goes onto the canvas as it is done, so the last step only adds the strokes.
+        ctx?.putImageData(image, 0, 0, 0, rows[frame] + from, rect.w, to - from);
+      });
     }
   }
-  const pixels = new Uint8ClampedArray(new ArrayBuffer(W * H * 3 * 4));
-  const shade = ARMS.shade;
-  const core = N.core;
-  const p: Paint = { r: 0, g: 0, b: 0, a: 0 };
-  for (let from = 0; from < H; from += ROWS_PER_STEP) {
-    const to = Math.min(from + ROWS_PER_STEP, H);
-    deferStep(() => {
-      for (let y = from; y < to; y++) {
-        const dy = y + 0.5 - CY;
-        const shadeRow = Math.max(0, Math.round(y - shade.drop * v));
-        for (let x = 0; x < W; x++) {
-          const u = x + 0.5 - CX;
-          const at = y * W + x;
-          p.r = p.g = p.b = p.a = 0;
-          paintVeil(p, u, dy, v);
-          put(pixels, at * 4, p, x, y);
-          // The blue arm, shaded where the pink one passes over it.
-          p.r = p.g = p.b = p.a = 0;
-          armPaint(ARMS.blue, fields.blue.n[at] ?? Infinity, 0, p);
-          const pinkOver = fields.pink.n[shadeRow * W + x] ?? Infinity;
-          const shaded = 1 - shade.alpha * (1 - ramp(0.6, shade.reach, pinkOver));
-          const blueA = ARMS.blue.alpha * shaded;
-          p.r *= blueA;
-          p.g *= blueA;
-          p.b *= blueA;
-          p.a *= blueA;
-          put(pixels, (W * H + at) * 4, p, x, y);
-          // The pink arm and the warm core over the crossing.
-          p.r = p.g = p.b = p.a = 0;
-          armPaint(ARMS.pink, fields.pink.n[at] ?? Infinity, fields.pink.end[at] ?? 0, p);
-          p.r *= ARMS.pink.alpha;
-          p.g *= ARMS.pink.alpha;
-          p.b *= ARMS.pink.alpha;
-          p.a *= ARMS.pink.alpha;
-          const c = Math.hypot(u, dy / v) / core.radius;
-          if (c < 1) over(p, core.color, core.alpha * (1 - c) ** 1.6);
-          put(pixels, (2 * W * H + at) * 4, p, x, y);
-        }
-      }
-    });
-  }
   deferStep(() => {
-    const canvas = document.createElement('canvas');
-    canvas.width = W;
-    canvas.height = H * 3;
-    const ctx = canvas.getContext('2d');
     if (!ctx) return;
-    ctx.putImageData(new ImageData(pixels, W, H * 3), 0, 0);
-    drawSprinkles(ctx, 'blue', H, v);
-    drawSprinkles(ctx, 'pink', 2 * H, v);
-    drawSparks(ctx, 2 * H, v);
+    for (const arm of ARM_NAMES) {
+      drawSprinkles(ctx, arm, layout, CX - rects[arm].x, rows[arm] + CY - rects[arm].y);
+    }
+    drawSparks(ctx, layout, CX - rects.pink.x, rows.pink + CY - rects.pink.y);
+  });
+  deferStep(() => {
     const texture = scene.textures.addCanvas(key, canvas);
     if (!texture) return;
-    texture.add(NEBULA_FRAMES.veil, 0, 0, 0, W, H);
-    texture.add(NEBULA_FRAMES.blue, 0, 0, H, W, H);
-    texture.add(NEBULA_FRAMES.pink, 0, 0, 2 * H, W, H);
+    for (const frame of ['veil', 'blue', 'pink'] as const) {
+      const r = rects[frame];
+      texture.add(NEBULA_FRAMES[frame], 0, 0, rows[frame], r.w, r.h);
+    }
   });
 }

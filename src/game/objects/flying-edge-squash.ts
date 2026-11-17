@@ -7,7 +7,7 @@ import {
 import type { CreatureId } from '../../data/creatures';
 import type { MouthKind } from '../../data/creature-looks';
 import { EDGE_SQUASH, type WallFeel } from '../../data/edge-squash';
-import { lerp, smoothstep } from '../../util/math';
+import { lerp, rampBetween, smoothstep } from '../../util/math';
 import { effectsMode } from '../effects-mode';
 import {
   bounceWave,
@@ -61,11 +61,6 @@ export interface SquashBody {
   width: number;
   /** Height of the tallest column as a multiple of the normal height (1: not squashed). */
   tall: number;
-}
-
-/** 0 at `from`, 1 at `full`, smooth between. */
-function rampBetween(value: number, from: number, full: number): number {
-  return smoothstep((value - from) / (full - from));
 }
 
 const RIGHT_DEG = 0;
