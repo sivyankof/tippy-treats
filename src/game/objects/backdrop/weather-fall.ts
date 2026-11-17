@@ -1,16 +1,20 @@
 import * as Phaser from 'phaser';
 import type { Rng } from '../../../core/rng';
+import { BALANCE } from '../../../data/balance';
 import { LOGICAL_SIZE } from '../../../data/screen';
 import { WEATHER_LOOK, WEATHER_TEX } from '../../../data/weather-look';
-import { MS_PER_SECOND, TWO_PI } from '../../../util/math';
+import { clamp01, MS_PER_SECOND, TWO_PI } from '../../../util/math';
 import { laneCount, snowSpots, startU } from './weather-lanes';
 import {
   particleFade,
   particleKeepOut,
   rainDropsShown,
   rainSlope,
+  rainDrift,
+  rainStartX,
   rainX,
-  sideU,
+  rainY,
+  rainSpots,
   wrapRange,
 } from './weather-motion';
 import type { WeatherFrame, WeatherPart } from './weather-frame';
@@ -39,7 +43,6 @@ interface FallLook {
   scale: Range;
   alpha: Range;
   slant?: number;
-  leanMaxPx?: number;
   swayPx?: Range;
   swayMs?: Range;
   spinMs?: Range;
@@ -73,7 +76,6 @@ export class WeatherFall implements WeatherPart {
   readonly objects: Phaser.GameObjects.Image[] = [];
   private readonly specs: Particle[] = [];
   private readonly look: FallLook;
-  private readonly edgeShare: number;
 
   constructor(
     scene: Phaser.Scene,
@@ -83,7 +85,6 @@ export class WeatherFall implements WeatherPart {
     this.look = WEATHER_LOOK[kind] as FallLook;
     const look = this.look;
     const frames = FRAME_SETS[look.frames[0] ?? ''] ?? [];
-    this.edgeShare = (look.leanMaxPx ?? 0) / LOGICAL_SIZE.width;
     const count = Math.min(look.count, WEATHER_LOOK.particleCount.full);
     const strip = look.sideShare ?? WEATHER_LOOK.sideShare;
     const snow = kind === 'snow';
@@ -93,20 +94,18 @@ export class WeatherFall implements WeatherPart {
     // Snow falls in lanes (one speed per lane, see weather-lanes.ts); the rest start anywhere.
     const lanes = laneCount(LOGICAL_SIZE.width, WEATHER_LOOK.snow.laneGapPx);
     const spots = snow ? snowSpots(count, lanes, drawU, () => rng.next()) : [];
+    // Rain: x and y of the drops are each spread evenly over the screen in a shuffled order, so the count beside the tower holds.
+    const rainAt = rain ? rainSpots(count, () => rng.next()) : [];
+    // Raindrops fall at one speed, as real ones do: it keeps their spread even as they fall.
+    const rainSpeed = rain ? draw(rng, look.speed, 0) : 0;
     const laneSpeed = new Map<number, number>();
-    const sideSpeed: number[] = [];
     for (let i = 0; i < count; i++) {
-      const side = i % 2;
       const { lane, u, v } = spots[i] ?? {
         lane: 0,
-        u: rain ? sideU(rng, side, strip, this.edgeShare) : drawU(),
-        // Rain: the two sides alternate and each side's drops are spaced evenly down the screen.
-        v: rain
-          ? (Math.floor(i / 2) + side / 2 + rng.next() * 0.2) / Math.ceil(count / 2)
-          : rng.next(),
+        u: rain ? (rainAt[i]?.u ?? 0) : drawU(),
+        v: rain ? (rainAt[i]?.v ?? 0) : rng.next(),
       };
-      // The drops of one rain side share a speed, so their even spacing holds as they fall.
-      let speed = rain ? (sideSpeed[side] ??= draw(rng, look.speed, 0)) : draw(rng, look.speed, 0);
+      let speed = rain ? rainSpeed : draw(rng, look.speed, 0);
       if (snow) {
         speed = laneSpeed.get(lane) ?? speed;
         laneSpeed.set(lane, speed);
@@ -155,12 +154,16 @@ export class WeatherFall implements WeatherPart {
     const keepFeather = this.look.keepOutFeatherPx ?? WEATHER_LOOK.keepOutFeatherPx;
     const leaf = this.kind === 'leaves';
     const slant = this.look.slant ?? 0;
-    const leanMax = this.look.leanMaxPx;
     // A raindrop is turned along the way it really falls.
-    const slantRad = rain ? -Math.atan(rainSlope(slant, height, leanMax, pad)) : 0;
+    const slantRad = rain ? -Math.atan(rainSlope(slant)) : 0;
     const tilt = this.look.tiltRad ?? 0;
     const swayLag = this.look.swayLag ?? 0;
     const turnMin = this.look.turnMin ?? 1;
+    // The free side areas beside the widest tower, and how far a slanted drop drifts over its fall.
+    const outer = (width - BALANCE.tray.width) / 2;
+    const top = frame.hudFloor;
+    const drift = rainDrift(slant, height - top, pad);
+    const midY = (top + height) / 2;
     for (let i = 0; i < this.objects.length; i++) {
       const image = this.objects[i];
       const p = this.specs[i];
@@ -169,14 +172,17 @@ export class WeatherFall implements WeatherPart {
         image.setVisible(false);
         continue;
       }
-      const y = wrapRange(p.v * height + p.speed * seconds, height, pad);
+      const y = rain
+        ? rainY(p.v, p.speed, seconds, top, height, pad, band)
+        : wrapRange(p.v * height + p.speed * seconds, height, pad);
       const x = rain
-        ? rainX(p.u, width, slant, y, height, leanMax, pad)
+        ? rainX(rainStartX(p.u, width, outer, drift, WEATHER_LOOK.rainSideBias), slant, y, midY)
         : p.u * width + p.sway * Math.sin((TWO_PI * t) / p.swayMs + p.phase);
       // The whole picture keeps out of the HUD gap: its half size, and for a raindrop its slanted length.
       const reach = (image.width * p.scale) / 2;
       const alpha =
         particleFade(y, band, bandFeather, height, pad) *
+        (rain ? clamp01((y - top) / pad) : 1) *
         (rain
           ? particleKeepOut(
               x,

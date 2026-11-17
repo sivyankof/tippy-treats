@@ -1,4 +1,3 @@
-import type { Rng } from '../../../core/rng';
 import { WEATHER_LOOK } from '../../../data/weather-look';
 import type { EffectLevel } from '../../../data/effect-levels';
 import { clamp01 } from '../../../util/math';
@@ -10,38 +9,88 @@ export function wrapRange(value: number, size: number, pad: number): number {
   return ((((value + pad) % span) + span) % span) - pad;
 }
 
-/** x (share of the width) in the left (side 0) or right (side 1) strip of width `strip`, at least `edge` in from the strip's outer edge and from the tower's side. */
-export function sideU(rng: Rng, side: number, strip: number, edge: number): number {
-  return side === 0 ? rng.range(edge, strip - edge) : rng.range(1 - strip + edge, 1 - edge);
+/** The golden ratio's fractional part: stepping by it spreads points over 0..1 with no part left empty. */
+const GOLDEN_STEP = 0.6180339887498949;
+
+/**
+ * Start spots (`u` across, `v` down, both 0..1) of `count` raindrops: the drops go down the screen in order and
+ * step across by the golden ratio from a random offset, so at every moment the drops cover the width and the
+ * height evenly (a plain random draw leaves gaps and bunches, and the count beside the tower swings).
+ * Each spot moves a little (`jitterShare` of a cell) so no lattice shows.
+ */
+export function rainSpots(
+  count: number,
+  next: () => number,
+  jitterShare = 0.3,
+): { u: number; v: number }[] {
+  const offset = next();
+  const wrap01 = (x: number): number => x - Math.floor(x);
+  return Array.from({ length: count }, (_, i) => ({
+    u: wrap01(offset + i * GOLDEN_STEP + ((next() - 0.5) * jitterShare) / count),
+    v: wrap01((i + 0.5 + (next() - 0.5) * jitterShare) / count),
+  }));
+}
+
+/** The path of a raindrop: `slant` px of drift per px of fall (the picture is turned by this). */
+export function rainSlope(slant: number): number {
+  return slant;
 }
 
 /**
- * How far a raindrop leans per px of fall: `slant`, eased on a screen taller than
- * `WEATHER_LOOK.leanRefHeight` (the drop still looks slanted, its picture is turned by this), and
- * never more than makes the whole pass (`height` plus `padPx` at both ends) lean `leanMaxPx` either way
- * of the lane, so the drop stays inside its side strip.
+ * How far (px) a drop drifts to either side of its middle over a pass of `span` px of height plus `padPx` at both
+ * ends: a drop may start beyond a side edge, so that the upwind edge is not empty at any height.
  */
-export function rainSlope(slant: number, height: number, leanMaxPx = Infinity, padPx = 0): number {
-  const ease = Math.min(1, WEATHER_LOOK.leanRefHeight / height);
-  return Math.min(slant * ease, leanMaxPx / (height / 2 + padPx));
+export function rainDrift(slant: number, span: number, padPx = 0): number {
+  return rainSlope(slant) * (span / 2 + padPx);
 }
 
 /**
- * x of a raindrop at height `y`: its lane `u` (share of the width) on the middle of the screen, leaning
- * by `rainSlope` px per px of fall. The lean depends on the height, not on the time, so a drop that starts
- * in a side strip stays near that strip on every pass instead of drifting across the whole width
- * (a time-based drift spread the drops evenly, and most of them fell behind the tower).
+ * Height of a raindrop `seconds` into its fall. Rain falls in the part of the screen under the HUD (from `top`
+ * to the bottom of the screen `height`, `padPx` more at both ends before it wraps): above `top` the plates hide
+ * the sides anyway, and a drop spent there would be lost; the drop fades in over `padPx` under `top`. The
+ * stripe of the incoming layer (`band`) is invisible too, so a drop skips it: it is invisible at both edges of
+ * the stripe, and the time it would spend inside is not lost.
  */
-export function rainX(
+export function rainY(
+  v: number,
+  speed: number,
+  seconds: number,
+  top: number,
+  height: number,
+  padPx: number,
+  band: { top: number; bottom: number } = { top: height, bottom: height },
+): number {
+  const skipFrom = Math.min(Math.max(band.top, top), height);
+  const skip = Math.min(Math.max(band.bottom - skipFrom, 0), height - skipFrom);
+  const span = height - top - skip;
+  const y = top + wrapRange(v * span + speed * seconds, span, padPx);
+  return y >= skipFrom ? y + skip : y;
+}
+
+/**
+ * Where a raindrop is at mid height (px), from its start `u` (0..1, evenly spread over the drops): most drops
+ * (`bias`) start beside the tower, in the two free side areas of `outerPx` that the drift widens beyond the
+ * screen edge (`driftPx`), the rest anywhere across the middle, so a narrow tower hides few of them.
+ */
+export function rainStartX(
   u: number,
   width: number,
-  slant: number,
-  y: number,
-  height: number,
-  leanMaxPx = Infinity,
-  padPx = 0,
+  outerPx: number,
+  driftPx: number,
+  bias: number,
 ): number {
-  return u * width + rainSlope(slant, height, leanMaxPx, padPx) * (y - height / 2);
+  const side = bias / 2;
+  const spanSide = outerPx + driftPx;
+  const pick = (from: number, span: number, share: number, at: number): number =>
+    from + span * clamp01((u - at) / share);
+  if (u < side) return pick(-driftPx, spanSide, side, 0);
+  if (u < bias) return pick(width - outerPx, spanSide, side, side);
+  return pick(outerPx, width - 2 * outerPx, 1 - bias, bias);
+}
+
+/** x of a raindrop at height `y`: its x `xMid` at the middle `midY` of its fall, leaning by `rainSlope` px per px of fall. The lean depends on the height, not on the time. */
+export function rainX(xMid: number, slant: number, y: number, midY: number): number {
+  return xMid + rainSlope(slant) * (y - midY);
 }
 
 /**
