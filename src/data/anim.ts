@@ -1,3 +1,5 @@
+import type { ZoneId } from './zones';
+
 /** How a crumb falls; shared by the bite and the sneeze. */
 const CRUMB_FALL = {
   gravity: 1600,
@@ -275,6 +277,8 @@ export const ANIM = {
     haloAlpha: [0.22, 0.4],
     haloPeriodMs: 1600,
     haloFadeMs: 300,
+    /** Halo alpha multiplier per zone (1 where not listed): the dark sky zones show it fainter. */
+    haloZoneMult: { stars: 0.5, space: 0.5 } as Partial<Record<ZoneId, number>>,
     /** Halo size relative to the tray width and the visible tower. */
     haloWidthRatio: 1.5,
     haloColor: 0xfff3b0,

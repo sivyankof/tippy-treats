@@ -7,6 +7,8 @@ import { FX_TEXTURES } from './fx-textures';
 
 /** High-combo effects: a brief background flash and a soft halo around the tower. */
 export class ComboGlow {
+  /** Zone multiplier of the halo alpha, blended with the backdrop cross-fade; set per frame. */
+  zoneMult = 1;
   private readonly flashRect: Phaser.GameObjects.Rectangle;
   private readonly halo: Phaser.GameObjects.Image;
   /** Fade of the halo, 0..1; driven by a tween. */
@@ -66,7 +68,7 @@ export class ComboGlow {
     this.halo
       .setPosition(x, centerY)
       .setDisplaySize(trayWidth * ANIM.combo.haloWidthRatio, height * ANIM.combo.haloWidthRatio)
-      .setAlpha((minAlpha + (maxAlpha - minAlpha) * pulse) * this.fade);
+      .setAlpha((minAlpha + (maxAlpha - minAlpha) * pulse) * this.fade * this.zoneMult);
   }
 
   /** Covers the whole screen with the flash. */

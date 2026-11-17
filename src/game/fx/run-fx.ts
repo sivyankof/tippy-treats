@@ -537,6 +537,11 @@ export class RunFx {
     return this.result === null && state.phase !== 'await_continue' && state.phase !== 'over';
   }
 
+  /** Dims the halo by the zone behind the tower (already blended with the backdrop fade). */
+  setGlowZone(mult: number): void {
+    this.glow.zoneMult = mult;
+  }
+
   private setGlow(on: boolean): void {
     if (on === this.glowOn) return;
     this.glowOn = on;
