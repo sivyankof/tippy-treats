@@ -2,6 +2,8 @@ import type * as Phaser from 'phaser';
 import { Rng } from '../../core/rng';
 import type { LayerPlan } from '../../core/sim-types';
 import { BALANCE } from '../../data/balance';
+import { LOGICAL_SIZE } from '../../data/screen';
+import { lerp, smoothstep } from '../../util/math';
 import { CUT_LOOK, CUT_PICTURE, CUT_TEXTURES } from '../../data/cut-look';
 import { layerMarks } from '../objects/layer-marks';
 import type { LayerView } from '../objects/layer-view';
@@ -49,6 +51,8 @@ interface Slot {
   crumbs: (() => void) | null;
   panic: boolean;
   trace: boolean;
+  pieceWidth: number;
+  faceShift: number;
   side: 1 | -1;
   layerNumber: number;
   layerWidth: number;
@@ -129,6 +133,8 @@ export class CutFx {
     slot.crumbsDone = false;
     slot.crumbs = cut.crumbs;
     slot.panic = cut.plan.panic;
+    slot.pieceWidth = cut.pieceWidth;
+    slot.faceShift = 0;
     slot.trace = cut.plan.trace;
     slot.side = cut.side;
     slot.layerNumber = cut.layerNumber;
@@ -167,10 +173,32 @@ export class CutFx {
     if (since >= 0 && !slot.crumbsDone) {
       slot.crumbsDone = true;
       slot.crumbs?.();
+      view.dropShadow();
       if (slot.panic) effectCues.emit({ kind: 'cutPanic' });
     }
     slot.strands.update(since, dtMs, view, slot.hooks);
-    if (slot.panic) slot.panicSet.update(slot.ageMs, view, view.alpha);
+    if (slot.panic) {
+      slot.panicSet.update(slot.ageMs, view, view.alpha);
+      this.keepFaceInView(slot, view);
+    }
+  }
+
+  /** A big scared piece slides its face along the piece so the face stays on the screen. */
+  private keepFaceInView(slot: Slot, view: LayerView): void {
+    const { faceKeepPx } = CUT_LOOK.panic;
+    const cos = Math.cos(view.rotation);
+    const maxShift = Math.max(0, slot.pieceWidth / 2 - faceKeepPx);
+    let wanted = 0;
+    // Only while the piece is turned flat enough for a sideways move to move the face along the screen.
+    const flat = smoothstep((Math.abs(cos) - 0.2) / 0.3);
+    if (flat > 0) {
+      const farRight = LOGICAL_SIZE.width - faceKeepPx;
+      const x = view.x;
+      const target = Math.min(farRight, Math.max(faceKeepPx, x));
+      wanted = Math.min(maxShift, Math.max(-maxShift, (target - x) / cos)) * flat;
+    }
+    slot.faceShift = lerp(slot.faceShift, wanted, CUT_LOOK.panic.faceEase);
+    view.setFaceShift(slot.faceShift);
   }
 
   private finish(slot: Slot): void {
@@ -191,6 +219,8 @@ export class CutFx {
       crumbs: null,
       panic: false,
       trace: false,
+      pieceWidth: 0,
+      faceShift: 0,
       side: 1,
       layerNumber: 0,
       layerWidth: 0,

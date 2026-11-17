@@ -42,6 +42,9 @@ export function artTextureWidth(
 /** Space under the layer for its shadow. */
 const SHADOW_MARGIN = Math.ceil(SHADOW_DROP + ANIM.layer.shadowHeight / 2) + 1;
 
+/** Rows at the bottom of the baked picture that hold only the shadow. */
+export const SHADOW_ROWS = SHADOW_MARGIN;
+
 const GOLDEN_COLORS: LayerColors = {
   cake: TREASURE.colors.goldCake,
   glaze: TREASURE.colors.goldGlaze,

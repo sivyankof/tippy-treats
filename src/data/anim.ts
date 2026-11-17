@@ -142,6 +142,8 @@ export const ANIM = {
     perfectBump: 4,
   },
   dust: {
+    /** A flat warm crumb tone: a pale grey-white puff read as a halo. */
+    tint: 0xd9aa7a,
     perSide: [6, 8],
     lifeMs: 350,
     /** Puffs thrown out from under the edges of the landed layer; life is `lifeMs`. */

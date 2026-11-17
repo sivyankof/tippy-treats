@@ -20,7 +20,7 @@ import { LayerShade } from './layer-shade';
 import { LayerMaterial, type MaterialMotion } from './layer-material';
 import { LayerRig } from './layer-rig';
 import { hasNewLook } from '../../core/mastery';
-import { artWidth, creatureOfLayer, creatureStage, lookCodeFor } from './layer-art';
+import { artWidth, creatureOfLayer, creatureStage, lookCodeFor, SHADOW_ROWS } from './layer-art';
 import { GrownAccentView } from './grown-accent-view';
 import { LayerArtSlot } from './layer-art-slot';
 import { RAINBOW_LOOK } from '../../data/rainbow-look';
@@ -295,6 +295,19 @@ export class LayerView extends Phaser.GameObjects.Container {
     return this;
   }
 
+  /** Drops the baked shadow under the layer: a piece in the air carries none (cuts the rows that hold only it). */
+  dropShadow(): this {
+    const frame = this.art.frame;
+    this.art.setCrop(0, 0, frame.width, frame.height - SHADOW_ROWS);
+    return this;
+  }
+
+  /** Moves the face sideways inside the layer (local px); 0 puts it back in the middle. */
+  setFaceShift(dx: number): this {
+    this.face.setX(dx);
+    return this;
+  }
+
   /** Scale of the part pinned to the bottom edge: landing, falling and sneezing. */
   setSquash(scaleX: number, scaleY: number): this {
     this.squashRoot.setScale(scaleX, scaleY);
@@ -462,6 +475,8 @@ export class LayerView extends Phaser.GameObjects.Container {
       this.press,
     ]);
     this.press.angle = 0;
+    this.art.setCrop();
+    this.face.setX(0);
     this.squashRoot.setRotation(0).setX(0);
     this.edgeSkin?.clear();
     this.rig.reset();

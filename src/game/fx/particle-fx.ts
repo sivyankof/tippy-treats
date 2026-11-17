@@ -13,7 +13,7 @@ const DUST_STYLE: ParticleStyle = {
   ...ANIM.dust.style,
   lifeMs: [ANIM.dust.lifeMs, ANIM.dust.lifeMs],
 };
-const DUST_TINTS = [PALETTE.panelShadow];
+const DUST_TINTS = [ANIM.dust.tint];
 const SPARK_TINTS = [PALETTE.success, PALETTE.textLight];
 /** Confetti colours, in turn. */
 export const CONFETTI_TINTS = [
