@@ -1,10 +1,13 @@
 import * as Phaser from 'phaser';
 import type { Rng } from '../../../core/rng';
+import { LOGICAL_SIZE } from '../../../data/screen';
 import { WEATHER_LOOK, WEATHER_TEX } from '../../../data/weather-look';
 import { MS_PER_SECOND, TWO_PI } from '../../../util/math';
 import { hudKeepOutFade } from '../../camera-layout';
-import { particleFade, wrapRange } from './weather-motion';
+import { particleFade, rainDropsShown, wrapRange } from './weather-motion';
 import type { WeatherFrame, WeatherPart } from './weather-frame';
+
+const SPAWN_TRIES = 12;
 
 export type FallKind = 'rain' | 'storm' | 'snow' | 'leaves';
 
@@ -77,12 +80,19 @@ export class WeatherFall implements WeatherPart {
     const count = Math.min(look.count, WEATHER_LOOK.particleCount.full);
     const strip = look.sideShare ?? WEATHER_LOOK.sideShare;
     for (let i = 0; i < count; i++) {
-      const sideStrip = rng.chance(look.sideBias ?? WEATHER_LOOK.sideBias);
-      const left = rng.chance(0.5);
-      const u = sideStrip ? (left ? rng.range(0, strip) : rng.range(1 - strip, 1)) : rng.next();
+      let u = 0;
+      let v = 0;
+      // Snow keeps its flakes apart at the start (a few draws, the last one stands).
+      for (let tries = 0; tries < SPAWN_TRIES; tries++) {
+        const sideStrip = rng.chance(look.sideBias ?? WEATHER_LOOK.sideBias);
+        const left = rng.chance(0.5);
+        u = sideStrip ? (left ? rng.range(0, strip) : rng.range(1 - strip, 1)) : rng.next();
+        v = rng.next();
+        if (kind !== 'snow' || this.apart(u, v)) break;
+      }
       this.specs.push({
         u,
-        v: rng.next(),
+        v,
         speed: draw(rng, look.speed, 0),
         sway: draw(rng, look.swayPx, 0),
         swayMs: draw(rng, look.swayMs, 1),
@@ -98,6 +108,15 @@ export class WeatherFall implements WeatherPart {
     }
   }
 
+  /** Whether (u, v) is at least the snow's minimum gap from every flake placed so far. */
+  private apart(u: number, v: number): boolean {
+    const snow = WEATHER_LOOK.snow;
+    const w = LOGICAL_SIZE.width;
+    return this.specs.every(
+      (p) => Math.hypot((p.u - u) * w, (p.v - v) * snow.gapRefHeight) >= snow.minGapPx,
+    );
+  }
+
   private flakeSize(rng: Rng): number {
     const r = rng.next();
     const cuts = WEATHER_LOOK.snow.sizeCuts;
@@ -106,12 +125,15 @@ export class WeatherFall implements WeatherPart {
   }
 
   update(frame: WeatherFrame): void {
+    const rainy = this.kind === 'rain' || this.kind === 'storm';
     const shown =
       frame.share > 0
-        ? Math.round(
-            (this.objects.length * WEATHER_LOOK.particleCount[frame.level]) /
-              WEATHER_LOOK.particleCount.full,
-          )
+        ? rainy
+          ? rainDropsShown(this.objects.length, frame.level)
+          : Math.round(
+              (this.objects.length * WEATHER_LOOK.particleCount[frame.level]) /
+                WEATHER_LOOK.particleCount.full,
+            )
         : 0;
     const t = frame.timeMs;
     const seconds = t / MS_PER_SECOND;

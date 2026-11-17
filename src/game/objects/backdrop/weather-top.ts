@@ -116,6 +116,9 @@ export class WeatherTop {
         .setAlpha(SPLASH.alpha * (1 - t) * share);
     }
     if (!show || !pause || timeMs < this.nextSplashAt) return;
+    let active = 0;
+    for (const s of this.splashes) if (s.bornAt >= 0) active++;
+    if (active >= SPLASH.maxShown[level]) return;
     const free = this.splashes.find((s) => s.bornAt < 0);
     this.nextSplashAt = timeMs + this.rng.range(pause[0], pause[1]);
     if (!free) return;

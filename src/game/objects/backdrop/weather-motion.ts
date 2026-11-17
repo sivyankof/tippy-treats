@@ -1,4 +1,5 @@
 import { WEATHER_LOOK } from '../../../data/weather-look';
+import type { EffectLevel } from '../../../data/effect-levels';
 import { clamp01 } from '../../../util/math';
 
 /** `value` wrapped into the range [-pad, size + pad). */
@@ -36,6 +37,11 @@ export function flashEnvelope(elapsed: number, length: number): number {
   const t = elapsed / length;
   const rise = WEATHER_LOOK.lightning.riseShare;
   return t < rise ? t / rise : 1 - (t - rise) / (1 - rise);
+}
+
+/** How many raindrops show at an effects level: the particle limit of the level less the splashes that may stand at once. */
+export function rainDropsShown(pool: number, level: EffectLevel): number {
+  return Math.min(pool, WEATHER_LOOK.particleCount[level] - WEATHER_LOOK.splash.maxShown[level]);
 }
 
 /** One round puff of the cloud bank (picture px): its row (0 back, 1 middle, 2 front), centre and radius. */

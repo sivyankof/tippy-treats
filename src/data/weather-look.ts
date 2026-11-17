@@ -188,6 +188,8 @@ export const WEATHER_LOOK = {
   /** Rare splashes on the top layer: tower top Y spots at once, and the pause between them in ms (per level). */
   splash: {
     max: 3,
+    /** Splashes allowed at once per level: with the raindrops they stay within `particleCount` (see `rainDropsShown`). */
+    maxShown: { full: 3, lite: 1, minimal: 0 } satisfies PerLevel<number>,
     pauseMs: { full: [900, 2200], lite: [1800, 4400], minimal: null } as PerLevel<
       readonly [number, number] | null
     >,
@@ -215,7 +217,7 @@ export const WEATHER_LOOK = {
     slant: 0.22,
     alpha: [0.6, 0.75],
     scale: [0.85, 1.1],
-    count: 40,
+    count: 37,
   },
   storm: {
     frames: ['drop'],
@@ -223,7 +225,7 @@ export const WEATHER_LOOK = {
     slant: 0.38,
     alpha: [0.6, 0.75],
     scale: [0.95, 1.15],
-    count: 40,
+    count: 37,
   },
   snow: {
     frames: ['flake'],
@@ -233,7 +235,10 @@ export const WEATHER_LOOK = {
     alpha: [0.9, 1],
     scale: [1, 1],
     /** Cumulative chance of each flake picture but the last (small disc, middle disc, soft disc); the rest are the six-ray flake. */
-    sizeCuts: [0.45, 0.88, 0.94] as readonly number[],
+    sizeCuts: [0.42, 0.84, 0.92] as readonly number[],
+    /** No two flakes start closer than this (px of the 1080-wide logical screen, `gapRefHeight` tall), so they do not stick in pairs. */
+    minGapPx: 130,
+    gapRefHeight: 2340,
     /** The flakes keep to the side strips and the open sky: few hide behind the tower. */
     sideBias: 0.95,
     /** The open sky beside the tower is about this share of the width on each side (the tower hides the rest). */
@@ -300,7 +305,7 @@ export const WEATHER_LOOK = {
       [0, -20, 150, 60],
       [0, 60, 147, 58],
       [0, 150, 149, 60],
-      [0, 265, 60, 56],
+      [0, 265, 78, 60],
       [0, 335, 34, 52],
       [0, 415, 10, 46],
       [0, 500, 12, 48],
@@ -313,7 +318,6 @@ export const WEATHER_LOOK = {
       [1, 35, 155, 60],
       [1, 130, 155, 56],
       [1, 222, 155, 56],
-      [1, 306, 86, 42],
       [1, 735, 130, 50],
       [1, 820, 157, 54],
       [1, 905, 155, 60],
@@ -333,11 +337,13 @@ export const WEATHER_LOOK = {
      */
     flashColor: 0xffe6a0,
     flashSpots: [
-      { x: 292, y: 105 },
+      { x: 285, y: 100 },
       { x: 707, y: 95 },
     ] as ReadonlyArray<{ x: number; y: number }>,
     flashRadiusPx: 210,
     flashCoreShare: 0.6,
+    /** How bright the flash is on each row of puffs (back, middle, front): the front puffs stay dimmer, so the light comes from the bolt and not from a ball. */
+    flashRowShare: [1, 1, 0.6] as readonly [number, number, number],
     /** How far (px) the brighter rim reaches into a mass: it falls off as exp(-depth / this). */
     flashReachPx: 34,
   },
