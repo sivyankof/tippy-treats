@@ -1,6 +1,6 @@
 import * as Phaser from 'phaser';
 import { Rng } from '../../../core/rng';
-import { STREET_WEATHER, type StreetFallKind } from '../../../data/street-weather';
+import { STREET_WEATHER, streetFallView, type StreetFallKind } from '../../../data/street-weather';
 import type { WeatherId } from '../../../data/weather';
 import { WEATHER_LOOK, WEATHER_TEX } from '../../../data/weather-look';
 import { flightClearBand, hudFloor } from '../../camera-layout';
@@ -58,11 +58,7 @@ export class StreetWeather implements Life {
       kind === 'rain' || kind === 'storm'
         ? new WeatherBank(scene, weather, rng.fork('bank'), look.bank)
         : null;
-    this.fall = new WeatherFall(scene, kind, rng.fork('fall'), {
-      count: look.count[kind],
-      alpha: look.alpha,
-      scale: look.scale,
-    });
+    this.fall = new WeatherFall(scene, kind, rng.fork('fall'), streetFallView(kind));
     const glow = look.glow;
     this.glow =
       kind === 'storm'
