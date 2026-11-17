@@ -451,15 +451,16 @@ export interface Modifiers {
 
 ```ts
 // core/save/schema.ts
-// Текущая версия 8. Версия 2: streak.claimedToday заменён на claimedDay, добавлено today.
+// Текущая версия 9. Версия 2: streak.claimedToday заменён на claimedDay, добавлено today.
 // Версия 3: в ads добавлен offerDay (день последнего показа предложения «Без рекламы»).
 // Версия 4: в ads добавлены shownDay и shownToday (дневной счётчик межстраничной рекламы).
 // Версия 5: добавлены oven (счётчик «Свежей печи») и doubles (счётчик «×2 монеты» за день); bakerXp пересчитан под новую кривую.
 // Версия 6: форма та же; новая подсказка dailyIntro (окно-объяснение башни дня), миграция убирает её из hintsShown, чтобы окно увидели все.
 // Версия 8: добавлен bestLap (лучший достигнутый виток «Космоса», награда за новые витки); миграция 7 → 8 выводит его из рекорда Классики по замороженным числам (`frozen-v8.ts`), чтобы ничего не платилось задним числом.
 // Версия 7: добавлены checkpoints (открытые контрольные точки) и checkpointAds (старты за рекламу за местный день); миграция 6 → 7 открывает точки по рекорду.
-export interface SaveV8 {
-  version: 8;
+// Версия 9: в shop добавлен starterPackShownAt (первый показ кнопки стартового набора на Home, начало 7-дневного окна; 0 — ещё не показывали); миграция 8 → 9 ставит момент миграции, если набор не куплен и завершено ≥ 10 забегов (порог заморожен в `frozen-v9.ts`).
+export interface SaveV9 {
+  version: 9;
   installId: string;             // random uuid, for mission seed & support
   createdAt: number;             // epoch ms
   lastSeenAt: number;
@@ -476,7 +477,7 @@ export interface SaveV8 {
   missions: { day: string; items: MissionProgress[]; rerollUsed: boolean; chestClaimed: boolean };
   daily: { day: string; attemptsUsed: number; extraAttemptUsed: boolean; best: number; claimedTiers: number[] };
   gift: { nextAt: number };
-  shop: { freeCoinsDay: string; freeCoinsUsed: number; starterPackUntil: number };
+  shop: { freeCoinsDay: string; freeCoinsUsed: number; starterPackUntil: number; starterPackShownAt: number };   // starterPackShownAt: epoch ms первого показа набора на Home, 0 — не показывали
   purchases: { removeAds: boolean; starterPack: boolean };
   tutorial: { firstRunDone: boolean; hintsShown: string[] };
   settings: { music: boolean; sfx: boolean; haptics: boolean; reducedFx: 'auto' | 'on' | 'off'; lang: 'en' | 'ru' | 'auto';
@@ -504,7 +505,7 @@ interface MissionProgress { id: string; group: 'easy' | 'medium' | 'hard'; targe
 - Валюты никогда не уходят в минус: `core/economy.ts` `spend` возвращает новый кошелёк или `null` (отрицательная и нечисловая цена отклоняются, дробная округляется вверх; `earn` берёт только целые неотрицательные суммы); `gameState.spend/spendBerries` возвращают `false`. Покупки и прокачка возвращают `{ ok: true, value } | { ok: false, reason }` (тип `EconomyResult`).
 - Монеты забега попадают в сохранение, когда забег кончился (при любом исходе, `gameState.recordRun`); ягоды сразу, как только заработаны (`addBerries`), поэтому `recordRun` их не прибавляет. Если игрок уходит из идущего забега (кнопка «Заново» в паузе, перезапуск из панели отладки, любой другой выход со сцены забега), сцена закрывает забег сама: `TowerSim.quitResult()` собирает `RunResult` с `endReason: 'quit'` из текущего состояния (забег не меняется), `game/run-recorder.ts` (`RunRecorder`) записывает его через `recordRun` ровно один раз. Закрытие или перезагрузка страницы посреди забега (`pagehide`) тоже считается выходом из него: сцена забега подписывается в `create` (`state/page-lifecycle.ts`, `bindPageLeave`), записывает забег через `RunRecorder` и сразу сбрасывает сохранение на диск, отписывается на `SHUTDOWN`. Уход в фон (`visibilitychange: hidden`) выходом не считается, это пауза. Если после такого `pagehide` страница вернулась из кэша «назад/вперёд» (`pageshow` с `persisted`), старый забег уже записан, поэтому сцена начинает новый (`launchRun`): монеты не считаются дважды и не теряются. Забег, который уже кончился и записан, повторно не записывается. Бонус за высоту (`payHeightBonus`) платится только когда забег заканчивается сам, у `quit` его нет. Забег, в котором ничего не заработано (высота не выше стартовой, ноль очков, монет и ягод), забегом не считается (`isEmptyRun`): сохранять нечего, а счётчик забегов не должен расти от повторных «Заново». Первый забег игрока за всё время рекордом не бывает, дальше сравнение с сохранённым лучшим результатом.
 - Отладочные подмены (`?tutorial=`, `?team=`, `?dayOffset=`) действуют до перезагрузки страницы и не сохраняются. Забеги с `?bot=` и `?start=` искусственные и в сохранение не пишутся вообще (ни монеты, ни ягоды, ни XP: `RunRecorder` выключен, решает `savesRun` в `util/debug-params.ts`); забеги с `?team=` и `?level=` пишутся как обычные, чтобы владелец проверял существ по-настоящему.
-- Покупки `removeAds` и `starterPack` при запуске сверяются со стором (`services.iap.ownedNonConsumables()`, источник истины — стор; в браузере его изображает заглушка); после сверки вызывается `services.ads.setRemoveAds`. Схема сохранения для магазина не менялась: срок стартового набора считается от `createdAt` (`shop.starterPackUntil` > 0 перекрывает его), лимит бесплатных монет хранится в `shop.freeCoinsDay` / `freeCoinsUsed`.
+- Покупки `removeAds` и `starterPack` при запуске сверяются со стором (`services.iap.ownedNonConsumables()`, источник истины — стор; в браузере его изображает заглушка); после сверки вызывается `services.ads.setRemoveAds`. Срок стартового набора (с версии 9) считается от первого показа кнопки на Home (`shop.starterPackShownAt`, ставит `gameState.noteStarterPackShown`, когда кнопка появилась; `shop.starterPackUntil` > 0 перекрывает конец окна), лимит бесплатных монет хранится в `shop.freeCoinsDay` / `freeCoinsUsed`. Миграциям передаётся время загрузки (`migrate(raw, nowMs)`, шаг цепочки `(raw, nowMs) => raw`): оно нужно шагу 8 → 9.
 
 ## 6. Масштабирование экрана
 
