@@ -22,16 +22,18 @@ export function hangFadeEnd(): number {
   return HUD_LAYOUT.wobblePlate.y - SHOP_LOOK.hang.clearPx - hangBottom();
 }
 
+/** The fade runs from here to `FADE_END` (worked out once: `hangAlpha` is called every frame). */
+const FADE_FROM = hangRestDown() + SHOP_LOOK.hang.settlePx;
+const FADE_END = hangFadeEnd();
+
 /**
  * Alpha factor of the awning and the lamps after the wall has carried them `down` px: 1 on the start view (and the
  * drop-in that settles on it), a smooth fall to 0 at `hangFadeEnd`, 0 beyond. A pure function of the distance, the same
  * on every screen height; if the start view were already past the end they would never show.
  */
 export function hangAlpha(down: number): number {
-  const from = hangRestDown() + SHOP_LOOK.hang.settlePx;
-  const end = hangFadeEnd();
-  if (down <= from) return end > from ? 1 : 0;
-  if (down >= end) return 0;
-  const t = (down - from) / (end - from);
+  if (down <= FADE_FROM) return FADE_END > FADE_FROM ? 1 : 0;
+  if (down >= FADE_END) return 0;
+  const t = (down - FADE_FROM) / (FADE_END - FADE_FROM);
   return 1 - t * t * (3 - 2 * t);
 }

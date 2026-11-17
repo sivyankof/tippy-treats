@@ -1,5 +1,6 @@
 import type * as Phaser from 'phaser';
 import { OFFLINE_LOOK } from '../../data/offline-look';
+import { paddedScale } from '../../util/field-pad';
 import { DEG_TO_RAD } from '../../util/math';
 import { FIELD_PAD } from '../../data/picture-fields';
 import { bakePadded } from '../ui/bake-texture';
@@ -10,7 +11,7 @@ const { textureSize: size, colors, puffs, belly, slash, bandShare, gloss } = OFF
 export const OFFLINE_ICON_KEY = 'icon_offline';
 
 /** How many times bigger the picture is than the drawn icon (the room around it); show it this much bigger to keep the drawing at its size. */
-export const OFFLINE_ICON_FIELD_SCALE = (size + FIELD_PAD.offlineIcon * 2) / size;
+export const OFFLINE_ICON_FIELD_SCALE = paddedScale(size, FIELD_PAD.offlineIcon);
 
 /** The cloud as one flat shape in `color`, grown by `grow` and moved by (dx, dy). */
 function paintCloud(g: Phaser.GameObjects.Graphics, color: number, grow: number, d: number): void {

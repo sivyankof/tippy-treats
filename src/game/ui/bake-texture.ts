@@ -1,6 +1,6 @@
 import type * as Phaser from 'phaser';
 import { paddedSize } from '../../util/field-pad';
-import { probeClip } from '../clip-guard';
+import { clipGuardActive, drawProbed } from '../clip-guard';
 
 /** One deferred bake: draws and uploads a single texture. */
 export type BakeStep = () => void;
@@ -103,17 +103,23 @@ export function bakeTexture(
   }
   const g = scene.add.graphics().setVisible(false);
   try {
-    draw(g);
     // The picture goes into a canvas first and the texture is made from the finished canvas,
     // so the GPU gets one upload instead of an empty one and a second after the drawing.
-    const canvas = document.createElement('canvas');
-    canvas.width = Math.ceil(width);
-    canvas.height = Math.ceil(height);
-    g.generateTexture(canvas, canvas.width, canvas.height);
+    const w = Math.ceil(width);
+    const h = Math.ceil(height);
+    let canvas: HTMLCanvasElement;
+    if (clipGuardActive()) {
+      canvas = drawProbed(g, key, w, h, draw);
+    } else {
+      draw(g);
+      canvas = document.createElement('canvas');
+      canvas.width = w;
+      canvas.height = h;
+      g.generateTexture(canvas, w, h);
+    }
     // `finish` edits the finished pixels (cuts a piece out of the picture).
     const context = finish ? canvas.getContext('2d') : null;
     if (finish && context) finish(context);
-    probeClip(scene, key, canvas.width, canvas.height, draw);
     // Small pictures drawn many times per frame share an atlas page (see shared-atlas.ts).
     if (!sharedStore?.(scene, key, canvas)) scene.textures.addCanvas(key, canvas);
   } finally {

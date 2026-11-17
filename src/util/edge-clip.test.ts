@@ -29,7 +29,7 @@ describe('measureOverflow', () => {
       [0, 0, 255],
       [1, 1, 255],
     ]);
-    expect(pixelsOf(measureOverflow(data, 2, 2, 1))).toEqual([2, 1, 0, 1]);
+    expect(pixelsOf(measureOverflow(data, 2, 2, 1))).toEqual([3, 1, 0, 2]);
   });
 
   it('reports how far the drawing reaches beyond the field', () => {
@@ -55,6 +55,16 @@ describe('measureOverflow', () => {
     expect(o.right.spare).toBe(0);
     expect(o.top.spare).toBe(1);
     expect(o.bottom.spare).toBe(-1);
+  });
+
+  it('counts a pixel in a corner of the margin for both of its sides', () => {
+    // A 2 x 2 field with a margin of 2: the pixel at (0, 1) is 2 left of and 1 above the field.
+    const data = picture(6, 6, [[0, 1, 255]]);
+    const o = measureOverflow(data, 2, 2, 2);
+    expect(pixelsOf(o)).toEqual([1, 0, 0, 1]);
+    expect([o.top.reach, o.left.reach]).toEqual([1, 2]);
+    expect(o.left.spare).toBe(-2);
+    expect(o.top.spare).toBe(-1);
   });
 
   it('ignores a faint haze at or under the threshold', () => {

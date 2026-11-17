@@ -1,7 +1,7 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { HUD_LAYOUT } from '../../data/hud-layout';
 import { LOGICAL_SIZE } from '../../data/screen';
-import { setLang, tn, type Lang } from '../../i18n';
+import { getLang, setLang, tn, type Lang } from '../../i18n';
 import {
   badgeRowRight,
   captionSpot,
@@ -76,19 +76,36 @@ describe('icon-only next-creature chip', () => {
 });
 
 describe('next-creature text at the peak of its pop', () => {
+  let savedLang: Lang;
+  beforeEach(() => {
+    savedLang = getLang();
+  });
+  afterEach(() => {
+    setLang(savedLang);
+  });
+
+  /** Widths of the text as Phaser measured it in the browser (Nunito Black 56 px with the stroke padding), `ru` and `en`, for a count of 1, 2, 5, 8, 10, 17 and 20. */
+  const MEASURED: Record<Lang, Record<number, number>> = {
+    ru: { 1: 379, 2: 377, 5: 409, 8: 409, 10: 443, 17: 443, 20: 443 },
+    en: { 1: 268, 2: 295, 5: 295, 8: 295, 10: 329, 17: 329, 20: 329 },
+  };
+
   for (const lang of ['ru', 'en'] as Lang[]) {
     for (const n of [1, 2, 5, 8, 10, 17, 20]) {
-      it(`stays right of the icon and inside the chip: ${lang}, ${n}`, () => {
+      it(`stays right of the icon and keeps the chip padding at the right: ${lang}, ${n}`, () => {
         setLang(lang);
         const text = tn('run.nextCreatureIn', n);
-        const width = textWidth(text.length);
-        const span = nextChipSpan(WIDTH, width);
-        const peakRight = span.labelLeft + width * nextLabelPopScale(width);
-        expect(span.labelLeft).toBeGreaterThanOrEqual(
-          span.iconX + badgeSize / 2 + HUD_LAYOUT.badgeGap,
-        );
-        expect(peakRight).toBeLessThanOrEqual(span.chipRight + 1e-9);
-        expect(peakRight).toBeLessThanOrEqual(WIDTH - badgeMargin);
+        // The measured width and a width a fifth bigger than the widest measure per character.
+        const widths = [MEASURED[lang][n] ?? 0, textWidth(text.length)];
+        for (const width of widths) {
+          const span = nextChipSpan(WIDTH, width);
+          const peakRight = span.labelLeft + width * nextLabelPopScale(width);
+          expect(span.labelLeft).toBeGreaterThanOrEqual(
+            span.iconX + badgeSize / 2 + HUD_LAYOUT.badgeGap,
+          );
+          expect(peakRight).toBeLessThanOrEqual(span.chipRight - HUD_LAYOUT.nextChip.padX + 1e-9);
+          expect(span.chipRight).toBeLessThanOrEqual(WIDTH - badgeMargin);
+        }
       });
     }
   }

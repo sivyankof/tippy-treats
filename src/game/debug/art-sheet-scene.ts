@@ -18,10 +18,6 @@ export class ArtSheetScene extends Phaser.Scene {
 
   create(): void {
     primeArtTextures(this);
-    const lines = [clipSummary(), `atlas pages: ${atlasPageCount(this.textures)}`];
-    const report = lines.join('\n');
-    console.log(report);
-    console.log(['clip tight:', ...clipTightLines()].join('\n'));
     const keys = this.textures
       .getTextureKeys()
       .filter(isSheetPicture)
@@ -31,8 +27,7 @@ export class ArtSheetScene extends Phaser.Scene {
     const rows = Math.ceil(keys.length / columns);
     const liveRows = Math.ceil(LIVE_PICTURES.length / columns);
     const gridHeight = rows * (cellHeight + gap);
-    const reportHeight = (report.split('\n').length + 1) * ART_SHEET.reportLineHeight;
-    const height = margin * 2 + gridHeight + liveRows * (cellHeight + gap) - gap + reportHeight;
+    const height = margin * 2 + gridHeight + liveRows * (cellHeight + gap) - gap;
     this.scale.setGameSize(width, height);
     this.cameras.main.setBackgroundColor(ART_SHEET.background);
     keys.forEach((key, i) => {
@@ -40,12 +35,6 @@ export class ArtSheetScene extends Phaser.Scene {
       const y = margin + Math.floor(i / columns) * (cellHeight + gap);
       this.drawCell(key, x, y);
     });
-    this.add
-      .text(margin, height - margin - reportHeight + gap, report, {
-        font: ART_SHEET.captionFont,
-        color: ART_SHEET.reportColor,
-      })
-      .setOrigin(0, 0);
     LIVE_PICTURES.forEach((picture, i) => {
       const x = margin + (i % columns) * (cellWidth + gap);
       const y = margin + gridHeight + Math.floor(i / columns) * (cellHeight + gap);
@@ -56,6 +45,23 @@ export class ArtSheetScene extends Phaser.Scene {
         y,
       );
     });
+    this.showReport(width, height);
+  }
+
+  /** The clip guard report and the atlas page count, once every picture (the drawn layers too) is baked: under the grid, in the console. */
+  private showReport(width: number, gridBottom: number): void {
+    const { margin, gap } = ART_SHEET;
+    const report = [clipSummary(), `atlas pages: ${atlasPageCount(this.textures)}`].join('\n');
+    console.log(report);
+    console.log(['clip tight:', ...clipTightLines()].join('\n'));
+    const reportHeight = (report.split('\n').length + 1) * ART_SHEET.reportLineHeight;
+    this.scale.setGameSize(width, gridBottom + margin + reportHeight);
+    this.add
+      .text(margin, gridBottom + gap, report, {
+        font: ART_SHEET.captionFont,
+        color: ART_SHEET.reportColor,
+      })
+      .setOrigin(0, 0);
   }
 
   private drawLiveCell(

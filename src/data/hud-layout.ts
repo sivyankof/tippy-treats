@@ -78,7 +78,8 @@ export const HUD_LAYOUT = {
   nextFont: 56,
   nextStroke: 8,
   /** The see-through wallet chip under it: from the icon centre to `padX` past the text. */
-  nextChip: { height: 78, padX: 22 },
+  /** `popRoom`: extra room right of the text inside the plate, so the text at the peak of its pop still keeps `padX` from the plate's right end. */
+  nextChip: { height: 78, padX: 22, popRoom: 14 },
   /** The SVG icons are loaded at this multiple of their size so they stay crisp when shown larger. */
   iconTextureScale: 2,
   /**
