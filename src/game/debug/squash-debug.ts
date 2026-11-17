@@ -1,13 +1,15 @@
 import * as Phaser from 'phaser';
 import type { TowerSim } from '../../core/tower-sim';
+import type { EffectLevel } from '../../data/effect-levels';
 import type { SquashKind } from '../../data/topper-squash';
+import { effectsMode } from '../effects-mode';
 import type { TopperWorld } from '../objects/layer-topper';
 import { lookCode, lookOfCode, plainLooks } from '../objects/plain-look';
 import { plainToppers, topperSize } from '../objects/topper-look';
 import type { TowerView } from '../objects/tower-view';
 
 /** How the next layer lands on the decoration: on its whole body, or on its edge only. */
-export type SquashMode = 'hit' | 'edge';
+export type SquashMode = 'hit' | 'edge' | 'none';
 
 /** Frames to wait after the decoration is put on the top layer, so the view shows it before the layer lands. */
 const SETTLE_FRAMES = 3;
@@ -24,6 +26,7 @@ interface Armed {
 
 type SquashWindow = Window & {
   tippySquash?: (kind: SquashKind, mode?: SquashMode) => boolean;
+  tippySquashLevel?: (level: EffectLevel | null) => void;
 };
 
 /**
@@ -47,7 +50,7 @@ export function installSquashDebug(scene: Phaser.Scene, sim: TowerSim, tower: To
       plainLooks.force(number, lookCode({ pair, decor: 'cream', pattern: null }));
     } else {
       plainLooks.force(number, lookCode({ pair, decor: null, pattern: null }));
-      plainToppers.force(number, { kind, side: 1 });
+      plainToppers.force(number, mode === 'none' ? null : { kind, side: 1 });
     }
     armed = { kind, mode, frames: 0 };
     return true;
@@ -61,7 +64,7 @@ export function installSquashDebug(scene: Phaser.Scene, sim: TowerSim, tower: To
     if (job.frames < SETTLE_FRAMES) return;
     const topView = tower.topView();
     if (!topView) return;
-    if (job.kind === 'cream') {
+    if (job.kind === 'cream' || job.mode === 'none') {
       flying.x = (sim.state.layers[sim.state.layers.length - 1]?.x ?? flying.x) + CREAM_OFFSET;
     } else {
       if (!topView.topperWorld(world)) {
@@ -87,8 +90,10 @@ export function installSquashDebug(scene: Phaser.Scene, sim: TowerSim, tower: To
   scene.events.on(Phaser.Scenes.Events.UPDATE, step);
   const win = window as SquashWindow;
   win.tippySquash = arm;
+  win.tippySquashLevel = (level) => effectsMode.pinLevel(level);
   scene.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
     scene.events.off(Phaser.Scenes.Events.UPDATE, step);
     if (win.tippySquash === arm) delete win.tippySquash;
+    delete win.tippySquashLevel;
   });
 }
