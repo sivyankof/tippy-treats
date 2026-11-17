@@ -1,11 +1,14 @@
-import type * as Phaser from 'phaser';
+import * as Phaser from 'phaser';
 import { Rng } from '../../core/rng';
 import type { LayerPlan } from '../../core/sim-types';
 import { BALANCE } from '../../data/balance';
 import { LOGICAL_SIZE } from '../../data/screen';
 import { lerp, smoothstep } from '../../util/math';
-import { CUT_LOOK, CUT_PICTURE, CUT_TEXTURES } from '../../data/cut-look';
-import { outlineColor } from './plain-style';
+import { mixColor } from '../../util/color';
+import type { CreatureId } from '../../data/creatures';
+import { CUT_LOOK } from '../../data/cut-look';
+import { collectBakeSteps } from '../ui/bake-texture';
+import { dripTexturesFor, glazeEdgeTone } from '../objects/glaze-drip-layer';
 import { layerMarks } from '../objects/layer-marks';
 import type { LayerView } from '../objects/layer-view';
 import { plainLooks } from '../objects/plain-look';
@@ -13,7 +16,7 @@ import { effectCues } from './effect-cues';
 import { cutOverride } from './cut-override';
 import { CutPanic } from './cut-panic';
 import { CutStrands, type StrandHooks } from './cut-strands';
-import { bakeCutTextures, hangPictureSize } from './cut-textures';
+import { bakeCutTextures } from './cut-textures';
 import { cutSpinDegPerSec } from './cut-timeline';
 import { chooseCutVariant, forcedCutVariant, type CutPlan, type CutVariant } from './cut-variant';
 import type { FallingPieces } from './falling-piece';
@@ -38,6 +41,8 @@ export interface CutPlay {
   look: LayerPlan;
   cake: number;
   glaze: number;
+  /** The creature of the layer (its drips and glaze edge have their own tone and size), null for a plain one. */
+  creature: CreatureId | null;
   plan: CutPlan;
   /** The crumbs of the cut: called when the piece lets go. */
   crumbs: () => void;
@@ -62,7 +67,9 @@ interface Slot {
   side: 1 | -1;
   layerNumber: number;
   layerWidth: number;
-  glaze: number;
+  /** The picture of the end of this layer's drips: the drop that stays on the cut (null when it is not baked). */
+  hang: string | null;
+  hangSize: number;
   strands: CutStrands;
   panicSet: CutPanic;
   hooks: StrandHooks;
@@ -77,9 +84,12 @@ export class CutFx {
   private readonly slots: Slot[] = [];
   private lastBigLayer: number | null = null;
   private next = 0;
+  /** Strands are bending strips: the Canvas renderer has none, so there the cut plays without them. */
+  private readonly strips: boolean;
 
   constructor(private readonly scene: Phaser.Scene) {
     bakeCutTextures(scene);
+    this.strips = scene.game.renderer.type !== Phaser.CANVAS;
     for (let i = 0; i < SLOTS; i++) this.slots.push(this.makeSlot(scene));
   }
 
@@ -147,22 +157,25 @@ export class CutFx {
     slot.side = cut.side;
     slot.layerNumber = cut.layerNumber;
     slot.layerWidth = cut.layerWidth;
-    slot.glaze = cut.glaze;
+    this.findHang(slot, cut);
     const random = new Rng(plainLooks.cosmeticSeed)
       .fork(CUT_LOOK.stream)
       .fork(`fx${cut.layerNumber}`);
-    if (cut.plan.strands) {
+    if (cut.plan.strands && this.strips) {
       const start = {
         side: cut.side,
         edgeX: cut.edgeX,
         y: cut.y,
         pieceWidth: cut.pieceWidth,
+        driftSpeed: ramp.driftSpeed,
         glaze: cut.glaze,
+        outline: strandOutline(cut.creature, cut.glaze),
         layerCenter: cut.layerCenter,
       };
       slot.strands.begin(start, random);
     }
-    if (cut.plan.panic) slot.panicSet.begin(cut.pieceWidth, BALANCE.layer.height, cut.cake, random);
+    if (cut.plan.panic)
+      slot.panicSet.begin(cut.pieceWidth, BALANCE.layer.height, cut.cake, cut.side, random);
   }
 
   update(dtMs: number): void {
@@ -238,7 +251,8 @@ export class CutFx {
       side: 1,
       layerNumber: 0,
       layerWidth: 0,
-      glaze: 0xffffff,
+      hang: null,
+      hangSize: 0,
       strands: new CutStrands(scene),
       panicSet: new CutPanic(scene),
       hooks: { snapped: () => undefined },
@@ -252,28 +266,45 @@ export class CutFx {
     return slot;
   }
 
+  /**
+   * The drop that will stay on the cut: the round end of this layer's own drips, the same picture
+   * and size. Only a picture baked already (the layer's drips were shown): nothing is baked mid-run.
+   */
+  private findHang(slot: Slot, cut: CutPlay): void {
+    let key = '';
+    const missing = collectBakeSteps(() => {
+      key = dripTexturesFor(this.scene, cut.creature, cut.glaze).bulb;
+    });
+    const baked = missing.length === 0 && this.scene.textures.exists(key);
+    slot.hang = baked ? key : null;
+    slot.hangSize = baked ? this.scene.textures.getFrame(key).width : 0;
+  }
+
   /** The drop that stays hanging on the cut edge of the layer for the rest of the run. */
   private leaveTrace(slot: Slot): void {
+    if (!slot.hang) return;
     const { trace } = CUT_LOOK.strands;
-    const size = hangPictureSize();
-    const mark = {
-      texture: CUT_TEXTURES.hang,
-      dx: slot.side * (slot.layerWidth / 2 - trace.insetPx),
-      dy: trace.y,
-      originX: 0.5,
-      originY: size.originY,
-      width: (trace.widthPx * size.width) / CUT_PICTURE.hang.width,
-      height: (trace.heightPx * size.height) / CUT_PICTURE.hang.height,
-      tint: slot.glaze,
-      bornMs: this.scene.time.now,
-      growMs: trace.growMs,
-      swing: trace.swing,
-    };
     layerMarks.addCut(slot.layerNumber, [
-      { ...mark, texture: CUT_TEXTURES.hangOutline, tint: outlineColor(slot.glaze) },
-      mark,
+      {
+        texture: slot.hang,
+        dx: slot.side * (slot.layerWidth / 2 - trace.insetPx),
+        dy: trace.y,
+        originX: 0.5,
+        originY: 0,
+        width: slot.hangSize,
+        height: slot.hangSize,
+        bornMs: this.scene.time.now,
+        growMs: trace.growMs,
+        swing: trace.swing,
+      },
     ]);
   }
+}
+
+/** The outline of the strands: the dark tone of the glaze edge, warmed (amber on a yellow glaze, not olive). */
+export function strandOutline(creature: CreatureId | null, glaze: number): number {
+  const { color, share } = CUT_LOOK.strands.warm;
+  return mixColor(glazeEdgeTone(creature, glaze), color, share);
 }
 
 /** The build-up of the let-go for a cut with these traits: the slowest of the applicable ones. */

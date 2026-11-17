@@ -6,8 +6,6 @@
 export const CUT_LOOK = {
   /** Name of the cosmetic stream forked per cut (`fork('cut')`, then the layer number). */
   stream: 'cut',
-  /** A piece narrower than this share of the layer before the cut is no piece: only crumbs. */
-  thinShare: 0.08,
   /** A piece wider than this share is a big one: strands and panic. */
   bigShare: 0.35,
   /** A big piece comes at most once per this many layers; a nearer one gets the normal choice. */
@@ -40,119 +38,123 @@ export const CUT_LOOK = {
    */
   ramp: {
     plain: { spinDelayMs: 0, spinMs: 120, gravityStart: 1, gravityMs: 1, driftSpeed: 70 },
-    strands: { spinDelayMs: 260, spinMs: 360, gravityStart: 0.5, gravityMs: 420, driftSpeed: 170 },
+    strands: { spinDelayMs: 260, spinMs: 360, gravityStart: 0.5, gravityMs: 420, driftSpeed: 240 },
     panic: { spinDelayMs: 0, spinMs: 320, gravityStart: 0.3, gravityMs: 700, driftSpeed: 60 },
   },
   /** Crumbs from the cut line. */
   crumbs: { full: [5, 8], lite: 3 },
 
+  /**
+   * The glaze strands (docs/06, "Срезы с характером"). Thicknesses are world px of the 1080 px wide
+   * game: on a 390 CSS px screen one screen px is 2.77 of them (ends 4-6 px, middle 1.5-2 px, beads
+   * 5-7 px on the screen). A thickness is the whole strand, its outline included.
+   */
   strands: {
-    /** From the let-go: thick bridge, then stretch, snap at `snapMs`, recoil. */
-    bridgeMs: 110,
+    /** The middle starts `bridge` times as thick as the ends (the strands lie together: one short bridge) and thins to its own `mid` over `thinMs`. */
+    bridge: 1.15,
+    thinMs: 170,
+    /** When the strands snap (ms from the let-go, plus the trait's `snapShift`) and how long the ends spring back. */
     snapMs: 330,
-    recoilMs: 150,
-    /** Strands per cut and their traits: where they hold on the glaze band (share), thickness and when they snap (ms from `snapMs`). */
+    recoilMs: 160,
     count: [2, 3],
+    /**
+     * Strands per cut and their traits: where they hold on the glaze band of the layer and of the
+     * piece (share from its top), thickness at the ends and in the middle (px), how much they sag,
+     * where along them the thinnest point (and the break) is, when they snap (ms from `snapMs`).
+     */
     traits: [
-      { band: 0.5, thick: 1, snapShift: 0, sag: 1 },
-      { band: 0.15, thick: 0.72, snapShift: -25, sag: 0.8 },
-      { band: 0.85, thick: 0.52, snapShift: 25, sag: 1.2 },
+      { layerBand: 0.5, pieceBand: 0.45, end: 16, mid: 5.5, sag: 1, breakU: 0.5, snapShift: 0 },
+      {
+        layerBand: 0.2,
+        pieceBand: 0.15,
+        end: 13,
+        mid: 4.6,
+        sag: 0.55,
+        breakU: 0.44,
+        snapShift: -50,
+      },
+      { layerBand: 0.92, pieceBand: 1, end: 11.5, mid: 4.2, sag: 1.5, breakU: 0.57, snapShift: 50 },
     ],
-    /** Glaze band at the cut edge (px from the layer centre) and how far inside the layers the strands hold on. */
-    bandTop: -47,
+    /** Glaze band at the cut edge (px from the layer centre). */
+    bandTop: -50,
     bandBottom: -27,
-    inset: 4,
-    /** The inset is at most this share of the piece width; each next strand sits this far (px) further in. */
+    /** The strands hold on this far inside the cut edge (on its outline), at most `insetMaxShare` of the piece width. */
+    inset: 3,
     insetMaxShare: 0.3,
-    anchorStepPx: 3,
-    /** Thickness of a strand's middle (px, at the thickest trait): the bridge, and just before it snaps. */
-    midThickStart: 26,
-    midThickEnd: 8,
-    /** Thickness of a strand at its anchors (px). */
-    endThick: 34,
-    /** Droop of the middle point: share of the strand length, at most `droopMaxPx`. */
-    droopShare: 0.12,
-    droopMaxPx: 18,
-    /** The middle bows outwards (the piece drifts out): share of the length, at most `bowMaxPx`. */
-    bowShare: 0.08,
-    bowMaxPx: 22,
-    /** Sideways wobble of the middle point (px) and its period. */
+    /** The thickness flares to the ends along this power of the distance from the thinnest point (more: a longer thin middle). */
+    profilePower: 2.4,
+    /** Outline of a strand per side: this share of its thickness, within [minPx, maxPx]. */
+    outline: { share: 0.2, minPx: 1, maxPx: 3 },
+    /**
+     * The outline is the dark tone of the glaze edge warmed by this much of a warm brown: on a
+     * yellow glaze plain darkening gives an olive line, this gives amber.
+     */
+    warm: { color: 0x7a3410, share: 0.25 },
+    /** The middle sags this share of the length (at most `maxPx`), growing in with the stretch. */
+    sag: { share: 0.24, maxPx: 30 },
+    /** Sideways wobble of the middle (px) and its period. */
     wobblePx: 1.5,
-    wobbleMs: 160,
-    /** Phase of the wobble per strand: radians per unit of the trait's band. */
-    wobbleBandPhase: 9,
-    /** The bow of the middle comes in over this share of the stretch (1 over the first half: 0.5). */
-    bowRampShare: 0.5,
-    /** Beads sliding down a strand. */
+    wobbleMs: 170,
+    /** Phase of the wobble per strand: radians per unit of the trait's `breakU`. */
+    wobblePhase: 9,
+    /** Rows of the ribbon of each half and of the round cap of a snapped end. */
+    rows: 18,
+    capRows: 5,
+    /** Beads sliding down the strands: one per half, the piece half's only on some strands. */
     beads: {
-      count: [1, 2],
-      sizePx: 12,
-      speed: 0.0016,
-      startShare: 0.12,
-      /** Share of the strand its random start varies by; how much slower each next bead slides. */
-      phaseShare: 0.1,
-      lag: 0.35,
-      /** Size: `sizeBase` plus `sizeThick` of the strand thickness, shrinking by `shrink` over the stretch. */
-      sizeBase: 0.8,
-      sizeThick: 0.5,
-      shrink: 0.25,
-      /** A bead grows in over this long once the bridge is over. */
-      growMs: 80,
-      /** Where the light dot sits on the bead: share of the bead size left and up of its centre. */
-      shine: { dx: 0.18, dy: 0.2 },
+      /** Diameter, outline included (px), per bead: the first is the bigger one. */
+      sizePx: [18, 15],
+      /** Each next strand's beads are this much smaller (px). */
+      stepPx: 0.5,
+      /** Share of the strands that get a second bead (on the piece half). */
+      secondShare: 0.5,
+      /** They form after the bridge, grow in over `growMs`, and slide from `from` to `to` (share of the half from its anchor), quicker and quicker. */
+      startMs: 110,
+      growMs: 90,
+      from: 0.3,
+      fromSpread: 0.1,
+      /** Where each bead stops (the piece half's higher up, so it never sits by the one that drops). */
+      to: [0.72, 0.5],
+      slideMs: 260,
+      /** The strand under a bead is this much thicker (share of the bead size), over this long a stretch (px, gaussian). */
+      bump: 0.15,
+      bumpPx: 5,
     },
-    /** The bridge of glaze at the let-go: a blob on the cut that grows in `growMs`, then shrinks and fades over `settleMs` as the strands take over. Size in px at its thickest. */
-    blob: { widthPx: 38, heightPx: 54, growMs: 50, settleMs: 300, endScaleX: 0.6, endScaleY: 0.8 },
-    /** After the snap: the stubs spring back with overshoot and curl, drops fall. */
+    /** Light stripe along a strand: its width and lift as shares of the fill's half width; none where the fill is thinner than `minFillPx`. */
+    gloss: { width: 0.3, lift: 0.42, minFillPx: 5, lightLift: 0.45 },
+    /** A light dot on a bead and a drop: size share and where it sits (share of the size, left and up). */
+    dot: { size: 0.28, dx: 0.2, dy: 0.22, flat: 0.75 },
+    /** After the snap: each end springs back with an overshoot, then goes into the glaze. */
     recoil: {
-      restShare: 0.2,
-      curlDeg: 55,
-      /** Picture stage of a stub (a thick one, not a splinter), its thickness as a share of the strand at first and at the end, and the round tip: share of the stub thickness. */
-      stage: 1,
-      thickStart: 1.1,
-      thickEnd: 0.5,
-      tip: 1.35,
-      fadeFrom: 0.55,
-      /** The thread thickens over the first `thickenU` of the recoil, the bulb swells over the first `bulbU`, the anchor caps shrink to `anchorEnd`. */
-      thickenU: 1 / 3,
-      bulbU: 1 / 4,
-      anchorEnd: 0.6,
+      /** The free end flies back to this share of the half by `springU` of the recoil (with `backOut`), whipping up by `whipPx`. */
+      restShare: 0.18,
+      springU: 0.55,
+      whipPx: 3,
+      /** The free end gets round and thicker as it comes back: share of the end thickness. */
+      tipShare: 0.38,
+      /** The piece keeps a small glaze dot of this size (px) on its cut corner, fading with the piece. */
+      nubPx: 9,
     },
-    /** The round caps where a strand holds on: share of the thickness at the anchor. */
-    anchorCap: 0.9,
-    /** Light tone of the glaze for the stripes (share of white) and their opacity. */
-    gloss: { mix: 0.55, alpha: 0.85, beadScale: 1 },
     drops: {
-      count: [2, 3],
-      sizePx: 18,
+      /** One per strand: the bead nearest the break drops off at the snap. */
       gravity: 2000,
-      speedX: 90,
-      spreadPx: 22,
-      /** Delay between the births of the drops of one snap (ms). */
-      staggerMs: 50,
-      /** Each next drop of a snap starts this far lower (px), and with this upward speed plus `upStepPx` per drop (px/s, negative is up). */
-      dropStepPx: 3,
-      upSpeed: -30,
-      upStepPx: 20,
-      /** Sideways speed share: `sideBase` plus `sideStep` per drop; every other drop goes back by `backShare`. */
-      sideBase: 0.3,
-      sideStep: 0.5,
-      backShare: -0.6,
-      /** A drop shrinks to this share of its size and fades out over the last part of its life. */
-      endScale: 0.75,
-      fadeFrom: 0.4,
-      lifeMs: 420,
-      stretchPerSpeed: 0.0007,
-      maxStretch: 0.9,
+      /** Speed it starts with: the side drift of the piece share, and down. */
+      driftShare: 0.3,
+      downSpeed: 60,
+      /** The teardrop is this much taller than wide; it stretches along its speed. */
+      tall: 1.25,
+      stretchPerSpeed: 0.0005,
+      maxStretch: 0.5,
+      lifeMs: 460,
+      fadeFrom: 0.5,
+      endScale: 0.8,
     },
-    /** The drop that stays on the cut edge of the layer. */
+    /** The drop that stays on the cut edge of the layer: the picture of the layer's own drip end. */
     trace: {
-      widthPx: 32,
-      heightPx: 48,
       growMs: 260,
-      /** Where it hangs, from the layer centre. */
-      insetPx: 12,
-      y: -36,
+      /** Where it hangs: this far inside the cut edge, its neck from this y (from the layer centre). */
+      insetPx: 22,
+      y: -31,
       swing: { amplitudeDeg: 14, periodMs: 620, decayMs: 750 },
     },
   },
@@ -203,32 +205,17 @@ export const CUT_VARIANT_NAMES = ['plain', 'strands', 'panic', 'big'] as const;
 export type CutVariantName = (typeof CUT_VARIANT_NAMES)[number];
 
 /**
- * The baked pictures of the cuts (keys of the shared atlas, `fx_` prefix). Every body is two white
- * pictures of one size: the fill and the outline (the same shape grown by `outline`). All outlines of
- * a cut are shown first and all fills over them, so overlapping parts of one body leave no seams;
- * the outline is tinted with the warm dark tone of the fill colour.
+ * The baked pictures of the cuts (keys of the shared atlas, `fx_` prefix). The glaze of the strands
+ * is white pictures laid on bending strips (`Rope`) and tinted: the glaze colour for the fills, the
+ * dark tone of the glaze edge for the outlines, a light tone for the gloss.
  */
 export const CUT_TEXTURES = {
-  /** Half a strand, thick at its open left end, thin at its right end: one picture per stage of thinning. */
-  strand: ['fx_cut_strand_0', 'fx_cut_strand_1', 'fx_cut_strand_2', 'fx_cut_strand_3'],
-  strandOutline: [
-    'fx_cut_strand_o_0',
-    'fx_cut_strand_o_1',
-    'fx_cut_strand_o_2',
-    'fx_cut_strand_o_3',
-  ],
+  /** Across a strip: white with soft long sides; a strand, its outline and its gloss stripe are strips of it. */
+  ribbon: 'fx_cut_ribbon',
+  /** A white disc: beads, their outlines and the light dots. */
   bead: 'fx_cut_bead',
-  beadOutline: 'fx_cut_bead_o',
-  blob: 'fx_cut_blob',
-  blobOutline: 'fx_cut_blob_o',
-  /** A teardrop, its point up: it falls point-last. */
+  /** A white teardrop, its point up: a falling drop and its outline. */
   drop: 'fx_cut_drop',
-  dropOutline: 'fx_cut_drop_o',
-  /** A light stripe along a strand and a light spot on a bead, tinted with a light tone of the glaze. */
-  gloss: 'fx_cut_gloss',
-  dot: 'fx_cut_dot',
-  hang: 'fx_cut_hang',
-  hangOutline: 'fx_cut_hang_o',
   arm: 'fx_cut_arm',
   armOutline: 'fx_cut_arm_o',
   /** The lighter side of an arm and the light spot of its hand. */
@@ -241,22 +228,10 @@ export const CUT_PICTURE = {
   /** Empty room around the drawing (the picture field rule). */
   pad: 4,
   outline: 4,
-  strand: {
-    length: 96,
-    /** Thickness at the open end. */
-    thick: 24,
-    /** Thickness at the thin end, per stage of thinning, as a share of `thick`. */
-    midShare: [1, 0.72, 0.46, 0.26],
-    /** The flare at the open end holds the full thickness this far (share of the length). */
-    flareHold: 0.18,
-    /** The light stripe: from/to (share of the length), thickness (px), and how far it sits above the middle line (share of the half thickness). */
-    gloss: { from: 0.14, to: 0.8, thick: 5, lift: 0.38 },
-  },
-  bead: { size: 16 },
-  dot: { width: 6, height: 4 },
-  blob: { width: 38, height: 54 },
-  /** The point of a teardrop: radius of its tip (px) and how fast the neck widens (power; more is narrower and longer). */
-  drop: { width: 18, height: 28, tipRadius: 1.5, neckCurve: 1.1 },
-  hang: { width: 32, height: 48 },
+  /** The strip picture: width across, height along, and the soft edge on each long side (px). */
+  ribbon: { width: 24, height: 8, soft: 2 },
+  bead: { size: 32 },
+  /** The teardrop: width and height of the shape, the radius of its point. */
+  drop: { width: 28, height: 36, tipRadius: 2.5, neckCurve: 1.1 },
   dash: { length: 34, thick: 7 },
 } as const;
