@@ -36,7 +36,7 @@ interface FallLook {
   tiltRad?: number;
   swayLag?: number;
   turnMin?: number;
-  sizeCuts?: readonly [number, number];
+  sizeCuts?: readonly number[];
 }
 
 const FRAME_SETS: Record<string, readonly string[]> = {
@@ -95,8 +95,9 @@ export class WeatherFall implements WeatherPart {
 
   private flakeSize(rng: Rng): number {
     const r = rng.next();
-    const [small, middle] = WEATHER_LOOK.snow.sizeCuts;
-    return r < small ? 0 : r < middle ? 1 : 2;
+    const cuts = WEATHER_LOOK.snow.sizeCuts;
+    const at = cuts.findIndex((cut) => r < cut);
+    return at < 0 ? cuts.length : at;
   }
 
   update(frame: WeatherFrame): void {

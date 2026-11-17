@@ -1,3 +1,4 @@
+import type { WeatherId } from './weather';
 import { TREASURE } from './treasure-anim';
 
 /**
@@ -12,6 +13,12 @@ export const RULE_ANIM = {
     rushStreak: 0xff7a68,
     /** A dark slate: it stands out from both the pale roof sky and the salmon houses. */
     windStreak: 0x3d5a80,
+    /** Roof wind streaks in weather: nearer to the sky colour and lighter, so they are not the darkest spot on the screen. */
+    windStreakWeather: {
+      rain: 0xc3d0e6,
+      storm: 0xaebbd6,
+      sunset: 0xffe6d8,
+    } as Partial<Record<WeatherId, number>>,
     /** The roof wind streaks of a Space layer: light, so they read on the dark sky and stay a soft trail. */
     windStreakSpace: 0xc9dbff,
     /** The puff that flashes behind a rush layer when it lets go. */

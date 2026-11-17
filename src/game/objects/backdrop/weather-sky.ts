@@ -5,18 +5,16 @@ import { WEATHER_LOOK, WEATHER_TEX } from '../../../data/weather-look';
 import type { ZoneId } from '../../../data/zones';
 import { TWO_PI } from '../../../util/math';
 import { effectsMode } from '../../effects-mode';
+import { FLIGHT_CLEAR } from '../../../data/flight-clear';
+import { HUD_LAYOUT } from '../../../data/hud-layout';
 import { flightClearBand, hudFloor, hudKeepOutFade } from '../../camera-layout';
 import type { FrameCtx, Life } from './life';
 import { bankKey } from './weather-art';
-import { bankEdge, flashEnvelope, nextBoltAt } from './weather-motion';
+import { zoneShowsWeatherSky } from './weather-share';
+import { bankEdge, boltEnd, flashEnvelope, nextBoltAt } from './weather-motion';
 
 const BANK = WEATHER_LOOK.bank;
 const BOLT = WEATHER_LOOK.lightning;
-const BANK_FLASH = {
-  widthPx: BANK.flashWidthPx,
-  heightShare: BANK.flashHeightShare,
-  centreShare: BANK.flashCentreShare,
-};
 const NIGHT = WEATHER_LOOK.night;
 
 /** Cloud banks of storms that are alive; filled in development only, for the debug hook. */
@@ -29,8 +27,9 @@ export function strikeLightningNow(): void {
 
 /**
  * The cloud bank of rain and storm: one opaque figure that is part of the zone's sky, drawn over the
- * four parallax layers (see `SceneryDef.weatherSky`). It drifts slowly on full and lite and stands still on minimal. A storm adds lightning, a
- * pale twin of the bank and a jagged bolt that stays inside the cloud, in a flash of 120-180 ms
+ * four parallax layers (see `SceneryDef.weatherSky`). It drifts slowly on full and lite and stands still on minimal. A storm adds lightning: the
+ * same puffs lit from inside (a twin picture of the bank) and a jagged bolt with a branch that starts in
+ * the cloud and may leave it a little at the bottom, in a flash of 120-180 ms
  * every 8-15 s (full and lite; minimal none).
  */
 export class WeatherBank implements Life {
@@ -57,9 +56,10 @@ export class WeatherBank implements Life {
       .setScale(BANK.scale);
     this.objects = [this.bank];
     if (weather === 'storm') {
-      this.flash = new Phaser.GameObjects.Image(scene, 0, 0, bankKey(weather, true)).setVisible(
-        false,
-      );
+      this.flash = new Phaser.GameObjects.Image(scene, 0, 0, bankKey(weather, true))
+        .setOrigin(0.5, 0)
+        .setScale(BANK.scale)
+        .setVisible(false);
       this.bolt = new Phaser.GameObjects.Image(scene, 0, 0, WEATHER_TEX.bolt)
         .setOrigin(0.5, 0)
         .setVisible(false);
@@ -105,22 +105,20 @@ export class WeatherBank implements Life {
     const strength = this.flashAt < 0 ? 0 : flashEnvelope(now - this.flashAt, this.flashMs);
     if (this.flashAt >= 0 && now - this.flashAt >= this.flashMs) this.flashAt = -1;
     const strike = this.strike;
-    const on = strength > 0 && strike !== null;
-    flash.setVisible(on);
-    bolt.setVisible(on);
-    if (!on) return;
-    // Only a patch of the cloud around the bolt lights up, inside the cloud.
-    flash
-      .setPosition(strike.x, strike.edge * BANK_FLASH.centreShare)
-      .setDisplaySize(BANK_FLASH.widthPx, strike.edge * BANK_FLASH.heightShare)
-      .setAlpha(BOLT.flashAlpha * strength);
+    flash.setVisible(strength > 0);
+    bolt.setVisible(strength > 0 && strike !== null);
+    if (strength <= 0) return;
+    // The lit twin of the bank follows it as it drifts; its glow has no edge but the puffs.
+    flash.setPosition(bankX, 0).setAlpha(BOLT.flashAlpha * strength);
+    if (strike === null) return;
     bolt.setPosition(strike.x, strike.y).setScale(strike.scale).setAlpha(1);
   }
 
   /**
-   * A place for the bolt inside the cloud: it starts a little way down from the top, is at most 0.6
-   * of the cloud's height there, ends at least 25 px above the cloud's lower edge, and clears every
-   * HUD plate by the HUD gap. `null` when the draws find none (the flash plays without a bolt).
+   * A place for the bolt in the middle part of the cloud: it starts a little way down from the top, is as
+   * long as `lengthShare` of the cloud's height there (so its tip may leave the lower edge by a few
+   * percent of its length), and its width and its length clear every HUD plate by the HUD gap.
+   * `null` when the draws find none (the flash plays without a bolt).
    */
   private pickStrike(
     ctx: FrameCtx,
@@ -130,13 +128,15 @@ export class WeatherBank implements Life {
       const range = BOLT.xRanges[this.rng.int(0, BOLT.xRanges.length - 1)];
       if (!range) return null;
       const x = ctx.width * this.rng.range(range[0], range[1]);
-      const edge = bankEdge((x - bankX) / BANK.scale + BANK.width / 2) * BANK.scale;
+      const edge = bankEdge((x - bankX) / BANK.scale + BANK.width / 2, true) * BANK.scale;
       if (edge < BOLT.minCloudPx) continue;
       const top = edge * BOLT.topShare;
-      const end = Math.min(top + edge * BOLT.lengthShare, edge - BOLT.endGapPx);
+      const end = top + edge * BOLT.lengthShare;
       if (end - top < BOLT.height * BOLT.minLengthShare) continue;
-      const clear = [top, (top + end) / 2, end].every((y) => hudKeepOutFade(x, y) > 0);
-      if (clear) return { x, y: top, scale: (end - top) / BOLT.height, edge };
+      const half = BOLT.width * ((end - top) / BOLT.height) * BOLT.hudHalfShare;
+      const room = boltEnd(x, half, top, end, HUD_LAYOUT.plates, FLIGHT_CLEAR.hudGapPx);
+      if (room === null || room - top < BOLT.height * BOLT.minLengthShare) continue;
+      return { x, y: top, scale: (room - top) / BOLT.height, edge };
     }
     return null;
   }
@@ -218,7 +218,7 @@ export class WeatherNight implements Life {
 
 /** The weather pieces that belong to a zone's sky; they sit right after the sky picture. */
 export function weatherSkyLives(scene: Phaser.Scene, zone: ZoneId, weather: WeatherId): Life[] {
-  if (zone !== 'roof' && zone !== 'clouds') return [];
+  if (!zoneShowsWeatherSky(zone)) return [];
   const rng = new Rng(WEATHER_LOOK.skySeed).fork(`${weather}_sky`);
   if (weather === 'rain' || weather === 'storm') return [new WeatherBank(scene, weather, rng)];
   if (weather === 'night') return [new WeatherNight(scene, rng)];

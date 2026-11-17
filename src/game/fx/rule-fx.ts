@@ -1,5 +1,6 @@
 import type * as Phaser from 'phaser';
 import type { SimEvent, TowerState } from '../../core/tower-sim';
+import type { WeatherId } from '../../data/weather';
 import { RULE_ANIM } from '../../data/rule-anim';
 import { LOGICAL_SIZE } from '../../data/screen';
 import { SPACE_ZONE_INDEX, ZONE_RULES } from '../../data/zones';
@@ -71,9 +72,10 @@ export class RuleFx {
     scene: Phaser.Scene,
     private readonly flying: FlyingLayerView,
     private readonly particles: Particles,
+    weather: WeatherId,
   ) {
     this.outline = new RushOutline(scene);
-    this.streaks = new SpeedStreaks(scene);
+    this.streaks = new SpeedStreaks(scene, weather);
     this.cloud = new CloudCover(scene);
   }
 

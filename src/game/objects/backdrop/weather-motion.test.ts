@@ -1,5 +1,14 @@
 import { describe, expect, it } from 'vitest';
-import { bankEdge, flashEnvelope, nextBoltAt, particleFade, wrapRange } from './weather-motion';
+import { WEATHER_LOOK } from '../../../data/weather-look';
+import {
+  bankEdge,
+  boltEnd,
+  bankPuffs,
+  flashEnvelope,
+  nextBoltAt,
+  particleFade,
+  wrapRange,
+} from './weather-motion';
 
 describe('weather motion', () => {
   it('wraps values into the padded range', () => {
@@ -30,11 +39,33 @@ describe('weather motion', () => {
     expect(flashEnvelope(90, 150)).toBeLessThan(1);
   });
 
-  it('finds the lower edge of the bank: high in the middle, low under the side lobes', () => {
-    expect(bankEdge(500)).toBeGreaterThanOrEqual(100);
-    expect(bankEdge(500)).toBeLessThan(bankEdge(130));
-    expect(bankEdge(130)).toBeGreaterThan(200);
-    // The band alone reaches this far at the far left, where no lobe stands.
-    expect(bankEdge(-100)).toBe(100);
+  it('finds the lower edge of the bank: high in the middle, low under the side puffs', () => {
+    expect(bankEdge(500)).toBeLessThan(80);
+    expect(bankEdge(500)).toBeLessThan(bankEdge(165) - 100);
+    expect(bankEdge(165)).toBeGreaterThan(180);
+    // The strip alone reaches this far where no puff stands.
+    expect(bankEdge(-400)).toBe(WEATHER_LOOK.bank.topStripPx);
+  });
+
+  it('hangs the lower rows lower in a storm and keeps the back row and the middle', () => {
+    expect(bankEdge(165, true)).toBeGreaterThan(bankEdge(165, false));
+    expect(bankEdge(500, true)).toBe(bankEdge(500, false));
+    const stormBack = bankPuffs(true).filter((p) => p.row === 0);
+    const calmBack = bankPuffs(false).filter((p) => p.row === 0);
+    expect(stormBack.map((p) => p.y)).toEqual(calmBack.map((p) => p.y));
+  });
+});
+
+describe('boltEnd', () => {
+  const plates = [
+    { x: 24, y: 24, width: 96, height: 96 },
+    { x: 186, y: 312, width: 708, height: 68 },
+  ];
+  it('stops the bolt above a plate it is level with', () => {
+    expect(boltEnd(300, 40, 30, 330, plates, 40)).toBe(272);
+  });
+  it('leaves a bolt that is clear sideways alone and refuses one over a plate', () => {
+    expect(boltEnd(300, 40, 30, 250, plates, 40)).toBe(250);
+    expect(boltEnd(100, 40, 30, 250, plates, 40)).toBeNull();
   });
 });

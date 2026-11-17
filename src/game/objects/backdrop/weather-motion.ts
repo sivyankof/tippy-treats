@@ -38,15 +38,64 @@ export function flashEnvelope(elapsed: number, length: number): number {
   return t < rise ? t / rise : 1 - (t - rise) / (1 - rise);
 }
 
-/** Height of the cloud bank's lower edge (picture px) at picture x `px`: the lowest of the band and the lobes there. */
-export function bankEdge(px: number): number {
+/** One round puff of the cloud bank (picture px): its row (0 back, 1 middle, 2 front), centre and radius. */
+export interface Puff {
+  row: number;
+  x: number;
+  y: number;
+  r: number;
+}
+
+/** The puffs of a bank, front rows last (so they paint over the back ones); a storm hangs the lower rows lower. */
+export function bankPuffs(storm: boolean): Puff[] {
   const b = WEATHER_LOOK.bank;
-  let edge: number = b.bodyBottom;
-  for (const [cx, cy, r] of b.lumps) {
-    const rx = (r * b.lobeWide) / 2;
-    const ry = (r * b.lobeTall) / 2;
-    const t = (px - cx) / rx;
-    if (Math.abs(t) < 1) edge = Math.max(edge, cy + ry * Math.sqrt(1 - t * t));
+  return b.puffs
+    .map(([row, x, y, r]) => ({
+      row,
+      x,
+      y: y + (storm ? (r * b.stormHang * row) / 2 : 0),
+      r,
+    }))
+    .sort((p, q) => p.row - q.row);
+}
+
+/** Height of the cloud bank's lower edge (picture px) at picture x `px`: the lowest of the top strip and the puffs there. */
+export function bankEdge(px: number, storm = false): number {
+  let edge: number = WEATHER_LOOK.bank.topStripPx;
+  for (const p of bankPuffs(storm)) {
+    const dx = Math.abs(px - p.x);
+    if (dx < p.r) edge = Math.max(edge, p.y + Math.sqrt(p.r * p.r - dx * dx));
   }
   return edge;
+}
+
+/** A HUD plate (screen px). */
+interface Plate {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
+/**
+ * How far down a bolt at screen x `x` (half width `half`) may run, from `top` towards `wantEnd`, so that it
+ * stays `gap` px from every plate: a plate the bolt is level with sideways stops it `gap` above that plate.
+ * `null` when a plate lies over its top end.
+ */
+export function boltEnd(
+  x: number,
+  half: number,
+  top: number,
+  wantEnd: number,
+  plates: readonly Plate[],
+  gap: number,
+): number | null {
+  let end = wantEnd;
+  for (const p of plates) {
+    const sideways = Math.max(p.x - (x + half), x - half - (p.x + p.width));
+    if (sideways >= gap) continue;
+    if (p.y + p.height + gap > top && p.y - gap < top) return null;
+    if (p.y > top) end = Math.min(end, p.y - gap);
+  }
+  return end;
 }
