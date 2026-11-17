@@ -109,6 +109,25 @@ function drawLimit(id: string): number {
   return PERF_BUDGET.drawCalls[def?.drawClass ?? 'heavy'];
 }
 
+/** What the shared atlas reached over a benchmark. */
+export interface AtlasPeak {
+  pages: number;
+  /** Share of the page height the shelves reached at the peak. */
+  usedShare: number;
+}
+
+/** True when the atlas stayed on one page and kept at least `PERF_BUDGET.atlasMinSpare` of its height free at the peak. */
+export function atlasOk(peak: AtlasPeak): boolean {
+  return peak.pages <= 1 && 1 - peak.usedShare >= PERF_BUDGET.atlasMinSpare;
+}
+
+/** The atlas part of the header: `atlas=pages:1 peak:0.78 spare:0.22`, with `!` when over the budget. */
+export function formatAtlas(peak: AtlasPeak): string {
+  const spare = (1 - peak.usedShare).toFixed(2);
+  const text = `atlas=pages:${peak.pages} peak:${peak.usedShare.toFixed(2)} spare:${spare}`;
+  return atlasOk(peak) ? text : `${text}!`;
+}
+
 /** The parts of `navigator` that tell a real phone from a driven or emulated browser. */
 export interface BrowserInfo {
   webdriver?: boolean;

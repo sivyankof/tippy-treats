@@ -22,7 +22,11 @@ export const SHARED_ATLAS = {
   extrude: 2,
   /** A picture larger than this on either side keeps a texture of its own. */
   maxSide: 1024,
-  /** Texture keys starting with one of these go to the atlas. */
+  /**
+   * Texture keys starting with one of these go to the atlas. The far backdrop pictures `bd_mountains` (768 x 540) and
+   * `bd_planet_*` (440 x 440) are left out on purpose: together they needed the one tall shelf (544 px, 13% of the page
+   * height) the page ran out of at the peak; each costs one more draw call in its zone and nothing else.
+   */
   keyPrefixes: [
     'layer_',
     'shade_',
@@ -38,11 +42,13 @@ export const SHARED_ATLAS = {
     'ui_plate_chip',
     'ui_icon_',
     'ui_mastery_',
-    'bd_mountains',
-    'bd_planet_',
     'bd_sv_',
     'bd_win',
   ],
-  /** Keys under those prefixes that must keep their own texture (repeated by a TileSprite). */
-  ownTexture: ['fx_dash'],
+  /**
+   * Keys under those prefixes that must keep their own texture: `fx_dash` is repeated by a TileSprite; `tr_lap_edge` (4 x 360, a
+   * 368 px shelf for a sliver) and the cloud and nebula figures `tr_cloud`, `tr_nebula` (1000 x 360) are drawn only in
+   * their zones, each a draw call more there, and they would hold two more tall shelves.
+   */
+  ownTexture: ['fx_dash', 'tr_lap_edge', 'tr_cloud', 'tr_nebula'],
 } as const;

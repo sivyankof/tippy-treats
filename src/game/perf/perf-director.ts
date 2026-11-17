@@ -18,6 +18,8 @@ import {
   budgetVerdict,
   formatBudgetLine,
   formatHeader,
+  formatAtlas,
+  atlasOk,
   formatTable,
   isAutomatedBrowser,
   SegmentSamples,
@@ -25,6 +27,7 @@ import {
   type SegmentStats,
 } from './perf-stats';
 import { runHooks } from './run-hooks';
+import { atlasPeak } from '../ui/shared-atlas';
 import { cutOverride } from '../fx/cut-override';
 
 /** What the page reads from `window.__tippyPerf`. */
@@ -270,9 +273,11 @@ class PerfDirector {
     setFrameWorkListener(null);
     // Read before the session ends: the runs after the benchmark are normal ones.
     const fx = perfSession()?.params.fx ?? 'full';
-    const header = this.header(fx);
+    const header = `${this.header(fx)} ${formatAtlas(atlasPeak())}`;
     endPerfSession();
-    const budget = budgetVerdict(this.rows, this.automated);
+    const atlas = atlasPeak();
+    const verdict = budgetVerdict(this.rows, this.automated);
+    const budget = atlasOk(atlas) ? verdict : { ok: false, over: [...verdict.over, 'atlas'] };
     const table = `${formatTable(this.rows, PERF.overlay.decimals, this.automated)}\n${formatBudgetLine(budget)}`;
     this.publish({
       done: true,

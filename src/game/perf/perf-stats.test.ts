@@ -250,3 +250,14 @@ describe('formatHeader', () => {
     );
   });
 });
+
+describe('atlas peak', () => {
+  it('passes on one page with enough spare and fails on a second page or too little spare', async () => {
+    const { atlasOk, formatAtlas } = await import('./perf-stats');
+    expect(atlasOk({ pages: 1, usedShare: 0.75 })).toBe(true);
+    expect(atlasOk({ pages: 1, usedShare: 0.9 })).toBe(false);
+    expect(atlasOk({ pages: 2, usedShare: 0.5 })).toBe(false);
+    expect(formatAtlas({ pages: 1, usedShare: 0.75 })).toBe('atlas=pages:1 peak:0.75 spare:0.25');
+    expect(formatAtlas({ pages: 2, usedShare: 0.9 })).toBe('atlas=pages:2 peak:0.90 spare:0.10!');
+  });
+});

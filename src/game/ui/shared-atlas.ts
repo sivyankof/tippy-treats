@@ -280,6 +280,7 @@ export function addSharedPicture(
   pagesOf.set(manager, pages);
   const spot = findSpot(pages, cellW, cellH) ?? findSpot([openPage(scene, pages)], cellW, cellH);
   if (!spot) return false;
+  notePeak(pages);
   const { box } = spot;
   const cell: Cell = { box, picture: source, width, height, page: spot.page, texture: null };
   uploadCell(scene.sys.game.renderer, cell.page, cell);
@@ -296,6 +297,25 @@ export function addSharedPicture(
   manager.emit(Phaser.Textures.Events.ADD, key, texture);
   manager.emit(Phaser.Textures.Events.ADD_KEY + key, texture);
   return true;
+}
+
+/** The most pages and the most shelf height one page has had since the page was loaded (the benchmark reads it). */
+const peak = { pages: 0, usedHeight: 0, pageHeight: 0 };
+
+function notePeak(pages: readonly Page[]): void {
+  peak.pages = Math.max(peak.pages, pages.length);
+  for (const page of pages) {
+    peak.pageHeight = page.packer.height;
+    peak.usedHeight = Math.max(peak.usedHeight, page.packer.usedHeight);
+  }
+}
+
+/** The peak of the atlas: pages opened and the share of the page height the shelves reached. */
+export function atlasPeak(): { pages: number; usedShare: number } {
+  return {
+    pages: peak.pages,
+    usedShare: peak.pageHeight > 0 ? peak.usedHeight / peak.pageHeight : 0,
+  };
 }
 
 /** How many pages the shared atlas has now (the debug pages report it; the aim is one). */

@@ -221,6 +221,8 @@ export const PERF_BUDGET = {
   workWorstMs: 50,
   /** Mean time between frames, ms (about 55 fps). */
   intervalMeanMs: 18,
+  /** Share of the shared atlas page height that stays free at the peak of the shelves; with less (or with a second page) the benchmark is over the budget. */
+  atlasMinSpare: 0.2,
 } as const;
 
 /** The knobs of the benchmark that are not per segment. */
