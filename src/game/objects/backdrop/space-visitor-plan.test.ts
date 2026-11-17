@@ -5,7 +5,6 @@ import { flightClearBand } from '../../camera-layout';
 import { SPACE_VISITOR, SPACE_VISITOR_IDS } from '../../../data/space-visitor';
 import {
   newVisitorPose,
-  pickGuest,
   planVisitor,
   visitorBand,
   visitorLane,
@@ -20,33 +19,27 @@ const seq =
     values.shift() ?? 0;
 
 describe('planVisitor', () => {
-  it('gives no guest when the chance roll fails', () => {
-    expect(planVisitor(seq(SPACE_VISITOR.chancePerRun))).toBeNull();
-    expect(planVisitor(seq(0.99))).toBeNull();
-  });
-
-  it('gives a guest when the roll is under the chance', () => {
-    const plan = planVisitor(seq(0, 0, 0, 0, 0.9, 0.5));
-    expect(plan).not.toBeNull();
-    expect(plan?.guest).toBe('eclair');
-    expect(plan?.delayMs).toBe(SPACE_VISITOR.delayMs[0]);
-    expect(plan?.leftward).toBe(false);
-    expect(plan?.bandShare).toBe(0.5);
+  it('rolls delay, length, side and height of the given guest', () => {
+    const plan = planVisitor('eclair', seq(0, 0, 0.9, 0.5));
+    expect(plan.guest).toBe('eclair');
+    expect(plan.delayMs).toBe(SPACE_VISITOR.delayMs[0]);
+    expect(plan.leftward).toBe(false);
+    expect(plan.bandShare).toBe(0.5);
   });
 
   it('keeps delay and duration inside the data ranges', () => {
     for (let i = 0; i < 50; i++) {
-      const plan = planVisitor(Math.random, 'comet');
+      const plan = planVisitor('comet', Math.random);
       const [dMin, dMax] = SPACE_VISITOR.guests.comet.flight.durationMs;
-      expect(plan?.durationMs).toBeGreaterThanOrEqual(dMin);
-      expect(plan?.durationMs).toBeLessThanOrEqual(dMax);
+      expect(plan.durationMs).toBeGreaterThanOrEqual(dMin);
+      expect(plan.durationMs).toBeLessThanOrEqual(dMax);
     }
   });
 
-  it('a forced guest always comes, soon, without a chance roll', () => {
-    const plan = planVisitor(() => 0.99, 'teapot');
-    expect(plan?.guest).toBe('teapot');
-    expect(plan?.delayMs).toBe(SPACE_VISITOR.forcedDelayMs);
+  it('a forced guest comes soon', () => {
+    const plan = planVisitor('teapot', () => 0.99, true);
+    expect(plan.guest).toBe('teapot');
+    expect(plan.delayMs).toBe(SPACE_VISITOR.forcedDelayMs);
   });
 
   it('is the same for the same stream', () => {
@@ -57,12 +50,7 @@ describe('planVisitor', () => {
         return s / 2147483647;
       };
     };
-    expect(planVisitor(make(), 'saucer')).toEqual(planVisitor(make(), 'saucer'));
-  });
-
-  it('every guest is reachable by the roll', () => {
-    const seen = new Set(Array.from({ length: 100 }, (_, i) => pickGuest(i / 100)));
-    expect([...seen].sort()).toEqual([...SPACE_VISITOR_IDS].sort());
+    expect(planVisitor('saucer', make())).toEqual(planVisitor('saucer', make()));
   });
 });
 

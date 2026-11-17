@@ -127,7 +127,7 @@ export const spaceArt: ZoneArt = {
         { slot: 2, life: planet },
         { slot: 2, life: satellite },
         { slot: 3, life: comet },
-        { slot: 3, life: new SpaceVisitor(scene, [satellite, comet]) },
+        { slot: 3, life: new SpaceVisitor(scene, planetSeed, [satellite, comet]) },
       ],
     };
   },
