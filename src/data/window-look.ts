@@ -235,6 +235,8 @@ export const SHOP_LOOK = {
     minHeight: 2000,
     /** Share the colours lean towards the wall, so the counter stays quieter than the tower. */
     mute: 0.3,
+    /** Outline of the glass walls: a dark pinkish-brown, like the other outlines of the shop (not grey). */
+    caseOutline: 0xb89090,
     glass: 0xe4f1f4,
     glassAlpha: 0.5,
     wood: 0xe8b89a,
