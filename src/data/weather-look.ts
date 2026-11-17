@@ -246,6 +246,8 @@ export const WEATHER_LOOK = {
     swayMs: [3200, 6500],
     alpha: [0.9, 1],
     scale: [1, 1],
+    /** Flakes start anywhere across the whole width, not in the side strips. */
+    sideBias: 0,
     /** Cumulative chance of each flake picture but the last (small disc, middle disc, branched six-ray flake); the rest are the plain six-ray flake. */
     sizeCuts: [0.3, 0.6, 0.7] as readonly number[],
     /** Picture sizes of the flakes (px): a small and a middle disc, then a branched and a plain six-ray flake. */

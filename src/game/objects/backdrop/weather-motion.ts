@@ -110,7 +110,33 @@ export function boltEnd(
   return end;
 }
 
-/** How visible a weather particle at (`x`, `y`) is near the HUD plates: 0 within the HUD gap plus `keepOutMarginPx`, then rising to 1 over `feather` px. */
-export function particleKeepOut(x: number, y: number, feather: number): number {
-  return hudKeepOutFade(x, y, WEATHER_LOOK.keepOutMarginPx, feather);
+/** Points along a streak that are tested against the HUD plates (the two ends, the middle and between). */
+const STREAK_SAMPLES = [-1, -0.5, 0, 0.5, 1] as const;
+
+/**
+ * How visible a weather particle centred at (`x`, `y`) is near the HUD plates: 0 while ANY part of it is within the HUD gap
+ * plus `keepOutMarginPx`, then rising to 1 over `feather` px. `radius` is the half width of the picture (the half size of a
+ * round one). A streak (a raindrop) is also `halfLen` px long to each side of its centre along its own axis, turned by
+ * `rotation` (radians, as the image is rotated).
+ */
+export function particleKeepOut(
+  x: number,
+  y: number,
+  feather: number,
+  radius = 0,
+  halfLen = 0,
+  rotation = 0,
+): number {
+  const margin = WEATHER_LOOK.keepOutMarginPx + radius;
+  if (halfLen <= 0) return hudKeepOutFade(x, y, margin, feather);
+  // Far from every plate even with the whole streak counted as a disc: nothing to test.
+  if (hudKeepOutFade(x, y, margin + halfLen, feather) >= 1) return 1;
+  const dx = -Math.sin(rotation) * halfLen;
+  const dy = Math.cos(rotation) * halfLen;
+  let fade = 1;
+  for (const s of STREAK_SAMPLES) {
+    fade = Math.min(fade, hudKeepOutFade(x + dx * s, y + dy * s, margin, feather));
+    if (fade <= 0) return 0;
+  }
+  return fade;
 }

@@ -139,21 +139,25 @@ function bakeFlakes(scene: Phaser.Scene): void {
       size,
       size,
       (g) => {
-        g.fillStyle(FLAKE_DISC_EDGE, 1);
-        g.fillCircle(c, c, c);
         g.fillStyle(0xffffff, 1);
-        g.fillCircle(c, c, c - FLAKE_DISC_RIM);
+        g.fillCircle(c, c, c);
       },
       (ctx) => {
         // Soft shading: white in the upper middle, a pale cool tint towards the lower rim.
         ctx.globalCompositeOperation = 'source-atop';
-        const shade = ctx.createRadialGradient(c, c * 0.8, 0, c, c, c);
-        shade.addColorStop(0, '#ffffff');
-        shade.addColorStop(0.55, '#ffffff');
-        shade.addColorStop(1, `#${FLAKE_DISC_SHADE.toString(16).padStart(6, '0')}`);
-        ctx.fillStyle = shade;
+        const body = ctx.createRadialGradient(c, c * 0.8, 0, c, c, c);
+        body.addColorStop(0, '#ffffff');
+        body.addColorStop(0.55, '#ffffff');
+        body.addColorStop(1, cssColor(FLAKE_DISC_SHADE));
+        ctx.fillStyle = body;
         ctx.fillRect(0, 0, size, size);
+        // The pale-blue edge goes on last so the shading cannot cover it.
         ctx.globalCompositeOperation = 'source-over';
+        ctx.strokeStyle = cssColor(FLAKE_DISC_EDGE);
+        ctx.lineWidth = FLAKE_DISC_RIM;
+        ctx.beginPath();
+        ctx.arc(c, c, c - FLAKE_DISC_RIM / 2, 0, TWO_PI);
+        ctx.stroke();
       },
     );
   });

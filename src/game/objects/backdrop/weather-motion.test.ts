@@ -111,4 +111,34 @@ describe('particleKeepOut', () => {
     expect(particleKeepOut(edge + 6, y, 12)).toBeGreaterThan(0);
     expect(particleKeepOut(edge + 40, y, 12)).toBe(1);
   });
+
+  it('counts the whole picture: a 44 px flake with its edge 1 px inside the gap is fully transparent', () => {
+    const plate = HUD_LAYOUT.plates[1];
+    if (!plate) throw new Error('no plate');
+    const y = plate.y + plate.height / 2;
+    const radius = 22;
+    const edge = plate.x + plate.width + FLIGHT_CLEAR.hudGapPx + WEATHER_LOOK.keepOutMarginPx;
+    // Centre far enough that only the flake's edge reaches 1 px into the gap + margin.
+    expect(particleKeepOut(edge + radius - 1, y, 12, radius)).toBe(0);
+    expect(particleKeepOut(edge + radius + 1, y, 12, radius)).toBeGreaterThan(0);
+    // The same centre with no extent counted would still be visible.
+    expect(particleKeepOut(edge + radius - 1, y, 12)).toBeGreaterThan(0);
+  });
+
+  it('counts the length of a slanted raindrop: a tail that crosses the gap makes the whole drop transparent', () => {
+    const plate = HUD_LAYOUT.plates[1];
+    if (!plate) throw new Error('no plate');
+    const halfLen = 40;
+    const rotation = -0.3;
+    const clear = FLIGHT_CLEAR.hudGapPx + WEATHER_LOOK.keepOutMarginPx;
+    // The drop's top end (centre minus the axis) is the one nearest the plate; put it 1 px inside the clear zone.
+    const top = { x: -Math.sin(rotation) * -halfLen, y: Math.cos(rotation) * -halfLen };
+    const x = plate.x + plate.width + clear - 1 - top.x;
+    const y = plate.y + plate.height / 2 - top.y;
+    expect(particleKeepOut(x, y, 12, 0, halfLen, rotation)).toBe(0);
+    // Counting only its centre the drop would be shown.
+    expect(particleKeepOut(x, y, 12)).toBeGreaterThan(0);
+    // Far from every plate it is untouched.
+    expect(particleKeepOut(plate.x + plate.width / 2, 2000, 12, 5, halfLen, rotation)).toBe(1);
+  });
 });

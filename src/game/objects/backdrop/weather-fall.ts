@@ -78,12 +78,10 @@ export class WeatherFall implements WeatherPart {
     const count = Math.min(look.count, WEATHER_LOOK.particleCount.full);
     const strip = look.sideShare ?? WEATHER_LOOK.sideShare;
     const snow = kind === 'snow';
-    // Snow starts anywhere across the whole width (behind the tower it is simply hidden); the rest keep to the sides.
+    // Most start in the side strips; a kind with `sideBias: 0` (snow: behind the tower it is simply hidden) spreads across the whole width.
     const drawU = (): number => {
-      if (snow) return rng.next();
-      const sideStrip = rng.chance(look.sideBias ?? WEATHER_LOOK.sideBias);
-      const left = rng.chance(0.5);
-      return sideStrip ? (left ? rng.range(0, strip) : rng.range(1 - strip, 1)) : rng.next();
+      if (!rng.chance(look.sideBias ?? WEATHER_LOOK.sideBias)) return rng.next();
+      return rng.chance(0.5) ? rng.range(0, strip) : rng.range(1 - strip, 1);
     };
     // Snow falls in lanes (one speed per lane, see weather-lanes.ts); the rest start anywhere.
     const lanes = laneCount(LOGICAL_SIZE.width, WEATHER_LOOK.snow.laneGapPx);
@@ -155,9 +153,20 @@ export class WeatherFall implements WeatherPart {
       const x = rain
         ? wrapRange(p.u * width + slant * p.speed * seconds, width, pad)
         : p.u * width + p.sway * Math.sin((TWO_PI * t) / p.swayMs + p.phase);
+      // The whole picture keeps out of the HUD gap: its half size, and for a raindrop its slanted length.
+      const reach = (image.width * p.scale) / 2;
       const alpha =
         particleFade(y, band, bandFeather, height, pad) *
-        particleKeepOut(x, y, keepFeather) *
+        (rain
+          ? particleKeepOut(
+              x,
+              y,
+              keepFeather,
+              reach,
+              Math.max((image.height * p.scale) / 2 - reach, 0),
+              this.slantRad,
+            )
+          : particleKeepOut(x, y, keepFeather, Math.max(reach, (image.height * p.scale) / 2))) *
         frame.share *
         p.alpha;
       if (alpha <= 0.01) {
