@@ -7,7 +7,7 @@ export type { MouthKind };
 export type EyeKind = 'open' | 'closed' | 'happy' | 'wide' | 'wink';
 export type Mood = 'calm' | 'nervous' | 'scared';
 /**
- * Short-lived overrides, highest priority last: blink < lick < joy < ouch < the faces of the abilities
+ * Short-lived overrides, highest priority last: blink < lick < joy < ouch < panic < the faces of the abilities
  * (wink, scrunch, gape, blow, puffed, strain) < squint < horror.
  */
 export type Reaction =
@@ -15,6 +15,7 @@ export type Reaction =
   | 'lick'
   | 'joy'
   | 'ouch'
+  | 'panic'
   | 'wink'
   | 'scrunch'
   | 'gape'
@@ -44,6 +45,7 @@ const REACTION_ORDER: readonly Reaction[] = [
   'lick',
   'joy',
   'ouch',
+  'panic',
   'wink',
   'scrunch',
   'gape',
@@ -151,6 +153,9 @@ export function resolveExpression(
       return { eyes: 'happy', mouth: 'smile', sweat: false, ...(recipe ? OWN : PLAIN) };
     case 'ouch':
       return { ...base, mouth: 'o', brows: true, ownBrows: false, lids: false };
+    case 'panic':
+      // A cut-off piece that knows it is falling: round eyes, a round mouth, worried brows, a drop of sweat.
+      return { eyes: 'wide', mouth: 'o', brows: true, ownBrows: false, lids: false, sweat: true };
     case 'wink':
       return { ...abilityFace(recipe), eyes: 'wink', mouth: 'smile' };
     case 'scrunch':

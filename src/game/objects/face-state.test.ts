@@ -134,6 +134,17 @@ describe('resolveExpression', () => {
     }
   });
 
+  it('panic is round eyes and an `o` with worried brows, whatever the mood', () => {
+    for (const mood of moods) {
+      expect(resolveExpression(mood, 'panic', 'yum')).toMatchObject({
+        eyes: 'wide',
+        mouth: 'o',
+        brows: true,
+        ownBrows: false,
+      });
+    }
+  });
+
   it('horror is wide eyes, a scared mouth, brows and sweat whatever the mood', () => {
     for (const mood of moods) {
       expect(resolveExpression(mood, 'horror', 'yum')).toEqual({
