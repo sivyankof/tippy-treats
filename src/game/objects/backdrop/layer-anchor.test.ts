@@ -91,6 +91,18 @@ describe('layerSwayAt', () => {
   });
 });
 
+describe('layer sway and the idle limit', () => {
+  it('never stands still for 2 s: even over a turning point it moves more than the 0.6 px the audit counts', () => {
+    for (const zone of ZONES) {
+      for (const sway of BACKDROP.sway[zone.id]) {
+        if (!sway) continue;
+        const moved = sway.px * (1 - Math.cos((2 * Math.PI * 1000) / sway.periodMs));
+        expect(moved).toBeGreaterThan(0.6);
+      }
+    }
+  });
+});
+
 describe('slotCopy', () => {
   const win = WALL_LOOK.window;
   const half = WINDOW_LOOK.height / 2;

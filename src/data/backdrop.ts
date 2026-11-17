@@ -131,9 +131,9 @@ export const BACKDROP = {
    * the start), and what stands on it sways the same. `null`: the layer carries nothing fixed and drifts as `drift` says.
    */
   sway: {
-    kitchen: [null, { px: 10, periodMs: 19000 }, { px: 12, periodMs: 24000 }, null],
-    showcase: [null, null, { px: 12, periodMs: 22000 }, null],
-    roof: [null, { px: 10, periodMs: 18000 }, { px: 12, periodMs: 23000 }, null],
+    kitchen: [null, { px: 10, periodMs: 14000 }, { px: 12, periodMs: 16000 }, null],
+    showcase: [null, null, { px: 12, periodMs: 16000 }, null],
+    roof: [null, { px: 10, periodMs: 14000 }, { px: 12, periodMs: 16000 }, null],
     clouds: [null, null, null, null],
     stars: [null, null, null, null],
     space: [null, null, null, null],
