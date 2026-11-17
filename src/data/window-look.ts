@@ -178,10 +178,10 @@ export const WALL_LOOK = {
   /** The parallax layer of the wall with the shelves (index into `ANIM.parallax` and `BACKDROP.drift`). */
   layer: 2,
   /**
-   * Share of the wall's sideways drift (5 px/s) that the things follow. 0 keeps them in their outer column: with the
-   * full drift they would leave it within half a minute and cross behind the tower.
+   * The wall of zone 1 does not drift on one way: it sways to and fro (`tilePositionX = px * sin(2 pi t / periodMs)`), and everything
+   * on it sways the same, so nothing slides against it and nothing travels behind the tower.
    */
-  driftFollow: 0,
+  sway: { px: 12, periodMs: 24000 },
   /** The window: one copy per `spacing` screens, right and left of the tower in turn, from a pool built with the zone. */
   window: { firstGap: 1.3, spacing: 1.3, pool: 2 },
   /** The jar and the sweets bracket: one copy per 2.6 screens, midway between two windows (never next to one). */
@@ -196,6 +196,8 @@ export const WALL_LOOK = {
   featherPx: 80,
   /** The mute grows over this much scroll (px of the wall), so the start view stands as drawn. */
   muteRampPx: 150,
+  /** A copy this far (px) beyond the screen edge, past its own half height, is only hidden. */
+  offscreenSlackPx: 40,
 } as const;
 
 /** Keys of the baked window pictures, one per place and weather of the run. */

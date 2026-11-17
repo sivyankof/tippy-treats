@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest';
 import { ANIM } from '../../../data/anim';
-import { BACKDROP } from '../../../data/backdrop';
 import { LOGICAL_SIZE } from '../../../data/screen';
 import { WALL_LOOK, WINDOW_LOOK } from '../../../data/window-look';
 import {
@@ -9,6 +8,7 @@ import {
   slotCopy,
   wallDownAt,
   wallDriftX,
+  wallSwayX,
   wallPoint,
   type WallSeries,
 } from './wall-anchor';
@@ -32,16 +32,16 @@ describe('wallPoint', () => {
     const startScroll = 500;
     const out = { x: 0, y: 0 };
     for (const scrollY of [500, 320, -40, -900]) {
-      for (const timeMs of [0, 7300]) {
+      for (const timeMs of [0, 3100, 7300, 12000, 19999]) {
         // A texture point drawn at (ax, ay) on the start view is at (tx - tileX, ty - tileY) later.
         const [ax, ay] = [900, 1260];
         const [tx, ty] = [ax, ay + startScroll * parallax];
         const tileY = scrollY * parallax;
-        const tileX = (BACKDROP.drift.kitchen[WALL_LOOK.layer] ?? 0) * (timeMs / 1000);
+        const tileX = wallSwayX(timeMs);
         wallPoint(ax, ay, wallDownAt(scrollY, startScroll), timeMs, out);
         expect(out.y).toBeCloseTo(ty - tileY, 6);
-        // Sideways it follows its share of the wall's drift.
-        expect(out.x).toBeCloseTo(tx - WALL_LOOK.driftFollow * tileX, 6);
+        // Sideways it sways with the texture, so it never slides against it.
+        expect(out.x).toBeCloseTo(tx - tileX, 6);
         expect(out.x).toBeCloseTo(ax + wallDriftX(timeMs), 6);
       }
     }
@@ -50,6 +50,16 @@ describe('wallPoint', () => {
   it('does not move before the camera leaves its start view', () => {
     expect(wallDownAt(500, 500)).toBe(0);
     expect(wallDownAt(400, 500)).toBeCloseTo(100 * parallax, 6);
+  });
+});
+
+describe('wallSwayX', () => {
+  it('stays within the amplitude and returns after one period', () => {
+    const { px, periodMs } = WALL_LOOK.sway;
+    for (let t = 0; t < 2 * periodMs; t += 137) {
+      expect(Math.abs(wallSwayX(t))).toBeLessThanOrEqual(px + 1e-9);
+      expect(wallSwayX(t + periodMs)).toBeCloseTo(wallSwayX(t), 6);
+    }
   });
 });
 

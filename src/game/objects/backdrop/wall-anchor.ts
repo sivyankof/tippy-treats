@@ -1,7 +1,6 @@
 import { ANIM } from '../../../data/anim';
-import { BACKDROP } from '../../../data/backdrop';
 import { WALL_LOOK } from '../../../data/window-look';
-import { MS_PER_SECOND } from '../../../util/math';
+import { TWO_PI } from '../../../util/math';
 
 /** How often a wall thing repeats on the wall: the screens from the start copy to the second copy, then between copies. */
 export interface WallSeries {
@@ -15,10 +14,15 @@ export function wallDownAt(scrollY: number, startScrollY: number): number {
   return (startScrollY - scrollY) * (ANIM.parallax[WALL_LOOK.layer] ?? 1);
 }
 
-/** Sideways shift (px) of a wall thing at `timeMs`: the wall's drift, of which things follow `WALL_LOOK.driftFollow`. */
+/** Sideways position of the wall's texture (px) at `timeMs`: a gentle sway to and fro, the same for the wall and its things. */
+export function wallSwayX(timeMs: number): number {
+  const { px, periodMs } = WALL_LOOK.sway;
+  return px * Math.sin((TWO_PI * timeMs) / periodMs);
+}
+
+/** Sideways shift (px) of a wall thing at `timeMs`: the texture moves by `wallSwayX`, so things on it move the other way on the screen. */
 export function wallDriftX(timeMs: number): number {
-  const drift = BACKDROP.drift.kitchen[WALL_LOOK.layer] ?? 0;
-  return (-drift * WALL_LOOK.driftFollow * timeMs) / MS_PER_SECOND;
+  return -wallSwayX(timeMs);
 }
 
 /** Where a point of the wall stands on the screen: `anchor` is its place on the start view. Same as a point of the layer's texture. */

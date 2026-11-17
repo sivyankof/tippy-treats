@@ -3,6 +3,7 @@ import { ANIM } from '../../../data/anim';
 import { BACKDROP_FAR } from '../../../data/backdrop-far';
 import { BACKDROP } from '../../../data/backdrop';
 import { LOGICAL_SIZE } from '../../../data/screen';
+import { WALL_LOOK } from '../../../data/window-look';
 import { type GradientStop } from '../../../data/backdrop-colors';
 import type { StartPlaceId } from '../../../data/start-places';
 import type { WeatherId } from '../../../data/weather';
@@ -12,6 +13,7 @@ import { MS_PER_SECOND, oscillate01, sineWave } from '../../../util/math';
 import { markPerfPart } from '../../perf/perf-marks';
 import { bakeTexture, deferStep } from '../../ui/bake-texture';
 import { bakeFarArt, FarPlane } from './far-plane';
+import { wallSwayX } from './wall-anchor';
 import type { GuestSource } from './guest-source';
 import type { FrameCtx, Life } from './life';
 import { fillDitheredRows, gradientBands } from './sky-gradient';
@@ -130,6 +132,8 @@ export class ZoneScenery {
   private readonly lives: Life[];
   private readonly skyLives: readonly Life[];
   private readonly drift: readonly number[];
+  /** The parallax layer that sways instead of drifting (the wall of zone 1); -1 in the other zones. */
+  private readonly swayLayer: number;
   private readonly tints: NonNullable<(typeof BACKDROP.layerTint)[ZoneId]> | null;
   private readonly breathePhase: number;
 
@@ -146,6 +150,7 @@ export class ZoneScenery {
     // Menu screens build the kitchen without the run backdrop, so the far plane bakes here too.
     bakeFarArt(scene, zone, weather);
     this.drift = BACKDROP.drift[zone];
+    this.swayLayer = zone === 'kitchen' ? WALL_LOOK.layer : -1;
     this.tints = BACKDROP.layerTint[zone] ?? null;
     this.breathePhase = depth;
     this.sky = new Phaser.GameObjects.Image(
@@ -219,7 +224,11 @@ export class ZoneScenery {
     this.far.update(ctx, scrollY);
     this.layers.forEach((layer, i) => {
       layer.tilePositionY = scrollY * (ANIM.parallax[i] ?? 1);
-      layer.tilePositionX = ((this.drift[i] ?? 0) * ctx.timeMs) / MS_PER_SECOND;
+      // The wall of zone 1 sways to and fro, the things on it sway with it (wall-anchor.ts); the rest drifts on.
+      layer.tilePositionX =
+        i === this.swayLayer
+          ? wallSwayX(ctx.timeMs)
+          : ((this.drift[i] ?? 0) * ctx.timeMs) / MS_PER_SECOND;
       const tint = this.tints?.[i];
       if (tint) layer.setTint(mixColor(tint.from, tint.to, oscillate01(ctx.timeMs, tint.ms)));
     });

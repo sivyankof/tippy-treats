@@ -94,33 +94,40 @@ export class WallThing implements Life {
     const y0 = first.at.y * ctx.height + (first.offset?.y ?? 0);
     const moved = Math.min(1, Math.abs(ctx.wallDown) / WALL_LOOK.muteRampPx);
     const driftX = wallDriftX(ctx.timeMs);
+    const count = this.specs.length;
     for (let slot = 0; slot < this.pool; slot++) {
       const n = series ? slotCopy(slot, series, y0, ctx.wallDown, ctx.height) : 0;
       const rise = series ? seriesRise(n, series, ctx.height) : 0;
-      const mirrored = mirror === true && copyMirrored(n);
       const spot = this.spots[slot];
-      let on = false;
-      this.specs.forEach((spec, k) => {
-        const image = this.objects[slot * this.specs.length + k];
-        if (!image) return;
+      if (!spot) continue;
+      // A copy far off the screen is only hidden: no pose is worked out for it.
+      const centreY = y0 + ctx.wallDown - rise;
+      const reach = halfH + WALL_LOOK.offscreenSlackPx;
+      const away = skipStart === true && n === 0;
+      if (away || centreY + reach < 0 || centreY - reach > ctx.height) {
+        spot.alpha = 0;
+        for (let k = 0; k < count; k++) this.objects[slot * count + k]?.setVisible(false);
+        continue;
+      }
+      const mirrored = mirror === true && copyMirrored(n);
+      for (let k = 0; k < count; k++) {
+        const spec = this.specs[k];
+        const image = this.objects[slot * count + k];
+        if (!spec || !image) continue;
         const pose = hoverPose(spec, ctx.width, ctx.height, ctx.timeMs, this.pose);
         pose.x = (mirrored ? ctx.width - pose.x : pose.x) + driftX;
         pose.y += ctx.wallDown - rise;
-        const shown =
-          pose.y + halfH > 0 && pose.y - halfH < ctx.height && !(skipStart === true && n === 0);
         pose.alpha *= wallMute(pose.x, pose.y, halfH, this.band, moved);
         applyPose(image, pose);
         image.setFlipX(mirrored);
-        image.setVisible(shown);
-        if (k === 0 && spot) {
-          on = shown;
+        image.setVisible(pose.y + halfH > 0 && pose.y - halfH < ctx.height);
+        if (k === 0) {
           spot.x = pose.x;
           spot.y = pose.y;
           spot.mirrored = mirrored;
-          spot.alpha = shown ? pose.alpha / (spec.alpha ?? 1) : 0;
+          spot.alpha = pose.alpha / (spec.alpha ?? 1);
         }
-      });
-      if (spot && !on) spot.alpha = 0;
+      }
     }
   }
 }
