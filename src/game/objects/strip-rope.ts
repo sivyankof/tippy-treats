@@ -6,8 +6,13 @@ import * as Phaser from 'phaser';
  * right), four floats `x0, y0, x1, y1`; the uv are given as shares of the picture.
  */
 export class StripRope extends Phaser.GameObjects.Rope {
+  /** Shares of the picture the uv were made from, and the frame corners they were mapped with. */
+  private shares: Float32Array;
+  private mappedCut = new Float32Array(4);
+
   constructor(scene: Phaser.Scene, texture: string, uv: Float32Array) {
     super(scene, 0, 0, texture, undefined, uv.length / 4);
+    this.shares = uv;
     this.mapUvs(uv);
     this.setVisible(false);
   }
@@ -17,12 +22,24 @@ export class StripRope extends Phaser.GameObjects.Rope {
    * (a baked picture can sit upside down in it, or on a page of the shared atlas).
    */
   mapUvs(uv: Float32Array): this {
+    this.shares = uv;
     const { u0, v0, u1, v1 } = this.frame;
+    this.mappedCut.set([u0, v0, u1, v1]);
     for (let i = 0; i < uv.length; i += 2) {
       this.uv[i] = u0 + uv[i]! * (u1 - u0);
       this.uv[i + 1] = v0 + uv[i + 1]! * (v1 - v0);
     }
     return this;
+  }
+
+  /**
+   * A frame of the shared atlas moves when its pages are rebuilt after a lost context: the uv
+   * follow the frame's corners on the next update.
+   */
+  override preUpdate(): void {
+    const { u0, v0, u1, v1 } = this.frame;
+    const m = this.mappedCut;
+    if (u0 !== m[0] || v0 !== m[1] || u1 !== m[2] || v1 !== m[3]) this.mapUvs(this.shares);
   }
 
   /** The vertices are the owner's: nothing is recomputed from the points. */

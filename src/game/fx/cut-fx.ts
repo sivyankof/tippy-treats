@@ -93,6 +93,11 @@ export class CutFx {
     for (let i = 0; i < SLOTS; i++) this.slots.push(this.makeSlot(scene));
   }
 
+  /** True when the strands can be shown (not on the Canvas renderer): otherwise the caller plays the plain cut. */
+  get showsStrands(): boolean {
+    return this.strips;
+  }
+
   /** The variant of the cut of layer `layerNumber` (1-based): the forced one, or the run's cosmetic stream decides. */
   variantFor(layerNumber: number, share: number, pieceWidth: number): CutVariant {
     const forced = cutOverride.take();
@@ -157,10 +162,13 @@ export class CutFx {
     slot.side = cut.side;
     slot.layerNumber = cut.layerNumber;
     slot.layerWidth = cut.layerWidth;
-    this.findHang(slot, cut);
+    if (cut.plan.trace) this.findHang(slot, cut);
+    else slot.hang = null;
     const random = new Rng(plainLooks.cosmeticSeed)
       .fork(CUT_LOOK.stream)
       .fork(`fx${cut.layerNumber}`);
+    // Without strips nothing snaps to leave the drop: it stays on the cut at once.
+    if (cut.plan.trace && !this.strips) this.leaveTrace(slot);
     if (cut.plan.strands && this.strips) {
       const start = {
         side: cut.side,
@@ -268,14 +276,15 @@ export class CutFx {
 
   /**
    * The drop that will stay on the cut: the round end of this layer's own drips, the same picture
-   * and size. Only a picture baked already (the layer's drips were shown): nothing is baked mid-run.
+   * and size. Only the round end is needed, and only a picture baked already (the layer's drips
+   * were shown): nothing is baked mid-run (the recorded bake steps are dropped, not run).
    */
   private findHang(slot: Slot, cut: CutPlay): void {
     let key = '';
-    const missing = collectBakeSteps(() => {
+    collectBakeSteps(() => {
       key = dripTexturesFor(this.scene, cut.creature, cut.glaze).bulb;
     });
-    const baked = missing.length === 0 && this.scene.textures.exists(key);
+    const baked = this.scene.textures.exists(key);
     slot.hang = baked ? key : null;
     slot.hangSize = baked ? this.scene.textures.getFrame(key).width : 0;
   }

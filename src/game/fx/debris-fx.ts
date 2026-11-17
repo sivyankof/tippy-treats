@@ -112,6 +112,8 @@ export class DebrisFx {
     const variant = this.cuts.variantFor(index + 1, share, event.cutWidth);
     const plan = cutPlanFor(effectsMode.level, variant);
     if (!plan) return false;
+    // Where strands cannot be shown the cut plays plain: a drop runs down, no strand crumbs.
+    const strands = plan.strands && this.cuts.showsStrands;
     const { side, y, pieceCut, pieceX, edgeX, colors } = this.biteSetup(
       cutSide,
       memo,
@@ -126,7 +128,7 @@ export class DebrisFx {
         side,
         colors.cake,
         pickInt(plan.crumbs),
-        plan.strands ? DEPTH.cutCrumbs : undefined,
+        strands ? DEPTH.cutCrumbs : undefined,
       );
       if (memo.kind === 'plain') {
         this.decorBits(index + 1, event.cutWidth, pieceCut, edgeX, y, side);
@@ -156,7 +158,7 @@ export class DebrisFx {
       },
     });
     // With strands the glaze leaves in them and as the drop that stays; otherwise a drop runs down.
-    if (!plan.strands) this.runDrips(pose, y, edgeX, side, colors.glaze, memo);
+    if (!strands) this.runDrips(pose, y, edgeX, side, colors.glaze, memo);
     return true;
   }
 

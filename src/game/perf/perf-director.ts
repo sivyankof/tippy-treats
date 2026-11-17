@@ -58,6 +58,8 @@ type Phase = 'launch' | 'warmup' | 'measure';
 const TIMEOUT_NOTE = 'timeout';
 /** A transition segment whose run never reached the zone boundary. */
 const NO_FADE_NOTE = 'no zone change';
+/** A transition segment whose window ran out during the cross-fade or its tail. */
+const FADE_CUT_NOTE = 'window ended during the fade';
 
 /**
  * Plays the segments of the benchmark one after another: starts the run of each (the setup comes
@@ -169,7 +171,7 @@ class PerfDirector {
     if (total !== null) this.lastDrawTotal = total;
     if (def.endAfterFade && this.fadeOver(fading, nowMs)) this.endSegment(nowMs, '');
     else if (nowMs - this.windowStartMs >= def.measureMs) {
-      this.endSegment(nowMs, def.endAfterFade ? NO_FADE_NOTE : '');
+      this.endSegment(nowMs, !def.endAfterFade ? '' : this.sawFade ? FADE_CUT_NOTE : NO_FADE_NOTE);
     } else if (this.resultsUp && def.startOn !== 'results') {
       this.endSegment(nowMs, def.endOnResults ? '' : 'run ended early');
     }

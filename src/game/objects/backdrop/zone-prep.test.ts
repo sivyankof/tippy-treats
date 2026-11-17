@@ -86,4 +86,17 @@ describe('PrepQueue', () => {
     expect(queue.work(4, now)).toBe(0);
     expect(log).toEqual([0, 1, 2]);
   });
+
+  it('forgets the longest step when the queue empties, so a later prep is not held back by it', () => {
+    const log: number[] = [];
+    const first = timedSteps([9], log);
+    const queue = new PrepQueue();
+    queue.add(first.steps);
+    queue.work(4, first.now);
+    expect(queue.pending).toBe(0);
+    // With a remembered 9 ms, the second step would wait for the next frame.
+    const second = timedSteps([1, 1, 1], []);
+    queue.add(second.steps);
+    expect(queue.work(4, second.now)).toBe(3);
+  });
 });

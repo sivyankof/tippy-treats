@@ -1,5 +1,7 @@
-import { CUT_VARIANT_NAMES, type CutVariantName } from '../../data/cut-look';
+import type { CutVariantName } from '../../data/cut-look';
 import type { SquashKind } from '../../data/topper-squash';
+import type { CutHook } from './cut-debug';
+import type { SquashHook } from './squash-debug';
 
 /** The decorations the panel can squash, in the order of its buttons. */
 export const SQUASH_BUTTON_KINDS: readonly SquashKind[] = [
@@ -12,12 +14,9 @@ export const SQUASH_BUTTON_KINDS: readonly SquashKind[] = [
 ];
 
 type TriggerWindow = Window & {
-  tippyCut?: (variant?: CutVariantName) => boolean;
-  tippySquash?: (kind: SquashKind, mode?: 'hit' | 'edge' | 'none') => boolean;
+  tippyCut?: CutHook;
+  tippySquash?: SquashHook;
 };
-
-/** The cut variants the panel offers (the same names `window.tippyCut` takes). */
-export const CUT_BUTTON_VARIANTS: readonly CutVariantName[] = CUT_VARIANT_NAMES;
 
 /** Panel button: the next cut goes the given way, like `window.tippyCut(variant)`. False when the run has no hook (no run on screen). */
 export function triggerCut(variant: CutVariantName): boolean {

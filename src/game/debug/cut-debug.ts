@@ -12,6 +12,9 @@ const DEBUG_SHARE: Readonly<Record<CutVariantName, number>> = {
   big: 0.42,
 };
 
+/** The dev hook `window.tippyCut`. */
+export type CutHook = (variant?: CutVariantName, share?: number) => boolean;
+
 /**
  * Dev build only: `window.tippyCut('plain' | 'strands' | 'panic' | 'big', share?)` makes the next
  * cut that variant and drops the flying layer as soon as it is the right distance off the tower
@@ -19,9 +22,7 @@ const DEBUG_SHARE: Readonly<Record<CutVariantName, number>> = {
  * false when there is no flying layer to drop.
  */
 export function installCutDebug(scene: GameScene): void {
-  const win = window as Window & {
-    tippyCut?: (variant?: CutVariantName, share?: number) => boolean;
-  };
+  const win = window as Window & { tippyCut?: CutHook };
   // The driver the run had before the hook stepped in; kept across calls so a second call before the drop does not restore the first hook's driver.
   let restore: { driver: DropDriver | null } | null = null;
   const hook = (variant: CutVariantName = 'plain', share?: number): boolean => {

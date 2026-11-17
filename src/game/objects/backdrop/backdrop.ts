@@ -26,7 +26,13 @@ import { starsArt } from './stars-zone';
 import { ZoneFade } from './zone-fade';
 import { weatherShareOf } from './weather-share';
 import { PrepQueue, prepTarget, sameTarget, type PrepTarget } from './zone-prep';
-import { bakeSky, ZoneScenery, type SceneryLook, type ZoneArt } from './zone-scenery';
+import {
+  bakeSky,
+  ZoneScenery,
+  type SceneryDef,
+  type SceneryLook,
+  type ZoneArt,
+} from './zone-scenery';
 
 /** What the backdrop needs of the run state: the zone and the placed height (the lap follows from it). */
 export interface RunBackdropState {
@@ -158,7 +164,14 @@ export class Backdrop {
       return;
     }
     this.prepQueue.add(collectBakeSteps(() => this.bake(zoneIdOf(target.index), this.lap)));
-    this.prepQueue.add([() => (prep.scenery = this.buildScenery(target.index))]);
+    // Two steps: the zone's lives and pictures, then the container that holds them.
+    let def: SceneryDef | null = null;
+    this.prepQueue.add([
+      () => (def = this.buildDef(target.index)),
+      () => {
+        if (def) prep.scenery = this.assemble(target.index, def);
+      },
+    ]);
   }
 
   /** The zone built ahead for this change, with the work still left done now; `null` when none was. */
@@ -313,17 +326,28 @@ export class Backdrop {
 
   /** Bakes what zone `index` still needs and builds it, hidden and not yet updated. */
   private buildScenery(index: number): ZoneScenery {
+    return this.assemble(index, this.buildDef(index));
+  }
+
+  /** Bakes what zone `index` still needs and makes its lives, the first half of building it. */
+  private buildDef(index: number): SceneryDef {
     const id = zoneIdOf(index);
     this.bake(id, this.lap);
+    return this.artOf(id).build(this.scene, {
+      ...this.sceneryLook(Math.max(this.lap, 1)),
+      topWidth: this.lapTopWidth,
+    });
+  }
+
+  /** The second half: the hidden scenery of zone `index` from its made lives. */
+  private assemble(index: number, def: SceneryDef): ZoneScenery {
+    const id = zoneIdOf(index);
     const depth = DEPTH.background + BACKDROP.depthBase + index * BACKDROP.depthStep;
     const scenery = new ZoneScenery(
       this.scene,
       id,
       depth,
-      this.artOf(id).build(this.scene, {
-        ...this.sceneryLook(Math.max(this.lap, 1)),
-        topWidth: this.lapTopWidth,
-      }),
+      def,
       this.ctx.width,
       this.ctx.height,
       this.look.weather,

@@ -11,12 +11,14 @@ export function wrapRange(value: number, size: number, pad: number): number {
 
 /** The golden ratio's fractional part: stepping by it spreads points over 0..1 with no part left empty. */
 const GOLDEN_STEP = 0.6180339887498949;
+/** The step that orders the drops down the screen: another irrational, so that it does not follow the sideways one. */
+const DEPTH_STEP = 0.5698402909980532;
 
 /**
- * Start spots (`u` across, `v` down, both 0..1) of `count` raindrops: the drops go down the screen in order and
- * step across by the golden ratio from a random offset, so at every moment the drops cover the width and the
- * height evenly (a plain random draw leaves gaps and bunches, and the count beside the tower swings).
- * Each spot moves a little (`jitterShare` of a cell) so no lattice shows.
+ * Start spots (`u` across, `v` down, both 0..1) of `count` raindrops. All the heights are the cells of an even
+ * grid, but dealt out in the order of a golden-like sequence, so for ANY first N drops (a lighter effects level
+ * shows only a prefix) they cover the height evenly, and all of them fill it with no gap. Across, the drops step
+ * by the golden ratio from a random offset (the order of the heights is the same for every run). Each spot moves a little (`jitterShare` of a cell) so no lattice shows.
  */
 export function rainSpots(
   count: number,
@@ -25,15 +27,19 @@ export function rainSpots(
 ): { u: number; v: number }[] {
   const offset = next();
   const wrap01 = (x: number): number => x - Math.floor(x);
-  return Array.from({ length: count }, (_, i) => ({
-    u: wrap01(offset + i * GOLDEN_STEP + ((next() - 0.5) * jitterShare) / count),
-    v: wrap01((i + 0.5 + (next() - 0.5) * jitterShare) / count),
+  // The lattice: cell c has its own height and its own place across (jitter drawn in the cell order).
+  const lattice = Array.from({ length: count }, (_, c) => ({
+    u: wrap01(offset + c * GOLDEN_STEP + ((next() - 0.5) * jitterShare) / count),
+    v: wrap01((c + 0.5 + (next() - 0.5) * jitterShare) / count),
   }));
-}
-
-/** The path of a raindrop: `slant` px of drift per px of fall (the picture is turned by this). */
-export function rainSlope(slant: number): number {
-  return slant;
+  // Drop k takes the cell whose rank among the cells is the rank of k in the depth sequence: any prefix of drops
+  // then covers the height evenly.
+  const byDepth = lattice
+    .map((_, k) => k)
+    .sort((p, q) => wrap01(p * DEPTH_STEP) - wrap01(q * DEPTH_STEP));
+  const spots = new Array<{ u: number; v: number }>(count);
+  byDepth.forEach((k, rank) => (spots[k] = lattice[rank]!));
+  return spots;
 }
 
 /**
@@ -41,7 +47,7 @@ export function rainSlope(slant: number): number {
  * ends: a drop may start beyond a side edge, so that the upwind edge is not empty at any height.
  */
 export function rainDrift(slant: number, span: number, padPx = 0): number {
-  return rainSlope(slant) * (span / 2 + padPx);
+  return slant * (span / 2 + padPx);
 }
 
 /**
@@ -90,7 +96,7 @@ export function rainStartX(
 
 /** x of a raindrop at height `y`: its x `xMid` at the middle `midY` of its fall, leaning by `rainSlope` px per px of fall. The lean depends on the height, not on the time. */
 export function rainX(xMid: number, slant: number, y: number, midY: number): number {
-  return xMid + rainSlope(slant) * (y - midY);
+  return xMid + slant * (y - midY);
 }
 
 /**

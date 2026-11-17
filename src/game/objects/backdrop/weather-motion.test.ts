@@ -17,7 +17,6 @@ import {
   particleFade,
   particleKeepOut,
   rainDrift,
-  rainSlope,
   rainStartX,
   rainX,
   rainY,
@@ -55,6 +54,20 @@ describe('weather motion', () => {
     expect(rows.size).toBeGreaterThanOrEqual(30);
   });
 
+  it('spreads any prefix of the drops evenly down the screen (lite shows only the first ones)', () => {
+    const rng = new Rng(5);
+    const spots = rainSpots(64, () => rng.next());
+    for (const n of [8, 16, 32]) {
+      const vs = spots
+        .slice(0, n)
+        .map((p) => p.v)
+        .sort((x, y) => x - y);
+      const gaps = vs.map((v, i) => (i === 0 ? v + 1 - vs[n - 1]! : v - vs[i - 1]!));
+      // A plain order leaves half the height empty; any prefix here leaves at most about four drop spacings.
+      expect(Math.max(...gaps)).toBeLessThan(4 / n);
+    }
+  });
+
   it('keeps enough raindrops visible beside the tower on every screen height, in rain and storm', () => {
     const { width } = LOGICAL_SIZE;
     const towerLeft = (width - BALANCE.tray.width) / 2;
@@ -65,7 +78,7 @@ describe('weather motion', () => {
     for (const kind of ['rain', 'storm'] as const) {
       const look = WEATHER_LOOK[kind];
       const slant = look.slant;
-      const rotation = -Math.atan(rainSlope(slant));
+      const rotation = -Math.atan(slant);
       const shown = rainDropsShown(look.count, 'full');
       for (const [screen, minOutside] of [
         [844, 8],

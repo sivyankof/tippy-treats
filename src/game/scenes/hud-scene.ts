@@ -22,7 +22,7 @@ import { flyingLap } from '../../core/space-laps';
 import { LapChangeWatch } from '../../core/space-planet';
 import { ZoneChangeWatch } from '../ui/zone-change-watch';
 import { BACKDROP } from '../../data/backdrop';
-import { prepTarget, type PrepTarget } from '../objects/backdrop/zone-prep';
+import { prepTarget, sameTarget, type PrepTarget } from '../objects/backdrop/zone-prep';
 import { HudNumbersIdle } from '../ui/hud-idle';
 import { isCompactNext } from '../ui/hud-row-layout';
 import { NextCreatureBadge } from '../ui/next-creature-badge';
@@ -54,6 +54,7 @@ export class HudScene extends Phaser.Scene {
   /** "Demo: <name>" during a creature demo. */
   private demoLabel!: Phaser.GameObjects.Text;
   private zoneWatch = new ZoneChangeWatch();
+  private preparedTarget: PrepTarget | null = null;
   private lapWatch = new LapChangeWatch(LAP_PLATE.firstLap);
   private treasure!: TreasureHud;
   private numbersIdle!: HudNumbersIdle;
@@ -101,6 +102,7 @@ export class HudScene extends Phaser.Scene {
     this.lapBanner = new ZoneBanner(this, LAP_BANNER, 'ui_lap_banner');
     this.demoLabel = createOutlinedText(this, 0, 0, '', HUD_LAYOUT.demoLabelFont, PALETTE.gold);
     this.zoneWatch = new ZoneChangeWatch();
+    this.preparedTarget = null;
     this.lapWatch = new LapChangeWatch(LAP_PLATE.firstLap);
     this.treasure = new TreasureHud(this);
     this.tutorialHints = new TutorialHints(this);
@@ -222,8 +224,12 @@ export class HudScene extends Phaser.Scene {
     coming: PrepTarget | null,
     time: number,
   ): void {
-    if (coming?.kind === 'zone') this.zoneBanner.prepare(coming.index);
-    else if (coming?.kind === 'lap') this.lapBanner.prepareLap(coming.lap);
+    // Each target is prepared once: the text is formatted when it comes up, not every frame of the lead.
+    if (!sameTarget(coming, this.preparedTarget)) {
+      this.preparedTarget = coming;
+      if (coming?.kind === 'zone') this.zoneBanner.prepare(coming.index);
+      else if (coming?.kind === 'lap') this.lapBanner.prepareLap(coming.lap);
+    }
     if (announced !== null) this.zoneBanner.show(announced);
     if (lap !== null) this.lapBanner.showLap(lap);
     this.zoneBanner.update(time);

@@ -9,7 +9,6 @@ import {
   particleFade,
   particleKeepOut,
   rainDropsShown,
-  rainSlope,
   rainDrift,
   rainStartX,
   rainX,
@@ -155,7 +154,7 @@ export class WeatherFall implements WeatherPart {
     const leaf = this.kind === 'leaves';
     const slant = this.look.slant ?? 0;
     // A raindrop is turned along the way it really falls.
-    const slantRad = rain ? -Math.atan(rainSlope(slant)) : 0;
+    const slantRad = rain ? -Math.atan(slant) : 0;
     const tilt = this.look.tiltRad ?? 0;
     const swayLag = this.look.swayLag ?? 0;
     const turnMin = this.look.turnMin ?? 1;

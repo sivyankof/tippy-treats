@@ -1,7 +1,6 @@
 import { START_PLACES, type StartPlaceId } from '../data/start-places';
 import { WEATHER, WEATHER_IDS, type WeatherId } from '../data/weather';
 import { Rng } from './rng';
-import { planetSeedOf } from './space-planet';
 import { weightedPick } from './weighted-pick';
 
 /** The cosmetic look of one run: it never changes how the run plays. */
@@ -39,6 +38,3 @@ export function pickWeather(seed: number, recent: readonly WeatherId[]): Weather
 export function pickStartPlace(seed: number): StartPlaceId {
   return weightedPick(new Rng(seed).fork('place'), START_PLACES, (place) => place.share).id;
 }
-
-/** The planet stream of a run: like the weather and the place, it comes from the run seed (the day seed in the daily tower). */
-export const pickPlanetSeed = planetSeedOf;

@@ -26,8 +26,11 @@ interface Armed {
   frames: number;
 }
 
+/** The dev hook `window.tippySquash`. */
+export type SquashHook = (kind: SquashKind, mode?: SquashMode) => boolean;
+
 type SquashWindow = Window & {
-  tippySquash?: (kind: SquashKind, mode?: SquashMode) => boolean;
+  tippySquash?: SquashHook;
   tippySquashLevel?: (level: EffectLevel | null) => void;
 };
 

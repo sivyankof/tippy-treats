@@ -1,4 +1,5 @@
 import type * as Phaser from 'phaser';
+import { CUT_VARIANT_NAMES } from '../../data/cut-look';
 import { BALANCE } from '../../data/balance';
 import { PALETTE } from '../../data/palette';
 import { cssColor } from '../../util/color';
@@ -11,12 +12,7 @@ import { adsDev, iapDev } from '../../services';
 import { gameState, sessionTally } from '../../state';
 import { openCheckpointDemo } from './checkpoint-demo';
 import { cycleDebugLevel, cycleDebugSlot, getDebugTeam } from './debug-team';
-import {
-  CUT_BUTTON_VARIANTS,
-  SQUASH_BUTTON_KINDS,
-  triggerCut,
-  triggerSquash,
-} from './debug-triggers';
+import { SQUASH_BUTTON_KINDS, triggerCut, triggerSquash } from './debug-triggers';
 
 const FONT_SIZE = 30;
 const MARGIN = 20;
@@ -137,7 +133,7 @@ export class DebugPanel {
     this.purchasesEntry = entry(() => iapDev?.resetPurchases(), PALETTE.panel).setText(
       RESET_PURCHASES_LABEL,
     );
-    for (const variant of CUT_BUTTON_VARIANTS) {
+    for (const variant of CUT_VARIANT_NAMES) {
       this.effectEntries.push(
         entry(() => triggerCut(variant), PALETTE.panel).setText(`${CUT_PREFIX} ${variant}`),
       );

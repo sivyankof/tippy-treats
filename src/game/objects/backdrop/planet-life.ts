@@ -28,6 +28,8 @@ export class PlanetLife implements Life, LapLife {
   private readonly spot = new Spot();
   /** Tower top width when lap 1 began (its corridor); the other laps follow the dashed cap. */
   private lapOneTopWidth: number | undefined;
+  /** What the seed gives for the lap on screen: asked once per lap, not every frame. */
+  private cached: { lap: number; id: SpacePlanetId; key: string; enter: number } | null = null;
 
   constructor(
     private readonly scene: Phaser.Scene,
@@ -47,14 +49,26 @@ export class PlanetLife implements Life, LapLife {
     if (lap === 1) this.lapOneTopWidth = topWidth;
   }
 
+  private ofLap(lap: number): { id: SpacePlanetId; key: string; enter: number } {
+    if (this.cached?.lap !== lap) {
+      const id = planetOfLap(this.planetSeed, lap);
+      this.cached = {
+        lap,
+        id,
+        key: planetKey(id),
+        enter: planetPassOf(this.planetSeed, lap).enter,
+      };
+    }
+    return this.cached;
+  }
+
   update(ctx: FrameCtx): void {
     const { lap, progress } = lapProgress(ctx.towerLayers);
     if (lap === 0) {
       this.image.setVisible(false);
       return;
     }
-    const id = planetOfLap(this.planetSeed, lap);
-    const key = planetKey(id);
+    const { id, key, enter } = this.ofLap(lap);
     // The planet is out of view at the ends of a lap, where its texture changes.
     if (this.scene.textures.exists(key) && this.image.texture.key !== key)
       this.image.setTexture(key);
@@ -76,7 +90,6 @@ export class PlanetLife implements Life, LapLife {
     const halfH =
       (size.height * fit.scale) / 2 + (effectsMode.reduced ? 0 : PLANET_PLACE.drift.bob.px);
     const halfW = (size.width * fit.scale) / 2;
-    const { enter } = planetPassOf(this.planetSeed, lap);
     const y = planetY(progress, ctx.height, halfH, enter);
     const alpha = planetFade(fit.x, y, halfH, Math.max(halfW, halfH), ctx.height);
     this.image.setVisible(alpha > 0);

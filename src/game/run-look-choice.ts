@@ -1,4 +1,5 @@
-import { pickPlanetSeed, pickStartPlace, pickWeather, type RunLook } from '../core/run-look';
+import { pickStartPlace, pickWeather, type RunLook } from '../core/run-look';
+import { planetSeedOf } from '../core/space-planet';
 import { DEFAULT_START_PLACE, type StartPlaceId } from '../data/start-places';
 import { WEATHER, type WeatherId } from '../data/weather';
 
@@ -34,7 +35,7 @@ export function resetRunLookHistory(): void {
  * session history and remembers its weather.
  */
 export function chooseRunLook(input: RunLookInput): RunLook {
-  const planetSeed = pickPlanetSeed(input.seed);
+  const planetSeed = planetSeedOf(input.seed);
   if (input.perf) {
     return {
       weather: input.perf.weather ?? PLAIN_WEATHER,

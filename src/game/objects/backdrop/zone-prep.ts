@@ -30,7 +30,7 @@ export type PrepStep = () => void;
 
 /**
  * Steps of work spread over frames: each frame runs the first waiting step and then more while the
- * time used plus the longest step seen so far stays within the budget, so a frame never takes much
+ * time used plus the longest step seen so far in this prep (forgotten when the queue empties) stays within the budget, so a frame never takes much
  * more than the budget for them (a single step longer than it still runs, alone).
  */
 export class PrepQueue {
@@ -72,6 +72,8 @@ export class PrepQueue {
   clear(): void {
     this.steps = [];
     this.next = 0;
+    // The longest step belongs to the work that is over: the next prep starts without it.
+    this.longestMs = 0;
   }
 
   private runNext(): void {
