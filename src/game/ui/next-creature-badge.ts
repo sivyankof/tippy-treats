@@ -8,7 +8,7 @@ import { IDLE_MOTION, IDLE_PHASE } from '../../data/idle-motion';
 import { PALETTE } from '../../data/palette';
 import { createCreatureIcon, setCreatureIcon } from './creature-icons';
 import { idlePose, type IdlePose } from './idle-motion';
-import { nextChipSpan } from './hud-row-layout';
+import { nextChipSpan, nextLabelPopScale } from './hud-row-layout';
 import { nextChipContent } from './next-creature-label';
 import { effectsMode } from '../effects-mode';
 import { fxGuard } from '../fx-guard';
@@ -51,7 +51,7 @@ export class NextCreatureBadge {
       PALETTE.textDark,
       nextStroke,
     )
-      .setOrigin(1, 0.5)
+      .setOrigin(0, 0.5)
       .setVisible(false);
   }
 
@@ -144,10 +144,10 @@ export class NextCreatureBadge {
     });
   }
 
-  /** Text hugs the right margin, the icon sits to its left; the chip runs from before the icon to past the text, so the icon never lies on the text. */
+  /** The text is pinned by its left edge, a fixed gap after the icon (a pop grows it away from the icon); the chip runs from before the icon to past the text, so the icon never lies on the text. */
   private place(): void {
     const span = nextChipSpan(this.screenWidth, this.labelShown ? this.label.width : null);
-    this.label.setX(span.labelRight);
+    this.label.setX(span.labelLeft);
     this.icon.setX(span.iconX);
     this.chip.place(
       (span.chipLeft + span.chipRight) / 2,
@@ -157,12 +157,17 @@ export class NextCreatureBadge {
     );
   }
 
+  /** The icon pops by `nextPopScale`; the text by less when it is wide (`nextLabelPopScale`). */
+  private popScale(target: Phaser.GameObjects.Image | Phaser.GameObjects.Text): number {
+    return target === this.icon ? ANIM.badges.nextPopScale : nextLabelPopScale(this.label.width);
+  }
+
   private pop(target: Phaser.GameObjects.Image | Phaser.GameObjects.Text): void {
-    const { nextPopScale, nextPopMs, nextPopEase } = ANIM.badges;
+    const { nextPopMs, nextPopEase } = ANIM.badges;
     // The icon rests at the scale that makes it `badgeSize` wide, the text at 1.
     const rest = target === this.icon ? badgeSize / this.icon.width : 1;
     this.scene.tweens.killTweensOf(target);
-    target.setScale(rest * nextPopScale);
+    target.setScale(rest * this.popScale(target));
     this.scene.tweens.add({ targets: target, scale: rest, duration: nextPopMs, ease: nextPopEase });
   }
 }

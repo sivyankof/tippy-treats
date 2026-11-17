@@ -184,8 +184,6 @@ export const WALL_LOOK = {
   sweets: { firstGap: 1.95, spacing: 2.6, pool: 2 },
   /** The glass counter of the shop: midway between two windows, a screen and a third after the sweets. */
   display: { firstGap: 3.25, spacing: 2.6, pool: 2 },
-  /** A narrow strip of the awning in each outer column; `pieceW` px wide (the tower stands in the middle). */
-  awning: { firstGap: 2.6, spacing: 2.6, pool: 2, pieceW: 256 },
   /** Things passing under a HUD plate or through the flight row keep this share of their alpha; it comes back over `featherPx`. */
   muted: 0.5,
   featherPx: 80,
@@ -286,6 +284,13 @@ export const SHOP_LOOK = {
     bobMs: 2600,
     phaseStep: 0.5,
   },
+  /**
+   * The awning and the lamps are the top of the room on the start view and fade out as the wall carries them down:
+   * fully gone once their lowest point would stand `clearPx` above the top of the wobble plate (`shop-hang.ts`).
+   * The zone's first frame is the world still dropping in (`ANIM.ui.transition.distance`); the view the player sees
+   * has the wall `distance` x parallax lower, and the fade starts there, `settlePx` further (the drop-in overshoots).
+   */
+  hang: { clearPx: 40, settlePx: 6 },
   /** Share of its brightness the awning loses at night. */
   awningNightDim: 0.15,
   lamp: {
@@ -296,7 +301,7 @@ export const SHOP_LOOK = {
     /** Each lamp: x as a share of the screen, extra px it hangs under the awning (they differ in height) and its swing period. */
     items: [
       { x: 0.26, drop: 0, ms: 2300 },
-      { x: 0.76, drop: 44, ms: 2700 },
+      { x: 0.76, drop: 32, ms: 2700 },
     ],
     /** The cord starts this many px up inside the awning; the lamps are drawn smaller than the picture. */
     tuckPx: 8,

@@ -15,6 +15,7 @@ import { OUTLINE, circle, drawPlank, ellipse, outlined, roundRect, tint } from '
 import { inSky } from './layer-anchor';
 import { Traveler } from './life';
 import { LayerThing } from './layer-life';
+import { hangAlpha } from './shop-hang';
 import { bakeDisplay, displayLife } from './shop-display';
 import { bakeFly } from './kitchen-zone';
 import { bakeStopsSky, type ZoneArt } from './zone-scenery';
@@ -221,29 +222,8 @@ export const shopArt: ZoneArt = {
     const awning = new LayerThing(scene, strips, {
       layer: WALL_LOOK.layer,
       halfH: awningLook.height,
+      fadeDown: hangAlpha,
     });
-    const narrow = (side: 0 | 1): LayerThing =>
-      new LayerThing(
-        scene,
-        [
-          {
-            texture: SHOP_TEX.awning,
-            at: { x: side, y: 0 },
-            offset: { x: -side * WALL_LOOK.awning.pieceW, y: -awningLook.bobPx },
-            origin: [0, 0] as const,
-            bob: { px: awningLook.bobPx, ms: awningLook.bobMs },
-            phase: side * awningLook.phaseStep,
-            tint: dim,
-          },
-        ],
-        {
-          layer: WALL_LOOK.layer,
-          series: WALL_LOOK.awning,
-          skipStart: true,
-          halfH: awningLook.height,
-          cropW: WALL_LOOK.awning.pieceW,
-        },
-      );
     const window = new LayerThing(
       scene,
       [
@@ -283,10 +263,12 @@ export const shopArt: ZoneArt = {
         { slot: 3, life: awning },
         {
           slot: 3,
-          life: new LayerThing(scene, lamps, { layer: WALL_LOOK.layer, halfH: lamp.height }),
+          life: new LayerThing(scene, lamps, {
+            layer: WALL_LOOK.layer,
+            halfH: lamp.height,
+            fadeDown: hangAlpha,
+          }),
         },
-        { slot: 3, life: narrow(0) },
-        { slot: 3, life: narrow(1) },
         { slot: 3, life: window },
         ...glass.map((life) => ({ slot: 3, life })),
         { slot: 3, life: sweets },

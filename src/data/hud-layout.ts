@@ -5,6 +5,8 @@ const BADGE_SIZE = 108;
 const BADGE_COUNTER_INSET = 10;
 const BADGE_COUNTER_DROP = 22;
 const BADGE_CHIP_HEIGHT = 58;
+/** The plate of the wobble bar («Качка»), also one of `HUD_LAYOUT.plates`. */
+const WOBBLE_PLATE = { x: 186, y: BAR_Y - 34, width: 708, height: 68 };
 
 /** The pause window: three buttons and the switches under them (a `PopupWindow` of the kit). */
 export const PAUSE = {
@@ -90,10 +92,11 @@ export const HUD_LAYOUT = {
     { x: 880, y: 26, width: 186, height: 90 },
     { x: 400, y: 60, width: 280, height: 140 },
     { x: 470, y: 226, width: 140, height: 72 },
-    { x: 186, y: BAR_Y - 34, width: 708, height: 68 },
+    WOBBLE_PLATE,
     { x: 440, y: 426, width: 620, height: 86 },
     { x: 24, y: BADGE_ROW_Y - BADGE_SIZE / 2, width: 248, height: BADGE_SIZE + 24 },
   ],
+  wobblePlate: WOBBLE_PLATE,
   /** Lowest screen y the HUD (height, score, wobble bar, badge row) reaches. */
   bottomEdge: BADGE_ROW_Y + BADGE_SIZE / 2,
   /** Lowest screen y of the badge row including the counter chips that hang under the icons. */
