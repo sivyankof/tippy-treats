@@ -1,4 +1,5 @@
 import type * as Phaser from 'phaser';
+import { probeClip } from '../clip-guard';
 
 /** One deferred bake: draws and uploads a single texture. */
 export type BakeStep = () => void;
@@ -111,6 +112,7 @@ export function bakeTexture(
     // `finish` edits the finished pixels (cuts a piece out of the picture).
     const context = finish ? canvas.getContext('2d') : null;
     if (finish && context) finish(context);
+    probeClip(scene, key, canvas.width, canvas.height, draw);
     // Small pictures drawn many times per frame share an atlas page (see shared-atlas.ts).
     if (!sharedStore?.(scene, key, canvas)) scene.textures.addCanvas(key, canvas);
   } finally {

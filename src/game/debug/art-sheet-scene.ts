@@ -2,6 +2,8 @@ import * as Phaser from 'phaser';
 import { ART_SHEET, isSheetPicture } from '../../data/art-sheet';
 import { SCENES } from '../scene-keys';
 import { LIVE_PICTURES } from './art-sheet-live';
+import { clipSummary, clipTightLines } from '../clip-guard';
+import { atlasPageCount } from '../ui/shared-atlas';
 import { primeArtTextures } from './art-sheet-prime';
 
 /**
@@ -16,6 +18,10 @@ export class ArtSheetScene extends Phaser.Scene {
 
   create(): void {
     primeArtTextures(this);
+    const lines = [clipSummary(), `atlas pages: ${atlasPageCount(this.textures)}`];
+    const report = lines.join('\n');
+    console.log(report);
+    console.log(['clip tight:', ...clipTightLines()].join('\n'));
     const keys = this.textures
       .getTextureKeys()
       .filter(isSheetPicture)
@@ -25,7 +31,8 @@ export class ArtSheetScene extends Phaser.Scene {
     const rows = Math.ceil(keys.length / columns);
     const liveRows = Math.ceil(LIVE_PICTURES.length / columns);
     const gridHeight = rows * (cellHeight + gap);
-    const height = margin * 2 + gridHeight + liveRows * (cellHeight + gap) - gap;
+    const reportHeight = (report.split('\n').length + 1) * ART_SHEET.reportLineHeight;
+    const height = margin * 2 + gridHeight + liveRows * (cellHeight + gap) - gap + reportHeight;
     this.scale.setGameSize(width, height);
     this.cameras.main.setBackgroundColor(ART_SHEET.background);
     keys.forEach((key, i) => {
@@ -33,6 +40,12 @@ export class ArtSheetScene extends Phaser.Scene {
       const y = margin + Math.floor(i / columns) * (cellHeight + gap);
       this.drawCell(key, x, y);
     });
+    this.add
+      .text(margin, height - margin - reportHeight + gap, report, {
+        font: ART_SHEET.captionFont,
+        color: ART_SHEET.reportColor,
+      })
+      .setOrigin(0, 0);
     LIVE_PICTURES.forEach((picture, i) => {
       const x = margin + (i % columns) * (cellWidth + gap);
       const y = margin + gridHeight + Math.floor(i / columns) * (cellHeight + gap);
