@@ -21,15 +21,20 @@ export const DEPTH = {
   /** Dashed guides of the ghost, and the rim of the brownie's bubble, over the tower. */
   guides: 26,
   bubble: 27,
-  /** Glaze strands of a cut: over the tower, behind the piece they hold on to. */
-  cutStrands: 27.5,
-  /** Arms of a scared piece: over its body, they reach out from its sides. */
+  /** Arms of a scared piece: over its body, they reach out from its sides (outline, fill, light side). */
   cutArms: 28.1,
-  /** Beads and the bridge of glaze: over the piece, so the bridge is seen at its edge. */
-  cutBeads: 28.2,
+  cutArmsFill: 28.11,
+  cutArmsLight: 28.12,
+  /**
+   * Glaze of a cut (strands, beads, the bridge, drops): over the piece. All outlines first, then all fills,
+   * then the stripes, so overlapping parts of the glaze leave no seams.
+   */
+  cutGlazeOutline: 28.2,
+  cutGlazeFill: 28.21,
+  cutGlazeGloss: 28.22,
   pieces: 28,
-  /** Motion dashes beside a falling scared piece. */
-  cutDashes: 28.5,
+  /** Motion dashes behind a falling scared piece, under it. */
+  cutDashes: 27.95,
   /** Stars circling over the splatted guest of the tower: behind it and in front of it. */
   guestStarsBack: 27.9,
   /** A guest pressed under a layer sits half a layer step below that layer, over the layer under it. */

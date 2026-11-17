@@ -81,8 +81,30 @@ export const CUT_LOOK = {
     /** The bridge of glaze at the let-go: a blob on the cut that grows in `growMs`, then shrinks and fades over `settleMs` as the strands take over. Size in px at its thickest. */
     blob: { widthPx: 38, heightPx: 54, growMs: 50, settleMs: 300 },
     /** After the snap: the stubs spring back with overshoot and curl, drops fall. */
-    recoil: { restShare: 0.14, curlDeg: 55, bulge: 1.7, fadeFrom: 0.55 },
-    drops: { count: [2, 3], sizePx: 20, gravity: 2000, speedX: 90, lifeMs: 420 },
+    recoil: {
+      restShare: 0.2,
+      curlDeg: 55,
+      /** Picture stage of a stub (a thick one, not a splinter), its thickness as a share of the strand at first and at the end, and the round tip: share of the stub thickness. */
+      stage: 1,
+      thickStart: 1.1,
+      thickEnd: 0.5,
+      tip: 1.35,
+      fadeFrom: 0.55,
+    },
+    /** The round caps where a strand holds on: share of the thickness at the anchor. */
+    anchorCap: 0.9,
+    /** Light tone of the glaze for the stripes (share of white) and their opacity. */
+    gloss: { mix: 0.55, alpha: 0.85, beadScale: 0.5 },
+    drops: {
+      count: [2, 3],
+      sizePx: 18,
+      gravity: 2000,
+      speedX: 90,
+      spreadPx: 16,
+      lifeMs: 420,
+      stretchPerSpeed: 0.0007,
+      maxStretch: 0.9,
+    },
     /** The drop that stays on the cut edge of the layer. */
     trace: {
       widthPx: 32,
@@ -97,10 +119,15 @@ export const CUT_LOOK = {
 
   panic: {
     /** Arms: size, where they sit on the piece (share of its width from the centre, px from its centre in height), the wave. */
-    arm: { length: 48, thick: 15, handPx: 24 },
+    arm: { length: 40, thick: 15, handPx: 28, thumbPx: 13, thumbOutPx: 11 },
+    /** The lighter side of the arm: its width (px) and how far it is from the arm's middle (px); lighter share of the cake colour. */
+    light: { widthPx: 4, offsetPx: 3.5, mix: 0.4 },
     /** Where the shoulders sit: this far in from the side of the piece, and this far from its centre in height. */
     armInset: 2,
     armY: -4,
+    /** A face keeps this far (px, half its width and a margin) from the screen edge; it slides along the piece at this ease (share per frame). */
+    faceKeepPx: 70,
+    faceEase: 0.3,
     /** The arms grow out over this long after the let-go. */
     armGrowMs: 100,
     waveDeg: 50,
@@ -108,7 +135,21 @@ export const CUT_LOOK = {
     /** The arm's rest pose from straight up, outwards. */
     restDeg: 25,
     /** Motion dashes beside the piece. */
-    dashes: { count: [2, 3], flickerMs: 90, gap: 34, lift: 18, stagger: 10, fadeInMs: 80 },
+    dashes: {
+      count: [2, 3],
+      /** Sideways gap between dashes, the gap behind the piece, and how far every other one lags (px). */
+      gap: 30,
+      behind: 14,
+      stagger: 14,
+      /** They show as the piece picks up speed: fully at `fullSpeed` (px/s); the length follows the speed. */
+      fullSpeed: 420,
+      lengthScale: [0.55, 1.2],
+      /** Gentle breathing of the opacity (share and period, ms). */
+      breath: { share: 0.2, periodMs: 260 },
+      /** Fade of the dashes with the piece (they follow its alpha), and the ease of the speed estimate (0..1 per frame). */
+      speedEase: 0.35,
+      alpha: 0.9,
+    },
   },
 } as const;
 
@@ -116,20 +157,42 @@ export const CUT_LOOK = {
 export const CUT_VARIANT_NAMES = ['plain', 'strands', 'panic', 'big'] as const;
 export type CutVariantName = (typeof CUT_VARIANT_NAMES)[number];
 
-/** The baked pictures of the cuts (keys of the shared atlas, `fx_` prefix). White fill and a grey outline: shown tinted, the outline becomes a darker tone of the fill colour. */
+/**
+ * The baked pictures of the cuts (keys of the shared atlas, `fx_` prefix). Every body is two white
+ * pictures of one size: the fill and the outline (the same shape grown by `outline`). All outlines of
+ * a cut are shown first and all fills over them, so overlapping parts of one body leave no seams;
+ * the outline is tinted with the warm dark tone of the fill colour.
+ */
 export const CUT_TEXTURES = {
   /** Half a strand, thick at its open left end, thin at its right end: one picture per stage of thinning. */
   strand: ['fx_cut_strand_0', 'fx_cut_strand_1', 'fx_cut_strand_2', 'fx_cut_strand_3'],
+  strandOutline: [
+    'fx_cut_strand_o_0',
+    'fx_cut_strand_o_1',
+    'fx_cut_strand_o_2',
+    'fx_cut_strand_o_3',
+  ],
   bead: 'fx_cut_bead',
+  beadOutline: 'fx_cut_bead_o',
   blob: 'fx_cut_blob',
+  blobOutline: 'fx_cut_blob_o',
+  /** A teardrop, its point up: it falls point-last. */
+  drop: 'fx_cut_drop',
+  dropOutline: 'fx_cut_drop_o',
+  /** A light stripe along a strand and a light spot on a bead, tinted with a light tone of the glaze. */
+  gloss: 'fx_cut_gloss',
+  dot: 'fx_cut_dot',
   hang: 'fx_cut_hang',
   arm: 'fx_cut_arm',
+  armOutline: 'fx_cut_arm_o',
+  /** The lighter side of an arm and the light spot of its hand. */
+  armLight: 'fx_cut_arm_l',
   dash: 'fx_cut_dash',
 } as const;
 
 /** Shapes of the baked pictures. */
 export const CUT_PICTURE = {
-  /** Grey of the outline: tinted by a colour it gives that colour's darker tone. */
+  /** Grey of the outline of the hanging drop (it is one picture tinted with the glaze). */
   outlineGrey: 0x9a9a9a,
   /** Empty room around the drawing (the picture field rule). */
   pad: 4,
@@ -142,9 +205,14 @@ export const CUT_PICTURE = {
     midShare: [1, 0.72, 0.46, 0.26],
     /** The flare at the open end holds the full thickness this far (share of the length). */
     flareHold: 0.18,
+    /** The light stripe: from/to (share of the length), thickness (px), and how far it sits above the middle line (share of the half thickness). */
+    gloss: { from: 0.14, to: 0.8, thick: 5, lift: 0.38 },
   },
   bead: { size: 16 },
+  dot: { width: 6, height: 4 },
   blob: { width: 38, height: 54 },
+  /** The point of a teardrop: radius of its tip (px) and how fast the neck widens (power; more is narrower and longer). */
+  drop: { width: 18, height: 28, tipRadius: 1.5, neckCurve: 1.1 },
   hang: { width: 32, height: 48 },
   dash: { length: 34, thick: 7 },
 } as const;
