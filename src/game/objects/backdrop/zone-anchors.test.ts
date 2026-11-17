@@ -60,6 +60,7 @@ import { showcaseArt } from './showcase-zone';
 import { SpaceVisitor } from './space-visitor';
 import { spaceArt } from './space-zone';
 import { starsArt } from './stars-zone';
+import { StreetWeather } from './street-weather';
 import { WeatherBank, WeatherNight } from './weather-sky';
 import { GlassWeatherLife } from './window-weather';
 import type { ZoneArt } from './zone-scenery';
@@ -92,7 +93,10 @@ const SKY_ALLOWED: Record<
   planet: { classes: [PlanetLife], zones: ['space'] },
   visitor: { classes: [SpaceVisitor], zones: ['space'] },
   mountains: { classes: [Mountains], zones: ['roof', 'clouds'] },
-  weather: { classes: [WeatherBank, WeatherNight, GlassWeatherLife], zones: 'any' },
+  weather: {
+    classes: [WeatherBank, WeatherNight, GlassWeatherLife, StreetWeather],
+    zones: 'any',
+  },
 };
 
 interface Built {
