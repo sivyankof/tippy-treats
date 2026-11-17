@@ -24,7 +24,7 @@ import { showcaseArt } from './showcase-zone';
 import { spaceArt } from './space-zone';
 import { starsArt } from './stars-zone';
 import { ZoneFade } from './zone-fade';
-import { zoneMixOf } from './zone-mix';
+import { haloZoneMult, zoneMixOf } from './zone-mix';
 import { weatherShareOf } from './weather-share';
 import { PrepQueue, prepTarget, sameTarget, type PrepTarget } from './zone-prep';
 import {
@@ -77,6 +77,8 @@ interface Prep {
 export class Backdrop {
   private readonly fade: ZoneFade;
   private readonly sceneries = new Map<number, ZoneScenery>();
+  /** The keys of `sceneries`, kept as an array so the per-frame zone sums do not make an iterator each time. */
+  private readonly liveIndices: number[] = [];
   private readonly counter: Counter;
   private readonly ctx: FrameCtx;
   /** The steps that bake and build what the coming change shows, a few per frame. */
@@ -192,7 +194,7 @@ export class Backdrop {
     if (this.still) return 0;
     return weatherShareOf(
       view,
-      this.sceneries.keys(),
+      this.liveIndices,
       this.fade.current,
       zoneIdOf,
       this.alphaOf,
@@ -202,7 +204,12 @@ export class Backdrop {
 
   /** A per-zone number blended with the zone cross-fade (see `zoneMixOf`). */
   zoneMix(valueOf: (zone: ZoneId) => number): number {
-    return zoneMixOf(this.sceneries.keys(), this.fade.current, zoneIdOf, this.alphaOf, valueOf);
+    return zoneMixOf(this.liveIndices, this.fade.current, zoneIdOf, this.alphaOf, valueOf);
+  }
+
+  /** The halo of a long combo is fainter in the dark sky zones, following the cross-fade. */
+  haloMult(): number {
+    return this.zoneMix(haloZoneMult);
   }
 
   /** True while the backdrop cross-fades from one zone into the next. */
@@ -247,6 +254,7 @@ export class Backdrop {
       if (alpha === 0 && index !== this.fade.current) {
         scenery.destroy();
         this.sceneries.delete(index);
+        this.liveIndices.splice(this.liveIndices.indexOf(index), 1);
         continue;
       }
       scenery.setAlpha(alpha);
@@ -318,6 +326,7 @@ export class Backdrop {
     scenery.setAlpha(this.fade.alphaOf(index));
     scenery.update(this.ctx, this.scrollY);
     this.sceneries.set(index, scenery);
+    this.liveIndices.push(index);
   }
 
   /** Bakes what zone `index` still needs and builds it, hidden and not yet updated. */

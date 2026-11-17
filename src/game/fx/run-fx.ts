@@ -65,6 +65,12 @@ export interface CameraInfo {
 /** How many of the topmost layers a sparkle can stand beside (the rows it may reach below the top). */
 const SPARKLE_LAYERS = Math.ceil(TOWER_SPARKLES.rowsBelow);
 
+/** What the effects read from the backdrop: the creature the guest leaves from and the zone's halo dimming. */
+export interface BackdropLink {
+  guestSource(): GuestSource | null;
+  haloMult(): number;
+}
+
 export class RunFx {
   readonly tower: TowerView;
   private readonly flyingView: FlyingLayerView;
@@ -102,6 +108,7 @@ export class RunFx {
   } | null = null;
 
   private glowOn = false;
+  private backdrop: BackdropLink | null = null;
   private missPiece: LayerView | null = null;
   /** Time left of the miss reaction; `null` when no miss is waiting. */
   private missWaitMs: number | null = null;
@@ -207,9 +214,13 @@ export class RunFx {
     return true;
   }
 
-  /** The backdrop creature the tower's guest flies out of (it is hidden there while the guest is out). */
-  setGuestSource(get: () => GuestSource | null): void {
-    this.guest.setSource(get);
+  /**
+   * Links the backdrop: the creature the tower's guest flies out of (it is hidden there while the guest is
+   * out) and the zone behind the tower that dims the combo halo.
+   */
+  setBackdrop(backdrop: BackdropLink): void {
+    this.backdrop = backdrop;
+    this.guest.setSource(() => backdrop.guestSource());
   }
 
   /** The miss has played out: the run may be declined. */
@@ -367,6 +378,7 @@ export class RunFx {
     fxGuard.call('kick', this.kick, this.kick.update, visualMs);
     const record = this.recordMoment;
     fxGuard.call('record-moment', record, record.update, visualMs, timeMs, state, cam);
+    fxGuard.call('glow-zone', this, this.dimGlowByZone);
     fxGuard.call('glow', this, this.placeGlow, timeMs, cam);
     fxGuard.call('sparkles', this, this.updateSparkles, visualMs, state, cam);
   }
@@ -538,8 +550,8 @@ export class RunFx {
   }
 
   /** Dims the halo by the zone behind the tower (already blended with the backdrop fade). */
-  setGlowZone(mult: number): void {
-    this.glow.zoneMult = mult;
+  private dimGlowByZone(): void {
+    if (this.backdrop) this.glow.zoneMult = this.backdrop.haloMult();
   }
 
   private setGlow(on: boolean): void {
