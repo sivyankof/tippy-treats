@@ -9,7 +9,8 @@ import {
 import { shade } from '../../../util/color';
 import { bakeTexture } from '../../ui/bake-texture';
 import type { FrameCtx, Life } from './life';
-import { WallThing } from './wall-life';
+import { onLayer } from './layer-anchor';
+import { LayerThing } from './layer-life';
 import { circle, ellipse, outlined, roundRect, tint as muteTint } from './art-kit';
 
 type Graphics = Phaser.GameObjects.Graphics;
@@ -118,10 +119,11 @@ export function bakeDisplay(scene: Phaser.Scene): void {
  * `minHeight` tall: a short screen has no room, so the picture is left out, not shrunk.
  */
 class DisplayLife implements Life {
+  readonly anchor = onLayer(WALL_LOOK.layer);
   readonly objects: readonly Phaser.GameObjects.GameObject[];
   private shown: boolean | null = null;
 
-  constructor(private readonly inner: WallThing) {
+  constructor(private readonly inner: LayerThing) {
     this.objects = inner.objects;
   }
 
@@ -138,7 +140,7 @@ class DisplayLife implements Life {
 /** The counter at the left edge of the run; it breathes with the window and bobs a little. */
 export function displayLife(scene: Phaser.Scene): Life {
   return new DisplayLife(
-    new WallThing(
+    new LayerThing(
       scene,
       [
         {
@@ -149,7 +151,7 @@ export function displayLife(scene: Phaser.Scene): Life {
           bob: { px: D.bob.px, ms: D.bob.ms },
         },
       ],
-      { series: WALL_LOOK.display, halfH: (D.h * D.unit) / 2 },
+      { layer: WALL_LOOK.layer, series: WALL_LOOK.display, halfH: (D.h * D.unit) / 2 },
     ),
   );
 }

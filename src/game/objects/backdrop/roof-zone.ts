@@ -8,7 +8,12 @@ import type { WeatherId } from '../../../data/weather';
 import { multiplyColor } from '../../../util/color';
 import { bakeTexture } from '../../ui/bake-texture';
 import { tiled } from './art-kit';
+import { inSky, onLayer } from './layer-anchor';
 import { Hover, PuffColumn, Traveler } from './life';
+
+/** The layer of the roofs with the chimney, and the layer with the washing line. */
+const ROOF_LAYER = 1;
+const LINE_LAYER = 2;
 import { bakeMountains, Mountains } from './mountains';
 import { bakeWeatherSky } from './weather-art';
 import { fixtureTintOf, mountainTintOf } from './weather-palette';
@@ -205,14 +210,17 @@ export const roofArt: ZoneArt = {
         : { ...life.smoke, tint: multiplyColor(life.smoke.tint, fixture) };
     const lives: SceneryDef['lives'][number][] = [
       { slot: MOUNTAIN_SLOT.roof, life: new Mountains(scene, mountainTintOf(weather)) },
-      { slot: 1, life: new Hover(scene, [chimney]) },
-      { slot: 1, life: new PuffColumn(scene, smoke, life.smokeAt, life.smokeOffset) },
+      { slot: 1, life: new Hover(scene, [chimney], onLayer(ROOF_LAYER)) },
+      {
+        slot: 1,
+        life: new PuffColumn(scene, smoke, onLayer(ROOF_LAYER), life.smokeAt, life.smokeOffset),
+      },
     ];
     // The washing is taken in and the birds are asleep at night.
     if (!night) {
       lives.push(
-        { slot: 2, life: new Hover(scene, [life.rope, ...life.laundry]) },
-        { slot: 2, life: new Traveler(scene, life.birds) },
+        { slot: 2, life: new Hover(scene, [life.rope, ...life.laundry], onLayer(LINE_LAYER)) },
+        { slot: 2, life: new Traveler(scene, life.birds, inSky('traveler')) },
       );
     }
     return {

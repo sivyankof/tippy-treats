@@ -3,7 +3,7 @@ import { ANIM } from '../../../data/anim';
 import { MENU } from '../../../data/menu-layout';
 import { bakeSharedArt } from '../../objects/backdrop/art-kit';
 import { kitchenArt } from '../../objects/backdrop/kitchen-zone';
-import type { FrameCtx } from '../../objects/backdrop/life';
+import { newFrameCtx, type FrameCtx } from '../../objects/backdrop/life';
 import { ZoneScenery, type SceneryLook } from '../../objects/backdrop/zone-scenery';
 import { bakeTexture } from '../bake-texture';
 
@@ -50,15 +50,7 @@ export class MenuScenery {
     bakeSharedArt(scene);
     kitchenArt.bake(scene, MENU_LOOK);
     bakeShade(scene);
-    this.ctx = {
-      timeMs: scene.time.now,
-      deltaMs: 0,
-      width,
-      height,
-      clearBand: null,
-      towerLayers: 0,
-      wallDown: 0,
-    };
+    this.ctx = newFrameCtx(width, height, null, scene.time.now);
     this.scenery = new ZoneScenery(
       scene,
       'kitchen',

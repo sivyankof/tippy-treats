@@ -12,6 +12,7 @@ import {
 } from '../../fx/plain-style';
 import { bakeTexture } from '../../ui/bake-texture';
 import type { FrameCtx, Life } from './life';
+import { inSky } from './layer-anchor';
 import { mountainRise } from './mountain-placement';
 
 const L = MOUNTAIN_LOOK;
@@ -144,6 +145,8 @@ export function bakeMountains(scene: Phaser.Scene): void {
  * picture at the same place, so the zone cross-fade does not move it.
  */
 export class Mountains implements Life {
+  /** The mountains follow the tower's height themselves (`towerLayersAt`), far beyond any layer. */
+  readonly anchor = inSky('mountains');
   readonly objects: Phaser.GameObjects.Image[];
   private readonly image: Phaser.GameObjects.Image;
 

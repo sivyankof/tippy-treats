@@ -7,8 +7,9 @@ import { mixColor, shade } from '../../../util/color';
 import { outlineColor } from '../../fx/plain-style';
 import { bakeTexture } from '../../ui/bake-texture';
 import { drawPlank } from './art-kit';
+import { inSky, onLayer } from './layer-anchor';
 import { Hover, PuffColumn, Traveler } from './life';
-import { WallThing } from './wall-life';
+import { LayerThing } from './layer-life';
 import type { ZoneArt } from './zone-scenery';
 import { RunOnly, bakeGlassItems, bakeWindow, windowGlassLives } from './window-weather';
 import { KITCHEN_SHELF, WALL_LOOK, WINDOW_LOOK, windowKey } from '../../../data/window-look';
@@ -21,6 +22,8 @@ const K = BD_TEX.kitchen;
 const C = BACKDROP_COLORS.kitchen;
 
 const SHELF = KITCHEN_SHELF;
+/** The tiled wall (layer 1) carries the clock, the pot and the ladle rail; they are drawn right above it. */
+const KITCHEN_LAYER = 1;
 const JAR_LOWER = 0.38;
 const JAR_PAD = 26;
 
@@ -221,7 +224,7 @@ export const kitchenArt: ZoneArt = {
   build(scene, look) {
     const life = BACKDROP_LIFE.kitchen;
     // The window and the jar hang on the wall with the shelves: they ride with it (wall-life.ts).
-    const window = new WallThing(
+    const window = new LayerThing(
       scene,
       [
         {
@@ -231,25 +234,42 @@ export const kitchenArt: ZoneArt = {
           pulse: WINDOW_LOOK.pulse,
         },
       ],
-      { series: WALL_LOOK.window, mirror: true, halfH: WINDOW_LOOK.height / 2 },
+      {
+        layer: WALL_LOOK.layer,
+        series: WALL_LOOK.window,
+        mirror: true,
+        halfH: WINDOW_LOOK.height / 2,
+      },
     );
-    const jar = new WallThing(
+    const jar = new LayerThing(
       scene,
       [{ texture: JAR_KEY, at: SHELF.jar.at, offset: { x: 0, y: 0 }, pulse: WINDOW_LOOK.pulse }],
-      { series: WALL_LOOK.jar, halfH: (SHELF.jar.h + JAR_PAD + 40) / 2 },
+      { layer: WALL_LOOK.layer, series: WALL_LOOK.jar, halfH: (SHELF.jar.h + JAR_PAD + 40) / 2 },
     );
     const glass = windowGlassLives(scene, 'kitchen', look.weather, window.spots);
-    const steam = new PuffColumn(scene, life.steam, life.steamAt, life.steamOffset);
-    const fly = new Traveler(scene, life.fly);
+    const steam = new PuffColumn(
+      scene,
+      life.steam,
+      onLayer(KITCHEN_LAYER),
+      life.steamAt,
+      life.steamOffset,
+    );
+    const fly = new Traveler(scene, life.fly, inSky('traveler'));
     return {
       layers: [K.wallpaper, K.tiles, K.shelves, K.utensils],
       lives: [
-        { slot: 1, life: new Hover(scene, [life.pot, life.clock, life.rail]) },
-        { slot: 1, life: new Hover(scene, [life.clockHand, life.pendulum]) },
-        { slot: 1, life: new Hover(scene, life.ladles) },
-        { slot: 1, life: new Hover(scene, [life.lid]) },
+        {
+          slot: 1,
+          life: new Hover(scene, [life.pot, life.clock, life.rail], onLayer(KITCHEN_LAYER)),
+        },
+        {
+          slot: 1,
+          life: new Hover(scene, [life.clockHand, life.pendulum], onLayer(KITCHEN_LAYER)),
+        },
+        { slot: 1, life: new Hover(scene, life.ladles, onLayer(KITCHEN_LAYER)) },
+        { slot: 1, life: new Hover(scene, [life.lid], onLayer(KITCHEN_LAYER)) },
         { slot: 1, life: steam },
-        { slot: 3, life: new RunOnly([window, ...glass, jar]) },
+        { slot: 3, life: new RunOnly([window, ...glass, jar], onLayer(WALL_LOOK.layer)) },
         { slot: 3, life: fly },
       ],
       guest: fly,

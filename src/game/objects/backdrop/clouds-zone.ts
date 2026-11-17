@@ -5,6 +5,7 @@ import { BACKDROP_COLORS } from '../../../data/backdrop-colors';
 import { BACKDROP_LIFE } from '../../../data/backdrop-life';
 import { bakeTexture } from '../../ui/bake-texture';
 import { cloudShape, tiled } from './art-kit';
+import { inSky } from './layer-anchor';
 import { Traveler } from './life';
 import { bakeMountains, Mountains } from './mountains';
 import type { WeatherId } from '../../../data/weather';
@@ -123,8 +124,8 @@ export const cloudsArt: ZoneArt = {
       weatherSky: weatherSkyLives(scene, 'clouds', look.weather),
       lives: [
         { slot: MOUNTAIN_SLOT.clouds, life: new Mountains(scene, mountainTintOf(look.weather)) },
-        { slot: 1, life: new Traveler(scene, life.balloon) },
-        { slot: 2, life: new Traveler(scene, life.plane) },
+        { slot: 1, life: new Traveler(scene, life.balloon, inSky('traveler')) },
+        { slot: 2, life: new Traveler(scene, life.plane, inSky('traveler')) },
       ],
     };
   },

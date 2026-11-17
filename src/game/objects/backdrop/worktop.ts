@@ -8,6 +8,7 @@ import { shade } from '../../../util/color';
 import { DEPTH } from '../../depth';
 import { bakeTexture } from '../../ui/bake-texture';
 import { bakeSharedArt } from './art-kit';
+import { FIXED } from './layer-anchor';
 import { PuffColumn } from './life';
 
 const K = BD_TEX.kitchen;
@@ -78,7 +79,7 @@ export class Counter {
       .image(COUNTER.mug.x, this.top + COUNTER.mug.sink, K.mug)
       .setOrigin(0.5, 1)
       .setDepth(depth + 0.02);
-    this.steam = new PuffColumn(scene, COUNTER.mug.steam);
+    this.steam = new PuffColumn(scene, COUNTER.mug.steam, FIXED);
     for (const puff of this.steam.objects) scene.add.existing(puff).setDepth(depth + 0.03);
   }
 

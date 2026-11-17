@@ -4,6 +4,7 @@ import { BACKDROP_COLORS } from '../../../data/backdrop-colors';
 import { BACKDROP_LIFE } from '../../../data/backdrop-life';
 import { bakeTexture } from '../../ui/bake-texture';
 import { glow, scatterPoints, sparkle, tiled } from './art-kit';
+import { inSky } from './layer-anchor';
 import { Hover, Traveler, Twinkles } from './life';
 import type { ZoneArt } from './zone-scenery';
 
@@ -104,9 +105,9 @@ export const starsArt: ZoneArt = {
     return {
       layers: [T.dust, T.mid, T.sparkles, T.glow],
       lives: [
-        { slot: 1, life: new Hover(scene, [life.glow, life.moon, ...life.eyes]) },
-        { slot: 2, life: new Twinkles(scene, life.twinkle) },
-        { slot: 2, life: new Traveler(scene, life.shooting) },
+        { slot: 1, life: new Hover(scene, [life.glow, life.moon, ...life.eyes], inSky('moon')) },
+        { slot: 2, life: new Twinkles(scene, life.twinkle, inSky('twinkles')) },
+        { slot: 2, life: new Traveler(scene, life.shooting, inSky('traveler')) },
       ],
     };
   },

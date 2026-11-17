@@ -1,13 +1,21 @@
 import * as Phaser from 'phaser';
 import type { HoverSpec } from '../../../data/backdrop-life';
 import { WALL_LOOK } from '../../../data/window-look';
-import { flightClearBand, hudKeepOutFade } from '../../camera-layout';
 import { applyPose, createImage, type FrameCtx, type Life } from './life';
 import { hoverPose, newPose } from './life-motion';
-import { copyMirrored, seriesRise, slotCopy, wallDriftX, type WallSeries } from './wall-anchor';
+import {
+  copyMirrored,
+  layerDriftX,
+  layerMute,
+  onLayer,
+  seriesRise,
+  slotCopy,
+  type Anchor,
+  type LayerSeries,
+} from './layer-anchor';
 
 /** Where one pool slot stands now, for what rides on it (the glass items of a window). */
-export interface WallSpot {
+export interface LayerSpot {
   /** Centre of the first picture of the slot, screen px. */
   x: number;
   y: number;
@@ -16,9 +24,11 @@ export interface WallSpot {
   alpha: number;
 }
 
-export interface WallOptions {
+export interface LayerOptions {
+  /** The parallax layer the thing stands on (0..3). */
+  layer: number;
   /** How the thing repeats on the wall; absent: only the start copy stands, and it rides away with the wall. */
-  series?: WallSeries;
+  series?: LayerSeries;
   /** Copies alternate sides of the tower (a flipped picture and a mirrored place). */
   mirror?: boolean;
   /** Half the height of the picture (px): it counts as on the screen while any part of it is. */
@@ -29,48 +39,29 @@ export interface WallOptions {
   cropW?: number;
 }
 
-function newSpot(): WallSpot {
+function newSpot(): LayerSpot {
   return { x: 0, y: 0, mirrored: false, alpha: 0 };
 }
 
 /**
- * Alpha factor of a wall thing at (`x`, `y`) with its picture `halfH` px tall to each side: things that pass under a HUD plate or
- * through the row of the flying layer keep `WALL_LOOK.muted` of their alpha, coming back over `featherPx`. `moved` (0..1) is how
- * far the wall has scrolled: the start view, where the things stand, is not muted.
- */
-export function wallMute(
-  x: number,
-  y: number,
-  halfH: number,
-  band: { top: number; bottom: number },
-  moved: number,
-): number {
-  if (moved === 0) return 1;
-  const { muted, featherPx } = WALL_LOOK;
-  const plate = hudKeepOutFade(x, y, halfH * 0.5, featherPx);
-  const row = Math.min(1, Math.max(band.top - (y + halfH), y - halfH - band.bottom, 0) / featherPx);
-  return 1 - (1 - Math.min(plate, row)) * (1 - muted) * moved;
-}
-
-/**
- * Pictures that ride with the wall that carries the shelves: the same speed as the wall (`ctx.wallDown`), the same place in
- * it on the start view as the `Hover` specs say. With a `series` the thing repeats up the wall from a pool made when the zone
+ * Pictures that ride with a parallax layer (the wall that carries the shelves, a roof): the same speed as the layer
+ * (`ctx.layerDown`), the same sway, the same place in it on the start view as the `Hover` specs say. With a `series` the thing repeats up the wall from a pool made when the zone
  * is built, so nothing is created in a run. Each pool slot holds one picture per spec.
  */
-export class WallThing implements Life {
+export class LayerThing implements Life {
   readonly objects: Phaser.GameObjects.Image[];
   /** One per pool slot. */
-  readonly spots: WallSpot[];
+  readonly spots: LayerSpot[];
   private readonly pool: number;
   private readonly pose = newPose();
-  private readonly band = { top: 0, bottom: 0 };
-  private bandHeight = -1;
+  readonly anchor: Anchor;
 
   constructor(
     scene: Phaser.Scene,
     private readonly specs: readonly HoverSpec[],
-    private readonly options: WallOptions,
+    private readonly options: LayerOptions,
   ) {
+    this.anchor = onLayer(options.layer);
     this.pool = options.series?.pool ?? 1;
     this.spots = Array.from({ length: this.pool }, newSpot);
     this.objects = Array.from({ length: this.pool * specs.length }, (_, i) => {
@@ -84,24 +75,21 @@ export class WallThing implements Life {
   }
 
   update(ctx: FrameCtx): void {
-    if (ctx.height !== this.bandHeight) {
-      this.bandHeight = ctx.height;
-      Object.assign(this.band, flightClearBand(ctx.height));
-    }
-    const { series, mirror, halfH, skipStart } = this.options;
+    const { series, mirror, halfH, skipStart, layer } = this.options;
+    const down = ctx.layerDown[layer] ?? 0;
     const first = this.specs[0];
     if (!first) return;
     const y0 = first.at.y * ctx.height + (first.offset?.y ?? 0);
-    const moved = Math.min(1, Math.abs(ctx.wallDown) / WALL_LOOK.muteRampPx);
-    const driftX = wallDriftX(ctx.timeMs);
+    const moved = Math.min(1, Math.abs(down) / WALL_LOOK.muteRampPx);
+    const driftX = layerDriftX(ctx, layer);
     const count = this.specs.length;
     for (let slot = 0; slot < this.pool; slot++) {
-      const n = series ? slotCopy(slot, series, y0, ctx.wallDown, ctx.height) : 0;
+      const n = series ? slotCopy(slot, series, y0, down, ctx.height) : 0;
       const rise = series ? seriesRise(n, series, ctx.height) : 0;
       const spot = this.spots[slot];
       if (!spot) continue;
       // A copy far off the screen is only hidden: no pose is worked out for it.
-      const centreY = y0 + ctx.wallDown - rise;
+      const centreY = y0 + down - rise;
       const reach = halfH + WALL_LOOK.offscreenSlackPx;
       const away = skipStart === true && n === 0;
       if (away || centreY + reach < 0 || centreY - reach > ctx.height) {
@@ -116,8 +104,8 @@ export class WallThing implements Life {
         if (!spec || !image) continue;
         const pose = hoverPose(spec, ctx.width, ctx.height, ctx.timeMs, this.pose);
         pose.x = (mirrored ? ctx.width - pose.x : pose.x) + driftX;
-        pose.y += ctx.wallDown - rise;
-        pose.alpha *= wallMute(pose.x, pose.y, halfH, this.band, moved);
+        pose.y += down - rise;
+        pose.alpha *= layerMute(pose.x, pose.y, halfH, ctx.height, moved);
         applyPose(image, pose);
         image.setFlipX(mirrored);
         image.setVisible(pose.y + halfH > 0 && pose.y - halfH < ctx.height);

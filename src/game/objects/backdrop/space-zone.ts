@@ -5,6 +5,7 @@ import { BACKDROP_LIFE } from '../../../data/backdrop-life';
 import { bakeTexture, deferStep } from '../../ui/bake-texture';
 import { fillBlobRows } from './blob-pixels';
 import { glow, scatterPoints, sparkle, tiled } from './art-kit';
+import { inSky } from './layer-anchor';
 import { Traveler } from './life';
 import { SpaceVisitor } from './space-visitor';
 import { bakeSpaceVisitors } from './space-visitor-art';
@@ -113,8 +114,8 @@ export const spaceArt: ZoneArt = {
   build(scene, { lap, topWidth }) {
     const life = BACKDROP_LIFE.space;
     const planet = new PlanetLife(scene, lap, topWidth);
-    const satellite = new Traveler(scene, life.satellite);
-    const comet = new Traveler(scene, life.comet);
+    const satellite = new Traveler(scene, life.satellite, inSky('traveler'));
+    const comet = new Traveler(scene, life.comet, inSky('traveler'));
     return {
       lapLife: planet,
       layers: [P.dust, P.nebula, P.nebulaTwo, P.sparkles],

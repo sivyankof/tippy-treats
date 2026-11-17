@@ -177,11 +177,6 @@ export const GLASS_LOOK = {
 export const WALL_LOOK = {
   /** The parallax layer of the wall with the shelves (index into `ANIM.parallax` and `BACKDROP.drift`). */
   layer: 2,
-  /**
-   * The wall of zone 1 does not drift on one way: it sways to and fro (`tilePositionX = px * sin(2 pi t / periodMs)`), and everything
-   * on it sways the same, so nothing slides against it and nothing travels behind the tower.
-   */
-  sway: { px: 12, periodMs: 24000 },
   /** The window: one copy per `spacing` screens, right and left of the tower in turn, from a pool built with the zone. */
   window: { firstGap: 1.3, spacing: 1.3, pool: 2 },
   /** The jar and the sweets bracket: one copy per 2.6 screens, midway between two windows (never next to one). */

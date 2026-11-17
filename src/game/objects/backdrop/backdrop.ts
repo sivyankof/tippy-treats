@@ -9,16 +9,15 @@ import { flyingLap } from '../../../core/space-laps';
 import { DEPTH } from '../../depth';
 import { markPerfPart } from '../../perf/perf-marks';
 import { collectBakeSteps, type BakeStep } from '../../ui/bake-texture';
-import { surfaceScreenY, trayScrollY, travellerClearBand } from '../../camera-layout';
+import { surfaceScreenY, travellerClearBand } from '../../camera-layout';
 import { bakeSharedArt } from './art-kit';
 import { towerLayersAt } from './mountain-placement';
-import { wallDownAt } from './wall-anchor';
 import { bakeFarArt } from './far-plane';
 import { cloudsArt } from './clouds-zone';
 import { Counter } from './worktop';
 import { kitchenArt } from './kitchen-zone';
 import type { GuestSource } from './guest-source';
-import type { FrameCtx } from './life';
+import { newFrameCtx, type FrameCtx } from './life';
 import { roofArt } from './roof-zone';
 import { shopArt } from './shop-zone';
 import { showcaseArt } from './showcase-zone';
@@ -70,6 +69,8 @@ export class Backdrop {
   private bakeQueue: BakeStep[] = [];
   private lastNowMs: number;
   private scrollY = 0;
+  /** True once the first frame has set the start view of the zones built with the backdrop. */
+  private started = false;
   /** Lap of Space of the layer in flight; 0 before Space. */
   private lap: number;
   /** Tower top width when the current lap began (the planet's lap 1 corridor); fixed for the lap. */
@@ -94,15 +95,7 @@ export class Backdrop {
     this.lapTopWidth = state.layers.at(-1)?.width;
     this.fade = new ZoneFade(state.zoneIndex, BACKDROP.fadeMs);
     this.lastNowMs = scene.time.now;
-    this.ctx = {
-      timeMs: scene.time.now,
-      deltaMs: 0,
-      width,
-      height,
-      clearBand: travellerClearBand(height),
-      towerLayers: 0,
-      wallDown: 0,
-    };
+    this.ctx = newFrameCtx(width, height, travellerClearBand(height), scene.time.now);
     this.counter = new Counter(scene, trayTopY, width);
     this.ensure(state.zoneIndex);
     this.prepareNext(state.zoneIndex);
@@ -171,9 +164,13 @@ export class Backdrop {
 
   /** Call every frame with the camera scroll. */
   update(scrollY: number): void {
+    if (!this.started) {
+      // The first frame is the start view: the zones built by now stand on their spots here.
+      this.started = true;
+      for (const scenery of this.sceneries.values()) scenery.startAt(scrollY);
+    }
     this.scrollY = scrollY;
     this.ctx.towerLayers = towerLayersAt(scrollY, this.trayTopY, surfaceScreenY(this.ctx.height));
-    this.ctx.wallDown = wallDownAt(scrollY, trayScrollY(this.trayTopY, this.ctx.height));
     if (this.still) return;
     const now = this.scene.time.now;
     const ctx = this.ctx;
@@ -264,6 +261,8 @@ export class Backdrop {
       this.ctx.height,
       this.look.weather,
     );
+    // A zone built later starts where the camera is now; those of the first frame are set by `update`.
+    scenery.startAt(this.scrollY);
     scenery.setAlpha(this.fade.alphaOf(index));
     scenery.update(this.ctx, this.scrollY);
     this.sceneries.set(index, scenery);

@@ -74,6 +74,12 @@ export const BD_TEX = {
 } as const;
 
 /** Numbers of the zone backdrops; colours are in `backdrop-colors.ts`, life in `backdrop-life.ts`. */
+/** Sideways sway of a parallax layer: amplitude in px and the period. */
+export interface LayerSway {
+  px: number;
+  periodMs: number;
+}
+
 export const BACKDROP = {
   /** The old zone flows into the new one over this long (docs/06, "Смена зоны"). */
   fadeMs: 1500,
@@ -119,6 +125,19 @@ export const BACKDROP = {
     stars: [2, 3, 5, 8],
     space: [2, 3, 5, 8],
   } satisfies Record<ZoneId, readonly [number, number, number, number]>,
+  /**
+   * A layer that carries pictures fixed to it (a wall with a clock, a roof with a chimney) does not drift on one way, or those
+   * pictures would slide out from behind the tower: it sways to and fro (`tilePositionX = px * sin(2 pi t / periodMs)`, so 0 at
+   * the start), and what stands on it sways the same. `null`: the layer carries nothing fixed and drifts as `drift` says.
+   */
+  sway: {
+    kitchen: [null, { px: 10, periodMs: 19000 }, { px: 12, periodMs: 24000 }, null],
+    showcase: [null, null, { px: 12, periodMs: 22000 }, null],
+    roof: [null, { px: 10, periodMs: 18000 }, { px: 12, periodMs: 23000 }, null],
+    clouds: [null, null, null, null],
+    stars: [null, null, null, null],
+    space: [null, null, null, null],
+  } satisfies Record<ZoneId, readonly (LayerSway | null)[]>,
   /** Alpha of each parallax layer (back to front) per zone. */
   layerAlpha: {
     kitchen: [1, 1, 1, 1],

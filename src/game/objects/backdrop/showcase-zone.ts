@@ -5,7 +5,12 @@ import { BACKDROP_LIFE, garlandWireY } from '../../../data/backdrop-life';
 import { LOGICAL_SIZE } from '../../../data/screen';
 import { bakeTexture } from '../../ui/bake-texture';
 import { glow, tiled } from './art-kit';
+import { onLayer } from './layer-anchor';
 import { Hover, Traveler, Twinkles } from './life';
+
+/** The street (layer 0) the passers-by walk on, and the layer of the shop front (treats) with the garland and the cake on its stand. */
+const STREET_LAYER = 0;
+const SHOW_LAYER = 2;
 import { bakeStopsSky, type ZoneArt } from './zone-scenery';
 import {
   AWNING_WEATHER,
@@ -239,10 +244,20 @@ export const showcaseArt: ZoneArt = {
       layers: [keys.street, keys.panes, S.treats, awningKey(look.weather)],
       layerAlpha: awningAlpha(look.weather),
       lives: [
-        ...life.walkers.map((spec) => ({ slot: 0, life: new Traveler(scene, spec) })),
-        { slot: 2, life: new Hover(scene, [life.garland.wire]) },
-        { slot: 2, life: new Twinkles(scene, life.garland.bulbs) },
-        { slot: 2, life: new Hover(scene, [life.cakeStand, life.cake, ...life.sprinkles]) },
+        ...life.walkers.map((spec) => ({
+          slot: 0,
+          life: new Traveler(scene, spec, onLayer(STREET_LAYER)),
+        })),
+        { slot: 2, life: new Hover(scene, [life.garland.wire], onLayer(SHOW_LAYER)) },
+        { slot: 2, life: new Twinkles(scene, life.garland.bulbs, onLayer(SHOW_LAYER)) },
+        {
+          slot: 2,
+          life: new Hover(
+            scene,
+            [life.cakeStand, life.cake, ...life.sprinkles],
+            onLayer(SHOW_LAYER),
+          ),
+        },
         ...(glass ? [{ slot: 3, life: glass }] : []),
       ],
     };
