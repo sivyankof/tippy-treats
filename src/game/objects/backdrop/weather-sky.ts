@@ -1,86 +1,90 @@
 import * as Phaser from 'phaser';
-import type { Rng } from '../../../core/rng';
-import { WEATHER_LOOK, WEATHER_TEX } from '../../../data/weather-look';
+import { Rng } from '../../../core/rng';
+import type { WeatherId } from '../../../data/weather';
+import { WEATHER_LOOK, WEATHER_TEX, type WeatherZone } from '../../../data/weather-look';
+import type { ZoneId } from '../../../data/zones';
 import { TWO_PI } from '../../../util/math';
-import { flashEnvelope, nextBoltAt, particleFade } from './weather-motion';
-import type { WeatherFrame, WeatherPart } from './weather-frame';
+import { effectsMode } from '../../effects-mode';
+import { flightClearBand, hudFloor, hudKeepOutFade } from '../../camera-layout';
+import type { FrameCtx, Life } from './life';
+import { bankKey } from './weather-art';
+import { bankEdge, flashEnvelope, nextBoltAt } from './weather-motion';
 
 const BANK = WEATHER_LOOK.bank;
 const BOLT = WEATHER_LOOK.lightning;
 const NIGHT = WEATHER_LOOK.night;
 
+/** Cloud banks of storms that are alive, so the debug hook can strike them. */
+const BANKS = new Set<WeatherBank>();
+
+/** Debug: every live storm bank strikes right away. */
+export function strikeLightningNow(): void {
+  for (const bank of BANKS) {
+    if (bank.alive) bank.strikeNow();
+    else BANKS.delete(bank);
+  }
+}
+
 /**
- * The cloud bank of rain and storm, part of the sky: a wide soft picture along the top edge with a
- * wavy lower edge. It drifts slowly (full and lite) and stands still on minimal. A storm adds
- * lightning: a pale overlay of the same bank and a jagged bolt inside it for 120-180 ms, no more
- * than once per 8-15 s; lite plays it too, minimal never.
+ * The cloud bank of rain and storm: one opaque figure that is part of the zone's sky, behind the
+ * houses. It drifts slowly on full and lite and stands still on minimal. A storm adds lightning, a
+ * pale twin of the bank and a jagged bolt that stays inside the cloud, in a flash of 120-180 ms
+ * every 8-15 s (full and lite; minimal none).
  */
-export class WeatherBank implements WeatherPart {
+export class WeatherBank implements Life {
   readonly objects: Phaser.GameObjects.Image[];
   private readonly bank: Phaser.GameObjects.Image;
-  private readonly flash: Phaser.GameObjects.Image | null;
-  private readonly bolt: Phaser.GameObjects.Image | null;
+  private readonly flash: Phaser.GameObjects.Image | null = null;
+  private readonly bolt: Phaser.GameObjects.Image | null = null;
   private nextAt: number;
   private flashAt = -1;
   private flashMs = 0;
-  private boltX = 0;
+  /** Where the strike stands (screen px) and whether it has a bolt (it may find no free place). */
+  private strike: { x: number; y: number; scale: number } | null = null;
+  private pending = false;
 
   constructor(
     scene: Phaser.Scene,
-    storm: boolean,
+    zone: WeatherZone,
+    weather: WeatherId,
     private readonly rng: Rng,
   ) {
-    this.bank = new Phaser.GameObjects.Image(
-      scene,
-      0,
-      0,
-      storm ? WEATHER_TEX.bankStorm : WEATHER_TEX.bankRain,
-    )
+    this.bank = new Phaser.GameObjects.Image(scene, 0, 0, bankKey(zone, weather))
       .setOrigin(0.5, 0)
       .setScale(BANK.scale);
-    this.flash = storm
-      ? new Phaser.GameObjects.Image(scene, 0, 0, WEATHER_TEX.bankFlash)
-          .setOrigin(0.5, 0)
-          .setScale(BANK.scale)
-          .setVisible(false)
-      : null;
-    this.bolt = storm
-      ? new Phaser.GameObjects.Image(scene, 0, 0, WEATHER_TEX.bolt)
-          .setOrigin(0.5, 0)
-          .setVisible(false)
-      : null;
     this.objects = [this.bank];
-    if (this.flash) this.objects.push(this.flash);
-    if (this.bolt) this.objects.push(this.bolt);
+    if (weather === 'storm') {
+      this.flash = new Phaser.GameObjects.Image(scene, 0, 0, bankKey(zone, weather, true))
+        .setOrigin(0.5, 0)
+        .setScale(BANK.scale)
+        .setVisible(false);
+      this.bolt = new Phaser.GameObjects.Image(scene, 0, 0, WEATHER_TEX.bolt)
+        .setOrigin(0.5, 0)
+        .setVisible(false);
+      this.objects.push(this.flash, this.bolt);
+      BANKS.add(this);
+    }
     this.nextAt = nextBoltAt(0, BOLT.firstMs, rng.next());
   }
 
-  /** Debug: the next bolt strikes right away. */
-  strikeNow(timeMs: number): void {
-    this.nextAt = timeMs;
+  get alive(): boolean {
+    return this.bank.scene !== undefined;
   }
 
-  layout(frame: WeatherFrame): void {
-    this.bank.setPosition(frame.width / 2, 0);
+  /** Debug: the next bolt strikes at the next frame. */
+  strikeNow(): void {
+    this.pending = true;
   }
 
-  update(frame: WeatherFrame): void {
-    const visible = frame.share > 0;
-    this.bank.setVisible(visible);
-    if (!visible) {
-      this.flash?.setVisible(false);
-      this.bolt?.setVisible(false);
-      return;
-    }
-    const still = frame.level === 'minimal';
-    const drift = still ? 0 : BANK.driftPx * Math.sin((TWO_PI * frame.timeMs) / BANK.driftMs);
-    const x = frame.width / 2 + drift;
-    this.bank.setPosition(x, 0).setAlpha(BANK.alpha * frame.share);
-    if (!this.flash || !this.bolt) return;
-    this.updateBolt(frame, x, still);
+  update(ctx: FrameCtx): void {
+    const still = effectsMode.level === 'minimal';
+    const drift = still ? 0 : BANK.driftPx * Math.sin((TWO_PI * ctx.timeMs) / BANK.driftMs);
+    const x = ctx.width / 2 + drift;
+    this.bank.setPosition(x, 0);
+    if (this.flash && this.bolt) this.updateStrike(ctx, x, still);
   }
 
-  private updateBolt(frame: WeatherFrame, bankX: number, still: boolean): void {
+  private updateStrike(ctx: FrameCtx, bankX: number, still: boolean): void {
     const { flash, bolt } = this;
     if (!flash || !bolt) return;
     if (still) {
@@ -88,46 +92,66 @@ export class WeatherBank implements WeatherPart {
       bolt.setVisible(false);
       return;
     }
-    if (this.flashAt < 0 && frame.timeMs >= this.nextAt) {
-      this.flashAt = frame.timeMs;
+    const now = ctx.timeMs;
+    if (this.flashAt < 0 && (this.pending || now >= this.nextAt)) {
+      this.pending = false;
+      this.flashAt = now;
       this.flashMs = this.rng.range(BOLT.flashMs[0], BOLT.flashMs[1]);
-      const range = BOLT.xRanges[this.rng.int(0, BOLT.xRanges.length - 1)] ?? BOLT.xRanges[0];
-      this.boltX = frame.width * this.rng.range(range?.[0] ?? 0.1, range?.[1] ?? 0.26);
-      this.nextAt = nextBoltAt(frame.timeMs, BOLT.everyMs, this.rng.next());
+      this.strike = this.pickStrike(ctx, bankX);
+      this.nextAt = nextBoltAt(now, BOLT.everyMs, this.rng.next());
     }
-    const strength =
-      this.flashAt < 0 ? 0 : flashEnvelope(frame.timeMs - this.flashAt, this.flashMs);
-    if (this.flashAt >= 0 && strength === 0 && frame.timeMs - this.flashAt >= this.flashMs) {
-      this.flashAt = -1;
+    const strength = this.flashAt < 0 ? 0 : flashEnvelope(now - this.flashAt, this.flashMs);
+    if (this.flashAt >= 0 && now - this.flashAt >= this.flashMs) this.flashAt = -1;
+    flash.setVisible(strength > 0);
+    bolt.setVisible(strength > 0 && this.strike !== null);
+    if (strength <= 0) return;
+    flash.setPosition(bankX, 0).setAlpha(BOLT.flashAlpha * strength);
+    const strike = this.strike;
+    if (strike) bolt.setPosition(strike.x, strike.y).setScale(strike.scale).setAlpha(1);
+  }
+
+  /**
+   * A place for the bolt inside the cloud: it starts a little way down from the top, is at most 0.6
+   * of the cloud's height there, ends at least 25 px above the cloud's lower edge, and clears every
+   * HUD plate by the HUD gap. `null` when the draws find none (the flash plays without a bolt).
+   */
+  private pickStrike(ctx: FrameCtx, bankX: number): { x: number; y: number; scale: number } | null {
+    for (let i = 0; i < BOLT.tries; i++) {
+      const range = BOLT.xRanges[this.rng.int(0, BOLT.xRanges.length - 1)];
+      if (!range) return null;
+      const x = ctx.width * this.rng.range(range[0], range[1]);
+      const edge = bankEdge((x - bankX) / BANK.scale + BANK.width / 2) * BANK.scale;
+      if (edge < BOLT.minCloudPx) continue;
+      const top = edge * BOLT.topShare;
+      const end = Math.min(top + edge * BOLT.lengthShare, edge - BOLT.endGapPx);
+      if (end - top < BOLT.height * 0.25) continue;
+      const clear = [top, (top + end) / 2, end].every((y) => hudKeepOutFade(x, y) > 0);
+      if (clear) return { x, y: top, scale: (end - top) / BOLT.height };
     }
-    const on = strength > 0;
-    flash.setVisible(on);
-    bolt.setVisible(on);
-    if (!on) return;
-    flash.setPosition(bankX, 0).setAlpha(BOLT.flashAlpha * strength * frame.share);
-    bolt.setPosition(this.boltX, BOLT.topY).setAlpha(BOLT.boltAlpha * frame.share);
+    return null;
   }
 }
 
 interface Star {
   image: Phaser.GameObjects.Image;
-  u: number;
-  v: number;
+  /** Candidate places as shares of the screen; the first that clears the HUD and the flight row is used. */
+  spots: Array<[number, number]>;
   alpha: number;
   periodMs: number;
   phase: number;
 }
 
 /**
- * The night sky: small stars (twinkling on full, still on lite and minimal) and a crescent moon at
- * the side, under the HUD plates and above the row of the incoming layer. Both stay out of the
- * middle strip behind the score and out of the flight row.
+ * The night sky: small flat stars (they twinkle in scale and alpha on full, stand still on lite and
+ * minimal) and the crescent moon, both in the zone's sky behind the houses. A star is never shown
+ * inside the HUD plates plus the HUD gap or in the flight row; the moon hangs at the HUD floor on
+ * the left and is left out when there is no room above the row.
  */
-export class WeatherNight implements WeatherPart {
+export class WeatherNight implements Life {
   readonly objects: Phaser.GameObjects.Image[] = [];
   private readonly stars: Star[] = [];
   private readonly moon: Phaser.GameObjects.Image;
-  private moonShown = false;
+  private laidOutFor = '';
 
   constructor(scene: Phaser.Scene, rng: Rng) {
     for (let i = 0; i < NIGHT.stars; i++) {
@@ -135,8 +159,7 @@ export class WeatherNight implements WeatherPart {
       const image = new Phaser.GameObjects.Image(scene, 0, 0, frames[i % frames.length] ?? '');
       this.stars.push({
         image,
-        u: rng.next(),
-        v: rng.next(),
+        spots: Array.from({ length: NIGHT.tries }, () => [rng.next(), rng.next()]),
         alpha: rng.range(NIGHT.starAlpha[0], NIGHT.starAlpha[1]),
         periodMs: rng.range(NIGHT.twinkleMs[0], NIGHT.twinkleMs[1]),
         phase: rng.next() * TWO_PI,
@@ -147,39 +170,48 @@ export class WeatherNight implements WeatherPart {
     this.objects.push(this.moon);
   }
 
-  layout(frame: WeatherFrame): void {
-    const { width, hudFloor, band } = frame;
-    const m = NIGHT.moon;
-    // The moon hangs right under the HUD floor on the left; with no room above the row it is left out.
-    const y = hudFloor + m.radius + m.gapPx;
-    this.moonShown = y + m.radius < band.top - NIGHT.aboveBandPx;
-    this.moon.setPosition(width * m.xShare, y);
+  private layout(width: number, height: number): void {
+    const key = `${width}x${height}`;
+    if (key === this.laidOutFor) return;
+    this.laidOutFor = key;
+    const band = flightClearBand(height);
     const lowest = band.top - NIGHT.aboveBandPx;
-    const [midFrom, midTo] = NIGHT.middleStrip;
-    for (const s of this.stars) {
-      let x = s.u * width;
-      // Stars that would sit behind the score are moved to the side strips.
-      if (x > midFrom * width && x < midTo * width)
-        x = x < width / 2 ? midFrom * width * s.u : width - (1 - midTo) * width * s.u;
-      s.image.setPosition(x, NIGHT.topMarginPx + s.v * Math.max(lowest - NIGHT.topMarginPx, 0));
+    const radius = NIGHT.moon.radius;
+    const moonX = width * NIGHT.moon.xShare;
+    const moonY = hudFloor() + radius;
+    const moonFits = moonY + radius < lowest && hudKeepOutFade(moonX, moonY, radius) > 0;
+    this.moon.setPosition(moonX, moonY).setVisible(moonFits);
+    for (const star of this.stars) {
+      star.image.setVisible(false);
+      for (const [u, v] of star.spots) {
+        const x = u * width;
+        const y = NIGHT.topMarginPx + v * Math.max(lowest - NIGHT.topMarginPx, 0);
+        if (hudKeepOutFade(x, y, star.image.width / 2) > 0) {
+          star.image.setPosition(x, y).setVisible(true);
+          break;
+        }
+      }
     }
   }
 
-  update(frame: WeatherFrame): void {
-    const twinkle = frame.level === 'full';
+  update(ctx: FrameCtx): void {
+    this.layout(ctx.width, ctx.height);
+    const twinkle = effectsMode.level === 'full';
     for (const s of this.stars) {
-      const wave = twinkle
-        ? 1 -
-          NIGHT.twinkleDepth *
-            (0.5 + 0.5 * Math.sin((TWO_PI * frame.timeMs) / s.periodMs + s.phase))
-        : 1;
-      const alpha =
-        s.alpha *
-        wave *
-        frame.share *
-        particleFade(s.image.y, frame.band, WEATHER_LOOK.bandFeatherPx, frame.height, 1);
-      s.image.setAlpha(alpha).setVisible(alpha > 0.01);
+      if (!s.image.visible) continue;
+      const wave = twinkle ? Math.sin((TWO_PI * ctx.timeMs) / s.periodMs + s.phase) : 0;
+      const alpha = s.alpha * (1 - NIGHT.twinkleDepth * (0.5 + 0.5 * wave));
+      s.image.setAlpha(alpha).setScale(1 + NIGHT.twinkleScale * wave);
     }
-    this.moon.setVisible(this.moonShown && frame.share > 0).setAlpha(frame.share);
   }
+}
+
+/** The weather pieces that belong to a zone's sky; they sit right after the sky picture. */
+export function weatherSkyLives(scene: Phaser.Scene, zone: ZoneId, weather: WeatherId): Life[] {
+  if (zone !== 'roof' && zone !== 'clouds') return [];
+  const rng = new Rng(WEATHER_LOOK.skySeed).fork(`${weather}_sky`);
+  if (weather === 'rain' || weather === 'storm')
+    return [new WeatherBank(scene, zone, weather, rng)];
+  if (weather === 'night') return [new WeatherNight(scene, rng)];
+  return [];
 }

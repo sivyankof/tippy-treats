@@ -2,6 +2,7 @@ import * as Phaser from 'phaser';
 import type { Rng } from '../../../core/rng';
 import { WEATHER_LOOK, WEATHER_TEX } from '../../../data/weather-look';
 import { MS_PER_SECOND, TWO_PI } from '../../../util/math';
+import { hudKeepOutFade } from '../../camera-layout';
 import { particleFade, wrapRange } from './weather-motion';
 import type { WeatherFrame, WeatherPart } from './weather-frame';
 
@@ -97,10 +98,6 @@ export class WeatherFall implements WeatherPart {
     return r < FLAKE_SIZE_CUTS[0] ? 0 : r < FLAKE_SIZE_CUTS[1] ? 1 : 2;
   }
 
-  layout(): void {
-    // Positions come from the shares every frame; nothing is kept per screen size.
-  }
-
   update(frame: WeatherFrame): void {
     const shown =
       frame.share > 0
@@ -130,7 +127,10 @@ export class WeatherFall implements WeatherPart {
         ? wrapRange(p.u * width + slant * p.speed * seconds, width, pad)
         : p.u * width + p.sway * Math.sin((TWO_PI * t) / p.swayMs + p.phase);
       const alpha =
-        particleFade(y, band, WEATHER_LOOK.bandFeatherPx, height, pad) * frame.share * p.alpha;
+        particleFade(y, band, WEATHER_LOOK.bandFeatherPx, height, pad) *
+        hudKeepOutFade(x, y, 0, WEATHER_LOOK.keepOutFeatherPx) *
+        frame.share *
+        p.alpha;
       if (alpha <= 0.01) {
         image.setVisible(false);
         continue;

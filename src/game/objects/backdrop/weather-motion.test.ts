@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { flashEnvelope, nextBoltAt, particleFade, wrapRange } from './weather-motion';
+import { bankEdge, flashEnvelope, nextBoltAt, particleFade, wrapRange } from './weather-motion';
 
 describe('weather motion', () => {
   it('wraps values into the padded range', () => {
@@ -28,5 +28,13 @@ describe('weather motion', () => {
     expect(flashEnvelope(150, 150)).toBe(0);
     expect(flashEnvelope(90, 150)).toBeGreaterThan(0);
     expect(flashEnvelope(90, 150)).toBeLessThan(1);
+  });
+
+  it('finds the lower edge of the bank: high in the middle, low under the side lobes', () => {
+    expect(bankEdge(500)).toBeGreaterThanOrEqual(100);
+    expect(bankEdge(500)).toBeLessThan(bankEdge(130));
+    expect(bankEdge(130)).toBeGreaterThan(200);
+    // The band alone reaches this far at the far left, where no lobe stands.
+    expect(bankEdge(-100)).toBe(100);
   });
 });

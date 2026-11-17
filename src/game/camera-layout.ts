@@ -37,6 +37,24 @@ export function hudFloor(): number {
 }
 
 /**
+ * How visible a background picture centred at (`x`, `y`) with the given `radius` may be, with respect
+ * to the HUD plates: 0 inside any plate grown by `FLIGHT_CLEAR.hudGapPx`, rising to 1 over `feather`
+ * px outside it. Weather particles fade by it; stars and the like are not placed where it is 0.
+ */
+export function hudKeepOutFade(x: number, y: number, radius = 0, feather = 0): number {
+  const gap = FLIGHT_CLEAR.hudGapPx + radius;
+  let fade = 1;
+  for (const plate of HUD_LAYOUT.plates) {
+    const dx = Math.max(plate.x - x, 0, x - (plate.x + plate.width));
+    const dy = Math.max(plate.y - y, 0, y - (plate.y + plate.height));
+    const away = Math.hypot(dx, dy) - gap;
+    if (away <= 0) return 0;
+    if (feather > 0) fade = Math.min(fade, away / feather);
+  }
+  return Math.min(fade, 1);
+}
+
+/**
  * The stripe the background satellite and comet keep out of: the flight stripe stretched down past
  * the top of the tower (`FLIGHT_CLEAR.travellerBelowTopPx`), and a ceiling `hudGapPx` under the
  * lowest HUD plate.

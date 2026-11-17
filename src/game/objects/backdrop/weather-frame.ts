@@ -17,10 +17,8 @@ export interface WeatherFrame {
   level: EffectLevel;
 }
 
-/** A piece of the weather that lives in the screen-space container. */
+/** A piece of the falling weather that lives in the screen-space container. */
 export interface WeatherPart {
   readonly objects: readonly Phaser.GameObjects.GameObject[];
-  /** Called when the screen size changes (and once at the start). */
-  layout(frame: WeatherFrame): void;
   update(frame: WeatherFrame): void;
 }

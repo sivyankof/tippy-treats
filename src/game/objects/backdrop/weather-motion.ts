@@ -1,3 +1,4 @@
+import { WEATHER_LOOK } from '../../../data/weather-look';
 import { clamp01 } from '../../../util/math';
 
 /** `value` wrapped into the range [-pad, size + pad). */
@@ -34,4 +35,17 @@ export function flashEnvelope(elapsed: number, length: number): number {
   if (elapsed < 0 || elapsed >= length) return 0;
   const t = elapsed / length;
   return t < 0.2 ? t / 0.2 : 1 - (t - 0.2) / 0.8;
+}
+
+/** Height of the cloud bank's lower edge (picture px) at picture x `px`: the lowest of the band and the lobes there. */
+export function bankEdge(px: number): number {
+  const b = WEATHER_LOOK.bank;
+  let edge: number = b.bodyBottom;
+  for (const [cx, cy, r] of b.lumps) {
+    const rx = (r * b.lobeWide) / 2;
+    const ry = (r * b.lobeTall) / 2;
+    const t = (px - cx) / rx;
+    if (Math.abs(t) < 1) edge = Math.max(edge, cy + ry * Math.sqrt(1 - t * t));
+  }
+  return edge;
 }

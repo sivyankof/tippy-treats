@@ -26,6 +26,8 @@ export interface LapLife {
 /** Pictures of the four parallax layers (back to front) and the living elements between them. */
 export interface SceneryDef {
   layers: readonly string[];
+  /** Pieces of the weather's sky (the cloud bank with its lightning, the stars and the moon); they stand over the four layers, so no house shows through a cloud, and fade with the zone. */
+  weatherSky?: readonly Life[];
   /** `slot` is the parallax layer the element is drawn right above (0..3). */
   lives: readonly { slot: number; life: Life }[];
   /** The creature of the zone that may leave for the tower, when there is one. */
@@ -122,6 +124,7 @@ export class ZoneScenery {
   private readonly far: FarPlane;
   private readonly layers: Phaser.GameObjects.TileSprite[];
   private readonly lives: Life[];
+  private readonly skyLives: readonly Life[];
   private readonly drift: readonly number[];
   private readonly tints: NonNullable<(typeof BACKDROP.layerTint)[ZoneId]> | null;
   private readonly breathePhase: number;
@@ -166,6 +169,7 @@ export class ZoneScenery {
         if (object instanceof Phaser.GameObjects.TileSprite) object.setTint(def.farTint);
       }
     }
+    this.skyLives = def.weatherSky ?? [];
     this.lives = def.lives.map(({ life }) => life);
     this.guest = def.guest ?? null;
     this.lapLife = def.lapLife ?? null;
@@ -179,6 +183,7 @@ export class ZoneScenery {
         if (slot === i) children.push(...life.objects);
       }
     });
+    for (const life of this.skyLives) children.push(...life.objects);
     for (const child of children)
       markPerfPart(child, this.far.objects.includes(child) ? 'far' : 'bg');
     this.root = new Phaser.GameObjects.Container(scene, 0, 0, children);
@@ -214,6 +219,7 @@ export class ZoneScenery {
       const tint = this.tints?.[i];
       if (tint) layer.setTint(mixColor(tint.from, tint.to, oscillate01(ctx.timeMs, tint.ms)));
     });
+    for (const life of this.skyLives) life.update(ctx);
     for (const life of this.lives) life.update(ctx);
   }
 
