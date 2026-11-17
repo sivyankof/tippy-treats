@@ -112,7 +112,9 @@ export class PlanetLife implements Life {
     this.image.setVisible(mute < 1);
     this.dim.setVisible(mute > 0);
     this.dim.setAlpha(mute);
+    // A hidden picture is not placed; it is placed in the frame it shows again, before it is drawn.
     for (const picture of this.objects) {
+      if (!picture.visible) continue;
       picture.setPosition(fit.x + pose.x, y + pose.y);
       picture.setRotation(pose.rotation);
       // The pose carries the drift's breathing around 1; the lane gives the size the planet fits at.
