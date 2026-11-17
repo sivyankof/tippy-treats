@@ -45,3 +45,14 @@ export function allFullTeams(): SimTeamSet[] {
   }
   return teams;
 }
+
+/**
+ * Level-5 team numbers after the speed arc to 1250 (strong profile), kept for comparison only: the
+ * team goal (best team without the rainbow at most x2.2, p99 at most 900, no run to the cut-off)
+ * is paused until 1.1 (docs/03-creatures.md, "Цель бригад приостановлена"). Nothing fails on them.
+ */
+export const TEAM_REFERENCE = {
+  ratio: 2.66,
+  p99: 1500,
+  cutRunsPer1000: 25,
+} as const;
