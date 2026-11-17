@@ -36,6 +36,8 @@ export interface SceneryDef {
   sky?: string;
   /** Tint of the far plane, for a zone whose sky colour follows the weather (the plane is baked in the clear sky's tones). */
   farTint?: number;
+  /** Alpha of the four parallax layers when the art needs other values than the zone's (an opaque night awning). */
+  layerAlpha?: readonly number[];
 }
 
 /** What a zone's art may depend on besides the zone itself: the lap of Space and the look of the run. */
@@ -45,6 +47,8 @@ export interface SceneryLook {
   weather: WeatherId;
   /** Start place of zone 1; only the first zone reads it (through `PLACE_ART`). */
   place: StartPlaceId;
+  /** Menu screens show the home kitchen without jars on the shelves (they crowd the plates). */
+  menu?: boolean;
   /** Space only: width of the tower top when the lap began (the lap 1 planet keeps clear of it). */
   topWidth?: number;
 }
@@ -151,7 +155,7 @@ export class ZoneScenery {
     this.layers = def.layers.map((key, i) =>
       new Phaser.GameObjects.TileSprite(scene, 0, 0, width, height, key)
         .setOrigin(0)
-        .setAlpha(BACKDROP.layerAlpha[zone][i] ?? 1),
+        .setAlpha(def.layerAlpha?.[i] ?? BACKDROP.layerAlpha[zone][i] ?? 1),
     );
     // A weather tints the layers (multiply) once; a layer that colour-shifts by itself keeps its own tint.
     const weatherTints = layerTintsOf(zone, weather);

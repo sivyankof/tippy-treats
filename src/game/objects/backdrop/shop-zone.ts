@@ -9,7 +9,9 @@ import {
 import { mixColor, shade } from '../../../util/color';
 import { outlineColor } from '../../fx/plain-style';
 import { bakeTexture } from '../../ui/bake-texture';
-import { Hover } from './life';
+import { BACKDROP_LIFE } from '../../../data/backdrop-life';
+import { Hover, Traveler } from './life';
+import { bakeFly } from './kitchen-zone';
 import { bakeStopsSky, type ZoneArt } from './zone-scenery';
 import { bakeGlassItems, bakeWindow, windowGlassLife } from './window-weather';
 
@@ -17,8 +19,9 @@ type Graphics = Phaser.GameObjects.Graphics;
 
 const TILE = SHOP_LOOK.tile;
 const C = SHOP_COLORS;
-const PLANK_Y = 410;
 const OUTLINE = 4;
+/** The awning sways this many px (it never stands still). */
+const AWNING_BOB = 2;
 
 /** A body with the dark outline of its own colour: the outline shape is drawn first, `fill` on top. */
 function outlined(g: Graphics, color: number, outline: (grow: number) => void): void {
@@ -28,18 +31,18 @@ function outlined(g: Graphics, color: number, outline: (grow: number) => void): 
   outline(0);
 }
 
-function macaron(g: Graphics, x: number, color: number, w: number): void {
+function macaron(g: Graphics, plankY: number, x: number, color: number, w: number): void {
   const shell = w * 0.36;
   const cream = C.sweets.cream;
-  const top = PLANK_Y - w * 0.8;
+  const top = plankY - w * 0.8;
   const parts: [number, number][] = [
     [top + shell / 2, shell],
-    [PLANK_Y - shell / 2, shell],
+    [plankY - shell / 2, shell],
   ];
   for (const [cy, h] of parts) {
     outlined(g, color, (grow) => g.fillEllipse(x, cy, w + grow * 2, h + grow * 2));
   }
-  const gap = PLANK_Y - shell - (top + shell);
+  const gap = plankY - shell - (top + shell);
   outlined(g, cream, (grow) =>
     g.fillRoundedRect(
       x - w * 0.43 - grow,
@@ -53,8 +56,8 @@ function macaron(g: Graphics, x: number, color: number, w: number): void {
   g.fillEllipse(x - w * 0.18, top + shell * 0.36, w * 0.32, shell * 0.26);
 }
 
-function candy(g: Graphics, x: number, color: number, r: number): void {
-  const cy = PLANK_Y - r;
+function candy(g: Graphics, plankY: number, x: number, color: number, r: number): void {
+  const cy = plankY - r;
   outlined(g, color, (grow) => g.fillCircle(x, cy, r + grow));
   g.fillStyle(shade(color, 0.2), 1);
   g.fillCircle(x + r * 0.05, cy + r * 0.05, r * 0.6);
@@ -62,30 +65,6 @@ function candy(g: Graphics, x: number, color: number, r: number): void {
   g.fillCircle(x + r * 0.05, cy + r * 0.05, r * 0.3);
   g.fillStyle(0xffffff, 0.5);
   g.fillRoundedRect(x - r * 0.72, cy - r * 0.55, r * 0.16, r * 0.62, r * 0.08);
-}
-
-function cake(g: Graphics, x: number, w: number, h: number): void {
-  const top = PLANK_Y - h;
-  outlined(g, C.sweets.cake, (grow) =>
-    g.fillRoundedRect(x - w / 2 - grow, top + h * 0.3 - grow, w + grow * 2, h * 0.7 + grow, 14),
-  );
-  g.fillStyle(shade(C.sweets.cake, -0.1), 1);
-  g.fillRoundedRect(x - w / 2, PLANK_Y - h * 0.22, w, h * 0.22, { tl: 0, tr: 0, bl: 14, br: 14 });
-  outlined(g, C.sweets.glaze, (grow) =>
-    g.fillRoundedRect(
-      x - w / 2 - 4 - grow,
-      top - grow,
-      w + 8 + grow * 2,
-      h * 0.42 + grow * 2,
-      h * 0.21,
-    ),
-  );
-  g.fillStyle(C.sweets.glaze, 1);
-  for (const dx of [-0.28, 0.1, 0.34]) {
-    g.fillRoundedRect(x + w * dx - 8, top + h * 0.3, 16, h * 0.3, 8);
-  }
-  g.fillStyle(0xffffff, 0.5);
-  g.fillRoundedRect(x - w * 0.36, top + 6, w * 0.34, 6, 3);
 }
 
 function bakeWall(scene: Phaser.Scene): void {
@@ -105,31 +84,42 @@ function bakeWall(scene: Phaser.Scene): void {
 }
 
 function bakeShelves(scene: Phaser.Scene): void {
-  bakeTexture(scene, SHOP_TEX.shelves, TILE, TILE, (g) => {
+  const { shelfTile, planks, sweetsPlank, sweets, sweetsMute } = SHOP_LOOK;
+  bakeTexture(scene, SHOP_TEX.shelves, shelfTile.width, shelfTile.height, (g) => {
     // A pale wash over the far silhouettes of the wall (they sit under this layer), so they take the pink of the shop.
     g.fillStyle(C.skyBottom, SHOP_LOOK.farWash);
-    g.fillRect(0, 0, TILE, TILE);
-    const mute = (color: number): number => mixColor(color, C.skyBottom, 0.12);
-    macaron(g, 72, mute(C.sweets.macaron[0]), 92);
-    candy(g, 190, mute(C.sweets.candy[1]), 40);
-    cake(g, 318, 96, 84);
-    macaron(g, 440, mute(C.sweets.macaron[1]), 84);
-    g.fillStyle(shade(C.shelf, -0.25), 1);
-    g.fillRoundedRect(0, PLANK_Y, TILE, 34, 10);
-    g.fillStyle(C.shelf, 1);
-    g.fillRoundedRect(0, PLANK_Y, TILE, 24, 10);
-    g.fillStyle(0xffffff, 0.3);
-    g.fillRoundedRect(24, PLANK_Y + 4, 150, 5, 2.5);
+    g.fillRect(0, 0, shelfTile.width, shelfTile.height);
+    const mute = (color: number): number => mixColor(color, C.skyBottom, sweetsMute);
+    const plankY = planks[sweetsPlank] ?? 0;
+    sweets.forEach((sweet, i) => {
+      if (sweet.kind === 'candy') {
+        candy(g, plankY, sweet.x, mute(C.sweets.candy[1]), sweet.size);
+      } else {
+        macaron(
+          g,
+          plankY,
+          sweet.x,
+          mute(C.sweets.macaron[i % C.sweets.macaron.length] ?? 0),
+          sweet.size,
+        );
+      }
+    });
+    for (const y of planks) {
+      g.fillStyle(shade(C.shelf, -0.25), 1);
+      g.fillRoundedRect(-20, y, shelfTile.width + 40, 34, 10);
+      g.fillStyle(C.shelf, 1);
+      g.fillRoundedRect(-20, y, shelfTile.width + 40, 24, 10);
+      g.fillStyle(0xffffff, 0.3);
+      g.fillRoundedRect(24, y + 4, 150, 5, 2.5);
+    }
   });
 }
 
 function bakeStands(scene: Phaser.Scene): void {
   bakeTexture(scene, SHOP_TEX.stands, TILE, TILE, (g) => {
     g.fillStyle(C.silhouette, 0.55);
-    for (const [x, y] of [
-      [90, 280],
-      [390, 120],
-    ] as const) {
+    SHOP_LOOK.standsX.forEach((x, i) => {
+      const y = i === 0 ? 280 : 120;
       g.fillRoundedRect(x - 6, y, 12, 70, 5);
       g.fillRoundedRect(x - 28, y + 66, 56, 12, 6);
       g.fillEllipse(x, y, 120, 14);
@@ -138,7 +128,7 @@ function bakeStands(scene: Phaser.Scene): void {
       g.closePath();
       g.fillPath();
       g.fillCircle(x, y - 54, 7);
-    }
+    });
   });
 }
 
@@ -164,6 +154,25 @@ function bakeAwning(scene: Phaser.Scene): void {
   });
 }
 
+/** A pendant lamp: a cord, a cap and a round pastel globe in two tones with a gloss mark. */
+function bakeLamp(scene: Phaser.Scene): void {
+  const { width, height, cord, globe } = SHOP_LOOK.lamp;
+  const cx = width / 2;
+  const cy = cord + globe;
+  bakeTexture(scene, SHOP_TEX.lamp, width, height, (g) => {
+    g.fillStyle(outlineColor(C.awningPink), 1);
+    g.fillRect(cx - 2, 0, 4, cord);
+    g.fillRoundedRect(cx - 9, cord - 6, 18, 12, 4);
+    g.fillStyle(0xfff0c0, 0.3);
+    g.fillCircle(cx, cy, globe + 12);
+    outlined(g, C.sweets.glaze, (grow) => g.fillCircle(cx, cy, globe + grow));
+    g.fillStyle(shade(C.sweets.glaze, 0.35), 1);
+    g.fillCircle(cx - 2, cy - 2, globe * 0.62);
+    g.fillStyle(0xffffff, 0.6);
+    g.fillRoundedRect(cx - globe * 0.7, cy - globe * 0.5, 6, globe * 0.6, 3);
+  });
+}
+
 /** The confectioner's shop: a striped awning, shelves of round sweets and a window to the street with the sky of the weather. */
 export const shopArt: ZoneArt = {
   bake(scene, look) {
@@ -177,13 +186,26 @@ export const shopArt: ZoneArt = {
     bakeShelves(scene);
     bakeStands(scene);
     bakeAwning(scene);
+    bakeLamp(scene);
+    bakeFly(scene);
   },
   build(scene, look) {
     const strips = [0, 1, 2].map((i) => ({
       texture: SHOP_TEX.awning,
       at: { x: 0, y: 0 },
-      offset: { x: TILE * (i + 0.5), y: 0 },
+      offset: { x: TILE * (i + 0.5), y: -AWNING_BOB },
       origin: [0.5, 0] as const,
+      bob: { px: AWNING_BOB, ms: 2600 },
+      phase: i * 0.5,
+    }));
+    const lamp = SHOP_LOOK.lamp;
+    const lamps = lamp.at.map((x, i) => ({
+      texture: SHOP_TEX.lamp,
+      at: { x, y: 0 },
+      offset: { x: 0, y: SHOP_LOOK.awning.height - 8 },
+      origin: [0.5, 0] as const,
+      swing: { deg: lamp.swingDeg, ms: lamp.ms[i] ?? 2500 },
+      phase: i * 1.3,
     }));
     const awning = new Hover(scene, strips);
     const window = new Hover(scene, [
@@ -191,16 +213,21 @@ export const shopArt: ZoneArt = {
         texture: windowKey('shop', look.weather),
         at: WINDOW_LOOK.shop.at,
         offset: WINDOW_LOOK.shop.offset,
+        pulse: WINDOW_LOOK.pulse,
       },
     ]);
     const glass = windowGlassLife(scene, 'shop', look.weather);
+    const fly = new Traveler(scene, BACKDROP_LIFE.kitchen.fly);
     return {
       layers: [SHOP_TEX.wall, SHOP_TEX.lattice, SHOP_TEX.shelves, SHOP_TEX.stands],
       lives: [
         { slot: 3, life: awning },
+        { slot: 3, life: new Hover(scene, lamps) },
         { slot: 3, life: window },
         ...(glass ? [{ slot: 3, life: glass }] : []),
+        { slot: 3, life: fly },
       ],
+      guest: fly,
       sky: SHOP_TEX.sky,
     };
   },

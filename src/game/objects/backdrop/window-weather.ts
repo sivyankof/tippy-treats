@@ -14,7 +14,7 @@ import type { WeatherId } from '../../../data/weather';
 import { cssColor, shade } from '../../../util/color';
 import { TWO_PI } from '../../../util/math';
 import { effectsMode } from '../../effects-mode';
-import { outlineColor } from '../../fx/plain-style';
+import { fillPolygon, outlineColor } from '../../fx/plain-style';
 import { bakeTexture } from '../../ui/bake-texture';
 import { glassPose, newGlassPose } from './glass-motion';
 import type { FrameCtx, Life } from './life';
@@ -65,18 +65,19 @@ function framePath(ctx: Ctx2D, place: StartPlaceId, grow: number): void {
   else roundRect(ctx, x - pad, y - pad, w + 2 * pad, h + 2 * pad, 24);
 }
 
+/** A cloud of round lobes only (no flat base): bigger lobes in the middle, a low wide one under them. */
 function cloud(ctx: Ctx2D, x: number, y: number, s: number): void {
   ctx.beginPath();
   for (const [dx, dy, r] of [
-    [-26, 6, 14],
-    [-8, -6, 20],
-    [14, -2, 16],
-    [30, 8, 11],
+    [-28, 8, 14],
+    [-10, -4, 20],
+    [12, -2, 18],
+    [30, 8, 13],
+    [0, 10, 18],
   ] as const) {
     ctx.moveTo(x + (dx + r) * s, y + dy * s);
     ctx.arc(x + dx * s, y + dy * s, r * s, 0, TWO_PI);
   }
-  ctx.roundRect(x - 38 * s, y + 4 * s, 78 * s, 16 * s, 8 * s);
   ctx.fill();
 }
 
@@ -140,9 +141,9 @@ function paintSky(ctx: Ctx2D, sky: WindowSky): void {
     ctx.fillStyle = cssColor(sky.cloud);
     ctx.globalAlpha = 0.9;
     if (sky.heavy) {
-      cloud(ctx, x + w * 0.3, y + h * 0.16, 1.5);
-      cloud(ctx, x + w * 0.78, y + h * 0.1, 1.6);
-      cloud(ctx, x + w * 0.5, y + h * 0.34, 1.1);
+      cloud(ctx, x + w * 0.28, y + h * 0.12, 1.5);
+      cloud(ctx, x + w * 0.76, y + h * 0.08, 1.7);
+      cloud(ctx, x + w * 0.5, y + h * 0.24, 1.2);
     } else {
       cloud(ctx, x + w * 0.32, y + h * 0.34, 1.1);
       cloud(ctx, x + w * 0.8, y + h * 0.16, 0.7);
@@ -235,7 +236,7 @@ function paintValance(ctx: Ctx2D): void {
   const scallops = 6;
   const step = (right - left) / scallops;
   for (const [grow, color] of [
-    [3, outlineColor(look.valance)],
+    [3, outlineColor(look.frame)],
     [0, look.valance],
   ] as const) {
     ctx.fillStyle = cssColor(color);
@@ -309,15 +310,31 @@ export function bakeGlassItems(scene: Phaser.Scene, weather: WeatherId): void {
   } else {
     const { w, h, color, dark } = GLASS_LOOK.leaf;
     bakeTexture(scene, GLASS_TEX.leaf, w, h, (g) => {
-      const leaf = (grow: number, fill: number): void => {
+      const half = (lower: boolean, grow: number): { x: number; y: number }[] =>
+        Array.from({ length: 13 }, (_, i) => {
+          const t = i / 12;
+          const bulge = Math.sin(Math.PI * t ** 0.8) ** 0.85;
+          return {
+            x: 4 + (w - 14) * t,
+            y: h / 2 + (lower ? 1 : -1) * (bulge * (h / 2 - 3) + (bulge > 0 ? grow : 0)),
+          };
+        });
+      const body = (grow: number, fill: number, lowerOnly = false): void => {
         g.fillStyle(fill, 1);
-        g.fillEllipse(w / 2, h / 2, w - 8 + grow * 2, h - 4 + grow * 2);
-        g.fillTriangle(w - 10, h / 2, w - 1, h / 2 + 1, w - 10, h / 2 + 3 + grow);
+        if (!lowerOnly) fillPolygon(g, [...half(false, grow), ...half(true, grow).reverse()]);
+        else
+          fillPolygon(g, [
+            ...half(true, grow),
+            ...half(false, 0).map((p) => ({ x: p.x, y: h / 2 })),
+          ]);
       };
-      leaf(2, dark);
-      leaf(0, color);
+      body(2, dark);
       g.fillStyle(dark, 1);
-      g.fillRect(6, h / 2 - 1, w - 16, 2);
+      g.fillRect(w - 13, h / 2 - 1.5, 12, 3);
+      body(0, color);
+      body(0, shade(color, -0.22), true);
+      g.fillStyle(dark, 1);
+      g.fillRect(6, h / 2 - 1, w - 20, 2);
     });
   }
 }

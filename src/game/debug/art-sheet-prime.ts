@@ -86,6 +86,7 @@ function bakePlaceArt(scene: Phaser.Scene): void {
   for (const weather of ['clear', 'rain', 'night', 'snow', 'leaves'] as const) {
     const look = { lap: 1, weather, place: 'kitchen' } as const;
     kitchenArt.bake(scene, look);
+    kitchenArt.bake(scene, { ...look, menu: true });
     shopArt.bake(scene, { ...look, place: 'shop' });
     showcaseArt.bake(scene, look);
   }
