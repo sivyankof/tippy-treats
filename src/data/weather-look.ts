@@ -251,12 +251,15 @@ export const WEATHER_LOOK = {
     scale: 1.27,
     driftPx: 60,
     driftMs: 26000,
-    /** The bank is the sky colour at the top of the zone made this much darker (share, 0..1). */
-    darkRain: 0.25,
-    darkStorm: 0.4,
-    /** The pale twin that lights the bank in a flash: this colour, this share. */
+    /** Colours of the bank: close to the sky at the top (low contrast), the storm a little darker. */
+    colorRain: 0x6e7890,
+    colorStorm: 0x4a5266,
+    /** A flash lights only a patch of the cloud around the bolt: a pale lobe of this colour (the bank colour mixed with it by `flashMix`), this wide (px), this share of the cloud's height tall, centred this share down. */
     flashColor: 0xdde6ff,
-    flashMix: 0.8,
+    flashMix: 0.5,
+    flashWidthPx: 240,
+    flashHeightShare: 0.7,
+    flashCentreShare: 0.42,
     /** Flat band from the top edge down to this y (picture px); every lobe reaches up into it, so the figure is one piece. */
     bodyBottom: 100,
     /** Width and height of a lobe's ellipse as multiples of its radius. */

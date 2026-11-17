@@ -12,6 +12,11 @@ import { bankEdge, flashEnvelope, nextBoltAt } from './weather-motion';
 
 const BANK = WEATHER_LOOK.bank;
 const BOLT = WEATHER_LOOK.lightning;
+const BANK_FLASH = {
+  widthPx: BANK.flashWidthPx,
+  heightShare: BANK.flashHeightShare,
+  centreShare: BANK.flashCentreShare,
+};
 const NIGHT = WEATHER_LOOK.night;
 
 /** Cloud banks of storms that are alive, so the debug hook can strike them. */
@@ -40,7 +45,7 @@ export class WeatherBank implements Life {
   private flashAt = -1;
   private flashMs = 0;
   /** Where the strike stands (screen px) and whether it has a bolt (it may find no free place). */
-  private strike: { x: number; y: number; scale: number } | null = null;
+  private strike: { x: number; y: number; scale: number; edge: number } | null = null;
   private pending = false;
 
   constructor(
@@ -54,10 +59,12 @@ export class WeatherBank implements Life {
       .setScale(BANK.scale);
     this.objects = [this.bank];
     if (weather === 'storm') {
-      this.flash = new Phaser.GameObjects.Image(scene, 0, 0, bankKey(zone, weather, true))
-        .setOrigin(0.5, 0)
-        .setScale(BANK.scale)
-        .setVisible(false);
+      this.flash = new Phaser.GameObjects.Image(
+        scene,
+        0,
+        0,
+        bankKey(zone, weather, true),
+      ).setVisible(false);
       this.bolt = new Phaser.GameObjects.Image(scene, 0, 0, WEATHER_TEX.bolt)
         .setOrigin(0.5, 0)
         .setVisible(false);
@@ -102,12 +109,17 @@ export class WeatherBank implements Life {
     }
     const strength = this.flashAt < 0 ? 0 : flashEnvelope(now - this.flashAt, this.flashMs);
     if (this.flashAt >= 0 && now - this.flashAt >= this.flashMs) this.flashAt = -1;
-    flash.setVisible(strength > 0);
-    bolt.setVisible(strength > 0 && this.strike !== null);
-    if (strength <= 0) return;
-    flash.setPosition(bankX, 0).setAlpha(BOLT.flashAlpha * strength);
     const strike = this.strike;
-    if (strike) bolt.setPosition(strike.x, strike.y).setScale(strike.scale).setAlpha(1);
+    const on = strength > 0 && strike !== null;
+    flash.setVisible(on);
+    bolt.setVisible(on);
+    if (!on) return;
+    // Only a patch of the cloud around the bolt lights up, inside the cloud.
+    flash
+      .setPosition(strike.x, strike.edge * BANK_FLASH.centreShare)
+      .setDisplaySize(BANK_FLASH.widthPx, strike.edge * BANK_FLASH.heightShare)
+      .setAlpha(BOLT.flashAlpha * strength);
+    bolt.setPosition(strike.x, strike.y).setScale(strike.scale).setAlpha(1);
   }
 
   /**
@@ -115,7 +127,10 @@ export class WeatherBank implements Life {
    * of the cloud's height there, ends at least 25 px above the cloud's lower edge, and clears every
    * HUD plate by the HUD gap. `null` when the draws find none (the flash plays without a bolt).
    */
-  private pickStrike(ctx: FrameCtx, bankX: number): { x: number; y: number; scale: number } | null {
+  private pickStrike(
+    ctx: FrameCtx,
+    bankX: number,
+  ): { x: number; y: number; scale: number; edge: number } | null {
     for (let i = 0; i < BOLT.tries; i++) {
       const range = BOLT.xRanges[this.rng.int(0, BOLT.xRanges.length - 1)];
       if (!range) return null;
@@ -126,7 +141,7 @@ export class WeatherBank implements Life {
       const end = Math.min(top + edge * BOLT.lengthShare, edge - BOLT.endGapPx);
       if (end - top < BOLT.height * 0.25) continue;
       const clear = [top, (top + end) / 2, end].every((y) => hudKeepOutFade(x, y) > 0);
-      if (clear) return { x, y: top, scale: (end - top) / BOLT.height };
+      if (clear) return { x, y: top, scale: (end - top) / BOLT.height, edge };
     }
     return null;
   }

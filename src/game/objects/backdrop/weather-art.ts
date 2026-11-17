@@ -8,7 +8,6 @@ import { TWO_PI } from '../../../util/math';
 import { drawGlossMark, fillPolygon, outlineColor, type Pt } from '../../fx/plain-style';
 import { bakeTexture } from '../../ui/bake-texture';
 import { sparkle } from './art-kit';
-import { skyStops } from './weather-palette';
 
 type Graphics = Phaser.GameObjects.Graphics;
 
@@ -41,6 +40,7 @@ const CAP_WAVES = 4.3;
 const CAP_OUTLINE = 2.5;
 const CAP_DRIPS = [0.22, 0.52, 0.8] as const;
 const CAP_DRIP = { radius: 5.5, reach: 9 };
+const FLASH_LOBE_SIZE = 128;
 const BOLT_CORE = 0xfffbe6;
 const BOLT_RIM = 0xcfdcff;
 
@@ -207,11 +207,18 @@ function bakeMoon(scene: Phaser.Scene): void {
   );
 }
 
-/** The colour of a cloud bank: the sky at the top of the zone made darker. */
-export function bankColor(zone: WeatherZone, weather: WeatherId): number {
-  const top = skyStops(zone, weather)[0]?.color ?? 0;
-  const dark = weather === 'storm' ? WEATHER_LOOK.bank.darkStorm : WEATHER_LOOK.bank.darkRain;
-  return shade(top, -dark);
+/** The colour of a cloud bank (data, the same in both zones). */
+export function bankColor(weather: WeatherId): number {
+  return weather === 'storm' ? WEATHER_LOOK.bank.colorStorm : WEATHER_LOOK.bank.colorRain;
+}
+
+/** The pale lobe that lights the cloud around a bolt: one flat ellipse. */
+function bakeFlashLobe(scene: Phaser.Scene, key: string, color: number): void {
+  const size = FLASH_LOBE_SIZE;
+  bakeTexture(scene, key, size, size, (g) => {
+    g.fillStyle(color, 1);
+    g.fillEllipse(size / 2, size / 2, size, size);
+  });
 }
 
 /** One opaque figure: a band along the top edge and the lobes that hang from it, all one flat colour. */
@@ -314,10 +321,10 @@ export function bakeWeatherSky(
   if (zone !== 'roof' && zone !== 'clouds') return;
   for (const kind of ['rain', 'storm'] as const) {
     if (!is(kind)) continue;
-    const color = bankColor(zone, kind);
+    const color = bankColor(kind);
     bakeBank(scene, bankKey(zone, kind), color);
     if (kind === 'storm') {
-      bakeBank(
+      bakeFlashLobe(
         scene,
         bankKey(zone, kind, true),
         mixColor(color, WEATHER_LOOK.bank.flashColor, WEATHER_LOOK.bank.flashMix),
