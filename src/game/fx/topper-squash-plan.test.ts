@@ -150,7 +150,7 @@ describe('rollSpots', () => {
 
   it('sits at the seam', () => {
     const [left] = rollSpots(500, 600, 500, 600)!;
-    expect(left.dy).toBeLessThan(-BALANCE.layer.height / 2 + 10);
+    expect(left.dy).toBeLessThan(-BALANCE.layer.height / 2 + 20);
   });
 
   it('is none when the layers barely overlap', () => {

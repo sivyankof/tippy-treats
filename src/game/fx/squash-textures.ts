@@ -18,7 +18,8 @@ import {
 import { drawWafer, leaf } from './topper-texture';
 
 const { stain, roll } = TOPPER_SQUASH;
-const { field, bake, outlinePx, stainColors, leafSize, waferBreak } = SQUASH_PICTURES;
+const { field, bake, outlinePx, rollOutlinePx, stainColors, leafSize, waferBreak } =
+  SQUASH_PICTURES;
 const { gloss } = PLAIN_TOPPERS;
 
 /** Size in layer pixels of a stain picture (the drawing and its field). */
@@ -96,19 +97,19 @@ function drawStain(g: Phaser.GameObjects.Graphics): void {
   drawBlobs(
     g,
     [
-      { cx: mid - 2, cy: top + 9, rx: 20, ry: 9.5 },
-      { cx: mid - 18, cy: top + 13, rx: 8, ry: 6 },
-      { cx: mid + 14, cy: top + 13, rx: 10, ry: 7 },
-      { cx: mid + 20, cy: top + 21, rx: 4, ry: 5 },
-      { cx: mid - 3, cy: top + 21, rx: 5, ry: 8 },
-      { cx: mid - 3, cy: top + 33, rx: 6.2, ry: 7.5 },
+      { cx: mid, cy: top + 12, rx: 21, ry: 12 },
+      { cx: mid - 17, cy: top + 15, rx: 9, ry: 7.5 },
+      { cx: mid + 16, cy: top + 16, rx: 9.5, ry: 8 },
+      { cx: mid + 4, cy: top + 6, rx: 11, ry: 6 },
+      { cx: mid - 4, cy: top + 27, rx: 5.2, ry: 7 },
+      { cx: mid - 4, cy: top + 33, rx: 6, ry: 6.2 },
     ],
     stainColors.base,
     stainColors.shadow,
     0.12,
   );
-  glossAt(g, mid - 8, top + 5, 34, 0.95);
-  glossAt(g, mid - 5, top + 31, 10, 0.9);
+  glossAt(g, mid - 8, top + 6, 36, 0.95);
+  glossAt(g, mid - 6, top + 31, 9, 0.9);
 }
 
 const capsule: BodyShape = (cx, cy, rx, ry) => roundRectPoints(cx, cy, rx, ry, ry);
@@ -118,10 +119,15 @@ function drawCreamRoll(g: Phaser.GameObjects.Graphics): void {
   const { color, shadow } = PLAIN_LAYER.decor.cream;
   const cx = roll.width / 2;
   const cy = roll.height / 2;
-  const rx = roll.width / 2 - outlinePx;
-  const ry = roll.height / 2 - outlinePx;
-  drawTwoToneBody(g, capsule, cx, cy, rx, ry, { base: color, shadow, grow: outlinePx, band: 0.1 });
-  g.lineStyle(2.2, shadow, 1);
+  const rx = roll.width / 2 - rollOutlinePx;
+  const ry = roll.height / 2 - rollOutlinePx;
+  drawTwoToneBody(g, capsule, cx, cy, rx, ry, {
+    base: color,
+    shadow,
+    grow: rollOutlinePx,
+    band: 0.14,
+  });
+  g.lineStyle(3, shadow, 1);
   for (const x of [cx - rx * 0.1, cx + rx * 0.42]) {
     g.beginPath();
     g.moveTo(x - 3, cy - ry * 0.8);

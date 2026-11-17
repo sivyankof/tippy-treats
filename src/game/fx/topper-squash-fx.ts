@@ -96,14 +96,14 @@ export class TopperSquashFx {
     const side = local < 0 ? -1 : local > 0 ? 1 : SIDE_FALLBACK;
     effectCues.emit({ kind: 'topperSquash', topper: kind });
     if (look.flatten) this.flatten(kind, world, lowerIndex, look.flatten);
-    const size = topperSize(kind);
-    const bodyY = world.y - size.restY * world.scaleY * TOPPER_SQUASH.burstHeight;
-    if (kind === 'wafer') this.waferHalves(world, side, rng);
+    // Everything comes out of the seam: the top edge of the lower layer, under the new layer.
+    const seamY = world.y - PLAIN_TOPPERS.sinkPx + TOPPER_SQUASH.burstBelowSeamPx;
+    if (kind === 'wafer') this.waferHalves(world.x, seamY, world.scaleX, side, rng);
     else if (look.burst && look.burstTexture) {
-      this.burst(look.burst, look.burstTexture, world.x, bodyY, side, rng);
+      this.burst(look.burst, look.burstTexture, world.x, seamY, side, rng);
     }
     if (look.extra && look.extraTexture) {
-      this.burst(look.extra, look.extraTexture, world.x, bodyY, side, rng);
+      this.burst(look.extra, look.extraTexture, world.x, seamY, side, rng);
     }
     if (plan.trace && look.stainTint !== null) {
       this.leaveStain(lowerIndex, lower.width, local, look.stainTint);
@@ -201,9 +201,8 @@ export class TopperSquashFx {
     c.offY = world.y - view.y;
     c.scaleX = world.scaleX;
     c.scaleY = world.scaleY;
-    // It lies below the seam when flat: the body above its resting spot is `restY` tall.
-    c.sinkPx =
-      Math.max(0, size.restY * world.scaleY * look.scaleY - PLAIN_TOPPERS.sinkPx) + look.sinkPx;
+    // It is squeezed so that only a thin splat of `peekPx` shows below the seam, under the new layer.
+    c.sinkPx = look.peekPx - PLAIN_TOPPERS.sinkPx;
     c.tuckDepth = DEPTH.tower + (lowerIndex + 0.5) * DEPTH.towerLayerStep;
     c.ease = easeFn(look.ease);
     c.ageMs = 0;
@@ -212,7 +211,7 @@ export class TopperSquashFx {
       .setTexture(ensureTopperTexture(this.scene, kind))
       .setOrigin(size.originX, size.restY / size.height)
       .setRotation(world.rotation)
-      .setDepth(DEPTH.pieces)
+      .setDepth(c.tuckDepth)
       .setAlpha(1)
       .setVisible(true);
     this.pose(c);
@@ -229,7 +228,6 @@ export class TopperSquashFx {
     c.image
       .setScale(c.scaleX * lerp(1, look.scaleX, squash), c.scaleY * lerp(1, look.scaleY, squash))
       .setAlpha(1 - fade);
-    if (c.ageMs >= TOPPER_SQUASH.tuckAfterMs) c.image.setDepth(c.tuckDepth);
   }
 
   private take(): Crushed {
@@ -284,18 +282,9 @@ export class TopperSquashFx {
   }
 
   /** The wafer breaks: the two halves start exactly where the whole wafer stood and fly apart, and crumbs fly. */
-  private waferHalves(world: Readonly<TopperWorld>, side: -1 | 1, rng: Rng): void {
+  private waferHalves(x: number, y: number, scale: number, side: -1 | 1, rng: Rng): void {
     const burst = TOPPER_SQUASH.kinds.wafer.burst;
     if (!burst) return;
-    const size = topperSize('wafer');
-    // The picture of a half is the whole wafer's: its centre is where the whole picture's centre was.
-    const cos = Math.cos(world.rotation);
-    const sin = Math.sin(world.rotation);
-    const ox = (0.5 - size.originX) * size.width * world.scaleX;
-    const oy = (0.5 - size.restY / size.height) * size.height * world.scaleY;
-    const x = world.x + ox * cos - oy * sin;
-    const y = world.y + ox * sin + oy * cos;
-    const scale = world.scaleX;
     const halves = [
       { texture: SQUASH_TEXTURES.waferTop, lift: TOPPER_SQUASH.wafer.topLiftDeg, spin: -1 },
       { texture: SQUASH_TEXTURES.waferBottom, lift: TOPPER_SQUASH.wafer.bottomLiftDeg, spin: 1 },
