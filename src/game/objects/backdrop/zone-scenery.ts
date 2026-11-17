@@ -50,6 +50,8 @@ export interface SceneryLook {
   weather: WeatherId;
   /** Start place of zone 1; only the first zone reads it (through `PLACE_ART`). */
   place: StartPlaceId;
+  /** The run's planet stream (`planetOfLap`); only Space reads it. */
+  planetSeed: number;
   /** Space only: width of the tower top when the lap began (the lap 1 planet keeps clear of it). */
   topWidth?: number;
 }
@@ -60,7 +62,7 @@ export interface ZoneArt {
   /** True when, in this weather, the art bakes and names its own sky (`SceneryDef.sky`), so the zone's plain sky is not baked. */
   ownSky?(weather: WeatherId): boolean;
   /** Bakes what only one lap of the zone shows (the planet of a lap of Space); `lap` is 1-based. */
-  bakeLap?(scene: Phaser.Scene, lap: number): void;
+  bakeLap?(scene: Phaser.Scene, lap: number, planetSeed: number): void;
   /** Only Space reads `look.lap` and `look.topWidth`; a zone ignores what it does not show. */
   build(scene: Phaser.Scene, look: SceneryLook): SceneryDef;
 }

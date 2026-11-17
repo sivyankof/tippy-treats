@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest';
-import { pickStartPlace, pickWeather } from '../core/run-look';
+import { pickPlanetSeed, pickStartPlace, pickWeather } from '../core/run-look';
 import { chooseRunLook, resetRunLookHistory } from './run-look-choice';
 
 beforeEach(resetRunLookHistory);
@@ -9,15 +9,21 @@ describe('chooseRunLook', () => {
     expect(chooseRunLook({ seed: 5, tutorial: true })).toEqual({
       weather: 'clear',
       place: 'kitchen',
+      planetSeed: pickPlanetSeed(5),
     });
     expect(chooseRunLook({ seed: 5 }).weather).toBe(pickWeather(5, []));
   });
 
   it('the benchmark is clear + kitchen unless the parameters name them', () => {
-    expect(chooseRunLook({ seed: 9, perf: {} })).toEqual({ weather: 'clear', place: 'kitchen' });
+    expect(chooseRunLook({ seed: 9, perf: {} })).toEqual({
+      weather: 'clear',
+      place: 'kitchen',
+      planetSeed: pickPlanetSeed(9),
+    });
     expect(chooseRunLook({ seed: 9, perf: { weather: 'rain', place: 'shop' } })).toEqual({
       weather: 'rain',
       place: 'shop',
+      planetSeed: pickPlanetSeed(9),
     });
   });
 
@@ -25,10 +31,12 @@ describe('chooseRunLook', () => {
     expect(chooseRunLook({ seed: 7, debug: { weather: 'storm' } })).toEqual({
       weather: 'storm',
       place: pickStartPlace(7),
+      planetSeed: pickPlanetSeed(7),
     });
     expect(chooseRunLook({ seed: 7, debug: { place: 'shop' } })).toEqual({
       weather: pickWeather(7, []),
       place: 'shop',
+      planetSeed: pickPlanetSeed(7),
     });
   });
 
@@ -38,6 +46,7 @@ describe('chooseRunLook', () => {
       expect(chooseRunLook({ seed, daily: true })).toEqual({
         weather: pickWeather(seed, []),
         place: pickStartPlace(seed),
+        planetSeed: pickPlanetSeed(seed),
       });
     }
   });

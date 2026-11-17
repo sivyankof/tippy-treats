@@ -124,7 +124,7 @@ export class Backdrop {
     const space = this.sceneries.get(SPACE_ZONE_INDEX);
     if (!space || lap === 0) return;
     // Normally baked a lap ahead; a jump (a debug start) bakes here.
-    ZONE_ART.space.bakeLap?.(this.scene, lap);
+    ZONE_ART.space.bakeLap?.(this.scene, lap, this.look.planetSeed);
     space.setLap(lap, topWidth);
     this.prepareNext(SPACE_ZONE_INDEX);
   }
@@ -275,11 +275,16 @@ export class Backdrop {
     if (!art.ownSky?.(this.look.weather)) bakeSky(this.scene, id, this.look.weather);
     const look = this.sceneryLook(Math.max(lap, 1));
     art.bake(this.scene, look);
-    art.bakeLap?.(this.scene, look.lap);
+    art.bakeLap?.(this.scene, look.lap, look.planetSeed);
   }
 
   private sceneryLook(lap: number): SceneryLook {
-    return { lap, weather: this.look.weather, place: this.look.place };
+    return {
+      lap,
+      weather: this.look.weather,
+      place: this.look.place,
+      planetSeed: this.look.planetSeed,
+    };
   }
 
   /** Zone 1 is the art of the start place of the run; the others are fixed. */
@@ -297,7 +302,7 @@ export class Backdrop {
       const next = ZONES[index + 1];
       this.bakeQueue = collectBakeSteps(() => {
         if (next) this.bake(next.id, 1);
-        else ZONE_ART.space.bakeLap?.(this.scene, this.lap + 1);
+        else ZONE_ART.space.bakeLap?.(this.scene, this.lap + 1, this.look.planetSeed);
       });
     });
   }

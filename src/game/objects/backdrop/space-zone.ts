@@ -108,12 +108,14 @@ export const spaceArt: ZoneArt = {
     bakeTravelers(scene);
     bakeSpaceVisitors(scene);
   },
-  bakeLap(scene, lap) {
-    bakePlanet(scene, planetOfLap(lap));
+  bakeLap(scene, lap, planetSeed) {
+    bakePlanet(scene, planetOfLap(planetSeed, lap));
+    // The planet of the lap before may still be leaving at the bottom (a start inside the lap bakes only the lap's own).
+    if (lap > 1) bakePlanet(scene, planetOfLap(planetSeed, lap - 1));
   },
-  build(scene, { lap, topWidth }) {
+  build(scene, { lap, topWidth, planetSeed }) {
     const life = BACKDROP_LIFE.space;
-    const planet = new PlanetLife(scene, lap, topWidth);
+    const planet = new PlanetLife(scene, planetSeed, lap, topWidth);
     const satellite = new Traveler(scene, life.satellite, inSky('traveler'));
     const comet = new Traveler(scene, life.comet, inSky('traveler'));
     return {

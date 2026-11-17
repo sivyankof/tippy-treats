@@ -64,7 +64,7 @@ const PRIME_STEPS: ReadonlyArray<(scene: Phaser.Scene) => void> = [
   (scene) => bakeWeatherArt(scene, 'all'),
   bakeAllWeatherSky,
   // The night house layers of the Roof (lit windows).
-  (scene) => roofArt.bake(scene, { lap: 1, weather: 'night', place: 'kitchen' }),
+  (scene) => roofArt.bake(scene, { lap: 1, weather: 'night', place: 'kitchen', planetSeed: 0 }),
   bakeAllPlanets,
   bakePlaceArt,
   bakeTowerSparkle,
@@ -89,7 +89,7 @@ const PRIME_STEPS: ReadonlyArray<(scene: Phaser.Scene) => void> = [
 /** The pictures of the start places and the Showcase for a few weathers, so the sheet shows the sky colours, the glass items and both places. */
 function bakePlaceArt(scene: Phaser.Scene): void {
   for (const weather of ['clear', 'rain', 'night', 'snow', 'leaves'] as const) {
-    const look = { lap: 1, weather, place: 'kitchen' } as const;
+    const look = { lap: 1, weather, place: 'kitchen', planetSeed: 0 } as const;
     kitchenArt.bake(scene, look);
     shopArt.bake(scene, { ...look, place: 'shop' });
     showcaseArt.bake(scene, look);

@@ -5,6 +5,7 @@ import { LAP_REWARD } from '../data/zones';
 import {
   flyingLap,
   lapFirstIndex,
+  lapProgress,
   lapRewardBerries,
   lapScoreBonus,
   layerZoneScoreMult,
@@ -114,5 +115,16 @@ describe('lapFirstIndex', () => {
       expect(spaceLap(lapFirstIndex(lap) - 1)).toBe(lap - 1);
     }
     expect(lapFirstIndex(0)).toBe(lapFirstIndex(1));
+  });
+});
+
+describe('lapProgress', () => {
+  it('is lap 0 before Space and counts the lap and the share of it from layer 100', () => {
+    expect(lapProgress(50)).toEqual({ lap: 0, progress: 0 });
+    expect(lapProgress(100)).toEqual({ lap: 1, progress: 0 });
+    expect(lapProgress(110).progress).toBeCloseTo(0.5);
+    expect(lapProgress(119.99).lap).toBe(1);
+    expect(lapProgress(120)).toEqual({ lap: 2, progress: 0 });
+    expect(lapProgress(145)).toEqual({ lap: 3, progress: 0.25 });
   });
 });
