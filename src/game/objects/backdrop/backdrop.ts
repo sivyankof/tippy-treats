@@ -19,6 +19,7 @@ import { kitchenArt } from './kitchen-zone';
 import type { GuestSource } from './guest-source';
 import { newFrameCtx, type FrameCtx } from './life';
 import { roofArt } from './roof-zone';
+import { rememberLapOneWidth } from './planet-placement';
 import { shopArt } from './shop-zone';
 import { showcaseArt } from './showcase-zone';
 import { spaceArt } from './space-zone';
@@ -89,8 +90,8 @@ export class Backdrop {
   private started = false;
   /** Lap of Space of the layer in flight; 0 before Space. */
   private lap: number;
-  /** Tower top width when the current lap began (the planet's lap 1 corridor); fixed for the lap. */
-  private lapTopWidth: number | undefined;
+  /** Tower top width when lap 1 began (the planet's lap 1 corridor); `undefined` for a start deep in Space. One value for the bakes and the planet. */
+  private lapOneTopWidth: number | undefined;
   /** The picture that stands in for the zones once they are frozen (the results screen). */
   private still: Phaser.GameObjects.Image | null = null;
   /** The zones the still replaced, shown again when it goes. */
@@ -108,7 +109,7 @@ export class Backdrop {
     readonly look: RunLook,
   ) {
     this.lap = flyingLap(state.height);
-    this.lapTopWidth = state.layers.at(-1)?.width;
+    this.lapOneTopWidth = rememberLapOneWidth(undefined, this.lap, state.layers.at(-1)?.width);
     this.fade = new ZoneFade(state.zoneIndex, BACKDROP.fadeMs);
     this.lastNowMs = scene.time.now;
     this.ctx = newFrameCtx(width, height, travellerClearBand(height), scene.time.now);
@@ -135,7 +136,7 @@ export class Backdrop {
   private setLap(lap: number, topWidth: number | undefined): void {
     if (lap === this.lap) return;
     this.lap = lap;
-    this.lapTopWidth = topWidth;
+    this.lapOneTopWidth = rememberLapOneWidth(this.lapOneTopWidth, lap, topWidth);
     const space = this.sceneries.get(SPACE_ZONE_INDEX);
     if (!space || lap === 0) return;
     // Normally baked ahead (`planAhead`); a jump (a debug start) bakes here.
@@ -158,7 +159,12 @@ export class Backdrop {
     if (target.kind === 'lap') {
       this.prepQueue.add(
         collectBakeSteps(() =>
-          ZONE_ART.space.bakeLap?.(this.scene, target.lap, this.look.planetSeed, this.lapTopWidth),
+          ZONE_ART.space.bakeLap?.(
+            this.scene,
+            target.lap,
+            this.look.planetSeed,
+            this.lapOneTopWidth,
+          ),
         ),
       );
       return;
@@ -318,7 +324,7 @@ export class Backdrop {
     // A zone shown later starts where the camera is now; those of the first frame are set by `update`.
     scenery.startAt(this.scrollY);
     // Built ahead, Space takes the tower top width of the moment its first lap begins.
-    if (prepared) scenery.setLap(Math.max(this.lap, 1), this.lapTopWidth);
+    if (prepared) scenery.setLap(Math.max(this.lap, 1), this.lapOneTopWidth);
     scenery.setAlpha(this.fade.alphaOf(index));
     scenery.update(this.ctx, this.scrollY);
     this.sceneries.set(index, scenery);
@@ -335,7 +341,7 @@ export class Backdrop {
     this.bake(id, this.lap);
     return this.artOf(id).build(this.scene, {
       ...this.sceneryLook(Math.max(this.lap, 1)),
-      topWidth: this.lapTopWidth,
+      topWidth: this.lapOneTopWidth,
     });
   }
 
@@ -363,7 +369,7 @@ export class Backdrop {
     if (!art.ownSky?.(this.look.weather)) bakeSky(this.scene, id, this.look.weather);
     const look = this.sceneryLook(Math.max(lap, 1));
     art.bake(this.scene, look);
-    art.bakeLap?.(this.scene, look.lap, look.planetSeed, this.lapTopWidth);
+    art.bakeLap?.(this.scene, look.lap, look.planetSeed, this.lapOneTopWidth);
   }
 
   private sceneryLook(lap: number): SceneryLook {

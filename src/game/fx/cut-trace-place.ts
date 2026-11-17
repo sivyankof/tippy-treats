@@ -3,6 +3,7 @@ import { BALANCE } from '../../data/balance';
 import { CUT_LOOK } from '../../data/cut-look';
 import { cutStripWidth, glazeWave, waveY } from '../objects/glaze-wave';
 import { layerBox } from '../objects/layer-draw';
+import { artWidth } from '../objects/layer-art';
 import { faceHalfSpan } from './glaze-growth';
 
 /** Where the drop that stays on a cut hangs: its top middle, from the layer centre. */
@@ -19,11 +20,13 @@ export interface TraceSpot {
  */
 export function traceSpot(width: number, side: 1 | -1, outer: number, plain: boolean): TraceSpot {
   const { trace } = CUT_LOOK.strands;
-  const box = layerBox(width);
+  // The picture is drawn at the rounded width: the edge and the wave are those of the drawn one.
+  const drawn = artWidth(width);
+  const box = layerBox(drawn);
   const r = outer / 2;
   const strip = cutStripWidth(box);
   const wave = plain
-    ? glazeWave(box, side === 1 ? 'right' : 'left', faceHalfSpan(width, null))
+    ? glazeWave(box, side === 1 ? 'right' : 'left', faceHalfSpan(drawn, null))
     : null;
   // The glaze ends where the sponge of the cut begins.
   const glazeEnd = wave ? (side === 1 ? wave.right : wave.left) : side * (box.innerRight - strip);
@@ -43,4 +46,11 @@ export function traceSpot(width: number, side: 1 | -1, outer: number, plain: boo
  */
 export function squashedY(bottomY: number, upPx: number, scaleY: number): number {
   return bottomY - upPx * scaleY;
+}
+
+/** The offset (`dx`, `dy`) from a pivot turned by `rad` radians (a layer's tilt carries what hangs on it). */
+export function rotatedOffset(dx: number, dy: number, rad: number): { x: number; y: number } {
+  const cos = Math.cos(rad);
+  const sin = Math.sin(rad);
+  return { x: dx * cos - dy * sin, y: dx * sin + dy * cos };
 }

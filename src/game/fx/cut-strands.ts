@@ -1,11 +1,11 @@
 import type * as Phaser from 'phaser';
 import type { Rng } from '../../core/rng';
-import { ANIM } from '../../data/anim';
 import { BALANCE } from '../../data/balance';
 import { CUT_LOOK, CUT_PICTURE, CUT_TEXTURES } from '../../data/cut-look';
 import { shade } from '../../util/color';
 import { clamp01, lerp, smoothstep, TWO_PI } from '../../util/math';
 import { DEPTH } from '../depth';
+import { layerBox } from '../objects/layer-draw';
 import type { LayerView } from '../objects/layer-view';
 import { StripRope } from '../objects/strip-rope';
 import {
@@ -40,10 +40,6 @@ const MAX_STRANDS = S.traits.length;
 const PAD = CUT_PICTURE.pad;
 const HALF_HEIGHT = BALANCE.layer.height / 2;
 
-/** The radius of the top corners of a layer this wide (as `layerBox` draws it). */
-function cornerOf(width: number): number {
-  return Math.min(ANIM.layer.cornerRadius, width / 2, HALF_HEIGHT);
-}
 /** A snapped half never gets shorter than this share: its direction stays known. */
 const MIN_LENGTH = 0.03;
 /** A bead riding a snapped half back stays this far along it (share): never on its round end. */
@@ -255,8 +251,8 @@ export class CutStrands {
       // Both ends sit on the outline of the cut side, further in where the top corner rounds off.
       const layerY = lerp(S.bandTop, S.bandBottom, trait.layerBand);
       const pieceY = lerp(S.bandTop, S.bandBottom, trait.pieceBand);
-      const layerIn = sideInset(cornerOf(start.layerWidth), inset, layerY + HALF_HEIGHT);
-      const pieceIn = sideInset(cornerOf(start.pieceWidth), inset, pieceY + HALF_HEIGHT);
+      const layerIn = sideInset(layerBox(start.layerWidth).radius, inset, layerY + HALF_HEIGHT);
+      const pieceIn = sideInset(layerBox(start.pieceWidth).radius, inset, pieceY + HALF_HEIGHT);
       strand.a.x = start.edgeX - start.side * layerIn;
       strand.a.y = start.y + layerY;
       strand.layerOff.x = strand.a.x - this.center0.x;

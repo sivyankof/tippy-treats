@@ -34,26 +34,47 @@ export function planetOfLap(
   lap: number,
   fits: PlanetFits,
 ): SpacePlanetId | null {
-  const last = Math.max(lap, 1);
-  let block = 0;
-  let order = blockOrder(planetSeed, block);
-  let shown = new Set<SpacePlanetId>();
-  let previous: SpacePlanetId | null = null;
-  let pick: SpacePlanetId | null = null;
-  for (let at = 1; at <= last; at++) {
-    const fitting = order.filter((id) => fits(id, at));
-    const fresh = fitting.filter((id) => !shown.has(id));
+  return new PlanetWalk(planetSeed, fits).pick(lap);
+}
+
+/**
+ * The walk behind `planetOfLap`, kept between calls: it remembers the pick of every lap it has passed, so asking
+ * for the next lap costs one step, not a replay from lap 1. `fits` must stay the same for the life of a walk.
+ */
+export class PlanetWalk {
+  private readonly picks: (SpacePlanetId | null)[] = [];
+  private block = 0;
+  private order: SpacePlanetId[];
+  private shown = new Set<SpacePlanetId>();
+  private previous: SpacePlanetId | null = null;
+
+  constructor(
+    private readonly planetSeed: number,
+    private readonly fits: PlanetFits,
+  ) {
+    this.order = blockOrder(planetSeed, 0);
+  }
+
+  pick(lap: number): SpacePlanetId | null {
+    const last = Math.max(lap, 1);
+    while (this.picks.length < last) this.step(this.picks.length + 1);
+    return this.picks[last - 1] ?? null;
+  }
+
+  private step(at: number): void {
+    const fitting = this.order.filter((id) => this.fits(id, at));
+    const fresh = fitting.filter((id) => !this.shown.has(id));
     const pool = fresh.length > 0 ? fresh : fitting;
-    pick = pool.find((id) => id !== previous) ?? pool[0] ?? null;
-    if (pick === null) continue;
-    previous = pick;
-    shown.add(pick);
-    if (shown.size === SPACE_PLANET_IDS.length) {
-      shown = new Set();
-      order = blockOrder(planetSeed, ++block);
+    const pick = pool.find((id) => id !== this.previous) ?? pool[0] ?? null;
+    this.picks.push(pick);
+    if (pick === null) return;
+    this.previous = pick;
+    this.shown.add(pick);
+    if (this.shown.size === SPACE_PLANET_IDS.length) {
+      this.shown = new Set();
+      this.order = blockOrder(this.planetSeed, ++this.block);
     }
   }
-  return pick;
 }
 
 /** How the planet of a lap crosses the screen: its side (0 left, 1 right; alternates lap by lap) and a draw 0..1 for its entry height. */

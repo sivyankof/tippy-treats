@@ -1,5 +1,5 @@
 import { spaceWidthLimit, lapFirstIndex } from '../../../core/space-laps';
-import { planetOfLap } from '../../../core/space-planet';
+import { PlanetWalk } from '../../../core/space-planet';
 import { LOGICAL_SIZE } from '../../../data/screen';
 import { PLANET_PLACE, type SpacePlanetId } from '../../../data/space-planets';
 import { planetSize } from './dessert-planets';
@@ -79,27 +79,50 @@ export function planetFit(
   return null;
 }
 
+/** Walks kept per (seed, lap 1 top width): a lap change is one step of a walk, not a replay from lap 1. */
+const walks = new Map<string, PlanetWalk>();
+const MAX_WALKS = 8;
+
 /**
  * The planet of a lap of Space on the logical screen width (the lanes of laps from 2 on depend on it alone), or
- * `null` when none fits. Only lap 1 depends on the tower top width (`topWidth`, see `corridorHalf`).
+ * `null` when none fits. Only lap 1 depends on the tower top width, and that width is the one of lap 1 for EVERY lap
+ * asked (the pick of lap 1 decides the picks after it): callers pass `lapOneTopWidth` (see `rememberLapOneWidth`).
  */
 export function lapPlanet(
   planetSeed: number,
   lap: number,
-  topWidth?: number,
+  lapOneTopWidth?: number,
 ): SpacePlanetId | null {
-  return planetOfLap(
-    planetSeed,
-    lap,
-    (id, at) =>
-      planetFit(
-        at,
-        LOGICAL_SIZE.width,
-        planetSize(id).width,
-        0,
-        at === 1 ? topWidth : undefined,
-      ) !== null,
-  );
+  const key = `${planetSeed}|${lapOneTopWidth ?? ''}`;
+  let walk = walks.get(key);
+  if (!walk) {
+    if (walks.size >= MAX_WALKS) walks.clear();
+    walk = new PlanetWalk(
+      planetSeed,
+      (id, at) =>
+        planetFit(
+          at,
+          LOGICAL_SIZE.width,
+          planetSize(id).width,
+          0,
+          at === 1 ? lapOneTopWidth : undefined,
+        ) !== null,
+    );
+    walks.set(key, walk);
+  }
+  return walk.pick(lap);
+}
+
+/**
+ * The tower top width of lap 1, the one source of truth for the bakes and for the planet on screen: it is taken when
+ * lap 1 begins and kept (`undefined` for a start deep in Space, in both places alike).
+ */
+export function rememberLapOneWidth(
+  current: number | undefined,
+  lap: number,
+  topWidth: number | undefined,
+): number | undefined {
+  return lap === 1 ? topWidth : current;
 }
 
 /**

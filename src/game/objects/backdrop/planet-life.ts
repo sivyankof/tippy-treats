@@ -13,7 +13,14 @@ import type { FrameCtx, Life } from './life';
 import { inSky } from './layer-anchor';
 import { hoverPose, newPose } from './life-motion';
 import { planetSize } from './dessert-planets';
-import { lapPlanet, planetFade, planetFit, planetY, type PlanetFit } from './planet-placement';
+import {
+  lapPlanet,
+  planetFade,
+  rememberLapOneWidth,
+  planetFit,
+  planetY,
+  type PlanetFit,
+} from './planet-placement';
 import type { LapLife } from './zone-scenery';
 
 /** What the seed gives for a lap. */
@@ -49,7 +56,9 @@ export class PlanetLife implements Life, LapLife {
     lap: number,
     topWidth?: number,
   ) {
-    const id = lapPlanet(planetSeed, lap, topWidth) ?? SPACE_PLANET_IDS[0]!;
+    const id =
+      lapPlanet(planetSeed, lap, rememberLapOneWidth(undefined, lap, topWidth)) ??
+      SPACE_PLANET_IDS[0]!;
     this.image = new Phaser.GameObjects.Image(scene, 0, 0, planetKey(id)).setVisible(false);
     this.objects = [this.image];
     this.still = { texture: planetKey(id), at: { x: 0, y: 0 }, scale: 1 };
@@ -58,8 +67,9 @@ export class PlanetLife implements Life, LapLife {
   }
 
   setLap(lap: number, topWidth?: number): void {
-    if (lap === 1 && topWidth !== this.lapOneTopWidth) {
-      this.lapOneTopWidth = topWidth;
+    const width = rememberLapOneWidth(this.lapOneTopWidth, lap, topWidth);
+    if (width !== this.lapOneTopWidth) {
+      this.lapOneTopWidth = width;
       this.cached = null;
     }
   }

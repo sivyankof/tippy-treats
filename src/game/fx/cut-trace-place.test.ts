@@ -4,7 +4,7 @@ import { BALANCE } from '../../data/balance';
 import { CUT_LOOK } from '../../data/cut-look';
 import { cutStripWidth, glazeWave, waveY } from '../objects/glaze-wave';
 import { layerBox } from '../objects/layer-draw';
-import { squashedY, traceSpot } from './cut-trace-place';
+import { rotatedOffset, squashedY, traceSpot } from './cut-trace-place';
 import { faceHalfSpan } from './glaze-growth';
 
 const OUTER = 36;
@@ -46,5 +46,23 @@ describe('squashedY', () => {
   it('keeps a point at its height above the bottom, squashed with the layer', () => {
     expect(squashedY(100, 40, 1)).toBe(60);
     expect(squashedY(100, 40, 0.72)).toBeCloseTo(71.2);
+  });
+});
+
+describe('rotatedOffset', () => {
+  it('keeps the offset at rest and turns it with the layer', () => {
+    expect(rotatedOffset(10, 4, 0)).toEqual({ x: 10, y: 4 });
+    const turned = rotatedOffset(10, 0, Math.PI / 2);
+    expect(turned.x).toBeCloseTo(0);
+    expect(turned.y).toBeCloseTo(10);
+    const a = rotatedOffset(7, -3, 0.4);
+    expect(Math.hypot(a.x, a.y)).toBeCloseTo(Math.hypot(7, -3));
+  });
+});
+
+describe('traceSpot on a fractional width', () => {
+  it('is the spot of the drawn (rounded) width', () => {
+    expect(traceSpot(300.6, 1, OUTER, true)).toEqual(traceSpot(301, 1, OUTER, true));
+    expect(traceSpot(300.4, -1, OUTER, false)).toEqual(traceSpot(300, -1, OUTER, false));
   });
 });

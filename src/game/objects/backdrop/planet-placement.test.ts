@@ -11,6 +11,7 @@ import {
   planetFit,
   planetLaneX,
   planetY,
+  rememberLapOneWidth,
 } from './planet-placement';
 
 const W = LOGICAL_SIZE.width;
@@ -166,8 +167,36 @@ describe('lapPlanet', () => {
     for (let seed = 0; seed < 100; seed++) {
       const ids = Array.from({ length: 40 }, (_, i) => lapPlanet(seed, i + 2));
       expect(ids.every((id) => id !== null)).toBe(true);
-      // The first nine laps of a block hold nine different planets, the narrow laps taking the ones that fit.
-      expect(new Set(ids.slice(0, 7)).size).toBe(7);
+      // The first block (nine laps) holds all nine planets before one repeats; the narrow laps take the ones that fit.
+      expect(new Set(ids.slice(0, 9)).size).toBe(9);
+      // Every following block of nine holds them all again.
+      for (let block = 1; block < 4; block++) {
+        expect(new Set(ids.slice(block * 9, block * 9 + 9)).size).toBe(9);
+      }
+    }
+  });
+
+  it('gives the same planet to the bake and to the show for any sequence of top widths', () => {
+    for (let seed = 0; seed < 30; seed++) {
+      for (const widths of [
+        [300, 700, 500, 250, 900],
+        [undefined, 640, 120],
+        [420, 420, 90],
+      ]) {
+        // Lap 1 takes the width of its start; later laps carry the SAME remembered width into both places.
+        let baked: number | undefined;
+        let shown: number | undefined;
+        widths.forEach((w, i) => {
+          const lap = i + 1;
+          baked = rememberLapOneWidth(baked, lap, w);
+          shown = rememberLapOneWidth(shown, lap, w);
+          expect(lapPlanet(seed, lap, baked)).toBe(lapPlanet(seed, lap, shown));
+          expect(lapPlanet(seed, lap + 1, baked)).toBe(
+            lapPlanet(seed, lap + 1, widths[0] ?? undefined),
+          );
+        });
+        expect(rememberLapOneWidth(7, 3, 99)).toBe(7);
+      }
     }
   });
 

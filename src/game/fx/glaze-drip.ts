@@ -2,7 +2,7 @@ import * as Phaser from 'phaser';
 import { ANIM } from '../../data/anim';
 import { BALANCE } from '../../data/balance';
 import type { LayerView } from '../objects/layer-view';
-import { squashedY } from './cut-trace-place';
+import { rotatedOffset, squashedY } from './cut-trace-place';
 import { DEPTH } from '../depth';
 import { easeFn } from './ease';
 import { FX_TEXTURES } from './fx-textures';
@@ -58,7 +58,9 @@ export class GlazeDrip {
     const view = drip.hold?.view() ?? null;
     if (drip.hold && view) {
       const top = squashedY(view.y + HALF_LAYER, drip.hold.up, view.innerScaleY);
-      drip.item.setPosition(view.x + drip.hold.dx * view.innerScaleX, top + slide);
+      // The offset from the layer centre turns with the layer, so the drop stays on its tilted glaze edge.
+      const off = rotatedOffset(drip.hold.dx * view.innerScaleX, top - view.y, view.rotation);
+      drip.item.setPosition(view.x + off.x, view.y + off.y + slide);
     } else {
       drip.item.setY(drip.startY + slide);
     }

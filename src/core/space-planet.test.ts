@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { SPACE_PLANET_IDS, type SpacePlanetId } from '../data/space-planets';
 import {
   LapChangeWatch,
+  PlanetWalk,
   planetOfLap,
   planetPassOf,
   planetSeedOf,
@@ -17,6 +18,15 @@ describe('planetOfLap', () => {
   const wideLater: PlanetFits = (id, lap) => lap >= 4 || !WIDE.includes(id);
   const lapsOf = (seed: number, fits: PlanetFits, count: number): (SpacePlanetId | null)[] =>
     Array.from({ length: count }, (_, i) => planetOfLap(seed, i + 1, fits));
+
+  it('a kept walk gives the same picks as a replay, in any order of asking', () => {
+    for (const seed of seeds) {
+      const walk = new PlanetWalk(seed, wideLater);
+      for (const lap of [7, 2, 19, 1, 4, 30, 5]) {
+        expect(walk.pick(lap)).toBe(planetOfLap(seed, lap, wideLater));
+      }
+    }
+  });
 
   it('shows all nine planets once in every block of nine laps when all fit', () => {
     for (const seed of seeds) {
