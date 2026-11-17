@@ -28,7 +28,9 @@ export interface NextChipSpan {
 
 /** `labelWidth` is null for the icon alone: the chip then hugs the icon, with no gap for text. */
 export function nextChipSpan(screenWidth: number, labelWidth: number | null): NextChipSpan {
-  const labelRight = screenWidth - badgeMargin - nextChip.padX;
+  // Only a text pops, so only a chip with text keeps room for it.
+  const room = labelWidth === null ? 0 : nextChip.popRoom;
+  const labelRight = screenWidth - badgeMargin - nextChip.padX - room;
   const iconX =
     labelWidth === null
       ? labelRight - badgeSize / 2
@@ -38,17 +40,17 @@ export function nextChipSpan(screenWidth: number, labelWidth: number | null): Ne
     labelRight,
     iconX,
     chipLeft: iconX - badgeSize / 2 - nextChip.padX,
-    chipRight: labelRight + nextChip.padX,
+    chipRight: labelRight + nextChip.padX + room,
   };
 }
 
 /**
  * Scale of the text at the peak of its pop: `ANIM.badges.nextPopScale`, less for a wide text, so the growth to the right
- * (the text is pinned at its left edge, next to the icon) stays within the chip padding.
+ * (the text is pinned at its left edge, next to the icon) uses only `popRoom`: the text then still keeps the chip padding from the plate's right end.
  */
 export function nextLabelPopScale(labelWidth: number): number {
   if (labelWidth <= 0) return 1;
-  return Math.min(ANIM.badges.nextPopScale, 1 + nextChip.padX / labelWidth);
+  return Math.min(ANIM.badges.nextPopScale, 1 + nextChip.popRoom / labelWidth);
 }
 
 /** The chip keeps `nextBadgeGap` between itself and the badge row. */
