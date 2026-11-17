@@ -3,7 +3,7 @@ import { ANIM } from '../../../data/anim';
 import { BACKDROP_FAR } from '../../../data/backdrop-far';
 import { BACKDROP } from '../../../data/backdrop';
 import { LOGICAL_SIZE } from '../../../data/screen';
-import { ZONE_SKY } from '../../../data/backdrop-colors';
+import { ZONE_SKY, type GradientStop } from '../../../data/backdrop-colors';
 import type { StartPlaceId } from '../../../data/start-places';
 import type { WeatherId } from '../../../data/weather';
 import type { ZoneId } from '../../../data/zones';
@@ -31,6 +31,10 @@ export interface SceneryDef {
   guest?: GuestSource;
   /** The living element that changes with the lap of Space (the planet), when the zone has one. */
   lapLife?: LapLife;
+  /** Key of a sky picture the art baked for this run's weather (see `bakeStopsSky`); the zone's own sky when absent. */
+  sky?: string;
+  /** Tint of the far plane, for a zone whose sky colour follows the weather (the plane is baked in the clear sky's tones). */
+  farTint?: number;
 }
 
 /** What a zone's art may depend on besides the zone itself: the lap of Space and the look of the run. */
@@ -78,20 +82,29 @@ function bakeDitheredSky(scene: Phaser.Scene, zone: ZoneId): void {
   );
 }
 
+/** Bakes a sky picture of `key` from gradient stops: the sky of a zone that shows the weather of the run through glass. */
+export function bakeStopsSky(
+  scene: Phaser.Scene,
+  key: string,
+  stops: readonly GradientStop[],
+): void {
+  const { skyBands, skyBandHeight, skyWidth } = BACKDROP;
+  const colors = gradientBands(stops, skyBands);
+  bakeTexture(scene, key, skyWidth, skyBands * skyBandHeight, (g) => {
+    colors.forEach((color, i) => {
+      g.fillStyle(color, 1);
+      g.fillRect(0, i * skyBandHeight, skyWidth, skyBandHeight);
+    });
+  });
+}
+
 /** Bakes the sky picture of a zone (once; the scenery also calls it, so a zone built without the run backdrop has its sky). */
 export function bakeSky(scene: Phaser.Scene, zone: ZoneId): void {
   if ((BACKDROP.skyDither.zones as readonly ZoneId[]).includes(zone)) {
     bakeDitheredSky(scene, zone);
     return;
   }
-  const { skyBands, skyBandHeight, skyWidth } = BACKDROP;
-  const colors = gradientBands(ZONE_SKY[zone], skyBands);
-  bakeTexture(scene, skyKey(zone), skyWidth, skyBands * skyBandHeight, (g) => {
-    colors.forEach((color, i) => {
-      g.fillStyle(color, 1);
-      g.fillRect(0, i * skyBandHeight, skyWidth, skyBandHeight);
-    });
-  });
+  bakeStopsSky(scene, skyKey(zone), ZONE_SKY[zone]);
 }
 
 /**
@@ -125,13 +138,18 @@ export class ZoneScenery {
     this.drift = BACKDROP.drift[zone];
     this.tints = BACKDROP.layerTint[zone] ?? null;
     this.breathePhase = depth;
-    this.sky = new Phaser.GameObjects.Image(scene, width / 2, height / 2, skyKey(zone));
+    this.sky = new Phaser.GameObjects.Image(scene, width / 2, height / 2, def.sky ?? skyKey(zone));
     this.far = new FarPlane(scene, zone, width, height);
     this.layers = def.layers.map((key, i) =>
       new Phaser.GameObjects.TileSprite(scene, 0, 0, width, height, key)
         .setOrigin(0)
         .setAlpha(BACKDROP.layerAlpha[zone][i] ?? 1),
     );
+    if (def.farTint !== undefined) {
+      for (const object of this.far.objects) {
+        if (object instanceof Phaser.GameObjects.TileSprite) object.setTint(def.farTint);
+      }
+    }
     this.lives = def.lives.map(({ life }) => life);
     this.guest = def.guest ?? null;
     this.lapLife = def.lapLife ?? null;

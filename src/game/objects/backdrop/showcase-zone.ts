@@ -3,11 +3,17 @@ import { BD_TEX } from '../../../data/backdrop';
 import { BACKDROP_COLORS } from '../../../data/backdrop-colors';
 import { BACKDROP_LIFE, garlandWireY } from '../../../data/backdrop-life';
 import { LOGICAL_SIZE } from '../../../data/screen';
-import { shade } from '../../../util/color';
 import { bakeTexture } from '../../ui/bake-texture';
 import { glow, tiled } from './art-kit';
 import { Hover, Traveler, Twinkles } from './life';
-import type { ZoneArt } from './zone-scenery';
+import { bakeStopsSky, type ZoneArt } from './zone-scenery';
+import { STREET_LOOK, WINDOW_SKY, type StreetLook } from '../../../data/window-look';
+import type { WeatherId } from '../../../data/weather';
+import { BACKDROP_FAR } from '../../../data/backdrop-far';
+import { channels, mixColor, shade } from '../../../util/color';
+import { gradientColorAt } from './sky-gradient';
+import { ZONE_SKY } from '../../../data/backdrop-colors';
+import { bakeGlassItems, showcaseGlassLife } from './window-weather';
 
 type Graphics = Phaser.GameObjects.Graphics;
 
@@ -17,6 +23,33 @@ const C = BACKDROP_COLORS.showcase;
 /** Where on the wire texture the string hangs at its anchors. */
 const WIRE_TOP = 6;
 const WIRE_STEPS = 48;
+
+/** Street and pane pictures are baked per weather (one weather per run), so a run never meets the pictures of another. */
+interface StreetKeys {
+  street: string;
+  panes: string;
+}
+
+const streetKeys = (weather: WeatherId): StreetKeys => ({
+  street: `${S.street}_${weather}`,
+  panes: `${S.panes}_${weather}`,
+});
+/** The far plane is baked in the clear sky's tones; this tint takes it to the weather's (it can only darken). */
+function farTint(weather: WeatherId): number | undefined {
+  if (weather === 'clear') return undefined;
+  const sky = WINDOW_SKY[weather];
+  const mid = mixColor(sky.top, sky.bottom, BACKDROP_FAR.skyAt);
+  const clear = gradientColorAt(ZONE_SKY.showcase, BACKDROP_FAR.skyAt);
+  const [r, g, b] = channels(mid);
+  const [cr, cg, cb] = channels(clear);
+  const ratio = (a: number, c: number): number => Math.min(1, a / c);
+  return (
+    (Math.round(255 * ratio(r, cr)) << 16) |
+    (Math.round(255 * ratio(g, cg)) << 8) |
+    Math.round(255 * ratio(b, cb))
+  );
+}
+const skyKey = (weather: WeatherId): string => `bd_sky_showcase_${weather}`;
 
 const BUILDINGS = [
   { x: 30, y: 60, w: 110, h: 200 },
@@ -41,13 +74,13 @@ function glint(
   g.fillTriangle(x + width, y, x + lean + width, y + height, x + lean, y + height);
 }
 
-function bakeLayers(scene: Phaser.Scene): void {
-  bakeTexture(scene, S.street, TILE, TILE, (g) => {
+function bakeLayers(scene: Phaser.Scene, street: StreetLook, keys: StreetKeys): void {
+  bakeTexture(scene, keys.street, TILE, TILE, (g) => {
     for (const b of BUILDINGS) {
       tiled(TILE, b.x, b.y, Math.max(b.w, b.h), (x, y) => {
-        g.fillStyle(C.building, 0.7);
+        g.fillStyle(street.building, 0.7);
         g.fillRoundedRect(x, y, b.w, b.h, 12);
-        g.fillStyle(C.buildingWindow, 0.8);
+        g.fillStyle(street.buildingWindow, 0.8);
         for (let wy = y + 16; wy < y + b.h - 24; wy += 34) {
           for (let wx = x + 14; wx < x + b.w - 22; wx += 30) g.fillRoundedRect(wx, wy, 16, 20, 4);
         }
@@ -55,8 +88,8 @@ function bakeLayers(scene: Phaser.Scene): void {
     }
   });
 
-  bakeTexture(scene, S.panes, TILE, TILE, (g) => {
-    g.fillStyle(C.frame, 0.9);
+  bakeTexture(scene, keys.panes, TILE, TILE, (g) => {
+    g.fillStyle(street.frame, 0.9);
     g.fillRect(0, 0, TILE, 14);
     g.fillRect(0, 0, 14, TILE);
     g.fillRect(TILE / 2, 0, 14, TILE);
@@ -157,20 +190,37 @@ function bakeWindowLife(scene: Phaser.Scene): void {
 
 /** Shop window: street behind glass, a blinking garland, passers-by and a turning cake. */
 export const showcaseArt: ZoneArt = {
-  bake(scene) {
-    bakeLayers(scene);
+  bake(scene, look) {
+    const sky = WINDOW_SKY[look.weather];
+    bakeStopsSky(
+      scene,
+      skyKey(look.weather),
+      look.weather === 'clear'
+        ? ZONE_SKY.showcase
+        : [
+            { at: 0, color: sky.top },
+            { at: 1, color: sky.bottom },
+          ],
+    );
+    bakeGlassItems(scene, look.weather);
+    bakeLayers(scene, STREET_LOOK[look.weather], streetKeys(look.weather));
     bakeGarland(scene);
     bakeWindowLife(scene);
   },
-  build(scene) {
+  build(scene, look) {
     const life = BACKDROP_LIFE.showcase;
+    const keys = streetKeys(look.weather);
+    const glass = showcaseGlassLife(scene, look.weather);
     return {
-      layers: [S.street, S.panes, S.treats, S.awning],
+      sky: skyKey(look.weather),
+      farTint: farTint(look.weather),
+      layers: [keys.street, keys.panes, S.treats, S.awning],
       lives: [
         ...life.walkers.map((spec) => ({ slot: 0, life: new Traveler(scene, spec) })),
         { slot: 2, life: new Hover(scene, [life.garland.wire]) },
         { slot: 2, life: new Twinkles(scene, life.garland.bulbs) },
         { slot: 2, life: new Hover(scene, [life.cakeStand, life.cake, ...life.sprinkles]) },
+        ...(glass ? [{ slot: 3, life: glass }] : []),
       ],
     };
   },
