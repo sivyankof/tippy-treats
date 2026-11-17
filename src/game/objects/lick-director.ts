@@ -9,6 +9,7 @@ import { faceHalfSpan } from '../fx/glaze-growth';
 import { dropOuter } from './glaze-drip-textures';
 import { glazeWave, waveY } from './glaze-wave';
 import { layerBox } from './layer-draw';
+import { layerMarks, type LayerMarkStore } from './layer-mark-store';
 import type { LayerView } from './layer-view';
 import {
   beatStartMs,
@@ -25,10 +26,13 @@ import {
   type LickStage,
   type LoopShape,
 } from './lick-plan';
+import { JuiceQueue, stainTarget, type JuiceCheck, type JuiceStain } from './juice-lick-plan';
 import { tongueOuterWidth } from './tongue-shape';
 
 /** Name of the stream the licks draw from, forked from the cosmetic seed of the run. */
 const LICK_STREAM = 'lick';
+/** The stream of the juice licks (who glances), so they never shift the natural licks. */
+const JUICE_STREAM = 'lick-juice';
 /** Radius of the round part of the lick drop at scale 1 (its centre sits this far above its bottom). */
 const DROP_RADIUS = dropOuter(GLAZE_DRIPS.lickLook).width / 2;
 
@@ -43,6 +47,8 @@ export interface LickContext {
   /** Visible band of the screen in world y. */
   bandTop: number;
   bandBottom: number;
+  /** Scene time (ms), the clock the marks of the layers run on. */
+  nowMs: number;
 }
 
 /** A lick under way. */
@@ -59,6 +65,9 @@ interface ActiveLick {
   stage: LickStage | null;
   /** Neighbours that glance at the lucky one. */
   glancers: LayerView[];
+  /** The juice stain this lick takes (a stain lick), and whether the tongue has taken it. */
+  juice: JuiceStain | null;
+  taken: boolean;
 }
 
 /**
@@ -71,6 +80,10 @@ interface ActiveLick {
 export class LickDirector {
   private readonly scheduler: LickScheduler;
   private readonly random: Rng;
+  private readonly juiceRandom: Rng;
+  private readonly juice = new JuiceQueue();
+  /** Time the director has run, ms: the clock of the juice queue. */
+  private clockMs = 0;
   private run: ActiveLick | null = null;
   private readonly glaze: LickGlaze = { kind: 'none', x: 0, y: 0, squash: 1, scale: 1 };
   private readonly spot = { x: 0, y: 0 };
@@ -83,28 +96,46 @@ export class LickDirector {
   /** The happy end of the big scene: a contented "mmm" and a heart over the head (world point). */
   onHappy: ((x: number, y: number) => void) | null = null;
 
-  constructor(cosmeticSeed: number) {
+  constructor(
+    cosmeticSeed: number,
+    private readonly marks: LayerMarkStore = layerMarks,
+  ) {
     this.random = new Rng(cosmeticSeed).fork(LICK_STREAM);
+    this.juiceRandom = new Rng(cosmeticSeed).fork(JUICE_STREAM);
     this.scheduler = new LickScheduler(() => this.random.next());
   }
 
   /** Advances the lick and, when it is time, starts a new one. A failure drops the lick, not the run. */
   update(dtMs: number, ctx: LickContext): void {
+    this.clockMs += dtMs;
     if (!fxGuard.call('lick', this, this.advance, dtMs, ctx))
       fxGuard.cleanup('lick', this, this.drop);
   }
 
   private advance(dtMs: number, ctx: LickContext): void {
-    if (effectsMode.reduced || !ctx.calm) {
+    this.marks.sweep(ctx.nowMs);
+    if (effectsMode.reduced) {
+      this.stop();
+      for (const stain of this.juice.clear()) this.marks.removePress(stain.index + 1);
+      return;
+    }
+    if (!ctx.calm) {
       this.stop();
       return;
     }
+    // A stain waiting to be licked comes before the idle timer, but never breaks into a scene that is on.
+    if (this.pollJuice(ctx)) return;
     if (this.run) {
       this.follow(this.run, ctx);
       return;
     }
     this.scheduler.tick(dtMs);
     if (this.scheduler.ready) this.start(ctx, false);
+  }
+
+  /** A juice stain was left on layer `index` (0-based): about a second later it is licked off, or melts. */
+  queueJuice(index: number): void {
+    this.juice.add(index, this.clockMs);
   }
 
   /** The beat the lick that is on has reached; `null` when none is on. */
@@ -125,10 +156,23 @@ export class LickDirector {
 
   /** Drops the lick that is going on. */
   stop(): void {
-    if (!this.run) return;
-    this.run.view.faceView.cancelLick();
-    this.run.view.glazeDrips.hideLick();
+    const run = this.run;
+    if (!run) return;
+    run.view.faceView.cancelLick();
+    run.view.glazeDrips.hideLick();
     this.run = null;
+    this.endJuice(run);
+  }
+
+  /** A stain lick is over: the next waits its pause and the idle timer keeps off; one broken off before the stroke asks again. */
+  private endJuice(run: ActiveLick): void {
+    if (!run.juice) return;
+    if (!run.taken) {
+      this.juice.retry(run.juice, this.clockMs);
+      return;
+    }
+    this.juice.done(this.clockMs);
+    this.scheduler.hold(LICK.juice.idleAfterMs);
   }
 
   /** After a failure: the lick is forgotten first, so a second failure while stopping it cannot repeat. */
@@ -136,6 +180,11 @@ export class LickDirector {
     const run = this.run;
     this.run = null;
     if (!run) return;
+    // A stain lick that failed leaves no stain behind.
+    if (run.juice) {
+      this.marks.removePress(run.index + 1);
+      this.juice.done(this.clockMs);
+    }
     fxGuard.run('lick-stop', () => {
       run.view.faceView.cancelLick();
       run.view.glazeDrips.hideLick();
@@ -185,8 +234,69 @@ export class LickDirector {
       color: lickKind === 'fall' && above >= 0 ? above : own,
       stage: null,
       glancers: [],
+      juice: null,
+      taken: false,
     };
     this.scheduler.started();
+    this.follow(this.run, ctx);
+    return true;
+  }
+
+  /**
+   * The juice queue's turn: melts what has to melt and starts the lick of a stain that is ready.
+   * True when a lick started (it has played its first frame).
+   */
+  private pollJuice(ctx: LickContext): boolean {
+    const action = this.juice.poll(
+      this.clockMs,
+      this.run !== null,
+      !effectsMode.atMost('lite'),
+      (index) => this.juiceCheck(index, ctx),
+    );
+    if (action.kind === 'melt') {
+      this.marks.vanishPress(action.stain.index + 1, ctx.nowMs, LICK.juice.vanishMs);
+      return false;
+    }
+    if (action.kind === 'lick') return this.startJuice(action.stain, ctx);
+    return false;
+  }
+
+  /** What the layer of a stain can do now: gone (no layer on screen or no stain), able to lick, or has to wait. */
+  private juiceCheck(index: number, ctx: LickContext): JuiceCheck {
+    const view = ctx.views.get(index);
+    if (!view || !this.marks.hasPress(index + 1)) return 'gone';
+    if (view.y < ctx.bandTop || view.y > ctx.bandBottom) return 'gone';
+    return this.allowed(index, view, ctx) ? 'ok' : 'wait';
+  }
+
+  /** The short scene aimed at the stain of layer `stain.index`; false when it could not start. */
+  private startJuice(stain: JuiceStain, ctx: LickContext): boolean {
+    const view = ctx.views.get(stain.index);
+    const mark = this.marks.at(stain.index + 1)?.press?.[0];
+    if (!view || !mark) return false;
+    const face = view.faceView;
+    const target = stainTarget(mark, face.x, face.y, face.faceScale, { x: 0, y: 0 });
+    const dir: 1 | -1 = target.x < 0 ? -1 : 1;
+    const style = lickStyleFor(null);
+    const shape: LoopShape = { ...loopShape(view.drawnWidth, face.faceScale, dir, style), target };
+    if (!face.startLick('short', 'stain', shape, style)) {
+      this.juice.retry(stain, this.clockMs);
+      return false;
+    }
+    this.run = {
+      index: stain.index,
+      view,
+      scene: 'short',
+      kind: 'stain',
+      style,
+      shape,
+      rootY: 0,
+      color: 0,
+      stage: null,
+      glancers: [],
+      juice: stain,
+      taken: false,
+    };
     this.follow(this.run, ctx);
     return true;
   }
@@ -230,6 +340,15 @@ export class LickDirector {
       this.cue(run, frame.stage, ctx);
     }
     const scale = face.faceScale || 1;
+    if (
+      run.juice &&
+      !run.taken &&
+      (frame.stage === 'back' || (frame.stage === 'stroke' && frame.p >= LICK.shortPath.takeAt))
+    ) {
+      // The tip takes the stain: it shrinks away with it.
+      run.taken = true;
+      this.marks.vanishPress(run.index + 1, ctx.nowMs, LICK.juice.vanishMs);
+    }
     this.lickDrips(run, ctx, scale);
     const g = lickGlaze(run.scene, run.kind, run.style, run.shape, frame, run.rootY, this.glaze);
     const x = face.x + g.x * scale;
@@ -291,12 +410,17 @@ export class LickDirector {
     for (const index of [run.index - 1, run.index + 1]) {
       const other = ctx.views.get(index);
       if (!other || !other.visible) continue;
-      if (this.random.next() >= LICK.neighbourGlanceChance) continue;
+      if (this.rngOf(run).next() >= LICK.neighbourGlanceChance) continue;
       const otherFace = other.faceView;
       if (otherFace.licking) continue;
       other.glanceAtWorld(fx, fy, left);
       run.glancers.push(other);
     }
+  }
+
+  /** The stream a lick draws from: stain licks have their own. */
+  private rngOf(run: ActiveLick): Rng {
+    return run.juice ? this.juiceRandom : this.random;
   }
 
   private allowed(index: number, view: LayerView, ctx: LickContext): boolean {

@@ -30,6 +30,23 @@ export const LICK = {
   bigChance: 0.2,
   /** When no layer can lick right now the next look comes after this time. */
   retryMs: 1000,
+  /**
+   * Licking a juice stain (docs/06, "Слизывание глазури", "Сок"): the layer takes the stain off its
+   * side with the short scene about `delayMs` after the berry burst. Several stains go one after
+   * another with `betweenMs` between them; a stain that could not be licked for `timeoutMs` (or
+   * whose layer left the screen) melts. After a juice lick the idle timer waits at least
+   * `idleAfterMs`. The stain shrinks away over `vanishMs`; the tongue aims at `targetShare` of
+   * the stain picture's height; a lick broken off before the stroke asks again after `retryMs`.
+   */
+  juice: {
+    delayMs: 1000,
+    betweenMs: 700,
+    timeoutMs: 6000,
+    idleAfterMs: 3000,
+    vanishMs: 110,
+    targetShare: 0.4,
+    retryMs: 400,
+  },
   /** A layer is on screen for a lick when it is at least this far from the screen edge. */
   screenMarginPx: 40,
   /** A face scaled below this (a narrow layer) does not lick. */

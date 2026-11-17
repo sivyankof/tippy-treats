@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { BALANCE } from '../data/balance';
 import type { RunResult } from './run-result';
+import { speedCurve } from './speed-curve';
 import {
   MAX_STEPS,
   STEP,
@@ -68,14 +69,14 @@ describe('TowerSim: flight', () => {
     const sim = new TowerSim(config());
     dropAt(sim, 0);
     const second = only(untilFlying(sim), 'spawn').layer;
-    expect(second).toMatchObject({ index: 2, x: 940, dir: -1, speed: SPEED.base + SPEED.perLayer });
+    expect(second).toMatchObject({ index: 2, x: 940, dir: -1, speed: speedCurve(1) });
     dropAt(sim, 0);
     const third = only(untilFlying(sim), 'spawn').layer;
     expect(third).toMatchObject({
       index: 3,
       x: 140,
       dir: 1,
-      speed: SPEED.base + SPEED.perLayer * 2,
+      speed: speedCurve(2),
     });
   });
 

@@ -48,9 +48,42 @@ export interface PerfSegmentDef {
   startOn: PerfStartOn;
   /** The window also closes when the results screen opens (the collapse). */
   endOnResults?: boolean;
+  /** The window closes `PERF.transition.tailMs` after the cross-fade of the zone change has ended (the transition segments). */
+  endAfterFade?: boolean;
+  /** Worst frame work time this segment is held to instead of `PERF_BUDGET.workWorstMs`, ms. */
+  workWorstMs?: number;
 }
 
 const NO_TEAM: ReadonlyArray<CreatureId | null> = [null, null, null];
+
+/** The zone boundaries the transition segments cross: the height whose next layer is the first of a new zone. */
+export const PERF_TRANSITION = {
+  /** A segment starts this many layers below its boundary, so everything the change prepares happens in the window. */
+  layersBefore: 10,
+  /** The window stays open this long after the cross-fade has ended. */
+  tailMs: 800,
+  /** Longest window: a run that never reaches the boundary ends here with a note. */
+  measureMs: 40000,
+  /** Worst frame work time of a transition segment, ms (headless; the zone change must not hitch). */
+  workWorstMs: 12,
+} as const;
+
+/** One transition segment: a bot that drops (almost) every layer perfectly through the boundary. */
+function transitionSegment<B extends number>(boundary: B) {
+  return {
+    id: `transition-${boundary}` as const,
+    drawClass: 'heavy',
+    start: boundary - PERF_TRANSITION.layersBefore,
+    team: NO_TEAM,
+    level: 1,
+    driver: { kind: 'bot', sdMs: 3 },
+    warmupMs: 500,
+    measureMs: PERF_TRANSITION.measureMs,
+    startOn: 'ready',
+    endAfterFade: true,
+    workWorstMs: PERF_TRANSITION.workWorstMs,
+  } as const satisfies PerfSegmentDef;
+}
 
 export const PERF_SEGMENTS = [
   {
@@ -203,6 +236,11 @@ export const PERF_SEGMENTS = [
     measureMs: 8000,
     startOn: 'results',
   },
+  transitionSegment(20),
+  transitionSegment(40),
+  transitionSegment(60),
+  transitionSegment(80),
+  transitionSegment(100),
 ] as const satisfies readonly PerfSegmentDef[];
 
 export type PerfSegmentId = (typeof PERF_SEGMENTS)[number]['id'];
@@ -217,8 +255,10 @@ export const PERF_BUDGET = {
   drawCalls: { light: 40, heavy: 60 } as Readonly<Record<PerfDrawClass, number>>,
   /** Mean frame work time, ms. */
   workMeanMs: 8,
-  /** Worst frame work time, ms. */
+  /** Worst frame work time, ms (a segment may hold itself to less: `PerfSegmentDef.workWorstMs`). */
   workWorstMs: 50,
+  /** Most draw calls of one frame while two zones cross-fade (the transition segments). */
+  fadeDrawsMax: 60,
   /** Mean time between frames, ms (about 55 fps). */
   intervalMeanMs: 18,
   /** Share of the shared atlas page height that stays free at the peak of the shelves; with less (or with a second page) the benchmark is over the budget. */

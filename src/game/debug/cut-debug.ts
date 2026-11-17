@@ -13,20 +13,23 @@ const DEBUG_SHARE: Readonly<Record<CutVariantName, number>> = {
 };
 
 /**
- * Dev build only: `window.tippyCut('plain' | 'strands' | 'panic' | 'big')` makes the next cut that
- * variant and drops the flying layer as soon as it is the right distance off the tower, so the
- * effect starts at once. Returns false when there is no flying layer to drop.
+ * Dev build only: `window.tippyCut('plain' | 'strands' | 'panic' | 'big', share?)` makes the next
+ * cut that variant and drops the flying layer as soon as it is the right distance off the tower
+ * (`share` of its width, when given: a thin sliver, say), so the effect starts at once. Returns
+ * false when there is no flying layer to drop.
  */
 export function installCutDebug(scene: GameScene): void {
-  const win = window as Window & { tippyCut?: (variant?: CutVariantName) => boolean };
+  const win = window as Window & {
+    tippyCut?: (variant?: CutVariantName, share?: number) => boolean;
+  };
   // The driver the run had before the hook stepped in; kept across calls so a second call before the drop does not restore the first hook's driver.
   let restore: { driver: DropDriver | null } | null = null;
-  const hook = (variant: CutVariantName = 'plain'): boolean => {
+  const hook = (variant: CutVariantName = 'plain', share?: number): boolean => {
     if (!CUT_VARIANT_NAMES.includes(variant)) return false;
     restore ??= { driver: scene.drivers.current };
     cutOverride.setNext(variant);
     scene.drivers.set(
-      new OffsetDriver(DEBUG_SHARE[variant], () => {
+      new OffsetDriver(share ?? DEBUG_SHARE[variant], () => {
         scene.drivers.set(restore?.driver ?? null);
         restore = null;
       }),

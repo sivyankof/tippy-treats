@@ -34,6 +34,18 @@ export function spaceWidthLimit(
   return Math.max(floor, 1 - step * (lap - 1)) * maxWidth;
 }
 
+/**
+ * Where a tower `layers` tall (the fractional height of the camera view) stands in Space: its lap (0 before Space) and the
+ * progress through it, 0 at the first layer of the lap to 1 at its last.
+ */
+export function lapProgress(layers: number): { lap: number; progress: number } {
+  const start = zoneStartIndex(SPACE_ZONE_INDEX) - 1;
+  if (layers < start) return { lap: 0, progress: 0 };
+  const laps = (layers - start) / BALANCE.zones.length;
+  const lap = Math.floor(laps);
+  return { lap: lap + 1, progress: laps - lap };
+}
+
 /** Extra score multiplier of a lap, on top of the Space one: `min(maxBonus, perLap * (lap - 1))`, 0 outside Space. */
 export function lapScoreBonus(
   lap: number,

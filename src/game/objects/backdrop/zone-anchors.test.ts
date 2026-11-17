@@ -106,7 +106,7 @@ function buildAll(): Built[] {
   const out: Built[] = [];
   for (const c of CASES) {
     for (const weather of WEATHER_IDS as readonly WeatherId[]) {
-      const def = c.art.build(scene, { lap: 1, weather, place: c.place });
+      const def = c.art.build(scene, { lap: 1, weather, place: c.place, planetSeed: 0 });
       const lives = [...def.lives.map((entry) => entry.life), ...(def.weatherSky ?? [])];
       for (const life of lives)
         out.push({ label: `${c.name}/${weather}/${life.constructor.name}`, zone: c.zone, life });
@@ -203,7 +203,12 @@ describe('zone lives declare where they stand', () => {
   it('nothing standing on a layer is drawn under a drifting layer of the kitchen and the shop, so no layer slides across it', () => {
     for (const c of CASES.filter((item) => item.zone === 'kitchen')) {
       for (const weather of WEATHER_IDS as readonly WeatherId[]) {
-        const def = c.art.build({} as unknown as Phaser.Scene, { lap: 1, weather, place: c.place });
+        const def = c.art.build({} as unknown as Phaser.Scene, {
+          lap: 1,
+          weather,
+          place: c.place,
+          planetSeed: 0,
+        });
         for (const { slot, life } of def.lives) {
           if (life.anchor.kind !== 'layer' || life instanceof Traveler) continue;
           BACKDROP.sway[c.zone].forEach((sway, layer) => {

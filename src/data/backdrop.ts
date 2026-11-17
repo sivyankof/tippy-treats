@@ -83,8 +83,12 @@ export interface LayerSway {
 export const BACKDROP = {
   /** The old zone flows into the new one over this long (docs/06, "Смена зоны"). */
   fadeMs: 1500,
-  /** The pictures of the next zone are baked this long after a zone starts, so a change does not hitch. */
-  prepareDelayMs: 800,
+  /**
+   * The coming change is got ready ahead (docs/06, "Смена зоны"): from `leadLayers` layers before
+   * it, the next zone's pictures are baked and the zone is built hidden (in Space: the next lap's
+   * planet), in steps worked off at about `budgetMs` of work per frame.
+   */
+  prep: { leadLayers: 6, budgetMs: 4 },
   /** The sky is a thin strip of `skyBands` rows stretched over the screen (the filter blends the rows). */
   skyBands: 64,
   skyBandHeight: 4,
@@ -101,7 +105,7 @@ export const BACKDROP = {
    * centre (0..1). `alphaNoise`: noise on the alpha in 8-bit levels, against steps in the soft edge.
    * `rowsPerStep`: tile rows filled per bake step.
    */
-  nebula: { blobAlpha: 0.36, alphaNoise: 1.5, rowsPerStep: 128 },
+  nebula: { blobAlpha: 0.36, alphaNoise: 1.5, rowsPerStep: 32 },
   /** The sky picture is a bit larger than the screen so its slow breathing never shows an edge. */
   skyOverscan: 1.06,
   skyBreathe: { amount: 0.012, periodMs: 1800 },

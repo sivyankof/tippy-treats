@@ -3,8 +3,10 @@ import { Rng } from '../../../core/rng';
 import { BALANCE } from '../../../data/balance';
 import { LOGICAL_SIZE } from '../../../data/screen';
 import { HUD_LAYOUT } from '../../../data/hud-layout';
+import { flightClearBand, hudFloor } from '../../camera-layout';
 import { FLIGHT_CLEAR } from '../../../data/flight-clear';
 import { WEATHER_LOOK } from '../../../data/weather-look';
+import { clamp01 } from '../../../util/math';
 import {
   bankEdge,
   boltEnd,
@@ -14,40 +16,104 @@ import {
   rainDropsShown,
   particleFade,
   particleKeepOut,
+  rainDrift,
+  rainSlope,
+  rainStartX,
   rainX,
-  sideU,
+  rainY,
+  rainSpots,
   wrapRange,
 } from './weather-motion';
 
 describe('weather motion', () => {
   it('leans a raindrop by its height, not by the time', () => {
-    expect(rainX(0.1, 1000, 0.2, 500, 1000)).toBe(100);
-    expect(rainX(0.1, 1000, 0.2, 1000, 1000)).toBeCloseTo(200);
-    expect(rainX(0.1, 1000, 0.2, 0, 1000)).toBeCloseTo(0);
-    // A screen twice the reference height leans half as far.
-    const tall = WEATHER_LOOK.leanRefHeight * 2;
-    expect(rainX(0.1, 1000, 0.2, tall, tall)).toBeCloseTo(100 + 0.2 * 0.5 * (tall / 2));
+    expect(rainX(500, 0.2, 500, 500)).toBe(500);
+    expect(rainX(500, 0.2, 1000, 500)).toBeCloseTo(600);
+    expect(rainX(500, 0.2, 0, 500)).toBeCloseTo(400);
   });
 
-  it('keeps rain and storm in the side strips for the whole fall, on every screen height', () => {
+  it('starts raindrops beside the tower, widened by the drift, and the rest anywhere', () => {
+    const width = 1080;
+    const outer = 180;
+    const drift = 150;
+    const xs = Array.from({ length: 100 }, (_, i) =>
+      rainStartX((i + 0.5) / 100, width, outer, drift, 0.7),
+    );
+    expect(Math.min(...xs)).toBeGreaterThanOrEqual(-drift);
+    expect(Math.max(...xs)).toBeLessThanOrEqual(width + drift);
+    expect(xs.filter((x) => x < outer || x > width - outer)).toHaveLength(70);
+    expect(xs.some((x) => x < 0)).toBe(true);
+    expect(xs.some((x) => x > width)).toBe(true);
+  });
+
+  it('spreads raindrop spots evenly across and down the screen', () => {
+    const rng = new Rng(3);
+    const spots = rainSpots(37, () => rng.next());
+    const cols = new Set(spots.map((p) => Math.floor(p.u * 12)));
+    const rows = new Set(spots.map((p) => Math.floor(p.v * 37)));
+    expect(cols.size).toBe(12);
+    expect(rows.size).toBeGreaterThanOrEqual(30);
+  });
+
+  it('keeps enough raindrops visible beside the tower on every screen height, in rain and storm', () => {
     const { width } = LOGICAL_SIZE;
     const towerLeft = (width - BALANCE.tray.width) / 2;
     const towerRight = width - towerLeft;
+    const pad = WEATHER_LOOK.endFeatherPx;
+    const reach = 12;
+    const halfLen = 45;
     for (const kind of ['rain', 'storm'] as const) {
       const look = WEATHER_LOOK[kind];
-      const pad = WEATHER_LOOK.endFeatherPx;
-      for (const height of [LOGICAL_SIZE.minHeight, 2340, LOGICAL_SIZE.maxHeight]) {
-        const rng = new Rng(7);
-        for (let n = 0; n < 200; n++) {
-          const u = sideU(rng, n % 2, look.sideShare, look.leanMaxPx / width);
-          // Every height of the fall, the wrapped ends included.
-          for (let y = -pad; y <= height + pad; y += 20) {
-            const x = rainX(u, width, look.slant, y, height, look.leanMaxPx, pad);
-            const inLeft = x >= 0 && x <= towerLeft;
-            const inRight = x >= towerRight && x <= width;
-            expect(inLeft || inRight, `${kind} ${height} u=${u} y=${y} x=${x}`).toBe(true);
+      const slant = look.slant;
+      const rotation = -Math.atan(rainSlope(slant));
+      const shown = rainDropsShown(look.count, 'full');
+      for (const [screen, minOutside] of [
+        [844, 8],
+        [693, 6],
+      ] as const) {
+        const height = Math.max(
+          LOGICAL_SIZE.minHeight,
+          Math.min(LOGICAL_SIZE.maxHeight, (LOGICAL_SIZE.width * screen) / 390),
+        );
+        const band = flightClearBand(height);
+        const top = hudFloor();
+        const drift = rainDrift(slant, height - top, pad);
+        let lowest = Infinity;
+        let sum = 0;
+        let nn = 0;
+        for (let seed = 1; seed <= 12; seed++) {
+          const rng = new Rng(seed);
+          const spots = rainSpots(look.count, () => rng.next());
+          const us = spots.map((p) => p.u);
+          const vs = spots.map((p) => p.v);
+          const speed = rng.range(look.speed[0], look.speed[1]);
+          for (let t = 0; t < 60; t += 0.1) {
+            let outside = 0;
+            for (let i = 0; i < shown; i++) {
+              const y = rainY(vs[i] ?? 0, speed, t, top, height, pad, band);
+              const xMid = rainStartX(
+                us[i] ?? 0,
+                width,
+                towerLeft,
+                drift,
+                WEATHER_LOOK.rainSideBias,
+              );
+              const x = rainX(xMid, slant, y, (top + height) / 2);
+              const alpha =
+                clamp01((y - top) / pad) *
+                particleFade(y, band, WEATHER_LOOK.bandFeatherPx, height, pad) *
+                particleKeepOut(x, y, WEATHER_LOOK.keepOutFeatherPx, reach, halfLen, rotation);
+              if (alpha > 0.4 && ((x >= 0 && x <= towerLeft) || (x >= towerRight && x <= width))) {
+                outside++;
+              }
+            }
+            lowest = Math.min(lowest, outside);
+            sum += outside;
+            nn++;
           }
         }
+        console.log(kind, screen, lowest, sum / nn);
+        expect(lowest, `${kind} on ${screen}`).toBeGreaterThanOrEqual(minOutside);
       }
     }
   });

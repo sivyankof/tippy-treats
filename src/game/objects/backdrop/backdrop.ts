@@ -8,7 +8,7 @@ import type { RunLook } from '../../../core/run-look';
 import { flyingLap } from '../../../core/space-laps';
 import { DEPTH } from '../../depth';
 import { markPerfPart } from '../../perf/perf-marks';
-import { collectBakeSteps, type BakeStep } from '../../ui/bake-texture';
+import { collectBakeSteps } from '../../ui/bake-texture';
 import { surfaceScreenY, travellerClearBand } from '../../camera-layout';
 import { bakeSharedArt } from './art-kit';
 import { towerLayersAt } from './mountain-placement';
@@ -25,6 +25,7 @@ import { spaceArt } from './space-zone';
 import { starsArt } from './stars-zone';
 import { ZoneFade } from './zone-fade';
 import { weatherShareOf } from './weather-share';
+import { PrepQueue, prepTarget, sameTarget, type PrepTarget } from './zone-prep';
 import { bakeSky, ZoneScenery, type SceneryLook, type ZoneArt } from './zone-scenery';
 
 /** What the backdrop needs of the run state: the zone and the placed height (the lap follows from it). */
@@ -55,18 +56,27 @@ function zoneIdOf(index: number): ZoneId {
   return zone ? zone.id : 'kitchen';
 }
 
+/** What is being got ready for the coming change, and the zone built for it (hidden, not updated) once it is. */
+interface Prep {
+  target: PrepTarget;
+  scenery: ZoneScenery | null;
+}
+
 /**
  * The scenery of a run: the backdrop of the current zone (sky, four parallax layers and
  * background life) and the counter under the tray. When the zone changes, the new
- * backdrop fades in over the old one; the run does not wait for it.
+ * backdrop fades in over the old one; the run does not wait for it. The next zone is baked and
+ * built ahead, in small steps, from `BACKDROP.prep.leadLayers` layers before the change, so the
+ * change itself only shows it (docs/06, "Смена зоны").
  */
 export class Backdrop {
   private readonly fade: ZoneFade;
   private readonly sceneries = new Map<number, ZoneScenery>();
   private readonly counter: Counter;
   private readonly ctx: FrameCtx;
-  /** Bakes of the next zone still to do, one texture per frame. */
-  private bakeQueue: BakeStep[] = [];
+  /** The steps that bake and build what the coming change shows, a few per frame. */
+  private readonly prepQueue = new PrepQueue();
+  private prep: Prep | null = null;
   private lastNowMs: number;
   private scrollY = 0;
   /** True once the first frame has set the start view of the zones built with the backdrop. */
@@ -98,7 +108,6 @@ export class Backdrop {
     this.ctx = newFrameCtx(width, height, travellerClearBand(height), scene.time.now);
     this.counter = new Counter(scene, trayTopY, width);
     this.ensure(state.zoneIndex);
-    this.prepareNext(state.zoneIndex);
   }
 
   /**
@@ -108,13 +117,13 @@ export class Backdrop {
   follow(state: RunBackdropState): void {
     this.setLap(flyingLap(state.height), state.layers.at(-1)?.width);
     this.setZone(state.zoneIndex);
+    this.planAhead(state.height, state.zoneIndex);
   }
 
   private setZone(zoneIndex: number): void {
     if (zoneIndex === this.fade.current) return;
     this.ensure(zoneIndex);
     this.fade.goTo(zoneIndex);
-    this.prepareNext(zoneIndex);
   }
 
   private setLap(lap: number, topWidth: number | undefined): void {
@@ -123,10 +132,48 @@ export class Backdrop {
     this.lapTopWidth = topWidth;
     const space = this.sceneries.get(SPACE_ZONE_INDEX);
     if (!space || lap === 0) return;
-    // Normally baked a lap ahead; a jump (a debug start) bakes here.
-    ZONE_ART.space.bakeLap?.(this.scene, lap);
+    // Normally baked ahead (`planAhead`); a jump (a debug start) bakes here.
+    ZONE_ART.space.bakeLap?.(this.scene, lap, this.look.planetSeed);
     space.setLap(lap, topWidth);
-    this.prepareNext(SPACE_ZONE_INDEX);
+  }
+
+  /**
+   * Starts getting the coming change ready once the tower is `BACKDROP.prep.leadLayers` layers
+   * below it: the next zone's pictures are baked and the zone is built, hidden; in Space the next
+   * lap's planet is baked. What was got ready for another change is dropped.
+   */
+  private planAhead(height: number, zoneIndex: number): void {
+    const target = prepTarget(height, zoneIndex, BACKDROP.prep.leadLayers);
+    if (sameTarget(target, this.prep?.target ?? null)) return;
+    this.dropPrep();
+    if (!target) return;
+    const prep: Prep = { target, scenery: null };
+    this.prep = prep;
+    if (target.kind === 'lap') {
+      this.prepQueue.add(
+        collectBakeSteps(() =>
+          ZONE_ART.space.bakeLap?.(this.scene, target.lap, this.look.planetSeed),
+        ),
+      );
+      return;
+    }
+    this.prepQueue.add(collectBakeSteps(() => this.bake(zoneIdOf(target.index), this.lap)));
+    this.prepQueue.add([() => (prep.scenery = this.buildScenery(target.index))]);
+  }
+
+  /** The zone built ahead for this change, with the work still left done now; `null` when none was. */
+  private takePrepared(index: number): ZoneScenery | null {
+    const prep = this.prep;
+    if (prep?.target.kind !== 'zone' || prep.target.index !== index) return null;
+    this.prepQueue.flush();
+    this.prep = null;
+    return prep.scenery;
+  }
+
+  private dropPrep(): void {
+    this.prepQueue.clear();
+    this.prep?.scenery?.destroy();
+    this.prep = null;
   }
 
   /**
@@ -147,6 +194,11 @@ export class Backdrop {
     );
   }
 
+  /** True while the backdrop cross-fades from one zone into the next. */
+  get fading(): boolean {
+    return this.fade.previous !== null;
+  }
+
   /** The creature of the current zone that may leave for the tower; `null` when it has none. */
   guestSource(): GuestSource | null {
     return this.sceneries.get(this.fade.current)?.guest ?? null;
@@ -158,6 +210,7 @@ export class Backdrop {
     this.ctx.height = height;
     this.ctx.clearBand = travellerClearBand(height);
     for (const scenery of this.sceneries.values()) scenery.resize(width, height);
+    this.prep?.scenery?.resize(width, height);
     // The still has the old size; the zones draw again and lay out for the new one.
     this.unfreeze();
   }
@@ -188,7 +241,7 @@ export class Backdrop {
       scenery.setAlpha(alpha);
       scenery.update(ctx, scrollY);
     }
-    this.bakeQueue.shift()?.();
+    this.prepQueue.work(BACKDROP.prep.budgetMs, () => performance.now());
     this.counter.update(ctx.timeMs);
   }
 
@@ -244,8 +297,22 @@ export class Backdrop {
     if (this.scene.textures.exists(BD_TEX.still)) this.scene.textures.remove(BD_TEX.still);
   }
 
+  /** Shows zone `index`: the one built ahead for it, or one built now (a debug start, a jump). */
   private ensure(index: number): void {
     if (this.sceneries.has(index)) return;
+    const prepared = this.takePrepared(index);
+    const scenery = prepared ?? this.buildScenery(index);
+    // A zone shown later starts where the camera is now; those of the first frame are set by `update`.
+    scenery.startAt(this.scrollY);
+    // Built ahead, Space takes the tower top width of the moment its first lap begins.
+    if (prepared) scenery.setLap(Math.max(this.lap, 1), this.lapTopWidth);
+    scenery.setAlpha(this.fade.alphaOf(index));
+    scenery.update(this.ctx, this.scrollY);
+    this.sceneries.set(index, scenery);
+  }
+
+  /** Bakes what zone `index` still needs and builds it, hidden and not yet updated. */
+  private buildScenery(index: number): ZoneScenery {
     const id = zoneIdOf(index);
     this.bake(id, this.lap);
     const depth = DEPTH.background + BACKDROP.depthBase + index * BACKDROP.depthStep;
@@ -261,11 +328,8 @@ export class Backdrop {
       this.ctx.height,
       this.look.weather,
     );
-    // A zone built later starts where the camera is now; those of the first frame are set by `update`.
-    scenery.startAt(this.scrollY);
-    scenery.setAlpha(this.fade.alphaOf(index));
-    scenery.update(this.ctx, this.scrollY);
-    this.sceneries.set(index, scenery);
+    scenery.setAlpha(0);
+    return scenery;
   }
 
   private bake(id: ZoneId, lap: number): void {
@@ -275,30 +339,20 @@ export class Backdrop {
     if (!art.ownSky?.(this.look.weather)) bakeSky(this.scene, id, this.look.weather);
     const look = this.sceneryLook(Math.max(lap, 1));
     art.bake(this.scene, look);
-    art.bakeLap?.(this.scene, look.lap);
+    art.bakeLap?.(this.scene, look.lap, look.planetSeed);
   }
 
   private sceneryLook(lap: number): SceneryLook {
-    return { lap, weather: this.look.weather, place: this.look.place };
+    return {
+      lap,
+      weather: this.look.weather,
+      place: this.look.place,
+      planetSeed: this.look.planetSeed,
+    };
   }
 
   /** Zone 1 is the art of the start place of the run; the others are fixed. */
   private artOf(id: ZoneId): ZoneArt {
     return id === 'kitchen' ? PLACE_ART[this.look.place] : ZONE_ART[id];
-  }
-
-  /**
-   * Queues the pictures of the next zone (in Space: of the next lap's planet) a little after this
-   * one starts, so the change itself is cheap; the queue is worked off one texture per frame, so
-   * no frame hitches.
-   */
-  private prepareNext(index: number): void {
-    this.scene.time.delayedCall(BACKDROP.prepareDelayMs, () => {
-      const next = ZONES[index + 1];
-      this.bakeQueue = collectBakeSteps(() => {
-        if (next) this.bake(next.id, 1);
-        else ZONE_ART.space.bakeLap?.(this.scene, this.lap + 1);
-      });
-    });
   }
 }

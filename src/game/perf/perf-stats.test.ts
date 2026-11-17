@@ -71,6 +71,26 @@ describe('SegmentSamples', () => {
     expect(samples.summary('x', 0.95).intervalMeanMs).toBe(2);
   });
 
+  it('sums up the frames of a zone cross-fade apart', () => {
+    const samples = new SegmentSamples();
+    samples.add(3, 30, 0);
+    samples.add(9, 52, 16, true);
+    samples.add(4, 48, 32, true);
+    samples.add(20, 31, 48);
+    const stats = samples.summary('transition-80', 0.95);
+    expect(stats.fade).toEqual({ frames: 2, drawsMax: 52, worstMs: 9 });
+    expect(stats.worstMs).toBe(20);
+  });
+
+  it('has no fade stats without a cross-fade, and no fade draws when one was not counted', () => {
+    const plain = new SegmentSamples();
+    plain.add(1, 10, 0);
+    expect(plain.summary('x', 0.95).fade).toBeNull();
+    const uncounted = new SegmentSamples();
+    uncounted.add(1, null, 0, true);
+    expect(uncounted.summary('x', 0.95).fade?.drawsMax).toBeNull();
+  });
+
   it('is all zeros for an empty window', () => {
     const stats = new SegmentSamples().summary('x', 0.95);
     expect(stats).toMatchObject({
@@ -121,6 +141,29 @@ describe('budget', () => {
     expect(budgetOver(stats({ id: 'calm', drawCallsMean: 40 })).draws).toBe(false);
     expect(budgetOver(stats({ id: 'tower', drawCallsMean: 59 })).draws).toBe(false);
     expect(budgetOver(stats({ id: 'tower', drawCallsMean: 61 })).draws).toBe(true);
+  });
+
+  it('holds a transition segment to its own worst frame and to the cross-fade draws', () => {
+    expect(budgetOver(stats({ id: 'transition-80', worstMs: 12 })).worst).toBe(false);
+    expect(budgetOver(stats({ id: 'transition-80', worstMs: 13 })).worst).toBe(true);
+    expect(budgetOver(stats({ id: 'tower', worstMs: 13 })).worst).toBe(false);
+    const fade = { frames: 90, drawsMax: 61, worstMs: 5 };
+    expect(budgetOver(stats({ id: 'transition-80', fade })).fadeDraws).toBe(true);
+    expect(
+      budgetOver(stats({ id: 'transition-80', fade: { ...fade, drawsMax: 60 } })).fadeDraws,
+    ).toBe(false);
+    expect(budgetOver(stats({ fade: null })).fadeDraws).toBe(false);
+  });
+
+  it('puts the cross-fade into the note', () => {
+    const row = stats({
+      id: 'transition-40',
+      note: 'run ended early',
+      fade: { frames: 90, drawsMax: 64, worstMs: 6.2 },
+    });
+    expect(formatTable([row], 1).split('\n')[2]).toBe(
+      '| transition-40 ! | 3.0 | 4.0 | 10.0 | 16.0 | 17.0 | 100 | 30.0 | 60.0 | fade 90 frames, draws max 64!, worst 6.2 ms, run ended early |',
+    );
   });
 
   it('skips the draw calls of a segment that has no count', () => {

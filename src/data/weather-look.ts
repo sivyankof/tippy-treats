@@ -218,34 +218,33 @@ export const WEATHER_LOOK = {
   /** Particles fade out toward the HUD plates over this many px beyond the HUD gap and margin. */
   keepOutFeatherPx: 40,
   endFeatherPx: 60,
-  /** Screen height (px) up to which a raindrop leans fully along its fall; a taller screen eases the lean (see `rainX`). */
-  leanRefHeight: 1920,
   /** Share of the particles (unless a kind says otherwise) that start in the side strips (the tower hides the middle), and the strip width as share of the screen. */
   sideBias: 0.8,
+  /**
+   * Share of the raindrops that start in the side areas the widest tower leaves (widened by the drift beyond the
+   * screen edge); the rest start anywhere. 1: the slant carries them into the middle anyway, and a drop behind the
+   * tower is lost (the checked floor of drops seen beside the tower holds only with all of them there).
+   */
+  rainSideBias: 1,
   sideShare: 0.3,
 
   /** Motion and look of each kind of falling thing (px, px/s, ms). */
   rain: {
     frames: ['drop'],
     speed: [1500, 1900],
+    /** Drift per px of fall: the drops fall over the whole width (as snow does), slanted, the picture turned along the path. */
     slant: 0.15,
-    /** A drop leans at most this far (px) either way of its lane over the whole fall: the lane sits this far in from the strip's edges, so the drop never crosses the screen edge or the tower. */
-    leanMaxPx: 40,
     alpha: [0.85, 0.95],
     scale: [0.85, 1.1],
     count: 37,
-    /** Rain falls only in the two side strips the tower leaves free (each of this share of the width; the tower is at most `BALANCE.tray.width` wide, so at most (1 - that / width) / 2); a drop leans with its height, so it stays near its strip. */
-    sideShare: 0.15,
   },
   storm: {
     frames: ['drop'],
     speed: [1900, 2400],
-    slant: 0.38,
-    leanMaxPx: 60,
+    slant: 0.22,
     alpha: [0.85, 0.95],
     scale: [0.95, 1.15],
     count: 37,
-    sideShare: 0.16,
   },
   snow: {
     frames: ['flake'],

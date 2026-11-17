@@ -1,4 +1,4 @@
-import { PERF_BUDGET, PERF_SEGMENTS } from '../../data/perf';
+import { PERF_BUDGET, PERF_SEGMENTS, type PerfSegmentDef } from '../../data/perf';
 
 /** The share of frames at or below the returned value (nearest rank), `share` in 0..1; `sorted` is ascending. */
 export function percentile(sorted: ArrayLike<number>, share: number): number {
@@ -27,6 +27,17 @@ export interface SegmentStats {
   fps: number;
   /** Something the reader should know (the run ended early, the segment timed out). */
   note: string;
+  /** The frames while two zones cross-fade; `null` when the window saw no zone change. */
+  fade?: FadeStats | null;
+}
+
+/** The frames of a window while the backdrop cross-fades from one zone into the next. */
+export interface FadeStats {
+  frames: number;
+  /** Most draw calls of one of them, `null` when they could not be counted. */
+  drawsMax: number | null;
+  /** Worst work time of one of them, ms. */
+  worstMs: number;
 }
 
 const INITIAL_CAPACITY = 4096;
@@ -41,9 +52,22 @@ export class SegmentSamples {
   private drawsKnown = true;
   private startMs: number | null = null;
   private endMs = 0;
+  private fadeFrames = 0;
+  private fadeDrawsMax = 0;
+  private fadeDrawsKnown = true;
+  private fadeWorstMs = 0;
 
-  /** One frame: its work time, the draw calls it made (`null`: not counted) and the time it ended at. */
-  add(workMs: number, drawCalls: number | null, nowMs: number): void {
+  /**
+   * One frame: its work time, the draw calls it made (`null`: not counted), the time it ended at and
+   * whether two zones were cross-fading in it.
+   */
+  add(workMs: number, drawCalls: number | null, nowMs: number, fading = false): void {
+    if (fading) {
+      this.fadeFrames++;
+      this.fadeWorstMs = Math.max(this.fadeWorstMs, workMs);
+      if (drawCalls === null) this.fadeDrawsKnown = false;
+      else this.fadeDrawsMax = Math.max(this.fadeDrawsMax, drawCalls);
+    }
     if (this.count === this.work.length) {
       const bigger = new Float64Array(this.work.length * 2);
       bigger.set(this.work);
@@ -84,6 +108,14 @@ export class SegmentSamples {
       wallMs,
       fps: wallMs > 0 ? ((this.count - 1) * 1000) / wallMs : 0,
       note,
+      fade:
+        this.fadeFrames === 0
+          ? null
+          : {
+              frames: this.fadeFrames,
+              drawsMax: this.fadeDrawsKnown ? this.fadeDrawsMax : null,
+              worstMs: this.fadeWorstMs,
+            },
     };
   }
 }
@@ -94,6 +126,8 @@ export interface BudgetOver {
   mean: boolean;
   worst: boolean;
   interval: boolean;
+  /** A frame of the zone cross-fade drew more than `PERF_BUDGET.fadeDrawsMax`. */
+  fadeDraws: boolean;
 }
 
 /** What a benchmark says about the budget as a whole. */
@@ -103,10 +137,18 @@ export interface BudgetVerdict {
   over: string[];
 }
 
+function segmentDef(id: string): PerfSegmentDef | undefined {
+  return PERF_SEGMENTS.find((segment) => segment.id === id);
+}
+
 /** Draw call limit of a segment by its class; a segment the data does not know is held to the heavy one. */
 function drawLimit(id: string): number {
-  const def = PERF_SEGMENTS.find((segment) => segment.id === id);
-  return PERF_BUDGET.drawCalls[def?.drawClass ?? 'heavy'];
+  return PERF_BUDGET.drawCalls[segmentDef(id)?.drawClass ?? 'heavy'];
+}
+
+/** Worst frame limit of a segment: its own when it has one, the budget's otherwise. */
+function worstLimit(id: string): number {
+  return segmentDef(id)?.workWorstMs ?? PERF_BUDGET.workWorstMs;
 }
 
 /** What the shared atlas reached over a benchmark. */
@@ -162,8 +204,9 @@ export function budgetOver(row: SegmentStats, automated = false): BudgetOver {
   return {
     draws: row.drawCallsMean !== null && row.drawCallsMean > drawLimit(row.id),
     mean: row.meanMs > PERF_BUDGET.workMeanMs,
-    worst: row.worstMs > PERF_BUDGET.workWorstMs,
+    worst: row.worstMs > worstLimit(row.id),
     interval: !automated && row.intervalMeanMs > PERF_BUDGET.intervalMeanMs,
+    fadeDraws: (row.fade?.drawsMax ?? 0) > PERF_BUDGET.fadeDrawsMax,
   };
 }
 
@@ -196,11 +239,21 @@ export function formatTable(
     const mark = (text: string, flag: boolean): string => (flag ? `${text}!` : text);
     const draws = row.drawCallsMean === null ? '-' : row.drawCallsMean.toFixed(1);
     const id = Object.values(over).some(Boolean) ? `${row.id} !` : row.id;
+    const note = [fadeNote(row.fade, decimals, over.fadeDraws), row.note]
+      .filter((part) => part !== '')
+      .join(', ');
     lines.push(
-      `| ${id} | ${mark(row.meanMs.toFixed(decimals), over.mean)} | ${row.p95Ms.toFixed(decimals)} | ${mark(row.worstMs.toFixed(decimals), over.worst)} | ${mark(row.intervalMeanMs.toFixed(decimals), over.interval)} | ${row.intervalP95Ms.toFixed(decimals)} | ${row.frames} | ${mark(draws, over.draws)} | ${row.fps.toFixed(1)} | ${row.note} |`,
+      `| ${id} | ${mark(row.meanMs.toFixed(decimals), over.mean)} | ${row.p95Ms.toFixed(decimals)} | ${mark(row.worstMs.toFixed(decimals), over.worst)} | ${mark(row.intervalMeanMs.toFixed(decimals), over.interval)} | ${row.intervalP95Ms.toFixed(decimals)} | ${row.frames} | ${mark(draws, over.draws)} | ${row.fps.toFixed(1)} | ${note} |`,
     );
   }
   return lines.join('\n');
+}
+
+/** The note of a window with a zone cross-fade: `fade N frames, draws max D, worst W ms` (`!` after a value over the budget). */
+function fadeNote(fade: FadeStats | null | undefined, decimals: number, over: boolean): string {
+  if (!fade) return '';
+  const draws = fade.drawsMax === null ? '-' : `${fade.drawsMax}${over ? '!' : ''}`;
+  return `fade ${fade.frames} frames, draws max ${draws}, worst ${fade.worstMs.toFixed(decimals)} ms`;
 }
 
 /** What a benchmark was drawn on: the line above its table. */

@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { LayerMarkStore, markGrow, markSwingDeg, type LayerMark } from './layer-mark-store';
+import {
+  LayerMarkStore,
+  markGrow,
+  markSwingDeg,
+  markVanish,
+  type LayerMark,
+} from './layer-mark-store';
 
 function mark(over: Partial<LayerMark> = {}): LayerMark {
   return {
@@ -82,5 +88,35 @@ describe('layer marks', () => {
     expect(early).toBeLessThanOrEqual(20);
     expect(markSwingDeg(m, 3000)).toBe(0);
     expect(markSwingDeg(mark(), 100)).toBe(0);
+  });
+});
+
+describe('vanishing press marks', () => {
+  it('shrinks a press mark away and sweeps it out when it is over', () => {
+    const store = new LayerMarkStore();
+    store.addPress(2, [mark()]);
+    store.addCut(2, [mark()]);
+    expect(store.vanishPress(2, 1000, 100)).toBe(true);
+    expect(store.vanishPress(2, 1000, 100)).toBe(false);
+    const shown = store.at(2)?.press?.[0] as LayerMark;
+    expect(markVanish(shown, 999)).toBe(1);
+    expect(markVanish(shown, 1050)).toBeGreaterThan(0);
+    expect(markVanish(shown, 1050)).toBeLessThan(1);
+    expect(markVanish(shown, 1100)).toBe(0);
+    store.sweep(1099);
+    expect(store.hasPress(2)).toBe(true);
+    store.sweep(1100);
+    expect(store.hasPress(2)).toBe(false);
+    expect(store.hasCut(2)).toBe(true);
+  });
+
+  it('removes a press mark at once and drops an empty set', () => {
+    const store = new LayerMarkStore();
+    store.addPress(5, [mark()]);
+    const version = store.version;
+    expect(store.removePress(5)).toBe(true);
+    expect(store.removePress(5)).toBe(false);
+    expect(store.at(5)).toBeUndefined();
+    expect(store.version).toBeGreaterThan(version);
   });
 });

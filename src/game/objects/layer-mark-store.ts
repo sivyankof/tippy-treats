@@ -33,6 +33,8 @@ export interface LayerMark {
   /** It grows from nothing to its size over this many ms (`backOut`), so it never pops in; 0 shows it at once. */
   growMs: number;
   swing?: MarkSwing;
+  /** The mark shrinks away from `startMs` over `durMs` (a stain licked off or melting); the store removes it after that. */
+  vanish?: { startMs: number; durMs: number };
 }
 
 /** Marks of one layer: at most one drop from a cut (its outline and its fill) and one press mark (a stain, or a cream roll of up to two pictures). */
@@ -54,6 +56,8 @@ export const MAX_PRESS_PICTURES = 2;
 export class LayerMarkStore {
   private readonly byLayer = new Map<number, LayerMarkSet>();
   private changes = 0;
+  /** Press marks that are vanishing: `sweep` has something to do only while this is above 0. */
+  private vanishing = 0;
 
   /** Grows with every change of the store: a view that saw the same number has nothing new to place. */
   get version(): number {
@@ -62,6 +66,7 @@ export class LayerMarkStore {
 
   clear(): void {
     this.byLayer.clear();
+    this.vanishing = 0;
     this.changes++;
   }
 
@@ -97,6 +102,36 @@ export class LayerMarkStore {
     return true;
   }
 
+  /** The layer's press mark starts shrinking away at `startMs` over `durMs`; false when it has none or already vanishes. */
+  vanishPress(layerIndex: number, startMs: number, durMs: number): boolean {
+    const set = this.byLayer.get(layerIndex);
+    if (!set?.press || set.press.some((m) => m.vanish)) return false;
+    set.press = set.press.map((m) => ({ ...m, vanish: { startMs, durMs } }));
+    this.vanishing++;
+    this.changes++;
+    return true;
+  }
+
+  /** Takes the layer's press mark off at once; false when it has none. */
+  removePress(layerIndex: number): boolean {
+    const set = this.byLayer.get(layerIndex);
+    if (!set?.press) return false;
+    if (set.press.some((m) => m.vanish)) this.vanishing--;
+    delete set.press;
+    if (!set.cut) this.byLayer.delete(layerIndex);
+    this.changes++;
+    return true;
+  }
+
+  /** Removes the press marks whose vanishing is over at `nowMs`. */
+  sweep(nowMs: number): void {
+    if (this.vanishing <= 0) return;
+    for (const [layerIndex, set] of [...this.byLayer]) {
+      const mark = set.press?.[0]?.vanish;
+      if (mark && nowMs >= mark.startMs + mark.durMs) this.removePress(layerIndex);
+    }
+  }
+
   private setOf(layerIndex: number): LayerMarkSet {
     let set = this.byLayer.get(layerIndex);
     if (!set) {
@@ -114,6 +149,14 @@ export const layerMarks = new LayerMarkStore();
 export function markGrow(mark: Readonly<LayerMark>, ageMs: number): number {
   if (mark.growMs <= 0) return 1;
   return Math.max(0, backOut(clamp01(ageMs / mark.growMs)));
+}
+
+/** Scale of a mark that is vanishing at `nowMs`: 1 before it starts, 0 when it is over (it shrinks, slowing at the end). */
+export function markVanish(mark: Readonly<LayerMark>, nowMs: number): number {
+  const v = mark.vanish;
+  if (!v) return 1;
+  const t = clamp01((nowMs - v.startMs) / Math.max(1, v.durMs));
+  return 1 - t * t * (3 - 2 * t);
 }
 
 /** Swing angle of a mark `ageMs` after it was made, degrees (0 without a swing). */

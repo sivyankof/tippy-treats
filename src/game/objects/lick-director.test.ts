@@ -1,14 +1,17 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import { LICK, type LickStyle } from '../../data/lick';
 import { effectsMode } from '../effects-mode';
+import { LayerMarkStore, type LayerMark } from './layer-mark-store';
 import { LickDirector, type LickContext } from './lick-director';
 import type { LayerView } from './layer-view';
 import {
   lickDurationMs,
   lickedDripShare,
   lickFrame,
+  lickStartMs,
   newLickFrame,
   type LickFrame,
+  type LickKind,
   type LickScene,
 } from './lick-plan';
 
@@ -37,6 +40,7 @@ class FakeFace {
     private readonly starts: number[],
     private readonly clock: { ms: number },
     private readonly scenes: LickScene[],
+    private readonly kinds: LickKind[] = [],
   ) {}
 
   get canLick(): boolean {
@@ -55,9 +59,10 @@ class FakeFace {
     return this.ms >= 0 ? TONGUE : null;
   }
 
-  startLick(scene: LickScene, _kind: unknown, _shape: unknown, style: LickStyle): boolean {
+  startLick(scene: LickScene, kind: LickKind, _shape: unknown, style: LickStyle): boolean {
     if (this.noTongue) return false;
-    this.ms = 0;
+    this.ms = lickStartMs(scene, kind, style);
+    this.kinds.push(kind);
     this.scene = scene;
     this.style = style;
     this.starts.push(this.clock.ms);
@@ -128,12 +133,13 @@ function buildTower(
   clock: { ms: number },
   starts: number[],
   scenes: LickScene[],
+  kinds: LickKind[] = [],
 ): { faces: FakeFace[]; drips: FakeDrips[]; ctx: LickContext } {
   const faces: FakeFace[] = [];
   const drips: FakeDrips[] = [];
   const views = new Map<number, LayerView>();
   for (let i = 0; i < LAYERS; i++) {
-    const face = new FakeFace(starts, clock, scenes);
+    const face = new FakeFace(starts, clock, scenes, kinds);
     const glaze = new FakeDrips(dripsPerLayer);
     faces.push(face);
     drips.push(glaze);
@@ -157,6 +163,7 @@ function buildTower(
     aiming: false,
     bandTop: 0,
     bandBottom: 2000,
+    nowMs: 0,
   };
   return { faces, drips, ctx };
 }
@@ -271,5 +278,102 @@ describe('LickDirector', () => {
     }
     expect(director.stage).toBeNull();
     expect(faces.every((face) => !face.licking)).toBe(true);
+  });
+});
+
+/** A juice stain, as the squash leaves it. */
+function stainMark(): LayerMark {
+  return {
+    texture: 'fx_stain',
+    dx: 100,
+    dy: 40,
+    originX: 0.5,
+    originY: 0.15,
+    width: 62,
+    height: 34,
+    bornMs: 0,
+    growMs: 520,
+  };
+}
+
+/** Plays the director over a still tower with stains on the given layers (0-based, queued at 0 ms). */
+function playJuice(
+  layers: number[],
+  options: { ms?: number; aiming?: boolean; level?: 'full' | 'lite'; gone?: number[] } = {},
+): { starts: Array<{ ms: number; kind: LickKind }>; marks: LayerMarkStore } {
+  effectsMode.pinLevel(options.level ?? 'full');
+  const clock = { ms: 0 };
+  const starts: Array<{ ms: number; kind: LickKind }> = [];
+  const kinds: LickKind[] = [];
+  const { faces, ctx } = buildTower(0, clock, [], [], kinds);
+  const marks = new LayerMarkStore();
+  for (const index of layers) marks.addPress(index + 1, [stainMark()]);
+  for (const index of options.gone ?? []) (ctx.views as Map<number, LayerView>).delete(index);
+  ctx.aiming = options.aiming ?? false;
+  ctx.topIndex = LAYERS - 1;
+  const director = new LickDirector(SEED, marks);
+  for (const index of layers) director.queueJuice(index);
+  let seen = 0;
+  for (; clock.ms < (options.ms ?? 6000); clock.ms += FRAME_MS) {
+    ctx.nowMs = clock.ms;
+    for (const face of faces) face.tick(FRAME_MS);
+    director.update(FRAME_MS, ctx);
+    while (seen < kinds.length) starts.push({ ms: clock.ms, kind: kinds[seen++]! });
+  }
+  return { starts, marks };
+}
+
+describe('LickDirector, juice stains', () => {
+  afterEach(() => effectsMode.pinLevel(null));
+
+  it('licks a stain about a second after it was made and leaves no stain behind', () => {
+    const { starts, marks } = playJuice([1]);
+    const stains = starts.filter((s) => s.kind === 'stain');
+    expect(stains).toHaveLength(1);
+    expect(stains[0]!.ms).toBeGreaterThanOrEqual(LICK.juice.delayMs - FRAME_MS);
+    expect(stains[0]!.ms).toBeLessThanOrEqual(LICK.juice.delayMs + 2 * FRAME_MS);
+    expect(marks.hasPress(2)).toBe(false);
+  });
+
+  it('takes several stains one after another with a pause between', () => {
+    const { starts, marks } = playJuice([0, 1], { ms: 5000 });
+    const stains = starts.filter((s) => s.kind === 'stain');
+    expect(stains).toHaveLength(2);
+    const length = lickDurationMs('short') - lickStartMs('short', 'stain');
+    expect(stains[1]!.ms - stains[0]!.ms).toBeGreaterThanOrEqual(length + LICK.juice.betweenMs);
+    expect(marks.hasPress(1)).toBe(false);
+    expect(marks.hasPress(2)).toBe(false);
+  });
+
+  it('keeps the idle timer off for a while after a juice lick', () => {
+    const { starts } = playJuice([1], { ms: LICK.firstDelayMs[1] + 1000 });
+    const stain = starts.find((s) => s.kind === 'stain')!;
+    for (const s of starts.filter((s) => s.kind !== 'stain')) {
+      expect(s.ms - stain.ms).toBeGreaterThanOrEqual(LICK.juice.idleAfterMs);
+    }
+  });
+
+  it('makes the stain of a layer that is gone melt without a lick', () => {
+    const { starts, marks } = playJuice([1], { gone: [1], ms: 2000 });
+    expect(starts).toEqual([]);
+    expect(marks.hasPress(2)).toBe(false);
+  });
+
+  it('lets the top layer wait while a layer is in the air, and melts the stain when it waits too long', () => {
+    const waiting = playJuice([LAYERS - 1], { aiming: true, ms: LICK.juice.delayMs + 2000 });
+    expect(waiting.starts).toEqual([]);
+    expect(waiting.marks.hasPress(LAYERS)).toBe(true);
+    const melted = playJuice([LAYERS - 1], {
+      aiming: true,
+      ms: LICK.juice.delayMs + LICK.juice.timeoutMs + 1000,
+    });
+    expect(melted.starts).toEqual([]);
+    expect(melted.marks.hasPress(LAYERS)).toBe(false);
+  });
+
+  it('melts the stain on lite with no tongue', () => {
+    const lite = playJuice([1], { level: 'lite', ms: 3000 });
+    expect(lite.starts.filter((s) => s.kind === 'stain')).toEqual([]);
+    expect(lite.marks.hasPress(2)).toBe(false);
   });
 });
