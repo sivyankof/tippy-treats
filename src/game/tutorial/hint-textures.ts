@@ -1,6 +1,7 @@
 import type * as Phaser from 'phaser';
 import { TUTORIAL_ANIM } from '../../data/tutorial-anim';
 import { PALETTE } from '../../data/palette';
+import { FIELD_PAD } from '../../data/picture-fields';
 import { OUTLINE_SHARE, outlineColor } from '../fx/plain-style';
 import { bakeTexture } from '../ui/bake-texture';
 
@@ -15,6 +16,15 @@ export const HAND_TOP_ORIGIN = OUTLINE / (HAND.height + OUTLINE * 2);
 const ARROW = TUTORIAL_ANIM.arrow;
 const { width: ARROW_W, height: ARROW_H } = ARROW;
 const ARROW_OUTLINE = ARROW_H * OUTLINE_SHARE;
+/** Extra room around the arrow and its outline so the stroke fits the picture. */
+const ARROW_FIELD = FIELD_PAD.hintArrow;
+/** Height of the arrow with its outline, without the extra room: what the caption above it counts on. */
+export const ARROW_SHOWN_HEIGHT = ARROW_H + ARROW_OUTLINE * 2;
+const ARROW_FRAME_HEIGHT = ARROW_SHOWN_HEIGHT + ARROW_FIELD * 2;
+/** Origin y that puts the tip of the arrow (with its outline) where the bottom of the picture was before the extra room. */
+export const ARROW_TIP_ORIGIN_Y = (ARROW_FIELD + ARROW_SHOWN_HEIGHT) / ARROW_FRAME_HEIGHT;
+/** Origin y of the flipped arrow: the tip with its outline sits on the position. */
+export const ARROW_FLIPPED_ORIGIN_Y = ARROW_FIELD / ARROW_FRAME_HEIGHT;
 
 interface Box {
   x: number;
@@ -58,7 +68,7 @@ function bakeHand(scene: Phaser.Scene): void {
 
 /** A fat arrow that points down, drawn as stem and head: outline first, then the fill. */
 function bakeArrow(scene: Phaser.Scene): void {
-  const pad = ARROW_OUTLINE;
+  const pad = ARROW_OUTLINE + ARROW_FIELD;
   bakeTexture(scene, HINT_TEXTURES.arrow, ARROW_W + pad * 2, ARROW_H + pad * 2, (g) => {
     const stemX = pad + ARROW_W * ARROW.stemX;
     const stemW = ARROW_W * ARROW.stemWidth;

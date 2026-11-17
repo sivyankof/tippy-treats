@@ -6,7 +6,8 @@ import type { ZoneId } from '../../../data/zones';
 import { cssColor, mixColor, shade } from '../../../util/color';
 import { TWO_PI } from '../../../util/math';
 import { drawGlossMark, fillPolygon, outlineColor, type Pt } from '../../fx/plain-style';
-import { bakeTexture, deferStep } from '../../ui/bake-texture';
+import { FIELD_PAD } from '../../../data/picture-fields';
+import { bakePadded, bakeTexture, deferStep } from '../../ui/bake-texture';
 import { sparkle } from './art-kit';
 import { bankPuffs, type Puff } from './weather-motion';
 import { zoneShowsWeatherSky } from './weather-share';
@@ -563,7 +564,7 @@ function bakeBolt(scene: Phaser.Scene): void {
 function bakeCap(scene: Phaser.Scene): void {
   const c = WEATHER_LOOK.cap;
   const outline = MOUNTAIN_LOOK.snowOutline;
-  bakeTexture(scene, TEX.cap, c.width, c.height, (g) => {
+  bakePadded(scene, TEX.cap, c.width, c.height, FIELD_PAD.snowCap, (g) => {
     const a = c.anchorY;
     const heap: Array<[number, number]> = [];
     for (let x = 2; x <= c.width - 2; x += CAP_STEP) {

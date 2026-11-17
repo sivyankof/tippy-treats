@@ -11,7 +11,7 @@ import { effectsMode } from '../../effects-mode';
 import { FX_TEXTURES } from '../../fx/fx-textures';
 import { idleBob } from '../../fx/idle-bob';
 import { pileSizeFor } from '../../fx/pile-size';
-import { REWARD_TEXTURES } from '../../fx/reward-pictures';
+import { REWARD_TEXTURES, REWARD_TOWER_FIELD_SCALE } from '../../fx/reward-pictures';
 import { createTreasurePile } from '../../fx/treasure-pile';
 import { TREASURE_TEXTURES } from '../../fx/treasure-textures';
 import { CreaturePortrait } from '../../objects/creature-portrait';
@@ -95,7 +95,11 @@ export class LevelUpPanel {
         return [this.pictureRow(this.image(REWARD_TEXTURES.slot, true), t('levelUp.slot'), inner)];
       case 'daily':
         return [
-          this.pictureRow(this.image(REWARD_TEXTURES.tower, true), t('levelUp.daily'), inner),
+          this.pictureRow(
+            this.image(REWARD_TEXTURES.tower, true, REWARD_TOWER_FIELD_SCALE),
+            t('levelUp.daily'),
+            inner,
+          ),
         ];
       case 'shop':
         return [
@@ -109,8 +113,8 @@ export class LevelUpPanel {
   }
 
   /** A picture of the window at the reward size; `bob` makes it rise and fall gently. */
-  private image(key: string, bob: boolean): Phaser.GameObjects.Image {
-    const size = cfg.pictureSize;
+  private image(key: string, bob: boolean, fieldScale = 1): Phaser.GameObjects.Image {
+    const size = cfg.pictureSize * fieldScale;
     const image = this.scene.add.image(0, 0, key).setDisplaySize(size, size);
     if (bob) idleBob(this.scene, image, cfg.appear.bob);
     return image;

@@ -3,7 +3,7 @@ import { MENU } from '../../../data/menu-layout';
 import { PALETTE } from '../../../data/palette';
 import { t } from '../../../i18n';
 import { gameState } from '../../../state';
-import { REWARD_TEXTURES } from '../../fx/reward-pictures';
+import { REWARD_TEXTURES, REWARD_TOWER_FIELD_SCALE } from '../../fx/reward-pictures';
 import { attachPressFeedback } from '../button';
 import { createStrokedText } from '../outlined-text';
 import { faceOffsetY, VolumePlate } from '../style/volume';
@@ -26,7 +26,10 @@ export function openDailyIntro(scene: Phaser.Scene): PopupWindow {
   // The reward pictures are square.
   const picture = scene.add
     .image(0, 0, REWARD_TEXTURES.tower)
-    .setDisplaySize(win.pictureSize, win.pictureSize);
+    .setDisplaySize(
+      win.pictureSize * REWARD_TOWER_FIELD_SCALE,
+      win.pictureSize * REWARD_TOWER_FIELD_SCALE,
+    );
   return openExplainerWindow(scene, {
     title: t('daily.title'),
     picture,

@@ -1,6 +1,8 @@
 import * as Phaser from 'phaser';
 import type { Rng } from '../../../core/rng';
 import { WEATHER_LOOK, WEATHER_TEX } from '../../../data/weather-look';
+import { FIELD_PAD } from '../../../data/picture-fields';
+import { paddedOrigin } from '../../../util/field-pad';
 import { smoothstep } from '../../../util/math';
 import { DEPTH } from '../../depth';
 import { towerWeatherShown } from './weather-share';
@@ -49,7 +51,14 @@ export class WeatherTop {
     this.cap = snow
       ? scene.add
           .image(0, 0, WEATHER_TEX.cap)
-          .setOrigin(0.5, CAP.anchorY / CAP.height)
+          .setOrigin(
+            ...paddedOrigin(
+              [0.5, CAP.anchorY / CAP.height],
+              CAP.width,
+              CAP.height,
+              FIELD_PAD.snowCap,
+            ),
+          )
           .setVisible(false)
       : null;
     if (rainy) {

@@ -2,6 +2,7 @@ import type * as Phaser from 'phaser';
 import { PLAIN_TOPPERS, TOPPER_KINDS, type TopperKind } from '../../data/plain-toppers';
 import { DEG_TO_RAD } from '../../util/math';
 import { bakeTexture } from '../ui/bake-texture';
+import { BERRY_LOOK } from '../../data/berry-look';
 import { bakeBerry } from './berry-texture';
 import {
   drawGlossMark,
@@ -221,7 +222,11 @@ const DRAWERS: Readonly<
 export function ensureTopperTexture(scene: Phaser.Scene, kind: TopperKind): string {
   const key = topperTextureKey(kind);
   if (kind === 'strawberry') {
-    if (!scene.textures.exists(key)) bakeBerry(scene, key, false);
+    if (!scene.textures.exists(key)) {
+      // The berry is drawn on its own 256 px picture; the field of the kind (drawn pixels) is that many texture pixels.
+      const { width, field } = kinds.strawberry;
+      bakeBerry(scene, key, false, Math.round((field.left * BERRY_LOOK.textureSize) / width));
+    }
     return key;
   }
   const { width, height, field } = kinds[kind];

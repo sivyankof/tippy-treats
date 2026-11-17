@@ -9,7 +9,9 @@ import {
 } from '../../../data/window-look';
 import { mixColor, shade } from '../../../util/color';
 import { outlineColor } from '../../fx/plain-style';
-import { bakeTexture } from '../../ui/bake-texture';
+import { bakePadded, bakeTexture } from '../../ui/bake-texture';
+import { FIELD_PAD } from '../../../data/picture-fields';
+import { paddedOrigin } from '../../../util/field-pad';
 import { BACKDROP_LIFE } from '../../../data/backdrop-life';
 import { OUTLINE, circle, drawPlank, ellipse, outlined, roundRect, tint } from './art-kit';
 import { inSky } from './layer-anchor';
@@ -136,7 +138,7 @@ function bakeStands(scene: Phaser.Scene): void {
 /** A striped awning strip: `TILE` wide so three of them cover the screen; its scallops hang below the stripes. */
 function bakeAwning(scene: Phaser.Scene): void {
   const { height, stripe } = SHOP_LOOK.awning;
-  bakeTexture(scene, SHOP_TEX.awning, TILE, height, (g) => {
+  bakePadded(scene, SHOP_TEX.awning, TILE, height, FIELD_PAD.shopAwning, (g) => {
     const body = height - stripe / 2 - OUTLINE;
     for (const [grow, pink, cream] of [
       [OUTLINE, outlineColor(C.awningPink), outlineColor(C.awningPink)],
@@ -160,7 +162,7 @@ function bakeLamp(scene: Phaser.Scene): void {
   const { width, height, cord, globe } = SHOP_LOOK.lamp;
   const cx = width / 2;
   const cy = cord + globe;
-  bakeTexture(scene, SHOP_TEX.lamp, width, height, (g) => {
+  bakePadded(scene, SHOP_TEX.lamp, width, height, FIELD_PAD.shopLamp, (g) => {
     g.fillStyle(outlineColor(C.awningPink), 1);
     g.fillRect(cx - 2, 0, 4, cord);
     g.fillRoundedRect(cx - 9, cord - 6, 18, 12, 4);
@@ -203,7 +205,7 @@ export const shopArt: ZoneArt = {
       texture: SHOP_TEX.awning,
       at: { x: 0, y: 0 },
       offset: { x: TILE * (i + 0.5), y: -awningLook.bobPx },
-      origin: [0.5, 0] as const,
+      origin: paddedOrigin([0.5, 0], TILE, awningLook.height, FIELD_PAD.shopAwning),
       bob: { px: awningLook.bobPx, ms: awningLook.bobMs },
       phase: i * awningLook.phaseStep,
       tint: dim,
@@ -213,7 +215,7 @@ export const shopArt: ZoneArt = {
       texture: SHOP_TEX.lamp,
       at: { x: item.x, y: 0 },
       offset: { x: 0, y: awningLook.height - lamp.tuckPx + item.drop },
-      origin: [0.5, 0] as const,
+      origin: paddedOrigin([0.5, 0], lamp.width, lamp.height, FIELD_PAD.shopLamp),
       scale: lamp.scale,
       swing: { deg: lamp.swingDeg, ms: item.ms },
       phase: i * lamp.phaseStep,

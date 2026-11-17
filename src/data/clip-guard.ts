@@ -41,4 +41,10 @@ export const CLIP_ALLOWED: readonly ClipAllowance[] = [
     reason:
       'the garland wire runs from edge to edge of its picture and is laid end to end across the screen',
   },
+  {
+    match: /^shade_cap_/,
+    sides: ['right', 'bottom'],
+    reason:
+      'a rounded corner larger than the picture, cropped to the band on purpose (the picture is a cut of a bigger shape)',
+  },
 ];
