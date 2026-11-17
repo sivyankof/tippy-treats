@@ -21,7 +21,8 @@ export const WEATHER_TEX = {
   cap: 'fx_wx_cap',
   bankRain: 'fx_wx_bank_rain',
   bankStorm: 'fx_wx_bank_storm',
-  bankFlash: 'fx_wx_bank_flash',
+  /** The lit twin of the bank for a bolt on the left and on the right. */
+  bankFlash: ['fx_wx_bank_flash_l', 'fx_wx_bank_flash_r'],
   bolt: 'fx_wx_bolt',
 } as const;
 
@@ -203,7 +204,7 @@ export const WEATHER_LOOK = {
   /** Particles fade out toward the HUD plates over this many px beyond the HUD gap. */
   keepOutFeatherPx: 40,
   endFeatherPx: 60,
-  /** Share of the particles that start in the side strips (the tower hides the middle), and the strip width as share of the screen. */
+  /** Share of the particles (unless a kind says otherwise) that start in the side strips (the tower hides the middle), and the strip width as share of the screen. */
   sideBias: 0.8,
   sideShare: 0.3,
 
@@ -232,7 +233,15 @@ export const WEATHER_LOOK = {
     alpha: [0.9, 1],
     scale: [1, 1],
     /** Cumulative chance of each flake picture but the last (small disc, middle disc, soft disc); the rest are the six-ray flake. */
-    sizeCuts: [0.3, 0.6, 0.88] as readonly number[],
+    sizeCuts: [0.45, 0.88, 0.94] as readonly number[],
+    /** The flakes keep to the side strips and the open sky: few hide behind the tower. */
+    sideBias: 0.95,
+    /** The open sky beside the tower is about this share of the width on each side (the tower hides the rest). */
+    sideShare: 0.17,
+    /** Snow is slow and big: its fades are short, so more of the flakes show (the HUD gap itself stays). */
+    bandFeatherPx: 30,
+    keepOutFeatherPx: 12,
+    endFeatherPx: 30,
     count: 40,
   },
   leaves: {
@@ -267,15 +276,19 @@ export const WEATHER_LOOK = {
     lightStorm: 0xa6b4e0,
     lightMix: 0.62,
     /** Tone shifts (-1..1 towards black / white): the back row is darker, the front row lighter; the lower rim of every puff is `bellyShade` darker. */
-    rowShade: [-0.1, 0, 0.06] as readonly [number, number, number],
+    rowShade: [-0.06, 0, 0.03] as readonly [number, number, number],
     bellyShade: -0.22,
-    /** Outline of every puff (px) in a shade of the puff colour. */
+    /** Outline round the whole bank, and nowhere inside it (px), in a shade of the bank colour. */
     outlinePx: 3.4,
+    /** A thin seam in the belly tone along the top of the puffs marked with a 1 (the fifth number), so a couple of front puffs read as lying over the rest. */
+    seamPx: 2.6,
     /** Per row (the puffs of a row are drawn as one mass): a pale crescent this thick (px) lies along the top and a darker belly this thick along the bottom. */
     topLightPx: 11,
     bellyPx: 12,
-    /** A flat strip along the top edge that closes the gaps between the back puffs (picture px). */
+    /** A flat strip along the top edge between these x that closes the gaps between the back puffs (picture px). At the sides the bank starts lower, so the pause button and the coins sit on sky and the pale top. */
     topStripPx: 40,
+    stripFrom: 320,
+    stripTo: 720,
     /** In a storm the lower rows hang this much lower, as a share of the puff radius (times the row: 0 back, 0.5 middle, 1 front). */
     stormHang: 0.3,
     /**
@@ -284,41 +297,49 @@ export const WEATHER_LOOK = {
      * sides are deep, with puffs of different sizes at different depths and no regular teeth.
      */
     puffs: [
-      [0, -20, 95, 80],
-      [0, 60, 70, 70],
-      [0, 150, 76, 74],
-      [0, 245, 56, 62],
-      [0, 330, 34, 52],
+      [0, -20, 150, 60],
+      [0, 60, 147, 58],
+      [0, 150, 149, 60],
+      [0, 265, 60, 56],
+      [0, 335, 34, 52],
       [0, 415, 10, 46],
       [0, 500, 12, 48],
       [0, 585, 8, 44],
       [0, 665, 20, 50],
-      [0, 745, 50, 62],
-      [0, 830, 68, 70],
-      [0, 925, 60, 68],
-      [0, 1010, 92, 80],
-      [1, 35, 128, 64],
-      [1, 130, 120, 56],
-      [1, 222, 116, 56],
+      [0, 745, 121, 50],
+      [0, 830, 145, 52],
+      [0, 925, 143, 54],
+      [0, 1010, 150, 60],
+      [1, 35, 155, 60],
+      [1, 130, 155, 56],
+      [1, 222, 155, 56],
       [1, 306, 86, 42],
-      [1, 730, 100, 50],
-      [1, 815, 114, 54],
-      [1, 905, 128, 64],
-      [1, 995, 128, 56],
-      [2, 60, 168, 58],
-      [2, 150, 156, 46],
-      [2, 235, 148, 50],
-      [2, 790, 134, 38],
-      [2, 865, 162, 58],
-      [2, 955, 158, 46],
-    ] as ReadonlyArray<readonly [number, number, number, number]>,
-    /** The flash: the same puffs lit from inside, warm white-yellow at the rim of every puff and faint towards its middle, no edge of its own. */
-    flashRim: 0xfff6d0,
-    flashCore: 0xffe08a,
-    flashRimAlpha: 0.95,
-    flashCoreAlpha: 0.2,
-    /** How far (px) the bright rim reaches into a puff mass: the glow falls off as exp(-depth / this). */
-    flashReachPx: 30,
+      [1, 735, 130, 50],
+      [1, 820, 157, 54],
+      [1, 905, 155, 60],
+      [1, 995, 163, 56],
+      [2, 60, 168, 58, 0],
+      [2, 150, 156, 46, 1],
+      [2, 235, 148, 50, 0],
+      [2, 790, 134, 38, 0],
+      [2, 865, 162, 58, 1],
+      [2, 955, 158, 46, 1],
+    ] as ReadonlyArray<readonly [number, number, number, number, number?]>,
+    /**
+     * The flash: ONE soft warm patch over the lit part of the cloud, centred on where the bolt stands (one
+     * picture for a bolt on the left, one for the right; picture px), strongest at its centre, fading to nothing
+     * at `flashRadiusPx`. It only lies on the clouds (the picture is cut to the bank) and is a little brighter
+     * towards the edges of the puffs, `flashCoreShare` being how bright it is deep inside a mass. Drawn additively.
+     */
+    flashColor: 0xffe6a0,
+    flashSpots: [
+      { x: 292, y: 105 },
+      { x: 707, y: 95 },
+    ] as ReadonlyArray<{ x: number; y: number }>,
+    flashRadiusPx: 210,
+    flashCoreShare: 0.6,
+    /** How far (px) the brighter rim reaches into a mass: it falls off as exp(-depth / this). */
+    flashReachPx: 34,
   },
 
   /** Lightning in the cloud bank of a storm. */
@@ -329,7 +350,7 @@ export const WEATHER_LOOK = {
     /** Share of a flash over which it rises to its peak; it falls over the rest. */
     riseShare: 0.2,
     /** Alpha of the lit bank at the peak. */
-    flashAlpha: 0.75,
+    flashAlpha: 0.85,
     /** The bolt stands in one of these x ranges (share of the screen width): between the pause button and the score, and between the score and the coins. */
     xRanges: [
       [0.2, 0.28],

@@ -12,19 +12,16 @@ import { bankPuffs, type Puff } from './weather-motion';
 
 type Graphics = Phaser.GameObjects.Graphics;
 
-/** Snow: small disc, middle disc, soft disc, six-ray flake (picture px). */
-const FLAKE_SIZES = [22, 30, 38, 46] as const;
-const FLAKE_OUTLINE = 0x93abd4;
-const FLAKE_SOFT_STOPS = [
-  [0, 'rgba(255,255,255,1)'],
-  [0.5, 'rgba(255,255,255,0.95)'],
-  [0.78, 'rgba(214,226,246,0.7)'],
-  [1, 'rgba(160,182,224,0)'],
-] as const;
+/** Snow (picture px): a small and a middle disc, then two six-ray flakes (one with side branches, one plain). */
+const FLAKE_SIZES = [28, 36, 44, 44] as const;
+const FLAKE_OUTLINE = 0x7e92b8;
+const FLAKE_DISC_RIM = 5;
 const FLAKE_RAYS = {
   count: 6,
-  outlinePx: 7,
-  bodyPx: 3.6,
+  outlinePx: 10.5,
+  bodyPx: 4.6,
+  plainOutlinePx: 12.5,
+  plainBodyPx: 6.6,
   branchAt: 0.55,
   branchLen: 0.3,
   branchTilt: 0.95,
@@ -63,10 +60,14 @@ const BOLT_CORE = 0xfffbe6;
 const BOLT_MID = 0xffd45e;
 const BOLT_RIM = 0xb97a2a;
 
-/** Key of the cloud bank picture of a weather (the same in both zones), and of its pale flash twin. */
-export function bankKey(weather: WeatherId, flash = false): string {
-  if (flash) return TEX.bankFlash;
+/** Key of the cloud bank picture of a weather (the same in both zones). */
+export function bankKey(weather: WeatherId): string {
   return weather === 'storm' ? TEX.bankStorm : TEX.bankRain;
+}
+
+/** Key of the lit twin of the bank for a bolt on `side` (0 left, 1 right). */
+export function bankFlashKey(side: number): string {
+  return TEX.bankFlash[side] ?? '';
 }
 
 /** Adds a little noise to the alpha of a finished picture so a smooth fall-off shows no steps. */
@@ -85,20 +86,22 @@ function ditherAlpha(ctx: CanvasRenderingContext2D, width: number, height: numbe
 
 const NO_DRAW = (): void => undefined;
 
-/** A six-ray flake: each ray a stroke with two short side branches, a cold outline under a white body. */
-function drawFlakeRays(g: Graphics, size: number): void {
+/** A six-ray flake: each ray a stroke (the first kind with two short side branches), a cold outline under a white body. */
+function drawFlakeRays(g: Graphics, size: number, branched: boolean): void {
   const c = size / 2;
-  const r = c - 3;
   const f = FLAKE_RAYS;
+  const r = c - f.outlinePx / 2;
+  const widths = branched ? [f.outlinePx, f.bodyPx] : [f.plainOutlinePx, f.plainBodyPx];
   for (const [width, color] of [
-    [f.outlinePx, FLAKE_OUTLINE],
-    [f.bodyPx, 0xffffff],
+    [widths[0] ?? 0, FLAKE_OUTLINE],
+    [widths[1] ?? 0, 0xffffff],
   ] as const) {
     g.lineStyle(width, color, 1);
     for (let k = 0; k < f.count; k++) {
       const a = (k / f.count) * TWO_PI - Math.PI / 2;
       const tip = { x: c + Math.cos(a) * r, y: c + Math.sin(a) * r };
       g.lineBetween(c, c, tip.x, tip.y);
+      if (!branched) continue;
       const at = { x: c + Math.cos(a) * r * f.branchAt, y: c + Math.sin(a) * r * f.branchAt };
       for (const side of [-1, 1]) {
         const b = a + side * f.branchTilt;
@@ -119,24 +122,16 @@ function bakeFlakes(scene: Phaser.Scene): void {
   FLAKE_SIZES.forEach((size, i) => {
     const key = TEX.flake[i] ?? '';
     const c = size / 2;
-    if (i === 2) {
-      bakeTexture(scene, key, size, size, NO_DRAW, (ctx) => {
-        const grad = ctx.createRadialGradient(c, c, 0, c, c, c);
-        for (const [at, color] of FLAKE_SOFT_STOPS) grad.addColorStop(at, color);
-        ctx.fillStyle = grad;
-        ctx.fillRect(0, 0, size, size);
-        ditherAlpha(ctx, size, size);
-      });
-    } else if (i === 3) {
-      bakeTexture(scene, key, size, size, (g) => drawFlakeRays(g, size));
-    } else {
-      bakeTexture(scene, key, size, size, (g) => {
-        g.fillStyle(FLAKE_OUTLINE, 1);
-        g.fillCircle(c, c, c);
-        g.fillStyle(0xffffff, 1);
-        g.fillCircle(c, c, c - (i === 0 ? 2 : 2.8));
-      });
+    if (i >= 2) {
+      bakeTexture(scene, key, size, size, (g) => drawFlakeRays(g, size, i === 2));
+      return;
     }
+    bakeTexture(scene, key, size, size, (g) => {
+      g.fillStyle(FLAKE_OUTLINE, 1);
+      g.fillCircle(c, c, c);
+      g.fillStyle(0xffffff, 1);
+      g.fillCircle(c, c, c - FLAKE_DISC_RIM);
+    });
   });
 }
 
@@ -345,10 +340,10 @@ function newCanvas(width: number, height: number): CanvasRenderingContext2D {
   return ctx;
 }
 
-/** One mass of puffs with its three tones and a soft outline, drawn on a canvas of its own. */
+/** One mass of puffs with its three tones (no outline: the outline runs round the whole bank), drawn on a canvas of its own. */
 function drawMass(
   mass: readonly Puff[],
-  tones: { outline: number; light: number; base: number; belly: number },
+  tones: { light: number; base: number; belly: number },
 ): HTMLCanvasElement {
   const b = WEATHER_LOOK.bank;
   const row = newCanvas(b.width, b.height);
@@ -361,18 +356,24 @@ function drawMass(
   fillPuffs(belly, mass, tones.belly, 0, 0);
   belly.globalCompositeOperation = 'destination-out';
   fillPuffs(belly, mass, 0x000000, 0, -b.bellyPx);
-  row.globalCompositeOperation = 'source-atop';
   row.drawImage(belly.canvas, 0, 0);
-  // The outline goes behind everything, one soft ring round the whole mass.
-  row.globalCompositeOperation = 'destination-over';
-  fillPuffs(row, mass, tones.outline, b.outlinePx, 0);
   return row.canvas;
 }
 
+/** A thin seam in the belly tone along the upper arc of a puff. */
+function strokeSeam(ctx: CanvasRenderingContext2D, p: Puff, color: number): void {
+  ctx.strokeStyle = cssColor(color);
+  ctx.lineWidth = WEATHER_LOOK.bank.seamPx;
+  ctx.lineCap = 'round';
+  ctx.beginPath();
+  ctx.arc(p.x, p.y, p.r, Math.PI * 1.08, Math.PI * 1.92);
+  ctx.stroke();
+}
+
 /**
- * The cloud bank: three rows of puffs; every row is one mass (no seams between its puffs) with its own
- * soft outline, so a front row lies over the back one. Each mass has three tones: a pale crescent along
- * its top, the base, a darker belly along its lower edge.
+ * The cloud bank: three rows of puffs, each row one mass (no lines between its puffs) with three tones: a
+ * pale crescent along its top, the base, a darker belly along its lower edge. The soft outline runs round
+ * the whole bank only, like the cloud of the Clouds zone; a few front puffs get a thin seam in the belly tone.
  */
 function bakeBank(scene: Phaser.Scene, key: string, weather: WeatherId): void {
   const b = WEATHER_LOOK.bank;
@@ -382,14 +383,13 @@ function bakeBank(scene: Phaser.Scene, key: string, weather: WeatherId): void {
   const puffs = bankPuffs(storm);
   bakeTexture(scene, key, b.width, b.height, NO_DRAW, (ctx) => {
     ctx.fillStyle = cssColor(shade(color, b.rowShade[0]));
-    ctx.fillRect(0, 0, b.width, b.topStripPx);
+    ctx.fillRect(b.stripFrom, 0, b.stripTo - b.stripFrom, b.topStripPx);
     for (const row of [0, 1, 2] as const) {
       const base = shade(color, b.rowShade[row] ?? 0);
       ctx.drawImage(
         drawMass(
           puffs.filter((p) => p.row === row),
           {
-            outline: outlineColor(base),
             light: mixColor(base, lightTo, b.lightMix),
             base,
             belly: shade(base, b.bellyShade),
@@ -399,59 +399,51 @@ function bakeBank(scene: Phaser.Scene, key: string, weather: WeatherId): void {
         0,
       );
     }
+    const seam = shade(shade(color, b.rowShade[2] ?? 0), b.bellyShade);
+    for (const p of puffs) if (p.seam) strokeSeam(ctx, p, seam);
+    ctx.globalCompositeOperation = 'destination-over';
+    fillPuffs(ctx, puffs, outlineColor(color), b.outlinePx, 0);
   });
 }
 
 /**
- * The flash of a storm: the same masses of the bank lit from inside. Every pixel inside a row's mass glows
- * warm white-yellow near the mass's edge and faintly deeper in (a smooth fall-off with a little noise, so no
- * rings or steps); a row in front cuts out the glow of the rows behind it. Nothing glows outside the
- * clouds, so the light follows the puffs and has no edge of its own.
+ * The flash of a storm for a bolt on one side: ONE soft warm patch centred on where the bolt stands, strongest
+ * in the middle and fading to nothing at its radius (a smooth fall-off with a little noise, so no rings or steps).
+ * It lies only on the clouds (nothing outside the bank glows) and is a little stronger towards the edges of the
+ * puffs, so the light follows them. The picture is drawn additively over the bank.
  */
-function bakeBankFlash(scene: Phaser.Scene, key: string): void {
+function bakeBankFlash(scene: Phaser.Scene, key: string, side: number): void {
   const b = WEATHER_LOOK.bank;
+  const spot = b.flashSpots[side] ?? { x: b.width / 2, y: b.height / 2 };
   const puffs = bankPuffs(true);
-  const rowsFrontFirst = [2, 1, 0].map((row) => puffs.filter((p) => p.row === row));
-  const rim = b.flashRim;
-  const core = b.flashCore;
+  const colour = b.flashColor;
+  const rgb = [(colour >> 16) & 255, (colour >> 8) & 255, colour & 255];
   bakeTexture(scene, key, b.width, b.height, NO_DRAW, (ctx) => {
     const image = ctx.createImageData(b.width, b.height);
     const px = image.data;
-    let seed = 777;
+    let seed = 777 + side;
     for (let y = 0; y < b.height; y++) {
       for (let x = 0; x < b.width; x++) {
-        let alpha = 0;
-        let depth = 0;
-        for (const mass of rowsFrontFirst) {
-          // Depth inside the mass (negative outside it): the deepest of its circles.
-          let deep = -Infinity;
-          for (const p of mass) {
-            const dx = x + 0.5 - p.x;
-            const dy = y + 0.5 - p.y;
-            if (Math.abs(dx) > p.r + b.outlinePx || Math.abs(dy) > p.r + b.outlinePx) continue;
-            deep = Math.max(deep, p.r - Math.hypot(dx, dy));
-          }
-          if (deep > -b.outlinePx) {
-            if (deep > 0) {
-              alpha = 1;
-              depth = deep;
-            }
-            break;
-          }
+        const d = Math.hypot(x + 0.5 - spot.x, y + 0.5 - spot.y) / b.flashRadiusPx;
+        if (d >= 1) continue;
+        // Depth inside the bank: the deepest of the puffs (the top strip counts as the sky-side edge).
+        let depth = x >= b.stripFrom && x <= b.stripTo && y < b.topStripPx ? y : -Infinity;
+        for (const p of puffs) {
+          const dx = x + 0.5 - p.x;
+          const dy = y + 0.5 - p.y;
+          if (Math.abs(dx) > p.r || Math.abs(dy) > p.r) continue;
+          depth = Math.max(depth, p.r - Math.hypot(dx, dy));
         }
-        if (alpha === 0) continue;
-        const k = Math.exp(-depth / b.flashReachPx);
-        const a = b.flashCoreAlpha + (b.flashRimAlpha - b.flashCoreAlpha) * k;
+        if (depth <= 0) continue;
+        const patch = 0.5 + 0.5 * Math.cos(Math.PI * d);
+        const rim = Math.exp(-depth / b.flashReachPx);
+        const a = patch * (b.flashCoreShare + (1 - b.flashCoreShare) * rim);
         seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0;
         const i = (y * b.width + x) * 4;
-        const [r, g, bl] = [(rim >> 16) & 255, (rim >> 8) & 255, rim & 255].map((c, n) => {
-          const to = [(core >> 16) & 255, (core >> 8) & 255, core & 255][n] ?? c;
-          return to + (c - to) * k;
-        });
-        px[i] = r ?? 0;
-        px[i + 1] = g ?? 0;
-        px[i + 2] = bl ?? 0;
-        px[i + 3] = Math.round(a * 255 + ((seed >>> 24) / 255 - 0.5) * DITHER_AMP);
+        px[i] = rgb[0] ?? 255;
+        px[i + 1] = rgb[1] ?? 255;
+        px[i + 2] = rgb[2] ?? 255;
+        px[i + 3] = Math.max(0, Math.round(a * 255 + ((seed >>> 24) / 255 - 0.5) * DITHER_AMP));
       }
     }
     ctx.putImageData(image, 0, 0);
@@ -562,7 +554,8 @@ export function bakeWeatherSky(
     if (!is(kind)) continue;
     bakeBank(scene, bankKey(kind), kind);
     if (kind === 'storm') {
-      bakeBankFlash(scene, bankKey(kind, true));
+      bakeBankFlash(scene, bankFlashKey(0), 0);
+      bakeBankFlash(scene, bankFlashKey(1), 1);
       bakeBolt(scene);
     }
   }

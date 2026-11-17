@@ -9,7 +9,7 @@ import { FLIGHT_CLEAR } from '../../../data/flight-clear';
 import { HUD_LAYOUT } from '../../../data/hud-layout';
 import { flightClearBand, hudFloor, hudKeepOutFade } from '../../camera-layout';
 import type { FrameCtx, Life } from './life';
-import { bankKey } from './weather-art';
+import { bankFlashKey, bankKey } from './weather-art';
 import { zoneShowsWeatherSky } from './weather-share';
 import { bankEdge, boltEnd, flashEnvelope, nextBoltAt } from './weather-motion';
 
@@ -35,7 +35,8 @@ export function strikeLightningNow(): void {
 export class WeatherBank implements Life {
   readonly objects: Phaser.GameObjects.Image[];
   private readonly bank: Phaser.GameObjects.Image;
-  private readonly flash: Phaser.GameObjects.Image | null = null;
+  /** The lit twin of the bank for a bolt on the left and on the right. */
+  private readonly flashes: Phaser.GameObjects.Image[] = [];
   private readonly bolt: Phaser.GameObjects.Image | null = null;
   /** Time of the next bolt; drawn from the first frame on, since the scene clock does not start at 0. */
   private nextAt = -1;
@@ -43,7 +44,9 @@ export class WeatherBank implements Life {
   private flashAt = -1;
   private flashMs = 0;
   /** Where the strike stands (screen px) and whether it has a bolt (it may find no free place). */
-  private strike: { x: number; y: number; scale: number; edge: number } | null = null;
+  private strike: { x: number; y: number; scale: number; side: number } | null = null;
+  /** Which flash picture lights this time (the side of the strike, drawn when it has no place). */
+  private side = 0;
   private pending = false;
 
   constructor(
@@ -56,14 +59,19 @@ export class WeatherBank implements Life {
       .setScale(BANK.scale);
     this.objects = [this.bank];
     if (weather === 'storm') {
-      this.flash = new Phaser.GameObjects.Image(scene, 0, 0, bankKey(weather, true))
-        .setOrigin(0.5, 0)
-        .setScale(BANK.scale)
-        .setVisible(false);
+      for (let side = 0; side < BOLT.xRanges.length; side++) {
+        this.flashes.push(
+          new Phaser.GameObjects.Image(scene, 0, 0, bankFlashKey(side))
+            .setOrigin(0.5, 0)
+            .setScale(BANK.scale)
+            .setBlendMode(Phaser.BlendModes.ADD)
+            .setVisible(false),
+        );
+      }
       this.bolt = new Phaser.GameObjects.Image(scene, 0, 0, WEATHER_TEX.bolt)
         .setOrigin(0.5, 0)
         .setVisible(false);
-      this.objects.push(this.flash, this.bolt);
+      this.objects.push(...this.flashes, this.bolt);
       if (import.meta.env.DEV) {
         BANKS.add(this);
         this.bank.once(Phaser.GameObjects.Events.DESTROY, () => BANKS.delete(this));
@@ -82,14 +90,14 @@ export class WeatherBank implements Life {
     const drift = still ? 0 : BANK.driftPx * Math.sin((TWO_PI * ctx.timeMs) / BANK.driftMs);
     const x = ctx.width / 2 + drift;
     this.bank.setPosition(x, 0);
-    if (this.flash && this.bolt) this.updateStrike(ctx, x, still);
+    if (this.bolt) this.updateStrike(ctx, x, still);
   }
 
   private updateStrike(ctx: FrameCtx, bankX: number, still: boolean): void {
-    const { flash, bolt } = this;
-    if (!flash || !bolt) return;
+    const { flashes, bolt } = this;
+    if (!bolt) return;
     if (still) {
-      flash.setVisible(false);
+      for (const flash of flashes) flash.setVisible(false);
       bolt.setVisible(false);
       return;
     }
@@ -100,16 +108,17 @@ export class WeatherBank implements Life {
       this.flashAt = now;
       this.flashMs = this.rng.range(BOLT.flashMs[0], BOLT.flashMs[1]);
       this.strike = this.pickStrike(ctx, bankX);
+      this.side = this.strike?.side ?? this.rng.int(0, flashes.length - 1);
       this.nextAt = nextBoltAt(now, BOLT.everyMs, this.rng.next());
     }
     const strength = this.flashAt < 0 ? 0 : flashEnvelope(now - this.flashAt, this.flashMs);
     if (this.flashAt >= 0 && now - this.flashAt >= this.flashMs) this.flashAt = -1;
     const strike = this.strike;
-    flash.setVisible(strength > 0);
+    flashes.forEach((flash, i) => flash.setVisible(strength > 0 && i === this.side));
     bolt.setVisible(strength > 0 && strike !== null);
     if (strength <= 0) return;
-    // The lit twin of the bank follows it as it drifts; its glow has no edge but the puffs.
-    flash.setPosition(bankX, 0).setAlpha(BOLT.flashAlpha * strength);
+    // The lit twin of the bank follows it as it drifts; its glow is one patch with no edge but the puffs.
+    this.flashes[this.side]?.setPosition(bankX, 0).setAlpha(BOLT.flashAlpha * strength);
     if (strike === null) return;
     bolt.setPosition(strike.x, strike.y).setScale(strike.scale).setAlpha(1);
   }
@@ -123,9 +132,10 @@ export class WeatherBank implements Life {
   private pickStrike(
     ctx: FrameCtx,
     bankX: number,
-  ): { x: number; y: number; scale: number; edge: number } | null {
+  ): { x: number; y: number; scale: number; side: number } | null {
     for (let i = 0; i < BOLT.tries; i++) {
-      const range = BOLT.xRanges[this.rng.int(0, BOLT.xRanges.length - 1)];
+      const side = this.rng.int(0, BOLT.xRanges.length - 1);
+      const range = BOLT.xRanges[side];
       if (!range) return null;
       const x = ctx.width * this.rng.range(range[0], range[1]);
       const edge = bankEdge((x - bankX) / BANK.scale + BANK.width / 2, true) * BANK.scale;
@@ -136,7 +146,7 @@ export class WeatherBank implements Life {
       const half = BOLT.width * ((end - top) / BOLT.height) * BOLT.hudHalfShare;
       const room = boltEnd(x, half, top, end, HUD_LAYOUT.plates, FLIGHT_CLEAR.hudGapPx);
       if (room === null || room - top < BOLT.height * BOLT.minLengthShare) continue;
-      return { x, y: top, scale: (room - top) / BOLT.height, edge };
+      return { x, y: top, scale: (room - top) / BOLT.height, side };
     }
     return null;
   }
