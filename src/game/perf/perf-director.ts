@@ -5,6 +5,7 @@ import { setFrameWorkListener } from '../frame-work';
 import { capRenderDensity } from '../render-density';
 import { densityCapForLevel } from '../../util/density-scale';
 import { webglRendererOf, type WebGLRenderer } from '../webgl-renderer';
+import { chooseRunLook } from '../run-look-choice';
 import { CLASSIC_RUN } from '../run-request';
 import type { GameScene } from '../scenes/game-scene';
 import { launchRun, resultsShown, SCENES } from '../scene-keys';
@@ -119,6 +120,7 @@ class PerfDirector {
       maxTextureUnits: webgl?.maxTextures ?? 0,
       hidden: params?.hidden ?? [],
       automated: this.automated,
+      look: chooseRunLook({ seed: PERF.seed, perf: params ?? {} }),
     });
   }
 

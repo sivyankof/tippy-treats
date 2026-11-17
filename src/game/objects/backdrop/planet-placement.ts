@@ -23,7 +23,8 @@ const HALF = 0.5;
  * tower top as it was when the lap was entered (`topWidth`); without it, the full layer width cap.
  */
 export function corridorHalf(lap: number, topWidth?: number): number {
-  const width = lap === 1 && topWidth !== undefined ? topWidth : spaceWidthLimit(lapFirstIndex(lap));
+  const width =
+    lap === 1 && topWidth !== undefined ? topWidth : spaceWidthLimit(lapFirstIndex(lap));
   return width / 2 + PLANET_PLACE.swayPx;
 }
 

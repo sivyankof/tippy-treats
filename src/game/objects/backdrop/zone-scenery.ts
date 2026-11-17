@@ -4,6 +4,8 @@ import { BACKDROP_FAR } from '../../../data/backdrop-far';
 import { BACKDROP } from '../../../data/backdrop';
 import { LOGICAL_SIZE } from '../../../data/screen';
 import { ZONE_SKY } from '../../../data/backdrop-colors';
+import type { StartPlaceId } from '../../../data/start-places';
+import type { WeatherId } from '../../../data/weather';
 import type { ZoneId } from '../../../data/zones';
 import { mixColor } from '../../../util/color';
 import { MS_PER_SECOND, oscillate01, sineWave } from '../../../util/math';
@@ -31,13 +33,24 @@ export interface SceneryDef {
   lapLife?: LapLife;
 }
 
+/** What a zone's art may depend on besides the zone itself: the lap of Space and the look of the run. */
+export interface SceneryLook {
+  /** 1-based lap of Space; 1 outside Space. */
+  lap: number;
+  weather: WeatherId;
+  /** Start place of zone 1; only the first zone reads it (through `PLACE_ART`). */
+  place: StartPlaceId;
+  /** Space only: width of the tower top when the lap began (the lap 1 planet keeps clear of it). */
+  topWidth?: number;
+}
+
 /** One zone's art: baking is separate so the next zone can be prepared ahead of the change. */
 export interface ZoneArt {
-  bake(scene: Phaser.Scene): void;
+  bake(scene: Phaser.Scene, look: SceneryLook): void;
   /** Bakes what only one lap of the zone shows (the planet of a lap of Space); `lap` is 1-based. */
   bakeLap?(scene: Phaser.Scene, lap: number): void;
-  /** `lap` is the 1-based lap of Space and `topWidth` the tower top width when it began; only Space reads them. */
-  build(scene: Phaser.Scene, lap?: number, topWidth?: number): SceneryDef;
+  /** Only Space reads `look.lap` and `look.topWidth`; a zone ignores what it does not show. */
+  build(scene: Phaser.Scene, look: SceneryLook): SceneryDef;
 }
 
 const skyKey = (zone: ZoneId): string => `bd_sky_${zone}`;

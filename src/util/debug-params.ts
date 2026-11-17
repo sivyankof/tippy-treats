@@ -3,6 +3,8 @@ import { BALANCE } from '../data/balance';
 import { isSpaceVisitorId, type SpaceVisitorId } from '../data/space-visitor';
 import { isEffectLevel, type EffectLevel } from '../data/effect-levels';
 import { isPerfSegmentId, PERF, PERF_PARTS, type PerfPart, type PerfSegmentId } from '../data/perf';
+import { isStartPlaceId, type StartPlaceId } from '../data/start-places';
+import { isWeatherId, type WeatherId } from '../data/weather';
 import { isResultsDemoCase, type ResultsDemoCase } from '../data/results-demo';
 import { UINT32_RANGE } from './math';
 
@@ -32,6 +34,10 @@ export interface DebugParams {
   spaceGuest?: SpaceVisitorId;
   /** `?reset=1` makes the state layer start from a fresh save. */
   reset?: boolean;
+  /** `?weather=clear|sunset|night|rain|snow|leaves|storm` pins the weather of the run (the run is not saved). */
+  weather?: WeatherId;
+  /** `?place=kitchen|shop` pins the start place of zone 1 (the run is not saved). */
+  place?: StartPlaceId;
 }
 
 const UINT32_MAX = UINT32_RANGE - 1;
@@ -103,6 +109,10 @@ export function parseDebugParams(search: string): DebugParams {
   if (params.get('reset') === '1') result.reset = true;
   const spaceGuest = params.get('spaceGuest');
   if (isSpaceVisitorId(spaceGuest)) result.spaceGuest = spaceGuest;
+  const weather = params.get('weather');
+  if (isWeatherId(weather)) result.weather = weather;
+  const place = params.get('place');
+  if (isStartPlaceId(place)) result.place = place;
   return result;
 }
 
@@ -127,6 +137,10 @@ export interface PerfParams {
   hidden?: PerfPart[];
   /** `mastery=on|off`: every segment without a team plays the mastery team at the grown level (`on`) or one level below it (`off`, the control); `master` plays it at the master level (the captions and master effects of a run); absent keeps the segments as they are. */
   mastery?: 'on' | 'off' | 'master';
+  /** `weather=<id>`: the weather of every benchmark run; absent is clear. */
+  weather?: WeatherId;
+  /** `place=<id>`: the start place of every benchmark run; absent is the kitchen. */
+  place?: StartPlaceId;
 }
 
 /** A number of the query that is one of `allowed`; `undefined` otherwise. */
@@ -164,6 +178,10 @@ export function parsePerfParams(search: string): PerfParams | null {
   if (hidden.length > 0) result.hidden = hidden;
   const mastery = params.get('mastery');
   if (mastery === 'on' || mastery === 'off' || mastery === 'master') result.mastery = mastery;
+  const weather = params.get('weather');
+  if (isWeatherId(weather)) result.weather = weather;
+  const place = params.get('place');
+  if (isStartPlaceId(place)) result.place = place;
   return result;
 }
 
@@ -198,7 +216,7 @@ export function skipsTutorial(params: DebugParams): boolean {
 }
 
 /**
- * Whether a run goes into the save. `?bot=`, `?start=`, `?team=` and `?level=` runs are artificial
+ * Whether a run goes into the save. `?bot=`, `?start=`, `?team=`, `?level=`, `?weather=` and `?place=` runs are artificial
  * (a bot plays, the tower begins part-way up, or the team is hand-picked), so they leave the save
  * alone; `?tutorial=`, `?seed=` and `?debug` runs are normal play and count.
  */
@@ -207,7 +225,9 @@ export function savesRun(params: DebugParams): boolean {
     params.bot === undefined &&
     params.start === undefined &&
     params.team === undefined &&
-    params.level === undefined
+    params.level === undefined &&
+    params.weather === undefined &&
+    params.place === undefined
   );
 }
 

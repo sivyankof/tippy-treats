@@ -217,6 +217,22 @@ describe('formatHeader', () => {
     );
   });
 
+  it('names the weather and the place when it is given them', () => {
+    const line = formatHeader({
+      fx: 'full',
+      canvas: { width: 780, height: 1688 },
+      css: { width: 390, height: 844 },
+      devicePixelRatio: 2,
+      densityCap: 2,
+      textureUnits: 1,
+      maxTextureUnits: 16,
+      hidden: [],
+      automated: true,
+      look: { weather: 'rain', place: 'shop' },
+    });
+    expect(line).toContain('hidden=- weather=rain place=shop intervals: reference');
+  });
+
   it('marks what was left as it is', () => {
     const line = formatHeader({
       fx: 'lite',

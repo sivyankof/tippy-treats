@@ -5,6 +5,7 @@ import type { PerfParams } from '../../util/debug-params';
 import { toTeamSlots } from '../debug/debug-team';
 import { effectsMode } from '../effects-mode';
 import type { RunRequest } from '../run-request';
+import { chooseRunLook } from '../run-look-choice';
 import type { RunSetup } from '../run-setup';
 import type { ResultsData } from '../scene-keys';
 import { createDriver, type DropDriver } from './perf-drivers';
@@ -84,6 +85,7 @@ export function perfRunSetup(request: RunRequest): RunSetup | null {
     request,
     mode: 'classic',
     seed: PERF.seed,
+    look: chooseRunLook({ seed: PERF.seed, perf: session.params }),
     startHeight: def.start,
     startWidth: isCheckpointHeight(def.start) ? checkpointStartWidth(def.start) : undefined,
     checkpoint: null,

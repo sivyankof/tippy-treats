@@ -1,7 +1,10 @@
 import * as Phaser from 'phaser';
 import { ANIM } from '../../../data/anim';
 import { BACKDROP, BD_TEX } from '../../../data/backdrop';
+import type { StartPlaceId } from '../../../data/start-places';
+import { WEATHER } from '../../../data/weather';
 import { SPACE_ZONE_INDEX, ZONES, type ZoneId } from '../../../data/zones';
+import type { RunLook } from '../../../core/run-look';
 import { flyingLap } from '../../../core/space-laps';
 import { DEPTH } from '../../depth';
 import { markPerfPart } from '../../perf/perf-marks';
@@ -20,7 +23,8 @@ import { showcaseArt } from './showcase-zone';
 import { spaceArt } from './space-zone';
 import { starsArt } from './stars-zone';
 import { ZoneFade } from './zone-fade';
-import { bakeSky, ZoneScenery, type ZoneArt } from './zone-scenery';
+import { weatherShareOf } from './weather-share';
+import { bakeSky, ZoneScenery, type SceneryLook, type ZoneArt } from './zone-scenery';
 
 /** What the backdrop needs of the run state: the zone and the placed height (the lap follows from it). */
 export interface RunBackdropState {
@@ -37,6 +41,12 @@ const ZONE_ART: Record<ZoneId, ZoneArt> = {
   clouds: cloudsArt,
   stars: starsArt,
   space: spaceArt,
+};
+
+/** The art of zone 1 for each start place; a new place is one entry here plus its art file. */
+const PLACE_ART: Record<StartPlaceId, ZoneArt> = {
+  kitchen: kitchenArt,
+  shop: kitchenArt,
 };
 
 function zoneIdOf(index: number): ZoneId {
@@ -74,6 +84,7 @@ export class Backdrop {
     width: number,
     height: number,
     state: RunBackdropState,
+    readonly look: RunLook,
   ) {
     this.lap = flyingLap(state.height);
     this.lapTopWidth = state.layers.at(-1)?.width;
@@ -118,6 +129,19 @@ export class Backdrop {
     ZONE_ART.space.bakeLap?.(this.scene, lap);
     space.setLap(lap, topWidth);
     this.prepareNext(SPACE_ZONE_INDEX);
+  }
+
+  /**
+   * How much of the weather of the given kind is visible right now: the summed fade alpha of the
+   * live zones that show weather that way (`WEATHER.zoneView`), 0..1. Weather particles scale their
+   * alpha by it, so they fade smoothly across a zone change.
+   */
+  weatherShare(view: 'full' | 'window'): number {
+    const zones = [...this.sceneries.keys()].map((index) => ({
+      zone: zoneIdOf(index),
+      alpha: this.fade.alphaOf(index),
+    }));
+    return weatherShareOf(view, zones, WEATHER.zoneView);
   }
 
   /** The creature of the current zone that may leave for the tower; `null` when it has none. */
@@ -221,7 +245,10 @@ export class Backdrop {
       this.scene,
       id,
       depth,
-      ZONE_ART[id].build(this.scene, Math.max(this.lap, 1), this.lapTopWidth),
+      this.artOf(id).build(this.scene, {
+        ...this.sceneryLook(Math.max(this.lap, 1)),
+        topWidth: this.lapTopWidth,
+      }),
       this.ctx.width,
       this.ctx.height,
     );
@@ -234,8 +261,18 @@ export class Backdrop {
     bakeSharedArt(this.scene);
     bakeFarArt(this.scene, id);
     bakeSky(this.scene, id);
-    ZONE_ART[id].bake(this.scene);
-    ZONE_ART[id].bakeLap?.(this.scene, Math.max(lap, 1));
+    const look = this.sceneryLook(Math.max(lap, 1));
+    this.artOf(id).bake(this.scene, look);
+    this.artOf(id).bakeLap?.(this.scene, look.lap);
+  }
+
+  private sceneryLook(lap: number): SceneryLook {
+    return { lap, weather: this.look.weather, place: this.look.place };
+  }
+
+  /** Zone 1 is the art of the start place of the run; the others are fixed. */
+  private artOf(id: ZoneId): ZoneArt {
+    return id === 'kitchen' ? PLACE_ART[this.look.place] : ZONE_ART[id];
   }
 
   /**

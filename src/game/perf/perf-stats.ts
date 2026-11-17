@@ -201,6 +201,8 @@ export interface PerfHeader {
   hidden: readonly string[];
   /** Automated browser: the frame intervals are printed for reference and do not count. */
   automated: boolean;
+  /** Weather and start place of the runs (`&weather=`, `&place=`); absent leaves them out of the line. */
+  look?: { weather: string; place: string };
 }
 
 /** One line: effects level, canvas and CSS size, density, texture units and the hidden parts. */
@@ -218,6 +220,7 @@ export function formatHeader(header: PerfHeader): string {
     `cap=${header.densityCap ?? '-'}`,
     `units=${header.textureUnits}/${header.maxTextureUnits}`,
     `hidden=${hidden}`,
+    ...(header.look ? [`weather=${header.look.weather}`, `place=${header.look.place}`] : []),
     header.automated ? 'intervals: reference (automated)' : 'intervals: counted (device)',
   ].join(' ');
 }

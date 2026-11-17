@@ -151,6 +151,24 @@ describe('savesRun', () => {
     expect(savesRun(parseDebugParams('?bot=50'))).toBe(false);
     expect(savesRun(parseDebugParams('?start=20'))).toBe(false);
     expect(savesRun(parseDebugParams('?team=honey&bot=50'))).toBe(false);
+    expect(savesRun(parseDebugParams('?weather=rain'))).toBe(false);
+    expect(savesRun(parseDebugParams('?place=shop'))).toBe(false);
+  });
+});
+
+describe('weather and place', () => {
+  it('reads known ids and drops unknown ones', () => {
+    expect(parseDebugParams('?weather=storm&place=shop')).toMatchObject({
+      weather: 'storm',
+      place: 'shop',
+    });
+    expect(parseDebugParams('?weather=fog&place=van').weather).toBeUndefined();
+    expect(parseDebugParams('?weather=fog&place=van').place).toBeUndefined();
+    expect(parsePerfParams('?perf=1&weather=snow&place=shop')).toMatchObject({
+      weather: 'snow',
+      place: 'shop',
+    });
+    expect(parsePerfParams('?perf=1')?.weather).toBeUndefined();
   });
 });
 

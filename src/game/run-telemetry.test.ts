@@ -11,6 +11,7 @@ function setupOf(over: Partial<RunSetup>): RunSetup {
     request: CLASSIC_RUN,
     mode: 'classic',
     seed: 1,
+    look: { weather: 'clear', place: 'kitchen' },
     startHeight: 0,
     checkpoint: null,
     paidByAd: false,
