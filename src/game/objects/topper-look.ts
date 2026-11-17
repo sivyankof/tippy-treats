@@ -171,9 +171,24 @@ export interface PopPose {
   alpha: number;
 }
 
-/** The pose of a hopped-off topper `ms` after it left; fills and returns `out`. */
-export function popAt(launch: PopLaunch, ms: number, out: PopPose): PopPose {
-  const { gravity, springMs, squashX, squashY, lifeMs, fadeFrom } = PLAIN_TOPPERS.hop;
+/** The motion numbers of a flight off the tower: the hop of a missed topper or the shot of an edge hit. */
+export interface FlightSpec {
+  gravity: number;
+  springMs: number;
+  squashX: number;
+  squashY: number;
+  lifeMs: number;
+  fadeFrom: number;
+}
+
+/** The pose of a topper `ms` after it left; fills and returns `out`. `spec` is the hop unless a flight of its own is given. */
+export function popAt(
+  launch: PopLaunch,
+  ms: number,
+  out: PopPose,
+  spec: FlightSpec = PLAIN_TOPPERS.hop,
+): PopPose {
+  const { gravity, springMs, squashX, squashY, lifeMs, fadeFrom } = spec;
   const t = ms / 1000;
   out.dx = launch.vx * t;
   out.dy = launch.vy * t + 0.5 * gravity * t * t;
@@ -205,6 +220,12 @@ class PlainToppers {
       this.facts = [];
     }
     return seed;
+  }
+
+  /** Debug: the layer with this 1-based number gets exactly this topper (`null`: none). */
+  force(layerIndex: number, topper: Topper | null): void {
+    this.sync();
+    this.known[layerIndex] = topper;
   }
 
   /** A view shows layer `layerIndex` (1-based) of this kind and width; the first note of a layer stays. */

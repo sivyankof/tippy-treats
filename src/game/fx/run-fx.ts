@@ -145,7 +145,9 @@ export class RunFx {
       giggle: () => services.audio.guestGiggle(),
       kick: (mul) => this.kick.kick(ANIM.cameraKick.drop * mul, ANIM.cameraKick.durationMs),
     });
-    this.topperFx = new TopperFx(scene, () => services.audio.topperHop());
+    this.topperFx = new TopperFx(scene, this.tower, this.landingFx.particles, () =>
+      services.audio.topperHop(),
+    );
     const licks = this.tower.licks;
     this.abilityFx.onRainbowPuff = () => services.audio.cloudPuff();
     let jokesPlayed = 0;
@@ -358,7 +360,7 @@ export class RunFx {
     fxGuard.call('tower-tick', this, this.tickTower, visualMs, cam);
     fxGuard.call('guest', this, this.updateGuest, visualMs, state, cam);
     fxGuard.call('debris', this.debris, this.debris.update, visualMs);
-    fxGuard.call('topper-fx', this.topperFx, this.topperFx.update, visualMs);
+    fxGuard.call('topper-fx', this.topperFx, this.topperFx.update, visualMs, tower, state);
     fxGuard.call('landing-fx', this.landingFx, this.landingFx.update, visualMs);
     fxGuard.call('material-fx', this.materialFx, this.materialFx.update, visualMs, state.wobble);
     fxGuard.call('ability-fx', this, this.updateAbilityFx, visualMs, timeMs, state, mods, cam);

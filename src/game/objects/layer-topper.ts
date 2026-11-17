@@ -33,6 +33,9 @@ export class LayerTopper {
   /** The side of the face it stands on now (`null`: not shown). */
   private shownSide: -1 | 1 | null = null;
   private readonly matrix = new Phaser.GameObjects.Components.TransformMatrix();
+  /** The scale the picture has at rest, and the crouch (a multiple of it) the flying layer above makes it take. */
+  private base = { x: 1, y: 1 };
+  private crouch = { x: 1, y: 1 };
 
   constructor(scene: Phaser.Scene) {
     this.image = new Phaser.GameObjects.Image(scene, 0, 0, '__DEFAULT').setVisible(false);
@@ -54,6 +57,17 @@ export class LayerTopper {
     if (on) this.image.setVisible(false);
   }
 
+  /** The topper crouches: its scale is `x`, `y` times its own (1, 1 stands straight). */
+  setCrouch(x: number, y: number): void {
+    this.crouch.x = x;
+    this.crouch.y = y;
+    this.applyScale();
+  }
+
+  private applyScale(): void {
+    this.image.setScale(this.base.x * this.crouch.x, this.base.y * this.crouch.y);
+  }
+
   /** The topper stands `dx` from the centre from now on; `null` removes it. */
   setCarry(dx: number | null): void {
     this.carry = dx;
@@ -65,6 +79,8 @@ export class LayerTopper {
     this.faceless = false;
     this.edgeHidden = false;
     this.carry = undefined;
+    this.crouch.x = 1;
+    this.crouch.y = 1;
     this.image.setVisible(false);
     this.shownSide = null;
   }
@@ -102,6 +118,9 @@ export class LayerTopper {
         .setTexture(ensureTopperTexture(this.image.scene, topper.kind))
         .setDisplaySize(look.width, look.height)
         .setOrigin(look.originX, look.restY / look.height);
+      this.base.x = this.image.scaleX;
+      this.base.y = this.image.scaleY;
+      this.applyScale();
     }
     this.image
       .setPosition(dx, -BALANCE.layer.height / 2 + PLAIN_TOPPERS.sinkPx)
