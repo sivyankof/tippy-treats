@@ -74,6 +74,8 @@ export class WeatherBank implements Life {
   /** Which flash picture lights this time (the side of the strike, drawn when it has no place). */
   private side = 0;
   private pending = false;
+  /** How bright the flash is now (0..1), and on which side it lights (the street glows with it). */
+  private strength = 0;
 
   constructor(
     scene: Phaser.Scene,
@@ -114,6 +116,16 @@ export class WeatherBank implements Life {
     this.firstU = rng.next();
   }
 
+  /** How bright the flash of this frame is (0..1, 0 when none shows). */
+  get flashStrength(): number {
+    return this.strength;
+  }
+
+  /** Where the flash of this frame is centred, in px of the bank picture across. */
+  get flashSpotX(): number {
+    return BANK.flashSpots[this.side]?.x ?? BANK.width / 2;
+  }
+
   /** Debug: the next bolt strikes at the next frame. */
   strikeNow(): void {
     this.pending = true;
@@ -130,6 +142,7 @@ export class WeatherBank implements Life {
   private updateStrike(ctx: FrameCtx, bankX: number, still: boolean): void {
     const { flashes, bolt } = this;
     if (still) {
+      this.strength = 0;
       for (const flash of flashes) flash.setVisible(false);
       bolt?.setVisible(false);
       return;
@@ -145,6 +158,7 @@ export class WeatherBank implements Life {
       this.nextAt = nextBoltAt(now, BOLT.everyMs, this.rng.next());
     }
     const strength = this.flashAt < 0 ? 0 : flashEnvelope(now - this.flashAt, this.flashMs);
+    this.strength = strength;
     if (this.flashAt >= 0 && now - this.flashAt >= this.flashMs) this.flashAt = -1;
     const strike = this.strike;
     flashes.forEach((flash, i) => flash.setVisible(strength > 0 && i === this.side));

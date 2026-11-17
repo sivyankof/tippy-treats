@@ -1,6 +1,7 @@
 import type * as Phaser from 'phaser';
 import { MOUNTAIN_LOOK } from '../../../data/backdrop-mountains';
 import type { WeatherId } from '../../../data/weather';
+import { STREET_WEATHER } from '../../../data/street-weather';
 import { STRIKE_SIDES, WEATHER_LOOK, WEATHER_TEX as TEX } from '../../../data/weather-look';
 import type { ZoneId } from '../../../data/zones';
 import { cssColor, mixColor, shade } from '../../../util/color';
@@ -635,18 +636,47 @@ export function bakeWeatherSky(
 }
 
 /**
+ * The light of a storm flash on the street behind the Showcase glass: a round patch of the glow colour, full in
+ * the middle and fading to nothing at its edge along a cosine (no rim, no rings), with a little noise.
+ */
+function bakeStreetGlow(scene: Phaser.Scene): void {
+  const { picturePx: size, color } = STREET_WEATHER.glow;
+  const c = size / 2;
+  bakeTexture(scene, TEX.streetGlow, size, size, NO_DRAW, (ctx) => {
+    const [r, g, b] = [(color >> 16) & 255, (color >> 8) & 255, color & 255];
+    const image = ctx.createImageData(size, size);
+    for (let y = 0; y < size; y++) {
+      for (let x = 0; x < size; x++) {
+        const d = Math.hypot(x + 0.5 - c, y + 0.5 - c) / c;
+        if (d >= 1) continue;
+        const i = (y * size + x) * 4;
+        image.data[i] = r;
+        image.data[i + 1] = g;
+        image.data[i + 2] = b;
+        image.data[i + 3] = Math.round(255 * (0.5 + 0.5 * Math.cos(Math.PI * d)));
+      }
+    }
+    ctx.putImageData(image, 0, 0);
+    ditherAlpha(ctx, size, size);
+  });
+}
+
+/**
  * Bakes what the street behind the Showcase glass shows in this weather: the falling pictures and, in rain and
- * storm, the Roof's cloud bank (and in a storm its lit twins, no bolt). The same keys as the Roof's, baked once.
+ * storm, the Roof's cloud bank (and in a storm its lit twins, no bolt, and the light the flash throws on the
+ * street). The same keys as the Roof's, baked once.
  */
 export function bakeStreetWeather(scene: Phaser.Scene, weather: WeatherId): void {
   bakeWeatherArt(scene, weather);
   if (weather !== 'rain' && weather !== 'storm') return;
   bakeBank(scene, bankKey(weather), weather);
-  if (weather === 'storm')
-    STRIKE_SIDES.forEach((_, side) => bakeBankFlash(scene, bankFlashKey(side), side));
+  if (weather !== 'storm') return;
+  STRIKE_SIDES.forEach((_, side) => bakeBankFlash(scene, bankFlashKey(side), side));
+  bakeStreetGlow(scene);
 }
 
-/** Every weather sky picture for the art sheet (the two zones share them). */
+/** Every weather sky picture for the art sheet (the Roof and the Clouds share them; the street glow of the Showcase). */
 export function bakeAllWeatherSky(scene: Phaser.Scene): void {
   bakeWeatherSky(scene, 'roof', 'all');
+  bakeStreetGlow(scene);
 }

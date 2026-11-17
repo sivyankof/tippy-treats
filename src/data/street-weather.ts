@@ -23,6 +23,21 @@ export const STREET_WEATHER = {
     flashShare: 0.7,
     bolt: false,
   },
+  /**
+   * With every flash a soft light falls on the street behind the glass (under the panes, the shop front and the
+   * awning, behind the tower), so the flash reads even where the HUD and the awning cover the clouds. One round
+   * patch, strongest in the middle and fading to nothing at its edge, centred under the lit part of the cloud;
+   * drawn additively with the flash, it follows the flash's rise and fall. `picturePx` is the side of the baked
+   * picture, `widthPx` x `heightPx` the size it is shown at, `centreY` its centre (logical px from the top).
+   */
+  glow: {
+    color: 0xfff2d2,
+    alpha: 0.34,
+    picturePx: 256,
+    widthPx: 1400,
+    heightPx: 1300,
+    centreY: 420,
+  },
   /** White caps on the roofs of the houses in snow, baked into the street picture (px of the 512 px tile). */
   cap: {
     snow: 0xfbfcff,

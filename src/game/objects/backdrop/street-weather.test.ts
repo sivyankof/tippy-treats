@@ -51,6 +51,18 @@ describe('street weather of the Showcase', () => {
     expect(STREET_WEATHER.bank.scaleY).toBeLessThan(WEATHER_LOOK.bank.scale);
   });
 
+  it('throws the flash light wider than the lit patch of the cloud and keeps it soft', () => {
+    const glow = STREET_WEATHER.glow;
+    const patch = 2 * WEATHER_LOOK.bank.flashRadiusPx * STREET_WEATHER.bank.scaleX;
+    expect(glow.widthPx).toBeGreaterThan(patch);
+    expect(glow.heightPx).toBeGreaterThan(patch);
+    // A light behind the glass: it brightens the street, it never whites it out.
+    expect(glow.alpha).toBeGreaterThan(0);
+    expect(glow.alpha).toBeLessThanOrEqual(0.5);
+    // It reaches down past the HUD plates on the shortest screen, so the flash reads under them.
+    expect(glow.centreY + glow.heightPx / 2).toBeGreaterThan(hudFloor() + glow.heightPx / 4);
+  });
+
   it('keeps the smaller bank wider than the screen through its drift', () => {
     const shown = WEATHER_LOOK.bank.width * STREET_WEATHER.bank.scaleX;
     expect((shown - LOGICAL_SIZE.width) / 2).toBeGreaterThanOrEqual(STREET_WEATHER.bank.driftPx);
