@@ -227,7 +227,7 @@ export const WEATHER_LOOK = {
     frames: ['drop'],
     speed: [1500, 1900],
     slant: 0.22,
-    alpha: [0.6, 0.75],
+    alpha: [0.7, 0.8],
     scale: [0.85, 1.1],
     count: 37,
   },
@@ -235,7 +235,7 @@ export const WEATHER_LOOK = {
     frames: ['drop'],
     speed: [1900, 2400],
     slant: 0.38,
-    alpha: [0.6, 0.75],
+    alpha: [0.7, 0.8],
     scale: [0.95, 1.15],
     count: 37,
   },
@@ -246,8 +246,11 @@ export const WEATHER_LOOK = {
     swayMs: [3200, 6500],
     alpha: [0.9, 1],
     scale: [1, 1],
-    /** Flakes start anywhere across the whole width, not in the side strips. */
-    sideBias: 0,
+    /** Most flakes start in the side areas (the tower hides the middle), at a random x across the area; the rest cross the centre behind the tower. */
+    sideBias: 0.7,
+    sideShare: 0.28,
+    /** A flake's x moves within its lane by up to this share of the lane pitch either way, so the lanes show no columns. */
+    laneJitter: 0.5,
     /** Cumulative chance of each flake picture but the last (small disc, middle disc, branched six-ray flake); the rest are the plain six-ray flake. */
     sizeCuts: [0.3, 0.6, 0.7] as readonly number[],
     /** Picture sizes of the flakes (px): a small and a middle disc, then a branched and a plain six-ray flake. */

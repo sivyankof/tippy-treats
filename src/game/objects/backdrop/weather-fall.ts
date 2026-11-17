@@ -3,7 +3,7 @@ import type { Rng } from '../../../core/rng';
 import { LOGICAL_SIZE } from '../../../data/screen';
 import { WEATHER_LOOK, WEATHER_TEX } from '../../../data/weather-look';
 import { MS_PER_SECOND, TWO_PI } from '../../../util/math';
-import { laneCount, snowSpots } from './weather-lanes';
+import { laneCount, snowSpots, startU } from './weather-lanes';
 import { particleFade, particleKeepOut, rainDropsShown, wrapRange } from './weather-motion';
 import type { WeatherFrame, WeatherPart } from './weather-frame';
 
@@ -78,11 +78,8 @@ export class WeatherFall implements WeatherPart {
     const count = Math.min(look.count, WEATHER_LOOK.particleCount.full);
     const strip = look.sideShare ?? WEATHER_LOOK.sideShare;
     const snow = kind === 'snow';
-    // Most start in the side strips; a kind with `sideBias: 0` (snow: behind the tower it is simply hidden) spreads across the whole width.
-    const drawU = (): number => {
-      if (!rng.chance(look.sideBias ?? WEATHER_LOOK.sideBias)) return rng.next();
-      return rng.chance(0.5) ? rng.range(0, strip) : rng.range(1 - strip, 1);
-    };
+    // Most start in the side strips (a kind may set its own `sideBias` and `sideShare`); the rest anywhere.
+    const drawU = (): number => startU(rng, look.sideBias ?? WEATHER_LOOK.sideBias, strip);
     // Snow falls in lanes (one speed per lane, see weather-lanes.ts); the rest start anywhere.
     const lanes = laneCount(LOGICAL_SIZE.width, WEATHER_LOOK.snow.laneGapPx);
     const spots = snow ? snowSpots(count, lanes, drawU, () => rng.next()) : [];

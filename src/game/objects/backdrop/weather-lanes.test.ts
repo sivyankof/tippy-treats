@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { Rng } from '../../../core/rng';
 import { LOGICAL_SIZE } from '../../../data/screen';
 import { WEATHER_LOOK } from '../../../data/weather-look';
-import { laneCount, laneU, snowSpots, wrapGap } from './weather-lanes';
+import { laneCount, laneU, snowSpots, startU, wrapGap } from './weather-lanes';
 
 const SNOW = WEATHER_LOOK.snow;
 const lanes = laneCount(LOGICAL_SIZE.width, SNOW.laneGapPx);
@@ -61,8 +61,45 @@ describe('snow lanes', () => {
     expect(Math.max(...us)).toBeGreaterThan(0.8);
   });
 
-  it('puts a flake on the middle of its lane', () => {
-    for (const s of layout(3)) expect(s.u).toBe(laneU(s.lane, lanes));
+  it('keeps a flake within the jitter of the middle of its lane', () => {
+    for (const s of layout(3)) {
+      expect(Math.abs(s.u - laneU(s.lane, lanes))).toBeLessThanOrEqual(
+        SNOW.laneJitter / lanes + 1e-9,
+      );
+    }
+  });
+
+  it('starts most flakes in the side areas, at spread-out x positions', () => {
+    const rng = new Rng(11);
+    const xs: number[] = [];
+    let side = 0;
+    const total = 4000;
+    for (let i = 0; i < total; i++) {
+      const u = startU(rng, SNOW.sideBias, SNOW.sideShare);
+      if (u < SNOW.sideShare || u > 1 - SNOW.sideShare) {
+        side++;
+        if (u < SNOW.sideShare) xs.push(u);
+      }
+    }
+    expect(side / total).toBeGreaterThanOrEqual(0.55);
+    // Inside one side area the x values fill it, not a few fixed values.
+    const buckets = new Set(xs.map((u) => Math.floor((u / SNOW.sideShare) * 10)));
+    expect(buckets.size).toBe(10);
+  });
+
+  it('does not put the lane-placed flakes of the side areas on a few fixed x values', () => {
+    const xs = new Set<string>();
+    for (let seed = 1; seed <= 20; seed++) {
+      const rng = new Rng(seed);
+      const spots = snowSpots(
+        SNOW.count,
+        lanes,
+        () => startU(rng, SNOW.sideBias, SNOW.sideShare),
+        () => rng.next(),
+      );
+      for (const s of spots) if (s.u < SNOW.sideShare) xs.add(s.u.toFixed(3));
+    }
+    expect(xs.size).toBeGreaterThan(100);
   });
 
   it('takes the next lane over when the nearest is full', () => {

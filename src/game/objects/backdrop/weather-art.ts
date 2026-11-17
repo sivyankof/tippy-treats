@@ -29,16 +29,16 @@ const FLAKE_RAYS = {
   branchLen: 0.3,
   branchTilt: 0.95,
 };
-const DROP_W = 22;
+const DROP_W = 30;
 const DROP_H = 96;
-const DROP_COLOR = 0xe8f2ff;
-const DROP_RIM = 0x7f9ccc;
+const DROP_COLOR = 0xf4f9ff;
+const DROP_RIM = 0x4f84d6;
 /** Half widths of the drop: at the thin top, in the round head, and the rim; the taper swells over the length into the head. */
-const DROP_HALF = { top: 2, bottom: 4.6, rim: 1.6 };
-const DROP_TAPER_POWER = 2.4;
+const DROP_HALF = { top: 4.4, bottom: 6.4, rim: 2.6 };
+const DROP_TAPER_POWER = 1.4;
 /** Clear pixels kept below the rim of the raindrop head and past the end caps of the bolt, so the picture never cuts them. */
 const EDGE_MARGIN = 2;
-const DROP_TAIL_ALPHA = 0.3;
+const DROP_TAIL_ALPHA = 0.55;
 const DITHER_AMP = 3;
 const LEAF_W = 56;
 const LEAF_H = 36;

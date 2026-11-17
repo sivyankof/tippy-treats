@@ -1,3 +1,4 @@
+import type { Rng } from '../../../core/rng';
 import { WEATHER_LOOK } from '../../../data/weather-look';
 
 const SNOW = WEATHER_LOOK.snow;
@@ -7,6 +8,12 @@ export interface SnowSpot {
   lane: number;
   u: number;
   v: number;
+}
+
+/** The wanted x (share of the width) of a particle: with chance `bias` in one of the two side strips of width `share`, else anywhere. */
+export function startU(rng: Rng, bias: number, share: number): number {
+  if (!rng.chance(bias)) return rng.next();
+  return rng.chance(0.5) ? rng.range(0, share) : rng.range(1 - share, 1);
 }
 
 /** How many lanes fit the width (px) at the lanes' minimum distance. */
@@ -56,7 +63,8 @@ export function snowSpots(
     const open = free[lane] ?? [];
     const k = open.splice(Math.floor(drawV() * open.length), 1)[0] ?? 0;
     const v = (turn[lane] ?? 0) + k * slot + (drawV() - 0.5) * slack;
-    spots.push({ lane, u: laneU(lane, lanes), v: ((v % 1) + 1) % 1 });
+    const jitter = (drawV() - 0.5) * 2 * SNOW.laneJitter;
+    spots.push({ lane, u: laneU(lane, lanes) + jitter / lanes, v: ((v % 1) + 1) % 1 });
   }
   return spots;
 }
