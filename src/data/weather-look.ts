@@ -34,6 +34,8 @@ export const WEATHER_TEX = {
   /** The lit twin of the bank for a bolt on the left and on the right. */
   bankFlash: STRIKE_SIDES.map((side) => side.key) as readonly string[],
   bolt: 'fx_wx_bolt',
+  /** The soft light a storm flash throws on the street behind the Showcase glass. */
+  streetGlow: 'fx_wx_street_glow',
 } as const;
 
 /** Seed of the cosmetic stream of the sky pieces (stars, lightning), the same in both zones. */
