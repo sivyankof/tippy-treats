@@ -21,10 +21,13 @@ type Graphics = Phaser.GameObjects.Graphics;
 
 const TILE = SHOP_LOOK.tile;
 const C = SHOP_COLORS;
+/** A macaron is this share of its width tall. */
+const MACARON_HEIGHT = 0.8;
+
 function macaron(g: Graphics, plankY: number, x: number, color: number, w: number): void {
   const shell = w * 0.36;
   const cream = C.sweets.cream;
-  const top = plankY - w * 0.8;
+  const top = plankY - w * MACARON_HEIGHT;
   const parts: [number, number][] = [
     [top + shell / 2, shell],
     [plankY - shell / 2, shell],
@@ -74,13 +77,22 @@ function bakeShelves(scene: Phaser.Scene): void {
   });
 }
 
-const SWEETS_PAD = 70;
+/** Height of a sweet above the bracket board: a candy is a circle of radius `size`, a macaron is 0.8 of its width tall. */
+const sweetHeight = (item: (typeof SHOP_LOOK.sweets.items)[number]): number =>
+  item.kind === 'candy' ? item.size * 2 : item.size * MACARON_HEIGHT;
+
+/** The board line inside the sweets picture: the tallest sweet, its outline and a margin fit above it. */
+const SWEETS_PAD = Math.ceil(
+  Math.max(...SHOP_LOOK.sweets.items.map(sweetHeight)) + OUTLINE + SHOP_LOOK.sweets.edgePx,
+);
+/** Space under the board line: the board itself and its shade. */
+const SWEETS_BELOW = 36;
 
 /** A short bracket in the right outer column with a round candy and a macaron on it, muted towards the wall. */
 function bakeSweets(scene: Phaser.Scene): void {
   const { board, mute, items } = SHOP_LOOK.sweets;
   const width = board + 8;
-  const height = SWEETS_PAD + 36;
+  const height = SWEETS_PAD + SWEETS_BELOW;
   bakeTexture(scene, SHOP_TEX.sweets, width, height, (g) => {
     items.forEach((item, i) => {
       const x = width / 2 + item.x;
@@ -216,6 +228,8 @@ export const shopArt: ZoneArt = {
         texture: SHOP_TEX.sweets,
         at: SHOP_LOOK.sweets.at,
         offset: { x: 0, y: 0 },
+        // Anchored on the board line, so a taller sweet grows upwards and the bracket stays put.
+        origin: [0.5, SWEETS_PAD / (SWEETS_PAD + SWEETS_BELOW)] as const,
         pulse: WINDOW_LOOK.pulse,
       },
     ]);

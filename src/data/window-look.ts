@@ -215,6 +215,8 @@ export const SHOP_LOOK = {
     board: 150,
     /** Share the sweets' colours lean towards the wall. */
     mute: 0.35,
+    /** Free pixels above the tallest sweet inside its picture, so its outline is never cut. */
+    edgePx: 3,
     items: [
       { x: -34, kind: 'candy', size: 36 },
       { x: 36, kind: 'macaron', size: 76 },
