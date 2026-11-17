@@ -42,6 +42,11 @@ export const CLIP_ALLOWED: readonly ClipAllowance[] = [
       'the garland wire runs from edge to edge of its picture and is laid end to end across the screen',
   },
   {
+    match: /^bd_win_shop_awning$/,
+    reason:
+      'a tiled strip with a flat top: the scallop circles are cut at the top and at the tile sides on purpose, so the strips join into one awning',
+  },
+  {
     match: /^shade_cap_/,
     sides: ['right', 'bottom'],
     reason:

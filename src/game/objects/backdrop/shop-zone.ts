@@ -138,7 +138,7 @@ function bakeStands(scene: Phaser.Scene): void {
 /** A striped awning strip: `TILE` wide so three of them cover the screen; its scallops hang below the stripes. */
 function bakeAwning(scene: Phaser.Scene): void {
   const { height, stripe } = SHOP_LOOK.awning;
-  bakePadded(scene, SHOP_TEX.awning, TILE, height, FIELD_PAD.shopAwning, (g) => {
+  bakeTexture(scene, SHOP_TEX.awning, TILE, height, (g) => {
     const body = height - stripe / 2 - OUTLINE;
     for (const [grow, pink, cream] of [
       [OUTLINE, outlineColor(C.awningPink), outlineColor(C.awningPink)],
@@ -205,7 +205,7 @@ export const shopArt: ZoneArt = {
       texture: SHOP_TEX.awning,
       at: { x: 0, y: 0 },
       offset: { x: TILE * (i + 0.5), y: -awningLook.bobPx },
-      origin: paddedOrigin([0.5, 0], TILE, awningLook.height, FIELD_PAD.shopAwning),
+      origin: [0.5, 0] as const,
       bob: { px: awningLook.bobPx, ms: awningLook.bobMs },
       phase: i * awningLook.phaseStep,
       tint: dim,

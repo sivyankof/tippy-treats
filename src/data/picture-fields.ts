@@ -10,7 +10,6 @@ export const FIELD_PAD = {
   kitchenPendulum: 8,
   showcaseStand: 4,
   windowDrop: 3,
-  shopAwning: 15,
   shopLamp: 11,
   snowCap: 5,
   hintArrow: 10,
