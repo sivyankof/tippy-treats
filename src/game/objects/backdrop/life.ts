@@ -56,6 +56,11 @@ export function createImage(scene: Phaser.Scene, texture: string): Phaser.GameOb
   return new Phaser.GameObjects.Image(scene, 0, 0, texture);
 }
 
+/** Half the height of a picture at `scale` (px): what `rideLayer` takes to know how far the picture reaches from its centre. */
+export function halfExtent(image: { height: number }, scale: number): number {
+  return (image.height * scale) / 2;
+}
+
 export function applyPose(image: Phaser.GameObjects.Image, pose: Pose): void {
   image.setPosition(pose.x, pose.y);
   image.setRotation(pose.rotation);
@@ -87,7 +92,7 @@ export class Hover implements Life {
       const image = this.objects[i];
       if (!image) return;
       const pose = hoverPose(spec, ctx.width, ctx.height, ctx.timeMs, this.pose);
-      const shown = rideLayer(pose, this.anchor, ctx, ctx.height, image.height * pose.scaleY);
+      const shown = rideLayer(pose, this.anchor, ctx, ctx.height, halfExtent(image, pose.scaleY));
       applyPose(image, pose);
       if (this.anchor.kind === 'layer') image.setVisible(shown);
     });
@@ -118,7 +123,7 @@ export class PuffColumn implements Life {
     this.objects.forEach((image, i) => {
       const pose = puffPose(this.spec, i, timeMs, x, y, this.pose);
       const shown = ctx
-        ? rideLayer(pose, this.anchor, ctx, ctx.height, image.height * this.spec.endScale)
+        ? rideLayer(pose, this.anchor, ctx, ctx.height, halfExtent(image, this.spec.endScale))
         : true;
       applyPose(image, pose);
       if (ctx && this.anchor.kind === 'layer') image.setVisible(shown);
@@ -205,7 +210,13 @@ export class Traveler implements Life, GuestSource {
         ctx.clearBand,
       );
       // A walker on the street scrolls down with the street layer (its walk along the street is its own).
-      const onScreen = rideLayer(pose, this.anchor, ctx, ctx.height, image.height * pose.scaleY);
+      const onScreen = rideLayer(
+        pose,
+        this.anchor,
+        ctx,
+        ctx.height,
+        halfExtent(image, pose.scaleY),
+      );
       applyPose(image, pose);
       if (this.anchor.kind === 'layer') image.setVisible(onScreen);
     });
@@ -233,7 +244,7 @@ export class Twinkles implements Life {
       this.at.x = point.x * ctx.width;
       this.at.y = point.y * ctx.height + (point.dy ?? 0);
       const pose = twinklePose(this.spec, i, ctx.timeMs, this.at, this.pose);
-      const shown = rideLayer(pose, this.anchor, ctx, ctx.height, image.height);
+      const shown = rideLayer(pose, this.anchor, ctx, ctx.height, halfExtent(image, pose.scaleY));
       applyPose(image, pose);
       if (this.anchor.kind === 'layer') image.setVisible(shown);
     });

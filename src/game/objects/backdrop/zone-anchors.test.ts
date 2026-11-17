@@ -49,7 +49,7 @@ import { WEATHER_IDS, type WeatherId } from '../../../data/weather';
 import type { ZoneId } from '../../../data/zones';
 import { travellerClearBand } from '../../camera-layout';
 import { cloudsArt } from './clouds-zone';
-import type { Anchor, SkyKind } from './layer-anchor';
+import { onLayer, type Anchor, type SkyKind } from './layer-anchor';
 import { kitchenArt } from './kitchen-zone';
 import { Mountains } from './mountains';
 import { newFrameCtx, Traveler, Twinkles, Hover, type Life } from './life';
@@ -198,5 +198,38 @@ describe('zone lives declare where they stand', () => {
       compared += seen;
     }
     expect(compared).toBeGreaterThan(30);
+  });
+
+  it('nothing standing on a layer is drawn under a drifting layer of the kitchen and the shop, so no layer slides across it', () => {
+    for (const c of CASES.filter((item) => item.zone === 'kitchen')) {
+      for (const weather of WEATHER_IDS as readonly WeatherId[]) {
+        const def = c.art.build({} as unknown as Phaser.Scene, { lap: 1, weather, place: c.place });
+        for (const { slot, life } of def.lives) {
+          if (life.anchor.kind !== 'layer' || life instanceof Traveler) continue;
+          BACKDROP.sway[c.zone].forEach((sway, layer) => {
+            if (layer > slot) expect(sway, `${c.name}/${weather} slot ${slot}`).not.toBeNull();
+          });
+        }
+      }
+    }
+  });
+
+  it('a layer life is hidden exactly when its picture has left the screen: the zone uses HALF the picture height', () => {
+    const height = 2340;
+    const ctx = newFrameCtx(1080, height, travellerClearBand(height), 0);
+    // The stand-in image is 64 px tall, so its centre must stay 32 px above the top before it is gone.
+    const at = (y: number): boolean => {
+      const hover = new Hover(
+        {} as unknown as Phaser.Scene,
+        [{ texture: 't', at: { x: 0.5, y: 0 }, offset: { x: 0, y } }],
+        onLayer(2),
+      );
+      hover.update(ctx);
+      return (hover.objects[0] as unknown as { visible: boolean }).visible;
+    };
+    expect(at(-31)).toBe(true);
+    expect(at(-33)).toBe(false);
+    expect(at(height + 31)).toBe(true);
+    expect(at(height + 33)).toBe(false);
   });
 });

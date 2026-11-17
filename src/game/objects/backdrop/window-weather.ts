@@ -377,6 +377,7 @@ export class GlassWeatherLife implements Life {
   readonly objects: Phaser.GameObjects.Image[];
   private readonly pose = newGlassPose();
   private shown: boolean | null = null;
+  private offScreen = false;
 
   constructor(
     scene: Phaser.Scene,
@@ -401,11 +402,18 @@ export class GlassWeatherLife implements Life {
       for (const image of this.objects) image.setVisible(!minimal);
     }
     if (minimal) return;
+    const areaAlpha = this.area.alpha?.() ?? 1;
+    // The window this glass belongs to is off the screen: hide the items once and work out nothing until it is back.
+    const away = areaAlpha <= 0;
+    if (away !== this.offScreen) {
+      this.offScreen = away;
+      for (const image of this.objects) image.setVisible(!away);
+    }
+    if (away) return;
     const still = effectsMode.atMost('lite');
     const rects = this.area.rects(ctx);
     const time = still ? 0 : ctx.timeMs;
     const band = this.area.keepClear ? ctx.clearBand : null;
-    const areaAlpha = this.area.alpha?.() ?? 1;
     this.objects.forEach((image, i) => {
       const rect = rects[i % rects.length];
       if (!rect) return;

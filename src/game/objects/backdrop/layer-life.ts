@@ -5,9 +5,8 @@ import { applyPose, createImage, type FrameCtx, type Life } from './life';
 import { hoverPose, newPose } from './life-motion';
 import {
   copyMirrored,
-  layerDriftX,
-  layerMute,
   onLayer,
+  rideLayer,
   seriesRise,
   slotCopy,
   type Anchor,
@@ -80,8 +79,6 @@ export class LayerThing implements Life {
     const first = this.specs[0];
     if (!first) return;
     const y0 = first.at.y * ctx.height + (first.offset?.y ?? 0);
-    const moved = Math.min(1, Math.abs(down) / WALL_LOOK.muteRampPx);
-    const driftX = layerDriftX(ctx, layer);
     const count = this.specs.length;
     for (let slot = 0; slot < this.pool; slot++) {
       const n = series ? slotCopy(slot, series, y0, down, ctx.height) : 0;
@@ -103,12 +100,11 @@ export class LayerThing implements Life {
         const image = this.objects[slot * count + k];
         if (!spec || !image) continue;
         const pose = hoverPose(spec, ctx.width, ctx.height, ctx.timeMs, this.pose);
-        pose.x = (mirrored ? ctx.width - pose.x : pose.x) + driftX;
-        pose.y += down - rise;
-        pose.alpha *= layerMute(pose.x, pose.y, halfH, ctx.height, moved);
+        if (mirrored) pose.x = ctx.width - pose.x;
+        const shown = rideLayer(pose, this.anchor, ctx, ctx.height, halfH, rise);
         applyPose(image, pose);
         image.setFlipX(mirrored);
-        image.setVisible(pose.y + halfH > 0 && pose.y - halfH < ctx.height);
+        image.setVisible(shown);
         if (k === 0) {
           spot.x = pose.x;
           spot.y = pose.y;

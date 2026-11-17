@@ -110,8 +110,9 @@ export function layerMute(
 
 /**
  * Moves a pose of a life by what its anchor says: on a layer, down with the layer and sideways with its sway, and muted
- * under the HUD. Returns whether any part of the picture (`halfH` px tall to each side) is on the screen. Other anchors
- * leave the pose alone.
+ * under the HUD. `rise` (px) lifts a repeat of a series up the layer; it is not part of the layer's scroll, so the mute
+ * ramp ignores it. Returns whether any part of the picture (`halfH` px tall to each side, HALF its height) is on the
+ * screen. Other anchors leave the pose alone.
  */
 export function rideLayer(
   pose: Pose,
@@ -119,11 +120,12 @@ export function rideLayer(
   frame: LayerFrame,
   screenH: number,
   halfH: number,
+  rise = 0,
 ): boolean {
   if (anchor.kind !== 'layer') return true;
   const down = frame.layerDown[anchor.layer] ?? 0;
   pose.x += layerDriftX(frame, anchor.layer);
-  pose.y += down;
+  pose.y += down - rise;
   pose.alpha *= layerMute(
     pose.x,
     pose.y,
