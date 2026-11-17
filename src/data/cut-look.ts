@@ -10,8 +10,8 @@ export const CUT_LOOK = {
   bigShare: 0.35,
   /** A big piece comes at most once per this many layers; a nearer one gets the normal choice. */
   bigEveryLayers: 10,
-  /** Chance of strands on a cut ("every 4th miss"). */
-  strandChance: 0.25,
+  /** Chance of strands on a cut ("every 2nd miss"). */
+  strandChance: 0.5,
   /** Chance of a panicking piece ("every 7th miss"), drawn independently. */
   panicChance: 1 / 7,
   /** A piece narrower than this (px) has no room for a face and never panics. */
