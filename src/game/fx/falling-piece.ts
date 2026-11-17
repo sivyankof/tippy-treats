@@ -108,6 +108,11 @@ export class FallingPieces {
     return view;
   }
 
+  /** Which piece the view is showing: changes when the pool hands the view to another piece. */
+  generationOf(view: LayerView): number {
+    return this.pool.generationOf(view);
+  }
+
   update(dtMs: number): void {
     this.pool.update(dtMs, (piece, progress) => {
       const view = piece.item;

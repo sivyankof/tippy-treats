@@ -7,6 +7,7 @@ import {
   recoilAlpha,
   recoilLength,
   sagAmount,
+  snapDue,
   snapTimeMs,
   stagePair,
   strandClock,
@@ -96,5 +97,22 @@ describe('recoil', () => {
     expect(min).toBeGreaterThan(0);
     expect(recoilAlpha(0)).toBe(1);
     expect(recoilAlpha(1)).toBe(0);
+  });
+});
+
+describe('snapDue', () => {
+  const clock: StrandClock = { phase: 'bridge', stretch: 0, recoil: 0 };
+  const { recoilMs } = CUT_LOOK.strands;
+
+  it('is not due before the snap', () => {
+    expect(snapDue(strandClock(0, 0, clock).phase)).toBe(false);
+    expect(snapDue(strandClock(snapTimeMs(0) - 1, 0, clock).phase)).toBe(false);
+  });
+
+  it('is due in the recoil and, for a frame that jumped over it, after it', () => {
+    expect(snapDue(strandClock(snapTimeMs(0) + 1, 0, clock).phase)).toBe(true);
+    const jumped = strandClock(snapTimeMs(0) + recoilMs + 500, 0, clock);
+    expect(jumped.phase).toBe('gone');
+    expect(snapDue(jumped.phase)).toBe(true);
   });
 });

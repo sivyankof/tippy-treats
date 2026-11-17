@@ -47,6 +47,11 @@ export function strandClock(sinceMs: number, snapShift: number, out: StrandClock
   return out;
 }
 
+/** Whether a strand in this phase has passed its snap (a long frame can jump from the stretch to the end). */
+export function snapDue(phase: StrandPhase): boolean {
+  return phase === 'recoil' || phase === 'gone';
+}
+
 /** Thickness of the strand's middle as a share of its thick ends: a bridge at first, a thin thread at the snap. */
 export function middleShare(stretch: number): number {
   const stages = CUT_PICTURE.strand.midShare;

@@ -100,4 +100,14 @@ describe('TimedPool', () => {
     expect(made).toHaveLength(2);
     expect(pool.liveCount).toBe(2);
   });
+
+  it('counts the entries an item has served, so a follower notices when it was taken away', () => {
+    const { pool } = makePool(1);
+    const a = start(pool, 100);
+    const token = pool.generationOf(a);
+    expect(pool.generationOf(a)).toBe(token);
+    const b = start(pool, 100);
+    expect(b).toBe(a);
+    expect(pool.generationOf(a)).toBe(token + 1);
+  });
 });

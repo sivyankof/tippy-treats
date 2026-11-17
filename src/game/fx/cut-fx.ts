@@ -41,6 +41,8 @@ export interface CutPlay {
   plan: CutPlan;
   /** The crumbs of the cut: called when the piece lets go. */
   crumbs: () => void;
+  /** Writes where the centre of the cut layer is now (it sways); false when the layer is gone. */
+  layerCenter: (out: { x: number; y: number }) => boolean;
 }
 
 interface Slot {
@@ -48,6 +50,9 @@ interface Slot {
   ageMs: number;
   lifeMs: number;
   view: LayerView | null;
+  /** The pool the view comes from and which piece it showed when the cut began. */
+  pieces: FallingPieces | null;
+  token: number;
   crumbsDone: boolean;
   crumbs: (() => void) | null;
   panic: boolean;
@@ -131,6 +136,8 @@ export class CutFx {
     slot.ageMs = 0;
     slot.lifeMs = lifeMs;
     slot.view = view;
+    slot.pieces = cut.pieces;
+    slot.token = cut.pieces.generationOf(view);
     slot.crumbsDone = false;
     slot.crumbs = cut.crumbs;
     slot.panic = cut.plan.panic;
@@ -151,6 +158,7 @@ export class CutFx {
         y: cut.y,
         pieceWidth: cut.pieceWidth,
         glaze: cut.glaze,
+        layerCenter: cut.layerCenter,
       };
       slot.strands.begin(start, random);
     }
@@ -166,7 +174,9 @@ export class CutFx {
   private updateSlot(slot: Slot, dtMs: number): void {
     slot.ageMs += dtMs;
     const view = slot.view;
-    if (!view || slot.ageMs >= slot.lifeMs || !view.visible) {
+    // The pool recycles the oldest piece when it is full: then the view is no longer this cut's.
+    const taken = view !== null && slot.pieces?.generationOf(view) !== slot.token;
+    if (!view || taken || slot.ageMs >= slot.lifeMs || !view.visible) {
       this.finish(slot);
       return;
     }
@@ -186,12 +196,12 @@ export class CutFx {
 
   /** A big scared piece slides its face along the piece so the face stays on the screen. */
   private keepFaceInView(slot: Slot, view: LayerView): void {
-    const { faceKeepPx } = CUT_LOOK.panic;
+    const { faceKeepPx, flatFrom, flatRange } = CUT_LOOK.panic;
     const cos = Math.cos(view.rotation);
     const maxShift = Math.max(0, slot.pieceWidth / 2 - faceKeepPx);
     let wanted = 0;
     // Only while the piece is turned flat enough for a sideways move to move the face along the screen.
-    const flat = smoothstep((Math.abs(cos) - 0.2) / 0.3);
+    const flat = smoothstep((Math.abs(cos) - flatFrom) / flatRange);
     if (flat > 0) {
       const farRight = LOGICAL_SIZE.width - faceKeepPx;
       const x = view.x;
@@ -205,6 +215,7 @@ export class CutFx {
   private finish(slot: Slot): void {
     slot.active = false;
     slot.view = null;
+    slot.pieces = null;
     slot.crumbs = null;
     slot.strands.stop();
     slot.panicSet.stop();
@@ -216,6 +227,8 @@ export class CutFx {
       ageMs: 0,
       lifeMs: 0,
       view: null,
+      pieces: null,
+      token: 0,
       crumbsDone: false,
       crumbs: null,
       panic: false,

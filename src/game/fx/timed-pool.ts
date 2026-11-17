@@ -14,9 +14,10 @@ export interface PoolEntry<V> {
  * Pool of short-lived items (debris, drops): hands out recycled items, ages the live ones
  * and gives expired ones back. Knows nothing about rendering; `retire` hides an item.
  */
-export class TimedPool<V, E extends PoolEntry<V>> {
+export class TimedPool<V extends object, E extends PoolEntry<V>> {
   private readonly live: E[] = [];
   private readonly free: V[] = [];
+  private readonly generations = new WeakMap<V, number>();
 
   constructor(
     private readonly make: () => V,
@@ -49,7 +50,17 @@ export class TimedPool<V, E extends PoolEntry<V>> {
 
   /** Starts an entry; its item must come from `take()`. */
   add(entry: E): void {
+    this.generations.set(entry.item, this.generationOf(entry.item) + 1);
     this.live.push(entry);
+  }
+
+  /**
+   * How many entries this item has served. A caller that follows an item after `add` keeps the
+   * number and compares it later: a different one means the pool took the item away and gave it
+   * to another entry.
+   */
+  generationOf(item: V): number {
+    return this.generations.get(item) ?? 0;
   }
 
   /** Ages every entry by `dtMs`; `step` sees each one that is still alive, with its progress 0..1. */
