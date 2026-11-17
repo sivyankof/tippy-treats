@@ -1,4 +1,5 @@
 import type * as Phaser from 'phaser';
+import { ANIM } from '../../data/anim';
 import { BALANCE } from '../../data/balance';
 import { PLAIN_LAYER } from '../../data/plain-layers';
 import { RULE_ANIM } from '../../data/rule-anim';
@@ -33,6 +34,10 @@ export type NebulaFrame = keyof typeof NEBULA_FRAMES;
 /** Half of the cover row, baked px from the figure centre: the layer with its bob and margin. */
 export const ROW_HALF = (BALANCE.layer.height / 2 + cfg.bobPx + figure.layerMargin) / figure.scale;
 
+/** Half of the layer itself with both bobs (its own and the figure's), baked px from the figure centre. */
+export const LAYER_HALF =
+  (BALANCE.layer.height / 2 + cfg.bobPx + ANIM.flying.bobAmplitude) / figure.scale;
+
 export type ArmName = 'pink' | 'blue';
 type ArmSpec = (typeof ARMS)[ArmName];
 const ARM_NAMES: readonly ArmName[] = ['blue', 'pink'];
@@ -56,6 +61,8 @@ export interface NebulaLayout {
   light: number;
   arcY: number;
   haloRy: number;
+  /** The veil is opaque up to this far from the centre (the cover row, or the layer itself on a short screen). */
+  veilCore: number;
   veilFade: number;
 }
 
@@ -72,16 +79,18 @@ export function nebulaHeadroom(screenH: number): number {
 function layoutAt(fit: number, room: number): NebulaLayout {
   const l = N.layout;
   const curl = l.curlFloor + (1 - l.curlFloor) * fit;
+  const veilCore = room - ROW_HALF >= l.minFade ? ROW_HALF : Math.max(LAYER_HALF, room - l.minFade);
   return {
     fit,
     room,
     amplitude: { pink: ARMS.pink.amplitude * fit, blue: ARMS.blue.amplitude * fit },
     curlRadius: { pink: ARMS.pink.end.radius * curl, blue: ARMS.blue.end.radius * curl },
-    glow: ARMS.glow * (l.glowFloor + (1 - l.glowFloor) * fit),
+    glow: ARMS.glow * (l.glowFloor + (1 - l.glowFloor) * fit * fit),
     light: l.lightFloor + (1 - l.lightFloor) * fit,
     arcY: Math.min(N.arcs.y, room - N.arcs.width / 2 - N.arcs.soft),
     haloRy: Math.min(N.halo.ry, room),
-    veilFade: Math.max(0, Math.min(N.veil.fade, room - ROW_HALF)),
+    veilCore,
+    veilFade: Math.max(0, Math.min(N.veil.fade, room - veilCore)),
   };
 }
 
@@ -225,7 +234,7 @@ export function nebulaTop(layout: NebulaLayout): number {
   return Math.max(
     armsReach(layout),
     layout.haloRy,
-    ROW_HALF + layout.veilFade,
+    layout.veilCore + layout.veilFade,
     layout.arcY + N.arcs.width / 2 + N.arcs.soft,
   );
 }
@@ -239,15 +248,16 @@ function fringeWave(u: number, top: boolean): number {
 }
 
 /**
- * Opacity of the veil in its picture at (`u`, `y`) px from the centre: 1 over the whole cover row (the
- * layer is muted the same everywhere), melting away above and below over a reach that swells along the row.
+ * Opacity of the veil in its picture at (`u`, `y`) px from the centre: 1 over the whole cover row (on a
+ * short screen over the layer itself), so the layer is muted the same everywhere, melting away above and
+ * below over a reach that swells along the row.
  */
 export function veilAlpha(u: number, y: number, layout: NebulaLayout): number {
   const b = figure.body;
   const x = u + CX;
   const outX = Math.max(b.left - x, x - b.right, 0);
   const sideX = 1 - rampBetween(outX, 0, N.veil.fadeX);
-  const out = Math.abs(y) - ROW_HALF;
+  const out = Math.abs(y) - layout.veilCore;
   if (out <= 0) return sideX;
   const reach = layout.veilFade * (N.veil.fadeMin + (1 - N.veil.fadeMin) * fringeWave(u, y < 0));
   if (reach <= 0) return 0;
@@ -558,17 +568,24 @@ function paintVeil(kit: BakeKit, p: Paint, u: number, y: number, hit: Hit): void
   if (c < 1) over(p, kit.cream, core.alpha * (1 - c) ** 1.6);
   const shade = shadeAt(kit, u, y, hit);
   if (shade > 0) over(p, kit.shade, ARMS.shade.veilAlpha * shade);
-  over(p, kit.vein, core.vein.alpha * veinAt(L, u, y));
+  over(p, kit.vein, core.vein.alpha * veinAt(u, y));
 }
 
-/** How much of the dark dust vein through the core lies at (`u`, `y`), 0..1. */
-function veinAt(L: NebulaLayout, u: number, y: number): number {
+const VEIN_COS = Math.cos(N.core.vein.angle);
+const VEIN_SIN = Math.sin(N.core.vein.angle);
+
+/**
+ * How much of the dark dust vein through the core lies at (`u`, `y`), 0..1: a short steep stroke that
+ * fades out in the middle band of the row, where the face of the layer is.
+ */
+export function veinAt(u: number, y: number): number {
   const vein = N.core.vein;
-  const k = u / vein.length;
-  if (Math.abs(k) >= 1) return 0;
-  const veinY = u * vein.tilt * Math.max(L.fit, 0.4) + vein.bend * Math.sin(Math.PI * k);
-  const fade = 1 - rampBetween(Math.abs(k), 0.55, 1);
-  return fade * (1 - rampBetween(Math.abs(y - veinY), vein.width / 2, vein.width / 2 + 1.2));
+  const along = (u * VEIN_COS + y * VEIN_SIN) / vein.length;
+  if (Math.abs(along) >= 1) return 0;
+  const across = -u * VEIN_SIN + y * VEIN_COS - vein.bend * Math.sin(Math.PI * along);
+  const fade =
+    (1 - rampBetween(Math.abs(along), 0.55, 1)) * rampBetween(Math.abs(y), ...vein.clear);
+  return fade * (1 - rampBetween(Math.abs(across), vein.width / 2, vein.width / 2 + 1.2));
 }
 
 function paintArm(kit: BakeKit, arm: ArmName, p: Paint, u: number, y: number, hit: Hit): void {
@@ -577,7 +594,7 @@ function paintArm(kit: BakeKit, arm: ArmName, p: Paint, u: number, y: number, hi
   armPaint(kit.tones[arm], hit.n, hit.end, kit.layout.glow, p);
   // Dimmed at the core and cut along the dust vein, so the cream, the star and the dark vein read.
   let k = ARMS[arm].alpha * coreDim(Math.hypot(u, y) / N.core.radius) * kit.layout.light;
-  k *= 1 - veinAt(kit.layout, u, y);
+  k *= 1 - veinAt(u, y);
   if (arm === 'blue') k *= 1 - ARMS.shade.alpha * shadeAt(kit, u, y, hit);
   scalePaint(p, k);
 }

@@ -7,7 +7,7 @@ import { effectsMode } from '../effects-mode';
 import { scatter } from '../objects/creature-art/primitives';
 import { PrepQueue } from '../objects/backdrop/zone-prep';
 import { collectBakeSteps } from '../ui/bake-texture';
-import { bakeCloudFigure } from './cloud-figure';
+import { bakeCloudFigure, cloudTopBaked, verticalRoom, type VerticalRoom } from './cloud-figure';
 import { FLYING_FX_DEPTH } from './flying-fx-depth';
 import {
   bakeNebulaArms,
@@ -15,6 +15,7 @@ import {
   NEBULA_FRAMES,
   nebulaFrameRects,
   nebulaLayout,
+  nebulaTop,
   nebulaYScale,
 } from './nebula-arms';
 import { createFxTextures, FX_TEXTURES } from './fx-textures';
@@ -216,6 +217,16 @@ export class CloudMotion {
   y = 0;
   /** Leaving after the layer was dropped, or after a cloud that never came. */
   private leaveMs: number = cfg.outMs;
+  /** Share of the leave's rise and growth the screen leaves room for (`verticalRoom`). */
+  lift = 1;
+  /** The approach progress a cloud had when it was given up, while that leave is fresh. */
+  private gaveUpAt: number | null = null;
+  /** How the cover started: running on from the approach, growing in place (no warning), or back from a leave. */
+  private coverFrom: 'approach' | 'place' | 'leave' = 'place';
+  /** The approach progress the cover runs on from. */
+  private coverStart = 0;
+  /** How far to the side this cloud slides in from: less when it was found late. */
+  private slidePx: number = cfg.enterPx;
   /** The time to arrival seen last frame; it only falls while this cloud is still coming. */
   private lastEtaMs = Infinity;
   /** The pose at the start of the current phase. */
@@ -228,6 +239,7 @@ export class CloudMotion {
       case 'idle':
         if (input.covering) this.enter('cover', input);
         else if (input.flying && input.etaMs <= cfg.leadMs) {
+          this.slidePx = cfg.enterPx * clamp01(input.etaMs / cfg.leadMs);
           this.enter('approach', input);
           this.progress = 0;
           this.lastEtaMs = input.etaMs;
@@ -237,8 +249,11 @@ export class CloudMotion {
         // This cloud has come once the time to the next one jumps up (or no cloud is due any more).
         const arrived = input.etaMs > this.lastEtaMs + ARRIVAL_JUMP_MS;
         this.lastEtaMs = input.etaMs;
-        if (arrived && input.covering) this.enter('cover', input);
-        else if (arrived || !input.flying) this.leave(cfg.abortMs);
+        if (arrived && input.covering) {
+          this.enter('cover', input);
+          // This frame's time already counts: the run goes on without a still frame.
+          this.ageMs = dtMs;
+        } else if (arrived || !input.flying) this.leave(cfg.abortMs);
         else this.progress = stepApproach(this.progress, dtMs, input.etaMs);
         break;
       }
@@ -247,7 +262,10 @@ export class CloudMotion {
         break;
       case 'leave':
         if (this.ageMs >= this.leaveMs) this.reset();
-        else if (input.covering) this.enter('cover', input);
+        else if (input.covering) {
+          this.enter('cover', input);
+          this.ageMs = dtMs;
+        }
         break;
     }
     return this.computePose();
@@ -273,6 +291,20 @@ export class CloudMotion {
   }
 
   private enter(phase: CloudPhase, input: Readonly<CloudInput>): void {
+    if (phase === 'cover') {
+      // A cloud given up a moment ago (its time to arrival jumped a frame before the cover began) runs
+      // on as if the approach had gone straight into the cover.
+      const resumed = this.phase === 'leave' && this.gaveUpAt !== null && this.ageMs < cfg.inMs;
+      this.coverFrom =
+        this.phase === 'approach' || resumed
+          ? 'approach'
+          : this.phase === 'leave'
+            ? 'leave'
+            : 'place';
+      this.coverStart =
+        this.phase === 'approach' ? this.progress : resumed ? (this.gaveUpAt ?? 0) : 0;
+    }
+    this.gaveUpAt = null;
     if (this.phase === 'idle') {
       this.dir = input.dir;
       this.y = input.y;
@@ -286,6 +318,7 @@ export class CloudMotion {
   }
 
   private leave(durationMs: number): void {
+    this.gaveUpAt = this.phase === 'approach' ? this.progress : null;
     Object.assign(this.from, this.pose);
     this.phase = 'leave';
     this.ageMs = 0;
@@ -301,7 +334,7 @@ export class CloudMotion {
 
   /** The pose of a cloud that is still out to the side, invisible. */
   private restPose(): CloudPose {
-    return { x: -this.dir * cfg.enterPx, rise: 0, alpha: 0, scale: cfg.enterScale };
+    return { x: -this.dir * this.slidePx, rise: 0, alpha: 0, scale: cfg.enterScale };
   }
 
   private computePose(): Readonly<CloudPose> {
@@ -314,19 +347,35 @@ export class CloudMotion {
       case 'approach': {
         const k = this.progress;
         // Starts and settles gently: no sudden start when the cloud shows up.
-        p.x = -this.dir * cfg.enterPx * (1 - smoothstep(k));
+        p.x = -this.dir * this.slidePx * (1 - smoothstep(k));
         p.alpha = cfg.approachAlpha * smoothstep(k);
         p.scale = cfg.enterScale + (1 - cfg.enterScale) * easeOutCubic(k);
         p.rise = 0;
         return p;
       }
       case 'cover': {
-        const k = smoothstep(t / cfg.inMs);
-        // Whatever is left of the slide closes while it turns solid, so it covers the whole row.
-        p.x = from.x * (1 - k) + (this.dir * cfg.driftSpeed * t) / MS_PER_S;
-        p.alpha = from.alpha + (1 - from.alpha) * k;
-        p.scale = from.scale + (1 - from.scale) * k;
-        p.rise = from.rise;
+        const drift = (this.dir * cfg.driftSpeed * t) / MS_PER_S;
+        if (this.coverFrom === 'leave') {
+          // Back from a leave: it turns solid again where it is.
+          const k = smoothstep(t / cfg.inMs);
+          p.x = from.x * (1 - k) + drift;
+          p.alpha = from.alpha + (1 - from.alpha) * k;
+          p.scale = from.scale + (1 - from.scale) * k;
+          p.rise = from.rise * (1 - k);
+          return p;
+        }
+        // The slide runs on at the approach's pace to its end (no snap; a cloud without a warning grows in
+        // place), while it turns solid at a steady rate from where the approach got to.
+        const place = this.coverFrom === 'place';
+        this.progress = place ? 1 : Math.min(1, this.coverStart + t / cfg.approachMinMs);
+        const s = smoothstep(this.progress);
+        const start = place ? 0 : cfg.approachAlpha * smoothstep(this.coverStart);
+        p.x = (place ? 0 : -this.dir * this.slidePx * (1 - s)) + drift;
+        p.alpha = Math.min(1, start + t * cfg.solidPerMs);
+        p.scale = place
+          ? cfg.enterScale + (1 - cfg.enterScale) * p.alpha
+          : cfg.enterScale + (1 - cfg.enterScale) * easeOutCubic(this.progress);
+        p.rise = 0;
         return p;
       }
       case 'leave': {
@@ -334,8 +383,9 @@ export class CloudMotion {
         const k = smoothstep(t / this.leaveMs);
         p.x = from.x + this.dir * (cfg.driftSpeed * s + (cfg.leaveAccel * s * s) / 2);
         p.alpha = from.alpha * (1 - k);
-        p.scale = from.scale * (1 + cfg.leaveGrow * k);
-        p.rise = from.rise + cfg.slidePx * k;
+        // A screen with no room above keeps it from rising: it fades instead.
+        p.scale = from.scale * (1 + cfg.leaveGrow * k * this.lift);
+        p.rise = from.rise + cfg.slidePx * k * this.lift;
         return p;
       }
     }
@@ -346,6 +396,28 @@ export class CloudMotion {
 interface NebulaFit {
   origins: Record<'veil' | 'blue' | 'pink', { x: number; y: number }>;
   yScale: number;
+  /** How far up each look may move on this screen (`verticalRoom`). */
+  rooms: Record<CloudLook, VerticalRoom>;
+}
+
+/**
+ * Where a bank's figure stands: its centre y and its scale, from the pose, the bob and breath waves
+ * (-1..1) and the room the screen leaves above: the upward half of the bob and of the breath only goes
+ * as far as `room.billow` allows, so the top never comes nearer the plates than `hudGapPx`.
+ */
+export function placeFigure(
+  motionY: number,
+  pose: Readonly<CloudPose>,
+  bobWave: number,
+  breatheWave: number,
+  billow: boolean,
+  room: Readonly<VerticalRoom>,
+): { y: number; scale: number } {
+  const y = motionY + room.drop - pose.rise;
+  if (!billow) return { y, scale: cfg.figure.scale * pose.scale };
+  const bob = bobWave * cfg.bobPx * (bobWave < 0 ? room.billow : 1);
+  const breathe = 1 + breatheWave * cfg.breathe * (breatheWave > 0 ? room.billow : 1);
+  return { y: y + bob, scale: cfg.figure.scale * pose.scale * breathe };
 }
 
 /**
@@ -422,17 +494,23 @@ class CloudBank {
         this.figure.setOrigin(0.5, 0.5);
       }
     }
+    const room = this.nebulaFit.rooms[this.look];
+    this.motion.lift = room.leave;
     const pose = this.motion.update(dtMs, input);
     const shown = this.motion.visible;
     const level = effectsMode.level;
     const billow = puffsBillow(this.look, level);
     const sway = sineWave(timeMs, cfg.driftPeriodMs) * cfg.driftPx;
-    const bob = billow ? sineWave(timeMs, cfg.bobPeriodMs) * cfg.bobPx : 0;
     const own = billow ? sineWave(timeMs, cfg.swayPeriodMs) * cfg.swayPx : 0;
-    const breathe = billow ? 1 + sineWave(timeMs, cfg.breathePeriodMs) * cfg.breathe : 1;
     const x = LOGICAL_CENTER_X + pose.x + sway + own;
-    const y = this.motion.y + bob - pose.rise;
-    const scale = cfg.figure.scale * pose.scale * breathe;
+    const { y, scale } = placeFigure(
+      this.motion.y,
+      pose,
+      sineWave(timeMs, cfg.bobPeriodMs),
+      sineWave(timeMs, cfg.breathePeriodMs),
+      billow,
+      room,
+    );
     this.figure
       .setVisible(shown)
       .setPosition(x, y)
@@ -563,7 +641,8 @@ export class CloudCover {
     );
     createTreasureTextures(scene);
     createFxTextures(scene);
-    const layout = nebulaLayout(scene.scale.height);
+    const screenH = scene.scale.height;
+    const layout = nebulaLayout(screenH);
     const rects = nebulaFrameRects(layout);
     const fit: NebulaFit = {
       origins: {
@@ -572,6 +651,10 @@ export class CloudCover {
         pink: frameOrigin(rects.pink),
       },
       yScale: nebulaYScale(layout),
+      rooms: {
+        cloud: verticalRoom(screenH, cloudTopBaked(screenH)),
+        nebula: verticalRoom(screenH, nebulaTop(layout)),
+      },
     };
     this.banks = [new CloudBank(scene, fit), new CloudBank(scene, fit)];
   }
@@ -613,11 +696,16 @@ export class CloudCover {
    */
   update(dtMs: number, timeMs: number, input: Readonly<CloudInput>): void {
     this.prepNebula(input);
-    const hold = cloudHeld();
-    if (hold) Object.assign(this.held, input, { covering: true });
     const phases = this.banks.map((bank) => bank.motion.phase);
     let needsApproach = !phases.includes('approach') && input.flying && input.etaMs <= cfg.leadMs;
     let needsCover = input.covering && !phases.includes('cover') && !phases.includes('approach');
+    const hold = cloudHeld() && phases.includes('cover');
+    if (hold) {
+      Object.assign(this.held, input, { covering: true });
+      // The held bank stays alone on screen: no other one floats in.
+      needsApproach = false;
+      needsCover = false;
+    }
     followInput(this.passive, input);
     this.ghost = input.ghost;
     Object.assign(this.coming, input, { covering: false });

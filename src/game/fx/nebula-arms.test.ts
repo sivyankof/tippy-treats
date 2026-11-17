@@ -15,6 +15,7 @@ import {
   nebulaHeadroom,
   nebulaLayout,
   nebulaTop,
+  LAYER_HALF,
   ROW_HALF,
   veilAlpha,
   type ArmPoint,
@@ -112,9 +113,13 @@ describe('nebula arms', () => {
   });
 
   it('mutes the layer the same everywhere along the row: the veil is opaque over the whole cover row', () => {
+    expect(tall.veilCore).toBe(ROW_HALF);
+    // A short screen keeps it opaque over the layer itself with both bobs, so its edge can melt softly.
+    expect(short.veilCore).toBeGreaterThanOrEqual(LAYER_HALF);
+    expect(short.veilFade).toBeGreaterThanOrEqual(N.layout.minFade - 6);
     for (const layout of [tall, short]) {
       for (let x = figure.body.left; x <= figure.body.right; x += 7) {
-        for (let y = -ROW_HALF; y <= ROW_HALF; y += 5) {
+        for (let y = -layout.veilCore; y <= layout.veilCore; y += 5) {
           expect(veilAlpha(x - figure.width / 2, y, layout)).toBe(1);
         }
       }

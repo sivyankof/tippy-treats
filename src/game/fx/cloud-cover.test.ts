@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest';
+import { ANIM } from '../../data/anim';
 import { RULE_ANIM } from '../../data/rule-anim';
+import { LOGICAL_SIZE } from '../../data/screen';
+import { cloudTopBaked, flightRowY, topCeiling, verticalRoom } from './cloud-figure';
+import { nebulaLayout, nebulaTop } from './nebula-arms';
 import {
   cloudEtaMs,
   CloudMotion,
@@ -8,6 +12,7 @@ import {
   layerHidden,
   ghostShare,
   pickLook,
+  placeFigure,
   puffsBillow,
   armAlpha,
   armMotion,
@@ -200,6 +205,108 @@ describe('CloudMotion', () => {
     expect(Math.abs(pose.x)).toBeLessThan(5);
     expect(pose.alpha).toBeLessThan(0.5);
   });
+});
+
+/** One pass at `speed` px/s: the cloud is found `ahead` px away, the sim hides the layer for `coverMs`. */
+function pass(speed: number, ahead: number, coverMs: number, dt = 33, lift = 1): Frame[] {
+  const motion = new CloudMotion();
+  motion.lift = lift;
+  const frames: Frame[] = [];
+  let left = ahead;
+  let coverLeft = coverMs;
+  for (let t = dt; t < 3000; t += dt) {
+    if (left > 0) left -= (speed * dt) / 1000;
+    else coverLeft -= dt;
+    const covering = left <= 0 && coverLeft > 0;
+    const input: CloudInput = {
+      covering,
+      flying: true,
+      etaMs: left > 0 ? (left / speed) * 1000 : Infinity,
+      y: 500,
+      dir: 1,
+      ghost: false,
+      nebula: true,
+    };
+    const pose = motion.update(dt, input);
+    frames.push({ t, phase: motion.phase, pose: { ...pose }, y: motion.y });
+  }
+  return frames;
+}
+
+/** Logical px per CSS px on a 390 px wide phone. */
+const CSS = LOGICAL_SIZE.width / 390;
+
+describe('entry at high speed', () => {
+  for (const speed of [1250, 1350, 1500]) {
+    for (const ahead of [speed * 0.65, speed * 0.3, speed * 0.1]) {
+      it(`floats in without a jump at ${speed} px/s, found ${Math.round(ahead)} px ahead`, () => {
+        const frames = pass(speed, ahead, 300);
+        let solid = false;
+        for (let i = 1; i < frames.length; i++) {
+          const a = frames[i - 1];
+          const b = frames[i];
+          if (!a || !b || a.phase === 'idle' || b.phase !== a.phase) continue;
+          if (b.phase === 'leave') break;
+          // The shown opacity (the nebula's cap) steps by at most 0.15 a 33 ms frame ...
+          const shown = (f: Frame): number => Math.min(f.pose.alpha, cfg.nebula.maxDensity);
+          expect(Math.abs(shown(b) - shown(a))).toBeLessThanOrEqual(0.15);
+          // ... it slides by at most 20 CSS px (the drift included) ...
+          expect(Math.abs(b.pose.x - a.pose.x)).toBeLessThanOrEqual(20 * CSS);
+          // ... and no frame stands still until it is solid.
+          if (shown(b) >= cfg.nebula.maxDensity - 1e-6) solid = true;
+          if (!solid) expect(b.pose.alpha - a.pose.alpha).toBeGreaterThan(0);
+        }
+        // Across the phase change too: approach to cover is one smooth run.
+        const at = frames.findIndex((f) => f.phase === 'cover');
+        const a = frames[at - 1];
+        const b = frames[at];
+        if (a && b && a.phase === 'approach') {
+          expect(Math.abs(b.pose.alpha - a.pose.alpha)).toBeLessThanOrEqual(0.15);
+          expect(Math.abs(b.pose.x - a.pose.x)).toBeLessThanOrEqual(20 * CSS);
+          expect(b.pose.alpha).toBeGreaterThan(a.pose.alpha);
+        }
+      });
+    }
+  }
+});
+
+describe('HUD gap in every frame', () => {
+  const SHORT = Math.max(LOGICAL_SIZE.minHeight, Math.round((693 * LOGICAL_SIZE.width) / 390));
+  const TALL = Math.round((844 * LOGICAL_SIZE.width) / 390);
+  for (const [name, h] of [
+    ['390x693', SHORT],
+    ['390x844', TALL],
+  ] as const) {
+    for (const look of ['cloud', 'nebula'] as const) {
+      it(`keeps the ${look} top ${'40 px'} under the plates on ${name}: approach, cover with sway, leave`, () => {
+        const topBaked = look === 'cloud' ? cloudTopBaked(h) : nebulaTop(nebulaLayout(h));
+        const room = verticalRoom(h, topBaked);
+        const ceiling = topCeiling(h);
+        // The layer at the top of its own bob when the bank takes its height.
+        const motionY = flightRowY(h) - ANIM.flying.bobAmplitude;
+        // Never lower than the cover margin allows.
+        expect(room.drop).toBeLessThanOrEqual(cfg.figure.layerMargin - ANIM.flying.bobAmplitude);
+        for (const frames of [
+          pass(900, 700, 350, 33, room.leave),
+          pass(1350, 300, 200, 16, room.leave),
+        ]) {
+          for (const f of frames) {
+            if (f.phase === 'idle') continue;
+            // The worst moment of the billow: bob at its highest, breath at its widest.
+            for (const [bob, breathe] of [
+              [-1, 1],
+              [-1, -1],
+              [1, 1],
+            ] as const) {
+              const at = placeFigure(motionY, f.pose, bob, breathe, true, room);
+              const top = at.y - topBaked * at.scale;
+              expect(top).toBeGreaterThanOrEqual(ceiling - 0.5);
+            }
+          }
+        }
+      });
+    }
+  }
 });
 
 describe('followInput', () => {

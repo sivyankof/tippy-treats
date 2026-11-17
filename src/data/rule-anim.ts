@@ -196,10 +196,14 @@ export const RULE_ANIM = {
     leadMs: 650,
     /**
      * The approach never runs faster than 0 to 1 in this time, even when the look-ahead finds the cloud
-     * late (a fast layer): no frame jumps the cloud far across or flashes it in. Whatever is left closes
-     * at the cover (`inMs`); the sim's cover timing does not depend on it.
+     * late (a fast layer): at most about 19 CSS px of slide and 0.07 of opacity a 33 ms frame. A cloud
+     * found late slides in from nearer (`enterPx` times its warning over `leadMs`), so it has less way to go.
+     * When the sim starts the cover the slide runs on at this pace (no snap) while the cloud turns solid at
+     * `solidPerMs` of opacity a ms (0.12 a 33 ms frame), from wherever the approach got to, or from nothing
+     * when it came without a warning. The sim's cover timing does not depend on it.
      */
-    approachMinMs: 220,
+    approachMinMs: 400,
+    solidPerMs: 0.0036,
     /**
      * The densest the dense cloud of the clouds zone is drawn at rest, 0..1: the layer under it
      * shows as a pale silhouette (contrast about 1 - this). Visual only.
@@ -240,10 +244,12 @@ export const RULE_ANIM = {
       /**
        * A short screen re-lays the drawing lower instead of squashing it: the wave is `fit` as high (0..1,
        * the most that fits the HUD gap), the curls `curlFloor + (1 - curlFloor) * fit` as big and still round,
-       * the glow reaches `glowFloor + (1 - glowFloor) * fit` as far, the arms' light is `lightFloor + (1 -
-       * lightFloor) * fit` (they lie over the row there); the arms keep their width.
+       * the glow reaches `glowFloor + (1 - glowFloor) * fit²` as far (a thinner halo leaves the wave more
+       * height), the arms' light is `lightFloor + (1 - lightFloor) * fit` (they lie over the row there); the
+       * arms keep their width. Where the room over the row is less than `minFade` px, the veil is opaque
+       * over the layer itself (its half height with the bobs) and melts away from there, so its edge stays soft.
        */
-      layout: { curlFloor: 0.4, glowFloor: 0.6, lightFloor: 0.8 },
+      layout: { curlFloor: 0.4, glowFloor: 0.45, lightFloor: 0.8, minFade: 30 },
       /** Thin pale lilac haze arcs above and below the arms: crest `y` from the centre, `sag` to the ends at `reach`. */
       arcs: { color: 0xdcccff, alpha: 0.42, width: 2.4, soft: 4, y: 126, sag: 26, reach: 330 },
       /**
@@ -287,12 +293,12 @@ export const RULE_ANIM = {
          */
         shade: {
           color: 0x22103a,
-          alpha: 0.8,
-          veilAlpha: 0.3,
-          drop: 12,
+          alpha: 0.85,
+          veilAlpha: 0.5,
+          drop: 13,
           inner: 0.9,
-          outer: 2.6,
-          reach: 110,
+          outer: 3,
+          reach: 90,
         },
       },
       /**
@@ -307,7 +313,20 @@ export const RULE_ANIM = {
         radius: 80,
         cap: 0.85,
         star: { r: 26, waist: 0.16, color: 0xfff3d6, glow: 0xffb45c, warm: 1.9, warmAlpha: 0.35 },
-        vein: { color: 0x2a1238, alpha: 0.95, width: 3, length: 78, tilt: -0.35, bend: 9 },
+        /**
+         * The vein: a short steep stroke through the core (half length `length`, at `angle` radians from
+         * the row, bent by `bend`), fading out in the row's middle band (`clear` px from the centre line,
+         * where the face of the layer is) so it never lies across a face like a scratch.
+         */
+        vein: {
+          color: 0x2a1238,
+          alpha: 0.9,
+          width: 2.6,
+          length: 44,
+          angle: -1.05,
+          bend: 5,
+          clear: [10, 24],
+        },
       },
       /**
        * Short sprinkle strokes on the arms in the sprinkle colours of the layers: the arm, x from the
