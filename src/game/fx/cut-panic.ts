@@ -23,8 +23,9 @@ interface Arm {
 }
 
 /**
- * What makes a falling piece look scared besides its face: two short mitten arms waving fast at its
- * sides and a few motion dashes trailing behind it. Pooled pictures of the shared atlas; they
+ * What makes a falling piece look scared besides its face: a short mitten arm waving fast on its
+ * outer side (none on the cut side, where it would sit on the cut corner as a bump over the tower)
+ * and a few motion dashes trailing behind it. Pooled pictures of the shared atlas; they
  * follow the piece and fade with it.
  */
 export class CutPanic {
@@ -33,6 +34,8 @@ export class CutPanic {
   private dashCount = 0;
   private halfWidth = 0;
   private halfHeight = 0;
+  /** The side of the piece's arm: away from the tower (1 right). */
+  private armSide: 1 | -1 = 1;
   /** Smoothed velocity of the piece (px/s) and where it was, for the dashes. */
   private vx = 0;
   private vy = 0;
@@ -58,8 +61,10 @@ export class CutPanic {
     }
   }
 
-  begin(pieceWidth: number, pieceHeight: number, cake: number, random: Rng): void {
+  /** `side` is where the piece went (1 right): its arm waves on that side. */
+  begin(pieceWidth: number, pieceHeight: number, cake: number, side: 1 | -1, random: Rng): void {
     this.halfWidth = pieceWidth / 2;
+    this.armSide = side;
     this.halfHeight = pieceHeight / 2;
     this.dashCount = random.int(D.count[0], D.count[1]);
     this.lastMs = -1;
@@ -107,7 +112,7 @@ export class CutPanic {
       const swing = wave * P.waveDeg * (side === 0 ? 1 : -1);
       const rotation = piece.rotation - dir * (180 - P.restDeg + swing) * DEG_TO_RAD;
       const scale = lerp(P.armStartScale, 1, grow);
-      const shown = grow > 0 && alpha > 0.01;
+      const shown = dir === this.armSide && grow > 0 && alpha > 0.01;
       // The thumb is on the inner side: the left arm is turned over.
       for (const image of [arm.outline, arm.fill, arm.light]) {
         image
