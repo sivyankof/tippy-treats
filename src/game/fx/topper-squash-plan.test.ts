@@ -4,6 +4,8 @@ import { BALANCE } from '../../data/balance';
 import { EFFECT_LEVELS } from '../../data/effect-levels';
 import { TOPPER_SQUASH } from '../../data/topper-squash';
 import { faceHalfSpan } from './glaze-growth';
+import { glazeWave, waveY } from '../objects/glaze-wave';
+import { layerBox } from '../objects/layer-draw';
 import {
   burstCount,
   burstStates,
@@ -101,12 +103,14 @@ describe('edgeLaunch', () => {
 });
 
 describe('stainSpot', () => {
+  const waveOf = (width: number) => glazeWave(layerBox(width), null, faceHalfSpan(width, null));
+
   it('stays clear of the face and of the side of the layer', () => {
     const { stain } = TOPPER_SQUASH;
     for (const width of [300, 480, 720]) {
       const face = faceHalfSpan(width, null);
       for (const topperDx of [-300, -60, 0, 60, 300]) {
-        const spot = stainSpot(width, face, topperDx);
+        const spot = stainSpot(width, face, topperDx, waveOf(width));
         if (!spot) continue;
         expect(Math.abs(spot.dx) - stain.width / 2).toBeGreaterThanOrEqual(face + stain.faceGapPx);
         expect(Math.abs(spot.dx) + stain.width / 2).toBeLessThanOrEqual(
@@ -118,20 +122,52 @@ describe('stainSpot', () => {
 
   it('keeps the side of the topper', () => {
     const face = faceHalfSpan(720, null);
-    expect(stainSpot(720, face, -200)!.dx).toBeLessThan(0);
-    expect(stainSpot(720, face, 200)!.dx).toBeGreaterThan(0);
+    expect(stainSpot(720, face, -200, waveOf(720))!.dx).toBeLessThan(0);
+    expect(stainSpot(720, face, 200, waveOf(720))!.dx).toBeGreaterThan(0);
   });
 
-  it('sits under the glaze and inside the layer', () => {
-    const spot = stainSpot(720, faceHalfSpan(720, null), 200)!;
+  it('lies on the sponge under the glaze edge over it, inside the layer', () => {
     const stain = TOPPER_SQUASH.stain;
-    const bottom = spot.dy + (1 - stain.originY) * stain.height;
-    expect(spot.dy).toBeGreaterThan(-BALANCE.layer.height / 2 + 20);
-    expect(bottom).toBeLessThan(BALANCE.layer.height / 2);
+    for (const width of [480, 600, 720]) {
+      const wave = waveOf(width);
+      for (const topperDx of [-250, -120, 120, 250]) {
+        const spot = stainSpot(width, faceHalfSpan(width, null), topperDx, wave)!;
+        const top = spot.dy - stain.originY * stain.height;
+        for (let x = spot.dx - stain.width / 2; x <= spot.dx + stain.width / 2; x += 2) {
+          // Sampled every 2 px: within half a pixel of the edge's lowest point.
+          expect(top).toBeGreaterThanOrEqual(waveY(wave, x) + stain.belowGlazePx - 0.5);
+        }
+        const bottom = spot.dy + (1 - stain.originY) * stain.height;
+        expect(bottom).toBeLessThan(BALANCE.layer.height / 2);
+      }
+    }
+  });
+
+  it('never caps a growing drip: it moves along, or to the other side', () => {
+    const stain = TOPPER_SQUASH.stain;
+    const width = 720;
+    const face = faceHalfSpan(width, null);
+    const half = 17;
+    const free = stainSpot(width, face, 200, waveOf(width))!;
+    const drips = [free.dx, -250];
+    const spot = stainSpot(width, face, 200, waveOf(width), drips, half)!;
+    expect(spot.dx).toBeGreaterThan(0);
+    for (const d of drips) {
+      expect(Math.abs(spot.dx - d)).toBeGreaterThanOrEqual(
+        stain.width / 2 + half + stain.dripGapPx,
+      );
+    }
+    // No room on the topper's side: the other side.
+    const crowded = [];
+    for (let x = 0; x <= width / 2; x += 20) crowded.push(x);
+    expect(stainSpot(width, face, 200, waveOf(width), crowded, half)!.dx).toBeLessThan(0);
+    // No room anywhere: no stain.
+    const all = crowded.flatMap((x) => [x, -x]);
+    expect(stainSpot(width, face, 200, waveOf(width), all, half)).toBeNull();
   });
 
   it('is none on a layer too narrow to hold it beside the face', () => {
-    expect(stainSpot(120, faceHalfSpan(120, null), 30)).toBeNull();
+    expect(stainSpot(120, faceHalfSpan(120, null), 30, waveOf(120))).toBeNull();
   });
 });
 

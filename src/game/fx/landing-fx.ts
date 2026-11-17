@@ -29,9 +29,10 @@ export class LandingFx {
     this.text = new FloatText(scene);
   }
 
-  /** Dust from under both edges of every landing. */
-  landed(layer: LandedLayer): void {
-    this.particleFx.dust(layer.x, layer.y + HALF_LAYER, layer.width);
+  /** Dust from under both edges of every landing; a cut landing only from under the intact edge (`cutSide` is where the piece went). */
+  landed(layer: LandedLayer, cutSide: 1 | -1 | null = null): void {
+    const only = cutSide === null ? null : cutSide === 1 ? -1 : 1;
+    this.particleFx.dust(layer.x, layer.y + HALF_LAYER, layer.width, only);
   }
 
   /** Crumbs along the cut edge; `side` is where the bitten part goes (1 right, -1 left). */
@@ -47,8 +48,15 @@ export class LandingFx {
   }
 
   /** Bits of the decorations fly off the cut line with the bitten-off part (none in "Fewer effects"). */
-  decorBitten(cutX: number, centerY: number, height: number, side: 1 | -1, tints: number[]): void {
-    this.particleFx.decorBits(cutX, centerY, height, side, tints);
+  decorBitten(
+    cutX: number,
+    centerY: number,
+    height: number,
+    side: 1 | -1,
+    tints: number[],
+    depth?: number,
+  ): void {
+    this.particleFx.decorBits(cutX, centerY, height, side, tints, depth);
   }
 
   /** Ring, sparks and "Perfect!" around a perfectly landed layer. */

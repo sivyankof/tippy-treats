@@ -5,6 +5,7 @@ import {
   confettiRain,
   edgeBurst,
   lineBurst,
+  sideBurst,
   stepParticle,
   viewParticle,
   type ParticleState,
@@ -113,6 +114,14 @@ describe('bursts', () => {
     expect(right).toHaveLength(3);
     expect(left.every((p) => p.vx < 0 && p.vy < 0)).toBe(true);
     expect(right.every((p) => p.vx > 0 && p.vy < 0)).toBe(true);
+  });
+
+  it('starts a one-side burst under that edge only', () => {
+    const right = sideBurst(100, 50, 80, 1, 4, { ...style, tiltDeg: 20 }, half);
+    expect(right).toHaveLength(4);
+    expect(right.every((p) => p.x === 140 && p.vx > 0 && p.vy < 0)).toBe(true);
+    const left = sideBurst(100, 50, 80, -1, 2, { ...style, tiltDeg: 20 }, half);
+    expect(left.every((p) => p.x === 60 && p.vx < 0)).toBe(true);
   });
 
   it('keeps the total of an odd edge burst', () => {

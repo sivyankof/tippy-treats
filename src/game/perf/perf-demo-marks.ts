@@ -1,8 +1,7 @@
 import type { PlacedLayer } from '../../core/sim-types';
 import { SQUASH_TEXTURES, TOPPER_SQUASH } from '../../data/topper-squash';
-import { faceHalfSpan } from '../fx/glaze-growth';
 import { stainOrigin, stainPictureSize } from '../fx/squash-textures';
-import { stainSpot } from '../fx/topper-squash-plan';
+import { layerStainSpot } from '../fx/topper-squash-fx';
 import { layerMarks } from '../objects/layer-marks';
 
 /** The pictures the demo stains cycle through. */
@@ -16,7 +15,7 @@ export function leaveDemoMarks(layers: readonly PlacedLayer[]): void {
   const [width, height] = stainPictureSize();
   const [originX, originY] = stainOrigin();
   layers.forEach((layer, i) => {
-    const spot = stainSpot(layer.width, faceHalfSpan(layer.width, null), i % 2 === 0 ? 1 : -1);
+    const spot = layerStainSpot(layer.width, null, i, i % 2 === 0 ? 1 : -1);
     if (!spot) return;
     layerMarks.addPress(i + 1, [
       {

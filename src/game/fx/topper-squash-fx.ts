@@ -13,6 +13,11 @@ import {
 import { clamp01, lerp } from '../../util/math';
 import { DEPTH } from '../depth';
 import { effectsMode } from '../effects-mode';
+import type { CutSide } from '../../core/drop';
+import { plainDripColumns } from '../objects/glaze-drip-layer';
+import { glazeWave } from '../objects/glaze-wave';
+import { artWidth } from '../objects/layer-art';
+import { layerBox } from '../objects/layer-draw';
 import { layerMarks } from '../objects/layer-marks';
 import type { LayerMark } from '../objects/layer-mark-store';
 import { plainLooks, lookOfCode } from '../objects/plain-look';
@@ -32,6 +37,7 @@ import {
   rollSpots,
   squashLevelPlan,
   stainSpot,
+  type StainSpot,
 } from './topper-squash-plan';
 
 /** One squashed topper lying between the two layers. */
@@ -313,7 +319,12 @@ export class TopperSquashFx {
   }
 
   private leaveStain(lowerIndex: number, width: number, topperDx: number, texture: string): void {
-    const spot = stainSpot(width, faceHalfSpan(width, null), topperDx);
+    const spot = layerStainSpot(
+      width,
+      this.tower.layerPose(lowerIndex)?.cut ?? null,
+      lowerIndex,
+      topperDx,
+    );
     if (!spot) return;
     const { stain } = TOPPER_SQUASH;
     const [pictureWidth, pictureHeight] = stainPictureSize();
@@ -335,4 +346,21 @@ export class TopperSquashFx {
     // The lower layer licks the stain off about a second later (or it melts).
     if (made) this.tower.licks.queueJuice(lowerIndex);
   }
+}
+
+/**
+ * Where a juice stain sits on the plain layer of 0-based `index` (`width` wide, bitten on `cut`):
+ * `stainSpot` with that layer's glaze edge and growing drips, as its picture draws them.
+ */
+export function layerStainSpot(
+  width: number,
+  cut: CutSide | null,
+  index: number,
+  topperDx: number,
+): StainSpot | null {
+  const drawn = artWidth(width);
+  const face = faceHalfSpan(drawn, null);
+  const wave = glazeWave(layerBox(drawn), cut, face);
+  const drips = plainDripColumns(drawn, cut, index);
+  return stainSpot(drawn, face, topperDx, wave, drips.xs, drips.half);
 }

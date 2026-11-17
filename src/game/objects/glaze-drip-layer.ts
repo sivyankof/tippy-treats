@@ -151,6 +151,23 @@ function growthSpots(
     });
 }
 
+/**
+ * Where the growing drips of the plain layer of 0-based `layerIndex` hang (`width`: the width of
+ * its picture, bitten on `cut`; x from its centre), and half the width of their round ends: what
+ * else lies on the front of the layer keeps clear of them.
+ */
+export function plainDripColumns(
+  width: number,
+  cut: CutSide | null,
+  layerIndex: number,
+): { xs: number[]; half: number } {
+  const size = sizeFor(null);
+  return {
+    xs: growthSpots(null, width, cut, size, layerIndex).map((spot) => spot.x),
+    half: bulbOuter(size) / 2,
+  };
+}
+
 /** One growing drip: a stem stretched to length and a round end. */
 interface DripParts {
   stem: Phaser.GameObjects.Image;

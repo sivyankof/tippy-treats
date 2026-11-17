@@ -322,6 +322,13 @@ export class LayerView extends Phaser.GameObjects.Container {
     );
   }
 
+  /** Vertical scale the inner containers give the picture (the landing squash, the breath), on top of the view's own scale. */
+  get innerScaleY(): number {
+    return (
+      this.squashRoot.scaleY * this.breathRoot.scaleY * this.shapeRoot.scaleY * this.content.scaleY
+    );
+  }
+
   /**
    * Draws the picture squashed against the screen edge (`edge-squash.ts`; offsets in the view's
    * own units), or as it is for `null`. Only the drawing changes, never the layer's place.

@@ -9,10 +9,16 @@ import {
   outlineOf,
   profileThickness,
   recoilAnchorScale,
+  dropLaneSpeed,
+  dropTallness,
+  faceTurnShare,
   recoilLength,
-  recoilWhip,
+  recoilRest,
   sagControl,
+  sideInset,
   snapTimeMs,
+  trimHalf,
+  trimmedThickness,
   writeHalf,
   writeQuad,
 } from './cut-strand-geometry';
@@ -94,10 +100,80 @@ describe('recoil', () => {
     expect(min).toBeLessThan(restShare);
     expect(recoilLength(1)).toBeCloseTo(0);
   });
-  it('whips up and calms down', () => {
-    expect(recoilWhip(0)).toBeCloseTo(0);
-    expect(recoilWhip(S.recoil.springU / 2)).toBeGreaterThan(0);
-    expect(recoilWhip(1)).toBeCloseTo(0);
+  it('retracts along the path it had: the shortened curve lies on the old one', () => {
+    const c = { x: 40, y: 30 };
+    const e = { x: 100, y: 10 };
+    const oc = { x: 0, y: 0 };
+    const oe = { x: 0, y: 0 };
+    const origin = { x: 0, y: 0 };
+    for (const l of [1, 0.6, 0.18, 0.03]) {
+      trimHalf(c, e, l, oc, oe);
+      const p = curvePoint(origin, c, e, l, { x: 0, y: 0 });
+      expect(oe.x).toBeCloseTo(p.x);
+      expect(oe.y).toBeCloseTo(p.y);
+      // Halfway along the short curve is a point of the old one.
+      const q = curvePoint(origin, oc, oe, 0.5, { x: 0, y: 0 });
+      const r = curvePoint(origin, c, e, l / 2, { x: 0, y: 0 });
+      expect(q.x).toBeCloseTo(r.x);
+      expect(q.y).toBeCloseTo(r.y);
+    }
+  });
+  it('keeps the profile: the free end gets thicker as it comes back, never thicker than the anchor', () => {
+    const t = S.traits[0];
+    let last = 0;
+    for (const l of [1, 0.6, 0.3, 0.18, 0.05]) {
+      const tip = trimmedThickness(1, l, t.end, t.mid);
+      expect(tip).toBeGreaterThanOrEqual(last);
+      expect(tip).toBeLessThanOrEqual(t.end);
+      // No lump: thinner from the anchor to the free end.
+      for (let s = 0.1; s <= 1; s += 0.1) {
+        expect(trimmedThickness(s, l, t.end, t.mid)).toBeLessThanOrEqual(
+          trimmedThickness(s - 0.1, l, t.end, t.mid) + 1e-9,
+        );
+      }
+      last = tip;
+    }
+    expect(trimmedThickness(1, 1, t.end, t.mid)).toBeCloseTo(t.mid);
+  });
+  it('never crosses the rows of a short thick end (no spikes)', () => {
+    const t = S.traits[0];
+    for (const len of [4, 10, 20, 60]) {
+      const shape = new HalfShape();
+      shape.faceX = 0.6;
+      shape.faceY = 0.8;
+      shape.capped = true;
+      shape.sample(
+        { x: 0, y: 0 },
+        { x: len / 2, y: len / 4 },
+        { x: len, y: len / 3 },
+        0,
+        1,
+        () => t.end,
+      );
+      const out = new Float32Array(HALF_FLOATS);
+      writeHalf(
+        shape,
+        out,
+        (w) => w / 2,
+        () => 0,
+      );
+      // Each side of the strip keeps going forward along the strand: no row folds back over the one before.
+      for (let i = 1; i < S.rows; i++) {
+        const tx = shape.tx[i]!;
+        const ty = shape.ty[i]!;
+        for (const side of [0, 2]) {
+          const dx = out[i * 4 + side]! - out[(i - 1) * 4 + side]!;
+          const dy = out[i * 4 + side + 1]! - out[(i - 1) * 4 + side + 1]!;
+          expect(dx * tx + dy * ty).toBeGreaterThan(-1e-6);
+        }
+      }
+      expect(faceTurnShare(shape, t.end / 2)).toBeLessThanOrEqual(1);
+    }
+  });
+  it('settles as a short stub, however long the half was', () => {
+    expect(recoilRest(20)).toBeCloseTo(S.recoil.restShare);
+    expect(recoilRest(200) * 200).toBeCloseTo(S.recoil.restPx);
+    expect(recoilLength(S.recoil.springU, recoilRest(200))).toBeCloseTo(recoilRest(200));
   });
   it('shrinks the anchor to what is kept', () => {
     expect(recoilAnchorScale(0, 0)).toBe(1);
@@ -149,5 +225,96 @@ describe('path', () => {
     // Top-left, top-right, bottom-left, bottom-right.
     expect([out[0], out[1], out[2], out[3]]).toEqual([-5, -10, 5, -10]);
     expect([out[4], out[5], out[6], out[7]]).toEqual([-5, 10, 5, 10]);
+  });
+});
+
+describe('falling drops', () => {
+  /**
+   * Where the drops of a cut start (from the cut edge, outwards positive, and from the layer
+   * centre) as measured in the game for a thin, a big and a usual cut with strands, in the order
+   * they fall.
+   */
+  const MEASURED = [
+    [
+      [26.5, 19.1, 17],
+      [39, 22.8, 18],
+      [62.2, 42.3, 17.5],
+    ],
+    [
+      [-2.5, 7.2, 17],
+      [15.5, 11.5, 18],
+      [35.2, 9.9, 17.5],
+    ],
+    [
+      [30.9, 22.3, 17],
+      [44.8, 23.8, 18],
+      [69.4, 38.5, 17.5],
+    ],
+  ] as const;
+
+  it('snaps the lowest strand first and the highest last', () => {
+    const order = S.traits
+      .map((t) => ({ at: snapTimeMs(t), band: t.layerBand }))
+      .sort((p, q) => p.at - q.at);
+    for (let k = 1; k < order.length; k++) {
+      expect(order[k]!.band).toBeLessThan(order[k - 1]!.band);
+    }
+  });
+
+  it('fall apart: two drops of one cut never touch', () => {
+    const { drops } = S;
+    const drift = CUT_LOOK.ramp.strands.driftSpeed * drops.driftShare;
+    const times = S.traits.map(snapTimeMs).sort((p, q) => p - q);
+    for (const cut of MEASURED) {
+      const at = (k: number, ms: number) => {
+        const [x0, y0, size] = cut[k]!;
+        const age = ms - times[k]!;
+        if (age < 0 || age > drops.lifeMs) return null;
+        const t = age / 1000;
+        const vx = drift + dropLaneSpeed(k);
+        const vy = drops.downSpeed + drops.gravity * t;
+        const w = size;
+        return {
+          x: x0 + vx * t,
+          y: y0 + drops.downSpeed * t + (drops.gravity * t * t) / 2,
+          w,
+          h: w * dropTallness(age, Math.hypot(vx, vy)),
+        };
+      };
+      for (let ms = 0; ms < 1200; ms += 5) {
+        for (let i = 0; i < cut.length; i++) {
+          for (let j = i + 1; j < cut.length; j++) {
+            const p = at(i, ms);
+            const q = at(j, ms);
+            if (!p || !q) continue;
+            // Two ellipses of these sizes: apart when the scaled distance is over 1, with a margin.
+            const dx = (p.x - q.x) / ((p.w + q.w) / 2);
+            const dy = (p.y - q.y) / ((p.h + q.h) / 2);
+            expect(Math.hypot(dx, dy)).toBeGreaterThan(1.15);
+          }
+        }
+      }
+    }
+  });
+});
+
+describe('drop shape', () => {
+  it('starts round as its bead and draws out to a teardrop', () => {
+    expect(dropTallness(0, 0)).toBeCloseTo(1);
+    expect(dropTallness(S.drops.tallMs, 0)).toBeCloseTo(S.drops.tall);
+    expect(dropTallness(S.drops.tallMs, 1e6)).toBeCloseTo(S.drops.tall * (1 + S.drops.maxStretch));
+  });
+});
+
+describe('anchors', () => {
+  it('sit on the outline: in by the inset on the straight side, further in at the rounded corner', () => {
+    expect(sideInset(30, 3, 40)).toBe(3);
+    expect(sideInset(30, 3, 30)).toBeCloseTo(3);
+    expect(sideInset(30, 3, 10)).toBeGreaterThan(6);
+    // On the circle of the outline: (radius - x)^2 + (radius - y)^2 = (radius - inset)^2.
+    const x = sideInset(30, 3, 10);
+    expect((30 - x) ** 2 + 20 ** 2).toBeCloseTo(27 ** 2);
+    // A corner smaller than the inset changes nothing.
+    expect(sideInset(2, 3, 0)).toBe(3);
   });
 });

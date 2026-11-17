@@ -61,19 +61,37 @@ export const CUT_LOOK = {
      * Strands per cut and their traits: where they hold on the glaze band of the layer and of the
      * piece (share from its top), thickness at the ends and in the middle (px), how much they sag,
      * where along them the thinnest point (and the break) is, when they snap (ms from `snapMs`).
+     * The lowest strand snaps first and the highest last: a drop that starts lower and earlier
+     * always falls ahead of the next one and never gets caught up.
      */
     traits: [
-      { layerBand: 0.5, pieceBand: 0.45, end: 16, mid: 5.5, sag: 1, breakU: 0.5, snapShift: 0 },
+      {
+        layerBand: 0.5,
+        pieceBand: 0.45,
+        end: 16,
+        mid: 5.5,
+        sag: 1,
+        breakU: 0.5,
+        snapShift: 0,
+      },
       {
         layerBand: 0.2,
         pieceBand: 0.15,
         end: 13,
         mid: 4.6,
         sag: 0.55,
-        breakU: 0.44,
-        snapShift: -50,
+        breakU: 0.57,
+        snapShift: 90,
       },
-      { layerBand: 0.92, pieceBand: 1, end: 11.5, mid: 4.2, sag: 1.5, breakU: 0.57, snapShift: 50 },
+      {
+        layerBand: 0.92,
+        pieceBand: 1,
+        end: 11.5,
+        mid: 4.2,
+        sag: 1.5,
+        breakU: 0.44,
+        snapShift: -90,
+      },
     ],
     /** Glaze band at the cut edge (px from the layer centre). */
     bandTop: -50,
@@ -113,9 +131,14 @@ export const CUT_LOOK = {
       growMs: 90,
       from: 0.3,
       fromSpread: 0.1,
-      /** Where each bead stops (the piece half's higher up, so it never sits by the one that drops). */
-      to: [0.72, 0.5],
-      slideMs: 260,
+      /**
+       * Where each bead stops (share of its half from its anchor). The layer half's comes down
+       * nearly to the break, the lowest point of the strand, and drops from there: the drops of
+       * the strands start one below the other. The piece half's stays higher up, so it never sits
+       * by the one that drops.
+       */
+      to: [0.92, 0.5],
+      slideMs: 130,
       /** The strand under a bead is this much thicker (share of the bead size), over this long a stretch (px, gaussian). */
       bump: 0.15,
       bumpPx: 5,
@@ -126,12 +149,14 @@ export const CUT_LOOK = {
     dot: { size: 0.28, dx: 0.2, dy: 0.22, flat: 0.75 },
     /** After the snap: each end springs back with an overshoot, then goes into the glaze. */
     recoil: {
-      /** The free end flies back to this share of the half by `springU` of the recoil (with `backOut`), whipping up by `whipPx`. */
+      /**
+       * The free end flies back along the path of the half to this share of it by `springU` of the
+       * recoil (with `backOut`), round and thicker as it comes back (the half keeps its profile).
+       */
       restShare: 0.18,
+      /** ...but never longer than this (px): a short round stub on the cut face, not a stick. */
+      restPx: 8,
       springU: 0.55,
-      whipPx: 3,
-      /** The free end gets round and thicker as it comes back: share of the end thickness. */
-      tipShare: 0.38,
       /** The piece keeps a small glaze dot of this size (px) on its cut corner, fading with the piece. */
       nubPx: 9,
     },
@@ -140,9 +165,19 @@ export const CUT_LOOK = {
       gravity: 2000,
       /** Speed it starts with: the side drift of the piece share, and down. */
       driftShare: 0.3,
-      downSpeed: 60,
-      /** The teardrop is this much taller than wide; it stretches along its speed. */
+      /** It snaps off: falling at once, so the next drop of the cut finds it gone, never touching it. */
+      downSpeed: 300,
+      /**
+       * Each later drop of a cut goes this much more outwards (px/s; less, when below 0): a later
+       * strand breaks further out, so the drops before it must not drift into its spot.
+       */
+      laneSpeed: -30,
+      /**
+       * The teardrop is this much taller than wide, from round (the bead it was) over `tallMs`;
+       * it stretches along its speed.
+       */
       tall: 1.25,
+      tallMs: 120,
       stretchPerSpeed: 0.0005,
       maxStretch: 0.5,
       lifeMs: 460,
@@ -152,9 +187,12 @@ export const CUT_LOOK = {
     /** The drop that stays on the cut edge of the layer: the picture of the layer's own drip end. */
     trace: {
       growMs: 260,
-      /** Where it hangs: this far inside the cut edge, its neck from this y (from the layer centre). */
-      insetPx: 22,
-      y: -31,
+      /**
+       * Where it hangs: from the glaze edge just inside the sponge strip of the cut, this far
+       * (px) from where the glaze ends, with this share of it above the glaze edge.
+       */
+      gapPx: 2,
+      aboveShare: 0.2,
       swing: { amplitudeDeg: 14, periodMs: 620, decayMs: 750 },
     },
   },

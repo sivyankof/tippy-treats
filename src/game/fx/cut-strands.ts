@@ -1,5 +1,7 @@
 import type * as Phaser from 'phaser';
 import type { Rng } from '../../core/rng';
+import { ANIM } from '../../data/anim';
+import { BALANCE } from '../../data/balance';
 import { CUT_LOOK, CUT_PICTURE, CUT_TEXTURES } from '../../data/cut-look';
 import { shade } from '../../util/color';
 import { clamp01, lerp, smoothstep, TWO_PI } from '../../util/math';
@@ -10,6 +12,8 @@ import {
   beadGrow,
   beadShare,
   curvePoint,
+  dropLaneSpeed,
+  dropTallness,
   HalfShape,
   halfUvs,
   middleThickness,
@@ -18,9 +22,12 @@ import {
   quadUvs,
   recoilAnchorScale,
   recoilLength,
-  recoilWhip,
+  recoilRest,
   sagControl,
+  sideInset,
   snapTimeMs,
+  trimHalf,
+  trimmedThickness,
   writeHalf,
   writeQuad,
   type StrandTrait,
@@ -31,8 +38,16 @@ import { beadPicture, dropPicture, ribbonPicture } from './cut-textures';
 const S = CUT_LOOK.strands;
 const MAX_STRANDS = S.traits.length;
 const PAD = CUT_PICTURE.pad;
+const HALF_HEIGHT = BALANCE.layer.height / 2;
+
+/** The radius of the top corners of a layer this wide (as `layerBox` draws it). */
+function cornerOf(width: number): number {
+  return Math.min(ANIM.layer.cornerRadius, width / 2, HALF_HEIGHT);
+}
 /** A snapped half never gets shorter than this share: its direction stays known. */
 const MIN_LENGTH = 0.03;
+/** A bead riding a snapped half back stays this far along it (share): never on its round end. */
+const RIDE_MAX = 0.6;
 
 /** The three strips of a half: outline under, fill over, a light stripe on top. */
 interface Half {
@@ -45,6 +60,8 @@ interface Half {
   control: Vec;
   /** Thickness at the break when it snapped. */
   tip: number;
+  /** Length from the anchor to the break when it snapped (px). */
+  length: number;
 }
 
 /** A round body: outline, fill inside it and a light dot (quads on the disc or the drop picture). */
@@ -105,6 +122,8 @@ export interface StrandStart {
   /** Centre y of the layer and of the piece at the start. */
   y: number;
   pieceWidth: number;
+  /** Width of the layer after the cut. */
+  layerWidth: number;
   /** Sideways speed of the piece (px/s): the drops take a share of it. */
   driftSpeed: number;
   glaze: number;
@@ -130,6 +149,8 @@ export class CutStrands {
   private readonly ropes: StripRope[] = [];
   private start: StrandStart | null = null;
   private snapCount = 0;
+  /** Drops of this cut so far. */
+  private dropCount = 0;
   private readonly center: Vec = { x: 0, y: 0 };
   private readonly center0: Vec = { x: 0, y: 0 };
   private readonly ribbonUv: Float32Array;
@@ -178,6 +199,7 @@ export class CutStrands {
       end: { x: 0, y: 0 },
       control: { x: 0, y: 0 },
       tip: 0,
+      length: 0,
     };
   }
 
@@ -207,6 +229,7 @@ export class CutStrands {
     this.stop();
     this.start = start;
     this.snapCount = 0;
+    this.dropCount = 0;
     const light = shade(start.glaze, S.gloss.lightLift);
     const count = random.int(S.count[0], S.count[1]);
     const inset = Math.min(S.inset, start.pieceWidth * S.insetMaxShare);
@@ -229,12 +252,17 @@ export class CutStrands {
         half.gloss.setColors(light);
       }
       const { trait } = strand;
-      strand.a.x = start.edgeX - start.side * inset;
-      strand.a.y = start.y + lerp(S.bandTop, S.bandBottom, trait.layerBand);
+      // Both ends sit on the outline of the cut side, further in where the top corner rounds off.
+      const layerY = lerp(S.bandTop, S.bandBottom, trait.layerBand);
+      const pieceY = lerp(S.bandTop, S.bandBottom, trait.pieceBand);
+      const layerIn = sideInset(cornerOf(start.layerWidth), inset, layerY + HALF_HEIGHT);
+      const pieceIn = sideInset(cornerOf(start.pieceWidth), inset, pieceY + HALF_HEIGHT);
+      strand.a.x = start.edgeX - start.side * layerIn;
+      strand.a.y = start.y + layerY;
       strand.layerOff.x = strand.a.x - this.center0.x;
       strand.layerOff.y = strand.a.y - this.center0.y;
-      strand.local.x = -start.side * (start.pieceWidth / 2 - inset);
-      strand.local.y = lerp(S.bandTop, S.bandBottom, trait.pieceBand);
+      strand.local.x = -start.side * (start.pieceWidth / 2 - pieceIn);
+      strand.local.y = pieceY;
       strand.snapped = false;
       const second = random.next() < S.beads.secondShare;
       strand.beads.forEach((bead, b) => {
@@ -405,6 +433,7 @@ export class CutStrands {
       half.control.y = cy;
       half.end.x = ex;
       half.end.y = ey;
+      half.length = Math.hypot(ex, ey);
       half.tip = trait.mid;
     }
     // The bead nearest the break falls as a drop; the other one rides its half back.
@@ -421,14 +450,20 @@ export class CutStrands {
     hooks.snapped(breakX, breakY, this.snapCount === 1, main);
   }
 
-  /** The halves spring back to their anchors (`u` 0..1 of the recoil) and go into the glaze; the piece keeps a small dot. */
+  /**
+   * The halves spring back to their anchors (`u` 0..1 of the recoil) along the path they had: each
+   * is the same curve cut shorter, its profile kept, the free end a round cap. Then the layer half
+   * shrinks into the glaze and the piece half to a small dot on the piece.
+   */
   private poseRecoil(strand: Strand, u: number, piece: LayerView): void {
     const { trait } = strand;
     const k = clamp01(u);
-    const length = Math.max(MIN_LENGTH, recoilLength(k));
-    const whip = recoilWhip(k);
     const cos = Math.cos(piece.rotation);
     const sin = Math.sin(piece.rotation);
+    // The bead that rides a half back melts into it while the end springs back.
+    const beadScale = 1 - smoothstep(k / S.recoil.springU);
+    const turn = smoothstep(k / S.recoil.springU);
+    const side = this.start?.side ?? 1;
     for (let h = 0; h < 2; h++) {
       const half = strand.halves[h]!;
       const bead = strand.beads[h]!;
@@ -438,29 +473,38 @@ export class CutStrands {
         continue;
       }
       const anchor = h === 0 ? strand.a : strand.b;
-      let ex = half.end.x;
-      let ey = half.end.y;
-      let cx = half.control.x;
-      let cy = half.control.y;
+      const length = Math.max(MIN_LENGTH, recoilLength(k, recoilRest(half.length)));
+      trimHalf(half.control, half.end, length, control, freeEnd);
+      // The end springs back to stick straight out of its cut face (the layer's faces the piece,
+      // the piece's, in its own turn, faces the layer), so the stub sits flush and round on it.
+      straighten(control, freeEnd, h === 0 ? side : -side, turn);
       if (h === 1) {
-        [ex, ey] = [ex * cos - ey * sin, ex * sin + ey * cos];
-        [cx, cy] = [cx * cos - cy * sin, cx * sin + cy * cos];
+        [control.x, control.y] = [
+          control.x * cos - control.y * sin,
+          control.x * sin + control.y * cos,
+        ];
+        [freeEnd.x, freeEnd.y] = [
+          freeEnd.x * cos - freeEnd.y * sin,
+          freeEnd.x * sin + freeEnd.y * cos,
+        ];
       }
-      freeEnd.x = anchor.x + ex * length;
-      freeEnd.y = anchor.y + ey * length - whip;
-      control.x = anchor.x + cx * length;
-      control.y = anchor.y + cy * length - whip / 2;
+      control.x += anchor.x;
+      control.y += anchor.y;
+      freeEnd.x += anchor.x;
+      freeEnd.y += anchor.y;
       // The layer half goes into the glaze; the piece half leaves a small dot on the piece.
       const keep = h === 0 ? 0 : S.recoil.nubPx / trait.end;
       const scale = recoilAnchorScale(k, keep);
       const end = trait.end * scale;
-      const round = trait.end * S.recoil.tipShare;
-      const tip = Math.min(end, lerp(half.tip, round, smoothstep(k / S.recoil.springU)) * scale);
+      const mid = half.tip * scale;
       half.shape.capped = true;
-      half.shape.sample(anchor, control, freeEnd, 0, 1, (s) => profileThickness(s, end, tip));
+      half.shape.sample(anchor, control, freeEnd, 0, 1, (s) =>
+        trimmedThickness(s, length, end, mid),
+      );
       this.writeStrips(half);
-      if (bead.on) this.poseBead(bead, half.shape, bead.share, scale);
-      else this.hideBody(bead.body);
+      if (bead.on) {
+        this.poseBead(bead, half.shape, Math.min(RIDE_MAX, bead.share / length), scale * beadScale);
+      } else this.hideBody(bead.body);
     }
   }
 
@@ -471,7 +515,9 @@ export class CutStrands {
     drop.on = true;
     drop.x = x;
     drop.y = y;
-    drop.vx = start.side * start.driftSpeed * drops.driftShare;
+    // Drops of one cut keep apart: each in its own lane.
+    drop.vx = start.side * (start.driftSpeed * drops.driftShare + dropLaneSpeed(this.dropCount));
+    this.dropCount++;
     drop.vy = drops.downSpeed;
     drop.size = size;
     drop.ageMs = 0;
@@ -493,10 +539,9 @@ export class CutStrands {
       drop.y += drop.vy * dt;
       // A teardrop: its point trails against the way it goes, and it stretches with the speed.
       const speed = Math.hypot(drop.vx, drop.vy);
-      const stretch = Math.min(drops.maxStretch, speed * drops.stretchPerSpeed);
       const age = drop.ageMs / drops.lifeMs;
       const w = drop.size * lerp(1, drops.endScale, smoothstep(age));
-      const h = w * drops.tall * (1 + stretch);
+      const h = w * dropTallness(drop.ageMs, speed);
       const dirX = speed > 0 ? drop.vx / speed : 0;
       const dirY = speed > 0 ? drop.vy / speed : 1;
       this.poseBody(drop.body, drop.x, drop.y, w, h, DROP_SHAPE, dirX, dirY);
@@ -536,6 +581,19 @@ export class CutStrands {
     for (const half of strand.halves) this.hideHalf(half);
     for (const bead of strand.beads) this.hideBody(bead.body);
   }
+}
+
+/**
+ * Turns a stub (control and end from its anchor) by `share` towards sticking straight out
+ * sideways (`dir` 1 right, -1 left), keeping its length.
+ */
+function straighten(c: Vec, e: Vec, dir: number, share: number): void {
+  if (share <= 0) return;
+  const len = Math.hypot(e.x, e.y);
+  e.x = lerp(e.x, dir * len, share);
+  e.y = lerp(e.y, 0, share);
+  c.x = lerp(c.x, (dir * len) / 2, share);
+  c.y = lerp(c.y, 0, share);
 }
 
 /** A picture and the size of the shape drawn in it (the rest is its empty field). */

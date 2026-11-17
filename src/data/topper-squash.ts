@@ -391,11 +391,12 @@ export const TOPPER_SQUASH = {
     /** Anchor: the top of the splash. */
     originX: 0.5,
     originY: 0.15,
-    /** How far below the glaze edge (the deepest tongue) the anchor sits. */
-    belowGlazePx: 3,
-    /** Clear space between the stain and the face, and between the stain and the side of the layer. */
+    /** How far below the glaze edge (its lowest point over the stain) the top of the splash sits: it lies on the sponge. */
+    belowGlazePx: 4,
+    /** Clear space between the stain and the face, the side of the layer and the growing drips. */
     faceGapPx: 18,
     edgeGapPx: 6,
+    dripGapPx: 4,
     growMs: 520,
     /** The mark is born this long after the impact, so the juice seems to arrive from the squash. */
     delayMs: 60,

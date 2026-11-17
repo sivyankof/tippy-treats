@@ -173,6 +173,20 @@ export function edgeBurst(
   return result;
 }
 
+/** `count` particles from under one edge (`side`: 1 right, -1 left) of a layer centred on (centerX, centerY), flying outwards and slightly up. */
+export function sideBurst(
+  centerX: number,
+  centerY: number,
+  width: number,
+  side: 1 | -1,
+  count: number,
+  style: ParticleStyle,
+  random: RandomFn = Math.random,
+): ParticleState[] {
+  const x = centerX + (side * width) / 2;
+  return coneBurst(x, centerY, outwardDeg(side, style.tiltDeg), count, style, random);
+}
+
 /** `count` particles spread along a vertical cut line of `height` around (x, centerY), flying towards `side`. */
 export function lineBurst(
   x: number,

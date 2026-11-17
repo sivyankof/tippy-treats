@@ -445,7 +445,9 @@ export class RunFx {
     this.kick.kick(perfect ? -perfectBump : drop * impact.kick, durationMs);
 
     const pose = this.tower.layerPose(index);
-    if (pose) this.landingFx.landed(pose);
+    // A cut leaves no dust over the corner of the falling piece.
+    const cut = event.cutSide && event.cutWidth > 0 ? (event.cutSide === 'right' ? 1 : -1) : null;
+    if (pose) this.landingFx.landed(pose, cut);
 
     if (perfect) {
       if (pose) this.landingFx.perfect(pose, state.combo);

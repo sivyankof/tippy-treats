@@ -121,17 +121,12 @@ export class DebrisFx {
       index,
       pose,
     );
+    // With strands the crumbs and the decoration bits fly under them, never over.
+    const depth = strands ? DEPTH.cutCrumbs : undefined;
     const crumbs = (): void => {
-      this.landing.bitten(
-        edgeX,
-        y,
-        side,
-        colors.cake,
-        pickInt(plan.crumbs),
-        strands ? DEPTH.cutCrumbs : undefined,
-      );
+      this.landing.bitten(edgeX, y, side, colors.cake, pickInt(plan.crumbs), depth);
       if (memo.kind === 'plain') {
-        this.decorBits(index + 1, event.cutWidth, pieceCut, edgeX, y, side);
+        this.decorBits(index + 1, event.cutWidth, pieceCut, edgeX, y, side, depth);
       }
     };
     this.cuts.play({
@@ -158,7 +153,7 @@ export class DebrisFx {
       },
     });
     // With strands the glaze leaves in them and as the drop that stays; otherwise a drop runs down.
-    if (!strands) this.runDrips(pose, y, edgeX, side, colors.glaze, memo);
+    if (!strands) this.runDrips(pose, y, edgeX, side, colors.glaze, memo, index);
     return true;
   }
 
@@ -214,10 +209,10 @@ export class DebrisFx {
     if (!pose) return;
     this.landing.bitten(edgeX, y, side, colors.cake);
     if (memo.kind === 'plain') this.decorBits(index + 1, event.cutWidth, pieceCut, edgeX, y, side);
-    this.runDrips(pose, y, edgeX, side, colors.glaze, memo);
+    this.runDrips(pose, y, edgeX, side, colors.glaze, memo, index);
   }
 
-  /** Glaze drops run down the cut edge of the layer. */
+  /** Glaze drops run down the cut edge of the layer (0-based `index`), riding it. */
   private runDrips(
     pose: LandedLayer,
     y: number,
@@ -225,6 +220,7 @@ export class DebrisFx {
     side: 1 | -1,
     glaze: number,
     memo: FlyingMemo,
+    index: number,
   ): void {
     const { dripSize, drips } = ANIM.bite;
     const box = layerBox(pose.width);
@@ -235,7 +231,15 @@ export class DebrisFx {
     const count = pickInt(drips);
     for (let k = 0; k < count; k++) {
       const inset = Math.min(ANIM.layer.outline + dripSize / 2 + k * dripSize * 2, pose.width / 2);
-      this.drips.spawn(edgeX - side * inset, startY - dripSize, glaze);
+      const x = edgeX - side * inset;
+      const top = startY - dripSize;
+      // The drop rides the layer: it lands squashed, and a drop left where the layer stands at
+      // rest would hang in the air above it.
+      this.drips.spawn(x, top, glaze, {
+        view: () => this.tower.viewAt(index),
+        dx: x - pose.x,
+        up: y + BALANCE.layer.height / 2 - top,
+      });
     }
   }
 
@@ -247,6 +251,7 @@ export class DebrisFx {
     edgeX: number,
     y: number,
     side: 1 | -1,
+    depth?: number,
   ): void {
     const { decor } = lookOfCode(lookCodeFor(layerIndex, false));
     if (!decor) return;
@@ -259,6 +264,7 @@ export class DebrisFx {
       crest - box.innerTop,
       side,
       decorTints(decor),
+      depth,
     );
   }
 }

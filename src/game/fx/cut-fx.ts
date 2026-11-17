@@ -18,6 +18,7 @@ import { CutPanic } from './cut-panic';
 import { CutStrands, type StrandHooks } from './cut-strands';
 import { bakeCutTextures } from './cut-textures';
 import { cutSpinDegPerSec } from './cut-timeline';
+import { traceSpot } from './cut-trace-place';
 import { chooseCutVariant, forcedCutVariant, type CutPlan, type CutVariant } from './cut-variant';
 import type { FallingPieces } from './falling-piece';
 
@@ -62,6 +63,8 @@ interface Slot {
   crumbs: (() => void) | null;
   panic: boolean;
   trace: boolean;
+  /** The cut layer is a plain one (a wavy glaze edge), not a creature. */
+  plain: boolean;
   pieceWidth: number;
   faceShift: number;
   side: 1 | -1;
@@ -159,6 +162,7 @@ export class CutFx {
     slot.pieceWidth = cut.pieceWidth;
     slot.faceShift = 0;
     slot.trace = cut.plan.trace;
+    slot.plain = cut.look.kind === 'plain' && cut.creature === null;
     slot.side = cut.side;
     slot.layerNumber = cut.layerNumber;
     slot.layerWidth = cut.layerWidth;
@@ -175,6 +179,7 @@ export class CutFx {
         edgeX: cut.edgeX,
         y: cut.y,
         pieceWidth: cut.pieceWidth,
+        layerWidth: cut.layerWidth,
         driftSpeed: ramp.driftSpeed,
         glaze: cut.glaze,
         outline: strandOutline(cut.creature, cut.glaze),
@@ -254,6 +259,7 @@ export class CutFx {
       crumbs: null,
       panic: false,
       trace: false,
+      plain: true,
       pieceWidth: 0,
       faceShift: 0,
       side: 1,
@@ -293,11 +299,12 @@ export class CutFx {
   private leaveTrace(slot: Slot): void {
     if (!slot.hang) return;
     const { trace } = CUT_LOOK.strands;
+    const spot = traceSpot(slot.layerWidth, slot.side, slot.hangSize, slot.plain);
     layerMarks.addCut(slot.layerNumber, [
       {
         texture: slot.hang,
-        dx: slot.side * (slot.layerWidth / 2 - trace.insetPx),
-        dy: trace.y,
+        dx: spot.dx,
+        dy: spot.dy,
         originX: 0.5,
         originY: 0,
         width: slot.hangSize,

@@ -1,11 +1,9 @@
 import type { Rng } from '../../core/rng';
 import type { EffectLevel } from '../../data/effect-levels';
 import { BALANCE } from '../../data/balance';
-import { PLAIN_LAYER } from '../../data/plain-layers';
 import { TOPPER_SQUASH, type SquashBurst } from '../../data/topper-squash';
 import { DEG_TO_RAD, lerp } from '../../util/math';
-import { glazeCrestY } from '../objects/glaze-wave';
-import { layerBox } from '../objects/layer-draw';
+import { waveY, type GlazeWave } from '../objects/glaze-wave';
 import type { PopLaunch } from '../objects/topper-look';
 import type { ParticleState } from './particle-motion';
 
@@ -77,22 +75,58 @@ export interface StainSpot {
   angleDeg: number;
 }
 
+/** Scan step (px) of the places a stain may take and of the glaze edge over it. */
+const STAIN_STEP = 2;
+
 /**
  * The spot of a juice stain on a layer `width` wide whose face takes `faceHalf` each side of the
- * centre: on the side the topper stood (`topperDx`, offset from the centre), clear of the face and
- * of the layer's side, under the lowest point of the glaze edge. `null` when there is no room.
+ * centre: on the side of the layer below its glaze (the wavy edge `wave`), as near to where the
+ * topper stood (`topperDx`, offset from the centre) as it can be, clear of the face, of the
+ * layer's side and of the columns of its growing drips (`drips`: their x, `dripHalf` half the
+ * width of their round ends), so it never caps a drip. The other side is tried when the topper's
+ * has no room; `null` when neither has.
  */
-export function stainSpot(width: number, faceHalf: number, topperDx: number): StainSpot | null {
+export function stainSpot(
+  width: number,
+  faceHalf: number,
+  topperDx: number,
+  wave: GlazeWave,
+  drips: readonly number[] = [],
+  dripHalf = 0,
+): StainSpot | null {
   const { stain } = TOPPER_SQUASH;
   const half = stain.width / 2;
   const near = faceHalf + stain.faceGapPx + half;
   const far = width / 2 - stain.edgeGapPx - half;
   if (far < near) return null;
-  const side = topperDx < 0 ? -1 : 1;
-  const reach = Math.min(Math.max(Math.abs(topperDx), near), far);
-  const box = layerBox(width);
-  const deepest = glazeCrestY(box) + PLAIN_LAYER.glaze.tongueShare * BALANCE.layer.height;
-  return { dx: side * reach, dy: deepest + stain.belowGlazePx, angleDeg: side * stain.tiltDeg };
+  const clear = (x: number): boolean =>
+    drips.every((d) => Math.abs(d - x) >= half + dripHalf + stain.dripGapPx);
+  const first = topperDx < 0 ? -1 : 1;
+  const wanted = Math.min(Math.max(Math.abs(topperDx), near), far);
+  for (const side of [first, -first]) {
+    for (let k = 0; k <= far - near + STAIN_STEP; k += STAIN_STEP) {
+      for (const reach of [wanted - k, wanted + k]) {
+        if (reach < near || reach > far || !clear(side * reach)) continue;
+        return stainAt(wave, side * reach, side);
+      }
+    }
+  }
+  return null;
+}
+
+/** The stain at `x`: its top just below the lowest point of the glaze edge over it. */
+function stainAt(wave: GlazeWave, x: number, side: number): StainSpot {
+  const { stain } = TOPPER_SQUASH;
+  const half = stain.width / 2;
+  let edge = wave.crestY;
+  for (let at = x - half; at <= x + half + STAIN_STEP; at += STAIN_STEP) {
+    edge = Math.max(edge, waveY(wave, Math.min(at, x + half)));
+  }
+  return {
+    dx: x,
+    dy: edge + stain.belowGlazePx + stain.originY * stain.height,
+    angleDeg: side * stain.tiltDeg,
+  };
 }
 
 /**

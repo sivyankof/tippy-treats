@@ -6,7 +6,13 @@ import { pickInt } from '../../util/math';
 import { DEPTH } from '../depth';
 import { effectsMode } from '../effects-mode';
 import { FX_TEXTURES } from './fx-textures';
-import { confettiRain, edgeBurst, lineBurst, type ParticleStyle } from './particle-motion';
+import {
+  confettiRain,
+  edgeBurst,
+  lineBurst,
+  sideBurst,
+  type ParticleStyle,
+} from './particle-motion';
 import type { Particles } from './particles';
 
 const DUST_STYLE: ParticleStyle = {
@@ -28,14 +34,23 @@ export const CONFETTI_TINTS = [
 export class ParticleFx {
   constructor(private readonly particles: Particles) {}
 
-  /** Puffs of dust from under both edges of a layer of `width` landed at (x, bottomY). */
-  dust(x: number, bottomY: number, width: number): void {
-    const count = pickInt(ANIM.dust.perSide) * 2;
-    this.particles.emit(count, (n) => edgeBurst(x, bottomY, width, n, DUST_STYLE), {
-      texture: FX_TEXTURES.circle,
-      tints: DUST_TINTS,
-      depth: DEPTH.particles,
-    });
+  /**
+   * Puffs of dust from under both edges of a layer of `width` landed at (x, bottomY); with
+   * `onlySide`, from under that edge only (a cut layer: the other edge is where the bitten-off
+   * piece hangs, and a puff over its corner would read as a bump on it).
+   */
+  dust(x: number, bottomY: number, width: number, onlySide: 1 | -1 | null = null): void {
+    const perSide = pickInt(ANIM.dust.perSide);
+    const look = { texture: FX_TEXTURES.circle, tints: DUST_TINTS, depth: DEPTH.particles };
+    if (onlySide !== null) {
+      this.particles.emit(
+        perSide,
+        (n) => sideBurst(x, bottomY, width, onlySide, n, DUST_STYLE),
+        look,
+      );
+      return;
+    }
+    this.particles.emit(perSide * 2, (n) => edgeBurst(x, bottomY, width, n, DUST_STYLE), look);
   }
 
   /** Crumbs along the cut line at `cutX`, flying towards the bitten-off side (1 right, -1 left). */
@@ -61,14 +76,22 @@ export class ParticleFx {
 
   /**
    * Bits of the decorations of a bitten-off part: they fly out of the glaze band (`centerY`,
-   * `height`) at the cut line towards the bitten-off side. None in "Fewer effects".
+   * `height`) at the cut line towards the bitten-off side. None in "Fewer effects". A cut
+   * with strands passes the depth under them (`DEPTH.cutCrumbs`), like its crumbs.
    */
-  decorBits(cutX: number, centerY: number, height: number, side: 1 | -1, tints: number[]): void {
+  decorBits(
+    cutX: number,
+    centerY: number,
+    height: number,
+    side: 1 | -1,
+    tints: number[],
+    depth: number = DEPTH.particles,
+  ): void {
     if (effectsMode.reduced || tints.length === 0) return;
     this.particles.emit(
       pickInt(PLAIN_LAYER.decor.bits.count),
       (n) => lineBurst(cutX, centerY, height, side, n, ANIM.bite.crumbStyle),
-      { texture: FX_TEXTURES.crumb, tints, depth: DEPTH.particles },
+      { texture: FX_TEXTURES.crumb, tints, depth },
     );
   }
 

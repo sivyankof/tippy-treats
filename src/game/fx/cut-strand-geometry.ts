@@ -13,6 +13,8 @@ const FLOATS_PER_ROW = 4;
 const FACE_ROWS = 3;
 /** The most the end rows turn towards the cut face (radians). */
 const FACE_TURN = Math.PI / 4;
+/** Rows must be this many times farther apart than the turn moves their ends, or the turn fades. */
+const FACE_FOLD_MARGIN = 1.5;
 
 export type StrandTrait = (typeof S.traits)[number];
 
@@ -66,22 +68,78 @@ export function snapTimeMs(trait: StrandTrait): number {
 
 /**
  * Share of a snapped half that is left `u` (0..1) into the recoil: it flies back past its rest
- * length and settles there (`backOut`), then goes into the glaze.
+ * share `rest` and settles there (`backOut`), then goes into the glaze.
  */
-export function recoilLength(u: number): number {
-  const { restShare, springU } = S.recoil;
-  if (u < springU) return restShare + (1 - restShare) * (1 - backOut(u / springU));
-  return restShare * (1 - smoothstep((u - springU) / (1 - springU)));
+export function recoilLength(u: number, rest: number = S.recoil.restShare): number {
+  const { springU } = S.recoil;
+  if (u < springU) return rest + (1 - rest) * (1 - backOut(u / springU));
+  return rest * (1 - smoothstep((u - springU) / (1 - springU)));
 }
 
-/** Upward whip of the free end `u` into the recoil (px): a damped bounce, none at the start and end. */
-export function recoilWhip(u: number): number {
-  return S.recoil.whipPx * Math.sin(Math.PI * clamp01(u / S.recoil.springU)) * (1 - u);
+/** The rest share of a snapped half `length` px long: a short round stub, never longer than `restPx`. */
+export function recoilRest(length: number): number {
+  const { restShare, restPx } = S.recoil;
+  return length > 0 ? Math.min(restShare, restPx / length) : restShare;
+}
+
+/**
+ * The part of a snapped half that is left, `length` (share) of it from its anchor: the same curve
+ * cut short, so the half retracts along the path it had and never folds. `control` and `end` are
+ * the half's control point and break point from its anchor; the shortened ones are written into
+ * `outControl` and `outEnd` (also from the anchor).
+ */
+export function trimHalf(
+  control: Vec,
+  end: Vec,
+  length: number,
+  outControl: Vec,
+  outEnd: Vec,
+): void {
+  const l = clamp01(length);
+  outEnd.x = 2 * control.x * l * (1 - l) + end.x * l * l;
+  outEnd.y = 2 * control.y * l * (1 - l) + end.y * l * l;
+  outControl.x = control.x * l;
+  outControl.y = control.y * l;
+}
+
+/** Thickness of what is left of a snapped half at share `s` of it, `length` of the half left: the profile it had, the free end rounding off where it was cut. */
+export function trimmedThickness(s: number, length: number, end: number, mid: number): number {
+  return profileThickness(clamp01(s) * clamp01(length), end, mid);
+}
+
+/**
+ * Height to width of a falling drop `ageMs` after it fell off moving at `speed` (px/s): round as
+ * the bead it was, drawn out to a teardrop over `tallMs`, stretched along the speed.
+ */
+export function dropTallness(ageMs: number, speed: number): number {
+  const { tall, tallMs, maxStretch, stretchPerSpeed } = S.drops;
+  const stretch = Math.min(maxStretch, speed * stretchPerSpeed);
+  return lerp(1, tall, smoothstep(ageMs / tallMs)) * (1 + stretch);
+}
+
+/**
+ * Extra sideways speed of the `order`-th drop of a cut (0 for the first, px/s, outwards): drops of
+ * neighbouring strands keep apart (see `S.drops.laneSpeed`).
+ */
+export function dropLaneSpeed(order: number): number {
+  return S.drops.laneSpeed * order;
 }
 
 /** How thick the snapped half stays at its anchor `u` into the recoil (share): `keep` is what is left at the end. */
 export function recoilAnchorScale(u: number, keep: number): number {
   return lerp(1, keep, smoothstep((u - S.recoil.springU) / (1 - S.recoil.springU)));
+}
+
+/**
+ * How far in from the outer side of a layer (corner `radius`) a strand holds on at `fromTop` px
+ * below its top edge: `inset` in on a straight side, more where the top corner rounds off, so the
+ * end always sits on the outline and never hangs beside the corner.
+ */
+export function sideInset(radius: number, inset: number, fromTop: number): number {
+  if (radius <= inset || fromTop >= radius) return inset;
+  const r = radius - inset;
+  const dy = radius - Math.max(fromTop, inset);
+  return radius - Math.sqrt(Math.max(0, r * r - dy * dy));
 }
 
 /** The quadratic curve through `a` and `b` with control `c`, at `t`. */
@@ -189,13 +247,14 @@ export function writeHalf(
   cap = shape.capped,
 ): void {
   const n = S.rows;
+  const turn = faceTurnShare(shape, half(shape.w[0]!));
   for (let i = 0; i < n; i++) {
     const w = shape.w[i]!;
     let nx = -shape.ty[i]!;
     let ny = shape.tx[i]!;
     // The first rows turn towards the cut face, so the end grows out of it flush; at most
     // `FACE_TURN`, or a strand leaving the face steeply would get rows along itself (spikes).
-    const face = i < FACE_ROWS ? 1 - i / FACE_ROWS : 0;
+    const face = i < FACE_ROWS ? (1 - i / FACE_ROWS) * turn : 0;
     if (face > 0) {
       const sign = nx * shape.faceX + ny * shape.faceY < 0 ? -1 : 1;
       const fx = shape.faceX * sign;
@@ -220,6 +279,18 @@ export function writeHalf(
     out[at + 3] = cy + ny * h;
     if (i === n - 1) writeCap(shape, out, cap ? h : 0, cx, cy, nx, ny);
   }
+}
+
+/**
+ * How much of the turn towards the cut face a strip may take (0..1): a short, thick half (a snapped
+ * end going back into the glaze) has its rows so close that turning them would cross them over
+ * (a spike), so the turn fades out as the rows get closer than the turn moves their ends.
+ */
+export function faceTurnShare(shape: HalfShape, halfWidth: number): number {
+  const step = shape.length() / (S.rows - 1);
+  const sweep = (FACE_TURN / FACE_ROWS) * Math.max(0, halfWidth);
+  if (sweep <= 0) return 1;
+  return clamp01(step / (sweep * FACE_FOLD_MARGIN));
 }
 
 /** The round cap past the last row (`cx`, `cy` its centre, `h` its half width, (nx, ny) across it). */

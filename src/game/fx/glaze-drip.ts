@@ -1,5 +1,8 @@
 import * as Phaser from 'phaser';
 import { ANIM } from '../../data/anim';
+import { BALANCE } from '../../data/balance';
+import type { LayerView } from '../objects/layer-view';
+import { squashedY } from './cut-trace-place';
 import { DEPTH } from '../depth';
 import { easeFn } from './ease';
 import { FX_TEXTURES } from './fx-textures';
@@ -9,7 +12,21 @@ const dripEase = easeFn(ANIM.bite.dripEase);
 
 interface Drip extends PoolEntry<Phaser.GameObjects.Image> {
   startY: number;
+  hold: DripHold | null;
 }
+
+/**
+ * The layer a drop runs down: it rides the layer's sway and landing squash. `dx` is the drop's
+ * offset from the layer centre and `up` its top's height above the layer's bottom edge, both as
+ * the layer stands at rest.
+ */
+export interface DripHold {
+  view: () => LayerView | null;
+  dx: number;
+  up: number;
+}
+
+const HALF_LAYER = BALANCE.layer.height / 2;
 
 /** Pooled glaze drops that run down a bitten edge and fade. */
 export class GlazeDrip {
@@ -22,16 +39,29 @@ export class GlazeDrip {
     );
   }
 
-  /** Starts a drop with its top at (x, y), tinted with the layer glaze colour. */
-  spawn(x: number, y: number, color: number): void {
+  /** Starts a drop with its top at (x, y), tinted with the layer glaze colour; with `hold` it rides that layer. */
+  spawn(x: number, y: number, color: number, hold: DripHold | null = null): void {
     const item = this.pool.take();
     item.setPosition(x, y).setTint(color).setAlpha(1).setVisible(true);
-    this.pool.add({ item, startY: y, ageMs: 0, lifeMs: ANIM.bite.dripMs });
+    const drip: Drip = { item, startY: y, hold, ageMs: 0, lifeMs: ANIM.bite.dripMs };
+    this.pool.add(drip);
+    // In place at once: a squashed layer never shows the drop above it, not even for a frame.
+    this.place(drip, 0);
   }
 
   update(dtMs: number): void {
-    this.pool.update(dtMs, (drip, progress) => {
-      drip.item.setY(drip.startY + ANIM.bite.dripSlide * dripEase(progress)).setAlpha(1 - progress);
-    });
+    this.pool.update(dtMs, (drip, progress) => this.place(drip, progress));
+  }
+
+  private place(drip: Drip, progress: number): void {
+    const slide = ANIM.bite.dripSlide * dripEase(progress);
+    const view = drip.hold?.view() ?? null;
+    if (drip.hold && view) {
+      const top = squashedY(view.y + HALF_LAYER, drip.hold.up, view.innerScaleY);
+      drip.item.setPosition(view.x + drip.hold.dx * view.innerScaleX, top + slide);
+    } else {
+      drip.item.setY(drip.startY + slide);
+    }
+    drip.item.setAlpha(1 - progress);
   }
 }
