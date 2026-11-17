@@ -12,6 +12,12 @@ export const SHARED_ATLAS = {
    */
   pageWidth: 4096,
   pageHeight: 4096,
+  /**
+   * A run opens the next page while it loads (a long frame anyway) when the shelves of the last
+   * page are filled past this share of its height. A page made mid-run, by a picture that no
+   * longer fits, cost a worst frame of 60-80 ms on a tall tower.
+   */
+  sparePageAt: 0.8,
   /** Height of the pages on a device whose GPU cannot make a `pageHeight` page (too small a maximum texture size, or the page failed). */
   fallbackPageHeight: 2048,
   /** A WebGL context lost within this many ms after the big page was made counts against it: the pages are rebuilt at the fallback height. */
