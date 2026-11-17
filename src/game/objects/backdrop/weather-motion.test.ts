@@ -6,6 +6,7 @@ import {
   bankPuffs,
   flashEnvelope,
   nextBoltAt,
+  rainDropsShown,
   particleFade,
   wrapRange,
 } from './weather-motion';
@@ -67,5 +68,20 @@ describe('boltEnd', () => {
   it('leaves a bolt that is clear sideways alone and refuses one over a plate', () => {
     expect(boltEnd(300, 40, 30, 250, plates, 40)).toBe(250);
     expect(boltEnd(100, 40, 30, 250, plates, 40)).toBeNull();
+  });
+});
+
+describe('particle limit', () => {
+  it('keeps the raindrops and the splashes within the limit of every effects level', () => {
+    const { particleCount, splash, rain, storm } = WEATHER_LOOK;
+    for (const level of ['full', 'lite', 'minimal'] as const) {
+      for (const pool of [rain.count, storm.count]) {
+        expect(rainDropsShown(pool, level) + splash.maxShown[level]).toBeLessThanOrEqual(
+          particleCount[level],
+        );
+      }
+    }
+    expect(rainDropsShown(rain.count, 'full')).toBe(37);
+    expect(splash.max).toBeLessThanOrEqual(splash.maxShown.full);
   });
 });

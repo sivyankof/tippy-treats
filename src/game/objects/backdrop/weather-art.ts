@@ -428,16 +428,20 @@ function bakeBankFlash(scene: Phaser.Scene, key: string, side: number): void {
         if (d >= 1) continue;
         // Depth inside the bank: the deepest of the puffs (the top strip counts as the sky-side edge).
         let depth = x >= b.stripFrom && x <= b.stripTo && y < b.topStripPx ? y : -Infinity;
+        let front = 0;
         for (const p of puffs) {
           const dx = x + 0.5 - p.x;
           const dy = y + 0.5 - p.y;
           if (Math.abs(dx) > p.r || Math.abs(dy) > p.r) continue;
-          depth = Math.max(depth, p.r - Math.hypot(dx, dy));
+          const inside = p.r - Math.hypot(dx, dy);
+          depth = Math.max(depth, inside);
+          if (inside > 0) front = Math.max(front, p.row);
         }
         if (depth <= 0) continue;
         const patch = 0.5 + 0.5 * Math.cos(Math.PI * d);
         const rim = Math.exp(-depth / b.flashReachPx);
-        const a = patch * (b.flashCoreShare + (1 - b.flashCoreShare) * rim);
+        const a =
+          patch * (b.flashCoreShare + (1 - b.flashCoreShare) * rim) * (b.flashRowShare[front] ?? 1);
         seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0;
         const i = (y * b.width + x) * 4;
         px[i] = rgb[0] ?? 255;
