@@ -1,0 +1,192 @@
+import type { StartPlaceId } from './start-places';
+import type { WeatherId } from './weather';
+
+/** What is seen through a window for each weather (docs/06, section 5, «Погода»). Colours are muted: the tower is the brightest thing. */
+export interface WindowSky {
+  top: number;
+  bottom: number;
+  /** Cloud colour; `null` for a sky without clouds (night). */
+  cloud: number | null;
+  /** A bigger, lower cloud bank that fills the top of the glass (rain, storm). */
+  heavy: boolean;
+  moon: boolean;
+  stars: boolean;
+}
+
+export const WINDOW_SKY: Record<WeatherId, WindowSky> = {
+  clear: {
+    top: 0x9ed6f7,
+    bottom: 0xe6f6fc,
+    cloud: 0xffffff,
+    heavy: false,
+    moon: false,
+    stars: false,
+  },
+  sunset: {
+    top: 0xee9fb4,
+    bottom: 0xffd3a6,
+    cloud: 0xffe6d6,
+    heavy: false,
+    moon: false,
+    stars: false,
+  },
+  night: { top: 0x232b5e, bottom: 0x464e98, cloud: null, heavy: false, moon: true, stars: true },
+  rain: {
+    top: 0x8d9cb0,
+    bottom: 0xc4cdd9,
+    cloud: 0x76849a,
+    heavy: true,
+    moon: false,
+    stars: false,
+  },
+  snow: {
+    top: 0xc9cae0,
+    bottom: 0xeeeff8,
+    cloud: 0xffffff,
+    heavy: false,
+    moon: false,
+    stars: false,
+  },
+  leaves: {
+    top: 0xf0c286,
+    bottom: 0xffe7bb,
+    cloud: 0xfff3de,
+    heavy: false,
+    moon: false,
+    stars: false,
+  },
+  storm: {
+    top: 0x4c5469,
+    bottom: 0x747e92,
+    cloud: 0x3a4153,
+    heavy: true,
+    moon: false,
+    stars: false,
+  },
+};
+
+/** The street of the Showcase zone for each weather: buildings, their lit windows and the pane frame. */
+export interface StreetLook {
+  building: number;
+  buildingWindow: number;
+  frame: number;
+}
+
+export const STREET_LOOK: Record<WeatherId, StreetLook> = {
+  clear: { building: 0xb4daf3, buildingWindow: 0xe9f7ff, frame: 0xffffff },
+  sunset: { building: 0xe6aebd, buildingWindow: 0xfff0d2, frame: 0xfff3ee },
+  night: { building: 0x323a7c, buildingWindow: 0xffd98c, frame: 0x9aa2d2 },
+  rain: { building: 0x9fadbf, buildingWindow: 0xdfe6ee, frame: 0xe8edf3 },
+  snow: { building: 0xd3d4e6, buildingWindow: 0xf6f6fc, frame: 0xffffff },
+  leaves: { building: 0xe9bd8f, buildingWindow: 0xfff0d2, frame: 0xfff6ea },
+  storm: { building: 0x5c657d, buildingWindow: 0xaab4c7, frame: 0xc3cad8 },
+};
+
+/** Sizes of the baked window pictures; the canvas holds the frame, the sill and (kitchen) the valance. */
+export const WINDOW_LOOK = {
+  width: 180,
+  height: 250,
+  /** Glass inside the canvas. */
+  glass: { x: 30, y: 36, w: 120, h: 172 },
+  /** Centre of the window as shares of the screen; the offset is in logical px. */
+  kitchen: { at: { x: 1, y: 0.54 }, offset: { x: -104, y: 0 } },
+  shop: { at: { x: 0, y: 0.52 }, offset: { x: 104, y: 0 } },
+  colors: {
+    kitchen: {
+      frame: 0xd9a070,
+      valance: 0xfff0e0,
+      valanceStripe: 0xf6b8a0,
+    },
+    shop: {
+      frame: 0xf4a3bd,
+      ring: 0xfff1e6,
+    },
+  },
+  /** Slanted bands of light on the glass: x, width, lean (px) and alpha. */
+  glints: [
+    { x: 0.2, w: 0.14, lean: -0.22, alpha: 0.2 },
+    { x: 0.55, w: 0.07, lean: -0.22, alpha: 0.16 },
+  ],
+} as const;
+
+/** What moves on the glass: drops, flakes, a leaf; counts are per picture. */
+export interface GlassWeather {
+  item: 'drop' | 'flake' | 'leaf';
+  /** On a window of a start place. */
+  window: number;
+  /** Across the Showcase panes (they sit in two bands at the sides of the tower). */
+  showcase: number;
+  periodMs: readonly [number, number];
+}
+
+export const GLASS_WEATHER: Partial<Record<WeatherId, GlassWeather>> = {
+  rain: { item: 'drop', window: 5, showcase: 7, periodMs: [11000, 17000] },
+  storm: { item: 'drop', window: 8, showcase: 10, periodMs: [7000, 11000] },
+  snow: { item: 'flake', window: 7, showcase: 9, periodMs: [12000, 19000] },
+  leaves: { item: 'leaf', window: 2, showcase: 3, periodMs: [15000, 21000] },
+};
+
+/** The pictures that move on the glass, all on the shared atlas (one key per kind, baked for the weather of the run). */
+export const GLASS_TEX = {
+  drop: 'bd_win_drop',
+  flake: 'bd_win_flake',
+  leaf: 'bd_win_leaf',
+} as const;
+
+export const GLASS_LOOK = {
+  drop: { w: 16, h: 26, color: 0xdbeaf7, dark: 0x7d93ad },
+  flake: { size: 18 },
+  leaf: { w: 38, h: 26, color: 0xffffff, dark: 0x8a6a58, tints: [0xe58a3c, 0xd2543a, 0xe9b43c] },
+  /** Share of the cycle over which an item fades in and out. */
+  fadeShare: 0.1,
+  /** The sway of a flake or a leaf: share of the glass width, and its period (ms). */
+  sway: { flake: { share: 0.07, ms: 3600 }, leaf: { share: 0.16, ms: 4200 } },
+  /** Items keep this share of the glass away from its edges. */
+  margin: 0.1,
+  /** Showcase: items fade this far (px) before the clear band and the HUD floor. */
+  bandFadePx: 40,
+  /** Showcase: the two bands (logical px from each screen edge to the near and far side) and the lowest share of the height. */
+  /** The things on the wide Showcase panes are drawn this much bigger than on a window. */
+  showcaseSize: 1.6,
+  showcaseBands: { near: 24, far: 190, lowest: 0.86 },
+} as const;
+
+/** Keys of the baked window pictures, one per place and weather of the run. */
+export function windowKey(place: StartPlaceId, weather: WeatherId): string {
+  return `bd_win_${place}_${weather}`;
+}
+
+/** The shop of the start place (docs/06, «Места старта»): pink-cream palette, striped awning, sweets on the shelves. */
+export const SHOP_COLORS = {
+  skyTop: 0xffe8ee,
+  skyBottom: 0xffd5e0,
+  stripe: 0xfff4e8,
+  ring: 0xf3a8c0,
+  shelf: 0xe8b89a,
+  awningPink: 0xf6a3bb,
+  awningCream: 0xfff1e3,
+  silhouette: 0xeaa8bd,
+  sweets: {
+    macaron: [0xf7a8c4, 0xc9b4f0, 0xa8dcc8, 0xffd48a],
+    cream: 0xfff3e6,
+    candy: [0xff9db8, 0x9edcc0, 0xffd77a],
+    cake: 0xf3c9a0,
+    glaze: 0xffb6cb,
+  },
+} as const;
+
+export const SHOP_TEX = {
+  wall: 'bd_shop_wall',
+  lattice: 'bd_shop_lattice',
+  shelves: 'bd_shop_shelves',
+  stands: 'bd_shop_stands',
+  awning: 'bd_win_shop_awning',
+  sky: 'bd_sky_shop',
+} as const;
+
+export const SHOP_LOOK = {
+  tile: 512,
+  awning: { height: 112, stripe: 64 },
+  /** Alpha of the wash that tints the far silhouettes of the wall pink. */
+  farWash: 0.72,
+} as const;

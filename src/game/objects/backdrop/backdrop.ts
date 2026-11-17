@@ -19,6 +19,7 @@ import { kitchenArt } from './kitchen-zone';
 import type { GuestSource } from './guest-source';
 import type { FrameCtx } from './life';
 import { roofArt } from './roof-zone';
+import { shopArt } from './shop-zone';
 import { showcaseArt } from './showcase-zone';
 import { spaceArt } from './space-zone';
 import { starsArt } from './stars-zone';
@@ -46,7 +47,7 @@ const ZONE_ART: Record<ZoneId, ZoneArt> = {
 /** The art of zone 1 for each start place; a new place is one entry here plus its art file. */
 const PLACE_ART: Record<StartPlaceId, ZoneArt> = {
   kitchen: kitchenArt,
-  shop: kitchenArt,
+  shop: shopArt,
 };
 
 function zoneIdOf(index: number): ZoneId {

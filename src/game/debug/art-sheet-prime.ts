@@ -18,6 +18,9 @@ import { bakeSharedArt } from '../objects/backdrop/art-kit';
 import { bakeSpaceVisitors } from '../objects/backdrop/space-visitor-art';
 import { bakeAllPlanets } from '../objects/backdrop/dessert-planets';
 import { bakeAllFarArt } from '../objects/backdrop/far-plane';
+import { kitchenArt } from '../objects/backdrop/kitchen-zone';
+import { shopArt } from '../objects/backdrop/shop-zone';
+import { showcaseArt } from '../objects/backdrop/showcase-zone';
 import { bakeMountains } from '../objects/backdrop/mountains';
 import { roofArt } from '../objects/backdrop/roof-zone';
 import { bakeWeatherArt } from '../objects/backdrop/weather-art';
@@ -58,6 +61,7 @@ const PRIME_STEPS: ReadonlyArray<(scene: Phaser.Scene) => void> = [
   // The night house layers of the Roof (lit windows).
   (scene) => roofArt.bake(scene, { lap: 1, weather: 'night', place: 'kitchen' }),
   bakeAllPlanets,
+  bakePlaceArt,
   bakeTowerSparkle,
   bakeHintTextures,
   bakeTongue,
@@ -76,6 +80,16 @@ const PRIME_STEPS: ReadonlyArray<(scene: Phaser.Scene) => void> = [
     for (const id of CREATURE_IDS) ensureSleepTexture(scene, id, ART_SHEET.sleepLayerWidth);
   },
 ];
+
+/** The pictures of the start places and the Showcase for a few weathers, so the sheet shows the sky colours, the glass items and both places. */
+function bakePlaceArt(scene: Phaser.Scene): void {
+  for (const weather of ['clear', 'rain', 'night', 'snow', 'leaves'] as const) {
+    const look = { lap: 1, weather, place: 'kitchen' } as const;
+    kitchenArt.bake(scene, look);
+    shopArt.bake(scene, { ...look, place: 'shop' });
+    showcaseArt.bake(scene, look);
+  }
+}
 
 /** Bakes every lazy picture of the game into the texture registry. */
 export function primeArtTextures(scene: Phaser.Scene): void {
