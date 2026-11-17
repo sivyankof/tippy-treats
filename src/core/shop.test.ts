@@ -43,19 +43,37 @@ describe('starter pack offer', () => {
 
   it('offers the pack in the shop from the start, without a timer before the first show', () => {
     expect(starterPackInShop(withRuns(0), T0 + 100 * MS_PER_DAY)).toBe(true);
-    expect(starterPackEnd(withRuns(0))).toBeNull();
+    expect(starterPackEnd(withRuns(0), T0)).toBeNull();
     expect(starterPackMsLeft(withRuns(0), T0)).toBeNull();
   });
 
   it('runs the window for a week from the first show on Home', () => {
     const shown = withRuns(12, { shop: shop(T0 + MS_PER_DAY) });
-    expect(starterPackEnd(shown)).toBe(T0 + MS_PER_DAY + WEEK);
+    expect(starterPackEnd(shown, T0 + 2 * MS_PER_DAY)).toBe(T0 + MS_PER_DAY + WEEK);
     expect(starterPackMsLeft(shown, T0 + 2 * MS_PER_DAY)).toBe(WEEK - MS_PER_DAY);
     expect(starterPackOnHome(shown, T0 + MS_PER_DAY + WEEK - 1)).toBe(true);
     expect(starterPackInShop(shown, T0 + MS_PER_DAY + WEEK - 1)).toBe(true);
     expect(starterPackOnHome(shown, T0 + MS_PER_DAY + WEEK)).toBe(false);
     expect(starterPackInShop(shown, T0 + MS_PER_DAY + WEEK)).toBe(false);
     expect(starterPackMsLeft(shown, T0 + 100 * MS_PER_DAY)).toBe(0);
+  });
+
+  it('never shows more than a week left when the clock was set back', () => {
+    const shown = withRuns(12, { shop: shop(T0 + 3 * MS_PER_DAY) });
+    // Now is before the first show: the window counts as started now, not as longer.
+    expect(starterPackMsLeft(shown, T0)).toBe(WEEK);
+    expect(starterPackEnd(shown, T0)).toBe(T0 + WEEK);
+    expect(starterPackInShop(shown, T0)).toBe(true);
+    // A saved end time far ahead cannot show more than a week either.
+    const far = withRuns(10, { shop: shop(0, T0 + 30 * MS_PER_DAY) });
+    expect(starterPackMsLeft(far, T0)).toBe(WEEK);
+  });
+
+  it('keeps counting down when the clock moves forward', () => {
+    const shown = withRuns(12, { shop: shop(T0) });
+    expect(starterPackMsLeft(shown, T0 + 3 * MS_PER_DAY)).toBe(WEEK - 3 * MS_PER_DAY);
+    expect(starterPackMsLeft(shown, T0 + 30 * MS_PER_DAY)).toBe(0);
+    expect(starterPackInShop(shown, T0 + 30 * MS_PER_DAY)).toBe(false);
   });
 
   it('is gone once bought, in the shop and on Home', () => {
@@ -72,7 +90,7 @@ describe('starter pack offer', () => {
 
   it('lets a saved end time override the first show', () => {
     const s = withRuns(10, { shop: shop(0, T0 + 5) });
-    expect(starterPackEnd(s)).toBe(T0 + 5);
+    expect(starterPackEnd(s, T0)).toBe(T0 + 5);
     expect(starterPackInShop(s, T0 + 6)).toBe(false);
     expect(starterPackMsLeft(s, T0)).toBe(5);
   });

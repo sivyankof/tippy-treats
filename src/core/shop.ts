@@ -9,17 +9,20 @@ import type { Save } from './save/schema';
 
 /**
  * When the starter pack stops being offered: `shop.starterPackUntil` when set, else a week after
- * its first show on Home; null while the window has not started (Home has not shown it yet).
+ * its first show on Home; null while the window has not started (Home has not shown it yet). A first
+ * show in the future of `nowMs` (the clock was set back) counts as shown now, so the window never
+ * reaches further than a full week from now.
  */
-export function starterPackEnd(save: Pick<Save, 'shop'>): number | null {
+export function starterPackEnd(save: Pick<Save, 'shop'>, nowMs: number): number | null {
   const { starterPackUntil, starterPackShownAt } = save.shop;
   if (starterPackUntil > 0) return starterPackUntil;
-  return starterPackShownAt > 0 ? starterPackShownAt + SHOP.starterPackDays * MS_PER_DAY : null;
+  if (starterPackShownAt <= 0) return null;
+  return Math.min(starterPackShownAt, nowMs) + SHOP.starterPackDays * MS_PER_DAY;
 }
 
 /** The shop offers the pack until it is bought or its window is over, whatever the run count. */
 export function starterPackInShop(save: Pick<Save, 'shop' | 'purchases'>, nowMs: number): boolean {
-  const end = starterPackEnd(save);
+  const end = starterPackEnd(save, nowMs);
   return !save.purchases.starterPack && (end === null || nowMs < end);
 }
 
@@ -31,10 +34,11 @@ export function starterPackOnHome(
   return pastQuietRuns(save.stats.runs) && starterPackInShop(save, nowMs);
 }
 
-/** Milliseconds left of the offer, 0 once it is over; null while the window has not started. */
+/** Milliseconds left of the offer (0 once it is over, never more than the window); null while the window has not started. */
 export function starterPackMsLeft(save: Pick<Save, 'shop'>, nowMs: number): number | null {
-  const end = starterPackEnd(save);
-  return end === null ? null : Math.max(0, end - nowMs);
+  const end = starterPackEnd(save, nowMs);
+  if (end === null) return null;
+  return Math.min(Math.max(0, end - nowMs), SHOP.starterPackDays * MS_PER_DAY);
 }
 
 /** The save with the first show of the pack on Home kept; the same save when it was kept before. */
