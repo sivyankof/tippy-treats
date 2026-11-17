@@ -12,7 +12,7 @@ const NONE = 0xffffff;
 
 /** Texture keys of the weather pictures (all under `fx_`, so they live on the shared atlas). */
 export const WEATHER_TEX = {
-  flake: ['fx_wx_flake0', 'fx_wx_flake1', 'fx_wx_flake2'],
+  flake: ['fx_wx_flake0', 'fx_wx_flake1', 'fx_wx_flake2', 'fx_wx_flake3'],
   drop: 'fx_wx_drop',
   leaf: ['fx_wx_leaf_orange', 'fx_wx_leaf_red', 'fx_wx_leaf_yellow'],
   splash: 'fx_wx_splash',
@@ -204,7 +204,7 @@ export const WEATHER_LOOK = {
   keepOutFeatherPx: 40,
   endFeatherPx: 60,
   /** Share of the particles that start in the side strips (the tower hides the middle), and the strip width as share of the screen. */
-  sideBias: 0.75,
+  sideBias: 0.8,
   sideShare: 0.3,
 
   /** Motion and look of each kind of falling thing (px, px/s, ms). */
@@ -212,28 +212,28 @@ export const WEATHER_LOOK = {
     frames: ['drop'],
     speed: [1500, 1900],
     slant: 0.22,
-    alpha: [0.75, 1],
-    scale: [1, 1.3],
-    count: 36,
+    alpha: [0.6, 0.75],
+    scale: [0.85, 1.1],
+    count: 40,
   },
   storm: {
     frames: ['drop'],
     speed: [1900, 2400],
     slant: 0.38,
-    alpha: [0.8, 1],
-    scale: [1.1, 1.45],
-    count: 36,
+    alpha: [0.6, 0.75],
+    scale: [0.95, 1.15],
+    count: 40,
   },
   snow: {
     frames: ['flake'],
     speed: [90, 190],
     swayPx: [22, 60],
     swayMs: [3200, 6500],
-    alpha: [0.85, 1],
+    alpha: [0.9, 1],
     scale: [1, 1],
-    /** Cumulative chance of the small and the middle flake size; the rest are big. */
-    sizeCuts: [0.5, 0.85] as readonly [number, number],
-    count: 34,
+    /** Cumulative chance of each flake picture but the last (small disc, middle disc, soft disc); the rest are the six-ray flake. */
+    sizeCuts: [0.3, 0.6, 0.88] as readonly number[],
+    count: 40,
   },
   leaves: {
     frames: ['leaf'],
@@ -251,7 +251,7 @@ export const WEATHER_LOOK = {
     count: 26,
   },
 
-  /** Rain and storm cloud bank at the top of the sky. */
+  /** Rain and storm cloud bank at the top of the sky: three rows of round puffs, the front ones over the back ones. */
   bank: {
     /** Picture size, and the scale it is shown at (it is wider than the screen so it can drift). */
     width: 1024,
@@ -262,31 +262,63 @@ export const WEATHER_LOOK = {
     /** Colours of the bank: close to the sky at the top (low contrast), the storm a little darker. */
     colorRain: 0x6e7890,
     colorStorm: 0x4a5266,
-    /** A flash lights only a patch of the cloud around the bolt: a pale lobe of this colour (the bank colour mixed with it by `flashMix`), this wide (px), this share of the cloud's height tall, centred this share down. */
-    flashColor: 0xdde6ff,
-    flashMix: 0.5,
-    flashWidthPx: 240,
-    flashHeightShare: 0.7,
-    flashCentreShare: 0.42,
-    /** Flat band from the top edge down to this y (picture px); every lobe reaches up into it, so the figure is one piece. */
-    bodyBottom: 100,
-    /** Width and height of a lobe's ellipse as multiples of its radius. */
-    lobeWide: 3.1,
-    lobeTall: 1.8,
-    /** Lobes of the lower edge (picture px): centre x, centre y, radius. The middle ones stay high, behind the score. */
-    lumps: [
-      [40, 140, 66],
-      [130, 150, 70],
-      [220, 128, 62],
-      [310, 92, 52],
-      [400, 78, 46],
-      [500, 70, 44],
-      [600, 78, 46],
-      [690, 94, 52],
-      [790, 128, 62],
-      [880, 152, 72],
-      [975, 140, 66],
-    ] as ReadonlyArray<readonly [number, number, number]>,
+    /** The pale top of every puff (the bank colour mixed with this by `lightMix`): paler and colder in a storm. */
+    lightRain: 0xd2dcf2,
+    lightStorm: 0xa6b4e0,
+    lightMix: 0.62,
+    /** Tone shifts (-1..1 towards black / white): the back row is darker, the front row lighter; the lower rim of every puff is `bellyShade` darker. */
+    rowShade: [-0.1, 0, 0.06] as readonly [number, number, number],
+    bellyShade: -0.22,
+    /** Outline of every puff (px) in a shade of the puff colour. */
+    outlinePx: 3.4,
+    /** Per row (the puffs of a row are drawn as one mass): a pale crescent this thick (px) lies along the top and a darker belly this thick along the bottom. */
+    topLightPx: 11,
+    bellyPx: 12,
+    /** A flat strip along the top edge that closes the gaps between the back puffs (picture px). */
+    topStripPx: 40,
+    /** In a storm the lower rows hang this much lower, as a share of the puff radius (times the row: 0 back, 0.5 middle, 1 front). */
+    stormHang: 0.3,
+    /**
+     * The puffs: row (0 back, 1 middle, 2 front), centre x, centre y, radius (picture px). The middle of the
+     * bank (behind the score) is a single low row of small puffs, so only its light top goes under the HUD; the
+     * sides are deep, with puffs of different sizes at different depths and no regular teeth.
+     */
+    puffs: [
+      [0, -20, 95, 80],
+      [0, 60, 70, 70],
+      [0, 150, 76, 74],
+      [0, 245, 56, 62],
+      [0, 330, 34, 52],
+      [0, 415, 10, 46],
+      [0, 500, 12, 48],
+      [0, 585, 8, 44],
+      [0, 665, 20, 50],
+      [0, 745, 50, 62],
+      [0, 830, 68, 70],
+      [0, 925, 60, 68],
+      [0, 1010, 92, 80],
+      [1, 35, 128, 64],
+      [1, 130, 120, 56],
+      [1, 222, 116, 56],
+      [1, 306, 86, 42],
+      [1, 730, 100, 50],
+      [1, 815, 114, 54],
+      [1, 905, 128, 64],
+      [1, 995, 128, 56],
+      [2, 60, 168, 58],
+      [2, 150, 156, 46],
+      [2, 235, 148, 50],
+      [2, 790, 134, 38],
+      [2, 865, 162, 58],
+      [2, 955, 158, 46],
+    ] as ReadonlyArray<readonly [number, number, number, number]>,
+    /** The flash: the same puffs lit from inside, warm white-yellow at the rim of every puff and faint towards its middle, no edge of its own. */
+    flashRim: 0xfff6d0,
+    flashCore: 0xffe08a,
+    flashRimAlpha: 0.95,
+    flashCoreAlpha: 0.2,
+    /** How far (px) the bright rim reaches into a puff mass: the glow falls off as exp(-depth / this). */
+    flashReachPx: 30,
   },
 
   /** Lightning in the cloud bank of a storm. */
@@ -296,27 +328,29 @@ export const WEATHER_LOOK = {
     flashMs: [120, 180],
     /** Share of a flash over which it rises to its peak; it falls over the rest. */
     riseShare: 0.2,
-    /** Alpha of the pale lump overlay at the peak. */
+    /** Alpha of the lit bank at the peak. */
     flashAlpha: 0.75,
-    /** The bolt stands in one of these x ranges (share of the screen width). */
+    /** The bolt stands in one of these x ranges (share of the screen width): between the pause button and the score, and between the score and the coins. */
     xRanges: [
-      [0.1, 0.26],
-      [0.74, 0.9],
+      [0.2, 0.28],
+      [0.71, 0.745],
     ] as ReadonlyArray<readonly [number, number]>,
-    /** Picture size, and the width of its rim and core strokes (picture px). */
-    width: 140,
-    height: 200,
-    rimPx: 34,
-    corePx: 22,
-    /** Inside the cloud: the bolt starts this share of the cloud's height at that x down, is at most this share of it long, and ends at least `endGapPx` above its lower edge. */
-    topShare: 0.22,
-    lengthShare: 0.6,
+    /** Picture size, and the width of its outline, glow and core strokes (picture px). */
+    width: 168,
+    height: 240,
+    rimPx: 26,
+    midPx: 17,
+    corePx: 8,
+    /** The bolt starts this share of the cloud's height down at that x, is this share of it long (so it may come out of the cloud's lower edge by a few percent of its length). */
+    topShare: 0.12,
+    lengthShare: 0.95,
+    /** Half the bolt's width for the HUD gap, as a share of its picture width times its scale. */
+    hudHalfShare: 0.25,
     /** A bolt shorter than this share of the picture height is not shown. */
     minLengthShare: 0.25,
-    endGapPx: 25,
     /** The cloud must be at least this tall (px) at the strike point, and the strike point is drawn up to this many times to clear the HUD. */
     minCloudPx: 150,
-    tries: 12,
+    tries: 16,
   },
 
   /** Stars and the crescent moon of the night (both stand in the sky, drawn over the four parallax layers). */

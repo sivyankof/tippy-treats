@@ -3,6 +3,7 @@ import type { Rng } from '../../../core/rng';
 import { WEATHER_LOOK, WEATHER_TEX } from '../../../data/weather-look';
 import { smoothstep } from '../../../util/math';
 import { DEPTH } from '../../depth';
+import { towerWeatherShown } from './weather-share';
 import type { EffectLevel } from '../../../data/effect-levels';
 
 const CAP = WEATHER_LOOK.cap;
@@ -60,7 +61,7 @@ export class WeatherTop {
   }
 
   update(top: TowerTop, timeMs: number, deltaMs: number, level: EffectLevel, share: number): void {
-    const show = top.count > 0 && !top.over && share > 0;
+    const show = towerWeatherShown(share, top.count, top.over);
     if (top.count !== this.lastCount) {
       // The first top builds up at once; a new top starts its cap from nothing.
       this.capAge = this.lastCount < 0 ? CAP.growMs : 0;

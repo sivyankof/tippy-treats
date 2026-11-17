@@ -20,6 +20,7 @@ import type { GuestSource } from '../objects/backdrop/guest-source';
 import { TowerGuest, type GuestContext } from '../objects/tower-guest';
 import { MasterFeed } from '../ui/master-caption-state';
 import type { CreatureId } from '../../data/creatures';
+import type { WeatherId } from '../../data/weather';
 import { TowerView } from '../objects/tower-view';
 import { AbilityFx } from './abilities/ability-fx';
 import { CameraKick } from './camera-kick';
@@ -112,7 +113,7 @@ export class RunFx {
   private resultsDelivered = false;
 
   /** `seed` is the run seed: the sparkles take their random draws from its cosmetic stream. */
-  constructor(scene: Phaser.Scene, trayTopY: number, seed: number) {
+  constructor(scene: Phaser.Scene, trayTopY: number, seed: number, weather: WeatherId) {
     this.sparkles = new TowerSparkles(scene, new Rng(seed).fork('sparkles'));
     this.tower = new TowerView(scene, trayTopY);
     this.flyingView = new FlyingLayerView(scene, this.tower);
@@ -122,7 +123,13 @@ export class RunFx {
     this.abilityFx = new AbilityFx(scene, this.tower, this.flyingView, this.landingFx);
     this.materialFx = new MaterialFx(this.tower, this.landingFx.particles);
     this.coinFx = new CoinFx(scene, this.tower, this.landingFx.particles);
-    this.flyingFx = new FlyingFx(scene, this.tower, this.flyingView, this.landingFx.particles);
+    this.flyingFx = new FlyingFx(
+      scene,
+      this.tower,
+      this.flyingView,
+      this.landingFx.particles,
+      weather,
+    );
     this.lapEdges = new LapEdges(scene, this.tower);
     this.recordMoment = new RecordMoment(
       scene,

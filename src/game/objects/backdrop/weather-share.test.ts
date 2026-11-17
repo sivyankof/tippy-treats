@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { WEATHER } from '../../../data/weather';
 import type { ZoneId } from '../../../data/zones';
-import { weatherShareOf } from './weather-share';
+import { towerWeatherShown, weatherShareOf, zoneShowsWeatherSky } from './weather-share';
 
 /** The share of a list of zones, with a zone's index in the list standing for it. */
 function shareOf(
@@ -52,5 +52,51 @@ describe('weatherShareOf', () => {
       { zone: 'clouds', alpha: 0.2 },
     ] as const;
     expect(shareOf('full', under)).toBeCloseTo(0.5);
+  });
+});
+
+describe('zones without weather', () => {
+  const none = (Object.keys(WEATHER.zoneView) as ZoneId[]).filter(
+    (zone) => WEATHER.zoneView[zone] === 'none',
+  );
+
+  it('are the Stars and Space zones', () => {
+    expect(none).toEqual(['stars', 'space']);
+  });
+
+  it('let no weather through at full strength: no particles, snow cap, splashes or lightning', () => {
+    for (const zone of none) {
+      const alone = [{ zone, alpha: 1 }] as const;
+      expect(shareOf('full', alone)).toBe(0);
+      expect(shareOf('window', alone)).toBe(0);
+      expect(towerWeatherShown(shareOf('full', alone), 40, false)).toBe(false);
+    }
+  });
+
+  it('have no cloud bank or bolt in the sky', () => {
+    for (const zone of none) expect(zoneShowsWeatherSky(zone)).toBe(false);
+    expect(zoneShowsWeatherSky('roof')).toBe(true);
+    expect(zoneShowsWeatherSky('clouds')).toBe(true);
+    expect(zoneShowsWeatherSky('kitchen')).toBe(false);
+  });
+
+  it('fade the tower pieces out with the Clouds zone when the Stars zone comes in', () => {
+    const fading = [
+      { zone: 'clouds', alpha: 0.4 },
+      { zone: 'stars', alpha: 0.6 },
+    ] as const;
+    expect(towerWeatherShown(shareOf('full', fading), 80, false)).toBe(true);
+    expect(shareOf('full', fading)).toBeCloseTo(0.4);
+    const gone = [
+      { zone: 'clouds', alpha: 0 },
+      { zone: 'stars', alpha: 1 },
+    ] as const;
+    expect(towerWeatherShown(shareOf('full', gone), 80, false)).toBe(false);
+  });
+
+  it('show no tower pieces when the tower is gone or over', () => {
+    expect(towerWeatherShown(1, 0, false)).toBe(false);
+    expect(towerWeatherShown(1, 10, true)).toBe(false);
+    expect(towerWeatherShown(1, 10, false)).toBe(true);
   });
 });

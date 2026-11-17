@@ -136,8 +136,8 @@ export class GameScene extends Phaser.Scene {
 
     const { width, height } = this.scale.gameSize;
     this.background = new Backdrop(this, TRAY_TOP_Y, width, height, this.sim.state, setup.look);
-    this.fx = new RunFx(this, TRAY_TOP_Y, this.seed);
     const look = setup.look;
+    this.fx = new RunFx(this, TRAY_TOP_Y, this.seed, look.weather);
     this.weather = RunWeather.needed(look.weather)
       ? new RunWeather(this, look.weather, this.seed, this.background, this.fx.tower)
       : null;

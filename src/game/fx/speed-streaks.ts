@@ -1,5 +1,6 @@
 import type * as Phaser from 'phaser';
 import { BALANCE } from '../../data/balance';
+import type { WeatherId } from '../../data/weather';
 import { RULE_ANIM } from '../../data/rule-anim';
 import { scatter } from '../objects/creature-art/primitives';
 import { FLYING_FX_DEPTH } from './flying-fx-depth';
@@ -17,7 +18,11 @@ export class SpeedStreaks {
   private readonly streaks: Phaser.GameObjects.Image[] = [];
   private burstAtMs = NEVER;
 
-  constructor(scene: Phaser.Scene) {
+  /** Colour of the roof wind streaks: the weather's own when it has one, else the plain slate. */
+  private readonly windTint: number;
+
+  constructor(scene: Phaser.Scene, weather: WeatherId) {
+    this.windTint = RULE_ANIM.colors.windStreakWeather[weather] ?? RULE_ANIM.colors.windStreak;
     createTreasureTextures(scene);
     for (let i = 0; i < cfg.count; i++) {
       this.streaks.push(
@@ -52,7 +57,7 @@ export class SpeedStreaks {
         ? RULE_ANIM.colors.rushStreak
         : windSpace
           ? RULE_ANIM.colors.windStreakSpace
-          : RULE_ANIM.colors.windStreak;
+          : this.windTint;
     const baseAlpha =
       kind === 'rush' ? cfg.rushAlpha : windSpace ? cfg.windSpaceAlpha : cfg.windAlpha;
     const peak = baseAlpha * strength;

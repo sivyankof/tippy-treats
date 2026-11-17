@@ -1,4 +1,5 @@
 import type * as Phaser from 'phaser';
+import type { WeatherId } from '../../data/weather';
 import type { SimEvent, TowerState } from '../../core/tower-sim';
 import type { FlyingLayerView } from '../objects/flying-layer-view';
 import type { TowerView } from '../objects/tower-view';
@@ -23,8 +24,9 @@ export class FlyingFx {
     tower: TowerView,
     private readonly flying: FlyingLayerView,
     particles: Particles,
+    weather: WeatherId,
   ) {
-    this.rules = new RuleFx(scene, flying, particles);
+    this.rules = new RuleFx(scene, flying, particles, weather);
     this.golden = new GoldenFx(scene, tower, flying, particles);
     this.bursts = new AbilityBursts(particles);
   }
