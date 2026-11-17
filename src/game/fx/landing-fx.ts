@@ -41,8 +41,9 @@ export class LandingFx {
     side: 1 | -1,
     cakeColor: number,
     exactCount?: number,
+    depth?: number,
   ): void {
-    this.particleFx.crumbs(cutX, centerY, side, cakeColor, exactCount);
+    this.particleFx.crumbs(cutX, centerY, side, cakeColor, exactCount, depth);
   }
 
   /** Bits of the decorations fly off the cut line with the bitten-off part (none in "Fewer effects"). */

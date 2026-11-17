@@ -611,7 +611,9 @@ export class CutStrands {
       drop.y = y + n * 3;
       drop.vx = start.side * S.drops.speedX * (0.3 + 0.5 * n) * (n % 2 === 0 ? 1 : -0.6);
       drop.vy = -30 + n * 20;
-      drop.ageMs = 0;
+      // Born one after another, so two never fall stacked into one fork.
+      drop.ageMs = -n * S.drops.staggerMs;
+      hidePair(drop.pair);
     }
   }
 
@@ -621,6 +623,10 @@ export class CutStrands {
     for (const drop of this.drops) {
       if (!drop.on) continue;
       drop.ageMs += dtMs;
+      if (drop.ageMs < 0) {
+        any = true;
+        continue;
+      }
       if (drop.ageMs >= S.drops.lifeMs) {
         drop.on = false;
         hidePair(drop.pair);

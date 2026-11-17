@@ -29,6 +29,8 @@ export const DEPTH = {
    * Glaze of a cut (strands, beads, the bridge, drops): over the piece. All outlines first, then all fills,
    * then the stripes, so overlapping parts of the glaze leave no seams.
    */
+  /** Crumbs of a cut that pulls strands: over the piece, under the glaze, so they never sit as squares on the strands. */
+  cutCrumbs: 28.15,
   cutGlazeOutline: 28.2,
   cutGlazeFill: 28.21,
   cutGlazeGloss: 28.22,

@@ -1,3 +1,4 @@
+import { DEPTH } from '../depth';
 import type * as Phaser from 'phaser';
 import type { SimEvent, TowerState } from '../../core/tower-sim';
 import { ANIM } from '../../data/anim';
@@ -108,7 +109,14 @@ export class DebrisFx {
     const edgeX = pose.x + side * (pose.width / 2);
     const colors = cakeColorsFor(memo.creature ?? null, index + 1, memo.kind === 'golden');
     const crumbs = (): void => {
-      this.landing.bitten(edgeX, y, side, colors.cake, pickInt(plan.crumbs));
+      this.landing.bitten(
+        edgeX,
+        y,
+        side,
+        colors.cake,
+        pickInt(plan.crumbs),
+        plan.strands ? DEPTH.cutCrumbs : undefined,
+      );
       if (variant.piece && memo.kind === 'plain') {
         this.decorBits(index + 1, event.cutWidth, pieceCut, edgeX, y, side);
       }

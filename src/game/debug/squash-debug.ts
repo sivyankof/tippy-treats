@@ -17,6 +17,8 @@ const SETTLE_FRAMES = 3;
 const EDGE_OVERLAP = 0.45;
 /** The cream demo lands this far off the middle, so it is no perfect landing and the two ends of the seam differ. */
 const CREAM_OFFSET = 70;
+/** ...and at most this share of the narrower of the two layers. */
+const OFFSET_SHARE = 0.25;
 
 interface Armed {
   kind: SquashKind;
@@ -33,7 +35,7 @@ type SquashWindow = Window & {
  * Dev tool: `window.tippySquash('strawberry', 'hit')` puts a decoration of that kind on the top
  * layer (the cream swirl for `'cream'`) and, once the layer in the air is flying, makes it land
  * on it right away, on its whole body (`hit`) or on its edge (`edge`). True when the top layer
- * could take it.
+ * could take it (false when the run is over or the top layer is not plain).
  */
 export function installSquashDebug(scene: Phaser.Scene, sim: TowerSim, tower: TowerView): void {
   let armed: Armed | null = null;
@@ -43,7 +45,7 @@ export function installSquashDebug(scene: Phaser.Scene, sim: TowerSim, tower: To
     const layers = sim.state.layers;
     const number = layers.length;
     const top = layers[number - 1];
-    if (!top || top.kind !== 'plain') return false;
+    if (sim.state.phase === 'over' || !top || top.kind !== 'plain') return false;
     const pair = lookOfCode(plainLooks.codeFor(number)).pair;
     if (kind === 'cream') {
       plainToppers.force(number, null);
@@ -65,7 +67,15 @@ export function installSquashDebug(scene: Phaser.Scene, sim: TowerSim, tower: To
     const topView = tower.topView();
     if (!topView) return;
     if (job.kind === 'cream' || job.mode === 'none') {
-      flying.x = (sim.state.layers[sim.state.layers.length - 1]?.x ?? flying.x) + CREAM_OFFSET;
+      const top = sim.state.layers[sim.state.layers.length - 1];
+      // Never so far off that a narrow tower makes the layer miss and nothing lands.
+      // A plain landing ("none") is dead centre, so repeated shots do not whittle the tower down to the
+      // game-over width; the cream shot keeps its offset so the two ends of the seam differ.
+      const offset =
+        job.kind === 'cream'
+          ? Math.min(CREAM_OFFSET, OFFSET_SHARE * Math.min(top?.width ?? 0, flying.width))
+          : 0;
+      flying.x = (top?.x ?? flying.x) + offset;
     } else {
       if (!topView.topperWorld(world)) {
         armed = null;

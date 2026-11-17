@@ -116,7 +116,24 @@ function drawStain(g: Phaser.GameObjects.Graphics, tones: StainTones): void {
 
 /** A flying drop of juice: a teardrop with an outline, drawn light and shown tinted (see `SQUASH_PICTURES.drop`). */
 function drawDrop(g: Phaser.GameObjects.Graphics): void {
-  const { width: w, height: h, outline, shadow } = SQUASH_PICTURES.drop;
+  const { width, height, outline, shadow } = SQUASH_PICTURES.drop;
+  drawTeardrop(g, width, height, [outline, shadow, 0xffffff]);
+}
+
+/** A drop of lemon juice: the same teardrop in its own colours. */
+function drawLemonDrop(g: Phaser.GameObjects.Graphics): void {
+  const { width, height, outline, body, light } = SQUASH_PICTURES.lemonDrop;
+  drawTeardrop(g, width, height, [outline, body, light]);
+}
+
+/** A teardrop of `w` x `h` with an outline, a body and a light spot (`colors` in that order). */
+function drawTeardrop(
+  g: Phaser.GameObjects.Graphics,
+  w: number,
+  h: number,
+  colors: readonly [outline: number, body: number, light: number],
+): void {
+  const [outline, shadow, light] = colors;
   const r = w / 2 - outlinePx * 0.6;
   const cy = h - w / 2 - outlinePx * 0.2;
   // A round head and a pointed tip: the arc leaves out the top wedge, the tip closes it.
@@ -136,7 +153,7 @@ function drawDrop(g: Phaser.GameObjects.Graphics): void {
   fillPolygon(g, shape(outlinePx * 0.6, 0, 0));
   g.fillStyle(shadow, 1);
   fillPolygon(g, shape(0, 0, 0));
-  g.fillStyle(0xffffff, 1);
+  g.fillStyle(light, 1);
   fillPolygon(g, shape(-1.2, -0.9, -0.9));
 }
 
@@ -320,9 +337,10 @@ export function bakeSquashTextures(scene: Phaser.Scene): void {
       drawStain(g, tones);
     });
   }
-  const { drop, seed, stem: stemLook } = SQUASH_PICTURES;
+  const { drop, lemonDrop, seed, stem: stemLook } = SQUASH_PICTURES;
   for (const [key, w, h, draw] of [
     [SQUASH_TEXTURES.drop, drop.width, drop.height, drawDrop],
+    [SQUASH_TEXTURES.lemonDrop, lemonDrop.width, lemonDrop.height, drawLemonDrop],
     [SQUASH_TEXTURES.seed, seed.width, seed.height, drawSeed],
     [SQUASH_TEXTURES.stem, stemLook.width, stemLook.height, drawStemBit],
   ] as const) {

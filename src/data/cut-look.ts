@@ -100,7 +100,9 @@ export const CUT_LOOK = {
       sizePx: 18,
       gravity: 2000,
       speedX: 90,
-      spreadPx: 16,
+      spreadPx: 22,
+      /** Delay between the births of the drops of one snap (ms). */
+      staggerMs: 50,
       lifeMs: 420,
       stretchPerSpeed: 0.0007,
       maxStretch: 0.9,
