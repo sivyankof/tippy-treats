@@ -14,13 +14,13 @@ export type WeatherView = 'full' | 'window' | 'none';
 export const WEATHER = {
   /** Relative chance of each weather per run (they add up to 100). */
   shares: {
-    clear: 50,
+    clear: 25,
+    rain: 15,
+    snow: 15,
+    night: 13,
     sunset: 12,
-    night: 10,
-    rain: 9,
-    snow: 8,
-    leaves: 7,
-    storm: 4,
+    leaves: 10,
+    storm: 10,
   } satisfies Record<WeatherId, number>,
   /** No more than this many equal non-clear weathers in a row across the runs of a session. */
   maxSameInARow: 2,

@@ -13,6 +13,20 @@ describe('pickWeather', () => {
     }
   });
 
+  it('keeps the owner-set shares (2026-11-18) adding up to 100', () => {
+    expect(WEATHER.shares).toEqual({
+      clear: 25,
+      rain: 15,
+      snow: 15,
+      night: 13,
+      sunset: 12,
+      leaves: 10,
+      storm: 10,
+    });
+    const sum = WEATHER_IDS.reduce((total, id) => total + WEATHER.shares[id], 0);
+    expect(sum).toBe(100);
+  });
+
   it('follows the shares within tolerance over many seeds', () => {
     const counts = new Map<WeatherId, number>();
     for (let seed = 0; seed < SEEDS; seed++) {
