@@ -10,15 +10,15 @@ import { bakeTexture } from '../../ui/bake-texture';
 import { tiled } from './art-kit';
 import { inSky, onLayer } from './layer-anchor';
 import { Hover, PuffColumn, Traveler } from './life';
-
-/** The layer of the roofs with the chimney, and the layer with the washing line. */
-const ROOF_LAYER = 1;
-const LINE_LAYER = 2;
 import { bakeMountains, Mountains } from './mountains';
 import { bakeWeatherSky } from './weather-art';
 import { fixtureTintOf, mountainTintOf } from './weather-palette';
 import { weatherSkyLives } from './weather-sky';
 import type { SceneryDef, ZoneArt } from './zone-scenery';
+
+/** The layer of the roofs with the chimney, and the layer with the washing line. */
+const ROOF_LAYER = 1;
+const LINE_LAYER = 2;
 
 type Graphics = Phaser.GameObjects.Graphics;
 

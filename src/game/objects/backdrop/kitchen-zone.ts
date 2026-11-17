@@ -22,7 +22,7 @@ const K = BD_TEX.kitchen;
 const C = BACKDROP_COLORS.kitchen;
 
 const SHELF = KITCHEN_SHELF;
-/** The clock, the pot and the ladle rail hang on the wall with the shelves (the same layer as the window), drawn in front of the boards, so the boards never slide through them. */
+/** The clock, the pot and the ladle rail hang on the wall with the shelves (the same layer as the window), drawn above the utensils layer (slot 3) so nothing crosses over them. */
 const KITCHEN_LAYER = WALL_LOOK.layer;
 const JAR_LOWER = 0.38;
 const JAR_PAD = 26;
@@ -223,7 +223,7 @@ export const kitchenArt: ZoneArt = {
   },
   build(scene, look) {
     const life = BACKDROP_LIFE.kitchen;
-    // The window and the jar hang on the wall with the shelves: they ride with it (wall-life.ts).
+    // The window and the jar hang on the wall with the shelves: they ride with it (layer-life.ts).
     const window = new LayerThing(
       scene,
       [
@@ -259,16 +259,16 @@ export const kitchenArt: ZoneArt = {
       layers: [K.wallpaper, K.tiles, K.shelves, K.utensils],
       lives: [
         {
-          slot: 2,
+          slot: 3,
           life: new Hover(scene, [life.pot, life.clock, life.rail], onLayer(KITCHEN_LAYER)),
         },
         {
-          slot: 2,
+          slot: 3,
           life: new Hover(scene, [life.clockHand, life.pendulum], onLayer(KITCHEN_LAYER)),
         },
-        { slot: 2, life: new Hover(scene, life.ladles, onLayer(KITCHEN_LAYER)) },
-        { slot: 2, life: new Hover(scene, [life.lid], onLayer(KITCHEN_LAYER)) },
-        { slot: 2, life: steam },
+        { slot: 3, life: new Hover(scene, life.ladles, onLayer(KITCHEN_LAYER)) },
+        { slot: 3, life: new Hover(scene, [life.lid], onLayer(KITCHEN_LAYER)) },
+        { slot: 3, life: steam },
         { slot: 3, life: new RunOnly([window, ...glass, jar], onLayer(WALL_LOOK.layer)) },
         { slot: 3, life: fly },
       ],

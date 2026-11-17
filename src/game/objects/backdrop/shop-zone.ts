@@ -217,7 +217,7 @@ export const shopArt: ZoneArt = {
       swing: { deg: lamp.swingDeg, ms: item.ms },
       phase: i * lamp.phaseStep,
     }));
-    // Everything that hangs in the shop rides with the wall (wall-life.ts): the start awning and lamps scroll away with it.
+    // Everything that hangs in the shop rides with the wall (layer-life.ts): the start awning and lamps scroll away with it.
     const awning = new LayerThing(scene, strips, {
       layer: WALL_LOOK.layer,
       halfH: awningLook.height,

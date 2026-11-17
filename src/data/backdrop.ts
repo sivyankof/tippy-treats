@@ -73,13 +73,13 @@ export const BD_TEX = {
   },
 } as const;
 
-/** Numbers of the zone backdrops; colours are in `backdrop-colors.ts`, life in `backdrop-life.ts`. */
 /** Sideways sway of a parallax layer: amplitude in px and the period. */
 export interface LayerSway {
   px: number;
   periodMs: number;
 }
 
+/** Numbers of the zone backdrops; colours are in `backdrop-colors.ts`, life in `backdrop-life.ts`. */
 export const BACKDROP = {
   /** The old zone flows into the new one over this long (docs/06, "Смена зоны"). */
   fadeMs: 1500,
@@ -117,7 +117,7 @@ export const BACKDROP = {
    * Walls and buildings stay slow; they only need to never stand still.
    */
   drift: {
-    // The shelves and the utensils drift alike, so the jars never slide under a utensil silhouette.
+    // A swaying layer (see `sway`) ignores its drift value. The kitchen tiles carry nothing, so they drift on.
     kitchen: [2, 3, 5, 5],
     showcase: [3, 4, 7, 11],
     roof: [3, 5, 8, 12],
@@ -128,10 +128,11 @@ export const BACKDROP = {
   /**
    * A layer that carries pictures fixed to it (a wall with a clock, a roof with a chimney) does not drift on one way, or those
    * pictures would slide out from behind the tower: it sways to and fro (`tilePositionX = px * sin(2 pi t / periodMs)`, so 0 at
-   * the start), and what stands on it sways the same. `null`: the layer carries nothing fixed and drifts as `drift` says.
+   * the start), and what stands on it sways the same. `null`: the layer carries nothing fixed and drifts as `drift` says. A layer drawn above a layer with fixed pictures must sway too, or its
+   * shapes slide across them.
    */
   sway: {
-    kitchen: [null, { px: 10, periodMs: 14000 }, { px: 12, periodMs: 16000 }, null],
+    kitchen: [null, null, { px: 12, periodMs: 16000 }, { px: 8, periodMs: 12000 }],
     showcase: [null, null, { px: 12, periodMs: 16000 }, null],
     roof: [null, { px: 10, periodMs: 14000 }, { px: 12, periodMs: 16000 }, null],
     clouds: [null, null, null, null],

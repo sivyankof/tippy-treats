@@ -7,10 +7,6 @@ import { bakeTexture } from '../../ui/bake-texture';
 import { glow, tiled } from './art-kit';
 import { onLayer } from './layer-anchor';
 import { Hover, Traveler, Twinkles } from './life';
-
-/** The street (layer 0) the passers-by walk on, and the layer of the shop front (treats) with the garland and the cake on its stand. */
-const STREET_LAYER = 0;
-const SHOW_LAYER = 2;
 import { bakeStopsSky, type ZoneArt } from './zone-scenery';
 import {
   AWNING_WEATHER,
@@ -24,6 +20,10 @@ import { channels, mixColor, shade } from '../../../util/color';
 import { gradientColorAt } from './sky-gradient';
 import { ZONE_SKY } from '../../../data/backdrop-colors';
 import { bakeGlassItems, showcaseGlassLife } from './window-weather';
+
+/** The street (layer 0) the passers-by walk on, and the layer of the shop front (treats) with the garland and the cake on its stand. */
+const STREET_LAYER = 0;
+const SHOW_LAYER = 2;
 
 type Graphics = Phaser.GameObjects.Graphics;
 
