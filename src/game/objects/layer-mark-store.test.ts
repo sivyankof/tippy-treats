@@ -36,6 +36,19 @@ describe('layer marks', () => {
     expect(store.hasPress(3)).toBe(true);
   });
 
+  it('asks the layer above to hide its shadow only over a mark that wants it (the cream roll)', () => {
+    const store = new LayerMarkStore();
+    store.addPress(2, [mark()]);
+    store.addCut(3, [mark({ clearOfShadow: true })]);
+    store.addPress(4, [mark({ clearOfShadow: true }), mark({ clearOfShadow: true })]);
+    expect(store.clearsShadowAbove(2)).toBe(false);
+    expect(store.clearsShadowAbove(3)).toBe(false);
+    expect(store.clearsShadowAbove(4)).toBe(true);
+    expect(store.clearsShadowAbove(5)).toBe(false);
+    store.removePress(4);
+    expect(store.clearsShadowAbove(4)).toBe(false);
+  });
+
   it('refuses an empty or too long mark', () => {
     const store = new LayerMarkStore();
     expect(store.addCut(1, [])).toBe(false);

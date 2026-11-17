@@ -154,6 +154,7 @@ export class TopperSquashFx {
       angleDeg: spot.angleDeg,
       bornMs: now + roll.delayMs,
       growMs: roll.growMs,
+      clearOfShadow: true,
     }));
     if (!layerMarks.addPress(lowerIndex + 1, marks)) return;
     effectCues.emit({ kind: 'topperSquash', topper: 'cream' });

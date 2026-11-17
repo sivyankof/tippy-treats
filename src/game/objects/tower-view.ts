@@ -22,6 +22,7 @@ import { LickDirector, type LickContext } from './lick-director';
 import { isAiming, type LickKind, type LickScene } from './lick-plan';
 import { plainLooks } from './plain-look';
 import { prepareTongue } from './face-lick';
+import { layerMarks } from './layer-mark-store';
 import { LayerView } from './layer-view';
 import { SwayHold } from './sway-hold';
 import { snapshotTower, type TowerSnapshot } from './tower-snapshot';
@@ -301,7 +302,9 @@ export class TowerView {
         .setTopperAllowed(i === state.layers.length - 1)
         .setJokeAllowed(true)
         .setMarksAllowed(true)
-        .setLayer(i + 1, pose.width, pose.cut);
+        .setLayer(i + 1, pose.width, pose.cut)
+        // Over a cream roll squeezed out on the layer below, no baked shadow greys the roll.
+        .setBakedShadow(!layerMarks.clearsShadowAbove(i));
       view.setPosition(pose.x + view.slideX, pose.y).setAngle(pose.angle * view.material.tilt);
       if (i === count - 1) this.updateTopSpan(pose.x, pose.width);
       this.shadeBelow(i, view, pose.x + view.slideX, pose.width);

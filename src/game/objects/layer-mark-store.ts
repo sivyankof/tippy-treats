@@ -33,6 +33,8 @@ export interface LayerMark {
   /** It grows from nothing to its size over this many ms (`backOut`), so it never pops in; 0 shows it at once. */
   growMs: number;
   swing?: MarkSwing;
+  /** The layer above hides its baked shadow while this mark is there, so the shadow never greys it (the cream roll). */
+  clearOfShadow?: boolean;
   /** The mark shrinks away from `startMs` over `durMs` (a stain licked off or melting); the store removes it after that. */
   vanish?: { startMs: number; durMs: number };
 }
@@ -80,6 +82,11 @@ export class LayerMarkStore {
 
   hasPress(layerIndex: number): boolean {
     return this.byLayer.get(layerIndex)?.press !== undefined;
+  }
+
+  /** True when the layer above this one must hide its baked shadow (a mark of this layer asks for it). */
+  clearsShadowAbove(layerIndex: number): boolean {
+    return this.byLayer.get(layerIndex)?.press?.some((m) => m.clearOfShadow === true) ?? false;
   }
 
   /** Leaves the drop of a cut on the layer; false (and nothing changes) when it already has one or `marks` is empty or too long. */

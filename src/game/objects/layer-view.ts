@@ -100,6 +100,8 @@ export class LayerView extends Phaser.GameObjects.Container {
   /** The tilt of a press (radians) around the bottom corner on `side` (1 right, -1 left). */
   private readonly press = { angle: 0, side: 1 as -1 | 1 };
   private readonly pressOffset = { x: 0, y: 0 };
+  /** The baked shadow under the layer is cut off (a piece in the air, a layer over a cream roll). */
+  private shadowHidden = false;
 
   constructor(scene: Phaser.Scene) {
     super(scene);
@@ -209,6 +211,8 @@ export class LayerView extends Phaser.GameObjects.Container {
     const grown = creature !== null && this.isGrown(this.lookPlan.level);
     const stage = creatureStage(creature, grown, index);
     if (!this.artSlot.show(look, w, cut, creature, !this.faceEnabled, stage)) return this;
+    // A new picture: the crop of a hidden shadow is laid on it again.
+    if (this.shadowHidden) this.applyShadowCrop();
     this.rainbow.set(creature === 'rainbow', w, grown);
     this.accent.set(grown ? creature : null, w);
     this.face.layout(w);
@@ -298,9 +302,28 @@ export class LayerView extends Phaser.GameObjects.Container {
 
   /** Drops the baked shadow under the layer: a piece in the air carries none (cuts the rows that hold only it). */
   dropShadow(): this {
+    return this.setBakedShadow(false);
+  }
+
+  /**
+   * Shows or hides the baked shadow under the layer (the rows of its picture that hold only it).
+   * A layer over a cream roll hides it: the roll is squeezed out on the layer below and the
+   * shadow would grey it.
+   */
+  setBakedShadow(on: boolean): this {
+    if (this.shadowHidden === !on) return this;
+    this.shadowHidden = !on;
+    this.applyShadowCrop();
+    return this;
+  }
+
+  private applyShadowCrop(): void {
+    if (!this.shadowHidden) {
+      this.art.setCrop();
+      return;
+    }
     const frame = this.art.frame;
     this.art.setCrop(0, 0, frame.width, frame.height - SHADOW_ROWS);
-    return this;
   }
 
   /** Moves the face sideways inside the layer (local px); 0 puts it back in the middle. */
@@ -483,6 +506,7 @@ export class LayerView extends Phaser.GameObjects.Container {
       this.press,
     ]);
     this.press.angle = 0;
+    this.shadowHidden = false;
     this.art.setCrop();
     this.face.setX(0);
     this.squashRoot.setRotation(0).setX(0);
