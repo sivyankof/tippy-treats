@@ -7,7 +7,7 @@ import { MS_PER_SECOND } from '../src/util/math';
 /**
  * `npm run sim:speed` part 1: the nominal flying speed of every layer from 1 to 165 and the time a
  * layer needs to cross the field. Nominal means without the ability multiplier, the rush
- * (x1.35, in Space at most 1500) and the roof profile (x0.8 at the walls, x1 in the middle).
+ * (x1.35, in Space at most 1350) and the roof profile (x0.8 at the walls, x1 in the middle).
  * One speed curve for the whole tower (core/speed-curve.ts): zones do not change the speed.
  */
 
@@ -24,9 +24,8 @@ const speedOfLayer = (layer: number): number => layerSpeed(layer - 1, 1);
 /** What changes at this layer: the start of a zone and the bends of the curve. */
 function notes(layer: number): string {
   const zone = ZONES[zoneIndexOf(layer)];
-  const { arcFrom, arcTo, max } = BALANCE.speed;
+  const { arcTo, max } = BALANCE.speed;
   const marks: string[] = [];
-  if (layer - 1 === arcFrom) marks.push('the arc starts: growth eases off');
   if (layer - 1 === arcTo) marks.push(`the curve reaches ${max}`);
   if (layer > 1 && zoneIndexOf(layer) !== zoneIndexOf(layer - 1))
     marks.push(`zone ${zone?.id} starts`);

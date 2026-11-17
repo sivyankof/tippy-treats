@@ -22,16 +22,12 @@ export const BALANCE = {
   },
   /**
    * Speed curve of the flying layer (docs/02-gameplay.md, section 2), px/s by the tower height:
-   * linear `base + perLayer * h` up to `arcFrom`, then an easing arc from `arcStart` to `max` that
-   * flattens out at `arcTo`, then `max`. `arcStart` equals `base + perLayer * arcFrom` (no jump).
+   * one easing arc from `base` at the first layer to `max` that flattens out at `arcTo`, then `max`.
    */
   speed: {
     base: 600,
-    perLayer: 9,
-    arcFrom: 40,
     arcTo: 160,
-    arcStart: 960,
-    max: 1400,
+    max: 1250,
   },
   drop: {
     perfectTolerance: 20,
