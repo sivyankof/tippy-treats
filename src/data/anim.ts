@@ -502,7 +502,12 @@ export const ANIM = {
     countdownStepMs: 700,
   },
   /** The tempo ease chip next to the wobble plate fades and grows in and out over this long. */
-  tempoChip: { fadeMs: 260, minScale: 0.7 },
+  tempoChip: {
+    fadeMs: 260,
+    minScale: 0.7,
+    /** The «Breather» caption over the chip: fade in, hold, fade out (ms) and the lift it settles from (px). */
+    caption: { inMs: 200, holdMs: 1000, outMs: 300, rise: 14 },
+  },
   /** Creature badges of the run HUD: active effects and the next creature. */
   badges: {
     inMs: 280,
