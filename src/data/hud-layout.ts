@@ -79,6 +79,21 @@ export const HUD_LAYOUT = {
   nextChip: { height: 78, padX: 22 },
   /** The SVG icons are loaded at this multiple of their size so they stay crisp when shown larger. */
   iconTextureScale: 2,
+  /**
+   * Where the plates of the run HUD stand (screen px, width 1080): what the weather and other
+   * background pictures keep clear of (`hudKeepOutFade`). Measured from the run HUD: the pause button,
+   * the height and score digits, the combo count, the wobble plate with the tempo chip, the next
+   * creature chip and the badge row.
+   */
+  plates: [
+    { x: 24, y: 24, width: 96, height: 96 },
+    { x: 880, y: 26, width: 186, height: 90 },
+    { x: 400, y: 60, width: 280, height: 140 },
+    { x: 470, y: 226, width: 140, height: 72 },
+    { x: 186, y: BAR_Y - 34, width: 708, height: 68 },
+    { x: 440, y: 426, width: 620, height: 86 },
+    { x: 24, y: BADGE_ROW_Y - BADGE_SIZE / 2, width: 248, height: BADGE_SIZE + 24 },
+  ],
   /** Lowest screen y the HUD (height, score, wobble bar, badge row) reaches. */
   bottomEdge: BADGE_ROW_Y + BADGE_SIZE / 2,
   /** Lowest screen y of the badge row including the counter chips that hang under the icons. */

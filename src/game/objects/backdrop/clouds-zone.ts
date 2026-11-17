@@ -7,7 +7,11 @@ import { bakeTexture } from '../../ui/bake-texture';
 import { cloudShape, tiled } from './art-kit';
 import { Traveler } from './life';
 import { bakeMountains, Mountains } from './mountains';
+import type { WeatherId } from '../../../data/weather';
+import { WEATHER_LOOK } from '../../../data/weather-look';
+import { bakeWeatherSky } from './weather-art';
 import { mountainTintOf } from './weather-palette';
+import { weatherSkyLives } from './weather-sky';
 import type { ZoneArt } from './zone-scenery';
 
 const TILE = 512;
@@ -33,8 +37,15 @@ function bakeClouds(scene: Phaser.Scene, key: string, color: number, spots: Clou
   });
 }
 
-function bakeLayers(scene: Phaser.Scene): void {
-  bakeClouds(scene, CL.far, C.far, [
+/** Rain and storm: the clouds are grey-blue, not the pink of the evening. */
+const GREY = WEATHER_LOOK.cloudsGrey;
+const isGrey = (weather: WeatherId): boolean => weather === 'rain' || weather === 'storm';
+const layerKey = (key: string, weather: WeatherId): string =>
+  isGrey(weather) ? `${key}_grey` : key;
+
+function bakeLayers(scene: Phaser.Scene, weather: WeatherId): void {
+  const grey = isGrey(weather);
+  bakeClouds(scene, layerKey(CL.far, weather), grey ? GREY.far : C.far, [
     { x: 60, y: 60, scale: 0.5 },
     { x: 250, y: 140, scale: 0.55 },
     { x: 440, y: 40, scale: 0.45 },
@@ -43,19 +54,19 @@ function bakeLayers(scene: Phaser.Scene): void {
     { x: 470, y: 440, scale: 0.5 },
     { x: 90, y: 440, scale: 0.45 },
   ]);
-  bakeClouds(scene, CL.mid, C.mid, [
+  bakeClouds(scene, layerKey(CL.mid, weather), grey ? GREY.mid : C.mid, [
     { x: 100, y: 110, scale: 0.85 },
     { x: 380, y: 270, scale: 0.8 },
     { x: 150, y: 400, scale: 0.9 },
     { x: 420, y: 470, scale: 0.7 },
   ]);
-  bakeClouds(scene, CL.near, C.near, [
+  bakeClouds(scene, layerKey(CL.near, weather), grey ? GREY.near : C.near, [
     { x: 330, y: 90, scale: 1.2 },
     { x: 70, y: 300, scale: 1.1 },
     { x: 400, y: 410, scale: 1.25 },
   ]);
-  bakeTexture(scene, CL.haze, TILE, TILE, (g) => {
-    g.fillStyle(C.haze, 0.45);
+  bakeTexture(scene, layerKey(CL.haze, weather), TILE, TILE, (g) => {
+    g.fillStyle(grey ? GREY.haze : C.haze, 0.45);
     for (const { x, y, w } of [
       { x: 120, y: 70, w: 300 },
       { x: 380, y: 230, w: 360 },
@@ -99,15 +110,17 @@ function bakeLife(scene: Phaser.Scene): void {
 
 /** Clouds at sunset: three layers of drifting clouds, a hot-air balloon and a little plane. */
 export const cloudsArt: ZoneArt = {
-  bake(scene) {
-    bakeLayers(scene);
+  bake(scene, look) {
+    bakeWeatherSky(scene, 'clouds', look.weather);
+    bakeLayers(scene, look.weather);
     bakeLife(scene);
     bakeMountains(scene);
   },
   build(scene, look) {
     const life = BACKDROP_LIFE.clouds;
     return {
-      layers: [CL.far, CL.mid, CL.near, CL.haze],
+      layers: [CL.far, CL.mid, CL.near, CL.haze].map((key) => layerKey(key, look.weather)),
+      weatherSky: weatherSkyLives(scene, 'clouds', look.weather),
       lives: [
         { slot: MOUNTAIN_SLOT.clouds, life: new Mountains(scene, mountainTintOf(look.weather)) },
         { slot: 1, life: new Traveler(scene, life.balloon) },

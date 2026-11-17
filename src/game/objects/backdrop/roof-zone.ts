@@ -9,7 +9,9 @@ import { bakeTexture } from '../../ui/bake-texture';
 import { tiled } from './art-kit';
 import { Hover, PuffColumn, Traveler } from './life';
 import { bakeMountains, Mountains } from './mountains';
+import { bakeWeatherSky } from './weather-art';
 import { fixtureTintOf, mountainTintOf } from './weather-palette';
+import { weatherSkyLives } from './weather-sky';
 import type { SceneryDef, ZoneArt } from './zone-scenery';
 
 type Graphics = Phaser.GameObjects.Graphics;
@@ -55,29 +57,24 @@ const WINDOW_ROUND = 8;
 const layerKey = (key: string, weather: WeatherId): string =>
   weather === 'night' ? `${key}_night` : key;
 
-/** A lit window with a soft glow around it (night). */
-function litWindow(g: Graphics, x: number, y: number, w: number, h: number): void {
-  g.fillStyle(NIGHT.windowGlow, NIGHT.windowGlowAlpha);
-  g.fillRoundedRect(x - 7, y - 7, w + 14, h + 14, WINDOW_ROUND + 6);
-  g.fillStyle(NIGHT.window, 1);
-  g.fillRoundedRect(x, y, w, h, WINDOW_ROUND);
+/** A window at night: warm and flat when lit, dusk-coloured when not. */
+function nightWindow(g: Graphics, x: number, y: number, lit: boolean): void {
+  g.fillStyle(lit ? NIGHT.window : NIGHT.darkWindow, lit ? NIGHT.windowAlpha : 1);
+  g.fillRoundedRect(x, y, NIGHT.windowW, NIGHT.windowH, WINDOW_ROUND);
 }
 
 function bakeLayers(scene: Phaser.Scene, weather: WeatherId): void {
   const night = weather === 'night';
   bakeTexture(scene, layerKey(R.far, weather), TILE, TILE, (g) => {
-    for (const b of FAR_HOUSES) {
+    FAR_HOUSES.forEach((b, index) => {
       tiled(TILE, b.x, b.y, b.w + b.h, (x, y) => {
         house(g, x, y, b.w, b.h, night ? NIGHT.farWall : C.far, night ? NIGHT.farRoof : C.far);
-        if (!night) return;
-        // A few small lit windows far away.
+        // One small lit window in every other far house.
+        if (!night || index % 2 !== 0) return;
         g.fillStyle(NIGHT.farWindow, NIGHT.farWindowAlpha);
-        const top = y + b.w * ROOF_RISE + 26;
-        for (let k = 0; k < NIGHT.farWindows; k++) {
-          g.fillRoundedRect(x + 22 + k * (b.w * 0.42), top + (k % 2) * 28, 14, 18, 4);
-        }
+        g.fillRoundedRect(x + 24, y + b.w * ROOF_RISE + 28, 14, 18, 4);
       });
-    }
+    });
   });
 
   bakeTexture(scene, layerKey(R.mid, weather), TILE, TILE, (g) => {
@@ -86,12 +83,9 @@ function bakeLayers(scene: Phaser.Scene, weather: WeatherId): void {
         house(g, x, y, b.w, b.h, night ? NIGHT.midWall : C.mid, night ? NIGHT.midRoof : C.midDark);
         const top = y + b.w * ROOF_RISE + 28;
         if (night) {
-          litWindow(g, x + 24, top, NIGHT.windowW, NIGHT.windowH);
-          // Not every window is lit: one house keeps its second window dark.
-          if (index === 1) {
-            g.fillStyle(NIGHT.darkWindow, 1);
-            g.fillRoundedRect(x + b.w - 60, top + 40, NIGHT.windowW, NIGHT.windowH, WINDOW_ROUND);
-          } else litWindow(g, x + b.w - 60, top + 40, NIGHT.windowW, NIGHT.windowH);
+          // A third of the windows are lit: the first window of one house, the second of another.
+          nightWindow(g, x + 24, top, index === 0);
+          nightWindow(g, x + b.w - 60, top + 40, index === 1);
           return;
         }
         g.fillStyle(BACKDROP_COLORS.shared.warmWhite, 0.85);
@@ -193,6 +187,7 @@ function bakeCloths(scene: Phaser.Scene): void {
 /** Rooftops: skyline and roofs with birds, chimney smoke and washing in the wind (taken in at night). */
 export const roofArt: ZoneArt = {
   bake(scene, look) {
+    bakeWeatherSky(scene, 'roof', look.weather);
     bakeLayers(scene, look.weather);
     bakeLife(scene);
     bakeMountains(scene);
@@ -217,6 +212,7 @@ export const roofArt: ZoneArt = {
     }
     return {
       layers: [layerKey(R.far, weather), layerKey(R.mid, weather), R.near, R.pipes],
+      weatherSky: weatherSkyLives(scene, 'roof', weather),
       lives,
     };
   },

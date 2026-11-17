@@ -25,8 +25,12 @@ export const WEATHER_TEX = {
   bolt: 'fx_wx_bolt',
 } as const;
 
+/** Seed of the cosmetic stream of the sky pieces (stars, lightning), the same in both zones. */
+const SKY_SEED = 7141;
+
 /** Look of the run weather in Roof and Clouds. Clear is the unchanged zone look and is not listed. */
 export const WEATHER_LOOK = {
+  skySeed: SKY_SEED,
   /** Sky gradient per weather and zone (top to bottom). */
   sky: {
     sunset: {
@@ -116,7 +120,7 @@ export const WEATHER_LOOK = {
   /** Multiply tint of the four parallax layers (back to front). Night roof bakes its own far and mid layers. */
   layerTint: {
     sunset: {
-      roof: [0xffd8c8, 0xffc4b0, 0xf0a890, 0xf0a890],
+      roof: [0xf4e0f2, 0xdbd6ff, 0xdbebff, 0xdbebff],
       clouds: [0xffd0c0, 0xffc2a8, 0xffb8a0, 0xffd0b8],
     },
     night: {
@@ -125,18 +129,18 @@ export const WEATHER_LOOK = {
     },
     rain: {
       roof: [0xc8d0dc, 0xb0b8c8, 0xa0a8b8, 0xa0a8b8],
-      clouds: [0xb4bad0, 0xa4abc4, 0x9ca3bc, 0xb0b6cc],
+      clouds: [NONE, NONE, NONE, NONE],
     },
     storm: {
       roof: [0xa8b0c0, 0x9098ac, 0x808aa0, 0x808aa0],
-      clouds: [0x9298b4, 0x838aa8, 0x7a80a0, 0x9096b0],
+      clouds: [0xc4c8d8, 0xb8bccf, 0xaeb2c6, 0xc4c8d8],
     },
     snow: {
       roof: [0xe8eefc, 0xcfd9f0, 0xc0cce8, 0xc8d2ea],
       clouds: [0xf0f0ff, 0xe8ecfa, 0xe4e8f8, 0xf0f0fc],
     },
     leaves: {
-      roof: [0xffe6c8, 0xffd2a8, 0xf4c090, 0xf4c090],
+      roof: [0xfff0e0, 0xebfaff, 0xe6ffff, 0xe6ffff],
       clouds: [0xffe0c0, 0xffd2b0, 0xffc8a0, 0xffe0c0],
     },
   } satisfies Partial<Record<WeatherId, PerZone<Layers4>>>,
@@ -160,22 +164,22 @@ export const WEATHER_LOOK = {
     leaves: 0xf4c898,
   } satisfies Partial<Record<WeatherId, number>>,
 
+  /** Clouds of the Clouds zone in rain and storm (the pink evening clouds turn grey-blue). */
+  cloudsGrey: { far: 0x8c94a8, mid: 0x98a0b4, near: 0xa6aebf, haze: 0xb4bbcb },
+
   /** Roof at night: the far and mid house layers are baked again with dusk walls and warm windows. */
   nightRoof: {
     farWall: 0x3a3f86,
     farRoof: 0x34397c,
     farWindow: 0xffc86a,
-    farWindowAlpha: 0.7,
+    farWindowAlpha: 0.6,
     midWall: 0x4a4a92,
     midRoof: 0x3a3a7c,
     window: 0xf0c577,
-    windowGlow: 0xf0a860,
-    windowGlowAlpha: 0.14,
+    windowAlpha: 0.7,
     darkWindow: 0x363a78,
     windowW: 30,
     windowH: 38,
-    /** Share of the houses' windows that are lit (the rest stay dark). */
-    farWindows: 2,
   },
 
   /** Number of weather pictures on screen per effects level (the splashes and the stars count as well). */
@@ -194,6 +198,8 @@ export const WEATHER_LOOK = {
   },
   /** The particles fade out this far (px) from the edges of the flight row, and in at the screen ends. */
   bandFeatherPx: 70,
+  /** Particles fade out toward the HUD plates over this many px beyond the HUD gap. */
+  keepOutFeatherPx: 40,
   endFeatherPx: 60,
   /** Share of the particles that start in the side strips (the tower hides the middle), and the strip width as share of the screen. */
   sideBias: 0.75,
@@ -222,7 +228,7 @@ export const WEATHER_LOOK = {
     swayPx: [22, 60],
     swayMs: [3200, 6500],
     alpha: [0.85, 1],
-    scale: [1.1, 1.5],
+    scale: [1, 1],
     count: 34,
   },
   leaves: {
@@ -245,20 +251,21 @@ export const WEATHER_LOOK = {
     scale: 1.27,
     driftPx: 60,
     driftMs: 26000,
-    /** Share of the weather alpha. */
-    alpha: 0.92,
-    colorRain: 0x4c5875,
-    colorStorm: 0x2a3049,
-    colorFlash: 0xdde6ff,
-    /** Soft halo around the lumps: how much larger and how strong. */
-    haloGrow: 14,
-    haloAlpha: 0.35,
-    /** Flat body from the top edge down to this y (picture px). */
-    bodyBottom: 70,
-    /** Lumps of the lower edge (picture px): centre x, centre y, radius. The middle ones stay high, behind the score. */
+    /** The bank is the sky colour at the top of the zone made this much darker (share, 0..1). */
+    darkRain: 0.25,
+    darkStorm: 0.4,
+    /** The pale twin that lights the bank in a flash: this colour, this share. */
+    flashColor: 0xdde6ff,
+    flashMix: 0.8,
+    /** Flat band from the top edge down to this y (picture px); every lobe reaches up into it, so the figure is one piece. */
+    bodyBottom: 100,
+    /** Width and height of a lobe's ellipse as multiples of its radius. */
+    lobeWide: 3.1,
+    lobeTall: 1.8,
+    /** Lobes of the lower edge (picture px): centre x, centre y, radius. The middle ones stay high, behind the score. */
     lumps: [
       [40, 140, 66],
-      [130, 168, 70],
+      [130, 150, 70],
       [220, 128, 62],
       [310, 92, 52],
       [400, 78, 46],
@@ -266,7 +273,7 @@ export const WEATHER_LOOK = {
       [600, 78, 46],
       [690, 94, 52],
       [790, 128, 62],
-      [880, 170, 72],
+      [880, 152, 72],
       [975, 140, 66],
     ] as ReadonlyArray<readonly [number, number, number]>,
   },
@@ -278,28 +285,40 @@ export const WEATHER_LOOK = {
     flashMs: [120, 180],
     /** Alpha of the pale lump overlay at the peak. */
     flashAlpha: 0.75,
-    boltAlpha: 1,
-    /** The bolt stands in one of these x ranges (share of the screen width), y of its top in the bank. */
+    /** The bolt stands in one of these x ranges (share of the screen width). */
     xRanges: [
       [0.1, 0.26],
       [0.74, 0.9],
     ] as ReadonlyArray<readonly [number, number]>,
-    topY: 140,
-    width: 110,
+    /** Picture size, and the width of its rim and core strokes (picture px). */
+    width: 140,
     height: 200,
+    rimPx: 34,
+    corePx: 22,
+    /** Inside the cloud: the bolt starts this share of the cloud's height at that x down, is at most this share of it long, and ends at least `endGapPx` above its lower edge. */
+    topShare: 0.22,
+    lengthShare: 0.6,
+    endGapPx: 25,
+    /** The cloud must be at least this tall (px) at the strike point, and the strike point is drawn up to this many times to clear the HUD. */
+    minCloudPx: 150,
+    tries: 12,
   },
 
-  /** Stars and the crescent moon of the night. */
+  /** Stars and the crescent moon of the night (both stand in the sky, behind the houses). */
   night: {
     stars: 14,
-    starAlpha: [0.55, 0.95],
+    starAlpha: [0.6, 1],
     twinkleMs: [1800, 4200],
     twinkleDepth: 0.4,
-    /** Stars keep out of the flight row (and this far above it) and out of the middle strip under the score. */
+    /** Twinkle: the star's scale swings by this much. */
+    twinkleScale: 0.25,
+    /** A star is drawn up to this many times until it clears the HUD plates and the flight row. */
+    tries: 10,
+    /** Stars keep out of the flight row (and this far above it). */
     aboveBandPx: 50,
-    middleStrip: [0.28, 0.72] as readonly [number, number],
     topMarginPx: 30,
-    moon: { radius: 50, xShare: 0.17, gapPx: -10, haloGrow: 1.7, haloAlpha: 0.2 },
+    /** The moon: radius of the disc (px), centre x as a share of the screen width. It hangs at the HUD floor. */
+    moon: { radius: 40, xShare: 0.17 },
   },
 
   /** Thin snow cap on the top layer. */
@@ -309,10 +328,10 @@ export const WEATHER_LOOK = {
     /** Picture y that sits on the top edge of the layer. */
     anchorY: 24,
     /** Share of the layer width the cap covers. */
-    widthShare: 0.94,
+    widthShare: 0.88,
     growMs: 1600,
     /** Depth offset over the top layer (it stays under the next layer). */
     depthStep: 0.0004,
-    colors: { snow: 0xffffff, shade: 0xd9e5f5, outline: 0xb6c8e2 },
+    colors: { snow: 0xffffff, shade: 0xe6ecf8 },
   },
 } as const;

@@ -9,7 +9,7 @@ import { markPerfPart } from '../../perf/perf-marks';
 import { bakeWeatherArt } from './weather-art';
 import { WeatherFall, type FallKind } from './weather-fall';
 import type { WeatherFrame, WeatherPart } from './weather-frame';
-import { WeatherBank, WeatherNight } from './weather-sky';
+import { strikeLightningNow } from './weather-sky';
 import type { TowerView } from '../tower-view';
 import type { Backdrop } from './backdrop';
 import { WeatherTop, type TowerTop } from './weather-top';
@@ -24,16 +24,16 @@ const FALL_KINDS: Partial<Record<WeatherId, FallKind>> = {
 };
 
 /**
- * The weather of a run in Roof and Clouds: sky pieces and falling particles in one screen-space
- * container behind the tower (all of them frames of the shared atlas, so one draw batch), plus the
- * snow cap and splashes on the top layer. Sunset and clear have none: they are only a palette.
+ * The weather of a run that falls or lies on the tower: the particles of rain, snow and leaves in one
+ * screen-space container behind the tower (all frames of the shared atlas, so one draw batch), plus
+ * the snow cap and the splashes on the top layer. Sunset, night and clear have none of it: they are
+ * a palette and, at night, the stars and the moon of the zone's sky (`weather-sky.ts`).
  * Created only for a weather that has pieces; only the pictures of this weather are baked.
  */
 export class RunWeather {
   private readonly root: Phaser.GameObjects.Container;
   private readonly parts: WeatherPart[] = [];
   private readonly top: WeatherTop;
-  private readonly bank: WeatherBank | null = null;
   private readonly frame: WeatherFrame = {
     timeMs: 0,
     deltaMs: 0,
@@ -48,7 +48,7 @@ export class RunWeather {
   private laidOut = false;
 
   static needed(weather: WeatherId): boolean {
-    return weather !== 'clear' && weather !== 'sunset';
+    return weather in FALL_KINDS;
   }
 
   constructor(
@@ -61,11 +61,6 @@ export class RunWeather {
     bakeWeatherArt(scene, weather);
     const rng = new Rng(seed).fork(`weather_${weather}`);
     const fall = FALL_KINDS[weather];
-    if (weather === 'rain' || weather === 'storm') {
-      this.bank = new WeatherBank(scene, weather === 'storm', rng.fork('bank'));
-      this.parts.push(this.bank);
-    }
-    if (weather === 'night') this.parts.push(new WeatherNight(scene, rng.fork('night')));
     if (fall) this.parts.push(new WeatherFall(scene, fall, rng.fork('fall')));
     this.top = new WeatherTop(
       scene,
@@ -81,7 +76,7 @@ export class RunWeather {
     if (import.meta.env.DEV) {
       const win = window as Window & { tippyLightning?: () => void };
       // window.tippyLightning(): the next bolt of a storm strikes right away.
-      win.tippyLightning = () => this.bank?.strikeNow(0);
+      win.tippyLightning = strikeLightningNow;
     }
   }
 
@@ -105,7 +100,6 @@ export class RunWeather {
       f.band.top = band.top;
       f.band.bottom = band.bottom;
       f.hudFloor = hudFloor();
-      for (const part of this.parts) part.layout(f);
       this.laidOut = true;
     }
     this.root.setVisible(f.share > 0);

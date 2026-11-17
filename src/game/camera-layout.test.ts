@@ -5,6 +5,7 @@ import { HUD_LAYOUT } from '../data/hud-layout';
 import { FLIGHT_CLEAR } from '../data/flight-clear';
 import {
   FLYING_REACH,
+  hudKeepOutFade,
   flightClearBand,
   surfaceScreenY,
   targetScrollY,
@@ -51,5 +52,19 @@ describe('travellerClearBand', () => {
       expect(band.bottom).toBe(surfaceScreenY(screenH) + FLIGHT_CLEAR.travellerBelowTopPx);
       expect(band.ceiling).toBe(HUD_LAYOUT.badgeRowBottom + FLIGHT_CLEAR.hudGapPx);
     }
+  });
+});
+
+describe('hudKeepOutFade', () => {
+  it('is 0 inside a plate and in the gap around it, 1 far from every plate', () => {
+    expect(hudKeepOutFade(540, 120)).toBe(0);
+    expect(hudKeepOutFade(70, 70)).toBe(0);
+    expect(hudKeepOutFade(70, 120 + FLIGHT_CLEAR.hudGapPx - 1)).toBe(0);
+    expect(hudKeepOutFade(100, 900)).toBe(1);
+  });
+
+  it('ramps up over the feather outside the gap', () => {
+    const edge = 120 + FLIGHT_CLEAR.hudGapPx;
+    expect(hudKeepOutFade(70, edge + 15, 0, 30)).toBeCloseTo(0.5);
   });
 });
