@@ -28,6 +28,8 @@ export class LayerMarkPictures {
   readonly pressImages: Phaser.GameObjects.Image[] = [];
   private readonly shown: Array<LayerMark | null> = [];
   private allowed = false;
+  /** What the pictures were last placed for: nothing is placed again until one of these changes. */
+  private placed: { layerIndex: number; store: LayerMarkStore; version: number } | null = null;
 
   constructor(scene: Phaser.Scene) {
     for (let i = 0; i < PICTURES; i++) {
@@ -39,6 +41,7 @@ export class LayerMarkPictures {
   }
 
   setAllowed(on: boolean): void {
+    if (this.allowed !== on) this.placed = null;
     this.allowed = on;
     if (!on) this.hide();
   }
@@ -49,6 +52,16 @@ export class LayerMarkPictures {
 
   /** Shows the marks of layer `layerIndex` (1-based), if the view may show marks. */
   update(layerIndex: number, store: LayerMarkStore = layerMarks): void {
+    const last = this.placed;
+    if (
+      last &&
+      last.layerIndex === layerIndex &&
+      last.store === store &&
+      last.version === store.version
+    ) {
+      return;
+    }
+    this.placed = { layerIndex, store, version: store.version };
     const set = this.allowed ? store.at(layerIndex) : undefined;
     if (!set) {
       this.hide();

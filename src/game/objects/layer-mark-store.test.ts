@@ -47,6 +47,23 @@ describe('layer marks', () => {
     expect(store.at(2)).toBeUndefined();
   });
 
+  it('changes its version only when something really changed', () => {
+    const store = new LayerMarkStore();
+    const v0 = store.version;
+    store.addCut(1, []);
+    expect(store.version).toBe(v0);
+    store.addCut(1, [mark()]);
+    const v1 = store.version;
+    expect(v1).toBeGreaterThan(v0);
+    store.addCut(1, [mark()]);
+    expect(store.version).toBe(v1);
+    store.addPress(1, [mark()]);
+    expect(store.version).toBeGreaterThan(v1);
+    const v2 = store.version;
+    store.clear();
+    expect(store.version).toBeGreaterThan(v2);
+  });
+
   it('grows in without popping and settles at full size', () => {
     const m = mark();
     expect(markGrow(m, 0)).toBeCloseTo(0);

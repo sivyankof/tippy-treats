@@ -53,9 +53,16 @@ export const MAX_PRESS_PICTURES = 2;
  */
 export class LayerMarkStore {
   private readonly byLayer = new Map<number, LayerMarkSet>();
+  private changes = 0;
+
+  /** Grows with every change of the store: a view that saw the same number has nothing new to place. */
+  get version(): number {
+    return this.changes;
+  }
 
   clear(): void {
     this.byLayer.clear();
+    this.changes++;
   }
 
   at(layerIndex: number): Readonly<LayerMarkSet> | undefined {
@@ -76,6 +83,7 @@ export class LayerMarkStore {
     const set = this.setOf(layerIndex);
     if (set.cut) return false;
     set.cut = [...marks];
+    this.changes++;
     return true;
   }
 
@@ -85,6 +93,7 @@ export class LayerMarkStore {
     const set = this.setOf(layerIndex);
     if (set.press) return false;
     set.press = [...marks];
+    this.changes++;
     return true;
   }
 
