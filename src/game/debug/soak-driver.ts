@@ -62,7 +62,10 @@ export interface TippySoak {
 export interface SmokeCounts {
   objects: number;
   listeners: number;
+  /** Tweens that last (infinite, paused or longer than `SOAK.smoke.shortTweenMs`); the verdict compares these. */
   tweens: number;
+  /** All tweens, passing ones included: for diagnosis, not compared. */
+  rawTweens: number;
   timers: number;
 }
 
@@ -193,12 +196,13 @@ class SoakDriver implements TippySoak {
     const started = performance.now();
     const steps: SmokeReport['steps'] = [];
     const once = (): SmokeCounts => {
-      const { objects, listeners, tweens, timers } = this.sample();
-      return { objects, listeners, tweens, timers };
+      const { objects, listeners, lastingTweens, tweens, timers } = this.sample();
+      return { objects, listeners, tweens: lastingTweens, rawTweens: tweens, timers };
     };
     // Entrance tweens of a screen still run for a moment, and a Home has short idle tweens that
-    // come and go: read until two reads in a row agree (at least `settleMinReads` reads), and take
-    // the fewest tweens seen, as a tween that is left behind does not go away.
+    // come and go: only lasting tweens are counted (a short one caught mid-flight is not a leak),
+    // read until two reads in a row agree (at least `settleMinReads` reads), and take the fewest
+    // tweens seen, as a tween that is left behind does not go away.
     const read = async (): Promise<SmokeCounts> => {
       let last = once();
       let tweens = last.tweens;

@@ -64,5 +64,7 @@ export const SOAK = {
     /** Reads taken at least, whatever they show: idle tweens come and go, a leaked one stays. */
     settleMinReads: 4,
     settleMs: 600,
+    /** A finite tween that ends within this many ms is a passing one (a portrait or gloss tween of Home) and is left out of the compared tween count; infinite, paused and longer ones count. */
+    shortTweenMs: 600,
   },
 } as const;
