@@ -111,7 +111,8 @@ export const BACKDROP = {
    * Walls and buildings stay slow; they only need to never stand still.
    */
   drift: {
-    kitchen: [2, 3, 5, 8],
+    // The shelves and the utensils drift alike, so the jars never slide under a utensil silhouette.
+    kitchen: [2, 3, 5, 5],
     showcase: [3, 4, 7, 11],
     roof: [3, 5, 8, 12],
     clouds: [8, 14, 24, 40],

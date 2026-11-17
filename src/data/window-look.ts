@@ -89,8 +89,8 @@ export const WINDOW_LOOK = {
   /** Glass inside the canvas. */
   glass: { x: 30, y: 36, w: 120, h: 172 },
   /** Centre of the window as shares of the screen; the offset is in logical px. */
-  kitchen: { at: { x: 1, y: 0.54 }, offset: { x: -104, y: 0 } },
-  shop: { at: { x: 0, y: 0.52 }, offset: { x: 104, y: 0 } },
+  kitchen: { at: { x: 1, y: 0.54 }, offset: { x: -132, y: 0 } },
+  shop: { at: { x: 0, y: 0.52 }, offset: { x: 132, y: 0 } },
   colors: {
     kitchen: {
       frame: 0xd9a070,
@@ -102,6 +102,8 @@ export const WINDOW_LOOK = {
       ring: 0xfff1e6,
     },
   },
+  /** The window breathes a little, so nothing in the room stands still (docs/06, section 5). */
+  pulse: { amount: 0.008, ms: 2100 },
   /** Slanted bands of light on the glass: x, width, lean (px) and alpha. */
   glints: [
     { x: 0.2, w: 0.14, lean: -0.22, alpha: 0.2 },
@@ -136,7 +138,7 @@ export const GLASS_TEX = {
 export const GLASS_LOOK = {
   drop: { w: 16, h: 26, color: 0xdbeaf7, dark: 0x7d93ad },
   flake: { size: 18 },
-  leaf: { w: 38, h: 26, color: 0xffffff, dark: 0x8a6a58, tints: [0xe58a3c, 0xd2543a, 0xe9b43c] },
+  leaf: { w: 46, h: 30, color: 0xffffff, dark: 0x8a6a58, tints: [0xe58a3c, 0xd2543a, 0xe9b43c] },
   /** Share of the cycle over which an item fades in and out. */
   fadeShare: 0.1,
   /** The sway of a flake or a leaf: share of the glass width, and its period (ms). */
@@ -163,8 +165,8 @@ export const SHOP_COLORS = {
   stripe: 0xfff4e8,
   ring: 0xf3a8c0,
   shelf: 0xe8b89a,
-  awningPink: 0xf6a3bb,
-  awningCream: 0xfff1e3,
+  awningPink: 0xf6c3d0,
+  awningCream: 0xfceaec,
   silhouette: 0xeaa8bd,
   sweets: {
     macaron: [0xf7a8c4, 0xc9b4f0, 0xa8dcc8, 0xffd48a],
@@ -181,12 +183,48 @@ export const SHOP_TEX = {
   shelves: 'bd_shop_shelves',
   stands: 'bd_shop_stands',
   awning: 'bd_win_shop_awning',
+  lamp: 'bd_win_shop_lamp',
   sky: 'bd_sky_shop',
 } as const;
 
 export const SHOP_LOOK = {
   tile: 512,
-  awning: { height: 112, stripe: 64 },
+  /** The shelves and the sweets on them: a wide tile, so a row of sweets shows once per `width`. */
+  shelfTile: { width: 1024, height: 1024 },
+  planks: [410, 922],
+  /** The plank that carries sweets; the other stays bare. */
+  sweetsPlank: 0,
+  /** Sweets stand in the right outer column only: x, kind, size (the window and the HUD are on the left). */
+  sweets: [
+    { x: 868, kind: 'candy', size: 40 },
+    { x: 968, kind: 'macaron', size: 84 },
+  ] as const,
+  /** Share the sweets' colours lean towards the wall. */
+  sweetsMute: 0.35,
+  /** Stand silhouettes: x in the 512 tile. */
+  standsX: [70, 250],
+  awning: { height: 60, stripe: 64 },
+  lamp: {
+    width: 60,
+    height: 150,
+    cord: 86,
+    globe: 26,
+    at: [0.26, 0.76],
+    swingDeg: 4,
+    ms: [2300, 2700],
+  },
   /** Alpha of the wash that tints the far silhouettes of the wall pink. */
   farWash: 0.72,
 } as const;
+
+/** The shelf of the home kitchen: one jar, at the right edge, on one plank of two (docs/06, «Места старта»). */
+export const KITCHEN_SHELF = {
+  width: 1024,
+  height: 1024,
+  planks: [400, 912],
+  jarPlank: 0,
+  jar: { x: 902, w: 52, h: 112, color: 0xe58fa0, mute: 0.5 },
+} as const;
+
+/** The Showcase awning at night: stripes lean towards the night sky and the layer is opaque, so house windows do not show through. */
+export const NIGHT_AWNING = { mute: 0.65, alpha: 1 } as const;
