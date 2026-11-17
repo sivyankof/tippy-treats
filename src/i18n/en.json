@@ -1,6 +1,7 @@
 {
   "run": {
     "wobble": "Wobble",
+    "breather": "Breather",
     "paused": "Paused",
     "resume": "Continue",
     "restart": "Restart",
