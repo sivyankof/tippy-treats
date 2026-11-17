@@ -6,7 +6,6 @@ import type { RunMode, RunResult } from '../../core/run-result';
 import type { TeamSlot } from '../../core/sim-types';
 import { TowerSim, type TowerState } from '../../core/tower-sim';
 import { fxGuard } from '../fx-guard';
-import { reserveSparePage } from '../ui/shared-atlas';
 import { RunFx } from '../fx/run-fx';
 import type { MasterFeed } from '../ui/master-caption-state';
 import { easeFn } from '../fx/ease';
@@ -184,8 +183,6 @@ export class GameScene extends Phaser.Scene {
       );
     }
     this.camera.snap();
-    // The first frames of the run have baked their pictures: a nearly full page gets its successor now, not mid-run.
-    reserveSparePage(this);
     this.results.begin(this);
   }
 

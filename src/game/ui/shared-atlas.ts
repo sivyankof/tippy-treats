@@ -298,18 +298,6 @@ export function addSharedPicture(
   return true;
 }
 
-/**
- * Opens the next page ahead of need when the last one is nearly full, so the page is not made in
- * the middle of a run by the picture that no longer fits. Call it while a run loads.
- */
-export function reserveSparePage(scene: Phaser.Scene): void {
-  const pages = pagesOf.get(scene.sys.textures);
-  const last = pages?.[pages.length - 1];
-  if (!pages || !last) return;
-  if (last.packer.usedHeight < last.packer.height * SHARED_ATLAS.sparePageAt) return;
-  openPage(scene, pages);
-}
-
 /** How many pages the shared atlas has now (the debug pages report it; the aim is one). */
 export function atlasPageCount(textures: Phaser.Textures.TextureManager): number {
   return (pagesOf.get(textures) ?? []).length;
