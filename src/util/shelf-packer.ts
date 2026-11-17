@@ -40,9 +40,12 @@ export class ShelfPacker {
   /** A place for a box this big, or `null` when it does not fit any more. */
   alloc(width: number, height: number): PackedBox | null {
     if (width <= 0 || height <= 0 || width > this.width || height > this.height) return null;
+    const shelfHeight = Math.min(Math.ceil(height / this.step) * this.step, this.height);
     let best: { shelf: Shelf; span: Span } | null = null;
     for (const shelf of this.shelves) {
       if (shelf.height < height) continue;
+      // An empty shelf taller than the box is kept for a taller box (or cut down below).
+      if (shelf.height > shelfHeight && this.isEmpty(shelf)) continue;
       if (best && best.shelf.height <= shelf.height) continue;
       const span = shelf.free.find((s) => s.x1 - s.x0 >= width);
       if (span) best = { shelf, span };
@@ -54,7 +57,11 @@ export class ShelfPacker {
         best.shelf.free.splice(best.shelf.free.indexOf(best.span), 1);
       return { x, y: best.shelf.y };
     }
-    const shelfHeight = Math.min(Math.ceil(height / this.step) * this.step, this.height);
+    const reused = this.reuseEmpty(shelfHeight);
+    if (reused) {
+      if (width < this.width) reused.free.push({ x0: width, x1: this.width });
+      return { x: 0, y: reused.y };
+    }
     const y = this.usedHeight;
     if (y + shelfHeight > this.height) return null;
     const shelf: Shelf = { y, height: shelfHeight, free: [] };
@@ -87,8 +94,47 @@ export class ShelfPacker {
 
   private isEmptyLast(): boolean {
     const last = this.shelves[this.shelves.length - 1];
-    if (!last) return false;
-    const run = last.free[0];
-    return last.free.length === 1 && run?.x0 === 0 && run.x1 === this.width;
+    return last !== undefined && this.isEmpty(last);
+  }
+
+  private isEmpty(shelf: Shelf): boolean {
+    const run = shelf.free[0];
+    return shelf.free.length === 1 && run?.x0 === 0 && run.x1 === this.width;
+  }
+
+  /**
+   * A shelf of `shelfHeight` made from the shortest row of neighbouring empty shelves that is tall
+   * enough (the rest of the row stays an empty shelf), or null. Shelves that were emptied one by
+   * one are not lost to the boxes of other heights this way.
+   */
+  private reuseEmpty(shelfHeight: number): Shelf | null {
+    let best: { from: number; count: number; total: number } | null = null;
+    for (let i = 0; i < this.shelves.length; i++) {
+      let total = 0;
+      for (let j = i; j < this.shelves.length; j++) {
+        const shelf = this.shelves[j];
+        if (!shelf || !this.isEmpty(shelf)) break;
+        total += shelf.height;
+        if (total >= shelfHeight) {
+          if (!best || total < best.total) best = { from: i, count: j - i + 1, total };
+          break;
+        }
+      }
+    }
+    if (!best) return null;
+    const first = this.shelves[best.from];
+    if (!first) return null;
+    const shelf: Shelf = { y: first.y, height: shelfHeight, free: [] };
+    const rest = best.total - shelfHeight;
+    const replacement: Shelf[] = [shelf];
+    if (rest > 0)
+      replacement.push({
+        y: first.y + shelfHeight,
+        height: rest,
+        free: [{ x0: 0, x1: this.width }],
+      });
+    this.shelves.splice(best.from, best.count, ...replacement);
+    while (this.isEmptyLast()) this.shelves.pop();
+    return shelf;
   }
 }

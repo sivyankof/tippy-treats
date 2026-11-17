@@ -80,4 +80,25 @@ describe('ShelfPacker', () => {
     }
     expect(peak).toBeLessThanOrEqual(56 * 10);
   });
+
+  it('joins neighbouring empty shelves into a taller one', () => {
+    const p = new ShelfPacker(100, 100, 10);
+    const a = p.alloc(100, 20)!;
+    const b = p.alloc(100, 20)!;
+    p.alloc(100, 20);
+    p.free(a, 100);
+    p.free(b, 100);
+    expect(p.alloc(100, 40)).toEqual({ x: 0, y: 0 });
+    expect(p.usedHeight).toBe(60);
+  });
+
+  it('keeps the rest of a joined row as an empty shelf', () => {
+    const p = new ShelfPacker(100, 100, 10);
+    const a = p.alloc(100, 50)!;
+    p.alloc(100, 10);
+    p.free(a, 100);
+    expect(p.alloc(100, 20)).toEqual({ x: 0, y: 0 });
+    expect(p.alloc(100, 30)).toEqual({ x: 0, y: 20 });
+    expect(p.usedHeight).toBe(60);
+  });
 });

@@ -153,6 +153,8 @@ export const MENU = {
       alpha: 0.8,
       /** HUD plates are baked per size; widths are rounded up to this step to share pictures. */
       widthStep: 8,
+      /** Baked plates no plate shows any more are kept for reuse up to this many; the oldest go first (a counter only grows wider, so old sizes are not needed again). */
+      idlePlates: 3,
     },
     /** An on/off switch: the label on the left, a track with a sliding knob on the right. */
     toggle: {

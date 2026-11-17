@@ -478,7 +478,7 @@ export const ANIM = {
     /** Layers kept alive above the top edge while the camera rises along the tower (intro). */
     windowMarginLayers: 3,
     /** Unused baked layer textures kept for reuse before the oldest are removed. */
-    idleLayerTextures: 48,
+    idleLayerTextures: 16,
     /**
      * Pictures of the layers below the live ones that are baked ahead while the run ends, so the
      * collapse finds them; they may stay idle on top of `idleLayerTextures` until it takes them.
