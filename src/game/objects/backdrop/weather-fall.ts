@@ -4,10 +4,9 @@ import { LOGICAL_SIZE } from '../../../data/screen';
 import { WEATHER_LOOK, WEATHER_TEX } from '../../../data/weather-look';
 import { MS_PER_SECOND, TWO_PI } from '../../../util/math';
 import { hudKeepOutFade } from '../../camera-layout';
+import { laneCount, snowSpots } from './weather-lanes';
 import { particleFade, rainDropsShown, wrapRange } from './weather-motion';
 import type { WeatherFrame, WeatherPart } from './weather-frame';
-
-const SPAWN_TRIES = 12;
 
 export type FallKind = 'rain' | 'storm' | 'snow' | 'leaves';
 
@@ -79,21 +78,27 @@ export class WeatherFall implements WeatherPart {
     this.slantRad = -Math.atan(look.slant ?? 0);
     const count = Math.min(look.count, WEATHER_LOOK.particleCount.full);
     const strip = look.sideShare ?? WEATHER_LOOK.sideShare;
+    const snow = kind === 'snow';
+    const drawU = (): number => {
+      const sideStrip = rng.chance(look.sideBias ?? WEATHER_LOOK.sideBias);
+      const left = rng.chance(0.5);
+      return sideStrip ? (left ? rng.range(0, strip) : rng.range(1 - strip, 1)) : rng.next();
+    };
+    // Snow falls in lanes (one speed per lane, see weather-lanes.ts); the rest start anywhere.
+    const lanes = laneCount(LOGICAL_SIZE.width, WEATHER_LOOK.snow.laneGapPx);
+    const spots = snow ? snowSpots(count, lanes, drawU, () => rng.next()) : [];
+    const laneSpeed = new Map<number, number>();
     for (let i = 0; i < count; i++) {
-      let u = 0;
-      let v = 0;
-      // Snow keeps its flakes apart at the start (a few draws, the last one stands).
-      for (let tries = 0; tries < SPAWN_TRIES; tries++) {
-        const sideStrip = rng.chance(look.sideBias ?? WEATHER_LOOK.sideBias);
-        const left = rng.chance(0.5);
-        u = sideStrip ? (left ? rng.range(0, strip) : rng.range(1 - strip, 1)) : rng.next();
-        v = rng.next();
-        if (kind !== 'snow' || this.apart(u, v)) break;
+      const { lane, u, v } = spots[i] ?? { lane: 0, u: drawU(), v: rng.next() };
+      let speed = draw(rng, look.speed, 0);
+      if (snow) {
+        speed = laneSpeed.get(lane) ?? speed;
+        laneSpeed.set(lane, speed);
       }
       this.specs.push({
         u,
         v,
-        speed: draw(rng, look.speed, 0),
+        speed,
         sway: draw(rng, look.swayPx, 0),
         swayMs: draw(rng, look.swayMs, 1),
         spinMs: draw(rng, look.spinMs, 1),
@@ -101,20 +106,11 @@ export class WeatherFall implements WeatherPart {
         scale: draw(rng, look.scale, 1),
         alpha: draw(rng, look.alpha, 1),
       });
-      const index = kind === 'snow' ? this.flakeSize(rng) : i % Math.max(frames.length, 1);
+      const index = snow ? this.flakeSize(rng) : i % Math.max(frames.length, 1);
       this.objects.push(
         new Phaser.GameObjects.Image(scene, 0, 0, frames[index] ?? '').setVisible(false),
       );
     }
-  }
-
-  /** Whether (u, v) is at least the snow's minimum gap from every flake placed so far. */
-  private apart(u: number, v: number): boolean {
-    const snow = WEATHER_LOOK.snow;
-    const w = LOGICAL_SIZE.width;
-    return this.specs.every(
-      (p) => Math.hypot((p.u - u) * w, (p.v - v) * snow.gapRefHeight) >= snow.minGapPx,
-    );
   }
 
   private flakeSize(rng: Rng): number {
@@ -125,10 +121,10 @@ export class WeatherFall implements WeatherPart {
   }
 
   update(frame: WeatherFrame): void {
-    const rainy = this.kind === 'rain' || this.kind === 'storm';
+    const rain = this.kind === 'rain' || this.kind === 'storm';
     const shown =
       frame.share > 0
-        ? rainy
+        ? rain
           ? rainDropsShown(this.objects.length, frame.level)
           : Math.round(
               (this.objects.length * WEATHER_LOOK.particleCount[frame.level]) /
@@ -142,7 +138,6 @@ export class WeatherFall implements WeatherPart {
     const bandFeather = this.look.bandFeatherPx ?? WEATHER_LOOK.bandFeatherPx;
     const keepFeather = this.look.keepOutFeatherPx ?? WEATHER_LOOK.keepOutFeatherPx;
     const leaf = this.kind === 'leaves';
-    const rain = this.kind === 'rain' || this.kind === 'storm';
     const slant = this.look.slant ?? 0;
     const tilt = this.look.tiltRad ?? 0;
     const swayLag = this.look.swayLag ?? 0;
