@@ -4,6 +4,7 @@ import { bigPageFails } from '../../util/gl-page-error';
 import { ShelfPacker, type PackedBox } from '../../util/shelf-packer';
 import { devWarn } from '../dev-warn';
 import { asWebGLRenderer } from '../webgl-renderer';
+import { createCpuCanvas } from './cpu-canvas';
 import { setSharedPicturePixels, setSharedPictureStore } from './bake-texture';
 
 /**
@@ -366,10 +367,7 @@ let pixelCtx: CanvasRenderingContext2D | null = null;
 
 function pixelContext(): CanvasRenderingContext2D {
   if (pixelCtx) return pixelCtx;
-  const canvas = document.createElement('canvas');
-  canvas.width = 1;
-  canvas.height = 1;
-  const ctx = canvas.getContext('2d', { willReadFrequently: true });
+  const ctx = createCpuCanvas(1, 1).context;
   if (!ctx) throw new Error('No 2d context');
   return (pixelCtx = ctx);
 }

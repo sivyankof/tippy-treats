@@ -7,6 +7,7 @@ import { channels, cssColor, mixColor } from '../../util/color';
 import { clamp01, rampBetween, TWO_PI } from '../../util/math';
 import { ditherNoise } from '../objects/backdrop/sky-gradient';
 import { deferStep } from '../ui/bake-texture';
+import { createCpuCanvas } from '../ui/cpu-canvas';
 import { riseRoom } from './cloud-figure';
 
 /**
@@ -748,10 +749,9 @@ export function bakeNebulaArms(
   const height = rows.pink + rects.pink.h;
   const pixels = new Uint8ClampedArray(new ArrayBuffer(W * height * 4));
   const image = new ImageData(pixels, W, height);
-  const canvas = document.createElement('canvas');
-  canvas.width = W;
-  canvas.height = height;
-  const ctx = canvas.getContext('2d');
+  // In main memory: the slices go on with `putImageData`, and the texture is made without reading
+  // the whole picture back from the video chip in one frame of the run.
+  const { canvas, context: ctx } = createCpuCanvas(W, height);
   let kit: BakeKit | null = null;
   const p: Paint = { r: 0, g: 0, b: 0, a: 0 };
   const hit: Hit = { n: Infinity, end: 0 };
