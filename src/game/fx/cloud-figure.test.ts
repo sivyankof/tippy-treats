@@ -6,6 +6,7 @@ import {
   cloudSilhouette,
   nebulaSilhouette,
   requiredBodyWidth,
+  silhouetteBottomAt,
   silhouetteBounds,
   silhouetteTopAt,
 } from './cloud-figure';
@@ -61,24 +62,41 @@ describe('cloud figures', () => {
     expect(figure.body.top - top).toBeLessThanOrEqual(RULE_ANIM.cloud.nebula.maxRiseAboveBody);
   });
 
-  it('has one smooth wave for the nebula underside: it only deepens to the middle and shallows after it', () => {
+  it('is a band of about one thickness: the middle is at most 1.3 times as thick as the ends', () => {
     const s = nebulaSilhouette();
-    const bottomAt = (x: number): number => {
-      let bottom = x >= s.body.left && x <= s.body.right ? s.body.bottom : -Infinity;
-      for (const c of s.lobes) {
-        const dx = Math.abs(x - c.x);
-        if (dx < c.r) bottom = Math.max(bottom, c.y + Math.sqrt(c.r * c.r - dx * dx));
-      }
-      return bottom;
-    };
-    const centre = RULE_ANIM.cloud.nebula.belly.centre;
-    let worstDip = 0;
-    for (let x = 160; x < 880; x += 4) {
-      const next = x + 4;
-      // Moving away from the middle the edge may only rise (less the scallops of a close row of circles).
-      const outward = x < centre ? bottomAt(x) - bottomAt(next) : bottomAt(next) - bottomAt(x);
-      worstDip = Math.max(worstDip, outward < 0 ? -outward : 0);
+    const thick = (x: number): number => silhouetteBottomAt(s, x) - silhouetteTopAt(s, x);
+    const ends = Math.min(thick(150), thick(850));
+    let middle = 0;
+    for (let x = 300; x <= 700; x += 4) middle = Math.max(middle, thick(x));
+    expect(middle / ends).toBeLessThanOrEqual(1.3);
+    // Nothing hangs: the underside is almost flat (within a few px of the body bottom).
+    for (let x = 160; x <= 880; x += 4) {
+      expect(silhouetteBottomAt(s, x) - figure.body.bottom).toBeLessThanOrEqual(12);
     }
-    expect(worstDip).toBeLessThanOrEqual(3);
+  });
+
+  it('has 3 or 4 short wisps of different length that fade out and keep inside the picture', () => {
+    const s = nebulaSilhouette();
+    const wisps = s.wisps ?? [];
+    expect(wisps.length).toBeGreaterThanOrEqual(3);
+    expect(wisps.length).toBeLessThanOrEqual(4);
+    const lens = wisps.map((w) => (w.tail[w.tail.length - 1]?.y ?? 0) - figure.body.bottom);
+    expect(new Set(lens).size).toBe(wisps.length);
+    expect(Math.max(...lens)).toBeLessThanOrEqual(70);
+    for (const w of wisps) {
+      const alphas = w.tail.map((c) => c.alpha);
+      expect([...alphas].sort((a, b) => b - a)).toEqual(alphas);
+      expect(alphas[alphas.length - 1]).toBeLessThan(0.2);
+    }
+    expect(silhouetteBounds(s).bottom + figure.outline).toBeLessThanOrEqual(figure.height - 3);
+  });
+
+  it('keeps the full-width covered band of the body rows as it was', () => {
+    const s = nebulaSilhouette();
+    // Every column of the screen-wide part is covered from the body top to the body bottom.
+    for (let x = figure.body.left + 70; x <= figure.body.right - 70; x += 8) {
+      expect(silhouetteTopAt(s, x)).toBeLessThanOrEqual(figure.body.top);
+      expect(silhouetteBottomAt(s, x)).toBeGreaterThanOrEqual(figure.body.bottom);
+    }
   });
 });

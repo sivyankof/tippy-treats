@@ -35,6 +35,14 @@ export interface Silhouette {
   circles: readonly Circle[];
   /** Lobes and wisps that hang below or stick out: only the outline and the base tone take them, so the shade stays one flat band. */
   lobes: readonly Circle[];
+  /** Soft tails that melt into transparency under the edge: no outline, drawn over the body. */
+  wisps?: readonly Wisp[];
+}
+
+/** A wisp: the root circle (it is in `lobes` too and has the outline) and the fading tail below it. */
+export interface Wisp {
+  root: Circle;
+  tail: ReadonlyArray<Circle & { alpha: number }>;
 }
 
 /** The width (display px) the body must have to hide a layer anywhere on the screen at any moment of the cover. */
@@ -80,39 +88,71 @@ export function cloudSilhouette(): Silhouette {
   };
 }
 
+/** The wisps of the nebula: short tails of different length under its edge. */
+function nebulaWisps(): Wisp[] {
+  const w = cfg.nebula.wisps;
+  const bottom = figure.body.bottom;
+  return w.spots.map((spot) => {
+    const steps = w.tailAlpha.length;
+    const tail = w.tailAlpha.map((alpha, i) => {
+      const k = (i + 1) / steps;
+      return {
+        x: spot.x,
+        y: bottom + spot.len * k,
+        r: spot.r * (1 - (1 - w.tipShare) * k),
+        alpha,
+      };
+    });
+    return { root: { x: spot.x, y: bottom - spot.r * w.rootLift, r: spot.r }, tail };
+  });
+}
+
 /**
- * The nebula: a swollen middle thinning out towards both ends. Its top stays low above the body
- * (`nebulaTopMin`) so that on a short screen it does not reach the HUD plates over the row, and
- * its underside is ONE smooth wave (a close row of circles along `nebulaBelly`), no small lumps.
+ * The nebula: a band of cotton wool about as thick all along. Its top is a little puffier than its
+ * underside and stays low above the body (`maxRiseAboveBody`) so that on a short screen it does not
+ * reach the HUD plates over the row; the underside is almost flat with a few short wisps that melt away.
  */
 export function nebulaSilhouette(): Silhouette {
-  const belly = cfg.nebula.belly;
+  const u = cfg.nebula.underside;
   const lobes: Circle[] = [];
-  for (let x = belly.from; x <= belly.to; x += belly.step) {
-    const k = (x - belly.centre) / belly.spread;
-    const bottom = figure.body.bottom - belly.base + (belly.depth + belly.base) * Math.exp(-k * k);
-    lobes.push({ x, y: bottom - belly.r, r: belly.r });
+  for (let x = u.from, i = 0; x <= u.to; x += u.step, i++) {
+    const bottom = figure.body.bottom + (u.sag[i % u.sag.length] ?? 0);
+    lobes.push({ x, y: bottom - u.r, r: u.r });
   }
+  const wisps = nebulaWisps();
   return {
     body: figure.body,
     circles: [
-      // Many bumps of different sizes inside the allowed rise: no long straight run on the top edge.
+      // Bumps of different sizes inside the allowed rise: no long straight run on the top edge.
       { x: 130, y: 142, r: 30 },
-      { x: 195, y: 128, r: 34 },
-      { x: 262, y: 126, r: 24 },
-      { x: 320, y: 122, r: 40 },
-      { x: 400, y: 128, r: 28 },
-      { x: 460, y: 122, r: 36 },
-      { x: 535, y: 142, r: 70 },
-      { x: 610, y: 130, r: 34 },
-      { x: 665, y: 126, r: 44 },
-      { x: 740, y: 130, r: 28 },
-      { x: 800, y: 128, r: 38 },
+      { x: 195, y: 134, r: 32 },
+      { x: 262, y: 130, r: 22 },
+      { x: 330, y: 128, r: 38 },
+      { x: 405, y: 132, r: 30 },
+      { x: 470, y: 124, r: 40 },
+      { x: 540, y: 136, r: 60 },
+      { x: 615, y: 128, r: 36 },
+      { x: 680, y: 128, r: 40 },
+      { x: 745, y: 134, r: 30 },
+      { x: 805, y: 132, r: 34 },
       { x: 865, y: 142, r: 26 },
       { x: 910, y: 168, r: 30 },
     ],
-    lobes,
+    lobes: [...lobes, ...wisps.map((w) => w.root)],
+    wisps,
   };
+}
+
+/** Where the bottom edge of a silhouette is at column `x` (the largest y covered), wisps and their tails left out. */
+export function silhouetteBottomAt(s: Silhouette, x: number): number {
+  let bottom = x >= s.body.left && x <= s.body.right ? s.body.bottom : -Infinity;
+  const roots = new Set(s.wisps?.map((w) => w.root));
+  for (const c of s.lobes) {
+    if (roots.has(c)) continue;
+    const dx = Math.abs(x - c.x);
+    if (dx < c.r) bottom = Math.max(bottom, c.y + Math.sqrt(c.r * c.r - dx * dx));
+  }
+  return bottom;
 }
 
 /** Where the top edge of a silhouette is at column `x` (the smallest y covered), for checking its profile. */
@@ -141,6 +181,9 @@ export function silhouetteBounds(s: Silhouette): {
     right = Math.max(right, c.x + c.r);
     top = Math.min(top, c.y - c.r);
     bottom = Math.max(bottom, c.y + c.r);
+  }
+  for (const w of s.wisps ?? []) {
+    for (const c of w.tail) bottom = Math.max(bottom, c.y + c.r);
   }
   return { left, right, top, bottom };
 }
@@ -217,6 +260,13 @@ export function bakeNebulaFigure(scene: Phaser.Scene, key: string): void {
     fillSilhouette(g, s, edge, figure.outline, 0);
     fillSilhouette(g, s, n.pink, 0, 0);
     fillSilhouette(g, s, n.pinkLight, -16, -16);
+    // The wisp tails: no outline, shrinking and fainter down to the tip.
+    for (const w of s.wisps ?? []) {
+      for (const c of w.tail) {
+        g.fillStyle(n.pink, c.alpha);
+        g.fillCircle(c.x, c.y, c.r);
+      }
+    }
     // A smear: two flat overlapping ellipses of one tone, so it reads as a soft stain, not a shape.
     g.fillStyle(n.smear, 1);
     for (const m of cfg.nebula.smears) {

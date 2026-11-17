@@ -210,11 +210,28 @@ export const RULE_ANIM = {
         { x: 720, y: 205, w: 90, h: 56 },
       ],
       /**
-       * The underside: a close row of circles of radius `r` from `from` to `to` every `step` baked px, whose
-       * bottoms follow one smooth bump (a gaussian around `centre`, `spread` wide): `depth` below the body bottom
-       * in the middle, `base` above it at the thin ends.
+       * The underside: an almost flat edge, a close row of circles of radius `r` from `from` to `to` every `step`
+       * baked px, whose bottoms lie `sag[i]` px (taken in turn) below the body bottom: a soft low swell, nothing hangs.
        */
-      belly: { from: 150, to: 890, step: 30, r: 54, centre: 520, spread: 190, depth: 86, base: 6 },
+      underside: { from: 120, to: 900, step: 36, r: 40, sag: [3, 8, 4, 9, 5, 8, 3, 7] },
+      /**
+       * Short soft wisps under the edge, baked px: `x` is the middle, `len` how far the tip goes below the body bottom,
+       * `r` the radius where it leaves the body. The root has the warm outline; the tail is a close chain of shrinking pink
+       * circles of `tailAlpha` (one per entry, from the root down; they overlap, so it reads as one soft smear) with no outline: it melts into transparency.
+       */
+      wisps: {
+        spots: [
+          { x: 250, len: 34, r: 15 },
+          { x: 440, len: 58, r: 18 },
+          { x: 620, len: 40, r: 16 },
+          { x: 790, len: 52, r: 17 },
+        ],
+        tailAlpha: [0.3, 0.3, 0.28, 0.26, 0.24, 0.22, 0.2, 0.18, 0.15, 0.12, 0.1, 0.07, 0.05, 0.03],
+        /** Radius of the last tail circle as a share of the root radius. */
+        tipShare: 0.6,
+        /** The root circle sits this share of its radius above the body bottom (only its lower rim shows under the edge). */
+        rootLift: 0.5,
+      },
       /**
        * The densest the figure is drawn while the nebula covers the layer: one picture, so the
        * layer shows through with a contrast of about 1 - this (tuned by the contrast of the layer
