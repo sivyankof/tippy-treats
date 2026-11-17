@@ -50,7 +50,11 @@ export class PlanetLife implements Life, LapLife {
   setLap(lap: number, topWidth?: number): void {
     const id = planetOfLap(lap);
     if (this.comingId !== null) this.finish();
-    if (id === this.shownSpot.id && lap === this.shownSpot.lap) return;
+    if (id === this.shownSpot.id && lap === this.shownSpot.lap) {
+      // Space built ahead of its first lap takes the tower top width of the moment the lap begins.
+      if (topWidth !== this.shownSpot.topWidth) this.shownSpot.set(id, lap, topWidth);
+      return;
+    }
     if (effectsMode.reduced) {
       this.shown.setTexture(planetKey(id));
       this.shownSpot.set(id, lap, topWidth);

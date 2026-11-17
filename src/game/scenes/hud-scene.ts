@@ -21,6 +21,8 @@ import { LAP_PLATE } from '../../data/space-planets';
 import { flyingLap } from '../../core/space-laps';
 import { LapChangeWatch } from '../../core/space-planet';
 import { ZoneChangeWatch } from '../ui/zone-change-watch';
+import { BACKDROP } from '../../data/backdrop';
+import { prepTarget, type PrepTarget } from '../objects/backdrop/zone-prep';
 import { HudNumbersIdle } from '../ui/hud-idle';
 import { isCompactNext } from '../ui/hud-row-layout';
 import { NextCreatureBadge } from '../ui/next-creature-badge';
@@ -158,7 +160,8 @@ export class HudScene extends Phaser.Scene {
     const live = info && info.phase !== 'over' ? info : null;
     const announced = this.zoneWatch.observe(live ? live.zoneIndex : null);
     const lap = this.lapWatch.observe(live ? flyingLap(live.height) : null);
-    fxGuard.call('hud-zone-banner', this, this.updateZoneBanner, announced, lap, time);
+    const coming = live ? prepTarget(live.height, live.zoneIndex, BACKDROP.prep.leadLayers) : null;
+    fxGuard.call('hud-zone-banner', this, this.updateZoneBanner, announced, lap, coming, time);
     if (info) {
       this.heightRoll.set(info.height);
       this.scoreRoll.set(info.score);
@@ -212,7 +215,15 @@ export class HudScene extends Phaser.Scene {
     this.masterCaptions.update(game.masterFeed, this.effectBadges.count, delta);
   }
 
-  private updateZoneBanner(announced: number | null, lap: number | null, time: number): void {
+  /** `coming`: the change the backdrop is getting ready for; its plate text is written ahead too. */
+  private updateZoneBanner(
+    announced: number | null,
+    lap: number | null,
+    coming: PrepTarget | null,
+    time: number,
+  ): void {
+    if (coming?.kind === 'zone') this.zoneBanner.prepare(coming.index);
+    else if (coming?.kind === 'lap') this.lapBanner.prepareLap(coming.lap);
     if (announced !== null) this.zoneBanner.show(announced);
     if (lap !== null) this.lapBanner.showLap(lap);
     this.zoneBanner.update(time);

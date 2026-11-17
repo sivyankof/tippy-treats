@@ -57,9 +57,32 @@ export class ZoneBanner {
     this.showText(t('zone.lap', { n: lap }));
   }
 
+  /**
+   * Writes the name of a zone that is coming soon while the plate is hidden, so the frame of the
+   * change does not draw the text (a new text is drawn and sent to the video chip at once).
+   */
+  prepare(zoneIndex: number): void {
+    const zone = ZONES[zoneIndex];
+    if (zone) this.prepareText(t(`zone.${zone.id}.name`));
+  }
+
+  /** The same for lap `lap` of Space. */
+  prepareLap(lap: number): void {
+    this.prepareText(t('zone.lap', { n: lap }));
+  }
+
+  private prepareText(text: string): void {
+    if (!this.root.visible && this.label.text !== text) this.setLabel(text);
+  }
+
+  private setLabel(text: string): void {
+    fitText(this.label.setText(text), this.width - this.spec.labelPad * 2);
+  }
+
   private showText(text: string): void {
-    const { spec, height } = this;
-    fitText(this.label.setText(text), this.width - spec.labelPad * 2);
+    const { height } = this;
+    const spec = this.spec;
+    if (this.label.text !== text) this.setLabel(text);
     this.hangTimer?.remove();
     this.scene.tweens.killTweensOf(this.root);
     this.root.setVisible(true).setY(-height);
