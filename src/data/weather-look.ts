@@ -10,6 +10,16 @@ type Layers4 = readonly [number, number, number, number];
 
 const NONE = 0xffffff;
 
+/**
+ * The sides a storm's bolt can strike (one source for the strike range, the flash spot and the lit twin
+ * of the bank): the x range of the bolt (share of the screen width; between the pause button and the score,
+ * and between the score and the coins), where the flash patch is centred (picture px) and its texture key.
+ */
+export const STRIKE_SIDES = [
+  { x: [0.2, 0.28], spot: { x: 285, y: 100 }, key: 'fx_wx_bank_flash_l' },
+  { x: [0.71, 0.745], spot: { x: 707, y: 95 }, key: 'fx_wx_bank_flash_r' },
+] as const;
+
 /** Texture keys of the weather pictures (all under `fx_`, so they live on the shared atlas). */
 export const WEATHER_TEX = {
   flake: ['fx_wx_flake0', 'fx_wx_flake1', 'fx_wx_flake2', 'fx_wx_flake3'],
@@ -22,7 +32,7 @@ export const WEATHER_TEX = {
   bankRain: 'fx_wx_bank_rain',
   bankStorm: 'fx_wx_bank_storm',
   /** The lit twin of the bank for a bolt on the left and on the right. */
-  bankFlash: ['fx_wx_bank_flash_l', 'fx_wx_bank_flash_r'],
+  bankFlash: STRIKE_SIDES.map((side) => side.key) as readonly string[],
   bolt: 'fx_wx_bolt',
 } as const;
 
@@ -234,10 +244,20 @@ export const WEATHER_LOOK = {
     swayMs: [3200, 6500],
     alpha: [0.9, 1],
     scale: [1, 1],
-    /** Cumulative chance of each flake picture but the last (small disc, middle disc, soft disc); the rest are the six-ray flake. */
+    /** Cumulative chance of each flake picture but the last (small disc, middle disc, branched six-ray flake); the rest are the plain six-ray flake. */
     sizeCuts: [0.42, 0.84, 0.92] as readonly number[],
-    /** No two flakes start closer than this (px of the 1080-wide logical screen, `gapRefHeight` tall), so they do not stick in pairs. */
-    minGapPx: 130,
+    /** Picture sizes of the flakes (px): a small and a middle disc, then a branched and a plain six-ray flake. */
+    flakePx: [28, 36, 44, 44] as readonly number[],
+    /**
+     * The flakes fall in vertical lanes: each lane has one speed for all its flakes, and the lanes are at least this
+     * far apart (px of the 1080-wide logical screen), more than twice the widest sway plus the biggest flake, so two
+     * flakes never touch. In one lane the flakes are at least `minGapPx` apart down the screen (`gapRefHeight` tall),
+     * and the same speed keeps them so for good.
+     */
+    laneGapPx: 170,
+    minGapPx: 140,
+    /** No lane takes more flakes than this (they would not fit `minGapPx` apart); the rest go to the next lane over. */
+    laneCap: 14,
     gapRefHeight: 2340,
     /** The flakes keep to the side strips and the open sky: few hide behind the tower. */
     sideBias: 0.95,
@@ -336,10 +356,9 @@ export const WEATHER_LOOK = {
      * towards the edges of the puffs, `flashCoreShare` being how bright it is deep inside a mass. Drawn additively.
      */
     flashColor: 0xffe6a0,
-    flashSpots: [
-      { x: 285, y: 100 },
-      { x: 707, y: 95 },
-    ] as ReadonlyArray<{ x: number; y: number }>,
+    flashSpots: STRIKE_SIDES.map((side) => side.spot) as ReadonlyArray<{ x: number; y: number }>,
+    /** The flash picture is made in slices of this many rows, one per frame, so no single frame carries all of it. */
+    flashRowsPerStep: 24,
     flashRadiusPx: 210,
     flashCoreShare: 0.6,
     /** How bright the flash is on each row of puffs (back, middle, front): the front puffs stay dimmer, so the light comes from the bolt and not from a ball. */
@@ -357,11 +376,8 @@ export const WEATHER_LOOK = {
     riseShare: 0.2,
     /** Alpha of the lit bank at the peak. */
     flashAlpha: 0.85,
-    /** The bolt stands in one of these x ranges (share of the screen width): between the pause button and the score, and between the score and the coins. */
-    xRanges: [
-      [0.2, 0.28],
-      [0.71, 0.745],
-    ] as ReadonlyArray<readonly [number, number]>,
+    /** The bolt stands in one of these x ranges (share of the screen width), one per strike side. */
+    xRanges: STRIKE_SIDES.map((side) => side.x) as ReadonlyArray<readonly [number, number]>,
     /** Picture size, and the width of its outline, glow and core strokes (picture px). */
     width: 168,
     height: 240,

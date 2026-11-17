@@ -1,7 +1,7 @@
 import * as Phaser from 'phaser';
 import { Rng } from '../../../core/rng';
 import type { WeatherId } from '../../../data/weather';
-import { WEATHER_LOOK, WEATHER_TEX } from '../../../data/weather-look';
+import { STRIKE_SIDES, WEATHER_LOOK, WEATHER_TEX } from '../../../data/weather-look';
 import type { ZoneId } from '../../../data/zones';
 import { TWO_PI } from '../../../util/math';
 import { effectsMode } from '../../effects-mode';
@@ -59,7 +59,7 @@ export class WeatherBank implements Life {
       .setScale(BANK.scale);
     this.objects = [this.bank];
     if (weather === 'storm') {
-      for (let side = 0; side < BOLT.xRanges.length; side++) {
+      for (let side = 0; side < STRIKE_SIDES.length; side++) {
         this.flashes.push(
           new Phaser.GameObjects.Image(scene, 0, 0, bankFlashKey(side))
             .setOrigin(0.5, 0)
@@ -108,7 +108,7 @@ export class WeatherBank implements Life {
       this.flashAt = now;
       this.flashMs = this.rng.range(BOLT.flashMs[0], BOLT.flashMs[1]);
       this.strike = this.pickStrike(ctx, bankX);
-      this.side = this.strike?.side ?? this.rng.int(0, flashes.length - 1);
+      this.side = this.strike?.side ?? this.rng.int(0, STRIKE_SIDES.length - 1);
       this.nextAt = nextBoltAt(now, BOLT.everyMs, this.rng.next());
     }
     const strength = this.flashAt < 0 ? 0 : flashEnvelope(now - this.flashAt, this.flashMs);
@@ -134,8 +134,8 @@ export class WeatherBank implements Life {
     bankX: number,
   ): { x: number; y: number; scale: number; side: number } | null {
     for (let i = 0; i < BOLT.tries; i++) {
-      const side = this.rng.int(0, BOLT.xRanges.length - 1);
-      const range = BOLT.xRanges[side];
+      const side = this.rng.int(0, STRIKE_SIDES.length - 1);
+      const range = STRIKE_SIDES[side]?.x;
       if (!range) return null;
       const x = ctx.width * this.rng.range(range[0], range[1]);
       const edge = bankEdge((x - bankX) / BANK.scale + BANK.width / 2, true) * BANK.scale;
