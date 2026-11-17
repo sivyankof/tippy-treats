@@ -298,6 +298,11 @@ export function addSharedPicture(
   return true;
 }
 
+/** How many pages the shared atlas has now (the debug pages report it; the aim is one). */
+export function atlasPageCount(textures: Phaser.Textures.TextureManager): number {
+  return (pagesOf.get(textures) ?? []).length;
+}
+
 /** Moves loaded pictures (e.g. the face SVGs) onto the shared atlas, keeping their keys. */
 export function moveToSharedAtlas(scene: Phaser.Scene, keys: readonly string[]): void {
   const manager = scene.sys.textures;

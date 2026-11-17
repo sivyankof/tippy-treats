@@ -1,6 +1,8 @@
 import { BACKDROP_COLORS } from './backdrop-colors';
 import { GOLDEN } from '../util/math';
 import { BD_TEX } from './backdrop';
+import { FIELD_PAD } from './picture-fields';
+import { paddedOrigin } from '../util/field-pad';
 
 /** Everything that moves in the backdrop of a zone (docs/06, section 5). Positions are shares of the screen unless marked px. */
 export interface Point {
@@ -237,7 +239,7 @@ export const BACKDROP_LIFE = {
       texture: COOK.ladle,
       at: KITCHEN_RAIL,
       offset: { x: dx, y: 6 },
-      origin: [0.5, 0.05],
+      origin: paddedOrigin([0.5, 0.05], 44, 240, FIELD_PAD.kitchenLadle),
       scale,
       swing,
       phase,
@@ -254,7 +256,7 @@ export const BACKDROP_LIFE = {
       texture: COOK.pendulum,
       at: KITCHEN_CLOCK,
       offset: { x: 0, y: 26 },
-      origin: [0.5, 0.04],
+      origin: paddedOrigin([0.5, 0.04], 20, 104, FIELD_PAD.kitchenPendulum),
       swing: { deg: 14, ms: 1600 },
     } as HoverSpec,
     fly: {

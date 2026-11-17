@@ -3,7 +3,8 @@ import { BACKDROP, BD_TEX } from '../../../data/backdrop';
 import { BACKDROP_COLORS } from '../../../data/backdrop-colors';
 import { BACKDROP_LIFE, garlandWireY } from '../../../data/backdrop-life';
 import { LOGICAL_SIZE } from '../../../data/screen';
-import { bakeTexture } from '../../ui/bake-texture';
+import { bakePadded, bakeTexture } from '../../ui/bake-texture';
+import { FIELD_PAD } from '../../../data/picture-fields';
 import { glow, tiled } from './art-kit';
 import { onLayer } from './layer-anchor';
 import { Hover, Traveler, Twinkles } from './life';
@@ -188,7 +189,7 @@ function bakeWindowLife(scene: Phaser.Scene): void {
     g.fillRoundedRect(18, 128, 14, 60, 6);
     g.fillRoundedRect(38, 128, 14, 60, 6);
   });
-  bakeTexture(scene, S.stand, 220, 50, (g) => {
+  bakePadded(scene, S.stand, 220, 50, FIELD_PAD.showcaseStand, (g) => {
     g.fillStyle(shade(C.standBase, -0.12), 1);
     g.fillEllipse(110, 44, 130, 14);
     g.fillRoundedRect(98, 12, 24, 32, 6);

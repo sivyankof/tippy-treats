@@ -29,6 +29,8 @@ export interface VisitorSpec {
   /** Picture size in px (the picture looks to the right). */
   width: number;
   height: number;
+  /** Room added around the drawing on every side so its outline fits the picture (the drawing keeps its place: the picture is centred). */
+  fieldPad: number;
   /** Share of the passes this guest takes among the rare ones. */
   weight: number;
   flight: VisitorFlight;
@@ -66,6 +68,7 @@ export const SPACE_VISITOR = {
       texture: 'bd_sv_eclair',
       width: 320,
       height: 190,
+      fieldPad: 0,
       weight: 1,
       flight: {
         durationMs: [11000, 14000],
@@ -79,6 +82,7 @@ export const SPACE_VISITOR = {
       texture: 'bd_sv_saucer',
       width: 280,
       height: 300,
+      fieldPad: 4,
       weight: 1,
       flight: {
         durationMs: [12000, 15000],
@@ -92,6 +96,7 @@ export const SPACE_VISITOR = {
       texture: 'bd_sv_teapot',
       width: 250,
       height: 220,
+      fieldPad: 10,
       weight: 1,
       flight: {
         durationMs: [15000, 19000],
@@ -105,6 +110,7 @@ export const SPACE_VISITOR = {
       texture: 'bd_sv_comet',
       width: 340,
       height: 150,
+      fieldPad: 4,
       weight: 1,
       flight: {
         durationMs: [4200, 5200],

@@ -16,6 +16,14 @@ export const TOPPER_KINDS: readonly TopperKind[] = [
   'wafer',
 ];
 
+/** Room added around the drawing of a kind, in drawn pixels: the outline and tips fit with a few pixels to spare. */
+export interface TopperField {
+  left: number;
+  right: number;
+  top: number;
+  bottom: number;
+}
+
 export interface TopperKindLook {
   /** Size of the picture as drawn (shown `showScale` times bigger). */
   width: number;
@@ -24,6 +32,8 @@ export interface TopperKindLook {
   restY: number;
   /** Half of the width the topper takes on the edge (drawn size; for the place beside the face and the fly). */
   halfBody: number;
+  /** The picture is this much bigger than `width` x `height` on each side; the anchor (middle of `width`, `restY`) stays on the same spot of the drawing. */
+  field: TopperField;
   /** Tilt it rests at, degrees (positive leans to the right; mirrored with the side). */
   restDeg: number;
 }
@@ -51,11 +61,46 @@ export const PLAIN_TOPPERS = {
   edgeGapPx: 10,
   reach: 0.45,
   kinds: {
-    cherry: { width: 66, height: 92, restY: 86, halfBody: 24, restDeg: 0 },
-    lemon: { width: 84, height: 48, restY: 44, halfBody: 38, restDeg: 0 },
-    strawberry: { width: 70, height: 70, restY: 64, halfBody: 26, restDeg: 14 },
-    mint: { width: 74, height: 62, restY: 58, halfBody: 30, restDeg: 0 },
-    wafer: { width: 62, height: 84, restY: 78, halfBody: 24, restDeg: 0 },
+    cherry: {
+      width: 66,
+      height: 92,
+      restY: 86,
+      halfBody: 24,
+      restDeg: 0,
+      field: { left: 4, right: 13, top: 6, bottom: 4 },
+    },
+    lemon: {
+      width: 84,
+      height: 48,
+      restY: 44,
+      halfBody: 38,
+      restDeg: 0,
+      field: { left: 3, right: 3, top: 3, bottom: 3 },
+    },
+    strawberry: {
+      width: 70,
+      height: 70,
+      restY: 64,
+      halfBody: 26,
+      restDeg: 14,
+      field: { left: 0, right: 0, top: 0, bottom: 0 },
+    },
+    mint: {
+      width: 74,
+      height: 62,
+      restY: 58,
+      halfBody: 30,
+      restDeg: 0,
+      field: { left: 3, right: 3, top: 3, bottom: 3 },
+    },
+    wafer: {
+      width: 62,
+      height: 84,
+      restY: 78,
+      halfBody: 24,
+      restDeg: 0,
+      field: { left: 3, right: 3, top: 3, bottom: 5 },
+    },
   } satisfies Record<TopperKind, TopperKindLook>,
   colors: {
     cherry: {

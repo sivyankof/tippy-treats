@@ -16,7 +16,8 @@ import { cssColor, shade } from '../../../util/color';
 import { TWO_PI } from '../../../util/math';
 import { effectsMode } from '../../effects-mode';
 import { fillPolygon, outlineColor } from '../../fx/plain-style';
-import { bakeTexture } from '../../ui/bake-texture';
+import { bakePadded, bakeTexture } from '../../ui/bake-texture';
+import { FIELD_PAD } from '../../../data/picture-fields';
 import { glassPose, newGlassPose } from './glass-motion';
 import type { FrameCtx, Life } from './life';
 import { inSky, onLayer, type Anchor } from './layer-anchor';
@@ -282,7 +283,7 @@ export function bakeGlassItems(scene: Phaser.Scene, weather: WeatherId): void {
   if (!spec) return;
   if (spec.item === 'drop') {
     const d = GLASS_LOOK.drop;
-    bakeTexture(scene, GLASS_TEX.drop, d.w, d.h, (g) => {
+    bakePadded(scene, GLASS_TEX.drop, d.w, d.h, FIELD_PAD.windowDrop, (g) => {
       const r = d.w / 2;
       const body = (grow: number, color: number): void => {
         g.fillStyle(color, 1);

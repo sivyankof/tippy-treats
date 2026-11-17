@@ -14,6 +14,9 @@ export const ART_SHEET = {
   captionColor: '#3b2a4a',
   background: 0x9a8cb4,
   cellColor: 0xcdbfe0,
+  /** The clip guard report under the grid: line height and colour. */
+  reportLineHeight: 18,
+  reportColor: '#7a1020',
   /** Size a picture with no texture (a drawn container) is built at. */
   liveSize: 120,
   /** The creature layers of both looks are drawn this wide, scaled to this size across. */

@@ -135,6 +135,21 @@ describe('topperFor first-run guarantee', () => {
   });
 });
 
+describe('topperSize', () => {
+  it('keeps the anchor on the same spot of the drawing when the field grows', () => {
+    for (const kind of TOPPER_KINDS) {
+      const { width, height, restY, field } = PLAIN_TOPPERS.kinds[kind];
+      const k = PLAIN_TOPPERS.showScale;
+      const size = topperSize(kind);
+      expect(size.width).toBeCloseTo((width + field.left + field.right) * k);
+      expect(size.height).toBeCloseTo((height + field.top + field.bottom) * k);
+      // The anchor, measured from the top-left of the picture, is the drawn anchor plus the left / top field.
+      expect(size.originX * size.width).toBeCloseTo((width / 2 + field.left) * k);
+      expect(size.restY).toBeCloseTo((restY + field.top) * k);
+    }
+  });
+});
+
 describe('topperOffset', () => {
   it('sits beside the face on its side, inside the layer', () => {
     for (const kind of TOPPER_KINDS) {

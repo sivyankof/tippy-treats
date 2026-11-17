@@ -5,19 +5,30 @@ import { DEG_TO_RAD, lerp } from '../../util/math';
 import { faceHalfSpan } from '../fx/glaze-growth';
 import { plainLookAt, plainLooks } from './plain-look';
 
-/** What a kind takes on screen, pixels: the picture size, its resting spot (from the picture top) and half its width on the edge. */
+/**
+ * What a kind takes on screen, pixels: the picture size (the drawing with its field), the anchor
+ * as shares of the picture (`originX`, `restY / height`) and half the body's width on the edge.
+ */
 export interface TopperSize {
   width: number;
   height: number;
   restY: number;
+  originX: number;
   halfBody: number;
 }
 
 /** The on-screen size of a kind (the drawn size times `showScale`). */
 export function topperSize(kind: TopperKind): TopperSize {
-  const { width, height, restY, halfBody } = PLAIN_TOPPERS.kinds[kind];
+  const { width, height, restY, halfBody, field } = PLAIN_TOPPERS.kinds[kind];
   const k = PLAIN_TOPPERS.showScale;
-  return { width: width * k, height: height * k, restY: restY * k, halfBody: halfBody * k };
+  const fullWidth = width + field.left + field.right;
+  return {
+    width: fullWidth * k,
+    height: (height + field.top + field.bottom) * k,
+    restY: (restY + field.top) * k,
+    originX: (width / 2 + field.left) / fullWidth,
+    halfBody: halfBody * k,
+  };
 }
 
 /** The big topper of a plain layer: what it is and on which side of the face it sits (-1 left, 1 right). */
