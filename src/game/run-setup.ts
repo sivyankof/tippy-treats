@@ -5,6 +5,7 @@ import {
   type CheckpointHeight,
 } from '../core/checkpoints';
 import { dailySeed, dailyTeam } from '../core/daily';
+import type { RunLook } from '../core/run-look';
 import type { RunMode } from '../core/run-result';
 import type { TeamSlot } from '../core/sim-types';
 import { DEMO } from '../data/demo';
@@ -15,6 +16,7 @@ import { randomSeed } from '../util/math';
 import { hasDebugTeam, resolveRunTeam } from './debug/debug-team';
 import type { DropDriver } from './perf/perf-drivers';
 import { perfRunSetup, perfSession } from './perf/perf-session';
+import { chooseRunLook } from './run-look-choice';
 import { demoTeam, type RunRequest } from './run-request';
 import { TUTORIAL_TEAM } from './tutorial/tutorial-team';
 
@@ -41,6 +43,8 @@ export interface RunSetup {
   noContinue: boolean;
   /** Timing deviation of the dev bot player, if one plays. */
   bot: number | undefined;
+  /** Weather and start place of the run: cosmetic only, never saved. */
+  look: RunLook;
   /** Drops the layers of a `?perf=1` benchmark run (it replaces the bot); absent in every other run. */
   perfDriver?: DropDriver;
 }
@@ -57,17 +61,20 @@ export function setupRun(request: RunRequest): RunSetup {
   const seed = debug.seed ?? randomSeed();
   if (request.kind === 'daily') {
     const day = utcDay(now());
+    const daySeed = dailySeed(day);
     return {
       request,
       mode: 'daily',
-      seed: dailySeed(day),
+      seed: daySeed,
+      look: chooseRunLook({ seed: daySeed, daily: true, debug }),
       startHeight: 0,
       checkpoint: null,
       paidByAd: false,
       team: dailyTeam(day),
       tutorialRun: false,
       hints: false,
-      writesSave: true,
+      // A pinned weather or place is a dev view, not the real tower of the day.
+      writesSave: debug.weather === undefined && debug.place === undefined,
       noContinue: true,
       bot: undefined,
     };
@@ -77,6 +84,7 @@ export function setupRun(request: RunRequest): RunSetup {
       request,
       mode: 'classic',
       seed,
+      look: chooseRunLook({ seed, debug }),
       startHeight: DEMO.startHeight,
       checkpoint: null,
       paidByAd: false,
@@ -100,6 +108,7 @@ export function setupRun(request: RunRequest): RunSetup {
     request,
     mode: 'classic',
     seed,
+    look: chooseRunLook({ seed, tutorial: tutorialRun, debug }),
     startHeight: checkpoint ?? debug.start ?? 0,
     // A debug start at a checkpoint height looks exactly like a checkpoint start.
     startWidth:
