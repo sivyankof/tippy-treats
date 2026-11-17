@@ -54,7 +54,7 @@ describe('chooseCutVariant', () => {
     }
   });
 
-  it('gives strands about every 4th cut and panic about every 7th, independently', () => {
+  it('gives strands about every 2nd cut and panic about every 7th, independently', () => {
     let strands = 0;
     let panic = 0;
     let both = 0;
