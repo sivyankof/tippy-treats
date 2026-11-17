@@ -245,7 +245,7 @@ export const WEATHER_LOOK = {
     alpha: [0.9, 1],
     scale: [1, 1],
     /** Cumulative chance of each flake picture but the last (small disc, middle disc, branched six-ray flake); the rest are the plain six-ray flake. */
-    sizeCuts: [0.42, 0.84, 0.92] as readonly number[],
+    sizeCuts: [0.3, 0.6, 0.7] as readonly number[],
     /** Picture sizes of the flakes (px): a small and a middle disc, then a branched and a plain six-ray flake. */
     flakePx: [28, 36, 44, 44] as readonly number[],
     /**
@@ -259,10 +259,6 @@ export const WEATHER_LOOK = {
     /** No lane takes more flakes than this (they would not fit `minGapPx` apart); the rest go to the next lane over. */
     laneCap: 14,
     gapRefHeight: 2340,
-    /** The flakes keep to the side strips and the open sky: few hide behind the tower. */
-    sideBias: 0.95,
-    /** The open sky beside the tower is about this share of the width on each side (the tower hides the rest). */
-    sideShare: 0.17,
     /** Snow is slow and big: its fades are short, so more of the flakes show (the HUD gap itself stays). */
     bandFeatherPx: 30,
     keepOutFeatherPx: 12,
