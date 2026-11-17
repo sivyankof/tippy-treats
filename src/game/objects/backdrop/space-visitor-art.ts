@@ -10,7 +10,7 @@ import {
   roundRectPoints,
   type Pt,
 } from '../../fx/plain-style';
-import { bakeTexture } from '../../ui/bake-texture';
+import { bakePadded } from '../../ui/bake-texture';
 
 type Graphics = Phaser.GameObjects.Graphics;
 
@@ -243,6 +243,6 @@ const DRAW: Record<keyof typeof SPACE_VISITOR.guests, (g: Graphics) => void> = {
 export function bakeSpaceVisitors(scene: Phaser.Scene): void {
   for (const [id, spec] of Object.entries(SPACE_VISITOR.guests)) {
     const draw = DRAW[id as keyof typeof DRAW];
-    bakeTexture(scene, spec.texture, spec.width, spec.height, draw);
+    bakePadded(scene, spec.texture, spec.width, spec.height, spec.fieldPad, draw);
   }
 }

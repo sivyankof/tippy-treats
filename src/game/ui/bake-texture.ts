@@ -1,4 +1,5 @@
 import type * as Phaser from 'phaser';
+import { paddedSize } from '../../util/field-pad';
 import { probeClip } from '../clip-guard';
 
 /** One deferred bake: draws and uploads a single texture. */
@@ -118,6 +119,26 @@ export function bakeTexture(
   } finally {
     g.destroy();
   }
+}
+
+/**
+ * Bakes a picture whose drawing sits in the middle of a field `pad` px bigger on every side than
+ * `width` x `height`: the drawing keeps its coordinates, the room around it holds the outline and
+ * tips that would be cut off. Place the picture by `paddedOrigin` to keep it where it was.
+ */
+export function bakePadded(
+  scene: Phaser.Scene,
+  key: string,
+  width: number,
+  height: number,
+  pad: number,
+  draw: (g: Phaser.GameObjects.Graphics) => void,
+): void {
+  const [w, h] = paddedSize(width, height, pad);
+  bakeTexture(scene, key, w, h, (g) => {
+    g.translateCanvas(pad, pad);
+    draw(g);
+  });
 }
 
 /** A game object that only exists to be drawn into a texture: it leaves the scene's display list. */

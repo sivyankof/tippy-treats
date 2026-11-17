@@ -101,7 +101,7 @@ export class LayerTopper {
       this.image
         .setTexture(ensureTopperTexture(this.image.scene, topper.kind))
         .setDisplaySize(look.width, look.height)
-        .setOrigin(0.5, look.restY / look.height);
+        .setOrigin(look.originX, look.restY / look.height);
     }
     this.image
       .setPosition(dx, -BALANCE.layer.height / 2 + PLAIN_TOPPERS.sinkPx)

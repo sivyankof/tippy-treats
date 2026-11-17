@@ -24,4 +24,21 @@ export interface ClipAllowance {
   reason: string;
 }
 
-export const CLIP_ALLOWED: readonly ClipAllowance[] = [];
+export const CLIP_ALLOWED: readonly ClipAllowance[] = [
+  {
+    match: /^bd_(k_(wallpaper|shelves)|r_(far|mid|near)(_|$)|s_street_|shop_(lattice|shelves))/,
+    reason:
+      'tiled backdrop layers: the scenery is drawn past the tile on purpose, so the cut is a straight edge that repeats (TileSprite)',
+  },
+  {
+    match: /^bd_mountains/,
+    sides: ['bottom'],
+    reason: 'the hills run down past the bottom edge of their picture; the screen covers the cut',
+  },
+  {
+    match: /^bd_s_wire$/,
+    sides: ['left', 'right'],
+    reason:
+      'the garland wire runs from edge to edge of its picture and is laid end to end across the screen',
+  },
+];

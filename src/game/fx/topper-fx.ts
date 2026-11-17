@@ -110,7 +110,7 @@ export class TopperFx {
     const slot = this.take();
     slot.image
       .setTexture(ensureTopperTexture(this.scene, from.kind))
-      .setOrigin(0.5, look.restY / look.height)
+      .setOrigin(look.originX, look.restY / look.height)
       .setDepth(DEPTH.pieces)
       .setAlpha(1)
       .setVisible(true);

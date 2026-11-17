@@ -5,7 +5,8 @@ import { BACKDROP_LIFE } from '../../../data/backdrop-life';
 import { KITCHEN_COLORS, PALETTE } from '../../../data/palette';
 import { mixColor, shade } from '../../../util/color';
 import { outlineColor } from '../../fx/plain-style';
-import { bakeTexture } from '../../ui/bake-texture';
+import { bakePadded, bakeTexture } from '../../ui/bake-texture';
+import { FIELD_PAD } from '../../../data/picture-fields';
 import { drawPlank } from './art-kit';
 import { inSky, onLayer } from './layer-anchor';
 import { Hover, PuffColumn, Traveler } from './life';
@@ -124,7 +125,7 @@ function bakePot(scene: Phaser.Scene): void {
     g.fillStyle(PALETTE.textLight, 0.35);
     g.fillRoundedRect(38, 78, 12, 52, 6);
   });
-  bakeTexture(scene, K.lid, 150, 44, (g) => {
+  bakePadded(scene, K.lid, 150, 44, FIELD_PAD.kitchenLid, (g) => {
     g.fillStyle(C.potDark, 1);
     g.fillRoundedRect(6, 22, 138, 16, 8);
     g.fillEllipse(75, 22, 110, 34);
@@ -137,7 +138,7 @@ function bakePot(scene: Phaser.Scene): void {
 }
 
 function bakeRack(scene: Phaser.Scene): void {
-  bakeTexture(scene, K.ladle, 44, 240, (g) => {
+  bakePadded(scene, K.ladle, 44, 240, FIELD_PAD.kitchenLadle, (g) => {
     g.fillStyle(C.ladleDark, 1);
     g.fillRoundedRect(16, 0, 12, 182, 6);
     g.fillEllipse(22, 208, 46, 60);
@@ -183,7 +184,7 @@ function bakeClock(scene: Phaser.Scene): void {
     g.fillStyle(BACKDROP_COLORS.shared.ink, 1);
     g.fillRoundedRect(2, 0, 6, 52, 3);
   });
-  bakeTexture(scene, K.pendulum, 20, 104, (g) => {
+  bakePadded(scene, K.pendulum, 20, 104, FIELD_PAD.kitchenPendulum, (g) => {
     g.fillStyle(shade(C.pendulum, -0.4), 1);
     g.fillRoundedRect(8, 0, 4, 82, 2);
     g.fillCircle(10, 88, 15);

@@ -224,10 +224,13 @@ export function ensureTopperTexture(scene: Phaser.Scene, kind: TopperKind): stri
     if (!scene.textures.exists(key)) bakeBerry(scene, key, false);
     return key;
   }
-  const { width, height } = kinds[kind];
+  const { width, height, field } = kinds[kind];
   const s = PLAIN_TOPPERS.bakeScale * PLAIN_TOPPERS.showScale;
-  bakeTexture(scene, key, width * s, height * s, (g) => {
+  const fullWidth = width + field.left + field.right;
+  const fullHeight = height + field.top + field.bottom;
+  bakeTexture(scene, key, fullWidth * s, fullHeight * s, (g) => {
     g.scaleCanvas(s, s);
+    g.translateCanvas(field.left, field.top);
     DRAWERS[kind](g);
   });
   return key;
