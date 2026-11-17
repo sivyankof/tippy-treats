@@ -110,7 +110,7 @@ export const spaceArt: ZoneArt = {
   bakeLap(scene, lap) {
     bakePlanet(scene, planetOfLap(lap));
   },
-  build(scene, lap = 1) {
+  build(scene, { lap }) {
     const life = BACKDROP_LIFE.space;
     const planet = new PlanetLife(scene, lap);
     const satellite = new Traveler(scene, life.satellite);

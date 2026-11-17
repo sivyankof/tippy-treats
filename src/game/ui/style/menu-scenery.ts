@@ -4,10 +4,12 @@ import { MENU } from '../../../data/menu-layout';
 import { bakeSharedArt } from '../../objects/backdrop/art-kit';
 import { kitchenArt } from '../../objects/backdrop/kitchen-zone';
 import type { FrameCtx } from '../../objects/backdrop/life';
-import { ZoneScenery } from '../../objects/backdrop/zone-scenery';
+import { ZoneScenery, type SceneryLook } from '../../objects/backdrop/zone-scenery';
 import { bakeTexture } from '../bake-texture';
 
 const cfg = MENU.style.scenery;
+/** Menu screens always show the plain kitchen. */
+const MENU_LOOK: SceneryLook = { lap: 1, weather: 'clear', place: 'kitchen' };
 const SHADE_KEY = 'ui_scenery_shade';
 /** Pixels per band of the baked shade strip, and its width. */
 const BAND_PX = 4;
@@ -46,7 +48,7 @@ export class MenuScenery {
   ) {
     const { width, height } = scene.scale.gameSize;
     bakeSharedArt(scene);
-    kitchenArt.bake(scene);
+    kitchenArt.bake(scene, MENU_LOOK);
     bakeShade(scene);
     this.ctx = {
       timeMs: scene.time.now,
@@ -60,7 +62,7 @@ export class MenuScenery {
       scene,
       'kitchen',
       cfg.depth,
-      kitchenArt.build(scene),
+      kitchenArt.build(scene, MENU_LOOK),
       width,
       height,
     );
