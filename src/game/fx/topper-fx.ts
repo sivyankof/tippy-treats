@@ -1,11 +1,22 @@
 import * as Phaser from 'phaser';
 import type { TowerState } from '../../core/tower-sim';
+import { Rng } from '../../core/rng';
 import { BALANCE } from '../../data/balance';
 import { PLAIN_TOPPERS } from '../../data/plain-toppers';
+import { TOPPER_SQUASH } from '../../data/topper-squash';
 import { effectsMode } from '../effects-mode';
 import { DEPTH } from '../depth';
 import { faceHalfSpan } from './glaze-growth';
 import { ensureTopperTexture } from './topper-texture';
+import type { Particles } from './particles';
+import { TopperSquashFx } from './topper-squash-fx';
+import {
+  classifySquash,
+  crouchScale,
+  crouchStep,
+  edgeLaunch,
+  squashLevelPlan,
+} from './topper-squash-plan';
 import type { TopperWorld } from '../objects/layer-topper';
 import type { TowerView } from '../objects/tower-view';
 import {
@@ -17,6 +28,7 @@ import {
   sideOfOffset,
   topperSize,
   topperOffset,
+  type FlightSpec,
   type PopLaunch,
   type PopPose,
 } from '../objects/topper-look';
@@ -33,12 +45,15 @@ interface Flying {
   scaleY: number;
   ageMs: number;
   active: boolean;
+  spec: FlightSpec;
 }
 
 /**
- * The toppers that hop off a layer: when the next layer lands on a topper it does a spring hop and
- * flies off spinning past the edge of the screen, with a "boing". A topper whose place was bitten
- * off on landing pops off at the bite the same way. "Fewer effects" skips the hop: the topper just
+ * What happens to a topper when the next layer lands (docs/06, section 4): a layer that covers
+ * its whole body squeezes it (`TopperSquashFx`), one that sits on its body only shoots it sideways
+ * off the screen, and one that missed it makes it do a spring hop and fly off spinning, with a
+ * "boing". A topper whose place was bitten off on landing pops off at the bite the same way. The
+ * topper under the flying layer crouches. "Fewer effects" skips all of it: the topper just
  * disappears. Everything is a baked picture moved each frame; the pictures are pooled.
  */
 export class TopperFx {
@@ -52,11 +67,18 @@ export class TopperFx {
     scaleY: 1,
   };
   private readonly pose: PopPose = { dx: 0, dy: 0, angleDeg: 0, scaleX: 1, scaleY: 1, alpha: 1 };
+  private readonly squash: TopperSquashFx;
+  /** How deep the topper of the top layer crouches now (0..1). */
+  private crouch = 0;
 
   constructor(
     private readonly scene: Phaser.Scene,
+    tower: TowerView,
+    particles: Particles,
     private readonly onHop: () => void,
-  ) {}
+  ) {
+    this.squash = new TopperSquashFx(scene, tower, particles);
+  }
 
   /**
    * A layer lands: the topper of the layer under it hops off. Call it before the tower is synced
@@ -64,11 +86,32 @@ export class TopperFx {
    */
   hopOffBelow(tower: TowerView, state: Readonly<TowerState>): void {
     const index = state.layers.length - 2;
+    if (import.meta.env.DEV) console.info('[squash] land');
+    this.crouch = 0;
+    this.squash.cream(state);
     const view = tower.viewAt(index);
     const topper = plainToppers.at(index + 1);
     if (!view || !topper || !view.topperWorld(this.world)) return;
     const dir = this.world.x < view.x ? -1 : this.world.x > view.x ? 1 : topper.side;
-    this.launch(this.world, index + 1, dir);
+    const lower = state.layers[index];
+    const layer = state.layers[index + 1];
+    const outcome =
+      lower && layer && squashLevelPlan(effectsMode.level).play
+        ? classifySquash(
+            lower.x + (this.world.x - view.x),
+            topperSize(topper.kind).halfBody,
+            layer.x,
+            layer.width,
+          )
+        : 'miss';
+    if (import.meta.env.DEV) console.info(`[squash] ${topper.kind} ${outcome}`);
+    if (outcome === 'hit') this.squash.hit(topper.kind, this.world, state);
+    else if (outcome === 'edge') {
+      const rng = new Rng(plainLooks.cosmeticSeed).fork(
+        `${TOPPER_SQUASH.stream}:${index + 2}:edge`,
+      );
+      this.launch(this.world, index + 1, dir, TOPPER_SQUASH.edge, edgeLaunch(dir, rng));
+    } else this.launch(this.world, index + 1, dir);
   }
 
   /**
@@ -77,6 +120,8 @@ export class TopperFx {
    */
   settleOnTop(tower: TowerView, state: Readonly<TowerState>, memo: FlyingMemo | null): void {
     const index = state.layers.length - 1;
+    // The new layer's view exists now: it dips where the topper was squeezed.
+    this.squash.afterSync();
     const view = tower.topView();
     const layer = state.layers[index];
     const topper = plainToppers.at(index + 1);
@@ -104,7 +149,13 @@ export class TopperFx {
     this.launch(this.world, index + 1, x < layer.x ? -1 : 1);
   }
 
-  private launch(from: TopperWorld, layerIndex: number, dir: -1 | 1): void {
+  private launch(
+    from: TopperWorld,
+    layerIndex: number,
+    dir: -1 | 1,
+    spec: FlightSpec = PLAIN_TOPPERS.hop,
+    launch: PopLaunch = popLaunch(plainLooks.cosmeticSeed, layerIndex, dir),
+  ): void {
     if (effectsMode.reduced) return;
     const look = topperSize(from.kind);
     const slot = this.take();
@@ -114,7 +165,8 @@ export class TopperFx {
       .setDepth(DEPTH.pieces)
       .setAlpha(1)
       .setVisible(true);
-    slot.launch = popLaunch(plainLooks.cosmeticSeed, layerIndex, dir);
+    slot.launch = launch;
+    slot.spec = spec;
     slot.x = from.x;
     slot.y = from.y;
     slot.rotation = from.rotation;
@@ -140,6 +192,7 @@ export class TopperFx {
         scaleY: 1,
         ageMs: 0,
         active: false,
+        spec: PLAIN_TOPPERS.hop,
       };
       this.flying.push(slot);
       return slot;
@@ -147,21 +200,44 @@ export class TopperFx {
     return this.flying.reduce((a, b) => (a.ageMs >= b.ageMs ? a : b));
   }
 
-  update(dtMs: number): void {
+  update(dtMs: number, tower: TowerView, state: Readonly<TowerState>): void {
+    this.squash.update(dtMs);
+    this.updateCrouch(dtMs, tower, state);
     for (const f of this.flying) {
       if (!f.active) continue;
       f.ageMs += dtMs;
-      if (f.ageMs >= PLAIN_TOPPERS.hop.lifeMs) {
+      if (f.ageMs >= f.spec.lifeMs) {
         f.active = false;
         f.image.setVisible(false);
         continue;
       }
-      const p = popAt(f.launch, f.ageMs, this.pose);
+      const p = popAt(f.launch, f.ageMs, this.pose, f.spec);
       f.image
         .setPosition(f.x + p.dx, f.y + p.dy)
         .setRotation(f.rotation + (p.angleDeg * Math.PI) / 180)
         .setScale(f.scaleX * p.scaleX, f.scaleY * p.scaleY)
         .setAlpha(p.alpha);
     }
+  }
+
+  /**
+   * The topper of the top layer crouches softly while the flying layer is over it (it would
+   * land on it), and stands up again when the layer moves on.
+   */
+  private updateCrouch(dtMs: number, tower: TowerView, state: Readonly<TowerState>): void {
+    const view = tower.topView();
+    const flying = state.flying;
+    const over =
+      flying !== null &&
+      squashLevelPlan(effectsMode.level).crouch &&
+      view !== null &&
+      view.topperWorld(this.world) !== null &&
+      classifySquash(this.world.x, topperSize(this.world.kind).halfBody, flying.x, flying.width) !==
+        'miss';
+    const next = crouchStep(this.crouch, over ? 1 : 0, dtMs);
+    if (next === this.crouch && next === 0) return;
+    this.crouch = next;
+    const scale = crouchScale(next);
+    view?.crouchTopper(scale.x, scale.y);
   }
 }

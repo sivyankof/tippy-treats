@@ -47,7 +47,7 @@ const halfDisc: BodyShape = (cx, cy, rx, ry) => {
 };
 
 /** A pointed leaf from `from` towards angle `rad` (0 is up), as a smooth lens outline. */
-function leaf(from: Pt, rad: number, length: number, width: number): Pt[] {
+export function leaf(from: Pt, rad: number, length: number, width: number): Pt[] {
   const dx = Math.sin(rad);
   const dy = -Math.cos(rad);
   const steps = LEAF_STEPS;
@@ -193,7 +193,7 @@ function drawMint(g: Phaser.GameObjects.Graphics): void {
   glossAt(g, hub.x, hub.y, 62, c.gloss, { x: -18, y: -34 });
 }
 
-function drawWafer(g: Phaser.GameObjects.Graphics): void {
+export function drawWafer(g: Phaser.GameObjects.Graphics): void {
   const { width: w, restY } = kinds.wafer;
   const c = colors.wafer;
   const rx = 12;

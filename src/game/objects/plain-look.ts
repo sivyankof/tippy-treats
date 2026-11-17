@@ -134,6 +134,11 @@ class PlainLooks {
     return code;
   }
 
+  /** Debug: the plain layer with this 1-based number takes this look code from now on. */
+  force(layerIndex: number, code: number): void {
+    this.codes[layerIndex] = code;
+  }
+
   /** Sponge and glaze colours of the plain layer with this 1-based number. */
   colorsFor(layerIndex: number): LayerColors {
     return pairColors(lookOfCode(this.codeFor(layerIndex)).pair);

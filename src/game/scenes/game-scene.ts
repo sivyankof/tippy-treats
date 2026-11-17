@@ -16,6 +16,9 @@ import { effectsMode } from '../effects-mode';
 import { Backdrop } from '../objects/backdrop/backdrop';
 import { RunWeather } from '../objects/backdrop/run-weather';
 import { plainLooks } from '../objects/plain-look';
+import { installSquashDebug } from '../debug/squash-debug';
+import { leaveDemoMarks } from '../perf/perf-demo-marks';
+import { perfSession } from '../perf/perf-session';
 import { layerMarks } from '../objects/layer-marks';
 import { RunCamera } from '../run-camera';
 import { ContinueFlow } from '../continue-flow';
@@ -125,6 +128,7 @@ export class GameScene extends Phaser.Scene {
       startWidth: setup.startWidth,
     });
     this.mods = this.sim.currentModifiers();
+    if (perfSession()?.params.marks) leaveDemoMarks(this.sim.state.layers);
     logRunStart(setup, gameState.data.stats.runs);
     this.perfRun = setup.perfDriver !== undefined;
     this.bot =
@@ -145,6 +149,7 @@ export class GameScene extends Phaser.Scene {
       ? new RunWeather(this, look.weather, this.seed, this.background, this.fx.tower)
       : null;
     this.fx.setGuestSource(() => this.background.guestSource());
+    if (import.meta.env.DEV) installSquashDebug(this, this.sim, this.fx.tower);
     this.camera = new RunCamera(this, this.fx, this.background, TRAY_TOP_Y);
 
     this.input.on(Phaser.Input.Events.POINTER_DOWN, this.onPointerDown, this);

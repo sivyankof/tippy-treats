@@ -1,7 +1,6 @@
-import type { TopperKind } from '../../data/plain-toppers';
+import type { SquashKind } from '../../data/topper-squash';
 
-/** What gets squashed under a landing layer: a big topper or the cream of a plain layer. */
-export type SquashKind = TopperKind | 'cream';
+export type { SquashKind };
 
 /**
  * Named moments of the decorative run effects that will get their sounds later (docs/06,

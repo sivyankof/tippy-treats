@@ -7,6 +7,7 @@ import { bindSystemReducedMotion, effectsMode } from '../effects-mode';
 import { bindFrameWork } from '../frame-work';
 import { createAbilityTextures } from '../fx/abilities/ability-textures';
 import { createFxTextures } from '../fx/fx-textures';
+import { bakeSquashTextures } from '../fx/squash-textures';
 import { FACE_TEXTURES } from '../objects/face-textures';
 import { loadSvgTextures } from '../objects/svg-textures';
 import { moveToSharedAtlas } from '../ui/shared-atlas';
@@ -37,6 +38,7 @@ export class BootScene extends Phaser.Scene {
   create(): void {
     moveToSharedAtlas(this, [...Object.values(FACE_TEXTURES), TEMPO_ICON_KEY]);
     createFxTextures(this);
+    bakeSquashTextures(this);
     createAbilityTextures(this);
     bindAudioLifecycle(this.game, services.audio);
     bindSystemReducedMotion(effectsMode);

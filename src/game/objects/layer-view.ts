@@ -42,6 +42,8 @@ export interface PressSpec {
   /** How far the pressed spot dips, and how the dip eases back. */
   dipPx: number;
   dipEase: string;
+  /** Only the dip: the layer keeps the squash it has (a landing squash that is still running). */
+  dipOnly?: boolean;
 }
 
 /**
@@ -238,6 +240,12 @@ export class LayerView extends Phaser.GameObjects.Container {
     return this;
   }
 
+  /** The topper takes a crouch under the flying layer above: its scale is `x`, `y` times its own. */
+  crouchTopper(x: number, y: number): this {
+    this.topper.setCrouch(x, y);
+    return this;
+  }
+
   /** The topper stands `dx` from the centre from now on (`null`: it is gone). */
   carryTopper(dx: number | null): this {
     this.topper.setCarry(dx);
@@ -359,15 +367,17 @@ export class LayerView extends Phaser.GameObjects.Container {
    */
   playPress(dx: number, spec: PressSpec): void {
     const { scaleX, scaleY, holdMs, settleMs, squashEase, dipPx, dipEase } = spec;
-    springScaleBack(
-      this.scene,
-      this.squashRoot,
-      { scaleX, scaleY },
-      settleMs,
-      squashEase,
-      0,
-      holdMs,
-    );
+    if (!spec.dipOnly) {
+      springScaleBack(
+        this.scene,
+        this.squashRoot,
+        { scaleX, scaleY },
+        settleMs,
+        squashEase,
+        0,
+        holdMs,
+      );
+    }
     const half = (Math.max(0, this.artSlot.drawnWidth) / 2) * scaleX;
     this.press.side = pressPivot(dx, half) < 0 ? -1 : 1;
     this.press.angle = pressAngle(dx * scaleX, half, dipPx);
