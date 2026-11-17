@@ -16,7 +16,8 @@ export type OverflowBySide = Record<ClipSide, Overflow>;
 /**
  * Measures the pixels with alpha above `threshold` in the margin of `pad` pixels around a field:
  * `data` is a (`width` + 2 `pad`) x (`height` + 2 `pad`) picture with the field in the middle. The
- * pixels of a side are the ones in the strip beside that side; a pixel in a corner of the margin counts for both sides that meet there.
+ * pixels of a side are the ones beyond that side; a pixel in a corner of the margin is beyond both sides that meet there and
+ * counts for both, except that when one of them is in `allowed` (a side the picture may run past) it counts only for the allowed ones.
  */
 export function measureOverflow(
   data: ArrayLike<number>,
@@ -24,56 +25,36 @@ export function measureOverflow(
   height: number,
   pad: number,
   threshold: number = CLIP_ALPHA_THRESHOLD,
+  allowed: readonly ClipSide[] = [],
 ): OverflowBySide {
   const total = width + pad * 2;
+  const rows = height + pad * 2;
   const out: OverflowBySide = {
     top: { pixels: 0, reach: 0, spare: Infinity },
     right: { pixels: 0, reach: 0, spare: Infinity },
     bottom: { pixels: 0, reach: 0, spare: Infinity },
     left: { pixels: 0, reach: 0, spare: Infinity },
   };
-  const opaque = (x: number, y: number): boolean =>
-    (data[(y * total + x) * 4 + 3] ?? 0) > threshold;
-  const mark = (side: ClipSide, reach: number): void => {
-    out[side].pixels++;
-    out[side].reach = Math.max(out[side].reach, reach);
-  };
-  // The nearest opaque pixel to each field edge, anywhere in the padded picture.
-  const rows = height + pad * 2;
+  const beyond: Array<[ClipSide, number]> = [];
   for (let y = 0; y < rows; y++) {
     for (let x = 0; x < total; x++) {
-      if (!opaque(x, y)) continue;
+      if ((data[(y * total + x) * 4 + 3] ?? 0) <= threshold) continue;
+      // The nearest opaque pixel to each field edge, anywhere in the padded picture.
       out.top.spare = Math.min(out.top.spare, y - pad);
       out.bottom.spare = Math.min(out.bottom.spare, pad + height - 1 - y);
       out.left.spare = Math.min(out.left.spare, x - pad);
       out.right.spare = Math.min(out.right.spare, pad + width - 1 - x);
-    }
-  }
-  for (let x = pad; x < pad + width; x++) {
-    for (let y = 0; y < pad; y++) if (opaque(x, y)) mark('top', pad - y);
-    for (let y = pad + height; y < height + pad * 2; y++) {
-      if (opaque(x, y)) mark('bottom', y - pad - height + 1);
-    }
-  }
-  for (let y = pad; y < pad + height; y++) {
-    for (let x = 0; x < pad; x++) if (opaque(x, y)) mark('left', pad - x);
-    for (let x = pad + width; x < total; x++) if (opaque(x, y)) mark('right', x - pad - width + 1);
-  }
-  // A pixel in a corner of the margin is past both of the sides that meet there.
-  for (const [top, y0, y1] of [
-    [true, 0, pad],
-    [false, pad + height, rows],
-  ] as const) {
-    for (const [left, x0, x1] of [
-      [true, 0, pad],
-      [false, pad + width, total],
-    ] as const) {
-      for (let y = y0; y < y1; y++) {
-        for (let x = x0; x < x1; x++) {
-          if (!opaque(x, y)) continue;
-          mark(top ? 'top' : 'bottom', top ? pad - y : y - pad - height + 1);
-          mark(left ? 'left' : 'right', left ? pad - x : x - pad - width + 1);
-        }
+      // The sides this pixel is past, and by how much.
+      beyond.length = 0;
+      if (y < pad) beyond.push(['top', pad - y]);
+      if (y >= pad + height) beyond.push(['bottom', y - pad - height + 1]);
+      if (x < pad) beyond.push(['left', pad - x]);
+      if (x >= pad + width) beyond.push(['right', x - pad - width + 1]);
+      const free = beyond.some(([side]) => allowed.includes(side));
+      for (const [side, reach] of beyond) {
+        if (free && !allowed.includes(side)) continue;
+        out[side].pixels++;
+        out[side].reach = Math.max(out[side].reach, reach);
       }
     }
   }

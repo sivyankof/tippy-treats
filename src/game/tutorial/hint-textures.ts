@@ -21,20 +21,15 @@ const ARROW_OUTLINE = ARROW_H * OUTLINE_SHARE;
 const ARROW_FIELD = FIELD_PAD.hintArrow;
 /** Height of the arrow with its outline, without the extra room: what the caption above it counts on. */
 export const ARROW_SHOWN_HEIGHT = ARROW_H + ARROW_OUTLINE * 2;
+/** Width of the arrow with its outline, without the extra room. */
+const ARROW_SHOWN_WIDTH = ARROW_W + ARROW_OUTLINE * 2;
+/** Origin y of the padded arrow picture that holds the spot of the arrow at `y` (0 top, 1 bottom, outline included). */
+const arrowOriginY = (y: number): number =>
+  paddedOrigin([0.5, y], ARROW_SHOWN_WIDTH, ARROW_SHOWN_HEIGHT, ARROW_FIELD)[1];
 /** Origin y that puts the tip of the arrow (with its outline) where the bottom of the picture was before the extra room. */
-export const ARROW_TIP_ORIGIN_Y = paddedOrigin(
-  [0.5, 1],
-  ARROW_W + ARROW_OUTLINE * 2,
-  ARROW_SHOWN_HEIGHT,
-  ARROW_FIELD,
-)[1];
+export const ARROW_TIP_ORIGIN_Y = arrowOriginY(1);
 /** Origin y of the flipped arrow: the tip with its outline sits on the position. */
-export const ARROW_FLIPPED_ORIGIN_Y = paddedOrigin(
-  [0.5, 0],
-  ARROW_W + ARROW_OUTLINE * 2,
-  ARROW_SHOWN_HEIGHT,
-  ARROW_FIELD,
-)[1];
+export const ARROW_FLIPPED_ORIGIN_Y = arrowOriginY(0);
 
 interface Box {
   x: number;

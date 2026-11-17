@@ -1,6 +1,7 @@
 import type * as Phaser from 'phaser';
 import {
   CLIP_ALLOWED,
+  CLIP_ALPHA_THRESHOLD,
   CLIP_MIN_SPARE,
   CLIP_PROBE_PAD,
   CLIP_SIDES,
@@ -48,9 +49,9 @@ export function clipGuardActive(): boolean {
 }
 
 /**
- * Draws a picture once into a field `CLIP_PROBE_PAD` bigger on every side, counts what lands in
- * the margin (the part of the drawing the real field cuts off) and returns the canvas of the real
- * field cut from the middle: the picture that is kept is the one that was measured.
+ * Draws a picture once into a field `CLIP_PROBE_PAD` bigger on every side, cuts the real field
+ * from the middle, lets `finish` edit that field, puts it back and counts what lands in the margin
+ * (the part of the drawing the real field cuts off). The canvas returned is the measured picture.
  */
 export function drawProbed(
   g: Phaser.GameObjects.Graphics,
@@ -58,6 +59,7 @@ export function drawProbed(
   width: number,
   height: number,
   draw: (g: Phaser.GameObjects.Graphics) => void,
+  finish?: (context: CanvasRenderingContext2D) => void,
 ): HTMLCanvasElement {
   const pad = CLIP_PROBE_PAD;
   g.translateCanvas(pad, pad);
@@ -69,16 +71,23 @@ export function drawProbed(
   const field = document.createElement('canvas');
   field.width = width;
   field.height = height;
-  field.getContext('2d')?.drawImage(big, pad, pad, width, height, 0, 0, width, height);
-  const context = big.getContext('2d', { willReadFrequently: true });
-  if (context) record(key, width, height, context.getImageData(0, 0, big.width, big.height).data);
+  const fieldContext = field.getContext('2d');
+  fieldContext?.drawImage(big, pad, pad, width, height, 0, 0, width, height);
+  const bigContext = big.getContext('2d', { willReadFrequently: true });
+  if (fieldContext && finish) {
+    finish(fieldContext);
+    bigContext?.clearRect(pad, pad, width, height);
+    bigContext?.drawImage(field, pad, pad);
+  }
+  if (bigContext)
+    record(key, width, height, bigContext.getImageData(0, 0, big.width, big.height).data);
   return field;
 }
 
 function record(key: string, w: number, h: number, data: Uint8ClampedArray): void {
   checked.add(key);
-  const overflow = measureOverflow(data, w, h, CLIP_PROBE_PAD);
   const allowed = allowedSides(key);
+  const overflow = measureOverflow(data, w, h, CLIP_PROBE_PAD, CLIP_ALPHA_THRESHOLD, allowed);
   const list = CLIP_SIDES.filter(
     (side) => overflow[side].pixels > 0 && !allowed.includes(side),
   ).map((side) => ({ key, side, pixels: overflow[side].pixels, reach: overflow[side].reach }));

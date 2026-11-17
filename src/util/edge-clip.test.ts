@@ -67,6 +67,17 @@ describe('measureOverflow', () => {
     expect(o.top.spare).toBe(-1);
   });
 
+  it('does not blame a corner pixel on a side when its other side is allowed', () => {
+    // The pixel at (0, 1) is past the left and the top; with the left allowed it counts for the left only.
+    const data = picture(6, 6, [
+      [0, 1, 255],
+      [3, 0, 255],
+    ]);
+    const o = measureOverflow(data, 2, 2, 2, 24, ['left']);
+    expect(pixelsOf(o)).toEqual([1, 0, 0, 1]);
+    expect(o.top.reach).toBe(2);
+  });
+
   it('ignores a faint haze at or under the threshold', () => {
     const data = picture(4, 4, [
       [1, 0, 24],

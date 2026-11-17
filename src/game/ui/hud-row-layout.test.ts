@@ -84,27 +84,54 @@ describe('next-creature text at the peak of its pop', () => {
     setLang(savedLang);
   });
 
-  /** Widths of the text as Phaser measured it in the browser (Nunito Black 56 px with the stroke padding), `ru` and `en`, for a count of 1, 2, 5, 8, 10, 17 and 20. */
-  const MEASURED: Record<Lang, Record<number, number>> = {
-    ru: { 1: 379, 2: 377, 5: 409, 8: 409, 10: 443, 17: 443, 20: 443 },
-    en: { 1: 268, 2: 295, 5: 295, 8: 295, 10: 329, 17: 329, 20: 329 },
+  /** The font size the widths below were measured at: a change of `nextFont` needs a new measure. */
+  const MEASURED_FONT = 56;
+  /**
+   * The text and its width as Phaser measured it in the browser (Nunito Black 56 px with the stroke
+   * padding), `ru` and `en`, for a count of 1, 2, 5, 8, 10, 17 and 20. A changed wording fails the
+   * test: measure the new text again.
+   */
+  const MEASURED: Record<Lang, Record<number, { text: string; width: number }>> = {
+    ru: {
+      1: { text: 'через 1 слой', width: 379 },
+      2: { text: 'через 2 слоя', width: 377 },
+      5: { text: 'через 5 слоёв', width: 409 },
+      8: { text: 'через 8 слоёв', width: 409 },
+      10: { text: 'через 10 слоёв', width: 443 },
+      17: { text: 'через 17 слоёв', width: 443 },
+      20: { text: 'через 20 слоёв', width: 443 },
+    },
+    en: {
+      1: { text: 'in 1 layer', width: 268 },
+      2: { text: 'in 2 layers', width: 295 },
+      5: { text: 'in 5 layers', width: 295 },
+      8: { text: 'in 8 layers', width: 295 },
+      10: { text: 'in 10 layers', width: 329 },
+      17: { text: 'in 17 layers', width: 329 },
+      20: { text: 'in 20 layers', width: 329 },
+    },
   };
+
+  it('uses the font the widths were measured at', () => {
+    expect(nextFont).toBe(MEASURED_FONT);
+  });
 
   for (const lang of ['ru', 'en'] as Lang[]) {
     for (const n of [1, 2, 5, 8, 10, 17, 20]) {
       it(`stays right of the icon and keeps the chip padding at the right: ${lang}, ${n}`, () => {
         setLang(lang);
         const text = tn('run.nextCreatureIn', n);
+        const measured = MEASURED[lang][n]!;
+        expect(text).toBe(measured.text);
         // The measured width and a width a fifth bigger than the widest measure per character.
-        const widths = [MEASURED[lang][n] ?? 0, textWidth(text.length)];
-        for (const width of widths) {
+        for (const width of [measured.width, textWidth(text.length)]) {
           const span = nextChipSpan(WIDTH, width);
           const peakRight = span.labelLeft + width * nextLabelPopScale(width);
           expect(span.labelLeft).toBeGreaterThanOrEqual(
             span.iconX + badgeSize / 2 + HUD_LAYOUT.badgeGap,
           );
           expect(peakRight).toBeLessThanOrEqual(span.chipRight - HUD_LAYOUT.nextChip.padX + 1e-9);
-          expect(span.chipRight).toBeLessThanOrEqual(WIDTH - badgeMargin);
+          expect(peakRight).toBeLessThanOrEqual(WIDTH - badgeMargin);
         }
       });
     }

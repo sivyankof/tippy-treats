@@ -5,7 +5,7 @@
  * baked texture of a kind is `bakeScale` times bigger so it stays crisp.
  */
 
-import { evenPads } from '../util/field-pad';
+import { evenPads, type SidePads } from '../util/field-pad';
 import { BERRY_LOOK } from './berry-look';
 
 export type TopperKind = 'cherry' | 'lemon' | 'strawberry' | 'mint' | 'wafer';
@@ -19,17 +19,12 @@ export const TOPPER_KINDS: readonly TopperKind[] = [
   'wafer',
 ];
 
-/** Room added around the drawing of a kind, in drawn pixels: the outline and tips fit with a few pixels to spare. */
 /** The strawberry is the berry picture (`BERRY_LOOK.textureSize` px) drawn `STRAWBERRY_SIZE` px big; its field is this many texture px on each side, the field of the kind follows from it. */
 export const STRAWBERRY_PAD_PX = 4;
 const STRAWBERRY_SIZE = 70;
 
-export interface TopperField {
-  left: number;
-  right: number;
-  top: number;
-  bottom: number;
-}
+/** Room added around the drawing of a kind, in drawn pixels: the outline and tips fit with a few pixels to spare. */
+export type TopperField = SidePads;
 
 export interface TopperKindLook {
   /** Size of the picture as drawn (shown `showScale` times bigger). */

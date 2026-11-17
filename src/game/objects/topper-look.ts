@@ -1,7 +1,7 @@
 import { Rng } from '../../core/rng';
 import { PLAIN_TOPPERS, TOPPER_KINDS, type TopperKind } from '../../data/plain-toppers';
 import type { DecorKind } from '../../data/plain-layers';
-import { paddedOrigin } from '../../util/field-pad';
+import { paddedOrigin, paddedSize } from '../../util/field-pad';
 import { DEG_TO_RAD, lerp } from '../../util/math';
 import { faceHalfSpan } from '../fx/glaze-growth';
 import { plainLookAt, plainLooks } from './plain-look';
@@ -22,13 +22,12 @@ export interface TopperSize {
 export function topperSize(kind: TopperKind): TopperSize {
   const { width, height, restY, halfBody, field } = PLAIN_TOPPERS.kinds[kind];
   const k = PLAIN_TOPPERS.showScale;
-  const fullWidth = width + field.left + field.right;
-  const fullHeight = height + field.top + field.bottom;
-  const [originX, originY] = paddedOrigin([0.5, restY / height], width, height, field);
+  const [fullWidth, fullHeight] = paddedSize(width, height, field);
+  const [originX] = paddedOrigin([0.5, restY / height], width, height, field);
   return {
     width: fullWidth * k,
     height: fullHeight * k,
-    restY: originY * fullHeight * k,
+    restY: (restY + field.top) * k,
     originX,
     halfBody: halfBody * k,
   };

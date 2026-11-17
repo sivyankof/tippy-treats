@@ -16,9 +16,14 @@ export function evenPads(pad: number): SidePads {
   return { left: pad, right: pad, top: pad, bottom: pad };
 }
 
-/** The size of a picture whose field grew by `pad` px on every side. */
-export function paddedSize(width: number, height: number, pad: number): [number, number] {
-  return [width + pad * 2, height + pad * 2];
+/** The size of a picture whose field grew by `pad` px (a number pads every side alike). */
+export function paddedSize(
+  width: number,
+  height: number,
+  pad: number | SidePads,
+): [number, number] {
+  const p = typeof pad === 'number' ? evenPads(pad) : pad;
+  return [width + p.left + p.right, height + p.top + p.bottom];
 }
 
 /** How many times bigger a square picture of `size` px gets when its field grows by `pad` px on every side: show it this much bigger to keep the drawing at its size. */
@@ -37,7 +42,6 @@ export function paddedOrigin(
   pad: number | SidePads,
 ): [number, number] {
   const p = typeof pad === 'number' ? evenPads(pad) : pad;
-  const w = width + p.left + p.right;
-  const h = height + p.top + p.bottom;
+  const [w, h] = paddedSize(width, height, p);
   return [(origin[0] * width + p.left) / w, (origin[1] * height + p.top) / h];
 }

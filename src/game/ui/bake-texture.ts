@@ -109,17 +109,18 @@ export function bakeTexture(
     const h = Math.ceil(height);
     let canvas: HTMLCanvasElement;
     if (clipGuardActive()) {
-      canvas = drawProbed(g, key, w, h, draw);
+      // The probe runs `finish` itself, so the measured picture is the kept one.
+      canvas = drawProbed(g, key, w, h, draw, finish);
     } else {
       draw(g);
       canvas = document.createElement('canvas');
       canvas.width = w;
       canvas.height = h;
       g.generateTexture(canvas, w, h);
+      // `finish` edits the finished pixels (cuts a piece out of the picture).
+      const context = finish ? canvas.getContext('2d') : null;
+      if (finish && context) finish(context);
     }
-    // `finish` edits the finished pixels (cuts a piece out of the picture).
-    const context = finish ? canvas.getContext('2d') : null;
-    if (finish && context) finish(context);
     // Small pictures drawn many times per frame share an atlas page (see shared-atlas.ts).
     if (!sharedStore?.(scene, key, canvas)) scene.textures.addCanvas(key, canvas);
   } finally {

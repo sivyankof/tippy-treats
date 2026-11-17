@@ -214,3 +214,20 @@ describe('pop-off', () => {
     expect(popAt(launch, PLAIN_TOPPERS.hop.lifeMs, pose()).alpha).toBe(0);
   });
 });
+
+describe('topperSize', () => {
+  it('keeps the size and the rest spot of every kind (by the origin of the padded picture)', () => {
+    const k = PLAIN_TOPPERS.showScale;
+    for (const kind of TOPPER_KINDS) {
+      const { width, height, restY, field } = PLAIN_TOPPERS.kinds[kind];
+      const fullWidth = width + field.left + field.right;
+      const fullHeight = height + field.top + field.bottom;
+      const originY = (restY + field.top) / fullHeight;
+      const size = topperSize(kind);
+      expect(size.width).toBeCloseTo(fullWidth * k, 9);
+      expect(size.height).toBeCloseTo(fullHeight * k, 9);
+      expect(size.restY).toBeCloseTo(originY * fullHeight * k, 9);
+      expect(size.originX).toBeCloseTo((width / 2 + field.left) / fullWidth, 9);
+    }
+  });
+});

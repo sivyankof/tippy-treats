@@ -27,8 +27,7 @@ export class ArtSheetScene extends Phaser.Scene {
     const rows = Math.ceil(keys.length / columns);
     const liveRows = Math.ceil(LIVE_PICTURES.length / columns);
     const gridHeight = rows * (cellHeight + gap);
-    const height = margin * 2 + gridHeight + liveRows * (cellHeight + gap) - gap;
-    this.scale.setGameSize(width, height);
+    const gridBottom = margin + gridHeight + liveRows * (cellHeight + gap) - gap;
     this.cameras.main.setBackgroundColor(ART_SHEET.background);
     keys.forEach((key, i) => {
       const x = margin + (i % columns) * (cellWidth + gap);
@@ -45,10 +44,10 @@ export class ArtSheetScene extends Phaser.Scene {
         y,
       );
     });
-    this.showReport(width, height);
+    this.showReport(width, gridBottom);
   }
 
-  /** The clip guard report and the atlas page count, once every picture (the drawn layers too) is baked: under the grid, in the console. */
+  /** The clip guard report and the atlas page count, once every picture (the drawn layers too) is baked: under the grid (`gridBottom` is the bottom edge of the last cell), in the console. The game is resized here, once, to the grid and the report. */
   private showReport(width: number, gridBottom: number): void {
     const { margin, gap } = ART_SHEET;
     const report = [clipSummary(), `atlas pages: ${atlasPageCount(this.textures)}`].join('\n');
