@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   contrastRatio,
   cssColor,
+  dimPixels,
   fromHsl,
   luminance,
   mixColor,
@@ -67,5 +68,25 @@ describe('hsl conversion', () => {
     expect(toHsl(0xff0000).h).toBeCloseTo(0, 6);
     expect(toHsl(0x00ff00).h).toBeCloseTo(1 / 3, 6);
     expect(toHsl(0x0000ff).h).toBeCloseTo(2 / 3, 6);
+  });
+});
+
+describe('dimPixels', () => {
+  it('pulls colours toward their grey and darkens them, leaving alpha and greys in tone', () => {
+    const data = new Uint8ClampedArray([255, 0, 0, 200, 128, 128, 128, 255, 0, 0, 0, 0]);
+    dimPixels(data, 0.5, 0.5);
+    const grey = 0.299 * 255;
+    expect(data[0]).toBe(Math.round((grey + (255 - grey) * 0.5) * 0.5));
+    expect(data[1]).toBe(Math.round(grey * 0.5 * 0.5));
+    expect(data[3]).toBe(200);
+    // A grey only darkens.
+    expect([data[4], data[5], data[6]]).toEqual([64, 64, 64]);
+    expect(data[11]).toBe(0);
+  });
+
+  it('leaves the pixels as they are at full saturation and brightness', () => {
+    const data = new Uint8ClampedArray([10, 200, 90, 255]);
+    dimPixels(data, 1, 1);
+    expect([...data]).toEqual([10, 200, 90, 255]);
   });
 });

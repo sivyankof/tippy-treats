@@ -18,12 +18,6 @@ import type { FrameCtx, Life } from './life';
 import { fillDitheredRows, gradientBands } from './sky-gradient';
 import { layerTintsOf, skyStops, skySuffix } from './weather-palette';
 
-/** Something in a zone that follows the lap of Space. */
-export interface LapLife {
-  /** `lap` is 1-based; its picture is baked already. */
-  setLap(lap: number, topWidth?: number): void;
-}
-
 /** Pictures of the four parallax layers (back to front) and the living elements between them. */
 export interface SceneryDef {
   layers: readonly string[];
@@ -33,8 +27,6 @@ export interface SceneryDef {
   lives: readonly { slot: number; life: Life }[];
   /** The creature of the zone that may leave for the tower, when there is one. */
   guest?: GuestSource;
-  /** The living element that changes with the lap of Space (the planet), when the zone has one. */
-  lapLife?: LapLife;
   /** Key of a sky picture the art baked for this run's weather (see `bakeStopsSky`); the zone's own sky when absent. */
   sky?: string;
   /** Tint of the far plane, for a zone whose sky colour follows the weather (the plane is baked in the clear sky's tones). */
@@ -52,8 +44,6 @@ export interface SceneryLook {
   place: StartPlaceId;
   /** The run's planet stream (`planetOfLap`); only Space reads it. */
   planetSeed: number;
-  /** Space only: width of the tower top when the lap began (the lap 1 planet keeps clear of it). */
-  topWidth?: number;
 }
 
 /** One zone's art: baking is separate so the next zone can be prepared ahead of the change. */
@@ -62,8 +52,8 @@ export interface ZoneArt {
   /** True when, in this weather, the art bakes and names its own sky (`SceneryDef.sky`), so the zone's plain sky is not baked. */
   ownSky?(weather: WeatherId): boolean;
   /** Bakes what only one lap of the zone shows (the planet of a lap of Space); `lap` is 1-based. */
-  bakeLap?(scene: Phaser.Scene, lap: number, planetSeed: number, topWidth?: number): void;
-  /** Only Space reads `look.lap` and `look.topWidth`; a zone ignores what it does not show. */
+  bakeLap?(scene: Phaser.Scene, lap: number, planetSeed: number): void;
+  /** Only Space reads `look.lap`; a zone ignores what it does not show. */
   build(scene: Phaser.Scene, look: SceneryLook): SceneryDef;
 }
 
@@ -126,7 +116,6 @@ export class ZoneScenery {
   readonly root: Phaser.GameObjects.Container;
   /** The creature that may leave for the tower. */
   readonly guest: GuestSource | null;
-  private readonly lapLife: LapLife | null;
   private readonly sky: Phaser.GameObjects.Image;
   private readonly far: FarPlane;
   private readonly layers: Phaser.GameObjects.TileSprite[];
@@ -183,7 +172,6 @@ export class ZoneScenery {
     this.skyLives = def.weatherSky ?? [];
     this.lives = def.lives.map(({ life }) => life);
     this.guest = def.guest ?? null;
-    this.lapLife = def.lapLife ?? null;
     const children: Phaser.GameObjects.GameObject[] = [this.sky];
     const farSlot = BACKDROP_FAR.slot[zone];
     if (farSlot < 0) children.push(...this.far.objects);
@@ -206,11 +194,6 @@ export class ZoneScenery {
   /** Sets the camera scroll of the zone's start view (the zone is built there). */
   startAt(scrollY: number): void {
     this.originScrollY = scrollY;
-  }
-
-  /** A new lap of Space: the planet changes. */
-  setLap(lap: number, topWidth?: number): void {
-    this.lapLife?.setLap(lap, topWidth);
   }
 
   /** Call when the logical screen size changes. */
