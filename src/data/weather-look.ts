@@ -228,13 +228,12 @@ export const WEATHER_LOOK = {
   rain: {
     frames: ['drop'],
     speed: [1500, 1900],
-    slant: 0.22,
+    slant: 0.15,
     alpha: [0.7, 0.8],
     scale: [0.85, 1.1],
     count: 37,
-    /** Drops start in the side strips the tower leaves free (a drop leans with its height, so it stays near its strip). */
-    sideBias: 0.95,
-    sideShare: 0.15,
+    /** Rain falls only in the two side strips the tower leaves free (each of this share of the width); a drop leans with its height, so it stays near its strip. */
+    sideShare: 0.12,
   },
   storm: {
     frames: ['drop'],
@@ -243,7 +242,6 @@ export const WEATHER_LOOK = {
     alpha: [0.7, 0.8],
     scale: [0.95, 1.15],
     count: 37,
-    sideBias: 0.95,
     sideShare: 0.15,
   },
   snow: {

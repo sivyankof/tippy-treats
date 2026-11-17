@@ -55,8 +55,10 @@ function draw(rng: Rng, range: Range | undefined, fallback: number): number {
   return range ? rng.range(range[0], range[1]) : fallback;
 }
 
-/** Step of the golden ratio (share of a turn): successive multiples of it spread evenly over 0..1. */
-const GOLDEN_STEP = 0.6180339887;
+/** x (share of the width) in the left (side 0) or right (side 1) strip of width `strip`. */
+function sideU(rng: Rng, side: number, strip: number): number {
+  return side === 0 ? rng.range(0, strip) : rng.range(1 - strip, 1);
+}
 
 /**
  * Rain, snow or leaves: a fixed pool of images of one atlas, moved by closed formulas of the
@@ -88,14 +90,19 @@ export class WeatherFall implements WeatherPart {
     const lanes = laneCount(LOGICAL_SIZE.width, WEATHER_LOOK.snow.laneGapPx);
     const spots = snow ? snowSpots(count, lanes, drawU, () => rng.next()) : [];
     const laneSpeed = new Map<number, number>();
+    const sideSpeed: number[] = [];
     for (let i = 0; i < count; i++) {
+      const side = i % 2;
       const { lane, u, v } = spots[i] ?? {
         lane: 0,
-        u: drawU(),
-        // Rain starts spread evenly down the screen (golden-ratio steps), so few drops bunch in one band.
-        v: rain ? (i * GOLDEN_STEP + (rng.next() * 0.3) / count) % 1 : rng.next(),
+        u: rain ? sideU(rng, side, strip) : drawU(),
+        // Rain: the two sides alternate and each side's drops are spaced evenly down the screen.
+        v: rain
+          ? (Math.floor(i / 2) + side / 2 + rng.next() * 0.2) / Math.ceil(count / 2)
+          : rng.next(),
       };
-      let speed = draw(rng, look.speed, 0);
+      // The drops of one rain side share a speed, so their even spacing holds as they fall.
+      let speed = rain ? (sideSpeed[side] ??= draw(rng, look.speed, 0)) : draw(rng, look.speed, 0);
       if (snow) {
         speed = laneSpeed.get(lane) ?? speed;
         laneSpeed.set(lane, speed);
