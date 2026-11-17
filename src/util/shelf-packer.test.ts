@@ -94,11 +94,68 @@ describe('ShelfPacker', () => {
 
   it('keeps the rest of a joined row as an empty shelf', () => {
     const p = new ShelfPacker(100, 100, 10);
-    const a = p.alloc(100, 50)!;
+    const a = p.alloc(100, 30)!;
+    const b = p.alloc(100, 30)!;
     p.alloc(100, 10);
     p.free(a, 100);
-    expect(p.alloc(100, 20)).toEqual({ x: 0, y: 0 });
-    expect(p.alloc(100, 30)).toEqual({ x: 0, y: 20 });
+    p.free(b, 100);
+    expect(p.alloc(100, 40)).toEqual({ x: 0, y: 0 });
+    expect(p.alloc(100, 20)).toEqual({ x: 0, y: 40 });
+    expect(p.usedHeight).toBe(70);
+  });
+
+  it('a long-lived small box does not wear a tall empty shelf down', () => {
+    const p = new ShelfPacker(100, 100, 10);
+    const tall = p.alloc(100, 50)!;
+    p.alloc(100, 10);
+    p.free(tall, 100);
+    expect(p.alloc(10, 10)).toEqual({ x: 0, y: 0 });
+    // The shelf is still 50 tall: a tall box sits beside the small one, no new shelf opens.
+    expect(p.alloc(90, 50)).toEqual({ x: 10, y: 0 });
     expect(p.usedHeight).toBe(60);
+  });
+
+  it('skips the search for a row to join when no shelf is empty', () => {
+    const p = new ShelfPacker(100, 100, 10);
+    p.alloc(100, 30);
+    p.alloc(100, 30);
+    expect(p.alloc(100, 30)).toEqual({ x: 0, y: 60 });
+    expect(p.alloc(100, 30)).toBeNull();
+  });
+
+  it('never overlaps boxes and keeps its empty-shelf count honest under random use', () => {
+    const p = new ShelfPacker(200, 300, 10);
+    let seed = 7;
+    const next = (n: number): number => {
+      seed = (seed * 1103515245 + 12345) % 2147483648;
+      return seed % n;
+    };
+    const live: Array<{ x: number; y: number; w: number; h: number }> = [];
+    for (let step = 0; step < 600; step++) {
+      if (live.length > 0 && next(3) === 0) {
+        const [gone] = live.splice(next(live.length), 1);
+        if (gone) p.free(gone, gone.w);
+        continue;
+      }
+      const w = 10 + next(120);
+      const h = 10 + next(80);
+      const box = p.alloc(w, h);
+      if (!box) continue;
+      for (const o of live) {
+        const apart =
+          box.x + w <= o.x || o.x + o.w <= box.x || box.y + h <= o.y || o.y + o.h <= box.y;
+        expect(apart).toBe(true);
+      }
+      live.push({ ...box, w, h });
+      expect(p.usedHeight).toBeLessThanOrEqual(300);
+    }
+    const inner = p as unknown as {
+      shelves: Array<{ free: Array<{ x0: number; x1: number }> }>;
+      emptyCount: number;
+    };
+    const empty = inner.shelves.filter(
+      (sh) => sh.free.length === 1 && sh.free[0]?.x0 === 0 && sh.free[0].x1 === 200,
+    );
+    expect(inner.emptyCount).toBe(empty.length);
   });
 });

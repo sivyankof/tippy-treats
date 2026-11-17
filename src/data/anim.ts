@@ -19,6 +19,9 @@ const CRUMB_COUNT = [10, 14] as const;
  * `[min, max]` pairs are ranges a value is picked from at random (cosmetic only).
  * Ease names are Phaser ease strings.
  */
+/** Upper cap of live tower views (`ANIM.pool.maxLiveLayers`); the idle layer pictures are kept to the same number. */
+const MAX_LIVE_LAYERS = 16;
+
 export const ANIM = {
   layer: {
     cornerRadius: 30,
@@ -472,13 +475,17 @@ export const ANIM = {
   parallax: [0.05, 0.15, 0.3, 0.6],
   pool: {
     /** Upper cap of live tower views; layers below the screen are released earlier. */
-    maxLiveLayers: 16,
+    maxLiveLayers: MAX_LIVE_LAYERS,
     /** Layers kept alive below the bottom edge of the screen (sway, shadow). */
     offscreenMarginLayers: 1,
     /** Layers kept alive above the top edge while the camera rises along the tower (intro). */
     windowMarginLayers: 3,
-    /** Unused baked layer textures kept for reuse before the oldest are removed. */
-    idleLayerTextures: 16,
+    /**
+     * Unused baked layer textures kept for reuse before the oldest are removed: as many as there
+     * are live views (the 48 kept before filled the shared atlas page; the collapse takes its
+     * pictures from `CollapsePrep`, not from this cache).
+     */
+    idleLayerTextures: MAX_LIVE_LAYERS,
     /**
      * Pictures of the layers below the live ones that are baked ahead while the run ends, so the
      * collapse finds them; they may stay idle on top of `idleLayerTextures` until it takes them.

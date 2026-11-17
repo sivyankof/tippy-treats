@@ -18,12 +18,17 @@ interface Shelf {
 
 /**
  * Packs boxes into a fixed area in horizontal shelves and takes them back again. A box goes to
- * the lowest shelf that is tall enough and has a free run wide enough, else a new shelf is opened
- * below the last one (its height rounded up to `step`). Freed runs are merged with their
- * neighbours, so boxes of a similar height keep reusing the same shelves.
+ * the lowest shelf that is tall enough and has a free run wide enough (an empty shelf counts like
+ * any other). Else a row of neighbouring empty shelves that together are tall enough is joined
+ * into one shelf of the box's height (what is left of the row stays an empty shelf), else a new
+ * shelf is opened below the last one (its height rounded up to `step`). Freed runs are merged
+ * with their neighbours, so boxes of a similar height keep reusing the same shelves, and an
+ * empty last shelf is closed so its height can be reused.
  */
 export class ShelfPacker {
   private readonly shelves: Shelf[] = [];
+  /** How many shelves hold nothing (never the last one), so a miss need not scan for a row to join. */
+  private emptyCount = 0;
 
   constructor(
     readonly width: number,
@@ -44,13 +49,12 @@ export class ShelfPacker {
     let best: { shelf: Shelf; span: Span } | null = null;
     for (const shelf of this.shelves) {
       if (shelf.height < height) continue;
-      // An empty shelf taller than the box is kept for a taller box (or cut down below).
-      if (shelf.height > shelfHeight && this.isEmpty(shelf)) continue;
       if (best && best.shelf.height <= shelf.height) continue;
       const span = shelf.free.find((s) => s.x1 - s.x0 >= width);
       if (span) best = { shelf, span };
     }
     if (best) {
+      if (this.isEmpty(best.shelf)) this.emptyCount -= 1;
       const x = best.span.x0;
       best.span.x0 += width;
       if (best.span.x0 >= best.span.x1)
@@ -89,7 +93,11 @@ export class ShelfPacker {
       prev.x1 = Math.max(prev.x1, run.x1);
       free.splice(i, 1);
     }
-    while (this.isEmptyLast()) this.shelves.pop();
+    if (this.isEmpty(shelf)) this.emptyCount += 1;
+    while (this.isEmptyLast()) {
+      this.shelves.pop();
+      this.emptyCount -= 1;
+    }
   }
 
   private isEmptyLast(): boolean {
@@ -108,6 +116,7 @@ export class ShelfPacker {
    * one are not lost to the boxes of other heights this way.
    */
   private reuseEmpty(shelfHeight: number): Shelf | null {
+    if (this.emptyCount === 0) return null;
     let best: { from: number; count: number; total: number } | null = null;
     for (let i = 0; i < this.shelves.length; i++) {
       let total = 0;
@@ -134,7 +143,7 @@ export class ShelfPacker {
         free: [{ x0: 0, x1: this.width }],
       });
     this.shelves.splice(best.from, best.count, ...replacement);
-    while (this.isEmptyLast()) this.shelves.pop();
+    this.emptyCount += replacement.length - 1 - best.count;
     return shelf;
   }
 }

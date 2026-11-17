@@ -18,6 +18,7 @@ import { installSquashDebug } from '../debug/squash-debug';
 import { leaveDemoMarks } from '../perf/perf-demo-marks';
 import { perfSession } from '../perf/perf-session';
 import { layerMarks } from '../objects/layer-marks';
+import { trimHudPlates } from '../ui/style/hud-plate';
 import { RunCamera } from '../run-camera';
 import { ContinueFlow } from '../continue-flow';
 import { beginRunRewardedMemo, rewardedAds } from '../rewarded';
@@ -104,6 +105,8 @@ export class GameScene extends Phaser.Scene {
     plainLooks.setRunSeed(this.seed);
     // Drops, stains and cream rolls of the last run stay with it.
     layerMarks.clear();
+    // The pictures of the plates of the last run's HUD are trimmed before this run's are placed.
+    trimHudPlates(this);
     this.startHeight = setup.startHeight;
     this.checkpoint = setup.checkpoint;
     this.writesSave = setup.writesSave;
@@ -165,6 +168,7 @@ export class GameScene extends Phaser.Scene {
     const freezeBackdrop = (): void => this.background.freeze();
     this.events.on(RESULTS_SETTLED, freezeBackdrop);
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      trimHudPlates(this);
       this.events.off(RESULTS_SETTLED, freezeBackdrop);
       unbindLeave();
       this.scale.off(Phaser.Scale.Events.RESIZE, this.onResize, this);

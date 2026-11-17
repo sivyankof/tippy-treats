@@ -13,6 +13,7 @@ import { TREASURE } from '../../data/treasure-anim';
 import { shade } from '../../util/color';
 import { bakeTexture } from '../ui/bake-texture';
 import { drawCreatureLayer, finishCreatureLayer } from './creature-art';
+import { TextureRefCache } from '../ui/texture-ref-cache';
 import { creatureColors } from './creature-art/primitives';
 import { DARK_OUTLINE, SHADOW_DROP } from './layer-draw';
 import { drawPlainLayer, type PlainArt } from './plain-layer-draw';
@@ -183,7 +184,7 @@ export function artAlpha(creature: CreatureId | null): number {
 // Baked layer textures are shared by every view. A texture is kept while any view
 // shows it; unused ones stay for a while (widths repeat after perfect landings) and
 // the oldest are removed beyond ANIM.pool.idleLayerTextures. Map order is use order.
-const refs = new Map<string, number>();
+const layerRefs = new TextureRefCache(ANIM.pool.idleLayerTextures);
 
 /** Whether the picture for this combination is baked now. */
 export function layerArtBaked(
@@ -231,9 +232,7 @@ export function acquireLayerArt(
       ? (context) => finishCreatureLayer(context, creature, w, texW / 2, centerY)
       : undefined,
   );
-  const users = refs.get(key) ?? 0;
-  refs.delete(key);
-  refs.set(key, users + 1);
+  layerRefs.acquire(key);
   return key;
 }
 
@@ -255,14 +254,6 @@ export function prepareLayerArt(
 
 /** Gives a texture back; unused textures beyond the idle limit are removed. */
 export function releaseLayerArt(scene: Phaser.Scene, key: string): void {
-  const users = refs.get(key);
-  if (users === undefined) return;
-  refs.set(key, users - 1);
-  let idle = [...refs].filter(([, count]) => count <= 0);
-  for (const [oldKey] of idle) {
-    if (idle.length <= ANIM.pool.idleLayerTextures) break;
-    refs.delete(oldKey);
-    scene.textures.remove(oldKey);
-    idle = idle.filter(([k]) => k !== oldKey);
-  }
+  layerRefs.release(key);
+  layerRefs.evict((old) => scene.textures.remove(old));
 }
