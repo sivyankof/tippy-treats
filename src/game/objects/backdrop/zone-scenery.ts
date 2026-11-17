@@ -17,7 +17,7 @@ import { fillDitheredRows, gradientBands } from './sky-gradient';
 /** Something in a zone that follows the lap of Space. */
 export interface LapLife {
   /** `lap` is 1-based; its picture is baked already. */
-  setLap(lap: number): void;
+  setLap(lap: number, topWidth?: number): void;
 }
 
 /** Pictures of the four parallax layers (back to front) and the living elements between them. */
@@ -36,8 +36,8 @@ export interface ZoneArt {
   bake(scene: Phaser.Scene): void;
   /** Bakes what only one lap of the zone shows (the planet of a lap of Space); `lap` is 1-based. */
   bakeLap?(scene: Phaser.Scene, lap: number): void;
-  /** `lap` is the 1-based lap of Space; only Space reads it. */
-  build(scene: Phaser.Scene, lap?: number): SceneryDef;
+  /** `lap` is the 1-based lap of Space and `topWidth` the tower top width when it began; only Space reads them. */
+  build(scene: Phaser.Scene, lap?: number, topWidth?: number): SceneryDef;
 }
 
 const skyKey = (zone: ZoneId): string => `bd_sky_${zone}`;
@@ -141,8 +141,8 @@ export class ZoneScenery {
   }
 
   /** A new lap of Space: the planet changes. */
-  setLap(lap: number): void {
-    this.lapLife?.setLap(lap);
+  setLap(lap: number, topWidth?: number): void {
+    this.lapLife?.setLap(lap, topWidth);
   }
 
   /** Call when the logical screen size changes. */

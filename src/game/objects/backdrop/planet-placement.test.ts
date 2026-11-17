@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { LOGICAL_SIZE } from '../../../data/screen';
 import { PLANET_LOOK, PLANET_PLACE } from '../../../data/space-planets';
 import { flightClearBand, hudFloor } from '../../camera-layout';
+import { lapFirstIndex, spaceWidthLimit } from '../../../core/space-laps';
 import { planetOfLap } from '../../../core/space-planet';
 import { planetSize } from './dessert-planets';
 import { corridorHalf, planetFit, planetSpot } from './planet-placement';
@@ -66,6 +67,49 @@ describe('planetSpot', () => {
   it('prefers the left lane and uses the right one when the left is too narrow', () => {
     const left = planetSpot(10, W, 2337, ROUND, ROUND);
     expect(left?.x).toBeLessThan(W / 2);
+  });
+});
+
+describe('lap 1 corridor from the tower top width', () => {
+  const NARROW = 300;
+  const FULL = spaceWidthLimit(lapFirstIndex(1));
+
+  it('is the top width halved plus the sway on lap 1, and the dashed cap on later laps', () => {
+    expect(corridorHalf(1, NARROW)).toBe(NARROW / 2 + PLANET_PLACE.swayPx);
+    expect(corridorHalf(1)).toBe(corridorHalf(1, FULL));
+    expect(corridorHalf(2, NARROW)).toBe(corridorHalf(2));
+    expect(corridorHalf(7, NARROW)).toBe(corridorHalf(7));
+  });
+
+  it('gives lap 1 a spot with a narrow top and none with a full-width top', () => {
+    for (const h of SCREENS) {
+      const size = planetSize(planetOfLap(1));
+      expect(planetFit(1, W, h, size.width, size.height, NARROW)).not.toBeNull();
+      expect(planetFit(1, W, h, size.width, size.height, FULL)).toBeNull();
+    }
+  });
+
+  it('keeps clear of the narrow top corridor', () => {
+    for (const h of SCREENS) {
+      const size = planetSize(planetOfLap(1));
+      const f = planetFit(1, W, h, size.width, size.height, NARROW)!;
+      const half = (size.width * f.scale) / 2;
+      const clearOfTop = f.x + half <= W / 2 - corridorHalf(1, NARROW);
+      const clearOfTopRight = f.x - half >= W / 2 + corridorHalf(1, NARROW);
+      const above = f.y + (size.height * f.scale) / 2 <= flightClearBand(h).top;
+      expect(clearOfTop || clearOfTopRight || above).toBe(true);
+    }
+  });
+
+  it('does not change laps 2 and later', () => {
+    for (const h of SCREENS) {
+      for (let lap = 2; lap <= 9; lap++) {
+        const size = planetSize(planetOfLap(lap));
+        expect(planetFit(lap, W, h, size.width, size.height, NARROW)).toEqual(
+          planetFit(lap, W, h, size.width, size.height),
+        );
+      }
+    }
   });
 });
 

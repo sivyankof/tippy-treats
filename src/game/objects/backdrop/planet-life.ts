@@ -35,27 +35,27 @@ export class PlanetLife implements Life, LapLife {
   private comingId: SpacePlanetId | null = null;
   private fadedMs = 0;
 
-  constructor(scene: Phaser.Scene, lap: number) {
+  constructor(scene: Phaser.Scene, lap: number, topWidth?: number) {
     const id = planetOfLap(lap);
     this.shown = new Phaser.GameObjects.Image(scene, 0, 0, planetKey(id));
     this.coming = new Phaser.GameObjects.Image(scene, 0, 0, planetKey(id)).setVisible(false);
     this.objects = [this.shown, this.coming];
-    this.shownSpot.set(id, lap);
+    this.shownSpot.set(id, lap, topWidth);
     this.still = { texture: planetKey(id), at: { x: 0, y: 0 }, scale: 1 };
     this.moving = { ...this.still, ...PLANET_PLACE.drift };
   }
 
-  setLap(lap: number): void {
+  setLap(lap: number, topWidth?: number): void {
     const id = planetOfLap(lap);
     if (this.comingId !== null) this.finish();
     if (id === this.shownSpot.id && lap === this.shownSpot.lap) return;
     if (effectsMode.reduced) {
       this.shown.setTexture(planetKey(id));
-      this.shownSpot.set(id, lap);
+      this.shownSpot.set(id, lap, topWidth);
       return;
     }
     this.comingId = id;
-    this.comingSpot.set(id, lap);
+    this.comingSpot.set(id, lap, topWidth);
     this.fadedMs = 0;
     this.coming.setTexture(planetKey(id)).setAlpha(0).setVisible(true);
   }
@@ -93,7 +93,7 @@ export class PlanetLife implements Life, LapLife {
   private finish(): void {
     if (this.comingId === null) return;
     this.shown.setTexture(planetKey(this.comingId)).setAlpha(1);
-    this.shownSpot.set(this.comingId, this.comingSpot.lap);
+    this.shownSpot.set(this.comingId, this.comingSpot.lap, this.comingSpot.topWidth);
     this.comingId = null;
     this.comingSpot.clear();
     this.coming.setVisible(false);
@@ -104,14 +104,17 @@ export class PlanetLife implements Life, LapLife {
 class Spot {
   id: SpacePlanetId = SPACE_PLANET_IDS[0];
   lap: number | null = null;
+  /** Tower top width captured when the lap began; fixed for the lap (see `corridorHalf`). */
+  topWidth: number | undefined;
   private cachedLap: number | null = null;
   private cachedW = 0;
   private cachedH = 0;
   private spot: PlanetFit | null = null;
 
-  set(id: SpacePlanetId, lap: number | null): void {
+  set(id: SpacePlanetId, lap: number | null, topWidth?: number): void {
     this.id = id;
     this.lap = lap;
+    this.topWidth = topWidth;
     this.cachedLap = null;
   }
 
@@ -127,7 +130,7 @@ class Spot {
       this.cachedW = width;
       this.cachedH = height;
       const size = planetSize(this.id);
-      this.spot = planetFit(this.lap, width, height, size.width, size.height);
+      this.spot = planetFit(this.lap, width, height, size.width, size.height, this.topWidth);
     }
     return this.spot;
   }
