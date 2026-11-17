@@ -1,6 +1,6 @@
 import { DIFFICULTY } from '../src/data/balance';
 import { CREATURES, type CreatureId } from '../src/data/creatures';
-import { allFullTeams, NO_TEAM, type SimTeamSet } from '../src/data/sim-teams';
+import { allFullTeams, NO_TEAM, TEAM_REFERENCE, type SimTeamSet } from '../src/data/sim-teams';
 import { intArg, nodeFs, scriptArgs } from './node-env';
 import { ANALYSIS_MAX_HEIGHT, percentile, playRun, profileStreams, teamSlots } from './sim-runner';
 import { applySets, setArg } from './what-if';
@@ -42,15 +42,10 @@ const DEFAULT_RUNS = 200;
 const DEFAULT_TOP = 5;
 const PCT_DIGITS = 1;
 /**
- * Owner's height targets for level-5 teams of the strong profile (docs/03-creatures.md, "Цель
- * бригад с 2026-11-17"): the best team without the rainbow lifts the median at most `MAX_RATIO`
- * over no team, no run reaches the cut-off, and no team without the rainbow has a 99th percentile
- * above `MAX_P99`, measured on `P99_RUNS` runs (on 200 runs p99 wanders by 150+ layers).
- * Rainbow teams are only reported.
+ * The owner's team goal (docs/03-creatures.md, "Цель бригад приостановлена") is paused until 1.1:
+ * the report prints the current numbers next to `TEAM_REFERENCE` and never fails on them.
  */
-const MAX_RATIO = 2.2;
-const MAX_P99 = 900;
-const P99_RUNS = 1000;
+const REFERENCE_RUNS = 1000;
 const RAINBOW: CreatureId = 'rainbow';
 
 const args = scriptArgs();
@@ -166,26 +161,13 @@ function report(files: string[]): void {
   const bestRatio = best ? ratioOf(best) : null;
   const worstP99 = [...plain].sort((a, b) => b.p99 - a.p99)[0];
   if (best && bestRatio !== null && worstP99) {
-    // A team whose p99 could break the target counts only when it was measured on P99_RUNS runs.
-    const short = plain.filter((row) => row.p99 > MAX_P99 * 0.75 && row.runs < P99_RUNS);
-    const ok = bestRatio <= MAX_RATIO && worstP99.p99 <= MAX_P99 && reaching === 0;
-    const verdict = !ok ? 'MISSED' : short.length > 0 ? 'UNVERIFIED' : 'ok';
+    const { ratio, p99, cutRunsPer1000 } = TEAM_REFERENCE;
     console.log(
-      `target (no rainbow: ratio <= ${MAX_RATIO}, every p99 <= ${MAX_P99} on ${P99_RUNS} runs, no cut runs): ` +
-        `${verdict} (${best.team} x${bestRatio.toFixed(2)}; highest p99 ${worstP99.team} ` +
-        `${worstP99.p99} on ${worstP99.runs} runs)`,
-    );
-    if (short.length > 0) {
-      console.log(
-        `p99 candidates measured on fewer than ${P99_RUNS} runs (replay with --runs=${P99_RUNS}): ` +
-          short.map((row) => row.team).join(', '),
-      );
-    }
-  }
-  const overRainbow = teams.filter((row) => withRainbow(row) && (ratioOf(row) ?? 0) > MAX_RATIO);
-  if (overRainbow.length > 0) {
-    console.log(
-      `rainbow teams over x${MAX_RATIO} (for the owner): ${overRainbow.map((row) => row.team).join(', ')}`,
+      'reference (team goal paused until 1.1): ' +
+        `best no-rainbow team ${best.team} x${bestRatio.toFixed(2)}, ` +
+        `highest p99 ${worstP99.team} ${worstP99.p99} on ${worstP99.runs} runs, ` +
+        `${reaching} teams with cut runs; ` +
+        `reference numbers x${ratio} / p99 ${p99} / ${cutRunsPer1000} per ${REFERENCE_RUNS}`,
     );
   }
 }
