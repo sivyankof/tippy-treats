@@ -18,6 +18,7 @@ import { fillPolygon, outlineColor } from '../../fx/plain-style';
 import { bakeTexture } from '../../ui/bake-texture';
 import { glassPose, newGlassPose } from './glass-motion';
 import type { FrameCtx, Life } from './life';
+import type { WallSpot } from './wall-life';
 
 type Ctx2D = CanvasRenderingContext2D;
 
@@ -338,19 +339,18 @@ export function bakeGlassItems(scene: Phaser.Scene, weather: WeatherId): void {
   }
 }
 
-/** Where the window of a start place stands, for `Hover`: the picture and where its glass is on the screen. */
-export function windowRectOf(
+/** The glass of the window of a start place whose picture stands at (`x`, `y`); `mirrored` is a picture drawn flipped. */
+export function glassRectAt(
   place: StartPlaceId,
-  width: number,
-  height: number,
+  x: number,
+  y: number,
+  mirrored: boolean,
   out: Rect = { x: 0, y: 0, w: 0, h: 0 },
 ): Rect {
-  const look = WINDOW_LOOK[place];
-  const cx = look.at.x * width + look.offset.x;
-  const cy = look.at.y * height + look.offset.y;
-  const [from, to] = GLASS_LOOK.windowSpan[place];
-  out.x = cx - W / 2 + GLASS.x + GLASS.w * from;
-  out.y = cy - H / 2 + GLASS.y;
+  const [start, end] = GLASS_LOOK.windowSpan[place];
+  const [from, to] = mirrored ? [1 - end, 1 - start] : [start, end];
+  out.x = x - W / 2 + GLASS.x + GLASS.w * from;
+  out.y = y - H / 2 + GLASS.y;
   out.w = GLASS.w * (to - from);
   out.h = GLASS.h;
   return out;
@@ -362,6 +362,8 @@ export interface GlassArea {
   rects(ctx: FrameCtx): readonly Rect[];
   /** True where the area keeps the HUD and the flying layer's row clear (the wide Showcase panes). */
   keepClear: boolean;
+  /** Extra alpha factor of the whole area (a window that is off the screen or muted); 1 when absent. */
+  alpha?(): number;
 }
 
 /**
@@ -400,13 +402,14 @@ export class GlassWeatherLife implements Life {
     const rects = this.area.rects(ctx);
     const time = still ? 0 : ctx.timeMs;
     const band = this.area.keepClear ? ctx.clearBand : null;
+    const areaAlpha = this.area.alpha?.() ?? 1;
     this.objects.forEach((image, i) => {
       const rect = rects[i % rects.length];
       if (!rect) return;
       const pose = glassPose(this.spec, i, time, this.pose);
       const x = rect.x + rect.w * pose.u;
       const y = rect.y + rect.h * pose.v;
-      let alpha = pose.alpha;
+      let alpha = pose.alpha * areaAlpha;
       if (band) {
         const fade = GLASS_LOOK.bandFadePx;
         const away = Math.max(band.top - y, y - band.bottom, 0) / fade;
@@ -422,22 +425,29 @@ export class GlassWeatherLife implements Life {
   }
 }
 
-/** The life of the glass of a window of a start place for this weather; null when the weather leaves nothing on it. */
-export function windowGlassLife(
+/**
+ * The lives of the glass of the windows of a start place for this weather, one per pool slot of the wall window (`spots`):
+ * the items ride with their own window. Empty when the weather leaves nothing on the glass.
+ */
+export function windowGlassLives(
   scene: Phaser.Scene,
   place: StartPlaceId,
   weather: WeatherId,
-): GlassWeatherLife | null {
+  spots: readonly WallSpot[],
+): GlassWeatherLife[] {
   const spec = GLASS_WEATHER[weather];
-  if (!spec) return null;
-  const rect = windowRectOf(place, 0, 0);
-  const rects = [rect];
-  return new GlassWeatherLife(scene, spec, spec.window, {
-    keepClear: false,
-    rects: (ctx) => {
-      windowRectOf(place, ctx.width, ctx.height, rect);
-      return rects;
-    },
+  if (!spec) return [];
+  return spots.map((spot) => {
+    const rect: Rect = { x: 0, y: 0, w: 0, h: 0 };
+    const rects = [rect];
+    return new GlassWeatherLife(scene, spec, spec.window, {
+      keepClear: false,
+      alpha: () => spot.alpha,
+      rects: () => {
+        glassRectAt(place, spot.x, spot.y, spot.mirrored, rect);
+        return rects;
+      },
+    });
   });
 }
 
