@@ -1,12 +1,14 @@
 import { describe, expect, it } from 'vitest';
 import { HUD_LAYOUT } from '../../data/hud-layout';
 import { LOGICAL_SIZE } from '../../data/screen';
+import { setLang, tn, type Lang } from '../../i18n';
 import {
   badgeRowRight,
   captionSpot,
   isCompactNext,
   nextChipClearsRow,
   nextChipSpan,
+  nextLabelPopScale,
   type CaptionSpot,
 } from './hud-row-layout';
 
@@ -71,4 +73,23 @@ describe('icon-only next-creature chip', () => {
     expect(span.iconX - badgeSize / 2 - span.chipLeft).toBeCloseTo(HUD_LAYOUT.nextChip.padX);
     expect(span.chipRight - (span.iconX + badgeSize / 2)).toBeCloseTo(HUD_LAYOUT.nextChip.padX);
   });
+});
+
+describe('next-creature text at the peak of its pop', () => {
+  for (const lang of ['ru', 'en'] as Lang[]) {
+    for (const n of [1, 2, 5, 8, 10, 17, 20]) {
+      it(`stays right of the icon and inside the chip: ${lang}, ${n}`, () => {
+        setLang(lang);
+        const text = tn('run.nextCreatureIn', n);
+        const width = textWidth(text.length);
+        const span = nextChipSpan(WIDTH, width);
+        const peakRight = span.labelLeft + width * nextLabelPopScale(width);
+        expect(span.labelLeft).toBeGreaterThanOrEqual(
+          span.iconX + badgeSize / 2 + HUD_LAYOUT.badgeGap,
+        );
+        expect(peakRight).toBeLessThanOrEqual(span.chipRight + 1e-9);
+        expect(peakRight).toBeLessThanOrEqual(WIDTH - badgeMargin);
+      });
+    }
+  }
 });

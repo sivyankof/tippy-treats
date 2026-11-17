@@ -1,3 +1,4 @@
+import { ANIM } from '../../data/anim';
 import { HUD_LAYOUT } from '../../data/hud-layout';
 import { badgeCentreX } from './effect-badge-state';
 
@@ -13,9 +14,11 @@ export function isCompactNext(badgeCount: number): boolean {
   return badgeCount >= compactNextFrom;
 }
 
-/** Where the next-creature chip stands: the text hugs the right margin, the icon sits left of it. */
+/** Where the next-creature chip stands: the text ends at the right margin, the icon sits left of it. */
 export interface NextChipSpan {
-  /** Right end of the text (its origin is the right edge). */
+  /** Left end of the text (its origin is the left edge, so a pop grows it away from the icon). */
+  labelLeft: number;
+  /** Right end of the text at rest. */
   labelRight: number;
   /** Centre x of the icon. */
   iconX: number;
@@ -31,11 +34,21 @@ export function nextChipSpan(screenWidth: number, labelWidth: number | null): Ne
       ? labelRight - badgeSize / 2
       : labelRight - labelWidth - badgeGap - badgeSize / 2;
   return {
+    labelLeft: labelRight - (labelWidth ?? 0),
     labelRight,
     iconX,
     chipLeft: iconX - badgeSize / 2 - nextChip.padX,
     chipRight: labelRight + nextChip.padX,
   };
+}
+
+/**
+ * Scale of the text at the peak of its pop: `ANIM.badges.nextPopScale`, less for a wide text, so the growth to the right
+ * (the text is pinned at its left edge, next to the icon) stays within the chip padding.
+ */
+export function nextLabelPopScale(labelWidth: number): number {
+  if (labelWidth <= 0) return 1;
+  return Math.min(ANIM.badges.nextPopScale, 1 + nextChip.padX / labelWidth);
 }
 
 /** The chip keeps `nextBadgeGap` between itself and the badge row. */

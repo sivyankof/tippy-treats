@@ -32,10 +32,8 @@ export interface LayerOptions {
   mirror?: boolean;
   /** Half the height of the picture (px): it counts as on the screen while any part of it is. */
   halfH: number;
-  /** The start copy is drawn by something else (the awning's full-width start strip); only the repeats show. */
-  skipStart?: boolean;
-  /** Shows only this many px of the picture's left edge (a narrow strip of the awning). */
-  cropW?: number;
+  /** Alpha factor (0..1) by how far (px) the layer has moved down; the picture is hidden at 0. Absent: no fade. */
+  fadeDown?: (down: number) => number;
 }
 
 function newSpot(): LayerSpot {
@@ -68,18 +66,18 @@ export class LayerThing implements Life {
       const image = createImage(scene, spec?.texture ?? '');
       if (spec?.origin) image.setOrigin(spec.origin[0], spec.origin[1]);
       if (spec?.tint !== undefined) image.setTint(spec.tint);
-      if (options.cropW !== undefined) image.setCrop(0, 0, options.cropW, image.height);
       return image.setVisible(false);
     });
   }
 
   update(ctx: FrameCtx): void {
-    const { series, mirror, halfH, skipStart, layer } = this.options;
+    const { series, mirror, halfH, fadeDown, layer } = this.options;
     const down = ctx.layerDown[layer] ?? 0;
     const first = this.specs[0];
     if (!first) return;
     const y0 = first.at.y * ctx.height + (first.offset?.y ?? 0);
     const count = this.specs.length;
+    const fade = fadeDown ? fadeDown(down) : 1;
     for (let slot = 0; slot < this.pool; slot++) {
       const n = series ? slotCopy(slot, series, y0, down, ctx.height) : 0;
       const rise = series ? seriesRise(n, series, ctx.height) : 0;
@@ -88,8 +86,7 @@ export class LayerThing implements Life {
       // A copy far off the screen is only hidden: no pose is worked out for it.
       const centreY = y0 + down - rise;
       const reach = halfH + WALL_LOOK.offscreenSlackPx;
-      const away = skipStart === true && n === 0;
-      if (away || centreY + reach < 0 || centreY - reach > ctx.height) {
+      if (fade <= 0 || centreY + reach < 0 || centreY - reach > ctx.height) {
         spot.alpha = 0;
         for (let k = 0; k < count; k++) this.objects[slot * count + k]?.setVisible(false);
         continue;
@@ -101,6 +98,7 @@ export class LayerThing implements Life {
         if (!spec || !image) continue;
         const pose = hoverPose(spec, ctx.width, ctx.height, ctx.timeMs, this.pose);
         if (mirrored) pose.x = ctx.width - pose.x;
+        pose.alpha *= fade;
         const shown = rideLayer(pose, this.anchor, ctx, ctx.height, halfH, rise);
         applyPose(image, pose);
         image.setFlipX(mirrored);
