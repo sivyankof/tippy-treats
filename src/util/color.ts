@@ -17,6 +17,13 @@ export function mixColor(from: number, to: number, t: number): number {
   return pack(r1 + (r2 - r1) * t, g1 + (g2 - g1) * t, b1 + (b2 - b1) * t);
 }
 
+/** Channel-wise product of two 0xRRGGBB colours (what a multiply tint does). */
+export function multiplyColor(a: number, b: number): number {
+  const [r1, g1, b1] = channels(a);
+  const [r2, g2, b2] = channels(b);
+  return pack((r1 * r2) / CHANNEL_MAX, (g1 * g2) / CHANNEL_MAX, (b1 * b2) / CHANNEL_MAX);
+}
+
 /** CSS colour string for Phaser text styles. */
 export function cssColor(color: number): string {
   return `#${color.toString(16).padStart(6, '0')}`;

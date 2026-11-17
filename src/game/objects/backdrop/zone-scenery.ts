@@ -56,6 +56,8 @@ export interface SceneryLook {
 /** One zone's art: baking is separate so the next zone can be prepared ahead of the change. */
 export interface ZoneArt {
   bake(scene: Phaser.Scene, look: SceneryLook): void;
+  /** True when, in this weather, the art bakes and names its own sky (`SceneryDef.sky`), so the zone's plain sky is not baked. */
+  ownSky?(weather: WeatherId): boolean;
   /** Bakes what only one lap of the zone shows (the planet of a lap of Space); `lap` is 1-based. */
   bakeLap?(scene: Phaser.Scene, lap: number): void;
   /** Only Space reads `look.lap` and `look.topWidth`; a zone ignores what it does not show. */
@@ -140,7 +142,7 @@ export class ZoneScenery {
     height: number,
     weather: WeatherId = 'clear',
   ) {
-    bakeSky(scene, zone, weather);
+    if (!def.sky) bakeSky(scene, zone, weather);
     // Menu screens build the kitchen without the run backdrop, so the far plane bakes here too.
     bakeFarArt(scene, zone, weather);
     this.drift = BACKDROP.drift[zone];

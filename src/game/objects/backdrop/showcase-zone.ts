@@ -65,6 +65,9 @@ function awningAlpha(weather: WeatherId): number[] | undefined {
 }
 const skyKey = (weather: WeatherId): string => `bd_sky_showcase_${weather}`;
 
+/** In clear weather the street shows the zone's plain sky; every other weather gets its own picture. */
+const ownSky = (weather: WeatherId): boolean => weather !== 'clear';
+
 const BUILDINGS = [
   { x: 30, y: 60, w: 110, h: 200 },
   { x: 170, y: 200, w: 90, h: 250 },
@@ -212,18 +215,15 @@ function bakeWindowLife(scene: Phaser.Scene): void {
 
 /** Shop window: street behind glass, a blinking garland, passers-by and a turning cake. */
 export const showcaseArt: ZoneArt = {
+  ownSky,
   bake(scene, look) {
-    const sky = WINDOW_SKY[look.weather];
-    bakeStopsSky(
-      scene,
-      skyKey(look.weather),
-      look.weather === 'clear'
-        ? ZONE_SKY.showcase
-        : [
-            { at: 0, color: sky.top },
-            { at: 1, color: sky.bottom },
-          ],
-    );
+    if (ownSky(look.weather)) {
+      const sky = WINDOW_SKY[look.weather];
+      bakeStopsSky(scene, skyKey(look.weather), [
+        { at: 0, color: sky.top },
+        { at: 1, color: sky.bottom },
+      ]);
+    }
     bakeGlassItems(scene, look.weather);
     bakeLayers(scene, STREET_LOOK[look.weather], streetKeys(look.weather), look.weather);
     bakeGarland(scene);
@@ -234,7 +234,7 @@ export const showcaseArt: ZoneArt = {
     const keys = streetKeys(look.weather);
     const glass = showcaseGlassLife(scene, look.weather);
     return {
-      sky: skyKey(look.weather),
+      sky: ownSky(look.weather) ? skyKey(look.weather) : undefined,
       farTint: farTint(look.weather),
       layers: [keys.street, keys.panes, S.treats, awningKey(look.weather)],
       layerAlpha: awningAlpha(look.weather),

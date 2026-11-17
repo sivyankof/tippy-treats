@@ -121,12 +121,10 @@ export class WeatherTop {
     free.bornAt = timeMs;
     const span = top.right - top.left;
     free.image
-      .setPosition(top.left + span * this.rng.range(0.08, 0.92), top.topY + 2)
+      .setPosition(
+        top.left + span * this.rng.range(SPLASH.spanShare[0], SPLASH.spanShare[1]),
+        top.topY + 2,
+      )
       .setVisible(true);
-  }
-
-  destroy(): void {
-    this.cap?.destroy();
-    for (const s of this.splashes) s.image.destroy();
   }
 }

@@ -1,7 +1,7 @@
 import * as Phaser from 'phaser';
 import { Rng } from '../../../core/rng';
 import type { WeatherId } from '../../../data/weather';
-import { WEATHER_LOOK, WEATHER_TEX, type WeatherZone } from '../../../data/weather-look';
+import { WEATHER_LOOK, WEATHER_TEX } from '../../../data/weather-look';
 import type { ZoneId } from '../../../data/zones';
 import { TWO_PI } from '../../../util/math';
 import { effectsMode } from '../../effects-mode';
@@ -19,20 +19,17 @@ const BANK_FLASH = {
 };
 const NIGHT = WEATHER_LOOK.night;
 
-/** Cloud banks of storms that are alive, so the debug hook can strike them. */
+/** Cloud banks of storms that are alive; filled in development only, for the debug hook. */
 const BANKS = new Set<WeatherBank>();
 
 /** Debug: every live storm bank strikes right away. */
 export function strikeLightningNow(): void {
-  for (const bank of BANKS) {
-    if (bank.alive) bank.strikeNow();
-    else BANKS.delete(bank);
-  }
+  for (const bank of BANKS) bank.strikeNow();
 }
 
 /**
- * The cloud bank of rain and storm: one opaque figure that is part of the zone's sky, behind the
- * houses. It drifts slowly on full and lite and stands still on minimal. A storm adds lightning, a
+ * The cloud bank of rain and storm: one opaque figure that is part of the zone's sky, drawn over the
+ * four parallax layers (see `SceneryDef.weatherSky`). It drifts slowly on full and lite and stands still on minimal. A storm adds lightning, a
  * pale twin of the bank and a jagged bolt that stays inside the cloud, in a flash of 120-180 ms
  * every 8-15 s (full and lite; minimal none).
  */
@@ -41,7 +38,9 @@ export class WeatherBank implements Life {
   private readonly bank: Phaser.GameObjects.Image;
   private readonly flash: Phaser.GameObjects.Image | null = null;
   private readonly bolt: Phaser.GameObjects.Image | null = null;
-  private nextAt: number;
+  /** Time of the next bolt; drawn from the first frame on, since the scene clock does not start at 0. */
+  private nextAt = -1;
+  private readonly firstU: number;
   private flashAt = -1;
   private flashMs = 0;
   /** Where the strike stands (screen px) and whether it has a bolt (it may find no free place). */
@@ -50,32 +49,27 @@ export class WeatherBank implements Life {
 
   constructor(
     scene: Phaser.Scene,
-    zone: WeatherZone,
     weather: WeatherId,
     private readonly rng: Rng,
   ) {
-    this.bank = new Phaser.GameObjects.Image(scene, 0, 0, bankKey(zone, weather))
+    this.bank = new Phaser.GameObjects.Image(scene, 0, 0, bankKey(weather))
       .setOrigin(0.5, 0)
       .setScale(BANK.scale);
     this.objects = [this.bank];
     if (weather === 'storm') {
-      this.flash = new Phaser.GameObjects.Image(
-        scene,
-        0,
-        0,
-        bankKey(zone, weather, true),
-      ).setVisible(false);
+      this.flash = new Phaser.GameObjects.Image(scene, 0, 0, bankKey(weather, true)).setVisible(
+        false,
+      );
       this.bolt = new Phaser.GameObjects.Image(scene, 0, 0, WEATHER_TEX.bolt)
         .setOrigin(0.5, 0)
         .setVisible(false);
       this.objects.push(this.flash, this.bolt);
-      BANKS.add(this);
+      if (import.meta.env.DEV) {
+        BANKS.add(this);
+        this.bank.once(Phaser.GameObjects.Events.DESTROY, () => BANKS.delete(this));
+      }
     }
-    this.nextAt = nextBoltAt(0, BOLT.firstMs, rng.next());
-  }
-
-  get alive(): boolean {
-    return this.bank.scene !== undefined;
+    this.firstU = rng.next();
   }
 
   /** Debug: the next bolt strikes at the next frame. */
@@ -100,6 +94,7 @@ export class WeatherBank implements Life {
       return;
     }
     const now = ctx.timeMs;
+    if (this.nextAt < 0) this.nextAt = nextBoltAt(now, BOLT.firstMs, this.firstU);
     if (this.flashAt < 0 && (this.pending || now >= this.nextAt)) {
       this.pending = false;
       this.flashAt = now;
@@ -139,7 +134,7 @@ export class WeatherBank implements Life {
       if (edge < BOLT.minCloudPx) continue;
       const top = edge * BOLT.topShare;
       const end = Math.min(top + edge * BOLT.lengthShare, edge - BOLT.endGapPx);
-      if (end - top < BOLT.height * 0.25) continue;
+      if (end - top < BOLT.height * BOLT.minLengthShare) continue;
       const clear = [top, (top + end) / 2, end].every((y) => hudKeepOutFade(x, y) > 0);
       if (clear) return { x, y: top, scale: (end - top) / BOLT.height, edge };
     }
@@ -158,7 +153,7 @@ interface Star {
 
 /**
  * The night sky: small flat stars (they twinkle in scale and alpha on full, stand still on lite and
- * minimal) and the crescent moon, both in the zone's sky behind the houses. A star is never shown
+ * minimal) and the crescent moon, both in the zone's sky, drawn over the four parallax layers. A star is never shown
  * inside the HUD plates plus the HUD gap or in the flight row; the moon hangs at the HUD floor on
  * the left and is left out when there is no room above the row.
  */
@@ -225,8 +220,7 @@ export class WeatherNight implements Life {
 export function weatherSkyLives(scene: Phaser.Scene, zone: ZoneId, weather: WeatherId): Life[] {
   if (zone !== 'roof' && zone !== 'clouds') return [];
   const rng = new Rng(WEATHER_LOOK.skySeed).fork(`${weather}_sky`);
-  if (weather === 'rain' || weather === 'storm')
-    return [new WeatherBank(scene, zone, weather, rng)];
+  if (weather === 'rain' || weather === 'storm') return [new WeatherBank(scene, weather, rng)];
   if (weather === 'night') return [new WeatherNight(scene, rng)];
   return [];
 }

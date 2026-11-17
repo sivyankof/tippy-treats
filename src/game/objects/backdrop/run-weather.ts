@@ -113,9 +113,4 @@ export class RunWeather {
     top.over = state.phase === 'over';
     this.top.update(top, timeMs, deltaMs, f.level, f.share);
   }
-
-  destroy(): void {
-    this.top.destroy();
-    this.root.destroy(true);
-  }
 }

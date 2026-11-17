@@ -339,22 +339,26 @@ export function bakeGlassItems(scene: Phaser.Scene, weather: WeatherId): void {
 }
 
 /** Where the window of a start place stands, for `Hover`: the picture and where its glass is on the screen. */
-export function windowRectOf(place: StartPlaceId, width: number, height: number): Rect {
+export function windowRectOf(
+  place: StartPlaceId,
+  width: number,
+  height: number,
+  out: Rect = { x: 0, y: 0, w: 0, h: 0 },
+): Rect {
   const look = WINDOW_LOOK[place];
   const cx = look.at.x * width + look.offset.x;
   const cy = look.at.y * height + look.offset.y;
   const [from, to] = GLASS_LOOK.windowSpan[place];
-  return {
-    x: cx - W / 2 + GLASS.x + GLASS.w * from,
-    y: cy - H / 2 + GLASS.y,
-    w: GLASS.w * (to - from),
-    h: GLASS.h,
-  };
+  out.x = cx - W / 2 + GLASS.x + GLASS.w * from;
+  out.y = cy - H / 2 + GLASS.y;
+  out.w = GLASS.w * (to - from);
+  out.h = GLASS.h;
+  return out;
 }
 
 /** Where the glass items may be and what they keep out of. */
 export interface GlassArea {
-  /** The rectangles items live in (they are dealt out one by one). */
+  /** The rectangles items live in (they are dealt out one by one); the array is reused, not rebuilt, every frame. */
   rects(ctx: FrameCtx): readonly Rect[];
   /** True where the area keeps the HUD and the flying layer's row clear (the wide Showcase panes). */
   keepClear: boolean;
@@ -426,9 +430,14 @@ export function windowGlassLife(
 ): GlassWeatherLife | null {
   const spec = GLASS_WEATHER[weather];
   if (!spec) return null;
+  const rect = windowRectOf(place, 0, 0);
+  const rects = [rect];
   return new GlassWeatherLife(scene, spec, spec.window, {
     keepClear: false,
-    rects: (ctx) => [windowRectOf(place, ctx.width, ctx.height)],
+    rects: (ctx) => {
+      windowRectOf(place, ctx.width, ctx.height, rect);
+      return rects;
+    },
   });
 }
 
@@ -466,6 +475,9 @@ export function showcaseGlassLife(
   const spec = GLASS_WEATHER[weather];
   if (!spec) return null;
   const { near, far, lowest } = GLASS_LOOK.showcaseBands;
+  const left: Rect = { x: 0, y: 0, w: 0, h: 0 };
+  const right: Rect = { x: 0, y: 0, w: 0, h: 0 };
+  const rects = [left, right];
   return new GlassWeatherLife(
     scene,
     spec,
@@ -475,10 +487,15 @@ export function showcaseGlassLife(
       rects: (ctx) => {
         const top = ctx.clearBand?.ceiling ?? 0;
         const height = ctx.height * lowest - top;
-        return [
-          { x: near, y: top, w: far - near, h: height },
-          { x: ctx.width - far, y: top, w: far - near, h: height },
-        ];
+        left.x = near;
+        left.y = top;
+        left.w = far - near;
+        left.h = height;
+        right.x = ctx.width - far;
+        right.y = top;
+        right.w = far - near;
+        right.h = height;
+        return rects;
       },
     },
     GLASS_LOOK.showcaseSize,

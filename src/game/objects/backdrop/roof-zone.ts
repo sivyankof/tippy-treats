@@ -5,6 +5,7 @@ import { BACKDROP_COLORS } from '../../../data/backdrop-colors';
 import { BACKDROP_LIFE } from '../../../data/backdrop-life';
 import { WEATHER_LOOK } from '../../../data/weather-look';
 import type { WeatherId } from '../../../data/weather';
+import { multiplyColor } from '../../../util/color';
 import { bakeTexture } from '../../ui/bake-texture';
 import { tiled } from './art-kit';
 import { Hover, PuffColumn, Traveler } from './life';
@@ -198,10 +199,14 @@ export const roofArt: ZoneArt = {
     const night = weather === 'night';
     const fixture = fixtureTintOf(weather);
     const chimney = fixture === null ? life.chimney : { ...life.chimney, tint: fixture };
+    const smoke =
+      fixture === null
+        ? life.smoke
+        : { ...life.smoke, tint: multiplyColor(life.smoke.tint, fixture) };
     const lives: SceneryDef['lives'][number][] = [
       { slot: MOUNTAIN_SLOT.roof, life: new Mountains(scene, mountainTintOf(weather)) },
       { slot: 1, life: new Hover(scene, [chimney]) },
-      { slot: 1, life: new PuffColumn(scene, life.smoke, life.smokeAt, life.smokeOffset) },
+      { slot: 1, life: new PuffColumn(scene, smoke, life.smokeAt, life.smokeOffset) },
     ];
     // The washing is taken in and the birds are asleep at night.
     if (!night) {

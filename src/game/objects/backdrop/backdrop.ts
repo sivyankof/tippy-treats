@@ -78,6 +78,8 @@ export class Backdrop {
   /** The zones the still replaced, shown again when it goes. */
   private frozen: ZoneScenery[] = [];
 
+  private readonly alphaOf = (index: number): number => this.fade.alphaOf(index);
+
   /** `zoneIndex` and `lap` are what is shown at once (a debug start can begin deep in the tower). */
   constructor(
     private readonly scene: Phaser.Scene,
@@ -134,15 +136,13 @@ export class Backdrop {
 
   /**
    * How much of the weather of the given kind is visible right now: the summed fade alpha of the
-   * live zones that show weather that way (`WEATHER.zoneView`), 0..1. Weather particles scale their
+   * live zones that show weather that way (`WEATHER.zoneView`), 0..1; 0 while the results still stands. Weather particles scale their
    * alpha by it, so they fade smoothly across a zone change.
    */
   weatherShare(view: 'full' | 'window'): number {
-    const zones = [...this.sceneries.keys()].map((index) => ({
-      zone: zoneIdOf(index),
-      alpha: this.fade.alphaOf(index),
-    }));
-    return weatherShareOf(view, zones, WEATHER.zoneView);
+    // The results screen shows a still picture: nothing falls or moves on it any more.
+    if (this.still) return 0;
+    return weatherShareOf(view, this.sceneries.keys(), zoneIdOf, this.alphaOf, WEATHER.zoneView);
   }
 
   /** The creature of the current zone that may leave for the tower; `null` when it has none. */
@@ -262,10 +262,11 @@ export class Backdrop {
   private bake(id: ZoneId, lap: number): void {
     bakeSharedArt(this.scene);
     bakeFarArt(this.scene, id, this.look.weather);
-    bakeSky(this.scene, id, this.look.weather);
+    const art = this.artOf(id);
+    if (!art.ownSky?.(this.look.weather)) bakeSky(this.scene, id, this.look.weather);
     const look = this.sceneryLook(Math.max(lap, 1));
-    this.artOf(id).bake(this.scene, look);
-    this.artOf(id).bakeLap?.(this.scene, look.lap);
+    art.bake(this.scene, look);
+    art.bakeLap?.(this.scene, look.lap);
   }
 
   private sceneryLook(lap: number): SceneryLook {

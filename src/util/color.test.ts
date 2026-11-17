@@ -5,6 +5,7 @@ import {
   fromHsl,
   luminance,
   mixColor,
+  multiplyColor,
   parseHex,
   shade,
   toHsl,
@@ -15,6 +16,12 @@ describe('color helpers', () => {
     expect(mixColor(0x000000, 0xffffff, 0)).toBe(0x000000);
     expect(mixColor(0x000000, 0xffffff, 1)).toBe(0xffffff);
     expect(mixColor(0x000000, 0xfefefe, 0.5)).toBe(0x7f7f7f);
+  });
+
+  it('multiplies colours channel by channel', () => {
+    expect(multiplyColor(0xffffff, 0x6a62a0)).toBe(0x6a62a0);
+    expect(multiplyColor(0x000000, 0xffffff)).toBe(0x000000);
+    expect(multiplyColor(0x808080, 0xff0000)).toBe(0x800000);
   });
 
   it('formats CSS colour strings with padding', () => {
