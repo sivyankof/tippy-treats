@@ -55,7 +55,7 @@ export class ResultsCoins {
     if (grid) rows.push(grid);
     this.button = null;
     const left = gameState.doublesLeft;
-    if (canOfferDoubleCoins(earned, canDouble, left)) {
+    if (canOfferDoubleCoins(earned, canDouble, left, gameState.runsFinished)) {
       const { button, label } = createTextButton(scene, {
         text: t('results.doubleLeft', { n: left }),
         font: cfg.adButton.font,

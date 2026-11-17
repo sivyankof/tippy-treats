@@ -121,9 +121,10 @@ const DEFAULT_DWELL: Readonly<Dwell> = {
 
 const sleep = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
 
-/** Buys and upgrades every creature and puts a full team on the run, so the menus show a rich save. */
+/** Buys and upgrades every creature, puts a full team on the run and ends the first runs, so the menus show a rich save. */
 function enrichSave(): void {
   gameState.debugSetBakerLevel(SOAK.richBakerLevel);
+  gameState.debugSetRuns(SOAK.richRuns);
   gameState.addCoins(SOAK.richCoins);
   gameState.addBerries(SOAK.richBerries);
   for (const id of CREATURE_IDS) {

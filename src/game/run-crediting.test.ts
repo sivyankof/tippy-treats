@@ -159,6 +159,8 @@ describe('a run is credited once', () => {
     const flow = new ContinueFlow({
       ads: { isRewardedReady: () => false, showRewarded: () => Promise.resolve('unavailable') },
       wallet: state,
+      // A player past the clean first runs, so the window opens.
+      player: { runsFinished: 3 },
     });
     expect(flow.open('classic', 0)).toBe(true);
     const before = { coins: state.coins, berries: state.berries };
@@ -176,6 +178,8 @@ describe('a run is credited once', () => {
     const flow = new ContinueFlow({
       ads: { isRewardedReady: () => true, showRewarded: () => Promise.resolve('rewarded') },
       wallet: state,
+      // A player past the clean first runs, so the window opens.
+      player: { runsFinished: 3 },
     });
     expect(flow.open('classic', 0)).toBe(true);
     await flow.watchAd();

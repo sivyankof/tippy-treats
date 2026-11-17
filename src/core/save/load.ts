@@ -169,6 +169,7 @@ function normalize(raw: Obj, d: Save): Save {
       freeCoinsDay: day(shop.freeCoinsDay),
       freeCoinsUsed: uint(shop.freeCoinsUsed, 0),
       starterPackUntil: uint(shop.starterPackUntil, 0),
+      starterPackShownAt: uint(shop.starterPackShownAt, 0),
     },
     purchases: {
       removeAds: bool(purchases.removeAds, false),
@@ -241,9 +242,9 @@ function hasKeyFields(raw: Obj): boolean {
 }
 
 /** Parses, migrates and normalizes one stored text; null when it cannot be used. */
-function parseSave(text: string, defaults: Save): Parsed | null {
+function parseSave(text: string, defaults: Save, nowMs: number): Parsed | null {
   try {
-    const migrated = migrate(JSON.parse(text) as unknown) as unknown as Obj;
+    const migrated = migrate(JSON.parse(text) as unknown, nowMs) as unknown as Obj;
     return { save: normalize(migrated, defaults), intact: hasKeyFields(migrated) };
   } catch {
     return null;
@@ -264,9 +265,9 @@ export function loadSave(
   makeInstallId: () => string,
 ): LoadResult {
   const defaults = createDefaultSave(nowMs, makeInstallId());
-  const fromPrimary = isStored(primary) ? parseSave(primary, defaults) : null;
+  const fromPrimary = isStored(primary) ? parseSave(primary, defaults, nowMs) : null;
   if (fromPrimary?.intact) return { save: fromPrimary.save, source: 'primary', corrupt: [] };
-  const fromBackup = isStored(backup) ? parseSave(backup, defaults) : null;
+  const fromBackup = isStored(backup) ? parseSave(backup, defaults, nowMs) : null;
   if (fromPrimary && !fromBackup?.intact) {
     return { save: fromPrimary.save, source: 'primary', corrupt: [] };
   }

@@ -1,6 +1,6 @@
 import type { CreatureId } from '../../data/creatures';
 
-export const SAVE_VERSION = 8;
+export const SAVE_VERSION = 9;
 
 export type MissionGroup = 'easy' | 'medium' | 'hard';
 
@@ -156,5 +156,15 @@ export interface SaveV8 extends Omit<SaveV7, 'version'> {
   bestLap: number;
 }
 
+/**
+ * Version 9 (first runs without sales): `shop.starterPackShownAt` keeps when the starter pack
+ * button was first shown on Home: its 7-day window starts then, not at the install.
+ */
+export interface SaveV9 extends Omit<SaveV8, 'version' | 'shop'> {
+  version: 9;
+  /** `starterPackShownAt`: epoch ms of the first show of the starter pack on Home, 0 when never shown. */
+  shop: SaveV8['shop'] & { starterPackShownAt: number };
+}
+
 /** The current save version. */
-export type Save = SaveV8;
+export type Save = SaveV9;

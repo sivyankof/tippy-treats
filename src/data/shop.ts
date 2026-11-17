@@ -62,7 +62,7 @@ export const BERRY_PRODUCTS: readonly ProductKey[] = [
 
 /** Numbers of the shop rules (docs/05-economy-monetization.md, sections 5 and 6). */
 export const SHOP = {
-  /** The starter pack is offered this many days after the install, or until it is bought. */
+  /** The starter pack is offered this many days after its first show on Home, or until it is bought. */
   starterPackDays: 7,
   /** Free coins for a rewarded ad. */
   freeCoins: { amount: 25, perDay: 3 },

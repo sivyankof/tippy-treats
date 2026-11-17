@@ -49,7 +49,7 @@ export class HomeStarterOffer {
       bought: (creature: CreatureId | null) => void;
     },
   ) {
-    this.room = gameState.starterPackOffered;
+    this.room = gameState.starterPackOnHome;
   }
 
   /** Shows the button when the store has a price for the pack. */
@@ -62,6 +62,8 @@ export class HomeStarterOffer {
       return;
     }
     this.button = createStarterButton(this.scene, price, () => void this.buy());
+    // The honest 7-day window starts with the first time the player sees the button.
+    gameState.noteStarterPackShown();
     this.hooks.changed();
     this.button.setAlpha(0);
     this.scene.tweens.add({ targets: this.button, alpha: 1, duration: ANIM.ui.transition.inMs });

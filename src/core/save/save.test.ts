@@ -10,6 +10,7 @@ import {
   migrateV5,
   migrateV6,
   migrateV7,
+  migrateV8,
   SaveError,
   type Migration,
 } from './migrations';
@@ -18,6 +19,7 @@ import { xpToNext } from '../progression';
 import { legacyXpToNext, V5_RECORD_UNLOCKS, v5XpToNext } from './frozen-v5';
 import { V7_CHECKPOINT_HEIGHTS, v7CheckpointsReached } from './frozen-v7';
 import { V8_LAP_LENGTH, V8_SPACE_FIRST_LAYER, v8LapReached } from './frozen-v8';
+import { V9_STARTER_PACK_MIN_RUNS } from './frozen-v9';
 import { SAVE_VERSION, type Save } from './schema';
 
 const NOW = 1_700_000_000_000;
@@ -47,11 +49,11 @@ describe('migrate', () => {
 
   it('leaves the current version alone', () => {
     const save = fresh();
-    expect(migrate(save)).toEqual(save);
+    expect(migrate(save, NOW)).toEqual(save);
   });
 
   it('runs every step of the chain in order', () => {
-    const result = migrate({ version: 1, gold: 50 }, chain, 3) as unknown as Record<
+    const result = migrate({ version: 1, gold: 50 }, NOW, chain, 3) as unknown as Record<
       string,
       unknown
     >;
@@ -61,26 +63,26 @@ describe('migrate', () => {
   });
 
   it('starts in the middle of the chain', () => {
-    const result = migrate({ version: 2 }, chain, 3) as unknown as Record<string, unknown>;
+    const result = migrate({ version: 2 }, NOW, chain, 3) as unknown as Record<string, unknown>;
     expect(result.berries).toBe(7);
   });
 
   it('throws a typed error for a future version', () => {
-    expect(() => migrate({ version: SAVE_VERSION + 1 })).toThrow(SaveError);
+    expect(() => migrate({ version: SAVE_VERSION + 1 }, NOW)).toThrow(SaveError);
     try {
-      migrate({ version: 99 });
+      migrate({ version: 99 }, NOW);
     } catch (error) {
       expect((error as SaveError).code).toBe('future_version');
     }
   });
 
   it('throws when a step is missing', () => {
-    expect(() => migrate({ version: 1 }, {}, 2)).toThrow(/no migration/);
+    expect(() => migrate({ version: 1 }, NOW, {}, 2)).toThrow(/no migration/);
   });
 
   it('rejects non-objects and bad versions', () => {
     for (const raw of [null, 5, 'x', [], {}, { version: 'a' }, { version: 0 }, { version: 1.5 }]) {
-      expect(() => migrate(raw)).toThrow(SaveError);
+      expect(() => migrate(raw, NOW)).toThrow(SaveError);
     }
   });
 });
@@ -689,5 +691,71 @@ describe('best lap of the loader', () => {
     delete noField.bestLap;
     expect(load(JSON.stringify(noField)).save.bestLap).toBe(2);
     expect(load(JSON.stringify({ ...noField, bestLap: 'x' })).save.bestLap).toBe(2);
+  });
+});
+
+describe('migration 8 to 9', () => {
+  const LATER = NOW + 5 * 86_400_000;
+  // The version 8 shape of the shop: no first show of the starter pack yet.
+  const v8 = {
+    ...fresh(),
+    version: 8,
+    shop: { freeCoinsDay: '2026-11-01', freeCoinsUsed: 2, starterPackUntil: 0 },
+  } as Record<string, unknown>;
+  const withRuns = (runs: number, bought = false) => ({
+    ...v8,
+    stats: { runs, totalLayers: 300, perfects: 40, adsWatched: 3 },
+    purchases: { removeAds: false, starterPack: bought },
+  });
+  const shownAt = (raw: Record<string, unknown>) =>
+    (migrateV8(raw, LATER).shop as Record<string, unknown>).starterPackShownAt;
+
+  it('starts the window now for a player who has the runs and has not bought the pack', () => {
+    expect(shownAt(withRuns(10))).toBe(LATER);
+    expect(shownAt(withRuns(250))).toBe(LATER);
+  });
+
+  it('leaves the first show empty below 10 runs or when the pack is bought', () => {
+    expect(shownAt(withRuns(9))).toBe(0);
+    expect(shownAt(withRuns(0))).toBe(0);
+    expect(shownAt(withRuns(10, true))).toBe(0);
+    expect(shownAt(withRuns(9, true))).toBe(0);
+  });
+
+  it('keeps the rest of the shop and survives damaged fields', () => {
+    expect(migrateV8(withRuns(12), LATER).shop).toEqual({
+      freeCoinsDay: '2026-11-01',
+      freeCoinsUsed: 2,
+      starterPackUntil: 0,
+      starterPackShownAt: LATER,
+    });
+    expect(shownAt({ ...v8, stats: 'oops', shop: 'oops' })).toBe(0);
+    expect(shownAt({ ...v8, stats: { runs: Number.NaN } })).toBe(0);
+  });
+
+  it('uses the frozen run count of version 9, not the live data', () => {
+    expect(V9_STARTER_PACK_MIN_RUNS).toBe(10);
+  });
+
+  it('loads a version 8 text with the time of the load', () => {
+    const result = loadSave(JSON.stringify({ ...withRuns(11), coins: 33 }), null, LATER, makeId);
+    expect(result.save.version).toBe(SAVE_VERSION);
+    expect(result.save.coins).toBe(33);
+    expect(result.save.shop.starterPackShownAt).toBe(LATER);
+    expect(load(JSON.stringify(withRuns(3))).save.shop.starterPackShownAt).toBe(0);
+  });
+
+  it('carries a version 1 save through the whole chain', () => {
+    const result = load(JSON.stringify({ version: 1, stats: { runs: 40 } }));
+    expect(result.save.shop.starterPackShownAt).toBe(NOW);
+  });
+
+  it('keeps a stored first show and repairs a damaged one', () => {
+    const shop = { ...fresh().shop, starterPackShownAt: NOW - 1000 };
+    expect(load(JSON.stringify({ ...fresh(), shop })).save.shop.starterPackShownAt).toBe(
+      NOW - 1000,
+    );
+    const bad = { ...fresh(), shop: { ...shop, starterPackShownAt: 'x' } };
+    expect(load(JSON.stringify(bad)).save.shop.starterPackShownAt).toBe(0);
   });
 });

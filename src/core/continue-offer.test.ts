@@ -7,10 +7,20 @@ const input = (overrides: Partial<ContinueOfferInput> = {}): ContinueOfferInput 
   continuesUsed: 0,
   adReady: true,
   berries: 0,
+  runsBefore: 3,
   ...overrides,
 });
 
 describe('continueOffer', () => {
+  it('has no window in the first 3 runs of a player', () => {
+    const rich = { berries: 100 };
+    expect(continueOffer(input({ ...rich, runsBefore: 0 }))).toBeNull();
+    expect(continueOffer(input({ ...rich, runsBefore: 2 }))).toBeNull();
+    // The 4th run comes after 3 finished ones.
+    expect(continueOffer(input({ ...rich, runsBefore: 3 }))?.ad).toBe('ready');
+    expect(continueOffer(input({ ...rich, runsBefore: 4 }))?.ad).toBe('ready');
+  });
+
   it('offers the ad on the first continue, and berries only when affordable', () => {
     expect(continueOffer(input({ berries: 15 }))).toEqual({
       ad: 'ready',

@@ -4,27 +4,43 @@ import { CREATURE_IDS, type CreatureId } from '../data/creatures';
 import { MS_PER_DAY } from '../data/clock';
 import { PRODUCTS, SHOP, type ProductKey } from '../data/shop';
 import { creaturePrice, earn } from './economy';
+import { pastQuietRuns } from './first-runs';
 import type { Save } from './save/schema';
 
-/** When the starter pack stops being offered: `shop.starterPackUntil` when set, else a week after the install. */
-export function starterPackEnd(save: Pick<Save, 'createdAt' | 'shop'>): number {
-  const { starterPackUntil } = save.shop;
-  return starterPackUntil > 0
-    ? starterPackUntil
-    : save.createdAt + SHOP.starterPackDays * MS_PER_DAY;
+/**
+ * When the starter pack stops being offered: `shop.starterPackUntil` when set, else a week after
+ * its first show on Home; null while the window has not started (Home has not shown it yet).
+ */
+export function starterPackEnd(save: Pick<Save, 'shop'>): number | null {
+  const { starterPackUntil, starterPackShownAt } = save.shop;
+  if (starterPackUntil > 0) return starterPackUntil;
+  return starterPackShownAt > 0 ? starterPackShownAt + SHOP.starterPackDays * MS_PER_DAY : null;
 }
 
-/** The pack is offered for the first days after the install, or until it is bought. */
-export function starterPackOffered(
-  save: Pick<Save, 'createdAt' | 'shop' | 'purchases'>,
+/** The shop offers the pack until it is bought or its window is over, whatever the run count. */
+export function starterPackInShop(save: Pick<Save, 'shop' | 'purchases'>, nowMs: number): boolean {
+  const end = starterPackEnd(save);
+  return !save.purchases.starterPack && (end === null || nowMs < end);
+}
+
+/** Home offers the pack only once the first runs are over, and then like the shop does. */
+export function starterPackOnHome(
+  save: Pick<Save, 'shop' | 'purchases' | 'stats'>,
   nowMs: number,
 ): boolean {
-  return !save.purchases.starterPack && nowMs < starterPackEnd(save);
+  return pastQuietRuns(save.stats.runs) && starterPackInShop(save, nowMs);
 }
 
-/** Milliseconds left of the offer; 0 once it is over. */
-export function starterPackMsLeft(save: Pick<Save, 'createdAt' | 'shop'>, nowMs: number): number {
-  return Math.max(0, starterPackEnd(save) - nowMs);
+/** Milliseconds left of the offer, 0 once it is over; null while the window has not started. */
+export function starterPackMsLeft(save: Pick<Save, 'shop'>, nowMs: number): number | null {
+  const end = starterPackEnd(save);
+  return end === null ? null : Math.max(0, end - nowMs);
+}
+
+/** The save with the first show of the pack on Home kept; the same save when it was kept before. */
+export function withStarterPackShown(save: Save, nowMs: number): Save {
+  if (save.shop.starterPackShownAt > 0) return save;
+  return { ...save, shop: { ...save.shop, starterPackShownAt: nowMs } };
 }
 
 export interface StarterPackContents {

@@ -1,3 +1,5 @@
+import { FIRST_RUNS } from './first-runs';
+
 /**
  * The dev-only soak run (`window.tippySoak`, docs/08-architecture.md, section 9): a bot plays runs
  * with restarts and visits the menu screens between them, while a harness samples the counts of
@@ -41,6 +43,8 @@ export const SOAK = {
   richBerries: 100_000,
   richUpgrades: 6,
   richTeamSize: 3,
+  /** Finished runs of the rich save: past the quiet first runs, so Home has its starter pack button. */
+  richRuns: FIRST_RUNS.quiet,
   /** Texture keys are grouped by their name with digit runs replaced by this mark. */
   textureDigitMark: '#',
   /** How many texture groups a sample lists (the biggest first). */

@@ -11,6 +11,8 @@ export interface ContinueFlowDeps {
   ads: Pick<AdsService, 'isRewardedReady' | 'showRewarded'>;
   /** The save: the berry balance and the payment. */
   wallet: Pick<GameState, 'berries' | 'spendBerries'>;
+  /** The save: the runs finished before this one (the first runs have no window). */
+  player: Pick<GameState, 'runsFinished'>;
 }
 
 /**
@@ -72,6 +74,7 @@ export class ContinueFlow {
       continuesUsed,
       adReady: this.deps.ads.isRewardedReady(),
       berries: this.deps.wallet.berries,
+      runsBefore: this.deps.player.runsFinished,
     });
     if (!offer) return false;
     this.current = { ...offer };

@@ -25,7 +25,7 @@ export function createDefaultSave(nowMs: number, installId: string): Save {
     missions: { day: '', items: [], rerollUsed: false, chestClaimed: false },
     daily: { day: '', attemptsUsed: 0, extraAttemptUsed: false, best: 0, claimedTiers: [] },
     gift: { nextAt: 0 },
-    shop: { freeCoinsDay: '', freeCoinsUsed: 0, starterPackUntil: 0 },
+    shop: { freeCoinsDay: '', freeCoinsUsed: 0, starterPackUntil: 0, starterPackShownAt: 0 },
     purchases: { removeAds: false, starterPack: false },
     tutorial: { firstRunDone: false, hintsShown: [] },
     settings: {

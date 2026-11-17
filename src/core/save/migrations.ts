@@ -2,6 +2,7 @@ import { recordCreaturesReached } from '../record-unlocks';
 import { legacyXpToNext, V5_RECORD_UNLOCKS, v5XpToNext } from './frozen-v5';
 import { v7CheckpointsReached } from './frozen-v7';
 import { v8LapReached } from './frozen-v8';
+import { V9_STARTER_PACK_MIN_RUNS } from './frozen-v9';
 import { SAVE_VERSION, type Save } from './schema';
 
 export type SaveErrorCode = 'not_object' | 'bad_version' | 'future_version' | 'missing_migration';
@@ -19,8 +20,11 @@ export class SaveError extends Error {
 
 export type RawSave = Record<string, unknown>;
 
-/** Turns a save of version n into version n + 1 (the `version` field is bumped by `migrate`). */
-export type Migration = (raw: RawSave) => RawSave;
+/**
+ * Turns a save of version n into version n + 1 (the `version` field is bumped by `migrate`).
+ * `nowMs` is the time of the load, for a step that has to start something now.
+ */
+export type Migration = (raw: RawSave, nowMs: number) => RawSave;
 
 export type MigrationChain = Readonly<Record<number, Migration>>;
 
@@ -110,6 +114,21 @@ export function migrateV7(raw: RawSave): RawSave {
   return { ...raw, bestLap: v8LapReached(height) };
 }
 
+/**
+ * 8 -> 9: the 7-day window of the starter pack now starts at its first show on Home. A player
+ * who has not bought it and already finished the runs that let Home show it gets a full window
+ * from now; anyone else starts with no show yet (it is set at the first show). A damaged
+ * purchase flag or run count counts as not bought and no runs.
+ */
+export function migrateV8(raw: RawSave, nowMs: number): RawSave {
+  const shop = isRecord(raw.shop) ? raw.shop : {};
+  const purchases = isRecord(raw.purchases) ? raw.purchases : {};
+  const stats = isRecord(raw.stats) ? raw.stats : {};
+  const runs = typeof stats.runs === 'number' && Number.isFinite(stats.runs) ? stats.runs : 0;
+  const due = purchases.starterPack !== true && runs >= V9_STARTER_PACK_MIN_RUNS;
+  return { ...raw, shop: { ...shop, starterPackShownAt: due ? nowMs : 0 } };
+}
+
 /** Hands over creatures whose record way (as of version 5) the best classic height already reached. */
 function withRecordCreatures(raw: RawSave): RawSave {
   const height = rawClassicHeight(raw);
@@ -135,6 +154,7 @@ export const MIGRATIONS: MigrationChain = {
   5: migrateV5,
   6: migrateV6,
   7: migrateV7,
+  8: migrateV8,
 };
 
 /**
@@ -143,6 +163,8 @@ export const MIGRATIONS: MigrationChain = {
  */
 export function migrate(
   raw: unknown,
+  /** Time of the load, epoch ms (`Migration`). */
+  nowMs: number,
   chain: MigrationChain = MIGRATIONS,
   target: number = SAVE_VERSION,
 ): Save {
@@ -156,7 +178,7 @@ export function migrate(
   while (version < target) {
     const step = chain[version];
     if (!step) throw new SaveError('missing_migration', `no migration from version ${version}`);
-    current = { ...step(current), version: version + 1 };
+    current = { ...step(current, nowMs), version: version + 1 };
     version += 1;
   }
   return current as unknown as Save;

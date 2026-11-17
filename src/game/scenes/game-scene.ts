@@ -140,6 +140,7 @@ export class GameScene extends Phaser.Scene {
     this.continueFlow = new ContinueFlow({
       ads: rewardedAds,
       wallet: gameState,
+      player: gameState,
     });
 
     const { width, height } = this.scale.gameSize;
