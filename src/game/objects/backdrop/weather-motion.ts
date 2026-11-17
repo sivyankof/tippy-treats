@@ -1,3 +1,4 @@
+import type { Rng } from '../../../core/rng';
 import { WEATHER_LOOK } from '../../../data/weather-look';
 import type { EffectLevel } from '../../../data/effect-levels';
 import { clamp01 } from '../../../util/math';
@@ -9,17 +10,38 @@ export function wrapRange(value: number, size: number, pad: number): number {
   return ((((value + pad) % span) + span) % span) - pad;
 }
 
+/** x (share of the width) in the left (side 0) or right (side 1) strip of width `strip`, at least `edge` in from the strip's outer edge and from the tower's side. */
+export function sideU(rng: Rng, side: number, strip: number, edge: number): number {
+  return side === 0 ? rng.range(edge, strip - edge) : rng.range(1 - strip + edge, 1 - edge);
+}
+
+/**
+ * How far a raindrop leans per px of fall: `slant`, eased on a screen taller than
+ * `WEATHER_LOOK.leanRefHeight` (the drop still looks slanted, its picture is turned by this), and
+ * never more than makes the whole pass (`height` plus `padPx` at both ends) lean `leanMaxPx` either way
+ * of the lane, so the drop stays inside its side strip.
+ */
+export function rainSlope(slant: number, height: number, leanMaxPx = Infinity, padPx = 0): number {
+  const ease = Math.min(1, WEATHER_LOOK.leanRefHeight / height);
+  return Math.min(slant * ease, leanMaxPx / (height / 2 + padPx));
+}
+
 /**
  * x of a raindrop at height `y`: its lane `u` (share of the width) on the middle of the screen, leaning
- * by `slant` px per px of fall (eased on a screen taller than `WEATHER_LOOK.leanRefHeight`). The lean depends on the height, not on the time, so a drop that starts
+ * by `rainSlope` px per px of fall. The lean depends on the height, not on the time, so a drop that starts
  * in a side strip stays near that strip on every pass instead of drifting across the whole width
  * (a time-based drift spread the drops evenly, and most of them fell behind the tower).
  */
-export function rainX(u: number, width: number, slant: number, y: number, height: number): number {
-  // On a tall screen the lean is eased (the drop still looks slanted, its picture is turned by `slant`),
-  // so the whole path stays about as wide as on the short one and the drops stay near their strips.
-  const ease = Math.min(1, WEATHER_LOOK.leanRefHeight / height);
-  return u * width + slant * ease * (y - height / 2);
+export function rainX(
+  u: number,
+  width: number,
+  slant: number,
+  y: number,
+  height: number,
+  leanMaxPx = Infinity,
+  padPx = 0,
+): number {
+  return u * width + rainSlope(slant, height, leanMaxPx, padPx) * (y - height / 2);
 }
 
 /**

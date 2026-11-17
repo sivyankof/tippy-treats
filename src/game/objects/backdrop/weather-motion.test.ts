@@ -1,4 +1,7 @@
 import { describe, expect, it } from 'vitest';
+import { Rng } from '../../../core/rng';
+import { BALANCE } from '../../../data/balance';
+import { LOGICAL_SIZE } from '../../../data/screen';
 import { HUD_LAYOUT } from '../../../data/hud-layout';
 import { FLIGHT_CLEAR } from '../../../data/flight-clear';
 import { WEATHER_LOOK } from '../../../data/weather-look';
@@ -12,6 +15,7 @@ import {
   particleFade,
   particleKeepOut,
   rainX,
+  sideU,
   wrapRange,
 } from './weather-motion';
 
@@ -23,6 +27,29 @@ describe('weather motion', () => {
     // A screen twice the reference height leans half as far.
     const tall = WEATHER_LOOK.leanRefHeight * 2;
     expect(rainX(0.1, 1000, 0.2, tall, tall)).toBeCloseTo(100 + 0.2 * 0.5 * (tall / 2));
+  });
+
+  it('keeps rain and storm in the side strips for the whole fall, on every screen height', () => {
+    const { width } = LOGICAL_SIZE;
+    const towerLeft = (width - BALANCE.tray.width) / 2;
+    const towerRight = width - towerLeft;
+    for (const kind of ['rain', 'storm'] as const) {
+      const look = WEATHER_LOOK[kind];
+      const pad = WEATHER_LOOK.endFeatherPx;
+      for (const height of [LOGICAL_SIZE.minHeight, 2340, LOGICAL_SIZE.maxHeight]) {
+        const rng = new Rng(7);
+        for (let n = 0; n < 200; n++) {
+          const u = sideU(rng, n % 2, look.sideShare, look.leanMaxPx / width);
+          // Every height of the fall, the wrapped ends included.
+          for (let y = -pad; y <= height + pad; y += 20) {
+            const x = rainX(u, width, look.slant, y, height, look.leanMaxPx, pad);
+            const inLeft = x >= 0 && x <= towerLeft;
+            const inRight = x >= towerRight && x <= width;
+            expect(inLeft || inRight, `${kind} ${height} u=${u} y=${y} x=${x}`).toBe(true);
+          }
+        }
+      }
+    }
   });
 
   it('wraps values into the padded range', () => {

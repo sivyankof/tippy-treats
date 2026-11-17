@@ -4,7 +4,15 @@ import { LOGICAL_SIZE } from '../../../data/screen';
 import { WEATHER_LOOK, WEATHER_TEX } from '../../../data/weather-look';
 import { MS_PER_SECOND, TWO_PI } from '../../../util/math';
 import { laneCount, snowSpots, startU } from './weather-lanes';
-import { particleFade, particleKeepOut, rainDropsShown, rainX, wrapRange } from './weather-motion';
+import {
+  particleFade,
+  particleKeepOut,
+  rainDropsShown,
+  rainSlope,
+  rainX,
+  sideU,
+  wrapRange,
+} from './weather-motion';
 import type { WeatherFrame, WeatherPart } from './weather-frame';
 
 export type FallKind = 'rain' | 'storm' | 'snow' | 'leaves';
@@ -31,6 +39,7 @@ interface FallLook {
   scale: Range;
   alpha: Range;
   slant?: number;
+  leanMaxPx?: number;
   swayPx?: Range;
   swayMs?: Range;
   spinMs?: Range;
@@ -55,11 +64,6 @@ function draw(rng: Rng, range: Range | undefined, fallback: number): number {
   return range ? rng.range(range[0], range[1]) : fallback;
 }
 
-/** x (share of the width) in the left (side 0) or right (side 1) strip of width `strip`. */
-function sideU(rng: Rng, side: number, strip: number): number {
-  return side === 0 ? rng.range(0, strip) : rng.range(1 - strip, 1);
-}
-
 /**
  * Rain, snow or leaves: a fixed pool of images of one atlas, moved by closed formulas of the
  * time (nothing is allocated per frame). The pool is sized for the full level; lower levels show
@@ -69,7 +73,7 @@ export class WeatherFall implements WeatherPart {
   readonly objects: Phaser.GameObjects.Image[] = [];
   private readonly specs: Particle[] = [];
   private readonly look: FallLook;
-  private readonly slantRad: number;
+  private readonly edgeShare: number;
 
   constructor(
     scene: Phaser.Scene,
@@ -79,7 +83,7 @@ export class WeatherFall implements WeatherPart {
     this.look = WEATHER_LOOK[kind] as FallLook;
     const look = this.look;
     const frames = FRAME_SETS[look.frames[0] ?? ''] ?? [];
-    this.slantRad = -Math.atan(look.slant ?? 0);
+    this.edgeShare = (look.leanMaxPx ?? 0) / LOGICAL_SIZE.width;
     const count = Math.min(look.count, WEATHER_LOOK.particleCount.full);
     const strip = look.sideShare ?? WEATHER_LOOK.sideShare;
     const snow = kind === 'snow';
@@ -95,7 +99,7 @@ export class WeatherFall implements WeatherPart {
       const side = i % 2;
       const { lane, u, v } = spots[i] ?? {
         lane: 0,
-        u: rain ? sideU(rng, side, strip) : drawU(),
+        u: rain ? sideU(rng, side, strip, this.edgeShare) : drawU(),
         // Rain: the two sides alternate and each side's drops are spaced evenly down the screen.
         v: rain
           ? (Math.floor(i / 2) + side / 2 + rng.next() * 0.2) / Math.ceil(count / 2)
@@ -151,6 +155,9 @@ export class WeatherFall implements WeatherPart {
     const keepFeather = this.look.keepOutFeatherPx ?? WEATHER_LOOK.keepOutFeatherPx;
     const leaf = this.kind === 'leaves';
     const slant = this.look.slant ?? 0;
+    const leanMax = this.look.leanMaxPx;
+    // A raindrop is turned along the way it really falls.
+    const slantRad = rain ? -Math.atan(rainSlope(slant, height, leanMax, pad)) : 0;
     const tilt = this.look.tiltRad ?? 0;
     const swayLag = this.look.swayLag ?? 0;
     const turnMin = this.look.turnMin ?? 1;
@@ -164,7 +171,7 @@ export class WeatherFall implements WeatherPart {
       }
       const y = wrapRange(p.v * height + p.speed * seconds, height, pad);
       const x = rain
-        ? rainX(p.u, width, slant, y, height)
+        ? rainX(p.u, width, slant, y, height, leanMax, pad)
         : p.u * width + p.sway * Math.sin((TWO_PI * t) / p.swayMs + p.phase);
       // The whole picture keeps out of the HUD gap: its half size, and for a raindrop its slanted length.
       const reach = (image.width * p.scale) / 2;
@@ -177,7 +184,7 @@ export class WeatherFall implements WeatherPart {
               keepFeather,
               reach,
               Math.max((image.height * p.scale) / 2 - reach, 0),
-              this.slantRad,
+              slantRad,
             )
           : particleKeepOut(x, y, keepFeather, Math.max(reach, (image.height * p.scale) / 2))) *
         frame.share *
@@ -188,7 +195,7 @@ export class WeatherFall implements WeatherPart {
       }
       image.setVisible(true).setPosition(x, y).setAlpha(alpha);
       if (rain) {
-        image.setRotation(this.slantRad).setScale(p.scale);
+        image.setRotation(slantRad).setScale(p.scale);
       } else if (leaf) {
         const turn = Math.abs(Math.cos((TWO_PI * t) / p.spinMs + p.phase));
         const sway = Math.sin((TWO_PI * t) / p.swayMs + p.phase + swayLag);
