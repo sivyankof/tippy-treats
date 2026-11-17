@@ -1,4 +1,6 @@
 import { describe, expect, it } from 'vitest';
+import { HUD_LAYOUT } from '../../../data/hud-layout';
+import { FLIGHT_CLEAR } from '../../../data/flight-clear';
 import { WEATHER_LOOK } from '../../../data/weather-look';
 import {
   bankEdge,
@@ -8,6 +10,7 @@ import {
   nextBoltAt,
   rainDropsShown,
   particleFade,
+  particleKeepOut,
   wrapRange,
 } from './weather-motion';
 
@@ -83,5 +86,29 @@ describe('particle limit', () => {
     }
     expect(rainDropsShown(rain.count, 'full')).toBe(37);
     expect(splash.max).toBeLessThanOrEqual(splash.maxShown.full);
+  });
+});
+
+describe('particleKeepOut', () => {
+  it('is fully transparent within the HUD gap of every plate, snow feather included', () => {
+    for (const plate of HUD_LAYOUT.plates) {
+      const y = plate.y + plate.height / 2;
+      for (const away of [0, 25, 35, 39, FLIGHT_CLEAR.hudGapPx]) {
+        for (const feather of [12, WEATHER_LOOK.keepOutFeatherPx]) {
+          expect(particleKeepOut(plate.x + plate.width + away, y, feather)).toBe(0);
+          expect(particleKeepOut(plate.x - away, y, feather)).toBe(0);
+        }
+      }
+    }
+  });
+
+  it('starts to fade in only past the gap and the margin', () => {
+    const plate = HUD_LAYOUT.plates[1];
+    if (!plate) throw new Error('no plate');
+    const y = plate.y + plate.height / 2;
+    const edge = plate.x + plate.width + FLIGHT_CLEAR.hudGapPx + WEATHER_LOOK.keepOutMarginPx;
+    expect(particleKeepOut(edge, y, 12)).toBe(0);
+    expect(particleKeepOut(edge + 6, y, 12)).toBeGreaterThan(0);
+    expect(particleKeepOut(edge + 40, y, 12)).toBe(1);
   });
 });

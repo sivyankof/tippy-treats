@@ -213,7 +213,9 @@ export const WEATHER_LOOK = {
   },
   /** The particles fade out this far (px) from the edges of the flight row, and in at the screen ends. */
   bandFeatherPx: 70,
-  /** Particles fade out toward the HUD plates over this many px beyond the HUD gap. */
+  /** Particles are fully transparent this many px beyond the HUD gap (so none shows within gap + margin of a plate), and fade in over `keepOutFeatherPx` after it. */
+  keepOutMarginPx: 15,
+  /** Particles fade out toward the HUD plates over this many px beyond the HUD gap and margin. */
   keepOutFeatherPx: 40,
   endFeatherPx: 60,
   /** Share of the particles (unless a kind says otherwise) that start in the side strips (the tower hides the middle), and the strip width as share of the screen. */
