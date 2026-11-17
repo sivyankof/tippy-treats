@@ -20,9 +20,9 @@ describe('layer marks', () => {
   it('keeps at most one cut drop and one press mark per layer', () => {
     const store = new LayerMarkStore();
     const first = mark();
-    expect(store.addCut(3, first)).toBe(true);
-    expect(store.addCut(3, mark({ dx: 99 }))).toBe(false);
-    expect(store.at(3)?.cut).toBe(first);
+    expect(store.addCut(3, [first])).toBe(true);
+    expect(store.addCut(3, [mark({ dx: 99 })])).toBe(false);
+    expect(store.at(3)?.cut).toEqual([first]);
     expect(store.addPress(3, [mark(), mark()])).toBe(true);
     expect(store.addPress(3, [mark()])).toBe(false);
     expect(store.at(3)?.press).toHaveLength(2);
@@ -30,8 +30,11 @@ describe('layer marks', () => {
     expect(store.hasPress(3)).toBe(true);
   });
 
-  it('refuses an empty or too long press mark', () => {
+  it('refuses an empty or too long mark', () => {
     const store = new LayerMarkStore();
+    expect(store.addCut(1, [])).toBe(false);
+    expect(store.addCut(1, [mark(), mark(), mark()])).toBe(false);
+    expect(store.hasCut(1)).toBe(false);
     expect(store.addPress(1, [])).toBe(false);
     expect(store.addPress(1, [mark(), mark(), mark()])).toBe(false);
     expect(store.hasPress(1)).toBe(false);
@@ -39,7 +42,7 @@ describe('layer marks', () => {
 
   it('forgets everything when a run starts', () => {
     const store = new LayerMarkStore();
-    store.addCut(2, mark());
+    store.addCut(2, [mark()]);
     store.clear();
     expect(store.at(2)).toBeUndefined();
   });

@@ -35,11 +35,14 @@ export interface LayerMark {
   swing?: MarkSwing;
 }
 
-/** Marks of one layer: at most one drop from a cut and one press mark (a stain, or a cream roll of up to two pictures). */
+/** Marks of one layer: at most one drop from a cut (its outline and its fill) and one press mark (a stain, or a cream roll of up to two pictures). */
 export interface LayerMarkSet {
-  cut?: LayerMark;
+  cut?: readonly LayerMark[];
   press?: readonly LayerMark[];
 }
+
+/** Most pictures the drop of a cut may have (an outline under a fill). */
+export const MAX_CUT_PICTURES = 2;
 
 /** Most pictures a press mark may have (a cream roll squeezed out on both sides). */
 export const MAX_PRESS_PICTURES = 2;
@@ -67,11 +70,12 @@ export class LayerMarkStore {
     return this.byLayer.get(layerIndex)?.press !== undefined;
   }
 
-  /** Leaves the drop of a cut on the layer; false (and nothing changes) when it already has one. */
-  addCut(layerIndex: number, mark: LayerMark): boolean {
+  /** Leaves the drop of a cut on the layer; false (and nothing changes) when it already has one or `marks` is empty or too long. */
+  addCut(layerIndex: number, marks: readonly LayerMark[]): boolean {
+    if (marks.length === 0 || marks.length > MAX_CUT_PICTURES) return false;
     const set = this.setOf(layerIndex);
     if (set.cut) return false;
-    set.cut = mark;
+    set.cut = [...marks];
     return true;
   }
 

@@ -5,6 +5,7 @@ import { BALANCE } from '../../data/balance';
 import { LOGICAL_SIZE } from '../../data/screen';
 import { lerp, smoothstep } from '../../util/math';
 import { CUT_LOOK, CUT_PICTURE, CUT_TEXTURES } from '../../data/cut-look';
+import { outlineColor } from './plain-style';
 import { layerMarks } from '../objects/layer-marks';
 import type { LayerView } from '../objects/layer-view';
 import { plainLooks } from '../objects/plain-look';
@@ -242,7 +243,7 @@ export class CutFx {
   private leaveTrace(slot: Slot): void {
     const { trace } = CUT_LOOK.strands;
     const size = hangPictureSize();
-    layerMarks.addCut(slot.layerNumber, {
+    const mark = {
       texture: CUT_TEXTURES.hang,
       dx: slot.side * (slot.layerWidth / 2 - trace.insetPx),
       dy: trace.y,
@@ -254,7 +255,11 @@ export class CutFx {
       bornMs: this.scene.time.now,
       growMs: trace.growMs,
       swing: trace.swing,
-    });
+    };
+    layerMarks.addCut(slot.layerNumber, [
+      { ...mark, texture: CUT_TEXTURES.hangOutline, tint: outlineColor(slot.glaze) },
+      mark,
+    ]);
   }
 }
 

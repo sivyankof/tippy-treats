@@ -183,6 +183,7 @@ export const CUT_TEXTURES = {
   gloss: 'fx_cut_gloss',
   dot: 'fx_cut_dot',
   hang: 'fx_cut_hang',
+  hangOutline: 'fx_cut_hang_o',
   arm: 'fx_cut_arm',
   armOutline: 'fx_cut_arm_o',
   /** The lighter side of an arm and the light spot of its hand. */
@@ -192,8 +193,6 @@ export const CUT_TEXTURES = {
 
 /** Shapes of the baked pictures. */
 export const CUT_PICTURE = {
-  /** Grey of the outline of the hanging drop (it is one picture tinted with the glaze). */
-  outlineGrey: 0x9a9a9a,
   /** Empty room around the drawing (the picture field rule). */
   pad: 4,
   outline: 4,

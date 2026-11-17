@@ -3,7 +3,7 @@ import { CUT_LOOK, CUT_PICTURE, CUT_TEXTURES } from '../../data/cut-look';
 import { smoothstep } from '../../util/math';
 import { bakeTexture } from '../ui/bake-texture';
 
-const { pad, outline, outlineGrey } = CUT_PICTURE;
+const { pad, outline } = CUT_PICTURE;
 const WHITE = 0xffffff;
 
 /** Half-thickness of the strand picture at distance `x` from its open end, for the stage `midShare`. */
@@ -153,45 +153,20 @@ export function bakeCutTextures(scene: Phaser.Scene): void {
 
   const { width: hw, height: hh } = CUT_PICTURE.hang;
   const { width: hangW, height: hangH } = hangPictureSize();
-  bakeTexture(scene, CUT_TEXTURES.hang, hangW, hangH, (g) => {
+  // The outline and the fill are separate pictures (outline tinted with the warm outline tone of
+  // the glaze, fill with the glaze), like every glaze body of the strands. The neck is open at the
+  // top: it grows out of the glaze, so the outline does not close over it.
+  bakeBody(scene, CUT_TEXTURES.hang, CUT_TEXTURES.hangOutline, hangW, hangH, (g, grow) => {
     const cx = hangW / 2;
     const r = hw / 2;
     const top = pad + outline;
-    const body = (grow: number, color: number): void => {
-      g.fillStyle(color, 1);
-      g.fillCircle(cx, top + hh - r, r + grow);
-      // The middle of the neck as one block: no seams where the triangles meet.
-      g.fillRect(cx - r * 0.45 - grow, top - grow, r * 0.9 + 2 * grow, hh - r + grow);
-      // A neck that widens into the round bottom: a drop that hangs on the glaze.
-      g.fillTriangle(
-        cx - r * 0.45 - grow,
-        top - grow,
-        cx + r * 0.45 + grow,
-        top - grow,
-        cx,
-        top + hh - r,
-      );
-      g.fillTriangle(
-        cx - r * 0.45 - grow,
-        top - grow,
-        cx - r - grow,
-        top + hh - r,
-        cx,
-        top + hh - r,
-      );
-      g.fillTriangle(
-        cx + r * 0.45 + grow,
-        top - grow,
-        cx + r + grow,
-        top + hh - r,
-        cx,
-        top + hh - r,
-      );
-    };
-    body(outline, outlineGrey);
-    body(0, WHITE);
-    // The neck is open at the top: it grows out of the glaze.
-    g.fillStyle(WHITE, 1).fillRect(cx - r * 0.45, pad, r * 0.9, outline + 2);
+    const neckTop = grow > 0 ? top : pad;
+    g.fillCircle(cx, top + hh - r, r + grow);
+    // The middle of the neck as one block: no seams where the triangles meet.
+    g.fillRect(cx - r * 0.45 - grow, neckTop, r * 0.9 + 2 * grow, top + hh - r - neckTop);
+    // A neck that widens into the round bottom: a drop that hangs on the glaze.
+    g.fillTriangle(cx - r * 0.45 - grow, top, cx - r - grow, top + hh - r, cx, top + hh - r);
+    g.fillTriangle(cx + r * 0.45 + grow, top, cx + r + grow, top + hh - r, cx, top + hh - r);
   });
 
   const arm = CUT_LOOK.panic.arm;

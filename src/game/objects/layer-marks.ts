@@ -4,6 +4,7 @@ import {
   layerMarks,
   markGrow,
   markSwingDeg,
+  MAX_CUT_PICTURES,
   MAX_PRESS_PICTURES,
   type LayerMark,
   type LayerMarkStore,
@@ -12,7 +13,7 @@ import {
 export { layerMarks };
 
 /** Pictures one layer view keeps for its marks. */
-const PICTURES = 1 + MAX_PRESS_PICTURES;
+const PICTURES = MAX_CUT_PICTURES + MAX_PRESS_PICTURES;
 
 /**
  * The pictures of the marks of the layer a view shows: children of the layer's `content`, drawn
@@ -47,8 +48,10 @@ export class LayerMarkPictures {
       this.hide();
       return;
     }
-    this.place(0, set.cut ?? null);
-    for (let i = 0; i < MAX_PRESS_PICTURES; i++) this.place(1 + i, set.press?.[i] ?? null);
+    for (let i = 0; i < MAX_CUT_PICTURES; i++) this.place(i, set.cut?.[i] ?? null);
+    for (let i = 0; i < MAX_PRESS_PICTURES; i++) {
+      this.place(MAX_CUT_PICTURES + i, set.press?.[i] ?? null);
+    }
   }
 
   /** Grows and swings the shown marks; `alpha` follows the layer's art (a see-through layer). */
