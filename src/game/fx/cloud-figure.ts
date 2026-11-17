@@ -9,15 +9,14 @@ import { bakeTexture } from '../ui/bake-texture';
 import { outlineColor } from './plain-style';
 
 /**
- * The figures of the cloud bank: the dense cloud of the clouds zone and the see-through nebula of
- * Space. Each is ONE baked picture (a union of circles and one rounded body, so the outline runs
- * round the whole figure and no puff shows inside), not a row of puffs. On a short screen the top
- * line is squashed toward the body so that the figure stays clear of the HUD plates over the row.
+ * The figure of the cloud bank of the clouds zone (the nebula of Space is drawn by `nebula-arms.ts`):
+ * ONE baked picture (a union of circles and one rounded body, so the outline runs round the whole
+ * figure and no puff shows inside), not a row of puffs. On a short screen the top line is redrawn as
+ * low puffs so that the figure stays clear of the HUD plates over the row.
  */
 
 const cfg = RULE_ANIM.cloud;
 const figure = cfg.figure;
-const curls = cfg.nebula.curls;
 
 export interface Circle {
   x: number;
@@ -34,21 +33,15 @@ export interface BodyRect {
   bottom: number;
 }
 
-/** A silhouette: the flat body and the circles that make its wavy edge and its tails. */
+/** A silhouette: the flat body and the circles that make its wavy edge. */
 export interface Silhouette {
   body: BodyRect;
   /** The top line: domes that every tone pass follows. */
   circles: readonly Circle[];
-  /** Lobes and wisps that hang below or stick out: only the outline and the base tone take them, so the shade stays one flat band. */
+  /** Lobes that bulge below or stick out: only the outline and the base tone take them, so the shade stays one flat band. */
   lobes: readonly Circle[];
-  /** Soft tails that melt into transparency under the edge: no outline, drawn over the body. */
-  wisps?: readonly Wisp[];
-}
-
-/** A wisp: the root bump (it is in `lobes` too and has the outline) and the fading lobes that drift off below it. */
-export interface Wisp {
-  root: Circle;
-  tail: ReadonlyArray<Circle & { alpha: number }>;
+  /** How much lower the lighter tones start under a squashed top of low puffs (see `squashTop`), baked px. */
+  toneDip?: number;
 }
 
 /** The width (display px) the body must have to hide a layer anywhere on the screen at any moment of the cover. */
@@ -100,69 +93,6 @@ export function cloudSilhouette(): Silhouette {
   };
 }
 
-/** The wisps of the nebula: a small root bump and a few fainter lobes drifting off below it, each smaller than the last. */
-function nebulaWisps(): Wisp[] {
-  const w = cfg.nebula.wisps;
-  const bottom = figure.body.bottom;
-  return w.spots.map((spot) => {
-    const tail: Array<Circle & { alpha: number }> = [];
-    for (let i = 1; i <= spot.lobes; i++) {
-      const r = spot.r * (1 - w.shrink * i);
-      tail.push({
-        x: spot.x + spot.drift * i,
-        y: bottom + spot.len * i,
-        r,
-        ry: r * w.squash,
-        alpha: w.lobeAlpha[i - 1] ?? 0,
-      });
-    }
-    return { root: { x: spot.x, y: bottom - spot.r * w.rootLift, r: spot.r }, tail };
-  });
-}
-
-/**
- * The bumps of the nebula's top line: x, radius and how far the crest stands above `body.top`, baked px.
- * Different sizes and heights, close enough to overlap above the body: no straight run on the top edge.
- */
-const NEBULA_TOP: ReadonlyArray<readonly [number, number, number]> = [
-  [80, 30, 6],
-  [132, 36, 14],
-  [186, 30, 12],
-  [240, 40, 22],
-  [296, 34, 16],
-  [352, 44, 26],
-  [410, 36, 20],
-  [470, 50, 34],
-  [532, 40, 26],
-  [594, 46, 36],
-  [654, 36, 24],
-  [714, 42, 30],
-  [772, 34, 18],
-  [828, 36, 20],
-  [880, 30, 10],
-  [924, 26, 4],
-];
-
-/**
- * The nebula: a band of cotton wool about as thick all along. Its top is a bumpy cotton line a little
- * puffier than its underside; the underside is almost flat with a few short wisps that melt away.
- */
-export function nebulaSilhouette(): Silhouette {
-  const u = cfg.nebula.underside;
-  const lobes: Circle[] = [];
-  for (let x = u.from, i = 0; x <= u.to; x += u.step, i++) {
-    const bottom = figure.body.bottom + (u.sag[i % u.sag.length] ?? 0);
-    lobes.push({ x, y: bottom - u.r, r: u.r });
-  }
-  const wisps = nebulaWisps();
-  return {
-    body: DRAWN_BODY,
-    circles: NEBULA_TOP.map(([x, r, rise]) => ({ x, y: figure.body.top - rise + r, r })),
-    lobes: [...lobes, ...wisps.map((w) => w.root)],
-    wisps,
-  };
-}
-
 /** Screen y of the flight row on a tall tower (the highest it stands) on a screen `screenH` tall. */
 export function flightRowY(screenH: number): number {
   const band = flightClearBand(screenH);
@@ -204,23 +134,94 @@ function cornerRadius(b: BodyRect): number {
   return Math.min(b.bottom - b.top, b.right - b.left) * 0.45;
 }
 
+/** A stretch of the top line made by one or more domes: from `a` to `b`, baked px, and how high its crest stands above the drawn body top. */
+interface TopSpan {
+  a: number;
+  b: number;
+  crest: number;
+}
+
+/** The stretches of the top line between `from` and `to`, one per dome that makes the top edge there. */
+function topSpans(s: Silhouette, from: number, to: number): TopSpan[] {
+  const spans: TopSpan[] = [];
+  let owner: Circle | undefined;
+  for (let x = Math.ceil(from); x <= to; x++) {
+    let best: Circle | undefined;
+    let top = TOP_BASE;
+    for (const c of s.circles) {
+      const half = arcHalf(c, Math.abs(x - c.x));
+      if (half >= 0 && c.y - half < top) {
+        top = c.y - half;
+        best = c;
+      }
+    }
+    const last = spans[spans.length - 1];
+    if (best && best === owner && last) {
+      last.b = x;
+      last.crest = Math.max(last.crest, TOP_BASE - top);
+    } else if (best) {
+      spans.push({ a: x, b: x, crest: TOP_BASE - top });
+    }
+    owner = best;
+  }
+  return spans;
+}
+
+/** Joins every stretch narrower than `minSpan` to its narrower neighbour that touches it, so no crumb dome is left. */
+function joinNarrow(spans: TopSpan[], minSpan: number): TopSpan[] {
+  const out = spans.map((p) => ({ ...p }));
+  for (;;) {
+    let i = -1;
+    for (let k = 0; k < out.length; k++) {
+      const p = out[k];
+      if (p && p.b - p.a < minSpan && (i < 0 || p.b - p.a < (out[i]?.b ?? 0) - (out[i]?.a ?? 0)))
+        i = k;
+    }
+    const p = out[i];
+    if (!p || out.length < 2) return out;
+    const prev = out[i - 1];
+    const next = out[i + 1];
+    const touchesPrev = prev !== undefined && p.a - prev.b <= 1;
+    const touchesNext = next !== undefined && next.a - p.b <= 1;
+    let into: TopSpan | undefined;
+    if (touchesPrev && touchesNext) into = prev.b - prev.a <= next.b - next.a ? prev : next;
+    else into = touchesPrev ? prev : touchesNext ? next : undefined;
+    if (into) {
+      into.a = Math.min(into.a, p.a);
+      into.b = Math.max(into.b, p.b);
+      into.crest = Math.max(into.crest, p.crest);
+    }
+    out.splice(i, 1);
+  }
+}
+
 /**
- * The silhouette with its top line squashed by `share` toward the drawn body top (circles become flat
- * ellipses). A flat ellipse no longer hides behind the rounded ends of the body, so it is kept inside
- * the straight part of the top (an end bump outside it is dropped): no thin spit sticks out at the ends.
+ * The silhouette with its top line squashed by `share` toward the drawn body top. The domes are redrawn
+ * as low puffs standing on the drawn body top: each is as wide as the stretch of the line its dome made
+ * (so the puffs keep their different sizes and every valley reaches down between them), and the wider and
+ * the taller the dome was, the higher its puff, up to `share` of the crest height. The puffs are kept
+ * inside the straight part of the top: no thin spit sticks out past the rounded ends of the body.
  */
 export function squashTop(s: Silhouette, share: number): Silhouette {
   if (share >= 1) return s;
+  const low = figure.lowPuffs;
+  const room = crestHeight(s) * share;
   const corner = cornerRadius(s.body);
-  const from = s.body.left + corner;
-  const to = s.body.right - corner;
+  const spans = joinNarrow(topSpans(s, s.body.left + corner, s.body.right - corner), low.minSpan);
+  const widest = Math.max(...spans.map((p) => p.b - p.a));
+  const tallest = Math.max(...spans.map((p) => p.crest));
   const circles: Circle[] = [];
-  for (const c of s.circles) {
-    const r = Math.min(c.r, c.x - from, to - c.x);
-    if (r <= 0) continue;
-    circles.push({ x: c.x, y: TOP_BASE - (TOP_BASE - c.y) * share, r, ry: (c.ry ?? c.r) * share });
+  for (const p of spans) {
+    const rx = (p.b - p.a) / 2;
+    const size = Math.sqrt(((p.b - p.a) / widest) * (p.crest / tallest));
+    const ry = Math.min(
+      room * (low.heightFloor + (1 - low.heightFloor) * size),
+      rx * low.aspect,
+      p.crest,
+    );
+    if (rx > 0 && ry > 0) circles.push({ x: (p.a + p.b) / 2, y: TOP_BASE, r: rx, ry });
   }
-  return { ...s, circles };
+  return { ...s, circles, toneDip: low.toneDip };
 }
 
 /** The half-height of the arc of `c` at `dx` from its centre, or -1 outside it. */
@@ -229,12 +230,10 @@ function arcHalf(c: Circle, dx: number): number {
   return (c.ry ?? c.r) * Math.sqrt(1 - (dx * dx) / (c.r * c.r));
 }
 
-/** Where the bottom edge of a silhouette is at column `x` (the largest y covered), wisps and their tails left out. */
+/** Where the bottom edge of a silhouette is at column `x` (the largest y covered). */
 export function silhouetteBottomAt(s: Silhouette, x: number): number {
   let bottom = x >= s.body.left && x <= s.body.right ? s.body.bottom : -Infinity;
-  const roots = new Set(s.wisps?.map((w) => w.root));
   for (const c of s.lobes) {
-    if (roots.has(c)) continue;
     const half = arcHalf(c, Math.abs(x - c.x));
     if (half >= 0) bottom = Math.max(bottom, c.y + half);
   }
@@ -268,23 +267,33 @@ export function silhouetteBounds(s: Silhouette): {
     top = Math.min(top, c.y - (c.ry ?? c.r));
     bottom = Math.max(bottom, c.y + (c.ry ?? c.r));
   }
-  for (const w of s.wisps ?? []) {
-    for (const c of w.tail) {
-      left = Math.min(left, c.x - c.r);
-      right = Math.max(right, c.x + c.r);
-      bottom = Math.max(bottom, c.y + (c.ry ?? c.r));
-    }
-  }
   return { left, right, top, bottom };
 }
 
-/** Fills a circle or, when it is squashed, an ellipse grown by `grow` px. */
-function fillLobe(g: Phaser.GameObjects.Graphics, c: Circle, grow: number, drop: number): void {
-  const r = c.r + grow;
-  const ry = (c.ry ?? c.r) + grow;
-  if (r <= 0 || ry <= 0) return;
-  if (c.ry === undefined) g.fillCircle(c.x, c.y + drop, r);
-  else g.fillEllipse(c.x, c.y + drop, r * 2, ry * 2);
+/**
+ * Fills a circle or an ellipse grown by `grow` px and moved down by `drop`. A tone pass (`grow < 0`) over a
+ * flat puff of a squashed top moves it with the top of its body (down by `drop - grow + dip`, see
+ * `Silhouette.toneDip`) and stretches it up by `dip`, so the tones follow the low puffs instead of
+ * flattening into a band.
+ */
+function fillLobe(
+  g: Phaser.GameObjects.Graphics,
+  c: Circle,
+  grow: number,
+  drop: number,
+  dip = 0,
+): void {
+  if (c.ry === undefined) {
+    if (c.r + grow > 0) g.fillCircle(c.x, c.y + drop, c.r + grow);
+    return;
+  }
+  if (grow >= 0) {
+    g.fillEllipse(c.x, c.y + drop, (c.r + grow) * 2, (c.ry + grow) * 2);
+    return;
+  }
+  // A tone over a low puff keeps its width, so the puffs of a tone touch and the base tone shows only in the valleys.
+  const ry = Math.min(c.ry + dip, c.r * figure.lowPuffs.aspect);
+  g.fillEllipse(c.x, c.y + drop + dip - grow, c.r * 2, ry * 2);
 }
 
 /** Fills a silhouette grown by `grow` px (shrunk when negative) and moved down by `drop`. */
@@ -297,12 +306,14 @@ function fillSilhouette(
 ): void {
   g.fillStyle(color, 1);
   // The lobes belong to the outline and the base tone only (`grow >= 0`).
-  for (const c of grow >= 0 ? [...s.circles, ...s.lobes] : s.circles) fillLobe(g, c, grow, drop);
+  const dip = grow < 0 ? (s.toneDip ?? 0) : 0;
+  for (const c of grow >= 0 ? [...s.circles, ...s.lobes] : s.circles)
+    fillLobe(g, c, grow, drop, dip);
   const b = s.body;
   const w = b.right - b.left + grow * 2;
-  const h = b.bottom - b.top + grow * 2;
+  const h = b.bottom - b.top + grow * 2 - dip;
   if (w <= 0 || h <= 0) return;
-  g.fillRoundedRect(b.left - grow, b.top - grow + drop, w, h, Math.min(h, w) * 0.45);
+  g.fillRoundedRect(b.left - grow, b.top - grow + drop + dip, w, h, Math.min(h + dip, w) * 0.45);
 }
 
 /** A curl: a spiral stroke of `turns` turns that opens up to radius `r` around (`cx`, `cy`). */
@@ -374,45 +385,4 @@ export function bakeCloudFigure(scene: Phaser.Scene, key: string, refresh = fals
     },
     refresh,
   );
-}
-
-/** The nebula: pink body with a lighter top, a few pale round smears without an outline, soft wisps under it. */
-export function bakeNebulaFigure(scene: Phaser.Scene, key: string, refresh = false): void {
-  const n = cfg.nebula.colors;
-  const edge = outlineColor(n.pink);
-  bakeFigure(
-    scene,
-    key,
-    nebulaSilhouette(),
-    (g, s) => {
-      fillSilhouette(g, s, edge, figure.outline, 0);
-      fillSilhouette(g, s, n.pink, 0, 0);
-      fillSilhouette(g, s, n.pinkLight, -16, -16);
-      // The wisps: no outline, a few flat lobes, smaller and fainter down to the last.
-      for (const w of s.wisps ?? []) {
-        for (const c of w.tail) {
-          g.fillStyle(n.pink, c.alpha);
-          fillLobe(g, c, 0, 0);
-        }
-      }
-      // A smear: one flat round stain, lighter than the pink under it.
-      g.fillStyle(n.smear, 1);
-      for (const m of cfg.nebula.smears) g.fillEllipse(m.x, m.y, m.w, m.h);
-    },
-    refresh,
-  );
-}
-
-/** Size of the curl picture, baked px: the spiral with its stroke and a 3 px margin. */
-export function curlPictureSize(): { width: number; height: number } {
-  const pad = curls.width + 6;
-  return { width: Math.ceil(curls.r * 2 + pad), height: Math.ceil(curls.r * 1.6 + pad) };
-}
-
-/** One white curl of the nebula, drawn over the figure as its own small picture (it reads white, not grey). */
-export function bakeNebulaCurl(scene: Phaser.Scene, key: string): void {
-  const { width, height } = curlPictureSize();
-  bakeTexture(scene, key, width, height, (g) => {
-    strokeCurl(g, width / 2, height / 2, curls.r, curls.turns, 0.2, curls.width, 0xffffff);
-  });
 }

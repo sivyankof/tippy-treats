@@ -164,6 +164,15 @@ export const RULE_ANIM = {
        * body. At most the spare of the body over the cover row (70 - (60 + 7 + 24) / 1.4 = 5 px).
        */
       topDip: 5,
+      /**
+       * A squashed top (a short screen) is redrawn as low puffs: each dome of the drawn top line becomes a
+       * flat dome as wide as the stretch of the line it made, standing on the drawn body top. Stretches
+       * narrower than `minSpan` baked px join a neighbour; the smallest dome is `heightFloor` of the room
+       * high, the widest takes all of it; a dome is never taller than `aspect` of its half width. The lighter
+       * tones start `toneDip` px lower and their domes reach up to the same crests, so valleys of the base tone
+       * part the low puffs and their sizes read even on the flattest top.
+       */
+      lowPuffs: { minSpan: 16, heightFloor: 0.4, aspect: 0.8, toneDip: 12 },
     },
     /** The whole figure bobs, sways and breathes: it billows (not on the minimal level for the nebula). */
     bobPx: 7,
@@ -195,73 +204,110 @@ export const RULE_ANIM = {
      */
     ghostMaxDensity: 0.7,
     /**
-     * The space nebula: the cloud of the Space zone is a see-through cotton-candy lump. It has the
-     * same motion and the same figure size as the cloud, only another picture (`tr_nebula`) and a
-     * lower density cap, with twinkling stars over it.
+     * The space nebula: the cloud of the Space zone is two glowing arms of a nebula that wind round each
+     * other across the flying row (`fx/nebula-arms.ts`). It has the same motion and the same figure size
+     * as the cloud and the same frame (1000 x 360 baked px, centre on the row), only other pictures: the
+     * veil (`tr_nebula` frame `veil`, drawn normally) and the two arms (frames `blue` and `pink`, drawn
+     * additively, so they light the veil up without hiding the layer more), with twinkling stars over it.
      */
     nebula: {
       /**
-       * Flat fills: the pink body, a lighter pink top, the pale lilac-blue smears (no outline, lighter than
-       * the light pink: never a dark patch over the layer); the rim is a deeper tone of the pink.
+       * The veil: an even see-through haze along the row, opaque in the picture over the whole cover row
+       * (the row half, `figure.layerMargin` included, in the full width of `figure.body`), so the layer is
+       * muted the same everywhere (contrast 1 - `maxDensity`); it fades out over `fade` px above and below
+       * and `fadeX` px past the ends of the body. `tones` drift along it in long soft waves (`waveX` px).
        */
-      colors: {
-        pink: 0xff9bd2,
-        pinkLight: 0xffc4e4,
-        smear: 0xf6e2ff,
+      veil: { tones: [0x5c3488, 0x6e3a8c], waveX: 560, fade: 24, fadeX: 40 },
+      /** The faint lilac glow round everything: an ellipse of half sizes `rx`, `ry`, `alpha` at the centre. */
+      halo: { color: 0xa27ce0, alpha: 0.3, rx: 470, ry: 160 },
+      /** Thin pale lilac haze arcs above and below the arms: crest `y` from the centre, `sag` to the ends at `reach`. */
+      arcs: { color: 0xdcccff, alpha: 0.42, width: 2.4, soft: 4, y: 126, sag: 26, reach: 330 },
+      /**
+       * The arms: a wave of `amplitude` px whose half period is `reach` (the arm ends there), half width
+       * `width[0]` in the middle tapering to `width[1]` at the ends; the glow reaches `glow` half widths out.
+       * Tones from the outside in: the glow, the dense middle, the light core and the thin thread on the axis.
+       * The pink arm curls at each end into a spiral of `turns` turns, radius `radius` tightening to
+       * `tighten` of it, turning `endTone` (turquoise) on the way; the blue arm, paler (`alpha`), bends into
+       * small hooks the other way. Baked px from the figure centre.
+       */
+      arms: {
+        glow: 3.4,
+        step: 1.5,
+        pink: {
+          reach: 268,
+          amplitude: 62,
+          width: [27, 13],
+          tones: { glow: 0xa070ff, middle: 0xff5fb4, core: 0xffb3dc, thread: 0xfff4fa },
+          alpha: 0.8,
+          end: {
+            turns: 1.5,
+            radius: 40,
+            tighten: 0.28,
+            endWidth: 0.45,
+            tone: 0x4fe0cf,
+            from: 0.86,
+          },
+        },
+        blue: {
+          reach: 312,
+          amplitude: 40,
+          width: [15, 8],
+          tones: { glow: 0x4f6dff, middle: 0x8a9cff, core: 0xc9d3ff, thread: 0xf0f3ff },
+          alpha: 0.6,
+          end: { turns: 0.45, radius: 15, tighten: 0.6, endWidth: 0.6, tone: 0x8a9cff, from: 1 },
+        },
+        /** Where the pink arm crosses, the blue one behind it is shaded: `alpha` darker, the shade `drop` px lower. */
+        shade: { alpha: 0.55, drop: 5, reach: 2.2 },
       },
-      /** Soft round smears on the body, baked px: one flat ellipse each (centre and size). */
-      smears: [
-        { x: 300, y: 150, w: 92, h: 58 },
-        { x: 560, y: 140, w: 104, h: 62 },
-        { x: 770, y: 150, w: 80, h: 52 },
+      /** The core at the crossing: a warm cream glow, denser to the centre, and a thin dark dust vein through it. */
+      core: {
+        color: 0xffe2a8,
+        alpha: 0.4,
+        radius: 64,
+        vein: { color: 0x2e1840, alpha: 0.6, width: 2.6, length: 70, tilt: -0.35, bend: 8 },
+      },
+      /**
+       * Short sprinkle strokes on the arms in the sprinkle colours of the layers: the arm, x from the
+       * centre, the shift across the arm in half widths and the turn off the arm's run, radians.
+       */
+      sprinkles: {
+        length: 13,
+        width: 4.2,
+        spots: [
+          { arm: 'pink', u: -262, across: 0.5, turn: 0.7 },
+          { arm: 'pink', u: -168, across: -0.6, turn: -0.5 },
+          { arm: 'pink', u: -74, across: 0.4, turn: 0.9 },
+          { arm: 'pink', u: 52, across: -0.5, turn: -0.8 },
+          { arm: 'pink', u: 138, across: 0.6, turn: 0.4 },
+          { arm: 'pink', u: 226, across: -0.4, turn: -0.6 },
+          { arm: 'blue', u: -214, across: 0.3, turn: 0.6 },
+          { arm: 'blue', u: 96, across: -0.3, turn: -0.7 },
+          { arm: 'blue', u: 262, across: 0.3, turn: 0.5 },
+        ],
+      },
+      /** Sparks baked on the arms: dots (`r` < 5) and small four-ray stars, denser near the core. */
+      sparks: [
+        { x: -24, y: -30, r: 7 },
+        { x: 30, y: 22, r: 3 },
+        { x: -52, y: 14, r: 2.5 },
+        { x: 58, y: -26, r: 6 },
+        { x: -120, y: -44, r: 3 },
+        { x: 112, y: 40, r: 2.5 },
+        { x: -230, y: -40, r: 5.5 },
+        { x: 250, y: 30, r: 3 },
       ],
+      /** Slices of the nebula bake run per frame at the start of a run (all at once if a nebula is due sooner). */
+      bakeStepsPerFrame: 2,
       /**
-       * The underside: an almost flat edge, a close row of circles of radius `r` from `from` to `to` every `step`
-       * baked px, whose bottoms lie `sag[i]` px (taken in turn) below the body bottom: a soft low swell, nothing hangs.
+       * The motion of the arms (not on the minimal level): they flow towards each other along their wave
+       * by up to `flowPx` baked px, over `flowPeriodMs`, and sway (turn by up to `swayRad` round the centre),
+       * so their curls swing a little; the blue arm sways `blueSway` as much the other way.
        */
-      underside: { from: 120, to: 900, step: 36, r: 40, sag: [3, 8, 4, 9, 5, 8, 3, 7] },
+      motion: { flowPx: 9, flowPeriodMs: 5200, swayRad: 0.012, swayPeriodMs: 3700, blueSway: 0.7 },
       /**
-       * Short soft wisps under the edge, baked px. Each is a small outlined root bump (radius `r`, `rootLift`
-       * of it above the body bottom) and a few flat pink lobes without an outline that drift off below it:
-       * lobe `i` is `drift` px aside and `len` px down per step, `shrink` smaller each step, `squash` as tall
-       * as wide, and fainter (`lobeAlpha`, one per lobe from the root down). Few big lobes that barely
-       * overlap: a soft melting puff, not a stepped column.
-       */
-      wisps: {
-        spots: [
-          { x: 250, r: 15, lobes: 2, len: 11, drift: -9 },
-          { x: 445, r: 18, lobes: 3, len: 11, drift: 8 },
-          { x: 625, r: 14, lobes: 2, len: 9, drift: 10 },
-          { x: 790, r: 17, lobes: 3, len: 10, drift: -7 },
-        ],
-        lobeAlpha: [0.6, 0.38, 0.2],
-        shrink: 0.22,
-        squash: 0.72,
-        rootLift: 0.5,
-      },
-      /**
-       * The white curls ride over the figure as small pictures of their own (`tr_nebula_curl`, on the
-       * shared atlas), drawn near full white: baked into the see-through figure they came out grey. Spots from
-       * the figure centre: x as a share of the figure width, y in baked px (inside the body); `scale` of the
-       * picture, `flip` mirrors it.
-       */
-      curls: {
-        /** The picture: a spiral of `turns` turns opening up to `r` baked px, stroke `width`. */
-        r: 34,
-        turns: 1.4,
-        width: 9,
-        spots: [
-          { x: -0.08, y: -10, scale: 1, flip: false },
-          { x: 0.1, y: 0, scale: 1.15, flip: true },
-          { x: 0.27, y: -6, scale: 0.75, flip: false },
-        ],
-        /** Opacity of a curl over the shown figure (its pose alpha times this). */
-        alpha: 0.85,
-      },
-      /**
-       * The densest the figure is drawn while the nebula covers the layer: one picture, so the
-       * layer shows through with a contrast of about 1 - this (tuned by the contrast of the layer
-       * behind the figure, docs/08-architecture.md, section 12).
+       * The densest the figure is drawn while the nebula covers the layer: the veil is opaque in its
+       * picture over the row, so the layer shows through with a contrast of about 1 - this everywhere
+       * along the row (the arms are added light and do not change it; docs/08-architecture.md, section 12).
        */
       maxDensity: 0.68,
       /**
@@ -269,22 +315,32 @@ export const RULE_ANIM = {
        * `ghostMaxDensity`): the layer then shows with a contrast of at least ~0.7.
        */
       ghostMaxDensity: 0.4,
-      /** Twinkling stars over the figure (the shared `fx_star` picture), one pool per bank. */
+      /**
+       * Stars over the figure (the shared `fx_star` picture), one pool per bank: the first one sits on
+       * the core, bigger and warm, and pulses (the core pulse); the rest twinkle near the core and on the
+       * arms. Lite: they stand still (the core still pulses); minimal: none (the sparks baked on the
+       * arms stay).
+       */
       stars: {
-        /** How many twinkle per bank on each effects level. */
-        count: { full: 4, lite: 2, minimal: 0 },
+        /** How many are shown per bank on each effects level. */
+        count: { full: 5, lite: 5, minimal: 0 },
+        /** Whether the stars (but the core one) twinkle on each level. */
+        twinkle: { full: true, lite: false, minimal: false },
         /**
          * Where the stars sit on the figure, from its centre: x as a share of the figure width,
          * y in px of the figure; they ride on it.
          */
         spots: [
-          { x: -0.32, y: -34 },
-          { x: -0.1, y: 40 },
-          { x: 0.14, y: -48 },
-          { x: 0.34, y: 30 },
+          { x: 0, y: 0 },
+          { x: -0.06, y: 26 },
+          { x: 0.07, y: -34 },
+          { x: -0.19, y: -52 },
+          { x: 0.2, y: 50 },
         ],
         /** Texture scale of a star, from the smallest to the largest. */
         scale: [0.4, 0.75],
+        /** The core star: its scale, warm tint and pulse period. */
+        core: { scale: 0.9, tint: 0xfff0c8, periodMs: 1900 },
         /** Share of the base scale a star swells by at the top of its pulse. */
         pulse: 0.35,
         /** Alpha at the low and the high point of the pulse. */

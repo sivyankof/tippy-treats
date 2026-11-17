@@ -6,7 +6,7 @@ import { TREASURE } from '../../data/treasure-anim';
 import { bakeTexture } from '../ui/bake-texture';
 import { bakeBerry } from './berry-texture';
 import { shade } from '../../util/color';
-import { bakeCloudFigure, bakeNebulaCurl, bakeNebulaFigure } from './cloud-figure';
+import { bakeCloudFigure } from './cloud-figure';
 import { OUTLINE_SHARE, drawGlossMark, glossFromShares } from './plain-style';
 
 /** Keys of the pictures of coins, berries and the zone rules. */
@@ -19,10 +19,8 @@ export const TREASURE_TEXTURES = {
   berryFace: 'tr_berry_face',
   /** The cloud of the clouds zone: one whole figure; not meant for tinting. */
   cloud: 'tr_cloud',
-  /** The nebula of Space: one whole pink and blue figure; not meant for tinting. */
+  /** The nebula of Space: the veil and the two arms, three frames of one texture (`nebula-arms.ts`); not meant for tinting. */
   nebula: 'tr_nebula',
-  /** A white curl that rides over the nebula (drawn near full white, so it reads white over the see-through figure). */
-  nebulaCurl: 'tr_nebula_curl',
   /** A speed streak: solid at the right end, gone at the left; white, for tinting. */
   streak: 'tr_streak',
   /** The outline of a rush layer, stretchable sideways; white, for tinting. */
@@ -115,8 +113,6 @@ export function createTreasureTextures(scene: Phaser.Scene): void {
   bakeBerry(scene, TREASURE_TEXTURES.berry, false);
   bakeBerry(scene, TREASURE_TEXTURES.berryFace, true);
   bakeCloudFigure(scene, TREASURE_TEXTURES.cloud);
-  bakeNebulaFigure(scene, TREASURE_TEXTURES.nebula);
-  bakeNebulaCurl(scene, TREASURE_TEXTURES.nebulaCurl);
   bakeStreak(scene);
   bakeOutline(scene);
 }

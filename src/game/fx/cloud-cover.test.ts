@@ -9,8 +9,11 @@ import {
   ghostShare,
   pickLook,
   puffsBillow,
+  armAlpha,
+  armMotion,
   starActive,
   starCount,
+  starsTwinkle,
   starLook,
   starPulse,
   stepApproach,
@@ -259,18 +262,38 @@ describe('nebula look', () => {
     );
   });
 
-  it('shows 4, 2 and 0 stars on full, lite and minimal, spread evenly over the slots', () => {
+  it('shows the core star and the sparks on full and lite (twinkling on full only), none on minimal', () => {
     const slots = cfg.nebula.stars.spots.length;
-    expect(slots).toBe(4);
-    expect(starCount('full')).toBe(4);
-    expect(starCount('lite')).toBe(2);
+    expect(slots).toBe(5);
+    expect(starCount('full')).toBe(5);
+    expect(starCount('lite')).toBe(5);
     expect(starCount('minimal')).toBe(0);
     for (const level of ['full', 'lite', 'minimal'] as const) {
       const on = Array.from({ length: slots }, (_, i) => starActive(i, slots, starCount(level)));
       expect(on.filter(Boolean)).toHaveLength(starCount(level));
     }
-    const lite = Array.from({ length: slots }, (_, i) => starActive(i, slots, 2));
-    expect(lite).toEqual([false, true, false, true]);
+    expect(starsTwinkle('full')).toBe(true);
+    expect(starsTwinkle('lite')).toBe(false);
+    // The first star is the core's: it sits on the crossing.
+    expect(cfg.nebula.stars.spots[0]).toEqual({ x: 0, y: 0 });
+  });
+
+  it('adds the arms as bright as the veil is dense and keeps them still when the nebula does not billow', () => {
+    expect(armAlpha(cfg.nebula.maxDensity)).toBeCloseTo(1);
+    expect(armAlpha(cfg.nebula.maxDensity * cfg.nebula.ghostMaxDensity)).toBeCloseTo(
+      cfg.nebula.ghostMaxDensity,
+    );
+    expect(armAlpha(0)).toBe(0);
+    expect(armMotion(1234, false)).toEqual({ flow: 0, sway: 0 });
+    const m = cfg.nebula.motion;
+    for (let t = 0; t < 8000; t += 90) {
+      const { flow, sway } = armMotion(t, true);
+      expect(Math.abs(flow)).toBeLessThanOrEqual(m.flowPx + 1e-9);
+      expect(Math.abs(sway)).toBeLessThanOrEqual(m.swayRad + 1e-9);
+      // Smooth: no jerk between frames.
+      const next = armMotion(t + 16, true);
+      expect(Math.abs(next.flow - flow)).toBeLessThan(0.2);
+    }
   });
 
   it('billows the cloud always and the nebula except on minimal', () => {

@@ -47,7 +47,7 @@ export const SHARED_ATLAS = {
   ],
   /**
    * Keys under those prefixes that must keep their own texture: `fx_dash` is repeated by a TileSprite; `tr_lap_edge` (4 x 360, a
-   * 368 px shelf for a sliver) and the cloud and nebula figures `tr_cloud`, `tr_nebula` (1000 x 360) are drawn only in
+   * 368 px shelf for a sliver) and the cloud figure `tr_cloud` (1000 x 360) and the nebula `tr_nebula` (three 1000 x 360 frames) are drawn only in
    * their zones, each a draw call more there, and they would hold two more tall shelves.
    */
   ownTexture: ['fx_dash', 'tr_lap_edge', 'tr_cloud', 'tr_nebula'],
