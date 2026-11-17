@@ -456,7 +456,9 @@ class CloudBank {
   update(dtMs: number, timeMs: number, input: Readonly<CloudInput>): void {
     const look = pickLook(this.motion.phase, this.look, input.nebula ? 'nebula' : 'cloud');
     // The key is checked too: a figure baked again at run load (another screen height) is picked up.
-    if (look !== this.look || this.figure.texture.key !== figureKey(look)) {
+    // The nebula picture is baked lazily: until it exists keep the old look and retry next frame.
+    const baked = look !== 'nebula' || this.figure.scene.textures.exists(TREASURE_TEXTURES.nebula);
+    if (baked && (look !== this.look || this.figure.texture.key !== figureKey(look))) {
       this.look = look;
       this.figure.setTexture(figureKey(look), figureFrame(look));
       const o = this.nebulaFit.origins;
