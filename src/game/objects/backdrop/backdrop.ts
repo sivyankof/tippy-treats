@@ -25,6 +25,7 @@ import { showcaseArt } from './showcase-zone';
 import { spaceArt } from './space-zone';
 import { starsArt } from './stars-zone';
 import { ZoneFade } from './zone-fade';
+import { zoneMixOf } from './zone-mix';
 import { weatherShareOf } from './weather-share';
 import { PrepQueue, prepTarget, sameTarget, type PrepTarget } from './zone-prep';
 import {
@@ -211,6 +212,11 @@ export class Backdrop {
       this.alphaOf,
       WEATHER.zoneView,
     );
+  }
+
+  /** A per-zone number blended with the zone cross-fade (see `zoneMixOf`). */
+  zoneMix(valueOf: (zone: ZoneId) => number): number {
+    return zoneMixOf(this.sceneries.keys(), this.fade.current, zoneIdOf, this.alphaOf, valueOf);
   }
 
   /** True while the backdrop cross-fades from one zone into the next. */

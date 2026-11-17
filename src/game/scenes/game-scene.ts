@@ -12,6 +12,7 @@ import { easeFn } from '../fx/ease';
 import { RunIntro } from '../fx/run-intro';
 import { effectsMode } from '../effects-mode';
 import { Backdrop } from '../objects/backdrop/backdrop';
+import { haloZoneMult } from '../objects/backdrop/zone-mix';
 import { RunWeather } from '../objects/backdrop/run-weather';
 import { plainLooks } from '../objects/plain-look';
 import { installSquashDebug } from '../debug/squash-debug';
@@ -228,6 +229,7 @@ export class GameScene extends Phaser.Scene {
     const cam = this.camera.cameraInfo();
     this.fx.handleEvents(events, this.sim.state, this.flying.current, dropMods, cam);
     if (events.length > 0) this.mods = this.sim.currentModifiers();
+    fxGuard.call('glow-zone', this, this.dimGlowByZone);
     this.fx.update(delta, time, this.sim.state, this.mods, cam);
     fxGuard.run('backdrop-zone', () => this.background.follow(this.sim.state));
     fxGuard.run('weather', () => {
@@ -284,6 +286,11 @@ export class GameScene extends Phaser.Scene {
   }
 
   /** A demo that has placed its layers stops taking taps and goes back to the card. */
+  /** The halo of a long combo is fainter in the dark sky zones, following the backdrop cross-fade. */
+  private dimGlowByZone(): void {
+    this.fx.setGlowZone(this.background.zoneMix(haloZoneMult));
+  }
+
   private watchDemo(): void {
     if (this.request.kind !== 'demo' || this.demoLeaving) return;
     if (!demoFinished(this.sim.state.layers.length)) return;
