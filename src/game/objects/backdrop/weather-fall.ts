@@ -37,6 +37,11 @@ interface FallLook {
   swayLag?: number;
   turnMin?: number;
   sizeCuts?: readonly number[];
+  sideBias?: number;
+  sideShare?: number;
+  bandFeatherPx?: number;
+  keepOutFeatherPx?: number;
+  endFeatherPx?: number;
 }
 
 const FRAME_SETS: Record<string, readonly string[]> = {
@@ -70,9 +75,9 @@ export class WeatherFall implements WeatherPart {
     const frames = FRAME_SETS[look.frames[0] ?? ''] ?? [];
     this.slantRad = -Math.atan(look.slant ?? 0);
     const count = Math.min(look.count, WEATHER_LOOK.particleCount.full);
-    const strip = WEATHER_LOOK.sideShare;
+    const strip = look.sideShare ?? WEATHER_LOOK.sideShare;
     for (let i = 0; i < count; i++) {
-      const sideStrip = rng.chance(WEATHER_LOOK.sideBias);
+      const sideStrip = rng.chance(look.sideBias ?? WEATHER_LOOK.sideBias);
       const left = rng.chance(0.5);
       const u = sideStrip ? (left ? rng.range(0, strip) : rng.range(1 - strip, 1)) : rng.next();
       this.specs.push({
@@ -111,7 +116,9 @@ export class WeatherFall implements WeatherPart {
     const t = frame.timeMs;
     const seconds = t / MS_PER_SECOND;
     const { width, height, band } = frame;
-    const pad = WEATHER_LOOK.endFeatherPx;
+    const pad = this.look.endFeatherPx ?? WEATHER_LOOK.endFeatherPx;
+    const bandFeather = this.look.bandFeatherPx ?? WEATHER_LOOK.bandFeatherPx;
+    const keepFeather = this.look.keepOutFeatherPx ?? WEATHER_LOOK.keepOutFeatherPx;
     const leaf = this.kind === 'leaves';
     const rain = this.kind === 'rain' || this.kind === 'storm';
     const slant = this.look.slant ?? 0;
@@ -131,8 +138,8 @@ export class WeatherFall implements WeatherPart {
         ? wrapRange(p.u * width + slant * p.speed * seconds, width, pad)
         : p.u * width + p.sway * Math.sin((TWO_PI * t) / p.swayMs + p.phase);
       const alpha =
-        particleFade(y, band, WEATHER_LOOK.bandFeatherPx, height, pad) *
-        hudKeepOutFade(x, y, 0, WEATHER_LOOK.keepOutFeatherPx) *
+        particleFade(y, band, bandFeather, height, pad) *
+        hudKeepOutFade(x, y, 0, keepFeather) *
         frame.share *
         p.alpha;
       if (alpha <= 0.01) {

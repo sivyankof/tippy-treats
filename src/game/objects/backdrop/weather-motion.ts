@@ -44,14 +44,17 @@ export interface Puff {
   x: number;
   y: number;
   r: number;
+  /** A thin seam is drawn along its top. */
+  seam: boolean;
 }
 
 /** The puffs of a bank, front rows last (so they paint over the back ones); a storm hangs the lower rows lower. */
 export function bankPuffs(storm: boolean): Puff[] {
   const b = WEATHER_LOOK.bank;
   return b.puffs
-    .map(([row, x, y, r]) => ({
+    .map(([row, x, y, r, seam]) => ({
       row,
+      seam: seam === 1,
       x,
       y: y + (storm ? (r * b.stormHang * row) / 2 : 0),
       r,
