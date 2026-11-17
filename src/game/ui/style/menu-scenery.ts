@@ -9,7 +9,7 @@ import { bakeTexture } from '../bake-texture';
 
 const cfg = MENU.style.scenery;
 /** Menu screens always show the plain kitchen. */
-const MENU_LOOK: SceneryLook = { lap: 1, weather: 'clear', place: 'kitchen', menu: true };
+const MENU_LOOK: SceneryLook = { lap: 1, weather: 'clear', place: 'kitchen' };
 const SHADE_KEY = 'ui_scenery_shade';
 /** Pixels per band of the baked shade strip, and its width. */
 const BAND_PX = 4;

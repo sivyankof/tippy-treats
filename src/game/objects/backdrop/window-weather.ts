@@ -81,8 +81,10 @@ function cloud(ctx: Ctx2D, x: number, y: number, s: number): void {
   ctx.fill();
 }
 
-function paintSky(ctx: Ctx2D, sky: WindowSky): void {
+/** `mirror` puts the sky's details on the left half (the shop window: its right half is against the tower). */
+function paintSky(ctx: Ctx2D, sky: WindowSky, mirror: boolean): void {
   const { x, y, w, h } = GLASS;
+  const at = (share: number): number => x + w * (mirror ? 1 - share : share);
   const gradient = ctx.createLinearGradient(0, y, 0, y + h);
   gradient.addColorStop(0, cssColor(sky.top));
   gradient.addColorStop(1, cssColor(sky.bottom));
@@ -97,7 +99,7 @@ function paintSky(ctx: Ctx2D, sky: WindowSky): void {
       [0.8, 0.52, 4],
       [0.14, 0.7, 3],
     ] as const) {
-      const cx = x + w * sx;
+      const cx = at(sx);
       const cy = y + h * sy;
       ctx.beginPath();
       ctx.moveTo(cx, cy - r * 2);
@@ -113,40 +115,37 @@ function paintSky(ctx: Ctx2D, sky: WindowSky): void {
     }
   }
   if (sky.moon) {
-    const mx = x + w * 0.68;
+    const mx = at(0.68);
     const my = y + h * 0.2;
-    const halo = ctx.createRadialGradient(mx, my, 6, mx, my, 40);
-    halo.addColorStop(0, 'rgba(255,241,184,0.5)');
-    halo.addColorStop(1, 'rgba(255,241,184,0)');
-    ctx.fillStyle = halo;
-    ctx.fillRect(mx - 44, my - 44, 88, 88);
-    // Crescent: a round bite is cut out of the disc on a small canvas of its own.
-    const moon = document.createElement('canvas');
-    moon.width = 40;
-    moon.height = 40;
-    const m = moon.getContext('2d');
-    if (m) {
-      m.fillStyle = cssColor(0xfff1b8);
-      m.beginPath();
-      m.arc(18, 22, 17, 0, TWO_PI);
-      m.fill();
-      m.globalCompositeOperation = 'destination-out';
-      m.beginPath();
-      m.arc(27, 18, 15, 0, TWO_PI);
-      m.fill();
-      ctx.drawImage(moon, mx - 18, my - 22);
-    }
+    const r = 17;
+    // A flat moon: a warm outline, a pale disc, a darker rim on the lower right and a gloss mark. No glow.
+    ctx.fillStyle = cssColor(0xb9904a);
+    ctx.beginPath();
+    ctx.arc(mx, my, r + 2.5, 0, TWO_PI);
+    ctx.fill();
+    ctx.fillStyle = cssColor(0xf1d98a);
+    ctx.beginPath();
+    ctx.arc(mx, my, r, 0, TWO_PI);
+    ctx.fill();
+    ctx.fillStyle = cssColor(0xfff1b8);
+    ctx.beginPath();
+    ctx.arc(mx - 2.5, my - 2.5, r - 4.5, 0, TWO_PI);
+    ctx.fill();
+    ctx.fillStyle = 'rgba(255,255,255,0.7)';
+    ctx.beginPath();
+    ctx.roundRect(mx - 9, my - 8, 4, 9, 2);
+    ctx.fill();
   }
   if (sky.cloud !== null) {
     ctx.fillStyle = cssColor(sky.cloud);
     ctx.globalAlpha = 0.9;
     if (sky.heavy) {
-      cloud(ctx, x + w * 0.28, y + h * 0.12, 1.5);
-      cloud(ctx, x + w * 0.76, y + h * 0.08, 1.7);
-      cloud(ctx, x + w * 0.5, y + h * 0.24, 1.2);
+      cloud(ctx, at(0.28), y + h * 0.12, 1.5);
+      cloud(ctx, at(0.76), y + h * 0.08, 1.7);
+      cloud(ctx, at(0.5), y + h * 0.24, 1.2);
     } else {
-      cloud(ctx, x + w * 0.32, y + h * 0.34, 1.1);
-      cloud(ctx, x + w * 0.8, y + h * 0.16, 0.7);
+      cloud(ctx, at(0.32), y + h * 0.34, 1.1);
+      cloud(ctx, at(0.8), y + h * 0.16, 0.7);
     }
     ctx.globalAlpha = 1;
   }
@@ -208,7 +207,7 @@ function paintFrame(ctx: Ctx2D, place: StartPlaceId, weather: WeatherId): void {
   ctx.save();
   glassPath(ctx, place);
   ctx.clip();
-  paintSky(ctx, WINDOW_SKY[weather]);
+  paintSky(ctx, WINDOW_SKY[weather], place === 'shop');
   paintGlints(ctx);
   const sash = 'ring' in look ? look.ring : shade(frame, 0.12);
   bar(ctx, x + w / 2 - 4, y - 4, 8, h + 8, sash);
@@ -236,7 +235,7 @@ function paintValance(ctx: Ctx2D): void {
   const scallops = 6;
   const step = (right - left) / scallops;
   for (const [grow, color] of [
-    [3, outlineColor(look.frame)],
+    [3, look.valanceOutline],
     [0, look.valance],
   ] as const) {
     ctx.fillStyle = cssColor(color);
@@ -344,7 +343,13 @@ export function windowRectOf(place: StartPlaceId, width: number, height: number)
   const look = WINDOW_LOOK[place];
   const cx = look.at.x * width + look.offset.x;
   const cy = look.at.y * height + look.offset.y;
-  return { x: cx - W / 2 + GLASS.x, y: cy - H / 2 + GLASS.y, w: GLASS.w, h: GLASS.h };
+  const [from, to] = GLASS_LOOK.windowSpan[place];
+  return {
+    x: cx - W / 2 + GLASS.x + GLASS.w * from,
+    y: cy - H / 2 + GLASS.y,
+    w: GLASS.w * (to - from),
+    h: GLASS.h,
+  };
 }
 
 /** Where the glass items may be and what they keep out of. */

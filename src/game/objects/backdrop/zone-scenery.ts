@@ -49,8 +49,6 @@ export interface SceneryLook {
   weather: WeatherId;
   /** Start place of zone 1; only the first zone reads it (through `PLACE_ART`). */
   place: StartPlaceId;
-  /** Menu screens show the home kitchen without jars on the shelves (they crowd the plates). */
-  menu?: boolean;
   /** Space only: width of the tower top when the lap began (the lap 1 planet keeps clear of it). */
   topWidth?: number;
 }
