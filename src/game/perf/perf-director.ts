@@ -1,6 +1,6 @@
 import * as Phaser from 'phaser';
 import type { EffectLevel } from '../../data/effect-levels';
-import { PERF, type PerfSegmentDef } from '../../data/perf';
+import { PERF, PERF_TRANSITION, type PerfSegmentDef } from '../../data/perf';
 import { setFrameWorkListener } from '../frame-work';
 import { capRenderDensity } from '../render-density';
 import { densityCapForLevel } from '../../util/density-scale';
@@ -53,6 +53,8 @@ type Phase = 'launch' | 'warmup' | 'measure';
 
 /** A segment that never gets going is given up after this long (the note says so in the table). */
 const TIMEOUT_NOTE = 'timeout';
+/** A transition segment whose run never reached the zone boundary. */
+const NO_FADE_NOTE = 'no zone change';
 
 /**
  * Plays the segments of the benchmark one after another: starts the run of each (the setup comes
@@ -79,6 +81,9 @@ class PerfDirector {
   private freezeAtMs = 0;
   /** The benchmark ended its last segment (or the still froze the game). */
   private finished = false;
+  /** A transition segment: the window has seen the zone cross-fade, and when it ended (`null`: not yet). */
+  private sawFade = false;
+  private fadeEndMs: number | null = null;
 
   constructor(private readonly game: Phaser.Game) {
     const params = perfSession()?.params;
@@ -156,12 +161,27 @@ class PerfDirector {
       return;
     }
     const total = this.drawTotal?.() ?? null;
-    this.samples.add(workMs, total === null ? null : total - this.lastDrawTotal, nowMs);
+    const fading = this.gameScene.perfProbe()?.zoneFading ?? false;
+    this.samples.add(workMs, total === null ? null : total - this.lastDrawTotal, nowMs, fading);
     if (total !== null) this.lastDrawTotal = total;
-    if (nowMs - this.windowStartMs >= def.measureMs) this.endSegment(nowMs, '');
-    else if (this.resultsUp && def.startOn !== 'results') {
+    if (def.endAfterFade && this.fadeOver(fading, nowMs)) this.endSegment(nowMs, '');
+    else if (nowMs - this.windowStartMs >= def.measureMs) {
+      this.endSegment(nowMs, def.endAfterFade ? NO_FADE_NOTE : '');
+    } else if (this.resultsUp && def.startOn !== 'results') {
       this.endSegment(nowMs, def.endOnResults ? '' : 'run ended early');
     }
+  }
+
+  /** A transition segment: the cross-fade has been seen, has ended and its tail is over. */
+  private fadeOver(fading: boolean, nowMs: number): boolean {
+    if (fading) {
+      this.sawFade = true;
+      this.fadeEndMs = null;
+      return false;
+    }
+    if (!this.sawFade) return false;
+    this.fadeEndMs ??= nowMs;
+    return nowMs - this.fadeEndMs >= PERF_TRANSITION.tailMs;
   }
 
   /** The run of this segment exists, its camera is up and the layers are flying. */
@@ -204,6 +224,8 @@ class PerfDirector {
       this.samples = new SegmentSamples();
       this.lastDrawTotal = this.drawTotal?.() ?? 0;
       this.windowStartMs = nowMs;
+      this.sawFade = false;
+      this.fadeEndMs = null;
       this.phase = 'measure';
       // The count of forced cuts is of the measured window only.
       cutOverride.setAlways(def.cutVariant ?? null);

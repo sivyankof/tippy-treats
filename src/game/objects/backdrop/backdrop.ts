@@ -147,6 +147,11 @@ export class Backdrop {
     );
   }
 
+  /** True while the backdrop cross-fades from one zone into the next. */
+  get fading(): boolean {
+    return this.fade.previous !== null;
+  }
+
   /** The creature of the current zone that may leave for the tower; `null` when it has none. */
   guestSource(): GuestSource | null {
     return this.sceneries.get(this.fade.current)?.guest ?? null;

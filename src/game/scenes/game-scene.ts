@@ -290,9 +290,15 @@ export class GameScene extends Phaser.Scene {
     this.time.delayedCall(DEMO.endDelayMs, () => this.leaveRun());
   }
 
-  /** A look at the run for the `?perf=1` director: the intro is over, and the sim state. */
-  perfProbe(): { introActive: boolean; state: Readonly<TowerState> } | null {
-    return this.sim ? { introActive: this.camera.introActive, state: this.sim.state } : null;
+  /** A look at the run for the `?perf=1` director: the intro is over, the sim state and whether two zones cross-fade. */
+  perfProbe(): { introActive: boolean; state: Readonly<TowerState>; zoneFading: boolean } | null {
+    return this.sim
+      ? {
+          introActive: this.camera.introActive,
+          state: this.sim.state,
+          zoneFading: this.background.fading,
+        }
+      : null;
   }
 
   /** The master effects that acted, for the captions of the HUD. */
