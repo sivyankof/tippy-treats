@@ -16,7 +16,7 @@ describe('planetOfLap', () => {
   /** Three planets (the ringed ones) fit only from lap 4, like the wide planets of Space. */
   const WIDE: SpacePlanetId[] = ['donut_ring', 'mint_candy', 'truffle_hole'];
   const wideLater: PlanetFits = (id, lap) => lap >= 4 || !WIDE.includes(id);
-  const lapsOf = (seed: number, fits: PlanetFits, count: number): (SpacePlanetId | null)[] =>
+  const lapsOf = (seed: number, fits: PlanetFits, count: number): SpacePlanetId[] =>
     Array.from({ length: count }, (_, i) => planetOfLap(seed, i + 1, fits));
 
   it('a kept walk gives the same picks as a replay, in any order of asking', () => {
@@ -44,22 +44,24 @@ describe('planetOfLap', () => {
     }
   });
 
-  it('gives every lap a planet when any fits, and none when nothing does', () => {
+  it('gives every lap a planet, even when nothing fits it', () => {
     for (let seed = 0; seed < 200; seed++) {
       for (const id of lapsOf(seed, wideLater, 40)) expect(id).not.toBeNull();
     }
-    expect(planetOfLap(4, 3, () => false)).toBeNull();
-    // Only lap 1 has no room: it is empty, the rest are not.
+    // Nothing fits anywhere: the laps still walk the seeded order, all nine before a repeat.
+    const none = lapsOf(4, () => false, 9);
+    expect(new Set(none).size).toBe(SPACE_PLANET_IDS.length);
+    expect(none).toEqual(lapsOf(4, everywhere, 9));
+    // Only lap 1 has no room: it still has a planet.
     const lateOnly: PlanetFits = (_id, lap) => lap > 1;
-    expect(planetOfLap(4, 1, lateOnly)).toBeNull();
-    expect(planetOfLap(4, 2, lateOnly)).not.toBeNull();
+    expect(planetOfLap(4, 1, lateOnly)).not.toBeNull();
   });
 
   it('defers a planet that does not fit and shows it on a later lap, no repeats until all nine are shown', () => {
     for (let seed = 0; seed < 200; seed++) {
       const ids = lapsOf(seed, wideLater, 30);
       // Walk the laps: a block is closed when all nine were shown; inside it no planet comes twice.
-      let shown = new Set<SpacePlanetId | null>();
+      let shown = new Set<SpacePlanetId>();
       for (const id of ids) {
         expect(shown.has(id), `seed ${seed}`).toBe(false);
         shown.add(id);
@@ -71,9 +73,12 @@ describe('planetOfLap', () => {
     }
   });
 
-  it('takes a planet that was shown when only shown ones fit, instead of an empty lap', () => {
+  it('takes the first planet not shown yet when only shown ones fit, never a repeat inside a block', () => {
     const only: PlanetFits = (id, lap) => (lap < 3 ? true : id === 'cookie');
-    for (let seed = 0; seed < 50; seed++) expect(planetOfLap(seed, 6, only)).toBe('cookie');
+    for (let seed = 0; seed < 50; seed++) {
+      const ids = lapsOf(seed, only, 9);
+      expect(new Set(ids).size).toBe(SPACE_PLANET_IDS.length);
+    }
   });
 
   it('is a pure function of the seed, the lap and the fit, and differs between seeds', () => {

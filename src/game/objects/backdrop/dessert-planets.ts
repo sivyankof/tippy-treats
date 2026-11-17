@@ -1,13 +1,15 @@
 import type * as Phaser from 'phaser';
 import {
   PLANET_COLORS,
+  PLANET_DIM,
   PLANET_LOOK,
   SPACE_PLANET_IDS,
+  planetDimKey,
   planetKey,
   type PlanetColors,
   type SpacePlanetId,
 } from '../../../data/space-planets';
-import { mixColor } from '../../../util/color';
+import { dimPixels, mixColor } from '../../../util/color';
 import { TWO_PI } from '../../../util/math';
 import {
   drawGlossMark,
@@ -445,10 +447,27 @@ export function planetSize(id: SpacePlanetId): { width: number; height: number }
   return { width: w, height: h };
 }
 
-/** Bakes the picture of one planet (a single image, once). */
+/**
+ * Bakes the picture of one planet, once, and its muted copy (`planetDimKey`, `PLANET_DIM`), shown while the planet
+ * is behind the flight row. Two textures, two bake steps: each step costs about what the planet alone did, so a
+ * prep queue spreads them over two frames.
+ */
 export function bakePlanet(scene: Phaser.Scene, id: SpacePlanetId): void {
   const { canvas, paint } = PAINTERS[id];
-  bakeTexture(scene, planetKey(id), canvas.w, canvas.h, (g) => paint(g, muted(PLANET_COLORS[id])));
+  const colors = muted(PLANET_COLORS[id]);
+  bakeTexture(scene, planetKey(id), canvas.w, canvas.h, (g) => paint(g, colors));
+  bakeTexture(
+    scene,
+    planetDimKey(id),
+    canvas.w,
+    canvas.h,
+    (g) => paint(g, colors),
+    (context) => {
+      const image = context.getImageData(0, 0, canvas.w, canvas.h);
+      dimPixels(image.data, PLANET_DIM.saturation, PLANET_DIM.brightness);
+      context.putImageData(image, 0, 0);
+    },
+  );
 }
 
 /** Bakes all nine (the art sheet shows them). */

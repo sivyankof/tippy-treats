@@ -17,23 +17,19 @@ function blockOrder(planetSeed: number, block: number): SpacePlanetId[] {
   return order;
 }
 
-/** Whether a planet fits on a lap (the corridor of the lap leaves it a lane); decided by the caller. */
+/** Whether a planet fits a lap whole (the lane beside the corridor has room for it); decided by the caller. */
 export type PlanetFits = (id: SpacePlanetId, lap: number) => boolean;
 
 /**
- * The dessert planet of a lap of Space, or `null` when no planet fits that lap. The laps walk the seeded order of
- * a block of nine planets (`blockOrder`): each lap takes the first planet of the order that has not been shown yet
- * and fits the lap (`fits`); a planet that does not fit waits for a later, narrower lap. A block is over when all
- * nine have been shown, then the next block begins with a new order (its first pick is not the planet just shown).
- * So no planet repeats before all nine were shown, and a lap has no planet only when nothing fits it. If only
- * planets already shown fit a lap, the first of them in the order is taken (a rare repeat is better than an empty
- * lap). Lap 0 or less counts as lap 1. Pure: the result depends on the seed, the lap and `fits` alone.
+ * The dessert planet of a lap of Space. The laps walk the seeded order of a block of nine planets (`blockOrder`):
+ * each lap takes the first planet of the order that has not been shown yet and fits the lap whole (`fits`); while
+ * one fits, a planet that does not waits for a later, narrower lap. When none of the planets not yet shown fits,
+ * the first of them in the order is taken all the same (its caller places it by a fallback rule), so every lap has
+ * a planet. A block is over when all nine have been shown, then the next block begins with a new order (its first
+ * pick is not the planet just shown). So no planet repeats before all nine were shown. Lap 0 or less counts as
+ * lap 1. Pure: the result depends on the seed, the lap and `fits` alone.
  */
-export function planetOfLap(
-  planetSeed: number,
-  lap: number,
-  fits: PlanetFits,
-): SpacePlanetId | null {
+export function planetOfLap(planetSeed: number, lap: number, fits: PlanetFits): SpacePlanetId {
   return new PlanetWalk(planetSeed, fits).pick(lap);
 }
 
@@ -42,7 +38,7 @@ export function planetOfLap(
  * for the next lap costs one step, not a replay from lap 1. `fits` must stay the same for the life of a walk.
  */
 export class PlanetWalk {
-  private readonly picks: (SpacePlanetId | null)[] = [];
+  private readonly picks: SpacePlanetId[] = [];
   private block = 0;
   private order: SpacePlanetId[];
   private shown = new Set<SpacePlanetId>();
@@ -55,19 +51,19 @@ export class PlanetWalk {
     this.order = blockOrder(planetSeed, 0);
   }
 
-  pick(lap: number): SpacePlanetId | null {
+  pick(lap: number): SpacePlanetId {
     const last = Math.max(lap, 1);
     while (this.picks.length < last) this.step(this.picks.length + 1);
-    return this.picks[last - 1] ?? null;
+    return this.picks[last - 1] ?? this.order[0]!;
   }
 
   private step(at: number): void {
-    const fitting = this.order.filter((id) => this.fits(id, at));
-    const fresh = fitting.filter((id) => !this.shown.has(id));
-    const pool = fresh.length > 0 ? fresh : fitting;
-    const pick = pool.find((id) => id !== this.previous) ?? pool[0] ?? null;
+    const fresh = this.order.filter((id) => !this.shown.has(id));
+    const fitting = fresh.filter((id) => this.fits(id, at));
+    const pool = fitting.length > 0 ? fitting : fresh;
+    // A block holds nine, and `shown` is reset as the ninth is shown: `fresh` is never empty.
+    const pick = pool.find((id) => id !== this.previous) ?? pool[0] ?? this.order[0]!;
     this.picks.push(pick);
-    if (pick === null) return;
     this.previous = pick;
     this.shown.add(pick);
     if (this.shown.size === SPACE_PLANET_IDS.length) {

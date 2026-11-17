@@ -107,3 +107,26 @@ export function fromHsl({ h, s, l }: Hsl): number {
     hueChannel(p, q, h - 1 / 3) * CHANNEL_MAX,
   );
 }
+
+/** Rec. 601 weights of the red, green and blue channels in `luma`. */
+const LUMA_R = 0.299;
+const LUMA_G = 0.587;
+const LUMA_B = 0.114;
+/** Bytes per pixel of RGBA image data. */
+const RGBA = 4;
+
+/**
+ * Mutes RGBA pixels in place: each colour keeps `saturation` (0..1) of its distance from its own grey (Rec. 601
+ * luma), then is scaled by `brightness` (0..1). Alpha is left as it is.
+ */
+export function dimPixels(data: Uint8ClampedArray, saturation: number, brightness: number): void {
+  for (let i = 0; i < data.length; i += RGBA) {
+    const r = data[i] ?? 0;
+    const g = data[i + 1] ?? 0;
+    const b = data[i + 2] ?? 0;
+    const grey = LUMA_R * r + LUMA_G * g + LUMA_B * b;
+    data[i] = (grey + (r - grey) * saturation) * brightness;
+    data[i + 1] = (grey + (g - grey) * saturation) * brightness;
+    data[i + 2] = (grey + (b - grey) * saturation) * brightness;
+  }
+}

@@ -19,6 +19,9 @@ const PLANET_KEY_PREFIX = 'bd_planet_';
 
 export const planetKey = (id: SpacePlanetId): string => `${PLANET_KEY_PREFIX}${id}`;
 
+/** The muted copy of a planet picture (`PLANET_DIM`): a texture of its own, baked in a step right after the planet. */
+export const planetDimKey = (id: SpacePlanetId): string => `${planetKey(id)}_dim`;
+
 /** Colours of one planet: `base` and `shade` are the two flat tones of the body, the rest are its details. */
 export interface PlanetColors {
   base: number;
@@ -96,33 +99,27 @@ export const PLANET_LOOK = {
 } as const;
 
 /**
- * How the planet crosses the screen (docs/06, section 5). It floats down with the background: the progress of the
- * tower through its lap (not the clock) carries it from above the top of the screen to below the bottom, one planet
- * per lap, on alternating sides. It stays in a free lane: outside the dashed lap corridor (the width cap of its
- * lap, centred on the tower); where no lane has room at `minScale` it is not shown. While it would overlap the
- * stripe of the flying layer or come within the HUD gap it is faded out, and it is visible elsewhere.
+ * How the planet crosses the screen (docs/06, section 5). It is the far background: the progress of the tower
+ * through its lap (not the clock) carries it from above the top of the screen to below the bottom, one planet per
+ * lap, on alternating sides. It stands beside the tower, outside the dashed lap corridor (the width cap of its lap,
+ * centred on the screen), and stays visible the whole way: the flying layer and the HUD plates are drawn over it.
  */
 export const PLANET_PLACE = {
-  /** The planet's centre in its lane, as a share of the screen width from the screen edge on its side. */
+  /** The planet's preferred centre, as a share of the screen width from the screen edge on its side. */
   x: 0.11,
   scale: 0.6,
   /**
    * Where the planet has no room at `scale`, it is shown smaller, in steps of `scaleStep`, down to
-   * `minScale`: 40% below the first size of the planets (0.85, until 2026-11-17). Below that it is
-   * not shown (owner's ladder: hang off the edge up to half, then shrink, then hide).
+   * `minScale` (40% below the first size of the planets, 0.85).
    */
   minScale: 0.51,
   scaleStep: 0.01,
-  /** Clear space between the planet (drift included) and the stripe around the flying layer's line. */
-  rowGap: 24,
-  /** The planet fades out toward the stripe and the HUD plates over this many px (it is fully faded where it would touch them). */
-  fadeFeatherPx: 60,
-  /** Clear space between the planet and a dashed edge line, drift included. */
-  lineGap: 40,
-  /** How far the top layer may stand off the screen centre, so the corridor is widened by this on each side. */
-  swayPx: 40,
-  /** A planet may hang off the screen edge, but at least this share of its width stays in view. */
-  minVisible: 0.5,
+  /** Clear space between the planet picture and a dashed edge line. */
+  lineGap: 8,
+  /** At most this share of the planet's width may hang off the screen edge (its centre stays this far in, in widths, minus a half). */
+  edgeCut: 0.25,
+  /** A planet with no room even at `minScale` keeps out of the corridor and hangs off the edge by up to this share instead. */
+  fallbackEdgeCut: 0.5,
   /** The planet enters above the top edge; by a seeded draw it starts up to this share of the screen height higher (it comes into view later in the lap). */
   enterVary: 0.08,
   /** Full and lite levels, on top of the scroll; the minimal level has no drift. */
@@ -135,14 +132,26 @@ export const PLANET_PLACE = {
   scale: number;
   minScale: number;
   scaleStep: number;
-  rowGap: number;
-  fadeFeatherPx: number;
   lineGap: number;
-  swayPx: number;
-  minVisible: number;
+  edgeCut: number;
+  fallbackEdgeCut: number;
   enterVary: number;
   drift: Pick<HoverSpec, 'bob' | 'swing'>;
 };
+
+/**
+ * The muted look of the planet while it is behind the flight row (docs/06, section 5): a copy baked ahead with the
+ * planet (`planetDimKey`), with the saturation and the brightness scaled down, blended in over `featherPx` before
+ * the stripe.
+ */
+export const PLANET_DIM = {
+  /** Share of its colourfulness the muted copy keeps (about -35%). */
+  saturation: 0.65,
+  /** Brightness factor of the muted copy (about -35%). */
+  brightness: 0.65,
+  /** The muted copy fades in over this many px of approach to the flight stripe (fully muted where they overlap). */
+  featherPx: 80,
+} as const;
 
 /** The plate "Lap N" (docs/06, "Смена зоны"): shorter than the zone plate. */
 export const LAP_PLATE = {

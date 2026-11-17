@@ -1,10 +1,10 @@
 import { spaceWidthLimit, lapFirstIndex } from '../../../core/space-laps';
 import { PlanetWalk } from '../../../core/space-planet';
 import { LOGICAL_SIZE } from '../../../data/screen';
-import { PLANET_PLACE, type SpacePlanetId } from '../../../data/space-planets';
+import { PLANET_DIM, PLANET_PLACE, type SpacePlanetId } from '../../../data/space-planets';
 import { planetSize } from './dessert-planets';
 import { clamp01 } from '../../../util/math';
-import { flightClearBand, hudKeepOutFade } from '../../camera-layout';
+import { flightClearBand } from '../../camera-layout';
 
 /** The lane of a planet and the scale it is shown at there. */
 export interface PlanetFit {
@@ -16,56 +16,52 @@ export interface PlanetFit {
 const HALF = 0.5;
 
 /**
- * Half width of the corridor the planet keeps out of, swing of the top layer included. From lap 2
- * it is half the width cap of the lap (the dashed lines). Lap 1 has no lines: the corridor is the
- * tower top as it was when the lap was entered (`topWidth`); without it, the full layer width cap.
+ * Half width of the corridor the planet keeps out of: half the width cap of the lap, between the dashed lines,
+ * centred on the screen. Lap 1 has no lines; its cap is the full layer width.
  */
-export function corridorHalf(lap: number, topWidth?: number): number {
-  const width =
-    lap === 1 && topWidth !== undefined ? topWidth : spaceWidthLimit(lapFirstIndex(lap));
-  return width / 2 + PLANET_PLACE.swayPx;
+export function corridorHalf(lap: number): number {
+  return spaceWidthLimit(lapFirstIndex(lap)) / 2;
 }
 
 /**
- * Centre x of a planet `width` wide in its lane: on `side` (0 left, 1 right) of the lap corridor, at its preferred
- * distance from the screen edge, pushed into the lane; the planet may hang off the screen edge, but at least
- * `minVisible` of its width stays in view. `null` when the lane has no room.
+ * Centre x of a planet `width` wide in its lane: on `side` (0 left, 1 right) of the lap corridor (with `lineGap`),
+ * at its preferred distance from the screen edge, pushed into the lane; at most `edgeCut` of its width hangs off
+ * the screen edge. `null` when the lane has no room.
  */
 export function planetLaneX(
   lap: number,
   screenW: number,
   width: number,
   side: 0 | 1,
-  topWidth?: number,
+  edgeCut: number = PLANET_PLACE.edgeCut,
 ): number | null {
-  const { lineGap, minVisible } = PLANET_PLACE;
-  const hang = width * (minVisible - HALF);
-  const half = corridorHalf(lap, topWidth);
+  const { lineGap } = PLANET_PLACE;
+  const inset = width * (HALF - edgeCut);
+  const half = corridorHalf(lap);
   const centre = LOGICAL_SIZE.width / 2;
   const preferLeft = screenW * PLANET_PLACE.x;
   const lane =
     side === 0
-      ? { lo: hang, hi: centre - half - lineGap - width / 2, prefer: preferLeft }
+      ? { lo: inset, hi: centre - half - lineGap - width / 2, prefer: preferLeft }
       : {
           lo: centre + half + lineGap + width / 2,
-          hi: screenW - hang,
+          hi: screenW - inset,
           prefer: screenW - preferLeft,
         };
   return lane.lo <= lane.hi ? Math.min(Math.max(lane.prefer, lane.lo), lane.hi) : null;
 }
 
 /**
- * The lane of the planet of a lap on `side` at the largest scale from `PLANET_PLACE.scale` down to
- * `minScale` (in `scaleStep` steps) that has room; `width` x `height` is the unscaled picture and
- * `topWidth` the tower top width captured when lap 1 began (see `corridorHalf`). The corridor is centred, so the two
- * lanes are as wide and the side does not change the scale. `null` when it has no room even at `minScale`.
+ * The lane of the planet of a lap on `side` at the largest scale from `PLANET_PLACE.scale` down to `minScale`
+ * (in `scaleStep` steps) that has room by the rules of place; `width` is the unscaled picture. The corridor is
+ * centred, so the two lanes are as wide and the side does not change the scale. `null` when it has no room even at
+ * `minScale` (see `planetPlace` for where it stands then).
  */
 export function planetFit(
   lap: number,
   screenW: number,
   width: number,
   side: 0 | 1,
-  topWidth?: number,
 ): PlanetFit | null {
   const { scale, minScale, scaleStep } = PLANET_PLACE;
   // A misconfigured ladder (min above the scale, no step) tries the scale alone.
@@ -73,56 +69,44 @@ export function planetFit(
   const steps = Number.isFinite(span) && span > 0 ? Math.round(span) : 0;
   for (let i = 0; i <= steps; i++) {
     const k = scale - i * scaleStep;
-    const x = planetLaneX(lap, screenW, width * k, side, topWidth);
+    const x = planetLaneX(lap, screenW, width * k, side);
     if (x !== null) return { x, scale: k };
   }
   return null;
 }
 
-/** Walks kept per (seed, lap 1 top width): a lap change is one step of a walk, not a replay from lap 1. */
-const walks = new Map<string, PlanetWalk>();
+/**
+ * Where the planet of a lap stands, always: `planetFit`, or, when it has no room even at `minScale`, at `minScale`
+ * close against the corridor, hanging off the screen edge by up to `fallbackEdgeCut` (the corridor wins over the
+ * edge; only past that cut would it touch the corridor).
+ */
+export function planetPlace(lap: number, screenW: number, width: number, side: 0 | 1): PlanetFit {
+  const fit = planetFit(lap, screenW, width, side);
+  if (fit) return fit;
+  const scale = PLANET_PLACE.minScale;
+  const w = width * scale;
+  const x = planetLaneX(lap, screenW, w, side, PLANET_PLACE.fallbackEdgeCut);
+  if (x !== null) return { x, scale };
+  const inset = w * (HALF - PLANET_PLACE.fallbackEdgeCut);
+  return { x: side === 0 ? inset : screenW - inset, scale };
+}
+
+/** Walks kept per seed: a lap change is one step of a walk, not a replay from lap 1. */
+const walks = new Map<number, PlanetWalk>();
 const MAX_WALKS = 8;
 
-/**
- * The planet of a lap of Space on the logical screen width (the lanes of laps from 2 on depend on it alone), or
- * `null` when none fits. Only lap 1 depends on the tower top width, and that width is the one of lap 1 for EVERY lap
- * asked (the pick of lap 1 decides the picks after it): callers pass `lapOneTopWidth` (see `rememberLapOneWidth`).
- */
-export function lapPlanet(
-  planetSeed: number,
-  lap: number,
-  lapOneTopWidth?: number,
-): SpacePlanetId | null {
-  const key = `${planetSeed}|${lapOneTopWidth ?? ''}`;
-  let walk = walks.get(key);
+/** The planet of a lap of Space; it fits the lap whole when any planet not yet shown does (on the logical screen width). */
+export function lapPlanet(planetSeed: number, lap: number): SpacePlanetId {
+  let walk = walks.get(planetSeed);
   if (!walk) {
     if (walks.size >= MAX_WALKS) walks.clear();
     walk = new PlanetWalk(
       planetSeed,
-      (id, at) =>
-        planetFit(
-          at,
-          LOGICAL_SIZE.width,
-          planetSize(id).width,
-          0,
-          at === 1 ? lapOneTopWidth : undefined,
-        ) !== null,
+      (id, at) => planetFit(at, LOGICAL_SIZE.width, planetSize(id).width, 0) !== null,
     );
-    walks.set(key, walk);
+    walks.set(planetSeed, walk);
   }
   return walk.pick(lap);
-}
-
-/**
- * The tower top width of lap 1, the one source of truth for the bakes and for the planet on screen: it is taken when
- * lap 1 begins and kept (`undefined` for a start deep in Space, in both places alike).
- */
-export function rememberLapOneWidth(
-  current: number | undefined,
-  lap: number,
-  topWidth: number | undefined,
-): number | undefined {
-  return lap === 1 ? topWidth : current;
 }
 
 /**
@@ -137,19 +121,11 @@ export function planetY(progress: number, screenH: number, half: number, enter: 
 }
 
 /**
- * How visible the planet is at (`x`, `y`) with the half height `halfH` and the half size `radius`: 0 while any part
- * of it is in the stripe of the flying layer (`flightClearBand`) plus `rowGap` or within the HUD gap of a plate,
- * rising to 1 over `fadeFeatherPx` past them. The half height counts the drift.
+ * How muted the planet at height `y` with the half height `halfH` (its drift included) is: 1 while any part of it
+ * overlaps the stripe of the flying layer (`flightClearBand`), falling to 0 over `PLANET_DIM.featherPx` away from it.
  */
-export function planetFade(
-  x: number,
-  y: number,
-  halfH: number,
-  radius: number,
-  screenH: number,
-): number {
-  const { rowGap, fadeFeatherPx } = PLANET_PLACE;
+export function planetMute(y: number, halfH: number, screenH: number): number {
   const band = flightClearBand(screenH);
-  const gap = Math.max(band.top - rowGap - (y + halfH), y - halfH - (band.bottom + rowGap));
-  return Math.min(clamp01(gap / fadeFeatherPx), hudKeepOutFade(x, y, radius, fadeFeatherPx));
+  const gap = Math.max(band.top - (y + halfH), y - halfH - band.bottom);
+  return 1 - clamp01(gap / PLANET_DIM.featherPx);
 }
