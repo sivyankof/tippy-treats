@@ -119,6 +119,30 @@ export function rainDropsShown(pool: number, level: EffectLevel): number {
   return Math.min(pool, WEATHER_LOOK.particleCount[level] - WEATHER_LOOK.splash.maxShown[level]);
 }
 
+/**
+ * A pool of its own size and look (the street behind the Showcase glass): `count` pictures on the full level and
+ * the same share of them as the Roof's on the lower levels; alpha and size are scaled.
+ */
+export interface FallView {
+  count: number;
+  alpha: number;
+  scale: number;
+}
+
+/**
+ * How many pictures of a pool show on a level: the Roof's rain leaves room for its splashes, every other pool
+ * (and every pool of its own look) shows the level's share of it.
+ */
+export function fallShown(
+  pool: number,
+  level: EffectLevel,
+  rain: boolean,
+  view: FallView | null,
+): number {
+  if (rain && !view) return rainDropsShown(pool, level);
+  return Math.round((pool * WEATHER_LOOK.particleCount[level]) / WEATHER_LOOK.particleCount.full);
+}
+
 /** One round puff of the cloud bank (picture px): its row (0 back, 1 middle, 2 front), centre and radius. */
 export interface Puff {
   row: number;

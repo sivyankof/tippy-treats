@@ -21,6 +21,9 @@ import { channels, mixColor, shade } from '../../../util/color';
 import { gradientColorAt } from './sky-gradient';
 import { ZONE_SKY } from '../../../data/backdrop-colors';
 import { bakeGlassItems, showcaseGlassLife } from './window-weather';
+import { STREET_WEATHER } from '../../../data/street-weather';
+import { bakeStreetWeather } from './weather-art';
+import { StreetWeather } from './street-weather';
 
 /** The street (layer 0) the passers-by walk on, and the layer of the shop front (treats) with the garland and the cake on its stand. */
 const STREET_LAYER = 0;
@@ -84,6 +87,28 @@ const BUILDINGS = [
 ];
 const TREAT_X = [60, 150, 260, 350, 450];
 
+/** A white cap of snow on the flat roof of a house at (`x`, `y`), `w` wide: a white heap with round drips over a cold shade that outlines it. */
+function roofCap(g: Graphics, x: number, y: number, w: number): void {
+  const c = STREET_WEATHER.cap;
+  const left = x - c.overhang;
+  const width = w + 2 * c.overhang;
+  const top = y - c.height / 2;
+  const heap = (color: number, grow: number, dy: number): void => {
+    g.fillStyle(color, c.alpha);
+    g.fillRoundedRect(
+      left - grow,
+      top - grow + dy,
+      width + 2 * grow,
+      c.height + 2 * grow,
+      c.height / 2,
+    );
+    for (const u of c.drips)
+      g.fillCircle(left + u * width, top + c.height + dy, c.dripRadius + grow);
+  };
+  heap(c.shade, 1.5, c.shadeHeight / 2);
+  heap(c.snow, 0, 0);
+}
+
 /** A slanted band of light on the glass: top edge at (`x`, `y`) `width` wide, `height` tall, leaning by `lean`. */
 function glint(
   g: Graphics,
@@ -112,6 +137,8 @@ function bakeLayers(
         for (let wy = y + 16; wy < y + b.h - 24; wy += 34) {
           for (let wx = x + 14; wx < x + b.w - 22; wx += 30) g.fillRoundedRect(wx, wy, 16, 20, 4);
         }
+        // Snow lies on the roofs: baked into the street, it costs nothing in a frame.
+        if (weather === 'snow') roofCap(g, x, y, b.w);
       });
     }
   });
@@ -231,6 +258,7 @@ export const showcaseArt: ZoneArt = {
       ]);
     }
     bakeGlassItems(scene, look.weather);
+    bakeStreetWeather(scene, look.weather);
     bakeLayers(scene, STREET_LOOK[look.weather], streetKeys(look.weather), look.weather);
     bakeGarland(scene);
     bakeWindowLife(scene);
@@ -239,6 +267,7 @@ export const showcaseArt: ZoneArt = {
     const life = BACKDROP_LIFE.showcase;
     const keys = streetKeys(look.weather);
     const glass = showcaseGlassLife(scene, look.weather);
+    const street = StreetWeather.of(scene, look.weather);
     return {
       sky: ownSky(look.weather) ? skyKey(look.weather) : undefined,
       farTint: farTint(look.weather),
@@ -249,6 +278,8 @@ export const showcaseArt: ZoneArt = {
           slot: 0,
           life: new Traveler(scene, spec, onLayer(STREET_LAYER)),
         })),
+        // The weather falls on the street, in front of the houses and the passers-by, behind the glass.
+        ...(street ? [{ slot: STREET_LAYER, life: street }] : []),
         { slot: 2, life: new Hover(scene, [life.garland.wire], onLayer(SHOW_LAYER)) },
         { slot: 2, life: new Twinkles(scene, life.garland.bulbs, onLayer(SHOW_LAYER)) },
         {

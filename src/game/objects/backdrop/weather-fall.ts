@@ -7,7 +7,8 @@ import { laneCount, snowSpots, startU } from './weather-lanes';
 import {
   particleFade,
   particleKeepOut,
-  rainDropsShown,
+  fallShown,
+  type FallView,
   rainX,
   rainY,
   rainSpots,
@@ -77,11 +78,12 @@ export class WeatherFall implements WeatherPart {
     scene: Phaser.Scene,
     private readonly kind: FallKind,
     rng: Rng,
+    private readonly view: FallView | null = null,
   ) {
     this.look = WEATHER_LOOK[kind] as FallLook;
     const look = this.look;
     const frames = FRAME_SETS[look.frames[0] ?? ''] ?? [];
-    const count = Math.min(look.count, WEATHER_LOOK.particleCount.full);
+    const count = Math.min(view?.count ?? look.count, WEATHER_LOOK.particleCount.full);
     const strip = look.sideShare ?? WEATHER_LOOK.sideShare;
     const snow = kind === 'snow';
     const rain = kind === 'rain' || kind === 'storm';
@@ -114,8 +116,8 @@ export class WeatherFall implements WeatherPart {
         swayMs: draw(rng, look.swayMs, 1),
         spinMs: draw(rng, look.spinMs, 1),
         phase: rng.next() * TWO_PI,
-        scale: draw(rng, look.scale, 1),
-        alpha: draw(rng, look.alpha, 1),
+        scale: draw(rng, look.scale, 1) * (view?.scale ?? 1),
+        alpha: draw(rng, look.alpha, 1) * (view?.alpha ?? 1),
       });
       const index = snow ? this.flakeSize(rng) : i % Math.max(frames.length, 1);
       this.objects.push(
@@ -134,14 +136,7 @@ export class WeatherFall implements WeatherPart {
   update(frame: WeatherFrame): void {
     const rain = this.kind === 'rain' || this.kind === 'storm';
     const shown =
-      frame.share > 0
-        ? rain
-          ? rainDropsShown(this.objects.length, frame.level)
-          : Math.round(
-              (this.objects.length * WEATHER_LOOK.particleCount[frame.level]) /
-                WEATHER_LOOK.particleCount.full,
-            )
-        : 0;
+      frame.share > 0 ? fallShown(this.objects.length, frame.level, rain, this.view) : 0;
     const t = frame.timeMs;
     const seconds = t / MS_PER_SECOND;
     const { width, height, band } = frame;

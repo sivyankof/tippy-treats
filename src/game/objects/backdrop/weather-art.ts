@@ -634,6 +634,18 @@ export function bakeWeatherSky(
   }
 }
 
+/**
+ * Bakes what the street behind the Showcase glass shows in this weather: the falling pictures and, in rain and
+ * storm, the Roof's cloud bank (and in a storm its lit twins, no bolt). The same keys as the Roof's, baked once.
+ */
+export function bakeStreetWeather(scene: Phaser.Scene, weather: WeatherId): void {
+  bakeWeatherArt(scene, weather);
+  if (weather !== 'rain' && weather !== 'storm') return;
+  bakeBank(scene, bankKey(weather), weather);
+  if (weather === 'storm')
+    STRIKE_SIDES.forEach((_, side) => bakeBankFlash(scene, bankFlashKey(side), side));
+}
+
 /** Every weather sky picture for the art sheet (the two zones share them). */
 export function bakeAllWeatherSky(scene: Phaser.Scene): void {
   bakeWeatherSky(scene, 'roof', 'all');
