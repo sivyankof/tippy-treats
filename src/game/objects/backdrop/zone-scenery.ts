@@ -62,7 +62,7 @@ export interface ZoneArt {
   /** True when, in this weather, the art bakes and names its own sky (`SceneryDef.sky`), so the zone's plain sky is not baked. */
   ownSky?(weather: WeatherId): boolean;
   /** Bakes what only one lap of the zone shows (the planet of a lap of Space); `lap` is 1-based. */
-  bakeLap?(scene: Phaser.Scene, lap: number, planetSeed: number): void;
+  bakeLap?(scene: Phaser.Scene, lap: number, planetSeed: number, topWidth?: number): void;
   /** Only Space reads `look.lap` and `look.topWidth`; a zone ignores what it does not show. */
   build(scene: Phaser.Scene, look: SceneryLook): SceneryDef;
 }

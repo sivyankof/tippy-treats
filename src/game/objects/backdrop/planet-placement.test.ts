@@ -4,7 +4,14 @@ import { PLANET_LOOK, PLANET_PLACE, SPACE_PLANET_IDS } from '../../../data/space
 import { lapFirstIndex, lapProgress, spaceWidthLimit } from '../../../core/space-laps';
 import { flightClearBand, hudFloor } from '../../camera-layout';
 import { planetSize } from './dessert-planets';
-import { corridorHalf, planetFade, planetFit, planetLaneX, planetY } from './planet-placement';
+import {
+  corridorHalf,
+  lapPlanet,
+  planetFade,
+  planetFit,
+  planetLaneX,
+  planetY,
+} from './planet-placement';
 
 const W = LOGICAL_SIZE.width;
 const SCREENS = [2337, 1919]; // 390x844 and 390x693 at the logical width
@@ -151,5 +158,21 @@ describe('planetFade', () => {
         expect(planetFade(x, 60, half, half, h)).toBe(0);
       }
     }
+  });
+});
+
+describe('lapPlanet', () => {
+  it('shows a planet on every lap from 2 on, for any seed, and all nine before one repeats', () => {
+    for (let seed = 0; seed < 100; seed++) {
+      const ids = Array.from({ length: 40 }, (_, i) => lapPlanet(seed, i + 2));
+      expect(ids.every((id) => id !== null)).toBe(true);
+      // The first nine laps of a block hold nine different planets, the narrow laps taking the ones that fit.
+      expect(new Set(ids.slice(0, 7)).size).toBe(7);
+    }
+  });
+
+  it('leaves lap 1 empty when nothing fits the full corridor, and fills it for a narrow top', () => {
+    expect(lapPlanet(3, 1)).toBeNull();
+    expect(lapPlanet(3, 1, 300)).not.toBeNull();
   });
 });

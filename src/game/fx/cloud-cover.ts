@@ -5,6 +5,7 @@ import { LOGICAL_SIZE } from '../../data/screen';
 import { clamp01, lerp, oscillate01, sineWave, smoothstep } from '../../util/math';
 import { effectsMode } from '../effects-mode';
 import { scatter } from '../objects/creature-art/primitives';
+import { bakeCloudFigure, bakeNebulaFigure } from './cloud-figure';
 import { FLYING_FX_DEPTH } from './flying-fx-depth';
 import { createFxTextures, FX_TEXTURES } from './fx-textures';
 import { createTreasureTextures, TREASURE_TEXTURES } from './treasure-textures';
@@ -12,6 +13,7 @@ import { createTreasureTextures, TREASURE_TEXTURES } from './treasure-textures';
 const cfg = RULE_ANIM.cloud;
 const nebula = cfg.nebula;
 const stars = nebula.stars;
+const curls = nebula.curls;
 /** Stars a bank keeps ready: the most any level shows. */
 const STAR_SLOTS = stars.spots.length;
 const LOGICAL_CENTER_X = LOGICAL_SIZE.width / 2;
@@ -108,6 +110,14 @@ export function puffsBillow(look: CloudLook, level: EffectLevel): boolean {
   return look === 'cloud' || level !== 'minimal';
 }
 
+/**
+ * How clear a curl of the nebula is drawn over a figure shown at `figureAlpha`: it follows the figure up to
+ * its density cap and stays near white there (`curls.alpha`), so it fades in and out with the figure.
+ */
+export function curlAlpha(figureAlpha: number): number {
+  return clamp01(figureAlpha / nebula.maxDensity) * curls.alpha;
+}
+
 /** Where a star is in its pulse, 0..1; each star has its own phase. */
 export function starPulse(timeMs: number, slot: number): number {
   return oscillate01(timeMs, stars.periodMs, slot * stars.phaseStep);
@@ -119,6 +129,11 @@ export function starLook(pulse: number): { scale: number; alpha: number } {
     scale: 1 + stars.pulse * (pulse - 0.5) * 2,
     alpha: lerp(stars.alpha[0], stars.alpha[1], pulse),
   };
+}
+
+/** The texture of the figure of a look. */
+function figureKey(look: CloudLook): string {
+  return look === 'nebula' ? TREASURE_TEXTURES.nebula : TREASURE_TEXTURES.cloud;
 }
 
 /** What the bank looks like this frame: offset along its drift, rise, opacity and size. */
@@ -296,6 +311,8 @@ class CloudBank {
   private readonly figure: Phaser.GameObjects.Image;
   /** Twinkling stars of the nebula, made up front and only shown, moved and tinted afterwards. */
   private readonly stars: Phaser.GameObjects.Image[] = [];
+  /** White curls of the nebula, made up front: drawn on their own they read white over the see-through figure. */
+  private readonly curls: Phaser.GameObjects.Image[] = [];
   readonly motion = new CloudMotion();
   look: CloudLook = 'cloud';
 
@@ -314,6 +331,15 @@ class CloudBank {
           .setVisible(false),
       );
     }
+    for (const spot of curls.spots) {
+      this.curls.push(
+        scene.add
+          .image(0, 0, TREASURE_TEXTURES.nebulaCurl)
+          .setDepth(FLYING_FX_DEPTH.cloudCurls)
+          .setFlipX(spot.flip)
+          .setVisible(false),
+      );
+    }
   }
 
   /** The cap on how dense this bank is drawn, 0..1. */
@@ -323,11 +349,10 @@ class CloudBank {
 
   update(dtMs: number, timeMs: number, input: Readonly<CloudInput>): void {
     const look = pickLook(this.motion.phase, this.look, input.nebula ? 'nebula' : 'cloud');
-    if (look !== this.look) {
+    // The key is checked too: a figure baked again at run load (another screen height) is picked up.
+    if (look !== this.look || this.figure.texture.key !== figureKey(look)) {
       this.look = look;
-      this.figure.setTexture(
-        look === 'nebula' ? TREASURE_TEXTURES.nebula : TREASURE_TEXTURES.cloud,
-      );
+      this.figure.setTexture(figureKey(look));
     }
     const pose = this.motion.update(dtMs, input);
     const shown = this.motion.visible;
@@ -353,6 +378,26 @@ class CloudBank {
       pose.alpha,
       ghostShare(input.ghost, this.look === 'nebula'),
     );
+    this.updateCurls(shown && this.look === 'nebula', { x, y, scale }, this.figure.alpha);
+  }
+
+  /** The curls of the nebula sit on the figure and ride on it, as clear as the figure is shown. */
+  private updateCurls(
+    shown: boolean,
+    at: { x: number; y: number; scale: number },
+    figureAlpha: number,
+  ): void {
+    for (let i = 0; i < this.curls.length; i++) {
+      const curl = this.curls[i];
+      const spot = curls.spots[i];
+      if (!curl || !spot) continue;
+      curl.setVisible(shown);
+      if (!shown) continue;
+      curl
+        .setPosition(at.x + spot.x * cfg.figure.width * at.scale, at.y + spot.y * at.scale)
+        .setScale(at.scale * spot.scale)
+        .setAlpha(curlAlpha(figureAlpha));
+    }
   }
 
   /** The stars of the nebula sit on the figure and ride on it; each twinkles on its own phase. */
@@ -422,6 +467,9 @@ export class CloudCover {
   private readonly coming: CloudInput = { ...this.passive };
 
   constructor(scene: Phaser.Scene) {
+    // At run load the figures are baked again if the screen height asks for another top line.
+    bakeCloudFigure(scene, TREASURE_TEXTURES.cloud, true);
+    bakeNebulaFigure(scene, TREASURE_TEXTURES.nebula, true);
     createTreasureTextures(scene);
     createFxTextures(scene);
     this.banks = [new CloudBank(scene), new CloudBank(scene)];

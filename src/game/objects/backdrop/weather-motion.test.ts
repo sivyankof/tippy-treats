@@ -16,8 +16,6 @@ import {
   rainDropsShown,
   particleFade,
   particleKeepOut,
-  rainDrift,
-  rainStartX,
   rainX,
   rainY,
   rainSpots,
@@ -26,23 +24,28 @@ import {
 
 describe('weather motion', () => {
   it('leans a raindrop by its height, not by the time', () => {
-    expect(rainX(500, 0.2, 500, 500)).toBe(500);
-    expect(rainX(500, 0.2, 1000, 500)).toBeCloseTo(600);
-    expect(rainX(500, 0.2, 0, 500)).toBeCloseTo(400);
+    expect(rainX(0.5, 0.2, 500, 500, 1000, 60)).toBe(500);
+    expect(rainX(0.5, 0.2, 1000, 500, 1000, 60)).toBeCloseTo(600);
+    expect(rainX(0.5, 0.2, 100, 500, 1000, 60)).toBeCloseTo(420);
+    // Leaning off one edge comes in at the other, beyond the screen.
+    expect(rainX(1, 0.25, 900, 500, 1000, 60)).toBeCloseTo(40);
   });
 
-  it('starts raindrops beside the tower, widened by the drift, and the rest anywhere', () => {
+  it('spreads raindrops over the whole width at every height, in no columns', () => {
     const width = 1080;
-    const outer = 180;
-    const drift = 150;
-    const xs = Array.from({ length: 100 }, (_, i) =>
-      rainStartX((i + 0.5) / 100, width, outer, drift, 0.7),
-    );
-    expect(Math.min(...xs)).toBeGreaterThanOrEqual(-drift);
-    expect(Math.max(...xs)).toBeLessThanOrEqual(width + drift);
-    expect(xs.filter((x) => x < outer || x > width - outer)).toHaveLength(70);
-    expect(xs.some((x) => x < 0)).toBe(true);
-    expect(xs.some((x) => x > width)).toBe(true);
+    const margin = 30;
+    for (const y of [0, 700, 2000]) {
+      const xs = Array.from({ length: 120 }, (_, i) =>
+        rainX((i + 0.5) / 120, 0.25, y, 600, width, margin),
+      );
+      expect(Math.min(...xs)).toBeGreaterThanOrEqual(-margin);
+      expect(Math.max(...xs)).toBeLessThan(width + margin);
+      // Every tenth of the width holds some drops (no empty middle).
+      for (let k = 0; k < 10; k++) {
+        const n = xs.filter((x) => x >= (k * width) / 10 && x < ((k + 1) * width) / 10).length;
+        expect(n, `tenth ${k} at ${y}`).toBeGreaterThanOrEqual(6);
+      }
+    }
   });
 
   it('spreads raindrop spots evenly across and down the screen', () => {
@@ -72,11 +75,11 @@ describe('weather motion', () => {
     const { width } = LOGICAL_SIZE;
     const towerLeft = (width - BALANCE.tray.width) / 2;
     const towerRight = width - towerLeft;
-    const pad = WEATHER_LOOK.endFeatherPx;
     const reach = 12;
     const halfLen = 45;
     for (const kind of ['rain', 'storm'] as const) {
       const look = WEATHER_LOOK[kind];
+      const pad = WEATHER_LOOK.endFeatherPx;
       const slant = look.slant;
       const rotation = -Math.atan(slant);
       const shown = rainDropsShown(look.count, 'full');
@@ -89,8 +92,8 @@ describe('weather motion', () => {
           Math.min(LOGICAL_SIZE.maxHeight, (LOGICAL_SIZE.width * screen) / 390),
         );
         const band = flightClearBand(height);
+        const margin = WEATHER_LOOK.rainWrapMarginPx;
         const top = hudFloor();
-        const drift = rainDrift(slant, height - top, pad);
         let lowest = Infinity;
         let sum = 0;
         let nn = 0;
@@ -103,15 +106,8 @@ describe('weather motion', () => {
           for (let t = 0; t < 60; t += 0.1) {
             let outside = 0;
             for (let i = 0; i < shown; i++) {
-              const y = rainY(vs[i] ?? 0, speed, t, top, height, pad, band);
-              const xMid = rainStartX(
-                us[i] ?? 0,
-                width,
-                towerLeft,
-                drift,
-                WEATHER_LOOK.rainSideBias,
-              );
-              const x = rainX(xMid, slant, y, (top + height) / 2);
+              const y = rainY(vs[i] ?? 0, speed, t, top, height, 0, band);
+              const x = rainX(us[i] ?? 0, slant, y, top, width, margin);
               const alpha =
                 clamp01((y - top) / pad) *
                 particleFade(y, band, WEATHER_LOOK.bandFeatherPx, height, pad) *

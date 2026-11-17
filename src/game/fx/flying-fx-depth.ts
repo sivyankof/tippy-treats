@@ -10,6 +10,8 @@ export const FLYING_FX_DEPTH = {
   sparkles: DEPTH.flyingCoat + 0.6,
   /** A cloud bank: over everything that belongs to the layer, so that it hides all of it. */
   cloud: DEPTH.flyingCoat + 4,
+  /** The white curls of the space nebula, over its figure. */
+  cloudCurls: DEPTH.flyingCoat + 4.25,
   /** The twinkling stars of the space nebula, over its puffs. */
   cloudStars: DEPTH.flyingCoat + 4.5,
 } as const;

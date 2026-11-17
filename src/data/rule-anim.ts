@@ -158,6 +158,12 @@ export const RULE_ANIM = {
       outline: 7,
       /** Margin the layer height, bob and shake leave inside the body, display px, on each side. */
       layerMargin: 24,
+      /**
+       * The drawn body starts this far below `body.top`, baked px, so that the top line can stay bumpy
+       * when a short screen squashes it flat: the valleys between the bumps then dip this far into the
+       * body. At most the spare of the body over the cover row (70 - (60 + 7 + 24) / 1.4 = 5 px).
+       */
+      topDip: 5,
     },
     /** The whole figure bobs, sways and breathes: it billows (not on the minimal level for the nebula). */
     bobPx: 7,
@@ -194,20 +200,20 @@ export const RULE_ANIM = {
      * lower density cap, with twinkling stars over it.
      */
     nebula: {
-      /** Flat fills: the pink body, a lighter pink top, the lilac-blue smears (low contrast, no outline), white curls; the rim is a deeper tone of the pink. */
+      /**
+       * Flat fills: the pink body, a lighter pink top, the pale lilac-blue smears (no outline, lighter than
+       * the light pink: never a dark patch over the layer); the rim is a deeper tone of the pink.
+       */
       colors: {
         pink: 0xff9bd2,
         pinkLight: 0xffc4e4,
-        smear: 0xd2c8ff,
-        curl: 0xffffff,
+        smear: 0xf6e2ff,
       },
-      /** The most the figure may reach above the body top, baked px (the nebula stays below the HUD plates on a short screen). */
-      maxRiseAboveBody: 46,
-      /** Soft smears on the body, baked px: centre and size of the first ellipse (a second one overlaps it). */
+      /** Soft round smears on the body, baked px: one flat ellipse each (centre and size). */
       smears: [
-        { x: 300, y: 170, w: 100, h: 62 },
-        { x: 580, y: 150, w: 110, h: 66 },
-        { x: 720, y: 205, w: 90, h: 56 },
+        { x: 300, y: 150, w: 92, h: 58 },
+        { x: 560, y: 140, w: 104, h: 62 },
+        { x: 770, y: 150, w: 80, h: 52 },
       ],
       /**
        * The underside: an almost flat edge, a close row of circles of radius `r` from `from` to `to` every `step`
@@ -215,22 +221,42 @@ export const RULE_ANIM = {
        */
       underside: { from: 120, to: 900, step: 36, r: 40, sag: [3, 8, 4, 9, 5, 8, 3, 7] },
       /**
-       * Short soft wisps under the edge, baked px: `x` is the middle, `len` how far the tip goes below the body bottom,
-       * `r` the radius where it leaves the body. The root has the warm outline; the tail is a close chain of shrinking pink
-       * circles of `tailAlpha` (one per entry, from the root down; they overlap, so it reads as one soft smear) with no outline: it melts into transparency.
+       * Short soft wisps under the edge, baked px. Each is a small outlined root bump (radius `r`, `rootLift`
+       * of it above the body bottom) and a few flat pink lobes without an outline that drift off below it:
+       * lobe `i` is `drift` px aside and `len` px down per step, `shrink` smaller each step, `squash` as tall
+       * as wide, and fainter (`lobeAlpha`, one per lobe from the root down). Few big lobes that barely
+       * overlap: a soft melting puff, not a stepped column.
        */
       wisps: {
         spots: [
-          { x: 250, len: 34, r: 15 },
-          { x: 440, len: 58, r: 18 },
-          { x: 620, len: 40, r: 16 },
-          { x: 790, len: 52, r: 17 },
+          { x: 250, r: 15, lobes: 2, len: 11, drift: -9 },
+          { x: 445, r: 18, lobes: 3, len: 11, drift: 8 },
+          { x: 625, r: 14, lobes: 2, len: 9, drift: 10 },
+          { x: 790, r: 17, lobes: 3, len: 10, drift: -7 },
         ],
-        tailAlpha: [0.3, 0.3, 0.28, 0.26, 0.24, 0.22, 0.2, 0.18, 0.15, 0.12, 0.1, 0.07, 0.05, 0.03],
-        /** Radius of the last tail circle as a share of the root radius. */
-        tipShare: 0.6,
-        /** The root circle sits this share of its radius above the body bottom (only its lower rim shows under the edge). */
+        lobeAlpha: [0.6, 0.38, 0.2],
+        shrink: 0.22,
+        squash: 0.72,
         rootLift: 0.5,
+      },
+      /**
+       * The white curls ride over the figure as small pictures of their own (`tr_nebula_curl`, on the
+       * shared atlas), drawn near full white: baked into the see-through figure they came out grey. Spots from
+       * the figure centre: x as a share of the figure width, y in baked px (inside the body); `scale` of the
+       * picture, `flip` mirrors it.
+       */
+      curls: {
+        /** The picture: a spiral of `turns` turns opening up to `r` baked px, stroke `width`. */
+        r: 34,
+        turns: 1.4,
+        width: 9,
+        spots: [
+          { x: -0.08, y: -10, scale: 1, flip: false },
+          { x: 0.1, y: 0, scale: 1.15, flip: true },
+          { x: 0.27, y: -6, scale: 0.75, flip: false },
+        ],
+        /** Opacity of a curl over the shown figure (its pose alpha times this). */
+        alpha: 0.85,
       },
       /**
        * The densest the figure is drawn while the nebula covers the layer: one picture, so the

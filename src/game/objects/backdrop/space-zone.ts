@@ -11,7 +11,7 @@ import { SpaceVisitor } from './space-visitor';
 import { bakeSpaceVisitors } from './space-visitor-art';
 import { bakePlanet } from './dessert-planets';
 import { PlanetLife } from './planet-life';
-import { planetOfLap } from '../../../core/space-planet';
+import { lapPlanet } from './planet-placement';
 import type { ZoneArt } from './zone-scenery';
 
 const TILE = 512;
@@ -108,10 +108,12 @@ export const spaceArt: ZoneArt = {
     bakeTravelers(scene);
     bakeSpaceVisitors(scene);
   },
-  bakeLap(scene, lap, planetSeed) {
-    bakePlanet(scene, planetOfLap(planetSeed, lap));
+  bakeLap(scene, lap, planetSeed, topWidth) {
+    const id = lapPlanet(planetSeed, lap, topWidth);
+    if (id) bakePlanet(scene, id);
     // The planet of the lap before may still be leaving at the bottom (a start inside the lap bakes only the lap's own).
-    if (lap > 1) bakePlanet(scene, planetOfLap(planetSeed, lap - 1));
+    const before = lap > 1 ? lapPlanet(planetSeed, lap - 1, topWidth) : null;
+    if (before) bakePlanet(scene, before);
   },
   build(scene, { lap, topWidth, planetSeed }) {
     const life = BACKDROP_LIFE.space;

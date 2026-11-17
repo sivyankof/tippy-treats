@@ -220,13 +220,9 @@ export const WEATHER_LOOK = {
   endFeatherPx: 60,
   /** Share of the particles (unless a kind says otherwise) that start in the side strips (the tower hides the middle), and the strip width as share of the screen. */
   sideBias: 0.8,
-  /**
-   * Share of the raindrops that start in the side areas the widest tower leaves (widened by the drift beyond the
-   * screen edge); the rest start anywhere. 1: the slant carries them into the middle anyway, and a drop behind the
-   * tower is lost (the checked floor of drops seen beside the tower holds only with all of them there).
-   */
-  rainSideBias: 1,
   sideShare: 0.3,
+  /** A raindrop that leans off one screen edge comes in at the other this many px beyond it (more than half its slanted picture, so the jump is not seen). */
+  rainWrapMarginPx: 24,
 
   /** Motion and look of each kind of falling thing (px, px/s, ms). */
   rain: {
@@ -241,7 +237,7 @@ export const WEATHER_LOOK = {
   storm: {
     frames: ['drop'],
     speed: [1900, 2400],
-    slant: 0.22,
+    slant: 0.25,
     alpha: [0.85, 0.95],
     scale: [0.95, 1.15],
     count: 37,

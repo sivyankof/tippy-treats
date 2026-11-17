@@ -9,16 +9,16 @@ export function wrapRange(value: number, size: number, pad: number): number {
   return ((((value + pad) % span) + span) % span) - pad;
 }
 
-/** The golden ratio's fractional part: stepping by it spreads points over 0..1 with no part left empty. */
-const GOLDEN_STEP = 0.6180339887498949;
+/** The sideways step of the lattice of drop starts: stepping by it spreads points over 0..1 with no part left empty (picked, among steps near the golden ratio's, for the steadiest count of drops beside a wide tower, see the test). */
+const SIDE_STEP = 0.378;
 /** The step that orders the drops down the screen: another irrational, so that it does not follow the sideways one. */
 const DEPTH_STEP = 0.5698402909980532;
 
 /**
  * Start spots (`u` across, `v` down, both 0..1) of `count` raindrops. All the heights are the cells of an even
- * grid, but dealt out in the order of a golden-like sequence, so for ANY first N drops (a lighter effects level
+ * grid, but dealt out in the order of a low-discrepancy sequence, so for ANY first N drops (a lighter effects level
  * shows only a prefix) they cover the height evenly, and all of them fill it with no gap. Across, the drops step
- * by the golden ratio from a random offset (the order of the heights is the same for every run). Each spot moves a little (`jitterShare` of a cell) so no lattice shows.
+ * by `SIDE_STEP` from a random offset (the order of the heights is the same for every run). Each spot moves a little (`jitterShare` of a cell) so no lattice shows.
  */
 export function rainSpots(
   count: number,
@@ -29,7 +29,7 @@ export function rainSpots(
   const wrap01 = (x: number): number => x - Math.floor(x);
   // The lattice: cell c has its own height and its own place across (jitter drawn in the cell order).
   const lattice = Array.from({ length: count }, (_, c) => ({
-    u: wrap01(offset + c * GOLDEN_STEP + ((next() - 0.5) * jitterShare) / count),
+    u: wrap01(offset + c * SIDE_STEP + ((next() - 0.5) * jitterShare) / count),
     v: wrap01((c + 0.5 + (next() - 0.5) * jitterShare) / count),
   }));
   // Drop k takes the cell whose rank among the cells is the rank of k in the depth sequence: any prefix of drops
@@ -40,14 +40,6 @@ export function rainSpots(
   const spots = new Array<{ u: number; v: number }>(count);
   byDepth.forEach((k, rank) => (spots[k] = lattice[rank]!));
   return spots;
-}
-
-/**
- * How far (px) a drop drifts to either side of its middle over a pass of `span` px of height plus `padPx` at both
- * ends: a drop may start beyond a side edge, so that the upwind edge is not empty at any height.
- */
-export function rainDrift(slant: number, span: number, padPx = 0): number {
-  return slant * (span / 2 + padPx);
 }
 
 /**
@@ -74,29 +66,21 @@ export function rainY(
 }
 
 /**
- * Where a raindrop is at mid height (px), from its start `u` (0..1, evenly spread over the drops): most drops
- * (`bias`) start beside the tower, in the two free side areas of `outerPx` that the drift widens beyond the
- * screen edge (`driftPx`), the rest anywhere across the middle, so a narrow tower hides few of them.
+ * x of a raindrop at height `y`. It starts at `u` (0..1, evenly spread over the drops) across the ring of the screen
+ * width plus `marginPx` beyond both edges, and leans by `slant` px per px of fall from the height `top`. The ring
+ * wraps: a drop that leans out of one edge comes in at the other one beyond the screen (the margin hides the jump),
+ * so the drops are spread evenly over the whole width at every height (no lanes, no columns) and none of the fall is
+ * spent off screen. The lean depends on the height, not on the time.
  */
-export function rainStartX(
+export function rainX(
   u: number,
+  slant: number,
+  y: number,
+  top: number,
   width: number,
-  outerPx: number,
-  driftPx: number,
-  bias: number,
+  marginPx: number,
 ): number {
-  const side = bias / 2;
-  const spanSide = outerPx + driftPx;
-  const pick = (from: number, span: number, share: number, at: number): number =>
-    from + span * clamp01((u - at) / share);
-  if (u < side) return pick(-driftPx, spanSide, side, 0);
-  if (u < bias) return pick(width - outerPx, spanSide, side, side);
-  return pick(outerPx, width - 2 * outerPx, 1 - bias, bias);
-}
-
-/** x of a raindrop at height `y`: its x `xMid` at the middle `midY` of its fall, leaning by `rainSlope` px per px of fall. The lean depends on the height, not on the time. */
-export function rainX(xMid: number, slant: number, y: number, midY: number): number {
-  return xMid + slant * (y - midY);
+  return wrapRange(u * (width + 2 * marginPx) - marginPx + slant * (y - top), width, marginPx);
 }
 
 /**
