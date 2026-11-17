@@ -331,6 +331,8 @@ export const WEATHER_LOOK = {
       [0, 500, 12, 48],
       [0, 585, 8, 44],
       [0, 665, 20, 50],
+      // Closes the right end of the top strip with a round, outlined puff (no cut edge).
+      [0, 712, 30, 42],
       [0, 745, 121, 50],
       [0, 830, 145, 52],
       [0, 925, 143, 54],
