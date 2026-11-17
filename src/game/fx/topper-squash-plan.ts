@@ -200,3 +200,8 @@ export function burstStates(
 export function burstCount(burst: SquashBurst, rng: Rng): number {
   return rng.int(burst.count[0], burst.count[1]);
 }
+
+/** Sim x of a point at world x `worldX` on a layer that sits at sim x `layer.x` and is drawn at world x `viewX` (the tower sways). */
+export function simX(layer: { x: number }, worldX: number, viewX: number): number {
+  return layer.x + (worldX - viewX);
+}

@@ -152,6 +152,8 @@ export const TOPPER_SQUASH = {
     /** The flying layer must be within this many px (centre to centre, horizontally) beyond its half width of the topper to count as over it. */
     reachPx: 6,
   },
+  /** The squashed topper sinks this many times faster than the squash itself, so it lies down before the squash ends. */
+  sinkRamp: 1.2,
   /** A topper this much of its half body inside the edge of the new layer counts as fully under it. */
   hitMarginPx: 2,
   /** How the upper layer gives where it sits on a squashed topper: a light cousin of the fly splat. */

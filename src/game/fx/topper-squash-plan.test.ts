@@ -13,6 +13,7 @@ import {
   edgeLaunch,
   launchX,
   rollSpots,
+  simX,
   squashLevelPlan,
   stainSpot,
 } from './topper-squash-plan';
@@ -209,5 +210,19 @@ describe('launchX', () => {
     expect(launchX(700, 500, 300, 40) - 500).toBeCloseTo(150 - launch.edgeInsetPx);
     // A topper already between the two stays where it is.
     expect(launchX(600, 500, 300, 40)).toBeCloseTo(600);
+  });
+});
+
+describe('simX', () => {
+  it('takes the sway out of a world x: the layer sits at sim 300 but is drawn at world 340', () => {
+    expect(simX({ x: 300 }, 340, 340)).toBe(300);
+    expect(simX({ x: 300 }, 360, 340)).toBe(320);
+  });
+
+  it('makes the crouch agree with the landing outcome while the tower sways', () => {
+    const half = 20;
+    // Topper 20 px right of the layer centre; a flying layer centred on the layer covers 100 px each side.
+    const swayed = simX({ x: 300 }, 340 + 20, 340);
+    expect(classifySquash(swayed, half, 300, 200)).toBe(classifySquash(320, half, 300, 200));
   });
 });

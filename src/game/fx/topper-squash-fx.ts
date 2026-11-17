@@ -177,15 +177,6 @@ export class TopperSquashFx {
     }
   }
 
-  /** Stops everything that is on (a new run). */
-  clear(): void {
-    this.pending = null;
-    for (const c of this.crushed) {
-      c.active = false;
-      c.image.setVisible(false);
-    }
-  }
-
   private rngFor(layerNumber: number): Rng {
     return new Rng(plainLooks.cosmeticSeed).fork(`${TOPPER_SQUASH.stream}:${layerNumber}`);
   }
@@ -229,7 +220,7 @@ export class TopperSquashFx {
     const squash = c.ease(clamp01(c.ageMs / look.squashMs));
     const fade = clamp01((c.ageMs - look.squashMs - look.holdMs) / look.fadeMs);
     // It sinks with the squash and slides a little further while it fades.
-    const sink = c.sinkPx * clamp01(squash * 1.2) + look.sinkPx * fade;
+    const sink = c.sinkPx * clamp01(squash * TOPPER_SQUASH.sinkRamp) + look.sinkPx * fade;
     if (view) c.image.setPosition(view.x + c.offX, view.y + c.offY + sink);
     c.image
       .setScale(c.scaleX * lerp(1, look.scaleX, squash), c.scaleY * lerp(1, look.scaleY, squash))

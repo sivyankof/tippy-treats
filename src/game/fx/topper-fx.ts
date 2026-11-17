@@ -15,6 +15,7 @@ import {
   crouchScale,
   crouchStep,
   edgeLaunch,
+  simX,
   squashLevelPlan,
 } from './topper-squash-plan';
 import type { TopperWorld } from '../objects/layer-topper';
@@ -86,7 +87,6 @@ export class TopperFx {
    */
   hopOffBelow(tower: TowerView, state: Readonly<TowerState>): void {
     const index = state.layers.length - 2;
-    if (import.meta.env.DEV) console.info('[squash] land');
     this.crouch = 0;
     this.squash.cream(state);
     const view = tower.viewAt(index);
@@ -98,13 +98,12 @@ export class TopperFx {
     const outcome =
       lower && layer && squashLevelPlan(effectsMode.level).play
         ? classifySquash(
-            lower.x + (this.world.x - view.x),
+            simX(lower, this.world.x, view.x),
             topperSize(topper.kind).halfBody,
             layer.x,
             layer.width,
           )
         : 'miss';
-    if (import.meta.env.DEV) console.info(`[squash] ${topper.kind} ${outcome}`);
     if (outcome === 'hit') this.squash.hit(topper.kind, this.world, state);
     else if (outcome === 'edge') {
       const rng = new Rng(plainLooks.cosmeticSeed).fork(
@@ -227,13 +226,20 @@ export class TopperFx {
   private updateCrouch(dtMs: number, tower: TowerView, state: Readonly<TowerState>): void {
     const view = tower.topView();
     const flying = state.flying;
+    const top = state.layers[state.layers.length - 1];
+    // The topper is in world space (it sways with the tower), the flying layer in sim space.
     const over =
       flying !== null &&
+      top !== undefined &&
       squashLevelPlan(effectsMode.level).crouch &&
       view !== null &&
       view.topperWorld(this.world) !== null &&
-      classifySquash(this.world.x, topperSize(this.world.kind).halfBody, flying.x, flying.width) !==
-        'miss';
+      classifySquash(
+        simX(top, this.world.x, view.x),
+        topperSize(this.world.kind).halfBody,
+        flying.x,
+        flying.width,
+      ) !== 'miss';
     const next = crouchStep(this.crouch, over ? 1 : 0, dtMs);
     if (next === this.crouch && next === 0) return;
     this.crouch = next;
