@@ -2,10 +2,12 @@ import type * as Phaser from 'phaser';
 import type { CutSide } from '../../core/drop';
 import type { LayerPlan } from '../../core/sim-types';
 import { ANIM } from '../../data/anim';
+import { lerp, smoothstep } from '../../util/math';
 import { DEPTH } from '../depth';
 import type { Reaction } from '../objects/face-state';
 import { LayerView } from '../objects/layer-view';
 import type { PieceMotion } from './anim-curves';
+import { cutPieceAlpha, sagAmount } from './cut-timeline';
 import { TimedPool, type PoolEntry } from './timed-pool';
 
 export interface PieceSpawn extends PieceMotion {
@@ -26,6 +28,24 @@ export interface PieceSpawn extends PieceMotion {
   topper?: boolean;
   /** The piece is a layer of the tower and keeps its marks (a drop, a stain, a cream roll; off when left out). */
   marks?: boolean;
+  /** The piece stays and sags first, and fades only late in its life (the cut of a piece with character). */
+  cutPose?: CutPose;
+}
+
+/** How a cut piece holds still before it lets go, and when it starts to fade. */
+export interface CutPose {
+  holdMs: number;
+  sagPx: number;
+  tiltDeg: number;
+  /** Widening and lowering of the sag (0.03: 3%). */
+  squash: number;
+  /** Share of the life after which the piece fades. */
+  fadeFrom: number;
+  /** After the let-go the spin and the gravity grow to full over these times; gravity starts at `gravityStart` of full. */
+  spinDelayMs: number;
+  spinRampMs: number;
+  gravityStart: number;
+  gravityMs: number;
 }
 
 const PLAIN_LOOK: LayerPlan = { kind: 'plain' };
@@ -35,6 +55,9 @@ interface Piece extends PoolEntry<LayerView> {
   vy: number;
   spin: number;
   gravity: number;
+  pose: CutPose | null;
+  baseY: number;
+  baseAngle: number;
 }
 
 /**
@@ -78,19 +101,41 @@ export class FallingPieces {
       ageMs: 0,
       lifeMs: opts.lifeMs,
       gravity: opts.gravity,
+      pose: opts.cutPose ?? null,
+      baseY: opts.y,
+      baseAngle: opts.angle ?? 0,
     });
     return view;
   }
 
   update(dtMs: number): void {
-    const dt = dtMs / 1000;
     this.pool.update(dtMs, (piece, progress) => {
       const view = piece.item;
-      piece.vy += piece.gravity * dt;
+      const { pose } = piece;
+      let moveMs = dtMs;
+      if (pose) {
+        const sag = sagAmount(piece.ageMs);
+        view.setSquash(1 + pose.squash * sag, 1 - pose.squash * sag);
+        // Until the let-go the piece only sags and tilts; the motion starts from there.
+        moveMs = Math.min(dtMs, Math.max(0, piece.ageMs - pose.holdMs));
+        if (moveMs === 0) {
+          view.y = piece.baseY + pose.sagPx * sag;
+          view.angle = piece.baseAngle + pose.tiltDeg * sag * Math.sign(piece.spin);
+        }
+      }
+      const dt = moveMs / 1000;
+      const sinceLetGo = pose ? piece.ageMs - pose.holdMs : 0;
+      const gravity = pose
+        ? piece.gravity * lerp(pose.gravityStart, 1, smoothstep(sinceLetGo / pose.gravityMs))
+        : piece.gravity;
+      const spin = pose
+        ? piece.spin * smoothstep((sinceLetGo - pose.spinDelayMs) / pose.spinRampMs)
+        : piece.spin;
+      piece.vy += gravity * dt;
       view.x += piece.vx * dt;
       view.y += piece.vy * dt;
-      view.angle += piece.spin * dt;
-      view.setAlpha(1 - progress);
+      view.angle += spin * dt;
+      view.setAlpha(pose ? cutPieceAlpha(progress, pose.fadeFrom) : 1 - progress);
       view.tick(dtMs);
     });
   }
