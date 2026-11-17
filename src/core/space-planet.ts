@@ -17,22 +17,43 @@ function blockOrder(planetSeed: number, block: number): SpacePlanetId[] {
   return order;
 }
 
+/** Whether a planet fits on a lap (the corridor of the lap leaves it a lane); decided by the caller. */
+export type PlanetFits = (id: SpacePlanetId, lap: number) => boolean;
+
 /**
- * The dessert planet of a lap of Space: every block of nine laps shows all nine planets once, in an order that
- * depends on the run's planet seed (`planetSeedOf`); the first planet of a block is never the last one of the block
- * before, so a planet does not come twice in a row. Lap 0 or less counts as lap 1.
+ * The dessert planet of a lap of Space, or `null` when no planet fits that lap. The laps walk the seeded order of
+ * a block of nine planets (`blockOrder`): each lap takes the first planet of the order that has not been shown yet
+ * and fits the lap (`fits`); a planet that does not fit waits for a later, narrower lap. A block is over when all
+ * nine have been shown, then the next block begins with a new order (its first pick is not the planet just shown).
+ * So no planet repeats before all nine were shown, and a lap has no planet only when nothing fits it. If only
+ * planets already shown fit a lap, the first of them in the order is taken (a rare repeat is better than an empty
+ * lap). Lap 0 or less counts as lap 1. Pure: the result depends on the seed, the lap and `fits` alone.
  */
-export function planetOfLap(planetSeed: number, lap: number): SpacePlanetId {
-  const turn = Math.max(lap, 1) - 1;
-  const block = Math.floor(turn / SPACE_PLANET_IDS.length);
-  let order = blockOrder(planetSeed, 0);
-  for (let b = 1; b <= block; b++) {
-    const last = order[order.length - 1];
-    order = blockOrder(planetSeed, b);
-    if (order[0] === last)
-      [order[0], order[1]] = [order[1] as SpacePlanetId, order[0] as SpacePlanetId];
+export function planetOfLap(
+  planetSeed: number,
+  lap: number,
+  fits: PlanetFits,
+): SpacePlanetId | null {
+  const last = Math.max(lap, 1);
+  let block = 0;
+  let order = blockOrder(planetSeed, block);
+  let shown = new Set<SpacePlanetId>();
+  let previous: SpacePlanetId | null = null;
+  let pick: SpacePlanetId | null = null;
+  for (let at = 1; at <= last; at++) {
+    const fitting = order.filter((id) => fits(id, at));
+    const fresh = fitting.filter((id) => !shown.has(id));
+    const pool = fresh.length > 0 ? fresh : fitting;
+    pick = pool.find((id) => id !== previous) ?? pool[0] ?? null;
+    if (pick === null) continue;
+    previous = pick;
+    shown.add(pick);
+    if (shown.size === SPACE_PLANET_IDS.length) {
+      shown = new Set();
+      order = blockOrder(planetSeed, ++block);
+    }
   }
-  return order[turn % SPACE_PLANET_IDS.length] as SpacePlanetId;
+  return pick;
 }
 
 /** How the planet of a lap crosses the screen: its side (0 left, 1 right; alternates lap by lap) and a draw 0..1 for its entry height. */

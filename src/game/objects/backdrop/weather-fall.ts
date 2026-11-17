@@ -1,6 +1,5 @@
 import * as Phaser from 'phaser';
 import type { Rng } from '../../../core/rng';
-import { BALANCE } from '../../../data/balance';
 import { LOGICAL_SIZE } from '../../../data/screen';
 import { WEATHER_LOOK, WEATHER_TEX } from '../../../data/weather-look';
 import { clamp01, MS_PER_SECOND, TWO_PI } from '../../../util/math';
@@ -9,8 +8,6 @@ import {
   particleFade,
   particleKeepOut,
   rainDropsShown,
-  rainDrift,
-  rainStartX,
   rainX,
   rainY,
   rainSpots,
@@ -158,11 +155,8 @@ export class WeatherFall implements WeatherPart {
     const tilt = this.look.tiltRad ?? 0;
     const swayLag = this.look.swayLag ?? 0;
     const turnMin = this.look.turnMin ?? 1;
-    // The free side areas beside the widest tower, and how far a slanted drop drifts over its fall.
-    const outer = (width - BALANCE.tray.width) / 2;
     const top = frame.hudFloor;
-    const drift = rainDrift(slant, height - top, pad);
-    const midY = (top + height) / 2;
+    const margin = WEATHER_LOOK.rainWrapMarginPx;
     for (let i = 0; i < this.objects.length; i++) {
       const image = this.objects[i];
       const p = this.specs[i];
@@ -172,10 +166,10 @@ export class WeatherFall implements WeatherPart {
         continue;
       }
       const y = rain
-        ? rainY(p.v, p.speed, seconds, top, height, pad, band)
+        ? rainY(p.v, p.speed, seconds, top, height, 0, band)
         : wrapRange(p.v * height + p.speed * seconds, height, pad);
       const x = rain
-        ? rainX(rainStartX(p.u, width, outer, drift, WEATHER_LOOK.rainSideBias), slant, y, midY)
+        ? rainX(p.u, slant, y, top, width, margin)
         : p.u * width + p.sway * Math.sin((TWO_PI * t) / p.swayMs + p.phase);
       // The whole picture keeps out of the HUD gap: its half size, and for a raindrop its slanted length.
       const reach = (image.width * p.scale) / 2;

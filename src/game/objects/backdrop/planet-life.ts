@@ -1,15 +1,27 @@
 import * as Phaser from 'phaser';
 import type { HoverSpec } from '../../../data/backdrop-life';
-import { PLANET_PLACE, planetKey, type SpacePlanetId } from '../../../data/space-planets';
+import {
+  PLANET_PLACE,
+  planetKey,
+  SPACE_PLANET_IDS,
+  type SpacePlanetId,
+} from '../../../data/space-planets';
 import { lapProgress } from '../../../core/space-laps';
-import { planetOfLap, planetPassOf } from '../../../core/space-planet';
+import { planetPassOf } from '../../../core/space-planet';
 import { effectsMode } from '../../effects-mode';
 import type { FrameCtx, Life } from './life';
 import { inSky } from './layer-anchor';
 import { hoverPose, newPose } from './life-motion';
 import { planetSize } from './dessert-planets';
-import { planetFade, planetFit, planetY, type PlanetFit } from './planet-placement';
+import { lapPlanet, planetFade, planetFit, planetY, type PlanetFit } from './planet-placement';
 import type { LapLife } from './zone-scenery';
+
+/** What the seed gives for a lap. */
+interface LapPlanet {
+  id: SpacePlanetId;
+  key: string;
+  enter: number;
+}
 
 /**
  * The dessert planet of the lap: one picture that floats down with the background. The progress of the tower through
@@ -29,7 +41,7 @@ export class PlanetLife implements Life, LapLife {
   /** Tower top width when lap 1 began (its corridor); the other laps follow the dashed cap. */
   private lapOneTopWidth: number | undefined;
   /** What the seed gives for the lap on screen: asked once per lap, not every frame. */
-  private cached: { lap: number; id: SpacePlanetId; key: string; enter: number } | null = null;
+  private cached: { lap: number; planet: LapPlanet | null } | null = null;
 
   constructor(
     private readonly scene: Phaser.Scene,
@@ -37,7 +49,7 @@ export class PlanetLife implements Life, LapLife {
     lap: number,
     topWidth?: number,
   ) {
-    const id = planetOfLap(planetSeed, lap);
+    const id = lapPlanet(planetSeed, lap, topWidth) ?? SPACE_PLANET_IDS[0]!;
     this.image = new Phaser.GameObjects.Image(scene, 0, 0, planetKey(id)).setVisible(false);
     this.objects = [this.image];
     this.still = { texture: planetKey(id), at: { x: 0, y: 0 }, scale: 1 };
@@ -46,20 +58,22 @@ export class PlanetLife implements Life, LapLife {
   }
 
   setLap(lap: number, topWidth?: number): void {
-    if (lap === 1) this.lapOneTopWidth = topWidth;
+    if (lap === 1 && topWidth !== this.lapOneTopWidth) {
+      this.lapOneTopWidth = topWidth;
+      this.cached = null;
+    }
   }
 
-  private ofLap(lap: number): { id: SpacePlanetId; key: string; enter: number } {
+  /** The planet of the lap, or `null` when none fits the lap. */
+  private ofLap(lap: number): LapPlanet | null {
     if (this.cached?.lap !== lap) {
-      const id = planetOfLap(this.planetSeed, lap);
+      const id = lapPlanet(this.planetSeed, lap, this.lapOneTopWidth);
       this.cached = {
         lap,
-        id,
-        key: planetKey(id),
-        enter: planetPassOf(this.planetSeed, lap).enter,
+        planet: id && { id, key: planetKey(id), enter: planetPassOf(this.planetSeed, lap).enter },
       };
     }
-    return this.cached;
+    return this.cached.planet;
   }
 
   update(ctx: FrameCtx): void {
@@ -68,7 +82,12 @@ export class PlanetLife implements Life, LapLife {
       this.image.setVisible(false);
       return;
     }
-    const { id, key, enter } = this.ofLap(lap);
+    const planet = this.ofLap(lap);
+    if (!planet) {
+      this.image.setVisible(false);
+      return;
+    }
+    const { id, key, enter } = planet;
     // The planet is out of view at the ends of a lap, where its texture changes.
     if (this.scene.textures.exists(key) && this.image.texture.key !== key)
       this.image.setTexture(key);
