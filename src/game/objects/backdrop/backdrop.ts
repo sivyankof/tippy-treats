@@ -139,7 +139,7 @@ export class Backdrop {
     const space = this.sceneries.get(SPACE_ZONE_INDEX);
     if (!space || lap === 0) return;
     // Normally baked ahead (`planAhead`); a jump (a debug start) bakes here.
-    ZONE_ART.space.bakeLap?.(this.scene, lap, this.look.planetSeed);
+    ZONE_ART.space.bakeLap?.(this.scene, lap, this.look.planetSeed, topWidth);
     space.setLap(lap, topWidth);
   }
 
@@ -158,7 +158,7 @@ export class Backdrop {
     if (target.kind === 'lap') {
       this.prepQueue.add(
         collectBakeSteps(() =>
-          ZONE_ART.space.bakeLap?.(this.scene, target.lap, this.look.planetSeed),
+          ZONE_ART.space.bakeLap?.(this.scene, target.lap, this.look.planetSeed, this.lapTopWidth),
         ),
       );
       return;
@@ -363,7 +363,7 @@ export class Backdrop {
     if (!art.ownSky?.(this.look.weather)) bakeSky(this.scene, id, this.look.weather);
     const look = this.sceneryLook(Math.max(lap, 1));
     art.bake(this.scene, look);
-    art.bakeLap?.(this.scene, look.lap, look.planetSeed);
+    art.bakeLap?.(this.scene, look.lap, look.planetSeed, this.lapTopWidth);
   }
 
   private sceneryLook(lap: number): SceneryLook {

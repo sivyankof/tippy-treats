@@ -1,6 +1,8 @@
 import { spaceWidthLimit, lapFirstIndex } from '../../../core/space-laps';
+import { planetOfLap } from '../../../core/space-planet';
 import { LOGICAL_SIZE } from '../../../data/screen';
-import { PLANET_PLACE } from '../../../data/space-planets';
+import { PLANET_PLACE, type SpacePlanetId } from '../../../data/space-planets';
+import { planetSize } from './dessert-planets';
 import { clamp01 } from '../../../util/math';
 import { flightClearBand, hudKeepOutFade } from '../../camera-layout';
 
@@ -75,6 +77,29 @@ export function planetFit(
     if (x !== null) return { x, scale: k };
   }
   return null;
+}
+
+/**
+ * The planet of a lap of Space on the logical screen width (the lanes of laps from 2 on depend on it alone), or
+ * `null` when none fits. Only lap 1 depends on the tower top width (`topWidth`, see `corridorHalf`).
+ */
+export function lapPlanet(
+  planetSeed: number,
+  lap: number,
+  topWidth?: number,
+): SpacePlanetId | null {
+  return planetOfLap(
+    planetSeed,
+    lap,
+    (id, at) =>
+      planetFit(
+        at,
+        LOGICAL_SIZE.width,
+        planetSize(id).width,
+        0,
+        at === 1 ? topWidth : undefined,
+      ) !== null,
+  );
 }
 
 /**
