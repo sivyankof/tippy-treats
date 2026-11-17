@@ -92,7 +92,11 @@ export function bakeDisplay(scene: Phaser.Scene): void {
     g.scaleCanvas(D.unit, D.unit);
     const wood = tint(D.wood);
     // Case: pale back wall, the sweets, then the glass over them.
-    outlined(g, tint(C.sweets.cream), roundRect(g, CASE.x, CASE.y, CASE.w, CASE.h, 5), THIN);
+    const caseShape = roundRect(g, CASE.x, CASE.y, CASE.w, CASE.h, 5);
+    g.fillStyle(D.caseOutline, 1);
+    caseShape(THIN);
+    g.fillStyle(tint(C.sweets.cream), 1);
+    caseShape(0);
     cake(g, COLUMNS[0], SHELF_Y);
     cupcake(g, COLUMNS[1], SHELF_Y);
     donut(g, COLUMNS[0], FLOOR_Y);
