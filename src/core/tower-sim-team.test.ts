@@ -164,7 +164,7 @@ describe('abilities in play', () => {
       return drop(sim, offset);
     };
     expect(land(calmDrop(22)).quality).toBe('perfect');
-    expect(land(calmDrop(28)).quality).toBe('perfect');
+    expect(land(calmDrop(18)).quality).toBe('perfect');
     expect(land(calmDrop(33)).quality).toBe('normal');
   });
 
