@@ -18,6 +18,7 @@ const DROP_SEGMENTS = 7;
 const DROP_COLOR = 0xe6f0ff;
 const LEAF_W = 56;
 const LEAF_H = 36;
+const LEAF_SKEW = 0.78;
 const LEAF_COLORS = [0xe8832e, 0xc9402f, 0xeab72a] as const;
 const STAR_SIZES = [26, 36] as const;
 const STAR_COLOR = 0xfff4c8;
@@ -70,7 +71,7 @@ function leafHalf(lower: boolean): Pt[] {
     const t = i / steps;
     pts.push({
       x: 4 + (LEAF_W - 12) * t,
-      y: LEAF_H / 2 + sign * Math.sin(Math.PI * t) ** 0.85 * (LEAF_H / 2 - 3),
+      y: LEAF_H / 2 + sign * Math.sin(Math.PI * t ** LEAF_SKEW) ** 0.85 * (LEAF_H / 2 - 3),
     });
   }
   return pts;
@@ -154,17 +155,24 @@ function bakeMoon(scene: Phaser.Scene): void {
     MOON_SIZE,
     MOON_SIZE,
     (g) => {
-      glow(g, c, c, c, MOON_COLOR, WEATHER_LOOK.night.moon.haloAlpha);
       g.fillStyle(MOON_RIM, 1);
       g.fillCircle(c, c, r * 0.8);
       g.fillStyle(MOON_COLOR, 1);
       g.fillCircle(c - 2, c - 2, r * 0.8 - 3.5);
     },
     (ctx) => {
+      // Cut the bite first, then lay the soft halo behind what is left (so the bite stays clear of halo edges).
       ctx.globalCompositeOperation = 'destination-out';
       ctx.beginPath();
       ctx.arc(c + MOON_BITE.dx, c + MOON_BITE.dy, r * MOON_BITE.grow * 0.8, 0, Math.PI * 2);
       ctx.fill();
+      ctx.globalCompositeOperation = 'destination-over';
+      const halo = ctx.createRadialGradient(c, c, r * 0.5, c, c, c);
+      const rgb = `${(MOON_COLOR >> 16) & 255}, ${(MOON_COLOR >> 8) & 255}, ${MOON_COLOR & 255}`;
+      halo.addColorStop(0, `rgba(${rgb}, ${WEATHER_LOOK.night.moon.haloAlpha})`);
+      halo.addColorStop(1, `rgba(${rgb}, 0)`);
+      ctx.fillStyle = halo;
+      ctx.fillRect(0, 0, MOON_SIZE, MOON_SIZE);
     },
   );
 }
@@ -172,7 +180,7 @@ function bakeMoon(scene: Phaser.Scene): void {
 function drawBank(g: Graphics, color: number, grow: number, alpha: number): void {
   const b = WEATHER_LOOK.bank;
   g.fillStyle(color, alpha);
-  g.fillRect(0, -10, b.width, b.bodyBottom + grow);
+  if (grow === 0) g.fillRect(0, -10, b.width, b.bodyBottom);
   for (const [x, y, r] of b.lumps) g.fillEllipse(x, y, (r + grow) * 3.1, (r + grow) * 1.8);
 }
 

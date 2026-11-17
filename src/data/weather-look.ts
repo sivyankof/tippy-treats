@@ -247,8 +247,8 @@ export const WEATHER_LOOK = {
     driftMs: 26000,
     /** Share of the weather alpha. */
     alpha: 0.92,
-    colorRain: 0x586682,
-    colorStorm: 0x2f3650,
+    colorRain: 0x4c5875,
+    colorStorm: 0x2a3049,
     colorFlash: 0xdde6ff,
     /** Soft halo around the lumps: how much larger and how strong. */
     haloGrow: 14,
