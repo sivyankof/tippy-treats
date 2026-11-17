@@ -28,6 +28,11 @@ export function topperTextureKey(kind: TopperKind): string {
   return `topper_${kind}`;
 }
 
+/** Points per leaf side: few points make flat facets that show as steps on the outline. */
+const LEAF_STEPS = 28;
+/** Directions of the stamped outline of a leaf: eight copies of a thin leaf leave scallops. */
+const LEAF_OUTLINE_DIRECTIONS = 24;
+
 const circle: BodyShape = (cx, cy, rx, ry) => ellipsePoints(cx, cy, rx, ry, 0);
 
 /** A half disc lying on its flat side: the box is its bounding box. */
@@ -45,7 +50,7 @@ const halfDisc: BodyShape = (cx, cy, rx, ry) => {
 function leaf(from: Pt, rad: number, length: number, width: number): Pt[] {
   const dx = Math.sin(rad);
   const dy = -Math.cos(rad);
-  const steps = 10;
+  const steps = LEAF_STEPS;
   const side = (sign: number): Pt[] => {
     const out: Pt[] = [];
     for (let i = 0; i <= steps; i++) {
@@ -110,7 +115,14 @@ function drawCherry(g: Phaser.GameObjects.Graphics): void {
     c.stem,
   );
   const hub = { x: cx + 18, y: cy - r - 32 };
-  fillOutlinedPolygon(g, leaf(hub, 70 * DEG_TO_RAD, 22, 7), c.leaf, outlineColor(c.leaf), grow);
+  fillOutlinedPolygon(
+    g,
+    leaf(hub, 70 * DEG_TO_RAD, 22, 7),
+    c.leaf,
+    outlineColor(c.leaf),
+    grow,
+    LEAF_OUTLINE_DIRECTIONS,
+  );
   g.fillStyle(c.leafLight, 1);
   fillPolygon(g, leaf(hub, 70 * DEG_TO_RAD, 15, 2.4));
   drawTwoToneBody(g, circle, cx, cy, r, r, { base: c.base, shadow: c.shadow, grow, band: 0.16 });
@@ -159,7 +171,7 @@ function drawMint(g: Phaser.GameObjects.Graphics): void {
     [-4, 36, 12],
   ] as const) {
     const pts = leaf(hub, deg * DEG_TO_RAD, length, width);
-    fillOutlinedPolygon(g, pts, c.base, outlineColor(c.base), grow);
+    fillOutlinedPolygon(g, pts, c.base, outlineColor(c.base), grow, LEAF_OUTLINE_DIRECTIONS);
     // The flat shadow: the lower half of the leaf in the darker tone.
     g.fillStyle(c.shadow, 1);
     fillPolygon(
