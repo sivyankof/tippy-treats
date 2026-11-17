@@ -1,16 +1,12 @@
 import { spaceWidthLimit, lapFirstIndex } from '../../../core/space-laps';
 import { LOGICAL_SIZE } from '../../../data/screen';
 import { PLANET_PLACE } from '../../../data/space-planets';
-import { flightClearBand, hudFloor } from '../../camera-layout';
+import { clamp01 } from '../../../util/math';
+import { flightClearBand, hudKeepOutFade } from '../../camera-layout';
 
-/** Where the centre of a planet hangs, before its drift. */
-export interface PlanetSpot {
+/** The lane of a planet and the scale it is shown at there. */
+export interface PlanetFit {
   x: number;
-  y: number;
-}
-
-/** A spot and the scale the planet is shown at there. */
-export interface PlanetFit extends PlanetSpot {
   scale: number;
 }
 
@@ -29,60 +25,44 @@ export function corridorHalf(lap: number, topWidth?: number): number {
 }
 
 /**
- * Centre of the planet of a lap on a screen `screenW` x `screenH`, for a picture `width` x
- * `height` already scaled; `null` when it has no room. The planet stays below the HUD, clear of the
- * stripe around the flying layer's line (`flightClearBand`, plus `rowGap`) and clear of the dashed
- * lap corridor (the lines run from the tower top up to the top of that stripe, on both sides). It may hang off the screen edge, but at least
- * `minVisible` of its width stays in view.
+ * Centre x of a planet `width` wide in its lane: on `side` (0 left, 1 right) of the lap corridor, at its preferred
+ * distance from the screen edge, pushed into the lane; the planet may hang off the screen edge, but at least
+ * `minVisible` of its width stays in view. `null` when the lane has no room.
  */
-export function planetSpot(
+export function planetLaneX(
   lap: number,
   screenW: number,
-  screenH: number,
   width: number,
-  height: number,
+  side: 0 | 1,
   topWidth?: number,
-): PlanetSpot | null {
-  const { y: preferY, lineGap, minVisible, drift, rowGap } = PLANET_PLACE;
-  const clear = flightClearBand(screenH);
-  const bob = drift.bob.px;
+): number | null {
+  const { lineGap, minVisible } = PLANET_PLACE;
   const hang = width * (minVisible - HALF);
-  const preferLeft = screenW * PLANET_PLACE.x;
-  // Above the flight row: under the HUD, clear of the stripe around the flying layer's line; any x
-  // (the dashed lines start at the top of that stripe).
-  const high = hudFloor() + bob + height / 2;
-  const roof = clear.top - rowGap - bob - height / 2;
-  if (high <= roof) {
-    const y = Math.min(Math.max(preferY * screenH, high), roof);
-    return { x: Math.min(Math.max(preferLeft, hang), screenW - hang), y };
-  }
-  // Below the stripe, beside the tower top: only in a free lane outside the dashed corridor.
-  const y = clear.bottom + rowGap + bob + height / 2;
-  if (y > screenH - height / 2) return null;
   const half = corridorHalf(lap, topWidth);
   const centre = LOGICAL_SIZE.width / 2;
-  const lanes: readonly { lo: number; hi: number; prefer: number }[] = [
-    { lo: hang, hi: centre - half - lineGap - width / 2, prefer: preferLeft },
-    { lo: centre + half + lineGap + width / 2, hi: screenW - hang, prefer: screenW - preferLeft },
-  ];
-  for (const lane of lanes) {
-    if (lane.lo <= lane.hi) return { x: Math.min(Math.max(lane.prefer, lane.lo), lane.hi), y };
-  }
-  return null;
+  const preferLeft = screenW * PLANET_PLACE.x;
+  const lane =
+    side === 0
+      ? { lo: hang, hi: centre - half - lineGap - width / 2, prefer: preferLeft }
+      : {
+          lo: centre + half + lineGap + width / 2,
+          hi: screenW - hang,
+          prefer: screenW - preferLeft,
+        };
+  return lane.lo <= lane.hi ? Math.min(Math.max(lane.prefer, lane.lo), lane.hi) : null;
 }
 
 /**
- * The spot of the planet of a lap at the largest scale from `PLANET_PLACE.scale` down to
+ * The lane of the planet of a lap on `side` at the largest scale from `PLANET_PLACE.scale` down to
  * `minScale` (in `scaleStep` steps) that has room; `width` x `height` is the unscaled picture and
- * `topWidth` the tower top width captured when lap 1 began (see `corridorHalf`).
- * `null` when it has no room even at `minScale`.
+ * `topWidth` the tower top width captured when lap 1 began (see `corridorHalf`). The corridor is centred, so the two
+ * lanes are as wide and the side does not change the scale. `null` when it has no room even at `minScale`.
  */
 export function planetFit(
   lap: number,
   screenW: number,
-  screenH: number,
   width: number,
-  height: number,
+  side: 0 | 1,
   topWidth?: number,
 ): PlanetFit | null {
   const { scale, minScale, scaleStep } = PLANET_PLACE;
@@ -91,8 +71,37 @@ export function planetFit(
   const steps = Number.isFinite(span) && span > 0 ? Math.round(span) : 0;
   for (let i = 0; i <= steps; i++) {
     const k = scale - i * scaleStep;
-    const spot = planetSpot(lap, screenW, screenH, width * k, height * k, topWidth);
-    if (spot) return { ...spot, scale: k };
+    const x = planetLaneX(lap, screenW, width * k, side, topWidth);
+    if (x !== null) return { x, scale: k };
   }
   return null;
+}
+
+/**
+ * Height of the centre of a planet that has crossed `progress` (0..1) of its way: from `half` above the top edge
+ * (further up by `enter` 0..1 of `PLANET_PLACE.enterVary` of the screen) to `half` below the bottom edge, `half` being
+ * the half height of the picture with its drift. Linear in the progress, so the planet keeps the pace of the scroll.
+ */
+export function planetY(progress: number, screenH: number, half: number, enter: number): number {
+  const start = -half - enter * PLANET_PLACE.enterVary * screenH;
+  const end = screenH + half;
+  return start + (end - start) * progress;
+}
+
+/**
+ * How visible the planet is at (`x`, `y`) with the half height `halfH` and the half size `radius`: 0 while any part
+ * of it is in the stripe of the flying layer (`flightClearBand`) plus `rowGap` or within the HUD gap of a plate,
+ * rising to 1 over `fadeFeatherPx` past them. The half height counts the drift.
+ */
+export function planetFade(
+  x: number,
+  y: number,
+  halfH: number,
+  radius: number,
+  screenH: number,
+): number {
+  const { rowGap, fadeFeatherPx } = PLANET_PLACE;
+  const band = flightClearBand(screenH);
+  const gap = Math.max(band.top - rowGap - (y + halfH), y - halfH - (band.bottom + rowGap));
+  return Math.min(clamp01(gap / fadeFeatherPx), hudKeepOutFade(x, y, radius, fadeFeatherPx));
 }

@@ -1,139 +1,115 @@
 import * as Phaser from 'phaser';
-import { BACKDROP } from '../../../data/backdrop';
 import type { HoverSpec } from '../../../data/backdrop-life';
-import {
-  PLANET_PLACE,
-  planetKey,
-  SPACE_PLANET_IDS,
-  type SpacePlanetId,
-} from '../../../data/space-planets';
-import { planetOfLap } from '../../../core/space-planet';
+import { PLANET_PLACE, planetKey, type SpacePlanetId } from '../../../data/space-planets';
+import { lapProgress } from '../../../core/space-laps';
+import { planetOfLap, planetPassOf } from '../../../core/space-planet';
 import { effectsMode } from '../../effects-mode';
 import type { FrameCtx, Life } from './life';
 import { inSky } from './layer-anchor';
-import { hoverPose, newPose, type Pose } from './life-motion';
+import { hoverPose, newPose } from './life-motion';
 import { planetSize } from './dessert-planets';
-import { planetFit, type PlanetFit } from './planet-placement';
+import { planetFade, planetFit, planetY, type PlanetFit } from './planet-placement';
 import type { LapLife } from './zone-scenery';
 
 /**
- * The dessert planet of the lap: one picture that hangs in the upper left of the screen. On the
- * full and lite levels it bobs and swings slowly; on the minimal level it stands still (docs/06,
- * section 9). A new lap fades the next planet in over the old one (the zone change time); on the
- * minimal level the planet is swapped at once. Both pictures are made once, with the zone; only
- * their texture changes, so a lap change creates no objects.
+ * The dessert planet of the lap: one picture that floats down with the background. The progress of the tower through
+ * its lap (the camera scroll, `FrameCtx.towerLayers`) carries it from above the top of the screen to below the bottom;
+ * the next lap's planet enters at the top as the last one leaves at the bottom, so one picture serves all laps and
+ * only its texture changes while it is out of view. The side alternates lap by lap. On the full and lite levels it
+ * also bobs and swings slowly on top of the scroll; on the minimal level it only scrolls (docs/06, section 9).
  */
 export class PlanetLife implements Life, LapLife {
   readonly anchor = inSky('planet');
   readonly objects: Phaser.GameObjects.Image[];
+  private readonly image: Phaser.GameObjects.Image;
   private readonly pose = newPose();
   private readonly moving: HoverSpec;
   private readonly still: HoverSpec;
-  private readonly shown: Phaser.GameObjects.Image;
-  private readonly coming: Phaser.GameObjects.Image;
-  private readonly shownSpot = new Spot();
-  private readonly comingSpot = new Spot();
-  /** The planet that is fading in (with its spot), and how long it has faded; null when none is. */
-  private comingId: SpacePlanetId | null = null;
-  private fadedMs = 0;
+  private readonly spot = new Spot();
+  /** Tower top width when lap 1 began (its corridor); the other laps follow the dashed cap. */
+  private lapOneTopWidth: number | undefined;
 
-  constructor(scene: Phaser.Scene, lap: number, topWidth?: number) {
-    const id = planetOfLap(lap);
-    this.shown = new Phaser.GameObjects.Image(scene, 0, 0, planetKey(id));
-    this.coming = new Phaser.GameObjects.Image(scene, 0, 0, planetKey(id)).setVisible(false);
-    this.objects = [this.shown, this.coming];
-    this.shownSpot.set(id, lap, topWidth);
+  constructor(
+    private readonly scene: Phaser.Scene,
+    private readonly planetSeed: number,
+    lap: number,
+    topWidth?: number,
+  ) {
+    const id = planetOfLap(planetSeed, lap);
+    this.image = new Phaser.GameObjects.Image(scene, 0, 0, planetKey(id)).setVisible(false);
+    this.objects = [this.image];
     this.still = { texture: planetKey(id), at: { x: 0, y: 0 }, scale: 1 };
     this.moving = { ...this.still, ...PLANET_PLACE.drift };
+    this.setLap(lap, topWidth);
   }
 
   setLap(lap: number, topWidth?: number): void {
-    const id = planetOfLap(lap);
-    if (this.comingId !== null) this.finish();
-    if (id === this.shownSpot.id && lap === this.shownSpot.lap) return;
-    if (effectsMode.reduced) {
-      this.shown.setTexture(planetKey(id));
-      this.shownSpot.set(id, lap, topWidth);
-      return;
-    }
-    this.comingId = id;
-    this.comingSpot.set(id, lap, topWidth);
-    this.fadedMs = 0;
-    this.coming.setTexture(planetKey(id)).setAlpha(0).setVisible(true);
+    if (lap === 1) this.lapOneTopWidth = topWidth;
   }
 
   update(ctx: FrameCtx): void {
-    if (this.comingId !== null) {
-      this.fadedMs += ctx.deltaMs;
-      if (this.fadedMs >= BACKDROP.fadeMs) this.finish();
-      else {
-        const t = this.fadedMs / BACKDROP.fadeMs;
-        // Crossfade: the old planet fades out as the new one fades in, so neither pops.
-        this.coming.setAlpha(t);
-        this.shown.setAlpha(1 - t);
-      }
+    const { lap, progress } = lapProgress(ctx.towerLayers);
+    if (lap === 0) {
+      this.image.setVisible(false);
+      return;
+    }
+    const id = planetOfLap(this.planetSeed, lap);
+    const key = planetKey(id);
+    // The planet is out of view at the ends of a lap, where its texture changes.
+    if (this.scene.textures.exists(key) && this.image.texture.key !== key)
+      this.image.setTexture(key);
+    const fit = this.spot.at(
+      id,
+      lap,
+      this.planetSeed,
+      ctx.width,
+      lap === 1 ? this.lapOneTopWidth : undefined,
+    );
+    if (!fit || !this.scene.textures.exists(key) || this.image.texture.key !== key) {
+      this.image.setVisible(false);
+      return;
     }
     const spec = effectsMode.reduced ? this.still : this.moving;
-    // The drift is the pose's offset from the spot: it is computed at the origin and added to each planet's spot.
+    // The drift is the pose's offset from the scroll position: it is computed at the origin.
     const pose = hoverPose(spec, 0, 0, ctx.timeMs, this.pose);
-    this.place(this.shown, this.shownSpot, ctx, pose);
-    if (this.comingId !== null) this.place(this.coming, this.comingSpot, ctx, pose);
-  }
-
-  /** Puts one planet at the spot of its lap; hides it (no lane has room) or shows it. */
-  private place(image: Phaser.GameObjects.Image, spot: Spot, ctx: FrameCtx, pose: Pose): void {
-    const at = spot.at(ctx.width, ctx.height);
-    image.setVisible(at !== null);
-    if (!at) return;
-    image.setPosition(at.x + pose.x, at.y + pose.y);
-    image.setRotation(pose.rotation);
-    // The pose carries the drift's breathing around 1; the spot gives the size the planet fits at.
-    image.setScale(pose.scaleX * at.scale, pose.scaleY * at.scale);
-  }
-
-  /** The fade is over (or cut short by the next lap): the new planet is the shown one. */
-  private finish(): void {
-    if (this.comingId === null) return;
-    this.shown.setTexture(planetKey(this.comingId)).setAlpha(1);
-    this.shownSpot.set(this.comingId, this.comingSpot.lap, this.comingSpot.topWidth);
-    this.comingId = null;
-    this.comingSpot.clear();
-    this.coming.setVisible(false);
+    const size = planetSize(id);
+    const halfH =
+      (size.height * fit.scale) / 2 + (effectsMode.reduced ? 0 : PLANET_PLACE.drift.bob.px);
+    const halfW = (size.width * fit.scale) / 2;
+    const { enter } = planetPassOf(this.planetSeed, lap);
+    const y = planetY(progress, ctx.height, halfH, enter);
+    const alpha = planetFade(fit.x, y, halfH, Math.max(halfW, halfH), ctx.height);
+    this.image.setVisible(alpha > 0);
+    if (alpha <= 0) return;
+    this.image.setPosition(fit.x + pose.x, y + pose.y);
+    this.image.setAlpha(alpha);
+    this.image.setRotation(pose.rotation);
+    // The pose carries the drift's breathing around 1; the lane gives the size the planet fits at.
+    this.image.setScale(pose.scaleX * fit.scale, pose.scaleY * fit.scale);
   }
 }
 
-/** The planet of one lap and its cached spot and scale on the current screen size (see `planetFit`). */
+/** The lane and scale of the planet of the lap on the current screen width, cached until the lap or the width changes. */
 class Spot {
-  id: SpacePlanetId = SPACE_PLANET_IDS[0];
-  lap: number | null = null;
-  /** Tower top width captured when the lap began; fixed for the lap (see `corridorHalf`). */
-  topWidth: number | undefined;
-  private cachedLap: number | null = null;
-  private cachedW = 0;
-  private cachedH = 0;
-  private spot: PlanetFit | null = null;
+  private lap = 0;
+  private width = 0;
+  private topWidth: number | undefined;
+  private fit: PlanetFit | null = null;
 
-  set(id: SpacePlanetId, lap: number | null, topWidth?: number): void {
-    this.id = id;
-    this.lap = lap;
-    this.topWidth = topWidth;
-    this.cachedLap = null;
-  }
-
-  clear(): void {
-    this.lap = null;
-    this.cachedLap = null;
-  }
-
-  at(width: number, height: number): PlanetFit | null {
-    if (this.lap === null) return null;
-    if (this.cachedLap !== this.lap || this.cachedW !== width || this.cachedH !== height) {
-      this.cachedLap = this.lap;
-      this.cachedW = width;
-      this.cachedH = height;
-      const size = planetSize(this.id);
-      this.spot = planetFit(this.lap, width, height, size.width, size.height, this.topWidth);
+  at(
+    id: SpacePlanetId,
+    lap: number,
+    planetSeed: number,
+    width: number,
+    topWidth: number | undefined,
+  ): PlanetFit | null {
+    if (this.lap !== lap || this.width !== width || this.topWidth !== topWidth) {
+      this.lap = lap;
+      this.width = width;
+      this.topWidth = topWidth;
+      const size = planetSize(id);
+      this.fit = planetFit(lap, width, size.width, planetPassOf(planetSeed, lap).side, topWidth);
     }
-    return this.spot;
+    return this.fit;
   }
 }

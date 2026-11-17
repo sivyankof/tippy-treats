@@ -1,4 +1,4 @@
-import { pickStartPlace, pickWeather, type RunLook } from '../core/run-look';
+import { pickPlanetSeed, pickStartPlace, pickWeather, type RunLook } from '../core/run-look';
 import { DEFAULT_START_PLACE, type StartPlaceId } from '../data/start-places';
 import { WEATHER, type WeatherId } from '../data/weather';
 
@@ -34,13 +34,15 @@ export function resetRunLookHistory(): void {
  * session history and remembers its weather.
  */
 export function chooseRunLook(input: RunLookInput): RunLook {
+  const planetSeed = pickPlanetSeed(input.seed);
   if (input.perf) {
     return {
       weather: input.perf.weather ?? PLAIN_WEATHER,
       place: input.perf.place ?? DEFAULT_START_PLACE,
+      planetSeed,
     };
   }
-  if (input.tutorial) return { weather: PLAIN_WEATHER, place: DEFAULT_START_PLACE };
+  if (input.tutorial) return { weather: PLAIN_WEATHER, place: DEFAULT_START_PLACE, planetSeed };
   const pinned = input.debug;
   const daily = input.daily === true;
   const weather = pinned?.weather ?? pickWeather(input.seed, daily ? [] : history);
@@ -49,5 +51,5 @@ export function chooseRunLook(input: RunLookInput): RunLook {
   if (!daily && pinned?.weather === undefined) {
     history = [...history, weather].slice(-HISTORY_CAP);
   }
-  return { weather, place };
+  return { weather, place, planetSeed };
 }

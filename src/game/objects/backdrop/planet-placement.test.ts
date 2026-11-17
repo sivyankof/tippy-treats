@@ -1,11 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import { LOGICAL_SIZE } from '../../../data/screen';
-import { PLANET_LOOK, PLANET_PLACE } from '../../../data/space-planets';
+import { PLANET_LOOK, PLANET_PLACE, SPACE_PLANET_IDS } from '../../../data/space-planets';
+import { lapFirstIndex, lapProgress, spaceWidthLimit } from '../../../core/space-laps';
 import { flightClearBand, hudFloor } from '../../camera-layout';
-import { lapFirstIndex, spaceWidthLimit } from '../../../core/space-laps';
-import { planetOfLap } from '../../../core/space-planet';
 import { planetSize } from './dessert-planets';
-import { corridorHalf, planetFit, planetSpot } from './planet-placement';
+import { corridorHalf, planetFade, planetFit, planetLaneX, planetY } from './planet-placement';
 
 const W = LOGICAL_SIZE.width;
 const SCREENS = [2337, 1919]; // 390x844 and 390x693 at the logical width
@@ -18,131 +17,139 @@ describe('corridorHalf', () => {
     expect(corridorHalf(3)).toBeLessThan(corridorHalf(2));
     expect(corridorHalf(30)).toBe(corridorHalf(20));
   });
+
+  it('is the top width halved plus the sway on lap 1 when it is known, the dashed cap on later laps', () => {
+    const narrow = 300;
+    const full = spaceWidthLimit(lapFirstIndex(1));
+    expect(corridorHalf(1, narrow)).toBe(narrow / 2 + PLANET_PLACE.swayPx);
+    expect(corridorHalf(1)).toBe(corridorHalf(1, full));
+    expect(corridorHalf(2, narrow)).toBe(corridorHalf(2));
+  });
 });
 
-describe('planetSpot', () => {
-  it('keeps clear of the dashed corridor and the HUD on every lap and screen', () => {
-    for (const h of SCREENS) {
-      for (let lap = 1; lap <= 20; lap++) {
-        for (const size of [ROUND, RINGED]) {
-          const spot = planetSpot(lap, W, h, size, ROUND);
-          if (!spot) continue;
+describe('planetLaneX', () => {
+  it('keeps clear of the dashed corridor on both sides, on every lap', () => {
+    for (let lap = 1; lap <= 20; lap++) {
+      for (const size of [ROUND, RINGED]) {
+        for (const side of [0, 1] as const) {
+          const x = planetLaneX(lap, W, size, side);
+          if (x === null) continue;
           const half = corridorHalf(lap);
-          const left = spot.x - size / 2;
-          const right = spot.x + size / 2;
-          const top = spot.y - ROUND / 2;
-          const bottom = spot.y + ROUND / 2;
-          const clear = flightClearBand(h);
-          const bob = PLANET_PLACE.drift.bob.px;
-          const rowGap = PLANET_PLACE.rowGap;
-          expect(bottom + bob <= clear.top - rowGap || top - bob >= clear.bottom + rowGap).toBe(
-            true,
-          );
-          const clearOfLines = right <= W / 2 - half || left >= W / 2 + half || bottom <= clear.top;
-          expect(clearOfLines).toBe(true);
-          expect(top).toBeGreaterThanOrEqual(hudFloor());
-          expect(Math.min(right, W) - Math.max(left, 0)).toBeGreaterThanOrEqual(
+          if (side === 0) expect(x + size / 2).toBeLessThanOrEqual(W / 2 - half);
+          else expect(x - size / 2).toBeGreaterThanOrEqual(W / 2 + half);
+          // At most half of the planet hangs off the screen.
+          expect(Math.min(x + size / 2, W) - Math.max(x - size / 2, 0)).toBeGreaterThanOrEqual(
             size * PLANET_PLACE.minVisible - 1e-6,
           );
-          expect(bottom).toBeLessThanOrEqual(h);
         }
       }
     }
   });
 
-  it('shows a planet on the narrow late laps, none on lap 1 where the full-width layers leave no lane', () => {
-    for (const h of SCREENS) {
-      expect(planetSpot(1, W, h, ROUND, ROUND)).toBeNull();
-      expect(planetSpot(10, W, h, RINGED, ROUND)).not.toBeNull();
-    }
+  it('stands on the wanted side and has no lane where the corridor leaves none', () => {
+    expect(planetLaneX(10, W, ROUND, 0)).toBeLessThan(W / 2);
+    expect(planetLaneX(10, W, ROUND, 1)).toBeGreaterThan(W / 2);
+    // Lap 2 is the widest corridor with dashes: a ringed planet has no lane.
+    expect(planetLaneX(2, W, RINGED, 0)).toBeNull();
+    expect(planetLaneX(1, W, ROUND, 1)).toBeNull();
   });
 
-  it('shows nothing where no lane has room', () => {
-    // Lap 2 is the widest corridor: a ringed planet has no lane on either side.
-    expect(planetSpot(2, W, SCREENS[1] as number, RINGED, ROUND)).toBeNull();
-    // A screen too short to put the planet under the HUD.
-    expect(planetSpot(1, W, 600, ROUND, ROUND)).toBeNull();
-  });
-
-  it('prefers the left lane and uses the right one when the left is too narrow', () => {
-    const left = planetSpot(10, W, 2337, ROUND, ROUND);
-    expect(left?.x).toBeLessThan(W / 2);
-  });
-});
-
-describe('lap 1 corridor from the tower top width', () => {
-  const NARROW = 300;
-  const FULL = spaceWidthLimit(lapFirstIndex(1));
-
-  it('is the top width halved plus the sway on lap 1, and the dashed cap on later laps', () => {
-    expect(corridorHalf(1, NARROW)).toBe(NARROW / 2 + PLANET_PLACE.swayPx);
-    expect(corridorHalf(1)).toBe(corridorHalf(1, FULL));
-    expect(corridorHalf(2, NARROW)).toBe(corridorHalf(2));
-    expect(corridorHalf(7, NARROW)).toBe(corridorHalf(7));
-  });
-
-  it('gives lap 1 a spot with a narrow top and none with a full-width top', () => {
-    for (const h of SCREENS) {
-      const size = planetSize(planetOfLap(1));
-      expect(planetFit(1, W, h, size.width, size.height, NARROW)).not.toBeNull();
-      expect(planetFit(1, W, h, size.width, size.height, FULL)).toBeNull();
-    }
-  });
-
-  it('keeps clear of the narrow top corridor', () => {
-    for (const h of SCREENS) {
-      const size = planetSize(planetOfLap(1));
-      const f = planetFit(1, W, h, size.width, size.height, NARROW)!;
-      const half = (size.width * f.scale) / 2;
-      const clearOfTop = f.x + half <= W / 2 - corridorHalf(1, NARROW);
-      const clearOfTopRight = f.x - half >= W / 2 + corridorHalf(1, NARROW);
-      const above = f.y + (size.height * f.scale) / 2 <= flightClearBand(h).top;
-      expect(clearOfTop || clearOfTopRight || above).toBe(true);
-    }
-  });
-
-  it('does not change laps 2 and later', () => {
-    for (const h of SCREENS) {
-      for (let lap = 2; lap <= 9; lap++) {
-        const size = planetSize(planetOfLap(lap));
-        expect(planetFit(lap, W, h, size.width, size.height, NARROW)).toEqual(
-          planetFit(lap, W, h, size.width, size.height),
-        );
-      }
+  it('mirrors the lanes: the same room on both sides', () => {
+    for (let lap = 1; lap <= 12; lap++) {
+      expect(planetLaneX(lap, W, ROUND, 0) === null).toBe(planetLaneX(lap, W, ROUND, 1) === null);
     }
   });
 });
 
 describe('planetFit', () => {
-  const fit = (lap: number, h: number) => {
-    const size = planetSize(planetOfLap(lap));
-    return planetFit(lap, W, h, size.width, size.height);
-  };
+  const fit = (lap: number, id: (typeof SPACE_PLANET_IDS)[number], side: 0 | 1) =>
+    planetFit(lap, W, planetSize(id).width, side);
 
-  it('shows the planet of every lap from 2 on, smaller where the full size has no room', () => {
-    for (const h of SCREENS) {
-      for (let lap = 2; lap <= 20; lap++) {
-        const f = fit(lap, h);
-        expect(f).not.toBeNull();
-        expect(f!.scale).toBeLessThanOrEqual(PLANET_PLACE.scale);
-        expect(f!.scale).toBeGreaterThanOrEqual(PLANET_PLACE.minScale - 1e-9);
+  it('shows every planet from lap 2 on, smaller where the full size has no room, on either side', () => {
+    for (const id of SPACE_PLANET_IDS) {
+      for (let lap = 4; lap <= 20; lap++) {
+        for (const side of [0, 1] as const) {
+          const f = fit(lap, id, side);
+          expect(f, `${id} lap ${lap}`).not.toBeNull();
+          expect(f!.scale).toBeLessThanOrEqual(PLANET_PLACE.scale);
+          expect(f!.scale).toBeGreaterThanOrEqual(PLANET_PLACE.minScale - 1e-9);
+        }
       }
-      expect(fit(4, h)!.scale).toBeLessThan(PLANET_PLACE.scale);
-      expect(fit(6, h)!.scale).toBeCloseTo(PLANET_PLACE.scale);
+    }
+    expect(fit(2, 'cookie', 0)!.scale).toBeLessThan(PLANET_PLACE.scale);
+  });
+
+  it('hides lap 1 with a full-width top and shows it with a narrow one', () => {
+    const { width } = planetSize('marshmallow_moon');
+    expect(planetFit(1, W, width, 0)).toBeNull();
+    expect(planetFit(1, W, width, 0, 300)).not.toBeNull();
+  });
+});
+
+describe('planetY', () => {
+  it('goes from above the top edge to below the bottom edge, linearly in the progress', () => {
+    for (const h of SCREENS) {
+      const half = ROUND / 2;
+      expect(planetY(0, h, half, 0) + half).toBeLessThanOrEqual(0);
+      expect(planetY(1, h, half, 0) - half).toBeGreaterThanOrEqual(h);
+      const mid = planetY(0.5, h, half, 0);
+      expect(planetY(0.25, h, half, 0) - planetY(0, h, half, 0)).toBeCloseTo(
+        planetY(0.5, h, half, 0) - planetY(0.25, h, half, 0),
+      );
+      expect(mid).toBeGreaterThan(0);
     }
   });
 
-  it('keeps the spot rules at the chosen scale and hides lap 1 even at the smallest scale', () => {
+  it('starts higher with a larger entry draw, by at most the vary share of the screen', () => {
+    const h = 2337;
+    const low = planetY(0, h, 130, 0);
+    const high = planetY(0, h, 130, 1);
+    expect(low - high).toBeCloseTo(PLANET_PLACE.enterVary * h);
+  });
+
+  it('moves down with the tower: a tower layer later puts the planet further down', () => {
+    const h = 2337;
+    const a = lapProgress(lapFirstIndex(2) - 1 + 5);
+    const b = lapProgress(lapFirstIndex(2) - 1 + 6);
+    expect(planetY(b.progress, h, 130, 0.3)).toBeGreaterThan(planetY(a.progress, h, 130, 0.3));
+  });
+});
+
+describe('planetFade', () => {
+  it('is invisible while any part is in the flight stripe (with its gap) and at full strength clear of it', () => {
     for (const h of SCREENS) {
-      for (let lap = 2; lap <= 9; lap++) {
-        const size = planetSize(planetOfLap(lap));
-        const f = fit(lap, h)!;
-        expect(planetSpot(lap, W, h, size.width * f.scale, size.height * f.scale)).toEqual({
-          x: f.x,
-          y: f.y,
-        });
+      const band = flightClearBand(h);
+      const half = ROUND / 2;
+      const x = 130;
+      const mid = (band.top + band.bottom) / 2;
+      expect(planetFade(x, mid, half, half, h)).toBe(0);
+      // Touching the stripe plus the gap from above or below.
+      expect(planetFade(x, band.top - PLANET_PLACE.rowGap - half + 1, half, half, h)).toBe(0);
+      expect(planetFade(x, band.bottom + PLANET_PLACE.rowGap + half - 1, half, half, h)).toBe(0);
+      const below = band.bottom + PLANET_PLACE.rowGap + half + PLANET_PLACE.fadeFeatherPx;
+      expect(planetFade(x, below + 50, half, half, h)).toBeGreaterThan(0);
+    }
+  });
+
+  it('fades in smoothly past the stripe', () => {
+    const h = 2337;
+    const band = flightClearBand(h);
+    const half = 126;
+    const edge = band.bottom + PLANET_PLACE.rowGap + half;
+    const a = planetFade(130, edge + 30, half, half, h);
+    const b = planetFade(130, edge + 60, half, half, h);
+    expect(a).toBeGreaterThan(0);
+    expect(b).toBeGreaterThan(a);
+  });
+
+  it('keeps a planet away from the HUD plates', () => {
+    for (const h of SCREENS) {
+      const half = ROUND / 2;
+      // Its top edge above the HUD floor: hidden, whatever the lane.
+      for (const x of [130, W - 130]) {
+        expect(planetFade(x, hudFloor() - 10, half, half, h)).toBe(0);
+        expect(planetFade(x, 60, half, half, h)).toBe(0);
       }
-      expect(fit(1, h)).toBeNull();
     }
   });
 });
