@@ -184,6 +184,7 @@ export class TowerView {
       aiming: this.state !== null && isAiming(this.state.phase, this.state.flying !== null),
       bandTop: this.bandTop,
       bandBottom: this.bandBottom,
+      nowMs: this.scene.time.now,
     };
   }
 

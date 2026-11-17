@@ -4,8 +4,12 @@ import { backOut, clamp01, MS_PER_SECOND, pickRange, smoothstep } from '../../ut
 
 /** The big scene (the whole loop round the face) or the short one (one sideways stroke). */
 export type LickScene = 'big' | 'short';
-/** How the drop of the big scene comes to the face: it runs down beside the eye, or falls onto the cheek. */
-export type LickKind = 'run' | 'fall';
+/**
+ * How the drop of the big scene comes to the face: it runs down beside the eye, or falls onto the
+ * cheek. `stain` is the short scene licking a juice stain that is already on the layer: no drop
+ * comes (the scene starts after the beat the drop arrives in) and the tongue aims at the stain.
+ */
+export type LickKind = 'run' | 'fall' | 'stain';
 
 export type BigStage = keyof typeof LICK.big;
 export type ShortStage = keyof typeof LICK.short;
@@ -70,6 +74,15 @@ export function lickDurationMs(scene: LickScene, style: LickStyle = PLAIN_STYLE)
   return beatStartMs(scene, 'done', style);
 }
 
+/** Where on its own clock a lick of this kind starts: a stain lick skips the beat the drop arrives in. */
+export function lickStartMs(
+  scene: LickScene,
+  kind: LickKind,
+  style: LickStyle = PLAIN_STYLE,
+): number {
+  return kind === 'stain' ? beatMs(scene, 'arrive', style) : 0;
+}
+
 /** The lick `tMs` after it started; fills and returns `out`. */
 export function lickFrame(
   scene: LickScene,
@@ -97,6 +110,8 @@ export function lickFrame(
 
 /** The loop of the tongue tip on one face: its half width, which way it goes first (1: right), and the peak length. */
 export interface LoopShape {
+  /** Where the short scene's tongue aims, in face pixels (a juice stain); without it, at the cheek. */
+  target?: { x: number; y: number };
   rx: number;
   dir: 1 | -1;
   peak: number;
@@ -206,7 +221,10 @@ export function bigTip(
 }
 
 /** The short scene: the drop, where the tip goes out to and where its stroke ends (face pixels). */
-function shortPoints(side: 1 | -1): {
+function shortPoints(
+  side: 1 | -1,
+  target?: { x: number; y: number },
+): {
   mx: number;
   my: number;
   dx: number;
@@ -218,15 +236,17 @@ function shortPoints(side: 1 | -1): {
 } {
   const s = LICK.shortPath;
   const my = s.mouthY;
+  const dx = target ? target.x : side * s.dropX;
+  const dy = target ? target.y : s.dropY;
   return {
     mx: side * s.mouthX,
     my,
-    dx: side * s.dropX,
-    dy: s.dropY,
-    ox: side * (s.dropX + s.out.dx),
-    oy: s.dropY + s.out.dy,
-    sx: side * (s.dropX + s.stroke.dx),
-    sy: s.dropY + s.stroke.dy,
+    dx,
+    dy,
+    ox: dx + side * s.out.dx,
+    oy: dy + s.out.dy,
+    sx: dx + side * s.stroke.dx,
+    sy: dy + s.stroke.dy,
   };
 }
 
@@ -235,8 +255,9 @@ export function shortTip(
   frame: Readonly<LickFrame>,
   side: 1 | -1,
   out: { x: number; y: number },
+  target?: { x: number; y: number },
 ): boolean {
-  const k = shortPoints(side);
+  const k = shortPoints(side, target);
   const { stage, p } = frame;
   if (stage === 'out') {
     const t = backOut(p, LICK.shortPath.outOvershoot);
@@ -291,8 +312,8 @@ export function tongueBody(
     w = smoothstep((headPhase - wrapUntil) / sweepOver);
     if (AFTER_LOOP.includes(stage)) w = stage === 'stretch' ? w + (1 - w) * p : 1;
   } else {
-    if (!shortTip(frame, shape.dir, tip)) return 0;
-    const k = shortPoints(shape.dir);
+    if (!shortTip(frame, shape.dir, tip, shape.target)) return 0;
+    const k = shortPoints(shape.dir, shape.target);
     mx = k.mx;
     my = k.my;
     w = 1;
@@ -304,7 +325,7 @@ export function tongueBody(
   let cx = midX * (1 + bulge);
   let cy = midY + (midY - LICK.loop.centerY) * bulge;
   if (scene === 'short') {
-    const k = shortPoints(shape.dir);
+    const k = shortPoints(shape.dir, shape.target);
     const { knee } = LICK.shortPath;
     const reach = clamp01(Math.hypot(tip.x - mx, tip.y - my) / Math.hypot(k.ox - mx, k.oy - my));
     cx = midX + (shape.dir * knee.x - midX) * reach;
@@ -462,7 +483,7 @@ export function dropPoint(
   out: { x: number; y: number },
 ): void {
   if (scene === 'short') {
-    const k = shortPoints(shape.dir);
+    const k = shortPoints(shape.dir, shape.target);
     out.x = k.dx;
     out.y = k.dy;
     return;
@@ -503,6 +524,11 @@ export function lickGlaze(
 ): LickGlaze {
   out.squash = 1;
   out.scale = 1;
+  if (kind === 'stain') {
+    // The stain is a mark of the layer, not a drop of the face: the lick only shows the tongue taking it.
+    out.kind = 'none';
+    return out;
+  }
   const running = scene === 'big' && kind === 'run';
   out.kind = running ? 'drip' : 'drop';
   dropPoint(scene, kind, shape, scratch);
@@ -761,6 +787,11 @@ export class LickScheduler {
   nextScene(): LickScene {
     if (this.count === 0) return 'big';
     return this.random() < LICK.bigChance ? 'big' : 'short';
+  }
+
+  /** The next idle lick comes no sooner than `ms` from now (a juice lick has just played). */
+  hold(ms: number): void {
+    this.waitMs = Math.max(this.waitMs, ms);
   }
 
   /** A lick started: the next one is a whole interval away. */

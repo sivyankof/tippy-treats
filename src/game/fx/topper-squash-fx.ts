@@ -318,7 +318,7 @@ export class TopperSquashFx {
     const { stain } = TOPPER_SQUASH;
     const [pictureWidth, pictureHeight] = stainPictureSize();
     const [originX, originY] = stainOrigin();
-    layerMarks.addPress(lowerIndex + 1, [
+    const made = layerMarks.addPress(lowerIndex + 1, [
       {
         texture,
         dx: spot.dx,
@@ -332,5 +332,7 @@ export class TopperSquashFx {
         growMs: stain.growMs,
       },
     ]);
+    // The lower layer licks the stain off about a second later (or it melts).
+    if (made) this.tower.licks.queueJuice(lowerIndex);
   }
 }
