@@ -1,7 +1,7 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { HUD_LAYOUT } from '../../data/hud-layout';
 import { LOGICAL_SIZE } from '../../data/screen';
-import { setLang, tn, type Lang } from '../../i18n';
+import { getLang, setLang, tn, type Lang } from '../../i18n';
 import {
   badgeRowRight,
   captionSpot,
@@ -76,6 +76,14 @@ describe('icon-only next-creature chip', () => {
 });
 
 describe('next-creature text at the peak of its pop', () => {
+  let savedLang: Lang;
+  beforeEach(() => {
+    savedLang = getLang();
+  });
+  afterEach(() => {
+    setLang(savedLang);
+  });
+
   for (const lang of ['ru', 'en'] as Lang[]) {
     for (const n of [1, 2, 5, 8, 10, 17, 20]) {
       it(`stays right of the icon and inside the chip: ${lang}, ${n}`, () => {

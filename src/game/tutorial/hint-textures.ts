@@ -2,6 +2,7 @@ import type * as Phaser from 'phaser';
 import { TUTORIAL_ANIM } from '../../data/tutorial-anim';
 import { PALETTE } from '../../data/palette';
 import { FIELD_PAD } from '../../data/picture-fields';
+import { paddedOrigin } from '../../util/field-pad';
 import { OUTLINE_SHARE, outlineColor } from '../fx/plain-style';
 import { bakeTexture } from '../ui/bake-texture';
 
@@ -20,11 +21,20 @@ const ARROW_OUTLINE = ARROW_H * OUTLINE_SHARE;
 const ARROW_FIELD = FIELD_PAD.hintArrow;
 /** Height of the arrow with its outline, without the extra room: what the caption above it counts on. */
 export const ARROW_SHOWN_HEIGHT = ARROW_H + ARROW_OUTLINE * 2;
-const ARROW_FRAME_HEIGHT = ARROW_SHOWN_HEIGHT + ARROW_FIELD * 2;
 /** Origin y that puts the tip of the arrow (with its outline) where the bottom of the picture was before the extra room. */
-export const ARROW_TIP_ORIGIN_Y = (ARROW_FIELD + ARROW_SHOWN_HEIGHT) / ARROW_FRAME_HEIGHT;
+export const ARROW_TIP_ORIGIN_Y = paddedOrigin(
+  [0.5, 1],
+  ARROW_W + ARROW_OUTLINE * 2,
+  ARROW_SHOWN_HEIGHT,
+  ARROW_FIELD,
+)[1];
 /** Origin y of the flipped arrow: the tip with its outline sits on the position. */
-export const ARROW_FLIPPED_ORIGIN_Y = ARROW_FIELD / ARROW_FRAME_HEIGHT;
+export const ARROW_FLIPPED_ORIGIN_Y = paddedOrigin(
+  [0.5, 0],
+  ARROW_W + ARROW_OUTLINE * 2,
+  ARROW_SHOWN_HEIGHT,
+  ARROW_FIELD,
+)[1];
 
 interface Box {
   x: number;

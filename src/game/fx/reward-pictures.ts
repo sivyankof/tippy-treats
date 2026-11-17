@@ -1,5 +1,6 @@
 import type * as Phaser from 'phaser';
 import { REWARD_LOOK } from '../../data/reward-look';
+import { paddedScale } from '../../util/field-pad';
 import { TWO_PI } from '../../util/math';
 import { FIELD_PAD } from '../../data/picture-fields';
 import { bakePadded, bakeTexture } from '../ui/bake-texture';
@@ -16,8 +17,7 @@ import {
 const look = REWARD_LOOK;
 
 /** How many times bigger the picture of the tower is than its drawing (the room around it): show it this much bigger to keep the drawing at its size. */
-export const REWARD_TOWER_FIELD_SCALE =
-  (look.textureSize + FIELD_PAD.rewardTower * 2) / look.textureSize;
+export const REWARD_TOWER_FIELD_SCALE = paddedScale(look.textureSize, FIELD_PAD.rewardTower);
 
 /** Keys of the reward pictures baked by `createRewardTextures`. */
 export const REWARD_TEXTURES = {

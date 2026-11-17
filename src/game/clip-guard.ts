@@ -24,7 +24,7 @@ export interface ClipTight {
   sides: Partial<Record<ClipSide, number>>;
 }
 
-/** Only the art sheet page (dev build) probes pictures: a second drawing of every picture costs too much in a run. */
+/** Only the art sheet page (dev build) probes pictures: reading every picture back costs too much in a run. */
 const active =
   import.meta.env.DEV && typeof window !== 'undefined' && readDebugParams().artsheet === true;
 const found = new Map<string, ClipOffender[]>();
@@ -48,50 +48,49 @@ export function clipGuardActive(): boolean {
 }
 
 /**
- * Draws a picture a second time into a field `CLIP_PROBE_PAD` bigger on every side and counts what
- * lands in the margin: that is the part of the drawing the real field cuts off. Call it with the
- * same `draw` the bake uses, right after the bake.
+ * Draws a picture once into a field `CLIP_PROBE_PAD` bigger on every side, counts what lands in
+ * the margin (the part of the drawing the real field cuts off) and returns the canvas of the real
+ * field cut from the middle: the picture that is kept is the one that was measured.
  */
-export function probeClip(
-  scene: Phaser.Scene,
+export function drawProbed(
+  g: Phaser.GameObjects.Graphics,
   key: string,
   width: number,
   height: number,
   draw: (g: Phaser.GameObjects.Graphics) => void,
-): void {
-  if (!active) return;
-  const w = Math.ceil(width);
-  const h = Math.ceil(height);
+): HTMLCanvasElement {
   const pad = CLIP_PROBE_PAD;
-  const g = scene.add.graphics().setVisible(false);
-  try {
-    g.translateCanvas(pad, pad);
-    draw(g);
-    const canvas = document.createElement('canvas');
-    canvas.width = w + pad * 2;
-    canvas.height = h + pad * 2;
-    g.generateTexture(canvas, canvas.width, canvas.height);
-    const context = canvas.getContext('2d', { willReadFrequently: true });
-    if (!context) return;
-    checked.add(key);
-    const data = context.getImageData(0, 0, canvas.width, canvas.height).data;
-    const overflow = measureOverflow(data, w, h, pad);
-    const allowed = allowedSides(key);
-    const list = CLIP_SIDES.filter(
-      (side) => overflow[side].pixels > 0 && !allowed.includes(side),
-    ).map((side) => ({ key, side, pixels: overflow[side].pixels, reach: overflow[side].reach }));
-    if (list.length > 0) found.set(key, list);
-    else found.delete(key);
-    const sides: Partial<Record<ClipSide, number>> = {};
-    for (const side of CLIP_SIDES) {
-      const spare = overflow[side].spare;
-      if (spare >= 0 && spare < CLIP_MIN_SPARE && !allowed.includes(side)) sides[side] = spare;
-    }
-    if (Object.keys(sides).length > 0 && list.length === 0) tight.set(key, { key, sides });
-    else tight.delete(key);
-  } finally {
-    g.destroy();
+  g.translateCanvas(pad, pad);
+  draw(g);
+  const big = document.createElement('canvas');
+  big.width = width + pad * 2;
+  big.height = height + pad * 2;
+  g.generateTexture(big, big.width, big.height);
+  const field = document.createElement('canvas');
+  field.width = width;
+  field.height = height;
+  field.getContext('2d')?.drawImage(big, pad, pad, width, height, 0, 0, width, height);
+  const context = big.getContext('2d', { willReadFrequently: true });
+  if (context) record(key, width, height, context.getImageData(0, 0, big.width, big.height).data);
+  return field;
+}
+
+function record(key: string, w: number, h: number, data: Uint8ClampedArray): void {
+  checked.add(key);
+  const overflow = measureOverflow(data, w, h, CLIP_PROBE_PAD);
+  const allowed = allowedSides(key);
+  const list = CLIP_SIDES.filter(
+    (side) => overflow[side].pixels > 0 && !allowed.includes(side),
+  ).map((side) => ({ key, side, pixels: overflow[side].pixels, reach: overflow[side].reach }));
+  if (list.length > 0) found.set(key, list);
+  else found.delete(key);
+  const sides: Partial<Record<ClipSide, number>> = {};
+  for (const side of CLIP_SIDES) {
+    const spare = overflow[side].spare;
+    if (spare >= 0 && spare < CLIP_MIN_SPARE && !allowed.includes(side)) sides[side] = spare;
   }
+  if (Object.keys(sides).length > 0 && list.length === 0) tight.set(key, { key, sides });
+  else tight.delete(key);
 }
 
 /** Every picture probed so far that runs past its field, in key order. */
@@ -104,11 +103,12 @@ export function clipTight(): ClipTight[] {
   return [...tight.values()].sort((a, b) => a.key.localeCompare(b.key));
 }
 
-/** The summary: `clip: ok` or `clip: N offenders` and the list (the pictures that are only tight are counted, listed by `clipTightLines`). */
+/** The summary: `clip: ok` or `clip: N pictures (M sides)` and the list (the pictures that are only tight are counted, listed by `clipTightLines`). */
 export function clipSummary(): string {
   const list = clipOffenders();
   const near = `${tight.size} closer than ${CLIP_MIN_SPARE}px to the edge`;
-  const head = list.length === 0 ? 'clip: ok' : `clip: ${list.length} offenders`;
+  const head =
+    list.length === 0 ? 'clip: ok' : `clip: ${found.size} pictures (${list.length} sides)`;
   const lines = list.map((o) => `  ${o.key} ${o.side} ${o.pixels}px reach ${o.reach}px`);
   return [`${head} (${checked.size} pictures checked, ${near})`, ...lines].join('\n');
 }

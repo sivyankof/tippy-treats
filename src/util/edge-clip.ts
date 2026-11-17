@@ -16,7 +16,7 @@ export type OverflowBySide = Record<ClipSide, Overflow>;
 /**
  * Measures the pixels with alpha above `threshold` in the margin of `pad` pixels around a field:
  * `data` is a (`width` + 2 `pad`) x (`height` + 2 `pad`) picture with the field in the middle. The
- * pixels of a side are the ones in the strip beside that side (corners belong to no side).
+ * pixels of a side are the ones in the strip beside that side; a pixel in a corner of the margin counts for both sides that meet there.
  */
 export function measureOverflow(
   data: ArrayLike<number>,
@@ -58,6 +58,24 @@ export function measureOverflow(
   for (let y = pad; y < pad + height; y++) {
     for (let x = 0; x < pad; x++) if (opaque(x, y)) mark('left', pad - x);
     for (let x = pad + width; x < total; x++) if (opaque(x, y)) mark('right', x - pad - width + 1);
+  }
+  // A pixel in a corner of the margin is past both of the sides that meet there.
+  for (const [top, y0, y1] of [
+    [true, 0, pad],
+    [false, pad + height, rows],
+  ] as const) {
+    for (const [left, x0, x1] of [
+      [true, 0, pad],
+      [false, pad + width, total],
+    ] as const) {
+      for (let y = y0; y < y1; y++) {
+        for (let x = x0; x < x1; x++) {
+          if (!opaque(x, y)) continue;
+          mark(top ? 'top' : 'bottom', top ? pad - y : y - pad - height + 1);
+          mark(left ? 'left' : 'right', left ? pad - x : x - pad - width + 1);
+        }
+      }
+    }
   }
   return out;
 }
