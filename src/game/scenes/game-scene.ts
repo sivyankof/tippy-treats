@@ -1,7 +1,5 @@
 import * as Phaser from 'phaser';
-import { TimingBot } from '../../core/bot';
 import type { Modifiers } from '../../core/abilities/types';
-import { Rng } from '../../core/rng';
 import { emptyTally, tallyEvents, type RunTally } from '../../core/run-tally';
 import type { CheckpointHeight } from '../../core/checkpoints';
 import type { RunMode, RunResult } from '../../core/run-result';
@@ -34,7 +32,8 @@ import { openScreen, restartRun, SCENES } from '../scene-keys';
 import { exitTarget } from '../run-exit';
 import { CLASSIC_RUN, demoFinished, type RunRequest } from '../run-request';
 import { setupRun } from '../run-setup';
-import type { DropDriver } from '../perf/perf-drivers';
+import { DropDriverSlot } from '../drop-driver-slot';
+import { installCutDebug } from '../debug/cut-debug';
 import { ANIM } from '../../data/anim';
 import { DEMO } from '../../data/demo';
 import { enterWorld, leaveScreen } from '../ui/transition';
@@ -46,7 +45,7 @@ const TRAY_TOP_Y = 0;
 
 export class GameScene extends Phaser.Scene {
   private sim!: TowerSim;
-  private bot: DropDriver | null = null;
+  readonly drivers = new DropDriverSlot();
   /** A `?perf=1` benchmark run: its results show as saved (the save itself is never touched). */
   private perfRun = false;
   private seed = 0;
@@ -127,10 +126,9 @@ export class GameScene extends Phaser.Scene {
     this.mods = this.sim.currentModifiers();
     logRunStart(setup, gameState.data.stats.runs);
     this.perfRun = setup.perfDriver !== undefined;
-    this.bot =
-      setup.perfDriver ??
-      (setup.bot ? new TimingBot(setup.bot, new Rng(this.seed).fork('bot')) : null);
+    this.drivers.reset(setup.perfDriver, setup.bot, this.seed);
     this.flying.reset();
+    if (import.meta.env.DEV) installCutDebug(this);
     this.continueFlow?.dispose();
     this.continueFlow = new ContinueFlow({
       ads: rewardedAds,
@@ -192,8 +190,7 @@ export class GameScene extends Phaser.Scene {
     // What the drop that lands in this step is resolved with: read before the step, while its layer still flies.
     let dropMods = this.sim.flyingModifiers();
     const events = held ? [] : this.sim.update(delta);
-    this.bot?.observe(events);
-    if (!held && this.bot?.shouldDrop(this.sim)) {
+    if (this.drivers.shouldDrop(events, this.sim, held)) {
       dropMods = this.sim.flyingModifiers();
       events.push(...this.sim.drop());
     }
