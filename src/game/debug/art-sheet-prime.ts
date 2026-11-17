@@ -6,6 +6,7 @@ import { createAbilityTextures } from '../fx/abilities/ability-textures';
 import { bakeCheckpointTextures } from '../fx/checkpoint-textures';
 import { bakeOfflineIcon } from '../fx/offline-icon-texture';
 import { bakeChestTextures } from '../fx/chest-texture';
+import { bakeCutTextures } from '../fx/cut-textures';
 import { createFxTextures } from '../fx/fx-textures';
 import { bakeSquashTextures } from '../fx/squash-textures';
 import { bakeGiftTextures } from '../fx/gift-texture';
@@ -46,6 +47,7 @@ import { bakeMasteryFrame } from '../ui/mastery-frame';
 const PRIME_STEPS: ReadonlyArray<(scene: Phaser.Scene) => void> = [
   createFxTextures,
   bakeSquashTextures,
+  bakeCutTextures,
   createAbilityTextures,
   createTreasureTextures,
   bakeLapEdge,

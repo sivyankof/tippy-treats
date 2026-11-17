@@ -1,4 +1,5 @@
 import type { CreatureId } from './creatures';
+import type { CutVariantName } from './cut-look';
 import { MASTERY } from './mastery';
 
 /**
@@ -13,7 +14,9 @@ export type PerfDriverSpec =
   /** Nobody taps: the flying layer keeps bouncing between the walls. */
   | { kind: 'idle' }
   /** Taps as soon as the layer is clear of the tower (a certain miss), once armed. */
-  | { kind: 'miss' };
+  | { kind: 'miss' }
+  /** Taps when the layer is this share of its width off the tower: a cut of that size every time. */
+  | { kind: 'cut'; share: number };
 
 /** Something the director makes happen again and again during a segment. */
 export type PerfTrigger =
@@ -36,6 +39,8 @@ export interface PerfSegmentDef {
   level: number;
   driver: PerfDriverSpec;
   trigger?: PerfTrigger;
+  /** Every cut of the segment is forced to this variant. */
+  cutVariant?: CutVariantName;
   /** Unmeasured time from the moment the run is ready (the camera has risen). */
   warmupMs: number;
   /** Length of the measured window. */
@@ -161,6 +166,18 @@ export const PERF_SEGMENTS = [
     trigger: { kind: 'guest', everyMs: 400 },
     warmupMs: 1500,
     measureMs: 10000,
+    startOn: 'ready',
+  },
+  {
+    id: 'cuts',
+    drawClass: 'light',
+    start: 8,
+    team: NO_TEAM,
+    level: 1,
+    driver: { kind: 'cut', share: 0.05 },
+    cutVariant: 'strands',
+    warmupMs: 1500,
+    measureMs: 19000,
     startOn: 'ready',
   },
   {

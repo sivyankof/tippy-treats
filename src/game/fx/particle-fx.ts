@@ -39,11 +39,16 @@ export class ParticleFx {
   }
 
   /** Crumbs along the cut line at `cutX`, flying towards the bitten-off side (1 right, -1 left). */
-  crumbs(cutX: number, centerY: number, side: 1 | -1, color: number): void {
+  crumbs(cutX: number, centerY: number, side: 1 | -1, color: number, exactCount?: number): void {
     this.particles.emit(
-      pickInt(ANIM.bite.crumbs),
+      exactCount ?? pickInt(ANIM.bite.crumbs),
       (n) => lineBurst(cutX, centerY, BALANCE.layer.height, side, n, ANIM.bite.crumbStyle),
-      { texture: FX_TEXTURES.crumb, tints: [color], depth: DEPTH.particles },
+      {
+        texture: FX_TEXTURES.crumb,
+        tints: [color],
+        depth: DEPTH.particles,
+        exact: exactCount !== undefined,
+      },
     );
   }
 

@@ -13,6 +13,8 @@ export interface ParticleLook {
   depth: number;
   /** 0 pins the particles to the screen (confetti); default is the world. */
   scrollFactor?: number;
+  /** The count is kept as given on every effects level (the cuts set theirs per level). */
+  exact?: boolean;
 }
 
 interface LiveParticle extends PoolEntry<Phaser.GameObjects.Image> {
@@ -43,7 +45,7 @@ export class Particles {
    * the only knob that "fewer effects" turns, so all bursts go through here.
    */
   emit(count: number, generate: (count: number) => ParticleState[], look: ParticleLook): void {
-    const states = generate(effectsMode.particleCount(count));
+    const states = generate(look.exact ? count : effectsMode.particleCount(count));
     states.forEach((state, i) => {
       const image = this.pool.take();
       const view = viewParticle(state, 0);

@@ -25,6 +25,7 @@ import {
   type SegmentStats,
 } from './perf-stats';
 import { runHooks } from './run-hooks';
+import { cutOverride } from '../fx/cut-override';
 
 /** What the page reads from `window.__tippyPerf`. */
 export interface PerfReport {
@@ -177,6 +178,7 @@ class PerfDirector {
     this.freezeAtMs = 0;
     this.armAtMs = null;
     this.opensAtMs = null;
+    cutOverride.setAlways(def.cutVariant ?? null);
     if (def.startOn === 'ready') this.opensAtMs = nowMs + def.warmupMs;
     // The collapse waits for the miss; the results screen needs the miss at once.
     else this.armAtMs = nowMs + (def.startOn === 'miss' ? def.warmupMs : 0);
@@ -203,6 +205,8 @@ class PerfDirector {
       this.lastDrawTotal = this.drawTotal?.() ?? 0;
       this.windowStartMs = nowMs;
       this.phase = 'measure';
+      // The count of forced cuts is of the measured window only.
+      cutOverride.setAlways(def.cutVariant ?? null);
     } else if (nowMs - this.readyMs > PERF.readyTimeoutMs * 2) {
       this.endSegment(nowMs, TIMEOUT_NOTE);
     }
@@ -244,7 +248,8 @@ class PerfDirector {
     const def = currentSegment();
     const session = perfSession();
     if (!def || !session) return;
-    this.rows.push(this.samples.summary(def.id, PERF.percentile, note));
+    const cuts = def.cutVariant ? `${cutOverride.forcedCuts} cuts` : '';
+    this.rows.push(this.samples.summary(def.id, PERF.percentile, note || cuts));
     this.samples = new SegmentSamples();
     if (session.index + 1 >= session.ids.length) {
       this.finish();
@@ -261,6 +266,7 @@ class PerfDirector {
 
   private finish(): void {
     this.finished = true;
+    cutOverride.setAlways(null);
     setFrameWorkListener(null);
     // Read before the session ends: the runs after the benchmark are normal ones.
     const fx = perfSession()?.params.fx ?? 'full';
