@@ -16,6 +16,7 @@ import { effectsMode } from '../effects-mode';
 import { Backdrop } from '../objects/backdrop/backdrop';
 import { RunWeather } from '../objects/backdrop/run-weather';
 import { plainLooks } from '../objects/plain-look';
+import { layerMarks } from '../objects/layer-marks';
 import { RunCamera } from '../run-camera';
 import { ContinueFlow } from '../continue-flow';
 import { beginRunRewardedMemo, rewardedAds } from '../rewarded';
@@ -99,6 +100,8 @@ export class GameScene extends Phaser.Scene {
     this.seed = setup.seed;
     // The plain layers take their look from the cosmetic stream of the seed.
     plainLooks.setRunSeed(this.seed);
+    // Drops, stains and cream rolls of the last run stay with it.
+    layerMarks.clear();
     this.startHeight = setup.startHeight;
     this.checkpoint = setup.checkpoint;
     this.writesSave = setup.writesSave;

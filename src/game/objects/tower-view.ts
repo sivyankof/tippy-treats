@@ -299,6 +299,7 @@ export class TowerView {
         .setLook(pose.look)
         .setTopperAllowed(i === state.layers.length - 1)
         .setJokeAllowed(true)
+        .setMarksAllowed(true)
         .setLayer(i + 1, pose.width, pose.cut);
       view.setPosition(pose.x + view.slideX, pose.y).setAngle(pose.angle * view.material.tilt);
       if (i === count - 1) this.updateTopSpan(pose.x, pose.width);

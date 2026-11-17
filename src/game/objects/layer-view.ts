@@ -28,6 +28,7 @@ import { TWO_PI } from '../../util/math';
 import { RainbowIdle } from './rainbow-idle';
 import { GlazeDripLayer } from './glaze-drip-layer';
 import { LayerTopper, type TopperWorld } from './layer-topper';
+import { LayerMarkPictures } from './layer-marks';
 import { pressAngle, pressDrop, pressPivot, pressShift } from './layer-press';
 
 /** A heavy press at one spot of a layer (it landed on the guest of the tower). */
@@ -75,6 +76,8 @@ export class LayerView extends Phaser.GameObjects.Container {
   private readonly shade: LayerShade;
   /** The big topper on the top edge of a plain layer. */
   private readonly topper: LayerTopper;
+  /** Marks the layer keeps until the end of the run: a glaze drop on a cut, a juice stain, a cream roll. */
+  private readonly marks: LayerMarkPictures;
   /** The star and the rest wave of the Rainbow layer. */
   private readonly rainbow: RainbowIdle;
   /** The one small moving sprite of a grown creature (bee, breath, spark). */
@@ -106,11 +109,13 @@ export class LayerView extends Phaser.GameObjects.Container {
     this.face = new LayerFace(scene);
     this.shade = new LayerShade(scene);
     this.topper = new LayerTopper(scene);
+    this.marks = new LayerMarkPictures(scene);
     this.accent = new GrownAccentView(scene);
     this.rig = new LayerRig(scene, this.art, this.face);
     this.content = new Phaser.GameObjects.Container(scene, 0, -half, [
       this.art,
       this.glazeDrips,
+      ...this.marks.images,
       ...this.shade.parts,
       ...this.rig.parts,
       this.glossSweep,
@@ -196,6 +201,7 @@ export class LayerView extends Phaser.GameObjects.Container {
     const w = artWidth(width);
     this.topper.setFaceless(!this.faceEnabled);
     this.topper.update(index, w, this.lookPlan.kind === 'plain');
+    this.marks.update(index);
     const creature = creatureOfLayer(this.lookPlan);
     const grown = creature !== null && this.isGrown(this.lookPlan.level);
     const stage = creatureStage(creature, grown, index);
@@ -217,6 +223,12 @@ export class LayerView extends Phaser.GameObjects.Container {
   /** Lets the view show the big topper of its plain layer (a flying layer, the top layer of the tower). */
   setTopperAllowed(on: boolean): this {
     this.topper.setAllowed(on);
+    return this;
+  }
+
+  /** Lets the view show the marks its layer keeps (a layer of the tower, or one of it falling in the collapse). */
+  setMarksAllowed(on: boolean): this {
+    this.marks.setAllowed(on);
     return this;
   }
 
@@ -455,6 +467,7 @@ export class LayerView extends Phaser.GameObjects.Container {
     this.rainbow.setJokeAllowed(false);
     this.face.reset();
     this.topper.reset();
+    this.marks.reset();
     return this;
   }
 
@@ -467,6 +480,7 @@ export class LayerView extends Phaser.GameObjects.Container {
     this.rig.apply();
     this.applyPress();
     this.glazeDrips.setAlpha(this.art.alpha);
+    this.marks.tick(this.scene.time.now, this.art.alpha);
     this.material.tick(dtMs, motion);
     if (motion) this.breathe(motion);
     if (this.face.visible) this.face.tick(dtMs);

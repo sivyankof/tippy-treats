@@ -83,6 +83,7 @@ export class TowerCollapse {
         lifeMs: ANIM.collapse.lifeMs,
         face: 'joy',
         angle: pose.angle,
+        marks: true,
         look: pose.look,
         // The top layer still wears its topper (the others hopped theirs off) and drops it with it.
         topper:

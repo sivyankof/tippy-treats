@@ -24,6 +24,8 @@ export interface PieceSpawn extends PieceMotion {
   look?: LayerPlan;
   /** The piece carries the big topper of its plain layer and drops it with it (off when left out). */
   topper?: boolean;
+  /** The piece is a layer of the tower and keeps its marks (a drop, a stain, a cream roll; off when left out). */
+  marks?: boolean;
 }
 
 const PLAIN_LOOK: LayerPlan = { kind: 'plain' };
@@ -61,6 +63,7 @@ export class FallingPieces {
       .setDepth(DEPTH.pieces)
       .setLook(opts.look ?? PLAIN_LOOK)
       .setTopperAllowed(opts.topper ?? false)
+      .setMarksAllowed(opts.marks ?? false)
       .setLayer(opts.layerIndex, opts.width, opts.cut)
       .setPosition(opts.x, opts.y)
       .setAngle(opts.angle ?? 0)
