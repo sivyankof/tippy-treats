@@ -1,7 +1,11 @@
 import { SPACE_VISITOR, SPACE_VISITOR_IDS, type SpaceVisitorId } from '../data/space-visitor';
 import { Rng } from './rng';
 
-/** The stream of a run seed that decides the guests of Space (cosmetic, apart from the run's and the planets'). */
+/**
+ * The stream that decides the guests of Space (cosmetic). It is forked from the planet seed of the run
+ * (`planetSeedOf`, not the run seed itself) under its own name, so it is apart from the run's stream and
+ * from the planets' draws alike.
+ */
 export function visitorSeedOf(seed: number): number {
   return new Rng(seed).fork('visitors').seed;
 }
