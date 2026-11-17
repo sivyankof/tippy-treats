@@ -26,6 +26,8 @@ import { bakeSky, ZoneScenery, type ZoneArt } from './zone-scenery';
 export interface RunBackdropState {
   zoneIndex: number;
   height: number;
+  /** The placed layers, bottom first; the top one's width is the tower top width of a lap. */
+  layers: readonly { width: number }[];
 }
 
 const ZONE_ART: Record<ZoneId, ZoneArt> = {
@@ -58,6 +60,8 @@ export class Backdrop {
   private scrollY = 0;
   /** Lap of Space of the layer in flight; 0 before Space. */
   private lap: number;
+  /** Tower top width when the current lap began (the planet's lap 1 corridor); fixed for the lap. */
+  private lapTopWidth: number | undefined;
   /** The picture that stands in for the zones once they are frozen (the results screen). */
   private still: Phaser.GameObjects.Image | null = null;
   /** The zones the still replaced, shown again when it goes. */
@@ -72,6 +76,7 @@ export class Backdrop {
     state: RunBackdropState,
   ) {
     this.lap = flyingLap(state.height);
+    this.lapTopWidth = state.layers.at(-1)?.width;
     this.fade = new ZoneFade(state.zoneIndex, BACKDROP.fadeMs);
     this.lastNowMs = scene.time.now;
     this.ctx = {
@@ -92,7 +97,7 @@ export class Backdrop {
    * lap (the planet changes). One Space scenery serves every lap.
    */
   follow(state: RunBackdropState): void {
-    this.setLap(flyingLap(state.height));
+    this.setLap(flyingLap(state.height), state.layers.at(-1)?.width);
     this.setZone(state.zoneIndex);
   }
 
@@ -103,14 +108,15 @@ export class Backdrop {
     this.prepareNext(zoneIndex);
   }
 
-  private setLap(lap: number): void {
+  private setLap(lap: number, topWidth: number | undefined): void {
     if (lap === this.lap) return;
     this.lap = lap;
+    this.lapTopWidth = topWidth;
     const space = this.sceneries.get(SPACE_ZONE_INDEX);
     if (!space || lap === 0) return;
     // Normally baked a lap ahead; a jump (a debug start) bakes here.
     ZONE_ART.space.bakeLap?.(this.scene, lap);
-    space.setLap(lap);
+    space.setLap(lap, topWidth);
     this.prepareNext(SPACE_ZONE_INDEX);
   }
 
@@ -215,7 +221,7 @@ export class Backdrop {
       this.scene,
       id,
       depth,
-      ZONE_ART[id].build(this.scene, Math.max(this.lap, 1)),
+      ZONE_ART[id].build(this.scene, Math.max(this.lap, 1), this.lapTopWidth),
       this.ctx.width,
       this.ctx.height,
     );

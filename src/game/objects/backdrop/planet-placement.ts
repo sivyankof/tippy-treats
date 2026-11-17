@@ -17,9 +17,14 @@ export interface PlanetFit extends PlanetSpot {
 /** Half of a picture: its centre to its edge. */
 const HALF = 0.5;
 
-/** Half width of the corridor the planet keeps out of: half the width cap of the lap (the dashed lines from lap 2, the layers themselves on lap 1), swing of the top layer included. */
-export function corridorHalf(lap: number): number {
-  return spaceWidthLimit(lapFirstIndex(lap)) / 2 + PLANET_PLACE.swayPx;
+/**
+ * Half width of the corridor the planet keeps out of, swing of the top layer included. From lap 2
+ * it is half the width cap of the lap (the dashed lines). Lap 1 has no lines: the corridor is the
+ * tower top as it was when the lap was entered (`topWidth`); without it, the full layer width cap.
+ */
+export function corridorHalf(lap: number, topWidth?: number): number {
+  const width = lap === 1 && topWidth !== undefined ? topWidth : spaceWidthLimit(lapFirstIndex(lap));
+  return width / 2 + PLANET_PLACE.swayPx;
 }
 
 /**
@@ -35,6 +40,7 @@ export function planetSpot(
   screenH: number,
   width: number,
   height: number,
+  topWidth?: number,
 ): PlanetSpot | null {
   const { y: preferY, lineGap, minVisible, drift, rowGap } = PLANET_PLACE;
   const clear = flightClearBand(screenH);
@@ -52,7 +58,7 @@ export function planetSpot(
   // Below the stripe, beside the tower top: only in a free lane outside the dashed corridor.
   const y = clear.bottom + rowGap + bob + height / 2;
   if (y > screenH - height / 2) return null;
-  const half = corridorHalf(lap);
+  const half = corridorHalf(lap, topWidth);
   const centre = LOGICAL_SIZE.width / 2;
   const lanes: readonly { lo: number; hi: number; prefer: number }[] = [
     { lo: hang, hi: centre - half - lineGap - width / 2, prefer: preferLeft },
@@ -66,7 +72,8 @@ export function planetSpot(
 
 /**
  * The spot of the planet of a lap at the largest scale from `PLANET_PLACE.scale` down to
- * `minScale` (in `scaleStep` steps) that has room; `width` x `height` is the unscaled picture.
+ * `minScale` (in `scaleStep` steps) that has room; `width` x `height` is the unscaled picture and
+ * `topWidth` the tower top width captured when lap 1 began (see `corridorHalf`).
  * `null` when it has no room even at `minScale`.
  */
 export function planetFit(
@@ -75,6 +82,7 @@ export function planetFit(
   screenH: number,
   width: number,
   height: number,
+  topWidth?: number,
 ): PlanetFit | null {
   const { scale, minScale, scaleStep } = PLANET_PLACE;
   // A misconfigured ladder (min above the scale, no step) tries the scale alone.
@@ -82,7 +90,7 @@ export function planetFit(
   const steps = Number.isFinite(span) && span > 0 ? Math.round(span) : 0;
   for (let i = 0; i <= steps; i++) {
     const k = scale - i * scaleStep;
-    const spot = planetSpot(lap, screenW, screenH, width * k, height * k);
+    const spot = planetSpot(lap, screenW, screenH, width * k, height * k, topWidth);
     if (spot) return { ...spot, scale: k };
   }
   return null;

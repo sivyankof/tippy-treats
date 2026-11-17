@@ -1,6 +1,7 @@
 import type * as Phaser from 'phaser';
 import { SOAK } from '../../data/soak';
 import { uiRegionCount } from '../ui/ui-regions';
+import { countLastingTweens, tweenFacts } from './soak-tweens';
 
 /** Counts of live things of one scene. */
 export interface SceneSoak {
@@ -13,6 +14,8 @@ export interface SceneSoak {
   /** Objects that take pointer input. */
   interactive: number;
   tweens: number;
+  /** Tweens that last (see `isLastingTween`): the ones a leak would add to. */
+  lastingTweens: number;
   timers: number;
   /** Listeners on the scene's own emitters (events, input, cameras, loader, data). */
   listeners: number;
@@ -25,6 +28,7 @@ export interface SoakSample {
   updating: number;
   interactive: number;
   tweens: number;
+  lastingTweens: number;
   timers: number;
   /** Listeners on every emitter of the game and its scenes. */
   listeners: number;
@@ -110,13 +114,15 @@ function sceneListeners(scene: Phaser.Scene): { total: number; by: Record<string
 function readScene(scene: Phaser.Scene): SceneSoak {
   const { sys } = scene;
   const clock: unknown = scene.time;
+  const tweens = scene.tweens?.getTweens() ?? [];
   return {
     key: sys.settings.key,
     status: sys.settings.status,
     objects: countDisplayObjects(scene.children?.list ?? []),
     updating: hidden(sys.updateList, '_active').length + hidden(sys.updateList, '_pending').length,
     interactive: hidden(scene.input, '_list').length,
-    tweens: scene.tweens?.getTweens().length ?? 0,
+    tweens: tweens.length,
+    lastingTweens: countLastingTweens(tweens.map(tweenFacts), SOAK.smoke.shortTweenMs),
     timers: hidden(clock, '_active').length + hidden(clock, '_pendingInsertion').length,
     listeners: sceneListeners(scene).total,
   };
@@ -159,6 +165,7 @@ export function readSoakSample(game: Phaser.Game): SoakSample {
     updating: sum((s) => s.updating),
     interactive: sum((s) => s.interactive),
     tweens: sum((s) => s.tweens),
+    lastingTweens: sum((s) => s.lastingTweens),
     timers: sum((s) => s.timers),
     listeners: Object.values(listenersBy).reduce((total, n) => total + n, 0),
     listenersBy,
