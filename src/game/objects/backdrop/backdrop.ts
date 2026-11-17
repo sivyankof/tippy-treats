@@ -9,9 +9,10 @@ import { flyingLap } from '../../../core/space-laps';
 import { DEPTH } from '../../depth';
 import { markPerfPart } from '../../perf/perf-marks';
 import { collectBakeSteps, type BakeStep } from '../../ui/bake-texture';
-import { surfaceScreenY, travellerClearBand } from '../../camera-layout';
+import { surfaceScreenY, trayScrollY, travellerClearBand } from '../../camera-layout';
 import { bakeSharedArt } from './art-kit';
 import { towerLayersAt } from './mountain-placement';
+import { wallDownAt } from './wall-anchor';
 import { bakeFarArt } from './far-plane';
 import { cloudsArt } from './clouds-zone';
 import { Counter } from './worktop';
@@ -100,6 +101,7 @@ export class Backdrop {
       height,
       clearBand: travellerClearBand(height),
       towerLayers: 0,
+      wallDown: 0,
     };
     this.counter = new Counter(scene, trayTopY, width);
     this.ensure(state.zoneIndex);
@@ -171,6 +173,7 @@ export class Backdrop {
   update(scrollY: number): void {
     this.scrollY = scrollY;
     this.ctx.towerLayers = towerLayersAt(scrollY, this.trayTopY, surfaceScreenY(this.ctx.height));
+    this.ctx.wallDown = wallDownAt(scrollY, trayScrollY(this.trayTopY, this.ctx.height));
     if (this.still) return;
     const now = this.scene.time.now;
     const ctx = this.ctx;

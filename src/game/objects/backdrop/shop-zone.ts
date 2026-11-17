@@ -3,6 +3,7 @@ import {
   SHOP_COLORS,
   SHOP_LOOK,
   SHOP_TEX,
+  WALL_LOOK,
   WINDOW_LOOK,
   windowKey,
 } from '../../../data/window-look';
@@ -11,11 +12,12 @@ import { outlineColor } from '../../fx/plain-style';
 import { bakeTexture } from '../../ui/bake-texture';
 import { BACKDROP_LIFE } from '../../../data/backdrop-life';
 import { OUTLINE, circle, drawPlank, ellipse, outlined, roundRect, tint } from './art-kit';
-import { Hover, Traveler } from './life';
+import { Traveler } from './life';
+import { WallThing } from './wall-life';
 import { bakeDisplay, displayLife } from './shop-display';
 import { bakeFly } from './kitchen-zone';
 import { bakeStopsSky, type ZoneArt } from './zone-scenery';
-import { bakeGlassItems, bakeWindow, windowGlassLife } from './window-weather';
+import { bakeGlassItems, bakeWindow, windowGlassLives } from './window-weather';
 
 type Graphics = Phaser.GameObjects.Graphics;
 
@@ -214,34 +216,66 @@ export const shopArt: ZoneArt = {
       swing: { deg: lamp.swingDeg, ms: item.ms },
       phase: i * lamp.phaseStep,
     }));
-    const awning = new Hover(scene, strips);
-    const window = new Hover(scene, [
-      {
-        texture: windowKey('shop', look.weather),
-        at: WINDOW_LOOK.shop.at,
-        offset: WINDOW_LOOK.shop.offset,
-        pulse: WINDOW_LOOK.pulse,
-      },
-    ]);
-    const sweets = new Hover(scene, [
-      {
-        texture: SHOP_TEX.sweets,
-        at: SHOP_LOOK.sweets.at,
-        offset: { x: 0, y: 0 },
-        // Anchored on the board line, so a taller sweet grows upwards and the bracket stays put.
-        origin: [0.5, SWEETS_PAD / (SWEETS_PAD + SWEETS_BELOW)] as const,
-        pulse: WINDOW_LOOK.pulse,
-      },
-    ]);
-    const glass = windowGlassLife(scene, 'shop', look.weather);
+    // Everything that hangs in the shop rides with the wall (wall-life.ts): the start awning and lamps scroll away with it.
+    const awning = new WallThing(scene, strips, { halfH: awningLook.height });
+    const narrow = (side: 0 | 1): WallThing =>
+      new WallThing(
+        scene,
+        [
+          {
+            texture: SHOP_TEX.awning,
+            at: { x: side, y: 0 },
+            offset: { x: -side * WALL_LOOK.awning.pieceW, y: -awningLook.bobPx },
+            origin: [0, 0] as const,
+            bob: { px: awningLook.bobPx, ms: awningLook.bobMs },
+            phase: side * awningLook.phaseStep,
+            tint: dim,
+          },
+        ],
+        {
+          series: WALL_LOOK.awning,
+          skipStart: true,
+          halfH: awningLook.height,
+          cropW: WALL_LOOK.awning.pieceW,
+        },
+      );
+    const window = new WallThing(
+      scene,
+      [
+        {
+          texture: windowKey('shop', look.weather),
+          at: WINDOW_LOOK.shop.at,
+          offset: WINDOW_LOOK.shop.offset,
+          pulse: WINDOW_LOOK.pulse,
+        },
+      ],
+      { series: WALL_LOOK.window, mirror: true, halfH: WINDOW_LOOK.height / 2 },
+    );
+    const sweets = new WallThing(
+      scene,
+      [
+        {
+          texture: SHOP_TEX.sweets,
+          at: SHOP_LOOK.sweets.at,
+          offset: { x: 0, y: 0 },
+          // Anchored on the board line, so a taller sweet grows upwards and the bracket stays put.
+          origin: [0.5, SWEETS_PAD / (SWEETS_PAD + SWEETS_BELOW)] as const,
+          pulse: WINDOW_LOOK.pulse,
+        },
+      ],
+      { series: WALL_LOOK.sweets, halfH: SWEETS_PAD + SWEETS_BELOW },
+    );
+    const glass = windowGlassLives(scene, 'shop', look.weather, window.spots);
     const fly = new Traveler(scene, BACKDROP_LIFE.kitchen.fly);
     return {
       layers: [SHOP_TEX.wall, SHOP_TEX.lattice, SHOP_TEX.shelves, SHOP_TEX.stands],
       lives: [
         { slot: 3, life: awning },
-        { slot: 3, life: new Hover(scene, lamps) },
+        { slot: 3, life: new WallThing(scene, lamps, { halfH: lamp.height }) },
+        { slot: 3, life: narrow(0) },
+        { slot: 3, life: narrow(1) },
         { slot: 3, life: window },
-        ...(glass ? [{ slot: 3, life: glass }] : []),
+        ...glass.map((life) => ({ slot: 3, life })),
         { slot: 3, life: sweets },
         { slot: 3, life: displayLife(scene) },
         { slot: 3, life: fly },

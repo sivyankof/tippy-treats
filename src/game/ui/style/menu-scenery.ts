@@ -57,6 +57,7 @@ export class MenuScenery {
       height,
       clearBand: null,
       towerLayers: 0,
+      wallDown: 0,
     };
     this.scenery = new ZoneScenery(
       scene,

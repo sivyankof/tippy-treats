@@ -28,6 +28,8 @@ export interface FrameCtx {
   height: number;
   /** The stripe around the flying layer's line that Space travellers keep out of (the stripe of a tall tower, set by the run backdrop in every zone but read only by travellers that ask for it, i.e. Space's); null only for the menu scenery. */
   clearBand: YBand | null;
+  /** Px the wall with the shelves has moved down since the start view (0 on the start view and in the menus); wall things ride with it. */
+  wallDown: number;
   /** Tower height in layers, from the camera scroll (drives the mountain peaks). */
   towerLayers: number;
 }
@@ -39,11 +41,11 @@ export interface Life {
   update(ctx: FrameCtx): void;
 }
 
-function createImage(scene: Phaser.Scene, texture: string): Phaser.GameObjects.Image {
+export function createImage(scene: Phaser.Scene, texture: string): Phaser.GameObjects.Image {
   return new Phaser.GameObjects.Image(scene, 0, 0, texture);
 }
 
-function applyPose(image: Phaser.GameObjects.Image, pose: Pose): void {
+export function applyPose(image: Phaser.GameObjects.Image, pose: Pose): void {
   image.setPosition(pose.x, pose.y);
   image.setRotation(pose.rotation);
   image.setScale(pose.scaleX, pose.scaleY);

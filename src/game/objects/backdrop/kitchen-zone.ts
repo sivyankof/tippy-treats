@@ -8,9 +8,10 @@ import { outlineColor } from '../../fx/plain-style';
 import { bakeTexture } from '../../ui/bake-texture';
 import { drawPlank } from './art-kit';
 import { Hover, PuffColumn, Traveler } from './life';
+import { WallThing } from './wall-life';
 import type { ZoneArt } from './zone-scenery';
-import { RunOnly, bakeGlassItems, bakeWindow, windowGlassLife } from './window-weather';
-import { KITCHEN_SHELF, WINDOW_LOOK, windowKey } from '../../../data/window-look';
+import { RunOnly, bakeGlassItems, bakeWindow, windowGlassLives } from './window-weather';
+import { KITCHEN_SHELF, WALL_LOOK, WINDOW_LOOK, windowKey } from '../../../data/window-look';
 
 const TILE = 512;
 const TILE_SIZE = 128;
@@ -219,18 +220,25 @@ export const kitchenArt: ZoneArt = {
   },
   build(scene, look) {
     const life = BACKDROP_LIFE.kitchen;
-    const window = new Hover(scene, [
-      {
-        texture: windowKey('kitchen', look.weather),
-        at: WINDOW_LOOK.kitchen.at,
-        offset: WINDOW_LOOK.kitchen.offset,
-        pulse: WINDOW_LOOK.pulse,
-      },
-    ]);
-    const jar = new Hover(scene, [
-      { texture: JAR_KEY, at: SHELF.jar.at, offset: { x: 0, y: 0 }, pulse: WINDOW_LOOK.pulse },
-    ]);
-    const glass = windowGlassLife(scene, 'kitchen', look.weather);
+    // The window and the jar hang on the wall with the shelves: they ride with it (wall-life.ts).
+    const window = new WallThing(
+      scene,
+      [
+        {
+          texture: windowKey('kitchen', look.weather),
+          at: WINDOW_LOOK.kitchen.at,
+          offset: WINDOW_LOOK.kitchen.offset,
+          pulse: WINDOW_LOOK.pulse,
+        },
+      ],
+      { series: WALL_LOOK.window, mirror: true, halfH: WINDOW_LOOK.height / 2 },
+    );
+    const jar = new WallThing(
+      scene,
+      [{ texture: JAR_KEY, at: SHELF.jar.at, offset: { x: 0, y: 0 }, pulse: WINDOW_LOOK.pulse }],
+      { series: WALL_LOOK.jar, halfH: (SHELF.jar.h + JAR_PAD + 40) / 2 },
+    );
+    const glass = windowGlassLives(scene, 'kitchen', look.weather, window.spots);
     const steam = new PuffColumn(scene, life.steam, life.steamAt, life.steamOffset);
     const fly = new Traveler(scene, life.fly);
     return {
@@ -241,7 +249,7 @@ export const kitchenArt: ZoneArt = {
         { slot: 1, life: new Hover(scene, life.ladles) },
         { slot: 1, life: new Hover(scene, [life.lid]) },
         { slot: 1, life: steam },
-        { slot: 3, life: new RunOnly(glass ? [window, glass, jar] : [window, jar]) },
+        { slot: 3, life: new RunOnly([window, ...glass, jar]) },
         { slot: 3, life: fly },
       ],
       guest: fly,

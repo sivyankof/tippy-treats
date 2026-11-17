@@ -1,8 +1,15 @@
 import type * as Phaser from 'phaser';
-import { SHOP_COLORS, SHOP_LOOK, SHOP_TEX, WINDOW_LOOK } from '../../../data/window-look';
+import {
+  SHOP_COLORS,
+  SHOP_LOOK,
+  SHOP_TEX,
+  WALL_LOOK,
+  WINDOW_LOOK,
+} from '../../../data/window-look';
 import { shade } from '../../../util/color';
 import { bakeTexture } from '../../ui/bake-texture';
-import { Hover, type FrameCtx, type Life } from './life';
+import type { FrameCtx, Life } from './life';
+import { WallThing } from './wall-life';
 import { circle, ellipse, outlined, roundRect, tint as muteTint } from './art-kit';
 
 type Graphics = Phaser.GameObjects.Graphics;
@@ -114,31 +121,35 @@ class DisplayLife implements Life {
   readonly objects: readonly Phaser.GameObjects.GameObject[];
   private shown: boolean | null = null;
 
-  constructor(private readonly hover: Hover) {
-    this.objects = hover.objects;
+  constructor(private readonly inner: WallThing) {
+    this.objects = inner.objects;
   }
 
   update(ctx: FrameCtx): void {
     const show = ctx.clearBand !== null && ctx.height >= D.minHeight;
     if (show !== this.shown) {
       this.shown = show;
-      for (const image of this.hover.objects) image.setVisible(show);
+      for (const image of this.inner.objects) image.setVisible(show);
     }
-    if (show) this.hover.update(ctx);
+    if (show) this.inner.update(ctx);
   }
 }
 
 /** The counter at the left edge of the run; it breathes with the window and bobs a little. */
 export function displayLife(scene: Phaser.Scene): Life {
   return new DisplayLife(
-    new Hover(scene, [
-      {
-        texture: SHOP_TEX.display,
-        at: D.at,
-        offset: D.offset,
-        pulse: WINDOW_LOOK.pulse,
-        bob: { px: D.bob.px, ms: D.bob.ms },
-      },
-    ]),
+    new WallThing(
+      scene,
+      [
+        {
+          texture: SHOP_TEX.display,
+          at: D.at,
+          offset: D.offset,
+          pulse: WINDOW_LOOK.pulse,
+          bob: { px: D.bob.px, ms: D.bob.ms },
+        },
+      ],
+      { series: WALL_LOOK.display, halfH: (D.h * D.unit) / 2 },
+    ),
   );
 }
