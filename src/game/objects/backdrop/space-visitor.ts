@@ -5,6 +5,7 @@ import { effectsMode } from '../../effects-mode';
 import { fxGuard } from '../../fx-guard';
 import type { GuestSource } from './guest-source';
 import type { FrameCtx, Life } from './life';
+import { inSky } from './layer-anchor';
 import {
   newVisitorPose,
   planVisitor,
@@ -21,6 +22,7 @@ const HOLD_LEAD = SPACE_VISITOR.holdLead;
  * (`bakeSpaceVisitors`), so nothing is created while the run goes on.
  */
 export class SpaceVisitor implements Life {
+  readonly anchor = inSky('visitor');
   readonly objects: Phaser.GameObjects.Image[];
   private readonly plan: VisitorPlan | null;
   private readonly pose = newVisitorPose();

@@ -9,6 +9,7 @@ import { FLIGHT_CLEAR } from '../../../data/flight-clear';
 import { HUD_LAYOUT } from '../../../data/hud-layout';
 import { flightClearBand, hudFloor, hudKeepOutFade } from '../../camera-layout';
 import type { FrameCtx, Life } from './life';
+import { inSky } from './layer-anchor';
 import { bankFlashKey, bankKey } from './weather-art';
 import { zoneShowsWeatherSky } from './weather-share';
 import { bankEdge, boltEnd, flashEnvelope, nextBoltAt } from './weather-motion';
@@ -33,6 +34,7 @@ export function strikeLightningNow(): void {
  * every 8-15 s (full and lite; minimal none).
  */
 export class WeatherBank implements Life {
+  readonly anchor = inSky('weather');
   readonly objects: Phaser.GameObjects.Image[];
   private readonly bank: Phaser.GameObjects.Image;
   /** The lit twin of the bank for a bolt on the left and on the right. */
@@ -168,6 +170,7 @@ interface Star {
  * the left and is left out when there is no room above the row.
  */
 export class WeatherNight implements Life {
+  readonly anchor = inSky('weather');
   readonly objects: Phaser.GameObjects.Image[] = [];
   private readonly stars: Star[] = [];
   private readonly moon: Phaser.GameObjects.Image;

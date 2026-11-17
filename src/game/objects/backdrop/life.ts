@@ -7,6 +7,7 @@ import type {
   TwinkleSpec,
 } from '../../../data/backdrop-life';
 import type { GuestSource, SourcePoint } from './guest-source';
+import { newLayerFrame, rideLayer, type Anchor, type LayerFrame } from './layer-anchor';
 import { PassTimer } from './pass-timer';
 import {
   hoverPose,
@@ -20,7 +21,7 @@ import {
 } from './life-motion';
 
 /** What a living element needs to know about the frame. */
-export interface FrameCtx {
+export interface FrameCtx extends LayerFrame {
   timeMs: number;
   deltaMs: number;
   /** Logical screen size. */
@@ -28,17 +29,27 @@ export interface FrameCtx {
   height: number;
   /** The stripe around the flying layer's line that Space travellers keep out of (the stripe of a tall tower, set by the run backdrop in every zone but read only by travellers that ask for it, i.e. Space's); null only for the menu scenery. */
   clearBand: YBand | null;
-  /** Px the wall with the shelves has moved down since the start view (0 on the start view and in the menus); wall things ride with it. */
-  wallDown: number;
   /** Tower height in layers, from the camera scroll (drives the mountain peaks). */
   towerLayers: number;
 }
 
 /** A group of pictures that move on their own: part of a zone backdrop. */
 export interface Life {
+  /** Where the life stands: on a parallax layer (it scrolls and sways with it), in the sky, or fixed on the screen. Every life says. */
+  readonly anchor: Anchor;
   /** The pictures to add to the scenery, back to front. */
   readonly objects: readonly Phaser.GameObjects.GameObject[];
   update(ctx: FrameCtx): void;
+}
+
+/** A frame context for a scenery that does not scroll (the menus): every layer stands on its start view. */
+export function newFrameCtx(
+  width: number,
+  height: number,
+  clearBand: FrameCtx['clearBand'],
+  timeMs: number,
+): FrameCtx {
+  return { timeMs, deltaMs: 0, width, height, clearBand, towerLayers: 0, ...newLayerFrame() };
 }
 
 export function createImage(scene: Phaser.Scene, texture: string): Phaser.GameObjects.Image {
@@ -61,6 +72,7 @@ export class Hover implements Life {
   constructor(
     scene: Phaser.Scene,
     private readonly specs: readonly HoverSpec[],
+    readonly anchor: Anchor,
   ) {
     this.objects = specs.map((spec) => {
       const image = createImage(scene, spec.texture);
@@ -73,7 +85,11 @@ export class Hover implements Life {
   update(ctx: FrameCtx): void {
     this.specs.forEach((spec, i) => {
       const image = this.objects[i];
-      if (image) applyPose(image, hoverPose(spec, ctx.width, ctx.height, ctx.timeMs, this.pose));
+      if (!image) return;
+      const pose = hoverPose(spec, ctx.width, ctx.height, ctx.timeMs, this.pose);
+      const shown = rideLayer(pose, this.anchor, ctx, ctx.height, image.height * pose.scaleY);
+      applyPose(image, pose);
+      if (this.anchor.kind === 'layer') image.setVisible(shown);
     });
   }
 }
@@ -86,6 +102,7 @@ export class PuffColumn implements Life {
   constructor(
     scene: Phaser.Scene,
     private readonly spec: PuffSpec,
+    readonly anchor: Anchor,
     private readonly at: Point = { x: 0, y: 0 },
     private readonly offset: Point = { x: 0, y: 0 },
   ) {
@@ -96,10 +113,15 @@ export class PuffColumn implements Life {
     });
   }
 
-  /** Runs the column with its source at (`x`, `y`) in the pixels of whatever it is drawn in. */
-  updateAt(timeMs: number, x: number, y: number): void {
+  /** Runs the column with its source at (`x`, `y`) in the pixels of whatever it is drawn in; `ctx` (a column on a layer) moves it with the layer. */
+  updateAt(timeMs: number, x: number, y: number, ctx?: FrameCtx): void {
     this.objects.forEach((image, i) => {
-      applyPose(image, puffPose(this.spec, i, timeMs, x, y, this.pose));
+      const pose = puffPose(this.spec, i, timeMs, x, y, this.pose);
+      const shown = ctx
+        ? rideLayer(pose, this.anchor, ctx, ctx.height, image.height * this.spec.endScale)
+        : true;
+      applyPose(image, pose);
+      if (ctx && this.anchor.kind === 'layer') image.setVisible(shown);
     });
   }
 
@@ -108,6 +130,7 @@ export class PuffColumn implements Life {
       ctx.timeMs,
       this.at.x * ctx.width + this.offset.x,
       this.at.y * ctx.height + this.offset.y,
+      ctx,
     );
   }
 }
@@ -124,6 +147,7 @@ export class Traveler implements Life, GuestSource {
   constructor(
     scene: Phaser.Scene,
     private readonly spec: TravelSpec,
+    readonly anchor: Anchor,
     private readonly random: () => number = Math.random,
   ) {
     this.timer = new PassTimer(spec, random);
@@ -169,20 +193,21 @@ export class Traveler implements Life, GuestSource {
     }
     if (!this.shown) return;
     this.objects.forEach((image, i) => {
-      applyPose(
-        image,
-        travelPose(
-          this.spec,
-          this.pass,
-          i,
-          this.timer.progress,
-          ctx.width,
-          ctx.height,
-          ctx.timeMs,
-          this.pose,
-          ctx.clearBand,
-        ),
+      const pose = travelPose(
+        this.spec,
+        this.pass,
+        i,
+        this.timer.progress,
+        ctx.width,
+        ctx.height,
+        ctx.timeMs,
+        this.pose,
+        ctx.clearBand,
       );
+      // A walker on the street scrolls down with the street layer (its walk along the street is its own).
+      const onScreen = rideLayer(pose, this.anchor, ctx, ctx.height, image.height * pose.scaleY);
+      applyPose(image, pose);
+      if (this.anchor.kind === 'layer') image.setVisible(onScreen);
     });
   }
 }
@@ -196,6 +221,7 @@ export class Twinkles implements Life {
   constructor(
     scene: Phaser.Scene,
     private readonly spec: TwinkleSpec,
+    readonly anchor: Anchor,
   ) {
     this.objects = spec.points.map(() => createImage(scene, spec.texture));
   }
@@ -206,7 +232,10 @@ export class Twinkles implements Life {
       if (!image) return;
       this.at.x = point.x * ctx.width;
       this.at.y = point.y * ctx.height + (point.dy ?? 0);
-      applyPose(image, twinklePose(this.spec, i, ctx.timeMs, this.at, this.pose));
+      const pose = twinklePose(this.spec, i, ctx.timeMs, this.at, this.pose);
+      const shown = rideLayer(pose, this.anchor, ctx, ctx.height, image.height);
+      applyPose(image, pose);
+      if (this.anchor.kind === 'layer') image.setVisible(shown);
     });
   }
 }

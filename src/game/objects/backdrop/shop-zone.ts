@@ -12,8 +12,9 @@ import { outlineColor } from '../../fx/plain-style';
 import { bakeTexture } from '../../ui/bake-texture';
 import { BACKDROP_LIFE } from '../../../data/backdrop-life';
 import { OUTLINE, circle, drawPlank, ellipse, outlined, roundRect, tint } from './art-kit';
+import { inSky } from './layer-anchor';
 import { Traveler } from './life';
-import { WallThing } from './wall-life';
+import { LayerThing } from './layer-life';
 import { bakeDisplay, displayLife } from './shop-display';
 import { bakeFly } from './kitchen-zone';
 import { bakeStopsSky, type ZoneArt } from './zone-scenery';
@@ -217,9 +218,12 @@ export const shopArt: ZoneArt = {
       phase: i * lamp.phaseStep,
     }));
     // Everything that hangs in the shop rides with the wall (wall-life.ts): the start awning and lamps scroll away with it.
-    const awning = new WallThing(scene, strips, { halfH: awningLook.height });
-    const narrow = (side: 0 | 1): WallThing =>
-      new WallThing(
+    const awning = new LayerThing(scene, strips, {
+      layer: WALL_LOOK.layer,
+      halfH: awningLook.height,
+    });
+    const narrow = (side: 0 | 1): LayerThing =>
+      new LayerThing(
         scene,
         [
           {
@@ -233,13 +237,14 @@ export const shopArt: ZoneArt = {
           },
         ],
         {
+          layer: WALL_LOOK.layer,
           series: WALL_LOOK.awning,
           skipStart: true,
           halfH: awningLook.height,
           cropW: WALL_LOOK.awning.pieceW,
         },
       );
-    const window = new WallThing(
+    const window = new LayerThing(
       scene,
       [
         {
@@ -249,9 +254,14 @@ export const shopArt: ZoneArt = {
           pulse: WINDOW_LOOK.pulse,
         },
       ],
-      { series: WALL_LOOK.window, mirror: true, halfH: WINDOW_LOOK.height / 2 },
+      {
+        layer: WALL_LOOK.layer,
+        series: WALL_LOOK.window,
+        mirror: true,
+        halfH: WINDOW_LOOK.height / 2,
+      },
     );
-    const sweets = new WallThing(
+    const sweets = new LayerThing(
       scene,
       [
         {
@@ -263,15 +273,18 @@ export const shopArt: ZoneArt = {
           pulse: WINDOW_LOOK.pulse,
         },
       ],
-      { series: WALL_LOOK.sweets, halfH: SWEETS_PAD + SWEETS_BELOW },
+      { layer: WALL_LOOK.layer, series: WALL_LOOK.sweets, halfH: SWEETS_PAD + SWEETS_BELOW },
     );
     const glass = windowGlassLives(scene, 'shop', look.weather, window.spots);
-    const fly = new Traveler(scene, BACKDROP_LIFE.kitchen.fly);
+    const fly = new Traveler(scene, BACKDROP_LIFE.kitchen.fly, inSky('traveler'));
     return {
       layers: [SHOP_TEX.wall, SHOP_TEX.lattice, SHOP_TEX.shelves, SHOP_TEX.stands],
       lives: [
         { slot: 3, life: awning },
-        { slot: 3, life: new WallThing(scene, lamps, { halfH: lamp.height }) },
+        {
+          slot: 3,
+          life: new LayerThing(scene, lamps, { layer: WALL_LOOK.layer, halfH: lamp.height }),
+        },
         { slot: 3, life: narrow(0) },
         { slot: 3, life: narrow(1) },
         { slot: 3, life: window },

@@ -3,9 +3,8 @@ import type { Rng } from '../../../core/rng';
 import { LOGICAL_SIZE } from '../../../data/screen';
 import { WEATHER_LOOK, WEATHER_TEX } from '../../../data/weather-look';
 import { MS_PER_SECOND, TWO_PI } from '../../../util/math';
-import { hudKeepOutFade } from '../../camera-layout';
 import { laneCount, snowSpots } from './weather-lanes';
-import { particleFade, rainDropsShown, wrapRange } from './weather-motion';
+import { particleFade, particleKeepOut, rainDropsShown, wrapRange } from './weather-motion';
 import type { WeatherFrame, WeatherPart } from './weather-frame';
 
 export type FallKind = 'rain' | 'storm' | 'snow' | 'leaves';
@@ -158,7 +157,7 @@ export class WeatherFall implements WeatherPart {
         : p.u * width + p.sway * Math.sin((TWO_PI * t) / p.swayMs + p.phase);
       const alpha =
         particleFade(y, band, bandFeather, height, pad) *
-        hudKeepOutFade(x, y, 0, keepFeather) *
+        particleKeepOut(x, y, keepFeather) *
         frame.share *
         p.alpha;
       if (alpha <= 0.01) {

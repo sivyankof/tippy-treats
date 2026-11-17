@@ -10,6 +10,7 @@ import {
 import { planetOfLap } from '../../../core/space-planet';
 import { effectsMode } from '../../effects-mode';
 import type { FrameCtx, Life } from './life';
+import { inSky } from './layer-anchor';
 import { hoverPose, newPose, type Pose } from './life-motion';
 import { planetSize } from './dessert-planets';
 import { planetFit, type PlanetFit } from './planet-placement';
@@ -23,6 +24,7 @@ import type { LapLife } from './zone-scenery';
  * their texture changes, so a lap change creates no objects.
  */
 export class PlanetLife implements Life, LapLife {
+  readonly anchor = inSky('planet');
   readonly objects: Phaser.GameObjects.Image[];
   private readonly pose = newPose();
   private readonly moving: HoverSpec;

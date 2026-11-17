@@ -4,6 +4,7 @@ import {
   GLASS_TEX,
   GLASS_WEATHER,
   WINDOW_LOOK,
+  WALL_LOOK,
   WINDOW_SKY,
   windowKey,
   type GlassWeather,
@@ -18,7 +19,8 @@ import { fillPolygon, outlineColor } from '../../fx/plain-style';
 import { bakeTexture } from '../../ui/bake-texture';
 import { glassPose, newGlassPose } from './glass-motion';
 import type { FrameCtx, Life } from './life';
-import type { WallSpot } from './wall-life';
+import { inSky, onLayer, type Anchor } from './layer-anchor';
+import type { LayerSpot } from './layer-life';
 
 type Ctx2D = CanvasRenderingContext2D;
 
@@ -381,6 +383,7 @@ export class GlassWeatherLife implements Life {
     private readonly spec: GlassWeather,
     count: number,
     private readonly area: GlassArea,
+    readonly anchor: Anchor,
     private readonly size = 1,
   ) {
     const tint = GLASS_LOOK.leaf.tints;
@@ -433,21 +436,27 @@ export function windowGlassLives(
   scene: Phaser.Scene,
   place: StartPlaceId,
   weather: WeatherId,
-  spots: readonly WallSpot[],
+  spots: readonly LayerSpot[],
 ): GlassWeatherLife[] {
   const spec = GLASS_WEATHER[weather];
   if (!spec) return [];
   return spots.map((spot) => {
     const rect: Rect = { x: 0, y: 0, w: 0, h: 0 };
     const rects = [rect];
-    return new GlassWeatherLife(scene, spec, spec.window, {
-      keepClear: false,
-      alpha: () => spot.alpha,
-      rects: () => {
-        glassRectAt(place, spot.x, spot.y, spot.mirrored, rect);
-        return rects;
+    return new GlassWeatherLife(
+      scene,
+      spec,
+      spec.window,
+      {
+        keepClear: false,
+        alpha: () => spot.alpha,
+        rects: () => {
+          glassRectAt(place, spot.x, spot.y, spot.mirrored, rect);
+          return rects;
+        },
       },
-    });
+      onLayer(WALL_LOOK.layer),
+    );
   });
 }
 
@@ -459,7 +468,10 @@ export class RunOnly implements Life {
   readonly objects: readonly Phaser.GameObjects.GameObject[];
   private shown: boolean | null = null;
 
-  constructor(private readonly inner: readonly Life[]) {
+  constructor(
+    private readonly inner: readonly Life[],
+    readonly anchor: Anchor,
+  ) {
     this.objects = inner.flatMap((life) => life.objects);
   }
 
@@ -508,6 +520,7 @@ export function showcaseGlassLife(
         return rects;
       },
     },
+    inSky('weather'),
     GLASS_LOOK.showcaseSize,
   );
 }

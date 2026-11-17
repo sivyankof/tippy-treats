@@ -1,6 +1,7 @@
 import { WEATHER_LOOK } from '../../../data/weather-look';
 import type { EffectLevel } from '../../../data/effect-levels';
 import { clamp01 } from '../../../util/math';
+import { hudKeepOutFade } from '../../camera-layout';
 
 /** `value` wrapped into the range [-pad, size + pad). */
 export function wrapRange(value: number, size: number, pad: number): number {
@@ -107,4 +108,9 @@ export function boltEnd(
     if (p.y > top) end = Math.min(end, p.y - gap);
   }
   return end;
+}
+
+/** How visible a weather particle at (`x`, `y`) is near the HUD plates: 0 within the HUD gap plus `keepOutMarginPx`, then rising to 1 over `feather` px. */
+export function particleKeepOut(x: number, y: number, feather: number): number {
+  return hudKeepOutFade(x, y, WEATHER_LOOK.keepOutMarginPx, feather);
 }
