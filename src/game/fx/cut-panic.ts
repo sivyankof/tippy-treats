@@ -106,7 +106,7 @@ export class CutPanic {
       // The arm hangs down in its picture: half a turn points it up, `restDeg` leans it outwards.
       const swing = wave * P.waveDeg * (side === 0 ? 1 : -1);
       const rotation = piece.rotation - dir * (180 - P.restDeg + swing) * DEG_TO_RAD;
-      const scale = lerp(0.3, 1, grow);
+      const scale = lerp(P.armStartScale, 1, grow);
       const shown = grow > 0 && alpha > 0.01;
       // The thumb is on the inner side: the left arm is turned over.
       for (const image of [arm.outline, arm.fill, arm.light]) {

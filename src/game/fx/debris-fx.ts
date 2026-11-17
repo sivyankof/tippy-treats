@@ -13,7 +13,7 @@ import { lookOfCode } from '../objects/plain-look';
 import { effectsMode } from '../effects-mode';
 import { fxGuard } from '../fx-guard';
 import type { LayerView } from '../objects/layer-view';
-import type { TowerView } from '../objects/tower-view';
+import type { LayerPose, TowerView } from '../objects/tower-view';
 import { driftMotion } from './anim-curves';
 import { CutFx } from './cut-fx';
 import { cutPlanFor } from './cut-variant';
@@ -32,6 +32,15 @@ export class DebrisFx {
   readonly pieces: FallingPieces;
   private readonly drips: GlazeDrip;
   private readonly cuts: CutFx;
+  /** Scratch pose for the cut effect, which asks where the cut layer is every frame. */
+  private readonly cutPose: LayerPose = {
+    x: 0,
+    y: 0,
+    width: 0,
+    angle: 0,
+    cut: null,
+    look: { kind: 'plain' },
+  };
 
   constructor(
     scene: Phaser.Scene,
@@ -103,11 +112,13 @@ export class DebrisFx {
     const variant = this.cuts.variantFor(index + 1, share, event.cutWidth);
     const plan = cutPlanFor(effectsMode.level, variant);
     if (!plan) return false;
-    const side = cutSide === 'right' ? 1 : -1;
-    const y = this.tower.layerCenterY(index);
-    const pieceCut = side === 1 ? 'left' : 'right';
-    const edgeX = pose.x + side * (pose.width / 2);
-    const colors = cakeColorsFor(memo.creature ?? null, index + 1, memo.kind === 'golden');
+    const { side, y, pieceCut, pieceX, edgeX, colors } = this.biteSetup(
+      cutSide,
+      memo,
+      event,
+      index,
+      pose,
+    );
     const crumbs = (): void => {
       this.landing.bitten(
         edgeX,
@@ -129,13 +140,20 @@ export class DebrisFx {
         edgeX,
         y,
         layerWidth: pose.width,
-        pieceX: memo.x + side * (memo.width / 2 - event.cutWidth / 2),
+        pieceX,
         pieceWidth: event.cutWidth,
         look: memo,
         cake: colors.cake,
         glaze: colors.glaze,
         plan,
         crumbs,
+        layerCenter: (out) => {
+          const now = this.tower.layerPoseInto(this.cutPose, index);
+          if (!now) return false;
+          out.x = now.x;
+          out.y = now.y;
+          return true;
+        },
       });
     } else {
       crumbs();
@@ -145,6 +163,29 @@ export class DebrisFx {
     return true;
   }
 
+  /**
+   * What both kinds of bite need: the side the piece goes to, the layer's centre y, the side of the
+   * piece that was cut (the sponge faces the tower, the opposite side), where the piece stands, the
+   * cut edge of the layer (0 without a pose) and the colours.
+   */
+  private biteSetup(
+    cutSide: 'left' | 'right',
+    memo: FlyingMemo,
+    event: LandEvent,
+    index: number,
+    pose: LandedLayer | null,
+  ) {
+    const side: 1 | -1 = cutSide === 'right' ? 1 : -1;
+    return {
+      side,
+      y: this.tower.layerCenterY(index),
+      pieceCut: side === 1 ? ('left' as const) : ('right' as const),
+      pieceX: memo.x + side * (memo.width / 2 - event.cutWidth / 2),
+      edgeX: pose ? pose.x + side * (pose.width / 2) : 0,
+      colors: cakeColorsFor(memo.creature ?? null, index + 1, memo.kind === 'golden'),
+    };
+  }
+
   /** The cut of the table in docs/06, "Откусывание края": the piece drifts away, a glaze drop runs down the cut edge. */
   private biteClassic(
     event: LandEvent,
@@ -152,13 +193,17 @@ export class DebrisFx {
     memo: FlyingMemo,
     index: number,
   ): void {
-    const side = cutSide === 'right' ? 1 : -1;
-    const y = this.tower.layerCenterY(index);
-    // The sponge faces the tower, which is the opposite side of the cut.
-    const pieceCut = side === 1 ? 'left' : 'right';
+    const pose = this.tower.layerPose(index);
+    const { side, y, pieceCut, pieceX, edgeX, colors } = this.biteSetup(
+      cutSide,
+      memo,
+      event,
+      index,
+      pose,
+    );
     this.pieces.spawn({
       layerIndex: index + 1,
-      x: memo.x + side * (memo.width / 2 - event.cutWidth / 2),
+      x: pieceX,
       y,
       width: event.cutWidth,
       cut: pieceCut,
@@ -167,10 +212,7 @@ export class DebrisFx {
       look: memo,
     });
 
-    const pose = this.tower.layerPose(index);
     if (!pose) return;
-    const edgeX = pose.x + side * (pose.width / 2);
-    const colors = cakeColorsFor(memo.creature ?? null, index + 1, memo.kind === 'golden');
     this.landing.bitten(edgeX, y, side, colors.cake);
     if (memo.kind === 'plain') this.decorBits(index + 1, event.cutWidth, pieceCut, edgeX, y, side);
     this.runDrips(pose, y, edgeX, side, colors.glaze, memo);

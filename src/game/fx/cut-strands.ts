@@ -9,6 +9,7 @@ import {
   middleShare,
   recoilAlpha,
   recoilLength,
+  snapDue,
   snapTimeMs,
   stagePair,
   strandClock,
@@ -43,8 +44,10 @@ type Pair = [outline: Image, fill: Image];
 interface Strand {
   on: boolean;
   trait: (typeof S.traits)[number];
-  /** Where it holds on the layer (world) and on the piece (local, from the piece centre). */
+  /** Where it holds on the layer (world, follows the layer) and on the piece (local, from the piece centre). */
   a: Vec;
+  /** Where it holds on the layer, from the centre of the layer. */
+  layerOff: Vec;
   local: Vec;
   beads: number;
   beadPhase: number;
@@ -88,6 +91,8 @@ export interface StrandStart {
   side: 1 | -1;
   /** X of the cut edge of the layer, world. */
   edgeX: number;
+  /** Writes where the centre of the layer is now (it sways); false when it is gone. */
+  layerCenter: (out: Vec) => boolean;
   /** Centre y of the layer and of the piece at the start. */
   y: number;
   pieceWidth: number;
@@ -133,6 +138,9 @@ export class CutStrands {
   private snapCount = 0;
   private readonly mid: Vec = { x: 0, y: 0 };
   private readonly point: Vec = { x: 0, y: 0 };
+  /** Centre of the layer the strands hold on to, now and when the cut began. */
+  private readonly center: Vec = { x: 0, y: 0 };
+  private readonly center0: Vec = { x: 0, y: 0 };
   private readonly originX: number;
 
   constructor(private readonly scene: Phaser.Scene) {
@@ -184,6 +192,7 @@ export class CutStrands {
       on: false,
       trait: S.traits[i]!,
       a: { x: 0, y: 0 },
+      layerOff: { x: 0, y: 0 },
       local: { x: 0, y: 0 },
       beads: 0,
       beadPhase: 0,
@@ -207,11 +216,6 @@ export class CutStrands {
     };
   }
 
-  /** Whether the strands still have something to show. */
-  get busy(): boolean {
-    return this.start !== null;
-  }
-
   begin(start: StrandStart, random: Rng): void {
     this.stop();
     this.start = start;
@@ -219,7 +223,13 @@ export class CutStrands {
     const light = mixColor(start.glaze, WHITE, S.gloss.mix);
     const outline = outlineColor(start.glaze);
     const count = random.int(S.count[0], S.count[1]);
-    const inset = Math.min(S.inset, start.pieceWidth * 0.3);
+    const inset = Math.min(S.inset, start.pieceWidth * S.insetMaxShare);
+    this.center.x = this.center0.x = 0;
+    this.center.y = this.center0.y = 0;
+    if (start.layerCenter(this.center0)) {
+      this.center.x = this.center0.x;
+      this.center.y = this.center0.y;
+    }
     const tintPair = (pair: Pair): void => {
       pair[0].setTint(outline);
       pair[1].setTint(start.glaze);
@@ -237,9 +247,12 @@ export class CutStrands {
       tintPair(strand.blob);
       for (const g of strand.gloss) g.setTint(light);
       const bandY = lerp(S.bandTop, S.bandBottom, strand.trait.band);
-      strand.a.x = start.edgeX - start.side * (inset + i * 3);
+      const step = i * S.anchorStepPx;
+      strand.a.x = start.edgeX - start.side * (inset + step);
       strand.a.y = start.y + bandY;
-      strand.local.x = -start.side * (start.pieceWidth / 2 - inset - i * 3);
+      strand.layerOff.x = strand.a.x - this.center0.x;
+      strand.layerOff.y = strand.a.y - this.center0.y;
+      strand.local.x = -start.side * (start.pieceWidth / 2 - inset - step);
       strand.local.y = bandY;
       strand.beads = random.int(S.beads.count[0], S.beads.count[1]);
       strand.beadPhase = random.next();
@@ -267,6 +280,13 @@ export class CutStrands {
     const start = this.start;
     if (!start) return;
     let live = false;
+    // The layer sways: the anchors on it go with it.
+    if (start.layerCenter(this.center)) {
+      for (const strand of this.strands) {
+        strand.a.x = this.center.x + strand.layerOff.x;
+        strand.a.y = this.center.y + strand.layerOff.y;
+      }
+    }
     for (const strand of this.strands) {
       if (strand.on && this.poseStrand(strand, start, sinceMs, piece, hooks)) live = true;
     }
@@ -283,7 +303,7 @@ export class CutStrands {
   ): boolean {
     const { trait } = strand;
     const clock = strandClock(sinceMs, trait.snapShift, tmpClock);
-    if (sinceMs < 0 || clock.phase === 'gone') {
+    if (sinceMs < 0) {
       this.hideStrand(strand);
       return false;
     }
@@ -292,8 +312,15 @@ export class CutStrands {
     const bx = piece.x + cos * strand.local.x - sin * strand.local.y;
     const by = piece.y + sin * strand.local.x + cos * strand.local.y;
     const thick = trait.thick * (S.endThick / THICK);
+    // A long frame can jump over the whole recoil: the snap still happens (the drop on the layer, the cue).
+    if (snapDue(clock.phase) && !strand.snapped) {
+      this.snap(strand, start, sinceMs, bx, by, piece.rotation, hooks);
+    }
+    if (clock.phase === 'gone') {
+      this.hideStrand(strand);
+      return false;
+    }
     if (clock.phase === 'recoil') {
-      if (!strand.snapped) this.snap(strand, start, sinceMs, bx, by, piece.rotation, hooks);
       this.poseRecoil(strand, start, clock.recoil, bx, by, piece.rotation, thick);
       return true;
     }
@@ -345,8 +372,10 @@ export class CutStrands {
         ny = -ny;
       }
       const bow =
-        Math.min(S.bowMaxPx, len * S.bowShare) * strand.trait.sag * smoothstep(stretch * 2);
-      const phase = (sinceMs / S.wobbleMs) * Math.PI * 2 + strand.trait.band * 9;
+        Math.min(S.bowMaxPx, len * S.bowShare) *
+        strand.trait.sag *
+        smoothstep(stretch / S.bowRampShare);
+      const phase = (sinceMs / S.wobbleMs) * Math.PI * 2 + strand.trait.band * S.wobbleBandPhase;
       const shift = bow + Math.sin(phase) * S.wobblePx * stretch;
       mid.x += nx * shift;
       mid.y += ny * shift;
@@ -441,16 +470,22 @@ export class CutStrands {
         continue;
       }
       // A bead slides from the layer towards the piece, the second one a little behind.
-      const slide = (sinceMs - S.bridgeMs) * S.beads.speed * (1 - b * 0.35);
-      const u = clamp01(S.beads.startShare + strand.beadPhase * 0.1 + slide);
-      const size = S.beads.sizePx * (0.8 + 0.5 * thick) * (1 - 0.25 * stretch);
-      const grow = smoothstep((sinceMs - S.bridgeMs) / 80);
+      const slide = (sinceMs - S.bridgeMs) * S.beads.speed * (1 - b * S.beads.lag);
+      const u = clamp01(S.beads.startShare + strand.beadPhase * S.beads.phaseShare + slide);
+      const size =
+        S.beads.sizePx *
+        (S.beads.sizeBase + S.beads.sizeThick * thick) *
+        (1 - S.beads.shrink * stretch);
+      const grow = smoothstep((sinceMs - S.bridgeMs) / S.beads.growMs);
       const scale = (size / BEAD_SIZE) * grow;
       this.pathPoint(strand, mid, bx, by, u);
       placePair(pair, this.point.x, this.point.y, 0, scale, scale, 1);
       dot
-        .setPosition(this.point.x - size * 0.18 * grow, this.point.y - size * 0.2 * grow)
-        .setScale(scale * S.gloss.beadScale * 2)
+        .setPosition(
+          this.point.x - size * S.beads.shine.dx * grow,
+          this.point.y - size * S.beads.shine.dy * grow,
+        )
+        .setScale(scale * S.gloss.beadScale)
         .setAlpha(S.gloss.alpha)
         .setVisible(true);
     }
@@ -458,7 +493,7 @@ export class CutStrands {
 
   /** The bridge: a blob of glaze on the cut that grows at once, then shrinks and fades as the strands take over. */
   private poseBlob(strand: Strand, mid: Vec, sinceMs: number): void {
-    const { growMs, settleMs, widthPx } = S.blob;
+    const { growMs, settleMs, widthPx, endScaleX, endScaleY } = S.blob;
     const settle = smoothstep((sinceMs - growMs) / settleMs);
     const alpha = 1 - settle;
     if (alpha <= 0.01) {
@@ -471,8 +506,8 @@ export class CutStrands {
       mid.x,
       mid.y,
       0,
-      scale * lerp(1, 0.6, settle),
-      scale * lerp(1, 0.8, settle),
+      scale * lerp(1, endScaleX, settle),
+      scale * lerp(1, endScaleY, settle),
       alpha,
     );
   }
@@ -532,12 +567,12 @@ export class CutStrands {
     const stub = thick * lerp(recoil.thickStart, recoil.thickEnd, smoothstep(u));
     // The thread thickens from the snapped thinness to a thick stub.
     const lastShare = STAGES[STAGES.length - 1]!;
-    const share = lerp(lastShare, STAGES[recoil.stage]!, smoothstep(u * 3));
+    const share = lerp(lastShare, STAGES[recoil.stage]!, smoothstep(u / recoil.thickenU));
     stagePair(share, tmpPair);
     const bulb = lerp(
       THICK * lastShare * thick,
       THICK * STAGES[recoil.stage]! * stub * recoil.tip,
-      smoothstep(u * 4),
+      smoothstep(u / recoil.bulbU),
     );
     const curl = recoil.curlDeg * DEG_TO_RAD * (1 - (1 - u) * (1 - u));
     const a = strand.stubA;
@@ -580,7 +615,8 @@ export class CutStrands {
       tmpPair,
     );
     this.poseTip(strand.caps[3], bx, by, sx * length, sy * length, turnB, bulb, alpha);
-    const anchor = this.capScale(thick * THICK * S.anchorCap) * lerp(1, 0.6, smoothstep(u));
+    const anchor =
+      this.capScale(thick * THICK * S.anchorCap) * lerp(1, recoil.anchorEnd, smoothstep(u));
     placePair(strand.caps[0], ax, ay, 0, anchor, anchor, alpha);
     placePair(strand.caps[1], bx, by, 0, anchor, anchor, alpha);
   }
@@ -603,14 +639,19 @@ export class CutStrands {
   }
 
   private spawnDrops(start: StrandStart, x: number, y: number): void {
-    const count = S.drops.count[0] + (this.snapCount % 2);
+    const { drops } = S;
+    const count = drops.count[0] + (this.snapCount % 2);
     for (let n = 0; n < count && n < this.drops.length; n++) {
       const drop = this.drops[n]!;
       drop.on = true;
       drop.x = x + (n - (count - 1) / 2) * S.drops.spreadPx;
-      drop.y = y + n * 3;
-      drop.vx = start.side * S.drops.speedX * (0.3 + 0.5 * n) * (n % 2 === 0 ? 1 : -0.6);
-      drop.vy = -30 + n * 20;
+      drop.y = y + n * drops.dropStepPx;
+      drop.vx =
+        start.side *
+        drops.speedX *
+        (drops.sideBase + drops.sideStep * n) *
+        (n % 2 === 0 ? 1 : drops.backShare);
+      drop.vy = drops.upSpeed + n * drops.upStepPx;
       // Born one after another, so two never fall stacked into one fork.
       drop.ageMs = -n * S.drops.staggerMs;
       hidePair(drop.pair);
@@ -640,7 +681,7 @@ export class CutStrands {
       const speed = Math.hypot(drop.vx, drop.vy);
       const stretch = Math.min(S.drops.maxStretch, speed * S.drops.stretchPerSpeed);
       const age = drop.ageMs / S.drops.lifeMs;
-      const size = (S.drops.sizePx / DROP_W) * lerp(1, 0.75, smoothstep(age));
+      const size = (S.drops.sizePx / DROP_W) * lerp(1, S.drops.endScale, smoothstep(age));
       placePair(
         drop.pair,
         drop.x,
@@ -648,7 +689,7 @@ export class CutStrands {
         Math.atan2(-drop.vx, drop.vy),
         size / Math.sqrt(1 + stretch),
         size * (1 + stretch),
-        1 - smoothstep((age - 0.4) / 0.6),
+        1 - smoothstep((age - S.drops.fadeFrom) / (1 - S.drops.fadeFrom)),
       );
     }
     return any;

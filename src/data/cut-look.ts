@@ -62,6 +62,9 @@ export const CUT_LOOK = {
     bandTop: -47,
     bandBottom: -27,
     inset: 4,
+    /** The inset is at most this share of the piece width; each next strand sits this far (px) further in. */
+    insetMaxShare: 0.3,
+    anchorStepPx: 3,
     /** Thickness of a strand's middle (px, at the thickest trait): the bridge, and just before it snaps. */
     midThickStart: 26,
     midThickEnd: 8,
@@ -76,10 +79,30 @@ export const CUT_LOOK = {
     /** Sideways wobble of the middle point (px) and its period. */
     wobblePx: 1.5,
     wobbleMs: 160,
+    /** Phase of the wobble per strand: radians per unit of the trait's band. */
+    wobbleBandPhase: 9,
+    /** The bow of the middle comes in over this share of the stretch (1 over the first half: 0.5). */
+    bowRampShare: 0.5,
     /** Beads sliding down a strand. */
-    beads: { count: [1, 2], sizePx: 12, speed: 0.0016, startShare: 0.12 },
+    beads: {
+      count: [1, 2],
+      sizePx: 12,
+      speed: 0.0016,
+      startShare: 0.12,
+      /** Share of the strand its random start varies by; how much slower each next bead slides. */
+      phaseShare: 0.1,
+      lag: 0.35,
+      /** Size: `sizeBase` plus `sizeThick` of the strand thickness, shrinking by `shrink` over the stretch. */
+      sizeBase: 0.8,
+      sizeThick: 0.5,
+      shrink: 0.25,
+      /** A bead grows in over this long once the bridge is over. */
+      growMs: 80,
+      /** Where the light dot sits on the bead: share of the bead size left and up of its centre. */
+      shine: { dx: 0.18, dy: 0.2 },
+    },
     /** The bridge of glaze at the let-go: a blob on the cut that grows in `growMs`, then shrinks and fades over `settleMs` as the strands take over. Size in px at its thickest. */
-    blob: { widthPx: 38, heightPx: 54, growMs: 50, settleMs: 300 },
+    blob: { widthPx: 38, heightPx: 54, growMs: 50, settleMs: 300, endScaleX: 0.6, endScaleY: 0.8 },
     /** After the snap: the stubs spring back with overshoot and curl, drops fall. */
     recoil: {
       restShare: 0.2,
@@ -90,11 +113,15 @@ export const CUT_LOOK = {
       thickEnd: 0.5,
       tip: 1.35,
       fadeFrom: 0.55,
+      /** The thread thickens over the first `thickenU` of the recoil, the bulb swells over the first `bulbU`, the anchor caps shrink to `anchorEnd`. */
+      thickenU: 1 / 3,
+      bulbU: 1 / 4,
+      anchorEnd: 0.6,
     },
     /** The round caps where a strand holds on: share of the thickness at the anchor. */
     anchorCap: 0.9,
     /** Light tone of the glaze for the stripes (share of white) and their opacity. */
-    gloss: { mix: 0.55, alpha: 0.85, beadScale: 0.5 },
+    gloss: { mix: 0.55, alpha: 0.85, beadScale: 1 },
     drops: {
       count: [2, 3],
       sizePx: 18,
@@ -103,6 +130,17 @@ export const CUT_LOOK = {
       spreadPx: 22,
       /** Delay between the births of the drops of one snap (ms). */
       staggerMs: 50,
+      /** Each next drop of a snap starts this far lower (px), and with this upward speed plus `upStepPx` per drop (px/s, negative is up). */
+      dropStepPx: 3,
+      upSpeed: -30,
+      upStepPx: 20,
+      /** Sideways speed share: `sideBase` plus `sideStep` per drop; every other drop goes back by `backShare`. */
+      sideBase: 0.3,
+      sideStep: 0.5,
+      backShare: -0.6,
+      /** A drop shrinks to this share of its size and fades out over the last part of its life. */
+      endScale: 0.75,
+      fadeFrom: 0.4,
       lifeMs: 420,
       stretchPerSpeed: 0.0007,
       maxStretch: 0.9,
@@ -130,8 +168,13 @@ export const CUT_LOOK = {
     /** A face keeps this far (px, half its width and a margin) from the screen edge; it slides along the piece at this ease (share per frame). */
     faceKeepPx: 70,
     faceEase: 0.3,
+    /** The face slides only while the piece is turned flat: from this cosine of its turn, fully `flatRange` above it. */
+    flatFrom: 0.2,
+    flatRange: 0.3,
     /** The arms grow out over this long after the let-go. */
     armGrowMs: 100,
+    /** An arm starts this share of its size. */
+    armStartScale: 0.3,
     waveDeg: 50,
     wavePeriodMs: 130,
     /** The arm's rest pose from straight up, outwards. */
