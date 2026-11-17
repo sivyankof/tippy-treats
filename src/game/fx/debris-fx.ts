@@ -121,8 +121,9 @@ export class DebrisFx {
       index,
       pose,
     );
-    // With strands the crumbs and the decoration bits fly under them, never over.
-    const depth = strands ? DEPTH.cutCrumbs : undefined;
+    // With strands the crumbs and the decoration bits fly under them, never over; a scared piece
+    // keeps them under itself, so they never sit on its face.
+    const depth = plan.panic ? DEPTH.panicCrumbs : strands ? DEPTH.cutCrumbs : undefined;
     const crumbs = (): void => {
       this.landing.bitten(edgeX, y, side, colors.cake, pickInt(plan.crumbs), depth);
       if (memo.kind === 'plain') {

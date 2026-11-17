@@ -35,6 +35,8 @@ export const DEPTH = {
   cutGlazeFill: 28.21,
   cutGlazeGloss: 28.22,
   pieces: 28,
+  /** Crumbs of a scared piece's cut: under the piece, so they never sit on its face or arms. */
+  panicCrumbs: 27.96,
   /** Motion dashes behind a falling scared piece, under it. */
   cutDashes: 27.95,
   /** Stars circling over the splatted guest of the tower: behind it and in front of it. */
