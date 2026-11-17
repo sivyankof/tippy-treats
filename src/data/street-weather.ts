@@ -19,8 +19,8 @@ export const STREET_WEATHER = {
     scaleY: 1.1,
     alpha: 0.75,
     driftPx: 20,
-    /** The storm flashes light the clouds at this share of the Roof's flash; no bolt comes down to the street. */
-    flashShare: 0.7,
+    /** The storm flashes light the clouds as brightly as on the Roof; no bolt comes down to the street. */
+    flashShare: 1,
     bolt: false,
   },
   /**
