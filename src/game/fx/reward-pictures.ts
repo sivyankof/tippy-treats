@@ -1,7 +1,8 @@
 import type * as Phaser from 'phaser';
 import { REWARD_LOOK } from '../../data/reward-look';
 import { TWO_PI } from '../../util/math';
-import { bakeTexture } from '../ui/bake-texture';
+import { FIELD_PAD } from '../../data/picture-fields';
+import { bakePadded, bakeTexture } from '../ui/bake-texture';
 import {
   drawGlossMark,
   drawTwoToneBody,
@@ -13,6 +14,10 @@ import {
 } from './plain-style';
 
 const look = REWARD_LOOK;
+
+/** How many times bigger the picture of the tower is than its drawing (the room around it): show it this much bigger to keep the drawing at its size. */
+export const REWARD_TOWER_FIELD_SCALE =
+  (look.textureSize + FIELD_PAD.rewardTower * 2) / look.textureSize;
 
 /** Keys of the reward pictures baked by `createRewardTextures`. */
 export const REWARD_TEXTURES = {
@@ -58,7 +63,7 @@ function bakeTower(scene: Phaser.Scene): void {
   const size = look.textureSize;
   const c = size / 2;
   const t = look.tower;
-  bakeTexture(scene, REWARD_TEXTURES.tower, size, size, (g) => {
+  bakePadded(scene, REWARD_TEXTURES.tower, size, size, FIELD_PAD.rewardTower, (g) => {
     for (const tier of t.tiers) {
       drawTwoToneBody(
         g,

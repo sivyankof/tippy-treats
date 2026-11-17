@@ -10,4 +10,10 @@ export const FIELD_PAD = {
   kitchenPendulum: 8,
   showcaseStand: 4,
   windowDrop: 3,
+  shopLamp: 11,
+  snowCap: 5,
+  hintArrow: 10,
+  offlineIcon: 4,
+  rewardTower: 4,
+  grownBee: 4,
 } as const;

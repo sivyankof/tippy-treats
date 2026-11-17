@@ -3,7 +3,11 @@ import { AD_UNAVAILABLE_CAPTION, OFFLINE_CAPTION_LAYOUT } from '../../../data/of
 import { cssColor } from '../../../util/color';
 import { t } from '../../../i18n';
 import { currentAdCaption } from '../../ad-caption';
-import { OFFLINE_ICON_KEY, bakeOfflineIcon } from '../../fx/offline-icon-texture';
+import {
+  OFFLINE_ICON_FIELD_SCALE,
+  OFFLINE_ICON_KEY,
+  bakeOfflineIcon,
+} from '../../fx/offline-icon-texture';
 import type { Button } from '../button';
 import { fitText, onFontRefresh } from './fit-text';
 
@@ -82,7 +86,9 @@ export function showAdCaption(label: Phaser.GameObjects.Text, maxWidth: number):
   }
   const side = label.height * OFFLINE_CAPTION_LAYOUT.sizeShare;
   const gap = side * OFFLINE_CAPTION_LAYOUT.gapShare;
-  icon.setDisplaySize(side, side).setVisible(true);
+  icon
+    .setDisplaySize(side * OFFLINE_ICON_FIELD_SCALE, side * OFFLINE_ICON_FIELD_SCALE)
+    .setVisible(true);
   label.setX(0);
   fitText(label, maxWidth - side - gap);
   const total = side + gap + label.displayWidth;

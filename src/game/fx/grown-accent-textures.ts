@@ -2,7 +2,8 @@ import type * as Phaser from 'phaser';
 import { GROWN_ACCENT_TEXTURES } from '../../data/mastery-look';
 import { PALETTE } from '../../data/palette';
 import { starPoints } from '../objects/creature-art/rainbow-geometry';
-import { bakeTexture } from '../ui/bake-texture';
+import { FIELD_PAD } from '../../data/picture-fields';
+import { bakePadded, bakeTexture } from '../ui/bake-texture';
 import { fillPolygon } from './plain-style';
 
 /** Colours of the little bee and the spark (the bee is drawn in its own colours, the breath is white with a pale rim, the spark is pale yellow). */
@@ -21,7 +22,7 @@ const BREATH_PUFFS: ReadonlyArray<readonly [number, number, number]> = [
 /** Bakes the pictures of the moving accents of the grown looks; they land on the shared atlas. */
 export function bakeGrownAccentTextures(scene: Phaser.Scene): void {
   const { bee, breath, spark } = GROWN_ACCENT_TEXTURES;
-  bakeTexture(scene, bee.key, bee.w, bee.h, (g) => {
+  bakePadded(scene, bee.key, bee.w, bee.h, FIELD_PAD.grownBee, (g) => {
     const cx = bee.w / 2;
     const cy = bee.h * 0.62;
     g.fillStyle(BEE.wing, 0.85);

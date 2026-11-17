@@ -7,7 +7,13 @@ import { oscillate01 } from '../../util/math';
 import { FLYING_REACH } from '../camera-layout';
 import { effectsMode } from '../effects-mode';
 import { CaptionHint } from './caption-hint';
-import { bakeHintTextures, HINT_TEXTURES } from './hint-textures';
+import {
+  ARROW_FLIPPED_ORIGIN_Y,
+  ARROW_SHOWN_HEIGHT,
+  ARROW_TIP_ORIGIN_Y,
+  bakeHintTextures,
+  HINT_TEXTURES,
+} from './hint-textures';
 import { pickPlateY, type SpotInput } from './hint-spot';
 import { PerfectHint } from './perfect-hint';
 import { TapHint } from './tap-hint';
@@ -65,13 +71,16 @@ export class TutorialHints {
     this.perfect = new PerfectHint(scene);
     this.tap = new TapHint(scene);
     this.honey = new CaptionHint(scene);
-    this.arrow = scene.add.image(0, 0, HINT_TEXTURES.arrow).setOrigin(0.5, 1).setVisible(false);
+    this.arrow = scene.add
+      .image(0, 0, HINT_TEXTURES.arrow)
+      .setOrigin(0.5, ARROW_TIP_ORIGIN_Y)
+      .setVisible(false);
     this.wobble = new CaptionHint(scene, caption.secondPhase);
     this.berry = new CaptionHint(scene, caption.thirdPhase);
     this.cloud = new CaptionHint(scene, caption.fourthPhase);
     this.cloudArrow = scene.add
       .image(0, 0, HINT_TEXTURES.arrow)
-      .setOrigin(0.5, 0)
+      .setOrigin(0.5, ARROW_FLIPPED_ORIGIN_Y)
       .setFlipY(true)
       .setScale(cloudHint.arrowScale)
       .setVisible(false);
@@ -225,7 +234,7 @@ export class TutorialHints {
     const half = caption.width / 2;
     const x = Phaser.Math.Clamp(target.x, half, this.screenWidth - half);
     const plateHalf = this.honey.height / 2;
-    const above = tipY - this.arrow.displayHeight - arrow.captionGap - plateHalf;
+    const above = tipY - ARROW_SHOWN_HEIGHT - arrow.captionGap - plateHalf;
     // Too close to the HUD (a short screen): the plate goes under the layer instead.
     const lowestTop = HUD_LAYOUT.bottomEdge + caption.hudGap;
     const below = target.y + BALANCE.layer.height + arrow.captionGap + plateHalf;

@@ -23,9 +23,20 @@ export type CakeColors = Pick<LayerColors, 'cake' | 'glaze'>;
 
 /** Empty pixels around the art so antialiased edges are not cut. */
 const SIDE_PAD = 2;
+/** Room each side of a grown creature's picture beyond the usual margin, for the looks whose art goes past it. */
+function artSidePad(creature: CreatureId | null, stage: CreatureStage): number {
+  if (!creature || stage === 'base') return 0;
+  const look = GROWN_LOOKS[creature];
+  return 'sidePad' in look ? look.sidePad : 0;
+}
+
 /** Width of the baked picture of a layer `width` wide: the layer, a margin and an even number of pixels. */
-export function artTextureWidth(width: number): number {
-  return 2 * Math.ceil((width + SIDE_PAD * 2) / 2);
+export function artTextureWidth(
+  width: number,
+  creature: CreatureId | null = null,
+  stage: CreatureStage = 'base',
+): number {
+  return 2 * Math.ceil((width + (SIDE_PAD + artSidePad(creature, stage)) * 2) / 2);
 }
 
 /** Space under the layer for its shadow. */
@@ -200,7 +211,7 @@ export function acquireLayerArt(
   const w = artWidth(width);
   const key = layerArtKey(look, creature, w, cut, faceless, stage);
   const top = artTopPad(creature, stage);
-  const texW = artTextureWidth(w);
+  const texW = artTextureWidth(w, creature, stage);
   const texH = artHeight(creature, stage);
   const centerY = top + BALANCE.layer.height / 2;
   bakeTexture(

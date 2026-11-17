@@ -61,7 +61,7 @@ export const GROWN_LOOKS = {
     faceGap: 12,
   },
   caramel: {
-    topPad: 102,
+    topPad: 108,
     /** Lollipop on a stick: stands at this share of the half width from the centre. */
     stand: { share: 0.5, minFromEdge: 64 },
     stick: { width: 11, up: 40 },
@@ -97,6 +97,8 @@ export const GROWN_LOOKS = {
   },
   sprinkle: {
     topPad: 100,
+    /** Extra room each side of the picture: the sparkler's rays and the side sprinkles go past the usual margin. */
+    sidePad: 22,
     /** The sparkler: stands at this share of the half width, leans out by `lean`, stick height and ray length. */
     stand: { share: 0.5, minFromEdge: 60 },
     stick: { width: 7, up: 64, lean: 26 },
@@ -150,6 +152,8 @@ export const GROWN_LOOKS = {
   },
   rainbow: {
     topPad: 64,
+    /** Extra room each side of the picture: the arc goes past the usual margin. */
+    sidePad: 24,
     /** The big crown star is the usual one drawn this much larger and lifted this far; the small side stars flank it. */
     star: { scale: 1.7, lift: 14 },
     sideStars: { dx: 80, up: 6, r: 15 },

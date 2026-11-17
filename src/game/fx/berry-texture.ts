@@ -1,7 +1,7 @@
 import type * as Phaser from 'phaser';
 import { BERRY_LOOK } from '../../data/berry-look';
 import { DEG_TO_RAD } from '../../util/math';
-import { bakeTexture } from '../ui/bake-texture';
+import { bakePadded } from '../ui/bake-texture';
 import {
   OUTLINE_SHARE,
   drawFace,
@@ -138,11 +138,17 @@ function drawCalyx(g: Phaser.GameObjects.Graphics, size: number, cx: number, cy:
  * highlight stroke and dot, big seeds and a two-tone calyx. `withFace` adds the small face of
  * the large picture. Not meant for tinting.
  */
-export function bakeBerry(scene: Phaser.Scene, key: string, withFace: boolean): void {
+export function bakeBerry(
+  scene: Phaser.Scene,
+  key: string,
+  withFace: boolean,
+  /** Extra room around the picture on every side, texture px. */
+  pad = 0,
+): void {
   const size = BERRY_LOOK.textureSize;
   const cx = size / 2;
   const cy = size * body.centerY;
-  bakeTexture(scene, key, size, size, (g) => {
+  bakePadded(scene, key, size, size, pad, (g) => {
     drawBody(g, size, cx, cy);
     drawSeeds(g, size, cx, cy);
     drawGloss(g, size, cx, cy);
