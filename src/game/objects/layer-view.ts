@@ -117,8 +117,9 @@ export class LayerView extends Phaser.GameObjects.Container {
     this.content = new Phaser.GameObjects.Container(scene, 0, -half, [
       this.art,
       this.glazeDrips,
-      ...this.marks.images,
+      ...this.marks.cutImages,
       ...this.shade.parts,
+      ...this.marks.pressImages,
       ...this.rig.parts,
       this.glossSweep,
       this.face,

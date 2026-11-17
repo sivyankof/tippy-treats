@@ -22,12 +22,18 @@ const PICTURES = MAX_CUT_PICTURES + MAX_PRESS_PICTURES;
  */
 export class LayerMarkPictures {
   readonly images: Phaser.GameObjects.Image[] = [];
+  /** Pictures of cut marks: drawn under the shade of the layer above. */
+  readonly cutImages: Phaser.GameObjects.Image[] = [];
+  /** Pictures of press marks (stains, the cream roll): drawn above that shade, so it never greys them. */
+  readonly pressImages: Phaser.GameObjects.Image[] = [];
   private readonly shown: Array<LayerMark | null> = [];
   private allowed = false;
 
   constructor(scene: Phaser.Scene) {
     for (let i = 0; i < PICTURES; i++) {
-      this.images.push(new Phaser.GameObjects.Image(scene, 0, 0, '__DEFAULT').setVisible(false));
+      const image = new Phaser.GameObjects.Image(scene, 0, 0, '__DEFAULT').setVisible(false);
+      this.images.push(image);
+      (i < MAX_CUT_PICTURES ? this.cutImages : this.pressImages).push(image);
       this.shown.push(null);
     }
   }
