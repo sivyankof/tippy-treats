@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { TowerSim } from '../../core/tower-sim';
 import { BALANCE } from '../../data/balance';
-import { createDriver, IdleDriver, MissDriver } from './perf-drivers';
+import { createDriver, IdleDriver, MissDriver, OffsetDriver } from './perf-drivers';
 
 type SimView = Pick<TowerSim, 'state' | 'topLayerX' | 'currentModifiers'>;
 
@@ -49,5 +49,38 @@ describe('createDriver', () => {
     expect(createDriver({ kind: 'idle' }, 1)).toBeInstanceOf(IdleDriver);
     expect(createDriver({ kind: 'miss' }, 1)).toBeInstanceOf(MissDriver);
     expect(typeof createDriver({ kind: 'bot', sdMs: 5 }, 1).shouldDrop).toBe('function');
+  });
+});
+
+describe('OffsetDriver', () => {
+  const width = 200;
+
+  it('waits while the layer is closer to the tower than wanted', () => {
+    expect(new OffsetDriver(0.2).shouldDrop(simWith(540 + 0.1 * width, width))).toBe(false);
+  });
+
+  it('taps inside the window past the wanted offset, on either side', () => {
+    expect(new OffsetDriver(0.2).shouldDrop(simWith(540 + 0.22 * width, width))).toBe(true);
+    expect(new OffsetDriver(0.2).shouldDrop(simWith(540 - 0.22 * width, width))).toBe(true);
+  });
+
+  it('lets a layer that is too far off go by: it would miss', () => {
+    expect(new OffsetDriver(0.2).shouldDrop(simWith(540 + 0.5 * width, width))).toBe(false);
+  });
+
+  it('does not tap unless a layer flies', () => {
+    const sim = simWith(560, width);
+    (sim.state as { phase: string }).phase = 'settling';
+    expect(new OffsetDriver(0.1).shouldDrop(sim)).toBe(false);
+  });
+
+  it('tells the owner once a tap is made', () => {
+    let told = 0;
+    new OffsetDriver(0.2, () => told++).shouldDrop(simWith(540 + 0.22 * width, width));
+    expect(told).toBe(1);
+  });
+
+  it('is built from a cut spec', () => {
+    expect(createDriver({ kind: 'cut', share: 0.1 }, 1)).toBeInstanceOf(OffsetDriver);
   });
 });
