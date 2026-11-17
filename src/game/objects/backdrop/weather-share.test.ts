@@ -3,7 +3,7 @@ import { WEATHER } from '../../../data/weather';
 import type { ZoneId } from '../../../data/zones';
 import { towerWeatherShown, weatherShareOf, zoneShowsWeatherSky } from './weather-share';
 
-/** The share of a list of zones, with a zone's index in the list standing for it. */
+/** The share of a list of zones, with a zone's index in the list standing for it; the last one is the zone being flowed into. */
 function shareOf(
   view: 'full' | 'window',
   zones: readonly { zone: ZoneId; alpha: number }[],
@@ -11,6 +11,7 @@ function shareOf(
   return weatherShareOf(
     view,
     zones.keys(),
+    zones.length - 1,
     (i) => zones[i]?.zone ?? 'kitchen',
     (i) => zones[i]?.alpha ?? 0,
     WEATHER.zoneView,
@@ -32,13 +33,13 @@ describe('weatherShareOf', () => {
       { zone: 'showcase', alpha: 1 },
       { zone: 'roof', alpha: 0.25 },
     ] as const;
-    expect(shareOf('window', toRoof)).toBe(1);
+    expect(shareOf('window', toRoof)).toBe(0.75);
     expect(shareOf('full', toRoof)).toBe(0.25);
     const toStars = [
       { zone: 'clouds', alpha: 1 },
       { zone: 'stars', alpha: 0.6 },
     ] as const;
-    expect(shareOf('full', toStars)).toBe(1);
+    expect(shareOf('full', toStars)).toBeCloseTo(0.4);
   });
 
   it('adds zones of one view and clamps to 1', () => {
@@ -48,10 +49,10 @@ describe('weatherShareOf', () => {
     ] as const;
     expect(shareOf('full', over)).toBe(1);
     const under = [
-      { zone: 'roof', alpha: 0.3 },
+      { zone: 'roof', alpha: 1 },
       { zone: 'clouds', alpha: 0.2 },
     ] as const;
-    expect(shareOf('full', under)).toBeCloseTo(0.5);
+    expect(shareOf('full', under)).toBeCloseTo(1);
   });
 });
 
@@ -82,7 +83,7 @@ describe('zones without weather', () => {
 
   it('fade the tower pieces out with the Clouds zone when the Stars zone comes in', () => {
     const fading = [
-      { zone: 'clouds', alpha: 0.4 },
+      { zone: 'clouds', alpha: 1 },
       { zone: 'stars', alpha: 0.6 },
     ] as const;
     expect(towerWeatherShown(shareOf('full', fading), 80, false)).toBe(true);
@@ -92,6 +93,24 @@ describe('zones without weather', () => {
       { zone: 'stars', alpha: 1 },
     ] as const;
     expect(towerWeatherShown(shareOf('full', gone), 80, false)).toBe(false);
+  });
+
+  it('let the particle share follow the cloud bank: gone once the stars have covered it', () => {
+    // The bank is drawn in the old zone, which the new one covers by its alpha; the particles use the share.
+    for (let a = 0; a <= 1.0001; a += 0.05) {
+      const step = [
+        { zone: 'clouds', alpha: 1 },
+        { zone: 'stars', alpha: a },
+      ] as const;
+      const bankVisible = 1 - a;
+      expect(shareOf('full', step)).toBeCloseTo(bankVisible);
+    }
+    const covered = [
+      { zone: 'clouds', alpha: 1 },
+      { zone: 'stars', alpha: 1 },
+    ] as const;
+    expect(shareOf('full', covered)).toBe(0);
+    expect(towerWeatherShown(shareOf('full', covered), 83, false)).toBe(false);
   });
 
   it('show no tower pieces when the tower is gone or over', () => {

@@ -45,6 +45,22 @@ describe('snow lanes', () => {
     }
   });
 
+  it('spreads the flakes over the whole width, not into columns at the edges', () => {
+    const third = new Map<number, number>();
+    for (let seed = 1; seed <= 20; seed++) {
+      for (const s of layout(seed)) {
+        const k = Math.min(2, Math.floor(s.u * 3));
+        third.set(k, (third.get(k) ?? 0) + 1);
+      }
+    }
+    const total = SNOW.count * 20;
+    for (const n of third.values()) expect(n / total).toBeGreaterThan(0.25);
+    for (const s of layout(5)) expect(s.u).toBeGreaterThan(0);
+    const us = layout(5).map((s) => s.u);
+    expect(Math.min(...us)).toBeLessThan(0.2);
+    expect(Math.max(...us)).toBeGreaterThan(0.8);
+  });
+
   it('puts a flake on the middle of its lane', () => {
     for (const s of layout(3)) expect(s.u).toBe(laneU(s.lane, lanes));
   });

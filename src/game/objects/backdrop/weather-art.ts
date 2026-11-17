@@ -14,7 +14,11 @@ import { zoneShowsWeatherSky } from './weather-share';
 type Graphics = Phaser.GameObjects.Graphics;
 
 const FLAKE_OUTLINE = 0x7e92b8;
-const FLAKE_DISC_RIM = 5;
+/** The pale-blue edge of a soft flake: about 2.5 logical px, under 1 px on a 390 px wide screen. */
+const FLAKE_DISC_RIM = 2.5;
+const FLAKE_DISC_EDGE = 0xb9cae6;
+/** The soft shade of a flake: white in the middle, this at the lower rim (a light shadow below). */
+const FLAKE_DISC_SHADE = 0xdde7f6;
 const FLAKE_RAYS = {
   count: 6,
   outlinePx: 10.5,
@@ -29,7 +33,9 @@ const DROP_W = 22;
 const DROP_H = 96;
 const DROP_COLOR = 0xe8f2ff;
 const DROP_RIM = 0x7f9ccc;
-const DROP_HALF = { top: 2.4, bottom: 7.5, rim: 2.6 };
+/** Half widths of the drop: at the thin top, in the round head, and the rim; the taper swells over the length into the head. */
+const DROP_HALF = { top: 2, bottom: 4.6, rim: 1.6 };
+const DROP_TAPER_POWER = 2.4;
 /** Clear pixels kept below the rim of the raindrop head and past the end caps of the bolt, so the picture never cuts them. */
 const EDGE_MARGIN = 2;
 const DROP_TAIL_ALPHA = 0.3;
@@ -127,21 +133,41 @@ function bakeFlakes(scene: Phaser.Scene): void {
       bakeTexture(scene, key, size, size, (g) => drawFlakeRays(g, size, i === 2));
       return;
     }
-    bakeTexture(scene, key, size, size, (g) => {
-      g.fillStyle(FLAKE_OUTLINE, 1);
-      g.fillCircle(c, c, c);
-      g.fillStyle(0xffffff, 1);
-      g.fillCircle(c, c, c - FLAKE_DISC_RIM);
-    });
+    bakeTexture(
+      scene,
+      key,
+      size,
+      size,
+      (g) => {
+        g.fillStyle(FLAKE_DISC_EDGE, 1);
+        g.fillCircle(c, c, c);
+        g.fillStyle(0xffffff, 1);
+        g.fillCircle(c, c, c - FLAKE_DISC_RIM);
+      },
+      (ctx) => {
+        // Soft shading: white in the upper middle, a pale cool tint towards the lower rim.
+        ctx.globalCompositeOperation = 'source-atop';
+        const shade = ctx.createRadialGradient(c, c * 0.8, 0, c, c, c);
+        shade.addColorStop(0, '#ffffff');
+        shade.addColorStop(0.55, '#ffffff');
+        shade.addColorStop(1, `#${FLAKE_DISC_SHADE.toString(16).padStart(6, '0')}`);
+        ctx.fillStyle = shade;
+        ctx.fillRect(0, 0, size, size);
+        ctx.globalCompositeOperation = 'source-over';
+      },
+    );
   });
 }
 
 /** A long light streak with a faint blue rim, thin and faint at the top and thicker and brighter towards the head. */
 function bakeDrop(scene: Phaser.Scene): void {
   const cx = DROP_W / 2;
-  const head = DROP_HALF.bottom + 0.6;
+  const head = DROP_HALF.bottom;
+  // The head (rim included) ends EDGE_MARGIN above the bottom of the picture.
+  const headY = DROP_H - head - DROP_HALF.rim - EDGE_MARGIN;
+  // Thin at the top, swelling smoothly into the round head: the taper runs over the whole length.
   const half = (y: number): number =>
-    DROP_HALF.top + (DROP_HALF.bottom - DROP_HALF.top) * (y / DROP_H) ** 1.5;
+    DROP_HALF.top + (DROP_HALF.bottom - DROP_HALF.top) * (y / headY) ** DROP_TAPER_POWER;
   const outline = (grow: number): Pt[] => {
     const left: Pt[] = [];
     const right: Pt[] = [];
@@ -151,8 +177,6 @@ function bakeDrop(scene: Phaser.Scene): void {
     }
     return [...left, ...right.reverse()];
   };
-  // The head (rim included) ends EDGE_MARGIN above the bottom of the picture.
-  const headY = DROP_H - head - DROP_HALF.rim - EDGE_MARGIN;
   bakeTexture(
     scene,
     TEX.drop,
