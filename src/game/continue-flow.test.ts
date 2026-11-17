@@ -5,7 +5,12 @@ import type { RewardedResult } from '../services/rewarded-video/types';
 import { ContinueFlow } from './continue-flow';
 import { createTestState } from '../state/test-state';
 
-function setup(adResult: RewardedResult | 'never' = 'rewarded', ready = true, berries = 0) {
+function setup(
+  adResult: RewardedResult | 'never' = 'rewarded',
+  ready = true,
+  berries = 0,
+  runsFinished = 3,
+) {
   const wallet = createTestState();
   wallet.addBerries(berries);
   let release: (r: RewardedResult) => void = () => {};
@@ -22,11 +27,16 @@ function setup(adResult: RewardedResult | 'never' = 'rewarded', ready = true, be
     maybeShowInterstitial: vi.fn(),
     setRemoveAds: vi.fn(),
   };
-  const flow = new ContinueFlow({ ads, wallet });
+  const flow = new ContinueFlow({ ads, wallet, player: { runsFinished } });
   return { flow, wallet, ads, release: (r: RewardedResult) => release(r) };
 }
 
 describe('ContinueFlow', () => {
+  it('does not open in the first 3 runs of a player, so the run declines at once', () => {
+    expect(setup('rewarded', true, 100, 2).flow.open('classic', 0)).toBe(false);
+    expect(setup('rewarded', true, 100, 3).flow.open('classic', 0)).toBe(true);
+  });
+
   it('does not open with too few berries and the ad unavailable, so the run declines at once', () => {
     const { flow } = setup('unavailable', false, 1);
     expect(flow.open('classic', 0)).toBe(false);

@@ -84,7 +84,7 @@ export class ShopScene extends Phaser.Scene {
     this.starter?.tick(delta);
     if (!this.loaded || this.busy || this.leaving) return;
     const ready = services.ads.isRewardedReady();
-    const offered = gameState.starterPackOffered;
+    const offered = gameState.starterPackInShop;
     if (ready !== this.adReady || offered !== (this.starter !== null)) this.rebuild();
     this.starter?.refreshTimer();
   }
@@ -109,7 +109,7 @@ export class ShopScene extends Phaser.Scene {
   private rebuild(): void {
     for (const block of this.blocks) block.root.destroy();
     this.adReady = services.ads.isRewardedReady();
-    this.starter = gameState.starterPackOffered
+    this.starter = gameState.starterPackInShop
       ? new ShopStarter(this, this.prices.starter_pack ?? null, () =>
           this.actions.buy('starter_pack'),
         )

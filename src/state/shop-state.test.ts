@@ -1,19 +1,20 @@
 import { describe, expect, it } from 'vitest';
 import { MS_PER_DAY } from '../data/clock';
 import { SHOP } from '../data/shop';
-import { createTestState } from './test-state';
+import { createDefaultSave } from '../core/save/defaults';
+import { createTestState, loadTestState } from './test-state';
 
 const T0 = Date.UTC(2026, 5, 10, 12, 0, 0);
 
 describe('shop in the game state', () => {
-  it('offers the starter pack for a week from the install, until it is bought', () => {
+  it('sells the starter pack in the shop from the start, until it is bought', () => {
     const clock = { ms: T0 };
     const state = createTestState(clock);
-    expect(state.starterPackOffered).toBe(true);
-    clock.ms = T0 + MS_PER_DAY;
-    expect(state.starterPackMsLeft).toBe((SHOP.starterPackDays - 1) * MS_PER_DAY);
+    expect(state.starterPackInShop).toBe(true);
+    expect(state.starterPackOnHome).toBe(false);
+    expect(state.starterPackMsLeft).toBeNull();
     expect(state.grantProduct('starter_pack')).toBe(true);
-    expect(state.starterPackOffered).toBe(false);
+    expect(state.starterPackInShop).toBe(false);
     expect(state.data.creatures.crumb).toEqual({ level: 1 });
     expect(state.coins).toBe(500);
     expect(state.berries).toBe(60);
@@ -21,11 +22,23 @@ describe('shop in the game state', () => {
     expect(state.coins).toBe(500);
   });
 
-  it('closes the offer after the week', () => {
+  it('shows the pack on Home after 10 runs and closes it a week after the first show', async () => {
     const clock = { ms: T0 };
-    const state = createTestState(clock);
-    clock.ms = T0 + SHOP.starterPackDays * MS_PER_DAY;
-    expect(state.starterPackOffered).toBe(false);
+    const save = createDefaultSave(T0, 'id');
+    const state = await loadTestState({ ...save, stats: { ...save.stats, runs: 10 } }, clock);
+    // The window waits for the first show, however long it takes.
+    clock.ms = T0 + 30 * MS_PER_DAY;
+    expect(state.starterPackOnHome).toBe(true);
+    expect(state.starterPackMsLeft).toBeNull();
+    state.noteStarterPackShown();
+    clock.ms += MS_PER_DAY;
+    expect(state.starterPackMsLeft).toBe((SHOP.starterPackDays - 1) * MS_PER_DAY);
+    // A later show does not move the start.
+    state.noteStarterPackShown();
+    expect(state.starterPackMsLeft).toBe((SHOP.starterPackDays - 1) * MS_PER_DAY);
+    clock.ms = T0 + 30 * MS_PER_DAY + SHOP.starterPackDays * MS_PER_DAY;
+    expect(state.starterPackOnHome).toBe(false);
+    expect(state.starterPackInShop).toBe(false);
   });
 
   it('pays free coins three times a local day', () => {

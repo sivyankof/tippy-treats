@@ -155,9 +155,10 @@ export class ShopStarter implements DailySection {
     this.portrait?.tick(dtMs);
   }
 
-  /** The countdown follows the clock. */
+  /** The countdown follows the clock; there is none before the window has started. */
   refreshTimer(): void {
-    const text = t('shop.starter.left', { time: formatTimeLeft(gameState.starterPackMsLeft) });
+    const left = gameState.starterPackMsLeft;
+    const text = left === null ? '' : t('shop.starter.left', { time: formatTimeLeft(left) });
     if (text === this.lastText) return;
     this.lastText = text;
     this.timer.setText(text).setColor(cssColor(cfg.timerColor));

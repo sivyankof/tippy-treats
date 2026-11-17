@@ -11,38 +11,70 @@ import {
   starterPackContents,
   starterPackEnd,
   starterPackMsLeft,
-  starterPackOffered,
+  starterPackInShop,
+  starterPackOnHome,
   withFreeCoinsClaimed,
   withProductGranted,
   withPurchasesRestored,
+  withStarterPackShown,
 } from './shop';
 
 const T0 = 1_700_000_000_000;
 const save = (over: Partial<Save> = {}): Save => ({ ...createDefaultSave(T0, 'id'), ...over });
 
 describe('starter pack offer', () => {
-  it('is offered for the first days after the install', () => {
-    const s = save();
-    expect(starterPackOffered(s, T0)).toBe(true);
-    expect(starterPackOffered(s, T0 + SHOP.starterPackDays * MS_PER_DAY - 1)).toBe(true);
-    expect(starterPackOffered(s, T0 + SHOP.starterPackDays * MS_PER_DAY)).toBe(false);
+  const WEEK = SHOP.starterPackDays * MS_PER_DAY;
+  const shop = (shownAt: number, until = 0): Save['shop'] => ({
+    freeCoinsDay: '',
+    freeCoinsUsed: 0,
+    starterPackUntil: until,
+    starterPackShownAt: shownAt,
+  });
+  const withRuns = (runs: number, over: Partial<Save> = {}): Save =>
+    save({ stats: { runs, totalLayers: 0, perfects: 0, adsWatched: 0 }, ...over });
+
+  it('keeps Home without the pack until the 10th finished run', () => {
+    expect(starterPackOnHome(withRuns(0), T0)).toBe(false);
+    expect(starterPackOnHome(withRuns(9), T0)).toBe(false);
+    expect(starterPackOnHome(withRuns(10), T0)).toBe(true);
+    // The window only starts at the first show, so time since the install does not matter.
+    expect(starterPackOnHome(withRuns(10), T0 + 100 * MS_PER_DAY)).toBe(true);
   });
 
-  it('is gone once bought, even inside the days', () => {
-    const bought = save({ purchases: { removeAds: false, starterPack: true } });
-    expect(starterPackOffered(bought, T0)).toBe(false);
+  it('offers the pack in the shop from the start, without a timer before the first show', () => {
+    expect(starterPackInShop(withRuns(0), T0 + 100 * MS_PER_DAY)).toBe(true);
+    expect(starterPackEnd(withRuns(0))).toBeNull();
+    expect(starterPackMsLeft(withRuns(0), T0)).toBeNull();
   });
 
-  it('counts the time left down to zero', () => {
-    const s = save();
-    expect(starterPackMsLeft(s, T0 + MS_PER_DAY)).toBe((SHOP.starterPackDays - 1) * MS_PER_DAY);
-    expect(starterPackMsLeft(s, T0 + 100 * MS_PER_DAY)).toBe(0);
+  it('runs the window for a week from the first show on Home', () => {
+    const shown = withRuns(12, { shop: shop(T0 + MS_PER_DAY) });
+    expect(starterPackEnd(shown)).toBe(T0 + MS_PER_DAY + WEEK);
+    expect(starterPackMsLeft(shown, T0 + 2 * MS_PER_DAY)).toBe(WEEK - MS_PER_DAY);
+    expect(starterPackOnHome(shown, T0 + MS_PER_DAY + WEEK - 1)).toBe(true);
+    expect(starterPackInShop(shown, T0 + MS_PER_DAY + WEEK - 1)).toBe(true);
+    expect(starterPackOnHome(shown, T0 + MS_PER_DAY + WEEK)).toBe(false);
+    expect(starterPackInShop(shown, T0 + MS_PER_DAY + WEEK)).toBe(false);
+    expect(starterPackMsLeft(shown, T0 + 100 * MS_PER_DAY)).toBe(0);
   });
 
-  it('lets a saved end time override the install date', () => {
-    const s = save({ shop: { freeCoinsDay: '', freeCoinsUsed: 0, starterPackUntil: T0 + 5 } });
+  it('is gone once bought, in the shop and on Home', () => {
+    const purchases = { removeAds: false, starterPack: true };
+    expect(starterPackInShop(withRuns(0, { purchases }), T0)).toBe(false);
+    expect(starterPackOnHome(withRuns(10, { purchases }), T0)).toBe(false);
+  });
+
+  it('keeps the first show once it is set', () => {
+    const first = withStarterPackShown(withRuns(10), T0 + 5);
+    expect(first.shop.starterPackShownAt).toBe(T0 + 5);
+    expect(withStarterPackShown(first, T0 + 99)).toBe(first);
+  });
+
+  it('lets a saved end time override the first show', () => {
+    const s = withRuns(10, { shop: shop(0, T0 + 5) });
     expect(starterPackEnd(s)).toBe(T0 + 5);
-    expect(starterPackOffered(s, T0 + 6)).toBe(false);
+    expect(starterPackInShop(s, T0 + 6)).toBe(false);
+    expect(starterPackMsLeft(s, T0)).toBe(5);
   });
 });
 
@@ -72,6 +104,7 @@ describe('free coins for an ad', () => {
     freeCoinsDay: day,
     freeCoinsUsed: used,
     starterPackUntil: 0,
+    starterPackShownAt: 0,
   });
 
   it('allows three a day and starts over with a new day', () => {

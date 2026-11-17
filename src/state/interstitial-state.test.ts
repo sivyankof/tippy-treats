@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { RunResult } from '../core/run-result';
 import type { Save } from '../core/save/schema';
 import type { GameState } from './game-state';
+import { createDefaultSave } from '../core/save/defaults';
 import { createTestState, loadTestState } from './test-state';
 
 const T0 = Date.UTC(2026, 5, 10, 12, 0, 0);
@@ -34,11 +35,23 @@ const idle = {
   shownInSession: 0,
 };
 
-/** A state past the first sessions and the first 24 hours, with four finished runs. */
+/** Finished runs before interstitials may come at all (`FIRST_RUNS.quiet`). */
+const QUIET = 10;
+
+/** A state past the first sessions, the first 24 hours and the first quiet runs. */
 function readyState(clock: { ms: number }): GameState {
   const state = createTestState(clock);
   for (let i = 0; i < 4; i++) state.beginSession();
-  for (let i = 0; i < 4; i++) state.recordRun(run());
+  for (let i = 0; i < QUIET; i++) state.recordRun(run());
+  clock.ms = T0 + DAY_MS;
+  return state;
+}
+
+/** A state past the first sessions and the first 24 hours, `runs` runs finished, no ad shown since none. */
+async function stateWithRuns(clock: { ms: number }, runs: number): Promise<GameState> {
+  const save = createDefaultSave(T0, 'id');
+  const ads = { ...save.ads, sessions: 4, runsSinceInterstitial: 0 };
+  const state = await loadTestState({ ...save, ads, stats: { ...save.stats, runs } }, clock);
   clock.ms = T0 + DAY_MS;
   return state;
 }
@@ -48,7 +61,7 @@ describe('interstitial counters in the game state', () => {
     const clock = { ms: T0 };
     const state = createTestState(clock);
     expect(state.data.ads.sessions).toBe(0);
-    for (let i = 0; i < 4; i++) state.recordRun(run());
+    for (let i = 0; i < QUIET; i++) state.recordRun(run());
     clock.ms = T0 + DAY_MS;
     for (let n = 1; n <= 3; n++) {
       state.beginSession();
@@ -68,11 +81,19 @@ describe('interstitial counters in the game state', () => {
     expect(state.canShowInterstitial(idle)).toBe(true);
   });
 
-  it('counts every finished run and starts over after a show', () => {
+  it('stays quiet until 10 runs are finished, the run just ended included', async () => {
     const clock = { ms: T0 };
-    const state = createTestState(clock);
-    for (let i = 0; i < 4; i++) state.beginSession();
-    clock.ms = T0 + DAY_MS;
+    const state = await stateWithRuns(clock, QUIET - 5);
+    for (let i = 0; i < 4; i++) state.recordRun(run());
+    expect(state.data.stats.runs).toBe(QUIET - 1);
+    expect(state.canShowInterstitial(idle)).toBe(false);
+    state.recordRun(run());
+    expect(state.canShowInterstitial(idle)).toBe(true);
+  });
+
+  it('counts every finished run and starts over after a show', async () => {
+    const clock = { ms: T0 };
+    const state = await stateWithRuns(clock, QUIET);
     for (let i = 0; i < 3; i++) state.recordRun(run());
     expect(state.data.ads.runsSinceInterstitial).toBe(3);
     expect(state.canShowInterstitial(idle)).toBe(false);

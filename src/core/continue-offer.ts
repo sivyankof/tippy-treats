@@ -1,4 +1,5 @@
 import { BALANCE } from '../data/balance';
+import { isCleanRun } from './first-runs';
 import type { RunMode } from './run-result';
 
 /** What the "Continue?" window offers; `null` instead of an offer means no window at all. */
@@ -16,17 +17,21 @@ export interface ContinueOfferInput {
   continuesUsed: number;
   adReady: boolean;
   berries: number;
+  /** Finished runs of the save before this run (`stats.runs`): the first ones have no window. */
+  runsBefore: number;
 }
 
 /**
  * Decides what the window after a miss shows. The daily tower has no continues, a run has at
  * most `BALANCE.continues.max`. The berry price is always part of the offer (short of berries it
  * is shown greyed with the missing amount), but the window is skipped when nothing in it could
- * be pressed: no ad ready and not enough berries.
+ * be pressed: no ad ready and not enough berries. The first clean runs of a player have no
+ * window at all (docs/05-economy-monetization.md, section 5).
  */
 export function continueOffer(input: ContinueOfferInput): ContinueOffer | null {
-  const { mode, continuesUsed, adReady, berries } = input;
+  const { mode, continuesUsed, adReady, berries, runsBefore } = input;
   if (mode === 'daily' || continuesUsed >= BALANCE.continues.max) return null;
+  if (isCleanRun(runsBefore)) return null;
   const ad = continuesUsed === 0 ? (adReady ? 'ready' : 'unavailable') : null;
   const berryCost = BALANCE.continues.berryCosts[continuesUsed];
   if (berryCost === undefined) return null;

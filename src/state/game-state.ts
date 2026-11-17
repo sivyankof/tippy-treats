@@ -20,11 +20,13 @@ import {
   coinCreatureAffordable,
   freeCoinsLeft,
   shopCreatures,
+  starterPackInShop,
   starterPackMsLeft,
-  starterPackOffered,
+  starterPackOnHome,
   withFreeCoinsClaimed,
   withProductGranted,
   withPurchasesRestored,
+  withStarterPackShown,
 } from '../core/shop';
 import type { ProductKey } from '../data/shop';
 import type { TeamSlot } from '../core/sim-types';
@@ -121,6 +123,11 @@ export class GameState {
 
   get berries(): number {
     return this.store.save.berries;
+  }
+
+  /** Runs that reached the save so far (`stats.runs`); a run in progress is not among them. */
+  get runsFinished(): number {
+    return this.store.save.stats.runs;
   }
 
   get wallet(): Wallet {
@@ -236,6 +243,7 @@ export class GameState {
       removeAds: purchases.removeAds,
       session: ads.sessions,
       createdAt,
+      runsFinished: this.runsFinished,
       clockBehind: this.clockBehind,
       runsSince: ads.runsSinceInterstitial,
       nowMs: (this.deps.now ?? now)(),
@@ -401,6 +409,12 @@ export class GameState {
     this.store.replace(withBakerLevel(this.store.save, level));
   }
 
+  /** Dev soak only: sets the finished run count, so Home shows what it shows after the first runs. */
+  debugSetRuns(runs: number): void {
+    const save = this.store.save;
+    this.store.replace({ ...save, stats: { ...save.stats, runs: Math.max(0, Math.floor(runs)) } });
+  }
+
   /** Dev only: baker level +1, level XP reset, no reward. */
   debugBumpBakerLevel(): void {
     this.store.replace(withBakerLevelBumped(this.store.save));
@@ -497,13 +511,25 @@ export class GameState {
 
   // --- Shop ---
 
-  /** The starter pack is on offer: the first days after the install, until it is bought. */
-  get starterPackOffered(): boolean {
-    return starterPackOffered(this.store.save, (this.deps.now ?? now)());
+  /** Home offers the starter pack: the first runs are over, it is not bought and its window is on. */
+  get starterPackOnHome(): boolean {
+    return starterPackOnHome(this.store.save, (this.deps.now ?? now)());
   }
 
-  get starterPackMsLeft(): number {
+  /** The shop offers the starter pack: not bought, and its window has not started or is still on. */
+  get starterPackInShop(): boolean {
+    return starterPackInShop(this.store.save, (this.deps.now ?? now)());
+  }
+
+  /** Time left of the starter pack window; null while it has not started (no timer then). */
+  get starterPackMsLeft(): number | null {
     return starterPackMsLeft(this.store.save, (this.deps.now ?? now)());
+  }
+
+  /** The starter pack button has just appeared on Home: its window starts now if it has not yet. */
+  noteStarterPackShown(): void {
+    const next = withStarterPackShown(this.store.save, (this.deps.now ?? now)());
+    if (next !== this.store.save) this.store.replace(next);
   }
 
   /** Free-coin ads left today (local day). */

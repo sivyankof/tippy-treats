@@ -1,12 +1,25 @@
 import { BALANCE } from '../data/balance';
 import { REWARDED_OFFERS } from '../data/rewarded-video';
+import { isCleanRun, pastQuietRuns } from './first-runs';
 
 /**
  * "×2 coins for an ad" on the results screen: only for a run that reached the save and earned
- * at least `REWARDED_OFFERS.doubleCoinsMin` coins, while the day still has doublings `left` (docs/05-economy-monetization.md, section 6).
+ * at least `REWARDED_OFFERS.doubleCoinsMin` coins, while the day still has doublings `left`, and
+ * never on the results of the first clean runs (docs/05-economy-monetization.md, sections 5 and 6).
+ * `runsFinished` counts the finished runs of the save, the run on the results included.
  */
-export function canOfferDoubleCoins(earned: number, recorded: boolean, left: number): boolean {
-  return recorded && left > 0 && earned >= REWARDED_OFFERS.doubleCoinsMin;
+export function canOfferDoubleCoins(
+  earned: number,
+  recorded: boolean,
+  left: number,
+  runsFinished: number,
+): boolean {
+  return (
+    recorded &&
+    !isCleanRun(runsFinished - 1) &&
+    left > 0 &&
+    earned >= REWARDED_OFFERS.doubleCoinsMin
+  );
 }
 
 /** Everything the interstitial rules look at, read when the player leaves the results. */
@@ -17,6 +30,8 @@ export interface InterstitialContext {
   session: number;
   /** When the save was created, epoch ms: the first launch. */
   createdAt: number;
+  /** Finished runs of the save, the run just ended included (`stats.runs`). */
+  runsFinished: number;
   /** The clock looks set back (behind the last launch by more than the tolerance). */
   clockBehind: boolean;
   /** Finished runs since the last interstitial. */
@@ -52,7 +67,9 @@ export function canShowInterstitial(ctx: InterstitialContext): boolean {
   // A clock set back never lets an ad through: the first-launch pause and the limits cannot be trusted.
   if (ctx.clockBehind || ctx.nowMs < ctx.createdAt) return false;
   const pastStart =
-    ctx.session > rules.firstSessionsFree && ctx.nowMs - ctx.createdAt >= rules.firstFreeMs;
+    ctx.session > rules.firstSessionsFree &&
+    ctx.nowMs - ctx.createdAt >= rules.firstFreeMs &&
+    pastQuietRuns(ctx.runsFinished);
   return (
     !ctx.removeAds &&
     pastStart &&
