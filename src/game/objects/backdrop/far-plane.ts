@@ -1,7 +1,7 @@
 import * as Phaser from 'phaser';
 import { BACKDROP_FAR, type FarShape } from '../../../data/backdrop-far';
 import { MOUNTAIN_FAR_ZONES } from '../../../data/backdrop-mountains';
-import { ZONE_SKY } from '../../../data/backdrop-colors';
+import type { WeatherId } from '../../../data/weather';
 import { ZONES, type ZoneId } from '../../../data/zones';
 import { mixColor } from '../../../util/color';
 import { MS_PER_SECOND } from '../../../util/math';
@@ -11,15 +11,18 @@ import { cloudShape, sparkle } from './art-kit';
 import type { FrameCtx } from './life';
 import { mountainRise } from './mountain-placement';
 import { gradientColorAt } from './sky-gradient';
+import { farLightOf, skyStops, skySuffix } from './weather-palette';
 
 const FAR = BACKDROP_FAR;
 
-const farKey = (zone: ZoneId): string => `bd_far_${zone}`;
+const farKey = (zone: ZoneId, weather: WeatherId): string =>
+  `bd_far_${zone}${skySuffix(zone, weather)}`;
 
 /** The flat colour of tone step `tone` of a zone: the sky colour leaning towards the zone's pale colour. */
-function toneColor(zone: ZoneId, tone: number): number {
-  const base = gradientColorAt(ZONE_SKY[zone], FAR.skyAt);
-  return mixColor(base, FAR.light[zone], FAR.toneShares[tone] ?? 0);
+function toneColor(zone: ZoneId, weather: WeatherId, tone: number): number {
+  const base = gradientColorAt(skyStops(zone, weather), FAR.skyAt);
+  const light = farLightOf(zone, weather) ?? FAR.light[zone];
+  return mixColor(base, light, FAR.toneShares[tone] ?? 0);
 }
 
 function drawShape(g: Phaser.GameObjects.Graphics, shape: FarShape, color: number): void {
@@ -54,9 +57,9 @@ function drawShape(g: Phaser.GameObjects.Graphics, shape: FarShape, color: numbe
 }
 
 /** Bakes the silhouette tile of a zone. */
-export function bakeFarArt(scene: Phaser.Scene, zone: ZoneId): void {
-  bakeTexture(scene, farKey(zone), FAR.tile, FAR.tile, (g) => {
-    for (const shape of FAR.shapes[zone]) drawShape(g, shape, toneColor(zone, shape.tone));
+export function bakeFarArt(scene: Phaser.Scene, zone: ZoneId, weather: WeatherId = 'clear'): void {
+  bakeTexture(scene, farKey(zone, weather), FAR.tile, FAR.tile, (g) => {
+    for (const shape of FAR.shapes[zone]) drawShape(g, shape, toneColor(zone, weather, shape.tone));
   });
 }
 
@@ -74,8 +77,21 @@ export class FarPlane {
   private readonly tiles: Phaser.GameObjects.TileSprite;
   private readonly givesWayToPeaks: boolean;
 
-  constructor(scene: Phaser.Scene, zone: ZoneId, width: number, height: number) {
-    this.tiles = new Phaser.GameObjects.TileSprite(scene, 0, 0, width, height, farKey(zone))
+  constructor(
+    scene: Phaser.Scene,
+    zone: ZoneId,
+    width: number,
+    height: number,
+    weather: WeatherId = 'clear',
+  ) {
+    this.tiles = new Phaser.GameObjects.TileSprite(
+      scene,
+      0,
+      0,
+      width,
+      height,
+      farKey(zone, weather),
+    )
       .setOrigin(0)
       .setAlpha(FAR.alpha);
     this.objects = [this.tiles];

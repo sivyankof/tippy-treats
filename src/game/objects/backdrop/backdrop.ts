@@ -251,6 +251,7 @@ export class Backdrop {
       }),
       this.ctx.width,
       this.ctx.height,
+      this.look.weather,
     );
     scenery.setAlpha(this.fade.alphaOf(index));
     scenery.update(this.ctx, this.scrollY);
@@ -259,8 +260,8 @@ export class Backdrop {
 
   private bake(id: ZoneId, lap: number): void {
     bakeSharedArt(this.scene);
-    bakeFarArt(this.scene, id);
-    bakeSky(this.scene, id);
+    bakeFarArt(this.scene, id, this.look.weather);
+    bakeSky(this.scene, id, this.look.weather);
     const look = this.sceneryLook(Math.max(lap, 1));
     this.artOf(id).bake(this.scene, look);
     this.artOf(id).bakeLap?.(this.scene, look.lap);

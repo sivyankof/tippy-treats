@@ -7,6 +7,7 @@ import { bakeTexture } from '../../ui/bake-texture';
 import { cloudShape, tiled } from './art-kit';
 import { Traveler } from './life';
 import { bakeMountains, Mountains } from './mountains';
+import { mountainTintOf } from './weather-palette';
 import type { ZoneArt } from './zone-scenery';
 
 const TILE = 512;
@@ -103,12 +104,12 @@ export const cloudsArt: ZoneArt = {
     bakeLife(scene);
     bakeMountains(scene);
   },
-  build(scene) {
+  build(scene, look) {
     const life = BACKDROP_LIFE.clouds;
     return {
       layers: [CL.far, CL.mid, CL.near, CL.haze],
       lives: [
-        { slot: MOUNTAIN_SLOT.clouds, life: new Mountains(scene) },
+        { slot: MOUNTAIN_SLOT.clouds, life: new Mountains(scene, mountainTintOf(look.weather)) },
         { slot: 1, life: new Traveler(scene, life.balloon) },
         { slot: 2, life: new Traveler(scene, life.plane) },
       ],

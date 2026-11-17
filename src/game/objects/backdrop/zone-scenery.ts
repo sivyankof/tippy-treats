@@ -3,7 +3,6 @@ import { ANIM } from '../../../data/anim';
 import { BACKDROP_FAR } from '../../../data/backdrop-far';
 import { BACKDROP } from '../../../data/backdrop';
 import { LOGICAL_SIZE } from '../../../data/screen';
-import { ZONE_SKY } from '../../../data/backdrop-colors';
 import type { StartPlaceId } from '../../../data/start-places';
 import type { WeatherId } from '../../../data/weather';
 import type { ZoneId } from '../../../data/zones';
@@ -15,6 +14,7 @@ import { bakeFarArt, FarPlane } from './far-plane';
 import type { GuestSource } from './guest-source';
 import type { FrameCtx, Life } from './life';
 import { fillDitheredRows, gradientBands } from './sky-gradient';
+import { layerTintsOf, skyStops, skySuffix } from './weather-palette';
 
 /** Something in a zone that follows the lap of Space. */
 export interface LapLife {
@@ -53,11 +53,12 @@ export interface ZoneArt {
   build(scene: Phaser.Scene, look: SceneryLook): SceneryDef;
 }
 
-const skyKey = (zone: ZoneId): string => `bd_sky_${zone}`;
+const skyKey = (zone: ZoneId, weather: WeatherId): string =>
+  `bd_sky_${zone}${skySuffix(zone, weather)}`;
 
 /** The dark sky as a small picture with light noise, so the gradient shows no steps (baked once, in row slices over several frames). */
 function bakeDitheredSky(scene: Phaser.Scene, zone: ZoneId): void {
-  if (scene.textures.exists(skyKey(zone))) return;
+  if (scene.textures.exists(skyKey(zone, 'clear'))) return;
   const { skyDither, skyOverscan } = BACKDROP;
   const width = Math.ceil((LOGICAL_SIZE.width * skyOverscan) / skyDither.scale);
   const height = Math.ceil((LOGICAL_SIZE.maxHeight * skyOverscan) / skyDither.scale);
@@ -65,12 +66,12 @@ function bakeDitheredSky(scene: Phaser.Scene, zone: ZoneId): void {
   for (let from = 0; from < height; from += skyDither.rowsPerStep) {
     const to = Math.min(from + skyDither.rowsPerStep, height);
     deferStep(() =>
-      fillDitheredRows(pixels, ZONE_SKY[zone], width, height, skyDither.levels, from, to),
+      fillDitheredRows(pixels, skyStops(zone, 'clear'), width, height, skyDither.levels, from, to),
     );
   }
   bakeTexture(
     scene,
-    skyKey(zone),
+    skyKey(zone, 'clear'),
     width,
     height,
     () => undefined,
@@ -79,14 +80,14 @@ function bakeDitheredSky(scene: Phaser.Scene, zone: ZoneId): void {
 }
 
 /** Bakes the sky picture of a zone (once; the scenery also calls it, so a zone built without the run backdrop has its sky). */
-export function bakeSky(scene: Phaser.Scene, zone: ZoneId): void {
+export function bakeSky(scene: Phaser.Scene, zone: ZoneId, weather: WeatherId = 'clear'): void {
   if ((BACKDROP.skyDither.zones as readonly ZoneId[]).includes(zone)) {
     bakeDitheredSky(scene, zone);
     return;
   }
   const { skyBands, skyBandHeight, skyWidth } = BACKDROP;
-  const colors = gradientBands(ZONE_SKY[zone], skyBands);
-  bakeTexture(scene, skyKey(zone), skyWidth, skyBands * skyBandHeight, (g) => {
+  const colors = gradientBands(skyStops(zone, weather), skyBands);
+  bakeTexture(scene, skyKey(zone, weather), skyWidth, skyBands * skyBandHeight, (g) => {
     colors.forEach((color, i) => {
       g.fillStyle(color, 1);
       g.fillRect(0, i * skyBandHeight, skyWidth, skyBandHeight);
@@ -118,20 +119,29 @@ export class ZoneScenery {
     def: SceneryDef,
     width: number,
     height: number,
+    weather: WeatherId = 'clear',
   ) {
-    bakeSky(scene, zone);
+    bakeSky(scene, zone, weather);
     // Menu screens build the kitchen without the run backdrop, so the far plane bakes here too.
-    bakeFarArt(scene, zone);
+    bakeFarArt(scene, zone, weather);
     this.drift = BACKDROP.drift[zone];
     this.tints = BACKDROP.layerTint[zone] ?? null;
     this.breathePhase = depth;
-    this.sky = new Phaser.GameObjects.Image(scene, width / 2, height / 2, skyKey(zone));
-    this.far = new FarPlane(scene, zone, width, height);
+    this.sky = new Phaser.GameObjects.Image(scene, width / 2, height / 2, skyKey(zone, weather));
+    this.far = new FarPlane(scene, zone, width, height, weather);
     this.layers = def.layers.map((key, i) =>
       new Phaser.GameObjects.TileSprite(scene, 0, 0, width, height, key)
         .setOrigin(0)
         .setAlpha(BACKDROP.layerAlpha[zone][i] ?? 1),
     );
+    // A weather tints the layers (multiply) once; a layer that colour-shifts by itself keeps its own tint.
+    const weatherTints = layerTintsOf(zone, weather);
+    if (weatherTints) {
+      this.layers.forEach((layer, i) => {
+        const tint = weatherTints[i];
+        if (tint !== undefined && !this.tints?.[i]) layer.setTint(tint);
+      });
+    }
     this.lives = def.lives.map(({ life }) => life);
     this.guest = def.guest ?? null;
     this.lapLife = def.lapLife ?? null;
