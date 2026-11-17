@@ -15,7 +15,7 @@ import { bakeOvenTextures } from '../fx/oven-texture';
 import { createRewardTextures } from '../fx/reward-pictures';
 import { createPileTextures } from '../fx/treasure-pile';
 import { createTreasureTextures, TREASURE_TEXTURES } from '../fx/treasure-textures';
-import { bakeNebulaArms } from '../fx/nebula-arms';
+import { bakeNebulaArms, nebulaLayout } from '../fx/nebula-arms';
 import { bakeLapEdge } from '../fx/lap-edges';
 import { bakeSharedArt } from '../objects/backdrop/art-kit';
 import { bakeSpaceVisitors } from '../objects/backdrop/space-visitor-art';
@@ -51,7 +51,7 @@ const PRIME_STEPS: ReadonlyArray<(scene: Phaser.Scene) => void> = [
   bakeCutTextures,
   createAbilityTextures,
   createTreasureTextures,
-  (scene) => bakeNebulaArms(scene, TREASURE_TEXTURES.nebula, scene.scale.height),
+  (scene) => bakeNebulaArms(scene, TREASURE_TEXTURES.nebula, nebulaLayout(scene.scale.height)),
   bakeLapEdge,
   createPileTextures,
   createRewardTextures,

@@ -219,12 +219,8 @@ export class CloudMotion {
   private leaveMs: number = cfg.outMs;
   /** Share of the leave's rise and growth the screen leaves room for (`verticalRoom`). */
   lift = 1;
-  /** The approach progress a cloud had when it was given up, while that leave is fresh. */
-  private gaveUpAt: number | null = null;
-  /** How the cover started: running on from the approach, growing in place (no warning), or back from a leave. */
-  private coverFrom: 'approach' | 'place' | 'leave' = 'place';
-  /** The approach progress the cover runs on from. */
-  private coverStart = 0;
+  /** The cloud was given up while it floated in (its time to arrival jumped): it may still resume. */
+  private gaveUp = false;
   /** How far to the side this cloud slides in from: less when it was found late. */
   private slidePx: number = cfg.enterPx;
   /** The time to arrival seen last frame; it only falls while this cloud is still coming. */
@@ -291,20 +287,7 @@ export class CloudMotion {
   }
 
   private enter(phase: CloudPhase, input: Readonly<CloudInput>): void {
-    if (phase === 'cover') {
-      // A cloud given up a moment ago (its time to arrival jumped a frame before the cover began) runs
-      // on as if the approach had gone straight into the cover.
-      const resumed = this.phase === 'leave' && this.gaveUpAt !== null && this.ageMs < cfg.inMs;
-      this.coverFrom =
-        this.phase === 'approach' || resumed
-          ? 'approach'
-          : this.phase === 'leave'
-            ? 'leave'
-            : 'place';
-      this.coverStart =
-        this.phase === 'approach' ? this.progress : resumed ? (this.gaveUpAt ?? 0) : 0;
-    }
-    this.gaveUpAt = null;
+    this.gaveUp = false;
     if (this.phase === 'idle') {
       this.dir = input.dir;
       this.y = input.y;
@@ -317,8 +300,16 @@ export class CloudMotion {
     this.ageMs = 0;
   }
 
+  /**
+   * A cloud given up a moment ago while it floated in (its time to arrival jumped a frame before the sim
+   * began the cover): this bank should take that cover and turn solid from where it is.
+   */
+  get resumable(): boolean {
+    return this.phase === 'leave' && this.gaveUp && this.ageMs < cfg.inMs;
+  }
+
   private leave(durationMs: number): void {
-    this.gaveUpAt = this.phase === 'approach' ? this.progress : null;
+    this.gaveUp = this.phase === 'approach';
     Object.assign(this.from, this.pose);
     this.phase = 'leave';
     this.ageMs = 0;
@@ -354,28 +345,13 @@ export class CloudMotion {
         return p;
       }
       case 'cover': {
-        const drift = (this.dir * cfg.driftSpeed * t) / MS_PER_S;
-        if (this.coverFrom === 'leave') {
-          // Back from a leave: it turns solid again where it is.
-          const k = smoothstep(t / cfg.inMs);
-          p.x = from.x * (1 - k) + drift;
-          p.alpha = from.alpha + (1 - from.alpha) * k;
-          p.scale = from.scale + (1 - from.scale) * k;
-          p.rise = from.rise * (1 - k);
-          return p;
-        }
-        // The slide runs on at the approach's pace to its end (no snap; a cloud without a warning grows in
-        // place), while it turns solid at a steady rate from where the approach got to.
-        const place = this.coverFrom === 'place';
-        this.progress = place ? 1 : Math.min(1, this.coverStart + t / cfg.approachMinMs);
-        const s = smoothstep(this.progress);
-        const start = place ? 0 : cfg.approachAlpha * smoothstep(this.coverStart);
-        p.x = (place ? 0 : -this.dir * this.slidePx * (1 - s)) + drift;
-        p.alpha = Math.min(1, start + t * cfg.solidPerMs);
-        p.scale = place
-          ? cfg.enterScale + (1 - cfg.enterScale) * p.alpha
-          : cfg.enterScale + (1 - cfg.enterScale) * easeOutCubic(this.progress);
-        p.rise = 0;
+        // Whatever is left of the slide closes while it turns solid, at an even pace (no still frame):
+        // full density `inMs` after the cover starts, whatever the warning was. That is the game role.
+        const k = Math.min(1, t / cfg.inMs);
+        p.x = from.x * (1 - k) + (this.dir * cfg.driftSpeed * t) / MS_PER_S;
+        p.alpha = from.alpha + (1 - from.alpha) * k;
+        p.scale = from.scale + (1 - from.scale) * k;
+        p.rise = from.rise * (1 - k);
         return p;
       }
       case 'leave': {
@@ -589,6 +565,17 @@ class CloudBank {
 }
 
 /**
+ * Which bank takes a cover the sim has just started, by phases: none while one covers or floats in (that
+ * one has it), else a bank that gave up its cloud a moment ago (it resumes from where it is instead of a
+ * new one popping in), else a free one; -1 when there is none.
+ */
+export function coverTaker(motions: readonly CloudMotion[]): number {
+  if (motions.some((m) => m.phase === 'cover' || m.phase === 'approach')) return -1;
+  const resuming = motions.findIndex((m) => m.resumable);
+  return resuming >= 0 ? resuming : motions.findIndex((m) => m.phase === 'idle');
+}
+
+/**
  * What a bank that only finishes leaving takes from the live input: where the layer flies and how
  * dense the puffs may be (a leaving see-through cloud stays see-through), never a new cover.
  */
@@ -634,16 +621,16 @@ export class CloudCover {
   constructor(scene: Phaser.Scene) {
     // At run load the figures are baked again if the screen height asks for another top line.
     bakeCloudFigure(scene, TREASURE_TEXTURES.cloud, true);
-    // The nebula is computed pixel by pixel, in slices within a small budget a frame from run load:
-    // done long before Space (it shows only there).
-    this.nebulaPrep.add(
-      collectBakeSteps(() => bakeNebulaArms(scene, TREASURE_TEXTURES.nebula, scene.scale.height)),
-    );
-    createTreasureTextures(scene);
-    createFxTextures(scene);
     const screenH = scene.scale.height;
     const layout = nebulaLayout(screenH);
     const rects = nebulaFrameRects(layout);
+    // The nebula is computed pixel by pixel, in slices within a small budget a frame from run load:
+    // done long before Space (it shows only there).
+    this.nebulaPrep.add(
+      collectBakeSteps(() => bakeNebulaArms(scene, TREASURE_TEXTURES.nebula, layout, rects)),
+    );
+    createTreasureTextures(scene);
+    createFxTextures(scene);
     const fit: NebulaFit = {
       origins: {
         veil: frameOrigin(rects.veil),
@@ -698,30 +685,30 @@ export class CloudCover {
     this.prepNebula(input);
     const phases = this.banks.map((bank) => bank.motion.phase);
     let needsApproach = !phases.includes('approach') && input.flying && input.etaMs <= cfg.leadMs;
-    let needsCover = input.covering && !phases.includes('cover') && !phases.includes('approach');
+    let taker = input.covering ? coverTaker(this.banks.map((bank) => bank.motion)) : -1;
     const hold = cloudHeld() && phases.includes('cover');
     if (hold) {
       Object.assign(this.held, input, { covering: true });
       // The held bank stays alone on screen: no other one floats in.
       needsApproach = false;
-      needsCover = false;
+      taker = -1;
     }
     followInput(this.passive, input);
     this.ghost = input.ghost;
     Object.assign(this.coming, input, { covering: false });
-    for (const bank of this.banks) {
+    this.banks.forEach((bank, i) => {
       const phase = bank.motion.phase;
       if (phase === 'cover' || phase === 'approach') {
         bank.update(dtMs, timeMs, hold && phase === 'cover' ? this.held : input);
+      } else if (i === taker) {
+        // A free bank, or one that gave up its cloud a moment ago and resumes it.
+        bank.update(dtMs, timeMs, input);
       } else if (phase === 'idle' && needsApproach) {
         needsApproach = false;
         bank.update(dtMs, timeMs, this.coming);
-      } else if (phase === 'idle' && needsCover) {
-        needsCover = false;
-        bank.update(dtMs, timeMs, input);
       } else {
         bank.update(dtMs, timeMs, this.passive);
       }
-    }
+    });
   }
 }

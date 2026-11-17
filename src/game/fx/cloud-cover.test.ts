@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { ANIM } from '../../data/anim';
+import { FLIGHT_CLEAR } from '../../data/flight-clear';
+import { HUD_LAYOUT } from '../../data/hud-layout';
 import { RULE_ANIM } from '../../data/rule-anim';
 import { LOGICAL_SIZE } from '../../data/screen';
 import { cloudTopBaked, flightRowY, topCeiling, verticalRoom } from './cloud-figure';
@@ -7,6 +9,7 @@ import { nebulaLayout, nebulaTop } from './nebula-arms';
 import {
   cloudEtaMs,
   CloudMotion,
+  coverTaker,
   densityCap,
   followInput,
   layerHidden,
@@ -233,74 +236,109 @@ function pass(speed: number, ahead: number, coverMs: number, dt = 33, lift = 1):
   return frames;
 }
 
-/** Logical px per CSS px on a 390 px wide phone. */
-const CSS = LOGICAL_SIZE.width / 390;
-
 describe('entry at high speed', () => {
   for (const speed of [1250, 1350, 1500]) {
-    for (const ahead of [speed * 0.65, speed * 0.3, speed * 0.1]) {
-      it(`floats in without a jump at ${speed} px/s, found ${Math.round(ahead)} px ahead`, () => {
-        const frames = pass(speed, ahead, 300);
-        let solid = false;
-        for (let i = 1; i < frames.length; i++) {
-          const a = frames[i - 1];
-          const b = frames[i];
-          if (!a || !b || a.phase === 'idle' || b.phase !== a.phase) continue;
-          if (b.phase === 'leave') break;
-          // The shown opacity (the nebula's cap) steps by at most 0.15 a 33 ms frame ...
-          const shown = (f: Frame): number => Math.min(f.pose.alpha, cfg.nebula.maxDensity);
-          expect(Math.abs(shown(b) - shown(a))).toBeLessThanOrEqual(0.15);
-          // ... it slides by at most 20 CSS px (the drift included) ...
-          expect(Math.abs(b.pose.x - a.pose.x)).toBeLessThanOrEqual(20 * CSS);
-          // ... and no frame stands still until it is solid.
-          if (shown(b) >= cfg.nebula.maxDensity - 1e-6) solid = true;
-          if (!solid) expect(b.pose.alpha - a.pose.alpha).toBeGreaterThan(0);
-        }
-        // Across the phase change too: approach to cover is one smooth run.
-        const at = frames.findIndex((f) => f.phase === 'cover');
-        const a = frames[at - 1];
-        const b = frames[at];
-        if (a && b && a.phase === 'approach') {
-          expect(Math.abs(b.pose.alpha - a.pose.alpha)).toBeLessThanOrEqual(0.15);
-          expect(Math.abs(b.pose.x - a.pose.x)).toBeLessThanOrEqual(20 * CSS);
-          expect(b.pose.alpha).toBeGreaterThan(a.pose.alpha);
-        }
-      });
+    // Found early, late, very late, or not at all before the cover (no warning).
+    for (const ahead of [speed * 0.65, speed * 0.3, speed * 0.1, 0]) {
+      for (const coverMs of [200, 350]) {
+        it(`is solid within inMs of the cover and moves every frame: ${speed} px/s, ${Math.round(ahead)} px ahead, ${coverMs} ms`, () => {
+          const frames = pass(speed, ahead, coverMs);
+          const start = frames.find((f) => f.phase === 'cover');
+          expect(start).toBeDefined();
+          if (!start) return;
+          for (let i = 1; i < frames.length; i++) {
+            const a = frames[i - 1];
+            const b = frames[i];
+            if (!a || !b || a.phase === 'idle') continue;
+            if (b.phase === 'leave') break;
+            // The game role: full density from inMs after the cover starts until it ends.
+            if (b.phase === 'cover' && b.t - start.t >= cfg.inMs) expect(b.pose.alpha).toBe(1);
+            // Smooth as far as that allows: the shown opacity steps by at most 0.3 a 33 ms frame ...
+            const shown = (f: Frame): number => Math.min(f.pose.alpha, cfg.maxDensity);
+            expect(Math.abs(shown(b) - shown(a))).toBeLessThanOrEqual(0.3);
+            // ... and no frame stands still until it is solid.
+            if (a.pose.alpha < 1) expect(b.pose.alpha).toBeGreaterThan(a.pose.alpha);
+          }
+        });
+      }
     }
   }
 });
 
+describe('a cloud given up a frame before the cover', () => {
+  it('is taken over by the bank that gave it up, which turns solid from where it is', () => {
+    const base: CloudInput = {
+      covering: false,
+      flying: true,
+      etaMs: 200,
+      y: 500,
+      dir: 1,
+      ghost: false,
+      nebula: true,
+    };
+    const banks = [new CloudMotion(), new CloudMotion()];
+    const [a, other] = banks;
+    if (!a || !other) return;
+    for (let i = 0; i < 4; i++) a.update(33, { ...base, etaMs: 200 - i * 33 });
+    expect(a.phase).toBe('approach');
+    // The time to arrival jumps a frame before the sim starts the cover: the bank gives the cloud up.
+    a.update(33, { ...base, etaMs: Infinity });
+    expect(a.phase).toBe('leave');
+    const before = a.pose.alpha;
+    expect(before).toBeGreaterThan(0);
+    // The cover begins: the bank that gave up resumes it, the idle one stays out.
+    expect(coverTaker(banks)).toBe(0);
+    a.update(33, { ...base, covering: true, etaMs: Infinity });
+    expect(a.phase).toBe('cover');
+    expect(a.pose.alpha).toBeGreaterThan(before);
+    for (let t = 33; t < cfg.inMs + 33; t += 33)
+      a.update(33, { ...base, covering: true, etaMs: Infinity });
+    expect(a.pose.alpha).toBe(1);
+    // A free bank takes a cover when nothing else can.
+    expect(coverTaker([new CloudMotion()])).toBe(0);
+  });
+});
+
 describe('HUD gap in every frame', () => {
-  const SHORT = Math.max(LOGICAL_SIZE.minHeight, Math.round((693 * LOGICAL_SIZE.width) / 390));
-  const TALL = Math.round((844 * LOGICAL_SIZE.width) / 390);
-  for (const [name, h] of [
-    ['390x693', SHORT],
-    ['390x844', TALL],
-  ] as const) {
+  const next = HUD_LAYOUT.nextPlate;
+  for (let css = 693; css <= 932; css += 10) {
+    const h = Math.min(
+      LOGICAL_SIZE.maxHeight,
+      Math.max(LOGICAL_SIZE.minHeight, Math.round((css * LOGICAL_SIZE.width) / 390)),
+    );
     for (const look of ['cloud', 'nebula'] as const) {
-      it(`keeps the ${look} top ${'40 px'} under the plates on ${name}: approach, cover with sway, leave`, () => {
+      it(`never moves the ${look} top nearer the plates on 390x${css}: approach, cover with sway, leave`, () => {
         const topBaked = look === 'cloud' ? cloudTopBaked(h) : nebulaTop(nebulaLayout(h));
         const room = verticalRoom(h, topBaked);
-        const ceiling = topCeiling(h);
-        // The layer at the top of its own bob when the bank takes its height.
-        const motionY = flightRowY(h) - ANIM.flying.bobAmplitude;
+        // Its top at rest on the row: under the ceiling, or on a short screen as low as it can stand.
+        const rest = flightRowY(h) - topBaked * cfg.figure.scale;
+        const ceiling = Math.min(topCeiling(), rest);
         // Never lower than the cover margin allows.
         expect(room.drop).toBeLessThanOrEqual(cfg.figure.layerMargin - ANIM.flying.bobAmplitude);
-        for (const frames of [
-          pass(900, 700, 350, 33, room.leave),
-          pass(1350, 300, 200, 16, room.leave),
-        ]) {
-          for (const f of frames) {
-            if (f.phase === 'idle') continue;
-            // The worst moment of the billow: bob at its highest, breath at its widest.
-            for (const [bob, breathe] of [
-              [-1, 1],
-              [-1, -1],
-              [1, 1],
-            ] as const) {
-              const at = placeFigure(motionY, f.pose, bob, breathe, true, room);
-              const top = at.y - topBaked * at.scale;
-              expect(top).toBeGreaterThanOrEqual(ceiling - 0.5);
+        for (const bobUp of [ANIM.flying.bobAmplitude, 0, -ANIM.flying.bobAmplitude]) {
+          // The layer anywhere in its own bob when the bank takes its height.
+          const motionY = flightRowY(h) - bobUp;
+          for (const frames of [
+            pass(900, 700, 350, 33, room.leave),
+            pass(1350, 300, 200, 16, room.leave),
+            pass(1350, 0, 200, 16, room.leave),
+          ]) {
+            for (const f of frames) {
+              if (f.phase === 'idle') continue;
+              // The worst moments of the billow: bob at its highest, breath at its widest.
+              for (const [bob, breathe] of [
+                [-1, 1],
+                [-1, -1],
+                [1, 1],
+              ] as const) {
+                const at = placeFigure(motionY, f.pose, bob, breathe, true, room);
+                const top = at.y - topBaked * at.scale;
+                expect(top).toBeGreaterThanOrEqual(ceiling - 0.5);
+                // And always 40 px under the next creature plate.
+                expect(top).toBeGreaterThanOrEqual(
+                  next.y + next.height + FLIGHT_CLEAR.hudGapPx - 0.5,
+                );
+              }
             }
           }
         }

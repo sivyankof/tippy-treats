@@ -3,7 +3,7 @@ import { ANIM } from '../../data/anim';
 import { BALANCE } from '../../data/balance';
 import { PLAIN_LAYER } from '../../data/plain-layers';
 import { RULE_ANIM } from '../../data/rule-anim';
-import { cssColor } from '../../util/color';
+import { channels, cssColor, mixColor } from '../../util/color';
 import { clamp01, rampBetween, TWO_PI } from '../../util/math';
 import { ditherNoise } from '../objects/backdrop/sky-gradient';
 import { deferStep } from '../ui/bake-texture';
@@ -79,7 +79,10 @@ export function nebulaHeadroom(screenH: number): number {
 function layoutAt(fit: number, room: number): NebulaLayout {
   const l = N.layout;
   const curl = l.curlFloor + (1 - l.curlFloor) * fit;
-  const veilCore = room - ROW_HALF >= l.minFade ? ROW_HALF : Math.max(LAYER_HALF, room - l.minFade);
+  // On a short screen the bank may stand up to the layer's bob lower (`verticalRoom`): the opaque core
+  // still holds the whole layer then.
+  const core = LAYER_HALF + ANIM.flying.bobAmplitude / figure.scale;
+  const veilCore = room - ROW_HALF >= l.minFade ? ROW_HALF : Math.max(core, room - l.minFade);
   return {
     fit,
     room,
@@ -176,11 +179,31 @@ function curlFrom(
   return pts;
 }
 
-/** The samples of an arm: its wave and its two end curls (the left one is the right one turned half round). */
-export function armPoints(
-  arm: ArmName,
-  layout: NebulaLayout,
-): { main: ArmPoint[]; left: ArmPoint[]; right: ArmPoint[] } {
+/** The samples of an arm: its wave and its two end curls. */
+export interface ArmSamples {
+  main: ArmPoint[];
+  left: ArmPoint[];
+  right: ArmPoint[];
+}
+
+/** The samples of each arm made for a layout (a layout is made once per screen and kept). */
+const armCache = new WeakMap<NebulaLayout, Partial<Record<ArmName, ArmSamples>>>();
+
+/** The samples of an arm for a layout, made once (the left curl is the right one turned half round). */
+export function armPoints(arm: ArmName, layout: NebulaLayout): ArmSamples {
+  let byArm = armCache.get(layout);
+  if (!byArm) {
+    byArm = {};
+    armCache.set(layout, byArm);
+  }
+  const cached = byArm[arm];
+  if (cached) return cached;
+  const made = makeArmPoints(arm, layout);
+  byArm[arm] = made;
+  return made;
+}
+
+function makeArmPoints(arm: ArmName, layout: NebulaLayout): ArmSamples {
   const s = ARMS[arm];
   const main: ArmPoint[] = [];
   for (let u = -s.reach; u <= s.reach;) {
@@ -217,13 +240,16 @@ export function curlTurns(pts: readonly ArmPoint[], start: number): number {
   return turned / TWO_PI;
 }
 
-/** How far up (and down) from the centre the arms with their glow reach, baked px. */
+/** How far the sway turns the arms round the centre at most (`nebula.motion.swayRad`; the blue one turns less). */
+const SWAY_SIN = Math.sin(N.motion.swayRad);
+
+/** How far up (and down) from the centre the arms with their glow reach, baked px, their sway included. */
 export function armsReach(layout: NebulaLayout): number {
   let reach = 0;
   for (const arm of ARM_NAMES) {
     const { main, left, right } = armPoints(arm, layout);
     for (const p of [...left, ...main, ...right]) {
-      reach = Math.max(reach, Math.abs(p.y) + layout.glow * p.w);
+      reach = Math.max(reach, Math.abs(p.y) + layout.glow * p.w + Math.abs(p.x) * SWAY_SIN);
     }
   }
   return reach;
@@ -325,9 +351,7 @@ interface Paint {
 
 type Rgb = readonly [number, number, number];
 
-function rgb(color: number): Rgb {
-  return [(color >> 16) & 255, (color >> 8) & 255, color & 255];
-}
+const rgb = channels;
 
 function over(p: Paint, c: Rgb, alpha: number): void {
   if (alpha <= 0) return;
@@ -497,7 +521,8 @@ interface BakeKit {
   layout: NebulaLayout;
   shapes: Record<ArmName, ArmShape>;
   tones: Record<ArmName, ArmTones>;
-  veilTones: readonly [Rgb, Rgb];
+  /** The veil's tone at each column of the veil picture (it drifts along the row only). */
+  veilTones: readonly Rgb[];
   fringe: Rgb;
   halo: Rgb;
   arc: Rgb;
@@ -511,7 +536,9 @@ function bakeKit(layout: NebulaLayout): BakeKit {
     layout,
     shapes: { pink: armShape('pink', layout), blue: armShape('blue', layout) },
     tones: { pink: armTones(ARMS.pink), blue: armTones(ARMS.blue) },
-    veilTones: [rgb(N.veil.tones[0]), rgb(N.veil.tones[1])],
+    veilTones: Array.from({ length: W }, (_, col) =>
+      rgb(mixColor(N.veil.tones[0], N.veil.tones[1], fringeWave(col + 0.5 - CX, true))),
+    ),
     fringe: rgb(N.veil.fringe),
     halo: rgb(N.halo.color),
     arc: rgb(N.arcs.color),
@@ -543,17 +570,9 @@ function paintVeil(kit: BakeKit, p: Paint, u: number, y: number, hit: Hit): void
   const e2 = (u / h.rx) ** 2 + (L.haloRy > 0 ? (y / L.haloRy) ** 2 : Infinity);
   if (e2 < 1) over(p, kit.halo, h.alpha * (1 - e2) ** 2);
   const a = veilAlpha(u, y, L);
-  if (a > 0) {
-    const wave = fringeWave(u, true);
-    const [toneA, toneB] = kit.veilTones;
-    const tone: Rgb = [
-      toneA[0] + (toneB[0] - toneA[0]) * wave,
-      toneA[1] + (toneB[1] - toneA[1]) * wave,
-      toneA[2] + (toneB[2] - toneA[2]) * wave,
-    ];
-    // The body of the veil, turning to the faint lilac of its fringe as it melts away.
-    overMix(p, tone, kit.fringe, 1 - a, a);
-  }
+  const tone = kit.veilTones[Math.floor(u + CX)];
+  // The body of the veil, turning to the faint lilac of its fringe as it melts away.
+  if (a > 0 && tone) overMix(p, tone, kit.fringe, 1 - a, a);
   const arcs = N.arcs;
   const along = Math.abs(u) / arcs.reach;
   // The arcs only where there is room for them above the fringe (not on the shortest screens).
@@ -698,8 +717,8 @@ function drawSparks(
 
 // ---- The bake ---------------------------------------------------------------------------------------
 
-/** The layout each nebula texture was baked with: it is baked again when the screen asks for another. */
-const bakedFit = new Map<string, number>();
+/** The layout each nebula texture was baked with (all of it): it is baked again when the screen asks for another. */
+const bakedLayout = new Map<string, string>();
 
 /** Rows of the texture taken by each picture, top to bottom with a 2 px gap. */
 function textureRows(rects: Record<NebulaFrame, FrameRect>): Record<NebulaFrame, number> {
@@ -708,18 +727,23 @@ function textureRows(rects: Record<NebulaFrame, FrameRect>): Record<NebulaFrame,
 }
 
 /**
- * Bakes the nebula for a screen `screenH` tall into texture `key` (frames `NEBULA_FRAMES`, each cut to what
- * it holds), as deferred steps of `bake.rowsPerStep` rows when called inside `collectBakeSteps`. A texture
- * baked for another layout is replaced (only at run load, when nothing shows it).
+ * Bakes the nebula laid out by `layout` (`nebulaLayout` of the screen) into texture `key` (frames
+ * `NEBULA_FRAMES`, cut by `rects`), as deferred steps of `bake.rowsPerStep` rows when called inside
+ * `collectBakeSteps`. A texture baked for another layout is replaced (only at run load, when nothing
+ * shows it).
  */
-export function bakeNebulaArms(scene: Phaser.Scene, key: string, screenH: number): void {
-  const layout = nebulaLayout(screenH);
+export function bakeNebulaArms(
+  scene: Phaser.Scene,
+  key: string,
+  layout: NebulaLayout,
+  rects: Record<NebulaFrame, FrameRect> = nebulaFrameRects(layout),
+): void {
+  const signature = JSON.stringify(layout);
   if (scene.textures.exists(key)) {
-    if (bakedFit.get(key) === layout.fit) return;
+    if (bakedLayout.get(key) === signature) return;
     scene.textures.remove(key);
   }
-  bakedFit.set(key, layout.fit);
-  const rects = nebulaFrameRects(layout);
+  bakedLayout.set(key, signature);
   const rows = textureRows(rects);
   const height = rows.pink + rects.pink.h;
   const pixels = new Uint8ClampedArray(new ArrayBuffer(W * height * 4));

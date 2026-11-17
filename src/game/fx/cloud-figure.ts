@@ -1,7 +1,5 @@
 import type * as Phaser from 'phaser';
 import { ANIM } from '../../data/anim';
-import { FLIGHT_CLEAR } from '../../data/flight-clear';
-import { HUD_LAYOUT } from '../../data/hud-layout';
 import { RULE_ANIM } from '../../data/rule-anim';
 import { LOGICAL_SIZE } from '../../data/screen';
 import { ZONE_RULES } from '../../data/zones';
@@ -113,14 +111,12 @@ export function riseRoom(screenH: number): number {
 }
 
 /**
- * The highest screen y the top of a figure may reach on a screen `screenH` tall: `hudGapPx` under the
- * badge row (`hudFloor`), or, on a screen too short for that (the body itself reaches higher, the accepted
- * case of 390x693), `hudGapPx` under the next creature plate over the right of the row.
+ * The highest screen y the top of a figure may move up to: `hudGapPx` under the lowest HUD plates (the
+ * badge row, `hudFloor`), on every screen. On a short screen the figure at rest already reaches higher
+ * (its flattened top over the cover row, the accepted case of 390x693): there it does not move up at all.
  */
-export function topCeiling(screenH: number): number {
-  if (riseRoom(screenH) >= 0) return hudFloor();
-  const next = HUD_LAYOUT.nextPlate;
-  return next.y + next.height + FLIGHT_CLEAR.hudGapPx;
+export function topCeiling(): number {
+  return hudFloor();
 }
 
 /** How far up a figure may move on a screen: the share of its bob and upward breath, and of its leave rise and growth. */
@@ -137,16 +133,18 @@ export interface VerticalRoom {
 
 /**
  * The vertical room of a figure whose top stands `topBaked` px above its centre: what is left between
- * its top at rest on the flight row and `topCeiling` goes first to the bobs (the layer's and the figure's)
- * and the upward breath, then to the rise and growth of the leave. A short screen with no room keeps the
- * figure from moving up at all: it fades instead of rising, so its top never comes nearer the plates.
+ * its top at rest on the flight row and `topCeiling` goes first to the layer's own bob (the bank takes the
+ * height the layer has when it comes; without room it stands lower by up to that bob, `drop`), then to the
+ * figure's bob and upward breath, then to the rise and growth of the leave. A short screen with no room
+ * keeps the figure from moving up at all: it fades instead of rising, so its top never comes nearer the
+ * plates than it stands at rest. The room only grows with the screen height (monotonic).
  */
 export function verticalRoom(screenH: number, topBaked: number): VerticalRoom {
   const top = topBaked * figure.scale;
-  const ceiling = topCeiling(screenH);
-  // The layer's own bob comes first: the bank takes the height the layer has when it comes.
-  const slack = flightRowY(screenH) - top - ceiling - ANIM.flying.bobAmplitude;
-  const drop = Math.max(0, -slack);
+  const bob = ANIM.flying.bobAmplitude;
+  const free = flightRowY(screenH) - top - topCeiling();
+  const drop = Math.min(bob, Math.max(0, bob - free));
+  const slack = Math.max(0, free - bob);
   const billowNeed = cfg.bobPx + top * cfg.breathe;
   const billow = clamp01(slack / billowNeed);
   const left = Math.max(0, slack - billow * billowNeed);
