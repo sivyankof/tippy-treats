@@ -11,10 +11,20 @@ import {
   rainDropsShown,
   particleFade,
   particleKeepOut,
+  rainX,
   wrapRange,
 } from './weather-motion';
 
 describe('weather motion', () => {
+  it('leans a raindrop by its height, not by the time', () => {
+    expect(rainX(0.1, 1000, 0.2, 500, 1000)).toBe(100);
+    expect(rainX(0.1, 1000, 0.2, 1000, 1000)).toBeCloseTo(200);
+    expect(rainX(0.1, 1000, 0.2, 0, 1000)).toBeCloseTo(0);
+    // A screen twice the reference height leans half as far.
+    const tall = WEATHER_LOOK.leanRefHeight * 2;
+    expect(rainX(0.1, 1000, 0.2, tall, tall)).toBeCloseTo(100 + 0.2 * 0.5 * (tall / 2));
+  });
+
   it('wraps values into the padded range', () => {
     expect(wrapRange(-30, 100, 20)).toBe(-30 + 140);
     expect(wrapRange(130, 100, 20)).toBe(-10);

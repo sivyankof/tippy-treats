@@ -4,7 +4,7 @@ import { LOGICAL_SIZE } from '../../../data/screen';
 import { WEATHER_LOOK, WEATHER_TEX } from '../../../data/weather-look';
 import { MS_PER_SECOND, TWO_PI } from '../../../util/math';
 import { laneCount, snowSpots, startU } from './weather-lanes';
-import { particleFade, particleKeepOut, rainDropsShown, wrapRange } from './weather-motion';
+import { particleFade, particleKeepOut, rainDropsShown, rainX, wrapRange } from './weather-motion';
 import type { WeatherFrame, WeatherPart } from './weather-frame';
 
 export type FallKind = 'rain' | 'storm' | 'snow' | 'leaves';
@@ -55,6 +55,11 @@ function draw(rng: Rng, range: Range | undefined, fallback: number): number {
   return range ? rng.range(range[0], range[1]) : fallback;
 }
 
+/** x (share of the width) in the left (side 0) or right (side 1) strip of width `strip`. */
+function sideU(rng: Rng, side: number, strip: number): number {
+  return side === 0 ? rng.range(0, strip) : rng.range(1 - strip, 1);
+}
+
 /**
  * Rain, snow or leaves: a fixed pool of images of one atlas, moved by closed formulas of the
  * time (nothing is allocated per frame). The pool is sized for the full level; lower levels show
@@ -78,15 +83,26 @@ export class WeatherFall implements WeatherPart {
     const count = Math.min(look.count, WEATHER_LOOK.particleCount.full);
     const strip = look.sideShare ?? WEATHER_LOOK.sideShare;
     const snow = kind === 'snow';
+    const rain = kind === 'rain' || kind === 'storm';
     // Most start in the side strips (a kind may set its own `sideBias` and `sideShare`); the rest anywhere.
     const drawU = (): number => startU(rng, look.sideBias ?? WEATHER_LOOK.sideBias, strip);
     // Snow falls in lanes (one speed per lane, see weather-lanes.ts); the rest start anywhere.
     const lanes = laneCount(LOGICAL_SIZE.width, WEATHER_LOOK.snow.laneGapPx);
     const spots = snow ? snowSpots(count, lanes, drawU, () => rng.next()) : [];
     const laneSpeed = new Map<number, number>();
+    const sideSpeed: number[] = [];
     for (let i = 0; i < count; i++) {
-      const { lane, u, v } = spots[i] ?? { lane: 0, u: drawU(), v: rng.next() };
-      let speed = draw(rng, look.speed, 0);
+      const side = i % 2;
+      const { lane, u, v } = spots[i] ?? {
+        lane: 0,
+        u: rain ? sideU(rng, side, strip) : drawU(),
+        // Rain: the two sides alternate and each side's drops are spaced evenly down the screen.
+        v: rain
+          ? (Math.floor(i / 2) + side / 2 + rng.next() * 0.2) / Math.ceil(count / 2)
+          : rng.next(),
+      };
+      // The drops of one rain side share a speed, so their even spacing holds as they fall.
+      let speed = rain ? (sideSpeed[side] ??= draw(rng, look.speed, 0)) : draw(rng, look.speed, 0);
       if (snow) {
         speed = laneSpeed.get(lane) ?? speed;
         laneSpeed.set(lane, speed);
@@ -148,7 +164,7 @@ export class WeatherFall implements WeatherPart {
       }
       const y = wrapRange(p.v * height + p.speed * seconds, height, pad);
       const x = rain
-        ? wrapRange(p.u * width + slant * p.speed * seconds, width, pad)
+        ? rainX(p.u, width, slant, y, height)
         : p.u * width + p.sway * Math.sin((TWO_PI * t) / p.swayMs + p.phase);
       // The whole picture keeps out of the HUD gap: its half size, and for a raindrop its slanted length.
       const reach = (image.width * p.scale) / 2;

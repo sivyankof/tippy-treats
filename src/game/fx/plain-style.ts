@@ -70,10 +70,11 @@ export function fillOutlinedPolygon(
   fill: number,
   outline: number,
   grow: number,
+  directions: number = OUTLINE_DIRECTIONS,
 ): void {
   g.fillStyle(outline, 1);
-  for (let i = 0; i < OUTLINE_DIRECTIONS; i++) {
-    const a = (TWO_PI * i) / OUTLINE_DIRECTIONS;
+  for (let i = 0; i < directions; i++) {
+    const a = (TWO_PI * i) / directions;
     const dx = Math.cos(a) * grow;
     const dy = Math.sin(a) * grow;
     fillPolygon(

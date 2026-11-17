@@ -157,17 +157,17 @@ function bakeAwning(scene: Phaser.Scene): void {
   });
 }
 
-/** A pendant lamp: a cord, a cap and a round pastel globe in two tones with a gloss mark. */
+/** A pendant lamp: a cord, a cap and a round pastel globe in two tones with a gloss mark inside a flat rim ring. */
 function bakeLamp(scene: Phaser.Scene): void {
-  const { width, height, cord, globe } = SHOP_LOOK.lamp;
+  const { width, height, cord, globe, rim } = SHOP_LOOK.lamp;
   const cx = width / 2;
   const cy = cord + globe;
   bakePadded(scene, SHOP_TEX.lamp, width, height, FIELD_PAD.shopLamp, (g) => {
     g.fillStyle(outlineColor(C.awningPink), 1);
     g.fillRect(cx - 2, 0, 4, cord);
     g.fillRoundedRect(cx - 9, cord - 6, 18, 12, 4);
-    g.fillStyle(0xfff0c0, 0.3);
-    g.fillCircle(cx, cy, globe + 12);
+    g.lineStyle(rim.width, rim.color, 1);
+    g.strokeCircle(cx, cy, globe + rim.gap + rim.width / 2);
     outlined(g, C.sweets.glaze, circle(g, cx, cy, globe));
     g.fillStyle(shade(C.sweets.glaze, 0.35), 1);
     g.fillCircle(cx - 2, cy - 2, globe * 0.62);

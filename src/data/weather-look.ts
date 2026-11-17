@@ -219,6 +219,8 @@ export const WEATHER_LOOK = {
   keepOutFeatherPx: 40,
   endFeatherPx: 60,
   /** Share of the particles (unless a kind says otherwise) that start in the side strips (the tower hides the middle), and the strip width as share of the screen. */
+  /** Screen height (px) up to which a raindrop leans fully along its fall; a taller screen eases the lean (see `rainX`). */
+  leanRefHeight: 1920,
   sideBias: 0.8,
   sideShare: 0.3,
 
@@ -226,10 +228,12 @@ export const WEATHER_LOOK = {
   rain: {
     frames: ['drop'],
     speed: [1500, 1900],
-    slant: 0.22,
+    slant: 0.15,
     alpha: [0.7, 0.8],
     scale: [0.85, 1.1],
     count: 37,
+    /** Rain falls only in the two side strips the tower leaves free (each of this share of the width); a drop leans with its height, so it stays near its strip. */
+    sideShare: 0.12,
   },
   storm: {
     frames: ['drop'],
@@ -238,6 +242,7 @@ export const WEATHER_LOOK = {
     alpha: [0.7, 0.8],
     scale: [0.95, 1.15],
     count: 37,
+    sideShare: 0.15,
   },
   snow: {
     frames: ['flake'],
