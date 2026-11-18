@@ -6,6 +6,7 @@ import { formatNumber, t } from '../../i18n';
 import { services } from '../../services';
 import type { ContinueFlow } from '../continue-flow';
 import { continueInput } from '../continue-input';
+import { windowDuck } from '../music-cues';
 import { cuesForMoment } from '../fx/moment-cues';
 import { playCues } from '../fx/run-cues';
 import { createTreasureTextures } from '../fx/treasure-textures';
@@ -42,6 +43,8 @@ export class ContinueWindow {
   private screenH = 0;
   private slide: Phaser.Tweens.Tween | null = null;
   private bobTween: Phaser.Tweens.Tween | null = null;
+  /** Lets the music duck go; set while the window is shown. */
+  private releaseDuck: (() => void) | null = null;
 
   constructor(private readonly scene: Phaser.Scene) {
     createTreasureTextures(scene);
@@ -75,6 +78,7 @@ export class ContinueWindow {
       this.declineText,
     ]);
     this.panel = scene.add.container(0, 0, [this.bob]).setDepth(win.depth).setVisible(false);
+    scene.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.letDuckGo());
   }
 
   /** Screen area of the window while it is on screen, so taps on it do not drop a layer. */
@@ -130,6 +134,8 @@ export class ContinueWindow {
 
   private show(flow: ContinueFlow, runHeight: number): void {
     this.shown = true;
+    this.letDuckGo();
+    this.releaseDuck = windowDuck.hold();
     this.balance.snap(flow.balance);
     this.declineShown = false;
     this.timer.reset();
@@ -147,6 +153,7 @@ export class ContinueWindow {
 
   private hide(): void {
     this.shown = false;
+    this.letDuckGo();
     this.buttons.disable();
     this.slideTo(this.offscreenY(), win.slideOutMs, win.slideOutEase, () => {
       if (!this.shown) this.panel.setVisible(false);
@@ -154,6 +161,11 @@ export class ContinueWindow {
     this.bobTween?.stop();
     this.bobTween = null;
     this.bob.y = 0;
+  }
+
+  private letDuckGo(): void {
+    this.releaseDuck?.();
+    this.releaseDuck = null;
   }
 
   /** Below the bottom edge, ribbon included. */

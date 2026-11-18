@@ -1,5 +1,5 @@
 import type * as Phaser from 'phaser';
-import { APP_VERSION, BUILD_HASH, BUILD_TIME, MUSIC_AVAILABLE } from '../../../data/app-info';
+import { APP_VERSION, BUILD_HASH, BUILD_TIME } from '../../../data/app-info';
 import { MENU } from '../../../data/menu-layout';
 import { PALETTE } from '../../../data/palette';
 import { getLang, t } from '../../../i18n';
@@ -7,7 +7,6 @@ import { gameState } from '../../../state';
 import {
   notificationsAnyOn,
   setAllNotifications,
-  setMusicOn,
   setLanguage,
   setNotificationOn,
   type NotificationKind,
@@ -32,18 +31,6 @@ export interface SettingsHandlers {
   onClosed?: () => void;
 }
 
-/** The sound switches; the music one joins them only once the game has music. */
-function settingsSoundRows(): ToggleRowSpec[] {
-  const rows = soundSettingRows();
-  if (!MUSIC_AVAILABLE) return rows;
-  const music = {
-    label: t('settings.music'),
-    read: () => gameState.settings.music,
-    write: setMusicOn,
-  };
-  return [...rows.slice(0, 1), music, ...rows.slice(1)];
-}
-
 /** The general switch and one switch per type; the types are shifted right under the general one. */
 function notificationRows(): ToggleRowSpec[] {
   return [
@@ -58,7 +45,7 @@ function notificationRows(): ToggleRowSpec[] {
 }
 
 /**
- * The settings window (docs/07, section 13): sounds, vibration and effects, language,
+ * The settings window (docs/07, section 13): sounds, music, vibration and effects, language,
  * notifications, restore purchases, version and "Reset progress" with two confirmations.
  */
 export function openSettingsWindow(scene: Phaser.Scene, handlers: SettingsHandlers): PopupWindow {
@@ -66,7 +53,7 @@ export function openSettingsWindow(scene: Phaser.Scene, handlers: SettingsHandle
   const width = popup.innerWidth;
   let y = 0;
 
-  const sounds = createToggleRows(scene, settingsSoundRows(), { x: 0, top: y, width });
+  const sounds = createToggleRows(scene, soundSettingRows(), { x: 0, top: y, width });
   y = sounds.bottom + cfg.blockGap;
 
   const language = createLanguageRow(scene, y, width, handlers.onLanguage);

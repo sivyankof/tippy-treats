@@ -3,6 +3,7 @@ import { HUD_LAYOUT } from '../../data/hud-layout';
 import { readDebugParams } from '../../util/debug-params';
 import { services } from '../../services';
 import { bindAudioLifecycle } from '../audio-lifecycle';
+import { bindMenuMusic } from '../music-cues';
 import { bindSystemReducedMotion, effectsMode } from '../effects-mode';
 import { bindFrameWork } from '../frame-work';
 import { createAbilityTextures } from '../fx/abilities/ability-textures';
@@ -42,6 +43,7 @@ export class BootScene extends Phaser.Scene {
     bakeSquashTextures(this);
     createAbilityTextures(this);
     bindAudioLifecycle(this.game, services.audio, services.silentMode);
+    bindMenuMusic(this.game);
     bindSystemReducedMotion(effectsMode);
     bindFrameWork(this.game);
     if (readDebugParams().lineup) {

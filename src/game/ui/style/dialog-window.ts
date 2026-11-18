@@ -1,6 +1,7 @@
 import * as Phaser from 'phaser';
 import { MENU } from '../../../data/menu-layout';
 import { PALETTE } from '../../../data/palette';
+import { windowDuck } from '../../music-cues';
 import { createDimOverlay } from '../dim-overlay';
 import { createIconButton } from '../menu/icon-button';
 import { openPopup } from '../transition';
@@ -55,6 +56,8 @@ export class PopupWindow {
   private contentHeight: number;
   private closing = false;
   private gone = false;
+  /** Every open window turns the music down until it is gone (nested windows count). */
+  private readonly releaseDuck = windowDuck.hold();
 
   constructor(
     private readonly scene: Phaser.Scene,
@@ -133,6 +136,7 @@ export class PopupWindow {
   destroy(): void {
     if (this.gone) return;
     this.gone = true;
+    this.releaseDuck();
     this.scene.scale.off(Phaser.Scale.Events.RESIZE, this.layout, this);
     this.scene.events.off(Phaser.Scenes.Events.SHUTDOWN, this.destroy, this);
     this.scene.tweens.killTweensOf([this.dim, this.root]);
