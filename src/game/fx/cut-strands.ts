@@ -105,6 +105,8 @@ interface Drop {
 export interface StrandHooks {
   /** A strand snapped at (x, y); `first` for the first snap of the cut, `main` for the thickest strand. */
   snapped(x: number, y: number, first: boolean, main: boolean): void;
+  /** A drop of glaze came off a snapped strand and starts to fall. */
+  dropped(): void;
 }
 
 /** What starts a set of strands. */
@@ -437,7 +439,7 @@ export class CutStrands {
     const falling = !b1.on || b0.share >= b1.share ? b0 : b1;
     if (falling.on) {
       strand.halves[falling.half].shape.pointAt(falling.share, tmp);
-      this.spawnDrop(start, tmp.x, tmp.y, falling.size);
+      if (this.spawnDrop(start, tmp.x, tmp.y, falling.size)) hooks.dropped();
       falling.on = false;
       this.hideBody(falling.body);
     }
@@ -504,9 +506,10 @@ export class CutStrands {
     }
   }
 
-  private spawnDrop(start: StrandStart, x: number, y: number, size: number): void {
+  /** Starts a falling drop; false when every drop of the pool is busy. */
+  private spawnDrop(start: StrandStart, x: number, y: number, size: number): boolean {
     const drop = this.drops.find((d) => !d.on);
-    if (!drop) return;
+    if (!drop) return false;
     const { drops } = S;
     drop.on = true;
     drop.x = x;
@@ -517,6 +520,7 @@ export class CutStrands {
     drop.vy = drops.downSpeed;
     drop.size = size;
     drop.ageMs = 0;
+    return true;
   }
 
   private updateDrops(dtMs: number): void {

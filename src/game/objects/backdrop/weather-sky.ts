@@ -11,6 +11,7 @@ import { flightClearBand, hudFloor, hudKeepOutFade } from '../../camera-layout';
 import type { FrameCtx, Life } from './life';
 import { inSky } from './layer-anchor';
 import { fxGuard } from '../../fx-guard';
+import { playFx } from '../../fx-sound';
 import { bankFlashKey, bankKey } from './weather-art';
 import { announceFlash } from './lightning-flash';
 import { zoneShowsWeatherSky } from './weather-share';
@@ -160,7 +161,10 @@ export class WeatherBank implements Life {
       this.side = this.strike?.side ?? this.rng.int(0, STRIKE_SIDES.length - 1);
       this.nextAt = nextBoltAt(now, BOLT.everyMs, this.rng.next());
       // The layers of the tower start at the flash; the glass of the Showcase (no bolt) scares them less.
-      fxGuard.run('startle', () => announceFlash(this.view.bolt ? 'sky' : 'street'));
+      const kind = this.view.bolt ? 'sky' : 'street';
+      fxGuard.run('startle', () => announceFlash(kind));
+      // The thunder comes late (the sound picks its own delay); behind the glass it is muffled.
+      playFx('thunder', kind === 'street');
     }
     const strength = this.flashAt < 0 ? 0 : flashEnvelope(now - this.flashAt, this.flashMs);
     this.strength = strength;

@@ -17,6 +17,13 @@ describe('cuesForMoment', () => {
     expect(cues.haptics).toEqual(['success']);
   });
 
+  it('ticks every second of the countdown, higher on the last two', () => {
+    expect(cuesForMoment('timerTick').sounds).toEqual([{ kind: 'countdownTick', urgent: false }]);
+    expect(cuesForMoment('timerTickLast').sounds).toEqual([
+      { kind: 'countdownTick', urgent: true },
+    ]);
+  });
+
   it('keeps a decline silent', () => {
     expect(cuesForMoment('declined')).toEqual({ sounds: [], haptics: [] });
   });

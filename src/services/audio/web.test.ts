@@ -100,6 +100,17 @@ function setup() {
 }
 
 describe('WebAudioService', () => {
+  it('remembers the weather bed asked for before the unlock and starts it then', () => {
+    const { ctx, service } = setup();
+    service.setBed('rain');
+    service.unlock();
+    const baseline = ctx.nodes;
+    expect(service.debugStats().liveNodes).toBe(5);
+    service.setBed('rain');
+    expect(ctx.nodes).toBe(baseline);
+    service.setBed(null);
+  });
+
   it('is a silent no-op without Web Audio', () => {
     const service = new WebAudioService(() => null);
     service.unlock();

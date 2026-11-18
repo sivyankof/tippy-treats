@@ -1,4 +1,6 @@
 import type { Rarity } from '../../data/rarity';
+import type { BedKind } from '../../data/weather-bed';
+import { BedPlayer } from './bed';
 import type { DuckReason } from './mixer-math';
 import { Mixer } from './mixer';
 import {
@@ -41,6 +43,8 @@ export class WebAudioService implements AudioService, AudioDevControl {
   private ctx: AudioContext | null = null;
   private mixer: Mixer | null = null;
   private player: SoundPlayer | null = null;
+  private beds: BedPlayer | null = null;
+  private bedKind: BedKind | null = null;
   private recordDuckTimer: ReturnType<typeof setTimeout> | null = null;
   private readonly musicProxy = new MusicProxy();
   private devLevels: Partial<{ master: number; sfx: number; music: number }> = {};
@@ -93,6 +97,8 @@ export class WebAudioService implements AudioService, AudioDevControl {
         this.ctx = ctx;
         this.mixer = mixer;
         this.player = new SoundPlayer(synth);
+        this.beds = new BedPlayer(ctx, mixer, this.random);
+        this.applyBed();
         if (!this.on) mixer.setSfxOn(false);
         if (!this.musicOn) mixer.setMusicOn(false);
         mixer.setDevScales(this.devLevels);
@@ -101,6 +107,7 @@ export class WebAudioService implements AudioService, AudioDevControl {
         this.ctx = null;
         this.mixer = null;
         this.player = null;
+        this.beds = null;
         return;
       }
     }
@@ -118,6 +125,19 @@ export class WebAudioService implements AudioService, AudioDevControl {
   resume(reason: AudioSuspendReason): void {
     this.holds.delete(reason);
     if (this.holds.size === 0) this.run((ctx) => ctx.resume());
+  }
+
+  setBed(kind: BedKind | null): void {
+    this.bedKind = kind;
+    this.applyBed();
+  }
+
+  private applyBed(): void {
+    try {
+      this.beds?.set(this.bedKind);
+    } catch {
+      // A failing bed must never break the game.
+    }
   }
 
   debugStats(): AudioDebugStats {

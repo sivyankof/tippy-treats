@@ -88,6 +88,31 @@ describe('SOUND_BOOK', () => {
     }
   });
 
+  it('has a variant for every squashed kind, thunder in the sky and behind glass, and a bed marked for the owner', () => {
+    expect(
+      soundVariants('topperSquash')
+        .map((v) => v.label)
+        .sort(),
+    ).toEqual(['cherry', 'cream', 'lemon', 'mint', 'strawberry', 'wafer'].sort());
+    expect(soundVariants('thunder').map((v) => v.args[0])).toEqual([false, true]);
+    expect(SOUND_BOOK.weatherBed.ownerChoice).toBe(true);
+    expect(SOUND_BOOK.weatherBed.priority).toBe('ambient');
+    expect(SOUND_BOOK.yawn.priority).toBe('ambient');
+  });
+
+  it('draws the thunder delay and roll inside the brief (150-400 ms, 0.8-1.2 s)', () => {
+    for (const value of [0, 0.5, 0.999]) {
+      const { ctx } = fakeContext();
+      const synth = new Synth(ctx, new Mixer(ctx), () => value);
+      const result = new SoundPlayer(synth).play('thunder', [false]);
+      expect(result.played).toBe(true);
+      if (!result.played) continue;
+      // Delay up to 0.4 s, then the roll (the low note) up to 1.2 s, plus the tail.
+      expect(result.length).toBeGreaterThan(0.15 + 0.8);
+      expect(result.length).toBeLessThan(0.4 + 1.2 + 0.46 + 0.2);
+    }
+  });
+
   it('marks only the record fanfare as ducking the music', () => {
     const ducking = (Object.keys(SOUND_BOOK) as SoundId[]).filter(
       (id) => SOUND_BOOK[id].ducksMusic,

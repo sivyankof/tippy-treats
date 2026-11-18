@@ -49,6 +49,8 @@ export async function buyProduct(key: ProductKey): Promise<BuyOutcome> {
   gameState.grantProduct(key);
   applyRemoveAds();
   gameState.flush();
+  // One reward sound for every successful purchase, whichever screen it was made on.
+  services.audio.play('purchase');
   return 'purchased';
 }
 

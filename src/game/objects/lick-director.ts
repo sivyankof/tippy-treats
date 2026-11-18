@@ -89,6 +89,8 @@ export class LickDirector {
   private readonly spot = { x: 0, y: 0 };
   /** The short scene's stroke takes the drop: a short slurp. */
   onSlurp: (() => void) | null = null;
+  /** The short scene's stroke takes a juice stain: a shorter, quieter slurp. */
+  onSlurpJuice: (() => void) | null = null;
   /** The big scene's tongue shoots out: a long slurp through its whole motion. */
   onSlurpLong: (() => void) | null = null;
   /** The tongue snaps back in: a smack. */
@@ -382,7 +384,7 @@ export class LickDirector {
   private cue(run: ActiveLick, stage: LickStage, ctx: LickContext): void {
     if (run.scene === 'short') {
       if (stage === 'sly') this.glanceNeighbours(run, ctx);
-      if (stage === 'stroke') this.onSlurp?.();
+      if (stage === 'stroke') (run.juice ? this.onSlurpJuice : this.onSlurp)?.();
       return;
     }
     if (stage === 'notice') this.glanceNeighbours(run, ctx);

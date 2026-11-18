@@ -62,6 +62,8 @@ interface Slot {
   crumbsDone: boolean;
   crumbs: (() => void) | null;
   panic: boolean;
+  /** Strands are pulling on this cut (it has the stretch sound). */
+  pull: boolean;
   trace: boolean;
   /** The cut layer is a plain one (a wavy glaze edge), not a creature. */
   plain: boolean;
@@ -159,6 +161,7 @@ export class CutFx {
     slot.crumbsDone = false;
     slot.crumbs = cut.crumbs;
     slot.panic = cut.plan.panic;
+    slot.pull = false;
     slot.pieceWidth = cut.pieceWidth;
     slot.faceShift = 0;
     slot.trace = cut.plan.trace;
@@ -186,6 +189,7 @@ export class CutFx {
         layerCenter: cut.layerCenter,
       };
       slot.strands.begin(start, random);
+      slot.pull = true;
     }
     if (cut.plan.panic)
       slot.panicSet.begin(cut.pieceWidth, BALANCE.layer.height, cut.cake, cut.side, random);
@@ -211,6 +215,7 @@ export class CutFx {
       slot.crumbsDone = true;
       slot.crumbs?.();
       view.dropShadow();
+      if (slot.pull) effectCues.emit({ kind: 'cutStretch' });
       if (slot.panic) effectCues.emit({ kind: 'cutPanic' });
     }
     slot.strands.update(since, dtMs, view, slot.hooks);
@@ -258,6 +263,7 @@ export class CutFx {
       crumbsDone: false,
       crumbs: null,
       panic: false,
+      pull: false,
       trace: false,
       plain: true,
       pieceWidth: 0,
@@ -269,13 +275,15 @@ export class CutFx {
       hangSize: 0,
       strands: new CutStrands(scene),
       panicSet: new CutPanic(scene),
-      hooks: { snapped: () => undefined },
+      hooks: { snapped: () => undefined, dropped: () => undefined },
     };
     slot.hooks = {
-      snapped: (_x, _y, first, main) => {
-        if (first) effectCues.emit({ kind: 'cutStrandSnap' });
+      snapped: (_x, _y, _first, main) => {
+        // Every strand has its own small snap (the sound gate merges the ones at the same moment).
+        effectCues.emit({ kind: 'cutStrandSnap' });
         if (main && slot.trace) this.leaveTrace(slot);
       },
+      dropped: () => effectCues.emit({ kind: 'cutDrip' }),
     };
     return slot;
   }

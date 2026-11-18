@@ -1,7 +1,8 @@
 import type { RunCues } from './run-cues';
 
 /** Moments of a run that are not sim events: the continue window and the record line. */
-export type MomentKind = 'offerOpened' | 'timerTick' | 'continued' | 'declined' | 'recordCrossed';
+export type MomentKind =
+  'offerOpened' | 'timerTick' | 'timerTickLast' | 'continued' | 'declined' | 'recordCrossed';
 
 /**
  * Sounds and haptics of a moment. Declining plays nothing of its own: the collapse that
@@ -11,8 +12,11 @@ export function cuesForMoment(kind: MomentKind): RunCues {
   switch (kind) {
     case 'offerOpened':
       return { sounds: [{ kind: 'click' }], haptics: ['light'] };
+    // A quiet tick on every second of the countdown; the last two seconds tick higher and tap (as before).
     case 'timerTick':
-      return { sounds: [{ kind: 'click' }], haptics: ['selection'] };
+      return { sounds: [{ kind: 'countdownTick', urgent: false }], haptics: [] };
+    case 'timerTickLast':
+      return { sounds: [{ kind: 'countdownTick', urgent: true }], haptics: ['selection'] };
     case 'continued':
       return { sounds: [{ kind: 'berry' }], haptics: ['success'] };
     case 'recordCrossed':
