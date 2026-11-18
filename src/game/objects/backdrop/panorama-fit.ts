@@ -1,7 +1,7 @@
 import { ANIM } from '../../../data/anim';
 import { BALANCE } from '../../../data/balance';
 import { PANORAMA } from '../../../data/window-look';
-import { smoothstep } from '../../../util/math';
+import { rampBetween, smoothstep } from '../../../util/math';
 import { FLYING_REACH, hudFloor } from '../../camera-layout';
 
 /** Where the panoramic window stands on the start view of a screen: its centre y and the scale of its picture. */
@@ -88,4 +88,18 @@ export function coverFade(y: number, halfH: number, towerTop: number): number {
   const { fullAt, goneAt } = PANORAMA.cover;
   const visible = Math.min(1, Math.max(0, (towerTop - (y - halfH)) / (2 * halfH)));
   return smoothstep((visible - goneAt) / (fullAt - goneAt));
+}
+
+/** Share (0..1) of the full mute in a `rowMute` alpha factor: 0 clear of the row, 1 where the row overlaps the window. */
+export function muteShare(mute: number): number {
+  return (1 - mute) / (1 - PANORAMA.rowMuted);
+}
+
+/**
+ * Alpha of the moon of the night window: it goes before the window does (gone while the window still has
+ * `moon.goneAt` of its alpha) and keeps `moon.mutedAlpha` of it while the window is fully muted (`muted` 0..1).
+ */
+export function moonAlpha(windowAlpha: number, muted: number): number {
+  const { goneAt, mutedAlpha } = PANORAMA.moon;
+  return windowAlpha * rampBetween(windowAlpha, goneAt, 1) * (1 - (1 - mutedAlpha) * muted);
 }
