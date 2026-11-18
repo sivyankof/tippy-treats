@@ -18,3 +18,24 @@ export function musicTarget(
 ): number {
   return on ? level * duckFactor(held, share) : 0;
 }
+
+/**
+ * Transfer curve of the output limiter, `size` points over input -1..1: the identity up to
+ * `threshold`, then a smooth bend (tanh, same slope at the joint) that approaches `ceiling` and
+ * never reaches it. Odd in the input.
+ */
+export function limiterCurve(
+  size: number,
+  threshold: number,
+  ceiling: number,
+): Float32Array<ArrayBuffer> {
+  const curve = new Float32Array(new ArrayBuffer(size * Float32Array.BYTES_PER_ELEMENT));
+  const room = ceiling - threshold;
+  for (let i = 0; i < size; i++) {
+    const x = (i / (size - 1)) * 2 - 1;
+    const a = Math.abs(x);
+    const y = a <= threshold ? a : threshold + room * Math.tanh((a - threshold) / room);
+    curve[i] = x < 0 ? -y : y;
+  }
+  return curve;
+}

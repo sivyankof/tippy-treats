@@ -1,12 +1,12 @@
 import { AUDIO_MIX } from '../../data/audio-mix';
-import { musicTarget, type DuckReason } from './mixer-math';
+import { limiterCurve, musicTarget, type DuckReason } from './mixer-math';
 import { NodeTally } from './node-tally';
 
 /**
  * The output chain over any audio context (live or offline, so renders hear what the player hears):
  *
  *   sfx bus -> sfx compressor -> master
- *   music bus ---------------->  master -> limiter -> trim -> destination
+ *   music bus ---------------->  master -> limiter -> destination
  *
  * Sounds connect to `sfxBus`, the music to `musicBus`. The bus switches and the music duck ramp
  * the bus gain, so nothing clicks. Numbers: `data/audio-mix.ts`.
@@ -40,22 +40,16 @@ export class Mixer {
     sfxComp.attack.value = sc.attack;
     sfxComp.release.value = sc.release;
 
-    const limiter = ctx.createDynamicsCompressor();
+    const limiter = ctx.createWaveShaper();
     const lim = mix.limiter;
-    limiter.threshold.value = lim.threshold;
-    limiter.knee.value = lim.knee;
-    limiter.ratio.value = lim.ratio;
-    limiter.attack.value = lim.attack;
-    limiter.release.value = lim.release;
-    const trim = ctx.createGain();
-    trim.gain.value = mix.trimLevel;
+    limiter.curve = limiterCurve(lim.curveSize, lim.threshold, lim.ceiling);
+    limiter.oversample = '2x';
 
     this.sfxBus.connect(sfxComp);
     sfxComp.connect(this.master);
     this.musicBus.connect(this.master);
     this.master.connect(limiter);
-    limiter.connect(trim);
-    trim.connect(ctx.destination);
+    limiter.connect(ctx.destination);
   }
 
   get sfxIsOn(): boolean {

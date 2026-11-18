@@ -12,7 +12,7 @@ import { SoundPlayer } from './sound-player';
 import { Synth } from './synth';
 
 /**
- * Offline rendering: the same chain as live (`Mixer`: buses, compressor, limiter, trim) over an
+ * Offline rendering: the same chain as live (`Mixer`: buses, compressor, limiter) over an
  * `OfflineAudioContext`, so a render is what the player hears, and can be saved as a WAV and
  * measured (`wav.ts`, `levels.ts`). Randomness is seeded, so a render repeats exactly.
  */

@@ -1,6 +1,6 @@
 /**
  * Mixing of the audio output (docs/06-art-animation-audio.md, section 7, "Микширование").
- * Chain: sfx bus -> sfx compressor -> master; music bus -> master; master -> limiter -> trim -> output.
+ * Chain: sfx bus -> sfx compressor -> master; music bus -> master; master -> limiter -> output.
  * Gains are linear, times are seconds, thresholds are dB.
  */
 export const AUDIO_MIX = {
@@ -13,15 +13,14 @@ export const AUDIO_MIX = {
   /** The gentle compressor of the sfx bus (the one the synth always had). */
   sfxCompressor: { threshold: -18, knee: 20, ratio: 4, attack: 0.003, release: 0.2 },
   /**
-   * Output limiter: a compressor that only catches peaks. Threshold a few dB under full scale,
-   * no knee, high ratio, attack as fast as the node allows, short release so it lets go between sounds.
+   * Output limiter: a static soft clipper (a `WaveShaperNode`), not a compressor. Below `threshold`
+   * (linear) the signal is not touched at all; above it the curve bends smoothly towards `ceiling`
+   * (below full scale), so stacked sounds never clip. A `DynamicsCompressorNode` was tried and
+   * dropped: in Chrome it is not transparent below its threshold (rendered offline it made the drop
+   * 6.5 dB quieter and the guest splat 4 dB, while loud sounds stayed put), and existing sounds
+   * must sound exactly as before. `curveSize` points over -1..1 (odd, so zero is a point).
    */
-  limiter: { threshold: -3, knee: 0, ratio: 20, attack: 0.001, release: 0.08 },
-  /**
-   * Gain after the limiter. The browser's compressor adds make-up gain of its own; this takes it
-   * back so a quiet sound is as loud as it was without the limiter (checked by rendering offline).
-   */
-  trimLevel: 0.82,
+  limiter: { threshold: 0.7, ceiling: 0.98, curveSize: 4097 },
   /** Time constant of the short ramp of a bus switch: about 30 ms to settle, no click. */
   switchRampSec: 0.01,
   /** Time constant of the music duck ramp: settles in about 0.3 s both ways. */

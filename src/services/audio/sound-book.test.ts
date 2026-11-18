@@ -38,6 +38,7 @@ function fakeContext(): { ctx: BaseAudioContext; starts: () => number } {
     destination: node(),
     createGain: node,
     createDynamicsCompressor: node,
+    createWaveShaper: node,
     createBiquadFilter: node,
     createBufferSource: node,
     createOscillator: node,

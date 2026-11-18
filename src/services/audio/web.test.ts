@@ -67,6 +67,7 @@ class FakeContext {
     return g;
   };
   createDynamicsCompressor = () => this.node();
+  createWaveShaper = () => this.node();
   createBiquadFilter = () => this.node();
   createBufferSource = () => this.node();
   createOscillator = () => {
@@ -313,7 +314,7 @@ describe('WebAudioService', () => {
     service.setEnabled(false);
     expect(service.musicEnabled).toBe(false);
     service.unlock();
-    // sfx bus, music bus, master, trim: the first two gains of the mixer.
+    // sfx bus, music bus, master: the gains of the mixer, in this order.
     expect(ctx.gains[0]?.gain.value).toBe(0);
     expect(ctx.gains[1]?.gain.value).toBe(0);
     service.setEnabled(true);
