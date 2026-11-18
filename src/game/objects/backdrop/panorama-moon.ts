@@ -1,6 +1,6 @@
 import * as Phaser from 'phaser';
 import { PANORAMA, WALL_LOOK } from '../../../data/window-look';
-import { stepToward } from '../../../util/math';
+import { EasedValue } from '../../../util/eased-value';
 import type { FrameCtx, Life } from './life';
 import { onLayer } from './layer-anchor';
 import type { LayerSpot } from './layer-life';
@@ -18,8 +18,8 @@ export class PanoramaMoon implements Life {
   readonly objects: Phaser.GameObjects.Image[];
   private readonly image: Phaser.GameObjects.Image;
   private readonly offset = panoramaMoonOffset();
-  /** Share of the full mute shown now; -1 until the first frame, which takes it as it is. */
-  private muted = -1;
+  /** Share of the full mute shown now; the first frame takes it as it is. */
+  private readonly muted = new EasedValue(PANORAMA.rowEaseMs);
 
   constructor(
     scene: Phaser.Scene,
@@ -35,9 +35,8 @@ export class PanoramaMoon implements Life {
     const { x, y, r } = this.offset;
     const cy = spot.y + y * spot.scale;
     const target = muteShare(rowMute(cy, r * spot.scale, ctx.flightRow, PANORAMA.rowFeatherPx));
-    this.muted =
-      this.muted < 0 ? target : stepToward(this.muted, target, ctx.deltaMs / PANORAMA.rowEaseMs);
-    const alpha = spot.alpha > 0 ? moonAlpha(spot.alpha, this.muted) : 0;
+    const muted = this.muted.follow(target, ctx.deltaMs);
+    const alpha = spot.alpha > 0 ? moonAlpha(spot.alpha, muted) : 0;
     this.image.setVisible(alpha > 0);
     if (alpha <= 0) return;
     this.image

@@ -4,7 +4,7 @@ import { PANORAMA, WALL_LOOK } from '../../../data/window-look';
 import { applyPose, createImage, type FrameCtx, type Life } from './life';
 import { hoverPose, newPose } from './life-motion';
 import { mixColor } from '../../../util/color';
-import { stepToward } from '../../../util/math';
+import { EasedValue } from '../../../util/eased-value';
 import { coverFade, muteShare, rowMute } from './panorama-fit';
 
 const WHITE = 0xffffff;
@@ -110,22 +110,18 @@ export class LayerThing implements Life {
   private coveredSince = -1;
   /**
    * `rowMute` things: the cover fade and the mute share shown now. They follow their targets over time (the tower top
-   * and the flight row jump by a layer when one lands); -1 until the first frame, which takes the target as it is.
+   * and the flight row jump by a layer when one lands); the first frame takes the targets as they are.
    */
-  private coverNow = -1;
-  private mutedNow = -1;
+  private readonly cover = new EasedValue(PANORAMA.cover.easeMs);
+  private readonly muted = new EasedValue(PANORAMA.rowEaseMs);
 
   /** Moves the shown cover and mute towards this frame's targets for the picture centred at `centre`. */
   private followCover(centre: number, halfH: number, ctx: FrameCtx): void {
-    const cover = coverFade(centre, halfH, ctx.flightRow.towerTop);
-    const muted = muteShare(rowMute(centre, halfH, ctx.flightRow, PANORAMA.rowFeatherPx));
-    if (this.coverNow < 0) {
-      this.coverNow = cover;
-      this.mutedNow = muted;
-      return;
-    }
-    this.coverNow = stepToward(this.coverNow, cover, ctx.deltaMs / PANORAMA.cover.easeMs);
-    this.mutedNow = stepToward(this.mutedNow, muted, ctx.deltaMs / PANORAMA.rowEaseMs);
+    this.cover.follow(coverFade(centre, halfH, ctx.flightRow.towerTop), ctx.deltaMs);
+    this.muted.follow(
+      muteShare(rowMute(centre, halfH, ctx.flightRow, PANORAMA.rowFeatherPx)),
+      ctx.deltaMs,
+    );
   }
 
   update(ctx: FrameCtx): void {
@@ -184,11 +180,11 @@ export class LayerThing implements Life {
           // The mute and the cover are the picture's as a whole: every piece takes them from the picture's centre.
           if (k === 0)
             this.followCover(fitted ? pose.y - (spec.offset?.y ?? 0) * scale : pose.y, halfH, ctx);
-          const muted = this.mutedNow;
+          const muted = this.muted.value;
           if (muteTone === undefined) pose.alpha *= 1 - (1 - PANORAMA.rowMuted) * muted;
           else tint = mixColor(WHITE, muteTone, muted);
-          pose.alpha *= this.coverNow;
-          covered = this.coverNow <= 0;
+          pose.alpha *= this.cover.value;
+          covered = this.cover.value <= 0;
         }
         applyPose(image, pose);
         if (muteTone !== undefined) image.setTint(tint);
