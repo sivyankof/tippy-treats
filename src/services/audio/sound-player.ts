@@ -1,3 +1,5 @@
+import { SOUND_TRIM_DB } from '../../data/sound-trim';
+import { fromDb } from './levels';
 import { SOUND_BOOK, type SoundEntry } from './sound-book';
 import type { SoundArgs, SoundId } from './sound-args';
 import type { Synth } from './synth';
@@ -28,7 +30,8 @@ export class SoundPlayer {
     const at = this.synth.now + delay;
     if (!this.gate.admit(id, entry.priority, at)) return REFUSED;
     const length = this.synth.measure(() => {
-      this.synth.at(delay, () => entry.play(this.synth, ...args));
+      const trim = fromDb(SOUND_TRIM_DB[id] ?? 0);
+      this.synth.at(delay, () => this.synth.scaled(trim, () => entry.play(this.synth, ...args)));
     });
     if (length <= 0) return REFUSED;
     this.gate.hold(at, length - delay);

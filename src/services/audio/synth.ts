@@ -33,6 +33,8 @@ export class Synth {
   private base = 0;
   /** Latest end time (seconds from the context's now) of the notes scheduled since `measure` began. */
   private spanEnd = 0;
+  /** Gain factor of the sound being scheduled (its level trim, `data/sound-trim.ts`). */
+  private level = 1;
 
   constructor(
     private readonly ctx: BaseAudioContext,
@@ -61,6 +63,17 @@ export class Synth {
     }
   }
 
+  /** Runs `sound` with every note's gain multiplied by `factor` (the level trim of a sound). */
+  scaled(factor: number, sound: () => void): void {
+    const before = this.level;
+    this.level = before * factor;
+    try {
+      sound();
+    } finally {
+      this.level = before;
+    }
+  }
+
   /** Runs `sound` with every note shifted `offset` seconds later (the offline render of several sounds). */
   at(offset: number, sound: () => void): void {
     const before = this.base;
@@ -76,7 +89,7 @@ export class Synth {
   tone(recipe: ToneRecipe, options: PlayOptions = {}): void {
     const { ctx } = this;
     const pitch = options.pitch ?? 1;
-    const peak = recipe.gain * (options.gain ?? 1);
+    const peak = recipe.gain * (options.gain ?? 1) * this.level;
     const delay = this.base + (options.delay ?? 0);
     const start = ctx.currentTime + delay;
     const end = start + recipe.duration;
@@ -99,7 +112,7 @@ export class Synth {
   noise(recipe: NoiseRecipe, options: PlayOptions = {}): void {
     const { ctx } = this;
     const pitch = options.pitch ?? 1;
-    const peak = recipe.gain * (options.gain ?? 1);
+    const peak = recipe.gain * (options.gain ?? 1) * this.level;
     const delay = this.base + (options.delay ?? 0);
     const start = ctx.currentTime + delay;
     const length = Math.min(recipe.duration, SFX.noise.bufferSeconds);
