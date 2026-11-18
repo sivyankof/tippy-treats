@@ -252,8 +252,13 @@ export function prepareLayerArt(
   releaseLayerArt(scene, acquireLayerArt(scene, look, width, cut, creature, faceless, stage));
 }
 
-/** Gives a texture back; unused textures beyond the idle limit are removed. */
-export function releaseLayerArt(scene: Phaser.Scene, key: string): void {
+/**
+ * Gives a texture back; unused textures beyond the idle limit are removed. `forGood`: the picture showed a layer that
+ * has left the game (a piece that fell off the screen), so it is removed at once when nobody else holds it, instead of
+ * pushing a picture that may come back out of the idle ones (and holding its cell on the shared atlas).
+ */
+export function releaseLayerArt(scene: Phaser.Scene, key: string, forGood = false): void {
   layerRefs.release(key);
+  if (forGood && layerRefs.dropIfIdle(key)) scene.textures.remove(key);
   layerRefs.evict((old) => scene.textures.remove(old));
 }

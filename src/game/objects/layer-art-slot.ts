@@ -69,9 +69,9 @@ export class LayerArtSlot {
     return true;
   }
 
-  /** Gives the texture back so a pooled view does not keep it alive; `show` brings it back. */
-  release(): void {
-    if (this.key) releaseLayerArt(this.scene, this.key);
+  /** Gives the texture back so a pooled view does not keep it alive; `show` brings it back. `forGood`: see `releaseLayerArt`. */
+  release(forGood = false): void {
+    if (this.key) releaseLayerArt(this.scene, this.key, forGood);
     this.key = null;
     this.look = -1;
     this.width = -1;

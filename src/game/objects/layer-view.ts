@@ -281,11 +281,11 @@ export class LayerView extends Phaser.GameObjects.Container {
     return this;
   }
 
-  /** Gives the baked art back so a pooled view does not keep its texture alive; `setLayer` brings it back. */
-  releaseArt(): this {
+  /** Gives the baked art back so a pooled view does not keep its texture alive; `setLayer` brings it back. `forGood`: see `releaseLayerArt`. */
+  releaseArt(forGood = false): this {
     this.rainbow.endJoke();
     this.accent.hide();
-    this.artSlot.release();
+    this.artSlot.release(forGood);
     return this;
   }
 
