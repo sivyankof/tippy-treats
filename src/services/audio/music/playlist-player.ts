@@ -136,7 +136,7 @@ export class PlaylistPlayer implements MusicControl {
           const bounds = loopBounds(buffer.length, spec, rate, MUSIC.aacPrimingFrames);
           const smooth = Math.round(MUSIC.seamSmoothSec * rate);
           for (let c = 0; c < buffer.numberOfChannels; c++) {
-            smoothSeam(buffer.getChannelData(c), bounds.start, bounds.end, smooth);
+            smoothSeam(buffer.getChannelData(c), bounds.start, bounds.end, smooth, MUSIC.seam);
           }
           const { ctx, tally } = this.host;
           this.enter(new BufferDeck(ctx, tally, track, buffer, bounds, ctx.currentTime));

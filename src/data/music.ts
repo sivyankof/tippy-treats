@@ -149,6 +149,8 @@ export const MUSIC = {
   aacPrimingFrames: 2112,
   /** The seam of a seamless loop is smoothed over this long at the end of the decoded loop. */
   seamSmoothSec: 0.01,
+  /** The seam aims at a line fitted to the last `fit` samples and averages the tail over `radius` each side. */
+  seam: { fit: 16, radius: 2 },
   /** Media elements of the streamed tracks (two per track, three tracks: playing, leaving, cut). */
   streamElements: 6,
   /** How often a waiting timer looks again (the context may be held, the stream may lag). */

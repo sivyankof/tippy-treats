@@ -10,6 +10,7 @@ import {
 
 const TRACK = { frames: 441_000, sampleRate: 44_100 };
 const PRIMING = 2112;
+const SEAM = { fit: 16, radius: 2 };
 
 describe('framesAt and decodedBytes', () => {
   it('scale the source length to the context rate', () => {
@@ -63,14 +64,14 @@ describe('smoothSeam', () => {
     for (let i = 0; i < n; i++) data[i] = 0.5 * Math.sin((2 * Math.PI * 3.3 * i) / n);
     const ownStep = (2 * Math.PI * 3.3 * 0.5) / n;
     expect(wrapStep(data, 0, n)).toBeGreaterThan(20 * ownStep);
-    smoothSeam(data, 0, n, 480);
+    smoothSeam(data, 0, n, 480, SEAM);
     expect(wrapStep(data, 0, n)).toBeLessThan(2 * ownStep);
   });
 
   it('leaves everything before the smoothed tail untouched', () => {
     const data = Float32Array.from({ length: 1000 }, (_, i) => i / 1000);
     const copy = data.slice();
-    smoothSeam(data, 0, 1000, 100);
+    smoothSeam(data, 0, 1000, 100, SEAM);
     for (let i = 0; i < 900; i++) expect(data[i]).toBe(copy[i]);
   });
 
@@ -78,14 +79,14 @@ describe('smoothSeam', () => {
     const n = 4800;
     const data = Float32Array.from({ length: n }, (_, i) => Math.sin((2 * Math.PI * 5 * i) / n));
     const copy = data.slice();
-    smoothSeam(data, 0, n, 480);
+    smoothSeam(data, 0, n, 480, SEAM);
     for (let i = 0; i < n; i++) expect(data[i]).toBeCloseTo(copy[i] ?? 0, 3);
   });
 
   it('works inside bounds that skip a delay', () => {
     const data = new Float32Array(1000).fill(0.3);
     data.fill(0.1, 0, 100);
-    smoothSeam(data, 100, 900, 50);
+    smoothSeam(data, 100, 900, 50, SEAM);
     expect(data[899]).toBeCloseTo(0.3, 5);
     expect(data[950]).toBeCloseTo(0.3, 6);
   });

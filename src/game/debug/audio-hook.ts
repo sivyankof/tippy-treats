@@ -103,7 +103,7 @@ async function musicSeam(track: MusicTrackId, rate: number, smooth = true): Prom
   if (smooth) {
     const frames = Math.round(MUSIC.seamSmoothSec * rate);
     for (let c = 0; c < buffer.numberOfChannels; c++) {
-      smoothSeam(buffer.getChannelData(c), bounds.start, bounds.end, frames);
+      smoothSeam(buffer.getChannelData(c), bounds.start, bounds.end, frames, MUSIC.seam);
     }
   }
   const source = ctx.createBufferSource();

@@ -41,22 +41,61 @@ export function loopBounds(
   return { start: 0, end: Math.min(decoded, loop) };
 }
 
+/** How the seam is smoothed: the straight line fitted to the last `fit` samples and the half-width of the averaging. */
+export interface SeamSmoothing {
+  fit: number;
+  radius: number;
+}
+
 /**
- * Smooths the seam of a loop in place: the last `frames` samples before `end` are bent, with a
- * smooth step, so that the sample after the last one (by its own slope) lands on the first sample
- * of the loop. A jump at the seam (in the source, or left by a few missing samples) becomes a
- * gentle slope of `frames` samples instead of a click. Samples elsewhere are not touched.
+ * Smooths the seam of a loop in place. The last `frames` samples before `end` are bent, with a
+ * smooth step, so that the line fitted to the loop's last `fit` samples (a fit, not the last two
+ * samples: AAC leaves a little codec noise in the final samples of a file) lands on the first
+ * sample of the loop; along the same step they are averaged over `radius` samples each side, so
+ * the codec noise right at the end fades too. A jump at the seam (in the source, or left by a few
+ * missing samples) becomes a gentle slope instead of a click. Samples elsewhere are not touched.
  */
-export function smoothSeam(data: Float32Array, start: number, end: number, frames: number): void {
-  const n = Math.min(frames, end - start - 2);
-  if (n < 1) return;
-  const last = data[end - 1] ?? 0;
-  const prev = data[end - 2] ?? 0;
-  const step = last + (last - prev) - (data[start] ?? 0);
-  for (let i = 0; i < n; i++) {
+export function smoothSeam(
+  data: Float32Array,
+  start: number,
+  end: number,
+  frames: number,
+  { fit, radius }: SeamSmoothing,
+): void {
+  const n = Math.min(frames, end - start - fit);
+  if (n < 1 || fit < 2) return;
+  // Least squares line through the last `fit` samples, taken one sample past the end.
+  const mid = (fit - 1) / 2;
+  let mean = 0;
+  for (let k = 0; k < fit; k++) mean += data[end - fit + k] ?? 0;
+  mean /= fit;
+  let num = 0;
+  let den = 0;
+  for (let k = 0; k < fit; k++) {
+    num += (k - mid) * ((data[end - fit + k] ?? 0) - mean);
+    den += (k - mid) * (k - mid);
+  }
+  const next = mean + (num / den) * (fit - mid);
+  const step = next - (data[start] ?? 0);
+  const ease = (i: number): number => {
     const t = (i + 1) / n;
-    const index = end - n + i;
-    data[index] = (data[index] ?? 0) - step * t * t * (3 - 2 * t);
+    return t * t * (3 - 2 * t);
+  };
+  // The tail bent onto the head first, then laid out as the loop plays it: the untouched samples
+  // before it, the bent tail, the head after the wrap.
+  const before = Math.min(radius, end - n - start);
+  const around = new Float32Array(before + n + radius);
+  around.set(data.subarray(end - n - before, end), 0);
+  for (let i = 0; i < n; i++) around[before + i] = (around[before + i] ?? 0) - step * ease(i);
+  around.set(data.subarray(start, start + radius), before + n);
+  for (let i = 0; i < n; i++) {
+    const at = before + i;
+    const lo = Math.max(0, at - radius);
+    const hi = Math.min(around.length - 1, at + radius);
+    let sum = 0;
+    for (let k = lo; k <= hi; k++) sum += around[k] ?? 0;
+    const own = around[at] ?? 0;
+    data[end - n + i] = own + ease(i) * (sum / (hi - lo + 1) - own);
   }
 }
 
