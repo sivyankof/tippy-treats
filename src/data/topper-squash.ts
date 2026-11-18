@@ -78,10 +78,71 @@ export const SQUASH_PICTURES = {
   /** The pictures are baked this many times bigger than they are shown. */
   bake: 2,
   outlinePx: 2.2,
-  /** The cream roll's outline is thicker so the pale roll reads on a pale glaze. */
-  rollOutlinePx: 3,
-  /** Warm outline of the cream roll, in the tone of the cream (a pale outline would vanish on a pale glaze). */
-  rollOutline: 0xcaa883,
+  /**
+   * The cream roll (docs/06, "Валик крема"): two ridges piped along the seam and a hanging drop,
+   * drawn in neutral greys and shown with an overlay tint in the cream tone of the layer: mid
+   * grey turns into that tone, the darker greys into its shade and outline, white stays white.
+   */
+  cream: {
+    /** Thicker than the other pictures so the pale ridge reads on a pale glaze. */
+    outlinePx: 2.8,
+    tones: {
+      /**
+       * The warm outline: below mid grey the overlay multiplies each channel of the tint by twice
+       * the level, so a warm level (x0.66, x0.53, x0.40) gives a caramel-brown tone of the cream
+       * whatever the glaze hue, never a slate or olive grey.
+       */
+      outline: 0x544433,
+      /** The shade band under the ridge and the creases: light and warm (x0.93, x0.88, x0.80). */
+      shade: 0x777066,
+      /** Mid grey: exactly the tint. */
+      base: 0x808080,
+      /** The light rim over the festoons (the tint 30% towards white). */
+      light: 0xa6a6a6,
+      gloss: 0xffffff,
+    },
+    /** The lit tone is drawn this much of each blob smaller, up and to the left: the shade shows as a band below. */
+    band: 0.14,
+    /** The light rim over a festoon: its thickness as a share of the festoon's height, and its arc (degrees, 270 is the top). */
+    rim: { share: 0.3, fromDeg: 205, toDeg: 335 },
+    /** The swirl crease over each festoon (but the end bead), in the shade tone: its thickness, drawn pixels. */
+    crease: { widthPx: 1.5 },
+    /** The gloss mark on its festoon, in festoon heights. */
+    glossUnit: 4.4,
+    /**
+     * The two ridges, drawn pixels in a picture of `TOPPER_SQUASH.roll.width` x `height`, the inner
+     * end (under the upper layer) on the left: a flat base lying on the glaze, the festoons on it
+     * from big to small, and which festoon carries the gloss. Different counts and steps, so the
+     * two ends of the seam never look mirrored.
+     */
+    ridges: {
+      a: {
+        base: { cx: 45, cy: 24.5, rx: 40.5, ry: 6 },
+        festoons: [
+          { cx: 13, cy: 17, rx: 11.5, ry: 11.5 },
+          { cx: 34, cy: 16.5, rx: 11.5, ry: 11 },
+          { cx: 54, cy: 18, rx: 10.5, ry: 10 },
+          { cx: 72, cy: 20.5, rx: 9, ry: 8.5 },
+          { cx: 82.5, cy: 24, rx: 4.8, ry: 4.8 },
+        ],
+        glossOn: 2,
+      },
+      b: {
+        base: { cx: 44, cy: 24.5, rx: 40.5, ry: 6 },
+        festoons: [
+          { cx: 15, cy: 16.5, rx: 13, ry: 12.5 },
+          { cx: 42, cy: 17, rx: 12.5, ry: 11.5 },
+          { cx: 65, cy: 19.5, rx: 10.5, ry: 9.5 },
+          { cx: 79.5, cy: 23.5, rx: 6.5, ry: 6 },
+        ],
+        glossOn: 1,
+      },
+    },
+    /** The hanging drop: a neck from the ridge (`neck` of the width) and a round bulb at the bottom. */
+    drop: { width: 16, height: 23, neck: 0.5 },
+    /** The cream of the decoration, the tone the glaze is mixed into for the cream roll. */
+    cream: 0xfffaf2,
+  },
   /** Tones of the juice stains: the lit tone, the shadow tone (the outline is the shadow tone darkened) and the gloss. */
   stainColors: {
     cherry: { base: 0xea4f66, shadow: 0xc93550, gloss: 0xffd0d8 },
@@ -114,7 +175,9 @@ export const SQUASH_PICTURES = {
 export const SQUASH_TEXTURES = {
   stainCherry: 'fx_sq_stain_cherry',
   stainStrawberry: 'fx_sq_stain_strawberry',
-  creamRoll: 'fx_sq_cream_roll',
+  creamRidgeA: 'fx_sq_cream_ridge_a',
+  creamRidgeB: 'fx_sq_cream_ridge_b',
+  creamDrop: 'fx_sq_cream_drop',
   leaf: 'fx_sq_leaf',
   drop: 'fx_sq_drop',
   lemonDrop: 'fx_sq_lemon_drop',
@@ -403,23 +466,64 @@ export const TOPPER_SQUASH = {
     /** Slight tilt of the drip, degrees; sign follows the side. */
     tiltDeg: 3,
   },
-  /** The cream roll squeezed out at both ends of the seam. */
+  /** The cream roll squeezed out at both ends of the seam (docs/06, "Валик крема"). */
   roll: {
-    width: 66,
-    height: 30,
-    /** Where the picture is held: the tucked end under the upper layer. */
-    originX: 0.4,
-    originY: 0.5,
-    /** The roll sits on the seam: this many px below the top edge of the lower layer. */
-    seamDropPx: 12,
-    growMs: 380,
+    /** Drawn size of a ridge picture (both ridges share it), layer pixels. */
+    width: 90,
+    height: 36,
+    /** Where a ridge is held: on its bottom line, at the end tucked under the upper layer. */
+    originX: 0.36,
+    originY: 0.84,
+    /** The bottom line of the ridge lies this many px below the top edge of the lower layer, on its glaze. */
+    seamDropPx: 18,
+    /** The left ridge starts this long after the impact, the right one `rightLagMs` later still. */
     delayMs: 40,
+    rightLagMs: 30,
     /** Slight droop of the outer end, degrees. */
-    droopDeg: 8,
+    droopDeg: 5,
     /** The outer end of a roll goes at most this far past the lower layer's edge, so it lies on the lower glaze. */
     overhangPx: 9,
     /** The upper layer must overlap the lower by at least this much for the rolls to have room. */
     minOverlapPx: 120,
+    /** Share of the cream mixed into the glaze tone of the layer: the roll is cream with a hint of the glaze, clearly lighter than the glaze it lies on. */
+    creamShare: 0.72,
+    /** Squeezed out: a bump swells at the seam, the ridge is pushed out past its length, then settles back. */
+    squeeze: {
+      bulgeMs: 70,
+      bulge: [0.2, 0.7],
+      pushMs: 230,
+      over: [1.1, 0.9],
+      settleMs: 300,
+    },
+    /** The ridges: the left one (picture a), the right one (picture b), and the drops hanging from each (where along the picture, how big). */
+    sides: [
+      { ridge: 'a', drops: [{ at: 0.6, size: 1 }] },
+      {
+        ridge: 'b',
+        drops: [
+          { at: 0.5, size: 1 },
+          { at: 0.79, size: 0.7 },
+        ],
+      },
+    ],
+    drop: {
+      /** A drop is pulled out from under the ridge, overshoots, then sags slowly a little and stays. */
+      squeeze: {
+        bulgeMs: 60,
+        bulge: [0.55, 0.25],
+        pushMs: 240,
+        over: [0.9, 1.15],
+        settleMs: 280,
+        sag: { ms: 1600, to: [0.96, 1.1] },
+      },
+      /** The first drop starts when its ridge is this far through its bulge and push; each next one `staggerMs` later. */
+      startShare: 0.85,
+      staggerMs: 110,
+      /** The neck of a drop goes this many px up under the ridge's bottom line. */
+      tuckPx: 4,
+      /** A drop never hangs over the face of the lower layer: this much clear space beyond the face. */
+      faceGapPx: 18,
+    },
   },
   /** Pooled pictures of squashed toppers (the oldest is reused). */
   maxCrushed: 3,

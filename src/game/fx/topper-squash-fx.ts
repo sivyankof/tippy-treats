@@ -19,8 +19,7 @@ import { glazeWave } from '../objects/glaze-wave';
 import { artWidth } from '../objects/layer-art';
 import { layerBox } from '../objects/layer-draw';
 import { layerMarks } from '../objects/layer-marks';
-import type { LayerMark } from '../objects/layer-mark-store';
-import { plainLooks, lookOfCode } from '../objects/plain-look';
+import { pairColors, plainLooks, lookOfCode } from '../objects/plain-look';
 import { type TopperWorld } from '../objects/layer-topper';
 import type { TowerView } from '../objects/tower-view';
 import { topperSize } from '../objects/topper-look';
@@ -28,11 +27,13 @@ import { effectCues } from './effect-cues';
 import { easeFn } from './ease';
 import { faceHalfSpan } from './glaze-growth';
 import type { Particles } from './particles';
-import { rollOrigin, rollPictureSize, stainOrigin, stainPictureSize } from './squash-textures';
+import { stainOrigin, stainPictureSize } from './squash-textures';
 import { ensureTopperTexture } from './topper-texture';
 import {
   burstCount,
   burstStates,
+  creamRollMarks,
+  creamRollTint,
   launchX,
   rollSpots,
   squashLevelPlan,
@@ -133,29 +134,18 @@ export class TopperSquashFx {
     const lower = state.layers[lowerIndex];
     const layer = state.layers[lowerIndex + 1];
     if (!lower || !layer || lower.kind !== 'plain') return;
-    if (lookOfCode(plainLooks.codeFor(lowerIndex + 1)).decor !== 'cream') return;
+    const look = lookOfCode(plainLooks.codeFor(lowerIndex + 1));
+    if (look.decor !== 'cream') return;
     const plan = squashLevelPlan(effectsMode.level);
     if (!plan.play || !plan.trace) return;
     const spots = rollSpots(lower.x, lower.width, layer.x, layer.width);
     if (!spots) return;
-    const { roll } = TOPPER_SQUASH;
-    const [width, height] = rollPictureSize();
-    const [originX, originY] = rollOrigin();
-    const now = this.scene.time.now;
-    const marks: LayerMark[] = spots.map((spot) => ({
-      texture: SQUASH_TEXTURES.creamRoll,
-      dx: spot.dx,
-      dy: spot.dy,
-      originX,
-      originY,
-      width,
-      height,
-      flipX: spot.side < 0,
-      angleDeg: spot.angleDeg,
-      bornMs: now + roll.delayMs,
-      growMs: roll.growMs,
-      clearOfShadow: true,
-    }));
+    const marks = creamRollMarks(spots, {
+      nowMs: this.scene.time.now,
+      squeeze: plan.squeeze,
+      tint: creamRollTint(pairColors(look.pair).glaze),
+      faceHalf: faceHalfSpan(artWidth(lower.width), null),
+    });
     if (!layerMarks.addPress(lowerIndex + 1, marks)) return;
     effectCues.emit({ kind: 'topperSquash', topper: 'cream' });
   }

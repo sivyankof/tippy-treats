@@ -1,11 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import {
+  channels,
   contrastRatio,
   cssColor,
   dimPixels,
   fromHsl,
   luminance,
   mixColor,
+  overlayColor,
   multiplyColor,
   parseHex,
   shade,
@@ -88,5 +90,15 @@ describe('dimPixels', () => {
     const data = new Uint8ClampedArray([10, 200, 90, 255]);
     dimPixels(data, 1, 1);
     expect([...data]).toEqual([10, 200, 90, 255]);
+  });
+});
+
+describe('overlayColor', () => {
+  it('turns mid grey into the tint, keeps white and black, darkens below mid grey per channel', () => {
+    const mid = channels(overlayColor(0x808080, 0x336699));
+    channels(0x336699).forEach((v, i) => expect(Math.abs(mid[i]! - v)).toBeLessThanOrEqual(1));
+    expect(overlayColor(0xffffff, 0x336699)).toBe(0xffffff);
+    expect(overlayColor(0x000000, 0x336699)).toBe(0x000000);
+    expect(overlayColor(0x400000, 0xffffff)).toBe(0x800000);
   });
 });

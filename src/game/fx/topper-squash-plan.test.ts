@@ -2,7 +2,10 @@ import { describe, expect, it } from 'vitest';
 import { Rng } from '../../core/rng';
 import { BALANCE } from '../../data/balance';
 import { EFFECT_LEVELS } from '../../data/effect-levels';
-import { TOPPER_SQUASH } from '../../data/topper-squash';
+import { SQUASH_PICTURES, SQUASH_TEXTURES, TOPPER_SQUASH } from '../../data/topper-squash';
+import { channels, luma, overlayColor } from '../../util/color';
+import { PLAIN_PAIRS } from '../../data/plain-layers';
+import { squeezeDoneMs, squeezeScale, type LayerMark } from '../objects/layer-mark-store';
 import { faceHalfSpan } from './glaze-growth';
 import { glazeWave, waveY } from '../objects/glaze-wave';
 import { layerBox } from '../objects/layer-draw';
@@ -10,10 +13,14 @@ import {
   burstCount,
   burstStates,
   classifySquash,
+  creamRollMarks,
+  creamRollTint,
   crouchScale,
   crouchStep,
   edgeLaunch,
   launchX,
+  ovalBottomAt,
+  ridgePictureSize,
   rollSpots,
   simX,
   squashLevelPlan,
@@ -45,11 +52,23 @@ describe('classifySquash', () => {
 
 describe('squashLevelPlan', () => {
   it('plays everything on full', () => {
-    expect(squashLevelPlan('full')).toEqual({ play: true, crouch: true, dip: true, trace: true });
+    expect(squashLevelPlan('full')).toEqual({
+      play: true,
+      crouch: true,
+      dip: true,
+      trace: true,
+      squeeze: true,
+    });
   });
 
-  it('keeps the squash and the trace on lite, without the dip', () => {
-    expect(squashLevelPlan('lite')).toEqual({ play: true, crouch: true, dip: false, trace: true });
+  it('keeps the squash and the trace on lite, without the dip and the squeeze of the cream', () => {
+    expect(squashLevelPlan('lite')).toEqual({
+      play: true,
+      crouch: true,
+      dip: false,
+      trace: true,
+      squeeze: false,
+    });
   });
 
   it('plays nothing on minimal', () => {
@@ -58,6 +77,7 @@ describe('squashLevelPlan', () => {
       crouch: false,
       dip: false,
       trace: false,
+      squeeze: false,
     });
   });
 
@@ -260,5 +280,144 @@ describe('simX', () => {
     // Topper 20 px right of the layer centre; a flying layer centred on the layer covers 100 px each side.
     const swayed = simX({ x: 300 }, 340 + 20, 340);
     expect(classifySquash(swayed, half, 300, 200)).toBe(classifySquash(320, half, 300, 200));
+  });
+});
+
+describe('the cream roll', () => {
+  const spots = rollSpots(500, 600, 520, 300)!;
+  const input = { nowMs: 10_000, squeeze: true, tint: 0xffd6e1, faceHalf: 60 };
+  const ridges = (marks: LayerMark[]): LayerMark[] =>
+    marks.filter((m) => m.texture !== SQUASH_TEXTURES.creamDrop);
+  const drops = (marks: LayerMark[]): LayerMark[] =>
+    marks.filter((m) => m.texture === SQUASH_TEXTURES.creamDrop);
+
+  it('puts the drops first, so the ridges cover their necks, and fits in one press mark', () => {
+    const marks = creamRollMarks(spots, input);
+    expect(marks.length).toBeLessThanOrEqual(5);
+    const firstRidge = marks.findIndex((m) => m.texture !== SQUASH_TEXTURES.creamDrop);
+    expect(drops(marks.slice(firstRidge))).toHaveLength(0);
+    expect(ridges(marks)).toHaveLength(2);
+  });
+
+  it('gives the two ends different ridges and drops, not a mirror', () => {
+    const marks = creamRollMarks(spots, input);
+    const [left, right] = ridges(marks);
+    expect(left!.texture).toBe(SQUASH_TEXTURES.creamRidgeA);
+    expect(right!.texture).toBe(SQUASH_TEXTURES.creamRidgeB);
+    expect(left!.flipX).toBe(true);
+    expect(right!.flipX).toBe(false);
+    const hanging = drops(marks);
+    const leftDrops = hanging.filter((d) => d.dx < 0);
+    const rightDrops = hanging.filter((d) => d.dx > 0);
+    expect(leftDrops).toHaveLength(1);
+    expect(rightDrops).toHaveLength(2);
+    // Measured from the anchor of its ridge, no drop of one side sits where a drop of the other does.
+    for (const l of leftDrops) {
+      for (const r of rightDrops) {
+        expect(Math.abs(left!.dx - l.dx - (r.dx - right!.dx))).toBeGreaterThan(4);
+      }
+    }
+  });
+
+  it('hangs every drop from the bottom line of its ridge, on its outer side', () => {
+    const marks = creamRollMarks(spots, input);
+    const [left, right] = ridges(marks);
+    for (const d of drops(marks)) {
+      const ridge = d.dx < 0 ? left! : right!;
+      expect(Math.abs(d.dy - ridge.dy)).toBeLessThan(TOPPER_SQUASH.roll.drop.tuckPx + 3);
+      expect(Math.sign(d.dx - ridge.dx)).toBe(d.dx < 0 ? -1 : 1);
+    }
+  });
+
+  it('never hangs a drop over the face of the lower layer', () => {
+    const near = rollSpots(500, 600, 500, 160)!;
+    const faceHalf = 110;
+    const marks = creamRollMarks(near, { ...input, faceHalf });
+    for (const d of drops(marks)) {
+      expect(Math.abs(d.dx)).toBeGreaterThanOrEqual(faceHalf + TOPPER_SQUASH.roll.drop.faceGapPx);
+    }
+    expect(drops(marks).length).toBeLessThan(3);
+    expect(ridges(marks)).toHaveLength(2);
+  });
+
+  it('is tinted with the overlay of the cream tone', () => {
+    for (const m of creamRollMarks(spots, input)) {
+      expect(m.tint).toBe(input.tint);
+      expect(m.tintMode).toBe('overlay');
+    }
+  });
+
+  it('squeezes the left ridge out first, the right one a moment later, the drops after their ridge', () => {
+    const marks = creamRollMarks(spots, input);
+    const [left, right] = ridges(marks);
+    expect(left!.bornMs).toBeGreaterThan(input.nowMs);
+    expect(right!.bornMs).toBeGreaterThan(left!.bornMs);
+    for (const d of drops(marks)) {
+      const ridge = d.dx < 0 ? left! : right!;
+      expect(d.bornMs).toBeGreaterThan(ridge.bornMs + TOPPER_SQUASH.roll.squeeze.bulgeMs);
+    }
+  });
+
+  it('lies there at once in its final shape without the squeeze', () => {
+    for (const m of creamRollMarks(spots, { ...input, squeeze: false })) {
+      const look = m.squeeze!;
+      const age = input.nowMs - m.bornMs;
+      expect(age).toBe(squeezeDoneMs(look));
+      expect(squeezeScale(look, age, 0)).toBeCloseTo(look.sag?.to[0] ?? 1);
+      expect(squeezeScale(look, age, 1)).toBeCloseTo(look.sag?.to[1] ?? 1);
+    }
+  });
+
+  it('takes the tone of the glaze, lighter than it', () => {
+    for (const glaze of [0xffaecb, 0x7a4630, 0xb7e1ff, 0xfff4e4]) {
+      const tint = creamRollTint(glaze);
+      expect(luma(tint)).toBeGreaterThanOrEqual(luma(glaze));
+      expect(luma(tint)).toBeLessThan(luma(SQUASH_PICTURES.cream.cream) + 0.001);
+    }
+    expect(creamRollTint(0x7a4630)).not.toBe(creamRollTint(0xffaecb));
+  });
+
+  it('reads as cream on every glaze that carries cream: lighter than the glaze, a warm outline a tone darker', () => {
+    const { tones } = SQUASH_PICTURES.cream;
+    for (const pair of PLAIN_PAIRS.filter((p) => p.decor.includes('cream'))) {
+      const tint = creamRollTint(pair.glaze);
+      expect(luma(tint)).toBeGreaterThan(Math.min(0.9, luma(pair.glaze) + 0.04));
+      const outline = channels(overlayColor(tones.outline, tint));
+      const shade = overlayColor(tones.shade, tint);
+      // Warm: red over green over blue, whatever the glaze hue.
+      expect(outline[0]).toBeGreaterThan(outline[1]! + 10);
+      expect(outline[1]).toBeGreaterThan(outline[2]! + 10);
+      expect(luma(overlayColor(tones.outline, tint))).toBeLessThan(luma(tint) * 0.7);
+      expect(luma(shade)).toBeGreaterThan(luma(tint) * 0.82);
+      expect(luma(shade)).toBeLessThan(luma(tint));
+    }
+  });
+
+  it('keeps every drawn ridge inside its picture with the clear field', () => {
+    const { roll } = TOPPER_SQUASH;
+    const { cream, field, bake } = SQUASH_PICTURES;
+    // 3 baked pixels of clear field at least (docs/06, "Поле картинки").
+    const room = field - 3 / bake;
+    for (const ridge of Object.values(cream.ridges)) {
+      for (const b of [ridge.base, ...ridge.festoons]) {
+        expect(b.cx - b.rx - cream.outlinePx).toBeGreaterThanOrEqual(-room);
+        expect(b.cx + b.rx + cream.outlinePx).toBeLessThanOrEqual(roll.width + room);
+        expect(b.cy - b.ry - cream.outlinePx).toBeGreaterThanOrEqual(-room);
+        expect(b.cy + b.ry + cream.outlinePx).toBeLessThanOrEqual(roll.height + room);
+      }
+      // The anchor sits on the bottom line of the base, where the drops hang.
+      const bottom = ovalBottomAt(ridge.base, roll.originX * roll.width);
+      expect(Math.abs(bottom - roll.originY * roll.height)).toBeLessThan(1.5);
+    }
+    expect(ridgePictureSize()).toEqual([roll.width + field * 2, roll.height + field * 2]);
+  });
+});
+
+describe('ovalBottomAt', () => {
+  it('is the lowest point of the oval, its centre line outside it', () => {
+    const oval = { cx: 10, cy: 20, rx: 8, ry: 4 };
+    expect(ovalBottomAt(oval, 10)).toBe(24);
+    expect(ovalBottomAt(oval, 18)).toBeCloseTo(20);
+    expect(ovalBottomAt(oval, 40)).toBeCloseTo(20);
   });
 });

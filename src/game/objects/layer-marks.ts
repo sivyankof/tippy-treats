@@ -5,6 +5,7 @@ import {
   markGrow,
   markVanish,
   markSwingDeg,
+  squeezeScale,
   MAX_CUT_PICTURES,
   MAX_PRESS_PICTURES,
   type LayerMark,
@@ -25,7 +26,7 @@ export class LayerMarkPictures {
   readonly images: Phaser.GameObjects.Image[] = [];
   /** Pictures of cut marks: drawn under the shade of the layer above. */
   readonly cutImages: Phaser.GameObjects.Image[] = [];
-  /** Pictures of press marks (stains, the cream roll): drawn above that shade, so it never greys them. */
+  /** Pictures of press marks (stains, the cream roll and its drops): drawn above that shade, so it never greys them. */
   readonly pressImages: Phaser.GameObjects.Image[] = [];
   private readonly shown: Array<LayerMark | null> = [];
   private allowed = false;
@@ -84,11 +85,14 @@ export class LayerMarkPictures {
     const image = this.images[slot]!;
     if (!mark || !image.visible) return;
     const age = nowMs - mark.bornMs;
-    const grow = markGrow(mark, age) * markVanish(mark, nowMs);
+    const vanish = markVanish(mark, nowMs);
+    const squeeze = mark.squeeze;
+    const growX = squeeze ? squeezeScale(squeeze, age, 0) : markGrow(mark, age);
+    const growY = squeeze ? squeezeScale(squeeze, age, 1) : growX;
     image
       .setScale(
-        (mark.width / image.frame.width) * grow * (mark.flipX ? -1 : 1),
-        (mark.height / image.frame.height) * grow,
+        (mark.width / image.frame.width) * growX * vanish * (mark.flipX ? -1 : 1),
+        (mark.height / image.frame.height) * growY * vanish,
       )
       .setRotation(((mark.angleDeg ?? 0) + markSwingDeg(mark, age)) * DEG_TO_RAD)
       .setAlpha(alpha);
@@ -105,7 +109,13 @@ export class LayerMarkPictures {
       this.shown[slot] = mark;
       image.setTexture(mark.texture).setOrigin(mark.originX, mark.originY);
       if (mark.tint === undefined) image.clearTint();
-      else image.setTint(mark.tint);
+      else {
+        image
+          .setTint(mark.tint)
+          .setTintMode(
+            mark.tintMode === 'overlay' ? Phaser.TintModes.OVERLAY : Phaser.TintModes.MULTIPLY,
+          );
+      }
     }
     image.setPosition(mark.dx, mark.dy).setVisible(true);
     this.pose(slot, image.scene.time.now, image.alpha);

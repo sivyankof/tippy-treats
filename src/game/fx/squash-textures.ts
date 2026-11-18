@@ -1,24 +1,23 @@
 import type * as Phaser from 'phaser';
-import { PLAIN_LAYER } from '../../data/plain-layers';
 import { PLAIN_TOPPERS } from '../../data/plain-toppers';
 import { SQUASH_PICTURES, SQUASH_TEXTURES, TOPPER_SQUASH } from '../../data/topper-squash';
 import { DEG_TO_RAD } from '../../util/math';
 import { bakeTexture } from '../ui/bake-texture';
+import { bakeCreamRollTextures } from './cream-roll-textures';
 import {
+  drawBlobs,
   drawGlossMark,
+  drawTeardrop,
   ellipsePoints,
   fillOutlinedPolygon,
   fillPolygon,
   glossFromShares,
   outlineColor,
-  roundRectPoints,
-  type BodyShape,
 } from './plain-style';
 import { drawWafer, leaf } from './topper-texture';
 
-const { stain, roll } = TOPPER_SQUASH;
-const { field, bake, outlinePx, rollOutlinePx, stainColors, leafSize, waferBreak } =
-  SQUASH_PICTURES;
+const { stain } = TOPPER_SQUASH;
+const { field, bake, outlinePx, stainColors, leafSize, waferBreak } = SQUASH_PICTURES;
 const { gloss } = PLAIN_TOPPERS;
 
 /** Size in layer pixels of a stain picture (the drawing and its field). */
@@ -26,57 +25,10 @@ export function stainPictureSize(): [number, number] {
   return [stain.width + field * 2, stain.height + field * 2];
 }
 
-/** Size in layer pixels of a cream roll picture. */
-export function rollPictureSize(): [number, number] {
-  return [roll.width + field * 2, roll.height + field * 2];
-}
-
 /** The anchor of a stain as shares of its picture: the top of the blob. */
 export function stainOrigin(): [number, number] {
   const [w, h] = stainPictureSize();
   return [(stain.originX * stain.width + field) / w, (stain.originY * stain.height + field) / h];
-}
-
-/** The anchor of a roll as shares of its picture: the end tucked under the upper layer. */
-export function rollOrigin(): [number, number] {
-  const [w, h] = rollPictureSize();
-  return [(roll.originX * roll.width + field) / w, (roll.originY * roll.height + field) / h];
-}
-
-interface Blob {
-  cx: number;
-  cy: number;
-  rx: number;
-  ry: number;
-}
-
-/** A blob drawn as ellipses: one outline pass, one shadow pass and one lit pass over all of them, so the parts melt into one body. */
-function drawBlobs(
-  g: Phaser.GameObjects.Graphics,
-  blobs: readonly Blob[],
-  base: number,
-  shadow: number,
-  outline: number,
-  band: number,
-): void {
-  g.fillStyle(outline, 1);
-  for (const b of blobs)
-    fillPolygon(g, ellipsePoints(b.cx, b.cy, b.rx + outlinePx, b.ry + outlinePx, 0));
-  g.fillStyle(shadow, 1);
-  for (const b of blobs) fillPolygon(g, ellipsePoints(b.cx, b.cy, b.rx, b.ry, 0));
-  g.fillStyle(base, 1);
-  for (const b of blobs) {
-    fillPolygon(
-      g,
-      ellipsePoints(
-        b.cx - b.rx * band,
-        b.cy - b.ry * band,
-        b.rx * (1 - band),
-        b.ry * (1 - band),
-        0,
-      ),
-    );
-  }
 }
 
 function glossAt(
@@ -98,6 +50,7 @@ function drawStain(g: Phaser.GameObjects.Graphics, tones: StainTones): void {
   const top = stain.originY * stain.height;
   drawBlobs(
     g,
+    outlinePx,
     [
       { cx: mid, cy: top + 8, rx: 25, ry: 7.5 },
       { cx: mid - 21, cy: top + 10, rx: 8.5, ry: 5.2 },
@@ -117,44 +70,13 @@ function drawStain(g: Phaser.GameObjects.Graphics, tones: StainTones): void {
 /** A flying drop of juice: a teardrop with an outline, drawn light and shown tinted (see `SQUASH_PICTURES.drop`). */
 function drawDrop(g: Phaser.GameObjects.Graphics): void {
   const { width, height, outline, shadow } = SQUASH_PICTURES.drop;
-  drawTeardrop(g, width, height, [outline, shadow, 0xffffff]);
+  drawTeardrop(g, width, height, [outline, shadow, 0xffffff], outlinePx);
 }
 
 /** A drop of lemon juice: the same teardrop in its own colours. */
 function drawLemonDrop(g: Phaser.GameObjects.Graphics): void {
   const { width, height, outline, body, light } = SQUASH_PICTURES.lemonDrop;
-  drawTeardrop(g, width, height, [outline, body, light]);
-}
-
-/** A teardrop of `w` x `h` with an outline, a body and a light spot (`colors` in that order). */
-function drawTeardrop(
-  g: Phaser.GameObjects.Graphics,
-  w: number,
-  h: number,
-  colors: readonly [outline: number, body: number, light: number],
-): void {
-  const [outline, shadow, light] = colors;
-  const r = w / 2 - outlinePx * 0.6;
-  const cy = h - w / 2 - outlinePx * 0.2;
-  // A round head and a pointed tip: the arc leaves out the top wedge, the tip closes it.
-  const shape = (grow: number, dx: number, dy: number): Array<{ x: number; y: number }> => {
-    const points: Array<{ x: number; y: number }> = [];
-    for (let deg = -50; deg <= 230; deg += 10) {
-      const a = deg * DEG_TO_RAD;
-      points.push({
-        x: w / 2 + dx + Math.cos(a) * (r + grow),
-        y: cy + dy + Math.sin(a) * (r + grow),
-      });
-    }
-    points.push({ x: w / 2 + dx, y: outlinePx * 0.4 + dy - grow * 0.8 });
-    return points;
-  };
-  g.fillStyle(outline, 1);
-  fillPolygon(g, shape(outlinePx * 0.6, 0, 0));
-  g.fillStyle(shadow, 1);
-  fillPolygon(g, shape(0, 0, 0));
-  g.fillStyle(light, 1);
-  fillPolygon(g, shape(-1.2, -0.9, -0.9));
+  drawTeardrop(g, width, height, [outline, body, light], outlinePx);
 }
 
 /** A strawberry seed: a small outlined teardrop, in its own colours. */
@@ -193,34 +115,6 @@ function drawStemBit(g: Phaser.GameObjects.Graphics): void {
     }
     g.strokePath();
   }
-}
-
-const capsule: BodyShape = (cx, cy, rx, ry) => roundRectPoints(cx, cy, rx, ry, ry);
-
-/** The cream roll squeezed out between two layers: a plump capsule, two tones, a warm outline and a gloss. */
-function drawCreamRoll(g: Phaser.GameObjects.Graphics): void {
-  const { color, shadow } = PLAIN_LAYER.decor.cream;
-  const cx = roll.width / 2;
-  const cy = roll.height / 2;
-  const rx = roll.width / 2 - rollOutlinePx;
-  const ry = roll.height / 2 - rollOutlinePx;
-  g.fillStyle(SQUASH_PICTURES.rollOutline, 1);
-  fillPolygon(g, capsule(cx, cy, rx + rollOutlinePx, ry + rollOutlinePx));
-  g.fillStyle(shadow, 1);
-  fillPolygon(g, capsule(cx, cy, rx, ry));
-  g.fillStyle(color, 1);
-  fillPolygon(g, capsule(cx - rx * 0.05, cy - ry * 0.16, rx * 0.95, ry * 0.8));
-  drawGlossMark(
-    g,
-    glossFromShares(
-      { ...gloss, x: 0, y: 0 },
-      cx - rx * 0.4,
-      cy - ry * 0.45,
-      roll.height * 1.5,
-      0xffffff,
-      gloss.alpha,
-    ),
-  );
 }
 
 /** A mint leaf that came off the topper: two tones, a vein, the outline of the toppers. */
@@ -350,12 +244,7 @@ export function bakeSquashTextures(scene: Phaser.Scene): void {
       draw(g);
     });
   }
-  const [rw, rh] = rollPictureSize();
-  bakeTexture(scene, SQUASH_TEXTURES.creamRoll, rw * bake, rh * bake, (g) => {
-    g.scaleCanvas(bake, bake);
-    g.translateCanvas(field, field);
-    drawCreamRoll(g);
-  });
+  bakeCreamRollTextures(scene);
   bakeTexture(
     scene,
     SQUASH_TEXTURES.leaf,
