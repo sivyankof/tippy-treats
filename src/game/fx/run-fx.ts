@@ -22,6 +22,7 @@ import { MasterFeed } from '../ui/master-caption-state';
 import type { CreatureId } from '../../data/creatures';
 import type { WeatherId } from '../../data/weather';
 import { TowerView } from '../objects/tower-view';
+import { layerMarks } from '../objects/layer-marks';
 import { AbilityFx } from './abilities/ability-fx';
 import { CameraKick } from './camera-kick';
 import { CoinFx } from './coin-fx';
@@ -459,7 +460,9 @@ export class RunFx {
     const pose = this.tower.layerPose(index);
     // A cut leaves no dust over the corner of the falling piece.
     const cut = event.cutSide && event.cutWidth > 0 ? (event.cutSide === 'right' ? 1 : -1) : null;
-    if (pose) this.landingFx.landed(pose, cut);
+    // Cream squeezed out of the seam takes the place of the dust: a puff over it would smudge it.
+    const creamRoll = layerMarks.clearsShadowAbove(index);
+    if (pose && !creamRoll) this.landingFx.landed(pose, cut);
 
     if (perfect) {
       if (pose) this.landingFx.perfect(pose, state.combo);
