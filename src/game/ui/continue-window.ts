@@ -215,7 +215,7 @@ export class ContinueWindow {
     this.scene.tweens.killTweensOf(this.declineText);
     this.scene.tweens.add({
       targets: this.declineText,
-      alpha: 1,
+      alpha: continueInput(flow.elapsedMs).declineAlpha,
       duration: decline.fadeInMs,
     });
   }
