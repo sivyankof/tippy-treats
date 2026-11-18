@@ -55,8 +55,8 @@ function soundCard(id: SoundId): HTMLElement {
   if (entry.ownerChoice) code.append(el('span', 'sb-mark', t('soundboard.ownerChoice')));
   const buttons = el('div', 'sb-btns');
   for (const variant of soundVariants(id)) {
-    const label = variant.label === '' ? `▶ ${t('soundboard.play')}` : `▶ ${variant.label}`;
-    const b = el('button', '', label);
+    const word = variant.labelKey ? t(variant.labelKey) : variant.label || t('soundboard.play');
+    const b = el('button', '', `▶ ${word}`);
     b.type = 'button';
     b.addEventListener('click', () => playSound(id, variant.args));
     buttons.append(b);

@@ -75,6 +75,17 @@ describe('SOUND_BOOK', () => {
     }
   });
 
+  it('has the label of every word variant in both languages', () => {
+    for (const lang of ['en', 'ru'] as const) {
+      const keys = new Set(keysOf(DICTIONARIES[lang]));
+      for (const id of ids) {
+        for (const { labelKey } of soundVariants(id)) {
+          if (labelKey) expect(keys.has(labelKey), `${lang} ${labelKey}`).toBe(true);
+        }
+      }
+    }
+  });
+
   it('plays every sound and variant, scheduling notes and reporting a length', () => {
     for (const id of ids) {
       for (const variant of soundVariants(id)) {
@@ -91,7 +102,7 @@ describe('SOUND_BOOK', () => {
   it('has a variant for every squashed kind, thunder in the sky and behind glass, and a bed marked for the owner', () => {
     expect(
       soundVariants('topperSquash')
-        .map((v) => v.label)
+        .map((v) => v.args[0])
         .sort(),
     ).toEqual(['cherry', 'cream', 'lemon', 'mint', 'strawberry', 'wafer'].sort());
     expect(soundVariants('thunder').map((v) => v.args[0])).toEqual([false, true]);

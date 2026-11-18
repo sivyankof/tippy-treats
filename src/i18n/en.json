@@ -648,6 +648,21 @@
     "menu": "Menu arrangement",
     "stop": "Stop",
     "stats": "Live nodes",
+    "variants": {
+      "calm": "calm",
+      "lastSeconds": "last seconds",
+      "sky": "sky",
+      "glass": "glass",
+      "rain": "rain",
+      "storm": "storm",
+      "wind": "wind",
+      "cherry": "cherry",
+      "strawberry": "strawberry",
+      "lemon": "lemon",
+      "mint": "mint",
+      "wafer": "wafer",
+      "cream": "cream"
+    },
     "group": {
       "drop": "Throw and combo",
       "cut": "Cuts",

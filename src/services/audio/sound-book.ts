@@ -32,9 +32,21 @@ export type SoundGroup = (typeof SOUND_GROUPS)[number];
 
 /** One argument set the soundboard offers for a sound, with its short label. */
 export interface SoundVariant<A extends unknown[]> {
+  /** Plain label for a language-neutral one (`×2`, `#1`); empty means the default "Play". */
   label: string;
+  /** i18n key of the label, when it is a word. */
+  labelKey?: string;
   args: A;
 }
+
+/** The i18n key of a word label of a soundboard variant. */
+const variantKey = (name: string): string => `soundboard.variants.${name}`;
+
+/** The two variants of a sound that has a weak (glass) form. */
+const SKY_GLASS = [
+  { label: '', labelKey: variantKey('sky'), args: [false] },
+  { label: '', labelKey: variantKey('glass'), args: [true] },
+] as [SoundVariant<[boolean]>, SoundVariant<[boolean]>];
 
 /**
  * One sound of the game. `play` schedules the notes on the synth and nothing else: gating,
@@ -154,7 +166,8 @@ export const SOUND_BOOK: SoundBook = {
     group: 'topper',
     priority: 'normal',
     variants: (Object.keys(SFX_LIFE.squash) as SquashKind[]).map((kind) => ({
-      label: kind,
+      label: '',
+      labelKey: variantKey(kind),
       args: [kind] as [SquashKind],
     })),
     play(s, kind) {
@@ -166,10 +179,7 @@ export const SOUND_BOOK: SoundBook = {
   thunder: {
     group: 'weather',
     priority: 'normal',
-    variants: [
-      { label: 'sky', args: [false] },
-      { label: 'glass', args: [true] },
-    ],
+    variants: SKY_GLASS,
     play(s, muffled) {
       const t = SFX_LIFE.thunder;
       const delay = pickRange(t.delay, s.random);
@@ -190,10 +200,7 @@ export const SOUND_BOOK: SoundBook = {
   startleOh: {
     group: 'weather',
     priority: 'normal',
-    variants: [
-      { label: 'sky', args: [false] },
-      { label: 'glass', args: [true] },
-    ],
+    variants: SKY_GLASS,
     play: (s, weak) =>
       s.sequence(SFX_LIFE.startle.notes, { gain: weak ? SFX_LIFE.startle.weakGain : 1 }),
   },
@@ -215,7 +222,8 @@ export const SOUND_BOOK: SoundBook = {
     priority: 'ambient',
     ownerChoice: true,
     variants: (['rain', 'storm', 'wind'] as const).map((kind) => ({
-      label: kind,
+      label: '',
+      labelKey: variantKey(kind),
       args: [kind] as [BedKind],
     })),
     play: (s, kind) => s.bed(kind, WEATHER_BED.previewSeconds),
@@ -238,7 +246,11 @@ export const SOUND_BOOK: SoundBook = {
   ability: {
     group: 'creature',
     priority: 'normal',
-    variants: RARITIES.map((rarity) => ({ label: rarity, args: [rarity] as [typeof rarity] })),
+    variants: RARITIES.map((rarity) => ({
+      label: '',
+      labelKey: `rarity.${rarity}`,
+      args: [rarity] as [typeof rarity],
+    })),
     play(s, rarity) {
       s.noise(SFX.ability.puff);
       s.sequence(SFX.ability.byRarity[rarity].notes);
@@ -363,8 +375,8 @@ export const SOUND_BOOK: SoundBook = {
     group: 'ui',
     priority: 'normal',
     variants: [
-      { label: 'calm', args: [false] },
-      { label: 'last seconds', args: [true] },
+      { label: '', labelKey: variantKey('calm'), args: [false] },
+      { label: '', labelKey: variantKey('lastSeconds'), args: [true] },
     ],
     play: (s, urgent) => s.tone(urgent ? SFX_LIFE.tick.urgent : SFX_LIFE.tick.calm),
   },
