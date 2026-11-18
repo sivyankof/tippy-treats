@@ -60,5 +60,5 @@ export const NO_MUSIC_FACTORY: MusicFactory = () => NO_MUSIC;
 
 /** The host of a mixer (live or offline). */
 export function musicHostOf(mixer: Mixer, random: () => number): MusicHost {
-  return { ctx: mixer.ctx, bus: mixer.musicBus, tally: mixer.tally, random };
+  return { ctx: mixer.ctx, bus: mixer.musicBus, tally: mixer.musicTally, random };
 }

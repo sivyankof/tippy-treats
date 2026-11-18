@@ -350,7 +350,7 @@ describe('WebAudioService', () => {
 
   it('counts live nodes and releases them when sounds end', () => {
     const { ctx, service } = setup();
-    expect(service.debugStats()).toEqual({ liveNodes: 0, contextState: 'none' });
+    expect(service.debugStats()).toEqual({ liveNodes: 0, musicNodes: 0, contextState: 'none' });
     service.unlock();
     service.click();
     expect(service.debugStats().liveNodes).toBe(2);

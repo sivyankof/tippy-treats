@@ -17,6 +17,8 @@ export class Mixer {
   readonly master: GainNode;
   /** Live-node bookkeeping shared by everything that plays through this mixer. */
   readonly tally = new NodeTally();
+  /** The music's share of `tally` (its chain and voices): the leak check reads the rest. */
+  readonly musicTally = this.tally.child();
   private sfxOn = true;
   private musicOn = true;
   /** Dev-only multipliers of the bus levels (the soundboard sliders); 1 in the game. */

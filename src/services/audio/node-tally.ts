@@ -6,6 +6,14 @@ export class NodeTally {
   private created = 0;
   private released = 0;
 
+  /** A tally that also counts into `parent` (the music's own count inside the context's total). */
+  constructor(private readonly parent: NodeTally | null = null) {}
+
+  /** A part of this tally: what it counts is counted here too, and can be read on its own. */
+  child(): NodeTally {
+    return new NodeTally(this);
+  }
+
   /** Nodes that were created and not released yet. */
   get live(): number {
     return this.created - this.released;
@@ -18,11 +26,13 @@ export class NodeTally {
   /** Counts `nodes` as created. */
   add(nodes: readonly unknown[]): void {
     this.created += nodes.length;
+    this.parent?.add(nodes);
   }
 
   /** Counts `nodes` as released. */
   release(nodes: readonly unknown[]): void {
     this.released += nodes.length;
+    this.parent?.release(nodes);
   }
 }
 

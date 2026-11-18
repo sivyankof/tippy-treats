@@ -32,6 +32,19 @@ describe('NodeTally', () => {
   });
 });
 
+describe('NodeTally.child', () => {
+  it('counts into the parent as well and can be read on its own', () => {
+    const parent = new NodeTally();
+    const music = parent.child();
+    parent.add([1, 2]);
+    music.add([3, 4, 5]);
+    music.release([3]);
+    expect(music.live).toBe(2);
+    expect(parent.live).toBe(4);
+    expect(parent.live - music.live).toBe(2);
+  });
+});
+
 describe('runSource', () => {
   it('schedules the source and releases its nodes when it ends', () => {
     const tally = new NodeTally();
