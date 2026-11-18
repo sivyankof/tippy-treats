@@ -19,6 +19,11 @@ export function musicTarget(
   return on ? level * duckFactor(held, share) : 0;
 }
 
+/** The music is heard: a tune is playing, the switch is on and the music level is not turned to zero. */
+export function musicAudible(tunePlaying: boolean, on: boolean, levelScale: number): boolean {
+  return tunePlaying && on && levelScale > 0;
+}
+
 /**
  * Transfer curve of the output limiter, `size` points over input -1..1: the identity up to
  * `threshold`, then a smooth bend (tanh, same slope at the joint) that approaches `ceiling` and

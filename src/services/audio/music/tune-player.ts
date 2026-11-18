@@ -6,7 +6,7 @@ import {
 } from '../../../data/music/music-play';
 import type { Song } from '../../../data/music/song';
 import { DEFAULT_MUSIC_VARIANT, MUSIC_FILES, SONGS } from '../../../data/music/songs';
-import { randomSeed } from '../../../util/math';
+import { MS_PER_SECOND, randomSeed } from '../../../util/math';
 import type { MusicControl, MusicFactory, MusicHost, MusicStartOptions } from '../music-control';
 import { runSource, SOURCE_FOREVER_SEC, stopQuietly, type TimedSource } from '../node-tally';
 import { FileLoop, musicFileUrl } from './file-loop';
@@ -42,6 +42,9 @@ export interface OfflinePlan {
   mix?: Partial<MusicMix>;
 }
 
+/** Wall-clock slack after the cut before the idle chain is disconnected. */
+const IDLE_MARGIN_SEC = 0.05;
+
 /** Loop plans kept at a time (the loop playing and the next one). */
 const MAX_CACHED_PLANS = 4;
 
@@ -75,6 +78,9 @@ export class TunePlayer implements MusicControl {
   private crackles: AudioBuffer | null = null;
   private mix: MusicMix;
   private timer: ReturnType<typeof setInterval> | null = null;
+  /** Context time at which the voices of the tune that stopped last are cut. */
+  private cutAt = 0;
+  private idleTimer: ReturnType<typeof setTimeout> | null = null;
 
   constructor(
     private readonly host: MusicHost,
@@ -84,23 +90,22 @@ export class TunePlayer implements MusicControl {
   }
 
   start(options: MusicStartOptions): void {
-    const restart = this.playing;
     this.stop();
     const { ctx } = this.host;
     const chain = this.ensureChain();
     const now = ctx.currentTime;
-    const lead = restart ? MUSIC_PLAY.stopCutSec : MUSIC_PLAY.startLeadSec;
+    // The voices of a tune that has just stopped are cut at `cutAt`; the new one fades in after that.
+    const fadeAt = Math.max(now, this.cutAt);
+    this.cancelIdle();
+    chain.wake();
     this.layer = clampLayer(options.layer);
     this.menu = options.menu ?? false;
     this.playing = true;
+    this.host.onPlaying?.(true);
     const fader = chain.fader.gain;
-    if (!restart) fader.setValueAtTime(0, now);
-    fader.setTargetAtTime(
-      this.outLevel(),
-      now + lead - MUSIC_PLAY.startLeadSec,
-      MUSIC_PLAY.entryRampSec,
-    );
-    this.origin = now + lead;
+    if (fadeAt === now) fader.setValueAtTime(0, now);
+    fader.setTargetAtTime(this.outLevel(), fadeAt, MUSIC_PLAY.entryRampSec);
+    this.origin = fadeAt + MUSIC_PLAY.startLeadSec;
 
     const url = musicFileUrl(MUSIC_FILES[options.variant]);
     if (url) {
@@ -138,18 +143,24 @@ export class TunePlayer implements MusicControl {
     this.song = null;
     if (!this.playing) return;
     this.playing = false;
+    this.host.onPlaying?.(false);
     const { ctx } = this.host;
     const now = ctx.currentTime;
     const cut = now + MUSIC_PLAY.stopCutSec;
+    this.cutAt = cut;
     const fader = this.chain?.fader.gain;
     fader?.cancelScheduledValues(now);
     fader?.setTargetAtTime(0, now, MUSIC_PLAY.stopRampSec);
+    this.chain?.release(now, cut);
     this.files?.stop(cut);
     const voices: VoiceHandle[] = [...this.active];
+    // Handed over: a later stop must not move the cut of these voices.
+    this.active.clear();
     const hiss = this.hissSource;
     if (hiss) voices.push({ stop: (when) => stopQuietly(hiss, when) });
     this.hissSource = null;
     for (const voice of voices) voice.stop(cut);
+    if (!this.offline) this.idleLater();
   }
 
   setLayer(layer: number): void {
@@ -172,11 +183,28 @@ export class TunePlayer implements MusicControl {
     return this.active.size;
   }
 
+  /** Once the cut has passed and no tune started, the chain leaves the bus (nothing of it is computed while the music is off). */
+  private idleLater(): void {
+    this.cancelIdle();
+    const wait = (this.cutAt - this.host.ctx.currentTime + IDLE_MARGIN_SEC) * MS_PER_SECOND;
+    this.idleTimer = setTimeout(() => {
+      this.idleTimer = null;
+      // A suspended context has not reached the cut yet: wait for it.
+      if (this.playing) return;
+      if (this.host.ctx.currentTime < this.cutAt) this.idleLater();
+      else this.chain?.idle();
+    }, wait);
+  }
+
+  private cancelIdle(): void {
+    if (this.idleTimer !== null) clearTimeout(this.idleTimer);
+    this.idleTimer = null;
+  }
+
   private ensureChain(): MusicChain {
     if (this.chain) return this.chain;
     const { ctx, bus, tally, random } = this.host;
-    const chain = new MusicChain(ctx, bus, tally);
-    chain.setMix(this.mix, 0);
+    const chain = new MusicChain(ctx, bus, tally, this.mix);
     this.chain = chain;
     this.voices = new MusicVoices(ctx, tally, random, chain.wobble);
     return chain;

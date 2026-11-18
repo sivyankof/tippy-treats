@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   duckFactor,
   limiterCurve,
+  musicAudible,
   musicTarget,
   saturationCurve,
   type DuckReason,
@@ -59,5 +60,14 @@ describe('saturation curve', () => {
     for (let i = 0; i < size; i++) expect(curve[i]).toBeCloseTo(-(curve[size - 1 - i] ?? 0), 6);
     expect(curve[size - 1]).toBeLessThan(0.6);
     for (let i = 1; i < size; i++) expect(curve[i] ?? 0).toBeGreaterThan(curve[i - 1] ?? 0);
+  });
+});
+
+describe('musicAudible', () => {
+  it('needs a playing tune, the switch on and a level above zero', () => {
+    expect(musicAudible(true, true, 1)).toBe(true);
+    expect(musicAudible(false, true, 1)).toBe(false);
+    expect(musicAudible(true, false, 1)).toBe(false);
+    expect(musicAudible(true, true, 0)).toBe(false);
   });
 });

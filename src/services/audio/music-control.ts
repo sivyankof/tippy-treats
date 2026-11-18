@@ -42,6 +42,8 @@ export interface MusicHost {
   tally: NodeTally;
   /** Random numbers for the tune: `Math.random` live, a seeded one in an offline render. */
   random: () => number;
+  /** The player calls this when a tune starts or stops (the mixer softens the combo bell while one is heard). */
+  onPlaying?: (playing: boolean) => void;
 }
 
 /** Builds the player over a host; the service calls it once, when the audio is unlocked. */
@@ -60,5 +62,11 @@ export const NO_MUSIC_FACTORY: MusicFactory = () => NO_MUSIC;
 
 /** The host of a mixer (live or offline). */
 export function musicHostOf(mixer: Mixer, random: () => number): MusicHost {
-  return { ctx: mixer.ctx, bus: mixer.musicBus, tally: mixer.musicTally, random };
+  return {
+    ctx: mixer.ctx,
+    bus: mixer.musicBus,
+    tally: mixer.musicTally,
+    random,
+    onPlaying: (on) => mixer.setTunePlaying(on),
+  };
 }

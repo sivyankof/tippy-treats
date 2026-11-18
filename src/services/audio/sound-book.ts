@@ -87,7 +87,7 @@ export const SOUND_BOOK: SoundBook = {
     ],
     play(s, comboStep, underMusic) {
       const bell = SFX.perfect;
-      const soft = underMusic ?? s.musicOn;
+      const soft = underMusic ?? s.musicAudible;
       const look = soft ? bell.underMusic : bell;
       const freq = comboNoteFreq(comboStep);
       const scale = comboGainScale(comboStep) * (soft ? fromDb(bell.underMusic.gainDb) : 1);
