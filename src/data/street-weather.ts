@@ -53,9 +53,10 @@ export const STREET_WEATHER = {
   } satisfies Record<StreetFallKind, number>,
   /**
    * The rain starts mostly outside the tower (it hides the middle): this share of the drops in the two strips beside
-   * it. The lean of the fall smears it, so it is more than the strips' own share (`stripShare`).
+   * it. The lean of the fall smears it, so it is more than the strips' own share (`stripShare`). Raised from 0.55 when
+   * the rain began to fall over the whole screen height (a part of it now passes behind the awning and the HUD).
    */
-  outsideShare: 0.55,
+  outsideShare: 0.6,
   /** The flakes of the street are tinted this cool tone: white on the pale street they all but vanished. */
   snowTint: 0xa9bbe6,
   /**

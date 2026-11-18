@@ -183,8 +183,8 @@ describe('street weather of the Showcase', () => {
                 WEATHER_LOOK.bandFeatherPx,
                 WEATHER_LOOK.flightRowAlpha,
               );
-              // Counted where the player sees it: on the screen and not behind a HUD plate.
-              const seen = alpha > 0.4 && onScreen(x, y, height);
+              // Counted where the player sees it: on the screen, not behind a HUD plate, under the awning.
+              const seen = alpha > 0.4 && y > AWNING_BOTTOM_PX && onScreen(x, y, height);
               if (seen && (x <= towerLeft || x >= towerRight)) outside++;
             }
             lowest = Math.min(lowest, outside);
@@ -234,7 +234,7 @@ describe('street weather of the Showcase', () => {
             const y = wrapRange(f.v * height + f.speed * t, height, 20);
             const x = f.u * width + f.sway * Math.sin((TWO_PI * t * 1000) / f.ms + f.phase);
             const alpha = flightRowShade(y, band, snow.bandFeatherPx, WEATHER_LOOK.flightRowAlpha);
-            const seen = alpha > 0.4 && onScreen(x, y, height);
+            const seen = alpha > 0.4 && y > AWNING_BOTTOM_PX && onScreen(x, y, height);
             if (seen && (x <= towerLeft || x >= towerRight)) {
               outside++;
             }
