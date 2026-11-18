@@ -83,6 +83,13 @@ export const TOWER_WEATHER = {
     /** Blinking of a sleepy face: rarer and slower than usual. */
     blinkIntervalMs: [4500, 8000] as readonly [number, number],
     blinkMs: 260,
+    /**
+     * The half-shut eye: the white and the pupil are the usual pictures, the pupil smaller and lower, and the lid
+     * (`face_eye_sleepy`, light grey with a darker lash band) is tinted with the crust of the layer.
+     */
+    eye: { pupilScale: 0.6, pupilY: 9 },
+    /** A crust darker than `minLuma` gives a lid lifted towards white by up to `maxLift`, so the lid and its lash band still read. */
+    lid: { minLuma: 0.42, maxLift: 0.28 },
     /** The yawn: the face draws itself up (anticipation), the mouth gapes, then it closes with a smack and a spring. */
     yawn: {
       prepMs: 200,

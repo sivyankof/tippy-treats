@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { luma } from '../../util/color';
 import {
   domeShape,
   fillQuad,
@@ -6,6 +7,7 @@ import {
   glossFromShares,
   openBodyLayout,
   roundRectPoints,
+  sleepyLidTone,
   topEdgeAt,
 } from './plain-style';
 
@@ -160,5 +162,19 @@ describe('openBodyLayout', () => {
     expect(l.texH).toBe(100 + 20 + 25);
     expect(l.centerY).toBe(10 + 25 + 50);
     expect(l.origin.y).toBeCloseTo(l.centerY / l.texH);
+  });
+});
+
+describe('sleepyLidTone', () => {
+  it('keeps a light or mid crust as it is', () => {
+    expect(sleepyLidTone(0xf6c98c)).toBe(0xf6c98c);
+    expect(sleepyLidTone(0xb57a52)).toBe(0xb57a52);
+  });
+  it('lifts a very dark crust, never past white, and a darker one lifts more', () => {
+    const dark = sleepyLidTone(0x3a2418);
+    const darker = sleepyLidTone(0x1a0f0a);
+    expect(luma(dark)).toBeGreaterThan(luma(0x3a2418));
+    expect(luma(darker) - luma(0x1a0f0a)).toBeGreaterThan(luma(dark) - luma(0x3a2418));
+    expect(sleepyLidTone(0x000000)).toBeLessThan(0xffffff);
   });
 });
