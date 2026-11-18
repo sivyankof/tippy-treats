@@ -356,7 +356,9 @@ export const PANORAMA = {
   crossAt: 0.6,
   valance: { top: 46, band: 54, scallops: 8 },
   /** Layout on the start view: the tower of the start view, the gap under the HUD (`hudFloor`) and above the flying layer. */
-  layout: { towerLayers: 2, flightGapPx: 24, minScale: 0.6, centreShare: 0.5 },
+  layout: { towerLayers: 2, flightGapPx: 24, reachExtraPx: 30, minScale: 0.6, centreShare: 0.5 },
+  /** The window goes behind the tower: it fades out while this share of its height (from the top) still stands above the tower top, to nothing at `goneAt`. */
+  cover: { fullAt: 0.45, goneAt: 0.25 },
   /** Alpha of the whole window while the incoming layer flies in front of it (a partial mute would need a second draw). */
   rowMuted: 0.85,
   /** Drops, flakes and leaves of the pane: counts per weather (the lite level shows half), size against the small window's. */

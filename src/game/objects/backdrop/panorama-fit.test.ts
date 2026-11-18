@@ -3,6 +3,7 @@ import { PANORAMA } from '../../../data/window-look';
 import { hudFloor } from '../../camera-layout';
 import { BALANCE } from '../../../data/balance';
 import {
+  coverFade,
   flightRowAt,
   panoramaFit,
   panoramaFitCached,
@@ -54,8 +55,8 @@ describe('panoramaFit', () => {
 
 describe('flightRowAt', () => {
   it('stands higher the more layers are placed and has the height of the layer plus its bob', () => {
-    const a = flightRowAt({ top: 0, bottom: 0 }, 2037, 2);
-    const b = flightRowAt({ top: 0, bottom: 0 }, 2037, 3);
+    const a = flightRowAt({ top: 0, bottom: 0, towerTop: 0 }, 2037, 2);
+    const b = flightRowAt({ top: 0, bottom: 0, towerTop: 0 }, 2037, 3);
     expect(b.top).toBeLessThan(a.top);
     expect(a.bottom).toBeGreaterThan(a.top);
     expect(a.bottom - a.top).toBeGreaterThanOrEqual(BALANCE.layer.height);
@@ -72,5 +73,32 @@ describe('rowMute', () => {
     const mid = rowMute(950 + 300 + 40, 300, row, 80);
     expect(mid).toBeGreaterThan(PANORAMA.rowMuted);
     expect(mid).toBeLessThan(1);
+  });
+});
+
+describe('coverFade', () => {
+  const halfH = 320;
+  it('is 1 while the window stands well above the tower and 0 once only a cap shows', () => {
+    expect(coverFade(500, halfH, 1000)).toBe(1);
+    expect(coverFade(500, halfH, 180 + 0.2 * 2 * halfH)).toBe(0);
+    expect(coverFade(500, halfH, 0)).toBe(0);
+  });
+  it('falls smoothly between', () => {
+    const a = coverFade(500, halfH, 180 + 0.4 * 2 * halfH);
+    const b = coverFade(500, halfH, 180 + 0.3 * 2 * halfH);
+    expect(a).toBeGreaterThan(b);
+    expect(a).toBeLessThan(1);
+    expect(b).toBeGreaterThan(0);
+  });
+});
+
+describe('the start view on a short screen', () => {
+  it('keeps the window clear of the highest point of the flying layer', () => {
+    const fit = panoramaFit(W, H_SHORT);
+    expect(fit).not.toBeNull();
+    const bottom = (fit?.y ?? 0) + (PANORAMA.height * (fit?.scale ?? 1)) / 2;
+    expect(startViewFlightTop(H_SHORT) - bottom).toBeGreaterThanOrEqual(
+      PANORAMA.layout.flightGapPx,
+    );
   });
 });

@@ -145,7 +145,10 @@ export function garlandWireY(x: number): number {
 }
 
 const KITCHEN_POT: Point = { x: 0.115, y: 0.6 };
-const KITCHEN_RAIL: Point = { x: 0.87, y: 0.31 };
+/** The ladle rail hangs in the right outer column, a clear gap from the frame of the panoramic window (docs/06). */
+const KITCHEN_RAIL: Point = { x: 0.9, y: 0.31 };
+/** The rail is drawn this much smaller (its hooks and the ladles close up with it). */
+const KITCHEN_RAIL_SCALE = 0.8;
 const KITCHEN_CLOCK: Point = { x: 0.13, y: 0.42 };
 const COOK = BD_TEX.kitchen;
 const ROOF_LINE: Point = { x: 0.8, y: 0.56 };
@@ -230,7 +233,12 @@ export const BACKDROP_LIFE = {
     } as PuffSpec,
     steamAt: KITCHEN_POT,
     steamOffset: { x: 0, y: -76 },
-    rail: { texture: COOK.rail, at: KITCHEN_RAIL, ...micro(1700, 1) } as HoverSpec,
+    rail: {
+      texture: COOK.rail,
+      at: KITCHEN_RAIL,
+      scale: KITCHEN_RAIL_SCALE,
+      ...micro(1700, 1),
+    } as HoverSpec,
     ladles: [
       { dx: -66, swing: { deg: 7, ms: 1500 }, phase: 0, scale: 1 },
       { dx: 0, swing: { deg: 9, ms: 1750 }, phase: 1.3, scale: 0.85 },
@@ -238,7 +246,7 @@ export const BACKDROP_LIFE = {
     ].map(({ dx, swing, phase, scale }): HoverSpec => ({
       texture: COOK.ladle,
       at: KITCHEN_RAIL,
-      offset: { x: dx, y: 6 },
+      offset: { x: dx * KITCHEN_RAIL_SCALE, y: 6 },
       origin: paddedOrigin([0.5, 0.05], 44, 240, FIELD_PAD.kitchenLadle),
       scale,
       swing,

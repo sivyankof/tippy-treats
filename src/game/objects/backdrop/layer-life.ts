@@ -3,7 +3,7 @@ import type { HoverSpec } from '../../../data/backdrop-life';
 import { WALL_LOOK } from '../../../data/window-look';
 import { applyPose, createImage, type FrameCtx, type Life } from './life';
 import { hoverPose, newPose } from './life-motion';
-import { rowMute } from './panorama-fit';
+import { coverFade, rowMute } from './panorama-fit';
 import {
   copyMirrored,
   onLayer,
@@ -133,7 +133,10 @@ export class LayerThing implements Life {
         pose.scaleX *= scale;
         pose.scaleY *= scale;
         const shown = rideLayer(pose, this.anchor, ctx, ctx.height, halfH, rise, !rowMuted);
-        if (rowMuted) pose.alpha *= rowMute(pose.y, halfH, ctx.flightRow, WALL_LOOK.featherPx);
+        if (rowMuted) {
+          pose.alpha *= rowMute(pose.y, halfH, ctx.flightRow, WALL_LOOK.featherPx);
+          pose.alpha *= coverFade(pose.y, halfH, ctx.flightRow.towerTop);
+        }
         applyPose(image, pose);
         image.setFlipX(mirrored);
         image.setVisible(shown);
