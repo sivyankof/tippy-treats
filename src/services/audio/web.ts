@@ -1,5 +1,6 @@
 import type { Rarity } from '../../data/rarity';
 import type { BedKind } from '../../data/weather-bed';
+import { MS_PER_SECOND } from '../../util/math';
 import { BedPlayer } from './bed';
 import type { DuckReason } from './mixer-math';
 import { Mixer } from './mixer';
@@ -204,7 +205,7 @@ export class WebAudioService implements AudioService, AudioDevControl {
     this.recordDuckTimer = setTimeout(() => {
       this.recordDuckTimer = null;
       this.duckMusic('record', false);
-    }, length * 1000);
+    }, length * MS_PER_SECOND);
   }
 
   /** The silent unlock source, until the context runs; never throws. */

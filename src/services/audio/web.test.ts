@@ -201,7 +201,7 @@ describe('WebAudioService', () => {
     service.unlock();
     for (let i = 0; i < 100; i++) service.collapseThud(i);
     expect(ctx.oscillators).toHaveLength(1);
-    ctx.currentTime += SFX.collapse.minIntervalSec + 0.001;
+    ctx.currentTime += AUDIO_MIX.dedupeById.collapseThud! + 0.001;
     service.collapseThud(101);
     expect(ctx.oscillators).toHaveLength(2);
   });
