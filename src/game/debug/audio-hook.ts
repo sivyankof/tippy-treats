@@ -1,5 +1,6 @@
 import {
   renderMany,
+  renderOffline,
   renderSound,
   renderTune,
   type Rendered,
@@ -17,7 +18,8 @@ import {
 } from '../../services/audio/music/tune-levels';
 import { clippedSamples, durationAboveFloor, peakDb, rmsDb } from '../../services/audio/levels';
 import type { SoundArgs, SoundId } from '../../services/audio/sound-args';
-import { SOUND_IDS, soundVariants } from '../../services/audio/sound-book';
+import { TunePlayer } from '../../services/audio/music/tune-player';
+import { SOUND_BOOK, SOUND_IDS, soundVariants } from '../../services/audio/sound-book';
 import { encodeWav } from '../../services/audio/wav';
 import { audioDev, services } from '../../services';
 import type { AudioDebugStats, MusicDebugState } from '../../services/audio/types';
@@ -29,6 +31,8 @@ export interface AudioHookEntry {
   args: unknown[];
   /** `<id>` or `<id>-<label>`, safe in a file name. */
   name: string;
+  /** The registry group of the sound (the level rule compares sounds within a group). */
+  group: string;
 }
 
 /** Measurements of a render. */
@@ -52,6 +56,13 @@ export interface TippyAudioHook {
   wav(id: SoundId, args?: unknown[]): Promise<string>;
   /** Renders several sounds at offsets through the voice gate; reports the levels and what the gate refused. */
   many(list: TimedSound[]): Promise<AudioHookLevels & { refused: string[] }>;
+  /** `many` with a tune playing under the sounds (the worst-case mixes), optionally with the WAV. */
+  withMusic(
+    list: TimedSound[],
+    music: { variant: MusicVariant; layer: number },
+    seconds: number,
+    wav?: boolean,
+  ): Promise<AudioHookLevels & { refused: string[]; wav?: string }>;
   /** Extension point for the music (theme C): the same measurements for any rendered stretch. */
   measure(rendered: Rendered): AudioHookLevels;
   /** Same as `wav` for a rendered stretch. */
@@ -65,6 +76,12 @@ export interface TippyAudioHook {
   setBed(kind: BedKind | null): void;
   /** What the music was asked to play and the held ducks (null outside the development build). */
   music(): MusicDebugState | null;
+  /** Renders `seconds` of a tune at a layer offline: `{ sampleRate, channels }` as plain arrays (the contact sheet). */
+  tuneChannels(
+    variant: MusicVariant,
+    layer: number,
+    seconds: number,
+  ): Promise<{ sampleRate: number; channels: number[][] }>;
   /** Renders `seconds` of a tune at a layer offline and measures it (`wav: true` adds the file). */
   tune(
     variant: MusicVariant,
@@ -152,6 +169,7 @@ function listEntries(): AudioHookEntry[] {
       id,
       args: variant.args,
       name: variant.label === '' ? id : `${id}-${fileSafe(variant.label)}`,
+      group: SOUND_BOOK[id].group,
     })),
   );
 }
@@ -215,6 +233,25 @@ export function registerAudioHook(): void {
     setBed: (kind) => services.audio.setBed(kind),
     clearPlayLog: () => {
       log = [];
+    },
+    async withMusic(list, music, seconds, wav) {
+      const refused: string[] = [];
+      const r = await renderOffline(
+        (rig) => {
+          new TunePlayer(rig.host, { seconds }).start(music);
+          for (const sound of [...list].sort((a, b) => a.at - b.at)) {
+            const result = rig.player.play(sound.id, sound.args, sound.at);
+            if (!result.played) refused.push(`${sound.id}@${sound.at}`);
+          }
+          return seconds;
+        },
+        { seconds },
+      );
+      return { ...measure(r), refused, ...(wav ? { wav: encode(r) } : {}) };
+    },
+    async tuneChannels(variant, layer, seconds) {
+      const r = await renderTune(variant, layer, seconds);
+      return { sampleRate: r.sampleRate, channels: r.channels.map((c) => Array.from(c)) };
     },
     tune: tuneReport,
     music: () => audioDev?.musicState() ?? null,
