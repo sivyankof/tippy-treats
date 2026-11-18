@@ -677,7 +677,22 @@
       "coin": "A coin is collected.",
       "berry": "A berry is collected.",
       "record": "New record on the results screen and in the level-up panel. Turns the music down while it plays.",
-      "recordBlip": "The run crosses the session record."
+      "recordBlip": "The run crosses the session record.",
+      "cutStretch": "A cut piece lets go and the glaze strands start to pull: a short stretchy rise.",
+      "cutStrandSnap": "One glaze strand snaps; each snap is a little different in pitch.",
+      "cutDrip": "The drop of glaze falls off the cut: a small drip.",
+      "cutPanic": "The cut piece panics: a short comic squeak down, quieter than the sneeze.",
+      "topperSquash": "A layer squashes a topper (shown: each kind). Cream is the roller squeeze: quiet and longer.",
+      "lickSlurpJuice": "A layer licks a juice stain: the short slurp, shorter and quieter.",
+      "snowPuff": "A layer lands on a snow cap: a soft puff.",
+      "thunder": "Thunder after a flash, 150 to 400 ms late, with a low roll. Behind glass (window of the Kitchen and the Showcase) it is muffled.",
+      "startleOh": "The layers startle at lightning: one short \"oh\" per wave.",
+      "yawn": "A sleepy layer yawns at night: a quiet slow yawn.",
+      "weatherBed": "Rain, storm and snow wind bed (a few seconds here). For the owner to decide: off in the game; the minimal effects level never plays it.",
+      "zoneChange": "A new zone: a soft sweep and three rising notes.",
+      "lapChange": "A new lap of Space: four quick notes up to a high ringing one.",
+      "countdownTick": "A tick of the Continue countdown, higher on the last two seconds.",
+      "purchase": "A purchase or the starter pack went through: the coin ding and the berry chord."
     }
   }
 }

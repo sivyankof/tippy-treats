@@ -23,6 +23,7 @@ export type SoundCue =
         | 'recordBlip';
     }
   | { kind: 'perfect'; step: number }
+  | { kind: 'countdownTick'; urgent: boolean }
   | { kind: 'ability'; rarity: Rarity };
 
 /** What the player should hear and feel after one sim step. */
@@ -119,6 +120,7 @@ export function playCues(cues: RunCues, services: Services): void {
   for (const sound of cues.sounds) {
     if (sound.kind === 'perfect') services.audio.perfect(sound.step);
     else if (sound.kind === 'ability') services.audio.ability(sound.rarity);
+    else if (sound.kind === 'countdownTick') services.audio.play('countdownTick', sound.urgent);
     else services.audio[sound.kind]();
   }
   for (const kind of cues.haptics) services.haptics.play(kind);

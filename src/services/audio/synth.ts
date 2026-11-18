@@ -5,6 +5,8 @@ import {
   type TimedTone,
   type ToneRecipe,
 } from '../../data/sfx';
+import { WEATHER_BED, type BedKind } from '../../data/weather-bed';
+import { makeBedBuffer, startBed } from './bed';
 import type { Mixer } from './mixer';
 import { runSource, type NodeTally } from './node-tally';
 
@@ -26,6 +28,7 @@ export interface PlayOptions {
  */
 export class Synth {
   private noiseBuffer: AudioBuffer | null = null;
+  private bedBuffer: AudioBuffer | null = null;
   /** Start offset added to every note while `at` runs. */
   private base = 0;
   /** Latest end time (seconds from the context's now) of the notes scheduled since `measure` began. */
@@ -118,6 +121,14 @@ export class Synth {
     filter.connect(amp);
     amp.connect(this.mixer.sfxBus);
     runSource(this.mixer.tally, src, [src, filter, amp], start, end + SFX.stopTail);
+  }
+
+  /** A weather bed that plays `seconds` (the soundboard preview and the offline render; the game's own bed is `BedPlayer`). */
+  bed(kind: BedKind, seconds: number): void {
+    this.bedBuffer ??= makeBedBuffer(this.ctx, this.random);
+    const delay = this.base;
+    this.spanEnd = Math.max(this.spanEnd, delay + seconds + WEATHER_BED.stopTail);
+    startBed(this.ctx, this.mixer, this.bedBuffer, WEATHER_BED.beds[kind], seconds, delay);
   }
 
   /** Notes with their own start offsets (arpeggios, ability sounds), shifted by `options`. */

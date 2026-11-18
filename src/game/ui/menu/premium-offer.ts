@@ -2,7 +2,6 @@ import type * as Phaser from 'phaser';
 import { MENU } from '../../../data/menu-layout';
 import { PALETTE } from '../../../data/palette';
 import { t } from '../../../i18n';
-import { services } from '../../../services';
 import { effectsMode } from '../../effects-mode';
 import { createTextButton } from '../button';
 import { createOutlinedText } from '../outlined-text';
@@ -60,7 +59,6 @@ export function openNoAdsOffer(scene: Phaser.Scene, price: string, onClosed: () 
       void buyProduct('remove_ads').then((outcome) => {
         if (!popup.content.active) return;
         if (outcome === 'purchased') {
-          services.audio.coin();
           popup.close();
           return;
         }

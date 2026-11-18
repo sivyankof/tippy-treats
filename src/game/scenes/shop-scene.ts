@@ -197,7 +197,6 @@ export class ShopScene extends Phaser.Scene {
     if (outcome === 'pending') this.toast.show(t('shop.pending'));
     else if (outcome === 'failed' || outcome === 'unavailable') this.toast.show(t('shop.failed'));
     if (outcome !== 'purchased') return;
-    services.audio.coin();
     services.haptics.play('success');
     const { berries = 0 } = PRODUCTS[key].grant;
     if (newCreature !== null) {

@@ -13,6 +13,10 @@ import type { WeatherFrame, WeatherPart } from './weather-frame';
 import { strikeLightningNow } from './weather-sky';
 import { onLightningFlash } from './lightning-flash';
 import { SnowDust } from './snow-dust';
+import { playFx } from '../../fx-sound';
+import { bedWanted } from '../../weather-bed';
+import { services } from '../../../services';
+import type { BedKind } from '../../../data/weather-bed';
 import { TOWER_WEATHER } from '../../../data/tower-weather';
 import { fxGuard } from '../../fx-guard';
 import { towerWeather } from '../tower-weather-state';
@@ -57,6 +61,8 @@ export class RunWeather {
   private readonly weather: WeatherId;
   private laidOut = false;
   private readonly dust: SnowDust | null;
+  /** The weather bed now asked of the audio (off unless the owner switched the beds on). */
+  private bed: BedKind | null = null;
 
   constructor(
     scene: Phaser.Scene,
@@ -87,6 +93,7 @@ export class RunWeather {
       stopFlash();
       towerWeather.snow = 0;
       towerWeather.sleepy = false;
+      services.audio.setBed(null);
     });
     if (import.meta.env.DEV) {
       const win = window as Window & { tippyLightning?: () => void; tippyYawn?: () => boolean };
@@ -138,7 +145,16 @@ export class RunWeather {
       this.weather === 'night' &&
       this.backdrop.weatherShare('full') + this.backdrop.weatherShare('window') >
         TOWER_WEATHER.sleepy.nightShare;
+    this.updateBed(f.share, f.level);
     this.updateDust(landed, top, deltaMs, f.level, f.share);
+  }
+
+  /** Asks the audio for the weather bed only when what is wanted changes. */
+  private updateBed(share: number, level: EffectLevel): void {
+    const wanted = bedWanted(this.weather, share, level);
+    if (wanted === this.bed) return;
+    this.bed = wanted;
+    fxGuard.run('weather bed', () => services.audio.setBed(wanted));
   }
 
   /** The dust of a layer landing on the cap: out of both ends of the seam, under the next layer. */
@@ -158,6 +174,7 @@ export class RunWeather {
         const left = Math.max(top.left, lower.x - lower.width / 2);
         const right = Math.min(top.right, lower.x + lower.width / 2);
         const depth = this.top.topDepth;
+        if (level !== 'minimal') playFx('snowPuff');
         fxGuard.run('snow dust', () =>
           dust.burst(left, right, top.topY + BALANCE.layer.height, depth, level),
         );

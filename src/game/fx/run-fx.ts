@@ -40,6 +40,7 @@ import { TowerSparkles } from './tower-sparkles';
 import type { SparkleField } from './tower-sparkle-spot';
 import { TowerCollapse } from './tower-collapse';
 import { TopperFx } from './topper-fx';
+import { listenCueSounds } from './cue-sounds';
 import { clearRunHooks, runHooks, setRunHooks, type RunHooks } from '../perf/run-hooks';
 
 /** The flying layer as it was before the sim step that just ran. */
@@ -156,6 +157,7 @@ export class RunFx {
     this.topperFx = new TopperFx(scene, this.tower, this.landingFx.particles, () =>
       services.audio.topperHop(),
     );
+    scene.events.once(Phaser.Scenes.Events.SHUTDOWN, listenCueSounds());
     const licks = this.tower.licks;
     this.abilityFx.onRainbowPuff = () => services.audio.cloudPuff();
     let jokesPlayed = 0;
@@ -164,6 +166,7 @@ export class RunFx {
       services.audio.rainbowJoke();
     };
     licks.onSlurp = () => services.audio.lickSlurp();
+    licks.onSlurpJuice = () => services.audio.play('lickSlurpJuice');
     licks.onSlurpLong = () => services.audio.lickSlurpLong();
     licks.onSmack = () => services.audio.lickSmack();
     licks.onHappy = (x, y) => {

@@ -1,4 +1,5 @@
 import type { Rarity } from '../../data/rarity';
+import type { BedKind } from '../../data/weather-bed';
 import type { MusicControl } from './music-control';
 import type { DuckReason } from './mixer-math';
 import type { SoundArgs, SoundId } from './sound-args';
@@ -28,6 +29,8 @@ export interface AudioService {
   duckMusic(reason: DuckReason, on: boolean): void;
   /** Plays a registry sound by id (`SOUND_BOOK`); the named methods below are thin wrappers over this. */
   play<K extends SoundId>(id: K, ...args: SoundArgs[K]): void;
+  /** The weather bed under the run (`null` for none); remembered until the audio is unlocked. Off in the game unless `WEATHER_BED.enabled`. */
+  setBed(kind: BedKind | null): void;
   debugStats(): AudioDebugStats;
   /** Call from a user gesture: creates or resumes the audio context. */
   unlock(): void;

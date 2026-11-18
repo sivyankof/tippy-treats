@@ -1,6 +1,18 @@
 import { RARITIES } from '../../data/rarity';
 import { SFX } from '../../data/sfx';
-import { collapseThudGain, comboGainScale, comboNoteFreq, jitterRatio, noteFreq } from './notes';
+import { SFX_LIFE } from '../../data/sfx-life';
+import type { SquashKind } from '../../data/topper-squash';
+import { WEATHER_BED, type BedKind } from '../../data/weather-bed';
+import {
+  collapseThudGain,
+  comboGainScale,
+  comboNoteFreq,
+  jitterRatio,
+  noteFreq,
+  randomIn,
+  shortened,
+  stretchesFor,
+} from './notes';
 import type { SoundArgs, SoundId } from './sound-args';
 import type { Synth } from './synth';
 import type { SoundPriority } from './voice-gate';
@@ -108,6 +120,105 @@ export const SOUND_BOOK: SoundBook = {
       s.noise(click);
     },
   },
+  cutStretch: {
+    group: 'cut',
+    priority: 'normal',
+    play(s) {
+      const { tone, wet } = SFX_LIFE.cut.stretch;
+      s.tone(tone);
+      s.noise(wet);
+    },
+  },
+  cutStrandSnap: {
+    group: 'cut',
+    priority: 'normal',
+    play(s) {
+      const { pitchJitter, tick, click } = SFX_LIFE.cut.snap;
+      const pitch = jitterRatio(pitchJitter, s.random);
+      s.tone(tick, { pitch });
+      s.noise(click, { pitch });
+    },
+  },
+  cutDrip: {
+    group: 'cut',
+    priority: 'normal',
+    play: (s) => s.sequence([SFX_LIFE.cut.drip]),
+  },
+  cutPanic: {
+    group: 'cut',
+    priority: 'normal',
+    play: (s) => s.sequence(SFX_LIFE.cut.panic),
+  },
+  topperSquash: {
+    group: 'topper',
+    priority: 'normal',
+    variants: (Object.keys(SFX_LIFE.squash) as SquashKind[]).map((kind) => ({
+      label: kind,
+      args: [kind] as [SquashKind],
+    })),
+    play(s, kind) {
+      const { tones, noises, pitch, gain } = SFX_LIFE.squash[kind];
+      s.sequence(tones, { pitch, gain });
+      s.noiseSequence(noises, { pitch, gain });
+    },
+  },
+  thunder: {
+    group: 'weather',
+    priority: 'normal',
+    variants: [
+      { label: 'sky', args: [false] },
+      { label: 'glass', args: [true] },
+    ],
+    play(s, muffled) {
+      const t = SFX_LIFE.thunder;
+      const delay = randomIn(t.delay, s.random);
+      const roll = randomIn(t.rollSeconds, s.random);
+      const tone = muffled ? t.muffled : { pitch: 1, gain: 1 };
+      s.noise(t.crack, { delay, pitch: tone.pitch, gain: tone.gain });
+      const stretches = stretchesFor(roll, t.rumbleStep);
+      for (let i = 0; i < stretches; i++) {
+        s.noise(t.rumble, {
+          delay: delay + i * t.rumbleStep,
+          pitch: tone.pitch,
+          gain: tone.gain * Math.pow(t.rumbleFalloff, i),
+        });
+      }
+      s.tone({ ...t.low, duration: roll }, { delay, pitch: tone.pitch, gain: tone.gain });
+    },
+  },
+  startleOh: {
+    group: 'weather',
+    priority: 'normal',
+    variants: [
+      { label: 'sky', args: [false] },
+      { label: 'glass', args: [true] },
+    ],
+    play: (s, weak) =>
+      s.sequence(SFX_LIFE.startle.notes, { gain: weak ? SFX_LIFE.startle.weakGain : 1 }),
+  },
+  snowPuff: {
+    group: 'weather',
+    priority: 'ambient',
+    play: (s) => s.noise(SFX_LIFE.snowPuff.wet),
+  },
+  yawn: {
+    group: 'weather',
+    priority: 'ambient',
+    play(s) {
+      s.sequence(SFX_LIFE.yawn.notes);
+      s.noise(SFX_LIFE.yawn.breath, { delay: SFX_LIFE.yawn.breath.delay });
+    },
+  },
+  weatherBed: {
+    group: 'weather',
+    priority: 'ambient',
+    ownerChoice: true,
+    variants: (['rain', 'storm', 'wind'] as const).map((kind) => ({
+      label: kind,
+      args: [kind] as [BedKind],
+    })),
+    play: (s, kind) => s.bed(kind, WEATHER_BED.previewSeconds),
+  },
   squeak: {
     group: 'creature',
     priority: 'normal',
@@ -189,6 +300,17 @@ export const SOUND_BOOK: SoundBook = {
     priority: 'normal',
     play: (s) => s.sequence(SFX.lick.mmm),
   },
+  lickSlurpJuice: {
+    group: 'creature',
+    priority: 'normal',
+    play(s) {
+      const { tone, wet, pop } = SFX.lick.slurp;
+      const { timeShare, gainShare } = SFX_LIFE.juiceSlurp;
+      s.tone(shortened(tone, timeShare, gainShare));
+      s.noise(shortened(wet, timeShare, gainShare));
+      s.sequence([shortened(pop, timeShare, gainShare)]);
+    },
+  },
   guestSplat: {
     group: 'creature',
     priority: 'normal',
@@ -223,6 +345,28 @@ export const SOUND_BOOK: SoundBook = {
     priority: 'normal',
     play: (s) => s.tone(SFX.click),
   },
+  zoneChange: {
+    group: 'ui',
+    priority: 'normal',
+    play(s) {
+      s.noise(SFX_LIFE.zone.sweep);
+      s.sequence(SFX_LIFE.zone.notes);
+    },
+  },
+  lapChange: {
+    group: 'ui',
+    priority: 'normal',
+    play: (s) => s.sequence(SFX_LIFE.lap.notes),
+  },
+  countdownTick: {
+    group: 'ui',
+    priority: 'normal',
+    variants: [
+      { label: 'calm', args: [false] },
+      { label: 'last seconds', args: [true] },
+    ],
+    play: (s, urgent) => s.tone(urgent ? SFX_LIFE.tick.urgent : SFX_LIFE.tick.calm),
+  },
   coin: {
     group: 'reward',
     priority: 'normal',
@@ -232,6 +376,17 @@ export const SOUND_BOOK: SoundBook = {
     group: 'reward',
     priority: 'normal',
     play: (s) => s.chord(SFX.berry, SFX.berry.freqs, SFX.berry.stagger),
+  },
+  purchase: {
+    group: 'reward',
+    priority: 'normal',
+    play(s) {
+      s.sequence(SFX.coin.notes);
+      s.chord(SFX.berry, SFX.berry.freqs, SFX.berry.stagger, {
+        delay: SFX_LIFE.purchase.berryDelay,
+        gain: SFX_LIFE.purchase.berryGain,
+      });
+    },
   },
   record: {
     group: 'reward',

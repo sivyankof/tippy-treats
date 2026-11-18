@@ -3,6 +3,7 @@ import { PALETTE } from '../../data/palette';
 import { ZONE_BANNER, type PlateSpec } from '../../data/zone-plate';
 import { ZONES } from '../../data/zones';
 import { t } from '../../i18n';
+import { playFx } from '../fx-sound';
 import { DEG_TO_RAD, sineWave } from '../../util/math';
 import { fitText } from './menu/fit-text';
 import { createOutlinedText } from './outlined-text';
@@ -49,11 +50,13 @@ export class ZoneBanner {
   show(zoneIndex: number): void {
     const zone = ZONES[zoneIndex];
     if (!zone) return;
+    playFx('zoneChange');
     this.showText(t(`zone.${zone.id}.name`));
   }
 
   /** Announces lap `lap` of Space. */
   showLap(lap: number): void {
+    playFx('lapChange');
     this.showText(t('zone.lap', { n: lap }));
   }
 

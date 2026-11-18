@@ -4,6 +4,7 @@ import { PANORAMA, WALL_LOOK } from '../../../data/window-look';
 import { WEATHER_LOOK } from '../../../data/weather-look';
 import { effectsMode } from '../../effects-mode';
 import { fxGuard } from '../../fx-guard';
+import { playFx } from '../../fx-sound';
 import type { FrameCtx, Life } from './life';
 import { onLayer } from './layer-anchor';
 import type { LayerSpot } from './layer-life';
@@ -87,6 +88,8 @@ export class PanoramaFlash implements Life {
       this.flashAt = now;
       this.flashMs = this.rng.range(BOLT.flashMs[0], BOLT.flashMs[1]);
       this.nextAt = nextBoltAt(now, BOLT.everyMs, this.rng.next());
+      // Thunder heard through the glass of the window.
+      playFx('thunder', true);
     }
     const elapsed = now - this.flashAt;
     const strength = this.flashAt < 0 ? 0 : flashEnvelope(elapsed, this.flashMs);

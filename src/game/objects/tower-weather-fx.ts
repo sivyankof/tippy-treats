@@ -1,6 +1,7 @@
 import { Rng } from '../../core/rng';
 import type { EffectLevel } from '../../data/effect-levels';
 import { TOWER_WEATHER } from '../../data/tower-weather';
+import { playFx } from '../fx-sound';
 import type { FlashKind } from './backdrop/lightning-flash';
 import type { LayerView } from './layer-view';
 import { towerWeather } from './tower-weather-state';
@@ -61,6 +62,7 @@ export class TowerWeatherFx {
       // A face that shows more than its plain idle is skipped (`startleAllowed`).
       if (shown && view.faceView.canStartle) onScreen.push([index, view]);
     }
+    if (onScreen.length > 0) playFx('startleOh', kind === 'street');
     onScreen.sort((a, b) => b[0] - a[0]);
     onScreen.slice(0, layers).forEach(([index], rank) => {
       this.pending.push({
@@ -117,7 +119,9 @@ export class TowerWeatherFx {
     if (free.length === 0) return false;
     if (force) free.sort((a, b) => b[0] - a[0]);
     const [, view] = force ? free[0]! : free[this.rng.int(0, free.length - 1)]!;
-    return view.faceView.yawn(force);
+    if (!view.faceView.yawn(force)) return false;
+    playFx('yawn');
+    return true;
   }
 }
 

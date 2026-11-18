@@ -40,7 +40,9 @@ export class ContinueTimer {
     }
     const digit = Math.ceil(left / 1000);
     if (digit === this.lastDigit) return;
-    if (this.lastDigit !== -1 && urgent) playCues(cuesForMoment('timerTick'), services);
+    if (this.lastDigit !== -1) {
+      playCues(cuesForMoment(urgent ? 'timerTickLast' : 'timerTick'), services);
+    }
     this.lastDigit = digit;
     this.root.setDigit(digit, color, true);
   }
