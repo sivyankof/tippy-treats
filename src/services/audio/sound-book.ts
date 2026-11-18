@@ -13,6 +13,7 @@ import {
   shortened,
   stretchesFor,
 } from './notes';
+import { fromDb } from './levels';
 import type { SoundArgs, SoundId } from './sound-args';
 import type { Synth } from './synth';
 import type { SoundPriority } from './voice-gate';
@@ -80,17 +81,22 @@ export const SOUND_BOOK: SoundBook = {
   perfect: {
     group: 'drop',
     priority: 'critical',
-    variants: [1, 6, 12].map((step) => ({ label: `×${step}`, args: [step] as [number] })),
-    play(s, comboStep) {
+    variants: [
+      ...[1, 6, 12].map((step) => ({ label: `×${step}`, args: [step] as [number, boolean?] })),
+      { label: 'x6-bright', labelKey: variantKey('perfectBright'), args: [6, false] },
+    ],
+    play(s, comboStep, underMusic) {
       const bell = SFX.perfect;
+      const soft = underMusic ?? s.musicOn;
+      const look = soft ? bell.underMusic : bell;
       const freq = comboNoteFreq(comboStep);
-      const scale = comboGainScale(comboStep);
-      for (const p of bell.partials) {
+      const scale = comboGainScale(comboStep) * (soft ? fromDb(bell.underMusic.gainDb) : 1);
+      for (const p of look.partials) {
         s.tone(
           {
             wave: 'sine',
             freq: freq * p.ratio,
-            attack: bell.attack,
+            attack: look.attack,
             duration: bell.duration * p.decay,
             gain: p.gain,
           },

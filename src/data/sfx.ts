@@ -126,6 +126,19 @@ export const SFX = {
     /** Each combo step makes the bell a little louder, up to `maxGainScale`. */
     gainPerStep: 0.07,
     maxGainScale: 1.5,
+    /**
+     * While the music is on the bell is softer (a slower attack, the upper partials mostly gone)
+     * and 3 dB quieter, so it sits on the lofi bed instead of cutting through it.
+     */
+    underMusic: {
+      gainDb: -3,
+      attack: 0.008,
+      partials: [
+        { ratio: 1, gain: 0.5, decay: 1 },
+        { ratio: 2, gain: 0.13, decay: 0.6 },
+        { ratio: 3.01, gain: 0.035, decay: 0.35 },
+      ],
+    },
   },
 
   /** "Откусывание": a crunch, short filtered noise (two quick bursts). */

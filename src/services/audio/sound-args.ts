@@ -9,8 +9,11 @@ import type { BedKind } from '../../data/weather-bed';
  */
 export interface SoundArgs {
   drop: [];
-  /** `comboStep` is 1 for the first perfect in a row. */
-  perfect: [comboStep: number];
+  /**
+   * `comboStep` is 1 for the first perfect in a row. `underMusic` picks the soft bell (true) or
+   * the bright one (false); by default the music switch decides.
+   */
+  perfect: [comboStep: number, underMusic?: boolean];
   bite: [];
   coin: [];
   berry: [];

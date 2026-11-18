@@ -233,10 +233,27 @@ describe('WebAudioService', () => {
     const { ctx, service } = setup();
     service.unlock();
     service.perfect(1);
+    // The music is on: the soft bell with fewer partials.
+    expect(ctx.oscillators).toHaveLength(SFX.perfect.underMusic.partials.length);
+    ctx.oscillators.length = 0;
+    service.setMusicEnabled(false);
+    ctx.currentTime += 1;
+    service.perfect(1);
     expect(ctx.oscillators).toHaveLength(SFX.perfect.partials.length);
     ctx.oscillators.length = 0;
     service.record();
     expect(ctx.oscillators).toHaveLength(5);
+  });
+
+  it('the bell over the music is 3-4 dB quieter and has less of its upper partials', () => {
+    const bell = SFX.perfect;
+    expect(bell.underMusic.gainDb).toBeLessThanOrEqual(-3);
+    expect(bell.underMusic.gainDb).toBeGreaterThanOrEqual(-4);
+    expect(bell.underMusic.attack).toBeGreaterThan(bell.attack);
+    const upper = (partials: readonly { ratio: number; gain: number }[]) =>
+      partials.filter((p) => p.ratio > 1).reduce((sum, p) => sum + p.gain, 0) /
+      partials.reduce((sum, p) => sum + p.gain, 0);
+    expect(upper(bell.underMusic.partials)).toBeLessThan(upper(bell.partials) * 0.6);
   });
 
   it('plays the record blip as two short notes', () => {
