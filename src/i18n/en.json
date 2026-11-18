@@ -386,7 +386,7 @@
       "mastery": "Mastery",
       "height": "Height bonus"
     },
-    "doubleLeft": "×2 for an ad · {n} left",
+    "doubleLeft": "×2 · {n} left",
     "doubled": "Doubled!",
     "xp": "+{n} XP",
     "abilityCount": "×{n}",

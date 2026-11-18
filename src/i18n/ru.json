@@ -386,7 +386,7 @@
       "mastery": "Мастерство",
       "height": "Бонус высоты"
     },
-    "doubleLeft": "×2 за рекламу · осталось {n}",
+    "doubleLeft": "×2 · ещё {n}",
     "doubled": "Удвоено!",
     "xp": "+{n} опыта",
     "abilityCount": "×{n}",
