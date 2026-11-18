@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { NodeTally, runSource, type TimedSource } from './node-tally';
+import { NodeTally, runSource, stopQuietly, type TimedSource } from './node-tally';
 
 interface FakeSource extends TimedSource {
   started: number | undefined;
@@ -54,5 +54,19 @@ describe('runSource', () => {
     source.onended?.(new Event('ended'));
     source.onended?.(new Event('ended'));
     expect(tally.live).toBe(0);
+  });
+});
+
+describe('stopQuietly', () => {
+  it('stops a source at the time and swallows the error of one that already stopped', () => {
+    const src = fakeSource();
+    stopQuietly(src, 2);
+    expect(src.stopped).toBe(2);
+    const broken = {
+      stop() {
+        throw new Error('InvalidStateError');
+      },
+    };
+    expect(() => stopQuietly(broken, 1)).not.toThrow();
   });
 });

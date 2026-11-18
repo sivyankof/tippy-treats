@@ -8,7 +8,7 @@ import {
   type NoiseInstrument,
   type ToneInstrument,
 } from '../../../data/music/instruments';
-import { runSource, type NodeTally } from '../node-tally';
+import { runSource, stopQuietly, type NodeTally } from '../node-tally';
 import { noiseBuffer } from '../noise-buffer';
 import { noteFreq } from '../notes';
 
@@ -18,15 +18,6 @@ const TRIANGLE_HARMONICS = 6;
 /** A playing voice: `stop` cuts every oscillator of it at a context time (the tune stops). */
 export interface VoiceHandle {
   stop(when: number): void;
-}
-
-/** Stops a source, ignoring one that has already stopped. */
-function stopQuietly(source: AudioScheduledSourceNode, when: number): void {
-  try {
-    source.stop(when);
-  } catch {
-    // Already stopped.
-  }
 }
 
 /** One note for an instrument: context time, length in seconds, pitch from C4, peak gain. */

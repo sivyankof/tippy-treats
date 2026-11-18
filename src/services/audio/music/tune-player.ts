@@ -8,7 +8,7 @@ import type { Song } from '../../../data/music/song';
 import { DEFAULT_MUSIC_VARIANT, MUSIC_FILES, SONGS } from '../../../data/music/songs';
 import { randomSeed } from '../../../util/math';
 import type { MusicControl, MusicFactory, MusicHost, MusicStartOptions } from '../music-control';
-import { runSource, type TimedSource } from '../node-tally';
+import { runSource, SOURCE_FOREVER_SEC, stopQuietly, type TimedSource } from '../node-tally';
 import { FileLoop, musicFileUrl } from './file-loop';
 import { MusicChain } from './music-chain';
 import { MusicVoices, type VoiceHandle } from './music-voices';
@@ -147,15 +147,9 @@ export class TunePlayer implements MusicControl {
     this.files?.stop(cut);
     const voices: VoiceHandle[] = [...this.active];
     const hiss = this.hissSource;
-    if (hiss) voices.push({ stop: (when) => hiss.stop(when) });
+    if (hiss) voices.push({ stop: (when) => stopQuietly(hiss, when) });
     this.hissSource = null;
-    for (const voice of voices) {
-      try {
-        voice.stop(cut);
-      } catch {
-        // Already stopped.
-      }
-    }
+    for (const voice of voices) voice.stop(cut);
   }
 
   setLayer(layer: number): void {
@@ -213,7 +207,7 @@ export class TunePlayer implements MusicControl {
     level.gain.value = t.hissLevel;
     src.connect(level);
     level.connect(chain.tape);
-    runSource(tally, src, [src, level], at, at + HISS_FOREVER_SEC);
+    runSource(tally, src, [src, level], at, at + SOURCE_FOREVER_SEC);
     this.hissSource = src;
   }
 
@@ -302,7 +296,7 @@ export class TunePlayer implements MusicControl {
     level.connect(chain.tape);
     const end = time + this.crackles.duration / speed;
     runSource(tally, src, [src, level], time, end);
-    const voice: VoiceHandle = { stop: (when) => src.stop(when) };
+    const voice: VoiceHandle = { stop: (when) => stopQuietly(src, when) };
     this.active.add(voice);
     const release = src.onended;
     src.onended = (event: Event) => {
@@ -323,9 +317,6 @@ export class TunePlayer implements MusicControl {
     this.scheduleUntil(this.scheduledTo, plan.seconds - this.origin);
   }
 }
-
-/** The end time given to the looping hiss until `stop` sets the real one (a day). */
-const HISS_FOREVER_SEC = 86_400;
 
 /** The live player of the game (`WebAudioService`'s music factory). */
 export const createTunePlayer: MusicFactory = (host) => new TunePlayer(host);

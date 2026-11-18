@@ -63,3 +63,15 @@ export function runSource(
   source.start(start);
   source.stop(stopAt);
 }
+
+/** The end time given to a looping source until `stop` sets the real one (a day). */
+export const SOURCE_FOREVER_SEC = 86_400;
+
+/** Stops a source at `when`, ignoring one that has already stopped. */
+export function stopQuietly(source: { stop(when?: number): void }, when: number): void {
+  try {
+    source.stop(when);
+  } catch {
+    // Already stopped.
+  }
+}
