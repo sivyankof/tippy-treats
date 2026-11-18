@@ -13,6 +13,7 @@ import { loadSvgTextures } from '../objects/svg-textures';
 import { moveToSharedAtlas } from '../ui/shared-atlas';
 import { TEMPO_ICON_KEY } from '../ui/creature-icons';
 import { createCreatureIconTextures } from '../objects/creature-icon-textures';
+import { bakeTallAtlasArt } from '../ui/tall-atlas-art';
 import { SCENES, startRunFrom } from '../scene-keys';
 import { createRewardTextures } from '../fx/reward-pictures';
 import { createPileTextures } from '../fx/treasure-pile';
@@ -55,6 +56,7 @@ export class BootScene extends Phaser.Scene {
     createPileTextures(this);
     createRewardTextures(this);
     createCreatureIconTextures(this);
+    bakeTallAtlasArt(this);
     const resultsDemo = import.meta.env.DEV ? readDebugParams().resultsDemo : undefined;
     if (resultsDemo) {
       this.scene.start(SCENES.results, resultsDemoData(resultsDemo));

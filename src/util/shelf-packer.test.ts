@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { ShelfPacker } from './shelf-packer';
+import { ShelfPacker, tallestFirst } from './shelf-packer';
 
 describe('ShelfPacker', () => {
   it('fills a shelf left to right, then opens the next one below', () => {
@@ -157,5 +157,25 @@ describe('ShelfPacker', () => {
       (sh) => sh.free.length === 1 && sh.free[0]?.x0 === 0 && sh.free[0].x1 === 200,
     );
     expect(inner.emptyCount).toBe(empty.length);
+  });
+});
+
+describe('tallestFirst', () => {
+  it('orders by height, tallest first, keeping the order of equal heights', () => {
+    const items = [
+      { id: 'a', height: 150 },
+      { id: 'b', height: 312 },
+      { id: 'c', height: 150 },
+      { id: 'd', height: 276 },
+    ];
+    expect(tallestFirst(items).map((item) => item.id)).toEqual(['b', 'd', 'a', 'c']);
+    expect(items.map((item) => item.id)).toEqual(['a', 'b', 'c', 'd']);
+  });
+
+  it('lets tall boxes that come together share one shelf', () => {
+    const sizes = [150, 276, 312, 188, 268];
+    const packer = new ShelfPacker(4096, 4096, 8);
+    for (const h of tallestFirst(sizes.map((height) => ({ height })))) packer.alloc(300, h.height);
+    expect(packer.usedHeight).toBe(312);
   });
 });

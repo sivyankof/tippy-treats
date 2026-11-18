@@ -232,17 +232,22 @@ function drawComet(g: Graphics): void {
   gloss(g, 258, 60, 26, -0.15);
 }
 
-const DRAW: Record<keyof typeof SPACE_VISITOR.guests, (g: Graphics) => void> = {
+type GuestId = keyof typeof SPACE_VISITOR.guests;
+
+const DRAW: Record<GuestId, (g: Graphics) => void> = {
   eclair: drawEclair,
   saucer: drawSaucer,
   teapot: drawTeapot,
   comet: drawComet,
 };
 
+/** Bakes the picture of one guest (once), on the shared sheet. */
+export function bakeSpaceVisitor(scene: Phaser.Scene, id: GuestId): void {
+  const spec = SPACE_VISITOR.guests[id];
+  bakePadded(scene, spec.texture, spec.width, spec.height, spec.fieldPad, DRAW[id]);
+}
+
 /** Bakes the four guests: one picture each, on the shared sheet, ready before the Space zone shows. */
 export function bakeSpaceVisitors(scene: Phaser.Scene): void {
-  for (const [id, spec] of Object.entries(SPACE_VISITOR.guests)) {
-    const draw = DRAW[id as keyof typeof DRAW];
-    bakePadded(scene, spec.texture, spec.width, spec.height, spec.fieldPad, draw);
-  }
+  for (const id of Object.keys(SPACE_VISITOR.guests) as GuestId[]) bakeSpaceVisitor(scene, id);
 }
