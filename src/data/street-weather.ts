@@ -87,7 +87,7 @@ export const STREET_WEATHER = {
     alpha: 0.75,
     driftPx: 14,
     /** The storm flashes light the clouds as brightly as on the Roof; no bolt comes down to the street. */
-    flashShare: 0,
+    flashShare: 1,
     bolt: false,
   },
   /**
