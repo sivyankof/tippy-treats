@@ -1,15 +1,19 @@
+import {
+  DEFAULT_MUSIC_VARIANT,
+  MUSIC_VARIANTS,
+  musicVariantOf,
+  type MusicVariant,
+} from '../../data/music/songs';
+import { MUSIC_PLAY } from '../../data/music/music-play';
 import { t } from '../../i18n';
 import { services } from '../../services';
-import type { MusicVariant } from '../../services/audio/music-control';
 
-/** Tunes offered by the music section; theme C names them. */
-const VARIANTS: readonly MusicVariant[] = ['a', 'b', 'c'];
 /** Instrument layers the switch offers (one more per zone). */
-const LAYERS = [1, 2, 3, 4, 5, 6] as const;
+const LAYERS = Array.from({ length: MUSIC_PLAY.layers }, (_, i) => i + 1);
 
-/** Shared with the "all at once" button: the tune the soundboard last chose. */
+/** Shared with the "all at once" button: the tune the soundboard last chose (`?music=` picks the first one). */
 export const musicChoice: { variant: MusicVariant; layer: number; menu: boolean } = {
-  variant: 'a',
+  variant: musicVariantOf(new URLSearchParams(location.search).get('music')),
   layer: 1,
   menu: false,
 };
@@ -30,10 +34,14 @@ function row(...children: HTMLElement[]): HTMLElement {
   return box;
 }
 
+/** Lights the button of the current choice in a row. */
+function light<T>(buttons: ReadonlyMap<T, HTMLButtonElement>, chosen: T): void {
+  for (const [value, b] of buttons) b.classList.toggle('on', value === chosen);
+}
+
 /**
- * The music section of the soundboard: tune buttons, the layer switch, the menu toggle, stop.
- * It drives `services.audio.music` (the `MusicControl`), so it works as soon as a player exists;
- * theme C extends it from here (more switches go into this function).
+ * The music section of the soundboard: a button per tune (starts it at the chosen layer), the
+ * layer switch 1..6, the menu toggle and stop. It drives `services.audio.music` like the game does.
  */
 export function buildMusicSection(root: HTMLElement): void {
   const title = document.createElement('h2');
@@ -42,26 +50,36 @@ export function buildMusicSection(root: HTMLElement): void {
   card.className = 'sb-card';
   const note = document.createElement('p');
   note.className = 'sb-note';
-  note.textContent = t('soundboard.musicPending');
+  note.textContent = `${t('tunes.hint')} ${t(`tunes.${DEFAULT_MUSIC_VARIANT}`)}: ${t('tunes.default')}.`;
 
-  const tunes = VARIANTS.map((variant) =>
-    button(`${t('soundboard.variant')} ${variant.toUpperCase()}`, () => {
-      musicChoice.variant = variant;
-      services.audio.music.start({ ...musicChoice });
-    }),
-  );
-  tunes.push(button(t('soundboard.stop'), () => services.audio.music.stop(), 'alt'));
+  const tunes = new Map<MusicVariant, HTMLButtonElement>();
+  for (const variant of MUSIC_VARIANTS) {
+    tunes.set(
+      variant,
+      button(`▶ ${t(`tunes.${variant}`)}`, () => {
+        musicChoice.variant = variant;
+        light(tunes, variant);
+        services.audio.music.start({ ...musicChoice });
+      }),
+    );
+  }
+  const stop = button(t('soundboard.stop'), () => services.audio.music.stop(), 'alt');
 
-  const layers = LAYERS.map((layer) =>
-    button(
-      `${t('soundboard.layer')} ${layer}`,
-      () => {
-        musicChoice.layer = layer;
-        services.audio.music.setLayer(layer);
-      },
-      'alt',
-    ),
-  );
+  const layers = new Map<number, HTMLButtonElement>();
+  for (const layer of LAYERS) {
+    layers.set(
+      layer,
+      button(
+        `${t('soundboard.layer')} ${layer}`,
+        () => {
+          musicChoice.layer = layer;
+          light(layers, layer);
+          services.audio.music.setLayer(layer);
+        },
+        'alt',
+      ),
+    );
+  }
 
   const menu = button(
     t('soundboard.menu'),
@@ -73,6 +91,7 @@ export function buildMusicSection(root: HTMLElement): void {
     'alt',
   );
 
-  card.append(note, row(...tunes), row(...layers), row(menu));
+  light(layers, musicChoice.layer);
+  card.append(note, row(...tunes.values(), stop), row(...layers.values()), row(menu));
   root.append(title, card);
 }

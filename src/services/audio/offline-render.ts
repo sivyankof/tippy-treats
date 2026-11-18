@@ -9,6 +9,8 @@ import {
 } from './music-control';
 import type { SoundArgs, SoundId } from './sound-args';
 import { SoundPlayer } from './sound-player';
+import { TunePlayer, type TuneChange } from './music/tune-player';
+import type { MusicVariant } from './music-control';
 import { Synth } from './synth';
 
 /**
@@ -144,5 +146,33 @@ export function renderMusic(
       return seconds;
     },
     { ...options, seconds },
+  );
+}
+
+/** Options of `renderTune`: the render options, the menu arrangement and changes along the way. */
+export interface TuneRenderOptions extends RenderOptions {
+  menu?: boolean;
+  /** Layer or menu changes at their times (seconds from the start), e.g. the climb through the zones. */
+  changes?: readonly TuneChange[];
+  /** Measurements only: render this part (index) alone. */
+  only?: number;
+}
+
+/**
+ * Renders `seconds` of a tune at `layer` through the same chain as live (music bus, master,
+ * limiter): the player schedules the whole stretch up front.
+ */
+export function renderTune(
+  variant: MusicVariant,
+  layer: number,
+  seconds: number,
+  options: TuneRenderOptions = {},
+): Promise<Rendered> {
+  const { menu, changes, only, ...render } = options;
+  return renderMusic(
+    (host) => new TunePlayer(host, { seconds, changes, only }),
+    { variant, layer, menu },
+    seconds,
+    render,
   );
 }

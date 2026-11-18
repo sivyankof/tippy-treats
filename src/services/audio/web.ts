@@ -13,7 +13,13 @@ import { MusicProxy } from './music-proxy';
 import type { SoundArgs, SoundId } from './sound-args';
 import { SoundPlayer } from './sound-player';
 import { Synth } from './synth';
-import type { AudioDebugStats, AudioDevControl, AudioService, AudioSuspendReason } from './types';
+import type {
+  AudioDebugStats,
+  AudioDevControl,
+  AudioService,
+  AudioSuspendReason,
+  MusicDebugState,
+} from './types';
 
 /** Creates an audio context, or returns null when Web Audio is not available. */
 export type AudioContextFactory = () => AudioContext | null;
@@ -47,6 +53,8 @@ export class WebAudioService implements AudioService, AudioDevControl {
   private bedKind: BedKind | null = null;
   private recordDuckTimer: ReturnType<typeof setTimeout> | null = null;
   private readonly musicProxy = new MusicProxy();
+  /** Duck reasons held now; kept before the mixer exists so a window open at the first tap still ducks. */
+  private readonly ducks = new Set<DuckReason>();
   private devLevels: Partial<{ master: number; sfx: number; music: number }> = {};
 
   constructor(
@@ -79,11 +87,18 @@ export class WebAudioService implements AudioService, AudioDevControl {
     this.mixer?.setDevScales(levels);
   }
 
+  musicState(): MusicDebugState {
+    const { options, layer, menu } = this.musicProxy.asked;
+    return { variant: options?.variant ?? null, layer, menu, ducks: [...this.ducks] };
+  }
+
   get music(): MusicControl {
     return this.musicProxy;
   }
 
   duckMusic(reason: DuckReason, on: boolean): void {
+    if (on) this.ducks.add(reason);
+    else this.ducks.delete(reason);
     this.mixer?.duckMusic(reason, on);
   }
 
@@ -102,6 +117,7 @@ export class WebAudioService implements AudioService, AudioDevControl {
         if (!this.on) mixer.setSfxOn(false);
         if (!this.musicOn) mixer.setMusicOn(false);
         mixer.setDevScales(this.devLevels);
+        for (const reason of this.ducks) mixer.duckMusic(reason, true);
         this.musicProxy.attach(this.musicFactory(musicHostOf(mixer, this.random)));
       } catch {
         this.ctx = null;

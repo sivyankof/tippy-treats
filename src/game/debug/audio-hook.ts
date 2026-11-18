@@ -1,15 +1,26 @@
 import {
   renderMany,
   renderSound,
+  renderTune,
   type Rendered,
   type TimedSound,
+  type TuneRenderOptions,
 } from '../../services/audio/offline-render';
+import { SONGS, type MusicVariant } from '../../data/music/songs';
+import { MUSIC_PLAY } from '../../data/music/music-play';
+import { songTiming } from '../../services/audio/music/music-schedule';
+import {
+  dcOffset,
+  denormalSamples,
+  seamDb,
+  stretchRmsDb,
+} from '../../services/audio/music/tune-levels';
 import { clippedSamples, durationAboveFloor, peakDb, rmsDb } from '../../services/audio/levels';
 import type { SoundArgs, SoundId } from '../../services/audio/sound-args';
 import { SOUND_IDS, soundVariants } from '../../services/audio/sound-book';
 import { encodeWav } from '../../services/audio/wav';
-import { services } from '../../services';
-import type { AudioDebugStats } from '../../services/audio/types';
+import { audioDev, services } from '../../services';
+import type { AudioDebugStats, MusicDebugState } from '../../services/audio/types';
 import type { BedKind } from '../../data/weather-bed';
 
 /** One renderable sound: an id with one argument set and the file-name stem it gets. */
@@ -52,6 +63,73 @@ export interface TippyAudioHook {
   clearPlayLog(): void;
   /** Starts a weather bed in the live game (`null` stops it), whatever `WEATHER_BED.enabled` says. */
   setBed(kind: BedKind | null): void;
+  /** What the music was asked to play and the held ducks (null outside the development build). */
+  music(): MusicDebugState | null;
+  /** Renders `seconds` of a tune at a layer offline and measures it (`wav: true` adds the file). */
+  tune(
+    variant: MusicVariant,
+    layer: number,
+    seconds: number,
+    options?: TuneHookOptions,
+  ): Promise<TuneHookReport>;
+}
+
+export interface TuneHookOptions extends TuneRenderOptions {
+  wav?: boolean;
+  /** Length of the stretches of `stretchesDb`, seconds (default 10). */
+  stretchSec?: number;
+}
+
+/** What `tune` measures: the levels, the loop seam (the 0.5 s before and after the first loop end), DC, denormals. */
+export interface TuneHookReport extends AudioHookLevels {
+  loopSec: number;
+  seam: { before: number; after: number; diff: number } | null;
+  /** The same reading at the bar line in the middle of the loop: what an ordinary phrase boundary looks like. */
+  midSeam: { before: number; after: number; diff: number } | null;
+  dc: number;
+  denormals: number;
+  /** RMS of each stretch of `stretchSec`, dBFS. */
+  stretchesDb: number[];
+  wav?: string;
+}
+
+/** The seam is measured over this much on each side of the loop end. */
+const SEAM_SPAN_SEC = 0.5;
+const STRETCH_SEC = 10;
+
+async function tuneReport(
+  variant: MusicVariant,
+  layer: number,
+  seconds: number,
+  options: TuneHookOptions = {},
+): Promise<TuneHookReport> {
+  const { wav, stretchSec = STRETCH_SEC, ...render } = options;
+  const r = await renderTune(variant, layer, seconds, render);
+  const song = SONGS[variant];
+  const { loopSec, barSec } = songTiming(song);
+  const midAt = Math.floor(song.bars / 2) * barSec + MUSIC_PLAY.startLeadSec;
+  // The first note sounds `startLeadSec` after the start of the render.
+  const seamAt = loopSec + MUSIC_PLAY.startLeadSec;
+  const stretchesDb: number[] = [];
+  for (let t = 0; t < r.seconds; t += stretchSec) {
+    stretchesDb.push(stretchRmsDb(r.channels, r.sampleRate, t, t + stretchSec));
+  }
+  return {
+    ...measure(r),
+    loopSec,
+    seam:
+      seamAt + SEAM_SPAN_SEC <= r.seconds
+        ? seamDb(r.channels, r.sampleRate, seamAt, SEAM_SPAN_SEC)
+        : null,
+    midSeam:
+      midAt + SEAM_SPAN_SEC <= r.seconds
+        ? seamDb(r.channels, r.sampleRate, midAt, SEAM_SPAN_SEC)
+        : null,
+    dc: dcOffset(r.channels),
+    denormals: denormalSamples(r.channels),
+    stretchesDb,
+    ...(wav ? { wav: encode(r) } : {}),
+  };
 }
 
 /** One logged call of `AudioService.play`. */
@@ -138,6 +216,8 @@ export function registerAudioHook(): void {
     clearPlayLog: () => {
       log = [];
     },
+    tune: tuneReport,
+    music: () => audioDev?.musicState() ?? null,
   };
   (window as Window & { __tippyAudio?: TippyAudioHook }).__tippyAudio = hook;
 }

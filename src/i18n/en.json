@@ -624,6 +624,13 @@
   "resultsLap": {
     "reward": "one=New lap: +{n} berry|other=New lap: +{n} berries"
   },
+  "tunes": {
+    "a": "A · Music box",
+    "b": "B · Bakery waltz",
+    "c": "C · Upbeat run",
+    "default": "plays by default",
+    "hint": "A tune button starts the tune at the chosen layer. Layer 1 is the menu and the first zone; each next zone adds one part. «Menu» plays layer 1 quieter. Windows turn the music down by 40%."
+  },
   "soundboard": {
     "title": "Soundboard",
     "tapToEnable": "Tap anywhere to enable sound",
@@ -634,9 +641,8 @@
     "play": "Play",
     "ownerChoice": "for the owner to decide",
     "all": "All at once",
-    "allHint": "Drop, perfect bell, coin, ability, collapse slaps and the music together; the music does nothing until it is added.",
+    "allHint": "Drop, perfect bell, coin, ability, collapse slaps and the music (the tune and layer chosen below) together.",
     "musicTitle": "Music",
-    "musicPending": "The music player is not added yet: the buttons do nothing.",
     "variant": "Tune",
     "layer": "Layer",
     "menu": "Menu arrangement",

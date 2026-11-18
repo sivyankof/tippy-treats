@@ -21,6 +21,7 @@ import { LAP_PLATE } from '../../data/space-planets';
 import { flyingLap } from '../../core/space-laps';
 import { LapChangeWatch } from '../../core/space-planet';
 import { ZoneChangeWatch } from '../ui/zone-change-watch';
+import { RunMusic } from '../music-cues';
 import { BACKDROP } from '../../data/backdrop';
 import { prepTarget, sameTarget, type PrepTarget } from '../objects/backdrop/zone-prep';
 import { HudNumbersIdle } from '../ui/hud-idle';
@@ -56,6 +57,7 @@ export class HudScene extends Phaser.Scene {
   private zoneWatch = new ZoneChangeWatch();
   private preparedTarget: PrepTarget | null = null;
   private lapWatch = new LapChangeWatch(LAP_PLATE.firstLap);
+  private runMusic = new RunMusic();
   private treasure!: TreasureHud;
   private numbersIdle!: HudNumbersIdle;
   private tutorialHints!: TutorialHints;
@@ -104,6 +106,7 @@ export class HudScene extends Phaser.Scene {
     this.zoneWatch = new ZoneChangeWatch();
     this.preparedTarget = null;
     this.lapWatch = new LapChangeWatch(LAP_PLATE.firstLap);
+    this.runMusic = new RunMusic();
     this.treasure = new TreasureHud(this);
     this.tutorialHints = new TutorialHints(this);
     // Breathing only: a gloss band has nowhere to run on a button this small.
@@ -162,6 +165,7 @@ export class HudScene extends Phaser.Scene {
     const live = info && info.phase !== 'over' ? info : null;
     const announced = this.zoneWatch.observe(live ? live.zoneIndex : null);
     const lap = this.lapWatch.observe(live ? flyingLap(live.height) : null);
+    this.runMusic.observe(live ? live.zoneIndex : null);
     const coming = live ? prepTarget(live.height, live.zoneIndex, BACKDROP.prep.leadLayers) : null;
     fxGuard.call('hud-zone-banner', this, this.updateZoneBanner, announced, lap, coming, time);
     if (info) {

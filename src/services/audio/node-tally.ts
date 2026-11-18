@@ -36,7 +36,9 @@ export interface TimedSource extends AudioNode {
 /**
  * Starts `source` at `start`, stops it at `stopAt`, and disconnects every node of `nodes` (the
  * source included) once it ends, so no node outlives its sound. The nodes are counted in `tally`.
- * Every voice of the sounds and of the music goes through this one function.
+ * Every voice of the sounds and of the music goes through this one function. The release runs
+ * once even if the browser fires `ended` twice (Chrome did so for a buffer source whose stop time
+ * lay past the end of its buffer, and the live count went below zero).
  */
 export function runSource(
   tally: NodeTally,
@@ -46,7 +48,10 @@ export function runSource(
   stopAt: number,
 ): void {
   tally.add(nodes);
+  let ended = false;
   source.onended = () => {
+    if (ended) return;
+    ended = true;
     for (const node of nodes) node.disconnect();
     tally.release(nodes);
   };

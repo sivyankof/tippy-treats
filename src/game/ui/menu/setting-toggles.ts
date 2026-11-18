@@ -2,7 +2,7 @@ import type * as Phaser from 'phaser';
 import { MENU } from '../../../data/menu-layout';
 import { t } from '../../../i18n';
 import { services } from '../../../services';
-import { setReducedFxOn, setSoundOn, setVibrationOn } from '../../apply-settings';
+import { setMusicOn, setReducedFxOn, setSoundOn, setVibrationOn } from '../../apply-settings';
 import { effectsMode } from '../../effects-mode';
 import { ToggleSwitch } from '../style/toggle-switch';
 
@@ -53,10 +53,11 @@ export function createToggleRows(
   return { toggles, bottom: layout.top + rows.length * (height + gap) - gap };
 }
 
-/** Sounds, vibration and "fewer effects": the same three rows in the pause and the settings windows. */
+/** Sounds, music, vibration and "fewer effects": the same four rows in the pause and the settings windows. */
 export function soundSettingRows(): ToggleRowSpec[] {
   return [
     { label: t('run.sounds'), read: () => services.audio.enabled, write: setSoundOn },
+    { label: t('settings.music'), read: () => services.audio.musicEnabled, write: setMusicOn },
     { label: t('run.vibration'), read: () => services.haptics.enabled, write: setVibrationOn },
     { label: t('run.reducedFx'), read: () => effectsMode.switchOn, write: setReducedFxOn },
   ];

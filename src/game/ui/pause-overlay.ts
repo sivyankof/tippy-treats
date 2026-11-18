@@ -23,7 +23,7 @@ export interface PauseHandlers {
 
 /**
  * Pause window of the kit (`PopupWindow`): Continue (with a 3-2-1 countdown over the run),
- * Restart, Home and the sound, vibration and "fewer effects" switches.
+ * Restart, Home and the sound, music, vibration and "fewer effects" switches.
  */
 export class PauseOverlay {
   private readonly countdown: Phaser.GameObjects.Text;

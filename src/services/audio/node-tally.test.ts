@@ -46,4 +46,13 @@ describe('runSource', () => {
     expect(tally.live).toBe(0);
     expect(disconnected).toBe(1);
   });
+
+  it('releases once when the source fires ended twice', () => {
+    const tally = new NodeTally();
+    const source = fakeSource();
+    runSource(tally, source, [source], 0, 1);
+    source.onended?.(new Event('ended'));
+    source.onended?.(new Event('ended'));
+    expect(tally.live).toBe(0);
+  });
 });

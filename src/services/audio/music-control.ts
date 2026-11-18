@@ -1,8 +1,9 @@
+import type { MusicVariant } from '../../data/music/songs';
 import type { Mixer } from './mixer';
 import type { NodeTally } from './node-tally';
 
-/** The tunes of the game (docs/06, section 7): a, b and c are the three variants. */
-export type MusicVariant = 'a' | 'b' | 'c';
+/** The tunes of the game (docs/06, section 7): the keys of `SONGS`. */
+export type { MusicVariant };
 
 export interface MusicStartOptions {
   variant: MusicVariant;
