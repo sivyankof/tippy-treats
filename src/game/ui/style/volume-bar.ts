@@ -2,7 +2,8 @@ import type * as Phaser from 'phaser';
 import { BAR_LOOK } from '../../../data/bar-look';
 import { PALETTE } from '../../../data/palette';
 import { shade } from '../../../util/color';
-import { ARC_START, arcEnd, capAngle, clamp01, inset } from './bar-geometry';
+import { clamp01 } from '../../../util/math';
+import { ARC_START, arcEnd, capAngle, inset } from './bar-geometry';
 
 /** A rounded bar: top-left corner, size and corner radius (half the height makes a pill). */
 export interface BarBox {

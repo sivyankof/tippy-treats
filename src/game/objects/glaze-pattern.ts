@@ -1,6 +1,7 @@
 import type { CutSide } from '../../core/drop';
 import { PLAIN_LAYER, type PatternKind } from '../../data/plain-layers';
 import { luma, mixColor, shade } from '../../util/color';
+import { TWO_PI } from '../../util/math';
 import { deepestY, type GlazeWave, waveY } from './glaze-wave';
 import type { LayerBox } from './layer-draw';
 import { clipPolylines, uAxis, xAt, type Polyline } from './plain-lines';
@@ -22,7 +23,6 @@ export interface GlazePattern {
   dots: PatternDot[];
 }
 
-const FULL_TURN = Math.PI * 2;
 /** Directions the edge of a dot is tested in. */
 const DOT_TESTS = 8;
 
@@ -97,7 +97,7 @@ export function glazePattern(
       const phase = j * Math.PI;
       result.lines.push(
         ...clipPolylines(
-          (u) => [xAt(axis, u), y + amplitude * Math.sin((FULL_TURN * u) / period + phase)],
+          (u) => [xAt(axis, u), y + amplitude * Math.sin((TWO_PI * u) / period + phase)],
           u0,
           u1,
           P.step,
@@ -114,7 +114,7 @@ export function glazePattern(
         const x = xAt(axis, u);
         let whole = true;
         for (let a = 0; a < DOT_TESTS && whole; a++) {
-          const t = (FULL_TURN * a) / DOT_TESTS;
+          const t = (TWO_PI * a) / DOT_TESTS;
           whole = inside(x + radius * Math.cos(t), y + radius * Math.sin(t));
         }
         if (whole) result.dots.push({ x, y, r: radius });

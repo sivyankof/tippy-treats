@@ -1,12 +1,9 @@
 /** Pure numbers of bars and ring arcs (drawn in `volume-bar.ts`). */
 
-const FULL_TURN = Math.PI * 2;
+import { clamp01, TWO_PI } from '../../../util/math';
+
 /** A ring starts at twelve o'clock and runs clockwise. */
 export const ARC_START = -Math.PI / 2;
-
-export function clamp01(value: number): number {
-  return Math.max(0, Math.min(1, value));
-}
 
 /** Width of the filled part of a bar: `share` of `width`, never narrower than its two rounded caps (0 stays 0). */
 export function barFillWidth(share: number, width: number, radius: number): number {
@@ -16,7 +13,7 @@ export function barFillWidth(share: number, width: number, radius: number): numb
 
 /** Where an arc of `share` of a full turn ends. */
 export function arcEnd(share: number): number {
-  return ARC_START + FULL_TURN * clamp01(share);
+  return ARC_START + TWO_PI * clamp01(share);
 }
 
 /** The angle a round cap of half `ringWidth` covers on a ring of `radius`. */

@@ -7,6 +7,7 @@ import { PALETTE } from '../../data/palette';
 import { t } from '../../i18n';
 import { services } from '../../services';
 import { shade } from '../../util/color';
+import { TWO_PI } from '../../util/math';
 import { DEPTH } from '../depth';
 import type { TowerView } from '../objects/tower-view';
 import { bakeTexture } from '../ui/bake-texture';
@@ -21,8 +22,6 @@ import { playCues } from './run-cues';
 const flag = CONTINUE_ANIM.flag;
 const LINE_TEXTURE = 'fx_record_line';
 const PENNANT_TEXTURE = 'fx_record_pennant';
-const TWO_PI = Math.PI * 2;
-
 /**
  * The record of this session inside a run: a waving dashed line with a "Record" pennant at
  * the height of the best tower. When the run first rises above it, a short flash, confetti and
