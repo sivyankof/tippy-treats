@@ -10,8 +10,6 @@ export interface WeatherFrame {
   height: number;
   /** The stripe of the incoming layer (`flightClearBand`). */
   band: { top: number; bottom: number };
-  /** Lowest y a background picture may take under the HUD plates (`hudFloor`). */
-  hudFloor: number;
   /** How visible the weather is: the zone cross-fade (`Backdrop.weatherShare('full')`). */
   share: number;
   level: EffectLevel;

@@ -11,6 +11,7 @@ import {
 } from '../../../data/window-look';
 import type { StartPlaceId } from '../../../data/start-places';
 import type { WeatherId } from '../../../data/weather';
+import { WEATHER_LOOK } from '../../../data/weather-look';
 import { cssColor, shade } from '../../../util/color';
 import { effectsMode } from '../../effects-mode';
 import { fillPolygon, outlineColor } from '../../fx/plain-style';
@@ -18,14 +19,15 @@ import { bakePadded, bakeTexture } from '../../ui/bake-texture';
 import { FIELD_PAD } from '../../../data/picture-fields';
 import { glassPose, newGlassPose } from './glass-motion';
 import { bar, paintGlints, paintSky, paintValance, roundRect } from './window-paint';
+import { flightClearBand } from '../../camera-layout';
 import type { FrameCtx, Life } from './life';
-import type { YBand } from './life-motion';
 import { inSky, onLayer, type Anchor } from './layer-anchor';
 import type { LayerSpot } from './layer-life';
+import { flightRowShade } from './weather-motion';
 
 type Ctx2D = CanvasRenderingContext2D;
 
-/** A stripe of the screen in logical px that the glass items keep out of (the row of the incoming layer, the HUD). */
+/** A rectangle of the screen in logical px (where glass items live). */
 export interface Rect {
   x: number;
   y: number;
@@ -214,12 +216,13 @@ export function glassRectAt(
 export interface GlassArea {
   /** The rectangles items live in (they are dealt out one by one); the array is reused, not rebuilt, every frame. */
   rects(ctx: FrameCtx): readonly Rect[];
-  /** True where the area keeps the HUD and the flying layer's row clear (the wide Showcase panes). */
-  keepClear: boolean;
   /** Extra alpha factor of the whole area (a window that is off the screen or muted); 1 when absent. */
   alpha?(): number;
-  /** The row the items fade in front of; absent: the clear band of the frame when `keepClear`. */
-  band?(ctx: FrameCtx): YBand;
+  /**
+   * The row of the incoming layer: items in it are paler (`flightRowShade`), so the layer reads in front of them. Absent:
+   * the area has no row of its own (a small wall window, muted as a whole with its window).
+   */
+  band?(ctx: FrameCtx): { top: number; bottom: number };
 }
 
 /**
@@ -269,7 +272,7 @@ export class GlassWeatherLife implements Life {
     const still = effectsMode.atMost('lite');
     const rects = this.area.rects(ctx);
     const time = still ? 0 : ctx.timeMs;
-    const band = this.area.band?.(ctx) ?? (this.area.keepClear ? ctx.clearBand : null);
+    const band = this.area.band?.(ctx) ?? null;
     const cap =
       this.halveOnLite && still ? Math.ceil(this.objects.length / 2) : this.objects.length;
     this.objects.forEach((image, i) => {
@@ -280,12 +283,9 @@ export class GlassWeatherLife implements Life {
       const x = rect.x + rect.w * pose.u;
       const y = rect.y + rect.h * pose.v;
       let alpha = pose.alpha * areaAlpha;
-      if (band) {
-        const fade = GLASS_LOOK.bandFadePx;
-        const away = Math.max(band.top - y, y - band.bottom, 0) / fade;
-        const below = (y - (band.ceiling ?? 0)) / fade;
-        alpha *= Math.min(1, Math.max(0, Math.min(away, below)));
-      }
+      // Under the HUD plates the items are not faded: they are background and pass behind the plates.
+      if (band)
+        alpha *= flightRowShade(y, band, GLASS_LOOK.bandFadePx, WEATHER_LOOK.flightRowAlpha);
       image
         .setPosition(x, y)
         .setRotation(pose.rotation)
@@ -315,7 +315,6 @@ export function windowGlassLives(
       spec,
       spec.window,
       {
-        keepClear: false,
         alpha: () => spot.alpha,
         rects: () => {
           glassRectAt(place, spot.x, spot.y, spot.mirrored, rect);
@@ -356,7 +355,7 @@ export class RunOnly implements Life {
   }
 }
 
-/** The life of the Showcase panes: items in two bands at the sides of the tower, keeping off the HUD and the flying layer's row. */
+/** The life of the Showcase panes: items in two bands at the sides of the tower over the whole screen height, paler in the flying layer's row. */
 export function showcaseGlassLife(
   scene: Phaser.Scene,
   weather: WeatherId,
@@ -367,21 +366,29 @@ export function showcaseGlassLife(
   const left: Rect = { x: 0, y: 0, w: 0, h: 0 };
   const right: Rect = { x: 0, y: 0, w: 0, h: 0 };
   const rects = [left, right];
+  const band = { top: 0, bottom: 0 };
+  let bandHeight = -1;
   return new GlassWeatherLife(
     scene,
     spec,
     spec.showcase,
     {
-      keepClear: true,
+      // The same row the street weather behind the glass is paler in.
+      band: (ctx) => {
+        if (ctx.height !== bandHeight) {
+          bandHeight = ctx.height;
+          Object.assign(band, flightClearBand(ctx.height));
+        }
+        return band;
+      },
       rects: (ctx) => {
-        const top = ctx.clearBand?.ceiling ?? 0;
-        const height = ctx.height * lowest - top;
+        const height = ctx.height * lowest;
         left.x = near;
-        left.y = top;
+        left.y = 0;
         left.w = far - near;
         left.h = height;
         right.x = ctx.width - far;
-        right.y = top;
+        right.y = 0;
         right.w = far - near;
         right.h = height;
         return rects;

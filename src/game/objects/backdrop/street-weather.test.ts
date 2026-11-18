@@ -8,14 +8,14 @@ import { LOGICAL_SIZE } from '../../../data/screen';
 import { STREET_WEATHER, streetFallView } from '../../../data/street-weather';
 import { WEATHER_LOOK } from '../../../data/weather-look';
 import { GLASS_WEATHER } from '../../../data/window-look';
-import { clamp01, TWO_PI } from '../../../util/math';
+import { TWO_PI } from '../../../util/math';
 import { flightClearBand, hudFloor } from '../../camera-layout';
 import { laneCount, snowSpots, startU } from './weather-lanes';
+import { onScreen } from './weather-test-view';
 import {
   bankEdge,
   fallShown,
-  particleFade,
-  particleKeepOut,
+  flightRowShade,
   rainSpots,
   rainX,
   rainY,
@@ -162,8 +162,7 @@ describe('street weather of the Showcase', () => {
       ] as const) {
         const height = heightOf(css);
         const band = flightClearBand(height);
-        const top = hudFloor();
-        const pad = WEATHER_LOOK.endFeatherPx;
+        const halfLen = 45;
         let lowest = Infinity;
         for (let seed = 1; seed <= 8; seed++) {
           const rng = new Rng(seed);
@@ -175,13 +174,18 @@ describe('street weather of the Showcase', () => {
               const p = spots[i];
               if (!p) continue;
               const u = sideWarp(p.u, v.outside?.share ?? 0, v.outside?.stripShare ?? 0);
-              const y = rainY(p.v, speed, t, top, height, 0, band);
+              const y = rainY(p.v, speed, t, height, halfLen);
               const slant = look.slant * (v.slantShare ?? 1);
-              const x = rainX(u, slant, y, top, width, WEATHER_LOOK.rainWrapMarginPx);
-              const alpha =
-                clamp01((y - top) / pad) *
-                particleFade(y, band, WEATHER_LOOK.bandFeatherPx, height, pad);
-              if (alpha > 0.4 && (x <= towerLeft || x >= towerRight)) outside++;
+              const x = rainX(u, slant, y, width, WEATHER_LOOK.rainWrapMarginPx);
+              const alpha = flightRowShade(
+                y,
+                band,
+                WEATHER_LOOK.bandFeatherPx,
+                WEATHER_LOOK.flightRowAlpha,
+              );
+              // Counted where the player sees it: on the screen, not behind a HUD plate, under the awning.
+              const seen = alpha > 0.4 && y > AWNING_BOTTOM_PX && onScreen(x, y, height);
+              if (seen && (x <= towerLeft || x >= towerRight)) outside++;
             }
             lowest = Math.min(lowest, outside);
           }
@@ -203,7 +207,6 @@ describe('street weather of the Showcase', () => {
     ] as const) {
       const height = heightOf(css);
       const band = flightClearBand(height);
-      const top = hudFloor();
       let lowest = Infinity;
       for (let seed = 1; seed <= 8; seed++) {
         const rng = new Rng(seed);
@@ -228,12 +231,13 @@ describe('street weather of the Showcase', () => {
         for (let t = 0; t < 60; t += 0.25) {
           let outside = 0;
           for (const f of flakes) {
-            const y = wrapRange(f.v * height + f.speed * t, height, snow.endFeatherPx);
+            const y = wrapRange(f.v * height + f.speed * t, height, 20);
             const x = f.u * width + f.sway * Math.sin((TWO_PI * t * 1000) / f.ms + f.phase);
-            const alpha =
-              particleFade(y, band, snow.bandFeatherPx, height, snow.endFeatherPx) *
-              particleKeepOut(x, y, snow.keepOutFeatherPx, 20);
-            if (y > top && alpha > 0.4 && (x <= towerLeft || x >= towerRight)) outside++;
+            const alpha = flightRowShade(y, band, snow.bandFeatherPx, WEATHER_LOOK.flightRowAlpha);
+            const seen = alpha > 0.4 && y > AWNING_BOTTOM_PX && onScreen(x, y, height);
+            if (seen && (x <= towerLeft || x >= towerRight)) {
+              outside++;
+            }
           }
           lowest = Math.min(lowest, outside);
         }
