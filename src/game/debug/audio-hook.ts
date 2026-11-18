@@ -10,6 +10,7 @@ import { SOUND_IDS, soundVariants } from '../../services/audio/sound-book';
 import { encodeWav } from '../../services/audio/wav';
 import { services } from '../../services';
 import type { AudioDebugStats } from '../../services/audio/types';
+import type { BedKind } from '../../data/weather-bed';
 
 /** One renderable sound: an id with one argument set and the file-name stem it gets. */
 export interface AudioHookEntry {
@@ -46,7 +47,22 @@ export interface TippyAudioHook {
   encode(rendered: Rendered): string;
   /** The live service's `debugStats()`: live node count and context state. */
   stats(): AudioDebugStats;
+  /** Every `play` the game made since the last `clearPlayLog` (id, arguments, `performance.now()` time), refused or not. */
+  playLog(): PlayLogEntry[];
+  clearPlayLog(): void;
+  /** Starts a weather bed in the live game (`null` stops it), whatever `WEATHER_BED.enabled` says. */
+  setBed(kind: BedKind | null): void;
 }
+
+/** One logged call of `AudioService.play`. */
+export interface PlayLogEntry {
+  id: string;
+  args: unknown[];
+  at: number;
+}
+
+/** The play log keeps this many calls (a long run would otherwise grow it for ever). */
+const PLAY_LOG_MAX = 2000;
 
 function fileSafe(label: string): string {
   return label.replace(/[^a-zA-Z0-9.]+/g, '_').replace(/^_+|_+$/g, '');
@@ -92,6 +108,12 @@ function renderAny(id: SoundId, args: unknown[] = []): Promise<Rendered> {
 
 /** Dev only: `window.__tippyAudio`, for Playwright scripts that render, save and measure the sounds. */
 export function registerAudioHook(): void {
+  let log: PlayLogEntry[] = [];
+  const play = services.audio.play.bind(services.audio);
+  services.audio.play = ((id: SoundId, ...args: unknown[]) => {
+    if (log.length < PLAY_LOG_MAX) log.push({ id, args, at: performance.now() });
+    (play as (id: SoundId, ...args: unknown[]) => void)(id, ...args);
+  }) as typeof services.audio.play;
   const hook: TippyAudioHook = {
     ids: listEntries(),
     async render(id, args) {
@@ -111,6 +133,11 @@ export function registerAudioHook(): void {
     measure,
     encode,
     stats: () => services.audio.debugStats(),
+    playLog: () => log,
+    setBed: (kind) => services.audio.setBed(kind),
+    clearPlayLog: () => {
+      log = [];
+    },
   };
   (window as Window & { __tippyAudio?: TippyAudioHook }).__tippyAudio = hook;
 }
