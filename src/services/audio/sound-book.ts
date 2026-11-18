@@ -131,7 +131,8 @@ export const SOUND_BOOK: SoundBook = {
   },
   cutStrandSnap: {
     group: 'cut',
-    priority: 'normal',
+    // One per strand: decorative, so it must not take the places of the coin, the bite or an ability.
+    priority: 'ambient',
     play(s) {
       const { pitchJitter, tick, click } = SFX_LIFE.cut.snap;
       const pitch = jitterRatio(pitchJitter, s.random);
@@ -141,7 +142,7 @@ export const SOUND_BOOK: SoundBook = {
   },
   cutDrip: {
     group: 'cut',
-    priority: 'normal',
+    priority: 'ambient',
     play: (s) => s.sequence([SFX_LIFE.cut.drip]),
   },
   cutPanic: {

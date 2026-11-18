@@ -98,6 +98,8 @@ describe('SOUND_BOOK', () => {
     expect(SOUND_BOOK.weatherBed.ownerChoice).toBe(true);
     expect(SOUND_BOOK.weatherBed.priority).toBe('ambient');
     expect(SOUND_BOOK.yawn.priority).toBe('ambient');
+    expect(SOUND_BOOK.cutStrandSnap.priority).toBe('ambient');
+    expect(SOUND_BOOK.cutDrip.priority).toBe('ambient');
   });
 
   it('draws the thunder delay and roll inside the brief (150-400 ms, 0.8-1.2 s)', () => {
