@@ -67,9 +67,13 @@ export class MusicVoices {
     if (source) {
       const release = source.onended;
       source.onended = (event: Event) => {
-        release?.call(source, event);
-        voice.cleanup?.();
-        onEnd();
+        // The voice must leave the player's list however its clean-up goes.
+        try {
+          release?.call(source, event);
+          voice.cleanup?.();
+        } finally {
+          onEnd();
+        }
       };
     }
     return {
@@ -135,7 +139,14 @@ export class MusicVoices {
     if (first) runSource(this.tally, first, [...oscs, amp], time, stopAt);
     const cleanup = (): void => {
       const { wobble } = this;
-      if (wobble) for (const osc of oscs) wobble.disconnect(osc.detune);
+      if (!wobble) return;
+      for (const osc of oscs) {
+        try {
+          wobble.disconnect(osc.detune);
+        } catch {
+          // Not connected any more.
+        }
+      }
     };
     return { sources: oscs, cleanup };
   }
