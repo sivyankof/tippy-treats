@@ -32,7 +32,7 @@ export interface FrameCtx extends LayerFrame {
   /** Tower height in layers, from the camera scroll (drives the mountain peaks). */
   towerLayers: number;
   /** The row on the screen (px) the incoming layer flies in right now: from the highest reach of its bob to the lowest. */
-  flightRow: { top: number; bottom: number };
+  flightRow: { top: number; bottom: number; towerTop: number };
 }
 
 /** A group of pictures that move on their own: part of a zone backdrop. */
@@ -58,7 +58,7 @@ export function newFrameCtx(
     height,
     clearBand,
     towerLayers: 0,
-    flightRow: { top: 0, bottom: 0 },
+    flightRow: { top: 0, bottom: 0, towerTop: 0 },
     ...newLayerFrame(),
   };
 }

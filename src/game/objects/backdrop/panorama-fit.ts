@@ -1,6 +1,7 @@
 import { ANIM } from '../../../data/anim';
 import { BALANCE } from '../../../data/balance';
 import { PANORAMA } from '../../../data/window-look';
+import { smoothstep } from '../../../util/math';
 import { FLYING_REACH, hudFloor } from '../../camera-layout';
 
 /** Where the panoramic window stands on the start view of a screen: its centre y and the scale of its picture. */
@@ -13,7 +14,8 @@ export interface PanoramaFit {
 export function startViewFlightTop(screenH: number): number {
   const L = PANORAMA.layout;
   const towerTop = screenH - ANIM.camera.trayBottomOffset - L.towerLayers * BALANCE.layer.height;
-  return towerTop - FLYING_REACH;
+  // The layer's outline, its sway and the tray's own height reach a little higher than the nominal reach.
+  return towerTop - FLYING_REACH - L.reachExtraPx;
 }
 
 /**
@@ -51,11 +53,12 @@ export function panoramaFitCached(screenW: number, screenH: number): PanoramaFit
  * lowest point of its bob. `traySurfaceY` is where the tray top stands on the screen now, `layers` the layers placed.
  */
 export function flightRowAt(
-  out: { top: number; bottom: number },
+  out: { top: number; bottom: number; towerTop: number },
   traySurfaceY: number,
   layers: number,
-): { top: number; bottom: number } {
+): { top: number; bottom: number; towerTop: number } {
   const towerTop = traySurfaceY - layers * BALANCE.layer.height;
+  out.towerTop = towerTop;
   out.top = towerTop - FLYING_REACH;
   out.bottom = towerTop - BALANCE.layer.gapAboveTower + ANIM.flying.bobAmplitude;
   return out;
@@ -74,4 +77,15 @@ export function rowMute(
   const away = Math.max(row.top - (y + halfH), y - halfH - row.bottom, 0);
   const near = 1 - Math.min(1, away / feather);
   return 1 - (1 - PANORAMA.rowMuted) * near;
+}
+
+/**
+ * Alpha factor of the panoramic window as the tower covers it: 1 while at least `cover.fullAt` of its height (from the
+ * top) stands above the tower top, falling smoothly to 0 at `cover.goneAt`, so a window the tower almost hides is gone
+ * and does not sit on the top layer like a cap.
+ */
+export function coverFade(y: number, halfH: number, towerTop: number): number {
+  const { fullAt, goneAt } = PANORAMA.cover;
+  const visible = Math.min(1, Math.max(0, (towerTop - (y - halfH)) / (2 * halfH)));
+  return smoothstep((visible - goneAt) / (fullAt - goneAt));
 }
