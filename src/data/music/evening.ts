@@ -120,7 +120,7 @@ export const EVENING = lofiSong({
     ],
   },
   kick: {
-    gain: 0.15,
+    gain: 0.16,
     patterns: [
       [
         [0, 0.9],

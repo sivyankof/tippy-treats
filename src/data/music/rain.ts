@@ -124,7 +124,7 @@ export const RAIN = lofiSong({
     ],
   },
   kick: {
-    gain: 0.17,
+    gain: 0.15,
     patterns: [
       [
         [0, 1],
