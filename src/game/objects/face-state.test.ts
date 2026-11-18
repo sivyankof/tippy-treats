@@ -6,6 +6,7 @@ import {
   aimMouth,
   moodForWobble,
   resolveExpression,
+  startleAllowed,
   type Mood,
   type Reaction,
 } from './face-state';
@@ -540,5 +541,35 @@ describe('weather faces', () => {
     const [sleepyAt, sleepyLen] = firstBlink(sleepy);
     expect(sleepyAt).toBeGreaterThan(awakeAt);
     expect(sleepyLen).toBeGreaterThan(awakeLen);
+  });
+});
+
+describe('startleAllowed', () => {
+  it('lets a plain idle face, a blinking one and a yawning one be startled', () => {
+    expect(startleAllowed(null, 'calm', undefined, false)).toBe(true);
+    expect(startleAllowed(null, 'calm', 'smile', false)).toBe(true);
+    expect(startleAllowed('blink', 'calm', undefined, false)).toBe(true);
+    expect(startleAllowed('yawn', 'calm', undefined, false)).toBe(true);
+  });
+
+  it('skips a face with any reaction, a lick, a worried mood or a mouth hint (yum, grin, o)', () => {
+    for (const r of [
+      'lick',
+      'joy',
+      'ouch',
+      'panic',
+      'wink',
+      'squint',
+      'horror',
+      'startle',
+    ] as const) {
+      expect(startleAllowed(r, 'calm', undefined, false)).toBe(false);
+    }
+    expect(startleAllowed(null, 'calm', undefined, true)).toBe(false);
+    expect(startleAllowed(null, 'nervous', undefined, false)).toBe(false);
+    expect(startleAllowed(null, 'scared', undefined, false)).toBe(false);
+    for (const hint of ['yum', 'open', 'o'] as const) {
+      expect(startleAllowed(null, 'calm', hint, false)).toBe(false);
+    }
   });
 });

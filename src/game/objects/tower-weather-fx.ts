@@ -58,8 +58,9 @@ export class TowerWeatherFx {
     const layers = ctx.level === 'lite' ? STARTLE.liteLayers : Infinity;
     const onScreen: Array<[number, LayerView]> = [];
     for (const [index, view] of ctx.views) {
-      if (view.visible && view.y >= ctx.bandTop && view.y <= ctx.bandBottom)
-        onScreen.push([index, view]);
+      const shown = view.visible && view.y >= ctx.bandTop && view.y <= ctx.bandBottom;
+      // A face that shows more than its plain idle is skipped (`startleAllowed`).
+      if (shown && view.faceView.canStartle) onScreen.push([index, view]);
     }
     onScreen.sort((a, b) => b[0] - a[0]);
     onScreen.slice(0, layers).forEach(([index, view], rank) => {

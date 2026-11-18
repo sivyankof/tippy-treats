@@ -68,6 +68,22 @@ function priority(reaction: Reaction): number {
   return REACTION_ORDER.indexOf(reaction);
 }
 
+/**
+ * Whether a face may start (or keep) a weather startle: only a face that shows nothing but its plain idle. Any reaction
+ * (a joy, a lick, a cut, an ability) holds it, and so do a worried mood and a mouth hint other than the plain smile
+ * (the `yum` of a layer aiming at a coin, a grin, a worried `o`). A blink, a yawn and the sleepy idle give way.
+ */
+export function startleAllowed(
+  reaction: Reaction | null,
+  mood: Mood,
+  mouthHint: MouthKind | undefined,
+  licking: boolean,
+): boolean {
+  if (licking || mood !== 'calm') return false;
+  if (mouthHint !== undefined && mouthHint !== 'smile') return false;
+  return reaction === null || reaction === 'blink' || reaction === 'yawn';
+}
+
 /** How worried a tower with this wobble looks. */
 export function moodForWobble(wobble: number): Mood {
   if (wobble > ANIM.wobble.dangerFrom) return 'scared';

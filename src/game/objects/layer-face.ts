@@ -17,6 +17,7 @@ import {
   type Expression,
   type Mood,
   type MouthKind,
+  startleAllowed,
   type Reaction,
 } from './face-state';
 
@@ -181,12 +182,31 @@ export class LayerFace extends Phaser.GameObjects.Container {
     );
   }
 
-  /** No reaction of an event (a lick, a joy, a cut...) holds the face: the startle may take it. A yawn or a blink gives way. */
+  /** The face shows nothing but its plain idle (`startleAllowed`): the startle may take it. */
   get canStartle(): boolean {
-    const busy = this.timers.reaction();
-    return (
-      !this.lick.busy && !this.lick.active && (busy === null || busy === 'blink' || busy === 'yawn')
+    return startleAllowed(
+      this.timers.reaction(),
+      this.mood,
+      this.mouthHint,
+      this.lick.busy || this.lick.active || this.hugMs > 0,
     );
+  }
+
+  /**
+   * Something else has taken the face during the hold of a startle (a coin to aim at, a worried tower, a lick): the startle
+   * ends at once, with no way back for the eyes, so the two never show together. Runs first in the frame.
+   */
+  private cutStartleIfBusy(): void {
+    const held = this.timers.reaction();
+    if ((held !== 'startle' && held !== 'startleEyes') || this.canStartleHold()) return;
+    this.timers.clearReaction();
+    this.lastReaction = null;
+    this.startleTailMs = 0;
+  }
+
+  /** During a startle: the mood and the mouth hint are still plain (the reaction itself is the startle). */
+  private canStartleHold(): boolean {
+    return startleAllowed(null, this.mood, this.mouthHint, this.lick.busy || this.lick.active);
   }
 
   /** Starts a yawn; false when the face is not free for it. `force` yawns a face that is not sleepy (the debug button). */
@@ -383,6 +403,7 @@ export class LayerFace extends Phaser.GameObjects.Container {
 
   /** Advances blinking and reactions, the pupils and the sweat drop. */
   tick(dtMs: number): void {
+    this.cutStartleIfBusy();
     this.runHug(dtMs);
     this.timers.update(dtMs);
     this.refresh();
