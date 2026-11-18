@@ -13,6 +13,7 @@ import { Hover, PuffColumn, Traveler } from './life';
 import { LayerThing } from './layer-life';
 import type { ZoneArt } from './zone-scenery';
 import { RunOnly, bakeGlassItems, bakeWindow, windowGlassLives } from './window-weather';
+import { bakePanoramaSet, panoramaLives, panoramaMissing } from './panorama-window';
 import { KITCHEN_SHELF, WALL_LOOK, WINDOW_LOOK, windowKey } from '../../../data/window-look';
 
 const TILE = 512;
@@ -213,6 +214,7 @@ export function bakeFly(scene: Phaser.Scene): void {
 export const kitchenArt: ZoneArt = {
   bake(scene, look) {
     bakeWindow(scene, 'kitchen', look.weather);
+    bakePanoramaSet(scene, 'kitchen', look.weather);
     bakeGlassItems(scene, look.weather);
     bakeLayers(scene);
     bakeShelves(scene);
@@ -240,6 +242,7 @@ export const kitchenArt: ZoneArt = {
         series: WALL_LOOK.window,
         mirror: true,
         halfH: WINDOW_LOOK.height / 2,
+        skipStart: (w, h) => !panoramaMissing(w, h),
       },
     );
     const jar = new LayerThing(
@@ -259,6 +262,15 @@ export const kitchenArt: ZoneArt = {
     return {
       layers: [K.wallpaper, K.tiles, K.shelves, K.utensils],
       lives: [
+        // Everything of the shared atlas stands first (the panoramic window behind the ladle rail and the clock), so the
+        // pictures of one page are one draw call and the room's own pictures follow.
+        {
+          slot: 3,
+          life: new RunOnly(
+            [...panoramaLives(scene, 'kitchen', look.weather), window, ...glass, jar],
+            onLayer(WALL_LOOK.layer),
+          ),
+        },
         {
           slot: 3,
           life: new Hover(scene, [life.pot, life.clock, life.rail], onLayer(KITCHEN_LAYER)),
@@ -270,7 +282,6 @@ export const kitchenArt: ZoneArt = {
         { slot: 3, life: new Hover(scene, life.ladles, onLayer(KITCHEN_LAYER)) },
         { slot: 3, life: new Hover(scene, [life.lid], onLayer(KITCHEN_LAYER)) },
         { slot: 3, life: steam },
-        { slot: 3, life: new RunOnly([window, ...glass, jar], onLayer(WALL_LOOK.layer)) },
         { slot: 3, life: fly },
       ],
       guest: fly,

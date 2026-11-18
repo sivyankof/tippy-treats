@@ -1,3 +1,4 @@
+import { strikeWindowFlashNow } from './panorama-flash';
 import * as Phaser from 'phaser';
 import { Rng } from '../../../core/rng';
 import type { TowerState } from '../../../core/tower-sim';
@@ -92,9 +93,12 @@ export class RunWeather {
     });
     if (import.meta.env.DEV) {
       const win = window as Window & { tippyLightning?: () => void; tippyYawn?: () => boolean };
-      // window.tippyLightning(): the next bolt of a storm strikes right away; without a storm, only the startle of the layers.
+      // window.tippyLightning(): the next bolt of a storm strikes right away (the sky and the panoramic window);
+      // without a storm in the sky, only the startle of the layers.
       win.tippyLightning = () => {
-        if (strikeLightningNow() === 0) tower.startle('sky');
+        const struck = strikeLightningNow();
+        strikeWindowFlashNow();
+        if (struck === 0) tower.startle('sky');
       };
       // window.tippyYawn(): the first free layer from the top yawns right away, in any weather; true when one did.
       win.tippyYawn = () => tower.yawnNow();

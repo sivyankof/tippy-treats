@@ -8,18 +8,18 @@ import {
   WINDOW_SKY,
   windowKey,
   type GlassWeather,
-  type WindowSky,
 } from '../../../data/window-look';
 import type { StartPlaceId } from '../../../data/start-places';
 import type { WeatherId } from '../../../data/weather';
 import { cssColor, shade } from '../../../util/color';
-import { TWO_PI } from '../../../util/math';
 import { effectsMode } from '../../effects-mode';
 import { fillPolygon, outlineColor } from '../../fx/plain-style';
 import { bakePadded, bakeTexture } from '../../ui/bake-texture';
 import { FIELD_PAD } from '../../../data/picture-fields';
 import { glassPose, newGlassPose } from './glass-motion';
+import { bar, paintGlints, paintSky, paintValance, roundRect } from './window-paint';
 import type { FrameCtx, Life } from './life';
+import type { YBand } from './life-motion';
 import { inSky, onLayer, type Anchor } from './layer-anchor';
 import type { LayerSpot } from './layer-life';
 
@@ -37,11 +37,6 @@ const W = WINDOW_LOOK.width;
 const H = WINDOW_LOOK.height;
 const GLASS = WINDOW_LOOK.glass;
 const OUTLINE_PX = 4;
-
-function roundRect(ctx: Ctx2D, x: number, y: number, w: number, h: number, r: number): void {
-  ctx.beginPath();
-  ctx.roundRect(x, y, w, h, r);
-}
 
 /** A rectangle with a round top (an arched shop window). */
 function archPath(ctx: Ctx2D, x: number, y: number, w: number, h: number, bottom: number): void {
@@ -67,118 +62,6 @@ function framePath(ctx: Ctx2D, place: StartPlaceId, grow: number): void {
   const pad = 16 + grow;
   if (place === 'shop') archPath(ctx, x - pad, y - pad, w + 2 * pad, h + 2 * pad, 18);
   else roundRect(ctx, x - pad, y - pad, w + 2 * pad, h + 2 * pad, 24);
-}
-
-/** A cloud of round lobes only (no flat base): bigger lobes in the middle, a low wide one under them. */
-function cloud(ctx: Ctx2D, x: number, y: number, s: number): void {
-  ctx.beginPath();
-  for (const [dx, dy, r] of [
-    [-28, 8, 14],
-    [-10, -4, 20],
-    [12, -2, 18],
-    [30, 8, 13],
-    [0, 10, 18],
-  ] as const) {
-    ctx.moveTo(x + (dx + r) * s, y + dy * s);
-    ctx.arc(x + dx * s, y + dy * s, r * s, 0, TWO_PI);
-  }
-  ctx.fill();
-}
-
-/** `mirror` puts the sky's details on the left half (the shop window: its right half is against the tower). */
-function paintSky(ctx: Ctx2D, sky: WindowSky, mirror: boolean): void {
-  const { x, y, w, h } = GLASS;
-  const at = (share: number): number => x + w * (mirror ? 1 - share : share);
-  const gradient = ctx.createLinearGradient(0, y, 0, y + h);
-  gradient.addColorStop(0, cssColor(sky.top));
-  gradient.addColorStop(1, cssColor(sky.bottom));
-  ctx.fillStyle = gradient;
-  ctx.fillRect(x - 4, y - 4, w + 8, h + 8);
-  if (sky.stars) {
-    ctx.fillStyle = 'rgba(255,255,255,0.9)';
-    for (const [sx, sy, r] of [
-      [0.2, 0.14, 4],
-      [0.62, 0.3, 3],
-      [0.35, 0.46, 3],
-      [0.8, 0.52, 4],
-      [0.14, 0.7, 3],
-    ] as const) {
-      const cx = at(sx);
-      const cy = y + h * sy;
-      ctx.beginPath();
-      ctx.moveTo(cx, cy - r * 2);
-      ctx.lineTo(cx + r * 0.6, cy - r * 0.6);
-      ctx.lineTo(cx + r * 2, cy);
-      ctx.lineTo(cx + r * 0.6, cy + r * 0.6);
-      ctx.lineTo(cx, cy + r * 2);
-      ctx.lineTo(cx - r * 0.6, cy + r * 0.6);
-      ctx.lineTo(cx - r * 2, cy);
-      ctx.lineTo(cx - r * 0.6, cy - r * 0.6);
-      ctx.closePath();
-      ctx.fill();
-    }
-  }
-  if (sky.moon) {
-    const mx = at(0.68);
-    const my = y + h * 0.2;
-    const r = 17;
-    // A flat moon: a warm outline, a pale disc, a darker rim on the lower right and a gloss mark. No glow.
-    ctx.fillStyle = cssColor(0xb9904a);
-    ctx.beginPath();
-    ctx.arc(mx, my, r + 2.5, 0, TWO_PI);
-    ctx.fill();
-    ctx.fillStyle = cssColor(0xf1d98a);
-    ctx.beginPath();
-    ctx.arc(mx, my, r, 0, TWO_PI);
-    ctx.fill();
-    ctx.fillStyle = cssColor(0xfff1b8);
-    ctx.beginPath();
-    ctx.arc(mx - 2.5, my - 2.5, r - 4.5, 0, TWO_PI);
-    ctx.fill();
-    ctx.fillStyle = 'rgba(255,255,255,0.7)';
-    ctx.beginPath();
-    ctx.roundRect(mx - 9, my - 8, 4, 9, 2);
-    ctx.fill();
-  }
-  if (sky.cloud !== null) {
-    ctx.fillStyle = cssColor(sky.cloud);
-    ctx.globalAlpha = 0.9;
-    if (sky.heavy) {
-      cloud(ctx, at(0.28), y + h * 0.12, 1.5);
-      cloud(ctx, at(0.76), y + h * 0.08, 1.7);
-      cloud(ctx, at(0.5), y + h * 0.24, 1.2);
-    } else {
-      cloud(ctx, at(0.32), y + h * 0.34, 1.1);
-      cloud(ctx, at(0.8), y + h * 0.16, 0.7);
-    }
-    ctx.globalAlpha = 1;
-  }
-}
-
-/** Slanted bands of light on the glass, clipped to it. */
-function paintGlints(ctx: Ctx2D): void {
-  const { x, y, w, h } = GLASS;
-  for (const g of WINDOW_LOOK.glints) {
-    ctx.fillStyle = `rgba(255,255,255,${g.alpha})`;
-    const x0 = x + w * g.x;
-    const bandW = w * g.w;
-    const lean = h * g.lean;
-    ctx.beginPath();
-    ctx.moveTo(x0, y);
-    ctx.lineTo(x0 + bandW, y);
-    ctx.lineTo(x0 + bandW + lean, y + h);
-    ctx.lineTo(x0 + lean, y + h);
-    ctx.closePath();
-    ctx.fill();
-  }
-}
-
-/** A bar of the sash with the dark outline of its own colour. */
-function bar(ctx: Ctx2D, x: number, y: number, w: number, h: number, color: number): void {
-  ctx.fillStyle = cssColor(outlineColor(color));
-  ctx.fillRect(x - 2, y - 2, w + 4, h + 4);
-  ctx.fillStyle = cssColor(color);
-  ctx.fillRect(x, y, w, h);
 }
 
 function paintFrame(ctx: Ctx2D, place: StartPlaceId, weather: WeatherId): void {
@@ -226,41 +109,9 @@ function paintFrame(ctx: Ctx2D, place: StartPlaceId, weather: WeatherId): void {
   roundRect(ctx, x - 13, y + 24, 5, 46, 2.5);
   ctx.fillStyle = 'rgba(255,255,255,0.55)';
   ctx.fill();
-  if (place === 'kitchen') paintValance(ctx);
-}
-
-/** A scalloped cloth over the top of the kitchen window. */
-function paintValance(ctx: Ctx2D): void {
-  const look = WINDOW_LOOK.colors.kitchen;
-  const left = 8;
-  const right = W - 8;
-  const top = 12;
-  const band = 22;
-  const scallops = 6;
-  const step = (right - left) / scallops;
-  for (const [grow, color] of [
-    [3, look.valanceOutline],
-    [0, look.valance],
-  ] as const) {
-    ctx.fillStyle = cssColor(color);
-    roundRect(ctx, left - grow, top - grow, right - left + 2 * grow, band + 2 * grow, 8);
-    ctx.fill();
-    for (let i = 0; i < scallops; i++) {
-      ctx.beginPath();
-      ctx.arc(left + step * (i + 0.5), top + band, step / 2 + grow, 0, Math.PI);
-      ctx.fill();
-    }
+  if (place === 'kitchen') {
+    paintValance(ctx, { left: 8, right: W - 8, top: 12, band: 22, scallops: 6, radius: 8 });
   }
-  ctx.fillStyle = cssColor(look.valanceStripe);
-  for (let i = 0; i < scallops; i += 2) {
-    ctx.beginPath();
-    ctx.arc(left + step * (i + 0.5), top + band, step / 2 - 2, 0, Math.PI);
-    ctx.fill();
-    ctx.fillRect(left + step * i + 2, top + 2, step - 4, band - 2);
-  }
-  roundRect(ctx, left + 10, top + 4, 30, 4, 2);
-  ctx.fillStyle = 'rgba(255,255,255,0.6)';
-  ctx.fill();
 }
 
 /** Bakes the window picture of a start place for the weather of this run (one picture, on the shared atlas). */
@@ -367,6 +218,8 @@ export interface GlassArea {
   keepClear: boolean;
   /** Extra alpha factor of the whole area (a window that is off the screen or muted); 1 when absent. */
   alpha?(): number;
+  /** The row the items fade in front of; absent: the clear band of the frame when `keepClear`. */
+  band?(ctx: FrameCtx): YBand;
 }
 
 /**
@@ -387,6 +240,8 @@ export class GlassWeatherLife implements Life {
     private readonly area: GlassArea,
     readonly anchor: Anchor,
     private readonly size = 1,
+    /** On lite only the first half of the items is drawn. */
+    private readonly halveOnLite = false,
   ) {
     const tint = GLASS_LOOK.leaf.tints;
     this.objects = Array.from({ length: count }, (_, i) => {
@@ -414,10 +269,13 @@ export class GlassWeatherLife implements Life {
     const still = effectsMode.atMost('lite');
     const rects = this.area.rects(ctx);
     const time = still ? 0 : ctx.timeMs;
-    const band = this.area.keepClear ? ctx.clearBand : null;
+    const band = this.area.band?.(ctx) ?? (this.area.keepClear ? ctx.clearBand : null);
+    const cap =
+      this.halveOnLite && still ? Math.ceil(this.objects.length / 2) : this.objects.length;
     this.objects.forEach((image, i) => {
+      if (this.halveOnLite) image.setVisible(i < cap);
       const rect = rects[i % rects.length];
-      if (!rect) return;
+      if (!rect || i >= cap) return;
       const pose = glassPose(this.spec, i, time, this.pose);
       const x = rect.x + rect.w * pose.u;
       const y = rect.y + rect.h * pose.v;

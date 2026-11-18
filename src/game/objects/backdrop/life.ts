@@ -31,6 +31,8 @@ export interface FrameCtx extends LayerFrame {
   clearBand: YBand | null;
   /** Tower height in layers, from the camera scroll (drives the mountain peaks). */
   towerLayers: number;
+  /** The row on the screen (px) the incoming layer flies in right now: from the highest reach of its bob to the lowest. */
+  flightRow: { top: number; bottom: number };
 }
 
 /** A group of pictures that move on their own: part of a zone backdrop. */
@@ -49,7 +51,16 @@ export function newFrameCtx(
   clearBand: FrameCtx['clearBand'],
   timeMs: number,
 ): FrameCtx {
-  return { timeMs, deltaMs: 0, width, height, clearBand, towerLayers: 0, ...newLayerFrame() };
+  return {
+    timeMs,
+    deltaMs: 0,
+    width,
+    height,
+    clearBand,
+    towerLayers: 0,
+    flightRow: { top: 0, bottom: 0 },
+    ...newLayerFrame(),
+  };
 }
 
 export function createImage(scene: Phaser.Scene, texture: string): Phaser.GameObjects.Image {
