@@ -38,9 +38,15 @@ class FakeNode {
   stopAt = -1;
   ended = false;
   disconnected = false;
-  connect(): void {}
-  disconnect(): void {
+  /** Nodes this one is connected to (a plain `disconnect()` drops them all). */
+  readonly outputs = new Set<unknown>();
+  connect(target?: unknown): void {
+    if (target) this.outputs.add(target);
+  }
+  disconnect(target?: unknown): void {
     this.disconnected = true;
+    if (target) this.outputs.delete(target);
+    else this.outputs.clear();
   }
   setPeriodicWave(): void {}
   start(at = 0): void {
@@ -106,6 +112,16 @@ function setup(offline: ConstructorParameters<typeof TunePlayer>[1] = null) {
 /** The music chain's fader (its gain targets show the tune's level). */
 function faderOf(player: TunePlayer): FakeNode {
   return (player as unknown as { chain: { fader: FakeNode } }).chain.fader;
+}
+
+/** The player's music chain (private members the tests read). */
+function chainOf(player: TunePlayer) {
+  return (player as unknown as { chain: { fader: FakeNode; pump: FakeNode } }).chain;
+}
+
+/** The wobble LFO: it runs for the life of the chain, never cut with a tune. */
+function lfoOf(player: TunePlayer): FakeNode {
+  return (player as unknown as { chain: { lfo: FakeNode } }).chain.lfo;
 }
 
 /** Live nodes of the music chain itself (built once, kept for the player's life). */
@@ -226,6 +242,84 @@ describe('TunePlayer (live)', () => {
     player.setMix({ reverb: true });
     expect(tally.live).toBe(withReverb);
     play(ctx, 1);
+  });
+
+  it('never lets the stopped tune sound under the next one: the fade-in waits for the cut', () => {
+    for (const gap of [0, 0.1, MUSIC_PLAY.stopCutSec - 0.01]) {
+      const { ctx, player } = setup();
+      player.start({ variant: 'a', layer: 6 });
+      play(ctx, 4);
+      const heard = ctx.sources.filter((s) => !s.ended);
+      expect(heard.length).toBeGreaterThan(5);
+      player.stop();
+      ctx.currentTime += gap;
+      const before = ctx.sources.length;
+      player.start({ variant: 'b', layer: 6 });
+      const rise = faderOf(player).gain.targets.at(-1);
+      expect(rise?.value).toBeGreaterThan(0);
+      for (const old of heard) {
+        expect(old.stopAt, `gap ${gap}`).toBeLessThanOrEqual(rise?.at ?? 0);
+      }
+      // The new tune's notes come after the fade-in starts, never before the old voices end.
+      for (const fresh of ctx.sources.slice(before)) {
+        expect(fresh.startAt).toBeGreaterThanOrEqual(rise?.at ?? 0);
+      }
+    }
+  });
+
+  it('a direct restart fades in after the old voices are cut, and a second stop does not move their cut', () => {
+    const { ctx, player } = setup();
+    player.start({ variant: 'a', layer: 6 });
+    play(ctx, 4);
+    const heard = ctx.sources.filter((s) => !s.ended && s !== lfoOf(player));
+    const cut = ctx.currentTime + MUSIC_PLAY.stopCutSec;
+    player.start({ variant: 'b', layer: 6 });
+    expect(faderOf(player).gain.targets.at(-1)?.at).toBeGreaterThanOrEqual(cut);
+    ctx.currentTime += 0.05;
+    player.stop();
+    for (const old of heard) expect(old.stopAt).toBeCloseTo(cut, 9);
+  });
+
+  it('drops the pump dips of the stopped tune and its reverb, and leaves the bus when it has settled', () => {
+    const { ctx, tally, player } = setup();
+    const bus = (player as unknown as { host: { bus: unknown } }).host.bus;
+    player.start({ variant: 'a', layer: 6 });
+    play(ctx, 3);
+    const chain = chainOf(player);
+    expect(chain.fader.outputs.has(bus)).toBe(true);
+    player.stop();
+    // Still on the bus while its voices are cut (no click).
+    expect(chain.fader.outputs.has(bus)).toBe(true);
+    play(ctx, MUSIC_PLAY.stopCutSec + 0.2);
+    vi.advanceTimersByTime(MUSIC_PLAY.stopCutSec * 1000 + 200);
+    expect(chain.fader.outputs.has(bus)).toBe(false);
+    // Nothing but the chain itself is left: the reverb is gone with the tune.
+    expect(tally.live).toBe(chainNodes(player));
+    // Starting again puts it back, with the reverb.
+    player.start({ variant: 'a', layer: 6 });
+    expect(chain.fader.outputs.has(bus)).toBe(true);
+    expect(tally.live).toBeGreaterThan(chainNodes(player) + MUSIC_BUS.reverb.delays.length * 3);
+  });
+
+  it('builds no reverb at all on a device that starts with it off', () => {
+    const { tally, player } = setup();
+    player.setMix({ reverb: false });
+    player.start({ variant: 'a', layer: 1 });
+    // The chain and the first voices only: no four delay lines.
+    expect(tally.live).toBeLessThan(chainNodes(player) + 20);
+    const nodes = (player as unknown as { chain: { reverb: unknown } }).chain.reverb;
+    expect(nodes).toBeNull();
+  });
+
+  it('tells the host when a tune plays', () => {
+    const { ctx, player } = setup();
+    const states: boolean[] = [];
+    (player as unknown as { host: { onPlaying?: (on: boolean) => void } }).host.onPlaying = (on) =>
+      states.push(on);
+    player.start({ variant: 'a', layer: 1 });
+    play(ctx, 1);
+    player.stop();
+    expect(states).toEqual([true, false]);
   });
 
   it('dips the music on every kick (pump) and scales the drums with the knob', () => {

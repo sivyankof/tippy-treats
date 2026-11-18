@@ -1,4 +1,5 @@
 import { SOAK } from '../../data/soak';
+import type { AudioDebugStats } from '../../services/audio/types';
 
 /** The counts read before and after the smoke lap (`tippySoak.smoke()`). */
 export interface SmokeCounts {
@@ -9,7 +10,7 @@ export interface SmokeCounts {
   /** All tweens, passing ones included: for diagnosis, not compared. */
   rawTweens: number;
   timers: number;
-  /** Live audio nodes (`AudioService.debugStats`); compared within `SOAK.audioNodesTolerance`. */
+  /** Live audio nodes of the sounds, music left out (`soundNodes`); compared within `SOAK.audioNodesTolerance`. */
   audioNodes: number;
 }
 
@@ -28,4 +29,12 @@ export function differing(
   const names: string[] = COMPARED.filter((name) => a[name] !== b[name]);
   if (Math.abs(a.audioNodes - b.audioNodes) > audioTolerance) names.push('audioNodes');
   return names;
+}
+
+/**
+ * The live audio nodes the leak check compares: the sounds' and the beds', without the music (its
+ * chain and notes come and go with the beat, and a music leak shows in the total on the soundboard).
+ */
+export function soundNodes(stats: Pick<AudioDebugStats, 'liveNodes' | 'musicNodes'>): number {
+  return stats.liveNodes - stats.musicNodes;
 }

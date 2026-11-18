@@ -238,6 +238,8 @@ export function scheduleWindow(
       if (!level) return;
       barNotes(song, index, plan, bar).forEach(([step, pitch, length, velocity = 1], n) => {
         const grid = barStart + swingStep(step, song.stepsPerBeat, song.swing) * stepSec;
+        // A note on the grid outside the window cannot be moved into it: skip it before drawing.
+        if (grid < from - margin || grid >= to + margin) return;
         const loose = humanizeNote(seed, absBar, index, n, song.humanize, part.late);
         const time = Math.max(0, grid + loose.shift);
         if (time < from || time >= to || !heard(level, time)) return;

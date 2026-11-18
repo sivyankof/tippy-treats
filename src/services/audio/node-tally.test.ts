@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { NodeTally, runSource, type TimedSource } from './node-tally';
+import { NodeTally, runSource, stopQuietly, type TimedSource } from './node-tally';
 
 interface FakeSource extends TimedSource {
   started: number | undefined;
@@ -32,6 +32,19 @@ describe('NodeTally', () => {
   });
 });
 
+describe('NodeTally.child', () => {
+  it('counts into the parent as well and can be read on its own', () => {
+    const parent = new NodeTally();
+    const music = parent.child();
+    parent.add([1, 2]);
+    music.add([3, 4, 5]);
+    music.release([3]);
+    expect(music.live).toBe(2);
+    expect(parent.live).toBe(4);
+    expect(parent.live - music.live).toBe(2);
+  });
+});
+
 describe('runSource', () => {
   it('schedules the source and releases its nodes when it ends', () => {
     const tally = new NodeTally();
@@ -54,5 +67,19 @@ describe('runSource', () => {
     source.onended?.(new Event('ended'));
     source.onended?.(new Event('ended'));
     expect(tally.live).toBe(0);
+  });
+});
+
+describe('stopQuietly', () => {
+  it('stops a source at the time and swallows the error of one that already stopped', () => {
+    const src = fakeSource();
+    stopQuietly(src, 2);
+    expect(src.stopped).toBe(2);
+    const broken = {
+      stop() {
+        throw new Error('InvalidStateError');
+      },
+    };
+    expect(() => stopQuietly(broken, 1)).not.toThrow();
   });
 });

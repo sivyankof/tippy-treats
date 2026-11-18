@@ -1,4 +1,4 @@
-import { runSource, type NodeTally } from '../node-tally';
+import { runSource, SOURCE_FOREVER_SEC, stopQuietly, type NodeTally } from '../node-tally';
 
 /**
  * The file fallback of the music (docs/06, section 7): a decoded track looped by one buffer
@@ -39,7 +39,7 @@ export class FileLoop {
         source.connect(out);
         const start = Math.max(at, this.ctx.currentTime);
         // Far ahead: the loop runs until `stop` moves its end.
-        runSource(this.tally, source, [source], start, start + LOOP_FOREVER_SEC);
+        runSource(this.tally, source, [source], start, start + SOURCE_FOREVER_SEC);
         this.source = source;
       },
       () => {
@@ -55,20 +55,13 @@ export class FileLoop {
     const source = this.source;
     this.source = null;
     if (!source) return;
-    try {
-      source.stop(at);
-    } catch {
-      // Already stopped.
-    }
+    stopQuietly(source, at);
   }
 
   get playing(): boolean {
     return this.source !== null;
   }
 }
-
-/** The end time given to a looping file source until `stop` sets the real one (a day). */
-const LOOP_FOREVER_SEC = 86_400;
 
 /** Track files in `assets/music/`, by file name: their URLs in the build. */
 const FILE_URLS = import.meta.glob<string>('../../../../assets/music/*', {

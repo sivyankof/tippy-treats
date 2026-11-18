@@ -1,4 +1,4 @@
-import type { MusicMix } from '../../data/music/music-play';
+import { DEFAULT_MUSIC_MIX, type MusicMix } from '../../data/music/music-play';
 import type { MusicVariant } from '../../data/music/songs';
 import type { Mixer } from './mixer';
 import type { NodeTally } from './node-tally';
@@ -31,6 +31,8 @@ export interface MusicControl {
    * switch (off on weak phones). Missing fields stay as they are.
    */
   setMix(mix: Partial<MusicMix>): void;
+  /** The mix in force now (a copy): what the soundboard shows, and what the game last asked for. */
+  currentMix(): MusicMix;
 }
 
 /** What a music player gets to build on: the context, the music bus and the shared node tally. */
@@ -42,6 +44,8 @@ export interface MusicHost {
   tally: NodeTally;
   /** Random numbers for the tune: `Math.random` live, a seeded one in an offline render. */
   random: () => number;
+  /** The player calls this when a tune starts or stops (the mixer softens the combo bell while one is heard). */
+  onPlaying?: (playing: boolean) => void;
 }
 
 /** Builds the player over a host; the service calls it once, when the audio is unlocked. */
@@ -54,11 +58,18 @@ export const NO_MUSIC: MusicControl = {
   setLayer: () => undefined,
   setMenu: () => undefined,
   setMix: () => undefined,
+  currentMix: () => ({ ...DEFAULT_MUSIC_MIX }),
 };
 
 export const NO_MUSIC_FACTORY: MusicFactory = () => NO_MUSIC;
 
 /** The host of a mixer (live or offline). */
 export function musicHostOf(mixer: Mixer, random: () => number): MusicHost {
-  return { ctx: mixer.ctx, bus: mixer.musicBus, tally: mixer.tally, random };
+  return {
+    ctx: mixer.ctx,
+    bus: mixer.musicBus,
+    tally: mixer.musicTally,
+    random,
+    onPlaying: (on) => mixer.setTunePlaying(on),
+  };
 }

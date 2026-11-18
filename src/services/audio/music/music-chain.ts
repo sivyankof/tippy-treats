@@ -1,5 +1,6 @@
 import { MUSIC_BUS, DEFAULT_MUSIC_MIX, type MusicMix } from '../../../data/music/music-play';
 import type { PartRole } from '../../../data/music/song';
+import { MS_PER_SECOND } from '../../../util/math';
 import { fromDb } from '../levels';
 import { saturationCurve } from '../mixer-math';
 import type { NodeTally } from '../node-tally';
@@ -17,7 +18,9 @@ import type { NodeTally } from '../node-tally';
  * Voices connect to `roles[role]`; the soundboard knobs scale the drums, the melody and the
  * tape. The kick dips `pump` (AudioParam automation only). One slow LFO (`wobble`) drives the
  * detune of every electric-piano oscillator. The reverb is four damped feedback delay lines; it
- * is torn down when switched off (weak phones) and built again when switched on.
+ * is torn down when switched off (weak phones) and built again when switched on; a device that
+ * starts with it off never builds it. While no tune plays the chain is `idle`: the reverb is gone
+ * and the output is disconnected from the bus, so none of it is computed; `wake` brings it back.
  */
 export class MusicChain {
   readonly roles: Record<PartRole, GainNode>;
@@ -32,13 +35,18 @@ export class MusicChain {
   private readonly lfo: OscillatorNode;
   private readonly nodes: AudioNode[];
   private reverb: { send: GainNode; nodes: AudioNode[] } | null = null;
-  private mix: MusicMix = { ...DEFAULT_MUSIC_MIX };
+  private mix: MusicMix;
+  /** The chain sounds (a tune plays or has just stopped): the reverb may exist. */
+  private awake = true;
+  private connected = true;
 
   constructor(
     private readonly ctx: BaseAudioContext,
-    bus: AudioNode,
+    private readonly bus: AudioNode,
     private readonly tally: NodeTally,
+    mix: MusicMix = DEFAULT_MUSIC_MIX,
   ) {
+    this.mix = { ...mix };
     const b = MUSIC_BUS;
     const gain = (value: number): GainNode => {
       const node = ctx.createGain();
@@ -104,6 +112,35 @@ export class MusicChain {
     return { ...this.mix };
   }
 
+  /**
+   * The tune stops at `now` and its voices are cut at `cutAt`: the kick dips still scheduled for
+   * its notes are cancelled and the reverb is let go once the cut has passed, so nothing of the
+   * old tune rises with the next one.
+   */
+  release(now: number, cutAt: number): void {
+    this.awake = false;
+    this.pump.gain.cancelScheduledValues(now);
+    this.pump.gain.setValueAtTime(1, cutAt);
+    this.dropReverb((cutAt - now) * MS_PER_SECOND);
+  }
+
+  /** After a stop has settled: nothing sounds, so the whole chain leaves the bus and is not computed. */
+  idle(): void {
+    if (!this.connected) return;
+    this.connected = false;
+    this.fader.disconnect(this.bus);
+  }
+
+  /** Back for a tune: onto the bus, with the reverb if it is wanted. */
+  wake(): void {
+    this.awake = true;
+    if (!this.connected) {
+      this.connected = true;
+      this.fader.connect(this.bus);
+    }
+    if (this.mix.reverb) this.buildReverb();
+  }
+
   /** Dips the music (not the drums) at context time `at` for a kick of strength `share` (0..1). */
   kick(at: number, share: number): void {
     const p = MUSIC_BUS.pump;
@@ -121,8 +158,8 @@ export class MusicChain {
     glide(this.roles.drums.gain, this.mix.drums);
     glide(this.roles.melody.gain, this.mix.melody);
     glide(this.tape.gain, this.mix.tape);
-    if (this.mix.reverb) this.buildReverb();
-    else this.dropReverb();
+    if (this.mix.reverb && this.awake) this.buildReverb();
+    else if (!this.mix.reverb) this.dropReverb();
   }
 
   /** Four damped feedback delay lines, two per side, fed from the air filter. */
@@ -156,8 +193,8 @@ export class MusicChain {
     this.reverb = { send, nodes };
   }
 
-  /** Fades the reverb out, then disconnects its nodes once its tail has died. */
-  private dropReverb(): void {
+  /** Fades the reverb out, then disconnects its nodes once its tail has died (after `delayMs`). */
+  private dropReverb(delayMs: number = MUSIC_BUS.reverb.tailSec * MS_PER_SECOND): void {
     const reverb = this.reverb;
     if (!reverb) return;
     this.reverb = null;
@@ -167,6 +204,6 @@ export class MusicChain {
       this.air.disconnect(reverb.send);
       for (const node of reverb.nodes) node.disconnect();
       this.tally.release(reverb.nodes);
-    }, r.tailSec * 1000);
+    }, delayMs);
   }
 }

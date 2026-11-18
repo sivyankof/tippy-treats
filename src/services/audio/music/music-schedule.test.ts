@@ -89,6 +89,25 @@ describe('scheduleWindow', () => {
   });
 
   it.each(ALL)(
+    '%s: a loose song (wide humanize, lazy hits) still adds up over windows',
+    (_, base) => {
+      const song: Song = {
+        ...base,
+        humanize: { timeSec: 0.12, velocity: 0.2 },
+        parts: base.parts.map((part) => ({ ...part, late: { chance: 0.5, sec: 0.15 } })),
+      };
+      const levels = fullLevels(song);
+      const end = songTiming(song).loopSec + 1;
+      const whole = scheduleWindow(song, 5, levels, 0, end);
+      const pieces = [];
+      for (let t = 0; t < end; t += 0.05) {
+        pieces.push(...scheduleWindow(song, 5, levels, t, Math.min(end, t + 0.05)));
+      }
+      expect(pieces).toEqual(whole);
+    },
+  );
+
+  it.each(ALL)(
     '%s: small windows add up to one big window (nothing lost, nothing twice)',
     (_, song) => {
       const levels = fullLevels(song);

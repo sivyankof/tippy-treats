@@ -1,7 +1,8 @@
+import { DEFAULT_MUSIC_MIX } from '../../data/music/music-play';
 import { describe, expect, it, vi } from 'vitest';
 import { AUDIO_MIX } from '../../data/audio-mix';
 import { SFX } from '../../data/sfx';
-import type { MusicControl, MusicStartOptions } from './music-control';
+import type { MusicControl, MusicFactory, MusicStartOptions } from './music-control';
 import { WebAudioService } from './web';
 
 /** The only parts of the audio graph the synth touches; everything else is not needed. */
@@ -93,14 +94,28 @@ class FakeContext {
   };
 }
 
-function setup() {
+/** A music player that only reports whether a tune plays, as the real one does through its host. */
+const PLAYING_MUSIC: MusicFactory = (host) => ({
+  start: () => host.onPlaying?.(true),
+  stop: () => host.onPlaying?.(false),
+  setLayer: () => undefined,
+  setMenu: () => undefined,
+  setMix: () => undefined,
+  currentMix: () => ({ ...DEFAULT_MUSIC_MIX }),
+});
+
+function setup(musicFactory?: MusicFactory) {
   const ctx = new FakeContext();
   let created = 0;
-  const service = new WebAudioService(() => {
-    created++;
-    // The fake implements just the members the synth uses.
-    return ctx as unknown as AudioContext;
-  });
+  const service = new WebAudioService(
+    () => {
+      created++;
+      // The fake implements just the members the synth uses.
+      return ctx as unknown as AudioContext;
+    },
+    Math.random,
+    musicFactory,
+  );
   return { ctx, service, created: () => created };
 }
 
@@ -233,16 +248,37 @@ describe('WebAudioService', () => {
     const { ctx, service } = setup();
     service.unlock();
     service.perfect(1);
-    // The music is on: the soft bell with fewer partials.
-    expect(ctx.oscillators).toHaveLength(SFX.perfect.underMusic.partials.length);
-    ctx.oscillators.length = 0;
-    service.setMusicEnabled(false);
-    ctx.currentTime += 1;
-    service.perfect(1);
+    // No tune plays: the normal bell, whatever the switch says.
     expect(ctx.oscillators).toHaveLength(SFX.perfect.partials.length);
     ctx.oscillators.length = 0;
     service.record();
     expect(ctx.oscillators).toHaveLength(5);
+  });
+
+  it('softens the perfect bell only while the music is really heard', () => {
+    const { ctx, service } = setup(PLAYING_MUSIC);
+    const partialsOf = (): number => {
+      ctx.oscillators.length = 0;
+      ctx.currentTime += 1;
+      service.perfect(1);
+      return ctx.oscillators.length;
+    };
+    const soft = SFX.perfect.underMusic.partials.length;
+    const normal = SFX.perfect.partials.length;
+    service.unlock();
+    expect(partialsOf()).toBe(normal);
+    service.music.start({ variant: 'a', layer: 1 });
+    expect(partialsOf()).toBe(soft);
+    service.setLevels({ music: 0 });
+    expect(partialsOf()).toBe(normal);
+    service.setLevels({ music: 1 });
+    expect(partialsOf()).toBe(soft);
+    service.setMusicEnabled(false);
+    expect(partialsOf()).toBe(normal);
+    service.setMusicEnabled(true);
+    expect(partialsOf()).toBe(soft);
+    service.music.stop();
+    expect(partialsOf()).toBe(normal);
   });
 
   it('the bell over the music is 3-4 dB quieter and has less of its upper partials', () => {
@@ -350,7 +386,7 @@ describe('WebAudioService', () => {
 
   it('counts live nodes and releases them when sounds end', () => {
     const { ctx, service } = setup();
-    expect(service.debugStats()).toEqual({ liveNodes: 0, contextState: 'none' });
+    expect(service.debugStats()).toEqual({ liveNodes: 0, musicNodes: 0, contextState: 'none' });
     service.unlock();
     service.click();
     expect(service.debugStats().liveNodes).toBe(2);
@@ -401,6 +437,7 @@ describe('WebAudioService', () => {
       setLayer: (n) => log.push(`layer ${n}`),
       setMenu: (on) => log.push(`menu ${on}`),
       setMix: () => log.push('mix'),
+      currentMix: () => ({ ...DEFAULT_MUSIC_MIX }),
     };
     const ctx = new FakeContext();
     const service = new WebAudioService(

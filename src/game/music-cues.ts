@@ -16,15 +16,17 @@ import { SCENES } from './scene-keys';
  */
 
 let started = false;
-/** The reverb switch last sent to the music (null: not yet). */
-let reverbSent: boolean | null = null;
+/** The reverb the effects level asked for last (null: not yet): a change of the level sends it, a frame does not. */
+let reverbWanted: boolean | null = null;
 
 /** Keeps the music's reverb in step with the effects level: off from `lite` down. */
 function syncReverb(): void {
   const reverb = !effectsMode.atMost('lite');
-  if (reverb === reverbSent) return;
-  reverbSent = reverb;
-  services.audio.music.setMix({ reverb });
+  if (reverb === reverbWanted) return;
+  reverbWanted = reverb;
+  const { music } = services.audio;
+  // Compared with the mix in force, so a switch made on the soundboard is not undone or repeated.
+  if (music.currentMix().reverb !== reverb) music.setMix({ reverb });
 }
 
 function startOnce(layer: number, menu: boolean): boolean {

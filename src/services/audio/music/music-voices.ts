@@ -8,7 +8,7 @@ import {
   type NoiseInstrument,
   type ToneInstrument,
 } from '../../../data/music/instruments';
-import { runSource, type NodeTally } from '../node-tally';
+import { runSource, stopQuietly, type NodeTally } from '../node-tally';
 import { noiseBuffer } from '../noise-buffer';
 import { noteFreq } from '../notes';
 
@@ -18,15 +18,6 @@ const TRIANGLE_HARMONICS = 6;
 /** A playing voice: `stop` cuts every oscillator of it at a context time (the tune stops). */
 export interface VoiceHandle {
   stop(when: number): void;
-}
-
-/** Stops a source, ignoring one that has already stopped. */
-function stopQuietly(source: AudioScheduledSourceNode, when: number): void {
-  try {
-    source.stop(when);
-  } catch {
-    // Already stopped.
-  }
 }
 
 /** One note for an instrument: context time, length in seconds, pitch from C4, peak gain. */
@@ -76,9 +67,13 @@ export class MusicVoices {
     if (source) {
       const release = source.onended;
       source.onended = (event: Event) => {
-        release?.call(source, event);
-        voice.cleanup?.();
-        onEnd();
+        // The voice must leave the player's list however its clean-up goes.
+        try {
+          release?.call(source, event);
+          voice.cleanup?.();
+        } finally {
+          onEnd();
+        }
       };
     }
     return {
@@ -144,7 +139,14 @@ export class MusicVoices {
     if (first) runSource(this.tally, first, [...oscs, amp], time, stopAt);
     const cleanup = (): void => {
       const { wobble } = this;
-      if (wobble) for (const osc of oscs) wobble.disconnect(osc.detune);
+      if (!wobble) return;
+      for (const osc of oscs) {
+        try {
+          wobble.disconnect(osc.detune);
+        } catch {
+          // Not connected any more.
+        }
+      }
     };
     return { sources: oscs, cleanup };
   }

@@ -11,6 +11,8 @@ export type AudioSuspendReason = 'app' | 'ad' | 'silent';
 export interface AudioDebugStats {
   /** Audio nodes created and not yet released (sounds in flight, music voices). */
   liveNodes: number;
+  /** Of `liveNodes`, those of the music (its chain and notes: they move with the beat). */
+  musicNodes: number;
   /** `AudioContext.state`, or `none` before the first gesture. */
   contextState: string;
 }

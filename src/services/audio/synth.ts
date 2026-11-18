@@ -52,9 +52,9 @@ export class Synth {
     return this.mixer.tally;
   }
 
-  /** The music switch is on (the combo bell is softer over the music). */
-  get musicOn(): boolean {
-    return this.mixer.musicIsOn;
+  /** The music is heard now (the combo bell is softer over it). */
+  get musicAudible(): boolean {
+    return this.mixer.musicAudible;
   }
 
   /** Runs `sound` and returns how long it lasts in seconds, counted from the call to its last note's end. */

@@ -1,5 +1,5 @@
 import { AUDIO_MIX } from '../../data/audio-mix';
-import { limiterCurve, musicTarget, type DuckReason } from './mixer-math';
+import { limiterCurve, musicAudible, musicTarget, type DuckReason } from './mixer-math';
 import { NodeTally } from './node-tally';
 
 /**
@@ -17,8 +17,11 @@ export class Mixer {
   readonly master: GainNode;
   /** Live-node bookkeeping shared by everything that plays through this mixer. */
   readonly tally = new NodeTally();
+  /** The music's share of `tally` (its chain and voices): the leak check reads the rest. */
+  readonly musicTally = this.tally.child();
   private sfxOn = true;
   private musicOn = true;
+  private tunePlaying = false;
   /** Dev-only multipliers of the bus levels (the soundboard sliders); 1 in the game. */
   private scales = { master: 1, sfx: 1, music: 1 };
   private readonly ducks = new Set<DuckReason>();
@@ -58,6 +61,16 @@ export class Mixer {
 
   get musicIsOn(): boolean {
     return this.musicOn;
+  }
+
+  /** The music player says whether a tune is playing (it stops while the switch is off). */
+  setTunePlaying(on: boolean): void {
+    this.tunePlaying = on;
+  }
+
+  /** The music is really heard now (a tune plays, the switch is on, the level is not zero): the bell softens then. */
+  get musicAudible(): boolean {
+    return musicAudible(this.tunePlaying, this.musicOn, this.scales.music);
   }
 
   /** Ramps the sfx bus to its level or to silence. */

@@ -169,7 +169,11 @@ export class WebAudioService implements AudioService, AudioDevControl {
   }
 
   debugStats(): AudioDebugStats {
-    return { liveNodes: this.mixer?.tally.live ?? 0, contextState: this.ctx?.state ?? 'none' };
+    return {
+      liveNodes: this.mixer?.tally.live ?? 0,
+      musicNodes: this.mixer?.musicTally.live ?? 0,
+      contextState: this.ctx?.state ?? 'none',
+    };
   }
 
   play<K extends SoundId>(id: K, ...args: SoundArgs[K]): void {
