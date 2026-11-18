@@ -51,11 +51,13 @@ export const SOAK = {
   textureGroupLimit: 25,
   /**
    * How far the live audio node count may differ between the smoke lap's two reads. At the same quiet
-   * Home no sound is in flight, but the music schedules its notes ahead and the reads may land on
-   * different beats: the music of up to six layers keeps well under a bar's worth of notes (about
-   * 8 voices of 2 nodes), so 16 lets the beat phase move, while a real leak (sounds or notes that never release) adds far more in one lap.
+   * Home no sound is in flight, but the music plays and the reads may land on different beats: the
+   * lofi menu arrangement (electric piano and bass) holds 30-61 live nodes depending on the beat (a
+   * piano note keeps 3 nodes for about 3 s, a chord has five notes), a spread of 19 measured over
+   * 25 s of each tune. 24 lets the beat phase move, while a real leak (sounds or notes that never
+   * release) adds far more in one lap.
    */
-  audioNodesTolerance: 16,
+  audioNodesTolerance: 24,
   /** The smoke lap (`tippySoak.smoke()`): one fixed pass through every screen and run kind. */
   smoke: {
     /** Game-time multiplier of the runs in the lap (headless only; 1 outside the lap). */
