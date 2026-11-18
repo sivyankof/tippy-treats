@@ -625,13 +625,6 @@
   "resultsLap": {
     "reward": "one=New lap: +{n} berry|other=New lap: +{n} berries"
   },
-  "tunes": {
-    "a": "A · Warm kitchen",
-    "b": "B · Rain outside",
-    "c": "C · Evening",
-    "default": "plays by default",
-    "hint": "A tune button starts the tune at the chosen step. Step 1 (electric piano and tape) is the first zone; each next zone adds a part: 2 bass, 3 kick and hat, 4 snare, 5 melody, 6 second line. «Menu» plays steps 1-2 quieter. Windows turn the music down by 40%. Knobs below: tape, drums, melody."
-  },
   "soundboard": {
     "trimUnit": "dB",
     "trimCopy": "Copy values",
@@ -650,16 +643,10 @@
     "allHint": "Drop, perfect bell, coin, ability, collapse slaps and the music (the tune and layer chosen below) together.",
     "musicTitle": "Music",
     "variant": "Tune",
-    "menu": "Menu arrangement",
     "stop": "Stop",
     "stats": "Live nodes",
-    "step": "Step",
-    "knobTape": "Tape",
-    "knobDrums": "Drums",
-    "knobMelody": "Melody",
-    "reverb": "Reverb",
     "comboRun": "Music + drop + combo",
-    "comboRunHint": "Starts the chosen tune and plays a run of drops with a perfect combo 1 to 12 over it, then a coin: how the bell ladder sits on the chords.",
+    "comboRunHint": "Starts the chosen track and plays a run of drops with a perfect combo 1 to 12 over it, then a coin: how the bell ladder sits on the music.",
     "variants": {
       "calm": "calm",
       "lastSeconds": "last seconds",
@@ -727,6 +714,17 @@
       "lapChange": "A new lap of Space: four quick notes up to a high ringing one.",
       "countdownTick": "A tick of the Continue countdown, higher on the last two seconds.",
       "purchase": "A purchase or the starter pack went through: the coin ding and the berry chord."
-    }
+    },
+    "track": {
+      "menu": "Menu",
+      "kitchen": "Kitchen",
+      "showcase": "Showcase",
+      "roof": "Roof and Clouds",
+      "stars": "Stars",
+      "space": "Space",
+      "daily": "Daily tower",
+      "record": "New record"
+    },
+    "musicMemory": "Decoded music in memory: {now} MB now, {peak} MB at most · tracks sounding: {decks}"
   }
 }

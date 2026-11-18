@@ -1,8 +1,7 @@
-import { DEFAULT_MUSIC_MIX } from '../../data/music/music-play';
 import { describe, expect, it, vi } from 'vitest';
 import { AUDIO_MIX } from '../../data/audio-mix';
 import { SFX } from '../../data/sfx';
-import type { MusicControl, MusicFactory, MusicStartOptions } from './music-control';
+import { NO_MUSIC, type MusicControl, type MusicFactory } from './music-control';
 import { WebAudioService } from './web';
 
 /** The only parts of the audio graph the synth touches; everything else is not needed. */
@@ -96,12 +95,9 @@ class FakeContext {
 
 /** A music player that only reports whether a tune plays, as the real one does through its host. */
 const PLAYING_MUSIC: MusicFactory = (host) => ({
-  start: () => host.onPlaying?.(true),
+  ...NO_MUSIC,
+  play: () => host.onPlaying?.(true),
   stop: () => host.onPlaying?.(false),
-  setLayer: () => undefined,
-  setMenu: () => undefined,
-  setMix: () => undefined,
-  currentMix: () => ({ ...DEFAULT_MUSIC_MIX }),
 });
 
 function setup(musicFactory?: MusicFactory) {
@@ -267,7 +263,7 @@ describe('WebAudioService', () => {
     const normal = SFX.perfect.partials.length;
     service.unlock();
     expect(partialsOf()).toBe(normal);
-    service.music.start({ variant: 'a', layer: 1 });
+    service.music.play('kitchen');
     expect(partialsOf()).toBe(soft);
     service.setLevels({ music: 0 });
     expect(partialsOf()).toBe(normal);
@@ -432,12 +428,10 @@ describe('WebAudioService', () => {
   it('hands the remembered music state to the player made at unlock', () => {
     const log: string[] = [];
     const player: MusicControl = {
-      start: (o: MusicStartOptions) => log.push(`start ${o.variant} ${o.layer}`),
+      ...NO_MUSIC,
+      play: (track) => log.push(`play ${track}`),
       stop: () => log.push('stop'),
-      setLayer: (n) => log.push(`layer ${n}`),
-      setMenu: (on) => log.push(`menu ${on}`),
-      setMix: () => log.push('mix'),
-      currentMix: () => ({ ...DEFAULT_MUSIC_MIX }),
+      hold: (on) => log.push(`hold ${on}`),
     };
     const ctx = new FakeContext();
     const service = new WebAudioService(
@@ -445,12 +439,18 @@ describe('WebAudioService', () => {
       Math.random,
       () => player,
     );
-    service.music.start({ variant: 'b', layer: 2 });
+    service.music.play('stars');
     expect(log).toEqual([]);
     service.unlock();
-    expect(log).toEqual(['start b 2']);
+    expect(log).toEqual(['play stars']);
+    service.suspend('app');
+    expect(log.at(-1)).toBe('hold true');
+    service.resume('app');
+    expect(log.at(-1)).toBe('hold false');
     service.setMusicEnabled(false);
     expect(log.at(-1)).toBe('stop');
+    service.setMusicEnabled(true);
+    expect(log.at(-1)).toBe('play stars');
   });
 
   it('holds back for the silent mode like for any other reason', () => {

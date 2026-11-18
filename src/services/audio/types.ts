@@ -1,6 +1,7 @@
 import type { Rarity } from '../../data/rarity';
 import type { BedKind } from '../../data/weather-bed';
-import type { MusicControl } from './music-control';
+import type { MusicTrackId } from '../../data/music';
+import type { MusicControl, MusicPlayerState } from './music-control';
 import type { DuckReason } from './mixer-math';
 import type { SoundArgs, SoundId } from './sound-args';
 
@@ -86,12 +87,10 @@ export interface AudioService {
   squeak(pitch: number): void;
 }
 
-/** What the music was last asked to play and what turns it down (dev checks). */
-export interface MusicDebugState {
-  /** The tune asked for, null before the first start or after a stop. */
-  variant: string | null;
-  layer: number | null;
-  menu: boolean | null;
+/** What the music was last asked to play, what the player holds and what turns it down (dev checks). */
+export interface MusicDebugState extends MusicPlayerState {
+  /** The track the game asked for last, null before the first or after a stop. */
+  asked: MusicTrackId | null;
   /** Duck reasons that hold now. */
   ducks: string[];
 }

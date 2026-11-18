@@ -25,6 +25,7 @@ import { resultsFlow } from '../ui/menu/results-flow';
 import { ResultsTiers } from '../ui/menu/results-tiers';
 import { coinLines, presentedCreatures } from '../ui/menu/results-text';
 import { ResultsXp } from '../ui/menu/results-xp';
+import { cueMusic } from '../music-cues';
 
 const cfg = MENU.results;
 
@@ -225,6 +226,8 @@ export class ResultsScene extends Phaser.Scene {
     this.sys.setVisible(true);
     this.input.enabled = true;
     const { width, height } = this.scale.gameSize;
+    // A new record has its own track; without one the zone's track goes on.
+    cueMusic({ kind: 'results', record: this.run.summary.isRecord });
     if (this.run.summary.isRecord) this.celebrate(width, height);
     if (import.meta.env.DEV) {
       this.input.keyboard?.on('keydown-R', () => this.celebrate(width, height));

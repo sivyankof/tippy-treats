@@ -1,16 +1,8 @@
 import { AUDIO_MIX } from '../../data/audio-mix';
 import { Rng } from '../../core/rng';
 import { Mixer } from './mixer';
-import {
-  musicHostOf,
-  type MusicFactory,
-  type MusicHost,
-  type MusicStartOptions,
-} from './music-control';
 import type { SoundArgs, SoundId } from './sound-args';
 import { SoundPlayer } from './sound-player';
-import { TunePlayer, type TuneChange } from './music/tune-player';
-import type { MusicMix, MusicVariant } from './music-control';
 import { Synth } from './synth';
 
 /**
@@ -38,13 +30,12 @@ export interface Rendered {
   seconds: number;
 }
 
-/** What a render builds on: the context, the mixer, a synth and a gated sound player, and a music host. */
+/** What a render builds on: the context, the mixer, a synth and a gated sound player. */
 export interface RenderRig {
   ctx: OfflineAudioContext;
   mixer: Mixer;
   synth: Synth;
   player: SoundPlayer;
-  host: MusicHost;
 }
 
 /** One entry of `renderMany`: a sound starting `at` seconds from the start of the render. */
@@ -62,7 +53,7 @@ export interface RenderedMany extends Rendered {
 /**
  * The general renderer: `build` schedules everything on the rig and returns the length of the
  * material in seconds; the result is that long plus the tail (or `options.seconds` exactly).
- * `renderSound`, `renderMany` and `renderMusic` are thin users of it.
+ * `renderSound` and `renderMany` are thin users of it.
  */
 export async function renderOffline(
   build: (rig: RenderRig) => number,
@@ -83,7 +74,6 @@ export async function renderOffline(
     mixer,
     synth,
     player: new SoundPlayer(synth),
-    host: musicHostOf(mixer, next),
   };
   const material = build(rig);
   const buffer = await ctx.startRendering();
@@ -128,53 +118,4 @@ export async function renderMany(
     return end;
   }, options);
   return { ...rendered, refused };
-}
-
-/**
- * Renders `seconds` of the tune a player built by `factory`
- * makes, from the start options, through the same chain (music bus included).
- */
-export function renderMusic(
-  factory: MusicFactory,
-  start: MusicStartOptions,
-  seconds: number,
-  options: RenderOptions = {},
-): Promise<Rendered> {
-  return renderOffline(
-    (rig) => {
-      factory(rig.host).start(start);
-      return seconds;
-    },
-    { ...options, seconds },
-  );
-}
-
-/** Options of `renderTune`: the render options, the menu arrangement and changes along the way. */
-export interface TuneRenderOptions extends RenderOptions {
-  menu?: boolean;
-  /** Layer or menu changes at their times (seconds from the start), e.g. the climb through the zones. */
-  changes?: readonly TuneChange[];
-  /** Measurements only: render this part (index) alone. */
-  only?: number;
-  /** The knobs and the reverb switch (`MusicMix`). */
-  mix?: Partial<MusicMix>;
-}
-
-/**
- * Renders `seconds` of a tune at `layer` through the same chain as live (music bus, master,
- * limiter): the player schedules the whole stretch up front.
- */
-export function renderTune(
-  variant: MusicVariant,
-  layer: number,
-  seconds: number,
-  options: TuneRenderOptions = {},
-): Promise<Rendered> {
-  const { menu, changes, only, mix, ...render } = options;
-  return renderMusic(
-    (host) => new TunePlayer(host, { seconds, changes, only, mix }),
-    { variant, layer, menu },
-    seconds,
-    render,
-  );
 }

@@ -1,26 +1,14 @@
 import {
   renderMany,
-  renderOffline,
   renderSound,
-  renderTune,
   type Rendered,
   type TimedSound,
-  type TuneRenderOptions,
 } from '../../services/audio/offline-render';
-import { SONGS, type MusicVariant } from '../../data/music/songs';
-import { MUSIC_PLAY } from '../../data/music/music-play';
-import { songTiming } from '../../services/audio/music/music-schedule';
-import {
-  dcOffset,
-  denormalSamples,
-  energyShareAbove,
-  sampleSteps,
-  seamDb,
-  stretchRmsDb,
-} from '../../services/audio/music/tune-levels';
+import { MUSIC, MUSIC_TRACKS, type MusicTrackId } from '../../data/music';
+import { fetchAndDecode, trackUrl } from '../../services/audio/music/tune-loader';
+import { loopBounds, smoothSeam } from '../../services/audio/music/tune-loop';
 import { clippedSamples, durationAboveFloor, peakDb, rmsDb } from '../../services/audio/levels';
 import type { SoundArgs, SoundId } from '../../services/audio/sound-args';
-import { TunePlayer } from '../../services/audio/music/tune-player';
 import { SOUND_BOOK, SOUND_IDS, soundVariants } from '../../services/audio/sound-book';
 import { encodeWav } from '../../services/audio/wav';
 import { audioDev, services } from '../../services';
@@ -58,14 +46,7 @@ export interface TippyAudioHook {
   wav(id: SoundId, args?: unknown[]): Promise<string>;
   /** Renders several sounds at offsets through the voice gate; reports the levels and what the gate refused. */
   many(list: TimedSound[]): Promise<AudioHookLevels & { refused: string[] }>;
-  /** `many` with a tune playing under the sounds (the worst-case mixes), optionally with the WAV. */
-  withMusic(
-    list: TimedSound[],
-    music: { variant: MusicVariant; layer: number },
-    seconds: number,
-    wav?: boolean,
-  ): Promise<AudioHookLevels & { refused: string[]; wav?: string }>;
-  /** Extension point for the music (theme C): the same measurements for any rendered stretch. */
+  /** The same measurements for any rendered stretch. */
   measure(rendered: Rendered): AudioHookLevels;
   /** Same as `wav` for a rendered stretch. */
   encode(rendered: Rendered): string;
@@ -78,111 +59,87 @@ export interface TippyAudioHook {
   setBed(kind: BedKind | null): void;
   /** What the music was asked to play and the held ducks (null outside the development build). */
   music(): MusicDebugState | null;
-  /** Renders `seconds` of a tune at a layer offline: `{ sampleRate, channels }` as plain arrays (the contact sheet). */
-  tuneChannels(
-    variant: MusicVariant,
-    layer: number,
-    seconds: number,
-  ): Promise<{ sampleRate: number; channels: number[][] }>;
-  /** Renders `seconds` of a tune at a layer offline and measures it (`wav: true` adds the file). */
-  tune(
-    variant: MusicVariant,
-    layer: number,
-    seconds: number,
-    options?: TuneHookOptions,
-  ): Promise<TuneHookReport>;
+  /** Resets the peak of the decoded music memory (the next `music()` reads the peak from now). */
+  resetMusicPeak(): void;
+  /**
+   * The seam of a seamless track as the game plays it: the file decoded at `rate`, its loop bounds
+   * and seam smoothing applied, rendered offline across the loop point.
+   */
+  musicSeam(track: MusicTrackId, rate: number, smooth?: boolean): Promise<SeamReport>;
 }
 
-export interface TuneHookOptions extends TuneRenderOptions {
-  wav?: boolean;
-  /** Length of the stretches of `stretchesDb`, seconds (default 10). */
-  stretchSec?: number;
+/** Sample steps at the loop point against the rest of the render (a click stands out of the rest). */
+export interface SeamReport {
+  decodedFrames: number;
+  loopStart: number;
+  loopEnd: number;
+  /** Largest |x[i] - x[i-1]| within `SEAM_SAMPLES` of the loop point, and the 99.9th percentile elsewhere. */
+  seamStep: number;
+  stepQ999: number;
+  /** The same for the second difference |x[i] - 2x[i-1] + x[i-2]| (sharper for a kink in a slow wave). */
+  seamCurve: number;
+  curveQ999: number;
 }
 
-/** What `tune` measures: the levels, the loop seam (the 0.5 s before and after the first loop end), DC, denormals. */
-export interface TuneHookReport extends AudioHookLevels {
-  bpm: number;
-  bars: number;
-  loopSec: number;
-  seam: { before: number; after: number; diff: number } | null;
-  /** The same reading at the bar line in the middle of the loop: what an ordinary phrase boundary looks like. */
-  midSeam: { before: number; after: number; diff: number } | null;
-  dc: number;
-  denormals: number;
-  /** Plain RMS of the whole render, silence included, dBFS (compares sparse parts fairly). */
-  plainDb: number;
-  /** Share of the energy above 6 kHz (first channel), and that energy in dBFS RMS. */
-  highShare: number;
-  highDb: number;
-  /** Largest step between neighbouring samples, and the 99.9th percentile of the steps (clicks). */
-  steps: { max: number; quantile: number };
-  /** Largest step within 3 samples of the loop point. */
-  seamStep: number | null;
-  /** RMS of each stretch of `stretchSec`, dBFS. */
-  stretchesDb: number[];
-  wav?: string;
+/** The seam render: this long on each side of the loop point. */
+const SEAM_SIDE_SEC = 1;
+/** Samples on each side of the loop point counted as "the seam". */
+const SEAM_SAMPLES = 3;
+const Q999 = 0.999;
+
+function quantile(values: number[], q: number): number {
+  const sorted = [...values].sort((a, b) => a - b);
+  return sorted[Math.min(sorted.length - 1, Math.floor(sorted.length * q))] ?? 0;
 }
 
-/** The seam is measured over this much on each side of the loop end. */
-const SEAM_SPAN_SEC = 0.5;
-/** "High" energy: above this frequency (a soft mix has little there). */
-const HIGH_HZ = 6000;
-/** Samples on each side of the loop point the seam step looks at. */
-const SEAM_STEP_SAMPLES = 3;
-const STRETCH_SEC = 10;
-
-async function tuneReport(
-  variant: MusicVariant,
-  layer: number,
-  seconds: number,
-  options: TuneHookOptions = {},
-): Promise<TuneHookReport> {
-  const { wav, stretchSec = STRETCH_SEC, ...render } = options;
-  const r = await renderTune(variant, layer, seconds, render);
-  const song = SONGS[variant];
-  const { loopSec, barSec } = songTiming(song);
-  const midAt = Math.floor(song.bars / 2) * barSec + MUSIC_PLAY.startLeadSec;
-  // The first note sounds `startLeadSec` after the start of the render.
-  const seamAt = loopSec + MUSIC_PLAY.startLeadSec;
-  const stretchesDb: number[] = [];
-  for (let t = 0; t < r.seconds; t += stretchSec) {
-    stretchesDb.push(stretchRmsDb(r.channels, r.sampleRate, t, t + stretchSec));
+async function musicSeam(track: MusicTrackId, rate: number, smooth = true): Promise<SeamReport> {
+  const url = trackUrl(track);
+  if (!url) throw new Error(`no file for ${track}`);
+  const spec = MUSIC_TRACKS[track];
+  const side = Math.round(SEAM_SIDE_SEC * rate);
+  const ctx = new OfflineAudioContext(2, side * 2, rate);
+  const buffer = await fetchAndDecode(ctx, url);
+  const bounds = loopBounds(buffer.length, spec, rate, MUSIC.aacPrimingFrames);
+  if (smooth) {
+    const frames = Math.round(MUSIC.seamSmoothSec * rate);
+    for (let c = 0; c < buffer.numberOfChannels; c++) {
+      smoothSeam(buffer.getChannelData(c), bounds.start, bounds.end, frames);
+    }
   }
-  const levels = measure(r);
-  const highShare = r.channels[0] ? energyShareAbove(r.channels[0], r.sampleRate, HIGH_HZ) : 0;
-  const seamFrame = Math.round(seamAt * r.sampleRate);
-  let seamStep: number | null = null;
-  if (seamAt < r.seconds) {
-    seamStep = 0;
-    for (const channel of r.channels) {
-      for (let i = seamFrame - SEAM_STEP_SAMPLES; i <= seamFrame + SEAM_STEP_SAMPLES; i++) {
-        seamStep = Math.max(seamStep, Math.abs((channel[i] ?? 0) - (channel[i - 1] ?? 0)));
+  const source = ctx.createBufferSource();
+  source.buffer = buffer;
+  source.loop = true;
+  source.loopStart = bounds.start / rate;
+  source.loopEnd = bounds.end / rate;
+  source.connect(ctx.destination);
+  source.start(0, (bounds.end - side) / rate);
+  const out = await ctx.startRendering();
+  const steps: number[] = [];
+  const curves: number[] = [];
+  let seamStep = 0;
+  let seamCurve = 0;
+  for (let c = 0; c < out.numberOfChannels; c++) {
+    const x = out.getChannelData(c);
+    for (let i = 2; i < x.length; i++) {
+      const step = Math.abs((x[i] ?? 0) - (x[i - 1] ?? 0));
+      const curve = Math.abs((x[i] ?? 0) - 2 * (x[i - 1] ?? 0) + (x[i - 2] ?? 0));
+      if (Math.abs(i - side) <= SEAM_SAMPLES) {
+        seamStep = Math.max(seamStep, step);
+        seamCurve = Math.max(seamCurve, curve);
+      } else {
+        steps.push(step);
+        curves.push(curve);
       }
     }
   }
-  const plainRms = stretchRmsDb(r.channels, r.sampleRate, 0, r.seconds);
   return {
-    ...levels,
-    plainDb: plainRms,
-    highShare,
-    highDb: plainRms + 10 * Math.log10(Math.max(highShare, 1e-12)),
-    steps: sampleSteps(r.channels),
+    decodedFrames: buffer.length,
+    loopStart: bounds.start,
+    loopEnd: bounds.end,
     seamStep,
-    bpm: song.bpm,
-    bars: song.bars,
-    loopSec,
-    seam:
-      seamAt + SEAM_SPAN_SEC <= r.seconds
-        ? seamDb(r.channels, r.sampleRate, seamAt, SEAM_SPAN_SEC)
-        : null,
-    midSeam:
-      midAt + SEAM_SPAN_SEC <= r.seconds
-        ? seamDb(r.channels, r.sampleRate, midAt, SEAM_SPAN_SEC)
-        : null,
-    dc: dcOffset(r.channels),
-    denormals: denormalSamples(r.channels),
-    stretchesDb,
-    ...(wav ? { wav: encode(r) } : {}),
+    stepQ999: quantile(steps, Q999),
+    seamCurve,
+    curveQ999: quantile(curves, Q999),
   };
 }
 
@@ -271,27 +228,9 @@ export function registerAudioHook(): void {
     clearPlayLog: () => {
       log = [];
     },
-    async withMusic(list, music, seconds, wav) {
-      const refused: string[] = [];
-      const r = await renderOffline(
-        (rig) => {
-          new TunePlayer(rig.host, { seconds }).start(music);
-          for (const sound of [...list].sort((a, b) => a.at - b.at)) {
-            const result = rig.player.play(sound.id, sound.args, sound.at);
-            if (!result.played) refused.push(`${sound.id}@${sound.at}`);
-          }
-          return seconds;
-        },
-        { seconds },
-      );
-      return { ...measure(r), refused, ...(wav ? { wav: encode(r) } : {}) };
-    },
-    async tuneChannels(variant, layer, seconds) {
-      const r = await renderTune(variant, layer, seconds);
-      return { sampleRate: r.sampleRate, channels: r.channels.map((c) => Array.from(c)) };
-    },
-    tune: tuneReport,
     music: () => audioDev?.musicState() ?? null,
+    resetMusicPeak: () => services.audio.music.resetPeak(),
+    musicSeam,
   };
   (window as Window & { __tippyAudio?: TippyAudioHook }).__tippyAudio = hook;
 }

@@ -308,7 +308,14 @@ export class GameScene extends Phaser.Scene {
   /** The state of the run for the HUD. The object is reused: read it at once, do not keep it. */
   getRunInfo(): Readonly<RunInfo> | null {
     if (!this.sim) return null;
-    return fillRunInfo(this.runInfo, this.sim.state, this.seed, this.team, this.sys.isPaused());
+    return fillRunInfo(
+      this.runInfo,
+      this.sim.state,
+      this.seed,
+      this.team,
+      this.sys.isPaused(),
+      this.mode,
+    );
   }
 
   /** Taps do not drop a layer while a hint explains, the camera rises along the built tower or the demo ends. */

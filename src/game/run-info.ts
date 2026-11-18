@@ -1,4 +1,5 @@
 import type { ActiveEffect } from '../core/abilities/types';
+import type { RunMode } from '../core/run-result';
 import type { SimPhase, TeamSlot, TowerState } from '../core/sim-types';
 
 /** Read-only snapshot of the run for the HUD and the debug panel. */
@@ -22,6 +23,8 @@ export interface RunInfo {
   zoneIndex: number;
   coins: number;
   berries: number;
+  /** A classic tower or the daily tower. */
+  mode: RunMode;
 }
 
 export function emptyRunInfo(): RunInfo {
@@ -40,6 +43,7 @@ export function emptyRunInfo(): RunInfo {
     zoneIndex: 0,
     coins: 0,
     berries: 0,
+    mode: 'classic',
   };
 }
 
@@ -50,6 +54,7 @@ export function fillRunInfo(
   seed: number,
   team: readonly (TeamSlot | null)[],
   paused: boolean,
+  mode: RunMode,
 ): RunInfo {
   info.height = s.height;
   info.score = s.score;
@@ -65,5 +70,6 @@ export function fillRunInfo(
   info.zoneIndex = s.zoneIndex;
   info.coins = s.coins;
   info.berries = s.berries;
+  info.mode = mode;
   return info;
 }

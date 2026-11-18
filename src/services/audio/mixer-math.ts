@@ -44,16 +44,3 @@ export function limiterCurve(
   }
   return curve;
 }
-
-/**
- * Transfer curve of a soft saturation, `size` points over input -1..1: `tanh(drive * x) / drive`,
- * so small signals pass at unity and peaks are rounded off. Odd in the input (no DC).
- */
-export function saturationCurve(size: number, drive: number): Float32Array<ArrayBuffer> {
-  const curve = new Float32Array(new ArrayBuffer(size * Float32Array.BYTES_PER_ELEMENT));
-  for (let i = 0; i < size; i++) {
-    const x = (i / (size - 1)) * 2 - 1;
-    curve[i] = Math.tanh(drive * x) / drive;
-  }
-  return curve;
-}

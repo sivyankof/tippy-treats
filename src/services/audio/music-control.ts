@@ -1,38 +1,31 @@
-import { DEFAULT_MUSIC_MIX, type MusicMix } from '../../data/music/music-play';
-import type { MusicVariant } from '../../data/music/songs';
+import type { MusicTrackId } from '../../data/music';
 import type { Mixer } from './mixer';
 import type { NodeTally } from './node-tally';
 
-/** The tunes of the game (docs/06, section 7): the keys of `SONGS`. */
-export type { MusicMix, MusicVariant };
-
-export interface MusicStartOptions {
-  variant: MusicVariant;
-  /** Instrument layer 1..6: one more is added with every zone. */
-  layer: number;
-  /** Start in the quiet menu arrangement. */
-  menu?: boolean;
+/** What the music player reports for dev checks (the soundboard, the memory measurement). */
+export interface MusicPlayerState {
+  /** The track playing or coming in, null when stopped. */
+  track: MusicTrackId | null;
+  /** Decks alive now (a track playing, one leaving, one being cut). */
+  decks: number;
+  /** Decoded music in memory now (decks, and a decode under way counted at its full size), bytes. */
+  decodedBytes: number;
+  /** The most `decodedBytes` has been since the player was made or `resetPeak`. */
+  peakBytes: number;
 }
 
 /**
- * What the game asks of the music player (theme C implements it). Every call is safe at any
- * time: before the audio is unlocked it is remembered (`MusicProxy`), and a player must not throw.
+ * What the game asks of the music player. Every call is safe at any time: before the audio is
+ * unlocked it is remembered (`MusicProxy`), and a player must not throw.
  */
 export interface MusicControl {
-  /** Starts the tune (a running one is replaced). */
-  start(options: MusicStartOptions): void;
+  /** Plays `track`, changing over from the one playing (the same track goes on untouched). */
+  play(track: MusicTrackId): void;
   stop(): void;
-  /** Sets the number of instrument layers heard, 1..6. */
-  setLayer(layer: number): void;
-  /** True: the quiet menu arrangement; false: the run arrangement. */
-  setMenu(on: boolean): void;
-  /**
-   * The knobs of the music (tape, drums, melody: multipliers, 1 in the game) and the reverb
-   * switch (off on weak phones). Missing fields stay as they are.
-   */
-  setMix(mix: Partial<MusicMix>): void;
-  /** The mix in force now (a copy): what the soundboard shows, and what the game last asked for. */
-  currentMix(): MusicMix;
+  /** The audio is held (the app is in the background, an ad shows): streamed tracks pause too. */
+  hold(on: boolean): void;
+  state(): MusicPlayerState;
+  resetPeak(): void;
 }
 
 /** What a music player gets to build on: the context, the music bus and the shared node tally. */
@@ -40,36 +33,34 @@ export interface MusicHost {
   ctx: BaseAudioContext;
   /** Connect every music voice here (never to the destination). */
   bus: GainNode;
-  /** Count and release music nodes through `runSource` with this tally. */
+  /** Count and release music nodes with this tally. */
   tally: NodeTally;
-  /** Random numbers for the tune: `Math.random` live, a seeded one in an offline render. */
-  random: () => number;
-  /** The player calls this when a tune starts or stops (the mixer softens the combo bell while one is heard). */
+  /** The player calls this when a track starts or stops (the mixer softens the combo bell while one is heard). */
   onPlaying?: (playing: boolean) => void;
 }
 
-/** Builds the player over a host; the service calls it once, when the audio is unlocked. */
+/** Builds the player over a host; the service calls it once, when the audio is unlocked (inside the gesture). */
 export type MusicFactory = (host: MusicHost) => MusicControl;
+
+const NO_STATE: MusicPlayerState = { track: null, decks: 0, decodedBytes: 0, peakBytes: 0 };
 
 /** A player that does nothing (no music factory given). */
 export const NO_MUSIC: MusicControl = {
-  start: () => undefined,
+  play: () => undefined,
   stop: () => undefined,
-  setLayer: () => undefined,
-  setMenu: () => undefined,
-  setMix: () => undefined,
-  currentMix: () => ({ ...DEFAULT_MUSIC_MIX }),
+  hold: () => undefined,
+  state: () => ({ ...NO_STATE }),
+  resetPeak: () => undefined,
 };
 
 export const NO_MUSIC_FACTORY: MusicFactory = () => NO_MUSIC;
 
 /** The host of a mixer (live or offline). */
-export function musicHostOf(mixer: Mixer, random: () => number): MusicHost {
+export function musicHostOf(mixer: Mixer): MusicHost {
   return {
     ctx: mixer.ctx,
     bus: mixer.musicBus,
     tally: mixer.musicTally,
-    random,
     onPlaying: (on) => mixer.setTunePlaying(on),
   };
 }

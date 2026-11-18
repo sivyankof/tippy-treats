@@ -97,8 +97,7 @@ export class WebAudioService implements AudioService, AudioDevControl {
   }
 
   musicState(): MusicDebugState {
-    const { options, layer, menu } = this.musicProxy.asked;
-    return { variant: options?.variant ?? null, layer, menu, ducks: [...this.ducks] };
+    return { ...this.musicProxy.state(), asked: this.musicProxy.asked, ducks: [...this.ducks] };
   }
 
   get music(): MusicControl {
@@ -129,7 +128,7 @@ export class WebAudioService implements AudioService, AudioDevControl {
         if (!this.musicOn) mixer.setMusicOn(false);
         mixer.setDevScales(this.devLevels);
         for (const reason of this.ducks) mixer.duckMusic(reason, true);
-        this.musicProxy.attach(this.musicFactory(musicHostOf(mixer, this.random)));
+        this.musicProxy.attach(this.musicFactory(musicHostOf(mixer)));
       } catch {
         // Sound stays off: do not leave a context behind or make another one on the next tap.
         this.buildFailed = true;
@@ -153,12 +152,15 @@ export class WebAudioService implements AudioService, AudioDevControl {
 
   suspend(reason: AudioSuspendReason): void {
     this.holds.add(reason);
+    this.musicProxy.hold(true);
     this.run((ctx) => ctx.suspend());
   }
 
   resume(reason: AudioSuspendReason): void {
     this.holds.delete(reason);
-    if (this.holds.size === 0) this.run((ctx) => ctx.resume());
+    if (this.holds.size > 0) return;
+    this.run((ctx) => ctx.resume());
+    this.musicProxy.hold(false);
   }
 
   setBed(kind: BedKind | null): void {

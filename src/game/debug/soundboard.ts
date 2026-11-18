@@ -146,7 +146,7 @@ function soundCard(id: SoundId): HTMLElement {
 
 function allAtOnce(): void {
   const a = ALL_AT_ONCE;
-  services.audio.music.start({ ...musicChoice });
+  services.audio.music.play(musicChoice.track);
   services.audio.play('drop');
   services.audio.play('perfect', a.comboStep);
   services.audio.play('coin');

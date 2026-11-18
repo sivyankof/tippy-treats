@@ -1,106 +1,72 @@
-import { DEFAULT_MUSIC_MIX } from '../../data/music/music-play';
 import { describe, expect, it } from 'vitest';
-import type { MusicControl, MusicStartOptions } from './music-control';
+import { NO_MUSIC, type MusicControl } from './music-control';
 import { MusicProxy } from './music-proxy';
 
 function recorder(): MusicControl & { log: string[] } {
   const log: string[] = [];
   return {
+    ...NO_MUSIC,
     log,
-    start: (o: MusicStartOptions) => log.push(`start ${o.variant} ${o.layer} ${o.menu ?? '-'}`),
+    play: (track) => log.push(`play ${track}`),
     stop: () => log.push('stop'),
-    setLayer: (n) => log.push(`layer ${n}`),
-    setMenu: (on) => log.push(`menu ${on}`),
-    setMix: (mix) => log.push(`mix ${JSON.stringify(mix)}`),
-    currentMix: () => ({ ...DEFAULT_MUSIC_MIX }),
+    hold: (on) => log.push(`hold ${on}`),
   };
 }
 
 describe('MusicProxy', () => {
-  it('remembers calls made before a player exists and replays them on attach', () => {
+  it('remembers the last track asked before a player exists and plays it on attach', () => {
     const proxy = new MusicProxy();
-    proxy.start({ variant: 'b', layer: 1 });
-    proxy.setLayer(3);
-    proxy.setMenu(true);
+    proxy.play('menu');
+    proxy.play('kitchen');
     const real = recorder();
     proxy.attach(real);
-    expect(real.log).toEqual(['start b 3 true']);
+    expect(real.log).toEqual(['play kitchen']);
+    expect(proxy.asked).toBe('kitchen');
   });
 
-  it('forwards calls to the attached player', () => {
+  it('plays nothing on attach after a stop', () => {
     const proxy = new MusicProxy();
-    const real = recorder();
-    proxy.attach(real);
-    proxy.start({ variant: 'a', layer: 1 });
-    proxy.setLayer(2);
-    proxy.setMenu(false);
+    proxy.play('menu');
     proxy.stop();
-    expect(real.log).toEqual(['start a 1 -', 'layer 2', 'menu false', 'stop']);
+    const real = recorder();
+    proxy.attach(real);
+    expect(real.log).toEqual([]);
+    expect(proxy.asked).toBeNull();
   });
 
-  it('stops while the music is off and restarts with the remembered state when it is on', () => {
+  it('a hold asked before the player exists reaches it', () => {
+    const proxy = new MusicProxy();
+    proxy.hold(true);
+    proxy.play('roof');
+    const real = recorder();
+    proxy.attach(real);
+    expect(real.log).toEqual(['hold true', 'play roof']);
+  });
+
+  it('the switch off stops the player and keeps the track; on plays it again', () => {
     const proxy = new MusicProxy();
     const real = recorder();
     proxy.attach(real);
-    proxy.start({ variant: 'c', layer: 2 });
+    proxy.play('stars');
     proxy.setEnabled(false);
-    proxy.setLayer(4);
-    expect(real.log).toEqual(['start c 2 -', 'stop']);
+    proxy.play('space');
     proxy.setEnabled(true);
-    expect(real.log.at(-1)).toBe('start c 4 -');
+    expect(real.log).toEqual(['play stars', 'stop', 'play space']);
   });
 
-  it('remembers the mix before a player exists and passes it on, also while the music is off', () => {
+  it('a failing player never throws into the game', () => {
     const proxy = new MusicProxy();
-    proxy.setMix({ reverb: false });
-    proxy.setMix({ drums: 0.5 });
-    const real = recorder();
-    proxy.attach(real);
-    expect(real.log).toEqual(['mix {"reverb":false,"drums":0.5}']);
-    proxy.setEnabled(false);
-    proxy.setMix({ tape: 0 });
-    expect(real.log.at(-1)).toBe('mix {"tape":0}');
-  });
-
-  it('does not restart a tune that was stopped', () => {
-    const proxy = new MusicProxy();
-    const real = recorder();
-    proxy.attach(real);
-    proxy.start({ variant: 'a', layer: 1 });
-    proxy.stop();
-    proxy.setEnabled(false);
-    proxy.setEnabled(true);
-    expect(real.log.filter((l) => l.startsWith('start'))).toHaveLength(1);
-  });
-
-  it('swallows errors of the player', () => {
-    const proxy = new MusicProxy();
-    proxy.attach({
-      start: () => {
+    const broken: MusicControl = {
+      ...NO_MUSIC,
+      play: () => {
         throw new Error('boom');
       },
-      stop: () => undefined,
-      setLayer: () => undefined,
-      setMenu: () => undefined,
-      setMix: () => {
+      state: () => {
         throw new Error('boom');
       },
-      currentMix: () => ({ ...DEFAULT_MUSIC_MIX }),
-    });
-    expect(() => proxy.setMix({ reverb: false })).not.toThrow();
-    expect(() => proxy.start({ variant: 'a', layer: 1 })).not.toThrow();
-  });
-
-  it('reports the mix asked so far over the defaults', () => {
-    const proxy = new MusicProxy();
-    expect(proxy.currentMix()).toEqual(DEFAULT_MUSIC_MIX);
-    proxy.setMix({ reverb: false, drums: 0.5 });
-    proxy.setMix({ tape: 0.2 });
-    expect(proxy.currentMix()).toEqual({
-      ...DEFAULT_MUSIC_MIX,
-      reverb: false,
-      drums: 0.5,
-      tape: 0.2,
-    });
+    };
+    proxy.attach(broken);
+    expect(() => proxy.play('menu')).not.toThrow();
+    expect(proxy.state().track).toBeNull();
   });
 });

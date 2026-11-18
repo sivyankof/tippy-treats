@@ -1,33 +1,26 @@
-import { DEFAULT_MUSIC_MIX } from '../../data/music/music-play';
-import {
-  NO_MUSIC,
-  type MusicControl,
-  type MusicMix,
-  type MusicStartOptions,
-} from './music-control';
+import type { MusicTrackId } from '../../data/music';
+import { NO_MUSIC, type MusicControl, type MusicPlayerState } from './music-control';
 
 /**
- * The `AudioService.music` the game holds from the start. It remembers what the game asked
- * (tune, layer, menu, mix) and hands it to the real player once there is one (the audio is unlocked)
- * and the music is on; while the music is off the real player is stopped. Calls never throw.
+ * The `AudioService.music` the game holds from the start. It remembers the track the game asked
+ * for and whether the audio is held, and hands both to the real player once there is one (the
+ * audio is unlocked) and the music is on; while the music is off the real player is stopped.
+ * Calls never throw.
  */
 export class MusicProxy implements MusicControl {
   private real: MusicControl = NO_MUSIC;
   private enabled = true;
-  private options: MusicStartOptions | null = null;
-  private layer: number | null = null;
-  private menu: boolean | null = null;
-  private mix: Partial<MusicMix> = {};
+  private track: MusicTrackId | null = null;
+  private held = false;
 
   /** Gives the proxy its player and brings it up to date with what was asked. */
   attach(real: MusicControl): void {
     this.real = real;
-    const { mix } = this;
-    if (Object.keys(mix).length > 0) this.safely(() => this.real.setMix(mix));
+    if (this.held) this.safely(() => this.real.hold(true));
     if (this.enabled) this.replay();
   }
 
-  /** The music switch: off stops the player, on restarts it with the remembered state. */
+  /** The music switch: off stops the player, on plays the remembered track again. */
   setEnabled(on: boolean): void {
     if (on === this.enabled) return;
     this.enabled = on;
@@ -35,49 +28,41 @@ export class MusicProxy implements MusicControl {
     else this.safely(() => this.real.stop());
   }
 
-  start(options: MusicStartOptions): void {
-    this.options = options;
-    this.layer = options.layer;
-    this.menu = options.menu ?? null;
-    if (this.enabled) this.safely(() => this.real.start(options));
+  play(track: MusicTrackId): void {
+    this.track = track;
+    if (this.enabled) this.safely(() => this.real.play(track));
   }
 
   stop(): void {
-    this.options = null;
+    this.track = null;
     if (this.enabled) this.safely(() => this.real.stop());
   }
 
-  setLayer(layer: number): void {
-    this.layer = layer;
-    if (this.enabled) this.safely(() => this.real.setLayer(layer));
+  hold(on: boolean): void {
+    this.held = on;
+    this.safely(() => this.real.hold(on));
   }
 
-  setMenu(on: boolean): void {
-    this.menu = on;
-    if (this.enabled) this.safely(() => this.real.setMenu(on));
+  state(): MusicPlayerState {
+    try {
+      return this.real.state();
+    } catch {
+      return NO_MUSIC.state();
+    }
   }
 
-  setMix(mix: Partial<MusicMix>): void {
-    this.mix = { ...this.mix, ...mix };
-    this.safely(() => this.real.setMix(mix));
+  resetPeak(): void {
+    this.safely(() => this.real.resetPeak());
   }
 
-  /** The mix asked so far over the defaults (the real player holds the same). */
-  currentMix(): MusicMix {
-    return { ...DEFAULT_MUSIC_MIX, ...this.mix };
-  }
-
-  /** What the game asked last: the tune (null when stopped), the layer and the menu switch. */
-  get asked(): { options: MusicStartOptions | null; layer: number | null; menu: boolean | null } {
-    return { options: this.options, layer: this.layer, menu: this.menu };
+  /** The track the game asked for last (null when stopped or never asked). */
+  get asked(): MusicTrackId | null {
+    return this.track;
   }
 
   private replay(): void {
-    const { options, layer, menu } = this;
-    if (!options) return;
-    this.safely(() => {
-      this.real.start({ ...options, layer: layer ?? options.layer, menu: menu ?? options.menu });
-    });
+    const { track } = this;
+    if (track) this.safely(() => this.real.play(track));
   }
 
   private safely(call: () => void): void {
