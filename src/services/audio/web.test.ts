@@ -1,5 +1,7 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
+import { AUDIO_MIX } from '../../data/audio-mix';
 import { SFX } from '../../data/sfx';
+import type { MusicControl, MusicStartOptions } from './music-control';
 import { WebAudioService } from './web';
 
 /** The only parts of the audio graph the synth touches; everything else is not needed. */
@@ -8,6 +10,7 @@ interface FakeParam {
   setValueAtTime(): void;
   linearRampToValueAtTime(): void;
   exponentialRampToValueAtTime(): void;
+  setTargetAtTime(value: number): void;
 }
 
 class FakeNode {
@@ -32,16 +35,21 @@ class FakeNode {
 }
 
 function fakeParam(): FakeParam {
-  return {
+  const param: FakeParam = {
     value: 0,
     setValueAtTime() {},
     linearRampToValueAtTime() {},
     exponentialRampToValueAtTime() {},
+    setTargetAtTime(value: number) {
+      param.value = value;
+    },
   };
+  return param;
 }
 
 class FakeContext {
   currentTime = 0;
+  state = 'suspended';
   sampleRate = 8000;
   destination = new FakeNode();
   oscillators: FakeNode[] = [];
@@ -52,8 +60,14 @@ class FakeContext {
     this.nodes++;
     return new FakeNode();
   }
-  createGain = () => this.node();
+  gains: FakeNode[] = [];
+  createGain = () => {
+    const g = this.node();
+    this.gains.push(g);
+    return g;
+  };
   createDynamicsCompressor = () => this.node();
+  createWaveShaper = () => this.node();
   createBiquadFilter = () => this.node();
   createBufferSource = () => this.node();
   createOscillator = () => {
@@ -240,5 +254,124 @@ describe('WebAudioService', () => {
     const osc = ctx.oscillators[0];
     osc?.onended?.();
     expect(osc?.disconnected).toBe(true);
+  });
+
+  it('plays any registry sound through the typed generic call', () => {
+    const { ctx, service } = setup();
+    service.unlock();
+    service.play('coin');
+    service.play('perfect', 3);
+    expect(ctx.oscillators.length).toBeGreaterThan(SFX.coin.notes.length);
+  });
+
+  it('does not start the same sound twice within the dedupe time', () => {
+    const { ctx, service } = setup();
+    service.unlock();
+    service.coin();
+    const first = ctx.oscillators.length;
+    service.coin();
+    expect(ctx.oscillators).toHaveLength(first);
+    ctx.currentTime += AUDIO_MIX.dedupeSec + 0.001;
+    service.coin();
+    expect(ctx.oscillators).toHaveLength(first * 2);
+  });
+
+  it('refuses normal sounds at the voice cap but never a critical one', () => {
+    const { ctx, service } = setup();
+    service.unlock();
+    const normal = [
+      'coin',
+      'berry',
+      'click',
+      'bite',
+      'sneeze',
+      'shieldPop',
+      'lickHum',
+      'guestBuzz',
+    ] as const;
+    for (const id of normal) service.play(id);
+    const before = ctx.oscillators.length;
+    service.play('guestGiggle');
+    expect(ctx.oscillators).toHaveLength(before);
+    service.drop();
+    expect(ctx.oscillators.length).toBeGreaterThan(before);
+  });
+
+  it('counts live nodes and releases them when sounds end', () => {
+    const { ctx, service } = setup();
+    expect(service.debugStats()).toEqual({ liveNodes: 0, contextState: 'none' });
+    service.unlock();
+    service.click();
+    expect(service.debugStats().liveNodes).toBe(2);
+    expect(service.debugStats().contextState).toBe('suspended');
+    ctx.oscillators[0]?.onended?.();
+    expect(service.debugStats().liveNodes).toBe(0);
+  });
+
+  it('ramps the sfx and music buses with the switches and keeps the choice before unlock', () => {
+    const { ctx, service } = setup();
+    service.setMusicEnabled(false);
+    service.setEnabled(false);
+    expect(service.musicEnabled).toBe(false);
+    service.unlock();
+    // sfx bus, music bus, master: the gains of the mixer, in this order.
+    expect(ctx.gains[0]?.gain.value).toBe(0);
+    expect(ctx.gains[1]?.gain.value).toBe(0);
+    service.setEnabled(true);
+    service.setMusicEnabled(true);
+    expect(ctx.gains[0]?.gain.value).toBe(AUDIO_MIX.sfxLevel);
+    expect(ctx.gains[1]?.gain.value).toBe(AUDIO_MIX.musicLevel);
+  });
+
+  it('ducks the music while a window holds and for the length of the record fanfare', () => {
+    vi.useFakeTimers();
+    try {
+      const { ctx, service } = setup();
+      service.unlock();
+      const musicGain = ctx.gains[1];
+      service.duckMusic('window', true);
+      expect(musicGain?.gain.value).toBeCloseTo(AUDIO_MIX.musicLevel * (1 - AUDIO_MIX.duckShare));
+      service.duckMusic('window', false);
+      expect(musicGain?.gain.value).toBeCloseTo(AUDIO_MIX.musicLevel);
+      service.record();
+      expect(musicGain?.gain.value).toBeCloseTo(AUDIO_MIX.musicLevel * (1 - AUDIO_MIX.duckShare));
+      vi.advanceTimersByTime(5000);
+      expect(musicGain?.gain.value).toBeCloseTo(AUDIO_MIX.musicLevel);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('hands the remembered music state to the player made at unlock', () => {
+    const log: string[] = [];
+    const player: MusicControl = {
+      start: (o: MusicStartOptions) => log.push(`start ${o.variant} ${o.layer}`),
+      stop: () => log.push('stop'),
+      setLayer: (n) => log.push(`layer ${n}`),
+      setMenu: (on) => log.push(`menu ${on}`),
+    };
+    const ctx = new FakeContext();
+    const service = new WebAudioService(
+      () => ctx as unknown as AudioContext,
+      Math.random,
+      () => player,
+    );
+    service.music.start({ variant: 'b', layer: 2 });
+    expect(log).toEqual([]);
+    service.unlock();
+    expect(log).toEqual(['start b 2']);
+    service.setMusicEnabled(false);
+    expect(log.at(-1)).toBe('stop');
+  });
+
+  it('holds back for the silent mode like for any other reason', () => {
+    const { ctx, service } = setup();
+    service.unlock();
+    service.suspend('silent');
+    service.click();
+    expect(ctx.oscillators).toHaveLength(0);
+    service.resume('silent');
+    service.click();
+    expect(ctx.oscillators).toHaveLength(1);
   });
 });

@@ -6,9 +6,10 @@ import { effectsMode } from './effects-mode';
 
 /** Puts the saved settings into the services and the effects mode; called once at start-up. */
 export function applySavedSettings(): void {
-  const { sfx, haptics, reducedFx, lang } = gameState.settings;
+  const { sfx, music, haptics, reducedFx, lang } = gameState.settings;
   setLang(resolveLang(lang, navigator.languages));
   services.audio.setEnabled(sfx);
+  services.audio.setMusicEnabled(music);
   services.haptics.setEnabled(haptics);
   effectsMode.setChoice(reducedFx);
 }
@@ -19,8 +20,9 @@ export function setSoundOn(on: boolean): void {
   gameState.updateSettings({ sfx: on });
 }
 
-/** Only stores the choice; there is no music player until music is added. */
+/** The music switch: the music bus follows at once, the save with its delay. */
 export function setMusicOn(on: boolean): void {
+  services.audio.setMusicEnabled(on);
   gameState.updateSettings({ music: on });
 }
 

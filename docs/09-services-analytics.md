@@ -8,6 +8,7 @@
 |---|---|---|
 | Хранилище | `@capacitor/preferences` | M7 |
 | Вибрация | `@capacitor/haptics` | M7 |
+| Беззвучный режим | нативный плагин или код в `services/silent-mode/` (в браузере заглушка, никогда не беззвучная; звук держится по причине `silent`) | M7 |
 | Жизненный цикл приложения | `@capacitor/app` | M7 |
 | Заставка, статус-бар | `@capacitor/splash-screen`, `@capacitor/status-bar` | M7 |
 | Локальные уведомления | `@capacitor/local-notifications` | M8 |

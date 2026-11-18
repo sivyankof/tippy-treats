@@ -81,11 +81,6 @@ export const SFX = {
   silence: 0.0001,
   /** Extra time an oscillator runs past its decay before it is stopped. */
   stopTail: 0.03,
-  master: {
-    gain: 0.7,
-    /** Gentle limiter so stacked sounds do not clip. */
-    compressor: { threshold: -18, knee: 20, ratio: 4, attack: 0.003, release: 0.2 },
-  },
   noise: {
     /** Length of the shared noise buffer; no noise burst may be longer. */
     bufferSeconds: 0.5,

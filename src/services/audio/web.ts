@@ -1,8 +1,17 @@
 import type { Rarity } from '../../data/rarity';
-import { SFX } from '../../data/sfx';
-import { collapseThudGain, comboGainScale, comboNoteFreq, jitterRatio, noteFreq } from './notes';
+import type { DuckReason } from './mixer-math';
+import { Mixer } from './mixer';
+import {
+  musicHostOf,
+  NO_MUSIC_FACTORY,
+  type MusicControl,
+  type MusicFactory,
+} from './music-control';
+import { MusicProxy } from './music-proxy';
+import type { SoundArgs, SoundId } from './sound-args';
+import { SoundPlayer } from './sound-player';
 import { Synth } from './synth';
-import type { AudioService, AudioSuspendReason } from './types';
+import type { AudioDebugStats, AudioDevControl, AudioService, AudioSuspendReason } from './types';
 
 /** Creates an audio context, or returns null when Web Audio is not available. */
 export type AudioContextFactory = () => AudioContext | null;
@@ -20,19 +29,26 @@ export function createBrowserAudioContext(): AudioContext | null {
 }
 
 /**
- * Web Audio implementation of the sound effects. The context is created on `unlock()` (a user
+ * Web Audio implementation of the sound and the music. The context is created on `unlock()` (a user
  * gesture); sounds requested before that, while disabled, hidden or without Web Audio are dropped.
+ * Sounds come from the registry (`sound-book.ts`) through the voice gate; the named methods are
+ * thin wrappers over `play`.
  */
-export class WebAudioService implements AudioService {
+export class WebAudioService implements AudioService, AudioDevControl {
   private on = true;
+  private musicOn = true;
   private readonly holds = new Set<AudioSuspendReason>();
   private ctx: AudioContext | null = null;
-  private synth: Synth | null = null;
-  private lastThudAt = -Infinity;
+  private mixer: Mixer | null = null;
+  private player: SoundPlayer | null = null;
+  private recordDuckTimer: ReturnType<typeof setTimeout> | null = null;
+  private readonly musicProxy = new MusicProxy();
+  private devLevels: Partial<{ master: number; sfx: number; music: number }> = {};
 
   constructor(
     private readonly createContext: AudioContextFactory = createBrowserAudioContext,
     private readonly random: () => number = Math.random,
+    private readonly musicFactory: MusicFactory = NO_MUSIC_FACTORY,
   ) {}
 
   get enabled(): boolean {
@@ -41,6 +57,30 @@ export class WebAudioService implements AudioService {
 
   setEnabled(on: boolean): void {
     this.on = on;
+    this.mixer?.setSfxOn(on);
+  }
+
+  get musicEnabled(): boolean {
+    return this.musicOn;
+  }
+
+  setMusicEnabled(on: boolean): void {
+    this.musicOn = on;
+    this.mixer?.setMusicOn(on);
+    this.musicProxy.setEnabled(on);
+  }
+
+  setLevels(levels: Partial<{ master: number; sfx: number; music: number }>): void {
+    this.devLevels = { ...this.devLevels, ...levels };
+    this.mixer?.setDevScales(levels);
+  }
+
+  get music(): MusicControl {
+    return this.musicProxy;
+  }
+
+  duckMusic(reason: DuckReason, on: boolean): void {
+    this.mixer?.duckMusic(reason, on);
   }
 
   unlock(): void {
@@ -48,15 +88,26 @@ export class WebAudioService implements AudioService {
       try {
         const ctx = this.createContext();
         if (!ctx) return;
+        const mixer = new Mixer(ctx);
+        const synth = new Synth(ctx, mixer, this.random);
         this.ctx = ctx;
-        this.synth = new Synth(ctx);
+        this.mixer = mixer;
+        this.player = new SoundPlayer(synth);
+        if (!this.on) mixer.setSfxOn(false);
+        if (!this.musicOn) mixer.setMusicOn(false);
+        mixer.setDevScales(this.devLevels);
+        this.musicProxy.attach(this.musicFactory(musicHostOf(mixer, this.random)));
       } catch {
         this.ctx = null;
-        this.synth = null;
+        this.mixer = null;
+        this.player = null;
         return;
       }
     }
-    if (this.holds.size === 0) this.run((ctx) => ctx.resume());
+    if (this.holds.size === 0) {
+      this.run((ctx) => ctx.resume());
+      this.kick();
+    }
   }
 
   suspend(reason: AudioSuspendReason): void {
@@ -69,202 +120,64 @@ export class WebAudioService implements AudioService {
     if (this.holds.size === 0) this.run((ctx) => ctx.resume());
   }
 
-  drop(): void {
-    this.play((s) => {
-      const pitch = jitterRatio(SFX.drop.pitchJitter, this.random);
-      s.tone(SFX.drop.thump, { pitch });
-      s.noise(SFX.drop.slap, { pitch });
-    });
+  debugStats(): AudioDebugStats {
+    return { liveNodes: this.mixer?.tally.live ?? 0, contextState: this.ctx?.state ?? 'none' };
   }
 
-  perfect(comboStep: number): void {
-    this.play((s) => {
-      const bell = SFX.perfect;
-      const freq = comboNoteFreq(comboStep);
-      const scale = comboGainScale(comboStep);
-      for (const p of bell.partials) {
-        s.tone(
-          {
-            wave: 'sine',
-            freq: freq * p.ratio,
-            attack: bell.attack,
-            duration: bell.duration * p.decay,
-            gain: p.gain,
-          },
-          { gain: scale },
-        );
-      }
-    });
-  }
-
-  bite(): void {
-    this.play((s) => s.noiseSequence(SFX.bite.bursts));
-  }
-
-  coin(): void {
-    this.play((s) => s.sequence(SFX.coin.notes));
-  }
-
-  berry(): void {
-    this.play((s) => s.chord(SFX.berry, SFX.berry.freqs, SFX.berry.stagger));
-  }
-
-  ability(rarity: Rarity): void {
-    this.play((s) => {
-      s.noise(SFX.ability.puff);
-      s.sequence(SFX.ability.byRarity[rarity].notes);
-    });
-  }
-
-  rainbowChime(): void {
-    this.play((s) => s.sequence(SFX.rainbowChime.notes));
-  }
-
-  rainbowJoke(): void {
-    this.play((s) => s.sequence(SFX.rainbowJoke.notes));
-  }
-
-  cloudPuff(): void {
-    this.play((s) =>
-      s.noise({ ...SFX.ability.puff, gain: SFX.ability.puff.gain * SFX.cloudPuff.puffGainShare }),
-    );
-  }
-
-  shieldPop(): void {
-    this.play((s) => {
-      s.tone(SFX.shieldPop.blip);
-      s.noise(SFX.shieldPop.pop);
-    });
-  }
-
-  sneeze(): void {
-    this.play((s) => {
-      s.tone(SFX.sneeze.squeak);
-      s.noise(SFX.sneeze.puff, { delay: SFX.sneeze.puff.delay });
-    });
-  }
-
-  miss(): void {
-    this.play((s) => {
-      s.tone(SFX.miss.whistle);
-      s.tone(SFX.miss.boom, { delay: SFX.miss.boomDelay });
-      s.noise(SFX.miss.boomNoise, { delay: SFX.miss.boomDelay });
-    });
-  }
-
-  collapseThud(index: number): void {
-    this.play((s) => {
-      if (s.now - this.lastThudAt < SFX.collapse.minIntervalSec) return;
-      this.lastThudAt = s.now;
-      s.tone(SFX.collapse.thud, {
-        gain: collapseThudGain(index),
-        pitch: jitterRatio(SFX.collapse.pitchJitter, this.random),
-      });
-    });
-  }
-
-  record(): void {
-    this.play((s) => {
-      const fan = SFX.record;
-      const last = fan.semitones.length - 1;
-      fan.semitones.forEach((semitones, i) => {
-        s.tone(
-          {
-            wave: fan.wave,
-            freq: noteFreq(fan.rootFreq, semitones),
-            attack: fan.attack,
-            duration: i === last ? fan.finalDuration : fan.duration,
-            gain: fan.gain,
-          },
-          { delay: i * fan.spacing },
-        );
-      });
-    });
-  }
-
-  recordBlip(): void {
-    this.play((s) => s.sequence(SFX.recordBlip.notes));
-  }
-
-  click(): void {
-    this.play((s) => s.tone(SFX.click));
-  }
-
-  lickSlurp(): void {
-    this.play((s) => {
-      const { tone, wet, pop } = SFX.lick.slurp;
-      s.tone(tone);
-      s.noise(wet);
-      s.tone(pop, { delay: pop.delay });
-    });
-  }
-
-  lickSlurpLong(): void {
-    this.play((s) => {
-      const { wet, notes } = SFX.lick.long;
-      s.noise(wet);
-      s.sequence(notes);
-    });
-  }
-
-  lickSmack(): void {
-    this.play((s) => {
-      const { click, pop } = SFX.lick.smack;
-      s.noise(click);
-      s.tone(pop);
-    });
-  }
-
-  lickHum(): void {
-    this.play((s) => s.sequence(SFX.lick.mmm));
-  }
-
-  guestSplat(): void {
-    this.play((s) => {
-      const { thump, sub, wet } = SFX.guest.splat;
-      s.tone(thump);
-      s.tone(sub);
-      s.noise(wet);
-    });
-  }
-
-  guestPeel(): void {
-    this.play((s) => {
-      const { notes, click } = SFX.guest.peel;
-      s.sequence(notes);
-      s.noiseSequence([click]);
-    });
-  }
-
-  guestBuzz(): void {
-    this.play((s) => s.sequence(SFX.guest.buzz));
-  }
-
-  guestGiggle(): void {
-    this.play((s) => s.sequence(SFX.guest.giggle));
-  }
-
-  topperHop(): void {
-    this.play((s) => {
-      const { notes, click } = SFX.topperHop;
-      s.sequence(notes);
-      s.noise(click);
-    });
-  }
-
-  squeak(pitch: number): void {
-    this.play((s) =>
-      s.tone(SFX.squeak, { pitch: Number.isFinite(pitch) && pitch > 0 ? pitch : 1 }),
-    );
-  }
-
-  /** Plays through the synth if sound is on, unlocked and visible; never throws. */
-  private play(sound: (synth: Synth) => void): void {
-    if (!this.on || this.holds.size > 0 || !this.synth) return;
+  play<K extends SoundId>(id: K, ...args: SoundArgs[K]): void {
+    if (!this.on || this.holds.size > 0 || !this.player) return;
     try {
-      sound(this.synth);
+      const result = this.player.play(id, args);
+      if (result.played && result.ducksMusic) this.duckForLength(result.length);
     } catch {
       // A failing sound must never break the game.
+    }
+  }
+
+  drop = (): void => this.play('drop');
+  perfect = (comboStep: number): void => this.play('perfect', comboStep);
+  bite = (): void => this.play('bite');
+  coin = (): void => this.play('coin');
+  berry = (): void => this.play('berry');
+  ability = (rarity: Rarity): void => this.play('ability', rarity);
+  rainbowChime = (): void => this.play('rainbowChime');
+  rainbowJoke = (): void => this.play('rainbowJoke');
+  cloudPuff = (): void => this.play('cloudPuff');
+  shieldPop = (): void => this.play('shieldPop');
+  sneeze = (): void => this.play('sneeze');
+  miss = (): void => this.play('miss');
+  collapseThud = (index: number): void => this.play('collapseThud', index);
+  record = (): void => this.play('record');
+  recordBlip = (): void => this.play('recordBlip');
+  click = (): void => this.play('click');
+  lickSlurp = (): void => this.play('lickSlurp');
+  lickSlurpLong = (): void => this.play('lickSlurpLong');
+  lickSmack = (): void => this.play('lickSmack');
+  lickHum = (): void => this.play('lickHum');
+  guestSplat = (): void => this.play('guestSplat');
+  guestPeel = (): void => this.play('guestPeel');
+  guestBuzz = (): void => this.play('guestBuzz');
+  guestGiggle = (): void => this.play('guestGiggle');
+  topperHop = (): void => this.play('topperHop');
+  squeak = (pitch: number): void => this.play('squeak', pitch);
+
+  /** The music stays turned down for `length` seconds (the record fanfare). */
+  private duckForLength(length: number): void {
+    if (this.recordDuckTimer !== null) clearTimeout(this.recordDuckTimer);
+    this.duckMusic('record', true);
+    this.recordDuckTimer = setTimeout(() => {
+      this.recordDuckTimer = null;
+      this.duckMusic('record', false);
+    }, length * 1000);
+  }
+
+  /** The silent unlock source, until the context runs; never throws. */
+  private kick(): void {
+    if (this.ctx?.state === 'running') return;
+    try {
+      this.mixer?.kick();
+    } catch {
+      // Not needed on a modern browser.
     }
   }
 

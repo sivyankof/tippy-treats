@@ -40,6 +40,7 @@ function smokeVerdict(report, problems) {
   console.log(
     `smoke: ${ok ? 'ok' : 'FAIL'}, steps ${done}/${total}, ${problems.length} messages, ` +
       `${pair('objects', b.objects, a.objects)}, ${pair('listeners', b.listeners, a.listeners)}, ` +
+      `${pair('audioNodes', b.audioNodes, a.audioNodes)}, ` +
       `${pair('tweens', b.tweens, a.tweens)}, jokes ${report.status.jokes}, arcs ${report.status.arcs}, ${report.seconds} s`,
   );
   return ok ? 0 : 1;
@@ -49,7 +50,13 @@ async function main() {
   const url = String(arg('url', 'http://localhost:5173/'));
   const minutes = Number(arg('minutes', 10));
   const rich = arg('rich', false) === true;
-  const browser = await chromium.launch({ args: ['--use-angle=d3d11', '--ignore-gpu-blocklist'] });
+  const browser = await chromium.launch({
+    args: [
+      '--use-angle=d3d11',
+      '--ignore-gpu-blocklist',
+      '--autoplay-policy=no-user-gesture-required',
+    ],
+  });
   const page = await browser.newPage({
     viewport: { width: 390, height: 844 },
     userAgent: IPHONE_UA,

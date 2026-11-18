@@ -1,12 +1,34 @@
 import type { Rarity } from '../../data/rarity';
+import type { MusicControl } from './music-control';
+import type { DuckReason } from './mixer-math';
+import type { SoundArgs, SoundId } from './sound-args';
 
-/** Why sound is held back; the audio runs again only when none is left. */
-export type AudioSuspendReason = 'app' | 'ad';
+/** Why sound is held back; the audio runs again only when none is left. `silent` is the device's silent mode. */
+export type AudioSuspendReason = 'app' | 'ad' | 'silent';
+
+/** Diagnostics for the leak check and the perf run (dev tools only). */
+export interface AudioDebugStats {
+  /** Audio nodes created and not yet released (sounds in flight, music voices). */
+  liveNodes: number;
+  /** `AudioContext.state`, or `none` before the first gesture. */
+  contextState: string;
+}
 
 /** Game sound effects. Every method is a silent no-op when sound is off, locked or unsupported. */
 export interface AudioService {
+  /** The sound effects switch (the `sfx` setting). */
   readonly enabled: boolean;
   setEnabled(on: boolean): void;
+  /** The music switch (the `music` setting). */
+  readonly musicEnabled: boolean;
+  setMusicEnabled(on: boolean): void;
+  /** Music player: safe to call before the audio is unlocked (the calls are replayed then). */
+  readonly music: MusicControl;
+  /** Turns the music down by 40% while any reason holds (a window is open, the record fanfare plays). */
+  duckMusic(reason: DuckReason, on: boolean): void;
+  /** Plays a registry sound by id (`SOUND_BOOK`); the named methods below are thin wrappers over this. */
+  play<K extends SoundId>(id: K, ...args: SoundArgs[K]): void;
+  debugStats(): AudioDebugStats;
   /** Call from a user gesture: creates or resumes the audio context. */
   unlock(): void;
   /** Sound stops for `reason` (the app went to the background, an ad shows). */
@@ -57,4 +79,10 @@ export interface AudioService {
   topperHop(): void;
   /** Creature squeak; `pitch` is a multiplier (1 = base pitch). */
   squeak(pitch: number): void;
+}
+
+/** Dev-only extras of the web audio (the soundboard): live bus levels, not saved. */
+export interface AudioDevControl {
+  /** Multipliers of the master, sfx and music levels; missing ones stay as they are. */
+  setLevels(levels: Partial<{ master: number; sfx: number; music: number }>): void;
 }
