@@ -1,5 +1,6 @@
 import type { StartPlaceId } from './start-places';
 import type { WeatherId } from './weather';
+import { FLIGHT_CLEAR } from './flight-clear';
 
 /** What is seen through a window for each weather (docs/06, section 5, «Погода»). Colours are muted: the tower is the brightest thing. */
 export interface WindowSky {
@@ -332,3 +333,45 @@ export const AWNING_WEATHER: Partial<Record<WeatherId, { mute: number; alpha?: n
   rain: { mute: 0.3 },
   storm: { mute: 0.3 },
 };
+
+/**
+ * The panoramic window of the start view (docs/06, «Панорамное окно»): one wide window above the tower, in the wall's layer.
+ * It is baked at `width` x `height` on the shared atlas (an own texture cost two draw calls: it broke the atlas batch twice,
+ * see docs/08) and drawn smaller on a short screen; where it would be smaller than `minScale` the old small window stays.
+ */
+export const PANORAMA = {
+  width: 640,
+  height: 640,
+  /** Glass inside the picture. */
+  glass: { x: 64, y: 72, w: 512, h: 456 },
+  /** Frame outline and the width of the frame around the glass. */
+  outlinePx: 6,
+  framePx: 34,
+  /** Sill under the glass: gap from the glass, height. */
+  sill: { gap: 24, height: 52 },
+  /** Arched top of the shop window: height of the arch. */
+  archPx: 120,
+  barPx: 16,
+  /** Vertical bar at the middle, horizontal bar at this share of the glass height. */
+  crossAt: 0.6,
+  valance: { top: 46, band: 54, scallops: 8 },
+  /** Layout on the start view: the tower of the start view, the gap under the HUD (`hudFloor`) and above the flying layer. */
+  layout: { towerLayers: 2, flightGapPx: 24, minScale: 0.6, centreShare: 0.5 },
+  /** Alpha of the whole window while the incoming layer flies in front of it (a partial mute would need a second draw). */
+  rowMuted: 0.85,
+  /** Drops, flakes and leaves of the pane: counts per weather (the lite level shows half), size against the small window's. */
+  items: { rain: 12, storm: 16, snow: 14, leaves: 5, size: 1.5 },
+  /** The storm flash in the glass: peak alpha, colour, the texture is baked this much smaller than the glass. */
+  flash: { alpha: 0.7, color: 0xf6f9ff, bakeShare: 0.5 },
+  /** Gap kept to the HUD plates (the same as the flying layer's). */
+  hudGapPx: FLIGHT_CLEAR.hudGapPx,
+} as const;
+
+/** Key of the baked panoramic window of a place and weather, and of the glass-shaped flash of its storm. */
+export function panoramaKey(place: StartPlaceId, weather: WeatherId): string {
+  return `bd_win_pano_${place}_${weather}`;
+}
+
+export function panoramaFlashKey(place: StartPlaceId): string {
+  return `bd_win_pano_flash_${place}`;
+}

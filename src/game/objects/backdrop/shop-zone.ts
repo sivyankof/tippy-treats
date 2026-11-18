@@ -22,6 +22,7 @@ import { bakeDisplay, displayLife } from './shop-display';
 import { bakeFly } from './kitchen-zone';
 import { bakeStopsSky, type ZoneArt } from './zone-scenery';
 import { bakeGlassItems, bakeWindow, windowGlassLives } from './window-weather';
+import { bakePanoramaSet, panoramaLives, panoramaMissing } from './panorama-window';
 
 type Graphics = Phaser.GameObjects.Graphics;
 
@@ -185,6 +186,7 @@ export const shopArt: ZoneArt = {
       { at: 1, color: C.skyBottom },
     ]);
     bakeWindow(scene, 'shop', look.weather);
+    bakePanoramaSet(scene, 'shop', look.weather);
     bakeGlassItems(scene, look.weather);
     bakeWall(scene);
     bakeShelves(scene);
@@ -241,6 +243,7 @@ export const shopArt: ZoneArt = {
         series: WALL_LOOK.window,
         mirror: true,
         halfH: WINDOW_LOOK.height / 2,
+        skipStart: (w, h) => !panoramaMissing(w, h),
       },
     );
     const sweets = new LayerThing(
@@ -271,6 +274,7 @@ export const shopArt: ZoneArt = {
             fadeDown: hangAlpha,
           }),
         },
+        ...panoramaLives(scene, 'shop', look.weather).map((life) => ({ slot: 3, life })),
         { slot: 3, life: window },
         ...glass.map((life) => ({ slot: 3, life })),
         { slot: 3, life: sweets },

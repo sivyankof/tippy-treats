@@ -12,6 +12,7 @@ import { collectBakeSteps } from '../../ui/bake-texture';
 import { surfaceScreenY, travellerClearBand } from '../../camera-layout';
 import { bakeSharedArt } from './art-kit';
 import { towerLayersAt } from './mountain-placement';
+import { flightRowAt } from './panorama-fit';
 import { bakeFarArt } from './far-plane';
 import { cloudsArt } from './clouds-zone';
 import { Counter } from './worktop';
@@ -89,6 +90,7 @@ export class Backdrop {
   /** True once the first frame has set the start view of the zones built with the backdrop. */
   private started = false;
   /** Lap of Space of the layer in flight; 0 before Space. */
+  private placedLayers = 0;
   private lap: number;
   /** The picture that stands in for the zones once they are frozen (the results screen). */
   private still: Phaser.GameObjects.Image | null = null;
@@ -107,6 +109,7 @@ export class Backdrop {
     readonly look: RunLook,
   ) {
     this.lap = flyingLap(state.height);
+    this.placedLayers = state.height;
     this.fade = new ZoneFade(state.zoneIndex, BACKDROP.fadeMs);
     this.lastNowMs = scene.time.now;
     this.ctx = newFrameCtx(width, height, travellerClearBand(height), scene.time.now);
@@ -119,6 +122,7 @@ export class Backdrop {
    * lap (the planet changes). One Space scenery serves every lap.
    */
   follow(state: RunBackdropState): void {
+    this.placedLayers = state.height;
     this.setLap(flyingLap(state.height));
     this.setZone(state.zoneIndex);
     this.planAhead(state.height, state.zoneIndex);
@@ -242,6 +246,7 @@ export class Backdrop {
     }
     this.scrollY = scrollY;
     this.ctx.towerLayers = towerLayersAt(scrollY, this.trayTopY, surfaceScreenY(this.ctx.height));
+    flightRowAt(this.ctx.flightRow, this.trayTopY - scrollY, this.placedLayers);
     if (this.still) return;
     const now = this.scene.time.now;
     const ctx = this.ctx;

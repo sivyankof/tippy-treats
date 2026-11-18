@@ -1,3 +1,4 @@
+import { strikeWindowFlashNow } from './panorama-flash';
 import * as Phaser from 'phaser';
 import { Rng } from '../../../core/rng';
 import type { TowerState } from '../../../core/tower-sim';
@@ -76,7 +77,10 @@ export class RunWeather {
     if (import.meta.env.DEV) {
       const win = window as Window & { tippyLightning?: () => void };
       // window.tippyLightning(): the next bolt of a storm strikes right away.
-      win.tippyLightning = strikeLightningNow;
+      win.tippyLightning = () => {
+        strikeLightningNow();
+        strikeWindowFlashNow();
+      };
     }
   }
 
