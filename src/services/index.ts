@@ -62,11 +62,11 @@ const webIap = new WebIap(stubCatalog);
 // Before any audio context or media element: the page's audio session obeys the silent switch.
 const audioSession = setupAudioSession(typeof navigator === 'undefined' ? undefined : navigator);
 const musicPlaylist = playableTracks(MUSIC_PLAYLIST, audioSession.streams);
-// The first track of the playlist loads while the game does, so the music starts right after the first tap.
+// The first track of the playlist loads while the game does (once the saved music switch says on),
+// so the music starts right after the first tap.
 const musicPreload = createMusicPreload(musicPlaylist, audioSession.streams, (track) =>
   trackUrl(track),
 );
-musicPreload.start();
 const webAudio = new WebAudioService(
   createBrowserAudioContext,
   Math.random,
@@ -75,6 +75,7 @@ const webAudio = new WebAudioService(
     streams: audioSession.streams,
     preload: musicPreload,
   }),
+  (on) => (on ? musicPreload.start() : musicPreload.release()),
 );
 
 export const services: Services = {

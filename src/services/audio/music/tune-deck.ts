@@ -42,7 +42,8 @@ export interface Deck {
 /** The element is already set to the file at `url` (the browser reports the address resolved). */
 function sameFile(el: HTMLMediaElement, url: string): boolean {
   const set = el.getAttribute('src');
-  if (!set) return false;
+  // An element whose load failed is set to the file but holds nothing: load it again.
+  if (!set || el.error) return false;
   if (set === url) return true;
   try {
     return el.src === new URL(url, el.baseURI).href;

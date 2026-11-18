@@ -212,6 +212,32 @@ describe('StreamDeck', () => {
     expect(preloaded.paused).toBe(false);
   });
 
+  it('an element whose load failed is loaded again', async () => {
+    const { pool, elements } = setup();
+    const failed = elements[2];
+    if (!failed) throw new Error('no element');
+    failed.src = '/menu.m4a';
+    (failed as unknown as { error: unknown }).error = { code: 2 };
+    const deck = StreamDeck.open(
+      { currentTime: 0, createGain: () => new FakeGain() } as unknown as BaseAudioContext,
+      { currentTime: 0, setTimeout: () => null, clearTimeout: () => undefined },
+      pool,
+      'menu',
+      SPEC,
+      '/menu.m4a',
+      false,
+    );
+    let reloads = 0;
+    Object.defineProperty(failed, 'src', {
+      get: () => '/menu.m4a',
+      set: () => {
+        reloads += 1;
+      },
+    });
+    await deck?.start(0);
+    expect(reloads).toBe(1);
+  });
+
   it('counts what it played from where it started', async () => {
     const { deck, elements, advance } = setup();
     if (!deck) throw new Error('no deck');

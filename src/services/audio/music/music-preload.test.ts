@@ -16,17 +16,21 @@ function fakeBuffer(track: MusicTrackId): AudioBuffer {
 function deps(first: MusicTrackId, extra: Partial<PreloadDeps> = {}) {
   const calls: string[] = [];
   const index = MUSIC_PLAYLIST.indexOf(first);
-  const element = { preload: '', src: '' } as unknown as HTMLMediaElement;
+  const fake: { preload: string; src: string; removeAttribute(): void; load(): void } = {
+    preload: '',
+    src: '',
+    removeAttribute(): void {
+      fake.src = '';
+    },
+    load(): void {},
+  };
+  const element = fake as unknown as HTMLMediaElement;
   const d: PreloadDeps = {
     random: () => (index + 0.5) / MUSIC_PLAYLIST.length,
     playlist: MUSIC_PLAYLIST,
     url: (track) => `/music/${track}.m4a`,
-    fetchBytes: (url) => {
-      calls.push(`fetch ${url}`);
-      return Promise.resolve(new ArrayBuffer(8));
-    },
-    decodeOffline: (_data, rate) => {
-      calls.push(`decode ${rate}`);
+    decodeOffline: (url, rate) => {
+      calls.push(`decode ${url} ${rate}`);
       return Promise.resolve(fakeBuffer(first));
     },
     makeElement: () => {
@@ -47,7 +51,7 @@ describe('MusicPreload', () => {
     const taken = preload.takeDecoded();
     expect(taken?.track).toBe('roof');
     const decoded = await taken?.decoded;
-    expect(calls).toEqual(['fetch /music/roof.m4a', `decode ${MUSIC_TRACKS.roof.sampleRate}`]);
+    expect(calls).toEqual([`decode /music/roof.m4a ${MUSIC_TRACKS.roof.sampleRate}`]);
     expect(decoded?.bounds).toEqual({ start: 0, end: MUSIC_TRACKS.roof.frames });
     // Taken once.
     expect(preload.takeDecoded()).toBeNull();
@@ -73,11 +77,26 @@ describe('MusicPreload', () => {
   });
 
   it('a failed load is quiet: the player loads the track itself', async () => {
-    const { d } = deps('stars', { fetchBytes: () => Promise.reject(new Error('offline')) });
+    const { d } = deps('stars', { decodeOffline: () => Promise.reject(new Error('offline')) });
     const preload = new MusicPreload(d);
     preload.start();
     const taken = preload.takeDecoded();
     await expect(taken?.decoded).rejects.toThrow('offline');
+  });
+
+  it('starts once, and lets go of what it readied when the music is switched off', () => {
+    const { d, calls } = deps('roof');
+    const preload = new MusicPreload(d);
+    preload.start();
+    preload.start();
+    expect(calls).toHaveLength(1);
+    preload.release();
+    expect(preload.takeDecoded()).toBeNull();
+    const stream = deps('menu');
+    const streamed = new MusicPreload(stream.d);
+    streamed.start();
+    streamed.release();
+    expect(streamed.takeElement()).toBeNull();
   });
 
   it('a page with no streams has no element for a streamed track', () => {

@@ -1,12 +1,5 @@
 import { MUSIC_TRACKS, type MusicTrackId } from '../../../data/music';
-
-/** The parts of `navigator` the audio session setup reads. */
-export interface SessionNavigator {
-  audioSession?: { type: string };
-  userAgent: string;
-  platform?: string;
-  maxTouchPoints?: number;
-}
+import { isAppleTouch, type BrowserInfo } from '../../../util/browser-info';
 
 /** What the page may play: streamed tracks need media elements, which iOS before 16.4 cannot keep ambient. */
 export interface AudioSessionInfo {
@@ -16,32 +9,29 @@ export interface AudioSessionInfo {
   ambient: boolean;
 }
 
-/** An iPhone, iPod or iPad (an iPad reports itself as a Mac with a touch screen). */
-export function isAppleTouch(nav: SessionNavigator): boolean {
-  if (/iPhone|iPad|iPod/.test(nav.userAgent)) return true;
-  return nav.platform === 'MacIntel' && (nav.maxTouchPoints ?? 0) > 1;
-}
+const AMBIENT = 'ambient';
 
 /**
  * Call before any audio context or media element exists (docs/06, section 7, "Выключатель звука
- * iPhone"): the page's audio session becomes ambient, so the whole game obeys the ring/silent
- * switch and mixes with another app's music instead of stopping it (a media element would put the
- * page into "playback" otherwise; an explicit page type overrides the elements' own). Where the
- * API is missing on an Apple touch device (iOS 15-16.3), media elements must not play at all.
- * Android and desktops are unchanged.
+ * iPhone"). On an iPhone or iPad the page's audio session becomes ambient, so the whole game obeys
+ * the ring/silent switch and mixes with another app's music instead of stopping it (a media
+ * element would put the page into "playback" otherwise; an explicit page type overrides the
+ * elements' own). The type is read back: an engine that ignores it counts as one without the API,
+ * and there media elements must not play at all (iOS 15-16.3). Android and desktops are left as
+ * they are, whatever they support.
  */
-export function setupAudioSession(nav: SessionNavigator | undefined): AudioSessionInfo {
-  if (!nav) return { streams: true, ambient: false };
+export function setupAudioSession(nav: BrowserInfo | undefined): AudioSessionInfo {
+  if (!nav || !isAppleTouch(nav)) return { streams: true, ambient: false };
   const session = nav.audioSession;
   if (session) {
     try {
-      session.type = 'ambient';
-      return { streams: true, ambient: true };
+      session.type = AMBIENT;
+      if (session.type === AMBIENT) return { streams: true, ambient: true };
     } catch {
       // An engine that refuses the type: treat it as missing.
     }
   }
-  return { streams: !isAppleTouch(nav), ambient: false };
+  return { streams: false, ambient: false };
 }
 
 /** The tracks this page can play: without streams, the non-seamless ones are left out. */

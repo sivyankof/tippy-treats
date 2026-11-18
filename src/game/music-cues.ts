@@ -8,8 +8,8 @@ import { SCENES } from './scene-keys';
  * Where the game tells the music what to play (docs/06-art-animation-audio.md, section 7,
  * "Музыка"): the playlist everywhere, the daily tower's track for its whole run, the record track
  * while the results with a new record are up. The zones, a miss, "one more run" and the screens
- * in between ask nothing new (asking for what plays changes nothing). The run's pause window stops
- * the music where it is. Calls before the first tap are remembered by the music proxy.
+ * in between ask nothing new (asking for what plays changes nothing). The run's pause window only
+ * ducks the music, like any window. Calls before the first tap are remembered by the music proxy.
  */
 
 /** Asks the music for what `cue` wants (nothing when the cue keeps the music as it is). */

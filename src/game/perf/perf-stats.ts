@@ -1,3 +1,4 @@
+import type { BrowserInfo } from '../../util/browser-info';
 import { PERF_BUDGET, PERF_SEGMENTS, type PerfSegmentDef } from '../../data/perf';
 
 /** The share of frames at or below the returned value (nearest rank), `share` in 0..1; `sorted` is ascending. */
@@ -170,17 +171,10 @@ export function formatAtlas(peak: AtlasPeak): string {
   return atlasOk(peak) ? text : `${text}!`;
 }
 
-/** The parts of `navigator` that tell a real phone from a driven or emulated browser. */
-export interface BrowserInfo {
-  webdriver?: boolean;
-  userAgent?: string;
-  platform?: string;
-  userAgentData?: { platform?: string };
-  maxTouchPoints?: number;
-}
-
 const PHONE_UA = /iPhone|iPad|iPod|Android/i;
 const DESKTOP_PLATFORM = /^(Win|Linux( x86| i\d|$)|Mac|Chrome OS|CrOS)/i;
+
+export type { BrowserInfo };
 
 /**
  * True in a headless, driven or emulated browser: its frame intervals jitter and say nothing about

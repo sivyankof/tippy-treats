@@ -130,6 +130,15 @@ export class PlaylistPlayer implements MusicControl {
     if (ready) {
       const prefetch: Prefetch = { track: ready.track, decoded: ready.decoded, ready: null };
       this.prefetch = prefetch;
+      // Still decoding at the tap: its memory counts like any decode until it ends.
+      const job = {
+        bytes: decodedBytes(MUSIC_TRACKS[ready.track], MUSIC_TRACKS[ready.track].sampleRate),
+      };
+      this.decoding.add(job);
+      const done = (): void => {
+        this.decoding.delete(job);
+      };
+      ready.decoded.then(done, done);
       ready.decoded.then(
         (decoded) => {
           prefetch.ready = decoded;
@@ -364,12 +373,19 @@ export class PlaylistPlayer implements MusicControl {
     );
   }
 
-  /** The decoded `track`: the prefetched one when it is that track, otherwise a new decode. */
+  /**
+   * The decoded `track`: the prefetched one when it is that track (a failed prefetch falls back to
+   * a decode now), otherwise a new decode.
+   */
   private decoded(track: MusicTrackId): Promise<Decoded> | null {
     const prefetch = this.prefetch;
     if (prefetch?.track === track) {
       this.prefetch = null;
-      return prefetch.decoded;
+      return prefetch.decoded.catch(() => {
+        const again = this.decode(track);
+        if (!again) throw new Error(`no file for ${track}`);
+        return again;
+      });
     }
     return this.decode(track);
   }

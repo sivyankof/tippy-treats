@@ -66,6 +66,8 @@ export class WebAudioService implements AudioService, AudioDevControl {
     private readonly createContext: AudioContextFactory = createBrowserAudioContext,
     private readonly random: () => number = Math.random,
     private readonly musicFactory: MusicFactory = NO_MUSIC_FACTORY,
+    /** Told of every state of the music switch (the first track's preload starts or lets go). */
+    private readonly onMusicSwitch: (on: boolean) => void = () => undefined,
   ) {}
 
   get enabled(): boolean {
@@ -83,6 +85,7 @@ export class WebAudioService implements AudioService, AudioDevControl {
 
   setMusicEnabled(on: boolean): void {
     this.musicOn = on;
+    this.onMusicSwitch(on);
     this.mixer?.setMusicOn(on);
     this.musicProxy.setEnabled(on);
   }

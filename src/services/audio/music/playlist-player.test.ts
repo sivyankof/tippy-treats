@@ -496,6 +496,24 @@ describe('PlaylistPlayer', () => {
     expect(decodes).toEqual([]);
   });
 
+  it('a preload still decoding at the tap counts in memory, and a failed one falls back to a decode', async () => {
+    let fail: (e: Error) => void = () => undefined;
+    const decoded = new Promise<never>((_resolve, reject) => {
+      fail = reject;
+    });
+    const { player, decodes, advance } = setup('kitchen', {
+      first: { index: MUSIC_PLAYLIST.indexOf('roof'), decoded: { track: 'roof', decoded } },
+    });
+    expect(player.state().decodedBytes).toBeGreaterThan(0);
+    player.playlist();
+    await advance(0.1);
+    fail(new Error('network'));
+    await advance(0.5);
+    expect(decodes).toEqual(['roof']);
+    expect(player.state().track).toBe('roof');
+    expect(player.state().decks).toBe(1);
+  });
+
   it('a page without streams plays only the seamless tracks', async () => {
     const { player, advance } = setup('kitchen', {
       playlist: ['kitchen', 'roof', 'stars', 'space'],
