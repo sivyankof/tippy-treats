@@ -1,3 +1,5 @@
+import { ANIM } from '../../data/anim';
+import { BALANCE } from '../../data/balance';
 import { TOWER_WEATHER } from '../../data/tower-weather';
 import { smoothstep } from '../../util/math';
 
@@ -53,5 +55,35 @@ export function yawnPose(ms: number, out: YawnPose): YawnPose | null {
   const spring = Math.sin(Math.PI * Math.max(0, Math.min(1, (u - SHUT_SHARE) / (1 - SHUT_SHARE))));
   out.stretch = YAWN.stretchGape * (1 - smoothstep(u)) - YAWN.squashClose * spring;
   out.lift = YAWN.liftPx * (1 - smoothstep(u));
+  return out;
+}
+
+/** Where the yawning mouth is placed and how big it is (face px; the picture's origin is at `mouthOriginY`). */
+export interface YawnMouth {
+  y: number;
+  scale: number;
+}
+
+/**
+ * Fits the mouth of the yawn into the body of the layer: its top hangs just under the shut eyes and its bottom, with the
+ * face stretch, lift and the face scale taken into account, stays `bottomMarginPx` above the inner edge of the bottom
+ * outline of the layer. A narrow layer (a small face) or a stretched one gets a smaller mouth, never one past the body.
+ * `faceY` is the face centre from the layer centre, `faceScale` the face's scale on this layer. Fills and returns `out`.
+ */
+export function fitYawnMouth(
+  open: number,
+  stretch: number,
+  lift: number,
+  faceY: number,
+  faceScale: number,
+  out: YawnMouth,
+): YawnMouth {
+  const Y = YAWN;
+  const limit = BALANCE.layer.height / 2 - ANIM.layer.outline - Y.bottomMarginPx;
+  const bottomMax = ((limit - faceY) / faceScale + lift) / (1 + stretch);
+  const room = Math.max(0, bottomMax - Y.mouthTopPx);
+  const shown = Math.max(open, 0.01);
+  out.scale = Math.min(Y.mouthScale, room / (Y.mouthPicturePx * shown));
+  out.y = Y.mouthTopPx + Y.mouthOriginY * Y.mouthPicturePx * out.scale * shown;
   return out;
 }

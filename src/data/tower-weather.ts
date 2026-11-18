@@ -87,6 +87,13 @@ export const TOWER_WEATHER = {
       stretchGape: 0.2,
       /** The mouth is this big against its picture. */
       mouthScale: 1.1,
+      /** Height of the mouth picture (px, `face_mouth_yawn.svg`), and the share of it above the point it is placed by. */
+      mouthPicturePx: 48,
+      mouthOriginY: 0.3,
+      /** The top of the mouth rides this far under the face centre (just under the shut eyes), face px. */
+      mouthTopPx: 9,
+      /** The mouth stops this far above the inner edge of the layer's bottom outline, px. */
+      bottomMarginPx: 4,
       /** The face lifts this far while it draws itself up (face px). */
       liftPx: 3,
       /** The overshoot of the close: the face squashes this much at its lowest. */
