@@ -130,6 +130,7 @@ export class ResultsStart implements ExtraButtons {
     this.ad = { button, label };
     this.buttons.push(button);
     if (plan.ad === 'unavailable') this.greyAd();
+    else resetAdLabel(label, pairLabelWidth);
     const shift = (pair.width + cfg.pairGap) / 2;
     price.setX(-shift);
     button.setX(shift);

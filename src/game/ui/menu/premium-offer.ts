@@ -35,10 +35,10 @@ export function openNoAdsOffer(scene: Phaser.Scene, price: string, onClosed: () 
       repeat: -1,
     });
   }
-  const text = createOutlinedText(scene, 0, cfg.textY, t('noAdsOffer.text'), cfg.textFont);
-  fitText(text, popup.innerWidth);
-  const note = createOutlinedText(scene, 0, cfg.noteY, t('shop.noAds.desc'), cfg.noteFont);
-  fitText(note, popup.innerWidth);
+  const text = createOutlinedText(scene, 0, cfg.textY, t('shop.noAds.desc'), cfg.textFont)
+    .setAlign('center')
+    .setWordWrapWidth(popup.innerWidth);
+  const note = createOutlinedText(scene, 0, cfg.noteY, '', cfg.noteFont);
   popup.content.add([text, note]);
 
   let busy = false;

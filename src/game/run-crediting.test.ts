@@ -4,6 +4,7 @@ import { TimingBot } from '../core/bot';
 import { Rng } from '../core/rng';
 import type { RunMode, RunResult } from '../core/run-result';
 import { TowerSim } from '../core/tower-sim';
+import { CONTINUE_ANIM } from '../data/continue-anim';
 import { DAILY } from '../data/daily';
 import { STORAGE_KEYS } from '../data/storage';
 import { MemoryStorage } from '../services/storage/memory';
@@ -163,6 +164,7 @@ describe('a run is credited once', () => {
       player: { runsFinished: 3 },
     });
     expect(flow.open('classic', 0)).toBe(true);
+    flow.update(CONTINUE_ANIM.inputDelayMs);
     const before = { coins: state.coins, berries: state.berries };
     expect(flow.payWithBerries()).toBe(true);
     expect(state.coins).toBe(before.coins);
@@ -182,6 +184,7 @@ describe('a run is credited once', () => {
       player: { runsFinished: 3 },
     });
     expect(flow.open('classic', 0)).toBe(true);
+    flow.update(CONTINUE_ANIM.inputDelayMs);
     await flow.watchAd();
     expect(flow.takeAction()).toBe('continue');
     expect(state.coins).toBe(0);

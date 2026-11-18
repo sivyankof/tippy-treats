@@ -10,7 +10,7 @@ import { TREASURE_TEXTURES, createTreasureTextures } from '../../fx/treasure-tex
 import { createTextButton, type Button } from '../button';
 import { NumberRoll } from '../number-roll';
 import { createOutlinedText } from '../outlined-text';
-import { markAdUnavailable } from './ad-unavailable';
+import { markAdUnavailable, plainAdLabel, resetAdLabel } from './ad-unavailable';
 import { fitText } from './fit-text';
 import { stackRows, type Row } from './results-layout';
 import type { CoinLine } from './results-text';
@@ -67,6 +67,7 @@ export class ResultsCoins {
       });
       this.buttonLabel = label;
       this.button = button;
+      resetAdLabel(label, cfg.adButton.width - cfg.adTextPadding);
       rows.push({ obj: this.button, height: cfg.adButton.height });
     }
     this.height = stackRows(this.container, rows, cfg.rowGap);
@@ -141,7 +142,7 @@ export class ResultsCoins {
       }
       this.roll.set(this.earned * 2);
       this.buttonLabel?.setText(t('results.doubled'));
-      if (this.buttonLabel) fitText(this.buttonLabel, cfg.adButton.width - cfg.adTextPadding);
+      if (this.buttonLabel) plainAdLabel(this.buttonLabel, cfg.adButton.width - cfg.adTextPadding);
       services.audio.coin();
       return;
     }

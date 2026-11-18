@@ -4,8 +4,8 @@ import { PALETTE } from './palette';
 export const CONTINUE_ANIM = {
   /** Visual time runs at this share of real time while the missed layer falls past. */
   slowMoScale: 0.3,
-  /** "No thanks" appears this long after the window opens (accidental-tap guard). */
-  declineDelayMs: 1000,
+  /** Every button of the window is inactive this long after it opens (accidental-tap guard), then all switch on at once. */
+  inputDelayMs: 600,
   /** The last seconds of the timer get a tick and turn orange. */
   urgentFromMs: 2000,
   /** Easing names shared by the window and the flag. */
@@ -79,10 +79,10 @@ export const CONTINUE_ANIM = {
   },
   decline: {
     font: 44,
-    /** The small link-like button pulses between these alphas. */
-    alphaRange: [0.55, 1],
-    pulseMs: 1400,
-    fadeInMs: 240,
+    /** Pale caption while the buttons are inactive; it stands there from the first frame. */
+    lockedAlpha: 0.35,
+    /** The caption turns from pale to normal in this time once the buttons switch on. */
+    fadeInMs: 120,
     /** Hit area of the small button. */
     hitWidth: 420,
     hitHeight: 96,

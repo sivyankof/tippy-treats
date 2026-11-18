@@ -65,15 +65,29 @@ describe('ContinueFlow', () => {
     flow.open('classic', 0);
     flow.decline();
     expect(flow.takeAction()).toBeNull();
-    flow.update(CONTINUE_ANIM.declineDelayMs);
+    flow.update(CONTINUE_ANIM.inputDelayMs);
     flow.decline();
     expect(flow.takeAction()).toBe('decline');
+  });
+
+  it('takes no ad or berry tap before the buttons switch on', async () => {
+    const { flow, wallet } = setup('rewarded', true, 100);
+    flow.open('classic', 0);
+    flow.update(CONTINUE_ANIM.inputDelayMs - 1);
+    expect(flow.inputReady).toBe(false);
+    expect(flow.payWithBerries()).toBe(false);
+    await flow.watchAd();
+    expect(wallet.berries).toBe(100);
+    expect(flow.takeAction()).toBeNull();
+    flow.update(1);
+    expect(flow.inputReady).toBe(true);
+    expect(flow.payWithBerries()).toBe(true);
   });
 
   it('keeps a paid continue when "No thanks" follows in the same frame', () => {
     const { flow, wallet } = setup('rewarded', true, 100);
     flow.open('classic', 0);
-    flow.update(CONTINUE_ANIM.declineDelayMs);
+    flow.update(CONTINUE_ANIM.inputDelayMs);
     const before = wallet.berries;
     const cost = flow.offer?.berryCost ?? 0;
     expect(cost).toBeGreaterThan(0);
@@ -87,6 +101,7 @@ describe('ContinueFlow', () => {
   it('continues after a rewarded ad', async () => {
     const { flow } = setup('rewarded');
     flow.open('classic', 0);
+    flow.update(CONTINUE_ANIM.inputDelayMs);
     await flow.watchAd();
     expect(flow.takeAction()).toBe('continue');
   });
@@ -110,6 +125,7 @@ describe('ContinueFlow', () => {
   it('disables the ad button when the ad turns out unavailable', async () => {
     const { flow } = setup('unavailable', true, 20);
     flow.open('classic', 0);
+    flow.update(CONTINUE_ANIM.inputDelayMs);
     await flow.watchAd();
     expect(flow.offer).toEqual({ ad: 'unavailable', berryCost: 15, berriesMissing: 0 });
     expect(flow.takeAction()).toBeNull();
@@ -118,6 +134,7 @@ describe('ContinueFlow', () => {
   it('spends berries and continues', () => {
     const { flow, wallet } = setup('rewarded', true, 20);
     flow.open('classic', 0);
+    flow.update(CONTINUE_ANIM.inputDelayMs);
     expect(flow.payWithBerries()).toBe(true);
     expect(wallet.berries).toBe(5);
     expect(flow.takeAction()).toBeNull();
@@ -128,6 +145,7 @@ describe('ContinueFlow', () => {
   it('keeps the window open while the payment is shown', () => {
     const { flow } = setup('rewarded', true, 20);
     flow.open('classic', 0);
+    flow.update(CONTINUE_ANIM.inputDelayMs);
     flow.payWithBerries();
     expect(flow.paying).toBe(true);
     flow.update(CONTINUE_ANIM.balance.paidHoldMs - 1);
@@ -150,6 +168,7 @@ describe('ContinueFlow', () => {
   it('reports the wallet balance for the counter, and the new one after paying', () => {
     const { flow } = setup('rewarded', true, 20);
     flow.open('classic', 0);
+    flow.update(CONTINUE_ANIM.inputDelayMs);
     expect(flow.balance).toBe(20);
     flow.payWithBerries();
     expect(flow.balance).toBe(5);

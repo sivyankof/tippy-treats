@@ -5,7 +5,7 @@ import { formatNumber, t, tn } from '../../../i18n';
 import { services } from '../../../services';
 import { gameState } from '../../../state';
 import { showRewarded } from '../../rewarded';
-import { markAdUnavailable } from './ad-unavailable';
+import { markAdUnavailable, plainAdLabel, resetAdLabel } from './ad-unavailable';
 import { cssColor } from '../../../util/color';
 import { createTextButton, type Button } from '../button';
 import { createOutlinedText } from '../outlined-text';
@@ -138,13 +138,9 @@ export function openGiftWindow(
   };
 
   const offerDouble = (coins: number): void => {
+    const adLabelWidth = cfg.button.width - cfg.button.radius * 2;
     const markAdGone = (button: Button, label: Phaser.GameObjects.Text): void =>
-      markAdUnavailable(
-        button,
-        label,
-        cfg.button.width - cfg.button.radius * 2,
-        cfg.adDisabledAlpha,
-      );
+      markAdUnavailable(button, label, adLabelWidth, cfg.adDisabledAlpha);
     let busy = false;
     let doubled: ReturnType<typeof addButton> | null = null;
     const watch = async (button: Button, label: Phaser.GameObjects.Text): Promise<void> => {
@@ -158,6 +154,7 @@ export function openGiftWindow(
         const m = button.getWorldTransformMatrix();
         flyReward(scene, { currency: 'coins', amount: coins, from: { x: m.tx, y: m.ty }, wallet });
         label.setText(t('gift.doubled'));
+        plainAdLabel(label, adLabelWidth);
         return;
       }
       if (result === 'unavailable') markAdGone(button, label);
@@ -172,6 +169,7 @@ export function openGiftWindow(
         if (doubled) void watch(doubled.button, doubled.label);
       });
       if (!services.ads.isRewardedReady()) markAdGone(doubled.button, doubled.label);
+      else resetAdLabel(doubled.label, adLabelWidth);
     });
   };
 

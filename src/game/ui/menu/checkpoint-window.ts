@@ -9,7 +9,7 @@ import { createTextButton, type Button } from '../button';
 import { BalanceChip, followBalance } from '../style/balance-chip';
 import { PopupWindow } from '../style/dialog-window';
 import { createPriceButton } from '../style/price-button';
-import { markAdUnavailable } from './ad-unavailable';
+import { markAdUnavailable, resetAdLabel } from './ad-unavailable';
 import { buttonsFor, keepSelection, type StartHeight } from './checkpoint-model';
 import { createAdsSpentNote } from './no-more-starts-note';
 import { createCheckpointStep } from './checkpoint-step';
@@ -160,7 +160,7 @@ export function openCheckpointWindow(
     place(ad.button, 1);
     if (wanted.ad === 'unavailable') {
       markAdUnavailable(ad.button, ad.label, labelWidth, cfg.disabledAlpha);
-    }
+    } else resetAdLabel(ad.label, labelWidth);
   };
 
   function render(): void {

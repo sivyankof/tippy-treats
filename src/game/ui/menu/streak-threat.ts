@@ -6,7 +6,7 @@ import { t, tn } from '../../../i18n';
 import { services } from '../../../services';
 import { gameState } from '../../../state';
 import { showRewarded } from '../../rewarded';
-import { markAdUnavailable } from './ad-unavailable';
+import { markAdUnavailable, resetAdLabel } from './ad-unavailable';
 import { createTextButton, type Button } from '../button';
 import { createOutlinedText } from '../outlined-text';
 import { BalanceChip, followBalance } from '../style/balance-chip';
@@ -103,6 +103,7 @@ export function openStreakThreat(scene: Phaser.Scene, onClosed?: () => void): vo
   };
 
   if (!services.ads.isRewardedReady()) markAdGone();
+  else resetAdLabel(ad.label, cfg.buttonWidth - cfg.buttonRadius * 2);
 
   place(
     createPriceButton(scene, {

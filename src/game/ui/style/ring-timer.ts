@@ -3,10 +3,9 @@ import { PALETTE } from '../../../data/palette';
 import { cssColor } from '../../../util/color';
 import { createOutlinedText } from '../outlined-text';
 import { createVolumeImage, faceOffsetY, lookOf } from './volume';
+import { drawRingArc } from './volume-bar';
 
 const FULL_TURN = Math.PI * 2;
-/** The arc starts at twelve o'clock and runs clockwise. */
-const START_ANGLE = -Math.PI / 2;
 
 /** Size and motion of a ring timer. */
 export interface RingTimerLook {
@@ -65,14 +64,15 @@ export class RingTimer extends Phaser.GameObjects.Container {
     scene.add.existing(this);
   }
 
-  /** Draws the arc of the time left, `share` of a full turn (0 hides it). */
+  /** Draws the arc of the time left, `share` of a full turn (0 hides it), with volume (`volume-bar.ts`). */
   setShare(share: number, color: number): void {
     const g = this.arc.clear();
-    if (share <= 0) return;
-    g.lineStyle(this.look.ringWidth, color, 1);
-    g.beginPath()
-      .arc(0, 0, this.look.radius, START_ANGLE, START_ANGLE + FULL_TURN * Math.min(1, share))
-      .strokePath();
+    drawRingArc(
+      g,
+      { cx: 0, cy: 0, radius: this.look.radius, ringWidth: this.look.ringWidth },
+      share,
+      color,
+    );
   }
 
   /** Shows `value` in the middle; `pop` makes it jump in. */

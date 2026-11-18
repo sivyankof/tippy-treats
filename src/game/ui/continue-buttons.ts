@@ -30,6 +30,10 @@ export class ContinueButtons {
   private key: string | null = null;
   /** Last enabled state given to the ad button: `setEnabled` resets a press, so only changes are passed on. */
   private adEnabled: boolean | null = null;
+  /** The buttons take taps (off for the first moments after the window opens). */
+  private active = false;
+  private adReady = false;
+  private busy = false;
 
   constructor(
     private readonly scene: Phaser.Scene,
@@ -46,6 +50,7 @@ export class ContinueButtons {
       'ui_continue_button',
       actions.onWatchAd,
     ).breathe();
+    resetAdLabel(this.adLabel, adLabelWidth);
     this.root = scene.add.container(0, 0, [this.ad]);
     this.disable();
   }
@@ -57,11 +62,28 @@ export class ContinueButtons {
     this.pay?.setEnabled(false);
   }
 
+  /**
+   * Switches taps on or off for all buttons at once. Only the taps change: no button is redone,
+   * moved or redrawn, so the window looks the same from its first frame.
+   */
+  setActive(active: boolean): void {
+    if (this.active === active) return;
+    this.active = active;
+    this.applyEnabled();
+  }
+
+  private applyEnabled(): void {
+    this.enableAd(this.adReady && !this.busy && this.active);
+    this.pay?.setEnabled(!this.busy && this.active);
+  }
+
   /** Which buttons show, what they say and whether they react. */
   sync(offer: Readonly<ContinueOffer>, busy: boolean): void {
     const key = `${offer.ad}|${offer.berryCost}|${offer.berriesMissing}|${busy}`;
     if (key === this.key) return;
     this.key = key;
+    this.busy = busy;
+    this.adReady = offer.ad === 'ready';
     let row = 0;
     const step = win.berryButtonY - win.adButtonY;
     this.ad.setVisible(offer.ad !== null);
@@ -72,7 +94,7 @@ export class ContinueButtons {
         resetAdLabel(this.adLabel, adLabelWidth);
       } else showAdCaption(this.adLabel, adLabelWidth);
       this.ad.setPlateAlpha(ready ? 1 : btn.disabledAlpha);
-      this.enableAd(ready && !busy);
+      this.enableAd(ready && !busy && this.active);
       this.ad.setY(win.adButtonY + row++ * step);
     }
     this.rebuildPay(offer, win.adButtonY + row * step, busy);
@@ -99,7 +121,7 @@ export class ContinueButtons {
       onShort: this.actions.onShort,
     }).setY(y);
     if (!short) pay.breathe();
-    pay.setEnabled(!busy);
+    pay.setEnabled(!busy && this.active);
     this.root.add(pay);
     this.pay = pay;
   }
