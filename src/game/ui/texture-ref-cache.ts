@@ -30,6 +30,14 @@ export class TextureRefCache {
     return (this.refs.get(key) ?? 0) > 0;
   }
 
+  /** Forgets `key` now if nobody holds it (the caller removes the texture); true when it did. */
+  dropIfIdle(key: string): boolean {
+    const users = this.refs.get(key);
+    if (users === undefined || users > 0) return false;
+    this.refs.delete(key);
+    return true;
+  }
+
   /** Removes (through `remove`) the oldest unused keys beyond `idleLimit`. */
   evict(remove: (key: string) => void): void {
     let idle = [...this.refs].filter(([, users]) => users <= 0);

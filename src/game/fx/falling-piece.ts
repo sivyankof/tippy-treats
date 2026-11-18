@@ -70,8 +70,10 @@ export class FallingPieces {
   constructor(scene: Phaser.Scene) {
     this.pool = new TimedPool(
       () => new LayerView(scene).setStageMode('level'),
+      // A piece that is done showed a layer that has left the game (an overhang, a missed layer, a collapsing
+      // one): its picture is not kept among the idle layer pictures, so the collapse does not fill the atlas page.
       (view) => {
-        view.setVisible(false).releaseArt();
+        view.setVisible(false).releaseArt(true);
       },
       ANIM.pool.maxLivePieces,
     );

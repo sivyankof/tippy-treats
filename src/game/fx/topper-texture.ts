@@ -3,6 +3,7 @@ import {
   PLAIN_TOPPERS,
   STRAWBERRY_PAD_PX,
   TOPPER_KINDS,
+  topperBakedSize,
   type TopperKind,
 } from '../../data/plain-toppers';
 import { DEG_TO_RAD } from '../../util/math';
@@ -243,11 +244,10 @@ export function ensureTopperTexture(scene: Phaser.Scene, kind: TopperKind): stri
     }
     return key;
   }
-  const { width, height, field } = kinds[kind];
+  const { field } = kinds[kind];
   const s = PLAIN_TOPPERS.bakeScale * PLAIN_TOPPERS.showScale;
-  const fullWidth = width + field.left + field.right;
-  const fullHeight = height + field.top + field.bottom;
-  bakeTexture(scene, key, fullWidth * s, fullHeight * s, (g) => {
+  const size = topperBakedSize(kind);
+  bakeTexture(scene, key, size.width, size.height, (g) => {
     g.scaleCanvas(s, s);
     g.translateCanvas(field.left, field.top);
     DRAWERS[kind](g);

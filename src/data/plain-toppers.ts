@@ -151,3 +151,17 @@ export const PLAIN_TOPPERS = {
   /** How many hopped-off toppers fly at once (the oldest is reused). */
   maxFlying: 4,
 } as const;
+
+/** Size (texture px) of the baked picture of a topper kind: the strawberry is the padded berry picture, the others their padded drawing at `bakeScale * showScale`. */
+export function topperBakedSize(kind: TopperKind): { width: number; height: number } {
+  if (kind === 'strawberry') {
+    const side = BERRY_LOOK.textureSize + 2 * STRAWBERRY_PAD_PX;
+    return { width: side, height: side };
+  }
+  const { width, height, field } = PLAIN_TOPPERS.kinds[kind];
+  const s = PLAIN_TOPPERS.bakeScale * PLAIN_TOPPERS.showScale;
+  return {
+    width: (width + field.left + field.right) * s,
+    height: (height + field.top + field.bottom) * s,
+  };
+}

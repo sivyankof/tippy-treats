@@ -147,3 +147,11 @@ export class ShelfPacker {
     return shelf;
   }
 }
+
+/**
+ * The items in the order to pack them when they arrive together: tallest first (a stable sort), so each opens a
+ * shelf only when no taller one already holds a run wide enough, and pictures of close heights share a shelf.
+ */
+export function tallestFirst<T extends { height: number }>(items: readonly T[]): T[] {
+  return [...items].sort((a, b) => b.height - a.height);
+}

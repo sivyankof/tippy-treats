@@ -48,6 +48,21 @@ describe('TextureRefCache', () => {
     expect(evicted(cache)).toEqual([]);
   });
 
+  it('drops an unused key at once, but never a held or unknown one', () => {
+    const cache = new TextureRefCache(16);
+    cache.acquire('a');
+    cache.acquire('b');
+    cache.acquire('b');
+    cache.release('a');
+    cache.release('b');
+    expect(cache.dropIfIdle('a')).toBe(true);
+    expect(cache.dropIfIdle('a')).toBe(false);
+    expect(cache.dropIfIdle('b')).toBe(false);
+    expect(cache.isHeld('b')).toBe(true);
+    expect(cache.dropIfIdle('ghost')).toBe(false);
+    expect(evicted(cache)).toEqual([]);
+  });
+
   it('counts a key used again as the newest', () => {
     const cache = new TextureRefCache(1);
     for (const key of ['a', 'b']) {
