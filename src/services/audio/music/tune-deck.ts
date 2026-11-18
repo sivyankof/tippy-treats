@@ -27,6 +27,11 @@ export interface Deck {
   hold(on: boolean): void;
   /** Stops at context time `at` and lets everything go. */
   dispose(at: number): void;
+  /**
+   * One more pass of a track that plays once (a stream): it loops into its start again. False when
+   * it cannot. A seamless deck loops anyway and has none.
+   */
+  extend?(): boolean;
 }
 
 /**
@@ -138,6 +143,10 @@ export class StreamDeck implements Deck {
   private disposed = false;
   private held = false;
   private startOffset = 0;
+  /** Seconds played by the passes before the current one. */
+  private before = 0;
+  /** Passes still to loop into when the deck is not looping for ever (`extend`). */
+  private passesLeft = 0;
   /** Elements that were sounding when the deck was held. */
   private paused: PooledMedia[] = [];
   private readonly loopAt: number;
@@ -149,19 +158,27 @@ export class StreamDeck implements Deck {
     readonly track: MusicTrackId,
     spec: MusicTrack,
     private readonly url: string,
-    private readonly players: readonly PooledMedia[],
+    private readonly players: PooledMedia[],
     private readonly looping: boolean,
   ) {
     this.loopSec = spec.frames / spec.sampleRate;
     this.loopAt = this.loopSec - MUSIC.loopOverlapSec;
     this.gain = ctx.createGain();
     this.gain.gain.value = 0;
-    for (const player of players) {
-      player.gain.connect(this.gain);
-      player.el.onended = () => {
-        if (this.looping && player === this.players[this.active]) this.turn();
-      };
+    for (const player of players) this.wire(player);
+  }
+
+  extend(): boolean {
+    if (this.disposed) return false;
+    if (this.players.length < 2) {
+      const media = this.pool.acquire();
+      if (!media) return false;
+      this.players.push(media);
+      this.wire(media);
     }
+    this.passesLeft += 1;
+    this.arm();
+    return true;
   }
 
   /** Lends elements from `pool` (two to loop, one to play once), or returns null when it has too few. */
@@ -208,7 +225,7 @@ export class StreamDeck implements Deck {
 
   played(): number {
     const el = this.players[this.active]?.el;
-    return el ? Math.max(0, el.currentTime - this.startOffset) : 0;
+    return this.before + (el ? Math.max(0, el.currentTime - this.startOffset) : 0);
   }
 
   hold(on: boolean): void {
@@ -239,10 +256,22 @@ export class StreamDeck implements Deck {
     }, wait);
   }
 
+  private wire(player: PooledMedia): void {
+    player.gain.connect(this.gain);
+    player.el.onended = () => {
+      if (this.loops() && player === this.players[this.active]) this.turn();
+    };
+  }
+
+  /** Loops at the end of this pass: for ever, or for the passes `extend` asked for. */
+  private loops(): boolean {
+    return this.looping || this.passesLeft > 0;
+  }
+
   /** Waits until the active element nears its end, then turns to the other one (looping only). */
   private arm(): void {
     this.clearTimer();
-    if (this.disposed || this.held || !this.looping) return;
+    if (this.disposed || this.held || !this.loops()) return;
     const left = this.loopAt - (this.players[this.active]?.el.currentTime ?? 0);
     if (left <= 0) {
       this.turn();
@@ -262,8 +291,10 @@ export class StreamDeck implements Deck {
     const from = this.players[this.active];
     const to = this.players[1 - this.active];
     if (!from || !to) return;
+    this.before += Math.max(0, from.el.currentTime - this.startOffset);
     this.active = 1 - this.active;
     this.startOffset = 0;
+    if (!this.looping) this.passesLeft = Math.max(0, this.passesLeft - 1);
     const now = this.ctx.currentTime;
     const overlap = MUSIC.loopOverlapSec;
     to.el.src = this.url;

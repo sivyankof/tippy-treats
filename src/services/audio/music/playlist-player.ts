@@ -104,6 +104,10 @@ export class PlaylistPlayer implements MusicControl {
   private turnDeck: Deck | null = null;
   private prefetch: Prefetch | null = null;
   private readonly holds = new Set<MusicHoldReason>();
+  /** A run is being played: nothing is decoded, the turn grows by whole loops instead. */
+  private isBusy = false;
+  /** Seconds the turn grew by while the run was busy at its end. */
+  private extraSec = 0;
   private peak = 0;
 
   constructor(
@@ -134,6 +138,7 @@ export class PlaylistPlayer implements MusicControl {
     this.prefetch = null;
     this.turnDeck = null;
     this.turnBefore = 0;
+    this.extraSec = 0;
     this.index = nextIndex(this.index, MUSIC_PLAYLIST.length);
     this.show(this.turnTrack(), 0, true);
   }
@@ -161,6 +166,12 @@ export class PlaylistPlayer implements MusicControl {
     for (const deck of this.decks()) deck.hold(held);
     if (held) this.clearWatch();
     else this.watch();
+  }
+
+  busy(on: boolean): void {
+    if (on === this.isBusy) return;
+    this.isBusy = on;
+    if (!on) this.watch();
   }
 
   state(): MusicPlayerState {
@@ -358,14 +369,46 @@ export class PlaylistPlayer implements MusicControl {
     if (this.mode?.kind !== 'playlist' || this.holds.size > 0 || !deck || deck !== this.current) {
       return;
     }
-    const remaining = turnLength(deck, MUSIC.minPlaySec, MUSIC.crossfadeSec) - this.turnPlayed();
-    if (remaining <= MUSIC.prefetchSec) this.prefetchNext();
+    const length = turnLength(deck, MUSIC.minPlaySec, MUSIC.crossfadeSec) + this.extraSec;
+    const remaining = length - this.turnPlayed();
+    const decodeNext = this.nextNeedsDecode();
+    // A decode's end stalls the main thread: never while a run is played. A turn that grew while
+    // the run was busy decodes its next track as soon as the run lets go.
+    if (decodeNext && !this.isBusy && (remaining <= MUSIC.prefetchSec || this.extraSec > 0)) {
+      this.prefetchNext();
+    }
     if (remaining <= MUSIC.switchLeadSec) {
+      const ready = !decodeNext || this.prefetch?.ready;
+      if (!ready && this.isBusy && this.extend(deck)) {
+        this.watchTimer = this.sources.clock.setTimeout(
+          () => this.watch(),
+          MUSIC.watchSec * MS_PER_SECOND,
+        );
+        return;
+      }
       this.switchAt(this.sources.clock.currentTime + Math.max(0, remaining));
       return;
     }
     const wait = Math.min(MUSIC.watchSec, remaining - MUSIC.switchLeadSec);
     this.watchTimer = this.sources.clock.setTimeout(() => this.watch(), wait * MS_PER_SECOND);
+  }
+
+  /** The playlist's next track has to be decoded (a seamless one) and is not decoded yet. */
+  private nextNeedsDecode(): boolean {
+    const track = MUSIC_PLAYLIST[nextIndex(this.index, MUSIC_PLAYLIST.length)];
+    if (!track || MUSIC_TRACKS[track].loop !== 'seamless') return false;
+    return !(this.prefetch?.track === track && this.prefetch.ready);
+  }
+
+  /** The turn grows by one more loop (or pass) of `deck`; false when it cannot. */
+  private extend(deck: Deck): boolean {
+    if (deck.seamless) {
+      this.extraSec += deck.loopSec;
+      return true;
+    }
+    if (!deck.extend?.()) return false;
+    this.extraSec += deck.loopSec - MUSIC.loopOverlapSec;
+    return true;
   }
 
   /** Decodes the next seamless track of the playlist, when nothing else is in memory but the track playing. */
@@ -393,6 +436,7 @@ export class PlaylistPlayer implements MusicControl {
   private switchAt(at: number): void {
     this.turnDeck = null;
     this.turnBefore = 0;
+    this.extraSec = 0;
     this.index = nextIndex(this.index, MUSIC_PLAYLIST.length);
     const track = this.turnTrack();
     const ready = this.prefetch?.track === track ? this.prefetch.ready : null;

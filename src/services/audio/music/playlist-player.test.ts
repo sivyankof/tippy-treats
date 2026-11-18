@@ -117,6 +117,11 @@ class FakeStream implements OpeningDeck {
   dispose(): void {
     this.disposed = true;
   }
+  extended = 0;
+  extend(): boolean {
+    this.extended += 1;
+    return true;
+  }
 }
 
 /** `random` that picks playlist track `index` first. */
@@ -252,6 +257,41 @@ describe('PlaylistPlayer', () => {
     }
     expect(peak).toBe(bytesOf('kitchen') + bytesOf('roof'));
     expect(player.state().peakBytes).toBeLessThanOrEqual(MUSIC.memoryCapBytes);
+  });
+
+  it('while a run is played nothing is decoded: the track plays more whole loops, then changes on a boundary', async () => {
+    const { player, decodes, advance, sourcesOf } = setup('kitchen');
+    player.playlist();
+    await advance(0.1);
+    const start = sourcesOf('kitchen')[0]?.when ?? 0;
+    const loop = loopOf('kitchen');
+    player.busy(true);
+    await advance(3 * loop + 5);
+    expect(decodes).toEqual(['kitchen']);
+    expect(player.state().track).toBe('kitchen');
+    expect(player.state().decodedBytes).toBe(bytesOf('kitchen'));
+    // The run lets go: the next track is decoded at once and comes on the next loop boundary.
+    player.busy(false);
+    await advance(1);
+    expect(decodes).toEqual(['kitchen', 'roof']);
+    expect(player.state().track).toBe('kitchen');
+    await advance(4 * loop - (3 * loop + 6) + 1.5);
+    expect(player.state().track).toBe('roof');
+    expect(sourcesOf('roof')[0]?.when).toBeCloseTo(start + 4 * loop, 2);
+  });
+
+  it('a stream ending while a run is played goes round once more instead of decoding', async () => {
+    const { player, decodes, streams, advance } = setup('menu');
+    player.playlist();
+    await advance(0.1);
+    player.busy(true);
+    await advance(loopOf('menu'));
+    expect(decodes).toEqual([]);
+    expect(streams[0]?.extended).toBe(1);
+    expect(player.state().track).toBe('menu');
+    player.busy(false);
+    await advance(1);
+    expect(decodes).toEqual(['kitchen']);
   });
 
   it('a non-seamless track plays once and ends with the change', async () => {

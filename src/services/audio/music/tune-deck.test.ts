@@ -141,6 +141,31 @@ describe('StreamDeck', () => {
     expect(elements.filter((e) => !e.paused)).toHaveLength(1);
   });
 
+  it('a once-only deck asked to go round once more loops one pass, and its seconds add up', async () => {
+    const { pool, elements, advance } = setup();
+    const once = StreamDeck.open(
+      { currentTime: 0, createGain: () => new FakeGain() } as unknown as BaseAudioContext,
+      { currentTime: 0, setTimeout: (c, ms) => setTimeout(c, ms), clearTimeout: () => undefined },
+      pool,
+      'menu',
+      SPEC,
+      '/menu.m4a',
+      false,
+    );
+    if (!once) throw new Error('no deck');
+    await once.start();
+    expect(once.extend()).toBe(true);
+    expect(pool.free).toBe(0);
+    await advance(LENGTH + 1);
+    // The second element took over from the start; the first one stopped after the overlap.
+    const sounding = elements.slice(2).filter((e) => !e.paused);
+    expect(sounding).toHaveLength(1);
+    expect(once.played()).toBeGreaterThan(LENGTH - MUSIC.loopOverlapSec);
+    // No more passes were asked: it does not loop again.
+    await advance(LENGTH);
+    expect(elements.slice(2).filter((e) => e.plays > 1)).toHaveLength(0);
+  });
+
   it('counts what it played from where it started', async () => {
     const { deck, elements, advance } = setup();
     if (!deck) throw new Error('no deck');

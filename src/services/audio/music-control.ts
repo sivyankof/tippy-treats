@@ -35,6 +35,11 @@ export interface MusicControl {
   stop(): void;
   /** Stops the music where it is while any reason holds; it goes on from there after. */
   hold(reason: MusicHoldReason, on: boolean): void;
+  /**
+   * A run is being played (not paused): no file is decoded meanwhile (a decode's end stalls the
+   * main thread), the playlist's track plays on by whole loops until the run lets go.
+   */
+  busy(on: boolean): void;
   state(): MusicPlayerState;
   resetPeak(): void;
 }
@@ -69,6 +74,7 @@ export const NO_MUSIC: MusicControl = {
   next: () => undefined,
   stop: () => undefined,
   hold: () => undefined,
+  busy: () => undefined,
   state: () => ({ ...NO_STATE }),
   resetPeak: () => undefined,
 };

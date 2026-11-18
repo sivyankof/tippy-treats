@@ -17,11 +17,13 @@ export class MusicProxy implements MusicControl {
   private enabled = true;
   private ask: MusicAsk | null = null;
   private readonly holds = new Set<MusicHoldReason>();
+  private isBusy = false;
 
   /** Gives the proxy its player and brings it up to date with what was asked. */
   attach(real: MusicControl): void {
     this.real = real;
     for (const reason of this.holds) this.safely(() => this.real.hold(reason, true));
+    if (this.isBusy) this.safely(() => this.real.busy(true));
     if (this.enabled) this.replay();
   }
 
@@ -57,6 +59,11 @@ export class MusicProxy implements MusicControl {
     if (on) this.holds.add(reason);
     else this.holds.delete(reason);
     this.safely(() => this.real.hold(reason, on));
+  }
+
+  busy(on: boolean): void {
+    this.isBusy = on;
+    this.safely(() => this.real.busy(on));
   }
 
   state(): MusicPlayerState {

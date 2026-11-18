@@ -47,12 +47,13 @@ export function bindMenuMusic(game: Phaser.Game): void {
 
 /**
  * The music of one run (made by the HUD, fed every frame): its first frame asks for the playlist
- * or the daily tower's track; the pause window stops the music while it is up. `end` lets the
- * pause go when the run's HUD goes away.
+ * or the daily tower's track; the pause window stops the music while it is up; while the run is
+ * played the player decodes nothing (`busy`). `end` lets both go when the run's HUD goes away.
  */
 export class RunMusic {
   private asked = false;
   private paused = false;
+  private busy = false;
 
   /** `live`: the run is on screen (not over); `paused`: its pause window or countdown is up. */
   observe(live: boolean, daily: boolean, paused: boolean): void {
@@ -61,10 +62,18 @@ export class RunMusic {
       cueMusic({ kind: 'run', daily });
     }
     this.pause(paused);
+    this.setBusy(live && !paused);
   }
 
   end(): void {
     this.pause(false);
+    this.setBusy(false);
+  }
+
+  private setBusy(on: boolean): void {
+    if (on === this.busy) return;
+    this.busy = on;
+    services.audio.music.busy(on);
   }
 
   private pause(on: boolean): void {
