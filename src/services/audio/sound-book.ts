@@ -3,13 +3,13 @@ import { SFX } from '../../data/sfx';
 import { SFX_LIFE } from '../../data/sfx-life';
 import type { SquashKind } from '../../data/topper-squash';
 import { WEATHER_BED, type BedKind } from '../../data/weather-bed';
+import { pickRange } from '../../util/math';
 import {
   collapseThudGain,
   comboGainScale,
   comboNoteFreq,
   jitterRatio,
   noteFreq,
-  randomIn,
   shortened,
   stretchesFor,
 } from './notes';
@@ -171,8 +171,8 @@ export const SOUND_BOOK: SoundBook = {
     ],
     play(s, muffled) {
       const t = SFX_LIFE.thunder;
-      const delay = randomIn(t.delay, s.random);
-      const roll = randomIn(t.rollSeconds, s.random);
+      const delay = pickRange(t.delay, s.random);
+      const roll = pickRange(t.rollSeconds, s.random);
       const tone = muffled ? t.muffled : { pitch: 1, gain: 1 };
       s.noise(t.crack, { delay, pitch: tone.pitch, gain: tone.gain });
       const stretches = stretchesFor(roll, t.rumbleStep);

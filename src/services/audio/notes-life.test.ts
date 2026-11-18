@@ -1,13 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { randomIn, shortened, stretchesFor } from './notes';
-
-describe('randomIn', () => {
-  it('maps 0..1 onto the span', () => {
-    expect(randomIn([0.15, 0.4], () => 0)).toBeCloseTo(0.15);
-    expect(randomIn([0.15, 0.4], () => 1)).toBeCloseTo(0.4);
-    expect(randomIn([0.15, 0.4], () => 0.5)).toBeCloseTo(0.275);
-  });
-});
+import { shortened, stretchesFor } from './notes';
 
 describe('shortened', () => {
   it('scales the length and the loudness and moves a delay with the time', () => {

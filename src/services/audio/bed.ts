@@ -1,6 +1,7 @@
 import { SFX } from '../../data/sfx';
 import { WEATHER_BED, type BedKind, type BedRecipe } from '../../data/weather-bed';
 import type { Mixer } from './mixer';
+import { noiseBuffer } from './noise-buffer';
 
 /** A looped bed that can be stopped (it fades out and frees its nodes). */
 export interface BedVoice {
@@ -9,11 +10,7 @@ export interface BedVoice {
 
 /** A buffer of white noise for a bed, `WEATHER_BED.bufferSeconds` long. */
 export function makeBedBuffer(ctx: BaseAudioContext, random: () => number): AudioBuffer {
-  const length = Math.ceil(ctx.sampleRate * WEATHER_BED.bufferSeconds);
-  const buffer = ctx.createBuffer(1, length, ctx.sampleRate);
-  const data = buffer.getChannelData(0);
-  for (let i = 0; i < length; i++) data[i] = random() * 2 - 1;
-  return buffer;
+  return noiseBuffer(ctx, WEATHER_BED.bufferSeconds, random);
 }
 
 /**

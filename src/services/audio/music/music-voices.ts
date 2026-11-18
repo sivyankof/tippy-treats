@@ -7,6 +7,7 @@ import {
   type ToneInstrument,
 } from '../../../data/music/instruments';
 import { runSource, type NodeTally, type TimedSource } from '../node-tally';
+import { noiseBuffer } from '../noise-buffer';
 import { noteFreq } from '../notes';
 
 /** One note for an instrument: context time, length in seconds, pitch from C4, peak gain. */
@@ -146,13 +147,7 @@ export class MusicVoices {
   }
 
   private noiseBuffer(): AudioBuffer {
-    if (!this.noise) {
-      const length = Math.ceil(this.ctx.sampleRate * MUSIC_VOICE.noiseSeconds);
-      const buffer = this.ctx.createBuffer(1, length, this.ctx.sampleRate);
-      const data = buffer.getChannelData(0);
-      for (let i = 0; i < length; i++) data[i] = this.random() * 2 - 1;
-      this.noise = buffer;
-    }
+    this.noise ??= noiseBuffer(this.ctx, MUSIC_VOICE.noiseSeconds, this.random);
     return this.noise;
   }
 }

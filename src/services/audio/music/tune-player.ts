@@ -1,6 +1,7 @@
 import { MUSIC_PLAY } from '../../../data/music/music-play';
 import type { Song } from '../../../data/music/song';
 import { DEFAULT_MUSIC_VARIANT, SONGS } from '../../../data/music/songs';
+import { randomSeed } from '../../../util/math';
 import type { MusicControl, MusicFactory, MusicHost, MusicStartOptions } from '../music-control';
 import type { TimedSource } from '../node-tally';
 import { MusicVoices } from './music-voices';
@@ -9,7 +10,6 @@ import {
   initialLevels,
   retargetLevels,
   scheduleWindow,
-  variationSeed,
   type NoteEvent,
   type PartLevel,
 } from './music-schedule';
@@ -66,7 +66,7 @@ export class TunePlayer implements MusicControl {
     this.song = song;
     this.layer = clampLayer(options.layer);
     this.menu = options.menu ?? false;
-    this.seed = variationSeed(this.host.random);
+    this.seed = randomSeed(this.host.random);
     this.origin = now + MUSIC_PLAY.startLeadSec;
     this.scheduledTo = 0;
     this.levels = initialLevels(song, this.heardLayer());

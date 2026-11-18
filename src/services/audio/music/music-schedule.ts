@@ -1,7 +1,6 @@
 import { Rng } from '../../../core/rng';
 import { MUSIC_PLAY } from '../../../data/music/music-play';
 import type { Bar, Song } from '../../../data/music/song';
-import { UINT32_RANGE } from '../../../util/math';
 
 /**
  * The pure side of the music player: song timing, the variation plan of each loop, the fade of
@@ -204,9 +203,4 @@ export function scheduleWindow(
     });
   }
   return events.sort((a, b) => a.time - b.time);
-}
-
-/** A fresh seed of the variations from a random source. */
-export function variationSeed(random: () => number): number {
-  return Math.floor(random() * UINT32_RANGE) >>> 0;
 }
