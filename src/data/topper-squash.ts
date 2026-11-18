@@ -492,11 +492,36 @@ export const TOPPER_SQUASH = {
      * `fromLuma` down to `toLuma` the cream share rises to `share`.
      */
     darkGlaze: { fromLuma: 0.6, toLuma: 0.35, share: 0.86 },
-    /** Squeezed out: a small round bump shows at the seam and swells (both axes together, never a thin sliver), the ridge is pushed out past its length, then settles back. */
+    /**
+     * Anticipation: a round bead of cream swells at the seam first (two discs of the shared bead
+     * picture of the cuts, `fx_cut_bead`: the warm outline under the cream), then the ridge is
+     * pushed out from behind it and the bead shrinks into the ridge. A ridge scaled down always
+     * shows its festoons as teeth, so it never stands in for the bead.
+     */
+    bead: {
+      /** Diameter with the outline, layer px; the outline is the ridge's (`SQUASH_PICTURES.cream.outlinePx`). */
+      size: 17,
+      /** Its centre from the ridge's anchor: outwards along the seam, and up from the ridge's bottom line. */
+      outPx: 3,
+      upPx: 8,
+      squeeze: {
+        from: [0.5, 0.5],
+        bulgeMs: 80,
+        bulge: [1, 1],
+        pushMs: 1,
+        over: [1, 1],
+        settleMs: 1,
+      },
+      /** It starts shrinking into the ridge this long after it appeared, over `handOverMs`. */
+      handOverAtMs: 130,
+      handOverMs: 110,
+    },
+    /** The ridge starts this long after its bead, from behind it. */
+    ridgeLagMs: 60,
+    /** Squeezed out from behind the bead: it swells a little, is pushed out past its length, then settles back. */
     squeeze: {
-      from: [0.24, 0.32],
-      bulgeMs: 70,
-      bulge: [0.34, 0.44],
+      bulgeMs: 50,
+      bulge: [0.18, 0.36],
       pushMs: 230,
       over: [1.1, 0.9],
       settleMs: 300,
@@ -529,6 +554,14 @@ export const TOPPER_SQUASH = {
       tuckPx: 4,
       /** A drop never hangs over the face of the lower layer: this much clear space beyond the face. */
       faceGapPx: 18,
+      /**
+       * Nor over the cream swirls on the glaze of the lower layer or its growing drips: this much
+       * clear space beside them. A drop slides along its ridge's outer part to the nearest free
+       * spot; with none it is left out.
+       */
+      clearPx: 3,
+      /** Drawn half width of a drop of size 1, for that clear space. */
+      halfPx: 8,
     },
   },
   /** Pooled pictures of squashed toppers (the oldest is reused). */

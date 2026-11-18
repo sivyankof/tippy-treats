@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   LayerMarkStore,
+  MAX_PRESS_PICTURES,
   markGrow,
   markSwingDeg,
   markVanish,
@@ -61,7 +62,7 @@ describe('layer marks', () => {
     expect(
       store.addPress(
         1,
-        Array.from({ length: 6 }, () => mark()),
+        Array.from({ length: MAX_PRESS_PICTURES + 1 }, () => mark()),
       ),
     ).toBe(false);
     expect(store.hasPress(1)).toBe(false);

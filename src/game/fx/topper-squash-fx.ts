@@ -10,6 +10,7 @@ import {
   type SquashBurst,
   type SquashFlatten,
 } from '../../data/topper-squash';
+import { overlayColor } from '../../util/color';
 import { clamp01, lerp } from '../../util/math';
 import { DEPTH } from '../depth';
 import { effectsMode } from '../effects-mode';
@@ -18,6 +19,7 @@ import { plainDripColumns } from '../objects/glaze-drip-layer';
 import { glazeWave } from '../objects/glaze-wave';
 import { artWidth } from '../objects/layer-art';
 import { layerBox } from '../objects/layer-draw';
+import { decorItems, decorReach } from '../objects/decor-layout';
 import { layerMarks } from '../objects/layer-marks';
 import { pairColors, plainLooks, lookOfCode } from '../objects/plain-look';
 import { type TopperWorld } from '../objects/layer-topper';
@@ -38,6 +40,7 @@ import {
   rollSpots,
   squashLevelPlan,
   stainSpot,
+  type DropObstacle,
   type StainSpot,
 } from './topper-squash-plan';
 
@@ -140,11 +143,15 @@ export class TopperSquashFx {
     if (!plan.play || !plan.trace) return;
     const spots = rollSpots(lower.x, lower.width, layer.x, layer.width);
     if (!spots) return;
+    const tint = creamRollTint(pairColors(look.pair).glaze);
+    const drawn = artWidth(lower.width);
     const marks = creamRollMarks(spots, {
       nowMs: this.scene.time.now,
       squeeze: plan.squeeze,
-      tint: creamRollTint(pairColors(look.pair).glaze),
-      faceHalf: faceHalfSpan(artWidth(lower.width), null),
+      tint,
+      outline: overlayColor(SQUASH_PICTURES.cream.tones.outline, tint),
+      faceHalf: faceHalfSpan(drawn, null),
+      avoid: creamRollObstacles(drawn, this.tower.layerPose(lowerIndex)?.cut ?? null, lowerIndex),
     });
     if (!layerMarks.addPress(lowerIndex + 1, marks)) return;
     effectCues.emit({ kind: 'topperSquash', topper: 'cream' });
@@ -354,4 +361,20 @@ export function layerStainSpot(
   const wave = glazeWave(layerBox(drawn), cut, face);
   const drips = plainDripColumns(drawn, cut, index);
   return stainSpot(drawn, face, topperDx, wave, drips.xs, drips.half);
+}
+
+/**
+ * What a drop of the cream roll must not hang over on the plain layer of 0-based `index`
+ * (`drawn` wide, bitten on `cut`): its cream swirls and its growing drips, as its picture and
+ * its drips draw them.
+ */
+function creamRollObstacles(drawn: number, cut: CutSide | null, index: number): DropObstacle[] {
+  const face = faceHalfSpan(drawn, null);
+  const swirl = decorReach('cream');
+  const swirls = decorItems('cream', layerBox(drawn), cut, face).map((item) => ({
+    x: item.x,
+    half: swirl,
+  }));
+  const drips = plainDripColumns(drawn, cut, index);
+  return [...swirls, ...drips.xs.map((x) => ({ x, half: drips.half }))];
 }

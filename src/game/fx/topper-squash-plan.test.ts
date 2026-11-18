@@ -5,7 +5,14 @@ import { EFFECT_LEVELS } from '../../data/effect-levels';
 import { SQUASH_PICTURES, SQUASH_TEXTURES, TOPPER_SQUASH } from '../../data/topper-squash';
 import { channels, luma, overlayColor } from '../../util/color';
 import { PLAIN_PAIRS } from '../../data/plain-layers';
-import { squeezeDoneMs, squeezeScale, type LayerMark } from '../objects/layer-mark-store';
+import {
+  MAX_PRESS_PICTURES,
+  markVanish,
+  squeezeDoneMs,
+  squeezeScale,
+  type LayerMark,
+} from '../objects/layer-mark-store';
+import { CUT_TEXTURES } from '../../data/cut-look';
 import { faceHalfSpan } from './glaze-growth';
 import { glazeWave, waveY } from '../objects/glaze-wave';
 import { layerBox } from '../objects/layer-draw';
@@ -25,6 +32,7 @@ import {
   simX,
   squashLevelPlan,
   stainSpot,
+  type DropObstacle,
 } from './topper-squash-plan';
 
 describe('classifySquash', () => {
@@ -285,17 +293,84 @@ describe('simX', () => {
 
 describe('the cream roll', () => {
   const spots = rollSpots(500, 600, 520, 300)!;
-  const input = { nowMs: 10_000, squeeze: true, tint: 0xffd6e1, faceHalf: 60 };
+  const input = {
+    nowMs: 10_000,
+    squeeze: true,
+    tint: 0xffd6e1,
+    outline: 0x9a6a50,
+    faceHalf: 60,
+    avoid: [] as DropObstacle[],
+  };
+  const ridgeKeys: string[] = [SQUASH_TEXTURES.creamRidgeA, SQUASH_TEXTURES.creamRidgeB];
   const ridges = (marks: LayerMark[]): LayerMark[] =>
-    marks.filter((m) => m.texture !== SQUASH_TEXTURES.creamDrop);
+    marks.filter((m) => ridgeKeys.includes(m.texture));
+  const beads = (marks: LayerMark[]): LayerMark[] =>
+    marks.filter((m) => m.texture === CUT_TEXTURES.bead);
   const drops = (marks: LayerMark[]): LayerMark[] =>
     marks.filter((m) => m.texture === SQUASH_TEXTURES.creamDrop);
 
-  it('puts the drops first, so the ridges cover their necks, and fits in one press mark', () => {
+  it('goes back to front: drops, ridges, beads, and fits in one press mark', () => {
     const marks = creamRollMarks(spots, input);
-    expect(marks.length).toBeLessThanOrEqual(5);
-    const firstRidge = marks.findIndex((m) => m.texture !== SQUASH_TEXTURES.creamDrop);
+    expect(marks.length).toBeLessThanOrEqual(MAX_PRESS_PICTURES);
+    const firstRidge = marks.findIndex((m) => ridgeKeys.includes(m.texture));
+    const firstBead = marks.findIndex((m) => m.texture === CUT_TEXTURES.bead);
     expect(drops(marks.slice(firstRidge))).toHaveLength(0);
+    expect(ridges(marks.slice(firstBead))).toHaveLength(0);
+    expect(ridges(marks)).toHaveLength(2);
+    expect(beads(marks)).toHaveLength(4);
+  });
+
+  it('swells a round bead at the seam first, then pushes the ridge out from behind it as the bead shrinks away', () => {
+    const marks = creamRollMarks(spots, input);
+    const [left, right] = ridges(marks);
+    const [outline, fill] = beads(marks);
+    for (const b of beads(marks)) expect(b.width).toBe(b.height);
+    expect(outline!.width).toBeGreaterThan(fill!.width);
+    expect(outline!.tint).toBe(input.outline);
+    expect(fill!.tint).toBe(input.tint);
+    // The bead shows from its first frame, before its ridge starts.
+    expect(outline!.bornMs).toBeLessThan(left!.bornMs);
+    expect(squeezeScale(outline!.squeeze!, 1, 0)).toBeGreaterThan(0.45);
+    // It is gone while its ridge is still being pushed out (so the ridge never pops out from behind it).
+    const goneAt = outline!.handOver!.startMs + outline!.handOver!.durMs;
+    expect(goneAt).toBeLessThan(
+      left!.bornMs + TOPPER_SQUASH.roll.squeeze.bulgeMs + TOPPER_SQUASH.roll.squeeze.pushMs,
+    );
+    expect(markVanish(outline!, goneAt)).toBe(0);
+    expect(markVanish(outline!, outline!.handOver!.startMs - 1)).toBe(1);
+    // Next to the anchor of its ridge, above its bottom line.
+    expect(Math.abs(outline!.dx - left!.dx)).toBeLessThan(TOPPER_SQUASH.roll.bead.size);
+    expect(outline!.dy).toBeLessThan(left!.dy);
+    expect(right!.bornMs).toBeGreaterThan(left!.bornMs);
+  });
+
+  it('has no bead when it lies there at once', () => {
+    expect(beads(creamRollMarks(spots, { ...input, squeeze: false }))).toHaveLength(0);
+  });
+
+  it('slides a drop along its ridge away from the swirls and drips of the lower layer', () => {
+    const plain = drops(creamRollMarks(spots, input));
+    const { halfPx, clearPx } = TOPPER_SQUASH.roll.drop;
+    // A swirl right under every drop where it would hang.
+    const avoid = plain.map((d) => ({ x: d.dx, half: 11 }));
+    const moved = drops(creamRollMarks(spots, { ...input, avoid }));
+    expect(moved.length).toBeGreaterThan(0);
+    for (const d of moved) {
+      for (const o of avoid) {
+        expect(Math.abs(d.dx - o.x)).toBeGreaterThanOrEqual(
+          o.half + (halfPx * d.width) / plain[0]!.width + clearPx - 0.01,
+        );
+      }
+    }
+    // Two drops of a ridge never touch each other.
+    const right = moved.filter((d) => d.dx > 0);
+    if (right.length === 2) expect(Math.abs(right[0]!.dx - right[1]!.dx)).toBeGreaterThan(halfPx);
+  });
+
+  it('leaves a drop out when its ridge has no free spot', () => {
+    const avoid = [{ x: 0, half: 1000 }];
+    const marks = creamRollMarks(spots, { ...input, avoid });
+    expect(drops(marks)).toHaveLength(0);
     expect(ridges(marks)).toHaveLength(2);
   });
 
@@ -341,7 +416,8 @@ describe('the cream roll', () => {
   });
 
   it('is tinted with the overlay of the cream tone', () => {
-    for (const m of creamRollMarks(spots, input)) {
+    const marks = creamRollMarks(spots, input);
+    for (const m of [...ridges(marks), ...drops(marks)]) {
       expect(m.tint).toBe(input.tint);
       expect(m.tintMode).toBe('overlay');
     }

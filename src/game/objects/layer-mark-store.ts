@@ -57,6 +57,8 @@ export interface LayerMark {
   clearOfShadow?: boolean;
   /** The mark shrinks away from `startMs` over `durMs` (a stain licked off or melting); the store removes it after that. */
   vanish?: { startMs: number; durMs: number };
+  /** A stand-in that shrinks away from `startMs` over `durMs` and stays at nothing (the bead before the cream ridge); the store keeps it. */
+  handOver?: ShrinkWindow;
 }
 
 /** Marks of one layer: at most one drop from a cut (its outline and its fill) and one press mark (a stain, or a cream roll of up to five pictures). */
@@ -68,8 +70,8 @@ export interface LayerMarkSet {
 /** Most pictures the drop of a cut may have (an outline under a fill). */
 export const MAX_CUT_PICTURES = 2;
 
-/** Most pictures a press mark may have (a cream roll: two ridges and up to three drops). */
-export const MAX_PRESS_PICTURES = 5;
+/** Most pictures a press mark may have (a cream roll: two ridges, up to three drops and two beads of two discs each). */
+export const MAX_PRESS_PICTURES = 9;
 
 /**
  * The marks of the current run per 1-based layer number. A view asks for them every time it shows
@@ -180,9 +182,19 @@ export function markGrow(mark: Readonly<LayerMark>, ageMs: number): number {
 
 /** Scale of a mark that is vanishing at `nowMs`: 1 before it starts, 0 when it is over (it shrinks, slowing at the end). */
 export function markVanish(mark: Readonly<LayerMark>, nowMs: number): number {
-  const v = mark.vanish;
-  if (!v) return 1;
-  const t = clamp01((nowMs - v.startMs) / Math.max(1, v.durMs));
+  return shrinkAt(mark.vanish, nowMs) * shrinkAt(mark.handOver, nowMs);
+}
+
+/** A time window a mark shrinks away in. */
+export interface ShrinkWindow {
+  startMs: number;
+  durMs: number;
+}
+
+/** 1 before the window, 0 after it, shrinking smoothly (slowing at the end) inside it. */
+function shrinkAt(window: Readonly<ShrinkWindow> | undefined, nowMs: number): number {
+  if (!window) return 1;
+  const t = clamp01((nowMs - window.startMs) / Math.max(1, window.durMs));
   return 1 - t * t * (3 - 2 * t);
 }
 
