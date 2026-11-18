@@ -38,6 +38,11 @@ export function cloud(ctx: Ctx2D, x: number, y: number, s: number): void {
   ctx.fill();
 }
 
+/** Scale of the moon, stars and clouds for a glass `h` px tall: 1 on the small window, never smaller on a bigger pane. */
+export function detailScale(h: number): number {
+  return Math.max(1, (h / SMALL_GLASS.h) * DETAIL_GROWTH);
+}
+
 /** `mirror` puts the sky's details on the left half (the shop window: its right half is against the tower). */
 export function paintSky(
   ctx: Ctx2D,
@@ -47,7 +52,7 @@ export function paintSky(
 ): void {
   const { x, y, w, h } = glass;
   // Moon, stars and clouds grow with the glass, but a little less than it, so a wide pane does not get giant ones.
-  const k = h > SMALL_GLASS.h ? (h / SMALL_GLASS.h) * DETAIL_GROWTH : 1;
+  const k = detailScale(h);
   const at = (share: number): number => x + w * (mirror ? 1 - share : share);
   const gradient = ctx.createLinearGradient(0, y, 0, y + h);
   gradient.addColorStop(0, cssColor(sky.top));
