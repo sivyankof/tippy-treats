@@ -90,7 +90,7 @@ const PRIME_STEPS: ReadonlyArray<(scene: Phaser.Scene) => void> = [
 
 /** The pictures of the start places and the Showcase for a few weathers, so the sheet shows the sky colours, the glass items and both places. */
 function bakePlaceArt(scene: Phaser.Scene): void {
-  for (const weather of ['clear', 'rain', 'night', 'snow', 'leaves'] as const) {
+  for (const weather of ['clear', 'sunset', 'rain', 'storm', 'night', 'snow', 'leaves'] as const) {
     const look = { lap: 1, weather, place: 'kitchen', planetSeed: 0 } as const;
     kitchenArt.bake(scene, look);
     shopArt.bake(scene, { ...look, place: 'shop' });
