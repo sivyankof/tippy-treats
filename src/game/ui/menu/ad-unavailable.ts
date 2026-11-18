@@ -95,7 +95,10 @@ function layoutWithIcon(
   const gap = side * look.gapShare;
   icon.setDisplaySize(side * fieldScale, side * fieldScale).setVisible(true);
   label.setX(0);
-  fitText(label, maxWidth - side - gap);
+  const room = maxWidth - side - gap;
+  fitText(label, room);
+  // `fitText` stops at its own minimum; the edge room of the button holds whatever the text needs.
+  if (label.displayWidth > room) label.setScale(room / label.width);
   const total = side + gap + label.displayWidth;
   icon.setPosition(-total / 2 + side / 2, label.y);
   label.setX(-total / 2 + side + gap + label.displayWidth / 2);
