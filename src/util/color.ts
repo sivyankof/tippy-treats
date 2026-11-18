@@ -130,3 +130,15 @@ export function dimPixels(data: Uint8ClampedArray, saturation: number, brightnes
     data[i + 2] = (grey + (b - grey) * saturation) * brightness;
   }
 }
+
+/** The overlay tint of the renderer: `tint` laid over a picture pixel `base`, channel by channel (mid grey gives the tint, white stays white). */
+export function overlayColor(base: number, tint: number): number {
+  const b = channels(base);
+  const t = channels(tint);
+  const out = b.map((v, i) => {
+    const x = v / CHANNEL_MAX;
+    const k = t[i]! / CHANNEL_MAX;
+    return CHANNEL_MAX * (x < 0.5 ? 2 * k * x : 1 - 2 * (1 - k) * (1 - x));
+  });
+  return pack(out[0]!, out[1]!, out[2]!);
+}

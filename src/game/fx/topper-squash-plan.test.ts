@@ -3,7 +3,8 @@ import { Rng } from '../../core/rng';
 import { BALANCE } from '../../data/balance';
 import { EFFECT_LEVELS } from '../../data/effect-levels';
 import { SQUASH_PICTURES, SQUASH_TEXTURES, TOPPER_SQUASH } from '../../data/topper-squash';
-import { luma } from '../../util/color';
+import { channels, luma, overlayColor } from '../../util/color';
+import { PLAIN_PAIRS } from '../../data/plain-layers';
 import { squeezeDoneMs, squeezeScale, type LayerMark } from '../objects/layer-mark-store';
 import { faceHalfSpan } from './glaze-growth';
 import { glazeWave, waveY } from '../objects/glaze-wave';
@@ -374,6 +375,22 @@ describe('the cream roll', () => {
       expect(luma(tint)).toBeLessThan(luma(SQUASH_PICTURES.cream.cream) + 0.001);
     }
     expect(creamRollTint(0x7a4630)).not.toBe(creamRollTint(0xffaecb));
+  });
+
+  it('reads as cream on every glaze that carries cream: lighter than the glaze, a warm outline a tone darker', () => {
+    const { tones } = SQUASH_PICTURES.cream;
+    for (const pair of PLAIN_PAIRS.filter((p) => p.decor.includes('cream'))) {
+      const tint = creamRollTint(pair.glaze);
+      expect(luma(tint)).toBeGreaterThan(Math.min(0.9, luma(pair.glaze) + 0.04));
+      const outline = channels(overlayColor(tones.outline, tint));
+      const shade = overlayColor(tones.shade, tint);
+      // Warm: red over green over blue, whatever the glaze hue.
+      expect(outline[0]).toBeGreaterThan(outline[1]! + 10);
+      expect(outline[1]).toBeGreaterThan(outline[2]! + 10);
+      expect(luma(overlayColor(tones.outline, tint))).toBeLessThan(luma(tint) * 0.7);
+      expect(luma(shade)).toBeGreaterThan(luma(tint) * 0.82);
+      expect(luma(shade)).toBeLessThan(luma(tint));
+    }
   });
 
   it('keeps every drawn ridge inside its picture with the clear field', () => {

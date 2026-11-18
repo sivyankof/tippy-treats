@@ -87,10 +87,14 @@ export const SQUASH_PICTURES = {
     /** Thicker than the other pictures so the pale ridge reads on a pale glaze. */
     outlinePx: 2.8,
     tones: {
-      /** A tone darker than the cream: x0.62 like `outlineColor`, warmed a little so a pale cream never gets a grey outline. */
-      outline: 0x4f4b46,
-      /** The shade band under the ridge and the creases (x0.88). */
-      shade: 0x707070,
+      /**
+       * The warm outline: below mid grey the overlay multiplies each channel of the tint by twice
+       * the level, so a warm level (x0.66, x0.53, x0.40) gives a caramel-brown tone of the cream
+       * whatever the glaze hue, never a slate or olive grey.
+       */
+      outline: 0x544433,
+      /** The shade band under the ridge and the creases: light and warm (x0.93, x0.88, x0.80). */
+      shade: 0x777066,
       /** Mid grey: exactly the tint. */
       base: 0x808080,
       /** The light rim over the festoons (the tint 30% towards white). */
@@ -481,8 +485,8 @@ export const TOPPER_SQUASH = {
     overhangPx: 9,
     /** The upper layer must overlap the lower by at least this much for the rolls to have room. */
     minOverlapPx: 120,
-    /** Share of the cream mixed into the glaze tone of the layer: the roll is lighter than the glaze it lies on. */
-    creamShare: 0.45,
+    /** Share of the cream mixed into the glaze tone of the layer: the roll is cream with a hint of the glaze, clearly lighter than the glaze it lies on. */
+    creamShare: 0.72,
     /** Squeezed out: a bump swells at the seam, the ridge is pushed out past its length, then settles back. */
     squeeze: {
       bulgeMs: 70,
