@@ -16,6 +16,8 @@ export const SQUASH_BUTTON_KINDS: readonly SquashKind[] = [
 type TriggerWindow = Window & {
   tippyCut?: CutHook;
   tippySquash?: SquashHook;
+  tippyLightning?: () => void;
+  tippyYawn?: () => boolean;
 };
 
 /** Panel button: the next cut goes the given way, like `window.tippyCut(variant)`. False when the run has no hook (no run on screen). */
@@ -26,4 +28,16 @@ export function triggerCut(variant: CutVariantName): boolean {
 /** Panel button: the next layer lands on the given decoration, like `window.tippySquash(kind, 'hit')`. */
 export function triggerSquash(kind: SquashKind): boolean {
   return (window as TriggerWindow).tippySquash?.(kind, 'hit') ?? false;
+}
+
+/** Panel button: a flash of lightning now where there is a storm, otherwise only the startle of the layers, like `window.tippyLightning()`. False when there is no run on screen. */
+export function triggerLightning(): boolean {
+  const hook = (window as TriggerWindow).tippyLightning;
+  hook?.();
+  return hook !== undefined;
+}
+
+/** Panel button: the first free layer from the top yawns now in any weather, like `window.tippyYawn()`. */
+export function triggerYawn(): boolean {
+  return (window as TriggerWindow).tippyYawn?.() ?? false;
 }

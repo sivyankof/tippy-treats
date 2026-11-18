@@ -7,6 +7,9 @@ import { LICK } from '../../data/lick';
 import type { EyeLook, LickFace, LipsTongue } from './lick-plan';
 import { EYE_TEXTURE, FACE_TEXTURES, MOUTH_TEXTURE } from './face-textures';
 
+/** A mouth gaping less than this share shows as the expression's own mouth (the yawn has not opened yet). */
+const YAWN_MOUTH_MIN = 0.04;
+
 /** What the parts need to know about the layer besides the expression. */
 export interface PartsContext {
   recipe: FaceRecipe | null;
@@ -112,6 +115,30 @@ export class FaceParts extends Phaser.GameObjects.Container {
     this.tongueTip.setVisible(false);
     this.upper.setY(0);
     if (!e.sweat) this.sweatMs = 0;
+  }
+
+  /**
+   * The mouth of a yawn over the current expression: the gaping mouth of the lick at `scale` times its size, `open` (0..1)
+   * wide; a mouth that is all but shut is left as the expression has it. Call `apply` again to go back.
+   */
+  poseYawn(open: number, scale: number): void {
+    if (open <= YAWN_MOUTH_MIN) return;
+    const { lipY } = LICK.face.gape;
+    FaceParts.show(this.mouth, FACE_TEXTURES.mouthGape)
+      .setOrigin(0.5, 0)
+      .setPosition(0, lipY)
+      .setScale(scale * (0.7 + 0.3 * open), scale * open);
+  }
+
+  /** The eyes and pupils at `share` of the wide-eye size (the way back from a startle); `apply` resets them. */
+  setEyeScale(share: number): void {
+    for (const eye of [this.eyeL, this.eyeR]) eye.setScale(share);
+    const pupil =
+      ANIM.face.widePupilScale +
+      (1 - ANIM.face.widePupilScale) *
+        ((ANIM.face.wideEyeScale - share) / (ANIM.face.wideEyeScale - 1));
+    for (const p of [this.pupilL, this.pupilR])
+      p.setScale(Math.min(1, Math.max(ANIM.face.widePupilScale, pupil)));
   }
 
   /** Sideways pupil shift of this face for good. */

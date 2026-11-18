@@ -1,6 +1,7 @@
 import type { CreatureId } from './creatures';
 import type { CutVariantName } from './cut-look';
 import { MASTERY } from './mastery';
+import type { WeatherId } from './weather';
 
 /**
  * The `?perf=1` benchmark: an automatic run through fixed scenes with a fixed seed, measuring the
@@ -41,6 +42,12 @@ export interface PerfSegmentDef {
   trigger?: PerfTrigger;
   /** Every cut of the segment is forced to this variant. */
   cutVariant?: CutVariantName;
+  /** The weather of the segment, whatever `&weather=` says (the heavy segment plays in snow). */
+  weather?: WeatherId;
+  /** The starting tower carries a juice stain on every layer, as with `&marks=1`. */
+  marks?: boolean;
+  /** The starting tower is stepped (`PERF_STEPS`): ledges on both sides, so the snow drifts have places to lie. */
+  steps?: boolean;
   /** Unmeasured time from the moment the run is ready (the camera has risen). */
   warmupMs: number;
   /** Length of the measured window. */
@@ -84,6 +91,15 @@ function transitionSegment<B extends number>(boundary: B) {
     workWorstMs: PERF_TRANSITION.workWorstMs,
   } as const satisfies PerfSegmentDef;
 }
+
+/** The steps of the starting tower of a `steps` segment: layer `i` is `1 - narrowing * (i % period)` of its width and stands off-centre by `shiftShare` of it, alternately to each side. */
+export const PERF_STEPS = {
+  period: 4,
+  narrowing: 0.09,
+  shiftShare: 0.045,
+  /** The top layers keep their own width and place (the next layer lands on the top one). */
+  untouchedTop: 3,
+} as const;
 
 export const PERF_SEGMENTS = [
   {
@@ -235,6 +251,23 @@ export const PERF_SEGMENTS = [
     warmupMs: 1200,
     measureMs: 8000,
     startOn: 'results',
+  },
+  {
+    // Session 5g: the heaviest scene of the game: snow on the Roof, a stepped tower with drifts on its ledges and a mark on
+    // every layer, a cut on every landing (strands), the crew through `&mastery=master`.
+    id: 'heavy',
+    drawClass: 'heavy',
+    start: 50,
+    team: NO_TEAM,
+    level: 1,
+    driver: { kind: 'cut', share: 0.12 },
+    cutVariant: 'strands',
+    weather: 'snow',
+    marks: true,
+    steps: true,
+    warmupMs: 2000,
+    measureMs: 14000,
+    startOn: 'ready',
   },
   transitionSegment(20),
   transitionSegment(40),

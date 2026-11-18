@@ -10,7 +10,9 @@ import { HUD_LAYOUT } from '../../../data/hud-layout';
 import { flightClearBand, hudFloor, hudKeepOutFade } from '../../camera-layout';
 import type { FrameCtx, Life } from './life';
 import { inSky } from './layer-anchor';
+import { fxGuard } from '../../fx-guard';
 import { bankFlashKey, bankKey } from './weather-art';
+import { announceFlash } from './lightning-flash';
 import { zoneShowsWeatherSky } from './weather-share';
 import { bankEdge, boltEnd, flashEnvelope, nextBoltAt } from './weather-motion';
 
@@ -43,9 +45,10 @@ const SKY_BANK: BankView = {
 /** Cloud banks of storms that are alive; filled in development only, for the debug hook. */
 const BANKS = new Set<WeatherBank>();
 
-/** Debug: every live storm bank strikes right away. */
-export function strikeLightningNow(): void {
+/** Debug: every live storm bank strikes right away; how many there are. */
+export function strikeLightningNow(): number {
   for (const bank of BANKS) bank.strikeNow();
+  return BANKS.size;
 }
 
 /**
@@ -156,6 +159,8 @@ export class WeatherBank implements Life {
       this.strike = bolt ? this.pickStrike(ctx, bankX) : null;
       this.side = this.strike?.side ?? this.rng.int(0, STRIKE_SIDES.length - 1);
       this.nextAt = nextBoltAt(now, BOLT.everyMs, this.rng.next());
+      // The layers of the tower start at the flash; the glass of the Showcase (no bolt) scares them less.
+      fxGuard.run('startle', () => announceFlash(this.view.bolt ? 'sky' : 'street'));
     }
     const strength = this.flashAt < 0 ? 0 : flashEnvelope(now - this.flashAt, this.flashMs);
     this.strength = strength;

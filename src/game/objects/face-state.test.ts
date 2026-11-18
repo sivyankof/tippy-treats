@@ -478,3 +478,67 @@ describe('the lick reaction', () => {
     expect(timers.reaction()).toBe('joy');
   });
 });
+
+describe('weather faces', () => {
+  it('the startle gives round eyes and a small o mouth, the Showcase one only the eyes', () => {
+    const full = resolveExpression('calm', 'startle');
+    expect(full.eyes).toBe('wide');
+    expect(full.mouth).toBe('o');
+    expect(full.brows).toBe(true);
+    const weak = resolveExpression('calm', 'startleEyes', 'smile');
+    expect(weak.eyes).toBe('wide');
+    expect(weak.mouth).toBe('smile');
+    expect(weak.brows).toBe(false);
+  });
+
+  it('a sleepy calm face has half-shut eyes, a worried one does not, a reaction goes over it', () => {
+    expect(resolveExpression('calm', null, undefined, null, true).eyes).toBe('sleepy');
+    expect(resolveExpression('nervous', null, undefined, null, true).eyes).toBe('open');
+    expect(resolveExpression('calm', 'joy', undefined, null, true).eyes).toBe('happy');
+    expect(resolveExpression('calm', 'blink', undefined, null, true).eyes).toBe('closed');
+  });
+
+  it('weather reactions never override an event reaction, and a stronger event takes them over', () => {
+    for (const event of ['lick', 'joy', 'ouch', 'panic', 'wink', 'squint', 'horror'] as const) {
+      const state = new FaceState(() => 0.5);
+      state.react(event, 500);
+      state.react('startle', 400);
+      state.react('yawn', 400);
+      expect(state.reaction()).toBe(event);
+    }
+    const state = new FaceState(() => 0.5);
+    state.react('yawn', 800);
+    state.react('startle', 400);
+    expect(state.reaction()).toBe('startle');
+    state.react('ouch', 300);
+    expect(state.reaction()).toBe('ouch');
+    // The yawn does not take over a startle.
+    const second = new FaceState(() => 0.5);
+    second.react('startle', 400);
+    second.react('yawn', 800);
+    expect(second.reaction()).toBe('startle');
+  });
+
+  it('a sleepy face blinks rarer and slower', () => {
+    const awake = new FaceState(() => 0);
+    const sleepy = new FaceState(() => 0);
+    sleepy.setSleepy(true);
+    const firstBlink = (state: FaceState): [number, number] => {
+      let t = 0;
+      while (state.reaction() !== 'blink') {
+        state.update(10);
+        t += 10;
+      }
+      let len = 0;
+      while (state.reaction() === 'blink') {
+        state.update(10);
+        len += 10;
+      }
+      return [t, len];
+    };
+    const [awakeAt, awakeLen] = firstBlink(awake);
+    const [sleepyAt, sleepyLen] = firstBlink(sleepy);
+    expect(sleepyAt).toBeGreaterThan(awakeAt);
+    expect(sleepyLen).toBeGreaterThan(awakeLen);
+  });
+});

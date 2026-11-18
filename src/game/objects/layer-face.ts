@@ -2,10 +2,13 @@ import * as Phaser from 'phaser';
 import { ANIM } from '../../data/anim';
 import type { FaceRecipe } from '../../data/creature-looks';
 import { LICK } from '../../data/lick';
+import { TOWER_WEATHER } from '../../data/tower-weather';
 import { frameLerp } from '../../util/math';
+import { fxGuard } from '../fx-guard';
 import { FaceParts } from './face-parts';
 import { faceLayout } from './face-recipe';
 import { FaceLick } from './face-lick';
+import { YAWN_TOTAL_MS, yawnPose, type YawnPose } from './face-yawn';
 import type { LickFrame, LickKind, LickScene, LoopShape } from './lick-plan';
 import type { LickStyle } from '../../data/lick';
 import {
@@ -50,6 +53,15 @@ export class LayerFace extends Phaser.GameObjects.Container {
   private resolvedReaction: Reaction | null = null;
   private resolvedMood: Mood = 'calm';
   private resolvedHint: MouthKind | undefined;
+  private resolvedSleepy = false;
+  /** The layer is sleepy (night): half-shut eyes at rest, slow blinks, the odd yawn. */
+  private sleepy = false;
+  /** Time into the yawn running, -1 when none; the pose it lays over the face now. */
+  private yawnMs = -1;
+  private readonly yawnNow: YawnPose = { open: 0, stretch: 0, lift: 0 };
+  /** Time left of the way back from the wide eyes of a startle. */
+  private startleTailMs = 0;
+  private lastReaction: Reaction | null = null;
   private layerWidth = 0;
   /** The layer is wide enough for mouth, cheeks and sweat (eyes, pupils and brows always show). */
   private showRest = true;
@@ -143,6 +155,88 @@ export class LayerFace extends Phaser.GameObjects.Container {
   setMood(mood: Mood): this {
     this.mood = mood;
     return this.refresh();
+  }
+
+  /** Night: half-shut eyes and slow blinks at rest (any reaction of an event goes over them). */
+  setSleepy(on: boolean): this {
+    if (this.sleepy === on) return this;
+    this.sleepy = on;
+    this.timers.setSleepy(on);
+    if (!on) this.endYawn();
+    return this.refresh();
+  }
+
+  /** A sleepy face (any face when `force`), calm and free: it may yawn now (a single face with a mouth). */
+  canYawn(force = false): boolean {
+    const busy = this.timers.reaction();
+    return (
+      (this.sleepy || force) &&
+      this.visible &&
+      !this.recipe?.pair &&
+      this.showRest &&
+      this.mood === 'calm' &&
+      !this.lick.busy &&
+      this.yawnMs < 0 &&
+      (busy === null || busy === 'blink')
+    );
+  }
+
+  /** Starts a yawn; false when the face is not free for it. `force` yawns a face that is not sleepy (the debug button). */
+  yawn(force = false): boolean {
+    if (!this.canYawn(force)) return false;
+    this.yawnMs = 0;
+    this.timers.react('yawn', YAWN_TOTAL_MS);
+    this.refresh();
+    return true;
+  }
+
+  get yawning(): boolean {
+    return this.yawnMs >= 0;
+  }
+
+  private endYawn(): void {
+    if (this.yawnMs < 0) return;
+    this.yawnMs = -1;
+    if (this.timers.reaction() === 'yawn') this.timers.clearReaction();
+    this.placeFaces();
+    this.expression = null;
+    this.refresh();
+  }
+
+  /** Lays the pose of the yawn (stretch, lift, the mouth) over the expression of this frame. */
+  protected runYawn(dtMs: number): void {
+    if (this.yawnMs < 0) return;
+    // A stronger reaction took the face over (or the time ran out): the yawn is off, the face is its own again.
+    const pose = this.timers.reaction() === 'yawn' ? yawnPose(this.yawnMs, this.yawnNow) : null;
+    if (!pose) {
+      this.yawnMs = -1;
+      if (this.timers.reaction() === 'yawn') this.timers.clearReaction();
+      this.placeFaces();
+      this.expression = null;
+      this.refresh();
+      return;
+    }
+    this.yawnMs += dtMs;
+    this.mainFace.setScale(1, 1 + pose.stretch).setY(-pose.lift);
+    this.mainFace.poseYawn(pose.open, TOWER_WEATHER.sleepy.yawn.mouthScale);
+  }
+
+  /** The eyes shrink from the wide startle size to normal over `startle.returnMs` after the startle face goes. */
+  protected runStartleTail(dtMs: number): void {
+    const now = this.timers.reaction();
+    const was = this.lastReaction;
+    this.lastReaction = now;
+    const startled = (r: Reaction | null): boolean => r === 'startle' || r === 'startleEyes';
+    if (startled(was) && !startled(now) && now === null) {
+      this.startleTailMs = TOWER_WEATHER.startle.returnMs;
+    } else if (now !== null && !startled(now)) {
+      this.startleTailMs = 0;
+    }
+    if (this.startleTailMs <= 0) return;
+    this.startleTailMs = Math.max(0, this.startleTailMs - dtMs);
+    const k = this.startleTailMs / TOWER_WEATHER.startle.returnMs;
+    this.mainFace.setEyeScale(1 + (ANIM.face.wideEyeScale - 1) * k);
+    if (this.startleTailMs === 0) this.applyExpression();
   }
 
   setMouthHint(mouth: MouthKind | undefined): this {
@@ -284,6 +378,9 @@ export class LayerFace extends Phaser.GameObjects.Container {
     this.runHug(dtMs);
     this.timers.update(dtMs);
     this.refresh();
+    // Weather decorations: a failure skips them and the face goes on.
+    fxGuard.call('face yawn', this, LayerFace.prototype.runYawn, dtMs);
+    fxGuard.call('face startle tail', this, LayerFace.prototype.runStartleTail, dtMs);
     // Last, so the pose of the lick lies over the expression of this frame.
     this.lick.tick(dtMs);
     const follow = frameLerp(ANIM.face.lookLerp, dtMs);
@@ -296,6 +393,11 @@ export class LayerFace extends Phaser.GameObjects.Container {
 
   /** Back to a calm face with open eyes, centred pupils and a fresh blink timer. */
   reset(): this {
+    this.sleepy = false;
+    this.timers.setSleepy(false);
+    this.yawnMs = -1;
+    this.startleTailMs = 0;
+    this.lastReaction = null;
     this.timers.reset();
     this.lick.reset();
     this.mood = 'calm';
@@ -320,14 +422,16 @@ export class LayerFace extends Phaser.GameObjects.Container {
       this.expression !== null &&
       reaction === this.resolvedReaction &&
       this.mood === this.resolvedMood &&
-      this.mouthHint === this.resolvedHint
+      this.mouthHint === this.resolvedHint &&
+      this.sleepy === this.resolvedSleepy
     ) {
       return this;
     }
     this.resolvedReaction = reaction;
     this.resolvedMood = this.mood;
     this.resolvedHint = this.mouthHint;
-    const next = resolveExpression(this.mood, reaction, this.mouthHint, this.recipe);
+    this.resolvedSleepy = this.sleepy;
+    const next = resolveExpression(this.mood, reaction, this.mouthHint, this.recipe, this.sleepy);
     if (sameExpression(this.expression, next)) return this;
     this.expression = next;
     this.applyExpression();

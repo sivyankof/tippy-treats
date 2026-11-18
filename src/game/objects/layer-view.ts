@@ -9,6 +9,7 @@ import type { CreatureId } from '../../data/creatures';
 import type { StageMode } from '../../data/mastery-look';
 import { IDLE_MOTION } from '../../data/idle-motion';
 import { effectsMode } from '../effects-mode';
+import { fxGuard } from '../fx-guard';
 import { createGlossBand, sweepGloss } from '../fx/gloss-sweep';
 import { springScaleBack, type ScaleStart } from '../fx/spring-back';
 import { idlePose, type IdlePose } from '../ui/idle-motion';
@@ -29,6 +30,7 @@ import { RainbowIdle } from './rainbow-idle';
 import { GlazeDripLayer } from './glaze-drip-layer';
 import { LayerTopper, type TopperWorld } from './layer-topper';
 import { LayerMarkPictures } from './layer-marks';
+import { LayerDrifts } from './layer-drifts';
 import { pressAngle, pressDrop, pressPivot, pressShift } from './layer-press';
 
 /** A heavy press at one spot of a layer (it landed on the guest of the tower). */
@@ -80,6 +82,8 @@ export class LayerView extends Phaser.GameObjects.Container {
   private readonly topper: LayerTopper;
   /** Marks the layer keeps until the end of the run: a glaze drop on a cut, a juice stain, a cream roll. */
   private readonly marks: LayerMarkPictures;
+  /** Snow drifts on the open top of the layer (the snow of the Roof and the Clouds). */
+  private readonly drifts: LayerDrifts;
   /** The star and the rest wave of the Rainbow layer. */
   private readonly rainbow: RainbowIdle;
   /** The one small moving sprite of a grown creature (bee, breath, spark). */
@@ -114,6 +118,7 @@ export class LayerView extends Phaser.GameObjects.Container {
     this.shade = new LayerShade(scene);
     this.topper = new LayerTopper(scene);
     this.marks = new LayerMarkPictures(scene);
+    this.drifts = new LayerDrifts(scene);
     this.accent = new GrownAccentView(scene);
     this.rig = new LayerRig(scene, this.art, this.face);
     this.content = new Phaser.GameObjects.Container(scene, 0, -half, [
@@ -122,6 +127,7 @@ export class LayerView extends Phaser.GameObjects.Container {
       ...this.marks.cutImages,
       ...this.shade.parts,
       ...this.marks.pressImages,
+      ...this.drifts.images,
       ...this.rig.parts,
       this.glossSweep,
       this.face,
@@ -224,6 +230,7 @@ export class LayerView extends Phaser.GameObjects.Container {
   setShadeFrom(upper: { x: number; width: number } | null, x: number, width: number): this {
     if (upper) this.shade.set(x, width, upper.x, upper.width);
     else this.shade.clear();
+    this.drifts.setLedge(width, upper ? upper.width : null, upper ? upper.x - x : 0);
     return this;
   }
 
@@ -236,6 +243,7 @@ export class LayerView extends Phaser.GameObjects.Container {
   /** Lets the view show the marks its layer keeps (a layer of the tower, or one of it falling in the collapse). */
   setMarksAllowed(on: boolean): this {
     this.marks.setAllowed(on);
+    this.drifts.setAllowed(on);
     return this;
   }
 
@@ -525,6 +533,7 @@ export class LayerView extends Phaser.GameObjects.Container {
     this.face.reset();
     this.topper.reset();
     this.marks.reset();
+    this.drifts.reset();
     return this;
   }
 
@@ -538,6 +547,7 @@ export class LayerView extends Phaser.GameObjects.Container {
     this.applyPress();
     this.glazeDrips.setAlpha(this.art.alpha);
     this.marks.tick(this.scene.time.now, this.art.alpha);
+    fxGuard.call('layer drifts', this.drifts, LayerDrifts.prototype.tick, dtMs, this.art.alpha);
     this.material.tick(dtMs, motion);
     if (motion) this.breathe(motion);
     if (this.face.visible) this.face.tick(dtMs);
