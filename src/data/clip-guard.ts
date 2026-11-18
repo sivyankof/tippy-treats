@@ -32,6 +32,11 @@ export const CLIP_ALLOWED: readonly ClipAllowance[] = [
       'tiled backdrop layers: the scenery is drawn past the tile on purpose, so the cut is a straight edge that repeats (TileSprite)',
   },
   {
+    match: /^bd_win_pano_(kitchen|shop)_[a-z]+_p\d\d$/,
+    reason:
+      'a piece of the panoramic window picture: it is cut out of a bigger picture on purpose and drawn edge to edge with its neighbours',
+  },
+  {
     match: /^bd_mountains/,
     sides: ['bottom'],
     reason: 'the hills run down past the bottom edge of their picture; the screen covers the cut',

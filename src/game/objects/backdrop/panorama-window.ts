@@ -1,4 +1,4 @@
-import type * as Phaser from 'phaser';
+import * as Phaser from 'phaser';
 import {
   GLASS_WEATHER,
   PANORAMA,
@@ -6,7 +6,7 @@ import {
   WINDOW_LOOK,
   WINDOW_SKY,
   panoramaFlashKey,
-  panoramaKey,
+  panoramaPieces,
   type GlassWeather,
 } from '../../../data/window-look';
 import type { StartPlaceId } from '../../../data/start-places';
@@ -157,18 +157,43 @@ function paintPanorama(ctx: Ctx2D, place: StartPlaceId, weather: WeatherId): voi
   }
 }
 
-/** Bakes the panoramic window of a place for the weather of the run (its own texture, see `PANORAMA`). */
-export function bakePanorama(scene: Phaser.Scene, place: StartPlaceId, weather: WeatherId): string {
-  const key = panoramaKey(place, weather);
-  bakeTexture(
-    scene,
-    key,
-    W,
-    H,
-    () => undefined,
-    (ctx) => paintPanorama(ctx, place, weather),
-  );
-  return key;
+/**
+ * Bakes the panoramic window of a place for the weather of the run as pieces of the shared atlas (`PANORAMA.pieces`).
+ * The whole picture is painted once into a canvas that the pieces are cut from; the canvas is dropped after the last.
+ */
+export function bakePanorama(
+  scene: Phaser.Scene,
+  place: StartPlaceId,
+  weather: WeatherId,
+): string[] {
+  const pieces = panoramaPieces(place, weather);
+  const bakedW = Math.round(W * P.bakeScale);
+  const bakedH = Math.round(H * P.bakeScale);
+  let full: HTMLCanvasElement | null = null;
+  pieces.forEach((piece, i) => {
+    bakeTexture(
+      scene,
+      piece.key,
+      piece.width,
+      piece.height,
+      () => undefined,
+      (ctx) => {
+        if (!full) {
+          full = document.createElement('canvas');
+          full.width = bakedW;
+          full.height = bakedH;
+          const fullCtx = full.getContext('2d');
+          if (fullCtx) {
+            fullCtx.scale(bakedW / W, bakedH / H);
+            paintPanorama(fullCtx, place, weather);
+          }
+        }
+        ctx.drawImage(full, -piece.x, -piece.y);
+        if (i === pieces.length - 1) full = null;
+      },
+    );
+  });
+  return pieces.map((piece) => piece.key);
 }
 
 /** Margin (px) round the baked flash shape, so its edge is never cut. */
@@ -255,7 +280,21 @@ export function panoramaGlassLife(
   );
 }
 
-/** Bakes what the panoramic window of a place needs for the weather of the run: its picture and, in a storm, the flash. */
+/** How many sceneries hold each baked panorama picture; the last one to go frees its cell on the atlas. */
+const holds = new Map<string, number>();
+
+function panoramaKeys(place: StartPlaceId, weather: WeatherId): string[] {
+  const keys = panoramaPieces(place, weather).map((piece) => piece.key);
+  if (weather === 'storm') keys.push(panoramaFlashKey(place));
+  return keys;
+}
+
+/**
+ * Bakes what the panoramic window of a place needs for the weather of the run: its picture and, in a storm, the flash.
+ * The pictures are big (a 648 px shelf of the shared atlas), so they are given back when the scenery that holds them is
+ * destroyed (`releasePanorama`): the start zone is gone after the cross-fade into the Showcase, and the freed shelf
+ * is reused by the pictures of the zones above it.
+ */
 export function bakePanoramaSet(
   scene: Phaser.Scene,
   place: StartPlaceId,
@@ -263,6 +302,20 @@ export function bakePanoramaSet(
 ): void {
   bakePanorama(scene, place, weather);
   if (weather === 'storm') bakePanoramaFlash(scene, place, panoramaFlashKey(place));
+  for (const key of panoramaKeys(place, weather)) holds.set(key, (holds.get(key) ?? 0) + 1);
+}
+
+/** One scenery lets go of its panorama pictures; the texture goes with the last one. */
+function releasePanorama(scene: Phaser.Scene, place: StartPlaceId, weather: WeatherId): void {
+  for (const key of panoramaKeys(place, weather)) {
+    const left = (holds.get(key) ?? 0) - 1;
+    if (left > 0) {
+      holds.set(key, left);
+      continue;
+    }
+    holds.delete(key);
+    if (scene.textures.exists(key)) scene.textures.remove(key);
+  }
 }
 
 /** True where the panoramic window has no room (a short screen) and the small window stands on the start view instead. */
@@ -278,16 +331,16 @@ export function panoramaLives(
 ): Life[] {
   const window = new LayerThing(
     scene,
-    [
-      {
-        texture: panoramaKey(place, weather),
-        at: { x: 0.5, y: 0 },
-        offset: { x: 0, y: 0 },
-        pulse: WINDOW_LOOK.pulse,
-      },
-    ],
+    panoramaPieces(place, weather).map((piece) => ({
+      texture: piece.key,
+      at: { x: 0.5, y: 0 },
+      offset: { x: piece.centreX, y: piece.centreY },
+      scale: 1 / P.bakeScale,
+    })),
     { layer: WALL_LOOK.layer, halfH: H / 2, fit: panoramaFitCached, rowMute: true },
   );
+  const image = window.objects[0];
+  image?.once(Phaser.GameObjects.Events.DESTROY, () => releasePanorama(scene, place, weather));
   const spot = window.spots[0];
   if (!spot) return [window];
   const glass = panoramaGlassLife(scene, weather, spot);

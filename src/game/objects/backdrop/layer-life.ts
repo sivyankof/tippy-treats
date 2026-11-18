@@ -88,7 +88,13 @@ export class LayerThing implements Life {
     });
   }
 
+  /** Set when a fitted thing is covered for good (`rowMute` things): its pictures are destroyed, so their texture can go. */
+  private retired = false;
+  /** Time (ms) the thing has been covered without a break; -1 while it is not. */
+  private coveredSince = -1;
+
   update(ctx: FrameCtx): void {
+    if (this.retired) return;
     const { series, mirror, fadeDown, layer, fit, skipStart } = this.options;
     const down = ctx.layerDown[layer] ?? 0;
     const first = this.specs[0];
@@ -102,6 +108,7 @@ export class LayerThing implements Life {
     const left = skipStart?.(ctx.width, ctx.height) === true;
     const count = this.specs.length;
     const fade = fadeDown ? fadeDown(down) : 1;
+    let covered = false;
     for (let slot = 0; slot < this.pool; slot++) {
       const n = series ? slotCopy(slot, series, y0, down, ctx.height) : 0;
       const rise = series ? seriesRise(n, series, ctx.height) : 0;
@@ -128,26 +135,45 @@ export class LayerThing implements Life {
         if (!spec || !image) continue;
         const pose = hoverPose(spec, ctx.width, ctx.height, ctx.timeMs, this.pose);
         if (mirrored) pose.x = ctx.width - pose.x;
-        if (fitted) pose.y += y0 - specY;
+        // A fitted picture may be made of several specs (pieces): their offsets from its centre scale with it.
+        if (fitted) {
+          pose.y = y0 + pose.y * scale;
+          pose.x = first.at.x * ctx.width + (pose.x - first.at.x * ctx.width) * scale;
+        }
         pose.alpha *= fade;
         pose.scaleX *= scale;
         pose.scaleY *= scale;
         const shown = rideLayer(pose, this.anchor, ctx, ctx.height, halfH, rise, !rowMuted);
         if (rowMuted) {
-          pose.alpha *= rowMute(pose.y, halfH, ctx.flightRow, WALL_LOOK.featherPx);
-          pose.alpha *= coverFade(pose.y, halfH, ctx.flightRow.towerTop);
+          // The mute and the cover are the picture's as a whole: every strip takes them from the picture's centre.
+          const centre = fitted ? pose.y - (spec.offset?.y ?? 0) * scale : pose.y;
+          pose.alpha *= rowMute(centre, halfH, ctx.flightRow, WALL_LOOK.featherPx);
+          const cover = coverFade(centre, halfH, ctx.flightRow.towerTop);
+          pose.alpha *= cover;
+          covered = cover <= 0;
         }
         applyPose(image, pose);
         image.setFlipX(mirrored);
         image.setVisible(shown);
         if (k === 0) {
-          spot.x = pose.x;
-          spot.y = pose.y;
+          spot.x = fitted ? pose.x - (spec.offset?.x ?? 0) * scale : pose.x;
+          spot.y = fitted ? pose.y - (spec.offset?.y ?? 0) * scale : pose.y;
           spot.mirrored = mirrored;
           spot.alpha = pose.alpha / (spec.alpha ?? 1);
           spot.scale = scale;
         }
       }
     }
+    // The tower only grows in a run: a window it has covered completely never comes back, so it gives its pictures up.
+    // The camera of the run intro passes over the start view first, so it must stay covered for a while.
+    if (!covered || !fitted) this.coveredSince = -1;
+    else if (this.coveredSince < 0) this.coveredSince = ctx.timeMs;
+    else if (ctx.timeMs - this.coveredSince >= WALL_LOOK.retireAfterMs) this.retire();
+  }
+
+  private retire(): void {
+    this.retired = true;
+    for (const spot of this.spots) spot.alpha = 0;
+    for (const image of this.objects) image.destroy();
   }
 }
