@@ -2,7 +2,14 @@ import { describe, expect, it } from 'vitest';
 import { ANIM } from '../../data/anim';
 import { BALANCE } from '../../data/balance';
 import { TOWER_WEATHER } from '../../data/tower-weather';
-import { YAWN_TOTAL_MS, fitYawnMouth, yawnPose, type YawnMouth, type YawnPose } from './face-yawn';
+import {
+  YAWN_TOTAL_MS,
+  fitYawnMouth,
+  yawnMouthShows,
+  yawnPose,
+  type YawnMouth,
+  type YawnPose,
+} from './face-yawn';
 
 const Y = TOWER_WEATHER.sleepy.yawn;
 const blank = (): YawnPose => ({ open: 0, stretch: 0, lift: 0 });
@@ -93,5 +100,16 @@ describe('fitYawnMouth', () => {
     });
     expect(m.scale).toBeLessThan(Y.mouthScale);
     expect(m.scale).toBeGreaterThan(0.3);
+  });
+});
+
+describe('yawnMouthShows', () => {
+  it('poses the mouth only once it gapes, and leaves the expression mouth while it is shut', () => {
+    expect(yawnMouthShows(0)).toBe(false);
+    expect(yawnMouthShows(Y.mouthMinOpen)).toBe(false);
+    expect(yawnMouthShows(Y.mouthMinOpen + 0.01)).toBe(true);
+    // Both ends of the close are shut, so the restore of the expression's mouth has a moment to happen in.
+    const last = yawnPose(YAWN_TOTAL_MS - 1, blank())!;
+    expect(yawnMouthShows(last.open)).toBe(false);
   });
 });

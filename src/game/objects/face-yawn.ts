@@ -18,11 +18,6 @@ export interface YawnPose {
   lift: number;
 }
 
-/** Share of the close in which the mouth shuts; the smack follows in the rest. */
-const SHUT_SHARE = 0.4;
-/** The small second opening of the smack. */
-const SMACK = { at: 0.68, width: 0.2, open: 0.16 };
-
 /**
  * The yawn `ms` after it began: the face draws itself up (eyes shut, a little taller and higher) over `prepMs`, the
  * mouth opens wide and holds over `gapeMs` with the face stretched a bit more, then over `closeMs` the mouth shuts, smacks
@@ -41,18 +36,20 @@ export function yawnPose(ms: number, out: YawnPose): YawnPose | null {
   if (gapeAt < YAWN.gapeMs) {
     const k = smoothstep(gapeAt / YAWN.gapeMs);
     // The mouth opens over the first fifth, then breathes a little while it is held.
-    const opening = smoothstep(Math.min(1, gapeAt / (YAWN.gapeMs * 0.2)));
-    out.open = opening * (1 - 0.06 * Math.sin((gapeAt / YAWN.gapeMs) * Math.PI * 2));
+    const opening = smoothstep(Math.min(1, gapeAt / (YAWN.gapeMs * YAWN.openShare)));
+    out.open = opening * (1 - YAWN.breath * Math.sin((gapeAt / YAWN.gapeMs) * Math.PI * 2));
     out.stretch = YAWN.stretchPrep + (YAWN.stretchGape - YAWN.stretchPrep) * k;
     out.lift = YAWN.liftPx;
     return out;
   }
   const u = (gapeAt - YAWN.gapeMs) / YAWN.closeMs;
-  const shut = smoothstep(Math.min(1, u / SHUT_SHARE));
-  const smack = Math.max(0, 1 - Math.abs(u - SMACK.at) / SMACK.width) * SMACK.open;
+  const shut = smoothstep(Math.min(1, u / YAWN.shutShare));
+  const smack = Math.max(0, 1 - Math.abs(u - YAWN.smack.at) / YAWN.smack.width) * YAWN.smack.open;
   out.open = 1 - shut + smack * shut;
   // Down from the stretch, past the rest shape (the squash) and back: a damped spring.
-  const spring = Math.sin(Math.PI * Math.max(0, Math.min(1, (u - SHUT_SHARE) / (1 - SHUT_SHARE))));
+  const spring = Math.sin(
+    Math.PI * Math.max(0, Math.min(1, (u - YAWN.shutShare) / (1 - YAWN.shutShare))),
+  );
   out.stretch = YAWN.stretchGape * (1 - smoothstep(u)) - YAWN.squashClose * spring;
   out.lift = YAWN.liftPx * (1 - smoothstep(u));
   return out;
@@ -86,4 +83,9 @@ export function fitYawnMouth(
   out.scale = Math.min(Y.mouthScale, room / (Y.mouthPicturePx * shown));
   out.y = Y.mouthTopPx + Y.mouthOriginY * Y.mouthPicturePx * out.scale * shown;
   return out;
+}
+
+/** Whether a mouth that gapes `open` is posed over the expression (a smaller one is left as the expression has it). */
+export function yawnMouthShows(open: number): boolean {
+  return open > YAWN.mouthMinOpen;
 }

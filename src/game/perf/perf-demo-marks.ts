@@ -53,6 +53,7 @@ export function stepTower(layers: PlacedLayer[]): void {
 /** What the benchmark does to the starting tower of the run about to begin: demo stains (`&marks=1` or a `marks` segment) and steps. */
 export function prepareStartTower(layers: PlacedLayer[]): void {
   const def = currentSegment();
-  if (perfSession()?.params.marks || def?.marks) leaveDemoMarks(layers);
+  // Steps first: the stains are placed by the width of each layer as it stands.
   if (def?.steps) stepTower(layers);
+  if (perfSession()?.params.marks || def?.marks) leaveDemoMarks(layers);
 }

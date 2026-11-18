@@ -4,11 +4,10 @@ import type { FaceRecipe } from '../../data/creature-looks';
 import type { Expression } from './face-state';
 import { browTransform, lidShape, WORRIED_BROW } from './face-recipe';
 import { LICK } from '../../data/lick';
+import { TOWER_WEATHER } from '../../data/tower-weather';
+import { yawnMouthShows } from './face-yawn';
 import type { EyeLook, LickFace, LipsTongue } from './lick-plan';
 import { EYE_TEXTURE, FACE_TEXTURES, MOUTH_TEXTURE } from './face-textures';
-
-/** A mouth gaping less than this share shows as the expression's own mouth (the yawn has not opened yet). */
-const YAWN_MOUTH_MIN = 0.04;
 
 /** What the parts need to know about the layer besides the expression. */
 export interface PartsContext {
@@ -119,14 +118,16 @@ export class FaceParts extends Phaser.GameObjects.Container {
 
   /**
    * The mouth of a yawn over the current expression: the tall oval mouth of the yawn at `scale` times its size, `open` (0..1)
-   * wide; a mouth that is all but shut is left as the expression has it. Call `apply` again to go back.
+   * wide; true when it was posed, false for a mouth that is all but shut (left as the expression has it, which the
+   * caller restores with `apply` if the last frame posed one). Call `apply` again to go back.
    */
-  poseYawn(open: number, scale: number, y: number): void {
-    if (open <= YAWN_MOUTH_MIN) return;
+  poseYawn(open: number, scale: number, y: number): boolean {
+    if (!yawnMouthShows(open)) return false;
     FaceParts.show(this.mouth, FACE_TEXTURES.mouthYawn)
-      .setOrigin(0.5, 0.3)
+      .setOrigin(0.5, TOWER_WEATHER.sleepy.yawn.mouthOriginY)
       .setPosition(0, y)
       .setScale(scale * (0.55 + 0.45 * open), scale * open);
+    return true;
   }
 
   /** The eyes and pupils at `share` of the wide-eye size (the way back from a startle); `apply` resets them. */
