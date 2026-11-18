@@ -82,6 +82,11 @@ class FakeContext {
     this.resumes++;
     return Promise.resolve();
   };
+  closes = 0;
+  close = () => {
+    this.closes++;
+    return Promise.reject(new Error('closed'));
+  };
   suspend = () => {
     this.suspends++;
     return Promise.reject(new Error('closed'));
@@ -100,6 +105,24 @@ function setup() {
 }
 
 describe('WebAudioService', () => {
+  it('closes the context and stops retrying when the graph cannot be built', () => {
+    const ctx = new FakeContext();
+    ctx.createGain = () => {
+      throw new Error('no gain');
+    };
+    let created = 0;
+    const service = new WebAudioService(() => {
+      created++;
+      return ctx as unknown as AudioContext;
+    });
+    service.unlock();
+    service.unlock();
+    service.unlock();
+    expect(created).toBe(1);
+    expect(ctx.closes).toBe(1);
+    expect(service.debugStats().contextState).toBe('none');
+  });
+
   it('remembers the weather bed asked for before the unlock and starts it then', () => {
     const { ctx, service } = setup();
     service.setBed('rain');
