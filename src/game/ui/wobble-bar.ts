@@ -11,6 +11,7 @@ import { stepSpring, type SpringState } from '../fx/anim-curves';
 import { bakeTexture } from './bake-texture';
 import { applyIdlePose, idlePose, type IdlePose } from './idle-motion';
 import { HudPlate, hudPlateWidth } from './style/hud-plate';
+import { drawBarFill, drawBarTrack } from './style/volume-bar';
 import { wobbleCentreX } from './tempo-chip-layout';
 import type { Movable } from './transition';
 import { FONT_FAMILY, FONT_WEIGHT } from './fonts';
@@ -80,18 +81,26 @@ export class WobbleBar {
   private danger: boolean | null = null;
 
   constructor(scene: Phaser.Scene) {
-    bakePill(
-      scene,
-      TEXTURES.track,
-      barWidth,
-      barHeight,
-      TRACK_RADIUS,
-      PALETTE.textDark,
-      TRACK_ALPHA,
+    // Track and fills are baked once with the volume of the kit's bars (`style/volume-bar.ts`);
+    // in the frame only the fill is stretched.
+    bakeTexture(scene, TEXTURES.track, barWidth, barHeight, (g) =>
+      drawBarTrack(
+        g,
+        { left: 0, top: 0, width: barWidth, height: barHeight, radius: TRACK_RADIUS },
+        { back: PALETTE.textDark, alpha: TRACK_ALPHA },
+      ),
     );
     const minFill = FILL_HEIGHT;
-    bakePill(scene, TEXTURES.ok, minFill * 2, FILL_HEIGHT, FILL_RADIUS, PALETTE.success, 1);
-    bakePill(scene, TEXTURES.danger, minFill * 2, FILL_HEIGHT, FILL_RADIUS, PALETTE.danger, 1);
+    const bakeFill = (key: string, color: number): void =>
+      bakeTexture(scene, key, minFill * 2, FILL_HEIGHT, (g) =>
+        drawBarFill(
+          g,
+          { left: 0, top: 0, width: minFill * 2, height: FILL_HEIGHT, radius: FILL_RADIUS },
+          color,
+        ),
+      );
+    bakeFill(TEXTURES.ok, PALETTE.success);
+    bakeFill(TEXTURES.danger, PALETTE.danger);
     bakePill(
       scene,
       TEXTURES.wave,

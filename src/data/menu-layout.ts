@@ -295,10 +295,6 @@ export const MENU = {
     back: 0xe9d5c3,
     border: 4,
     numbersScale: 0.8,
-    /** The upper half of the empty bar is darkened by this much, like a groove. */
-    groove: -0.12,
-    /** A gloss strip along the top of the filled part. */
-    gloss: { alpha: 0.42, inset: 7, share: 0.26 },
   },
   home: {
     /** The design height the layout numbers are made for. */
@@ -528,19 +524,20 @@ export const MENU = {
   },
   /** The gentle "no ads" offer after the second interstitial of a session. */
   noAdsOffer: {
-    contentHeight: 700,
+    contentHeight: 740,
     iconSize: 190,
     iconY: 110,
     /** The picture sways gently: the angle (degrees) and the half period (ms). */
     sway: { angle: 4, ms: 1100 },
-    textY: 290,
-    textFont: 46,
-    /** The note under the text; it also shows why a purchase did not go through. */
-    noteY: 356,
+    /** The description of the purchase (it wraps to two or three lines, centred on `textY`). */
+    textY: 305,
+    textFont: 40,
+    /** The line under it; empty until it shows why a purchase did not go through. */
+    noteY: 415,
     noteFont: 36,
-    buyY: 480,
+    buyY: 520,
     buy: { width: 720, height: 124, radius: 44, shadowOffset: 10, font: 52 },
-    laterY: 624,
+    laterY: 664,
   },
   /** The free gift window. */
   /** The oven explainer window. */
@@ -1123,6 +1120,8 @@ export const MENU = {
       badge: { height: 44, font: 28, padX: 26, fill: 0xe8334a },
       ownedFill: 0x2fb97f,
     },
+    /** The description of "No ads" under its row: font, width it wraps at and the gap above it. */
+    noAdsNote: { font: 30, wrap: 860, gap: 14 },
     /** The starter pack card. */
     starter: {
       height: 540,

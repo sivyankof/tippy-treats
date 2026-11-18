@@ -5,6 +5,7 @@ import { TOWER_GUESTS } from '../../data/tower-guest';
 import { createAbilityTextures } from '../fx/abilities/ability-textures';
 import { bakeCheckpointTextures } from '../fx/checkpoint-textures';
 import { bakeOfflineIcon } from '../fx/offline-icon-texture';
+import { bakeVideoIcon } from '../fx/video-icon-texture';
 import { bakeChestTextures } from '../fx/chest-texture';
 import { bakeCutTextures } from '../fx/cut-textures';
 import { createFxTextures } from '../fx/fx-textures';
@@ -76,6 +77,7 @@ const PRIME_STEPS: ReadonlyArray<(scene: Phaser.Scene) => void> = [
   bakeChestTextures,
   bakeCheckpointTextures,
   bakeOfflineIcon,
+  bakeVideoIcon,
   (scene) => bakeShadeTextures(scene),
   bakeTopperTextures,
   (scene) => bakeGiftTextures(scene, false),

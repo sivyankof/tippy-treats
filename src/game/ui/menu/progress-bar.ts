@@ -1,8 +1,9 @@
 import * as Phaser from 'phaser';
 import { MENU } from '../../../data/menu-layout';
 import { PALETTE } from '../../../data/palette';
-import { shade } from '../../../util/color';
 import { createOutlinedText } from '../outlined-text';
+import { barFillWidth } from '../style/bar-geometry';
+import { drawBarFill, drawBarTrack } from '../style/volume-bar';
 import { fitText } from './fit-text';
 
 const bar = MENU.xpBar;
@@ -17,8 +18,8 @@ export interface BarShape {
 }
 
 /**
- * Draws a bar centred on the origin: a dark frame, a grooved empty part and a glossy fill.
- * Shared by the XP bar and the progress bar. `share` is 0..1.
+ * Draws a bar centred on the origin: a dark frame, a grooved empty part and a fill with volume
+ * (`style/volume-bar.ts`). Shared by the XP bar, the oven and the progress bar. `share` is 0..1.
  */
 export function drawProgressBar(
   graphics: Phaser.GameObjects.Graphics,
@@ -38,22 +39,9 @@ export function drawProgressBar(
     h + border * 2,
     radius + border,
   );
-  g.fillStyle(bar.back, 1).fillRoundedRect(left, top, w, h, radius);
-  // A groove: the upper part of the empty bar is in the shade of its rim.
-  g.fillStyle(shade(bar.back, bar.groove), 1).fillRoundedRect(left, top, w, h / 2, {
-    tl: radius,
-    tr: radius,
-    bl: 0,
-    br: 0,
-  });
-  const filled = Math.max(0, Math.min(1, share)) * w;
-  if (filled > 0) {
-    const fw = Math.max(filled, radius * 2);
-    g.fillStyle(fill, 1).fillRoundedRect(left, top, fw, h, radius);
-    const gh = h * bar.gloss.share;
-    g.fillStyle(PALETTE.textLight, bar.gloss.alpha);
-    g.fillRoundedRect(left + radius / 2, top + bar.gloss.inset, fw - radius, gh, gh / 2);
-  }
+  drawBarTrack(g, { left, top, width: w, height: h, radius }, { back: bar.back });
+  const filled = barFillWidth(share, w, radius);
+  if (filled > 0) drawBarFill(g, { left, top, width: filled, height: h, radius }, fill);
 }
 
 /**

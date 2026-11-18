@@ -5,6 +5,7 @@ import { PALETTE } from '../../data/palette';
 import { formatNumber, t } from '../../i18n';
 import { services } from '../../services';
 import type { ContinueFlow } from '../continue-flow';
+import { continueInput } from '../continue-input';
 import { cuesForMoment } from '../fx/moment-cues';
 import { playCues } from '../fx/run-cues';
 import { createTreasureTextures } from '../fx/treasure-textures';
@@ -106,7 +107,10 @@ export class ContinueWindow {
     this.timer.update(flow);
     // While a payment is shown the buttons stay off.
     if (flow.paying) this.buttons.disable();
-    else if (flow.offer) this.buttons.sync(flow.offer, flow.adBusy);
+    else if (flow.offer) {
+      this.buttons.sync(flow.offer, flow.adBusy);
+      this.buttons.setActive(flow.inputReady);
+    }
     this.syncDecline(flow);
   }
 
@@ -131,7 +135,9 @@ export class ContinueWindow {
     this.timer.reset();
     this.heightText.setText(t('continue.height', { n: formatNumber(runHeight) }));
     this.scene.tweens.killTweensOf(this.declineText);
-    this.declineText.setAlpha(0);
+    this.fitDeclineHit();
+    this.declineText.setAlpha(continueInput(0).declineAlpha);
+    this.buttons.setActive(false);
     this.panel.setVisible(true).setY(this.offscreenY());
     this.slideTo(this.targetY(), win.slideInMs, win.slideInEase);
     this.startBob();
@@ -190,9 +196,8 @@ export class ContinueWindow {
     });
   }
 
-  private syncDecline(flow: ContinueFlow): void {
-    if (this.declineShown || !flow.declineReady) return;
-    this.declineShown = true;
+  /** The tap area of the small button, centred on its caption. */
+  private fitDeclineHit(): void {
     const { width, height } = this.declineText;
     this.declineText.input?.hitArea.setTo(
       (width - decline.hitWidth) / 2,
@@ -200,8 +205,14 @@ export class ContinueWindow {
       decline.hitWidth,
       decline.hitHeight,
     );
+  }
+
+  /** The pale caption turns normal at the moment the buttons switch on; then it pulses as before. */
+  private syncDecline(flow: ContinueFlow): void {
+    if (this.declineShown || !flow.inputReady) return;
+    this.declineShown = true;
+    this.fitDeclineHit();
     const [low, high] = decline.alphaRange;
-    this.declineText.setAlpha(0);
     this.scene.tweens.killTweensOf(this.declineText);
     this.scene.tweens.add({
       targets: this.declineText,

@@ -15,6 +15,7 @@ export const FIELD_PAD = {
   snowDrift: 4,
   hintArrow: 10,
   offlineIcon: 4,
+  videoIcon: 4,
   rewardTower: 4,
   grownBee: 4,
 } as const;

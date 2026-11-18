@@ -1,6 +1,6 @@
 import type * as Phaser from 'phaser';
 import type { Currency } from '../../../core/economy';
-import { markAdUnavailable } from './ad-unavailable';
+import { markAdUnavailable, resetAdLabel } from './ad-unavailable';
 import { productOwned } from '../../../core/shop';
 import { BERRY_PACKS } from '../../../data/economy';
 import { CREATURES, type CreatureId } from '../../../data/creatures';
@@ -13,6 +13,7 @@ import type { Prices } from '../../purchases';
 import { createTextButton, type Button } from '../button';
 import { CREATURE_ICON_KEYS } from '../creature-icons';
 import type { DailySection } from './daily-section';
+import { createBodyText } from './detail-info';
 import { createNoAdsIcon } from './shop-premium-icon';
 import {
   createShopRow,
@@ -95,7 +96,11 @@ export function freeSection(scene: Phaser.Scene, a: ShopActions, adReady: boolea
     markAdUnavailable(parts.button, parts.label, parts.labelWidth, 1);
     button = parts.button;
   } else {
-    button = rowTextButton(scene, t('shop.free.watch'), PALETTE.accent, 'wide', () => a.watchAd());
+    const parts = rowTextParts(scene, t('shop.free.watch'), PALETTE.accent, 'wide', () =>
+      a.watchAd(),
+    );
+    resetAdLabel(parts.label, parts.labelWidth);
+    button = parts.button;
   }
   const item = createShopRow(scene, {
     icon: pileIcon(scene, 'coins', amount, row.iconSize),
@@ -148,10 +153,15 @@ export function noAdsSection(scene: Phaser.Scene, a: ShopActions, prices: Prices
   const item = createShopRow(scene, {
     icon: createNoAdsIcon(scene, row.iconSize),
     title: t('shop.noAds.title'),
-    sub: t('shop.noAds.desc'),
     button: productButton(scene, 'remove_ads', prices, a),
   });
-  return createShopSection(scene, t('shop.section.noAds'), [item]);
+  const section = createShopSection(scene, t('shop.section.noAds'), [item]);
+  // The description is long: it gets the whole width of the card under the row.
+  const { font, wrap, gap } = MENU.shop.noAdsNote;
+  const note = createBodyText(scene, t('shop.noAds.desc'), font, true).setWordWrapWidth(wrap);
+  note.setPosition(0, section.height + gap + note.height / 2);
+  section.root.add(note);
+  return { root: section.root, height: section.height + gap + note.height };
 }
 
 /** The small "Restore purchases" button at the end of the list. */

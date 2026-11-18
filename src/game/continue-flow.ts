@@ -2,6 +2,7 @@ import { continueOffer, type ContinueOffer } from '../core/continue-offer';
 import type { RunMode } from '../core/run-result';
 import { BALANCE } from '../data/balance';
 import { CONTINUE_ANIM } from '../data/continue-anim';
+import { continueInput } from './continue-input';
 import type { AdsService } from '../services/rewarded-video/types';
 import type { GameState } from '../state/game-state';
 
@@ -62,9 +63,9 @@ export class ContinueFlow {
     return this.elapsed;
   }
 
-  /** The small "No thanks" button is live. */
-  get declineReady(): boolean {
-    return this.elapsed >= CONTINUE_ANIM.declineDelayMs;
+  /** The buttons of the window are live (they all switch on at the same moment). */
+  get inputReady(): boolean {
+    return continueInput(this.elapsed).active;
   }
 
   /** Opens the offer; false (nothing opened) when the window must not be shown at all. */
@@ -95,16 +96,16 @@ export class ContinueFlow {
     if (this.left <= 0) this.pending = 'decline';
   }
 
-  /** The "No thanks" button. Ignored before the guard time has passed. */
+  /** The "No thanks" button. Ignored before the buttons switch on. */
   decline(): void {
-    if (this.current && !this.adShowing && !this.pending && this.declineReady)
+    if (this.current && !this.adShowing && !this.pending && this.inputReady)
       this.pending = 'decline';
   }
 
   /** Pays the berry price from the wallet; false when there is no such offer or not enough. */
   payWithBerries(): boolean {
     const cost = this.current?.berryCost ?? null;
-    if (cost === null || this.adShowing || this.pending) return false;
+    if (cost === null || !this.inputReady || this.adShowing || this.pending) return false;
     if (!this.deps.wallet.spendBerries(cost)) return false;
     this.pending = 'continue';
     this.holdMs = CONTINUE_ANIM.balance.paidHoldMs;
@@ -116,7 +117,7 @@ export class ContinueFlow {
    * returns to the window with the timer running again, `unavailable` disables the button.
    */
   async watchAd(): Promise<void> {
-    if (this.current?.ad !== 'ready' || this.adShowing || this.pending) return;
+    if (this.current?.ad !== 'ready' || !this.inputReady || this.adShowing || this.pending) return;
     this.adShowing = true;
     const result = await this.deps.ads.showRewarded('continue');
     this.adShowing = false;

@@ -39,7 +39,7 @@
       "free": "free",
       "play": "Play",
       "playFor": "Play · {price}",
-      "watchAd": "▶ Watch ad"
+      "watchAd": "Watch ad"
     }
   },
   "ads": {
@@ -396,7 +396,7 @@
     "share": "Share",
     "startedAt": "Started at layer {start} · placed {placed}",
     "fromPointFor": "From {n} · {price}",
-    "fromPointAd": "From {n} ▶"
+    "fromPointAd": "From {n}"
   },
   "share": {
     "title": "Tippy Treats",
@@ -480,7 +480,6 @@
   },
   "noAdsOffer": {
     "title": "No ads",
-    "text": "No ads between runs, ever",
     "buy": "No ads for {price}",
     "later": "Not now"
   },
@@ -581,7 +580,7 @@
     },
     "noAds": {
       "title": "Remove ads",
-      "desc": "Reward videos stay optional"
+      "desc": "Removes ads between runs for good. Watch-for-bonus rewards stay optional."
     },
     "restoreResult": {
       "restored": "Purchases restored",
