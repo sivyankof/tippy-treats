@@ -602,6 +602,7 @@
       "comeback": "Come back"
     },
     "noAds": "No ads · {price}",
+    "musicCredits": "Music: Josh Lim (www.joshjameslim.com), Tad, Fupi, gilzoide",
     "version": "Version {version}",
     "build": "Build {hash} · {date}",
     "installId": "ID {id}",

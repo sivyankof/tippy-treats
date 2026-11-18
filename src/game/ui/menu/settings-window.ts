@@ -100,6 +100,14 @@ export function openSettingsWindow(scene: Phaser.Scene, handlers: SettingsHandle
   });
   y += cfg.wideButton.height + cfg.resultHeight + cfg.blockGap;
 
+  // The credits line may wrap onto a second line; the lines under it move down by what it took.
+  const credits = createOutlinedText(scene, 0, 0, t('settings.musicCredits'), cfg.infoFont)
+    .setAlign('center')
+    .setWordWrapWidth(width, true)
+    .setAlpha(cfg.infoAlpha);
+  const creditLines = credits.getWrappedText().length;
+  credits.setY(y + (cfg.infoLine * creditLines) / 2);
+  y += cfg.infoLine * creditLines;
   const info = [
     t('settings.version', { version: APP_VERSION }),
     t('settings.build', { hash: BUILD_HASH, date: BUILD_TIME }),
@@ -122,6 +130,7 @@ export function openSettingsWindow(scene: Phaser.Scene, handlers: SettingsHandle
     ...notify.toggles,
     restore,
     result,
+    credits,
     ...info,
     reset,
   ]);

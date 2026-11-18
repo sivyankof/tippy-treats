@@ -602,6 +602,7 @@
       "comeback": "Возвращение"
     },
     "noAds": "Без рекламы · {price}",
+    "musicCredits": "Музыка: Josh Lim (www.joshjameslim.com), Tad, Fupi, gilzoide",
     "version": "Версия {version}",
     "build": "Сборка {hash} · {date}",
     "installId": "ID {id}",
