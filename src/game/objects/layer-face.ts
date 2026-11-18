@@ -181,6 +181,14 @@ export class LayerFace extends Phaser.GameObjects.Container {
     );
   }
 
+  /** No reaction of an event (a lick, a joy, a cut...) holds the face: the startle may take it. A yawn or a blink gives way. */
+  get canStartle(): boolean {
+    const busy = this.timers.reaction();
+    return (
+      !this.lick.busy && !this.lick.active && (busy === null || busy === 'blink' || busy === 'yawn')
+    );
+  }
+
   /** Starts a yawn; false when the face is not free for it. `force` yawns a face that is not sleepy (the debug button). */
   yawn(force = false): boolean {
     if (!this.canYawn(force)) return false;

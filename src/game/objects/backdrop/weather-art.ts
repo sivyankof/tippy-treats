@@ -601,15 +601,14 @@ function bakeCap(scene: Phaser.Scene): void {
 /** Picture size of the drift baked for the width `i` of `TOWER_WEATHER.drift.pictureWidths`: its heap's peak, and the baseline row. */
 export function driftPicture(i: number): { width: number; height: number; baseline: number } {
   const width = TOWER_WEATHER.drift.pictureWidths[i] ?? 0;
-  const height = Math.ceil(driftThickness(width)) + 2;
-  return { width, height, baseline: height - 1 };
+  const baseline = Math.ceil(driftThickness(width)) + 1;
+  return { width, height: baseline + 1 + TOWER_WEATHER.drift.drop.reach, baseline };
 }
 
-/** The pictures of the snow drifts: the heap of the cap in a flatter shape, a warm outline, a cold shade, rounded ends. */
+/** The pictures of the snow drifts: a white heap with rounded ends, a cold outline and shade, and on wide ones two small drops. */
 function bakeDrifts(scene: Phaser.Scene): void {
   const D = TOWER_WEATHER.drift;
   const colors = WEATHER_LOOK.cap.colors;
-  const outline = MOUNTAIN_LOOK.snowOutline;
   D.pictureWidths.forEach((_, i) => {
     const { width, height, baseline } = driftPicture(i);
     const peak = driftThickness(width);
@@ -626,13 +625,21 @@ function bakeDrifts(scene: Phaser.Scene): void {
       pts.push({ x: width - inset, y: baseline + 1 }, { x: inset, y: baseline + 1 });
       return pts;
     };
+    const drops = width >= D.drop.minWidth ? [0.3, 0.68] : [];
     bakePadded(scene, TEX.drift[i] ?? '', width, height, FIELD_PAD.snowDrift, (g) => {
-      g.fillStyle(outline, 1);
+      const dropAt = (grow: number, color: number): void => {
+        g.fillStyle(color, 1);
+        for (const u of drops)
+          g.fillCircle(u * width, baseline + 1 + D.drop.radius * 0.4, D.drop.radius + grow);
+      };
+      dropAt(1.4, D.outlineColor);
+      g.fillStyle(D.outlineColor, 1);
       fillPolygon(g, heapPoints(0.5, peak, 0));
-      g.fillStyle(colors.shade, 1);
+      g.fillStyle(D.shadeColor, 1);
       fillPolygon(g, heapPoints(D.outlinePx, peak - D.outlinePx * 0.7, 0));
+      dropAt(0, colors.snow);
       g.fillStyle(colors.snow, 1);
-      fillPolygon(g, heapPoints(D.outlinePx + 1.2, peak - D.outlinePx * 0.7 - 2.2, 1.6));
+      fillPolygon(g, heapPoints(D.outlinePx + 1.2, peak - D.outlinePx * 0.7 - 3.2, 2.4));
     });
   });
 }
