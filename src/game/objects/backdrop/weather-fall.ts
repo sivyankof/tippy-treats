@@ -12,6 +12,7 @@ import {
   rainX,
   rainY,
   rainSpots,
+  sideWarp,
   wrapRange,
 } from './weather-motion';
 import type { WeatherFrame, WeatherPart } from './weather-frame';
@@ -84,11 +85,12 @@ export class WeatherFall implements WeatherPart {
     const look = this.look;
     const frames = FRAME_SETS[look.frames[0] ?? ''] ?? [];
     const count = Math.min(view?.count ?? look.count, WEATHER_LOOK.particleCount.full);
-    const strip = look.sideShare ?? WEATHER_LOOK.sideShare;
+    const strip = view?.sides?.share ?? look.sideShare ?? WEATHER_LOOK.sideShare;
     const snow = kind === 'snow';
     const rain = kind === 'rain' || kind === 'storm';
     // Most start in the side strips (a kind may set its own `sideBias` and `sideShare`); the rest anywhere.
-    const drawU = (): number => startU(rng, look.sideBias ?? WEATHER_LOOK.sideBias, strip);
+    const drawU = (): number =>
+      startU(rng, view?.sides?.bias ?? look.sideBias ?? WEATHER_LOOK.sideBias, strip);
     // Snow falls in lanes (one speed per lane, see weather-lanes.ts); the rest start anywhere.
     const lanes = laneCount(LOGICAL_SIZE.width, WEATHER_LOOK.snow.laneGapPx);
     const spots = snow ? snowSpots(count, lanes, drawU, () => rng.next()) : [];
@@ -96,11 +98,14 @@ export class WeatherFall implements WeatherPart {
     const rainAt = rain ? rainSpots(count, () => rng.next()) : [];
     // Raindrops fall at one speed, as real ones do: it keeps their spread even as they fall.
     const rainSpeed = rain ? draw(rng, look.speed, 0) : 0;
+    const outside = view?.outside;
+    const rainU = (u: number): number =>
+      outside ? sideWarp(u, outside.share, outside.stripShare) : u;
     const laneSpeed = new Map<number, number>();
     for (let i = 0; i < count; i++) {
       const { lane, u, v } = spots[i] ?? {
         lane: 0,
-        u: rain ? (rainAt[i]?.u ?? 0) : drawU(),
+        u: rain ? rainU(rainAt[i]?.u ?? 0) : drawU(),
         v: rain ? (rainAt[i]?.v ?? 0) : rng.next(),
       };
       let speed = rain ? rainSpeed : draw(rng, look.speed, 0);
@@ -144,7 +149,7 @@ export class WeatherFall implements WeatherPart {
     const bandFeather = this.look.bandFeatherPx ?? WEATHER_LOOK.bandFeatherPx;
     const keepFeather = this.look.keepOutFeatherPx ?? WEATHER_LOOK.keepOutFeatherPx;
     const leaf = this.kind === 'leaves';
-    const slant = this.look.slant ?? 0;
+    const slant = (this.look.slant ?? 0) * (this.view?.slantShare ?? 1);
     // A raindrop is turned along the way it really falls.
     const slantRad = rain ? -Math.atan(slant) : 0;
     const tilt = this.look.tiltRad ?? 0;
