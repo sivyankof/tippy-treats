@@ -48,7 +48,7 @@ export interface SquashLevelPlan {
   squeeze: boolean;
 }
 
-/** Full plays all of it; lite keeps the squash and the trace (the particles are halved by the particle pool); minimal plays nothing. */
+/** Full plays all of it; lite keeps the squash and the trace (the particles are halved by the particle pool, the cream roll lies there settled at once); minimal plays nothing. */
 export function squashLevelPlan(level: EffectLevel): SquashLevelPlan {
   if (level === 'minimal') {
     return { play: false, crouch: false, dip: false, trace: false, squeeze: false };
