@@ -3,7 +3,9 @@ import { PANORAMA } from '../../../data/window-look';
 import { WEATHER_LOOK } from '../../../data/weather-look';
 import type { StartPlaceId } from '../../../data/start-places';
 import { cssColor } from '../../../util/color';
+import { TWO_PI } from '../../../util/math';
 import { bakeTexture } from '../../ui/bake-texture';
+import type { Pt } from '../../fx/plain-style';
 import { BOLT_COLORS, boltLines } from './weather-art';
 import {
   HEAVY_CLOUDS,
@@ -18,6 +20,7 @@ import {
 } from './window-paint';
 
 type Ctx2D = CanvasRenderingContext2D;
+type Box = { x: number; y: number; w: number; h: number };
 
 const P = PANORAMA;
 const G = P.glass;
@@ -61,7 +64,7 @@ export function panoramaValance(): ValanceBox {
 }
 
 /** The two sash bars of the glass: the vertical one in the middle and the horizontal one at `crossAt`. */
-export function sashBars(): { x: number; y: number; w: number; h: number }[] {
+export function sashBars(): Box[] {
   return [
     { x: G.x + G.w / 2 - P.barPx / 2, y: G.y - 4, w: P.barPx, h: G.h + 8 },
     { x: G.x - 4, y: G.y + G.h * P.crossAt - P.barPx / 2, w: G.w + 8, h: P.barPx },
@@ -79,8 +82,8 @@ function cutFront(ctx: Ctx2D, place: StartPlaceId, bars: boolean): void {
   ctx.restore();
 }
 
-/** The bolt of the window flash: the sky bolt's zig-zag and colours, smaller, in the upper right pane. */
-function paintFlashBolt(ctx: Ctx2D): void {
+/** The zig-zag of the window bolt and the box round it (its outline included), in the window picture's px. */
+function flashBolt(): { trunk: Pt[]; branch: Pt[]; x0: number; y0: number; box: Box } {
   const L = WEATHER_LOOK.lightning;
   const b = P.flash.bolt;
   const w = L.width * b.scale;
@@ -88,6 +91,22 @@ function paintFlashBolt(ctx: Ctx2D): void {
   const { trunk, branch } = boltLines(w, h, 0);
   const x0 = G.x + G.w * b.x - (trunk[0]?.x ?? 0);
   const y0 = G.y + G.h * b.top;
+  // The round caps and joins of the outline reach half its width past the line.
+  const pad = (L.rimPx * b.scale) / 2;
+  return {
+    trunk,
+    branch,
+    x0,
+    y0,
+    box: { x: x0 - pad, y: y0 - pad, w: w + 2 * pad, h: h + 2 * pad },
+  };
+}
+
+/** The bolt of the window flash: the sky bolt's zig-zag and colours, smaller, in the upper right pane. */
+function paintFlashBolt(ctx: Ctx2D): void {
+  const L = WEATHER_LOOK.lightning;
+  const { trunk, branch, x0, y0 } = flashBolt();
+  const scale = P.flash.bolt.scale;
   ctx.lineCap = 'round';
   ctx.lineJoin = 'round';
   for (const [width, color] of [
@@ -97,20 +116,52 @@ function paintFlashBolt(ctx: Ctx2D): void {
   ] as const) {
     ctx.strokeStyle = cssColor(color);
     for (const line of [trunk, branch]) {
-      ctx.lineWidth = width * b.scale * (line === branch ? 0.7 : 1);
+      ctx.lineWidth = width * scale * (line === branch ? 0.7 : 1);
       ctx.beginPath();
-      line.forEach((p, i) => {
-        if (i === 0) ctx.moveTo(x0 + p.x, y0 + p.y);
-        else ctx.lineTo(x0 + p.x, y0 + p.y);
+      line.forEach((pt, i) => {
+        if (i === 0) ctx.moveTo(x0 + pt.x, y0 + pt.y);
+        else ctx.lineTo(x0 + pt.x, y0 + pt.y);
       });
       ctx.stroke();
     }
   }
 }
 
+/** Where the window bolt stands: the centre of its picture as an offset from the window picture's centre (drawn px). */
+export function panoramaBoltOffset(): { x: number; y: number } {
+  const { box } = flashBolt();
+  return { x: box.x + box.w / 2 - P.width / 2, y: box.y + box.h / 2 - P.height / 2 };
+}
+
 /**
- * The storm flash of the glass, baked at `flash.bakeShare` of its size: the sky lit a little, the storm clouds lit more
- * (the same clouds as in the glass), a bolt in the upper right pane; the sash bars and the kitchen valance stay dark.
+ * The bolt of the storm flash as a picture of its own (baked at `flash.bakeShare`): it goes out before the light of the
+ * glass does, so the fading flash never leaves a bolt darker than the lit sky round it. In the kitchen the valance in
+ * front of its top is cut out.
+ */
+export function bakePanoramaBolt(scene: Phaser.Scene, place: StartPlaceId, key: string): void {
+  const share = P.flash.bakeShare;
+  const m = PANORAMA_ART_MARGIN;
+  const { box } = flashBolt();
+  bakeTexture(
+    scene,
+    key,
+    Math.ceil(box.w * share) + 2 * m,
+    Math.ceil(box.h * share) + 2 * m,
+    () => undefined,
+    (ctx) => {
+      ctx.translate(m, m);
+      ctx.scale(share, share);
+      ctx.translate(-box.x, -box.y);
+      paintFlashBolt(ctx);
+      cutFront(ctx, place, false);
+    },
+  );
+}
+
+/**
+ * The storm flash of the glass, baked at `flash.bakeShare` of its size: the sky lit, a lighter oval round the bolt, the
+ * storm clouds lit most (the same clouds as in the glass); the sash bars and the kitchen valance stay dark. The bolt is
+ * a picture of its own (`bakePanoramaBolt`).
  */
 export function bakePanoramaFlash(scene: Phaser.Scene, place: StartPlaceId, key: string): void {
   const F = P.flash;
@@ -129,15 +180,25 @@ export function bakePanoramaFlash(scene: Phaser.Scene, place: StartPlaceId, key:
       ctx.save();
       panePath(ctx, place, 0);
       ctx.clip();
-      const colour = cssColor(F.color);
-      ctx.fillStyle = colour;
+      ctx.fillStyle = cssColor(F.color);
       ctx.globalAlpha = F.skyAlpha;
       ctx.fillRect(G.x, G.y, G.w, G.h);
+      ctx.fillStyle = cssColor(F.cloudColor);
+      ctx.globalAlpha = F.coreAlpha;
+      ctx.beginPath();
+      ctx.ellipse(
+        G.x + G.w * F.core.x,
+        G.y + G.h * F.core.y,
+        G.w * F.core.rx,
+        G.h * F.core.ry,
+        0,
+        0,
+        TWO_PI,
+      );
+      ctx.fill();
       ctx.globalAlpha = F.cloudAlpha;
       const k = detailScale(G.h);
       for (const c of HEAVY_CLOUDS) cloud(ctx, G.x + G.w * c.x, G.y + G.h * c.y, c.s * k);
-      ctx.globalAlpha = 1;
-      paintFlashBolt(ctx);
       ctx.restore();
       cutFront(ctx, place, true);
     },

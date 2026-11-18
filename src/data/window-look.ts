@@ -391,18 +391,25 @@ export const PANORAMA = {
   /** Drops, flakes and leaves of the pane: counts per weather (the lite level shows half), size against the small window's. */
   items: { rain: 12, storm: 16, snow: 14, leaves: 5, size: 1.5 },
   /**
-   * The storm flash in the glass: peak alpha of the picture, colour; the texture is baked this much smaller than the glass.
-   * Inside the picture the sky is lit to `skyAlpha`, the storm clouds to `cloudAlpha`; the sash bars are cut out. The bolt
-   * (the sky bolt's shape and colours) stands in the upper right pane: its top under the right cloud at `x`, `top` (shares
-   * of the glass), `height` of the glass tall, its strokes `scale` of the sky bolt's.
+   * The storm flash in the glass: peak alpha of the picture, colours; the texture is baked this much smaller than the glass.
+   * Inside the picture, one over the other: the whole sky in `color` at `skyAlpha`, a lighter oval round the bolt at
+   * `coreAlpha` (`core`: centre and radii as shares of the glass), the storm clouds in `cloudColor` at `cloudAlpha`; the
+   * sash bars and the kitchen valance are cut out. A lit sky must read as lit in one still frame, not as a grey day, so
+   * the lit glass is close to white. The bolt (the sky bolt's shape and colours) stands in the upper right pane: its top
+   * under the right cloud at `x`, `top` (shares of the glass), `height` of the glass tall, its strokes `scale` of the sky
+   * bolt's; it goes out before the light, or the fading flash would leave a bolt darker than the lit sky round it.
    */
   flash: {
     alpha: 1,
-    color: 0xf6f9ff,
+    color: 0xe4ecff,
+    cloudColor: 0xffffff,
     bakeShare: 1 / 3,
-    skyAlpha: 0.5,
-    cloudAlpha: 0.85,
-    bolt: { x: 0.74, top: 0.1, height: 0.44, scale: 0.9 },
+    skyAlpha: 0.72,
+    coreAlpha: 0.55,
+    core: { x: 0.72, y: 0.3, rx: 0.3, ry: 0.34 },
+    cloudAlpha: 0.92,
+    /** The bolt is a picture of its own: whole while the flash is at `fade[1]` of its peak or more, gone below `fade[0]`. */
+    bolt: { x: 0.74, top: 0.1, height: 0.44, scale: 0.9, fade: [0.65, 0.92] },
   },
   /** Gap kept to the HUD plates (the same as the flying layer's). */
   hudGapPx: FLIGHT_CLEAR.hudGapPx,
@@ -456,6 +463,10 @@ export function panoramaPieces(place: StartPlaceId, weather: WeatherId): Panoram
 
 export function panoramaMoonKey(place: StartPlaceId): string {
   return `bd_win_pano_moon_${place}`;
+}
+
+export function panoramaBoltKey(place: StartPlaceId): string {
+  return `bd_win_pano_bolt_${place}`;
 }
 
 export function panoramaFlashKey(place: StartPlaceId): string {
