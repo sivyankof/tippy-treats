@@ -393,6 +393,26 @@ describe('the cream roll', () => {
     }
   });
 
+  it('takes less of a dark glaze, so the cream stays light on chocolate', () => {
+    const { creamShare, darkGlaze } = TOPPER_SQUASH.roll;
+    const chocolate = 0x7a4630;
+    expect(luma(chocolate)).toBeLessThan(darkGlaze.toLuma);
+    const light = channels(creamRollTint(chocolate));
+    const cream = channels(SQUASH_PICTURES.cream.cream);
+    const glaze = channels(chocolate);
+    // The red channel tells the share of the cream in the mix.
+    const share = (light[0]! - glaze[0]!) / (cream[0]! - glaze[0]!);
+    expect(share).toBeCloseTo(darkGlaze.share, 1);
+    expect(share).toBeGreaterThan(creamShare);
+    // A light glaze keeps the plain share.
+    const pink = 0xffaecb;
+    const g = channels(creamRollTint(pink));
+    expect((g[1]! - channels(pink)[1]!) / (cream[1]! - channels(pink)[1]!)).toBeCloseTo(
+      creamShare,
+      1,
+    );
+  });
+
   it('keeps every drawn ridge inside its picture with the clear field', () => {
     const { roll } = TOPPER_SQUASH;
     const { cream, field, bake } = SQUASH_PICTURES;

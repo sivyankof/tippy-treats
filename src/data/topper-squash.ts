@@ -487,10 +487,16 @@ export const TOPPER_SQUASH = {
     minOverlapPx: 120,
     /** Share of the cream mixed into the glaze tone of the layer: the roll is cream with a hint of the glaze, clearly lighter than the glaze it lies on. */
     creamShare: 0.72,
-    /** Squeezed out: a bump swells at the seam, the ridge is pushed out past its length, then settles back. */
+    /**
+     * A dark glaze gives less of its tone, so the cream stays light and warm on chocolate: from
+     * `fromLuma` down to `toLuma` the cream share rises to `share`.
+     */
+    darkGlaze: { fromLuma: 0.6, toLuma: 0.35, share: 0.86 },
+    /** Squeezed out: a small round bump shows at the seam and swells (both axes together, never a thin sliver), the ridge is pushed out past its length, then settles back. */
     squeeze: {
+      from: [0.24, 0.32],
       bulgeMs: 70,
-      bulge: [0.2, 0.7],
+      bulge: [0.34, 0.44],
       pushMs: 230,
       over: [1.1, 0.9],
       settleMs: 300,

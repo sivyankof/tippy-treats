@@ -58,7 +58,12 @@ describe('layer marks', () => {
     expect(store.addCut(1, [mark(), mark(), mark()])).toBe(false);
     expect(store.hasCut(1)).toBe(false);
     expect(store.addPress(1, [])).toBe(false);
-    expect(store.addPress(1, Array.from({ length: 6 }, () => mark()))).toBe(false);
+    expect(
+      store.addPress(
+        1,
+        Array.from({ length: 6 }, () => mark()),
+      ),
+    ).toBe(false);
     expect(store.hasPress(1)).toBe(false);
   });
 
@@ -171,6 +176,14 @@ describe('squeezeScale', () => {
     expect(squeezeScale(look, 2200, 1)).toBeCloseTo(1.1);
     expect(squeezeScale(look, 9000, 0)).toBeCloseTo(0.96);
     expect(squeezeScale({ ...look, sag: undefined }, 9000, 0)).toBe(1);
+  });
+
+  it('can show a small bump from its first frame instead of growing from nothing', () => {
+    const bump: MarkSqueeze = { ...look, from: [0.24, 0.32] };
+    expect(squeezeScale(bump, 0, 0)).toBe(0);
+    expect(squeezeScale(bump, 1, 0)).toBeCloseTo(0.24, 1);
+    expect(squeezeScale(bump, 1, 1)).toBeCloseTo(0.32, 1);
+    expect(squeezeScale(bump, 70, 0)).toBeCloseTo(0.2);
   });
 
   it('never jumps between two frames (nothing pops)', () => {

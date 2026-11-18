@@ -7,8 +7,8 @@ import {
   TOPPER_SQUASH,
   type SquashBurst,
 } from '../../data/topper-squash';
-import { mixColor } from '../../util/color';
-import { DEG_TO_RAD, lerp } from '../../util/math';
+import { luma, mixColor } from '../../util/color';
+import { clamp01, DEG_TO_RAD, lerp } from '../../util/math';
 import { squeezeDoneMs, type LayerMark } from '../objects/layer-mark-store';
 import { waveY, type GlazeWave } from '../objects/glaze-wave';
 import type { PopLaunch } from '../objects/topper-look';
@@ -273,7 +273,11 @@ export function creamDropPictureSize(): [number, number] {
 
 /** The cream tone of a roll squeezed out of a layer with this glaze: the glaze mixed into the cream, so it reads on the glaze. */
 export function creamRollTint(glaze: number): number {
-  return mixColor(glaze, SQUASH_PICTURES.cream.cream, TOPPER_SQUASH.roll.creamShare);
+  const { creamShare, darkGlaze } = TOPPER_SQUASH.roll;
+  const dark = clamp01(
+    (darkGlaze.fromLuma - luma(glaze)) / (darkGlaze.fromLuma - darkGlaze.toLuma),
+  );
+  return mixColor(glaze, SQUASH_PICTURES.cream.cream, lerp(creamShare, darkGlaze.share, dark));
 }
 
 interface Oval {

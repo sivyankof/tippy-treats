@@ -14,6 +14,8 @@ export interface MarkSwing {
  * settle back to 1 with a small rebound, and then optionally sag slowly to `sag.to` and stay.
  */
 export interface MarkSqueeze {
+  /** The scale it shows at from its first frame (none: from nothing), so a small round bump appears rather than a sliver. */
+  from?: readonly [number, number];
   bulgeMs: number;
   bulge: readonly [number, number];
   pushMs: number;
@@ -204,7 +206,7 @@ export function squeezeScale(s: Readonly<MarkSqueeze>, ageMs: number, axis: 0 | 
   let t = ageMs;
   if (t < s.bulgeMs) {
     const u = t / s.bulgeMs;
-    return s.bulge[axis] * (1 - (1 - u) * (1 - u));
+    return lerp(s.from?.[axis] ?? 0, s.bulge[axis], 1 - (1 - u) * (1 - u));
   }
   t -= s.bulgeMs;
   if (t < s.pushMs) {
