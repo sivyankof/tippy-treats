@@ -4,7 +4,10 @@ import {
   markGrow,
   markSwingDeg,
   markVanish,
+  squeezeDoneMs,
+  squeezeScale,
   type LayerMark,
+  type MarkSqueeze,
 } from './layer-mark-store';
 
 function mark(over: Partial<LayerMark> = {}): LayerMark {
@@ -55,7 +58,7 @@ describe('layer marks', () => {
     expect(store.addCut(1, [mark(), mark(), mark()])).toBe(false);
     expect(store.hasCut(1)).toBe(false);
     expect(store.addPress(1, [])).toBe(false);
-    expect(store.addPress(1, [mark(), mark(), mark()])).toBe(false);
+    expect(store.addPress(1, Array.from({ length: 6 }, () => mark()))).toBe(false);
     expect(store.hasPress(1)).toBe(false);
   });
 
@@ -131,5 +134,53 @@ describe('vanishing press marks', () => {
     expect(store.removePress(5)).toBe(false);
     expect(store.at(5)).toBeUndefined();
     expect(store.version).toBeGreaterThan(version);
+  });
+});
+
+describe('squeezeScale', () => {
+  const look: MarkSqueeze = {
+    bulgeMs: 70,
+    bulge: [0.2, 0.7],
+    pushMs: 230,
+    over: [1.1, 0.9],
+    settleMs: 300,
+    sag: { ms: 1600, to: [0.96, 1.1] },
+  };
+
+  it('starts from nothing and swells to the bulge (anticipation)', () => {
+    expect(squeezeScale(look, -5, 0)).toBe(0);
+    expect(squeezeScale(look, 0, 1)).toBe(0);
+    expect(squeezeScale(look, 70, 0)).toBeCloseTo(0.2);
+    expect(squeezeScale(look, 70, 1)).toBeCloseTo(0.7);
+  });
+
+  it('is pushed out to the overshoot, then settles back past 1 and comes to rest', () => {
+    expect(squeezeScale(look, 300, 0)).toBeCloseTo(1.1);
+    expect(squeezeScale(look, 300, 1)).toBeCloseTo(0.9);
+    let under = Infinity;
+    for (let t = 300; t <= 600; t += 5) under = Math.min(under, squeezeScale(look, t, 0));
+    expect(under).toBeLessThan(1);
+    expect(under).toBeGreaterThan(0.95);
+    expect(squeezeScale(look, 600, 0)).toBeCloseTo(1);
+  });
+
+  it('then sags slowly to its final scale and stays there', () => {
+    expect(squeezeDoneMs(look)).toBe(70 + 230 + 300 + 1600);
+    expect(squeezeScale(look, 1400, 1)).toBeGreaterThan(1);
+    expect(squeezeScale(look, 1400, 1)).toBeLessThan(1.1);
+    expect(squeezeScale(look, 2200, 1)).toBeCloseTo(1.1);
+    expect(squeezeScale(look, 9000, 0)).toBeCloseTo(0.96);
+    expect(squeezeScale({ ...look, sag: undefined }, 9000, 0)).toBe(1);
+  });
+
+  it('never jumps between two frames (nothing pops)', () => {
+    for (const axis of [0, 1] as const) {
+      let last = squeezeScale(look, 0, axis);
+      for (let t = 4; t <= squeezeDoneMs(look) + 100; t += 4) {
+        const next = squeezeScale(look, t, axis);
+        expect(Math.abs(next - last)).toBeLessThan(0.1);
+        last = next;
+      }
+    }
   });
 });

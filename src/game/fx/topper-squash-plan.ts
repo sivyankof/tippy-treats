@@ -1,8 +1,15 @@
 import type { Rng } from '../../core/rng';
 import type { EffectLevel } from '../../data/effect-levels';
 import { BALANCE } from '../../data/balance';
-import { TOPPER_SQUASH, type SquashBurst } from '../../data/topper-squash';
+import {
+  SQUASH_PICTURES,
+  SQUASH_TEXTURES,
+  TOPPER_SQUASH,
+  type SquashBurst,
+} from '../../data/topper-squash';
+import { mixColor } from '../../util/color';
 import { DEG_TO_RAD, lerp } from '../../util/math';
+import { squeezeDoneMs, type LayerMark } from '../objects/layer-mark-store';
 import { waveY, type GlazeWave } from '../objects/glaze-wave';
 import type { PopLaunch } from '../objects/topper-look';
 import type { ParticleState } from './particle-motion';
@@ -37,12 +44,17 @@ export interface SquashLevelPlan {
   dip: boolean;
   /** The stain or the cream roll that stays on the layer. */
   trace: boolean;
+  /** The cream roll is squeezed out (otherwise it lies there at once, in its final shape). */
+  squeeze: boolean;
 }
 
 /** Full plays all of it; lite keeps the squash and the trace (the particles are halved by the particle pool); minimal plays nothing. */
 export function squashLevelPlan(level: EffectLevel): SquashLevelPlan {
-  if (level === 'minimal') return { play: false, crouch: false, dip: false, trace: false };
-  return { play: true, crouch: true, dip: level === 'full', trace: true };
+  if (level === 'minimal') {
+    return { play: false, crouch: false, dip: false, trace: false, squeeze: false };
+  }
+  const full = level === 'full';
+  return { play: true, crouch: true, dip: full, trace: true, squeeze: full };
 }
 
 /** The crouch (0..1) one frame later: it eases towards `target` with the time constant `easeMs`. */
@@ -238,4 +250,121 @@ export function burstCount(burst: SquashBurst, rng: Rng): number {
 /** Sim x of a point at world x `worldX` on a layer that sits at sim x `layer.x` and is drawn at world x `viewX` (the tower sways). */
 export function simX(layer: { x: number }, worldX: number, viewX: number): number {
   return layer.x + (worldX - viewX);
+}
+
+const { field } = SQUASH_PICTURES;
+
+/** Size in layer pixels of a picture drawn `w` x `h` with its field around it. */
+function withField(w: number, h: number): [number, number] {
+  return [w + field * 2, h + field * 2];
+}
+
+/** Size in layer pixels of a cream ridge picture. */
+export function ridgePictureSize(): [number, number] {
+  const { roll } = TOPPER_SQUASH;
+  return withField(roll.width, roll.height);
+}
+
+/** Size in layer pixels of the picture of a hanging cream drop. */
+export function creamDropPictureSize(): [number, number] {
+  const { drop } = SQUASH_PICTURES.cream;
+  return withField(drop.width, drop.height);
+}
+
+/** The cream tone of a roll squeezed out of a layer with this glaze: the glaze mixed into the cream, so it reads on the glaze. */
+export function creamRollTint(glaze: number): number {
+  return mixColor(glaze, SQUASH_PICTURES.cream.cream, TOPPER_SQUASH.roll.creamShare);
+}
+
+interface Oval {
+  cx: number;
+  cy: number;
+  rx: number;
+  ry: number;
+}
+
+/** The lowest point of an oval at `x` (its centre line outside it), drawn pixels. */
+export function ovalBottomAt(oval: Readonly<Oval>, x: number): number {
+  const u = Math.min(1, Math.abs(x - oval.cx) / oval.rx);
+  return oval.cy + oval.ry * Math.sqrt(1 - u * u);
+}
+
+/** What the cream roll needs to know of the moment and the layers. */
+export interface CreamRollInput {
+  nowMs: number;
+  /** Squeezed out, or lying there at once in its final shape. */
+  squeeze: boolean;
+  /** The cream tone (`creamRollTint`). */
+  tint: number;
+  /** Half the span of the lower layer's face (with nothing else around it): no drop hangs over it. */
+  faceHalf: number;
+}
+
+/**
+ * The marks of the cream roll at the two ends of the seam (`rollSpots`): the drops first, so the
+ * ridges they hang from cover their necks, then the left and the right ridge. Each side has its
+ * own picture and drops (docs/06, "Валик крема"); a drop that would hang over the lower layer's
+ * face is left out.
+ */
+export function creamRollMarks(
+  spots: readonly [RollSpot, RollSpot],
+  input: Readonly<CreamRollInput>,
+): LayerMark[] {
+  const { roll } = TOPPER_SQUASH;
+  const { ridges } = SQUASH_PICTURES.cream;
+  const [width, height] = ridgePictureSize();
+  const [dropWidth, dropHeight] = creamDropPictureSize();
+  const ridgeMarks: LayerMark[] = [];
+  const dropMarks: LayerMark[] = [];
+  const settled = (look: Parameters<typeof squeezeDoneMs>[0]): number =>
+    input.nowMs - squeezeDoneMs(look);
+  spots.forEach((spot, i) => {
+    const side = roll.sides[i]!;
+    const ridge = ridges[side.ridge];
+    const born = input.nowMs + roll.delayMs + i * roll.rightLagMs;
+    ridgeMarks.push({
+      texture: side.ridge === 'a' ? SQUASH_TEXTURES.creamRidgeA : SQUASH_TEXTURES.creamRidgeB,
+      dx: spot.dx,
+      dy: spot.dy,
+      originX: (roll.originX * roll.width + field) / width,
+      originY: (roll.originY * roll.height + field) / height,
+      width,
+      height,
+      flipX: spot.side < 0,
+      angleDeg: spot.angleDeg,
+      tint: input.tint,
+      tintMode: 'overlay',
+      bornMs: input.squeeze ? born : settled(roll.squeeze),
+      growMs: 0,
+      squeeze: roll.squeeze,
+      clearOfShadow: true,
+    });
+    const rad = spot.angleDeg * DEG_TO_RAD;
+    const firstDrop = born + roll.drop.startShare * (roll.squeeze.bulgeMs + roll.squeeze.pushMs);
+    let n = 0;
+    for (const drop of side.drops) {
+      const x = drop.at * roll.width;
+      const u = (x - roll.originX * roll.width) * spot.side;
+      const v = ovalBottomAt(ridge.base, x) - roll.originY * roll.height - roll.drop.tuckPx;
+      const dx = spot.dx + u * Math.cos(rad) - v * Math.sin(rad);
+      const dy = spot.dy + u * Math.sin(rad) + v * Math.cos(rad);
+      if (Math.abs(dx) < input.faceHalf + roll.drop.faceGapPx) continue;
+      dropMarks.push({
+        texture: SQUASH_TEXTURES.creamDrop,
+        dx,
+        dy,
+        originX: 0.5,
+        originY: field / dropHeight,
+        width: dropWidth * drop.size,
+        height: dropHeight * drop.size,
+        tint: input.tint,
+        tintMode: 'overlay',
+        bornMs: input.squeeze ? firstDrop + n * roll.drop.staggerMs : settled(roll.drop.squeeze),
+        growMs: 0,
+        squeeze: roll.drop.squeeze,
+      });
+      n++;
+    }
+  });
+  return [...dropMarks, ...ridgeMarks];
 }

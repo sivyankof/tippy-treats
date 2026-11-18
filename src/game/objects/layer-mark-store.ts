@@ -1,4 +1,4 @@
-import { backOut, clamp01, TWO_PI } from '../../util/math';
+import { backOut, clamp01, lerp, TWO_PI } from '../../util/math';
 
 /** A damped swing of a hanging mark (a glaze drop on a cut edge), around its origin. */
 export interface MarkSwing {
@@ -6,6 +6,20 @@ export interface MarkSwing {
   periodMs: number;
   /** The amplitude falls to 1/e over this many ms. */
   decayMs: number;
+}
+
+/**
+ * A mark squeezed out instead of growing evenly (the cream roll): its length (x) and height (y)
+ * swell from nothing to `bulge` (anticipation), are pushed on to `over` (action and overshoot),
+ * settle back to 1 with a small rebound, and then optionally sag slowly to `sag.to` and stay.
+ */
+export interface MarkSqueeze {
+  bulgeMs: number;
+  bulge: readonly [number, number];
+  pushMs: number;
+  over: readonly [number, number];
+  settleMs: number;
+  sag?: { ms: number; to: readonly [number, number] };
 }
 
 /**
@@ -33,13 +47,17 @@ export interface LayerMark {
   /** It grows from nothing to its size over this many ms (`backOut`), so it never pops in; 0 shows it at once. */
   growMs: number;
   swing?: MarkSwing;
+  /** Squeezed out along its length and height separately (replaces `growMs`). */
+  squeeze?: MarkSqueeze;
+  /** How `tint` applies: multiplied (default), or as an overlay on a picture drawn in neutral greys (mid grey becomes the tint, white stays white). */
+  tintMode?: 'multiply' | 'overlay';
   /** The layer above hides its baked shadow while this mark is there, so the shadow never greys it (the cream roll). */
   clearOfShadow?: boolean;
   /** The mark shrinks away from `startMs` over `durMs` (a stain licked off or melting); the store removes it after that. */
   vanish?: { startMs: number; durMs: number };
 }
 
-/** Marks of one layer: at most one drop from a cut (its outline and its fill) and one press mark (a stain, or a cream roll of up to two pictures). */
+/** Marks of one layer: at most one drop from a cut (its outline and its fill) and one press mark (a stain, or a cream roll of up to five pictures). */
 export interface LayerMarkSet {
   cut?: readonly LayerMark[];
   press?: readonly LayerMark[];
@@ -48,8 +66,8 @@ export interface LayerMarkSet {
 /** Most pictures the drop of a cut may have (an outline under a fill). */
 export const MAX_CUT_PICTURES = 2;
 
-/** Most pictures a press mark may have (a cream roll squeezed out on both sides). */
-export const MAX_PRESS_PICTURES = 2;
+/** Most pictures a press mark may have (a cream roll: two ridges and up to three drops). */
+export const MAX_PRESS_PICTURES = 5;
 
 /**
  * The marks of the current run per 1-based layer number. A view asks for them every time it shows
@@ -173,4 +191,33 @@ export function markSwingDeg(mark: Readonly<LayerMark>, ageMs: number): number {
   const fade = Math.exp(-ageMs / swing.decayMs);
   if (fade < 0.01) return 0;
   return swing.amplitudeDeg * fade * Math.sin((TWO_PI * ageMs) / swing.periodMs);
+}
+
+/** Time a squeeze takes from the start to its final scale (the sag included). */
+export function squeezeDoneMs(s: Readonly<MarkSqueeze>): number {
+  return s.bulgeMs + s.pushMs + s.settleMs + (s.sag?.ms ?? 0);
+}
+
+/** Scale along `axis` (0 the length, 1 the height) of a squeezed mark `ageMs` after it was made. */
+export function squeezeScale(s: Readonly<MarkSqueeze>, ageMs: number, axis: 0 | 1): number {
+  if (ageMs <= 0) return 0;
+  let t = ageMs;
+  if (t < s.bulgeMs) {
+    const u = t / s.bulgeMs;
+    return s.bulge[axis] * (1 - (1 - u) * (1 - u));
+  }
+  t -= s.bulgeMs;
+  if (t < s.pushMs) {
+    const u = 1 - t / s.pushMs;
+    return lerp(s.bulge[axis], s.over[axis], 1 - u * u * u);
+  }
+  t -= s.pushMs;
+  if (t < s.settleMs) {
+    // From the overshoot back past 1 by a third of it, and to rest at 1 with no speed left.
+    const u = t / s.settleMs;
+    return 1 + (s.over[axis] - 1) * Math.cos(1.5 * Math.PI * u) * (1 - u);
+  }
+  if (!s.sag) return 1;
+  const u = clamp01((t - s.settleMs) / s.sag.ms);
+  return lerp(1, s.sag.to[axis], u * u * (3 - 2 * u));
 }

@@ -110,6 +110,83 @@ export function ellipsePoints(cx: number, cy: number, rx: number, ry: number, ra
   return points;
 }
 
+/** An oval part of a blob, drawn pixels. */
+export interface Blob {
+  cx: number;
+  cy: number;
+  rx: number;
+  ry: number;
+}
+
+/**
+ * A blob drawn as ovals: one outline pass (`outlinePx` wide), one shadow pass and one lit pass
+ * over all of them, so the parts melt into one body; the lit tone is each oval `band` smaller, up
+ * and to the left, so the shadow shows as a band below and to the right.
+ */
+export function drawBlobs(
+  g: Phaser.GameObjects.Graphics,
+  outlinePx: number,
+  blobs: readonly Blob[],
+  base: number,
+  shadow: number,
+  outline: number,
+  band: number,
+): void {
+  g.fillStyle(outline, 1);
+  for (const b of blobs)
+    fillPolygon(g, ellipsePoints(b.cx, b.cy, b.rx + outlinePx, b.ry + outlinePx, 0));
+  g.fillStyle(shadow, 1);
+  for (const b of blobs) fillPolygon(g, ellipsePoints(b.cx, b.cy, b.rx, b.ry, 0));
+  g.fillStyle(base, 1);
+  for (const b of blobs) {
+    fillPolygon(
+      g,
+      ellipsePoints(
+        b.cx - b.rx * band,
+        b.cy - b.ry * band,
+        b.rx * (1 - band),
+        b.ry * (1 - band),
+        0,
+      ),
+    );
+  }
+}
+
+/**
+ * A teardrop of `w` x `h`, the tip up: an outline `outlinePx` wide, a body and a light spot
+ * (`colors` in that order).
+ */
+export function drawTeardrop(
+  g: Phaser.GameObjects.Graphics,
+  w: number,
+  h: number,
+  colors: readonly [outline: number, body: number, light: number],
+  outlinePx: number,
+): void {
+  const [outline, shadow, light] = colors;
+  const r = w / 2 - outlinePx * 0.6;
+  const cy = h - w / 2 - outlinePx * 0.2;
+  // A round head and a pointed tip: the arc leaves out the top wedge, the tip closes it.
+  const shape = (grow: number, dx: number, dy: number): Pt[] => {
+    const points: Pt[] = [];
+    for (let deg = -50; deg <= 230; deg += 10) {
+      const a = deg * DEG_TO_RAD;
+      points.push({
+        x: w / 2 + dx + Math.cos(a) * (r + grow),
+        y: cy + dy + Math.sin(a) * (r + grow),
+      });
+    }
+    points.push({ x: w / 2 + dx, y: outlinePx * 0.4 + dy - grow * 0.8 });
+    return points;
+  };
+  g.fillStyle(outline, 1);
+  fillPolygon(g, shape(outlinePx * 0.6, 0, 0));
+  g.fillStyle(shadow, 1);
+  fillPolygon(g, shape(0, 0, 0));
+  g.fillStyle(light, 1);
+  fillPolygon(g, shape(-1.2, -0.9, -0.9));
+}
+
 export interface GlossMark {
   /** Centre of the short stroke. */
   x: number;
