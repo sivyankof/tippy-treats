@@ -3,16 +3,16 @@ import { BAR_LOOK } from '../../../data/bar-look';
 import { PALETTE } from '../../../data/palette';
 import { shade } from '../../../util/color';
 import { clamp01 } from '../../../util/math';
-import { ARC_START, arcEnd, capAngle, inset } from './bar-geometry';
-
-/** A rounded bar: top-left corner, size and corner radius (half the height makes a pill). */
-export interface BarBox {
-  left: number;
-  top: number;
-  width: number;
-  height: number;
-  radius: number;
-}
+import { fillPolygon } from '../../fx/plain-style';
+import {
+  ARC_START,
+  arcEnd,
+  barFaceOutline,
+  barRadius,
+  capAngle,
+  inset,
+  type BarBox,
+} from './bar-geometry';
 
 export interface TrackLook {
   back: number;
@@ -35,12 +35,12 @@ export function drawBarTrack(g: Phaser.GameObjects.Graphics, box: BarBox, look: 
 }
 
 /**
- * A filled part with volume: the shade tone as the whole pill, the fill colour over it leaving a
- * strip of shade along the bottom, and a pale gloss strip on top. `box.width` is the filled width.
+ * A filled part with volume: the shade tone as the whole pill, the fill colour over it (the same pill cut off
+ * above the shade) leaving a strip of shade along the bottom, and a pale gloss strip on top. `box.width` is the filled width.
  */
 export function drawBarFill(g: Phaser.GameObjects.Graphics, box: BarBox, color: number): void {
   const { left, top, width, height } = box;
-  const radius = Math.min(box.radius, height / 2, width / 2);
+  const radius = barRadius(box);
   g.fillStyle(shade(color, BAR_LOOK.shade.amount), 1).fillRoundedRect(
     left,
     top,
@@ -48,14 +48,10 @@ export function drawBarFill(g: Phaser.GameObjects.Graphics, box: BarBox, color: 
     height,
     radius,
   );
+  // The face is the shade pill cut off above the shade strip, so its ends follow the pill's curve.
   const faceHeight = height * (1 - BAR_LOOK.shade.share);
-  g.fillStyle(color, 1).fillRoundedRect(
-    left,
-    top,
-    width,
-    faceHeight,
-    Math.min(radius, faceHeight / 2),
-  );
+  g.fillStyle(color, 1);
+  fillPolygon(g, barFaceOutline(box, faceHeight, BAR_LOOK.curveStepPx));
   const gloss = BAR_LOOK.gloss;
   const gh = height * gloss.share;
   if (width - radius <= 0 || gh < 1) return;
