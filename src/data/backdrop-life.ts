@@ -146,9 +146,9 @@ export function garlandWireY(x: number): number {
 
 const KITCHEN_POT: Point = { x: 0.115, y: 0.6 };
 /** The ladle rail hangs in the right outer column, a clear gap from the frame of the panoramic window (docs/06). */
-const KITCHEN_RAIL: Point = { x: 0.9, y: 0.31 };
+const KITCHEN_RAIL: Point = { x: 0.907, y: 0.31 };
 /** The rail is drawn this much smaller (its hooks and the ladles close up with it). */
-const KITCHEN_RAIL_SCALE = 0.8;
+const KITCHEN_RAIL_SCALE = 0.85;
 const KITCHEN_CLOCK: Point = { x: 0.13, y: 0.42 };
 const COOK = BD_TEX.kitchen;
 const ROOF_LINE: Point = { x: 0.8, y: 0.56 };
@@ -240,9 +240,10 @@ export const BACKDROP_LIFE = {
       ...micro(1700, 1),
     } as HoverSpec,
     ladles: [
-      { dx: -66, swing: { deg: 7, ms: 1500 }, phase: 0, scale: 1 },
-      { dx: 0, swing: { deg: 9, ms: 1750 }, phase: 1.3, scale: 0.85 },
-      { dx: 66, swing: { deg: 6, ms: 1300 }, phase: 2.4, scale: 1.1 },
+      // Smaller and with a short swing, so neighbours on the shorter rail never touch (`kitchen-ladles.test.ts`).
+      { dx: -66, swing: { deg: 3, ms: 1500 }, phase: 0, scale: 0.8 },
+      { dx: 0, swing: { deg: 4, ms: 1750 }, phase: 1.3, scale: 0.7 },
+      { dx: 66, swing: { deg: 2.5, ms: 1300 }, phase: 2.4, scale: 0.85 },
     ].map(({ dx, swing, phase, scale }): HoverSpec => ({
       texture: COOK.ladle,
       at: KITCHEN_RAIL,
