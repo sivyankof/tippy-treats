@@ -15,7 +15,7 @@ export const SOUND_TRIM_DB: Readonly<Record<string, number>> = {
   collapseThud: 6,
   cutStretch: 2,
   cutStrandSnap: 10.5,
-  cutPanic: 7,
+  cutPanic: 5,
   topperHop: 2,
   topperSquash: 8,
   thunder: -3,
