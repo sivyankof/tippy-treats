@@ -12,6 +12,7 @@ import type { SoundArgs, SoundId } from '../../services/audio/sound-args';
 import { SOUND_BOOK, SOUND_IDS, soundVariants } from '../../services/audio/sound-book';
 import { encodeWav } from '../../services/audio/wav';
 import { audioDev, services } from '../../services';
+import type { MusicControl } from '../../services/audio/music-control';
 import type { AudioDebugStats, MusicDebugState } from '../../services/audio/types';
 import type { BedKind } from '../../data/weather-bed';
 
@@ -61,6 +62,8 @@ export interface TippyAudioHook {
   music(): MusicDebugState | null;
   /** Resets the peak of the decoded music memory (the next `music()` reads the peak from now). */
   resetMusicPeak(): void;
+  /** The live music control (dev scripts drive the playlist and the exceptions like the game does). */
+  musicControl(): MusicControl;
   /**
    * The seam of a seamless track as the game plays it: the file decoded at `rate`, its loop bounds
    * and seam smoothing applied, rendered offline across the loop point.
@@ -230,6 +233,7 @@ export function registerAudioHook(): void {
     },
     music: () => audioDev?.musicState() ?? null,
     resetMusicPeak: () => services.audio.music.resetPeak(),
+    musicControl: () => services.audio.music,
     musicSeam,
   };
   (window as Window & { __tippyAudio?: TippyAudioHook }).__tippyAudio = hook;
