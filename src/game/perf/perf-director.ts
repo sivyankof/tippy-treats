@@ -1,6 +1,7 @@
 import * as Phaser from 'phaser';
 import type { EffectLevel } from '../../data/effect-levels';
 import { PERF, PERF_TRANSITION, type PerfSegmentDef } from '../../data/perf';
+import { services } from '../../services';
 import { setFrameWorkListener } from '../frame-work';
 import { capRenderDensity } from '../render-density';
 import { densityCapForLevel } from '../../util/density-scale';
@@ -334,5 +335,7 @@ class PerfDirector {
 
 /** Starts the benchmark director for a game whose session has begun (`beginPerfSession`). */
 export function startPerfDirector(game: Phaser.Game): void {
+  // The audio runs during the benchmark, so the numbers include the cost of sound.
+  services.audio.unlock();
   new PerfDirector(game).start();
 }

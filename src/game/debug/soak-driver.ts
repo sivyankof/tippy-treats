@@ -2,6 +2,7 @@ import * as Phaser from 'phaser';
 import { CHECKPOINT_HEIGHTS } from '../../core/checkpoints';
 import { CREATURE_IDS } from '../../data/creatures';
 import { SOAK } from '../../data/soak';
+import { services } from '../../services';
 import { gameState } from '../../state';
 import { setLang, type Lang } from '../../i18n';
 import { checkpointRun, CLASSIC_RUN, DAILY_RUN, demoRun, type RunRequest } from '../run-request';
@@ -17,6 +18,7 @@ import type { LickScene } from '../objects/lick-plan';
 import { runHooks } from '../perf/run-hooks';
 import type { GameScene } from '../scenes/game-scene';
 import { setSoakSpeed } from './soak-speed';
+import { differing, type SmokeCounts } from './soak-compare';
 import { readSoakSample, type SoakSample } from './soak-metrics';
 
 /** What the harness reads between laps. */
@@ -59,24 +61,6 @@ export interface TippySoak {
 }
 
 /** The numbers that must be equal at Home before and after the smoke lap. */
-export interface SmokeCounts {
-  objects: number;
-  listeners: number;
-  /** Tweens that last (infinite, paused or longer than `SOAK.smoke.shortTweenMs`); the verdict compares these. */
-  tweens: number;
-  /** All tweens, passing ones included: for diagnosis, not compared. */
-  rawTweens: number;
-  timers: number;
-}
-
-/** The counts compared before and after the lap (timers are reported, not compared). */
-const COMPARED = ['objects', 'listeners', 'tweens'] as const;
-
-/** Names of the compared counts that differ between `a` and `b`; empty when they agree. */
-function differing(a: SmokeCounts, b: SmokeCounts): string[] {
-  return COMPARED.filter((name) => a[name] !== b[name]);
-}
-
 /** The steps of the smoke lap, in order. */
 const SMOKE_STEPS = [
   'team',
@@ -162,6 +146,8 @@ class SoakDriver implements TippySoak {
 
   start(rich = false): void {
     if (this.active) return;
+    // The audio graph runs during a soak, so its nodes are part of what is checked.
+    services.audio.unlock();
     if (rich) enrichSave();
     this.active = true;
     this.counts.running = true;
@@ -195,10 +181,11 @@ class SoakDriver implements TippySoak {
     if (this.active)
       throw new Error('tippySoak.smoke(): the soak loop is running, stop() it first');
     const started = performance.now();
+    services.audio.unlock();
     const steps: SmokeReport['steps'] = [];
     const once = (): SmokeCounts => {
-      const { objects, listeners, lastingTweens, tweens, timers } = this.sample();
-      return { objects, listeners, tweens: lastingTweens, rawTweens: tweens, timers };
+      const { objects, listeners, lastingTweens, tweens, timers, audioNodes } = this.sample();
+      return { objects, listeners, tweens: lastingTweens, rawTweens: tweens, timers, audioNodes };
     };
     // Entrance tweens of a screen still run for a moment, and a Home has short idle tweens that
     // come and go: only lasting tweens are counted (a short one caught mid-flight is not a leak),
@@ -207,15 +194,18 @@ class SoakDriver implements TippySoak {
     const read = async (): Promise<SmokeCounts> => {
       let last = once();
       let tweens = last.tweens;
+      let audioNodes = last.audioNodes;
       for (let i = 0; i < SOAK.smoke.settleReads; i++) {
         await sleep(SOAK.smoke.settleMs);
         const next = once();
         const same = differing(last, next).length === 0;
         last = next;
         tweens = Math.min(tweens, next.tweens);
+        // Sounds in flight end, a node that is left behind does not: the fewest seen counts.
+        audioNodes = Math.min(audioNodes, next.audioNodes);
         if (same && i + 1 >= SOAK.smoke.settleMinReads) break;
       }
-      return { ...last, tweens };
+      return { ...last, tweens, audioNodes };
     };
     const step = async (name: SmokeStep, body: () => Promise<boolean>): Promise<void> => {
       this.stage(`smoke-${name}`);

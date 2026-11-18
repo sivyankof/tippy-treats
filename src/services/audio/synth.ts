@@ -5,6 +5,8 @@ import {
   type TimedTone,
   type ToneRecipe,
 } from '../../data/sfx';
+import type { Mixer } from './mixer';
+import { runSource, type NodeTally } from './node-tally';
 
 /** Per-call adjustments of a recipe. */
 export interface PlayOptions {
@@ -17,30 +19,54 @@ export interface PlayOptions {
 }
 
 /**
- * Sound building blocks over one audio context: master gain -> compressor -> destination.
- * Every node is stopped at its end time and disconnected when it finishes.
+ * Sound building blocks over one audio context; everything goes into the mixer's sfx bus.
+ * Every node is stopped at its end time and disconnected when it finishes (`runSource`).
+ * `random` feeds the noise buffer and the pitch jitter of the sounds: live it is `Math.random`,
+ * an offline render passes a seeded one so a render repeats exactly.
  */
 export class Synth {
-  private readonly input: GainNode;
   private noiseBuffer: AudioBuffer | null = null;
+  /** Start offset added to every note while `at` runs. */
+  private base = 0;
+  /** Latest end time (seconds from the context's now) of the notes scheduled since `measure` began. */
+  private spanEnd = 0;
 
-  constructor(private readonly ctx: AudioContext) {
-    this.input = ctx.createGain();
-    this.input.gain.value = SFX.master.gain;
-    const comp = ctx.createDynamicsCompressor();
-    const cfg = SFX.master.compressor;
-    comp.threshold.value = cfg.threshold;
-    comp.knee.value = cfg.knee;
-    comp.ratio.value = cfg.ratio;
-    comp.attack.value = cfg.attack;
-    comp.release.value = cfg.release;
-    this.input.connect(comp);
-    comp.connect(ctx.destination);
-  }
+  constructor(
+    private readonly ctx: BaseAudioContext,
+    private readonly mixer: Mixer,
+    readonly random: () => number = Math.random,
+  ) {}
 
   /** Current time of the context in seconds. */
   get now(): number {
     return this.ctx.currentTime;
+  }
+
+  get tally(): NodeTally {
+    return this.mixer.tally;
+  }
+
+  /** Runs `sound` and returns how long it lasts in seconds, counted from the call to its last note's end. */
+  measure(sound: () => void): number {
+    const before = this.spanEnd;
+    this.spanEnd = 0;
+    try {
+      sound();
+      return this.spanEnd;
+    } finally {
+      this.spanEnd = Math.max(before, this.spanEnd);
+    }
+  }
+
+  /** Runs `sound` with every note shifted `offset` seconds later (the offline render of several sounds). */
+  at(offset: number, sound: () => void): void {
+    const before = this.base;
+    this.base = before + offset;
+    try {
+      sound();
+    } finally {
+      this.base = before;
+    }
   }
 
   /** One oscillator note: attack ramp, exponential decay, optional pitch glide. */
@@ -48,8 +74,10 @@ export class Synth {
     const { ctx } = this;
     const pitch = options.pitch ?? 1;
     const peak = recipe.gain * (options.gain ?? 1);
-    const start = ctx.currentTime + (options.delay ?? 0);
+    const delay = this.base + (options.delay ?? 0);
+    const start = ctx.currentTime + delay;
     const end = start + recipe.duration;
+    this.spanEnd = Math.max(this.spanEnd, delay + recipe.duration + SFX.stopTail);
 
     const osc = ctx.createOscillator();
     osc.type = recipe.wave;
@@ -60,8 +88,8 @@ export class Synth {
     const amp = ctx.createGain();
     this.envelope(amp, start, recipe.attack, end, peak);
     osc.connect(amp);
-    amp.connect(this.input);
-    this.finish(osc, [osc, amp], start, end + SFX.stopTail);
+    amp.connect(this.mixer.sfxBus);
+    runSource(this.mixer.tally, osc, [osc, amp], start, end + SFX.stopTail);
   }
 
   /** A burst of white noise through a filter with an optional cutoff glide. */
@@ -69,8 +97,11 @@ export class Synth {
     const { ctx } = this;
     const pitch = options.pitch ?? 1;
     const peak = recipe.gain * (options.gain ?? 1);
-    const start = ctx.currentTime + (options.delay ?? 0);
-    const end = start + Math.min(recipe.duration, SFX.noise.bufferSeconds);
+    const delay = this.base + (options.delay ?? 0);
+    const start = ctx.currentTime + delay;
+    const length = Math.min(recipe.duration, SFX.noise.bufferSeconds);
+    const end = start + length;
+    this.spanEnd = Math.max(this.spanEnd, delay + length + SFX.stopTail);
 
     const src = ctx.createBufferSource();
     src.buffer = this.getNoiseBuffer();
@@ -85,8 +116,8 @@ export class Synth {
     this.envelope(amp, start, recipe.attack, end, peak);
     src.connect(filter);
     filter.connect(amp);
-    amp.connect(this.input);
-    this.finish(src, [src, filter, amp], start, end + SFX.stopTail);
+    amp.connect(this.mixer.sfxBus);
+    runSource(this.mixer.tally, src, [src, filter, amp], start, end + SFX.stopTail);
   }
 
   /** Notes with their own start offsets (arpeggios, ability sounds), shifted by `options`. */
@@ -123,26 +154,12 @@ export class Synth {
     param.exponentialRampToValueAtTime(SFX.silence, end);
   }
 
-  /** Schedules the source and cleans everything up once it ends. */
-  private finish(
-    source: OscillatorNode | AudioBufferSourceNode,
-    nodes: readonly AudioNode[],
-    start: number,
-    stopAt: number,
-  ): void {
-    source.onended = () => {
-      for (const node of nodes) node.disconnect();
-    };
-    source.start(start);
-    source.stop(stopAt);
-  }
-
   private getNoiseBuffer(): AudioBuffer {
     if (!this.noiseBuffer) {
       const length = Math.ceil(this.ctx.sampleRate * SFX.noise.bufferSeconds);
       const buffer = this.ctx.createBuffer(1, length, this.ctx.sampleRate);
       const data = buffer.getChannelData(0);
-      for (let i = 0; i < length; i++) data[i] = Math.random() * 2 - 1;
+      for (let i = 0; i < length; i++) data[i] = this.random() * 2 - 1;
       this.noiseBuffer = buffer;
     }
     return this.noiseBuffer;

@@ -1,5 +1,6 @@
 import type * as Phaser from 'phaser';
 import { SOAK } from '../../data/soak';
+import { services } from '../../services';
 import { uiRegionCount } from '../ui/ui-regions';
 import { countLastingTweens, tweenFacts } from './soak-tweens';
 
@@ -44,6 +45,8 @@ export interface SoakSample {
   textureCanvases: number;
   /** `<canvas>` elements attached to the page (the game's own and the ones the interface adds). */
   domCanvases: number;
+  /** Audio nodes alive (sounds in flight and music voices): must not grow from lap to lap. */
+  audioNodes: number;
   /** Interface regions registered in `ui-regions` (a module-level set). */
   uiRegions: number;
 }
@@ -182,5 +185,6 @@ export function readSoakSample(game: Phaser.Game): SoakSample {
     ),
     domCanvases: document.querySelectorAll('canvas').length,
     uiRegions: uiRegionCount(),
+    audioNodes: services.audio.debugStats().liveNodes,
   };
 }

@@ -49,6 +49,13 @@ export const SOAK = {
   textureDigitMark: '#',
   /** How many texture groups a sample lists (the biggest first). */
   textureGroupLimit: 25,
+  /**
+   * How far the live audio node count may differ between the smoke lap's two reads. At the same quiet
+   * Home no sound is in flight, but the music schedules its notes ahead and the reads may land on
+   * different beats: the music of up to six layers keeps well under a bar's worth of notes (about
+   * 8 voices of 2 nodes), so 16 lets the beat phase move, while a real leak (sounds or notes that never release) adds far more in one lap.
+   */
+  audioNodesTolerance: 16,
   /** The smoke lap (`tippySoak.smoke()`): one fixed pass through every screen and run kind. */
   smoke: {
     /** Game-time multiplier of the runs in the lap (headless only; 1 outside the lap). */

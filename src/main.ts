@@ -74,6 +74,17 @@ async function start(): Promise<void> {
   await loadSave();
   bootStage('fonts');
   await loadFonts();
+  if (import.meta.env.DEV) {
+    // window.__tippyAudio: offline render and measurement of the sounds (docs/08-architecture.md, section 9).
+    void import('./game/debug/audio-hook').then((hook) => hook.registerAudioHook());
+    // `?soundboard=1`: the sound test page instead of the game.
+    if (new URLSearchParams(window.location.search).get('soundboard') === '1') {
+      const board = await import('./game/debug/soundboard');
+      board.showSoundboard();
+      bootStage('started');
+      return;
+    }
+  }
   // `?perf=1` (any build): an automatic benchmark run, kept out of the save (docs/08-architecture.md, section 9).
   const perf = readPerfParams();
   const perfDirector = perf ? await import('./game/perf/perf-director') : null;
