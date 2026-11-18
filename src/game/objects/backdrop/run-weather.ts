@@ -13,6 +13,7 @@ import type { WeatherFrame, WeatherPart } from './weather-frame';
 import { strikeLightningNow } from './weather-sky';
 import { onLightningFlash } from './lightning-flash';
 import { SnowDust } from './snow-dust';
+import { TOWER_WEATHER } from '../../../data/tower-weather';
 import { fxGuard } from '../../fx-guard';
 import { towerWeather } from '../tower-weather-state';
 import type { TowerView } from '../tower-view';
@@ -29,9 +30,6 @@ const FALL_KINDS: Partial<Record<WeatherId, FallKind>> = {
   snow: 'snow',
   leaves: 'leaves',
 };
-
-/** The night makes the layers sleepy once this much of it shows (a zone that shows weather, the cross-fade counted). */
-const SLEEPY_SHARE = 0.5;
 
 /**
  * The weather of a run that falls or lies on the tower: the particles of rain, snow and leaves in one
@@ -140,7 +138,8 @@ export class RunWeather {
     towerWeather.snow = this.weather === 'snow' ? f.share : 0;
     towerWeather.sleepy =
       this.weather === 'night' &&
-      this.backdrop.weatherShare('full') + this.backdrop.weatherShare('window') > SLEEPY_SHARE;
+      this.backdrop.weatherShare('full') + this.backdrop.weatherShare('window') >
+        TOWER_WEATHER.sleepy.nightShare;
     this.updateDust(landed, top, deltaMs, f.level, f.share);
   }
 

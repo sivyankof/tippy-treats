@@ -53,6 +53,8 @@ export const TOWER_WEATHER = {
     /** Flake scale against its picture (they are the weather flakes, smaller). */
     scale: [0.7, 1] as readonly [number, number],
     spinDeg: 220,
+    /** Each flake spins at this share range of `spinDeg`. */
+    spinShare: [0.4, 1] as readonly [number, number],
     /** The flake picture (index into the weather flakes). */
     pictures: [0, 1, 2],
     /** The dust waits for the cap to have grown this much (share of `cap.growMs`). */
@@ -74,6 +76,10 @@ export const TOWER_WEATHER = {
   sleepy: {
     /** One yawn on the tower every so long, ms. */
     yawnEveryMs: [6000, 10000] as readonly [number, number],
+    /** When no layer was free for a yawn, the next try comes this soon, ms. */
+    yawnRetryMs: 1000,
+    /** The night makes the layers sleepy once this much of it shows (a zone that shows weather, the cross-fade counted). */
+    nightShare: 0.5,
     /** Blinking of a sleepy face: rarer and slower than usual. */
     blinkIntervalMs: [4500, 8000] as readonly [number, number],
     blinkMs: 260,
@@ -96,6 +102,14 @@ export const TOWER_WEATHER = {
       bottomMarginPx: 4,
       /** The face lifts this far while it draws itself up (face px). */
       liftPx: 3,
+      /** The gape opens over this share of its time, then the mouth breathes by `breath` (share of its size). */
+      openShare: 0.2,
+      breath: 0.06,
+      /** The mouth shuts over this share of the close; the smack follows: its place and width (share of the close) and its opening. */
+      shutShare: 0.4,
+      smack: { at: 0.68, width: 0.2, open: 0.16 },
+      /** A mouth that gapes less than this share is left as the expression has it. */
+      mouthMinOpen: 0.04,
       /** The overshoot of the close: the face squashes this much at its lowest. */
       squashClose: 0.07,
     },

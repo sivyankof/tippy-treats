@@ -7,8 +7,6 @@ import { towerWeather } from './tower-weather-state';
 
 const STARTLE = TOWER_WEATHER.startle;
 const SLEEPY = TOWER_WEATHER.sleepy;
-/** Next try for a yawn when no layer was free for it. */
-const RETRY_MS = 1000;
 
 /** What the weather pieces need to know of the tower this frame. */
 export interface TowerWeatherContext {
@@ -26,7 +24,8 @@ export interface TowerWeatherContext {
 }
 
 interface Scheduled {
-  view: LayerView;
+  /** 0-based index of the layer: the view is looked up when the step fires (a pooled view may have moved on). */
+  index: number;
   atMs: number;
   /** The reaction to start (`startleEyes` behind the glass of the Showcase). */
   reaction: 'startle' | 'startleEyes';
@@ -63,9 +62,9 @@ export class TowerWeatherFx {
       if (shown && view.faceView.canStartle) onScreen.push([index, view]);
     }
     onScreen.sort((a, b) => b[0] - a[0]);
-    onScreen.slice(0, layers).forEach(([index, view], rank) => {
+    onScreen.slice(0, layers).forEach(([index], rank) => {
       this.pending.push({
-        view,
+        index,
         atMs: this.clockMs + Math.min(STARTLE.maxDelayMs, rank * STARTLE.stepMs),
         reaction: kind === 'street' ? 'startleEyes' : 'startle',
         hop: kind === 'sky' && index === ctx.topIndex && !ctx.flying && !ctx.lickScene,
@@ -80,20 +79,18 @@ export class TowerWeatherFx {
 
   tick(dtMs: number, ctx: TowerWeatherContext): void {
     this.clockMs += dtMs;
-    this.runStartle();
+    this.runStartle(ctx);
     const sleepy = towerWeather.sleepy;
     for (const view of ctx.views.values()) view.faceView.setSleepy(sleepy);
     this.runYawns(ctx, sleepy);
   }
 
-  private runStartle(): void {
+  private runStartle(ctx: TowerWeatherContext): void {
     for (let i = this.pending.length - 1; i >= 0; i--) {
       const item = this.pending[i]!;
       if (item.atMs > this.clockMs) continue;
       this.pending.splice(i, 1);
-      if (!item.view.visible || !item.view.faceView.canStartle) continue;
-      item.view.faceView.react(item.reaction, STARTLE.holdMs);
-      if (item.hop) item.view.rig.hop(STARTLE.hop.px, STARTLE.hop.ms);
+      startleLayer(item, ctx);
     }
   }
 
@@ -105,7 +102,8 @@ export class TowerWeatherFx {
     if (this.nextYawnAt < 0) this.nextYawnAt = this.clockMs + this.rng.range(...SLEEPY.yawnEveryMs);
     if (this.clockMs < this.nextYawnAt) return;
     const yawned = this.yawnOne(ctx, false);
-    this.nextYawnAt = this.clockMs + (yawned ? this.rng.range(...SLEEPY.yawnEveryMs) : RETRY_MS);
+    this.nextYawnAt =
+      this.clockMs + (yawned ? this.rng.range(...SLEEPY.yawnEveryMs) : SLEEPY.yawnRetryMs);
   }
 
   /** One free layer on screen yawns: the top one is left out while a layer is in the air. */
@@ -121,4 +119,20 @@ export class TowerWeatherFx {
     const [, view] = force ? free[0]! : free[this.rng.int(0, free.length - 1)]!;
     return view.faceView.yawn(force);
   }
+}
+
+/**
+ * One layer's step of a startle wave: the view of the layer now (looked up by its index; a pooled view may have gone
+ * and come back for another layer), still on screen and still at its plain idle, starts the scared face (and the hop).
+ */
+export function startleLayer(
+  item: Pick<Scheduled, 'index' | 'reaction' | 'hop'>,
+  ctx: Pick<TowerWeatherContext, 'views' | 'bandTop' | 'bandBottom'>,
+): boolean {
+  const view = ctx.views.get(item.index);
+  if (!view || !view.visible || view.y < ctx.bandTop || view.y > ctx.bandBottom) return false;
+  if (!view.faceView.canStartle) return false;
+  view.faceView.react(item.reaction, STARTLE.holdMs);
+  if (item.hop) view.rig.hop(STARTLE.hop.px, STARTLE.hop.ms);
+  return true;
 }

@@ -65,7 +65,7 @@ export class SnowDust {
         this.rng.range(DUST.lifeMs[0], DUST.lifeMs[1]),
       );
       piece.scale = this.rng.range(DUST.scale[0], DUST.scale[1]);
-      piece.spin = side * this.rng.range(0.4, 1) * DUST.spinDeg;
+      piece.spin = side * this.rng.range(DUST.spinShare[0], DUST.spinShare[1]) * DUST.spinDeg;
       const picture = DUST.pictures[this.rng.int(0, DUST.pictures.length - 1)] ?? 0;
       piece.image
         .setTexture(WEATHER_TEX.flake[picture] ?? '')

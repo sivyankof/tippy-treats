@@ -59,6 +59,7 @@ export class LayerFace extends Phaser.GameObjects.Container {
   private sleepy = false;
   /** Time into the yawn running, -1 when none; the pose it lays over the face now. */
   private yawnMs = -1;
+  private yawnMouthPosed = false;
   private readonly yawnMouth: YawnMouth = { y: 0, scale: 1 };
   private readonly yawnNow: YawnPose = { open: 0, stretch: 0, lift: 0 };
   /** Time left of the way back from the wide eyes of a startle. */
@@ -194,19 +195,24 @@ export class LayerFace extends Phaser.GameObjects.Container {
   }
 
   /**
-   * Something else has taken the face during the hold of a startle (a coin to aim at, a worried tower, a lick): the startle
-   * ends at once, with no way back for the eyes, so the two never show together. Runs first in the frame.
+   * Something else has taken the face during the hold of a startle or a yawn (a coin to aim at, a worried tower, a lick): the
+   * weather reaction ends at once, with no way back for the eyes, so the two never show together. Runs first in the frame.
    */
-  private cutStartleIfBusy(): void {
+  private cutWeatherIfBusy(): void {
     const held = this.timers.reaction();
-    if ((held !== 'startle' && held !== 'startleEyes') || this.canStartleHold()) return;
-    this.timers.clearReaction();
-    this.lastReaction = null;
-    this.startleTailMs = 0;
+    const startled = held === 'startle' || held === 'startleEyes';
+    if (!startled && this.yawnMs < 0) return;
+    if (this.stillPlain()) return;
+    if (startled) {
+      this.timers.clearReaction();
+      this.lastReaction = null;
+      this.startleTailMs = 0;
+    }
+    this.endYawn();
   }
 
-  /** During a startle: the mood and the mouth hint are still plain (the reaction itself is the startle). */
-  private canStartleHold(): boolean {
+  /** The face is at its plain idle apart from the reaction held now: the mood is calm, the mouth hint plain, no lick (`startleAllowed`). */
+  private stillPlain(): boolean {
     return startleAllowed(null, this.mood, this.mouthHint, this.lick.busy || this.lick.active);
   }
 
@@ -226,6 +232,7 @@ export class LayerFace extends Phaser.GameObjects.Container {
   private endYawn(): void {
     if (this.yawnMs < 0) return;
     this.yawnMs = -1;
+    this.yawnMouthPosed = false;
     if (this.timers.reaction() === 'yawn') this.timers.clearReaction();
     this.placeFaces();
     this.expression = null;
@@ -238,11 +245,7 @@ export class LayerFace extends Phaser.GameObjects.Container {
     // A stronger reaction took the face over (or the time ran out): the yawn is off, the face is its own again.
     const pose = this.timers.reaction() === 'yawn' ? yawnPose(this.yawnMs, this.yawnNow) : null;
     if (!pose) {
-      this.yawnMs = -1;
-      if (this.timers.reaction() === 'yawn') this.timers.clearReaction();
-      this.placeFaces();
-      this.expression = null;
-      this.refresh();
+      this.endYawn();
       return;
     }
     this.yawnMs += dtMs;
@@ -255,7 +258,10 @@ export class LayerFace extends Phaser.GameObjects.Container {
       this.scaleX,
       this.yawnMouth,
     );
-    this.mainFace.poseYawn(pose.open, mouth.scale, mouth.y);
+    const posed = this.mainFace.poseYawn(pose.open, mouth.scale, mouth.y);
+    // The mouth of the yawn gives way to the expression's own while it is shut.
+    if (this.yawnMouthPosed && !posed) this.applyExpression();
+    this.yawnMouthPosed = posed;
   }
 
   /** The eyes shrink from the wide startle size to normal over `startle.returnMs` after the startle face goes. */
@@ -272,7 +278,9 @@ export class LayerFace extends Phaser.GameObjects.Container {
     if (this.startleTailMs <= 0) return;
     this.startleTailMs = Math.max(0, this.startleTailMs - dtMs);
     const k = this.startleTailMs / TOWER_WEATHER.startle.returnMs;
-    this.mainFace.setEyeScale(1 + (ANIM.face.wideEyeScale - 1) * k);
+    const eyes = 1 + (ANIM.face.wideEyeScale - 1) * k;
+    this.mainFace.setEyeScale(eyes);
+    this.pairFace?.setEyeScale(eyes);
     if (this.startleTailMs === 0) this.applyExpression();
   }
 
@@ -412,7 +420,7 @@ export class LayerFace extends Phaser.GameObjects.Container {
 
   /** Advances blinking and reactions, the pupils and the sweat drop. */
   tick(dtMs: number): void {
-    this.cutStartleIfBusy();
+    this.cutWeatherIfBusy();
     this.runHug(dtMs);
     this.timers.update(dtMs);
     this.refresh();

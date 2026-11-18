@@ -573,3 +573,14 @@ describe('startleAllowed', () => {
     }
   });
 });
+
+describe('the plain-idle rule that cuts a running yawn', () => {
+  it('a yawn goes on while the face is calm with a plain mouth and stops for a worried mood, a hint or a lick', () => {
+    // `LayerFace.cutWeatherIfBusy` asks `startleAllowed(null, ...)` for a running yawn or startle.
+    expect(startleAllowed(null, 'calm', undefined, false)).toBe(true);
+    expect(startleAllowed(null, 'nervous', undefined, false)).toBe(false);
+    expect(startleAllowed(null, 'scared', undefined, false)).toBe(false);
+    expect(startleAllowed(null, 'calm', 'yum', false)).toBe(false);
+    expect(startleAllowed(null, 'calm', undefined, true)).toBe(false);
+  });
+});
