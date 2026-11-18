@@ -117,9 +117,10 @@ type FadeParam = Pick<
 >;
 
 /**
- * Fades `param` from its value now to `to` over `sec` seconds of context time `now`, in `steps`
- * straight ramps along the equal-power curve. Whatever was scheduled is dropped and the value held
- * first, so a fade that interrupts another does not jump.
+ * Fades `param` to `to` over `sec` seconds, in `steps` straight ramps along the equal-power curve,
+ * from context time `startAt` (now or later; the value until then is held). Whatever was scheduled
+ * from `now` on is dropped and the value now held first, so a fade that interrupts another does not
+ * jump.
  */
 export function fadeParam(
   param: FadeParam,
@@ -127,15 +128,18 @@ export function fadeParam(
   to: number,
   sec: number,
   steps: number,
+  startAt = now,
 ): void {
   const from = param.value;
   param.cancelScheduledValues(now);
   param.setValueAtTime(from, now);
+  const begin = Math.max(now, startAt);
+  if (begin > now) param.setValueAtTime(from, begin);
   if (sec <= 0) {
-    param.setValueAtTime(to, now);
+    param.setValueAtTime(to, begin);
     return;
   }
   for (let k = 1; k <= steps; k++) {
-    param.linearRampToValueAtTime(equalPowerLevel(from, to, k / steps), now + (sec * k) / steps);
+    param.linearRampToValueAtTime(equalPowerLevel(from, to, k / steps), begin + (sec * k) / steps);
   }
 }

@@ -97,7 +97,7 @@ export class WebAudioService implements AudioService, AudioDevControl {
   }
 
   musicState(): MusicDebugState {
-    return { ...this.musicProxy.state(), asked: this.musicProxy.asked, ducks: [...this.ducks] };
+    return { ...this.musicProxy.state(), asked: this.musicProxy.asked(), ducks: [...this.ducks] };
   }
 
   get music(): MusicControl {
@@ -152,7 +152,7 @@ export class WebAudioService implements AudioService, AudioDevControl {
 
   suspend(reason: AudioSuspendReason): void {
     this.holds.add(reason);
-    this.musicProxy.hold(true);
+    this.musicProxy.hold('app', true);
     this.run((ctx) => ctx.suspend());
   }
 
@@ -160,7 +160,7 @@ export class WebAudioService implements AudioService, AudioDevControl {
     this.holds.delete(reason);
     if (this.holds.size > 0) return;
     this.run((ctx) => ctx.resume());
-    this.musicProxy.hold(false);
+    this.musicProxy.hold('app', false);
   }
 
   setBed(kind: BedKind | null): void {

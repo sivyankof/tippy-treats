@@ -1,31 +1,32 @@
 import * as Phaser from 'phaser';
-import { musicTrackFor, type MusicCue } from '../data/music';
-import { ZONES } from '../data/zones';
+import { musicAskFor, type MusicCue } from '../data/music';
 import { services } from '../services';
 import { HoldCount } from '../util/hold-count';
 import { SCENES } from './scene-keys';
 
 /**
  * Where the game tells the music what to play (docs/06-art-animation-audio.md, section 7,
- * "Музыка"): the menus play the menu track, a run the track of its zone (the daily tower one
- * track for the whole run), the results with a new record their own; the results without a
- * record, the pause and "one more try?" keep the track of the zone. The player itself leaves a
- * track that already plays untouched, so screens can ask for it again freely. Calls before the
- * first tap are remembered by the music proxy.
+ * "Музыка"): the playlist everywhere, the daily tower's track for its whole run, the record track
+ * while the results with a new record are up. The zones, a miss, "one more run" and the screens
+ * in between ask nothing new (asking for what plays changes nothing). The run's pause window stops
+ * the music where it is. Calls before the first tap are remembered by the music proxy.
  */
 
-/** Asks the music for the track of `cue` (nothing when the cue keeps the music as it is). */
+/** Asks the music for what `cue` wants (nothing when the cue keeps the music as it is). */
 export function cueMusic(cue: MusicCue): void {
-  const track = musicTrackFor(cue);
-  if (track) services.audio.music.play(track);
+  const ask = musicAskFor(cue);
+  if (!ask) return;
+  const { music } = services.audio;
+  if (ask.kind === 'playlist') music.playlist();
+  else music.play(ask.track);
 }
 
-/** A menu screen is up: the menu track. */
+/** A menu screen is up: the playlist (it goes on untouched if it plays). */
 export function playMenuMusic(): void {
   cueMusic({ kind: 'menu' });
 }
 
-/** Every screen besides the run and the results: each asks for the menu track when it opens. */
+/** Every screen that is not the run or the results. */
 const MENU_SCENES = [
   SCENES.home,
   SCENES.team,
@@ -37,23 +38,39 @@ const MENU_SCENES = [
   SCENES.lineup,
 ] as const;
 
-/** Call once at start-up: every menu screen asks for the menu track as it opens. */
+/** Call once at start-up: every menu screen asks for the playlist as it opens. */
 export function bindMenuMusic(game: Phaser.Game): void {
   for (const key of MENU_SCENES) {
     game.scene.getScene(key)?.sys.events.on(Phaser.Scenes.Events.CREATE, playMenuMusic);
   }
 }
 
-/** Follows the zone of one run: one per run (made by the HUD), fed every frame. */
+/**
+ * The music of one run (made by the HUD, fed every frame): its first frame asks for the playlist
+ * or the daily tower's track; the pause window stops the music while it is up. `end` lets the
+ * pause go when the run's HUD goes away.
+ */
 export class RunMusic {
-  private zoneIndex: number | null = null;
+  private asked = false;
+  private paused = false;
 
-  /** `zoneIndex` of the live run, or null when there is none (the run is over or not there yet). */
-  observe(zoneIndex: number | null, daily: boolean): void {
-    if (zoneIndex === null || zoneIndex === this.zoneIndex) return;
-    this.zoneIndex = zoneIndex;
-    const zone = ZONES[Math.min(zoneIndex, ZONES.length - 1)];
-    if (zone) cueMusic({ kind: 'run', zone: zone.id, daily });
+  /** `live`: the run is on screen (not over); `paused`: its pause window or countdown is up. */
+  observe(live: boolean, daily: boolean, paused: boolean): void {
+    if (live && !this.asked) {
+      this.asked = true;
+      cueMusic({ kind: 'run', daily });
+    }
+    this.pause(paused);
+  }
+
+  end(): void {
+    this.pause(false);
+  }
+
+  private pause(on: boolean): void {
+    if (on === this.paused) return;
+    this.paused = on;
+    services.audio.music.hold('pause', on);
   }
 }
 

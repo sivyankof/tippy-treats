@@ -1,6 +1,6 @@
 import type { Rarity } from '../../data/rarity';
 import type { BedKind } from '../../data/weather-bed';
-import type { MusicTrackId } from '../../data/music';
+import type { MusicAsk } from '../../data/music';
 import type { MusicControl, MusicPlayerState } from './music-control';
 import type { DuckReason } from './mixer-math';
 import type { SoundArgs, SoundId } from './sound-args';
@@ -89,8 +89,8 @@ export interface AudioService {
 
 /** What the music was last asked to play, what the player holds and what turns it down (dev checks). */
 export interface MusicDebugState extends MusicPlayerState {
-  /** The track the game asked for last, null before the first or after a stop. */
-  asked: MusicTrackId | null;
+  /** What the game asked for last (the playlist or a track), null before the first or after a stop. */
+  asked: MusicAsk | null;
   /** Duck reasons that hold now. */
   ducks: string[];
 }

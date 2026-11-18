@@ -716,15 +716,17 @@
       "purchase": "Покупка или стартовый набор прошли: «дзынь» монеты и аккорд ягоды."
     },
     "track": {
-      "menu": "Меню",
-      "kitchen": "Кухня",
-      "showcase": "Витрина",
-      "roof": "Крыша и Облака",
-      "stars": "Звёзды",
-      "space": "Космос",
-      "daily": "Башня дня",
-      "record": "Новый рекорд"
+      "menu": "A Cup of Tea",
+      "kitchen": "What Would You Give",
+      "roof": "Tropical",
+      "stars": "Lotus",
+      "space": "Ascension",
+      "bartender": "Bartender (короткий)",
+      "daily": "Loop Town (башня дня)",
+      "record": "Happy Theme (рекорд)"
     },
-    "musicMemory": "Музыка в памяти: сейчас {now} МБ, пик {peak} МБ · треков звучит: {decks}"
+    "musicMemory": "Музыка в памяти: сейчас {now} МБ, пик {peak} МБ · треков звучит: {decks}",
+    "playlist": "Плейлист",
+    "nextTrack": "Следующий трек плейлиста"
   }
 }

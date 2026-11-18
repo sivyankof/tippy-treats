@@ -1,5 +1,3 @@
-import type { ZoneId } from './zones';
-
 /**
  * The music of the game (docs/06-art-animation-audio.md, section 7, "Музыка"): ready-made tracks
  * from `assets/music/` (m4a, AAC; sources and licenses in `assets/LICENSES.md`). Times are
@@ -15,7 +13,8 @@ export type TrackLoop =
   | 'seamless'
   /**
    * The file is not a loop: streamed by media elements (never decoded whole, docs/08 journal:
-   * the 110 MB cap) and looped by fading its end into a new pass from the start.
+   * the 110 MB cap). In the playlist it plays once; on its own it loops by fading its end into a
+   * new pass from the start.
    */
   | 'overlap';
 
@@ -45,12 +44,12 @@ export const MUSIC_TRACKS = {
     sampleRate: 48_000,
     gainDb: 0,
   },
-  showcase: {
-    file: 'showcase-bartender.m4a',
-    loop: 'overlap',
-    frames: 10_820_449,
-    sampleRate: 44_100,
-    gainDb: -1,
+  stars: {
+    file: 'stars-lotus.m4a',
+    loop: 'seamless',
+    frames: 4_608_000,
+    sampleRate: 48_000,
+    gainDb: 0,
   },
   roof: {
     file: 'roof-tropical.m4a',
@@ -59,18 +58,18 @@ export const MUSIC_TRACKS = {
     sampleRate: 48_000,
     gainDb: 0,
   },
-  stars: {
-    file: 'stars-lotus.m4a',
-    loop: 'seamless',
-    frames: 4_608_000,
-    sampleRate: 48_000,
-    gainDb: 0,
-  },
   space: {
     file: 'space-ascension.m4a',
     loop: 'seamless',
     frames: 5_385_975,
     sampleRate: 48_000,
+    gainDb: 0,
+  },
+  bartender: {
+    file: 'bartender-short.m4a',
+    loop: 'overlap',
+    frames: 5_733_000,
+    sampleRate: 44_100,
     gainDb: 0,
   },
   daily: {
@@ -93,40 +92,41 @@ export type MusicTrackId = keyof typeof MUSIC_TRACKS;
 
 export const MUSIC_TRACK_IDS = Object.keys(MUSIC_TRACKS) as MusicTrackId[];
 
-/** Places of the game that have their own music: the menus, every zone, the daily tower, a record. */
-export type MusicPlace = 'menu' | ZoneId | 'daily' | 'record';
+/**
+ * The playlist (docs/06, section 7): played everywhere, round and round in this order, the first
+ * one picked at random when the game starts. The file names are the old zone names; they no
+ * longer mean a zone.
+ */
+export const MUSIC_PLAYLIST: readonly MusicTrackId[] = [
+  'menu',
+  'kitchen',
+  'roof',
+  'stars',
+  'space',
+  'bartender',
+];
 
-/** The track of every place (the table of docs/06, section 7). */
-export const MUSIC_PLACES: Readonly<Record<MusicPlace, MusicTrackId>> = {
-  menu: 'menu',
-  kitchen: 'kitchen',
-  showcase: 'showcase',
-  roof: 'roof',
-  clouds: 'roof',
-  stars: 'stars',
-  space: 'space',
-  daily: 'daily',
-  record: 'record',
-};
+/** What the music is asked to play: the playlist, or one track round and round (an exception). */
+export type MusicAsk = { kind: 'playlist' } | { kind: 'track'; track: MusicTrackId };
 
-/** Where the player is, as far as the music cares. */
+/** Where the player is, as far as the music cares (the zones are not here: they do not touch it). */
 export type MusicCue =
-  | { kind: 'menu' }
-  | { kind: 'run'; zone: ZoneId; daily: boolean }
-  | { kind: 'results'; record: boolean };
+  { kind: 'menu' } | { kind: 'run'; daily: boolean } | { kind: 'results'; record: boolean };
 
 /**
- * The track `cue` asks for, or null when the music goes on as it is: the results without a record
- * keep the track of the zone (as the pause and "one more try?" do, which send no cue at all).
+ * What `cue` asks of the music, or null when the music goes on as it is: every menu screen and a
+ * classic run ask for the playlist (which goes on untouched if it plays), the daily tower for its
+ * own track for the whole run, the results with a new record for the record track; the results
+ * without a record ask nothing.
  */
-export function musicTrackFor(cue: MusicCue): MusicTrackId | null {
+export function musicAskFor(cue: MusicCue): MusicAsk | null {
   switch (cue.kind) {
     case 'menu':
-      return MUSIC_PLACES.menu;
+      return { kind: 'playlist' };
     case 'run':
-      return MUSIC_PLACES[cue.daily ? 'daily' : cue.zone];
+      return cue.daily ? { kind: 'track', track: 'daily' } : { kind: 'playlist' };
     case 'results':
-      return cue.record ? MUSIC_PLACES.record : null;
+      return cue.record ? { kind: 'track', track: 'record' } : null;
   }
 }
 
@@ -137,7 +137,15 @@ export const MUSIC = {
   busLufs: -20,
   /** A change of track: the old one fades out, the new one in, over this long. */
   crossfadeSec: 2.5,
-  /** A streamed (non-seamless) track starts its next pass this long before the end and fades over it. */
+  /** Every track of the playlist plays at least this long: a seamless loop whole rounds up to it. */
+  minPlaySec: 150,
+  /** The next seamless track of the playlist is decoded this long before its change. */
+  prefetchSec: 8,
+  /** The change of a playlist track is put on the context's clock this long before it is due. */
+  switchLeadSec: 0.5,
+  /** A playlist turn is looked at this often while it plays (the change itself is exact). */
+  watchSec: 1,
+  /** A streamed track played on its own (the soundboard) starts its next pass this long before the end and fades over it. */
   loopOverlapSec: 2,
   /** A third track asked for during a change cuts the oldest one this fast. */
   cutSec: 0.1,
@@ -151,7 +159,7 @@ export const MUSIC = {
   seamSmoothSec: 0.01,
   /** The seam aims at a line fitted to the last `fit` samples and averages the tail over `radius` each side. */
   seam: { fit: 16, radius: 2 },
-  /** Media elements of the streamed tracks (two per track, three tracks: playing, leaving, cut). */
+  /** Media elements of the streamed track (two per deck; decks playing, leaving and being cut). */
   streamElements: 6,
   /** How often a waiting timer looks again (the context may be held, the stream may lag). */
   pollSec: 0.25,

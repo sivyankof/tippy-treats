@@ -96,6 +96,7 @@ class FakeContext {
 /** A music player that only reports whether a tune plays, as the real one does through its host. */
 const PLAYING_MUSIC: MusicFactory = (host) => ({
   ...NO_MUSIC,
+  playlist: () => host.onPlaying?.(true),
   play: () => host.onPlaying?.(true),
   stop: () => host.onPlaying?.(false),
 });
@@ -429,9 +430,10 @@ describe('WebAudioService', () => {
     const log: string[] = [];
     const player: MusicControl = {
       ...NO_MUSIC,
+      playlist: () => log.push('playlist'),
       play: (track) => log.push(`play ${track}`),
       stop: () => log.push('stop'),
-      hold: (on) => log.push(`hold ${on}`),
+      hold: (reason, on) => log.push(`hold ${reason} ${on}`),
     };
     const ctx = new FakeContext();
     const service = new WebAudioService(
@@ -439,18 +441,19 @@ describe('WebAudioService', () => {
       Math.random,
       () => player,
     );
-    service.music.play('stars');
+    service.music.playlist();
     expect(log).toEqual([]);
     service.unlock();
-    expect(log).toEqual(['play stars']);
-    service.suspend('app');
-    expect(log.at(-1)).toBe('hold true');
-    service.resume('app');
-    expect(log.at(-1)).toBe('hold false');
+    expect(log).toEqual(['playlist']);
+    service.suspend('ad');
+    expect(log.at(-1)).toBe('hold app true');
+    service.resume('ad');
+    expect(log.at(-1)).toBe('hold app false');
     service.setMusicEnabled(false);
     expect(log.at(-1)).toBe('stop');
+    service.music.play('daily');
     service.setMusicEnabled(true);
-    expect(log.at(-1)).toBe('play stars');
+    expect(log.at(-1)).toBe('play daily');
   });
 
   it('holds back for the silent mode like for any other reason', () => {

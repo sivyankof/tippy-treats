@@ -2,13 +2,20 @@ import type { MusicTrackId } from '../../data/music';
 import type { Mixer } from './mixer';
 import type { NodeTally } from './node-tally';
 
+/** Why the music stops where it is: the app is away (background, an ad) or the run is paused. */
+export type MusicHoldReason = 'app' | 'pause';
+
 /** What the music player reports for dev checks (the soundboard, the memory measurement). */
 export interface MusicPlayerState {
   /** The track playing or coming in, null when stopped. */
   track: MusicTrackId | null;
+  /** The playlist plays (false: an exception track, or nothing). */
+  playlist: boolean;
+  /** Seconds the playlist's current track has played in its turn. */
+  turnSec: number;
   /** Decks alive now (a track playing, one leaving, one being cut). */
   decks: number;
-  /** Decoded music in memory now (decks, and a decode under way counted at its full size), bytes. */
+  /** Decoded music in memory now (decks, the prefetched track, decodes under way at full size), bytes. */
   decodedBytes: number;
   /** The most `decodedBytes` has been since the player was made or `resetPeak`. */
   peakBytes: number;
@@ -19,11 +26,15 @@ export interface MusicPlayerState {
  * unlocked it is remembered (`MusicProxy`), and a player must not throw.
  */
 export interface MusicControl {
-  /** Plays `track`, changing over from the one playing (the same track goes on untouched). */
+  /** The playlist, going on where it stopped (nothing changes if it plays). */
+  playlist(): void;
+  /** One track round and round (the daily tower, the record), the playlist keeping its place. */
   play(track: MusicTrackId): void;
+  /** The playlist's next track now (the soundboard). */
+  next(): void;
   stop(): void;
-  /** The audio is held (the app is in the background, an ad shows): streamed tracks pause too. */
-  hold(on: boolean): void;
+  /** Stops the music where it is while any reason holds; it goes on from there after. */
+  hold(reason: MusicHoldReason, on: boolean): void;
   state(): MusicPlayerState;
   resetPeak(): void;
 }
@@ -42,11 +53,20 @@ export interface MusicHost {
 /** Builds the player over a host; the service calls it once, when the audio is unlocked (inside the gesture). */
 export type MusicFactory = (host: MusicHost) => MusicControl;
 
-const NO_STATE: MusicPlayerState = { track: null, decks: 0, decodedBytes: 0, peakBytes: 0 };
+const NO_STATE: MusicPlayerState = {
+  track: null,
+  playlist: false,
+  turnSec: 0,
+  decks: 0,
+  decodedBytes: 0,
+  peakBytes: 0,
+};
 
 /** A player that does nothing (no music factory given). */
 export const NO_MUSIC: MusicControl = {
+  playlist: () => undefined,
   play: () => undefined,
+  next: () => undefined,
   stop: () => undefined,
   hold: () => undefined,
   state: () => ({ ...NO_STATE }),

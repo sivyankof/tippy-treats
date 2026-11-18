@@ -42,7 +42,7 @@ class FakeMedia {
   load(): void {}
 }
 
-const SPEC = MUSIC_TRACKS.showcase;
+const SPEC = MUSIC_TRACKS.menu;
 const LENGTH = SPEC.frames / SPEC.sampleRate;
 
 function setup() {
@@ -72,9 +72,10 @@ function setup() {
     ctx as unknown as BaseAudioContext,
     clock,
     pool,
-    'showcase',
+    'menu',
     SPEC,
-    '/showcase.m4a',
+    '/menu.m4a',
+    true,
   );
   /** Plays on: the context and every sounding element move `sec` forward. */
   const advance = async (sec: number): Promise<void> => {
@@ -118,6 +119,37 @@ describe('StreamDeck', () => {
     expect(a?.currentTime).toBeLessThan(1);
   });
 
+  it('in the playlist it plays once: no second pass, one element lent', async () => {
+    const { pool, elements, advance } = setup();
+    // The setup's looping deck holds two; a once-only deck takes one more.
+    const once = StreamDeck.open(
+      { currentTime: 0, createGain: () => new FakeGain() } as unknown as BaseAudioContext,
+      { currentTime: 0, setTimeout: (c, ms) => setTimeout(c, ms), clearTimeout: () => undefined },
+      pool,
+      'menu',
+      SPEC,
+      '/menu.m4a',
+      false,
+    );
+    expect(pool.free).toBe(1);
+    if (!once) throw new Error('no deck');
+    await once.start(12);
+    const el = elements[2];
+    expect(el?.src).toBe('/menu.m4a#t=12.000');
+    if (el) el.currentTime = 12;
+    await advance(LENGTH);
+    expect(elements.filter((e) => !e.paused)).toHaveLength(1);
+  });
+
+  it('counts what it played from where it started', async () => {
+    const { deck, elements, advance } = setup();
+    if (!deck) throw new Error('no deck');
+    await deck.start();
+    await advance(5);
+    expect(deck.played()).toBeCloseTo(5, 5);
+    expect(elements[0]?.currentTime).toBeCloseTo(5, 5);
+  });
+
   it('holds: sounding elements pause and come back, no pass is started meanwhile', async () => {
     const { deck, elements, advance } = setup();
     if (!deck) throw new Error('no deck');
@@ -157,6 +189,7 @@ describe('StreamDeck', () => {
       'menu',
       MUSIC_TRACKS.menu,
       '/menu.m4a',
+      true,
     );
     expect(none).toBeNull();
     expect(pool.free).toBe(1);

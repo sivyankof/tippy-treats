@@ -141,6 +141,7 @@ export class HudScene extends Phaser.Scene {
     }
     this.scale.on(Phaser.Scale.Events.RESIZE, this.layout, this);
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      this.runMusic.end();
       unregisterButton();
       unregisterOverlay();
       unregisterPanel();
@@ -165,7 +166,7 @@ export class HudScene extends Phaser.Scene {
     const live = info && info.phase !== 'over' ? info : null;
     const announced = this.zoneWatch.observe(live ? live.zoneIndex : null);
     const lap = this.lapWatch.observe(live ? flyingLap(live.height) : null);
-    this.runMusic.observe(live ? live.zoneIndex : null, live?.mode === 'daily');
+    this.runMusic.observe(live !== null, info?.mode === 'daily', this.overlay.visible);
     const coming = live ? prepTarget(live.height, live.zoneIndex, BACKDROP.prep.leadLayers) : null;
     fxGuard.call('hud-zone-banner', this, this.updateZoneBanner, announced, lap, coming, time);
     if (info) {

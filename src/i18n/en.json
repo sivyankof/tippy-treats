@@ -716,15 +716,17 @@
       "purchase": "A purchase or the starter pack went through: the coin ding and the berry chord."
     },
     "track": {
-      "menu": "Menu",
-      "kitchen": "Kitchen",
-      "showcase": "Showcase",
-      "roof": "Roof and Clouds",
-      "stars": "Stars",
-      "space": "Space",
-      "daily": "Daily tower",
-      "record": "New record"
+      "menu": "A Cup of Tea",
+      "kitchen": "What Would You Give",
+      "roof": "Tropical",
+      "stars": "Lotus",
+      "space": "Ascension",
+      "bartender": "Bartender (short)",
+      "daily": "Loop Town (daily tower)",
+      "record": "Happy Theme (record)"
     },
-    "musicMemory": "Decoded music in memory: {now} MB now, {peak} MB at most · tracks sounding: {decks}"
+    "musicMemory": "Decoded music in memory: {now} MB now, {peak} MB at most · tracks sounding: {decks}",
+    "playlist": "Playlist",
+    "nextTrack": "Next playlist track"
   }
 }

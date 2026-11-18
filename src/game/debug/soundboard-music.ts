@@ -60,8 +60,8 @@ function comboRun(): void {
 }
 
 /**
- * The music section of the soundboard: a button per track (the change fades like in the game),
- * stop, the decoded memory of the player now and at its peak, and the "music + drop + combo"
+ * The music section of the soundboard: the playlist, its next track and stop, a button per track
+ * (it plays round and round like the daily tower's; the change fades like in the game), what plays, the decoded memory of the player now and at its peak, and the "music + drop + combo"
  * button. The music volume is the "Music" slider at the top. It drives `services.audio.music`
  * like the game does.
  */
@@ -82,6 +82,14 @@ export function buildMusicSection(root: HTMLElement): void {
       }),
     );
   }
+  const playlist = button(`▶ ${t('soundboard.playlist')}`, () => {
+    light(tracks, null);
+    services.audio.music.playlist();
+  });
+  const next = button(`⏭ ${t('soundboard.nextTrack')}`, () => {
+    light(tracks, null);
+    services.audio.music.next();
+  });
   const stop = button(
     t('soundboard.stop'),
     () => {
@@ -102,11 +110,13 @@ export function buildMusicSection(root: HTMLElement): void {
   memory.className = 'sb-note';
   const poll = (): void => {
     const s = services.audio.music.state();
-    memory.textContent = t('soundboard.musicMemory', {
+    const playing = s.track ? t(`soundboard.track.${s.track}`) : '—';
+    const turn = s.playlist ? ` · ${t('soundboard.playlist')}: ${Math.round(s.turnSec)} s` : '';
+    memory.textContent = `${playing}${turn} · ${t('soundboard.musicMemory', {
       now: (s.decodedBytes / BYTES_PER_MB).toFixed(1),
       peak: (s.peakBytes / BYTES_PER_MB).toFixed(1),
       decks: s.decks,
-    });
+    })}`;
   };
   poll();
   setInterval(poll, MEMORY_POLL_MS);
@@ -116,6 +126,13 @@ export function buildMusicSection(root: HTMLElement): void {
   comboNote.className = 'sb-note';
   comboNote.textContent = t('soundboard.comboRunHint');
 
-  card.append(row(...tracks.values(), stop), memory, files, row(combo), comboNote);
+  card.append(
+    row(playlist, next, stop),
+    row(...tracks.values()),
+    memory,
+    files,
+    row(combo),
+    comboNote,
+  );
   root.append(title, card);
 }
