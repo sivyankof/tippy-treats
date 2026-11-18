@@ -66,11 +66,11 @@ describe('flightRowAt', () => {
 describe('rowMute', () => {
   const row = { top: 800, bottom: 950 };
   it('is full where the window overlaps the row, 1 well clear of it', () => {
-    expect(rowMute(900, 300, row, 80)).toBeCloseTo(PANORAMA.rowMuted);
-    expect(rowMute(2000, 300, row, 80)).toBe(1);
+    expect(rowMute(900, 300, row, 24)).toBeCloseTo(PANORAMA.rowMuted);
+    expect(rowMute(2000, 300, row, 24)).toBe(1);
   });
   it('rises over the feather', () => {
-    const mid = rowMute(950 + 300 + 40, 300, row, 80);
+    const mid = rowMute(950 + 300 + 12, 300, row, 24);
     expect(mid).toBeGreaterThan(PANORAMA.rowMuted);
     expect(mid).toBeLessThan(1);
   });

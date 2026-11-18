@@ -337,7 +337,13 @@ export function panoramaLives(
       offset: { x: piece.centreX, y: piece.centreY },
       scale: 1 / P.bakeScale,
     })),
-    { layer: WALL_LOOK.layer, halfH: H / 2, fit: panoramaFitCached, rowMute: true },
+    {
+      layer: WALL_LOOK.layer,
+      halfH: H / 2,
+      fit: panoramaFitCached,
+      rowMute: true,
+      seamPx: P.seamPx,
+    },
   );
   const image = window.objects[0];
   image?.once(Phaser.GameObjects.Events.DESTROY, () => releasePanorama(scene, place, weather));

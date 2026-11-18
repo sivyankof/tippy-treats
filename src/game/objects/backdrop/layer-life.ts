@@ -1,6 +1,6 @@
 import * as Phaser from 'phaser';
 import type { HoverSpec } from '../../../data/backdrop-life';
-import { WALL_LOOK } from '../../../data/window-look';
+import { PANORAMA, WALL_LOOK } from '../../../data/window-look';
 import { applyPose, createImage, type FrameCtx, type Life } from './life';
 import { hoverPose, newPose } from './life-motion';
 import { coverFade, rowMute } from './panorama-fit';
@@ -46,6 +46,11 @@ export interface LayerOptions {
   skipStart?: (width: number, height: number) => boolean;
   /** The thing is muted only while the incoming layer flies in front of it (`rowMute`), not by the HUD plates and the tall-tower row. */
   rowMute?: boolean;
+  /**
+   * A fitted picture made of pieces: every piece is drawn this many px wider and taller (from its centre), so the pieces overlap
+   * a little and no wall shows through the line between them at a fractional position or scale.
+   */
+  seamPx?: number;
 }
 
 /** Where a fitted thing stands on the start view. */
@@ -95,7 +100,7 @@ export class LayerThing implements Life {
 
   update(ctx: FrameCtx): void {
     if (this.retired) return;
-    const { series, mirror, fadeDown, layer, fit, skipStart } = this.options;
+    const { series, mirror, fadeDown, layer, fit, skipStart, seamPx } = this.options;
     const down = ctx.layerDown[layer] ?? 0;
     const first = this.specs[0];
     if (!first) return;
@@ -147,12 +152,18 @@ export class LayerThing implements Life {
         if (rowMuted) {
           // The mute and the cover are the picture's as a whole: every strip takes them from the picture's centre.
           const centre = fitted ? pose.y - (spec.offset?.y ?? 0) * scale : pose.y;
-          pose.alpha *= rowMute(centre, halfH, ctx.flightRow, WALL_LOOK.featherPx);
+          pose.alpha *= rowMute(centre, halfH, ctx.flightRow, PANORAMA.rowFeatherPx);
           const cover = coverFade(centre, halfH, ctx.flightRow.towerTop);
           pose.alpha *= cover;
           covered = cover <= 0;
         }
         applyPose(image, pose);
+        if (seamPx && fitted) {
+          image.setScale(
+            image.scaleX * (1 + seamPx / image.displayWidth),
+            image.scaleY * (1 + seamPx / image.displayHeight),
+          );
+        }
         image.setFlipX(mirrored);
         image.setVisible(shown);
         if (k === 0) {

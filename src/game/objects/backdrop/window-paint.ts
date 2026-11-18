@@ -1,6 +1,7 @@
 import { WINDOW_LOOK, type WindowSky } from '../../../data/window-look';
 import { cssColor } from '../../../util/color';
 import { TWO_PI } from '../../../util/math';
+
 import { outlineColor } from '../../fx/plain-style';
 
 type Ctx2D = CanvasRenderingContext2D;
@@ -172,7 +173,7 @@ export function paintValance(ctx: Ctx2D, box: ValanceBox): void {
     ctx.fill();
     for (let i = 0; i < scallops; i++) {
       ctx.beginPath();
-      ctx.arc(left + step * (i + 0.5), top + band, step / 2 + grow, 0, Math.PI);
+      ctx.arc(left + step * (i + 0.5), top + band, step / 2 + grow, 0, TWO_PI);
       ctx.fill();
     }
   }
@@ -180,7 +181,7 @@ export function paintValance(ctx: Ctx2D, box: ValanceBox): void {
   const inset = edge * 0.7;
   for (let i = 0; i < scallops; i += 2) {
     ctx.beginPath();
-    ctx.arc(left + step * (i + 0.5), top + band, step / 2 - inset, 0, Math.PI);
+    ctx.arc(left + step * (i + 0.5), top + band, step / 2 - inset, 0, TWO_PI);
     ctx.fill();
     ctx.fillRect(left + step * i + inset, top + inset, step - 2 * inset, band - inset);
   }
