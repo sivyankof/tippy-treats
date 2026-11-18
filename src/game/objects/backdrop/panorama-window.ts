@@ -17,7 +17,6 @@ import { cssColor, mixColor, shade } from '../../../util/color';
 import { TWO_PI } from '../../../util/math';
 import { outlineColor } from '../../fx/plain-style';
 import { bakeTexture } from '../../ui/bake-texture';
-import { hudFloor } from '../../camera-layout';
 import { onLayer } from './layer-anchor';
 import type { LayerSpot } from './layer-life';
 import { GlassWeatherLife, type Rect } from './window-weather';
@@ -257,14 +256,13 @@ export function panoramaGlassLife(
   if (!spec || count === 0) return null;
   const rect: Rect = { x: 0, y: 0, w: 0, h: 0 };
   const rects = [rect];
-  const band = { top: 0, bottom: 0, ceiling: hudFloor() };
+  const band = { top: 0, bottom: 0 };
   return new GlassWeatherLife(
     scene,
     spec,
     count,
     {
-      keepClear: true,
-      // The drops fade in the row the incoming layer flies in right now (and under the HUD floor).
+      // The drops are paler in the row the incoming layer flies in right now (not faded under the HUD).
       band: (ctx) => {
         band.top = ctx.flightRow.top;
         band.bottom = ctx.flightRow.bottom;

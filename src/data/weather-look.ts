@@ -216,13 +216,13 @@ export const WEATHER_LOOK = {
     alpha: 0.85,
     scale: 1,
   },
-  /** The particles fade out this far (px) from the edges of the flight row, and in at the screen ends. */
+  /**
+   * The particles fall over the whole screen, top edge to bottom edge, behind the HUD plates (they are background).
+   * In the row of the incoming layer they keep this share of their alpha, so the layer reads (idea 34) ...
+   */
+  flightRowAlpha: 0.5,
+  /** ... changing to it over this many px from the edges of the row. */
   bandFeatherPx: 70,
-  /** Particles are fully transparent this many px beyond the HUD gap (so none shows within gap + margin of a plate), and fade in over `keepOutFeatherPx` after it. */
-  keepOutMarginPx: 15,
-  /** Particles fade out toward the HUD plates over this many px beyond the HUD gap and margin. */
-  keepOutFeatherPx: 40,
-  endFeatherPx: 60,
   /** Share of the particles (unless a kind says otherwise) that start in the side strips (the tower hides the middle), and the strip width as share of the screen. */
   sideBias: 0.8,
   sideShare: 0.3,
@@ -274,10 +274,8 @@ export const WEATHER_LOOK = {
     /** No lane takes more flakes than this (they would not fit `minGapPx` apart); the rest go to the next lane over. */
     laneCap: 14,
     gapRefHeight: 2340,
-    /** Snow is slow and big: its fades are short, so more of the flakes show (the HUD gap itself stays). */
+    /** Snow is slow and big: its change at the edges of the flight row is short. */
     bandFeatherPx: 30,
-    keepOutFeatherPx: 12,
-    endFeatherPx: 30,
     count: 40,
   },
   leaves: {

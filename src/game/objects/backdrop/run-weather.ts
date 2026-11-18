@@ -5,7 +5,7 @@ import type { TowerState } from '../../../core/tower-sim';
 import type { WeatherId } from '../../../data/weather';
 import { DEPTH } from '../../depth';
 import { effectsMode } from '../../effects-mode';
-import { flightClearBand, hudFloor } from '../../camera-layout';
+import { flightClearBand } from '../../camera-layout';
 import { markPerfPart } from '../../perf/perf-marks';
 import { bakeWeatherArt } from './weather-art';
 import { WeatherFall, type FallKind } from './weather-fall';
@@ -50,7 +50,6 @@ export class RunWeather {
     width: 0,
     height: 0,
     band: { top: 0, bottom: 0 },
-    hudFloor: 0,
     share: 0,
     level: 'full',
   };
@@ -122,7 +121,6 @@ export class RunWeather {
       const band = flightClearBand(height);
       f.band.top = band.top;
       f.band.bottom = band.bottom;
-      f.hudFloor = hudFloor();
       this.laidOut = true;
     }
     this.root.setVisible(f.share > 0);

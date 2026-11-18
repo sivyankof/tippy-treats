@@ -162,7 +162,7 @@ export const GLASS_LOOK = {
   windowSpan: { kitchen: [0.15, 1], shop: [0, 0.85] },
   /** Items keep this share of the glass away from its edges. */
   margin: 0.1,
-  /** Showcase: items fade this far (px) before the clear band and the HUD floor. */
+  /** Glass items with a row of the incoming layer (the panorama, the Showcase panes) turn paler over this many px from its edges (`WEATHER_LOOK.flightRowAlpha`). */
   bandFadePx: 40,
   /** Showcase: the two bands (logical px from each screen edge to the near and far side) and the lowest share of the height. */
   /** The things on the wide Showcase panes are drawn this much bigger than on a window. */

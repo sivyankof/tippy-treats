@@ -3,7 +3,7 @@ import { Rng } from '../../../core/rng';
 import { STREET_WEATHER, streetFallView, type StreetFallKind } from '../../../data/street-weather';
 import type { WeatherId } from '../../../data/weather';
 import { WEATHER_LOOK, WEATHER_TEX } from '../../../data/weather-look';
-import { flightClearBand, hudFloor } from '../../camera-layout';
+import { flightClearBand } from '../../camera-layout';
 import { effectsMode } from '../../effects-mode';
 import { inSky } from './layer-anchor';
 import type { FrameCtx, Life } from './life';
@@ -39,7 +39,6 @@ export class StreetWeather implements Life {
     width: 0,
     height: 0,
     band: { top: 0, bottom: 0 },
-    hudFloor: 0,
     share: 1,
     level: 'full',
   };
@@ -89,7 +88,6 @@ export class StreetWeather implements Life {
       const band = flightClearBand(ctx.height);
       f.band.top = band.top;
       f.band.bottom = band.bottom;
-      f.hudFloor = hudFloor();
     }
     this.fall.update(f);
   }
