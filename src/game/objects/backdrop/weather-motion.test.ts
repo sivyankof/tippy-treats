@@ -16,10 +16,17 @@ import {
   rainX,
   rainY,
   rainSpots,
+  wrapPad,
   wrapRange,
 } from './weather-motion';
 
 describe('weather motion', () => {
+  it('wraps a falling picture by its scaled half diagonal', () => {
+    expect(wrapPad(6, 8, 1)).toBe(5);
+    expect(wrapPad(6, 8, 0.5)).toBe(2.5);
+    expect(wrapPad(0, 0, 2)).toBe(0);
+  });
+
   it('leans a raindrop by its height, not by the time', () => {
     expect(rainX(0.5, 0.2, 0, 1000, 60)).toBe(500);
     expect(rainX(0.5, 0.2, 500, 1000, 60)).toBeCloseTo(600);

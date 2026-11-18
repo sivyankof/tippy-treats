@@ -12,6 +12,7 @@ import {
   rainY,
   rainSpots,
   sideWarp,
+  wrapPad,
   wrapRange,
 } from './weather-motion';
 import type { WeatherFrame, WeatherPart } from './weather-frame';
@@ -29,6 +30,8 @@ interface Particle {
   phase: number;
   scale: number;
   alpha: number;
+  /** How far beyond the screen edges it wraps (`wrapPad`), fixed by its picture and scale. */
+  pad: number;
 }
 
 type Range = readonly [number, number];
@@ -118,24 +121,20 @@ export class WeatherFall implements WeatherPart {
         speed = laneSpeed.get(lane) ?? speed;
         laneSpeed.set(lane, speed);
       }
-      this.specs.push({
-        u,
-        v,
-        speed,
-        sway: draw(rng, look.swayPx, 0),
-        swayMs: draw(rng, look.swayMs, 1),
-        spinMs: draw(rng, look.spinMs, 1),
-        phase: rng.next() * TWO_PI,
-        scale: draw(rng, look.scale, 1) * (view?.scale ?? 1),
-        alpha: draw(rng, look.alpha, 1) * (view?.alpha ?? 1),
-      });
+      const sway = draw(rng, look.swayPx, 0);
+      const swayMs = draw(rng, look.swayMs, 1);
+      const spinMs = draw(rng, look.spinMs, 1);
+      const phase = rng.next() * TWO_PI;
+      const scale = draw(rng, look.scale, 1) * (view?.scale ?? 1);
+      const alpha = draw(rng, look.alpha, 1) * (view?.alpha ?? 1);
       const index = snow ? this.flakeSize(rng) : i % Math.max(frames.length, 1);
-      this.objects.push(
-        tintOf(
-          new Phaser.GameObjects.Image(scene, 0, 0, frames[index] ?? '').setVisible(false),
-          view?.tint,
-        ),
+      const image = tintOf(
+        new Phaser.GameObjects.Image(scene, 0, 0, frames[index] ?? '').setVisible(false),
+        view?.tint,
       );
+      const pad = wrapPad(image.width, image.height, scale);
+      this.specs.push({ u, v, speed, sway, swayMs, spinMs, phase, scale, alpha, pad });
+      this.objects.push(image);
     }
   }
 
@@ -171,12 +170,10 @@ export class WeatherFall implements WeatherPart {
         image.setVisible(false);
         continue;
       }
-      // A particle wraps half its picture (its half diagonal, whatever way it turns) beyond the screen edges: it comes in
-      // over the top edge and leaves under the bottom one, and the jump back up is never seen.
-      const pad = (Math.hypot(image.width, image.height) * p.scale) / 2;
+      // The jump back up happens beyond the screen edges (`p.pad`), so it is never seen.
       const y = rain
-        ? rainY(p.v, p.speed, seconds, height, pad)
-        : wrapRange(p.v * height + p.speed * seconds, height, pad);
+        ? rainY(p.v, p.speed, seconds, height, p.pad)
+        : wrapRange(p.v * height + p.speed * seconds, height, p.pad);
       const x = rain
         ? rainX(p.u, slant, y, width, margin)
         : p.u * width + p.sway * Math.sin((TWO_PI * t) / p.swayMs + p.phase);
