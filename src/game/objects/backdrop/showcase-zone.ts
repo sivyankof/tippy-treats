@@ -265,7 +265,7 @@ export const showcaseArt: ZoneArt = {
   ownSky,
   bake(scene, look) {
     if (ownSky(look.weather)) {
-      const sky = WINDOW_SKY[look.weather];
+      const sky = STREET_WEATHER.sky[look.weather] ?? WINDOW_SKY[look.weather];
       bakeStopsSky(scene, skyKey(look.weather), [
         { at: 0, color: sky.top },
         { at: 1, color: sky.bottom },
@@ -285,6 +285,8 @@ export const showcaseArt: ZoneArt = {
     return {
       sky: ownSky(look.weather) ? skyKey(look.weather) : undefined,
       farTint: farTint(look.weather),
+      // In snow the houses wear caps: the far plane goes behind them, or its houses would cut the caps.
+      farSlot: look.weather === 'snow' ? -1 : undefined,
       layers: [keys.street, keys.panes, S.treats, awningKey(look.weather)],
       layerAlpha: awningAlpha(look.weather),
       lives: [

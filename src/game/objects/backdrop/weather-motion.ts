@@ -137,6 +137,8 @@ export function rainDropsShown(pool: number, level: EffectLevel): number {
  */
 export interface FallView {
   count: number;
+  /** A colour the pictures are tinted with (the white flakes of the street need a cool tone to stand out from the pale street). */
+  tint?: number;
   /** Rain only: this share of the drops start in the two outer strips of the screen width (`towerShare` is the tower's, in the middle). */
   outside?: { share: number; stripShare: number };
   /** Rain only: the lean of the fall is this share of the Roof's (the street is far, the rain falls steeper there and keeps where it started). */

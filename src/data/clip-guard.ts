@@ -48,6 +48,11 @@ export const CLIP_ALLOWED: readonly ClipAllowance[] = [
       'a tiled strip with a flat top: the scallop circles are cut at the top and at the tile sides on purpose, so the strips join into one awning',
   },
   {
+    match: /^bd_s_awning_snow$/,
+    reason:
+      'a tiled awning strip with its snow heap along the tile bottom: the stripes and the heap run to the tile sides on purpose, so the tiles join into one awning',
+  },
+  {
     match: /^shade_cap_/,
     sides: ['right', 'bottom'],
     reason:

@@ -61,6 +61,13 @@ const FRAME_SETS: Record<string, readonly string[]> = {
   leaf: WEATHER_TEX.leaf,
 };
 
+function tintOf(
+  image: Phaser.GameObjects.Image,
+  tint: number | undefined,
+): Phaser.GameObjects.Image {
+  return tint === undefined ? image : image.setTint(tint);
+}
+
 function draw(rng: Rng, range: Range | undefined, fallback: number): number {
   return range ? rng.range(range[0], range[1]) : fallback;
 }
@@ -126,7 +133,10 @@ export class WeatherFall implements WeatherPart {
       });
       const index = snow ? this.flakeSize(rng) : i % Math.max(frames.length, 1);
       this.objects.push(
-        new Phaser.GameObjects.Image(scene, 0, 0, frames[index] ?? '').setVisible(false),
+        tintOf(
+          new Phaser.GameObjects.Image(scene, 0, 0, frames[index] ?? '').setVisible(false),
+          view?.tint,
+        ),
       );
     }
   }
