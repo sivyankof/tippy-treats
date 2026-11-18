@@ -11,7 +11,7 @@ import { createTextButton, type Button } from '../button';
 import { BalanceChip, followBalance } from '../style/balance-chip';
 import { createPriceButton } from '../style/price-button';
 import { createAdsSpentNote } from './no-more-starts-note';
-import { markAdUnavailable, resetAdLabel } from './ad-unavailable';
+import { adLabelRoom, markAdUnavailable, resetAdLabel } from './ad-unavailable';
 import type { ResultsHeader } from './results-header';
 import type { Row } from './results-layout';
 import { adGreyAfter, resultsStartPlan, type ResultsStartPlan } from './results-start-model';
@@ -22,7 +22,7 @@ import { createStartFromButton } from './start-from-button';
 const cfg = MENU.results;
 const pair = cfg.pairButton;
 const NO_START: StartRun = () => undefined;
-const pairLabelWidth = pair.width - cfg.buttonTextPadding;
+const pairLabelWidth = adLabelRoom(pair.width);
 
 /** Buttons that sit between "Play again" and "Home" and the rows they make. */
 export interface ExtraButtons {

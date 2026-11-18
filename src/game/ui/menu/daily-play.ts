@@ -42,7 +42,6 @@ export class DailyPlay implements DailySection {
     this.ad = new DailyAdButton(
       scene,
       out.ad,
-      out.adPadding,
       cfg.attempts.adDisabledAlpha,
       'ui_daily_ad_out',
       onAd,

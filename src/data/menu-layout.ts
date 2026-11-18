@@ -1254,7 +1254,6 @@ export const MENU = {
       iconSize: 165,
       iconGap: 24,
       ad: { width: 390, height: 104, radius: 36, shadowOffset: 8, font: 38 },
-      adPadding: 40,
       adDisabledAlpha: 0.55,
     },
     play: { width: 760, height: 150, radius: 48, shadowOffset: 10, font: 64 },
@@ -1267,7 +1266,6 @@ export const MENU = {
       timerColor: 0xffc93c,
       adY: 160,
       ad: { width: 640, height: 124, radius: 44, shadowOffset: 10, font: 46 },
-      adPadding: 60,
     },
     /** The explainer window of the first visit (same build as the fresh oven one). */
     introWindow: {

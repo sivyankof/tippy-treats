@@ -34,14 +34,7 @@ export class DailyAttempts implements DailySection {
   ) {
     this.tokens = scene.add.container(0, 0);
     this.caption = scene.add.container(0, 0);
-    this.ad = new DailyAdButton(
-      scene,
-      cfg.ad,
-      cfg.adPadding,
-      cfg.adDisabledAlpha,
-      'ui_daily_ad',
-      onAd,
-    );
+    this.ad = new DailyAdButton(scene, cfg.ad, cfg.adDisabledAlpha, 'ui_daily_ad', onAd);
     this.ad.button.setPosition(cfg.width / 2 - cfg.ad.width / 2, captionHeight + cfg.rowHeight / 2);
     this.root = scene.add.container(0, 0, [this.caption, this.tokens, this.ad.button]);
   }

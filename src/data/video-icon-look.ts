@@ -42,4 +42,6 @@ export const VIDEO_CAPTION_LAYOUT = {
   sizeShare: 1.0,
   /** Gap between the icon and the text, as a share of the icon side. */
   gapShare: 0.2,
+  /** Free room between the icon or the text and the edge of the button, in design pixels (12 CSS px). */
+  edgePad: 36,
 } as const;
