@@ -408,8 +408,11 @@ export const PANORAMA = {
     coreAlpha: 0.55,
     core: { x: 0.72, y: 0.3, rx: 0.3, ry: 0.34 },
     cloudAlpha: 0.92,
-    /** The bolt is a picture of its own: whole while the flash is at `fade[1]` of its peak or more, gone below `fade[0]`. */
-    bolt: { x: 0.74, top: 0.1, height: 0.44, scale: 0.9, fade: [0.65, 0.92] },
+    /**
+     * The bolt is a picture of its own, all or nothing (a see-through bolt reads as a grey trace on the lit glass): on the
+     * rise it shows once the light has `riseAt` of its peak, on the fall it goes out once the light drops below `fallAt`.
+     */
+    bolt: { x: 0.74, top: 0.1, height: 0.44, scale: 0.9, riseAt: 0.3, fallAt: 0.75 },
   },
   /** Gap kept to the HUD plates (the same as the flying layer's). */
   hudGapPx: FLIGHT_CLEAR.hudGapPx,
