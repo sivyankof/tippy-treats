@@ -13,6 +13,8 @@ import { songTiming } from '../../services/audio/music/music-schedule';
 import {
   dcOffset,
   denormalSamples,
+  energyShareAbove,
+  sampleSteps,
   seamDb,
   stretchRmsDb,
 } from '../../services/audio/music/tune-levels';
@@ -99,12 +101,23 @@ export interface TuneHookOptions extends TuneRenderOptions {
 
 /** What `tune` measures: the levels, the loop seam (the 0.5 s before and after the first loop end), DC, denormals. */
 export interface TuneHookReport extends AudioHookLevels {
+  bpm: number;
+  bars: number;
   loopSec: number;
   seam: { before: number; after: number; diff: number } | null;
   /** The same reading at the bar line in the middle of the loop: what an ordinary phrase boundary looks like. */
   midSeam: { before: number; after: number; diff: number } | null;
   dc: number;
   denormals: number;
+  /** Plain RMS of the whole render, silence included, dBFS (compares sparse parts fairly). */
+  plainDb: number;
+  /** Share of the energy above 6 kHz (first channel), and that energy in dBFS RMS. */
+  highShare: number;
+  highDb: number;
+  /** Largest step between neighbouring samples, and the 99.9th percentile of the steps (clicks). */
+  steps: { max: number; quantile: number };
+  /** Largest step within 3 samples of the loop point. */
+  seamStep: number | null;
   /** RMS of each stretch of `stretchSec`, dBFS. */
   stretchesDb: number[];
   wav?: string;
@@ -112,6 +125,10 @@ export interface TuneHookReport extends AudioHookLevels {
 
 /** The seam is measured over this much on each side of the loop end. */
 const SEAM_SPAN_SEC = 0.5;
+/** "High" energy: above this frequency (a soft mix has little there). */
+const HIGH_HZ = 6000;
+/** Samples on each side of the loop point the seam step looks at. */
+const SEAM_STEP_SAMPLES = 3;
 const STRETCH_SEC = 10;
 
 async function tuneReport(
@@ -131,8 +148,28 @@ async function tuneReport(
   for (let t = 0; t < r.seconds; t += stretchSec) {
     stretchesDb.push(stretchRmsDb(r.channels, r.sampleRate, t, t + stretchSec));
   }
+  const levels = measure(r);
+  const highShare = r.channels[0] ? energyShareAbove(r.channels[0], r.sampleRate, HIGH_HZ) : 0;
+  const seamFrame = Math.round(seamAt * r.sampleRate);
+  let seamStep: number | null = null;
+  if (seamAt < r.seconds) {
+    seamStep = 0;
+    for (const channel of r.channels) {
+      for (let i = seamFrame - SEAM_STEP_SAMPLES; i <= seamFrame + SEAM_STEP_SAMPLES; i++) {
+        seamStep = Math.max(seamStep, Math.abs((channel[i] ?? 0) - (channel[i - 1] ?? 0)));
+      }
+    }
+  }
+  const plainRms = stretchRmsDb(r.channels, r.sampleRate, 0, r.seconds);
   return {
-    ...measure(r),
+    ...levels,
+    plainDb: plainRms,
+    highShare,
+    highDb: plainRms + 10 * Math.log10(Math.max(highShare, 1e-12)),
+    steps: sampleSteps(r.channels),
+    seamStep,
+    bpm: song.bpm,
+    bars: song.bars,
     loopSec,
     seam:
       seamAt + SEAM_SPAN_SEC <= r.seconds

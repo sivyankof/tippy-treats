@@ -26,11 +26,6 @@ export function songTiming(song: Song): SongTiming {
   };
 }
 
-/** Pitch class (0..11) of a pitch in semitones from C. */
-export function pitchClass(pitch: number): number {
-  return ((pitch % 12) + 12) % 12;
-}
-
 /** What one loop of the song plays: the phrase picks, the rests and the fill. */
 export interface LoopPlan {
   /** Per part: the alternative chosen for each slot of its form. */
@@ -142,10 +137,54 @@ export function retargetLevels(
   });
 }
 
-/** The music layer of a zone (index 0..5) on the run: one more per zone; at most 3 on the minimal effects level. */
+/** The music layer of a zone (index 0..5) on the run: one more per zone; without layer 6 on the minimal effects level. */
 export function zoneLayer(zoneIndex: number, minimalEffects: boolean): number {
   const layer = clampLayer(zoneIndex + 1);
   return minimalEffects ? Math.min(layer, MUSIC_PLAY.minimalLayerCap) : layer;
+}
+
+/**
+ * The swung position of `step` in steps from the bar line: the second eighth of each beat lands
+ * at `swing` of the beat, the sixteenths in between follow proportionally (straight at 0.5).
+ */
+export function swingStep(step: number, stepsPerBeat: number, swing: number): number {
+  const beat = Math.floor(step / stepsPerBeat);
+  const frac = step / stepsPerBeat - beat;
+  const bent = frac < 0.5 ? frac * 2 * swing : swing + (frac - 0.5) * 2 * (1 - swing);
+  return (beat + bent) * stepsPerBeat;
+}
+
+/** Spreads the bar, part and note index over the seed so neighbouring notes get unrelated draws. */
+const NOTE_MIX = [0x85ebca6b, 0xc2b2ae35, 0x27d4eb2f] as const;
+
+/**
+ * The seeded looseness of one note (the same note always gets the same): a time shift within
+ * +-`timeSec` (plus `late.sec` with `late.chance`) and a velocity factor within 1 +- `velocity`.
+ */
+export function humanizeNote(
+  seed: number,
+  absBar: number,
+  part: number,
+  index: number,
+  spec: { timeSec: number; velocity: number },
+  late?: { chance: number; sec: number },
+): { shift: number; velocity: number } {
+  const mixed =
+    seed ^
+    Math.imul(absBar + 1, NOTE_MIX[0]) ^
+    Math.imul(part + 1, NOTE_MIX[1]) ^
+    Math.imul(index + 1, NOTE_MIX[2]);
+  const rng = new Rng(mixed >>> 0);
+  const shift = (rng.next() * 2 - 1) * spec.timeSec;
+  const velocity = 1 + (rng.next() * 2 - 1) * spec.velocity;
+  const lazy = late !== undefined && rng.next() < late.chance ? late.sec : 0;
+  return { shift: shift + lazy, velocity };
+}
+
+/** The furthest a note may be moved from its swung place (humanize plus a lazy hit). */
+function maxShift(song: Song): number {
+  const late = Math.max(0, ...song.parts.map((part) => part.late?.sec ?? 0));
+  return song.humanize.timeSec + late;
 }
 
 /** A note to play: song time and length in seconds, pitch in semitones from C4, gain linear. */
@@ -162,9 +201,10 @@ function heard(level: PartLevel | undefined, time: number): boolean {
 }
 
 /**
- * Every note that starts in [from, to) of song time, in time order. A bar rest is skipped when
- * no other part is heard at that bar (a lone lead never falls silent). `plans` caches the plan
- * of each loop: a caller that asks window after window passes the same map to build each once.
+ * Every note that sounds from [from, to) of song time (its swung and humanized time), in time
+ * order. A bar rest is skipped when no other part is heard at that bar (a lone part never falls
+ * silent). `plans` caches the plan of each loop: a caller that asks window after window passes
+ * the same map to build each once. A note belongs to exactly one window, so windows add up.
  */
 export function scheduleWindow(
   song: Song,
@@ -175,9 +215,10 @@ export function scheduleWindow(
   plans: Map<number, LoopPlan> = new Map(),
 ): NoteEvent[] {
   if (!(to > from)) return [];
-  const { stepSec, stepsPerBar, barSec } = songTiming(song);
-  const firstBar = Math.max(0, Math.floor(from / barSec));
-  const lastBar = Math.floor(to / barSec);
+  const { stepSec, barSec } = songTiming(song);
+  const margin = maxShift(song);
+  const firstBar = Math.max(0, Math.floor((from - margin) / barSec));
+  const lastBar = Math.floor((to + margin) / barSec);
   const events: NoteEvent[] = [];
   for (let absBar = firstBar; absBar <= lastBar; absBar++) {
     const loop = Math.floor(absBar / song.bars);
@@ -187,21 +228,51 @@ export function scheduleWindow(
       plan = planLoop(song, seed, loop);
       plans.set(loop, plan);
     }
-    const barStart = absBar * stepsPerBar * stepSec;
+    const barStart = absBar * barSec;
     song.parts.forEach((part, index) => {
       if (plan.rest[index] === bar) {
         const others = levels.some((level, other) => other !== index && heard(level, barStart));
         if (others) return;
       }
-      for (const [step, pitch, length, velocity = 1] of barNotes(song, index, plan, bar)) {
-        const time = (absBar * stepsPerBar + step) * stepSec;
-        if (time < from || time >= to) continue;
-        const level = levels[index];
-        if (!level || !heard(level, time)) continue;
-        const gain = song.gain * part.gain * velocity * levelAt(level, time);
+      const level = levels[index];
+      if (!level) return;
+      barNotes(song, index, plan, bar).forEach(([step, pitch, length, velocity = 1], n) => {
+        const grid = barStart + swingStep(step, song.stepsPerBeat, song.swing) * stepSec;
+        const loose = humanizeNote(seed, absBar, index, n, song.humanize, part.late);
+        const time = Math.max(0, grid + loose.shift);
+        if (time < from || time >= to || !heard(level, time)) return;
+        const gain = song.gain * part.gain * velocity * loose.velocity * levelAt(level, time);
         events.push({ time, part: index, pitch, length: length * stepSec, gain });
-      }
+      });
     });
   }
   return events.sort((a, b) => a.time - b.time);
+}
+
+/** Spreads the beat index over the seed for the crackle draws. */
+const CRACKLE_MIX = 0x632be5ab;
+
+/**
+ * The vinyl crackles of [from, to) of song time: in each beat one crackle with `chance`, at a
+ * seeded place in the beat, with a seeded strength (0..1) and playback rate (0..1, mapped by the
+ * caller). The same seed always gives the same crackles; windows add up.
+ */
+export function crackleWindow(
+  seed: number,
+  beatSec: number,
+  chance: number,
+  from: number,
+  to: number,
+): Array<{ time: number; strength: number; rate: number }> {
+  if (!(to > from) || chance <= 0) return [];
+  const out: Array<{ time: number; strength: number; rate: number }> = [];
+  for (let beat = Math.max(0, Math.floor(from / beatSec)); beat * beatSec < to; beat++) {
+    const rng = new Rng((seed ^ Math.imul(beat + 1, CRACKLE_MIX)) >>> 0);
+    if (rng.next() >= chance) continue;
+    const time = (beat + rng.next()) * beatSec;
+    const strength = rng.next();
+    const rate = rng.next();
+    if (time >= from && time < to) out.push({ time, strength, rate });
+  }
+  return out;
 }

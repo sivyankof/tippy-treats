@@ -625,11 +625,11 @@
     "reward": "one=New lap: +{n} berry|other=New lap: +{n} berries"
   },
   "tunes": {
-    "a": "A · Music box",
-    "b": "B · Bakery waltz",
-    "c": "C · Upbeat run",
+    "a": "A · Warm kitchen",
+    "b": "B · Rain outside",
+    "c": "C · Evening",
     "default": "plays by default",
-    "hint": "A tune button starts the tune at the chosen layer. Layer 1 is the menu and the first zone; each next zone adds one part. «Menu» plays layer 1 quieter. Windows turn the music down by 40%."
+    "hint": "A tune button starts the tune at the chosen step. Step 1 (electric piano and tape) is the first zone; each next zone adds a part: 2 bass, 3 kick and hat, 4 snare, 5 melody, 6 second line. «Menu» plays steps 1-2 quieter. Windows turn the music down by 40%. Knobs below: tape, drums, melody."
   },
   "soundboard": {
     "title": "Soundboard",
@@ -644,15 +644,22 @@
     "allHint": "Drop, perfect bell, coin, ability, collapse slaps and the music (the tune and layer chosen below) together.",
     "musicTitle": "Music",
     "variant": "Tune",
-    "layer": "Layer",
     "menu": "Menu arrangement",
     "stop": "Stop",
     "stats": "Live nodes",
+    "step": "Step",
+    "knobTape": "Tape",
+    "knobDrums": "Drums",
+    "knobMelody": "Melody",
+    "reverb": "Reverb",
+    "comboRun": "Music + drop + combo",
+    "comboRunHint": "Starts the chosen tune and plays a run of drops with a perfect combo 1 to 12 over it, then a coin: how the bell ladder sits on the chords.",
     "variants": {
       "calm": "calm",
       "lastSeconds": "last seconds",
       "sky": "sky",
       "glass": "glass",
+      "perfectBright": "×6 without music",
       "rain": "rain",
       "storm": "storm",
       "wind": "wind",

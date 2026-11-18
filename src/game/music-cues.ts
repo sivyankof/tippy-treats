@@ -8,12 +8,24 @@ import { SCENES } from './scene-keys';
 
 /**
  * Where the game tells the music what to play (docs/06-art-animation-audio.md, section 7,
- * "Музыка"): the menus play layer 1 quietly, a run adds a layer per zone, open windows duck it.
+ * "Музыка"): the menus play layers 1-2 quietly, a run adds a layer per zone, open windows duck it.
+ * Weak phones (section 9): from the `lite` effects level the reverb is off, on `minimal` layer 6
+ * too.
  * The tune starts once and then only changes its layer and level, so it never restarts between
  * screens. Calls before the first tap are remembered by the music proxy.
  */
 
 let started = false;
+/** The reverb switch last sent to the music (null: not yet). */
+let reverbSent: boolean | null = null;
+
+/** Keeps the music's reverb in step with the effects level: off from `lite` down. */
+function syncReverb(): void {
+  const reverb = !effectsMode.atMost('lite');
+  if (reverb === reverbSent) return;
+  reverbSent = reverb;
+  services.audio.music.setMix({ reverb });
+}
 
 function startOnce(layer: number, menu: boolean): boolean {
   if (started) return false;
@@ -23,8 +35,9 @@ function startOnce(layer: number, menu: boolean): boolean {
   return true;
 }
 
-/** A menu screen is up: layer 1, at the menu level. */
+/** A menu screen is up: the menu arrangement (layers 1-2), at the menu level. */
 export function playMenuMusic(): void {
+  syncReverb();
   if (!startOnce(1, true)) services.audio.music.setMenu(true);
 }
 
@@ -55,6 +68,7 @@ export class RunMusic {
   /** `zoneIndex` of the live run, or null when there is none (the run is over or not there yet). */
   observe(zoneIndex: number | null): void {
     if (zoneIndex === null) return;
+    syncReverb();
     const layer = zoneLayer(zoneIndex, effectsMode.reduced);
     if (layer === this.layer) return;
     const first = this.layer === null;

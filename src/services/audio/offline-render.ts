@@ -10,7 +10,7 @@ import {
 import type { SoundArgs, SoundId } from './sound-args';
 import { SoundPlayer } from './sound-player';
 import { TunePlayer, type TuneChange } from './music/tune-player';
-import type { MusicVariant } from './music-control';
+import type { MusicMix, MusicVariant } from './music-control';
 import { Synth } from './synth';
 
 /**
@@ -131,7 +131,7 @@ export async function renderMany(
 }
 
 /**
- * Extension point for the music (theme C): renders `seconds` of the tune a player built by `factory`
+ * Renders `seconds` of the tune a player built by `factory`
  * makes, from the start options, through the same chain (music bus included).
  */
 export function renderMusic(
@@ -156,6 +156,8 @@ export interface TuneRenderOptions extends RenderOptions {
   changes?: readonly TuneChange[];
   /** Measurements only: render this part (index) alone. */
   only?: number;
+  /** The knobs and the reverb switch (`MusicMix`). */
+  mix?: Partial<MusicMix>;
 }
 
 /**
@@ -168,9 +170,9 @@ export function renderTune(
   seconds: number,
   options: TuneRenderOptions = {},
 ): Promise<Rendered> {
-  const { menu, changes, only, ...render } = options;
+  const { menu, changes, only, mix, ...render } = options;
   return renderMusic(
-    (host) => new TunePlayer(host, { seconds, changes, only }),
+    (host) => new TunePlayer(host, { seconds, changes, only, mix }),
     { variant, layer, menu },
     seconds,
     render,

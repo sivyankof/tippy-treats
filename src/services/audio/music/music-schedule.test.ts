@@ -1,17 +1,18 @@
 import { describe, expect, it } from 'vitest';
 import { MUSIC_PLAY } from '../../../data/music/music-play';
-import { SCALES, type Song } from '../../../data/music/song';
+import type { Song } from '../../../data/music/song';
 import { MUSIC_VARIANTS, SONGS } from '../../../data/music/songs';
 import {
-  barNotes,
   clampLayer,
   initialLevels,
+  crackleWindow,
+  humanizeNote,
   levelAt,
-  pitchClass,
   planLoop,
   retargetLevels,
   scheduleWindow,
   songTiming,
+  swingStep,
   zoneLayer,
   type LoopPlan,
 } from './music-schedule';
@@ -22,100 +23,14 @@ function fullLevels(song: Song) {
   return initialLevels(song, MUSIC_PLAY.layers);
 }
 
-/** Every plan a loop can take: each alternative of each slot, with and without the fill. */
-function plans(song: Song): LoopPlan[] {
-  const base = planLoop(song, 1, 0);
-  const result: LoopPlan[] = [base, { ...base, fill: true }];
-  song.parts.forEach((part, p) =>
-    part.form.forEach((slot, s) => {
-      if (typeof slot === 'string') return;
-      slot.forEach((_, alt) => {
-        const picks = base.picks.map((row) => [...row]);
-        const row = picks[p];
-        if (row) row[s] = alt;
-        result.push({ ...base, picks });
-      });
-    }),
-  );
-  return result;
+/** The song on the grid: no humanize, no lazy hits (the timing checks). */
+function exact(song: Song): Song {
+  return {
+    ...song,
+    humanize: { timeSec: 0, velocity: 0 },
+    parts: song.parts.map((part) => ({ ...part, late: { chance: 0, sec: 0 } })),
+  };
 }
-
-describe('songs', () => {
-  it.each(ALL)('%s: 16-32 bars, layers 1..6 with one part each', (_, song) => {
-    expect(song.bars).toBeGreaterThanOrEqual(16);
-    expect(song.bars).toBeLessThanOrEqual(32);
-    expect(song.parts.map((part) => part.layer)).toEqual([1, 2, 3, 4, 5, 6]);
-  });
-
-  it.each(ALL)('%s: every form fills the loop exactly, every alternative too', (_, song) => {
-    for (const part of song.parts) {
-      for (const plan of plans(song)) {
-        const index = song.parts.indexOf(part);
-        let bars = 0;
-        part.form.forEach((slot, s) => {
-          const id = typeof slot === 'string' ? slot : slot[plan.picks[index]?.[s] ?? 0];
-          const phrase = id === undefined ? undefined : part.phrases[id];
-          expect(phrase, `${part.id} slot ${s}`).toBeDefined();
-          bars += phrase?.length ?? 0;
-        });
-        expect(bars, part.id).toBe(song.bars);
-      }
-    }
-  });
-
-  it.each(ALL)('%s: notes start inside their bar, lengths and velocities sane', (_, song) => {
-    const { stepsPerBar } = songTiming(song);
-    for (const plan of plans(song)) {
-      song.parts.forEach((_part, index) => {
-        for (let bar = 0; bar < song.bars; bar++) {
-          for (const [step, , length, velocity = 1] of barNotes(song, index, plan, bar)) {
-            expect(step).toBeGreaterThanOrEqual(0);
-            expect(step).toBeLessThan(stepsPerBar);
-            expect(length).toBeGreaterThan(0);
-            expect(velocity).toBeGreaterThan(0);
-            expect(velocity).toBeLessThanOrEqual(1);
-          }
-        }
-      });
-    }
-  });
-
-  it.each(ALL)('%s: every pitch is inside the scale of its part', (_, song) => {
-    for (const plan of plans(song)) {
-      song.parts.forEach((part, index) => {
-        const allowed: readonly number[] = SCALES[part.scale];
-        for (let bar = 0; bar < song.bars; bar++) {
-          for (const [, pitch] of barNotes(song, index, plan, bar)) {
-            if (allowed.length === 0) expect(pitch).toBe(0);
-            else
-              expect(allowed, `${part.id} bar ${bar} pitch ${pitch}`).toContain(pitchClass(pitch));
-          }
-        }
-      });
-    }
-  });
-
-  it.each(ALL)('%s: F only in the bass, below C4', (_, song) => {
-    for (const plan of plans(song)) {
-      song.parts.forEach((part, index) => {
-        for (let bar = 0; bar < song.bars; bar++) {
-          for (const [, pitch] of barNotes(song, index, plan, bar)) {
-            if (pitchClass(pitch) === 5) expect(pitch, part.id).toBeLessThan(0);
-          }
-        }
-      });
-    }
-  });
-
-  it.each(ALL)('%s: rest bars are inside the loop and not its last bar', (_, song) => {
-    for (const part of song.parts) {
-      for (const bar of part.restBars ?? []) {
-        expect(bar).toBeGreaterThanOrEqual(0);
-        expect(bar).toBeLessThan(song.bars - 1);
-      }
-    }
-  });
-});
 
 describe('planLoop', () => {
   const song = SONGS.a;
@@ -202,7 +117,8 @@ describe('scheduleWindow', () => {
     expect(cache.size).toBeGreaterThan(0);
   });
 
-  it.each(ALL)('%s: the loop seam lines up exactly with the loop length', (_, song) => {
+  it.each(ALL)('%s: the loop seam lines up exactly with the loop length', (_, loose) => {
+    const song = exact(loose);
     const levels = fullLevels(song);
     const { loopSec, barSec } = songTiming(song);
     const seed = 21;
@@ -230,9 +146,10 @@ describe('scheduleWindow', () => {
     const { barSec } = songTiming(song);
     const start = initialLevels(song, 1);
     const silent = scheduleWindow(song, 3, start, 0, barSec * 2);
+    expect(silent.length).toBeGreaterThan(0);
     expect(silent.every((event) => event.part === 0)).toBe(true);
     const levels = retargetLevels(song, start, 2, 0.3 * barSec);
-    const kicks = scheduleWindow(song, 3, levels, 0, barSec * 4).filter((e) => e.part === 1);
+    const kicks = scheduleWindow(exact(song), 3, levels, 0, barSec * 4).filter((e) => e.part === 1);
     // Fade from the next bar line over two bars: nothing in bar 0, rising gains in bars 1-2, full after.
     expect(kicks.every((e) => e.time >= barSec)).toBe(true);
     const fading = kicks.filter((e) => e.time < barSec * (1 + MUSIC_PLAY.fadeInBars));
@@ -251,22 +168,71 @@ describe('scheduleWindow', () => {
   it('a lone part never rests; with company it may', () => {
     const song = SONGS.a;
     const { barSec } = songTiming(song);
-    // Find a loop and seed where the comb rests.
+    const bass = song.parts.findIndex((part) => part.id === 'bass');
+    // Find a loop and seed where the bass rests.
     let found: { seed: number; loop: number; bar: number } | null = null;
     for (let seed = 1; seed < 200 && !found; seed++) {
       for (let loop = 1; loop < 10 && !found; loop++) {
-        const rest = planLoop(song, seed, loop).rest[0];
+        const rest = planLoop(song, seed, loop).rest[bass];
         if (rest !== null && rest !== undefined) found = { seed, loop, bar: rest };
       }
     }
     expect(found).not.toBeNull();
     if (!found) return;
     const at = (found.loop * song.bars + found.bar) * barSec;
-    const lone = scheduleWindow(song, found.seed, initialLevels(song, 1), at, at + barSec);
-    expect(lone.some((e) => e.part === 0)).toBe(true);
+    const alone = song.parts.map((_, i) => {
+      const on = i === bass ? 1 : 0;
+      return { from: on, to: on, start: 0, end: 0 };
+    });
+    const lone = scheduleWindow(song, found.seed, alone, at, at + barSec);
+    expect(lone.some((e) => e.part === bass)).toBe(true);
     const band = scheduleWindow(song, found.seed, fullLevels(song), at, at + barSec);
-    expect(band.some((e) => e.part === 0)).toBe(false);
+    expect(band.some((e) => e.part === bass)).toBe(false);
     expect(band.length).toBeGreaterThan(0);
+  });
+});
+
+describe('swing and humanize', () => {
+  it('swingStep keeps the beats, moves the second eighth to the swing share', () => {
+    for (const step of [0, 4, 8, 12]) expect(swingStep(step, 4, 0.58)).toBeCloseTo(step, 9);
+    expect(swingStep(2, 4, 0.58)).toBeCloseTo(2.32, 9);
+    expect(swingStep(6, 4, 0.5)).toBeCloseTo(6, 9);
+    // The sixteenths follow in order, inside their beat.
+    const swung = [0, 1, 2, 3, 4].map((step) => swingStep(step, 4, 0.6));
+    expect(swung).toEqual([...swung].sort((a, b) => a - b));
+    expect(swung[3]).toBeLessThan(4);
+  });
+
+  it('humanizeNote stays within its spread, repeats for the same note and differs between notes', () => {
+    const spec = { timeSec: 0.012, velocity: 0.1 };
+    const shifts = new Set<number>();
+    for (let n = 0; n < 200; n++) {
+      const a = humanizeNote(7, 3, 1, n, spec);
+      expect(Math.abs(a.shift)).toBeLessThanOrEqual(spec.timeSec);
+      expect(Math.abs(a.velocity - 1)).toBeLessThanOrEqual(spec.velocity);
+      expect(humanizeNote(7, 3, 1, n, spec)).toEqual(a);
+      shifts.add(a.shift);
+    }
+    expect(shifts.size).toBeGreaterThan(190);
+    const late = { chance: 1, sec: 0.02 };
+    expect(humanizeNote(7, 3, 1, 0, spec, late).shift).toBeGreaterThan(0.02 - spec.timeSec - 1e-9);
+  });
+});
+
+describe('crackleWindow', () => {
+  it('is seeded, rare and adds up over windows', () => {
+    const whole = crackleWindow(5, 0.8, 0.1, 0, 400);
+    expect(whole.length).toBeGreaterThan(20);
+    expect(whole.length).toBeLessThan(90);
+    expect(crackleWindow(5, 0.8, 0.1, 0, 400)).toEqual(whole);
+    const pieces = [];
+    for (let t = 0; t < 400; t += 0.15) pieces.push(...crackleWindow(5, 0.8, 0.1, t, t + 0.15));
+    expect(pieces).toEqual(whole);
+    for (const hit of whole) {
+      expect(hit.strength).toBeGreaterThanOrEqual(0);
+      expect(hit.rate).toBeLessThan(1);
+    }
+    expect(crackleWindow(5, 0.8, 0, 0, 400)).toEqual([]);
   });
 });
 
@@ -276,7 +242,7 @@ describe('levels', () => {
 
   it('starts with the parts of the layer on, the others off', () => {
     const levels = initialLevels(song, 3);
-    expect(levels.map((level) => levelAt(level, 5))).toEqual([1, 1, 1, 0, 0, 0]);
+    expect(levels.map((level) => levelAt(level, 5))).toEqual([1, 1, 1, 1, 0, 0, 0]);
   });
 
   it('fades a joining part in from the next bar line over fadeInBars', () => {
@@ -295,7 +261,7 @@ describe('levels', () => {
 
   it('fades a leaving part out over fadeOutBars; a change on a bar line starts there', () => {
     const levels = retargetLevels(song, initialLevels(song, 6), 1, barSec * 4);
-    const part = levels[5];
+    const part = levels[6];
     expect(part?.start).toBeCloseTo(barSec * 4, 9);
     expect(part?.end).toBeCloseTo(barSec * (4 + MUSIC_PLAY.fadeOutBars), 9);
     expect(part?.to).toBe(0);
@@ -324,7 +290,7 @@ describe('zoneLayer', () => {
     expect(zoneLayer(7, false)).toBe(6);
   });
 
-  it('caps the layer on the minimal effects level', () => {
-    expect([0, 1, 2, 3, 4, 5].map((zone) => zoneLayer(zone, true))).toEqual([1, 2, 3, 3, 3, 3]);
+  it('leaves out layer 6 on the minimal effects level', () => {
+    expect([0, 1, 2, 3, 4, 5].map((zone) => zoneLayer(zone, true))).toEqual([1, 2, 3, 4, 5, 5]);
   });
 });

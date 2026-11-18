@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { duckFactor, limiterCurve, musicTarget, type DuckReason } from './mixer-math';
+import {
+  duckFactor,
+  limiterCurve,
+  musicTarget,
+  saturationCurve,
+  type DuckReason,
+} from './mixer-math';
 
 describe('duck level', () => {
   it('is 1 with no reason and 1 - share with any', () => {
@@ -38,5 +44,20 @@ describe('limiterCurve', () => {
   it('is odd and rising', () => {
     expect(at(-0.9)).toBeCloseTo(-at(0.9), 5);
     for (let i = 1; i < size; i++) expect(curve[i]!).toBeGreaterThan(curve[i - 1]!);
+  });
+});
+
+describe('saturation curve', () => {
+  it('is unity at low level, odd, and rounds the peaks below full scale', () => {
+    const size = 2049;
+    const curve = saturationCurve(size, 1.6);
+    const mid = (size - 1) / 2;
+    expect(curve[mid]).toBeCloseTo(0, 9);
+    // Slope 1 near zero: a quiet signal passes untouched.
+    const x = 2 / (size - 1);
+    expect((curve[mid + 1] ?? 0) / x).toBeCloseTo(1, 3);
+    for (let i = 0; i < size; i++) expect(curve[i]).toBeCloseTo(-(curve[size - 1 - i] ?? 0), 6);
+    expect(curve[size - 1]).toBeLessThan(0.6);
+    for (let i = 1; i < size; i++) expect(curve[i] ?? 0).toBeGreaterThan(curve[i - 1] ?? 0);
   });
 });
