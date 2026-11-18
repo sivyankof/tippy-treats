@@ -5,6 +5,7 @@ import { PALETTE } from '../../../data/palette';
 import { ZONES, type ZoneId } from '../../../data/zones';
 import { t } from '../../../i18n';
 import { checkpointZoneTexture } from '../../fx/checkpoint-textures';
+import { VIDEO_ICON_FIELD_SCALE, VIDEO_ICON_KEY, bakeVideoIcon } from '../../fx/video-icon-texture';
 import { attachPressFeedback } from '../button';
 import { createOutlinedText } from '../outlined-text';
 import { createPlate, faceOffsetY } from '../style/volume';
@@ -24,20 +25,6 @@ export interface CheckpointStepOptions {
   y: number;
   width: number;
   onSelect: () => void;
-}
-
-/** The small round "an ad can pay" mark with a play triangle. */
-function drawAdMark(g: Phaser.GameObjects.Graphics, x: number, y: number): void {
-  const r = cfg.adMark.size / 2;
-  g.fillStyle(cfg.adMark.fill, 1).fillCircle(x, y, r);
-  g.fillStyle(cfg.adMark.ink, 1).fillTriangle(
-    x - r * 0.28,
-    y - r * 0.5,
-    x - r * 0.28,
-    y + r * 0.5,
-    x + r * 0.55,
-    y,
-  );
 }
 
 /**
@@ -102,10 +89,14 @@ export function createCheckpointStep(
     tag.setScale(Math.min(1, cfg.priceWidth / tag.contentWidth));
     parts.push(tag);
     if (hasAd) {
-      const g = scene.add.graphics();
-      drawAdMark(g, priceX, faceY - shiftUp + cfg.adMark.offsetY);
-      if (row.ad === 'unavailable') g.setAlpha(cfg.adMark.dimAlpha);
-      parts.push(g);
+      // The shared video icon of every rewarded-video button, small, under the price.
+      bakeVideoIcon(scene);
+      const side = cfg.adMark.size * VIDEO_ICON_FIELD_SCALE;
+      const mark = scene.add
+        .image(priceX, faceY - shiftUp + cfg.adMark.offsetY, VIDEO_ICON_KEY)
+        .setDisplaySize(side, side);
+      if (row.ad === 'unavailable') mark.setAlpha(cfg.adMark.dimAlpha);
+      parts.push(mark);
     }
   }
 

@@ -17,30 +17,25 @@ function paintDisc(g: Phaser.GameObjects.Graphics, color: number, grow: number, 
   g.fillStyle(color, 1).fillCircle((disc.x + d) * size, (disc.y + d) * size, disc.r * size + grow);
 }
 
-/** The play triangle as a rounded wedge: a few small circles at the corners joined by a polygon. */
+/** The play triangle, scaled about its centre by `scale` and moved by `d` (shares of the picture). */
 function paintTriangle(
   g: Phaser.GameObjects.Graphics,
   color: number,
-  grow: number,
+  scale: number,
   d: number,
 ): void {
-  const r = triangle.cornerR * size + grow;
-  const l = (triangle.left + d) * size + r;
-  const rt = (triangle.right + d) * size - r;
-  const cy = (disc.y + d) * size;
-  const hh = triangle.halfHeight * size - r;
+  const cx = (triangle.left + triangle.right * 2) / 3;
+  const cy = disc.y;
+  const at = (x: number, y: number): { x: number; y: number } => ({
+    x: (cx + (x - cx) * scale + d) * size,
+    y: (cy + (y - cy) * scale + d) * size,
+  });
   g.fillStyle(color, 1);
   fillPolygon(g, [
-    { x: l, y: cy - hh },
-    { x: rt, y: cy },
-    { x: l, y: cy + hh },
+    at(triangle.left, cy - triangle.halfHeight),
+    at(triangle.right, cy),
+    at(triangle.left, cy + triangle.halfHeight),
   ]);
-  for (const p of [
-    { x: l, y: cy - hh },
-    { x: rt, y: cy },
-    { x: l, y: cy + hh },
-  ])
-    g.fillCircle(p.x, p.y, r);
 }
 
 function drawIcon(g: Phaser.GameObjects.Graphics): void {
@@ -49,9 +44,9 @@ function drawIcon(g: Phaser.GameObjects.Graphics): void {
   paintDisc(g, colors.outline, grow, 0);
   paintDisc(g, colors.discShadow, 0, 0);
   paintDisc(g, colors.disc, 0, d * 0.6);
-  paintTriangle(g, colors.outline, size * 0.02, 0);
-  paintTriangle(g, colors.triangleShadow, 0, 0);
-  paintTriangle(g, colors.triangle, 0, d * 0.4);
+  paintTriangle(g, colors.outline, triangle.outlineScale, 0);
+  paintTriangle(g, colors.triangleShadow, 1, 0);
+  paintTriangle(g, colors.triangle, triangle.lightScale, d * 0.4);
   drawGlossMark(g, {
     x: gloss.x * size,
     y: gloss.y * size,

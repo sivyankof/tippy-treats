@@ -81,10 +81,8 @@ export const CONTINUE_ANIM = {
     font: 44,
     /** Pale caption while the buttons are inactive; it stands there from the first frame. */
     lockedAlpha: 0.35,
-    /** Once active the small button pulses between these alphas. */
-    alphaRange: [0.55, 1],
-    pulseMs: 1400,
-    fadeInMs: 240,
+    /** The caption turns from pale to normal in this time once the buttons switch on. */
+    fadeInMs: 120,
     /** Hit area of the small button. */
     hitWidth: 420,
     hitHeight: 96,

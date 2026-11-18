@@ -275,7 +275,7 @@ export const CHECKPOINT_WINDOW = {
   fills: { open: 0x7c5cff, selected: 0xff5c8a, locked: 0x9a8fa8 },
   selectedRim: PALETTE.gold,
   /** The small "ad can pay" mark under the price. */
-  adMark: { size: 36, fill: 0xffffff, ink: PALETTE.accentSecondary, dimAlpha: 0.5, offsetY: 34 },
+  adMark: { size: 40, dimAlpha: 0.5, offsetY: 36 },
   lockSize: 56,
   /** Space between the stairs and the buttons, and between the two buttons. */
   buttonsGap: 36,

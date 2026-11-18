@@ -22,11 +22,11 @@ export const VIDEO_ICON_LOOK = {
   disc: { x: 0.5, y: 0.5, r: 0.42 },
   /** Offset of the light tone from the shadow tone (up and left). */
   bandShare: 0.05,
-  /** The triangle: left edge, right tip and half height, nudged right so it looks centred. */
-  triangle: { left: 0.4, right: 0.68, halfHeight: 0.19, cornerR: 0.03 },
+  /** The triangle: left edge, right tip and half height (nudged right so it looks centred), and the outline and light tone as scales of it. */
+  triangle: { left: 0.38, right: 0.72, halfHeight: 0.2, outlineScale: 1.3, lightScale: 0.72 },
   gloss: {
-    x: 0.34,
-    y: 0.3,
+    x: 0.27,
+    y: 0.23,
     length: 0.12,
     thick: 0.05,
     tiltDeg: -35,

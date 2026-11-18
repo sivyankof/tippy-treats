@@ -207,27 +207,16 @@ export class ContinueWindow {
     );
   }
 
-  /** The pale caption turns normal at the moment the buttons switch on; then it pulses as before. */
+  /** The pale caption turns normal at the moment the buttons switch on and stays so. */
   private syncDecline(flow: ContinueFlow): void {
     if (this.declineShown || !flow.inputReady) return;
     this.declineShown = true;
     this.fitDeclineHit();
-    const [low, high] = decline.alphaRange;
     this.scene.tweens.killTweensOf(this.declineText);
     this.scene.tweens.add({
       targets: this.declineText,
-      alpha: high,
+      alpha: 1,
       duration: decline.fadeInMs,
-      onComplete: () => {
-        this.scene.tweens.add({
-          targets: this.declineText,
-          alpha: low,
-          duration: decline.pulseMs / 2,
-          ease: ease.sine,
-          yoyo: true,
-          repeat: -1,
-        });
-      },
     });
   }
 }
