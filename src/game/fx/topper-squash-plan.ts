@@ -1,6 +1,7 @@
 import type { Rng } from '../../core/rng';
 import type { EffectLevel } from '../../data/effect-levels';
 import { BALANCE } from '../../data/balance';
+import { CUT_PICTURE, CUT_TEXTURES } from '../../data/cut-look';
 import {
   SQUASH_PICTURES,
   SQUASH_TEXTURES,
@@ -287,6 +288,12 @@ export function ovalBottomAt(oval: Readonly<Blob>, x: number): number {
   return oval.cy + oval.ry * Math.sqrt(1 - u * u);
 }
 
+/** Something on the lower layer a drop must not hang over: its centre from the layer's centre and half its width. */
+export interface DropObstacle {
+  x: number;
+  half: number;
+}
+
 /** What the cream roll needs to know of the moment and the layers. */
 export interface CreamRollInput {
   nowMs: number;
@@ -294,32 +301,71 @@ export interface CreamRollInput {
   squeeze: boolean;
   /** The cream tone (`creamRollTint`). */
   tint: number;
+  /** The warm outline of the cream (the ridges' outline level under the tint), for the bead's outline disc. */
+  outline: number;
   /** Half the span of the lower layer's face (with nothing else around it): no drop hangs over it. */
   faceHalf: number;
+  /** The cream swirls and the growing drips of the lower layer: no drop hangs over them either. */
+  avoid: readonly DropObstacle[];
 }
 
 /**
- * The marks of the cream roll at the two ends of the seam (`rollSpots`): the drops first, so the
- * ridges they hang from cover their necks, then the left and the right ridge. Each side has its
- * own picture and drops (docs/06, "Валик крема"); a drop that would hang over the lower layer's
- * face is left out.
+ * The marks of the cream roll at the two ends of the seam (`rollSpots`), back to front: the
+ * drops (the ridges cover their necks), the ridges, then the anticipation beads in front (the
+ * ridges are pushed out from behind them). Each side has its own picture and drops (docs/06,
+ * "Валик крема"). A drop slides along the outer part of its ridge to the nearest spot clear of
+ * the lower layer's face, cream swirls and drips, and of the other drop; with none it is left out.
  */
 export function creamRollMarks(
   spots: readonly [RollSpot, RollSpot],
   input: Readonly<CreamRollInput>,
 ): LayerMark[] {
   const { roll } = TOPPER_SQUASH;
-  const { ridges } = SQUASH_PICTURES.cream;
+  const { ridges, outlinePx } = SQUASH_PICTURES.cream;
   const [width, height] = ridgePictureSize();
   const [dropWidth, dropHeight] = creamDropPictureSize();
   const ridgeMarks: LayerMark[] = [];
   const dropMarks: LayerMark[] = [];
+  const beadMarks: LayerMark[] = [];
   const settled = (look: Parameters<typeof squeezeDoneMs>[0]): number =>
     input.nowMs - squeezeDoneMs(look);
+  // The bead picture of the cuts is a white disc with a clear field around it.
+  const beadPicture = (CUT_PICTURE.bead.size + CUT_PICTURE.pad * 2) / CUT_PICTURE.bead.size;
   spots.forEach((spot, i) => {
     const side = roll.sides[i]!;
     const ridge = ridges[side.ridge];
-    const born = input.nowMs + roll.delayMs + i * roll.rightLagMs;
+    const rad = spot.angleDeg * DEG_TO_RAD;
+    // A point `u` along the ridge outwards and `v` down from its anchor, turned with the ridge.
+    const at = (u: number, v: number): { dx: number; dy: number } => ({
+      dx: spot.dx + u * spot.side * Math.cos(rad) - v * Math.sin(rad),
+      dy: spot.dy + u * spot.side * Math.sin(rad) + v * Math.cos(rad),
+    });
+    const beadBorn = input.nowMs + roll.delayMs + i * roll.rightLagMs;
+    const born = beadBorn + roll.ridgeLagMs;
+    if (input.squeeze) {
+      const { bead } = roll;
+      const centre = at(bead.outPx, -bead.upPx);
+      const handOver = { startMs: beadBorn + bead.handOverAtMs, durMs: bead.handOverMs };
+      for (const [size, tint] of [
+        [bead.size, input.outline],
+        [bead.size - outlinePx * 2, input.tint],
+      ] as const) {
+        beadMarks.push({
+          texture: CUT_TEXTURES.bead,
+          dx: centre.dx,
+          dy: centre.dy,
+          originX: 0.5,
+          originY: 0.5,
+          width: size * beadPicture,
+          height: size * beadPicture,
+          tint,
+          bornMs: beadBorn,
+          growMs: 0,
+          squeeze: bead.squeeze,
+          handOver,
+        });
+      }
+    }
     ridgeMarks.push({
       texture: side.ridge === 'a' ? SQUASH_TEXTURES.creamRidgeA : SQUASH_TEXTURES.creamRidgeB,
       dx: spot.dx,
@@ -337,20 +383,39 @@ export function creamRollMarks(
       squeeze: roll.squeeze,
       clearOfShadow: true,
     });
-    const rad = spot.angleDeg * DEG_TO_RAD;
     const firstDrop = born + roll.drop.startShare * (roll.squeeze.bulgeMs + roll.squeeze.pushMs);
+    const placed: DropObstacle[] = [];
+    // The outer part of the ridge, where a drop may hang: clear of the anchor, up to its tip.
+    const first = roll.originX * roll.width + roll.drop.halfPx;
+    const last = roll.width - roll.drop.halfPx / 2;
     let n = 0;
     for (const drop of side.drops) {
-      const x = drop.at * roll.width;
-      const u = (x - roll.originX * roll.width) * spot.side;
-      const v = ovalBottomAt(ridge.base, x) - roll.originY * roll.height - roll.drop.tuckPx;
-      const dx = spot.dx + u * Math.cos(rad) - v * Math.sin(rad);
-      const dy = spot.dy + u * Math.sin(rad) + v * Math.cos(rad);
-      if (Math.abs(dx) < input.faceHalf + roll.drop.faceGapPx) continue;
+      const half = roll.drop.halfPx * drop.size;
+      const free = (x: number): { dx: number; dy: number } | null => {
+        const v = ovalBottomAt(ridge.base, x) - roll.originY * roll.height - roll.drop.tuckPx;
+        const p = at(x - roll.originX * roll.width, v);
+        if (Math.abs(p.dx) - half < input.faceHalf + roll.drop.faceGapPx) return null;
+        for (const o of [...input.avoid, ...placed]) {
+          if (Math.abs(p.dx - o.x) < o.half + half + roll.drop.clearPx) return null;
+        }
+        return p;
+      };
+      // The nearest free spot to the drawn one, looking both ways along the ridge, 1 px at a time.
+      const wanted = drop.at * roll.width;
+      let found: { dx: number; dy: number } | null = null;
+      for (let k = 0; !found && (wanted - k >= first || wanted + k <= last); k++) {
+        for (const x of k === 0 ? [wanted] : [wanted - k, wanted + k]) {
+          if (x < first || x > last) continue;
+          found = free(x);
+          if (found) break;
+        }
+      }
+      if (!found) continue;
+      placed.push({ x: found.dx, half });
       dropMarks.push({
         texture: SQUASH_TEXTURES.creamDrop,
-        dx,
-        dy,
+        dx: found.dx,
+        dy: found.dy,
         originX: 0.5,
         originY: field / dropHeight,
         width: dropWidth * drop.size,
@@ -364,5 +429,5 @@ export function creamRollMarks(
       n++;
     }
   });
-  return [...dropMarks, ...ridgeMarks];
+  return [...dropMarks, ...ridgeMarks, ...beadMarks];
 }
