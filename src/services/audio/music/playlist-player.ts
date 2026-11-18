@@ -1,5 +1,5 @@
 import { AUDIO_MIX } from '../../../data/audio-mix';
-import { MUSIC, MUSIC_PLAYLIST, MUSIC_TRACKS, type MusicTrackId } from '../../../data/music';
+import { MUSIC, MUSIC_TRACKS, type MusicTrackId } from '../../../data/music';
 import { MS_PER_SECOND } from '../../../util/math';
 import { fromDb } from '../levels';
 import type {
@@ -10,6 +10,7 @@ import type {
   MusicPlayerState,
 } from '../music-control';
 import { MediaPool, type MediaContext } from './media-pool';
+import type { MusicPreload } from './music-preload';
 import { firstIndex, nextIndex, turnLength, turnOffset } from './playlist-turn';
 import { BufferDeck, StreamDeck, type Deck, type DeckClock } from './tune-deck';
 import { fetchAndDecode, trackUrl } from './tune-loader';
@@ -19,7 +20,7 @@ import {
   fadeParam,
   prepareLoop,
   trackLoopSec,
-  type LoopBounds,
+  type Decoded,
 } from './tune-loop';
 
 /**
@@ -40,17 +41,16 @@ export interface OpeningDeck extends Deck {
 /** How the player gets its tracks (the browser's in the game, fakes in tests). */
 export interface PlayerSources {
   clock: DeckClock;
-  /** Random numbers in [0, 1): the first track of the playlist. */
+  /** The playlist this page plays, in order. */
+  playlist: readonly MusicTrackId[];
+  /** Random numbers in [0, 1): the first track of the playlist (unless `first` picked it). */
   random: () => number;
+  /** The first track readied while the game loaded: its index, and the decoded file of a seamless one. */
+  first?: { index: number; decoded: { track: MusicTrackId; decoded: Promise<Decoded> } | null };
   /** The decoded file of a seamless track, or null when it has no file. */
   decode(track: MusicTrackId): Promise<AudioBuffer> | null;
   /** A stream deck of a non-seamless track (`looping` when it plays on its own), or null when it cannot be streamed. */
   openStream(track: MusicTrackId, looping: boolean): OpeningDeck | null;
-}
-
-interface Decoded {
-  buffer: AudioBuffer;
-  bounds: LoopBounds;
 }
 
 /** A track asked for and not playing yet; `turn`: as the playlist's turn. */
@@ -76,8 +76,9 @@ interface Wait {
 type Mode = { kind: 'playlist' } | { kind: 'track'; track: MusicTrackId } | null;
 
 /**
- * The music player (docs/06, section 7, "Музыка"). The playlist goes round `MUSIC_PLAYLIST` from
- * a random first track, each track for at least `minPlaySec` (whole loops of a seamless one, a
+ * The music player (docs/06, section 7, "Музыка"). The playlist goes round the page's playlist
+ * (`MUSIC_PLAYLIST`, its seamless tracks only where streams cannot play) from a random first track
+ * (the preload's pick), each track for at least `minPlaySec` (whole loops of a seamless one, a
  * non-seamless one once), and changes over `crossfadeSec` exactly on the loop boundary (put on the
  * context's clock `switchLeadSec` ahead; the next seamless track is decoded `prefetchSec` ahead,
  * never while a run is played: the turn grows by whole loops instead). An exception (`play`) plays
@@ -123,7 +124,22 @@ export class PlaylistPlayer implements MusicControl {
     private readonly host: MusicHost,
     private readonly sources: PlayerSources,
   ) {
-    this.index = firstIndex(sources.random, MUSIC_PLAYLIST.length);
+    const { first } = sources;
+    this.index = first?.index ?? firstIndex(sources.random, sources.playlist.length);
+    const ready = first?.decoded;
+    if (ready) {
+      const prefetch: Prefetch = { track: ready.track, decoded: ready.decoded, ready: null };
+      this.prefetch = prefetch;
+      ready.decoded.then(
+        (decoded) => {
+          prefetch.ready = decoded;
+          this.note();
+        },
+        () => {
+          if (this.prefetch === prefetch) this.prefetch = null;
+        },
+      );
+    }
   }
 
   playlist(): void {
@@ -146,7 +162,7 @@ export class PlaylistPlayer implements MusicControl {
     this.mode = { kind: 'playlist' };
     this.clearWatch();
     this.prefetch = null;
-    this.newTurn(nextIndex(this.index, MUSIC_PLAYLIST.length));
+    this.newTurn(nextIndex(this.index, this.sources.playlist.length));
     this.show(this.turnTrack(), 0, true, false);
   }
 
@@ -212,11 +228,13 @@ export class PlaylistPlayer implements MusicControl {
 
   /** The playlist's track now, and the one after it. */
   private turnTrack(): MusicTrackId {
-    return MUSIC_PLAYLIST[this.index] ?? MUSIC_PLAYLIST[0] ?? 'menu';
+    const list = this.sources.playlist;
+    return list[this.index] ?? list[0] ?? 'kitchen';
   }
 
   private nextTrack(): MusicTrackId | null {
-    return MUSIC_PLAYLIST[nextIndex(this.index, MUSIC_PLAYLIST.length)] ?? null;
+    const list = this.sources.playlist;
+    return list[nextIndex(this.index, list.length)] ?? null;
   }
 
   private seamless(track: MusicTrackId): boolean {
@@ -398,7 +416,9 @@ export class PlaylistPlayer implements MusicControl {
     if (this.holds.size > 0) deck.hold(true);
     const now = this.host.ctx.currentTime;
     const level = trackLevel(deck.track);
-    fadeParam(deck.gain.gain, now, level, MUSIC.crossfadeSec, MUSIC.fadeSteps, at);
+    // From silence the music comes in quickly; over another track it crosses fully.
+    const fade = this.current ? MUSIC.crossfadeSec : MUSIC.entrySec;
+    fadeParam(deck.gain.gain, now, level, fade, MUSIC.fadeSteps, at);
     const before = this.current;
     if (before) {
       if (this.turnDeck === before) this.leaveTurn();
@@ -541,7 +561,7 @@ export class PlaylistPlayer implements MusicControl {
 
   /** The playlist moves on to its next track, the change starting at context time `at`. */
   private switchAt(at: number): void {
-    this.newTurn(nextIndex(this.index, MUSIC_PLAYLIST.length));
+    this.newTurn(nextIndex(this.index, this.sources.playlist.length));
     const track = this.turnTrack();
     const ready = this.prefetch?.track === track ? this.prefetch.ready : null;
     if (ready) {
@@ -685,32 +705,50 @@ function streamContext(ctx: BaseAudioContext): MediaContext | null {
   return ctx as unknown as MediaContext;
 }
 
+/** What the live player is built with (`services/index.ts`). */
+export interface LivePlayerOptions {
+  playlist: readonly MusicTrackId[];
+  /** Media elements may play (false on iOS before 16.4: no streams, no element pool). */
+  streams: boolean;
+  preload: MusicPreload;
+}
+
 /** The live player of the game (`WebAudioService`'s music factory; runs inside the unlocking gesture). */
-export const createPlaylistPlayer: MusicFactory = (host) => {
-  const { ctx } = host;
-  const clock: DeckClock = {
-    get currentTime() {
-      return ctx.currentTime;
-    },
-    setTimeout: (call, ms) => globalThis.setTimeout(call, ms),
-    clearTimeout: (id) => globalThis.clearTimeout(id as ReturnType<typeof setTimeout>),
+export function playlistPlayerFactory({
+  playlist,
+  streams,
+  preload,
+}: LivePlayerOptions): MusicFactory {
+  return (host) => {
+    const { ctx } = host;
+    const clock: DeckClock = {
+      get currentTime() {
+        return ctx.currentTime;
+      },
+      setTimeout: (call, ms) => globalThis.setTimeout(call, ms),
+      clearTimeout: (id) => globalThis.clearTimeout(id as ReturnType<typeof setTimeout>),
+    };
+    const media = streams ? streamContext(ctx) : null;
+    // The element already loading the first track (if it is a stream) is the first of the pool.
+    const make = (): HTMLMediaElement => preload.takeElement() ?? new Audio();
+    const pool = media ? new MediaPool(media, make, MUSIC.streamElements) : null;
+    const blessUrl = trackUrl('menu');
+    if (pool && blessUrl) pool.bless(blessUrl);
+    return new PlaylistPlayer(host, {
+      clock,
+      playlist,
+      // The player is a service, not the core: plain randomness is fine for the first track.
+      random: Math.random,
+      first: { index: preload.index, decoded: preload.takeDecoded() },
+      decode: (track) => {
+        const url = trackUrl(track);
+        return url ? fetchAndDecode(ctx, url) : null;
+      },
+      openStream: (track, looping) => {
+        const url = trackUrl(track);
+        if (!pool || !url) return null;
+        return StreamDeck.open(ctx, clock, pool, track, MUSIC_TRACKS[track], url, looping);
+      },
+    });
   };
-  const media = streamContext(ctx);
-  const pool = media ? new MediaPool(media, () => new Audio(), MUSIC.streamElements) : null;
-  const blessUrl = trackUrl('menu');
-  if (pool && blessUrl) pool.bless(blessUrl);
-  return new PlaylistPlayer(host, {
-    clock,
-    // The player is a service, not the core: plain randomness is fine for the first track.
-    random: Math.random,
-    decode: (track) => {
-      const url = trackUrl(track);
-      return url ? fetchAndDecode(ctx, url) : null;
-    },
-    openStream: (track, looping) => {
-      const url = trackUrl(track);
-      if (!pool || !url) return null;
-      return StreamDeck.open(ctx, clock, pool, track, MUSIC_TRACKS[track], url, looping);
-    },
-  });
-};
+}

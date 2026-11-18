@@ -2,8 +2,11 @@ import type { MusicTrackId } from '../../data/music';
 import type { Mixer } from './mixer';
 import type { NodeTally } from './node-tally';
 
-/** Why the music stops where it is: the app is away (background, an ad) or the run is paused. */
-export type MusicHoldReason = 'app' | 'pause';
+/**
+ * Why the music stops where it is: the app is away (background, an ad). The run's pause only
+ * ducks it, like any window.
+ */
+export type MusicHoldReason = 'app';
 
 /** What the music player reports for dev checks (the soundboard, the memory measurement). */
 export interface MusicPlayerState {

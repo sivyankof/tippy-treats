@@ -89,10 +89,15 @@ function restartOnPackageJson(): Plugin {
 }
 
 /** Puts the build stamp into index.html (`%BUILD_STAMP%`), where the dev error box prints it. */
-function buildStampInHtml(stamp: string): Plugin {
+/**
+ * The build stamp of the page: a production build bakes the one of its build, the dev server
+ * works it out again on every load of the page (the commit now, the time of the load), so a stamp
+ * on a phone's error box is never the server's start.
+ */
+function buildStampInHtml(stamp: () => string): Plugin {
   return {
     name: 'build-stamp-in-html',
-    transformIndexHtml: (html) => html.replaceAll('%BUILD_STAMP%', stamp),
+    transformIndexHtml: (html) => html.replaceAll('%BUILD_STAMP%', stamp()),
   };
 }
 
@@ -109,7 +114,11 @@ export default defineConfig(({ command, mode }) => {
       __BUILD_TIME__: JSON.stringify(buildTime),
     },
     plugins: [
-      buildStampInHtml(formatBuildStamp(buildHash, buildTime)),
+      buildStampInHtml(
+        devServer
+          ? () => `${formatBuildStamp(gitHash(), formatBuildTime(new Date()))} (page load)`
+          : () => formatBuildStamp(buildHash, buildTime),
+      ),
       ...(devServer ? [leanDevPhaser(), restartOnPackageJson()] : []),
     ],
     resolve: devServer ? { alias: [{ find: /^phaser$/, replacement: PHASER_MIN }] } : {},

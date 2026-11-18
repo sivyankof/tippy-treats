@@ -39,6 +39,18 @@ export interface Deck {
   setLooping?(on: boolean): void;
 }
 
+/** The element is already set to the file at `url` (the browser reports the address resolved). */
+function sameFile(el: HTMLMediaElement, url: string): boolean {
+  const set = el.getAttribute('src');
+  if (!set) return false;
+  if (set === url) return true;
+  try {
+    return el.src === new URL(url, el.baseURI).href;
+  } catch {
+    return false;
+  }
+}
+
 /**
  * The hold fade of a deck: its own gain under the player's, ramped down before the deck stops and
  * up after it goes on.
@@ -248,7 +260,12 @@ export class StreamDeck implements Deck {
     if (!first) throw new Error('no element');
     const from = offsetSec > 0 && offsetSec < this.loopSec ? offsetSec : 0;
     this.startOffset = from;
-    first.el.src = from > 0 ? `${this.url}#t=${from.toFixed(3)}` : this.url;
+    if (from === 0 && sameFile(first.el, this.url)) {
+      // Preloaded with this file (and maybe nudged by the blessing): back to its start, no reload.
+      if (first.el.currentTime !== 0) first.el.currentTime = 0;
+    } else {
+      first.el.src = from > 0 ? `${this.url}#t=${from.toFixed(3)}` : this.url;
+    }
     first.gain.gain.cancelScheduledValues(0);
     first.gain.gain.value = 1;
     await first.el.play();

@@ -22,12 +22,15 @@ const RATE = 48_000;
 /** An `AudioParam` that follows its last scheduled value (enough for the levels the player sets). */
 class FakeParam {
   value = 0;
+  /** Context time the last ramp ends at. */
+  rampEnd = 0;
   cancelScheduledValues(): void {}
   setValueAtTime(v: number): void {
     this.value = v;
   }
-  linearRampToValueAtTime(v: number): void {
+  linearRampToValueAtTime(v: number, at: number): void {
     this.value = v;
+    this.rampEnd = at;
   }
 }
 
@@ -62,8 +65,15 @@ class FakeContext {
   currentTime = 0;
   sampleRate = RATE;
   sources: FakeSource[] = [];
+  gains: FakeGain[] = [];
+  /** The gain params made, in order (the decks' levels among them). */
+  get gainParams(): FakeParam[] {
+    return this.gains.map((g) => g.gain);
+  }
   createGain(): FakeGain {
-    return new FakeGain();
+    const gain = new FakeGain();
+    this.gains.push(gain);
+    return gain;
   }
   createBufferSource(): FakeSource {
     const s = new FakeSource();
@@ -136,7 +146,7 @@ function pick(index: number): () => number {
   return () => (index + 0.5) / MUSIC_PLAYLIST.length;
 }
 
-function setup(first: MusicTrackId = 'kitchen') {
+function setup(first: MusicTrackId = 'kitchen', extra: Partial<PlayerSources> = {}) {
   const ctx = new FakeContext();
   const playing: boolean[] = [];
   const host: MusicHost = {
@@ -156,6 +166,7 @@ function setup(first: MusicTrackId = 'kitchen') {
   const streams: FakeStream[] = [];
   const sources: PlayerSources = {
     clock,
+    playlist: MUSIC_PLAYLIST,
     random: pick(MUSIC_PLAYLIST.indexOf(first)),
     decode: (track) => {
       decodes.push(track);
@@ -166,6 +177,7 @@ function setup(first: MusicTrackId = 'kitchen') {
       streams.push(deck);
       return deck;
     },
+    ...extra,
   };
   const player = new PlaylistPlayer(host, sources);
   /** Moves the context and the timers on together, and lets promises settle. */
@@ -440,25 +452,64 @@ describe('PlaylistPlayer', () => {
     expect(player.state().decodedBytes).toBe(0);
   });
 
-  it('a hold stops the music where it is and the turn does not run meanwhile', async () => {
+  it('a hold (the app in the background) stops the music where it is and the turn does not run meanwhile', async () => {
     const { player, advance, sourcesOf } = setup('kitchen');
     player.playlist();
     await advance(20);
-    player.hold('pause', true);
+    player.hold('app', true);
     const turn = player.state().turnSec;
     await advance(300);
     expect(player.state().turnSec).toBeCloseTo(turn, 5);
     expect(player.state().track).toBe('kitchen');
-    player.hold('pause', false);
+    player.hold('app', false);
     await advance(0.1);
     const resumed = sourcesOf('kitchen').at(-1);
     expect(resumed?.offset).toBeCloseTo(turn % loopOf('kitchen'), 1);
-    player.hold('app', true);
-    player.hold('pause', true);
-    player.hold('app', false);
-    const held = player.state().turnSec;
-    await advance(5);
-    expect(player.state().turnSec).toBeCloseTo(held, 5);
+  });
+
+  it('comes in from silence quickly, and crosses over another track in full', async () => {
+    const { player, advance, ctx } = setup('kitchen');
+    player.playlist();
+    await advance(0.1);
+    expect(player.state().track).toBe('kitchen');
+    const entry = ctx.gainParams.find((p) => p.rampEnd > 0);
+    expect(entry?.rampEnd).toBeLessThanOrEqual(MUSIC.entrySec + 0.11);
+    player.next();
+    await advance(0.1);
+    const crossing = ctx.gainParams.filter((p) => p.rampEnd > 0).at(-1);
+    expect(crossing?.rampEnd).toBeGreaterThan(MUSIC.crossfadeSec);
+  });
+
+  it('takes the first track and its decode from the preload', async () => {
+    const decoded = Promise.resolve({
+      buffer: fakeBuffer('roof'),
+      bounds: { start: 0, end: fakeBuffer('roof').length },
+    });
+    const { player, decodes, advance } = setup('kitchen', {
+      first: { index: MUSIC_PLAYLIST.indexOf('roof'), decoded: { track: 'roof', decoded } },
+    });
+    await advance(0.1);
+    expect(player.state().decodedBytes).toBe(bytesOf('roof'));
+    player.playlist();
+    await advance(0.1);
+    expect(player.state().track).toBe('roof');
+    expect(decodes).toEqual([]);
+  });
+
+  it('a page without streams plays only the seamless tracks', async () => {
+    const { player, advance } = setup('kitchen', {
+      playlist: ['kitchen', 'roof', 'stars', 'space'],
+      first: { index: 0, decoded: null },
+    });
+    player.playlist();
+    await advance(0.1);
+    const seen: (MusicTrackId | null)[] = [player.state().track];
+    for (let i = 0; i < 4; i++) {
+      player.next();
+      await advance(MUSIC.crossfadeSec + 0.5);
+      seen.push(player.state().track);
+    }
+    expect(seen).toEqual(['kitchen', 'roof', 'stars', 'space', 'kitchen']);
   });
 
   it('never has a third track sounding or over the memory cap, however fast the asks come', async () => {
@@ -511,6 +562,7 @@ describe('PlaylistPlayer', () => {
       },
       {
         clock: { currentTime: 0, setTimeout: () => null, clearTimeout: () => undefined },
+        playlist: MUSIC_PLAYLIST,
         random: () => 0.3,
         decode: () => Promise.reject(new Error('404')),
         openStream: () => null,

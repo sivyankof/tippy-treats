@@ -27,6 +27,12 @@ export function trackLoopSec(track: TrackLength): number {
   return track.frames / track.sampleRate;
 }
 
+/** A decoded seamless track ready to loop. */
+export interface Decoded {
+  buffer: AudioBuffer;
+  bounds: LoopBounds;
+}
+
 /** The loop of a decoded seamless track, in frames of the decoded buffer: [start, end). */
 export interface LoopBounds {
   start: number;

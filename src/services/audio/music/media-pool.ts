@@ -38,7 +38,8 @@ export class MediaPool {
     for (const media of this.all) {
       if (media.busy) continue;
       try {
-        media.el.src = url;
+        // A preloaded element keeps the file it is loading.
+        if (!media.el.getAttribute('src')) media.el.src = url;
         const started = media.el.play();
         // A lent element plays for real by now: only a still free one is paused.
         const pause = (): void => {

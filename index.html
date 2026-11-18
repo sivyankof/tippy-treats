@@ -51,27 +51,47 @@
             show('Unhandled: ' + (reason && reason.stack ? reason.stack : String(reason)));
           });
           // A start that hangs without an error (say, a promise that never settles) shows up too.
+          // The soundboard page has no game, so nothing to wait for there. The report is a box of
+          // its own and goes away by itself if the game does start after all.
+          var noGame = /[?&]soundboard=1(&|$)/.test(location.search);
+          function started() {
+            return !!document.querySelector('#app canvas');
+          }
           function report(seconds) {
-            if (document.querySelector('#app canvas')) return;
+            if (noGame || started()) return;
             var loaded = performance.getEntriesByType('resource');
             var last = loaded.slice(-4).map(function (entry) {
               var kb = Math.round((entry.transferSize || entry.encodedBodySize || 0) / 1024);
               var name = entry.name.replace(location.origin, '');
               return '  ' + name + ' ' + kb + ' KB ' + Math.round(entry.duration) + ' ms';
             });
-            show(
+            var late = document.getElementById('dev-boot-late');
+            if (!late) {
+              late = document.createElement('pre');
+              late.id = 'dev-boot-late';
+              late.style.cssText =
+                'position:fixed;left:0;right:0;bottom:0;z-index:99999;margin:0;padding:12px;' +
+                'max-height:40vh;overflow:auto;white-space:pre-wrap;font:12px/1.4 monospace;' +
+                'background:#fff3f3;color:#8a0010;border-top:2px solid #c00;';
+              (document.body || document.documentElement).appendChild(late);
+              var watch = setInterval(function () {
+                if (!started()) return;
+                clearInterval(watch);
+                if (late.parentNode) late.parentNode.removeChild(late);
+              }, 500);
+            }
+            late.textContent =
               'Build %BUILD_STAMP%\n' +
-                'The game did not start within ' +
-                seconds +
-                ' s. Last stage: ' +
-                (window.__bootStage || 'main.ts not running') +
-                '. Files loaded: ' +
-                loaded.length +
-                ', last ones:\n' +
-                last.join('\n') +
-                '\n' +
-                navigator.userAgent,
-            );
+              'The game did not start within ' +
+              seconds +
+              ' s. Last stage: ' +
+              (window.__bootStage || 'main.ts not running') +
+              '. Files loaded: ' +
+              loaded.length +
+              ', last ones:\n' +
+              last.join('\n') +
+              '\n' +
+              navigator.userAgent;
           }
           // A module that fails to load only fires a bare "error" on its <script> tag; a dynamic
           // import of the same entry rejects with the real reason (which file, what went wrong).

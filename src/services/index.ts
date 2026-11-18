@@ -4,7 +4,11 @@ import { t } from '../i18n';
 import { WebAds } from './rewarded-video/web';
 import type { AdsDevControl, AdsService } from './rewarded-video/types';
 import { createBrowserAudioContext, WebAudioService } from './audio/web';
-import { createPlaylistPlayer } from './audio/music/playlist-player';
+import { MUSIC_PLAYLIST } from '../data/music';
+import { playableTracks, setupAudioSession } from './audio/music/audio-session';
+import { createMusicPreload } from './audio/music/music-preload';
+import { playlistPlayerFactory } from './audio/music/playlist-player';
+import { trackUrl } from './audio/music/tune-loader';
 import type { ShareService } from './share/types';
 import type { SilentModeService } from './silent-mode/types';
 import { WebSilentMode } from './silent-mode/web';
@@ -55,7 +59,23 @@ const webIap = new WebIap(stubCatalog);
  * the web ones; native haptics, ads and purchases chosen by Capacitor.isNativePlatform() arrive
  * in stage M7.
  */
-const webAudio = new WebAudioService(createBrowserAudioContext, Math.random, createPlaylistPlayer);
+// Before any audio context or media element: the page's audio session obeys the silent switch.
+const audioSession = setupAudioSession(typeof navigator === 'undefined' ? undefined : navigator);
+const musicPlaylist = playableTracks(MUSIC_PLAYLIST, audioSession.streams);
+// The first track of the playlist loads while the game does, so the music starts right after the first tap.
+const musicPreload = createMusicPreload(musicPlaylist, audioSession.streams, (track) =>
+  trackUrl(track),
+);
+musicPreload.start();
+const webAudio = new WebAudioService(
+  createBrowserAudioContext,
+  Math.random,
+  playlistPlayerFactory({
+    playlist: musicPlaylist,
+    streams: audioSession.streams,
+    preload: musicPreload,
+  }),
+);
 
 export const services: Services = {
   audio: webAudio,

@@ -44,11 +44,11 @@ describe('MusicProxy', () => {
 
   it('a hold asked before the player exists reaches it', () => {
     const proxy = new MusicProxy();
-    proxy.hold('pause', true);
+    proxy.hold('app', true);
     proxy.playlist();
     const real = recorder();
     proxy.attach(real);
-    expect(real.log).toEqual(['hold pause true', 'playlist']);
+    expect(real.log).toEqual(['hold app true', 'playlist']);
   });
 
   it('the switch off stops the player and keeps the track; on plays it again', () => {

@@ -39,6 +39,9 @@ class FakeMedia {
   removeAttribute(): void {
     this.src = '';
   }
+  getAttribute(name: string): string | null {
+    return name === 'src' && this.src ? this.src : null;
+  }
   load(): void {}
 }
 
@@ -164,6 +167,49 @@ describe('StreamDeck', () => {
     // No more passes were asked: it does not loop again.
     await advance(LENGTH);
     expect(elements.slice(2).filter((e) => e.plays > 1)).toHaveLength(0);
+  });
+
+  it('an element preloaded with the file keeps it through the blessing and the start', async () => {
+    const elements: FakeMedia[] = [];
+    const preloaded = new FakeMedia();
+    preloaded.src = '/menu.m4a';
+    let made = 0;
+    const ctx = {
+      currentTime: 0,
+      createGain: () => new FakeGain(),
+      createMediaElementSource: () => new FakeGain(),
+    };
+    const pool = new MediaPool(
+      ctx as unknown as MediaContext,
+      () => {
+        const el = made++ === 0 ? preloaded : new FakeMedia();
+        elements.push(el);
+        return el as unknown as HTMLMediaElement;
+      },
+      2,
+    );
+    pool.bless('/other.m4a');
+    expect(preloaded.src).toBe('/menu.m4a');
+    expect(elements[1]?.src).toBe('/other.m4a');
+    const deck = StreamDeck.open(
+      ctx as unknown as BaseAudioContext,
+      { currentTime: 0, setTimeout: () => null, clearTimeout: () => undefined },
+      pool,
+      'menu',
+      SPEC,
+      '/menu.m4a',
+      false,
+    );
+    let reloads = 0;
+    Object.defineProperty(preloaded, 'src', {
+      get: () => '/menu.m4a',
+      set: () => {
+        reloads += 1;
+      },
+    });
+    await deck?.start(0);
+    expect(reloads).toBe(0);
+    expect(preloaded.paused).toBe(false);
   });
 
   it('counts what it played from where it started', async () => {

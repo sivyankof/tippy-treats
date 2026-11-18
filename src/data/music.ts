@@ -137,6 +137,8 @@ export const MUSIC = {
   busLufs: -20,
   /** A change of track: the old one fades out, the new one in, over this long. */
   crossfadeSec: 2.5,
+  /** The music coming in from silence (the first tap, the music switch) rises this fast. */
+  entrySec: 0.3,
   /** Every track of the playlist plays at least this long: a seamless loop whole rounds up to it. */
   minPlaySec: 150,
   /** The next seamless track of the playlist is decoded this long before its change. */
