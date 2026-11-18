@@ -2,6 +2,7 @@ import * as Phaser from 'phaser';
 import { ANIM } from '../../data/anim';
 import { BALANCE } from '../../data/balance';
 import { HUD_LAYOUT } from '../../data/hud-layout';
+import { MENU } from '../../data/menu-layout';
 import { IDLE_MOTION, IDLE_PHASE } from '../../data/idle-motion';
 import { PALETTE } from '../../data/palette';
 import { t } from '../../i18n';
@@ -23,7 +24,6 @@ export interface PlateEdge {
   height: number;
 }
 
-const TRACK_ALPHA = 0.35;
 const TEXTURES = {
   track: 'ui_bar_track',
   ok: 'ui_bar_ok',
@@ -38,6 +38,7 @@ const {
   labelFont,
   barY,
   barPlate,
+  trackBorder,
   barDangerText,
   tempoChip,
 } = HUD_LAYOUT;
@@ -83,13 +84,18 @@ export class WobbleBar {
   constructor(scene: Phaser.Scene) {
     // Track and fills are baked once with the volume of the kit's bars (`style/volume-bar.ts`);
     // in the frame only the fill is stretched.
-    bakeTexture(scene, TEXTURES.track, barWidth, barHeight, (g) =>
-      drawBarTrack(
-        g,
-        { left: 0, top: 0, width: barWidth, height: barHeight, radius: TRACK_RADIUS },
-        { back: PALETTE.textDark, alpha: TRACK_ALPHA },
-      ),
-    );
+    bakeTexture(scene, TEXTURES.track, barWidth, barHeight, (g) => {
+      // Like the baker level bar: a dark warm frame round a grooved empty part.
+      g.fillStyle(PALETTE.textDark, 1).fillRoundedRect(0, 0, barWidth, barHeight, TRACK_RADIUS);
+      const inner = {
+        left: trackBorder,
+        top: trackBorder,
+        width: barWidth - trackBorder * 2,
+        height: barHeight - trackBorder * 2,
+        radius: TRACK_RADIUS - trackBorder,
+      };
+      drawBarTrack(g, inner, { back: MENU.xpBar.back });
+    });
     const minFill = FILL_HEIGHT;
     const bakeFill = (key: string, color: number): void =>
       bakeTexture(scene, key, minFill * 2, FILL_HEIGHT, (g) =>

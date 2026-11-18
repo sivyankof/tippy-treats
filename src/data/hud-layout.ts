@@ -1,5 +1,5 @@
 const BAR_Y = 346;
-const BAR_HEIGHT = 30;
+const BAR_HEIGHT = 36;
 const BADGE_ROW_Y = 468;
 const BADGE_SIZE = 108;
 const BADGE_COUNTER_INSET = 10;
@@ -29,7 +29,10 @@ export const HUD_LAYOUT = {
   barY: BAR_Y,
   barWidth: 520,
   barHeight: BAR_HEIGHT,
-  barPad: 5,
+  /** Gap between the frame of the gauge and its fill. */
+  barPad: 4,
+  /** The dark frame round the empty part of the gauge. */
+  trackBorder: 3,
   labelGap: 14,
   /** Room around the wobble label and gauge on their plate (a `HudPlate` of the kit). */
   barPlate: { padX: 30, padY: 8 },
