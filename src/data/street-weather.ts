@@ -5,6 +5,12 @@
  * the weather of the Roof, so everything here is more muted.
  */
 
+import { BALANCE } from './balance';
+import { LOGICAL_SIZE } from './screen';
+import type { EffectLevel } from './effect-levels';
+import { GLASS_WEATHER } from './window-look';
+import { WEATHER_LOOK } from './weather-look';
+
 /** The kinds of falling pictures the street shows. */
 export type StreetFallKind = 'rain' | 'storm' | 'snow' | 'leaves';
 
@@ -14,27 +20,59 @@ interface StreetFallLook {
   scale: number;
 }
 
+/** What the street may show on a level: the level's limit of pictures less the drops or flakes on the glass (they stay on lite, go on minimal). */
+function streetRoom(kind: StreetFallKind, level: EffectLevel): number {
+  const glass = level === 'minimal' ? 0 : (GLASS_WEATHER[kind]?.showcase ?? 0);
+  return Math.max(WEATHER_LOOK.particleCount[level] - glass, 0);
+}
+
+const poolOf = (kind: StreetFallKind): number => streetRoom(kind, 'full');
+
+/** What a street pool of falling pictures needs (the game's `FallView` takes it as it is). */
+export interface StreetFallView extends StreetFallLook {
+  count: number;
+  shown: Record<EffectLevel, number>;
+  outside?: { share: number; stripShare: number };
+  slantShare?: number;
+  sides?: { bias: number; share: number };
+}
+
 export const STREET_WEATHER = {
   /**
-   * Falling pictures on the full level (lite shows half, minimal none). With the drops and flakes on the
-   * glass (`GLASS_LOOK`: 7 / 10 / 9 / 3) the zone stays within `WEATHER_LOOK.particleCount` on every level.
+   * Falling pictures in the pool: what the glass leaves of the limit of the full level (`WEATHER_LOOK.particleCount`),
+   * so the street shows as many as the limit allows (session 5g: the weather must read at first glance). The lower
+   * levels fill their own limit the same way (`streetShown`), minimal none.
    */
-  count: { rain: 24, storm: 20, snow: 22, leaves: 18 } satisfies Record<StreetFallKind, number>,
+  count: {
+    rain: poolOf('rain'),
+    storm: poolOf('storm'),
+    snow: poolOf('snow'),
+    leaves: poolOf('leaves'),
+  } satisfies Record<StreetFallKind, number>,
+  /**
+   * The rain starts mostly outside the tower (it hides the middle): this share of the drops in the two strips beside
+   * it. The lean of the fall smears it, so it is more than the strips' own share (`stripShare`).
+   */
+  outsideShare: 0.55,
+  /** The snow starts mostly in the strips beside the tower (the lanes there; the middle is behind the tower). */
+  snowSides: { bias: 0.9, share: 0.17 },
+  /** The rain on the street leans this share of the Roof's lean. */
+  slantShare: 0.5,
   /** The falling pictures are this share of their Roof alpha and size: they are out on the street. */
-  alpha: 0.6,
-  scale: 0.85,
+  alpha: 0.85,
+  scale: 0.96,
   /**
    * A kind whose pictures get lost at that share keeps more of its Roof look. White flakes on the pale street
    * of a tall screen all but vanished at 0.6 / 0.85 (their count cannot grow: the lite level is full with the
    * flakes on the glass), so snow is only a little muted.
    */
-  own: { snow: { alpha: 0.9, scale: 0.95 } } as Partial<Record<StreetFallKind, StreetFallLook>>,
+  own: { snow: { alpha: 0.97, scale: 0.99 } } as Partial<Record<StreetFallKind, StreetFallLook>>,
   /** The cloud bank of the Roof over the houses: smaller (the Roof shows it at 1.27) and paler; it still spans the screen and its drift. */
   bank: {
-    scaleX: 1.1,
-    scaleY: 1.1,
+    scaleX: 1.17,
+    scaleY: 1.17,
     alpha: 0.75,
-    driftPx: 20,
+    driftPx: 14,
     /** The storm flashes light the clouds as brightly as on the Roof; no bolt comes down to the street. */
     flashShare: 1,
     bolt: false,
@@ -61,19 +99,37 @@ export const STREET_WEATHER = {
     shade: 0xa9b3d2,
     alpha: 1,
     /** How far the cap reaches past the sides of the roof, its height, and the bumps along its lower edge. */
-    overhang: 5,
-    height: 18,
-    shadeHeight: 5,
-    drips: [0.2, 0.55, 0.82] as readonly number[],
-    dripRadius: 5,
+    overhang: 9,
+    height: 30,
+    shadeHeight: 8,
+    drips: [0.16, 0.38, 0.6, 0.84] as readonly number[],
+    dripRadius: 8,
+    /** The same snow lies on the top of the awnings (px of the tile): the heap's height and the bumps along its top. */
+    awningHeight: 26,
+    awningBumps: [0.12, 0.34, 0.58, 0.8] as readonly number[],
+    awningBumpRadius: 14,
   },
 } as const;
 
 /** How many pictures of a kind fall on the street, and the share of their Roof alpha and size they show at. */
-export function streetFallView(kind: StreetFallKind): StreetFallLook & { count: number } {
+export function streetFallView(kind: StreetFallKind): StreetFallView {
   const own = STREET_WEATHER.own[kind];
   return {
     count: STREET_WEATHER.count[kind],
+    outside:
+      kind === 'rain' || kind === 'storm'
+        ? {
+            share: STREET_WEATHER.outsideShare,
+            stripShare: 1 - BALANCE.tray.width / LOGICAL_SIZE.width,
+          }
+        : undefined,
+    sides: kind === 'snow' ? STREET_WEATHER.snowSides : undefined,
+    slantShare: kind === 'rain' || kind === 'storm' ? STREET_WEATHER.slantShare : undefined,
+    shown: {
+      full: streetRoom(kind, 'full'),
+      lite: streetRoom(kind, 'lite'),
+      minimal: streetRoom(kind, 'minimal'),
+    },
     alpha: own?.alpha ?? STREET_WEATHER.alpha,
     scale: own?.scale ?? STREET_WEATHER.scale,
   };

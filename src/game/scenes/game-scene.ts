@@ -137,7 +137,11 @@ export class GameScene extends Phaser.Scene {
     this.flying.reset();
     if (import.meta.env.DEV) installCutDebug(this);
     this.continueFlow?.dispose();
-    this.continueFlow = new ContinueFlow({ ads: rewardedAds, wallet: gameState, player: gameState });
+    this.continueFlow = new ContinueFlow({
+      ads: rewardedAds,
+      wallet: gameState,
+      player: gameState,
+    });
 
     const { width, height } = this.scale.gameSize;
     this.background = new Backdrop(this, TRAY_TOP_Y, width, height, this.sim.state, setup.look);

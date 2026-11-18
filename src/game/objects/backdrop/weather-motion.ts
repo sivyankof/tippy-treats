@@ -15,6 +15,18 @@ const SIDE_STEP = 0.378;
 const DEPTH_STEP = 0.5698402909980532;
 
 /**
+ * Moves an even spread `u` (0..1) so that `outsideShare` of it falls into the two outer strips of the width (each
+ * `stripShare / 2` wide) and the rest over the middle, each part still even: the tower hides the middle, so the drops
+ * move to where they are seen.
+ */
+export function sideWarp(u: number, outsideShare: number, stripShare: number): number {
+  const half = stripShare / 2;
+  if (u >= outsideShare) return half + ((u - outsideShare) / (1 - outsideShare)) * (1 - stripShare);
+  const t = (u / outsideShare) * 2;
+  return t < 1 ? t * half : 1 - half + (t - 1) * half;
+}
+
+/**
  * Start spots (`u` across, `v` down, both 0..1) of `count` raindrops. All the heights are the cells of an even
  * grid, but dealt out in the order of a low-discrepancy sequence, so for ANY first N drops (a lighter effects level
  * shows only a prefix) they cover the height evenly, and all of them fill it with no gap. Across, the drops step
@@ -125,6 +137,14 @@ export function rainDropsShown(pool: number, level: EffectLevel): number {
  */
 export interface FallView {
   count: number;
+  /** Rain only: this share of the drops start in the two outer strips of the screen width (`towerShare` is the tower's, in the middle). */
+  outside?: { share: number; stripShare: number };
+  /** Rain only: the lean of the fall is this share of the Roof's (the street is far, the rain falls steeper there and keeps where it started). */
+  slantShare?: number;
+  /** Snow only: the share of the flakes that start in the two side strips, and the strip width (shares of the screen); the Roof's own when unset. */
+  sides?: { bias: number; share: number };
+  /** How many show on each level, when that is not the level's share of `count` (the street fills what the glass leaves of the level limit). */
+  shown?: Record<EffectLevel, number>;
   alpha: number;
   scale: number;
 }
@@ -140,6 +160,7 @@ export function fallShown(
   view: FallView | null,
 ): number {
   if (rain && !view) return rainDropsShown(pool, level);
+  if (view?.shown) return Math.min(pool, view.shown[level]);
   return Math.round((pool * WEATHER_LOOK.particleCount[level]) / WEATHER_LOOK.particleCount.full);
 }
 

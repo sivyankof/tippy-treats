@@ -65,7 +65,7 @@ function farTint(weather: WeatherId): number | undefined {
 }
 /** The awning picture: its own (muted towards the sky) where `AWNING_WEATHER` has an entry, otherwise the usual one. */
 const awningKey = (weather: WeatherId): string =>
-  AWNING_WEATHER[weather] ? `${S.awning}_${weather}` : S.awning;
+  AWNING_WEATHER[weather] || weather === 'snow' ? `${S.awning}_${weather}` : S.awning;
 /** An opaque awning layer where the weather asks for it (night), otherwise the zone's own alphas. */
 function awningAlpha(weather: WeatherId): number[] | undefined {
   const alpha = AWNING_WEATHER[weather]?.alpha;
@@ -120,6 +120,19 @@ function glint(
 ): void {
   g.fillTriangle(x, y, x + width, y, x + lean, y + height);
   g.fillTriangle(x + width, y, x + lean + width, y + height, x + lean, y + height);
+}
+
+/** Snow on the top of the awning: the tile repeats, so a heap along the bottom of the tile lies on the awning of the tile below. */
+function awningCap(g: Graphics): void {
+  const c = STREET_WEATHER.cap;
+  const top = TILE - c.awningHeight;
+  const heap = (color: number, grow: number): void => {
+    g.fillStyle(color, c.alpha);
+    g.fillRect(0, top - grow, TILE, c.awningHeight + grow);
+    for (const u of c.awningBumps) g.fillCircle(u * TILE, top - grow, c.awningBumpRadius + grow);
+  };
+  heap(c.shade, 2);
+  heap(c.snow, 0);
 }
 
 function bakeLayers(
@@ -179,6 +192,7 @@ function bakeLayers(
       g.fillRect(x, 0, stripe, 64);
       g.fillCircle(x + stripe / 2, 64, stripe / 2);
     }
+    if (weather === 'snow') awningCap(g);
   });
 }
 
