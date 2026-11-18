@@ -78,6 +78,11 @@ function ensureIcon(
   return icon;
 }
 
+/** The widest icon-and-caption pair a rewarded button of `buttonWidth` takes: `edgePad` stays free on each side. */
+export function adLabelRoom(buttonWidth: number): number {
+  return buttonWidth - VIDEO_CAPTION_LAYOUT.edgePad * 2;
+}
+
 /** Shows `icon` left of the text, the pair centred on the label's spot and fitted to `maxWidth`. */
 function layoutWithIcon(
   label: Phaser.GameObjects.Text,

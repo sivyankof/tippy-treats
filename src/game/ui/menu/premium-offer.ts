@@ -8,6 +8,7 @@ import { createTextButton } from '../button';
 import { createOutlinedText } from '../outlined-text';
 import { PopupWindow } from '../style/dialog-window';
 import { buyProduct } from '../../purchases';
+import { createBodyText } from './detail-info';
 import { fitText } from './fit-text';
 import { createNoAdsIcon } from './shop-premium-icon';
 
@@ -35,8 +36,9 @@ export function openNoAdsOffer(scene: Phaser.Scene, price: string, onClosed: () 
       repeat: -1,
     });
   }
-  const text = createOutlinedText(scene, 0, cfg.textY, t('shop.noAds.desc'), cfg.textFont)
-    .setAlign('center')
+  // The same dark body text as the shop card, so the long line reads on the light window.
+  const text = createBodyText(scene, t('shop.noAds.desc'), cfg.textFont, true)
+    .setPosition(0, cfg.textY)
     .setWordWrapWidth(popup.innerWidth);
   const note = createOutlinedText(scene, 0, cfg.noteY, '', cfg.noteFont);
   popup.content.add([text, note]);

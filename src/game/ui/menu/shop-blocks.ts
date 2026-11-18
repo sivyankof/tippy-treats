@@ -1,6 +1,6 @@
 import type * as Phaser from 'phaser';
 import type { Currency } from '../../../core/economy';
-import { markAdUnavailable, resetAdLabel } from './ad-unavailable';
+import { adLabelRoom, markAdUnavailable, resetAdLabel } from './ad-unavailable';
 import { productOwned } from '../../../core/shop';
 import { BERRY_PACKS } from '../../../data/economy';
 import { CREATURES, type CreatureId } from '../../../data/creatures';
@@ -18,6 +18,7 @@ import { createNoAdsIcon } from './shop-premium-icon';
 import {
   createShopRow,
   createShopSection,
+  rowButtonLayout,
   rowPriceButton,
   pileIcon,
   rowTextButton,
@@ -87,19 +88,20 @@ export function creaturesSection(scene: Phaser.Scene, a: ShopActions): DailySect
 export function freeSection(scene: Phaser.Scene, a: ShopActions, adReady: boolean): DailySection {
   const left = gameState.freeCoinsLeft;
   const { amount, perDay } = SHOP.freeCoins;
+  const freeRoom = adLabelRoom(rowButtonLayout('wide').width);
   let button: Button;
   if (left <= 0) {
     button = rowTextButton(scene, t('shop.free.done'), MENU.style.shortFill, 'wide', () => {});
     button.setEnabled(false);
   } else if (!adReady) {
     const parts = rowTextParts(scene, t('shop.free.watch'), MENU.style.shortFill, 'wide', () => {});
-    markAdUnavailable(parts.button, parts.label, parts.labelWidth, 1);
+    markAdUnavailable(parts.button, parts.label, freeRoom, 1);
     button = parts.button;
   } else {
     const parts = rowTextParts(scene, t('shop.free.watch'), PALETTE.accent, 'wide', () =>
       a.watchAd(),
     );
-    resetAdLabel(parts.label, parts.labelWidth);
+    resetAdLabel(parts.label, freeRoom);
     button = parts.button;
   }
   const item = createShopRow(scene, {

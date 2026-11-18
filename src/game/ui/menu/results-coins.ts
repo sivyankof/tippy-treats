@@ -10,12 +10,13 @@ import { TREASURE_TEXTURES, createTreasureTextures } from '../../fx/treasure-tex
 import { createTextButton, type Button } from '../button';
 import { NumberRoll } from '../number-roll';
 import { createOutlinedText } from '../outlined-text';
-import { markAdUnavailable, plainAdLabel, resetAdLabel } from './ad-unavailable';
+import { adLabelRoom, markAdUnavailable, plainAdLabel, resetAdLabel } from './ad-unavailable';
 import { fitText } from './fit-text';
 import { stackRows, type Row } from './results-layout';
 import type { CoinLine } from './results-text';
 
 const cfg = MENU.results;
+const adRoom = adLabelRoom(cfg.adButton.width);
 
 /**
  * The coins of the run: the total with a coin icon, the breakdown by source and the
@@ -59,7 +60,7 @@ export class ResultsCoins {
       const { button, label } = createTextButton(scene, {
         text: t('results.doubleLeft', { n: left }),
         font: cfg.adButton.font,
-        maxLabelWidth: cfg.adButton.width - cfg.adTextPadding,
+        maxLabelWidth: adRoom,
         fill: PALETTE.accentSecondary,
         layout: cfg.adButton,
         keyPrefix: 'ui_results_ad',
@@ -67,7 +68,7 @@ export class ResultsCoins {
       });
       this.buttonLabel = label;
       this.button = button;
-      resetAdLabel(label, cfg.adButton.width - cfg.adTextPadding);
+      resetAdLabel(label, adRoom);
       rows.push({ obj: this.button, height: cfg.adButton.height });
     }
     this.height = stackRows(this.container, rows, cfg.rowGap);
@@ -120,12 +121,7 @@ export class ResultsCoins {
   private markAdGone(): void {
     if (!this.button || !this.buttonLabel) return;
     this.adGone = true;
-    markAdUnavailable(
-      this.button,
-      this.buttonLabel,
-      cfg.adButton.width - cfg.adTextPadding,
-      cfg.adDisabledAlpha,
-    );
+    markAdUnavailable(this.button, this.buttonLabel, adRoom, cfg.adDisabledAlpha);
   }
 
   private async watchAd(): Promise<void> {
@@ -142,7 +138,7 @@ export class ResultsCoins {
       }
       this.roll.set(this.earned * 2);
       this.buttonLabel?.setText(t('results.doubled'));
-      if (this.buttonLabel) plainAdLabel(this.buttonLabel, cfg.adButton.width - cfg.adTextPadding);
+      if (this.buttonLabel) plainAdLabel(this.buttonLabel, adRoom);
       services.audio.coin();
       return;
     }

@@ -2,7 +2,7 @@ import type * as Phaser from 'phaser';
 import { PALETTE } from '../../../data/palette';
 import { t } from '../../../i18n';
 import { createTextButton, type Button } from '../button';
-import { markAdUnavailable, resetAdLabel } from './ad-unavailable';
+import { adLabelRoom, markAdUnavailable, resetAdLabel } from './ad-unavailable';
 
 type Layout = { width: number; height: number; radius: number; shadowOffset: number; font: number };
 
@@ -15,12 +15,11 @@ export class DailyAdButton {
   constructor(
     scene: Phaser.Scene,
     private readonly layout: Layout,
-    padding: number,
     private readonly disabledAlpha: number,
     keyPrefix: string,
     onClick: () => void,
   ) {
-    this.labelWidth = layout.width - padding;
+    this.labelWidth = adLabelRoom(layout.width);
     const { button, label } = createTextButton(scene, {
       text: t('daily.extraAttempt'),
       font: layout.font,
