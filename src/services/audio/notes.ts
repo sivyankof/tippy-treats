@@ -41,11 +41,6 @@ export function collapseThudGain(index: number): number {
   return Math.max(SFX.collapse.gainFloor, Math.pow(SFX.collapse.gainFalloff, steps));
 }
 
-/** A value of the span `[min, max]` picked with `random` (0..1). */
-export function randomIn(span: readonly [min: number, max: number], random: () => number): number {
-  return span[0] + (span[1] - span[0]) * random();
-}
-
 /**
  * A copy of a note or noise recipe `timeShare` as long and `gainShare` as loud (a shorter, quieter
  * variant of an existing sound); the delay of a timed one moves with the time.

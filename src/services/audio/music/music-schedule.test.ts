@@ -188,6 +188,20 @@ describe('scheduleWindow', () => {
     },
   );
 
+  it.each(ALL)('%s: a cached plan gives the same events as a fresh one', (_, song) => {
+    const levels = fullLevels(song);
+    const { loopSec } = songTiming(song);
+    const end = loopSec * 2 + 1;
+    const cache = new Map<number, LoopPlan>();
+    for (let t = 0; t < end; t += MUSIC_PLAY.aheadSec) {
+      const to = Math.min(end, t + MUSIC_PLAY.aheadSec);
+      expect(scheduleWindow(song, 8, levels, t, to, cache)).toEqual(
+        scheduleWindow(song, 8, levels, t, to),
+      );
+    }
+    expect(cache.size).toBeGreaterThan(0);
+  });
+
   it.each(ALL)('%s: the loop seam lines up exactly with the loop length', (_, song) => {
     const levels = fullLevels(song);
     const { loopSec, barSec } = songTiming(song);

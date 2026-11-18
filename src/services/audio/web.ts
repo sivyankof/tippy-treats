@@ -1,5 +1,6 @@
 import type { Rarity } from '../../data/rarity';
 import type { BedKind } from '../../data/weather-bed';
+import { MS_PER_SECOND } from '../../util/math';
 import { BedPlayer } from './bed';
 import type { DuckReason } from './mixer-math';
 import { Mixer } from './mixer';
@@ -47,6 +48,8 @@ export class WebAudioService implements AudioService, AudioDevControl {
   private musicOn = true;
   private readonly holds = new Set<AudioSuspendReason>();
   private ctx: AudioContext | null = null;
+  /** The graph could not be built: no more tries, the game plays on without sound. */
+  private buildFailed = false;
   private mixer: Mixer | null = null;
   private player: SoundPlayer | null = null;
   private beds: BedPlayer | null = null;
@@ -104,8 +107,10 @@ export class WebAudioService implements AudioService, AudioDevControl {
 
   unlock(): void {
     if (!this.ctx) {
+      if (this.buildFailed) return;
+      let ctx: AudioContext | null = null;
       try {
-        const ctx = this.createContext();
+        ctx = this.createContext();
         if (!ctx) return;
         const mixer = new Mixer(ctx);
         const synth = new Synth(ctx, mixer, this.random);
@@ -120,10 +125,17 @@ export class WebAudioService implements AudioService, AudioDevControl {
         for (const reason of this.ducks) mixer.duckMusic(reason, true);
         this.musicProxy.attach(this.musicFactory(musicHostOf(mixer, this.random)));
       } catch {
+        // Sound stays off: do not leave a context behind or make another one on the next tap.
+        this.buildFailed = true;
         this.ctx = null;
         this.mixer = null;
         this.player = null;
         this.beds = null;
+        try {
+          ctx?.close().catch(() => undefined);
+        } catch {
+          // Ignore: the context may be closed already.
+        }
         return;
       }
     }
@@ -204,7 +216,7 @@ export class WebAudioService implements AudioService, AudioDevControl {
     this.recordDuckTimer = setTimeout(() => {
       this.recordDuckTimer = null;
       this.duckMusic('record', false);
-    }, length * 1000);
+    }, length * MS_PER_SECOND);
   }
 
   /** The silent unlock source, until the context runs; never throws. */

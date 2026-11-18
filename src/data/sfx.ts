@@ -322,8 +322,6 @@ export const SFX = {
     gainFalloff: 0.9,
     /** Slaps never get quieter than this share. */
     gainFloor: 0.12,
-    /** Calls closer than this to the previous slap are dropped, so a 100-layer fall stays a rumble. */
-    minIntervalSec: 0.045,
   },
 
   /** "Рекорд": a fanfare of 5 notes. */

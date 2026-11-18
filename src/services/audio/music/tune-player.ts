@@ -1,6 +1,7 @@
 import { MUSIC_PLAY } from '../../../data/music/music-play';
 import type { Song } from '../../../data/music/song';
 import { DEFAULT_MUSIC_VARIANT, SONGS } from '../../../data/music/songs';
+import { randomSeed } from '../../../util/math';
 import type { MusicControl, MusicFactory, MusicHost, MusicStartOptions } from '../music-control';
 import type { TimedSource } from '../node-tally';
 import { MusicVoices } from './music-voices';
@@ -9,7 +10,7 @@ import {
   initialLevels,
   retargetLevels,
   scheduleWindow,
-  variationSeed,
+  type LoopPlan,
   type NoteEvent,
   type PartLevel,
 } from './music-schedule';
@@ -29,6 +30,9 @@ export interface OfflinePlan {
   only?: number;
 }
 
+/** Loop plans kept at a time (the loop playing and the next one). */
+const MAX_CACHED_PLANS = 4;
+
 /**
  * The music player (`MusicControl`). Live, a look-ahead clock wakes every `tickMs` and schedules
  * the notes that start within `aheadSec`; notes whose time has passed (the context was suspended
@@ -41,6 +45,8 @@ export class TunePlayer implements MusicControl {
   private readonly active = new Set<TimedSource>();
   private song: Song | null = null;
   private seed = 0;
+  /** Loop plans of the current song, built once each (the tick runs every 25 ms). */
+  private readonly plans = new Map<number, LoopPlan>();
   /** Context time of song time 0. */
   private origin = 0;
   /** Song time up to which notes are scheduled. */
@@ -66,7 +72,8 @@ export class TunePlayer implements MusicControl {
     this.song = song;
     this.layer = clampLayer(options.layer);
     this.menu = options.menu ?? false;
-    this.seed = variationSeed(this.host.random);
+    this.seed = randomSeed(this.host.random);
+    this.plans.clear();
     this.origin = now + MUSIC_PLAY.startLeadSec;
     this.scheduledTo = 0;
     this.levels = initialLevels(song, this.heardLayer());
@@ -163,7 +170,9 @@ export class TunePlayer implements MusicControl {
   private scheduleUntil(from: number, to: number): void {
     const { song, out } = this;
     if (!song || !out || to <= from) return;
-    for (const event of scheduleWindow(song, this.seed, this.levels, from, to)) {
+    // Only the loops around now are ever asked for again.
+    if (this.plans.size > MAX_CACHED_PLANS) this.plans.clear();
+    for (const event of scheduleWindow(song, this.seed, this.levels, from, to, this.plans)) {
       this.playEvent(song, event, out);
     }
     this.scheduledTo = to;

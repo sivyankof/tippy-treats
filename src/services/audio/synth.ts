@@ -7,6 +7,7 @@ import {
 } from '../../data/sfx';
 import { WEATHER_BED, type BedKind } from '../../data/weather-bed';
 import { makeBedBuffer, startBed } from './bed';
+import { noiseBuffer } from './noise-buffer';
 import type { Mixer } from './mixer';
 import { runSource, type NodeTally } from './node-tally';
 
@@ -166,13 +167,7 @@ export class Synth {
   }
 
   private getNoiseBuffer(): AudioBuffer {
-    if (!this.noiseBuffer) {
-      const length = Math.ceil(this.ctx.sampleRate * SFX.noise.bufferSeconds);
-      const buffer = this.ctx.createBuffer(1, length, this.ctx.sampleRate);
-      const data = buffer.getChannelData(0);
-      for (let i = 0; i < length; i++) data[i] = this.random() * 2 - 1;
-      this.noiseBuffer = buffer;
-    }
+    this.noiseBuffer ??= noiseBuffer(this.ctx, SFX.noise.bufferSeconds, this.random);
     return this.noiseBuffer;
   }
 }

@@ -1,7 +1,6 @@
 import { Rng } from '../../../core/rng';
 import { MUSIC_PLAY } from '../../../data/music/music-play';
 import type { Bar, Song } from '../../../data/music/song';
-import { UINT32_RANGE } from '../../../util/math';
 
 /**
  * The pure side of the music player: song timing, the variation plan of each loop, the fade of
@@ -164,7 +163,8 @@ function heard(level: PartLevel | undefined, time: number): boolean {
 
 /**
  * Every note that starts in [from, to) of song time, in time order. A bar rest is skipped when
- * no other part is heard at that bar (a lone lead never falls silent).
+ * no other part is heard at that bar (a lone lead never falls silent). `plans` caches the plan
+ * of each loop: a caller that asks window after window passes the same map to build each once.
  */
 export function scheduleWindow(
   song: Song,
@@ -172,12 +172,12 @@ export function scheduleWindow(
   levels: readonly PartLevel[],
   from: number,
   to: number,
+  plans: Map<number, LoopPlan> = new Map(),
 ): NoteEvent[] {
   if (!(to > from)) return [];
   const { stepSec, stepsPerBar, barSec } = songTiming(song);
   const firstBar = Math.max(0, Math.floor(from / barSec));
   const lastBar = Math.floor(to / barSec);
-  const plans = new Map<number, LoopPlan>();
   const events: NoteEvent[] = [];
   for (let absBar = firstBar; absBar <= lastBar; absBar++) {
     const loop = Math.floor(absBar / song.bars);
@@ -204,9 +204,4 @@ export function scheduleWindow(
     });
   }
   return events.sort((a, b) => a.time - b.time);
-}
-
-/** A fresh seed of the variations from a random source. */
-export function variationSeed(random: () => number): number {
-  return Math.floor(random() * UINT32_RANGE) >>> 0;
 }

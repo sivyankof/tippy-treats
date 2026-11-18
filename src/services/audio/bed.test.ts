@@ -93,6 +93,24 @@ describe('startBed', () => {
     src.onended?.();
     expect(mixer.tally.live).toBe(0);
   });
+
+  it('fades the swell out with the gain, so the sum reaches silence', () => {
+    const { ctx, mixer, nodes } = rig();
+    const voice = startBed(ctx, mixer, buffer, recipe, null);
+    const lfoGain = nodes[4]!;
+    expect(lfoGain.gain.value).toBeGreaterThan(0);
+    voice.stop();
+    expect(lfoGain.gain.value).toBe(0);
+  });
+
+  it('releases the nodes once when the source and the LFO both end', () => {
+    const { ctx, mixer, nodes } = rig();
+    startBed(ctx, mixer, buffer, recipe, 5);
+    nodes[0]!.onended?.();
+    nodes[3]!.onended?.();
+    nodes[0]!.onended?.();
+    expect(mixer.tally.live).toBe(0);
+  });
 });
 
 describe('BedPlayer', () => {

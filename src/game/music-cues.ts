@@ -28,8 +28,18 @@ export function playMenuMusic(): void {
   if (!startOnce(1, true)) services.audio.music.setMenu(true);
 }
 
-/** The screens that play the menu music when they open (the other menus are reached from these). */
-const MENU_SCENES = [SCENES.home, SCENES.newCreature, SCENES.results] as const;
+/** Every screen that is not the run (game and HUD): each turns the music to the menu arrangement when it opens. */
+const MENU_SCENES = [
+  SCENES.home,
+  SCENES.team,
+  SCENES.collection,
+  SCENES.creatureDetail,
+  SCENES.daily,
+  SCENES.shop,
+  SCENES.newCreature,
+  SCENES.results,
+  SCENES.lineup,
+] as const;
 
 /** Call once at start-up: every menu screen turns the music to the menu arrangement as it opens. */
 export function bindMenuMusic(game: Phaser.Game): void {
