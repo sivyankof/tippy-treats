@@ -190,6 +190,8 @@ export const WALL_LOOK = {
   featherPx: 80,
   /** The mute grows over this much scroll (px of the wall), so the start view stands as drawn. */
   muteRampPx: 150,
+  /** A fitted thing (the panoramic window) the tower has covered completely for this long (ms) is gone for good and frees its pictures. */
+  retireAfterMs: 3000,
   /** A copy this far (px) beyond the screen edge, past its own half height, is only hidden. */
   offscreenSlackPx: 40,
 } as const;
@@ -344,6 +346,15 @@ export const PANORAMA = {
   height: 640,
   /** Glass inside the picture. */
   glass: { x: 64, y: 72, w: 512, h: 456 },
+  /**
+   * The picture is baked at `bakeScale` of its drawn size (the layers of the game are baked at 2/3 of theirs) and cut into
+   * `cols` x `rows` pieces, each its own cell of the shared atlas, edge to edge (no overlap: a muted window would show the
+   * doubled pixels as lines). One 640 px tall cell took a 648 px shelf of the page (0.09-0.13 of its peak); strips as wide
+   * as the picture wasted the height of the shelves they stood in; pieces about 145 px square fit the 160 px shelves of
+   * the layer pictures, which have room for three (docs/08, journal).
+   */
+  pieces: { cols: 3, rows: 3 },
+  bakeScale: 2 / 3,
   /** Frame outline and the width of the frame around the glass. */
   outlinePx: 6,
   framePx: 34,
@@ -364,7 +375,7 @@ export const PANORAMA = {
   /** Drops, flakes and leaves of the pane: counts per weather (the lite level shows half), size against the small window's. */
   items: { rain: 12, storm: 16, snow: 14, leaves: 5, size: 1.5 },
   /** The storm flash in the glass: peak alpha, colour, the texture is baked this much smaller than the glass. */
-  flash: { alpha: 0.7, color: 0xf6f9ff, bakeShare: 0.5 },
+  flash: { alpha: 0.7, color: 0xf6f9ff, bakeShare: 0.25 },
   /** Gap kept to the HUD plates (the same as the flying layer's). */
   hudGapPx: FLIGHT_CLEAR.hudGapPx,
 } as const;
@@ -372,6 +383,47 @@ export const PANORAMA = {
 /** Key of the baked panoramic window of a place and weather, and of the glass-shaped flash of its storm. */
 export function panoramaKey(place: StartPlaceId, weather: WeatherId): string {
   return `bd_win_pano_${place}_${weather}`;
+}
+
+/**
+ * One piece of the panoramic window: its rectangle in the baked picture (baked px) and the offset of its centre from the
+ * picture's centre in drawn px (the units the window is laid out in).
+ */
+export interface PanoramaPiece {
+  key: string;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  centreX: number;
+  centreY: number;
+}
+
+export function panoramaPieces(place: StartPlaceId, weather: WeatherId): PanoramaPiece[] {
+  const { pieces, width, height, bakeScale } = PANORAMA;
+  const bakedW = Math.round(width * bakeScale);
+  const bakedH = Math.round(height * bakeScale);
+  const stepX = Math.ceil(bakedW / pieces.cols);
+  const stepY = Math.ceil(bakedH / pieces.rows);
+  const out: PanoramaPiece[] = [];
+  for (let r = 0; r < pieces.rows; r++) {
+    for (let c = 0; c < pieces.cols; c++) {
+      const x = c * stepX;
+      const y = r * stepY;
+      const w = Math.min(stepX, bakedW - x);
+      const h = Math.min(stepY, bakedH - y);
+      out.push({
+        key: `${panoramaKey(place, weather)}_p${r}${c}`,
+        x,
+        y,
+        width: w,
+        height: h,
+        centreX: (x + w / 2 - bakedW / 2) / bakeScale,
+        centreY: (y + h / 2 - bakedH / 2) / bakeScale,
+      });
+    }
+  }
+  return out;
 }
 
 export function panoramaFlashKey(place: StartPlaceId): string {
