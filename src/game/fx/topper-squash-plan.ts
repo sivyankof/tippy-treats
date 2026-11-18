@@ -13,6 +13,7 @@ import { squeezeDoneMs, type LayerMark } from '../objects/layer-mark-store';
 import { waveY, type GlazeWave } from '../objects/glaze-wave';
 import type { PopLaunch } from '../objects/topper-look';
 import type { ParticleState } from './particle-motion';
+import type { Blob } from './plain-style';
 
 /** What a layer that landed did to the topper of the layer below it. */
 export type SquashOutcome = 'hit' | 'edge' | 'miss';
@@ -280,15 +281,8 @@ export function creamRollTint(glaze: number): number {
   return mixColor(glaze, SQUASH_PICTURES.cream.cream, lerp(creamShare, darkGlaze.share, dark));
 }
 
-interface Oval {
-  cx: number;
-  cy: number;
-  rx: number;
-  ry: number;
-}
-
 /** The lowest point of an oval at `x` (its centre line outside it), drawn pixels. */
-export function ovalBottomAt(oval: Readonly<Oval>, x: number): number {
+export function ovalBottomAt(oval: Readonly<Blob>, x: number): number {
   const u = Math.min(1, Math.abs(x - oval.cx) / oval.rx);
   return oval.cy + oval.ry * Math.sqrt(1 - u * u);
 }

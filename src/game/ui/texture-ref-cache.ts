@@ -8,6 +8,8 @@
  */
 export class TextureRefCache {
   private readonly refs = new Map<string, number>();
+  /** Keys made ahead for a user that has not taken them yet (`reserve`): `dropIfIdle` leaves them. */
+  private readonly reserved = new Set<string>();
 
   constructor(private readonly idleLimit: number) {}
 
@@ -16,6 +18,15 @@ export class TextureRefCache {
     const users = this.refs.get(key) ?? 0;
     this.refs.delete(key);
     this.refs.set(key, users + 1);
+    this.reserved.delete(key);
+  }
+
+  /**
+   * Marks `key` as made ahead for a user that comes soon (a picture baked before its layer lands): until a user takes
+   * it, `dropIfIdle` leaves it. The idle limit still applies to it, as to any unused key.
+   */
+  reserve(key: string): void {
+    this.reserved.add(key);
   }
 
   /** Gives one user back. A key nobody holds (or the cache does not know) is left alone. */
@@ -30,10 +41,13 @@ export class TextureRefCache {
     return (this.refs.get(key) ?? 0) > 0;
   }
 
-  /** Forgets `key` now if nobody holds it (the caller removes the texture); true when it did. */
+  /**
+   * Forgets `key` now if nobody holds it and nobody is waiting for it (`reserve`); the caller removes the texture. True
+   * when it did.
+   */
   dropIfIdle(key: string): boolean {
     const users = this.refs.get(key);
-    if (users === undefined || users > 0) return false;
+    if (users === undefined || users > 0 || this.reserved.has(key)) return false;
     this.refs.delete(key);
     return true;
   }
@@ -44,6 +58,7 @@ export class TextureRefCache {
     for (const [key] of idle) {
       if (idle.length <= this.idleLimit) break;
       this.refs.delete(key);
+      this.reserved.delete(key);
       remove(key);
       idle = idle.filter(([other]) => other !== key);
     }

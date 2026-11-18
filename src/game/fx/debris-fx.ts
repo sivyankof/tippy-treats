@@ -85,6 +85,8 @@ export class DebrisFx {
       look: memo,
       // The topper of the missed layer falls with it.
       topper: true,
+      // After "Continue?" the same layer flies again with this picture.
+      mayReturn: true,
     });
   }
 

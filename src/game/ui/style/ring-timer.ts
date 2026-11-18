@@ -1,11 +1,10 @@
 import * as Phaser from 'phaser';
 import { PALETTE } from '../../../data/palette';
 import { cssColor } from '../../../util/color';
+import { TWO_PI } from '../../../util/math';
 import { createOutlinedText } from '../outlined-text';
 import { createVolumeImage, faceOffsetY, lookOf } from './volume';
 import { drawRingArc } from './volume-bar';
-
-const FULL_TURN = Math.PI * 2;
 
 /** Size and motion of a ring timer. */
 export interface RingTimerLook {
@@ -54,7 +53,7 @@ export class RingTimer extends Phaser.GameObjects.Container {
       (g) => {
         g.lineStyle(ringWidth, PALETTE.panelShadow, trackAlpha);
         g.beginPath()
-          .arc(disc / 2, disc / 2, radius, 0, FULL_TURN)
+          .arc(disc / 2, disc / 2, radius, 0, TWO_PI)
           .strokePath();
       },
     ).setY(-faceOffsetY('chip'));

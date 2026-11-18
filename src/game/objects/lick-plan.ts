@@ -1,6 +1,6 @@
 import type { CreatureId } from '../../data/creatures';
 import { LICK, type LickStyle } from '../../data/lick';
-import { backOut, clamp01, MS_PER_SECOND, pickRange, smoothstep } from '../../util/math';
+import { backOut, clamp01, MS_PER_SECOND, pickRange, smoothstep, TWO_PI } from '../../util/math';
 
 /** The big scene (the whole loop round the face) or the short one (one sideways stroke). */
 export type LickScene = 'big' | 'short';
@@ -26,7 +26,6 @@ const STAGES: Readonly<Record<LickScene, readonly LickStage[]>> = {
   short: Object.keys(LICK.short) as LickStage[],
 };
 const PLAIN_STYLE: LickStyle = LICK.styles.plain;
-const TWO_PI = Math.PI * 2;
 const DEG = Math.PI / 180;
 
 /** How a layer licks: plain layers and most creatures alike, a few creatures in their own way. */

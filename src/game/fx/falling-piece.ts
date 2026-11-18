@@ -28,6 +28,11 @@ export interface PieceSpawn extends PieceMotion {
   topper?: boolean;
   /** The piece is a layer of the tower and keeps its marks (a drop, a stain, a cream roll; off when left out). */
   marks?: boolean;
+  /**
+   * The layer may come back with the same picture (a missed layer flies again after "Continue?"): when the piece is
+   * done its picture stays among the idle layer pictures instead of being removed at once (off when left out).
+   */
+  mayReturn?: boolean;
   /** The piece stays and sags first, and fades only late in its life (the cut of a piece with character). */
   cutPose?: CutPose;
 }
@@ -66,14 +71,18 @@ interface Piece extends PoolEntry<LayerView> {
  */
 export class FallingPieces {
   private readonly pool: TimedPool<LayerView, Piece>;
+  /** Live pieces whose layer may come back (`PieceSpawn.mayReturn`). */
+  private readonly returning = new WeakSet<LayerView>();
 
   constructor(scene: Phaser.Scene) {
     this.pool = new TimedPool(
       () => new LayerView(scene).setStageMode('level'),
-      // A piece that is done showed a layer that has left the game (an overhang, a missed layer, a collapsing
-      // one): its picture is not kept among the idle layer pictures, so the collapse does not fill the atlas page.
+      // A piece that is done showed a layer that has left the game (an overhang, a collapsing layer): its picture
+      // is not kept among the idle layer pictures, so the collapse does not fill the atlas page. A missed layer
+      // may fly again after "Continue?", so its picture stays.
       (view) => {
-        view.setVisible(false).releaseArt(true);
+        view.setVisible(false).releaseArt(!this.returning.has(view));
+        this.returning.delete(view);
       },
       ANIM.pool.maxLivePieces,
     );
@@ -95,6 +104,8 @@ export class FallingPieces {
       .setAlpha(1)
       .setVisible(true);
     if (opts.face) view.faceView.react(opts.face, Infinity);
+    if (opts.mayReturn) this.returning.add(view);
+    else this.returning.delete(view);
     this.pool.add({
       item: view,
       vx: opts.vx,

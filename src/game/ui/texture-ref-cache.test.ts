@@ -63,6 +63,29 @@ describe('TextureRefCache', () => {
     expect(evicted(cache)).toEqual([]);
   });
 
+  it('does not drop a key made ahead until a user has taken it', () => {
+    const cache = new TextureRefCache(16);
+    cache.acquire('next');
+    cache.reserve('next');
+    cache.release('next');
+    expect(cache.dropIfIdle('next')).toBe(false);
+    // The user it was made for takes it and gives it back: now it may go.
+    cache.acquire('next');
+    cache.release('next');
+    expect(cache.dropIfIdle('next')).toBe(true);
+  });
+
+  it('still evicts a key made ahead beyond the idle limit, and forgets that it waited', () => {
+    const cache = new TextureRefCache(0);
+    cache.acquire('next');
+    cache.reserve('next');
+    cache.release('next');
+    expect(evicted(cache)).toEqual(['next']);
+    cache.acquire('next');
+    cache.release('next');
+    expect(cache.dropIfIdle('next')).toBe(true);
+  });
+
   it('counts a key used again as the newest', () => {
     const cache = new TextureRefCache(1);
     for (const key of ['a', 'b']) {

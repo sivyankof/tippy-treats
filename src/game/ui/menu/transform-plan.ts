@@ -1,6 +1,7 @@
 import { upgradePreview } from '../../../core/mastery';
 import type { CreatureId } from '../../../data/creatures';
 import { TRANSFORM } from '../../../data/transform-scene';
+import { clamp01 } from '../../../util/math';
 import { shakeAngle } from './new-creature-reveal';
 
 /** What an upgrade turns the creature into: the new look (level 3) or the master (level 5). */
@@ -65,7 +66,6 @@ export interface TransformFrame {
   ring: number;
 }
 
-const clamp01 = (v: number): number => Math.min(1, Math.max(0, v));
 const share = (t: number, from: number, ms: number): number => clamp01((t - from) / ms);
 
 function backOut(p: number): number {

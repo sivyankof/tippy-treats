@@ -6,6 +6,8 @@
 export const BAR_LOOK = {
   /** The shade tone along the bottom of a fill: its share of the height and how much darker it is. */
   shade: { share: 0.3, amount: -0.2 },
+  /** The rounded ends of a fill's lit face are traced in chords of about this length (px). */
+  curveStepPx: 2,
   /** A white strip along the top of a fill: opacity, distance from the top and height (shares of the fill height). */
   gloss: { alpha: 0.42, insetShare: 0.16, share: 0.26 },
   /** The upper half of an empty track is darkened by this much, like a groove. */

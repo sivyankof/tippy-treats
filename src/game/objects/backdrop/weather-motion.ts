@@ -2,6 +2,14 @@ import { WEATHER_LOOK } from '../../../data/weather-look';
 import type { EffectLevel } from '../../../data/effect-levels';
 import { clamp01 } from '../../../util/math';
 
+/**
+ * How far beyond the screen edges a falling picture of `width` × `height` at `scale` wraps: its half diagonal, so it
+ * comes in over the top edge and leaves under the bottom one whatever way it turns.
+ */
+export function wrapPad(width: number, height: number, scale: number): number {
+  return (Math.hypot(width, height) * scale) / 2;
+}
+
 /** `value` wrapped into the range [-pad, size + pad). */
 export function wrapRange(value: number, size: number, pad: number): number {
   const span = size + 2 * pad;

@@ -2,9 +2,9 @@ import type * as Phaser from 'phaser';
 import { LICK } from '../../data/lick';
 import { PALETTE } from '../../data/palette';
 import { mixColor } from '../../util/color';
+import { TWO_PI } from '../../util/math';
 import type { Ribbon } from './tongue-ribbon';
 
-const TWO_PI = Math.PI * 2;
 /** The colours of the ribbon; the light stripe is pre-mixed, so a bend never doubles it. */
 export const TONGUE_COLORS = {
   outline: PALETTE.textDark,

@@ -1,5 +1,6 @@
 import type { CutSide } from '../../core/drop';
 import { PLAIN_LAYER } from '../../data/plain-layers';
+import { TWO_PI } from '../../util/math';
 import type { LayerBox } from './layer-draw';
 import { clipPolylines, uAxis, xAt, type Polyline, type Stroke } from './plain-lines';
 import { innerInsetAt } from './sponge-pores';
@@ -7,7 +8,6 @@ import { innerInsetAt } from './sponge-pores';
 const M = PLAIN_LAYER.marble;
 const W = PLAIN_LAYER.waffle;
 const STEP = PLAIN_LAYER.pattern.step;
-const FULL_TURN = Math.PI * 2;
 
 /** Where a sponge material may be drawn: below `topY`, off the outline, the cut and the face. */
 function spongeInside(
@@ -59,10 +59,7 @@ export function marbleStrokes(
     const reach = rib.width / 2 + (rib.edge !== null ? M.edgePx : 0);
     const inside = spongeInside(box, topY, M.inset, faceEdge, reach, cut);
     const lines = clipPolylines(
-      (u) => [
-        xAt(axis, u),
-        y0 + rib.amplitude * Math.sin((FULL_TURN * u) / rib.period + rib.phase),
-      ],
+      (u) => [xAt(axis, u), y0 + rib.amplitude * Math.sin((TWO_PI * u) / rib.period + rib.phase)],
       0,
       axis.length,
       STEP,
