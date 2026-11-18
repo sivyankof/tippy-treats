@@ -8,6 +8,9 @@ import { VoiceGate } from './voice-gate';
 /** What `SoundPlayer.play` reports: the sound was refused by the gate, or it plays for `length` seconds. */
 export type PlayResult = { played: false } | { played: true; length: number; ducksMusic: boolean };
 
+/** Dev-only level corrections per sound, dB (the soundboard sliders); never saved. */
+export type DevSoundTrims = Partial<Record<SoundId, number>>;
+
 const REFUSED: PlayResult = { played: false };
 
 /**
@@ -19,6 +22,8 @@ export class SoundPlayer {
   constructor(
     private readonly synth: Synth,
     private readonly gate: VoiceGate = new VoiceGate(),
+    /** Dev-only corrections in dB on top of the trim; read at every play, so edits apply at once. */
+    private readonly devTrimDb: DevSoundTrims = {},
   ) {}
 
   /**
@@ -30,7 +35,7 @@ export class SoundPlayer {
     const at = this.synth.now + delay;
     if (!this.gate.admit(id, entry.priority, at)) return REFUSED;
     const length = this.synth.measure(() => {
-      const trim = fromDb(SOUND_TRIM_DB[id] ?? 0);
+      const trim = fromDb(SOUND_TRIM_DB[id] ?? 0) * fromDb(this.devTrimDb[id] ?? 0);
       this.synth.at(delay, () => this.synth.scaled(trim, () => entry.play(this.synth, ...args)));
     });
     if (length <= 0) return REFUSED;
