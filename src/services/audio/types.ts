@@ -81,8 +81,20 @@ export interface AudioService {
   squeak(pitch: number): void;
 }
 
+/** What the music was last asked to play and what turns it down (dev checks). */
+export interface MusicDebugState {
+  /** The tune asked for, null before the first start or after a stop. */
+  variant: string | null;
+  layer: number | null;
+  menu: boolean | null;
+  /** Duck reasons that hold now. */
+  ducks: string[];
+}
+
 /** Dev-only extras of the web audio (the soundboard): live bus levels, not saved. */
 export interface AudioDevControl {
   /** Multipliers of the master, sfx and music levels; missing ones stay as they are. */
   setLevels(levels: Partial<{ master: number; sfx: number; music: number }>): void;
+  /** The music's asked state and the held ducks. */
+  musicState(): MusicDebugState;
 }

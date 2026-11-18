@@ -48,6 +48,11 @@ export class MusicProxy implements MusicControl {
     if (this.enabled) this.safely(() => this.real.setMenu(on));
   }
 
+  /** What the game asked last: the tune (null when stopped), the layer and the menu switch. */
+  get asked(): { options: MusicStartOptions | null; layer: number | null; menu: boolean | null } {
+    return { options: this.options, layer: this.layer, menu: this.menu };
+  }
+
   private replay(): void {
     const { options, layer, menu } = this;
     if (!options) return;

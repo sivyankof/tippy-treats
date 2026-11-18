@@ -3,7 +3,8 @@ import { PRODUCT_KEYS, PRODUCTS } from '../data/shop';
 import { t } from '../i18n';
 import { WebAds } from './rewarded-video/web';
 import type { AdsDevControl, AdsService } from './rewarded-video/types';
-import { WebAudioService } from './audio/web';
+import { createBrowserAudioContext, WebAudioService } from './audio/web';
+import { createTunePlayer } from './audio/music/tune-player';
 import type { ShareService } from './share/types';
 import type { SilentModeService } from './silent-mode/types';
 import { WebSilentMode } from './silent-mode/web';
@@ -54,7 +55,7 @@ const webIap = new WebIap(stubCatalog);
  * the web ones; native haptics, ads and purchases chosen by Capacitor.isNativePlatform() arrive
  * in stage M7.
  */
-const webAudio = new WebAudioService();
+const webAudio = new WebAudioService(createBrowserAudioContext, Math.random, createTunePlayer);
 
 export const services: Services = {
   audio: webAudio,
