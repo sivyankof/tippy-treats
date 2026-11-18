@@ -238,7 +238,8 @@ export function acquireLayerArt(
 
 /**
  * Bakes the art ahead of its first use. No view holds it yet, so it stays idle (and the oldest
- * idle pictures go first) until a view takes it.
+ * idle pictures go first) until a view takes it; a piece that leaves the game with the same picture
+ * does not take it away before then (`releaseLayerArt` with `forGood`).
  */
 export function prepareLayerArt(
   scene: Phaser.Scene,
@@ -249,13 +250,16 @@ export function prepareLayerArt(
   faceless = false,
   stage: CreatureStage = 'base',
 ): void {
-  releaseLayerArt(scene, acquireLayerArt(scene, look, width, cut, creature, faceless, stage));
+  const key = acquireLayerArt(scene, look, width, cut, creature, faceless, stage);
+  layerRefs.reserve(key);
+  releaseLayerArt(scene, key);
 }
 
 /**
  * Gives a texture back; unused textures beyond the idle limit are removed. `forGood`: the picture showed a layer that
- * has left the game (a piece that fell off the screen), so it is removed at once when nobody else holds it, instead of
- * pushing a picture that may come back out of the idle ones (and holding its cell on the shared atlas).
+ * has left the game (a piece that fell off the screen), so it is removed at once when nobody else holds it and no
+ * picture baked ahead waits for its user under the same key (`prepareLayerArt`), instead of pushing a picture that may
+ * come back out of the idle ones (and holding its cell on the shared atlas).
  */
 export function releaseLayerArt(scene: Phaser.Scene, key: string, forGood = false): void {
   layerRefs.release(key);
