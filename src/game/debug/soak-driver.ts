@@ -291,6 +291,8 @@ class SoakDriver implements TippySoak {
         if (!(await this.waitFor(() => this.game.scene.isPaused(SCENES.game), SOAK.runMaxMs))) {
           return false;
         }
+        // The page comes back, as it does for a player: the sound held for the background resumes.
+        this.game.events.emit(Phaser.Core.Events.VISIBLE);
         await sleep(this.dwell.screenMs);
         this.counts.runs += 1;
         this.pokeNextRun();
@@ -532,6 +534,7 @@ class SoakDriver implements TippySoak {
     await sleep(this.dwell.abandonMs);
     // The page going to the background opens the pause window, as it does for a player.
     this.game.events.emit(Phaser.Core.Events.HIDDEN);
+    this.game.events.emit(Phaser.Core.Events.VISIBLE);
     await sleep(this.dwell.screenMs);
     this.counts.runs += 1;
     this.pokeNextRun();
