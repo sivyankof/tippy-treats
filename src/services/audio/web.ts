@@ -12,7 +12,7 @@ import {
 } from './music-control';
 import { MusicProxy } from './music-proxy';
 import type { SoundArgs, SoundId } from './sound-args';
-import { SoundPlayer } from './sound-player';
+import { SoundPlayer, type DevSoundTrims } from './sound-player';
 import { Synth } from './synth';
 import type {
   AudioDebugStats,
@@ -58,6 +58,8 @@ export class WebAudioService implements AudioService, AudioDevControl {
   private readonly musicProxy = new MusicProxy();
   /** Duck reasons held now; kept before the mixer exists so a window open at the first tap still ducks. */
   private readonly ducks = new Set<DuckReason>();
+  /** The soundboard's per-sound corrections; shared with the player, which exists only after unlock. */
+  private readonly devSoundTrims: DevSoundTrims = {};
   private devLevels: Partial<{ master: number; sfx: number; music: number }> = {};
 
   constructor(
@@ -90,6 +92,10 @@ export class WebAudioService implements AudioService, AudioDevControl {
     this.mixer?.setDevScales(levels);
   }
 
+  setSoundTrimDb(id: SoundId, db: number): void {
+    this.devSoundTrims[id] = db;
+  }
+
   musicState(): MusicDebugState {
     const { options, layer, menu } = this.musicProxy.asked;
     return { variant: options?.variant ?? null, layer, menu, ducks: [...this.ducks] };
@@ -116,7 +122,7 @@ export class WebAudioService implements AudioService, AudioDevControl {
         const synth = new Synth(ctx, mixer, this.random);
         this.ctx = ctx;
         this.mixer = mixer;
-        this.player = new SoundPlayer(synth);
+        this.player = new SoundPlayer(synth, undefined, this.devSoundTrims);
         this.beds = new BedPlayer(ctx, mixer, this.random);
         this.applyBed();
         if (!this.on) mixer.setSfxOn(false);

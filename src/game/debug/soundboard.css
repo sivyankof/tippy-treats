@@ -110,3 +110,9 @@
   font-size: 13px;
   color: #7a5a48;
 }
+.sb-trim {
+  width: 64px;
+  flex: none;
+  text-align: right;
+  font-weight: 700;
+}

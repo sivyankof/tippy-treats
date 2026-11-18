@@ -102,4 +102,6 @@ export interface AudioDevControl {
   setLevels(levels: Partial<{ master: number; sfx: number; music: number }>): void;
   /** The music's asked state and the held ducks. */
   musicState(): MusicDebugState;
+  /** Dev-only level correction of one sound in dB, on top of its trim; lives until the page reloads. */
+  setSoundTrimDb(id: SoundId, db: number): void;
 }

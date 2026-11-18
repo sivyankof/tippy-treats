@@ -633,6 +633,11 @@
     "hint": "A tune button starts the tune at the chosen step. Step 1 (electric piano and tape) is the first zone; each next zone adds a part: 2 bass, 3 kick and hat, 4 snare, 5 melody, 6 second line. «Menu» plays steps 1-2 quieter. Windows turn the music down by 40%. Knobs below: tape, drums, melody."
   },
   "soundboard": {
+    "trimUnit": "dB",
+    "trimCopy": "Copy values",
+    "trimCopied": "Copied to the clipboard",
+    "trimCopyFailed": "Could not copy",
+    "trimLabel": "Level",
     "title": "Soundboard",
     "tapToEnable": "Tap anywhere to enable sound",
     "enabled": "Sound is on",
