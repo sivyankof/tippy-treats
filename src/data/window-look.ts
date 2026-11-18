@@ -370,16 +370,40 @@ export const PANORAMA = {
   valance: { top: 46, band: 54, scallops: 8 },
   /** Layout on the start view: the tower of the start view, the gap under the HUD (`hudFloor`) and above the flying layer. */
   layout: { towerLayers: 2, flightGapPx: 24, reachExtraPx: 30, minScale: 0.6, centreShare: 0.5 },
-  /** The window goes behind the tower: it fades out while this share of its height (from the top) still stands above the tower top, to nothing at `goneAt`. */
-  cover: { fullAt: 0.45, goneAt: 0.25 },
+  /**
+   * The window goes behind the tower: it fades out while this share of its height (from the top) still stands above the
+   * tower top, to nothing at `goneAt` (the middle of the glass is at 0.47, so the window is gone before the tower reaches
+   * it). The tower top jumps by a layer when one lands, so the fade follows its target over time: the whole way in `easeMs`.
+   */
+  cover: { fullAt: 0.8, goneAt: 0.5, easeMs: 320 },
   /** Alpha of the whole window while the incoming layer flies in front of it (a partial mute would need a second draw). */
   rowMuted: 0.85,
+  /** The mute follows the row (which jumps by a layer on a landing) over time: from none to full in this many ms. */
+  rowEaseMs: 200,
+  /**
+   * The moon of the night window, a picture of its own over the glass: it fades out while the window fades from 1 to
+   * `goneAt`, and has `mutedAlpha` of its alpha while the flight row passes in front of the moon itself (on 390x693 the
+   * row touches the bottom of the window already on the start view, so the mute of the whole window would hide it there).
+   */
+  moon: { goneAt: 0.6, mutedAlpha: 0 },
   /** The mute fades in over this many px before the row reaches the window: the start view, where the row stands 50 px or more below it, is not muted. */
   rowFeatherPx: 24,
   /** Drops, flakes and leaves of the pane: counts per weather (the lite level shows half), size against the small window's. */
   items: { rain: 12, storm: 16, snow: 14, leaves: 5, size: 1.5 },
-  /** The storm flash in the glass: peak alpha, colour, the texture is baked this much smaller than the glass. */
-  flash: { alpha: 0.7, color: 0xf6f9ff, bakeShare: 0.25 },
+  /**
+   * The storm flash in the glass: peak alpha of the picture, colour; the texture is baked this much smaller than the glass.
+   * Inside the picture the sky is lit to `skyAlpha`, the storm clouds to `cloudAlpha`; the sash bars are cut out. The bolt
+   * (the sky bolt's shape and colours) stands in the upper right pane: its top under the right cloud at `x`, `top` (shares
+   * of the glass), `height` of the glass tall, its strokes `scale` of the sky bolt's.
+   */
+  flash: {
+    alpha: 1,
+    color: 0xf6f9ff,
+    bakeShare: 1 / 3,
+    skyAlpha: 0.5,
+    cloudAlpha: 0.85,
+    bolt: { x: 0.74, top: 0.1, height: 0.44, scale: 0.9 },
+  },
   /** Gap kept to the HUD plates (the same as the flying layer's). */
   hudGapPx: FLIGHT_CLEAR.hudGapPx,
 } as const;
@@ -428,6 +452,10 @@ export function panoramaPieces(place: StartPlaceId, weather: WeatherId): Panoram
     }
   }
   return out;
+}
+
+export function panoramaMoonKey(place: StartPlaceId): string {
+  return `bd_win_pano_moon_${place}`;
 }
 
 export function panoramaFlashKey(place: StartPlaceId): string {

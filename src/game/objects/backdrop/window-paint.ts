@@ -44,12 +44,60 @@ export function detailScale(h: number): number {
   return Math.max(1, (h / SMALL_GLASS.h) * DETAIL_GROWTH);
 }
 
-/** `mirror` puts the sky's details on the left half (the shop window: its right half is against the tower). */
+/** The storm and rain clouds of a heavy sky: x as a share of the glass width, y as a share of its height, size. */
+export const HEAVY_CLOUDS = [
+  { x: 0.28, y: 0.12, s: 1.5 },
+  { x: 0.76, y: 0.08, s: 1.7 },
+  { x: 0.5, y: 0.24, s: 1.2 },
+] as const;
+
+/** Where the moon of a night sky stands in the glass (shares of its width and height) and its radius at detail scale 1. */
+const MOON = { x: 0.68, y: 0.2, r: 17, rim: 2.5 } as const;
+
+/** The moon of a night sky in `glass`: its centre and its outer radius (with the outline), in the glass's units. */
+export function moonSpot(glass: GlassBox, mirror = false): { x: number; y: number; r: number } {
+  const k = detailScale(glass.h);
+  const share = mirror ? 1 - MOON.x : MOON.x;
+  return {
+    x: glass.x + glass.w * share,
+    y: glass.y + glass.h * MOON.y,
+    r: (MOON.r + MOON.rim) * k,
+  };
+}
+
+/** A flat moon: a warm outline, a pale disc, a darker rim on the lower right and a gloss mark. No glow. */
+export function paintMoon(ctx: Ctx2D, glass: GlassBox, mirror = false): void {
+  const k = detailScale(glass.h);
+  const { x: mx, y: my } = moonSpot(glass, mirror);
+  const r = MOON.r * k;
+  ctx.fillStyle = cssColor(0xb9904a);
+  ctx.beginPath();
+  ctx.arc(mx, my, r + MOON.rim * k, 0, TWO_PI);
+  ctx.fill();
+  ctx.fillStyle = cssColor(0xf1d98a);
+  ctx.beginPath();
+  ctx.arc(mx, my, r, 0, TWO_PI);
+  ctx.fill();
+  ctx.fillStyle = cssColor(0xfff1b8);
+  ctx.beginPath();
+  ctx.arc(mx - 2.5 * k, my - 2.5 * k, r - 4.5 * k, 0, TWO_PI);
+  ctx.fill();
+  ctx.fillStyle = 'rgba(255,255,255,0.7)';
+  ctx.beginPath();
+  ctx.roundRect(mx - 9 * k, my - 8 * k, 4 * k, 9 * k, 2 * k);
+  ctx.fill();
+}
+
+/**
+ * `mirror` puts the sky's details on the left half (the shop window: its right half is against the tower). `withMoon`
+ * false leaves the moon out (the panoramic window draws it as a picture of its own, `paintMoon`).
+ */
 export function paintSky(
   ctx: Ctx2D,
   sky: WindowSky,
   mirror: boolean,
   glass: GlassBox = SMALL_GLASS,
+  withMoon = true,
 ): void {
   const { x, y, w, h } = glass;
   // Moon, stars and clouds grow with the glass, but a little less than it, so a wide pane does not get giant ones.
@@ -85,35 +133,12 @@ export function paintSky(
       ctx.fill();
     }
   }
-  if (sky.moon) {
-    const mx = at(0.68);
-    const my = y + h * 0.2;
-    const r = 17 * k;
-    // A flat moon: a warm outline, a pale disc, a darker rim on the lower right and a gloss mark. No glow.
-    ctx.fillStyle = cssColor(0xb9904a);
-    ctx.beginPath();
-    ctx.arc(mx, my, r + 2.5 * k, 0, TWO_PI);
-    ctx.fill();
-    ctx.fillStyle = cssColor(0xf1d98a);
-    ctx.beginPath();
-    ctx.arc(mx, my, r, 0, TWO_PI);
-    ctx.fill();
-    ctx.fillStyle = cssColor(0xfff1b8);
-    ctx.beginPath();
-    ctx.arc(mx - 2.5 * k, my - 2.5 * k, r - 4.5 * k, 0, TWO_PI);
-    ctx.fill();
-    ctx.fillStyle = 'rgba(255,255,255,0.7)';
-    ctx.beginPath();
-    ctx.roundRect(mx - 9 * k, my - 8 * k, 4 * k, 9 * k, 2 * k);
-    ctx.fill();
-  }
+  if (sky.moon && withMoon) paintMoon(ctx, glass, mirror);
   if (sky.cloud !== null) {
     ctx.fillStyle = cssColor(sky.cloud);
     ctx.globalAlpha = 0.9;
     if (sky.heavy) {
-      cloud(ctx, at(0.28), y + h * 0.12, 1.5 * k);
-      cloud(ctx, at(0.76), y + h * 0.08, 1.7 * k);
-      cloud(ctx, at(0.5), y + h * 0.24, 1.2 * k);
+      for (const c of HEAVY_CLOUDS) cloud(ctx, at(c.x), y + h * c.y, c.s * k);
     } else {
       cloud(ctx, at(0.32), y + h * 0.34, 1.1 * k);
       cloud(ctx, at(0.8), y + h * 0.16, 0.7 * k);

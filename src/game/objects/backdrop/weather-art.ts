@@ -66,9 +66,8 @@ const CAP_WAVES = 4.3;
 const CAP_OUTLINE = 2.5;
 const CAP_DRIPS = [0.22, 0.52, 0.8] as const;
 const CAP_DRIP = { radius: 5.5, reach: 9 };
-const BOLT_CORE = 0xfffbe6;
-const BOLT_MID = 0xffd45e;
-const BOLT_RIM = 0xb97a2a;
+/** Colours of the bolt: its warm outline, yellow body and white-yellow core (the sky bolt and the bolt in the panoramic window). */
+export const BOLT_COLORS = { rim: 0xb97a2a, mid: 0xffd45e, core: 0xfffbe6 } as const;
 
 /** Key of the cloud bank picture of a weather (the same in both zones). */
 export function bankKey(weather: WeatherId): string {
@@ -524,31 +523,40 @@ function bakeBankFlash(scene: Phaser.Scene, key: string, side: number): void {
   );
 }
 
+/**
+ * The zig-zag of a bolt `w` x `h` with one short branch; its ends stand `end` px inside the top and bottom edges
+ * (shared by the sky bolt and the bolt of the storm flash in the panoramic window).
+ */
+export function boltLines(w: number, h: number, end: number): { trunk: Pt[]; branch: Pt[] } {
+  return {
+    trunk: [
+      { x: w * 0.62, y: end },
+      { x: w * 0.38, y: h * 0.25 },
+      { x: w * 0.64, y: h * 0.33 },
+      { x: w * 0.34, y: h * 0.58 },
+      { x: w * 0.54, y: h * 0.64 },
+      { x: w * 0.28, y: h * 0.86 },
+      { x: w * 0.4, y: h - end },
+    ],
+    branch: [
+      { x: w * 0.34, y: h * 0.58 },
+      { x: w * 0.62, y: h * 0.7 },
+      { x: w * 0.58, y: h * 0.8 },
+    ],
+  };
+}
+
 /** The bolt: a zig-zag with one short branch, a warm outline, a yellow body and a white-yellow core. */
 function bakeBolt(scene: Phaser.Scene): void {
   const { width: w, height: h, rimPx } = WEATHER_LOOK.lightning;
   // The round caps of the outline reach rimPx / 2 past the end points; keep them inside the picture.
-  const end = rimPx / 2 + EDGE_MARGIN;
-  const pts: Pt[] = [
-    { x: w * 0.62, y: end },
-    { x: w * 0.38, y: h * 0.25 },
-    { x: w * 0.64, y: h * 0.33 },
-    { x: w * 0.34, y: h * 0.58 },
-    { x: w * 0.54, y: h * 0.64 },
-    { x: w * 0.28, y: h * 0.86 },
-    { x: w * 0.4, y: h - end },
-  ];
-  const branch: Pt[] = [
-    { x: w * 0.34, y: h * 0.58 },
-    { x: w * 0.62, y: h * 0.7 },
-    { x: w * 0.58, y: h * 0.8 },
-  ];
+  const { trunk: pts, branch } = boltLines(w, h, rimPx / 2 + EDGE_MARGIN);
   bakeTexture(scene, TEX.bolt, w, h, (g) => {
     const L = WEATHER_LOOK.lightning;
     for (const [width, color] of [
-      [L.rimPx, BOLT_RIM],
-      [L.midPx, BOLT_MID],
-      [L.corePx, BOLT_CORE],
+      [L.rimPx, BOLT_COLORS.rim],
+      [L.midPx, BOLT_COLORS.mid],
+      [L.corePx, BOLT_COLORS.core],
     ] as const) {
       g.lineStyle(width, color, 1);
       g.fillStyle(color, 1);

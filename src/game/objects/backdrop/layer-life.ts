@@ -4,7 +4,8 @@ import { PANORAMA, WALL_LOOK } from '../../../data/window-look';
 import { applyPose, createImage, type FrameCtx, type Life } from './life';
 import { hoverPose, newPose } from './life-motion';
 import { mixColor } from '../../../util/color';
-import { coverFade, rowMute } from './panorama-fit';
+import { stepToward } from '../../../util/math';
+import { coverFade, muteShare, rowMute } from './panorama-fit';
 
 const WHITE = 0xffffff;
 import {
@@ -27,6 +28,8 @@ export interface LayerSpot {
   alpha: number;
   /** Scale of the picture (1 unless the thing is fitted to the screen). */
   scale: number;
+  /** `rowMute` things: the tint the mute by the flight row gives them now (white when clear). */
+  tint: number;
 }
 
 export interface LayerOptions {
@@ -68,7 +71,7 @@ export interface LayerFit {
 }
 
 function newSpot(): LayerSpot {
-  return { x: 0, y: 0, mirrored: false, alpha: 0, scale: 1 };
+  return { x: 0, y: 0, mirrored: false, alpha: 0, scale: 1, tint: WHITE };
 }
 
 /**
@@ -105,6 +108,25 @@ export class LayerThing implements Life {
   private retired = false;
   /** Time (ms) the thing has been covered without a break; -1 while it is not. */
   private coveredSince = -1;
+  /**
+   * `rowMute` things: the cover fade and the mute share shown now. They follow their targets over time (the tower top
+   * and the flight row jump by a layer when one lands); -1 until the first frame, which takes the target as it is.
+   */
+  private coverNow = -1;
+  private mutedNow = -1;
+
+  /** Moves the shown cover and mute towards this frame's targets for the picture centred at `centre`. */
+  private followCover(centre: number, halfH: number, ctx: FrameCtx): void {
+    const cover = coverFade(centre, halfH, ctx.flightRow.towerTop);
+    const muted = muteShare(rowMute(centre, halfH, ctx.flightRow, PANORAMA.rowFeatherPx));
+    if (this.coverNow < 0) {
+      this.coverNow = cover;
+      this.mutedNow = muted;
+      return;
+    }
+    this.coverNow = stepToward(this.coverNow, cover, ctx.deltaMs / PANORAMA.cover.easeMs);
+    this.mutedNow = stepToward(this.mutedNow, muted, ctx.deltaMs / PANORAMA.rowEaseMs);
+  }
 
   update(ctx: FrameCtx): void {
     if (this.retired) return;
@@ -159,18 +181,18 @@ export class LayerThing implements Life {
         pose.scaleY *= scale;
         const shown = rideLayer(pose, this.anchor, ctx, ctx.height, halfH, rise, !rowMuted);
         if (rowMuted) {
-          // The mute and the cover are the picture's as a whole: every strip takes them from the picture's centre.
-          const centre = fitted ? pose.y - (spec.offset?.y ?? 0) * scale : pose.y;
-          const mute = rowMute(centre, halfH, ctx.flightRow, PANORAMA.rowFeatherPx);
-          if (muteTone === undefined) pose.alpha *= mute;
-          else tint = mixColor(WHITE, muteTone, (1 - mute) / (1 - PANORAMA.rowMuted));
-          const cover = coverFade(centre, halfH, ctx.flightRow.towerTop);
-          pose.alpha *= cover;
-          covered = cover <= 0;
+          // The mute and the cover are the picture's as a whole: every piece takes them from the picture's centre.
+          if (k === 0)
+            this.followCover(fitted ? pose.y - (spec.offset?.y ?? 0) * scale : pose.y, halfH, ctx);
+          const muted = this.mutedNow;
+          if (muteTone === undefined) pose.alpha *= 1 - (1 - PANORAMA.rowMuted) * muted;
+          else tint = mixColor(WHITE, muteTone, muted);
+          pose.alpha *= this.coverNow;
+          covered = this.coverNow <= 0;
         }
         applyPose(image, pose);
         if (muteTone !== undefined) image.setTint(tint);
-        if (seamPx && fitted) {
+        if (seamPx && fitted && pose.alpha >= 1) {
           image.setScale(
             image.scaleX * (1 + seamPx / image.displayWidth),
             image.scaleY * (1 + seamPx / image.displayHeight),
@@ -184,6 +206,7 @@ export class LayerThing implements Life {
           spot.mirrored = mirrored;
           spot.alpha = pose.alpha / (spec.alpha ?? 1);
           spot.scale = scale;
+          spot.tint = tint;
         }
       }
     }

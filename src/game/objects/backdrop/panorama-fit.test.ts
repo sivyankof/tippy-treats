@@ -5,6 +5,8 @@ import { BALANCE } from '../../../data/balance';
 import {
   coverFade,
   flightRowAt,
+  moonAlpha,
+  muteShare,
   panoramaFit,
   panoramaFitCached,
   rowMute,
@@ -83,9 +85,20 @@ describe('coverFade', () => {
     expect(coverFade(500, halfH, 180 + 0.2 * 2 * halfH)).toBe(0);
     expect(coverFade(500, halfH, 0)).toBe(0);
   });
+  it('is gone before the tower top reaches the middle of the glass', () => {
+    const G = PANORAMA.glass;
+    const top = 500 - halfH;
+    const glassMiddle = top + (G.y + G.h / 2) * (halfH / (PANORAMA.height / 2));
+    expect(coverFade(500, halfH, glassMiddle)).toBe(0);
+    expect(coverFade(500, halfH, glassMiddle - 10)).toBe(0);
+  });
+  it('is whole while the tower stands below the sill', () => {
+    const sillTop = 500 - halfH + PANORAMA.glass.y + PANORAMA.glass.h + PANORAMA.sill.gap;
+    expect(coverFade(500, halfH, sillTop)).toBe(1);
+  });
   it('falls smoothly between', () => {
-    const a = coverFade(500, halfH, 180 + 0.4 * 2 * halfH);
-    const b = coverFade(500, halfH, 180 + 0.3 * 2 * halfH);
+    const a = coverFade(500, halfH, 180 + 0.7 * 2 * halfH);
+    const b = coverFade(500, halfH, 180 + 0.6 * 2 * halfH);
     expect(a).toBeGreaterThan(b);
     expect(a).toBeLessThan(1);
     expect(b).toBeGreaterThan(0);
@@ -100,5 +113,26 @@ describe('the start view on a short screen', () => {
     expect(startViewFlightTop(H_SHORT) - bottom).toBeGreaterThanOrEqual(
       PANORAMA.layout.flightGapPx,
     );
+  });
+});
+
+describe('muteShare', () => {
+  it('is 0 clear of the row and 1 at the full mute', () => {
+    expect(muteShare(1)).toBe(0);
+    expect(muteShare(PANORAMA.rowMuted)).toBeCloseTo(1);
+  });
+});
+
+describe('moonAlpha', () => {
+  it('is whole with a whole, clear window', () => {
+    expect(moonAlpha(1, 0)).toBe(1);
+  });
+  it('leaves before the window: gone while the window still shows', () => {
+    expect(moonAlpha(PANORAMA.moon.goneAt, 0)).toBe(0);
+    for (const a of [0.7, 0.8, 0.9]) expect(moonAlpha(a, 0)).toBeLessThan(a);
+  });
+  it('takes the mute: mutedAlpha of its alpha at the full mute', () => {
+    expect(moonAlpha(1, 1)).toBeCloseTo(PANORAMA.moon.mutedAlpha);
+    expect(moonAlpha(1, 0.5)).toBeLessThan(1);
   });
 });

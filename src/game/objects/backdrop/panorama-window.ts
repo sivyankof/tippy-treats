@@ -7,6 +7,7 @@ import {
   WINDOW_LOOK,
   WINDOW_SKY,
   panoramaFlashKey,
+  panoramaMoonKey,
   panoramaPieces,
   type GlassWeather,
 } from '../../../data/window-look';
@@ -23,6 +24,14 @@ import { GlassWeatherLife, type Rect } from './window-weather';
 import type { Life } from './life';
 import { LayerThing } from './layer-life';
 import { PanoramaFlash } from './panorama-flash';
+import {
+  bakePanoramaFlash,
+  bakePanoramaMoon,
+  panePath,
+  panoramaValance,
+  sashBars,
+} from './panorama-art';
+import { PanoramaMoon } from './panorama-moon';
 import { panoramaFitCached } from './panorama-fit';
 import { bar, paintGlints, paintSky, paintValance, roundRect } from './window-paint';
 
@@ -32,28 +41,6 @@ const P = PANORAMA;
 const G = P.glass;
 const W = P.width;
 const H = P.height;
-
-/** The outline of the glass or the frame, grown by `grow`: a rounded rectangle (kitchen) or one with a low arch on top (shop). */
-export function panePath(ctx: Ctx2D, place: StartPlaceId, grow: number): void {
-  const x = G.x - grow;
-  const y = G.y - grow;
-  const w = G.w + 2 * grow;
-  const h = G.h + 2 * grow;
-  if (place === 'kitchen') {
-    roundRect(ctx, x, y, w, h, 24 + grow);
-    return;
-  }
-  const bottom = 14 + grow;
-  const rx = w / 2;
-  ctx.beginPath();
-  ctx.moveTo(x, y + P.archPx);
-  ctx.ellipse(x + rx, y + P.archPx, rx, P.archPx, 0, Math.PI, 0);
-  ctx.lineTo(x + w, y + h - bottom);
-  ctx.arcTo(x + w, y + h, x + w - bottom, y + h, bottom);
-  ctx.lineTo(x + bottom, y + h);
-  ctx.arcTo(x, y + h, x, y + h - bottom, bottom);
-  ctx.closePath();
-}
 
 function paintSill(ctx: Ctx2D, frame: number): void {
   const dark = outlineColor(frame);
@@ -129,11 +116,11 @@ function paintPanorama(ctx: Ctx2D, place: StartPlaceId, weather: WeatherId): voi
   ctx.save();
   panePath(ctx, place, 0);
   ctx.clip();
-  paintSky(ctx, WINDOW_SKY[weather], false, G);
+  // The moon is a picture of its own (`bakePanoramaMoon`): it leaves before the window does.
+  paintSky(ctx, WINDOW_SKY[weather], false, G, false);
   paintGlints(ctx, G);
   const sash = 'ring' in look ? look.ring : shade(frame, 0.12);
-  bar(ctx, G.x + G.w / 2 - P.barPx / 2, G.y - 4, P.barPx, G.h + 8, sash);
-  bar(ctx, G.x - 4, G.y + G.h * P.crossAt - P.barPx / 2, G.w + 8, P.barPx, sash);
+  for (const b of sashBars()) bar(ctx, b.x, b.y, b.w, b.h, sash);
   ctx.restore();
   panePath(ctx, place, 0);
   ctx.lineWidth = 5;
@@ -144,15 +131,7 @@ function paintPanorama(ctx: Ctx2D, place: StartPlaceId, weather: WeatherId): voi
   ctx.fillStyle = 'rgba(255,255,255,0.55)';
   ctx.fill();
   if (place === 'kitchen') {
-    const v = P.valance;
-    paintValance(ctx, {
-      left: G.x - 14,
-      right: G.x + G.w + 14,
-      top: v.top,
-      band: v.band,
-      scallops: v.scallops,
-      radius: 14,
-    });
+    paintValance(ctx, panoramaValance());
   } else {
     paintKeystone(ctx, dark, ring);
   }
@@ -195,35 +174,6 @@ export function bakePanorama(
     );
   });
   return pieces.map((piece) => piece.key);
-}
-
-/** Margin (px) round the baked flash shape, so its edge is never cut. */
-export const FLASH_MARGIN = 3;
-
-/** The glass-shaped patch that flashes in a storm: baked at `bakeShare` of the size (a flat flash needs no more). */
-export function bakePanoramaFlash(scene: Phaser.Scene, place: StartPlaceId, key: string): void {
-  const share = P.flash.bakeShare;
-  bakeTexture(
-    scene,
-    key,
-    G.w * share + 2 * FLASH_MARGIN,
-    G.h * share + 2 * FLASH_MARGIN,
-    () => undefined,
-    (ctx) => {
-      ctx.translate(FLASH_MARGIN, FLASH_MARGIN);
-      ctx.scale(share, share);
-      ctx.translate(-G.x, -G.y);
-      // The kitchen valance hangs over the top of the glass: the flash does not light the cloth.
-      if (place === 'kitchen') {
-        ctx.beginPath();
-        ctx.rect(G.x - 4, P.valance.top + P.valance.band, G.w + 8, G.h);
-        ctx.clip();
-      }
-      panePath(ctx, place, 0);
-      ctx.fillStyle = cssColor(P.flash.color);
-      ctx.fill();
-    },
-  );
 }
 
 /** The glass of the panoramic window whose picture is centred at (`x`, `y`) and drawn at `scale`. */
@@ -286,6 +236,7 @@ const holds = new Map<string, number>();
 function panoramaKeys(place: StartPlaceId, weather: WeatherId): string[] {
   const keys = panoramaPieces(place, weather).map((piece) => piece.key);
   if (weather === 'storm') keys.push(panoramaFlashKey(place));
+  if (WINDOW_SKY[weather].moon) keys.push(panoramaMoonKey(place));
   return keys;
 }
 
@@ -302,6 +253,7 @@ export function bakePanoramaSet(
 ): void {
   bakePanorama(scene, place, weather);
   if (weather === 'storm') bakePanoramaFlash(scene, place, panoramaFlashKey(place));
+  if (WINDOW_SKY[weather].moon) bakePanoramaMoon(scene, place, panoramaMoonKey(place));
   for (const key of panoramaKeys(place, weather)) holds.set(key, (holds.get(key) ?? 0) + 1);
 }
 
@@ -359,8 +311,12 @@ export function panoramaLives(
   image?.once(Phaser.GameObjects.Events.DESTROY, () => releasePanorama(scene, place, weather));
   const spot = window.spots[0];
   if (!spot) return [window];
+  // The moon comes right after the pieces: the same atlas page, so the batch is not broken.
+  const moon = WINDOW_SKY[weather].moon
+    ? new PanoramaMoon(scene, panoramaMoonKey(place), spot)
+    : null;
   const glass = panoramaGlassLife(scene, weather, spot);
   const flash =
     weather === 'storm' ? new PanoramaFlash(scene, panoramaFlashKey(place), spot) : null;
-  return [window, ...(glass ? [glass] : []), ...(flash ? [flash] : [])];
+  return [window, ...(moon ? [moon] : []), ...(glass ? [glass] : []), ...(flash ? [flash] : [])];
 }
