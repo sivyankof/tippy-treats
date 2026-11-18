@@ -1,4 +1,4 @@
-import type { MusicMix } from '../../data/music/music-play';
+import { DEFAULT_MUSIC_MIX, type MusicMix } from '../../data/music/music-play';
 import type { MusicVariant } from '../../data/music/songs';
 import type { Mixer } from './mixer';
 import type { NodeTally } from './node-tally';
@@ -31,6 +31,8 @@ export interface MusicControl {
    * switch (off on weak phones). Missing fields stay as they are.
    */
   setMix(mix: Partial<MusicMix>): void;
+  /** The mix in force now (a copy): what the soundboard shows, and what the game last asked for. */
+  currentMix(): MusicMix;
 }
 
 /** What a music player gets to build on: the context, the music bus and the shared node tally. */
@@ -56,6 +58,7 @@ export const NO_MUSIC: MusicControl = {
   setLayer: () => undefined,
   setMenu: () => undefined,
   setMix: () => undefined,
+  currentMix: () => ({ ...DEFAULT_MUSIC_MIX }),
 };
 
 export const NO_MUSIC_FACTORY: MusicFactory = () => NO_MUSIC;

@@ -1,3 +1,4 @@
+import { DEFAULT_MUSIC_MIX } from '../../data/music/music-play';
 import {
   NO_MUSIC,
   type MusicControl,
@@ -59,6 +60,11 @@ export class MusicProxy implements MusicControl {
   setMix(mix: Partial<MusicMix>): void {
     this.mix = { ...this.mix, ...mix };
     this.safely(() => this.real.setMix(mix));
+  }
+
+  /** The mix asked so far over the defaults (the real player holds the same). */
+  currentMix(): MusicMix {
+    return { ...DEFAULT_MUSIC_MIX, ...this.mix };
   }
 
   /** What the game asked last: the tune (null when stopped), the layer and the menu switch. */

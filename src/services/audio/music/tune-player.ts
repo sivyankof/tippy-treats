@@ -178,6 +178,10 @@ export class TunePlayer implements MusicControl {
     this.chain?.setMix(this.mix);
   }
 
+  currentMix(): MusicMix {
+    return { ...this.mix };
+  }
+
   /** Live voices of the tune now (diagnostics and tests). */
   get voiceCount(): number {
     return this.active.size;

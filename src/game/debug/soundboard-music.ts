@@ -4,7 +4,7 @@ import {
   musicVariantOf,
   type MusicVariant,
 } from '../../data/music/songs';
-import { DEFAULT_MUSIC_MIX, MUSIC_PLAY, type MusicMix } from '../../data/music/music-play';
+import { MUSIC_PLAY, type MusicMix } from '../../data/music/music-play';
 import { t } from '../../i18n';
 import { services } from '../../services';
 
@@ -67,20 +67,31 @@ function light<T>(buttons: ReadonlyMap<T, HTMLButtonElement>, chosen: T): void {
   for (const [value, b] of buttons) b.classList.toggle('on', value === chosen);
 }
 
+/** The drops and the coin of the running combo run (cleared by a new run and by Stop). */
+let comboTimers: Array<ReturnType<typeof setTimeout>> = [];
+
+function clearComboRun(): void {
+  for (const id of comboTimers) clearTimeout(id);
+  comboTimers = [];
+}
+
 /** The chosen tune, a run of drops with a rising perfect combo over it, and a coin at the end. */
 function comboRun(): void {
   const r = COMBO_RUN;
+  clearComboRun();
   services.audio.music.start({ ...musicChoice });
   for (let i = 0; i < r.steps; i++) {
-    setTimeout(
-      () => {
-        services.audio.play('drop');
-        services.audio.play('perfect', i + 1);
-      },
-      r.leadMs + i * r.gapMs,
+    comboTimers.push(
+      setTimeout(
+        () => {
+          services.audio.play('drop');
+          services.audio.play('perfect', i + 1);
+        },
+        r.leadMs + i * r.gapMs,
+      ),
     );
   }
-  setTimeout(() => services.audio.play('coin'), r.leadMs + r.steps * r.gapMs);
+  comboTimers.push(setTimeout(() => services.audio.play('coin'), r.leadMs + r.steps * r.gapMs));
 }
 
 /**
@@ -109,7 +120,14 @@ export function buildMusicSection(root: HTMLElement): void {
       }),
     );
   }
-  const stop = button(t('soundboard.stop'), () => services.audio.music.stop(), 'alt');
+  const stop = button(
+    t('soundboard.stop'),
+    () => {
+      clearComboRun();
+      services.audio.music.stop();
+    },
+    'alt',
+  );
 
   const layers = new Map<number, HTMLButtonElement>();
   for (const layer of LAYERS) {
@@ -137,7 +155,8 @@ export function buildMusicSection(root: HTMLElement): void {
     'alt',
   );
 
-  const mix: MusicMix = { ...DEFAULT_MUSIC_MIX };
+  // Starts from the mix in force (a weak phone has the reverb off), not from the defaults.
+  const mix: MusicMix = services.audio.music.currentMix();
   const reverb = button(
     t('soundboard.reverb'),
     () => {
@@ -145,8 +164,9 @@ export function buildMusicSection(root: HTMLElement): void {
       reverb.classList.toggle('on', mix.reverb);
       services.audio.music.setMix({ reverb: mix.reverb });
     },
-    'alt on',
+    'alt',
   );
+  reverb.classList.toggle('on', mix.reverb);
   const setKnob = (key: 'tape' | 'drums' | 'melody') => (value: number) => {
     mix[key] = value;
     services.audio.music.setMix({ [key]: value });

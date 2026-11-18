@@ -1,3 +1,4 @@
+import { DEFAULT_MUSIC_MIX } from '../../data/music/music-play';
 import { describe, expect, it } from 'vitest';
 import type { MusicControl, MusicStartOptions } from './music-control';
 import { MusicProxy } from './music-proxy';
@@ -11,6 +12,7 @@ function recorder(): MusicControl & { log: string[] } {
     setLayer: (n) => log.push(`layer ${n}`),
     setMenu: (on) => log.push(`menu ${on}`),
     setMix: (mix) => log.push(`mix ${JSON.stringify(mix)}`),
+    currentMix: () => ({ ...DEFAULT_MUSIC_MIX }),
   };
 }
 
@@ -83,8 +85,22 @@ describe('MusicProxy', () => {
       setMix: () => {
         throw new Error('boom');
       },
+      currentMix: () => ({ ...DEFAULT_MUSIC_MIX }),
     });
     expect(() => proxy.setMix({ reverb: false })).not.toThrow();
     expect(() => proxy.start({ variant: 'a', layer: 1 })).not.toThrow();
+  });
+
+  it('reports the mix asked so far over the defaults', () => {
+    const proxy = new MusicProxy();
+    expect(proxy.currentMix()).toEqual(DEFAULT_MUSIC_MIX);
+    proxy.setMix({ reverb: false, drums: 0.5 });
+    proxy.setMix({ tape: 0.2 });
+    expect(proxy.currentMix()).toEqual({
+      ...DEFAULT_MUSIC_MIX,
+      reverb: false,
+      drums: 0.5,
+      tape: 0.2,
+    });
   });
 });

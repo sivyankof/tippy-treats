@@ -1,3 +1,4 @@
+import { DEFAULT_MUSIC_MIX } from '../../data/music/music-play';
 import { describe, expect, it, vi } from 'vitest';
 import { AUDIO_MIX } from '../../data/audio-mix';
 import { SFX } from '../../data/sfx';
@@ -100,6 +101,7 @@ const PLAYING_MUSIC: MusicFactory = (host) => ({
   setLayer: () => undefined,
   setMenu: () => undefined,
   setMix: () => undefined,
+  currentMix: () => ({ ...DEFAULT_MUSIC_MIX }),
 });
 
 function setup(musicFactory?: MusicFactory) {
@@ -435,6 +437,7 @@ describe('WebAudioService', () => {
       setLayer: (n) => log.push(`layer ${n}`),
       setMenu: (on) => log.push(`menu ${on}`),
       setMix: () => log.push('mix'),
+      currentMix: () => ({ ...DEFAULT_MUSIC_MIX }),
     };
     const ctx = new FakeContext();
     const service = new WebAudioService(
