@@ -88,10 +88,12 @@ export class PanoramaFlash implements Life {
       this.flashMs = this.rng.range(BOLT.flashMs[0], BOLT.flashMs[1]);
       this.nextAt = nextBoltAt(now, BOLT.everyMs, this.rng.next());
     }
-    const strength = this.flashAt < 0 ? 0 : flashEnvelope(now - this.flashAt, this.flashMs);
+    const elapsed = now - this.flashAt;
+    const strength = this.flashAt < 0 ? 0 : flashEnvelope(elapsed, this.flashMs);
+    const rising = elapsed < BOLT.riseShare * this.flashMs;
     if (this.flashAt >= 0 && now - this.flashAt >= this.flashMs) this.flashAt = -1;
     this.image.setVisible(strength > 0);
-    const boltAlpha = boltShare(strength);
+    const boltAlpha = boltShare(strength, rising);
     this.bolt.setVisible(boltAlpha > 0);
     if (strength <= 0) return;
     const scale = spot.scale / PANORAMA.flash.bakeShare;

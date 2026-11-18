@@ -139,9 +139,17 @@ describe('moonAlpha', () => {
 });
 
 describe('boltShare', () => {
-  it('is whole at the peak of the flash and gone while the light still shows', () => {
-    expect(boltShare(1)).toBe(1);
-    expect(boltShare(PANORAMA.flash.bolt.fade[0])).toBe(0);
-    expect(boltShare(0.6)).toBeLessThan(0.6);
+  const { riseAt, fallAt } = PANORAMA.flash.bolt;
+  it('is whole at the peak of the flash and gone on the fall while the light still shows', () => {
+    expect(boltShare(1, false)).toBe(1);
+    expect(boltShare(fallAt - 0.01, false)).toBe(0);
+    expect(fallAt).toBeGreaterThan(riseAt);
+  });
+  it('is never half see-through on the fall', () => {
+    for (let s = 0; s <= 1; s += 0.05) expect([0, 1]).toContain(boltShare(s, false));
+  });
+  it('is never half see-through on the rise: nothing over an unlit glass, then whole', () => {
+    expect(boltShare(riseAt / 2, true)).toBe(0);
+    for (const s of [riseAt, 0.5, 0.8, 0.9]) expect(boltShare(s, true)).toBe(1);
   });
 });

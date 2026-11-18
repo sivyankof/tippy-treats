@@ -104,8 +104,12 @@ export function moonAlpha(windowAlpha: number, muted: number): number {
   return windowAlpha * rampBetween(windowAlpha, goneAt, 1) * (1 - (1 - mutedAlpha) * muted);
 }
 
-/** Alpha share of the bolt in the window flash at flash `strength` (0..1): whole near the peak, gone well before the light. */
-export function boltShare(strength: number): number {
-  const [from, full] = PANORAMA.flash.bolt.fade;
-  return rampBetween(strength, from, full);
+/**
+ * Alpha share of the bolt in the window flash at flash `strength` (0..1): all or nothing, so it never shows half
+ * see-through. On the rise (`rising`) it is whole once the light has `bolt.riseAt` of its peak; on the fall it goes out
+ * once the light drops below `bolt.fallAt`, well before the light does.
+ */
+export function boltShare(strength: number, rising: boolean): number {
+  const { riseAt, fallAt } = PANORAMA.flash.bolt;
+  return strength >= (rising ? riseAt : fallAt) ? 1 : 0;
 }
