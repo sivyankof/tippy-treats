@@ -33,6 +33,17 @@ export interface TimedSource extends AudioNode {
   stop(when?: number): void;
 }
 
+/** A callback that disconnects `nodes` and counts them released, once however often it is called. */
+export function releaseOnce(tally: NodeTally, nodes: readonly AudioNode[]): () => void {
+  let done = false;
+  return () => {
+    if (done) return;
+    done = true;
+    for (const node of nodes) node.disconnect();
+    tally.release(nodes);
+  };
+}
+
 /**
  * Starts `source` at `start`, stops it at `stopAt`, and disconnects every node of `nodes` (the
  * source included) once it ends, so no node outlives its sound. The nodes are counted in `tally`.
@@ -48,13 +59,7 @@ export function runSource(
   stopAt: number,
 ): void {
   tally.add(nodes);
-  let ended = false;
-  source.onended = () => {
-    if (ended) return;
-    ended = true;
-    for (const node of nodes) node.disconnect();
-    tally.release(nodes);
-  };
+  source.onended = releaseOnce(tally, nodes);
   source.start(start);
   source.stop(stopAt);
 }

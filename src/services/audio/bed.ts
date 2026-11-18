@@ -1,6 +1,7 @@
 import { SFX } from '../../data/sfx';
 import { WEATHER_BED, type BedKind, type BedRecipe } from '../../data/weather-bed';
 import type { Mixer } from './mixer';
+import { releaseOnce } from './node-tally';
 import { noiseBuffer } from './noise-buffer';
 
 /** A looped bed that can be stopped (it fades out and frees its nodes). */
@@ -39,7 +40,8 @@ export function startBed(
   const lfo = ctx.createOscillator();
   lfo.frequency.value = recipe.swell.rateHz;
   const lfoGain = ctx.createGain();
-  lfoGain.gain.value = recipe.gain * recipe.swell.depth;
+  const swellDepth = recipe.gain * recipe.swell.depth;
+  lfoGain.gain.value = swellDepth;
   src.connect(filter);
   filter.connect(amp);
   amp.connect(mixer.sfxBus);
@@ -48,10 +50,10 @@ export function startBed(
 
   const nodes = [src, filter, amp, lfo, lfoGain];
   mixer.tally.add(nodes);
-  src.onended = () => {
-    for (const node of nodes) node.disconnect();
-    mixer.tally.release(nodes);
-  };
+  // The source and the LFO end together; one guarded release covers all five nodes.
+  const release = releaseOnce(mixer.tally, nodes);
+  src.onended = release;
+  lfo.onended = release;
   amp.gain.setValueAtTime(SFX.silence, start);
   amp.gain.linearRampToValueAtTime(recipe.gain, start + recipe.fadeInSec);
   src.start(start);
@@ -66,6 +68,8 @@ export function startBed(
     const fadeStart = start + Math.max(recipe.fadeInSec, seconds - recipe.fadeOutSec);
     amp.gain.setValueAtTime(recipe.gain, fadeStart);
     amp.gain.linearRampToValueAtTime(SFX.silence, start + seconds);
+    lfoGain.gain.setValueAtTime(swellDepth, fadeStart);
+    lfoGain.gain.linearRampToValueAtTime(0, start + seconds);
     endAt(start + seconds + WEATHER_BED.stopTail);
   }
   return {
@@ -76,6 +80,11 @@ export function startBed(
       amp.gain.cancelScheduledValues(now);
       amp.gain.setValueAtTime(level, now);
       amp.gain.linearRampToValueAtTime(SFX.silence, now + recipe.fadeOutSec);
+      // The swell is added to the gain: it fades out too, or the sum would not reach silence.
+      const depth = lfoGain.gain.value;
+      lfoGain.gain.cancelScheduledValues(now);
+      lfoGain.gain.setValueAtTime(depth, now);
+      lfoGain.gain.linearRampToValueAtTime(0, now + recipe.fadeOutSec);
       endAt(now + recipe.fadeOutSec + WEATHER_BED.stopTail);
     },
   };
