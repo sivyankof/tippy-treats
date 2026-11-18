@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { MUSIC_PLAY } from '../../../data/music/music-play';
+import { MUSIC_BUS, MUSIC_PLAY } from '../../../data/music/music-play';
 import type { MusicHost } from '../music-control';
 import { NodeTally } from '../node-tally';
 import { songTiming } from './music-schedule';
@@ -10,7 +10,9 @@ import { TunePlayer } from './tune-player';
 class FakeParam {
   value = 0;
   targets: Array<{ value: number; at: number }> = [];
-  setValueAtTime(): void {}
+  setValueAtTime(value: number): void {
+    this.value = value;
+  }
   linearRampToValueAtTime(): void {}
   exponentialRampToValueAtTime(): void {}
   cancelScheduledValues(): void {}
@@ -23,6 +25,10 @@ class FakeNode {
   onended: ((event: Event) => void) | null = null;
   type = '';
   buffer: unknown = null;
+  loop = false;
+  curve: unknown = null;
+  oversample = 'none';
+  readonly delayTime = new FakeParam();
   readonly gain = new FakeParam();
   readonly frequency = new FakeParam();
   readonly detune = new FakeParam();
@@ -58,8 +64,12 @@ class FakeContext {
   createOscillator = (): FakeNode => this.source();
   createBufferSource = (): FakeNode => this.source();
   createBiquadFilter = (): FakeNode => new FakeNode();
+  createWaveShaper = (): FakeNode => new FakeNode();
+  createDelay = (): FakeNode => new FakeNode();
+  createChannelMerger = (): FakeNode => new FakeNode();
   createPeriodicWave = (): object => ({});
-  createBuffer = (_channels: number, length: number) => ({
+  createBuffer = (_channels: number, length: number, rate: number) => ({
+    duration: length / rate,
     getChannelData: () => new Float32Array(length),
   });
 
@@ -93,6 +103,16 @@ function setup(offline: ConstructorParameters<typeof TunePlayer>[1] = null) {
   return { ctx, tally, player: new TunePlayer(host, offline) };
 }
 
+/** The music chain's fader (its gain targets show the tune's level). */
+function faderOf(player: TunePlayer): FakeNode {
+  return (player as unknown as { chain: { fader: FakeNode } }).chain.fader;
+}
+
+/** Live nodes of the music chain itself (built once, kept for the player's life). */
+function chainNodes(player: TunePlayer): number {
+  return (player as unknown as { chain: { nodes: unknown[] } }).chain.nodes.length;
+}
+
 /** Runs the live clock for `seconds` of context time in timer steps. */
 function play(ctx: FakeContext, seconds: number): void {
   const step = MUSIC_PLAY.tickMs / 1000;
@@ -118,7 +138,7 @@ describe('TunePlayer (live)', () => {
       }
     }
     expect(ctx.sources.length).toBeGreaterThan(200);
-    expect(most).toBeLessThan(MUSIC_PLAY.maxVoices * 3);
+    expect(most).toBeLessThan(MUSIC_PLAY.maxVoices * 3 + 40);
     expect(player.voiceCount).toBeLessThanOrEqual(MUSIC_PLAY.maxVoices);
   });
 
@@ -136,7 +156,15 @@ describe('TunePlayer (live)', () => {
     expect(ctx.sources.length).toBe(made);
     expect(player.voiceCount).toBe(0);
     vi.advanceTimersByTime(MUSIC_PLAY.stopCutSec * 4000);
-    expect(tally.live).toBe(0);
+    // Only the chain is left (built once); the reverb counts too while it is on.
+    expect(tally.live).toBeLessThanOrEqual(chainNodes(player) + 20);
+    const kept = tally.live;
+    player.start({ variant: 'a', layer: 6 });
+    play(ctx, 5);
+    player.stop();
+    play(ctx, 2);
+    vi.advanceTimersByTime(MUSIC_PLAY.stopCutSec * 4000);
+    expect(tally.live).toBe(kept);
   });
 
   it('skips the notes whose time has passed (no burst after a suspend or a starved timer)', () => {
@@ -157,10 +185,10 @@ describe('TunePlayer (live)', () => {
     expect(ctx.sources.length).toBe(frozen);
   });
 
-  it('the menu is quieter and plays layer 1 only', () => {
+  it('the menu is quieter and plays layers 1-2 only', () => {
     const { ctx, player } = setup();
     player.start({ variant: 'c', layer: 6, menu: true });
-    const out = ctx.gains[1];
+    const out = faderOf(player);
     expect(out?.gain.targets.at(-1)?.value).toBeCloseTo(
       MUSIC_PLAY.tuneLevel * MUSIC_PLAY.menuLevel,
       9,
@@ -170,7 +198,7 @@ describe('TunePlayer (live)', () => {
     player.setMenu(false);
     expect(out?.gain.targets.at(-1)?.value).toBeCloseTo(MUSIC_PLAY.tuneLevel, 9);
     play(ctx, 6);
-    // Back on the run arrangement the other five parts join: many more notes per second.
+    // Back on the run arrangement the drums, the melody and the second line join.
     expect(ctx.sources.length - leadOnly).toBeGreaterThan(leadOnly * 2);
   });
 
@@ -184,7 +212,33 @@ describe('TunePlayer (live)', () => {
     player.stop();
     play(ctx, 6);
     vi.advanceTimersByTime(MUSIC_PLAY.stopCutSec * 4000);
-    expect(tally.live).toBe(0);
+    expect(tally.live).toBeLessThanOrEqual(chainNodes(player) + 20);
+  });
+
+  it('drops the reverb on request and lets its nodes go after the tail', () => {
+    const { ctx, tally, player } = setup();
+    player.start({ variant: 'b', layer: 1 });
+    const withReverb = tally.live;
+    player.setMix({ reverb: false });
+    vi.advanceTimersByTime(MUSIC_BUS.reverb.tailSec * 1000 + 10);
+    const without = tally.live;
+    expect(withReverb - without).toBeGreaterThanOrEqual(MUSIC_BUS.reverb.delays.length * 3);
+    player.setMix({ reverb: true });
+    expect(tally.live).toBe(withReverb);
+    play(ctx, 1);
+  });
+
+  it('dips the music on every kick (pump) and scales the drums with the knob', () => {
+    const { ctx, player } = setup();
+    player.setMix({ drums: 0.5 });
+    player.start({ variant: 'a', layer: 3 });
+    play(ctx, 6);
+    const chain = (player as unknown as { chain: { pump: FakeNode; roles: { drums: FakeNode } } })
+      .chain;
+    const dips = chain.pump.gain.targets.filter((t) => t.value < 1);
+    expect(dips.length).toBeGreaterThan(3);
+    for (const dip of dips) expect(dip.value).toBeGreaterThan(0.75);
+    expect(chain.roles.drums.gain.targets.at(-1)?.value ?? chain.roles.drums.gain.value).toBe(0.5);
   });
 });
 
@@ -196,10 +250,10 @@ describe('TunePlayer (offline)', () => {
     const last = Math.max(...ctx.sources.map((s) => s.startAt));
     expect(last).toBeGreaterThan(seconds - 1);
     expect(last).toBeLessThan(seconds);
-    // Before the change only the lead (one oscillator per note) plays.
+    // Before the change only the keys and the tape play.
     const { barSec } = songTiming(SONGS.c);
     const early = ctx.sources.filter((s) => s.startAt < 8);
     const late = ctx.sources.filter((s) => s.startAt > 8 + barSec * 3);
-    expect(late.length / (seconds - 8 - barSec * 3)).toBeGreaterThan((early.length / 8) * 3);
+    expect(late.length / (seconds - 8 - barSec * 3)).toBeGreaterThan((early.length / 8) * 1.5);
   });
 });

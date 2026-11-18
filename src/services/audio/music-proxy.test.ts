@@ -10,6 +10,7 @@ function recorder(): MusicControl & { log: string[] } {
     stop: () => log.push('stop'),
     setLayer: (n) => log.push(`layer ${n}`),
     setMenu: (on) => log.push(`menu ${on}`),
+    setMix: (mix) => log.push(`mix ${JSON.stringify(mix)}`),
   };
 }
 
@@ -47,6 +48,18 @@ describe('MusicProxy', () => {
     expect(real.log.at(-1)).toBe('start c 4 -');
   });
 
+  it('remembers the mix before a player exists and passes it on, also while the music is off', () => {
+    const proxy = new MusicProxy();
+    proxy.setMix({ reverb: false });
+    proxy.setMix({ drums: 0.5 });
+    const real = recorder();
+    proxy.attach(real);
+    expect(real.log).toEqual(['mix {"reverb":false,"drums":0.5}']);
+    proxy.setEnabled(false);
+    proxy.setMix({ tape: 0 });
+    expect(real.log.at(-1)).toBe('mix {"tape":0}');
+  });
+
   it('does not restart a tune that was stopped', () => {
     const proxy = new MusicProxy();
     const real = recorder();
@@ -67,7 +80,11 @@ describe('MusicProxy', () => {
       stop: () => undefined,
       setLayer: () => undefined,
       setMenu: () => undefined,
+      setMix: () => {
+        throw new Error('boom');
+      },
     });
+    expect(() => proxy.setMix({ reverb: false })).not.toThrow();
     expect(() => proxy.start({ variant: 'a', layer: 1 })).not.toThrow();
   });
 });

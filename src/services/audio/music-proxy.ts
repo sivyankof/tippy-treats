@@ -1,8 +1,13 @@
-import { NO_MUSIC, type MusicControl, type MusicStartOptions } from './music-control';
+import {
+  NO_MUSIC,
+  type MusicControl,
+  type MusicMix,
+  type MusicStartOptions,
+} from './music-control';
 
 /**
  * The `AudioService.music` the game holds from the start. It remembers what the game asked
- * (tune, layer, menu) and hands it to the real player once there is one (the audio is unlocked)
+ * (tune, layer, menu, mix) and hands it to the real player once there is one (the audio is unlocked)
  * and the music is on; while the music is off the real player is stopped. Calls never throw.
  */
 export class MusicProxy implements MusicControl {
@@ -11,10 +16,13 @@ export class MusicProxy implements MusicControl {
   private options: MusicStartOptions | null = null;
   private layer: number | null = null;
   private menu: boolean | null = null;
+  private mix: Partial<MusicMix> = {};
 
   /** Gives the proxy its player and brings it up to date with what was asked. */
   attach(real: MusicControl): void {
     this.real = real;
+    const { mix } = this;
+    if (Object.keys(mix).length > 0) this.safely(() => this.real.setMix(mix));
     if (this.enabled) this.replay();
   }
 
@@ -46,6 +54,11 @@ export class MusicProxy implements MusicControl {
   setMenu(on: boolean): void {
     this.menu = on;
     if (this.enabled) this.safely(() => this.real.setMenu(on));
+  }
+
+  setMix(mix: Partial<MusicMix>): void {
+    this.mix = { ...this.mix, ...mix };
+    this.safely(() => this.real.setMix(mix));
   }
 
   /** What the game asked last: the tune (null when stopped), the layer and the menu switch. */

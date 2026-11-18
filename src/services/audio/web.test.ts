@@ -383,6 +383,7 @@ describe('WebAudioService', () => {
       stop: () => log.push('stop'),
       setLayer: (n) => log.push(`layer ${n}`),
       setMenu: (on) => log.push(`menu ${on}`),
+      setMix: () => log.push('mix'),
     };
     const ctx = new FakeContext();
     const service = new WebAudioService(

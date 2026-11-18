@@ -1,19 +1,29 @@
-import { MUSIC_PLAY } from '../../../data/music/music-play';
+import {
+  DEFAULT_MUSIC_MIX,
+  MUSIC_BUS,
+  MUSIC_PLAY,
+  type MusicMix,
+} from '../../../data/music/music-play';
 import type { Song } from '../../../data/music/song';
-import { DEFAULT_MUSIC_VARIANT, SONGS } from '../../../data/music/songs';
+import { DEFAULT_MUSIC_VARIANT, MUSIC_FILES, SONGS } from '../../../data/music/songs';
 import { randomSeed } from '../../../util/math';
 import type { MusicControl, MusicFactory, MusicHost, MusicStartOptions } from '../music-control';
-import type { TimedSource } from '../node-tally';
-import { MusicVoices } from './music-voices';
+import { runSource, type TimedSource } from '../node-tally';
+import { FileLoop, musicFileUrl } from './file-loop';
+import { MusicChain } from './music-chain';
+import { MusicVoices, type VoiceHandle } from './music-voices';
 import {
   clampLayer,
+  crackleWindow,
   initialLevels,
   retargetLevels,
   scheduleWindow,
+  songTiming,
   type LoopPlan,
   type NoteEvent,
   type PartLevel,
 } from './music-schedule';
+import { crackle, tapeHiss } from './tape';
 
 /** A change during an offline render: at `at` seconds from the start, a new layer and/or the menu switch. */
 export interface TuneChange {
@@ -28,6 +38,8 @@ export interface OfflinePlan {
   changes?: readonly TuneChange[];
   /** Measurements only: play this part (index) alone, at full level. */
   only?: number;
+  /** The knobs and the reverb switch of the render. */
+  mix?: Partial<MusicMix>;
 }
 
 /** Loop plans kept at a time (the loop playing and the next one). */
@@ -37,12 +49,15 @@ const MAX_CACHED_PLANS = 4;
  * The music player (`MusicControl`). Live, a look-ahead clock wakes every `tickMs` and schedules
  * the notes that start within `aheadSec`; notes whose time has passed (the context was suspended
  * or the timer starved) are skipped, so nothing bursts after a resume. Offline, the whole stretch
- * is scheduled at `start`. Each tune gets its own output gain (the entry fade, the menu level and
- * the stop fade); voices are created per note only and released when they end.
+ * is scheduled at `start`. The music chain (filters, saturation, pump, reverb, tape, the wobble
+ * LFO) is built once, at the first start; voices are created per note only and released when
+ * they end. A variant listed in `MUSIC_FILES` plays its file in a loop instead.
  */
 export class TunePlayer implements MusicControl {
-  private readonly voices: MusicVoices;
-  private readonly active = new Set<TimedSource>();
+  private chain: MusicChain | null = null;
+  private voices: MusicVoices | null = null;
+  private files: FileLoop | null = null;
+  private readonly active = new Set<VoiceHandle>();
   private song: Song | null = null;
   private seed = 0;
   /** Loop plans of the current song, built once each (the tick runs every 25 ms). */
@@ -54,27 +69,49 @@ export class TunePlayer implements MusicControl {
   private levels: PartLevel[] = [];
   private layer = 1;
   private menu = false;
-  private out: GainNode | null = null;
+  private playing = false;
+  private hiss: AudioBuffer | null = null;
+  private hissSource: TimedSource | null = null;
+  private crackles: AudioBuffer | null = null;
+  private mix: MusicMix;
   private timer: ReturnType<typeof setInterval> | null = null;
 
   constructor(
     private readonly host: MusicHost,
     private readonly offline: OfflinePlan | null = null,
   ) {
-    this.voices = new MusicVoices(host.ctx, host.tally, host.random);
+    this.mix = { ...DEFAULT_MUSIC_MIX, ...offline?.mix };
   }
 
   start(options: MusicStartOptions): void {
+    const restart = this.playing;
     this.stop();
-    const { ctx, tally } = this.host;
-    const song = SONGS[options.variant] ?? SONGS[DEFAULT_MUSIC_VARIANT];
+    const { ctx } = this.host;
+    const chain = this.ensureChain();
     const now = ctx.currentTime;
-    this.song = song;
+    const lead = restart ? MUSIC_PLAY.stopCutSec : MUSIC_PLAY.startLeadSec;
     this.layer = clampLayer(options.layer);
     this.menu = options.menu ?? false;
+    this.playing = true;
+    const fader = chain.fader.gain;
+    if (!restart) fader.setValueAtTime(0, now);
+    fader.setTargetAtTime(
+      this.outLevel(),
+      now + lead - MUSIC_PLAY.startLeadSec,
+      MUSIC_PLAY.entryRampSec,
+    );
+    this.origin = now + lead;
+
+    const url = musicFileUrl(MUSIC_FILES[options.variant]);
+    if (url) {
+      this.files ??= new FileLoop(ctx, this.host.tally);
+      void this.files.play(url, chain.fader, this.origin);
+      return;
+    }
+    const song = SONGS[options.variant] ?? SONGS[DEFAULT_MUSIC_VARIANT];
+    this.song = song;
     this.seed = randomSeed(this.host.random);
     this.plans.clear();
-    this.origin = now + MUSIC_PLAY.startLeadSec;
     this.scheduledTo = 0;
     this.levels = initialLevels(song, this.heardLayer());
     const only = this.offline?.only;
@@ -84,13 +121,9 @@ export class TunePlayer implements MusicControl {
         from: +(i === only),
         to: +(i === only),
       }));
+    } else {
+      this.startHiss(chain, this.origin);
     }
-    const out = ctx.createGain();
-    out.gain.setValueAtTime(0, now);
-    out.gain.setTargetAtTime(this.outLevel(), now, MUSIC_PLAY.entryRampSec);
-    out.connect(this.host.bus);
-    tally.add([out]);
-    this.out = out;
     if (this.offline) {
       this.scheduleOffline(this.offline);
     } else {
@@ -102,26 +135,27 @@ export class TunePlayer implements MusicControl {
   stop(): void {
     if (this.timer !== null) clearInterval(this.timer);
     this.timer = null;
-    const out = this.out;
-    this.out = null;
     this.song = null;
-    if (!out) return;
-    const { ctx, tally } = this.host;
+    if (!this.playing) return;
+    this.playing = false;
+    const { ctx } = this.host;
     const now = ctx.currentTime;
-    out.gain.cancelScheduledValues(now);
-    out.gain.setTargetAtTime(0, now, MUSIC_PLAY.stopRampSec);
     const cut = now + MUSIC_PLAY.stopCutSec;
-    for (const source of this.active) {
+    const fader = this.chain?.fader.gain;
+    fader?.cancelScheduledValues(now);
+    fader?.setTargetAtTime(0, now, MUSIC_PLAY.stopRampSec);
+    this.files?.stop(cut);
+    const voices: VoiceHandle[] = [...this.active];
+    const hiss = this.hissSource;
+    if (hiss) voices.push({ stop: (when) => hiss.stop(when) });
+    this.hissSource = null;
+    for (const voice of voices) {
       try {
-        source.stop(cut);
+        voice.stop(cut);
       } catch {
         // Already stopped.
       }
     }
-    setTimeout(() => {
-      out.disconnect();
-      tally.release([out]);
-    }, MUSIC_PLAY.stopCutSec * 2000);
   }
 
   setLayer(layer: number): void {
@@ -134,14 +168,58 @@ export class TunePlayer implements MusicControl {
     this.retarget(this.host.ctx.currentTime);
   }
 
+  setMix(mix: Partial<MusicMix>): void {
+    this.mix = { ...this.mix, ...mix };
+    this.chain?.setMix(this.mix);
+  }
+
   /** Live voices of the tune now (diagnostics and tests). */
   get voiceCount(): number {
     return this.active.size;
   }
 
-  /** The layer heard: the menu plays layer 1. */
+  private ensureChain(): MusicChain {
+    if (this.chain) return this.chain;
+    const { ctx, bus, tally, random } = this.host;
+    const chain = new MusicChain(ctx, bus, tally);
+    chain.setMix(this.mix, 0);
+    this.chain = chain;
+    this.voices = new MusicVoices(ctx, tally, random, chain.wobble);
+    return chain;
+  }
+
+  /** The tape hiss: one looping source per start, from a buffer built once. */
+  private startHiss(chain: MusicChain, at: number): void {
+    const { ctx, tally, random } = this.host;
+    const t = MUSIC_BUS.tape;
+    if (!this.hiss) {
+      const rate = ctx.sampleRate;
+      const frames = Math.ceil(t.hissSeconds * rate);
+      const samples = tapeHiss(
+        frames,
+        rate,
+        random,
+        t.hissCutoff,
+        Math.ceil(t.hissLoopFadeSec * rate),
+      );
+      const buffer = ctx.createBuffer(1, frames, rate);
+      buffer.getChannelData(0).set(samples);
+      this.hiss = buffer;
+    }
+    const src = ctx.createBufferSource();
+    src.buffer = this.hiss;
+    src.loop = true;
+    const level = ctx.createGain();
+    level.gain.value = t.hissLevel;
+    src.connect(level);
+    level.connect(chain.tape);
+    runSource(tally, src, [src, level], at, at + HISS_FOREVER_SEC);
+    this.hissSource = src;
+  }
+
+  /** The layer heard: the menu plays the first `menuLayer` layers. */
   private heardLayer(): number {
-    return this.menu ? 1 : this.layer;
+    return this.menu ? MUSIC_PLAY.menuLayer : this.layer;
   }
 
   private outLevel(): number {
@@ -150,11 +228,12 @@ export class TunePlayer implements MusicControl {
 
   /** Applies the layer and the menu level from context time `when` (the fades start on the next bar line). */
   private retarget(when: number): void {
-    const { song, out } = this;
-    if (!song || !out) return;
+    const { song, chain } = this;
+    if (!this.playing || !chain) return;
+    chain.fader.gain.setTargetAtTime(this.outLevel(), when, MUSIC_PLAY.menuRampSec);
+    if (!song || this.offline?.only !== undefined) return;
     const at = Math.max(when - this.origin, this.scheduledTo);
     this.levels = retargetLevels(song, this.levels, this.heardLayer(), at);
-    out.gain.setTargetAtTime(this.outLevel(), when, MUSIC_PLAY.menuRampSec);
   }
 
   private readonly tick = (): void => {
@@ -166,31 +245,70 @@ export class TunePlayer implements MusicControl {
     }
   };
 
-  /** Schedules the notes of [from, to) in song time. */
+  /** Schedules the notes and crackles of [from, to) in song time. */
   private scheduleUntil(from: number, to: number): void {
-    const { song, out } = this;
-    if (!song || !out || to <= from) return;
+    const { song } = this;
+    if (!song || to <= from) return;
     // Only the loops around now are ever asked for again.
     if (this.plans.size > MAX_CACHED_PLANS) this.plans.clear();
     for (const event of scheduleWindow(song, this.seed, this.levels, from, to, this.plans)) {
-      this.playEvent(song, event, out);
+      this.playEvent(song, event);
+    }
+    if (this.offline?.only === undefined) {
+      const t = MUSIC_BUS.tape;
+      const beatSec = songTiming(song).barSec / song.beatsPerBar;
+      for (const hit of crackleWindow(this.seed, beatSec, t.crackleChance, from, to)) {
+        this.playCrackle(this.origin + hit.time, hit.strength, hit.rate);
+      }
     }
     this.scheduledTo = to;
   }
 
-  private playEvent(song: Song, event: NoteEvent, out: GainNode): void {
+  private playEvent(song: Song, event: NoteEvent): void {
     const part = song.parts[event.part];
-    if (!part) return;
+    const { chain, voices } = this;
+    if (!part || !chain || !voices) return;
     // Live only: offline every voice of the stretch is scheduled before any of them has ended.
     if (!this.offline && this.active.size >= MUSIC_PLAY.maxVoices) return;
-    const note = {
-      time: this.origin + event.time,
-      length: event.length,
-      pitch: event.pitch,
-      gain: event.gain,
+    const time = this.origin + event.time;
+    const note = { time, length: event.length, pitch: event.pitch, gain: event.gain };
+    const voice = voices.play(part.instrument, note, chain.roles[part.role], () =>
+      this.active.delete(voice),
+    );
+    this.active.add(voice);
+    if (part.instrument === 'kick') chain.kick(time, event.gain / (song.gain * part.gain));
+  }
+
+  /** One vinyl crackle: a tiny buffer source and its level into the tape input. */
+  private playCrackle(time: number, strength: number, rate: number): void {
+    const { chain } = this;
+    if (!chain) return;
+    const { ctx, tally, random } = this.host;
+    const t = MUSIC_BUS.tape;
+    if (!this.crackles) {
+      const frames = Math.max(2, Math.ceil(t.crackleSec * ctx.sampleRate));
+      const buffer = ctx.createBuffer(1, frames, ctx.sampleRate);
+      buffer.getChannelData(0).set(crackle(frames, random));
+      this.crackles = buffer;
+    }
+    const src = ctx.createBufferSource();
+    src.buffer = this.crackles;
+    const speed = t.crackleRate.min + (t.crackleRate.max - t.crackleRate.min) * rate;
+    src.playbackRate.setValueAtTime(speed, time);
+    const level = ctx.createGain();
+    level.gain.value =
+      t.crackleLevel * (t.crackleGain.min + (t.crackleGain.max - t.crackleGain.min) * strength);
+    src.connect(level);
+    level.connect(chain.tape);
+    const end = time + this.crackles.duration / speed;
+    runSource(tally, src, [src, level], time, end);
+    const voice: VoiceHandle = { stop: (when) => src.stop(when) };
+    this.active.add(voice);
+    const release = src.onended;
+    src.onended = (event: Event) => {
+      release?.call(src, event);
+      this.active.delete(voice);
     };
-    const source = this.voices.play(part.instrument, note, out, () => this.active.delete(source));
-    this.active.add(source);
   }
 
   /** The whole offline stretch, the changes applied at their times. */
@@ -205,6 +323,9 @@ export class TunePlayer implements MusicControl {
     this.scheduleUntil(this.scheduledTo, plan.seconds - this.origin);
   }
 }
+
+/** The end time given to the looping hiss until `stop` sets the real one (a day). */
+const HISS_FOREVER_SEC = 86_400;
 
 /** The live player of the game (`WebAudioService`'s music factory). */
 export const createTunePlayer: MusicFactory = (host) => new TunePlayer(host);

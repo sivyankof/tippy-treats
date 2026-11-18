@@ -1,20 +1,19 @@
-import { BOX } from './box';
-import { RUN } from './run';
+import { EVENING } from './evening';
+import { KITCHEN } from './kitchen';
+import { RAIN } from './rain';
 import type { Song } from './song';
-import { WALTZ } from './waltz';
 
 /**
- * The tunes on offer (docs/06-art-animation-audio.md, section 7, "Музыка"). Each variant lives in
- * its own file and nothing else reads its contents: once the owner has chosen, the other two are
- * removed by deleting their files and their lines here.
+ * The tunes on offer (docs/06-art-animation-audio.md, section 7, "Музыка"): three calm lofi
+ * tunes, each in its own file; nothing else reads their contents.
  */
 export const SONGS = {
-  /** "Шкатулка": music box lullaby. */
-  a: BOX,
-  /** "Вальс кондитерской": bakery waltz. */
-  b: WALTZ,
-  /** "Бодрая": upbeat run. */
-  c: RUN,
+  /** «Тёплая кухня»: C major, 76 bpm. */
+  a: KITCHEN,
+  /** «Дождь за окном»: A minor, 72 bpm. */
+  b: RAIN,
+  /** «Вечер»: F major, 70 bpm. */
+  c: EVENING,
 } as const satisfies Record<string, Song>;
 
 export type MusicVariant = keyof typeof SONGS;
@@ -22,10 +21,11 @@ export type MusicVariant = keyof typeof SONGS;
 export const MUSIC_VARIANTS = Object.keys(SONGS) as MusicVariant[];
 
 /**
- * The tune the game plays unless `?music=` picks another: the bakery waltz. It fits the sweets
- * theme, its middle tempo suits both the menu and a run, and its timbres (a soft square lead,
- * bass, reeds) differ from the combo bell, so the perfect-drop bells stay easy to hear; the music
- * box shares the bells' timbre and register, the run tune tires sooner over a long session.
+ * The tune the game plays unless `?music=` picks another: «Дождь за окном», the calmest of the
+ * three. It plays the fewest notes per minute (one long chord per bar, offbeat hats, a melody
+ * that leaves half its bars empty), its chords change every two bars instead of every bar, and
+ * none of its chords pulls towards a resolution (its "V" is a sus chord); «Тёплая кухня» is
+ * brighter and busier, «Вечер» moves through ii-V turns that ask to be followed.
  */
 export const DEFAULT_MUSIC_VARIANT: MusicVariant = 'b';
 
@@ -33,3 +33,10 @@ export const DEFAULT_MUSIC_VARIANT: MusicVariant = 'b';
 export function musicVariantOf(raw: string | null | undefined): MusicVariant {
   return MUSIC_VARIANTS.find((variant) => variant === raw) ?? DEFAULT_MUSIC_VARIANT;
 }
+
+/**
+ * The file fallback (docs/06, section 7): a variant listed here plays the named file from
+ * `assets/music/` in a loop instead of the synthesizer, through the same music bus, switches
+ * and duck. Empty: every tune is synthesized. Each file goes into `assets/LICENSES.md`.
+ */
+export const MUSIC_FILES: Partial<Record<MusicVariant, string>> = {};

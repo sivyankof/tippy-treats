@@ -1,9 +1,10 @@
+import type { MusicMix } from '../../data/music/music-play';
 import type { MusicVariant } from '../../data/music/songs';
 import type { Mixer } from './mixer';
 import type { NodeTally } from './node-tally';
 
 /** The tunes of the game (docs/06, section 7): the keys of `SONGS`. */
-export type { MusicVariant };
+export type { MusicMix, MusicVariant };
 
 export interface MusicStartOptions {
   variant: MusicVariant;
@@ -25,6 +26,11 @@ export interface MusicControl {
   setLayer(layer: number): void;
   /** True: the quiet menu arrangement; false: the run arrangement. */
   setMenu(on: boolean): void;
+  /**
+   * The knobs of the music (tape, drums, melody: multipliers, 1 in the game) and the reverb
+   * switch (off on weak phones). Missing fields stay as they are.
+   */
+  setMix(mix: Partial<MusicMix>): void;
 }
 
 /** What a music player gets to build on: the context, the music bus and the shared node tally. */
@@ -41,12 +47,13 @@ export interface MusicHost {
 /** Builds the player over a host; the service calls it once, when the audio is unlocked. */
 export type MusicFactory = (host: MusicHost) => MusicControl;
 
-/** A player that does nothing: the default until theme C provides one. */
+/** A player that does nothing (no music factory given). */
 export const NO_MUSIC: MusicControl = {
   start: () => undefined,
   stop: () => undefined,
   setLayer: () => undefined,
   setMenu: () => undefined,
+  setMix: () => undefined,
 };
 
 export const NO_MUSIC_FACTORY: MusicFactory = () => NO_MUSIC;
