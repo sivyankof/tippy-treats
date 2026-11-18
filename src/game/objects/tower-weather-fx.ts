@@ -90,7 +90,7 @@ export class TowerWeatherFx {
       const item = this.pending[i]!;
       if (item.atMs > this.clockMs) continue;
       this.pending.splice(i, 1);
-      if (!item.view.visible) continue;
+      if (!item.view.visible || !item.view.faceView.canStartle) continue;
       item.view.faceView.react(item.reaction, STARTLE.holdMs);
       if (item.hop) item.view.rig.hop(STARTLE.hop.px, STARTLE.hop.ms);
     }

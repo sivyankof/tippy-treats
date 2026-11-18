@@ -5,7 +5,7 @@ import { pickRange } from '../../util/math';
 
 export type { MouthKind };
 /** `wink`: the left eye is open, the right one shut. */
-export type EyeKind = 'open' | 'closed' | 'happy' | 'wide' | 'wink' | 'sleepy';
+export type EyeKind = 'open' | 'closed' | 'happy' | 'wide' | 'wink' | 'sleepy' | 'squeeze';
 export type Mood = 'calm' | 'nervous' | 'scared';
 /**
  * Short-lived overrides, highest priority last: blink < yawn (a sleepy layer at rest) < the startle at a flash of
@@ -159,7 +159,7 @@ export function resolveExpression(
       return { ...base, eyes: 'closed', lids: false };
     case 'yawn':
       // The mouth of the yawn is posed by the face itself; the eyes are shut.
-      return { ...base, eyes: 'closed', mouth: 'flat', lids: false };
+      return { ...base, eyes: 'squeeze', mouth: 'flat', lids: false };
     case 'startle':
       // A flash of lightning: round wide eyes, a small round mouth, worried brows.
       return { eyes: 'wide', mouth: 'o', brows: true, ownBrows: false, lids: false, sweat: false };

@@ -15,10 +15,10 @@ export const TOWER_WEATHER = {
     /** The drift stops this far short of the corner of the layer and of the seam under the layer above. */
     insetPx: 4,
     /** Thickness of a drift per px of its width, before the clamps. */
-    thicknessPerPx: 0.14,
-    minThicknessPx: 6,
+    thicknessPerPx: 0.24,
+    minThicknessPx: 8,
     /** The drift is never thicker than this share of the snow cap on the top layer. */
-    maxShareOfCap: 0.55,
+    maxShareOfCap: 0.72,
     /** A drift buried under a wider layer above squashes away over this long. */
     squashMs: 200,
     /** The widths the drift picture is baked at (px); a drift takes the nearest one and stretches a little. */
@@ -28,6 +28,11 @@ export const TOWER_WEATHER = {
     /** Rows of the picture under the top edge of the layer: the drift sits this deep in the rim. */
     sinkPx: 1,
     outlinePx: 1.6,
+    /** Cold outline and shade of the heap (the snow itself is the cap's white). */
+    outlineColor: 0x93a7cc,
+    shadeColor: 0xd6e1f5,
+    /** Small round drops hanging under the edge of a wide drift: radius, reach under the baseline, and the least width that gets them. */
+    drop: { radius: 2.6, reach: 4, minWidth: 64 },
     /** Depth of the baked heap swell (share of its height). */
     swell: 0.12,
   },
@@ -78,10 +83,10 @@ export const TOWER_WEATHER = {
       gapeMs: 700,
       closeMs: 250,
       /** Face stretch (scale of the face up, the share of its height) during the prep and the gape. */
-      stretchPrep: 0.06,
-      stretchGape: 0.1,
-      /** The mouth is this big against the lick gape picture. */
-      mouthScale: 0.8,
+      stretchPrep: 0.08,
+      stretchGape: 0.2,
+      /** The mouth is this big against its picture. */
+      mouthScale: 1.1,
       /** The face lifts this far while it draws itself up (face px). */
       liftPx: 3,
       /** The overshoot of the close: the face squashes this much at its lowest. */

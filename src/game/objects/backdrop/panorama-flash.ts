@@ -15,9 +15,10 @@ const G = PANORAMA.glass;
 /** Flashes that are alive; filled in development only, for the debug hook. */
 const FLASHES = new Set<PanoramaFlash>();
 
-/** Debug: every storm flash in a panoramic window shows right away. */
-export function strikeWindowFlashNow(): void {
+/** Debug: every storm flash in a panoramic window shows right away; how many there are. */
+export function strikeWindowFlashNow(): number {
   for (const flash of FLASHES) flash.strikeNow();
+  return FLASHES.size;
 }
 
 /**

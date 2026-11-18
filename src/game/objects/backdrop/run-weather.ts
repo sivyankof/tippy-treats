@@ -96,8 +96,8 @@ export class RunWeather {
       // window.tippyLightning(): the next bolt of a storm strikes right away (the sky and the panoramic window);
       // without a storm in the sky, only the startle of the layers.
       win.tippyLightning = () => {
-        const struck = strikeLightningNow();
-        strikeWindowFlashNow();
+        // A flash in the window of the Kitchen scares nobody; with no storm anywhere only the layers startle.
+        const struck = strikeLightningNow() + strikeWindowFlashNow();
         if (struck === 0) tower.startle('sky');
       };
       // window.tippyYawn(): the first free layer from the top yawns right away, in any weather; true when one did.

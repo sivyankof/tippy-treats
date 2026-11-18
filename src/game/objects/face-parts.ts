@@ -118,16 +118,15 @@ export class FaceParts extends Phaser.GameObjects.Container {
   }
 
   /**
-   * The mouth of a yawn over the current expression: the gaping mouth of the lick at `scale` times its size, `open` (0..1)
+   * The mouth of a yawn over the current expression: the tall oval mouth of the yawn at `scale` times its size, `open` (0..1)
    * wide; a mouth that is all but shut is left as the expression has it. Call `apply` again to go back.
    */
   poseYawn(open: number, scale: number): void {
     if (open <= YAWN_MOUTH_MIN) return;
-    const { lipY } = LICK.face.gape;
-    FaceParts.show(this.mouth, FACE_TEXTURES.mouthGape)
-      .setOrigin(0.5, 0)
-      .setPosition(0, lipY)
-      .setScale(scale * (0.7 + 0.3 * open), scale * open);
+    FaceParts.show(this.mouth, FACE_TEXTURES.mouthYawn)
+      .setOrigin(0.5, 0.3)
+      .setPosition(0, ANIM.face.mouthOffsetY)
+      .setScale(scale * (0.55 + 0.45 * open), scale * open);
   }
 
   /** The eyes and pupils at `share` of the wide-eye size (the way back from a startle); `apply` resets them. */

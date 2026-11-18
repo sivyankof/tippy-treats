@@ -1,15 +1,13 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="46" height="46" viewBox="0 0 46 46">
   <defs>
-    <clipPath id="outer"><circle cx="23" cy="23" r="23"/></clipPath>
     <clipPath id="inner"><circle cx="23" cy="23" r="20"/></clipPath>
   </defs>
-  <g clip-path="url(#outer)">
-    <rect x="0" y="19" width="46" height="27" fill="#3B2A4A"/>
-  </g>
+  <circle cx="23" cy="23" r="23" fill="#3B2A4A"/>
+  <circle cx="23" cy="23" r="20" fill="#FFFFFF"/>
   <g clip-path="url(#inner)">
-    <rect x="0" y="23" width="46" height="23" fill="#FFFFFF"/>
-    <circle cx="23" cy="32" r="9" fill="#3B2A4A"/>
-    <circle cx="26.5" cy="29" r="2.4" fill="#FFFFFF"/>
+    <circle cx="23" cy="32" r="6.5" fill="#3B2A4A"/>
+    <circle cx="25.2" cy="30" r="1.8" fill="#FFFFFF"/>
+    <path d="M0 0 H46 V22 Q23 35 0 22 Z" fill="#F0C896"/>
+    <path d="M-2 22 Q23 35 48 22" fill="none" stroke="#B07A4A" stroke-width="3" stroke-linecap="round"/>
   </g>
-  <path d="M2.5 20 Q23 26 43.5 20" fill="none" stroke="#3B2A4A" stroke-width="5" stroke-linecap="round"/>
 </svg>
