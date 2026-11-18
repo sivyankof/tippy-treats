@@ -355,6 +355,8 @@ export const PANORAMA = {
    */
   pieces: { cols: 3, rows: 3 },
   bakeScale: 2 / 3,
+  /** Each piece is drawn this many px bigger (half of it on every side): the pieces overlap, so no seam line shows at a fractional position. */
+  seamPx: 1.5,
   /** Frame outline and the width of the frame around the glass. */
   outlinePx: 6,
   framePx: 34,
@@ -372,6 +374,8 @@ export const PANORAMA = {
   cover: { fullAt: 0.45, goneAt: 0.25 },
   /** Alpha of the whole window while the incoming layer flies in front of it (a partial mute would need a second draw). */
   rowMuted: 0.85,
+  /** The mute fades in over this many px before the row reaches the window: the start view, where the row stands 50 px or more below it, is not muted. */
+  rowFeatherPx: 24,
   /** Drops, flakes and leaves of the pane: counts per weather (the lite level shows half), size against the small window's. */
   items: { rain: 12, storm: 16, snow: 14, leaves: 5, size: 1.5 },
   /** The storm flash in the glass: peak alpha, colour, the texture is baked this much smaller than the glass. */

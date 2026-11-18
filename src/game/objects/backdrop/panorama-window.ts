@@ -2,6 +2,7 @@ import * as Phaser from 'phaser';
 import {
   GLASS_WEATHER,
   PANORAMA,
+  SHOP_COLORS,
   WALL_LOOK,
   WINDOW_LOOK,
   WINDOW_SKY,
@@ -11,7 +12,8 @@ import {
 } from '../../../data/window-look';
 import type { StartPlaceId } from '../../../data/start-places';
 import type { WeatherId } from '../../../data/weather';
-import { cssColor, shade } from '../../../util/color';
+import { KITCHEN_COLORS } from '../../../data/palette';
+import { cssColor, mixColor, shade } from '../../../util/color';
 import { TWO_PI } from '../../../util/math';
 import { outlineColor } from '../../fx/plain-style';
 import { bakeTexture } from '../../ui/bake-texture';
@@ -323,6 +325,15 @@ export function panoramaMissing(width: number, height: number): boolean {
   return panoramaFitCached(width, height) === null;
 }
 
+/**
+ * The tint the window takes while the incoming layer flies in front of it: white leaned towards the wall behind it by the
+ * share the mute would give by alpha (a multiply tint cannot lighten, but a muted window is only a little quieter).
+ */
+function muteTone(place: StartPlaceId): number {
+  const wall = place === 'kitchen' ? KITCHEN_COLORS.wall : SHOP_COLORS.skyBottom;
+  return mixColor(0xffffff, wall, 1 - P.rowMuted);
+}
+
 /** The panoramic window of the start view with its drops and its storm flash, back to front. Built with the zone; made only in a run. */
 export function panoramaLives(
   scene: Phaser.Scene,
@@ -337,7 +348,14 @@ export function panoramaLives(
       offset: { x: piece.centreX, y: piece.centreY },
       scale: 1 / P.bakeScale,
     })),
-    { layer: WALL_LOOK.layer, halfH: H / 2, fit: panoramaFitCached, rowMute: true },
+    {
+      layer: WALL_LOOK.layer,
+      halfH: H / 2,
+      fit: panoramaFitCached,
+      rowMute: true,
+      muteTone: muteTone(place),
+      seamPx: P.seamPx,
+    },
   );
   const image = window.objects[0];
   image?.once(Phaser.GameObjects.Events.DESTROY, () => releasePanorama(scene, place, weather));
