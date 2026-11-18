@@ -1,17 +1,22 @@
 import { ANIM } from '../../data/anim';
 import type { FaceRecipe, MouthKind } from '../../data/creature-looks';
+import { TOWER_WEATHER } from '../../data/tower-weather';
 import { pickRange } from '../../util/math';
 
 export type { MouthKind };
 /** `wink`: the left eye is open, the right one shut. */
-export type EyeKind = 'open' | 'closed' | 'happy' | 'wide' | 'wink';
+export type EyeKind = 'open' | 'closed' | 'happy' | 'wide' | 'wink' | 'sleepy';
 export type Mood = 'calm' | 'nervous' | 'scared';
 /**
- * Short-lived overrides, highest priority last: blink < lick < joy < ouch < panic < the faces of the abilities
- * (wink, scrunch, gape, blow, puffed, strain) < squint < horror.
+ * Short-lived overrides, highest priority last: blink < yawn (a sleepy layer at rest) < the startle at a flash of
+ * lightning (the whole eyes-only one of the Showcase weaker still) < lick < joy < ouch < panic < the faces of the
+ * abilities (wink, scrunch, gape, blow, puffed, strain) < squint < horror. Every event reaction beats the weather ones.
  */
 export type Reaction =
   | 'blink'
+  | 'yawn'
+  | 'startleEyes'
+  | 'startle'
   | 'lick'
   | 'joy'
   | 'ouch'
@@ -42,6 +47,9 @@ export interface Expression {
 /** Reactions from the weakest to the strongest. */
 const REACTION_ORDER: readonly Reaction[] = [
   'blink',
+  'yawn',
+  'startleEyes',
+  'startle',
   'lick',
   'joy',
   'ouch',
@@ -103,6 +111,7 @@ function moodExpression(
   mood: Mood,
   mouthHint: MouthKind | undefined,
   recipe: FaceRecipe | null,
+  sleepy: boolean,
 ): Expression {
   const own = recipe ? OWN : PLAIN;
   switch (mood) {
@@ -112,11 +121,12 @@ function moodExpression(
       return { eyes: 'open', mouth: 'scared', sweat: true, ...own, ownBrows: false };
     case 'calm':
       return {
-        eyes: 'open',
+        eyes: sleepy ? 'sleepy' : 'open',
         mouth: calmMouth(mouthHint, recipe),
         sweat: false,
         ...own,
-        lids: recipe !== null && (recipe.lidLeft > 0 || recipe.lidRight > 0),
+        // The sleepy eye picture is half shut itself: no second lid over it.
+        lids: !sleepy && recipe !== null && (recipe.lidLeft > 0 || recipe.lidRight > 0),
       };
   }
 }
@@ -138,14 +148,24 @@ export function resolveExpression(
   reaction: Reaction | null,
   mouthHint?: MouthKind,
   recipe: FaceRecipe | null = null,
+  sleepy = false,
 ): Expression {
-  const base = moodExpression(mood, mouthHint, recipe);
+  const base = moodExpression(mood, mouthHint, recipe, sleepy);
   switch (reaction) {
     case null:
       return base;
     case 'blink':
     case 'squint':
       return { ...base, eyes: 'closed', lids: false };
+    case 'yawn':
+      // The mouth of the yawn is posed by the face itself; the eyes are shut.
+      return { ...base, eyes: 'closed', mouth: 'flat', lids: false };
+    case 'startle':
+      // A flash of lightning: round wide eyes, a small round mouth, worried brows.
+      return { eyes: 'wide', mouth: 'o', brows: true, ownBrows: false, lids: false, sweat: false };
+    case 'startleEyes':
+      // The weaker startle (behind the glass of the Showcase): the eyes only.
+      return { ...base, eyes: 'wide', lids: false };
     case 'lick':
       // A licking face: open eyes, no sweat; the brows, mouth and tongue are posed by the lick.
       return { ...base, eyes: 'open', sweat: false, lids: false };
@@ -195,6 +215,8 @@ export class FaceState {
   /** Time left of an idle blink; 0 when the eyes are open. */
   private blinkLeftMs = 0;
   private untilBlinkMs = 0;
+  /** The layer is sleepy (night): it blinks rarer and slower. */
+  private sleepy = false;
 
   constructor(private readonly random: () => number) {
     this.scheduleBlink();
@@ -214,7 +236,16 @@ export class FaceState {
       return;
     }
     this.untilBlinkMs -= dtMs;
-    if (this.untilBlinkMs <= 0) this.blinkLeftMs = ANIM.face.blinkMs;
+    if (this.untilBlinkMs <= 0) {
+      this.blinkLeftMs = this.sleepy ? TOWER_WEATHER.sleepy.blinkMs : ANIM.face.blinkMs;
+    }
+  }
+
+  /** Sleepy faces blink rarer and slower; the next blink is timed again at once. */
+  setSleepy(on: boolean): void {
+    if (this.sleepy === on) return;
+    this.sleepy = on;
+    if (this.blinkLeftMs <= 0) this.scheduleBlink();
   }
 
   /**
@@ -247,6 +278,7 @@ export class FaceState {
   }
 
   private scheduleBlink(): void {
-    this.untilBlinkMs = pickRange(ANIM.face.blinkIntervalMs, this.random);
+    const every = this.sleepy ? TOWER_WEATHER.sleepy.blinkIntervalMs : ANIM.face.blinkIntervalMs;
+    this.untilBlinkMs = pickRange(every, this.random);
   }
 }

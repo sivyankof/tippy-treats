@@ -1,5 +1,6 @@
 import type { GradientStop } from './backdrop-colors';
 import type { EffectLevel } from './effect-levels';
+import { TOWER_WEATHER } from './tower-weather';
 import type { WeatherId } from './weather';
 
 /** The two zones that show the whole weather. */
@@ -29,6 +30,8 @@ export const WEATHER_TEX = {
   star: ['fx_wx_star0', 'fx_wx_star1'],
   moon: 'fx_wx_moon',
   cap: 'fx_wx_cap',
+  /** The snow drifts on the ledges, one picture per width in `TOWER_WEATHER.drift.pictureWidths`. */
+  drift: TOWER_WEATHER.drift.pictureWidths.map((_, i) => `fx_wx_drift${i}`) as readonly string[],
   bankRain: 'fx_wx_bank_rain',
   bankStorm: 'fx_wx_bank_storm',
   /** The lit twin of the bank for a bolt on the left and on the right. */
@@ -427,6 +430,8 @@ export const WEATHER_LOOK = {
   cap: {
     width: 512,
     height: 56,
+    /** Radius of the heap circles: how thick the cap is at its middle (px). */
+    radius: 17,
     /** Picture y that sits on the top edge of the layer. */
     anchorY: 24,
     /** Share of the layer width the cap covers. */

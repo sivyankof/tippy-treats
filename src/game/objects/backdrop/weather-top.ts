@@ -1,5 +1,6 @@
 import * as Phaser from 'phaser';
 import type { Rng } from '../../../core/rng';
+import { TOWER_WEATHER } from '../../../data/tower-weather';
 import { WEATHER_LOOK, WEATHER_TEX } from '../../../data/weather-look';
 import { FIELD_PAD } from '../../../data/picture-fields';
 import { paddedOrigin } from '../../../util/field-pad';
@@ -69,9 +70,31 @@ export class WeatherTop {
     }
   }
 
-  update(top: TowerTop, timeMs: number, deltaMs: number, level: EffectLevel, share: number): void {
+  /** Depth of the pieces on the top layer: over it, under the next layer. */
+  get topDepth(): number {
+    return this.depth;
+  }
+
+  /**
+   * Moves the pieces on; true on the frame a layer has landed on the snow cap of the top layer under it
+   * (the cap has grown a little: a layer that lands at once on a fresh one throws no dust).
+   */
+  update(
+    top: TowerTop,
+    timeMs: number,
+    deltaMs: number,
+    level: EffectLevel,
+    share: number,
+  ): boolean {
     const show = towerWeatherShown(share, top.count, top.over);
+    let landed = false;
     if (top.count !== this.lastCount) {
+      landed =
+        show &&
+        this.cap !== null &&
+        this.lastCount > 0 &&
+        top.count === this.lastCount + 1 &&
+        this.capAge >= CAP.growMs * TOWER_WEATHER.dust.minCapShare;
       // The first top builds up at once; a new top starts its cap from nothing.
       this.capAge = this.lastCount < 0 ? CAP.growMs : 0;
       this.lastCount = top.count;
@@ -79,6 +102,7 @@ export class WeatherTop {
     this.depth = DEPTH.tower + (top.count - 1) * DEPTH.towerLayerStep + CAP.depthStep;
     this.updateCap(top, deltaMs, level, show, share);
     this.updateSplashes(top, timeMs, level, show, share);
+    return landed;
   }
 
   private updateCap(

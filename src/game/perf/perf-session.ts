@@ -85,7 +85,10 @@ export function perfRunSetup(request: RunRequest): RunSetup | null {
     request,
     mode: 'classic',
     seed: PERF.seed,
-    look: chooseRunLook({ seed: PERF.seed, perf: session.params }),
+    look: chooseRunLook({
+      seed: PERF.seed,
+      perf: def.weather ? { ...session.params, weather: def.weather } : session.params,
+    }),
     startHeight: def.start,
     startWidth: isCheckpointHeight(def.start) ? checkpointStartWidth(def.start) : undefined,
     checkpoint: null,

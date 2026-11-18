@@ -12,6 +12,8 @@ import { bakePadded, bakeTexture, deferStep } from '../../ui/bake-texture';
 import { sparkle } from './art-kit';
 import { bankPuffs, type Puff } from './weather-motion';
 import { zoneShowsWeatherSky } from './weather-share';
+import { TOWER_WEATHER } from '../../../data/tower-weather';
+import { driftThickness } from '../drift-geometry';
 
 type Graphics = Phaser.GameObjects.Graphics;
 
@@ -59,7 +61,6 @@ const MOON_BITE = { dx: 0.5, dy: -0.22, grow: 0.86 };
 const MOON_GLOSS = { x: -0.5, y: -0.18, length: 0.34, thick: 0.1, tilt: -1.0, dot: 0.06 };
 const CAP_STEP = 5;
 const CAP_TAPER = 0.55;
-const CAP_RADIUS = 17;
 const CAP_SWELL = 0.14;
 const CAP_WAVES = 4.3;
 const CAP_OUTLINE = 2.5;
@@ -575,11 +576,11 @@ function bakeCap(scene: Phaser.Scene): void {
         1 +
         CAP_SWELL * Math.sin(u * TWO_PI * CAP_WAVES) +
         0.5 * CAP_SWELL * Math.sin(u * TWO_PI * CAP_WAVES * 2.3 + 1);
-      heap.push([x, CAP_RADIUS * swell * taper]);
+      heap.push([x, WEATHER_LOOK.cap.radius * swell * taper]);
     }
     const drips = CAP_DRIPS.map((u): [number, number] => {
       const taper = Math.sin(Math.PI * u) ** CAP_TAPER;
-      return [u * c.width, taper * CAP_RADIUS];
+      return [u * c.width, taper * WEATHER_LOOK.cap.radius];
     });
     const draw = (color: number, grow: number, dy: number): void => {
       g.fillStyle(color, 1);
@@ -597,6 +598,45 @@ function bakeCap(scene: Phaser.Scene): void {
   });
 }
 
+/** Picture size of the drift baked for the width `i` of `TOWER_WEATHER.drift.pictureWidths`: its heap's peak, and the baseline row. */
+export function driftPicture(i: number): { width: number; height: number; baseline: number } {
+  const width = TOWER_WEATHER.drift.pictureWidths[i] ?? 0;
+  const height = Math.ceil(driftThickness(width)) + 2;
+  return { width, height, baseline: height - 1 };
+}
+
+/** The pictures of the snow drifts: the heap of the cap in a flatter shape, a warm outline, a cold shade, rounded ends. */
+function bakeDrifts(scene: Phaser.Scene): void {
+  const D = TOWER_WEATHER.drift;
+  const colors = WEATHER_LOOK.cap.colors;
+  const outline = MOUNTAIN_LOOK.snowOutline;
+  D.pictureWidths.forEach((_, i) => {
+    const { width, height, baseline } = driftPicture(i);
+    const peak = driftThickness(width);
+    const heapPoints = (inset: number, rise: number, lift: number): Pt[] => {
+      const pts: Pt[] = [];
+      const steps = Math.max(12, Math.round(width / 4));
+      const room = width - 2 * inset;
+      for (let k = 0; k <= steps; k++) {
+        const u = k / steps;
+        const taper = Math.sin(Math.PI * u) ** CAP_TAPER;
+        const swell = 1 + D.swell * Math.sin(u * TWO_PI * (1 + width / 120));
+        pts.push({ x: inset + u * room, y: baseline - lift - Math.max(0, rise * taper * swell) });
+      }
+      pts.push({ x: width - inset, y: baseline + 1 }, { x: inset, y: baseline + 1 });
+      return pts;
+    };
+    bakePadded(scene, TEX.drift[i] ?? '', width, height, FIELD_PAD.snowDrift, (g) => {
+      g.fillStyle(outline, 1);
+      fillPolygon(g, heapPoints(0.5, peak, 0));
+      g.fillStyle(colors.shade, 1);
+      fillPolygon(g, heapPoints(D.outlinePx, peak - D.outlinePx * 0.7, 0));
+      g.fillStyle(colors.snow, 1);
+      fillPolygon(g, heapPoints(D.outlinePx + 1.2, peak - D.outlinePx * 0.7 - 2.2, 1.6));
+    });
+  });
+}
+
 /** Bakes the pictures that fall or sit on the tower for one weather (`all` for the art sheet). */
 export function bakeWeatherArt(scene: Phaser.Scene, weather: WeatherId | 'all'): void {
   const is = (...ids: WeatherId[]): boolean =>
@@ -604,6 +644,7 @@ export function bakeWeatherArt(scene: Phaser.Scene, weather: WeatherId | 'all'):
   if (is('snow')) {
     bakeFlakes(scene);
     bakeCap(scene);
+    bakeDrifts(scene);
   }
   if (is('rain', 'storm')) {
     bakeDrop(scene);

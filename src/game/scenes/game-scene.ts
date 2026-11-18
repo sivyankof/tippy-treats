@@ -15,7 +15,7 @@ import { Backdrop } from '../objects/backdrop/backdrop';
 import { RunWeather } from '../objects/backdrop/run-weather';
 import { plainLooks } from '../objects/plain-look';
 import { installSquashDebug } from '../debug/squash-debug';
-import { leaveDemoMarks } from '../perf/perf-demo-marks';
+import { prepareStartTower } from '../perf/perf-demo-marks';
 import { perfSession } from '../perf/perf-session';
 import { layerMarks } from '../objects/layer-marks';
 import { trimHudPlates } from '../ui/style/hud-plate';
@@ -130,22 +130,24 @@ export class GameScene extends Phaser.Scene {
       startWidth: setup.startWidth,
     });
     this.mods = this.sim.currentModifiers();
-    if (perfSession()?.params.marks) leaveDemoMarks(this.sim.state.layers);
+    if (perfSession()) prepareStartTower(this.sim.state.layers);
     logRunStart(setup, gameState.data.stats.runs);
     this.perfRun = setup.perfDriver !== undefined;
     this.drivers.reset(setup.perfDriver, setup.bot, this.seed);
     this.flying.reset();
     if (import.meta.env.DEV) installCutDebug(this);
     this.continueFlow?.dispose();
-    this.continueFlow = new ContinueFlow({ ads: rewardedAds, wallet: gameState, player: gameState });
+    this.continueFlow = new ContinueFlow({
+      ads: rewardedAds,
+      wallet: gameState,
+      player: gameState,
+    });
 
     const { width, height } = this.scale.gameSize;
     this.background = new Backdrop(this, TRAY_TOP_Y, width, height, this.sim.state, setup.look);
     const look = setup.look;
     this.fx = new RunFx(this, TRAY_TOP_Y, this.seed, look.weather);
-    this.weather = RunWeather.needed(look.weather)
-      ? new RunWeather(this, look.weather, this.seed, this.background, this.fx.tower)
-      : null;
+    this.weather = new RunWeather(this, look.weather, this.seed, this.background, this.fx.tower);
     this.fx.setBackdrop(this.background);
     if (import.meta.env.DEV) installSquashDebug(this, this.sim, this.fx.tower);
     this.camera = new RunCamera(this, this.fx, this.background, TRAY_TOP_Y);

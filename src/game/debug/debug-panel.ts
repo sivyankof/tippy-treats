@@ -12,7 +12,13 @@ import { adsDev, iapDev } from '../../services';
 import { gameState, sessionTally } from '../../state';
 import { openCheckpointDemo } from './checkpoint-demo';
 import { cycleDebugLevel, cycleDebugSlot, getDebugTeam } from './debug-team';
-import { SQUASH_BUTTON_KINDS, triggerCut, triggerSquash } from './debug-triggers';
+import {
+  SQUASH_BUTTON_KINDS,
+  triggerCut,
+  triggerLightning,
+  triggerSquash,
+  triggerYawn,
+} from './debug-triggers';
 
 const FONT_SIZE = 30;
 const MARGIN = 20;
@@ -39,6 +45,9 @@ const RESET_PURCHASES_LABEL = 'Reset stub purchases';
 /** Prefixes of the buttons that start an effect in the run (there is no console on a phone). */
 const CUT_PREFIX = 'cut';
 const TOPPER_PREFIX = 'top';
+/** Buttons of the weather of the tower (the panel is outside i18n, English only). */
+const LIGHTNING_LABEL = 'lightning';
+const YAWN_LABEL = 'yawn';
 
 /** The effects level, with a mark when the automatic mode set it. */
 function fxLabel(): string {
@@ -143,6 +152,10 @@ export class DebugPanel {
         entry(() => triggerSquash(kind), PALETTE.panel).setText(`${TOPPER_PREFIX} ${kind}`),
       );
     }
+    this.effectEntries.push(
+      entry(triggerLightning, PALETTE.panel).setText(LIGHTNING_LABEL),
+      entry(triggerYawn, PALETTE.panel).setText(YAWN_LABEL),
+    );
     this.showAdsMode();
     this.entries = [
       ...this.slotEntries,

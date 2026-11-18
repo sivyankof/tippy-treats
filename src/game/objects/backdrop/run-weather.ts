@@ -10,9 +10,15 @@ import { bakeWeatherArt } from './weather-art';
 import { WeatherFall, type FallKind } from './weather-fall';
 import type { WeatherFrame, WeatherPart } from './weather-frame';
 import { strikeLightningNow } from './weather-sky';
+import { onLightningFlash } from './lightning-flash';
+import { SnowDust } from './snow-dust';
+import { fxGuard } from '../../fx-guard';
+import { towerWeather } from '../tower-weather-state';
 import type { TowerView } from '../tower-view';
 import type { Backdrop } from './backdrop';
 import { WeatherTop, type TowerTop } from './weather-top';
+import { BALANCE } from '../../../data/balance';
+import type { EffectLevel } from '../../../data/effect-levels';
 
 /** Depth of the screen-space weather: over every zone of the backdrop, under the worktop and the tower. */
 const WEATHER_DEPTH = DEPTH.counter - 1;
@@ -23,12 +29,17 @@ const FALL_KINDS: Partial<Record<WeatherId, FallKind>> = {
   leaves: 'leaves',
 };
 
+/** The night makes the layers sleepy once this much of it shows (a zone that shows weather, the cross-fade counted). */
+const SLEEPY_SHARE = 0.5;
+
 /**
  * The weather of a run that falls or lies on the tower: the particles of rain, snow and leaves in one
  * screen-space container behind the tower (all frames of the shared atlas, so one draw batch), plus
  * the snow cap and the splashes on the top layer. Sunset, night and clear have none of it: they are
- * a palette and, at night, the stars and the moon of the zone's sky (`weather-sky.ts`).
- * Created only for a weather that has pieces; only the pictures of this weather are baked.
+ * a palette and, at night, the stars and the moon of the zone's sky (`weather-sky.ts`). It also hands the
+ * weather on to the layers of the tower (`towerWeather`: the snow for the drifts, the night for the sleepy faces), throws
+ * the snow dust of a landing and turns a flash of lightning into the startle of the layers. Only the pictures of
+ * this weather are baked.
  */
 export class RunWeather {
   private readonly root: Phaser.GameObjects.Container;
@@ -45,11 +56,9 @@ export class RunWeather {
     level: 'full',
   };
   private readonly topState: TowerTop = { count: 0, topY: 0, left: 0, right: 0, over: false };
+  private readonly weather: WeatherId;
   private laidOut = false;
-
-  static needed(weather: WeatherId): boolean {
-    return weather in FALL_KINDS;
-  }
+  private readonly dust: SnowDust | null;
 
   constructor(
     scene: Phaser.Scene,
@@ -58,6 +67,7 @@ export class RunWeather {
     private readonly backdrop: Backdrop,
     private readonly tower: TowerView,
   ) {
+    this.weather = weather;
     bakeWeatherArt(scene, weather);
     const rng = new Rng(seed).fork(`weather_${weather}`);
     const fall = FALL_KINDS[weather];
@@ -68,15 +78,26 @@ export class RunWeather {
       fall === 'rain' || fall === 'storm',
       rng.fork('top'),
     );
+    this.dust = weather === 'snow' ? new SnowDust(scene, rng.fork('dust')) : null;
     const objects = this.parts.flatMap((part) => [...part.objects]);
     for (const object of objects) markPerfPart(object, 'bg');
     this.root = new Phaser.GameObjects.Container(scene, 0, 0, objects);
     this.root.setScrollFactor(0).setDepth(WEATHER_DEPTH);
     scene.add.existing(this.root);
+    const stopFlash = onLightningFlash((kind) => tower.startle(kind));
+    scene.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      stopFlash();
+      towerWeather.snow = 0;
+      towerWeather.sleepy = false;
+    });
     if (import.meta.env.DEV) {
-      const win = window as Window & { tippyLightning?: () => void };
-      // window.tippyLightning(): the next bolt of a storm strikes right away.
-      win.tippyLightning = strikeLightningNow;
+      const win = window as Window & { tippyLightning?: () => void; tippyYawn?: () => boolean };
+      // window.tippyLightning(): the next bolt of a storm strikes right away; without a storm, only the startle of the layers.
+      win.tippyLightning = () => {
+        if (strikeLightningNow() === 0) tower.startle('sky');
+      };
+      // window.tippyYawn(): the first free layer from the top yawns right away, in any weather; true when one did.
+      win.tippyYawn = () => tower.yawnNow();
     }
   }
 
@@ -111,6 +132,36 @@ export class RunWeather {
     top.left = span.left;
     top.right = span.right;
     top.over = state.phase === 'over';
-    this.top.update(top, timeMs, deltaMs, f.level, f.share);
+    const landed = this.top.update(top, timeMs, deltaMs, f.level, f.share);
+    towerWeather.snow = this.weather === 'snow' ? f.share : 0;
+    towerWeather.sleepy =
+      this.weather === 'night' &&
+      this.backdrop.weatherShare('full') + this.backdrop.weatherShare('window') > SLEEPY_SHARE;
+    this.updateDust(landed, top, deltaMs, f.level, f.share);
+  }
+
+  /** The dust of a layer landing on the cap: out of both ends of the seam, under the next layer. */
+  private updateDust(
+    landed: boolean,
+    top: TowerTop,
+    deltaMs: number,
+    level: EffectLevel,
+    share: number,
+  ): void {
+    const dust = this.dust;
+    if (!dust) return;
+    if (top.over) dust.clear();
+    if (landed) {
+      const lower = this.tower.layerPose(top.count - 2);
+      if (lower) {
+        const left = Math.max(top.left, lower.x - lower.width / 2);
+        const right = Math.min(top.right, lower.x + lower.width / 2);
+        const depth = this.top.topDepth;
+        fxGuard.run('snow dust', () =>
+          dust.burst(left, right, top.topY + BALANCE.layer.height, depth, level),
+        );
+      }
+    }
+    dust.update(deltaMs, share);
   }
 }

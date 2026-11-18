@@ -13,6 +13,7 @@ import { BALANCE } from '../../data/balance';
 import { RAINBOW_LOOK } from '../../data/rainbow-look';
 import { DEPTH } from '../depth';
 import { effectsMode } from '../effects-mode';
+import { fxGuard } from '../fx-guard';
 import { waveStep } from '../fx/anim-curves';
 import { moodForWobble, type MouthKind, type Reaction } from './face-state';
 import { CollapsePrep } from './collapse-prep';
@@ -24,6 +25,8 @@ import { plainLooks } from './plain-look';
 import { prepareTongue } from './face-lick';
 import { layerMarks } from './layer-mark-store';
 import { LayerView } from './layer-view';
+import type { FlashKind } from './backdrop/lightning-flash';
+import { TowerWeatherFx, type TowerWeatherContext } from './tower-weather-fx';
 import { SwayHold } from './sway-hold';
 import { snapshotTower, type TowerSnapshot } from './tower-snapshot';
 import { Tray } from './tray';
@@ -105,6 +108,17 @@ export class TowerView {
   private readonly landing = newLandingPreview();
   /** The rare lick of a layer; it draws from the cosmetic stream of the run. */
   readonly licks = new LickDirector(plainLooks.cosmeticSeed);
+  /** The startle at lightning, the sleepy faces and the yawns of the night. */
+  private readonly weatherFx = new TowerWeatherFx(plainLooks.cosmeticSeed);
+  private readonly weatherCtx: TowerWeatherContext = {
+    views: this.active,
+    topIndex: -1,
+    flying: false,
+    lickScene: false,
+    bandTop: -Infinity,
+    bandBottom: Infinity,
+    level: 'full',
+  };
   private bandTop = -Infinity;
   private bandBottom = Infinity;
   private calm = true;
@@ -170,6 +184,34 @@ export class TowerView {
   setScreenBand(top: number, bottom: number): void {
     this.bandTop = top;
     this.bandBottom = bottom;
+  }
+
+  /** What the weather pieces of the tower need to know now (one object, refilled). */
+  private weatherContext(): TowerWeatherContext {
+    const c = this.weatherCtx;
+    c.topIndex = this.layerCount - 1;
+    c.flying = this.state !== null && isAiming(this.state.phase, this.state.flying !== null);
+    c.lickScene = this.licks.stage !== null;
+    c.bandTop = this.bandTop;
+    c.bandBottom = this.bandBottom;
+    c.level = effectsMode.level;
+    return c;
+  }
+
+  /** A flash of lightning: the layers on screen start with fright (`street`: the weaker one behind the Showcase glass). */
+  startle(kind: FlashKind): void {
+    fxGuard.call(
+      'startle',
+      this.weatherFx,
+      TowerWeatherFx.prototype.startle,
+      kind,
+      this.weatherContext(),
+    );
+  }
+
+  /** The first layer from the top that is free yawns now, in any weather (a dev tool); true when one did. */
+  yawnNow(): boolean {
+    return this.weatherFx.yawnNow(this.weatherContext());
   }
 
   /** Makes a layer lick right away (a dev tool); returns whether one could. */
@@ -331,6 +373,13 @@ export class TowerView {
     this.calm = mood === 'calm';
     const top = this.layerCount - 1;
     const { swayEyeLag, swayEyeMax } = ANIM.face;
+    fxGuard.call(
+      'tower weather',
+      this.weatherFx,
+      TowerWeatherFx.prototype.tick,
+      dtMs,
+      this.weatherContext(),
+    );
     for (const [index, view] of this.active) {
       const face = view.faceView;
       const drift = mood === 'calm' ? 0 : -this.sway.shownOffset(index) * swayEyeLag;

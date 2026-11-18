@@ -12,6 +12,7 @@ export const FIELD_PAD = {
   windowDrop: 3,
   shopLamp: 11,
   snowCap: 5,
+  snowDrift: 4,
   hintArrow: 10,
   offlineIcon: 4,
   rewardTower: 4,
