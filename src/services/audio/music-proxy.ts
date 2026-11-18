@@ -50,6 +50,10 @@ export class MusicProxy implements MusicControl {
     if (this.enabled) this.safely(() => this.real.next());
   }
 
+  prepare(track: MusicTrackId | null): void {
+    if (this.enabled) this.safely(() => this.real.prepare(track));
+  }
+
   stop(): void {
     this.ask = null;
     if (this.enabled) this.safely(() => this.real.stop());

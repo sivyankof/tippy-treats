@@ -13,7 +13,14 @@ import { MediaPool, type MediaContext } from './media-pool';
 import { firstIndex, nextIndex, turnLength, turnOffset } from './playlist-turn';
 import { BufferDeck, StreamDeck, type Deck, type DeckClock } from './tune-deck';
 import { fetchAndDecode, trackUrl } from './tune-loader';
-import { decodedBytes, fadeParam, loopBounds, smoothSeam, type LoopBounds } from './tune-loop';
+import {
+  bufferBytes,
+  decodedBytes,
+  fadeParam,
+  prepareLoop,
+  trackLoopSec,
+  type LoopBounds,
+} from './tune-loop';
 
 /**
  * The level of `track` in the player: the files are `fileLufs`, the music bus scales by its own
@@ -41,25 +48,16 @@ export interface PlayerSources {
   openStream(track: MusicTrackId, looping: boolean): OpeningDeck | null;
 }
 
-/** The seam of a decoded seamless track is smoothed once, as it comes out of the decoder. */
-function prepare(buffer: AudioBuffer, track: MusicTrackId): LoopBounds {
-  const rate = buffer.sampleRate;
-  const bounds = loopBounds(buffer.length, MUSIC_TRACKS[track], rate, MUSIC.aacPrimingFrames);
-  const frames = Math.round(MUSIC.seamSmoothSec * rate);
-  for (let c = 0; c < buffer.numberOfChannels; c++) {
-    smoothSeam(buffer.getChannelData(c), bounds.start, bounds.end, frames, MUSIC.seam);
-  }
-  return bounds;
-}
-
 interface Decoded {
   buffer: AudioBuffer;
   bounds: LoopBounds;
 }
 
+/** A track asked for and not playing yet; `turn`: as the playlist's turn. */
 interface Pending {
   track: MusicTrackId;
   ticket: number;
+  turn: boolean;
 }
 
 interface Prefetch {
@@ -69,6 +67,11 @@ interface Prefetch {
   ready: Decoded | null;
 }
 
+/** A wait on the context's clock that can be called off. */
+interface Wait {
+  cancel(): void;
+}
+
 /** What plays: the playlist, one track on its own (an exception), or nothing. */
 type Mode = { kind: 'playlist' } | { kind: 'track'; track: MusicTrackId } | null;
 
@@ -76,32 +79,38 @@ type Mode = { kind: 'playlist' } | { kind: 'track'; track: MusicTrackId } | null
  * The music player (docs/06, section 7, "Музыка"). The playlist goes round `MUSIC_PLAYLIST` from
  * a random first track, each track for at least `minPlaySec` (whole loops of a seamless one, a
  * non-seamless one once), and changes over `crossfadeSec` exactly on the loop boundary (put on the
- * context's clock `switchLeadSec` ahead; the next seamless track is decoded `prefetchSec` ahead).
- * An exception (`play`) plays one track round and round; the playlist keeps its turn (track and
- * seconds played) and goes on from there. A hold stops the decks where they are.
+ * context's clock `switchLeadSec` ahead; the next seamless track is decoded `prefetchSec` ahead,
+ * never while a run is played: the turn grows by whole loops instead). An exception (`play`) plays
+ * one track round and round; the playlist keeps its turn (track and seconds played) and goes on
+ * from there. A hold stops the decks where they are.
  *
  * At most two decks sound at once (the track playing and the one leaving): a new track asked for
  * during a change cuts the leaving one at once, and a track that is leaving comes back from its
- * current level when it is asked for again. Decoded audio lives only in the decks and the
- * prefetched track, and a decode waits until the cut decks are gone and no other decode runs: at
- * most two decoded tracks at a time (the memory cap, docs/08 journal).
+ * current level when it is asked for again. A deck left for an exception (or an exception left for
+ * another) is parked: held silent and decoded, so coming back needs no decode in the middle of a
+ * run. Decoded audio lives only in the decks, the parked one and the prefetched track: at most
+ * `maxDecoded` tracks and `memoryCapBytes` at a time, a parked or prefetched track making room for
+ * a decode (docs/08 journal).
  */
 export class PlaylistPlayer implements MusicControl {
   private current: Deck | null = null;
   private leaving: Deck | null = null;
+  private parked: Deck | null = null;
   /** Decks stopping, with the context time they are gone at. */
   private readonly retiring = new Map<Deck, number>();
   /** Decodes running now (a cancelled one too: its memory is taken until it ends), bytes each. */
   private readonly decoding = new Set<{ bytes: number }>();
   private pending: Pending | null = null;
   private ticket = 0;
-  private leaveTimer: unknown = null;
+  private leaveWait: Wait | null = null;
   private watchTimer: unknown = null;
   private mode: Mode = null;
   /** The playlist's turn: its track, the seconds played by decks of it that are gone, the deck playing it. */
   private index: number;
   private turnBefore = 0;
   private turnDeck: Deck | null = null;
+  /** The turn's deck that left last and the seconds it had played then (taken back if it returns). */
+  private lastLeft: { deck: Deck; played: number } | null = null;
   private prefetch: Prefetch | null = null;
   private readonly holds = new Set<MusicHoldReason>();
   /** A run is being played: nothing is decoded, the turn grows by whole loops instead. */
@@ -121,39 +130,51 @@ export class PlaylistPlayer implements MusicControl {
     if (this.mode?.kind === 'playlist') return;
     this.mode = { kind: 'playlist' };
     const track = this.turnTrack();
-    this.show(track, turnOffset(this.turnShape(track), this.turnBefore), true);
+    const shape = { loopSec: trackLoopSec(MUSIC_TRACKS[track]), seamless: this.seamless(track) };
+    this.show(track, turnOffset(shape, this.turnBefore), true, true);
   }
 
   play(track: MusicTrackId): void {
     if (this.mode?.kind === 'track' && this.mode.track === track) return;
     this.mode = { kind: 'track', track };
     this.clearWatch();
-    this.prefetch = null;
-    this.show(track, 0, false);
+    if (this.prefetch && this.prefetch.track !== track) this.prefetch = null;
+    this.show(track, 0, false, true);
   }
 
   next(): void {
     this.mode = { kind: 'playlist' };
     this.clearWatch();
     this.prefetch = null;
-    this.turnDeck = null;
-    this.turnBefore = 0;
-    this.extraSec = 0;
-    this.index = nextIndex(this.index, MUSIC_PLAYLIST.length);
-    this.show(this.turnTrack(), 0, true);
+    this.newTurn(nextIndex(this.index, MUSIC_PLAYLIST.length));
+    this.show(this.turnTrack(), 0, true, false);
+  }
+
+  prepare(track: MusicTrackId | null): void {
+    if (track === null) {
+      if (this.prefetch && this.prefetch.track !== this.nextTrack()) this.prefetch = null;
+      return;
+    }
+    if (this.isBusy || !this.seamless(track)) return;
+    if ([this.current, this.leaving, this.parked].some((deck) => deck?.track === track)) return;
+    if (this.prefetch?.track === track) return;
+    if (this.pending || this.leaving || this.decoding.size > 0 || this.retiring.size > 0) return;
+    this.prefetch = null;
+    this.startPrefetch(track);
   }
 
   stop(): void {
     this.mode = null;
     this.cancelPending();
     this.clearWatch();
-    this.clearLeaveTimer();
+    this.clearLeaveWait();
     this.prefetch = null;
     this.leaveTurn();
     const decks = [this.current, this.leaving];
     this.current = null;
     this.leaving = null;
     for (const deck of decks) if (deck) this.fadeAndRetire(deck, MUSIC.stopSec);
+    this.unpark();
     this.host.onPlaying?.(false);
   }
 
@@ -163,7 +184,7 @@ export class PlaylistPlayer implements MusicControl {
     else this.holds.delete(reason);
     const held = this.holds.size > 0;
     if (held === was) return;
-    for (const deck of this.decks()) deck.hold(held);
+    for (const deck of this.liveDecks()) deck.hold(held);
     if (held) this.clearWatch();
     else this.watch();
   }
@@ -179,7 +200,7 @@ export class PlaylistPlayer implements MusicControl {
       track: this.pending?.track ?? this.current?.track ?? null,
       playlist: this.mode?.kind === 'playlist',
       turnSec: this.turnPlayed(),
-      decks: this.decks().length,
+      decks: this.liveDecks().length,
       decodedBytes: this.bytesNow(),
       peakBytes: this.peak,
     };
@@ -189,34 +210,62 @@ export class PlaylistPlayer implements MusicControl {
     this.peak = this.bytesNow();
   }
 
-  /** The playlist's track now. */
+  /** The playlist's track now, and the one after it. */
   private turnTrack(): MusicTrackId {
     return MUSIC_PLAYLIST[this.index] ?? MUSIC_PLAYLIST[0] ?? 'menu';
   }
 
-  /** The loop and kind of `track` from its data (before a deck of it exists). */
-  private turnShape(track: MusicTrackId): { loopSec: number; seamless: boolean } {
-    const spec = MUSIC_TRACKS[track];
-    return { loopSec: spec.frames / spec.sampleRate, seamless: spec.loop === 'seamless' };
+  private nextTrack(): MusicTrackId | null {
+    return MUSIC_PLAYLIST[nextIndex(this.index, MUSIC_PLAYLIST.length)] ?? null;
+  }
+
+  private seamless(track: MusicTrackId): boolean {
+    return MUSIC_TRACKS[track].loop === 'seamless';
   }
 
   private turnPlayed(): number {
     return this.turnBefore + (this.turnDeck ? this.turnDeck.played() : 0);
   }
 
+  /** The playlist moves to track `index`, from its start. */
+  private newTurn(index: number): void {
+    this.index = index;
+    this.turnDeck = null;
+    this.turnBefore = 0;
+    this.extraSec = 0;
+    this.lastLeft = null;
+  }
+
   /** The turn's deck stops counting (it leaves for an exception or stops); the turn keeps its seconds. */
   private leaveTurn(): void {
-    if (!this.turnDeck) return;
-    this.turnBefore += this.turnDeck.played();
+    const deck = this.turnDeck;
+    if (!deck) return;
+    const played = deck.played();
+    this.turnBefore += played;
+    this.lastLeft = { deck, played };
     this.turnDeck = null;
   }
 
-  /** Brings `track` in (`turn`: as the playlist's turn), `offsetSec` into it. */
-  private show(track: MusicTrackId, offsetSec: number, turn: boolean): void {
+  /**
+   * A deck already alive becomes the turn's deck. If it is the one that left the turn, the seconds
+   * it was counted for then are taken back (it has played on since, and goes on counting); any
+   * other deck of the track started from its beginning, so the turn starts again with it.
+   */
+  private adopt(deck: Deck): void {
+    if (this.turnDeck === deck) return;
+    const left = this.lastLeft;
+    this.turnBefore = left?.deck === deck ? Math.max(0, this.turnBefore - left.played) : 0;
+    this.lastLeft = null;
+    this.turnDeck = deck;
+  }
+
+  /** Brings `track` in (`turn`: as the playlist's turn; `park`: the deck it replaces is parked), `offsetSec` into it. */
+  private show(track: MusicTrackId, offsetSec: number, turn: boolean, park: boolean): void {
     const { current } = this;
     if (current?.track === track) {
       this.cancelPending();
-      this.adopt(current, turn);
+      current.setLooping?.(!turn);
+      if (turn) this.adopt(current);
       this.watch();
       return;
     }
@@ -226,30 +275,38 @@ export class PlaylistPlayer implements MusicControl {
       this.watch();
       return;
     }
-    if (this.pending?.track === track) return;
+    if (this.parked?.track === track) {
+      this.cancelPending();
+      const deck = this.parked;
+      this.parked = null;
+      if (this.holds.size === 0) deck.hold(false);
+      deck.setLooping?.(!turn);
+      this.enter(deck, { at: this.host.ctx.currentTime, turn, park, adopted: true });
+      return;
+    }
+    if (this.pending?.track === track && this.pending.turn === turn) return;
     this.cancelPending();
     if (this.turnDeck === current) this.leaveTurn();
     const leaving = this.leaving;
     if (leaving) {
       this.leaving = null;
-      this.clearLeaveTimer();
+      this.clearLeaveWait();
       this.cut(leaving);
     }
     const ticket = ++this.ticket;
-    this.pending = { track, ticket };
-    this.whenFree(ticket, () => this.open(track, ticket, offsetSec, turn));
+    this.pending = { track, ticket, turn };
+    this.whenFree(ticket, () => this.open(track, ticket, offsetSec, turn, park));
   }
 
-  /** A deck already playing becomes the turn's deck (its seconds count from now on). */
-  private adopt(deck: Deck, turn: boolean): void {
-    if (!turn || this.turnDeck === deck) return;
-    this.turnBefore = Math.max(0, this.turnBefore - deck.played());
-    this.turnDeck = deck;
-  }
-
-  private open(track: MusicTrackId, ticket: number, offsetSec: number, turn: boolean): void {
+  private open(
+    track: MusicTrackId,
+    ticket: number,
+    offsetSec: number,
+    turn: boolean,
+    park: boolean,
+  ): void {
     if (ticket !== this.ticket) return;
-    if (MUSIC_TRACKS[track].loop === 'seamless') {
+    if (this.seamless(track)) {
       const decoded = this.decoded(track);
       if (!decoded) {
         this.dropPending(ticket);
@@ -261,10 +318,8 @@ export class PlaylistPlayer implements MusicControl {
           const { ctx, tally } = this.host;
           const now = ctx.currentTime;
           const { clock } = this.sources;
-          this.enter(new BufferDeck(ctx, clock, tally, track, buffer, bounds, now, offsetSec), {
-            at: now,
-            turn,
-          });
+          const deck = new BufferDeck(ctx, clock, tally, track, buffer, bounds, now, offsetSec);
+          this.enter(deck, { at: now, turn, park, adopted: false });
         },
         // A missing or broken file leaves the music silent, never the game broken.
         () => this.dropPending(ticket),
@@ -278,8 +333,11 @@ export class PlaylistPlayer implements MusicControl {
     }
     deck.start(offsetSec).then(
       () => {
-        if (ticket === this.ticket) this.enter(deck, { at: this.host.ctx.currentTime, turn });
-        else deck.dispose(this.host.ctx.currentTime);
+        if (ticket !== this.ticket) {
+          deck.dispose(this.host.ctx.currentTime);
+          return;
+        }
+        this.enter(deck, { at: this.host.ctx.currentTime, turn, park, adopted: false });
       },
       () => {
         deck.dispose(this.host.ctx.currentTime);
@@ -298,37 +356,59 @@ export class PlaylistPlayer implements MusicControl {
     return this.decode(track);
   }
 
-  /** Decodes `track` and smooths its seam; the decode counts in memory while it runs. */
+  /**
+   * Decodes `track` and smooths its seam; the decode counts in memory while it runs. A parked or
+   * prefetched track goes first when the decode would make one track too many or pass the cap.
+   */
   private decode(track: MusicTrackId): Promise<Decoded> | null {
+    const bytes = decodedBytes(MUSIC_TRACKS[track], this.host.ctx.sampleRate);
+    this.makeRoom(bytes);
     const decoding = this.sources.decode(track);
     if (!decoding) return null;
-    const job = { bytes: decodedBytes(MUSIC_TRACKS[track], this.host.ctx.sampleRate) };
+    const job = { bytes };
     this.decoding.add(job);
     this.note();
     const done = (): void => {
       this.decoding.delete(job);
     };
     decoding.then(done, done);
-    return decoding.then((buffer) => ({ buffer, bounds: prepare(buffer, track) }));
+    return decoding.then((buffer) => ({ buffer, bounds: prepareLoop(buffer, track) }));
+  }
+
+  private makeRoom(bytes: number): void {
+    const over = (): boolean =>
+      this.decodedTracks() + 1 > MUSIC.maxDecoded || this.bytesNow() + bytes > MUSIC.memoryCapBytes;
+    if (over()) this.unpark();
+    if (over() && this.prefetch?.ready) this.prefetch = null;
   }
 
   /** The new deck fades in from context time `at` over the one playing, which leaves from then. */
-  private enter(deck: Deck, { at, turn }: { at: number; turn: boolean }): void {
+  private enter(
+    deck: Deck,
+    { at, turn, park, adopted }: { at: number; turn: boolean; park: boolean; adopted: boolean },
+  ): void {
     this.pending = null;
     const leaving = this.leaving;
     if (leaving) {
       this.leaving = null;
       this.cut(leaving);
     }
-    this.clearLeaveTimer();
+    this.clearLeaveWait();
     deck.gain.connect(this.host.bus);
     if (this.holds.size > 0) deck.hold(true);
     const now = this.host.ctx.currentTime;
     const level = trackLevel(deck.track);
     fadeParam(deck.gain.gain, now, level, MUSIC.crossfadeSec, MUSIC.fadeSteps, at);
-    if (this.current) this.leave(this.current, at);
+    const before = this.current;
+    if (before) {
+      if (this.turnDeck === before) this.leaveTurn();
+      this.leave(before, at, park);
+    }
     this.current = deck;
-    if (turn) this.turnDeck = deck;
+    if (turn) {
+      if (adopted) this.adopt(deck);
+      else this.turnDeck = deck;
+    }
     this.host.onPlaying?.(true);
     this.note();
     this.watch();
@@ -339,27 +419,49 @@ export class PlaylistPlayer implements MusicControl {
     const back = this.leaving;
     const gone = this.current;
     if (!back || !gone) return;
-    this.clearLeaveTimer();
+    this.clearLeaveWait();
     if (this.turnDeck === gone) this.leaveTurn();
     this.current = back;
-    this.adopt(back, turn);
+    back.setLooping?.(!turn);
+    if (turn) this.adopt(back);
     const now = this.host.ctx.currentTime;
     fadeParam(back.gain.gain, now, trackLevel(back.track), MUSIC.crossfadeSec, MUSIC.fadeSteps);
-    this.leave(gone, now);
+    this.leave(gone, now, false);
   }
 
-  /** `deck` fades out from `at` over the change and is let go at its end, unless it comes back first. */
-  private leave(deck: Deck, at: number): void {
+  /**
+   * `deck` fades out from `at` over the change; at its end it is let go, or parked (`park`), unless
+   * it comes back first.
+   */
+  private leave(deck: Deck, at: number, park: boolean): void {
     this.leaving = deck;
     const now = this.host.ctx.currentTime;
     fadeParam(deck.gain.gain, now, 0, MUSIC.crossfadeSec, MUSIC.fadeSteps, at);
     const end = Math.max(now, at) + MUSIC.crossfadeSec;
-    this.leaveTimer = this.after(end, () => {
-      this.leaveTimer = null;
+    this.leaveWait = this.after(end, () => {
+      this.leaveWait = null;
       if (this.leaving !== deck) return;
       this.leaving = null;
-      this.retire(deck, this.host.ctx.currentTime);
+      if (park) this.park(deck);
+      else this.retire(deck, this.host.ctx.currentTime);
     });
+  }
+
+  /** Keeps `deck` held and silent for coming back (the one parked before is let go). */
+  private park(deck: Deck): void {
+    this.unpark();
+    deck.hold(true);
+    this.parked = deck;
+    this.note();
+  }
+
+  /** Lets the parked deck go. */
+  private unpark(): void {
+    const deck = this.parked;
+    if (!deck) return;
+    this.parked = null;
+    if (this.lastLeft?.deck === deck) this.lastLeft = null;
+    this.retire(deck, this.host.ctx.currentTime);
   }
 
   /** Looks at the playlist's turn: decodes the next track ahead, and puts the change on the clock when it is due. */
@@ -395,8 +497,8 @@ export class PlaylistPlayer implements MusicControl {
 
   /** The playlist's next track has to be decoded (a seamless one) and is not decoded yet. */
   private nextNeedsDecode(): boolean {
-    const track = MUSIC_PLAYLIST[nextIndex(this.index, MUSIC_PLAYLIST.length)];
-    if (!track || MUSIC_TRACKS[track].loop !== 'seamless') return false;
+    const track = this.nextTrack();
+    if (!track || !this.seamless(track)) return false;
     return !(this.prefetch?.track === track && this.prefetch.ready);
   }
 
@@ -411,12 +513,17 @@ export class PlaylistPlayer implements MusicControl {
     return true;
   }
 
-  /** Decodes the next seamless track of the playlist, when nothing else is in memory but the track playing. */
+  /** Decodes the next seamless track of the playlist, when nothing else is changing. */
   private prefetchNext(): void {
-    if (this.prefetch || this.pending || this.leaving) return;
+    const track = this.nextTrack();
+    if (!track || !this.seamless(track) || this.prefetch?.track === track) return;
+    if (this.pending || this.leaving) return;
     if (this.decoding.size > 0 || this.retiring.size > 0) return;
-    const track = MUSIC_PLAYLIST[nextIndex(this.index, MUSIC_PLAYLIST.length)];
-    if (!track || MUSIC_TRACKS[track].loop !== 'seamless') return;
+    this.prefetch = null;
+    this.startPrefetch(track);
+  }
+
+  private startPrefetch(track: MusicTrackId): void {
     const decoded = this.decode(track);
     if (!decoded) return;
     const prefetch: Prefetch = { track, decoded, ready: null };
@@ -434,10 +541,7 @@ export class PlaylistPlayer implements MusicControl {
 
   /** The playlist moves on to its next track, the change starting at context time `at`. */
   private switchAt(at: number): void {
-    this.turnDeck = null;
-    this.turnBefore = 0;
-    this.extraSec = 0;
-    this.index = nextIndex(this.index, MUSIC_PLAYLIST.length);
+    this.newTurn(nextIndex(this.index, MUSIC_PLAYLIST.length));
     const track = this.turnTrack();
     const ready = this.prefetch?.track === track ? this.prefetch.ready : null;
     if (ready) {
@@ -447,14 +551,14 @@ export class PlaylistPlayer implements MusicControl {
       const { ctx, tally } = this.host;
       const { clock } = this.sources;
       const deck = new BufferDeck(ctx, clock, tally, track, ready.buffer, ready.bounds, at, 0);
-      this.enter(deck, { at, turn: true });
+      this.enter(deck, { at, turn: true, park: false, adopted: false });
       return;
     }
     // A stream (or a decode not ready in time) starts when the boundary comes.
     const index = this.index;
     this.after(at, () => {
       if (this.mode?.kind === 'playlist' && this.index === index && !this.turnDeck) {
-        this.show(track, 0, true);
+        this.show(track, 0, true, false);
       }
     });
   }
@@ -502,18 +606,28 @@ export class PlaylistPlayer implements MusicControl {
   }
 
   /** Runs `call` once the context's time reaches `at` (a held context simply makes it wait). */
-  private after(at: number, call: () => void): unknown {
+  private after(at: number, call: () => void): Wait {
     const { clock } = this.sources;
-    const left = at - clock.currentTime;
-    if (left <= 0) {
-      call();
-      return null;
-    }
-    const wait = Math.min(Math.max(left, MUSIC.minWaitSec), MUSIC.pollSec * 4);
-    return clock.setTimeout(() => {
-      if (clock.currentTime >= at) call();
-      else this.after(at, call);
-    }, wait * MS_PER_SECOND);
+    let timer: unknown = null;
+    let cancelled = false;
+    const check = (): void => {
+      timer = null;
+      if (cancelled) return;
+      const left = at - clock.currentTime;
+      if (left <= 0) {
+        call();
+        return;
+      }
+      const wait = Math.min(Math.max(left, MUSIC.minWaitSec), MUSIC.pollSec * 4);
+      timer = clock.setTimeout(check, wait * MS_PER_SECOND);
+    };
+    check();
+    return {
+      cancel: () => {
+        cancelled = true;
+        if (timer !== null) clock.clearTimeout(timer);
+      },
+    };
   }
 
   private cancelPending(): void {
@@ -526,9 +640,9 @@ export class PlaylistPlayer implements MusicControl {
     if (ticket === this.ticket) this.pending = null;
   }
 
-  private clearLeaveTimer(): void {
-    if (this.leaveTimer !== null) this.sources.clock.clearTimeout(this.leaveTimer);
-    this.leaveTimer = null;
+  private clearLeaveWait(): void {
+    this.leaveWait?.cancel();
+    this.leaveWait = null;
   }
 
   private clearWatch(): void {
@@ -536,21 +650,27 @@ export class PlaylistPlayer implements MusicControl {
     this.watchTimer = null;
   }
 
-  private decks(): Deck[] {
+  /** Decks that sound or are stopping (the parked one is held apart). */
+  private liveDecks(): Deck[] {
     const list: Deck[] = [...this.retiring.keys()];
     if (this.leaving) list.push(this.leaving);
     if (this.current) list.push(this.current);
     return list;
   }
 
+  /** Decoded tracks in memory now (streams hold none). */
+  private decodedTracks(): number {
+    const decks = [...this.liveDecks(), this.parked].filter((deck) => deck && deck.bytes > 0);
+    return decks.length + this.decoding.size + (this.prefetch?.ready ? 1 : 0);
+  }
+
   private bytesNow(): number {
     let bytes = 0;
     for (const job of this.decoding) bytes += job.bytes;
-    for (const deck of this.decks()) bytes += deck.bytes;
+    for (const deck of this.liveDecks()) bytes += deck.bytes;
+    if (this.parked) bytes += this.parked.bytes;
     const ready = this.prefetch?.ready;
-    if (ready) {
-      bytes += ready.buffer.length * ready.buffer.numberOfChannels * Float32Array.BYTES_PER_ELEMENT;
-    }
+    if (ready) bytes += bufferBytes(ready.buffer);
     return bytes;
   }
 

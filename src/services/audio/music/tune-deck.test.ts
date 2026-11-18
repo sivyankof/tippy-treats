@@ -180,6 +180,8 @@ describe('StreamDeck', () => {
     if (!deck) throw new Error('no deck');
     await deck.start();
     deck.hold(true);
+    // The elements pause once the short hold fade is over.
+    await advance(MUSIC.holdFadeSec + 0.1);
     expect(elements[0]?.paused).toBe(true);
     await advance(LENGTH);
     expect(elements[1]?.paused).toBe(true);

@@ -24,6 +24,13 @@ export function cueMusic(cue: MusicCue): void {
 /** A menu screen is up: the playlist (it goes on untouched if it plays). */
 export function playMenuMusic(): void {
   cueMusic({ kind: 'menu' });
+  services.audio.music.prepare(null);
+}
+
+/** The daily tower's screen: the playlist goes on, and the tower's own track is decoded ahead for its run. */
+function playDailyScreenMusic(): void {
+  cueMusic({ kind: 'menu' });
+  services.audio.music.prepare('daily');
 }
 
 /** Every screen that is not the run or the results. */
@@ -32,7 +39,6 @@ const MENU_SCENES = [
   SCENES.team,
   SCENES.collection,
   SCENES.creatureDetail,
-  SCENES.daily,
   SCENES.shop,
   SCENES.newCreature,
   SCENES.lineup,
@@ -43,6 +49,9 @@ export function bindMenuMusic(game: Phaser.Game): void {
   for (const key of MENU_SCENES) {
     game.scene.getScene(key)?.sys.events.on(Phaser.Scenes.Events.CREATE, playMenuMusic);
   }
+  game.scene
+    .getScene(SCENES.daily)
+    ?.sys.events.on(Phaser.Scenes.Events.CREATE, playDailyScreenMusic);
 }
 
 /**

@@ -2,7 +2,7 @@ import { MUSIC, type MusicTrack, type MusicTrackId } from '../../../data/music';
 import { MS_PER_SECOND } from '../../../util/math';
 import { releaseOnce, SOURCE_FOREVER_SEC, stopQuietly, type NodeTally } from '../node-tally';
 import type { MediaPool, PooledMedia } from './media-pool';
-import { fadeParam, type LoopBounds } from './tune-loop';
+import { bufferBytes, fadeParam, trackLoopSec, type LoopBounds } from './tune-loop';
 
 /** The clock a deck reads: the context's time, and timers (injected in tests). */
 export interface DeckClock {
@@ -23,7 +23,10 @@ export interface Deck {
   readonly seamless: boolean;
   /** Seconds the deck has played since it started, its holds left out. */
   played(): number;
-  /** Stops where it is (the game is paused, the app is in the background) and goes on from there. */
+  /**
+   * Stops where it is (the game is paused, the app is in the background) and goes on from there;
+   * a short fade both ways (`MUSIC.holdFadeSec`), so neither clicks.
+   */
   hold(on: boolean): void;
   /** Stops at context time `at` and lets everything go. */
   dispose(at: number): void;
@@ -32,18 +35,32 @@ export interface Deck {
    * it cannot. A seamless deck loops anyway and has none.
    */
   extend?(): boolean;
+  /** A stream loops for ever (an exception) or plays once (the playlist's turn). */
+  setLooping?(on: boolean): void;
 }
 
 /**
- * A seamless track: a looping buffer source between the loop bounds. A hold stops the source and
- * a release starts a new one where it stopped (a source node plays once; the buffer stays).
+ * The hold fade of a deck: its own gain under the player's, ramped down before the deck stops and
+ * up after it goes on.
+ */
+function hushTo(hush: GainNode, now: number, to: number): void {
+  fadeParam(hush.gain, now, to, MUSIC.holdFadeSec, 1);
+}
+
+/**
+ * A seamless track: a looping buffer source between the loop bounds. A hold fades and stops the
+ * source and a release starts a new one where it stopped (a source node plays once; the buffer
+ * stays).
  */
 export class BufferDeck implements Deck {
   readonly gain: GainNode;
   readonly bytes: number;
   readonly loopSec: number;
   readonly seamless = true;
+  private readonly hush: GainNode;
   private source: AudioBufferSourceNode | null = null;
+  /** The source fading out for a hold (stopped at once if the hold is let go first). */
+  private fading: AudioBufferSourceNode | null = null;
   /** Seconds played by the sources before the current one. */
   private before = 0;
   /** Context time the current source starts (null while held). */
@@ -63,12 +80,15 @@ export class BufferDeck implements Deck {
     at: number,
     offsetSec = 0,
   ) {
-    this.bytes = buffer.length * buffer.numberOfChannels * Float32Array.BYTES_PER_ELEMENT;
+    this.bytes = bufferBytes(buffer);
     this.loopSec = (bounds.end - bounds.start) / buffer.sampleRate;
     this.offsetSec = this.loopSec > 0 ? offsetSec % this.loopSec : 0;
     this.gain = ctx.createGain();
     this.gain.gain.value = 0;
-    tally.add([this.gain]);
+    this.hush = ctx.createGain();
+    this.hush.gain.value = 1;
+    this.hush.connect(this.gain);
+    tally.add([this.gain, this.hush]);
     this.startSource(at, this.offsetSec);
   }
 
@@ -82,13 +102,22 @@ export class BufferDeck implements Deck {
     this.held = on;
     const now = this.clock.currentTime;
     if (on) {
-      this.before = this.played();
+      // It goes on from where it falls silent.
+      const stopAt = now + MUSIC.holdFadeSec;
+      this.before = this.played() + MUSIC.holdFadeSec;
       this.segmentAt = null;
-      if (this.source) stopQuietly(this.source, now);
+      hushTo(this.hush, now, 0);
+      if (this.source) stopQuietly(this.source, stopAt);
+      this.fading = this.source;
       this.source = null;
       return;
     }
+    if (this.fading) stopQuietly(this.fading, now);
+    this.fading = null;
+    this.hush.gain.cancelScheduledValues(now);
+    this.hush.gain.setValueAtTime(0, now);
     this.startSource(now, this.position());
+    hushTo(this.hush, now, 1);
   }
 
   dispose(at: number): void {
@@ -98,8 +127,9 @@ export class BufferDeck implements Deck {
     this.source = null;
     const wait = Math.max(0, at - this.clock.currentTime) * MS_PER_SECOND;
     this.clock.setTimeout(() => {
+      this.hush.disconnect();
       this.gain.disconnect();
-      this.tally.release([this.gain]);
+      this.tally.release([this.gain, this.hush]);
     }, wait);
   }
 
@@ -116,7 +146,7 @@ export class BufferDeck implements Deck {
     source.loop = true;
     source.loopStart = bounds.start / rate;
     source.loopEnd = bounds.end / rate;
-    source.connect(this.gain);
+    source.connect(this.hush);
     this.tally.add([source]);
     source.onended = releaseOnce(this.tally, [source]);
     // The loop starts after an encoder delay the decoder kept.
@@ -129,17 +159,20 @@ export class BufferDeck implements Deck {
 
 /**
  * A long, non-seamless track streamed by media elements (never decoded whole). In the playlist it
- * plays once (`looping` false); on its own it loops by starting the other element from the
- * beginning `loopOverlapSec` before the end and fading the two over that time. A timer looks at
- * the element's own position, so a hold or a lagging stream never piles passes up.
+ * plays once (`looping` false, `extend` adds a pass); on its own it loops by starting the other
+ * element from the beginning `loopOverlapSec` before the end and fading the two over that time. A
+ * timer looks at the element's own position, so a hold or a lagging stream never piles passes up.
  */
 export class StreamDeck implements Deck {
   readonly gain: GainNode;
   readonly bytes = 0;
   readonly seamless = false;
   readonly loopSec: number;
+  private readonly hush: GainNode;
   private active = 0;
   private timer: unknown = null;
+  /** The hold's pause of the elements, waiting for the hold fade to end. */
+  private pauseTimer: unknown = null;
   private disposed = false;
   private held = false;
   private startOffset = 0;
@@ -159,26 +192,16 @@ export class StreamDeck implements Deck {
     spec: MusicTrack,
     private readonly url: string,
     private readonly players: PooledMedia[],
-    private readonly looping: boolean,
+    private looping: boolean,
   ) {
-    this.loopSec = spec.frames / spec.sampleRate;
+    this.loopSec = trackLoopSec(spec);
     this.loopAt = this.loopSec - MUSIC.loopOverlapSec;
     this.gain = ctx.createGain();
     this.gain.gain.value = 0;
+    this.hush = ctx.createGain();
+    this.hush.gain.value = 1;
+    this.hush.connect(this.gain);
     for (const player of players) this.wire(player);
-  }
-
-  extend(): boolean {
-    if (this.disposed) return false;
-    if (this.players.length < 2) {
-      const media = this.pool.acquire();
-      if (!media) return false;
-      this.players.push(media);
-      this.wire(media);
-    }
-    this.passesLeft += 1;
-    this.arm();
-    return true;
   }
 
   /** Lends elements from `pool` (two to loop, one to play once), or returns null when it has too few. */
@@ -201,6 +224,19 @@ export class StreamDeck implements Deck {
       players.push(media);
     }
     return new StreamDeck(ctx, clock, pool, track, spec, url, players, looping);
+  }
+
+  extend(): boolean {
+    if (!this.secondElement()) return false;
+    this.passesLeft += 1;
+    this.arm();
+    return true;
+  }
+
+  setLooping(on: boolean): void {
+    if (on && !this.secondElement()) return;
+    this.looping = on;
+    this.arm();
   }
 
   /**
@@ -231,14 +267,22 @@ export class StreamDeck implements Deck {
   hold(on: boolean): void {
     if (this.disposed || on === this.held) return;
     this.held = on;
+    const now = this.clock.currentTime;
+    this.clearPauseTimer();
     if (on) {
       this.clearTimer();
-      this.paused = this.players.filter((p) => !p.el.paused);
-      for (const p of this.paused) p.el.pause();
+      hushTo(this.hush, now, 0);
+      // The elements pause once the hold fade is over.
+      this.pauseTimer = this.clock.setTimeout(() => {
+        this.pauseTimer = null;
+        this.paused = this.players.filter((p) => !p.el.paused);
+        for (const p of this.paused) p.el.pause();
+      }, MUSIC.holdFadeSec * MS_PER_SECOND);
       return;
     }
     for (const p of this.paused) p.el.play().catch(() => undefined);
     this.paused = [];
+    hushTo(this.hush, now, 1);
     this.arm();
   }
 
@@ -246,18 +290,31 @@ export class StreamDeck implements Deck {
     if (this.disposed) return;
     this.disposed = true;
     this.clearTimer();
+    this.clearPauseTimer();
     const wait = Math.max(0, at - this.clock.currentTime) * MS_PER_SECOND;
     this.clock.setTimeout(() => {
       for (const p of this.players) {
         p.el.onended = null;
         this.pool.release(p);
       }
+      this.hush.disconnect();
       this.gain.disconnect();
     }, wait);
   }
 
+  /** A second element for a loop (a once-only deck holds one); false when the pool has none. */
+  private secondElement(): boolean {
+    if (this.disposed) return false;
+    if (this.players.length >= 2) return true;
+    const media = this.pool.acquire();
+    if (!media) return false;
+    this.players.push(media);
+    this.wire(media);
+    return true;
+  }
+
   private wire(player: PooledMedia): void {
-    player.gain.connect(this.gain);
+    player.gain.connect(this.hush);
     player.el.onended = () => {
       if (this.loops() && player === this.players[this.active]) this.turn();
     };
@@ -305,6 +362,8 @@ export class StreamDeck implements Deck {
     this.clock.setTimeout(() => {
       if (this.disposed || this.players[this.active] === from) return;
       from.el.pause();
+      // A hold that caught the overlap must not bring the faded element back.
+      this.paused = this.paused.filter((p) => p !== from);
     }, overlap * MS_PER_SECOND);
     this.arm();
   }
@@ -312,5 +371,10 @@ export class StreamDeck implements Deck {
   private clearTimer(): void {
     if (this.timer !== null) this.clock.clearTimeout(this.timer);
     this.timer = null;
+  }
+
+  private clearPauseTimer(): void {
+    if (this.pauseTimer !== null) this.clock.clearTimeout(this.pauseTimer);
+    this.pauseTimer = null;
   }
 }

@@ -149,6 +149,8 @@ export const MUSIC = {
   loopOverlapSec: 2,
   /** A third track asked for during a change cuts the oldest one this fast. */
   cutSec: 0.1,
+  /** A hold (the run's pause, the app in the background) fades the music out and back in this fast. */
+  holdFadeSec: 0.03,
   /** The music switch and `stop`: the music fades out this fast. */
   stopSec: 0.25,
   /** Steps of the equal-power curve of a fade (straight ramps between them). */
@@ -159,8 +161,10 @@ export const MUSIC = {
   seamSmoothSec: 0.01,
   /** The seam aims at a line fitted to the last `fit` samples and averages the tail over `radius` each side. */
   seam: { fit: 16, radius: 2 },
-  /** Media elements of the streamed track (two per deck; decks playing, leaving and being cut). */
-  streamElements: 6,
+  /** Media elements of the streamed tracks (up to two per deck: playing, leaving, parked, being cut). */
+  streamElements: 8,
+  /** Decoded tracks in memory at a time (playing and incoming, or playing and parked or prefetched). */
+  maxDecoded: 2,
   /** How often a waiting timer looks again (the context may be held, the stream may lag). */
   pollSec: 0.25,
   /** The shortest sleep of a loop timer (no busy waking right at the turn). */

@@ -48,11 +48,14 @@ class FakeSource extends FakeNode {
   onended: ((event: Event) => void) | null = null;
   when = 0;
   offset = 0;
+  stoppedAt: number | null = null;
   start(when = 0, offset = 0): void {
     this.when = when;
     this.offset = offset;
   }
-  stop(): void {}
+  stop(when = 0): void {
+    if (this.stoppedAt === null || when < this.stoppedAt) this.stoppedAt = when;
+  }
 }
 
 class FakeContext {
@@ -121,6 +124,10 @@ class FakeStream implements OpeningDeck {
   extend(): boolean {
     this.extended += 1;
     return true;
+  }
+  looping: boolean | null = null;
+  setLooping(on: boolean): void {
+    this.looping = on;
   }
 }
 
@@ -320,8 +327,8 @@ describe('PlaylistPlayer', () => {
     expect(seen).toEqual(['bartender', ...MUSIC_PLAYLIST]);
   });
 
-  it('after the daily tower the playlist goes on from its place, its turn intact', async () => {
-    const { player, advance, sourcesOf } = setup('kitchen');
+  it('after the daily tower the playlist goes on from where it fell silent, its turn intact, no decode', async () => {
+    const { player, advance, sourcesOf, decodes } = setup('kitchen');
     player.playlist();
     await advance(50);
     player.play('daily');
@@ -329,11 +336,31 @@ describe('PlaylistPlayer', () => {
     expect(player.state()).toMatchObject({ track: 'daily', playlist: false });
     player.playlist();
     await advance(0.2);
+    // The kitchen deck was parked: it comes back as it was, from where its fade-out ended.
+    expect(decodes).toEqual(['kitchen', 'daily']);
     const back = sourcesOf('kitchen').at(-1);
-    expect(back?.offset).toBeGreaterThan(49);
-    expect(back?.offset).toBeLessThan(51);
-    expect(player.state().turnSec).toBeGreaterThan(49);
-    expect(player.state().turnSec).toBeLessThan(52);
+    expect(back?.offset).toBeGreaterThan(52);
+    expect(back?.offset).toBeLessThan(53);
+    expect(player.state().turnSec).toBeGreaterThan(52);
+    expect(player.state().turnSec).toBeLessThan(53.5);
+  });
+
+  it('a turn that came back from an exception still changes on its loop boundary', async () => {
+    const { player, advance, sourcesOf } = setup('kitchen');
+    player.playlist();
+    await advance(30);
+    player.play('record');
+    await advance(20);
+    player.playlist();
+    await advance(0.2);
+    const back = sourcesOf('kitchen').at(-1);
+    const turn = player.state().turnSec;
+    const left = 3 * loopOf('kitchen') - turn;
+    await advance(left + 1.5);
+    const roof = sourcesOf('roof')[0];
+    // The loop boundary in the deck's own time: its restart plus what was left of the loop.
+    const boundary = (back?.when ?? 0) + (loopOf('kitchen') - (back?.offset ?? 0));
+    expect(roof?.when).toBeCloseTo(boundary + loopOf('kitchen') * 2, 1);
   });
 
   it('after the record window the playlist goes on from its place', async () => {
@@ -344,10 +371,73 @@ describe('PlaylistPlayer', () => {
     await advance(10);
     player.playlist();
     await advance(0.2);
-    const back = streams.at(-1);
-    expect(back?.track).toBe('menu');
-    expect(back?.from).toBeGreaterThan(29);
-    expect(back?.from).toBeLessThan(31.5);
+    // The menu stream was parked and comes back itself, from where it fell silent.
+    expect(streams).toHaveLength(1);
+    expect(player.state().track).toBe('menu');
+    expect(player.state().turnSec).toBeGreaterThan(32);
+    expect(player.state().turnSec).toBeLessThan(33.5);
+  });
+
+  it('a leaving deck that is asked back twice is not cut by the first leave', async () => {
+    const { player, advance, sourcesOf } = setup('kitchen');
+    player.playlist();
+    await advance(5);
+    player.play('daily');
+    await advance(0.1);
+    player.playlist();
+    await advance(0.5);
+    player.play('daily');
+    await advance(4);
+    const daily = sourcesOf('daily').at(-1);
+    expect(player.state().track).toBe('daily');
+    expect(daily?.stoppedAt).toBeGreaterThan(1000);
+  });
+
+  it('the playlist asked while its track is still coming as an exception takes it as its turn', async () => {
+    const { player, advance } = setup('kitchen');
+    player.play('daily');
+    await advance(3);
+    player.play('kitchen');
+    player.playlist();
+    await advance(1);
+    expect(player.state()).toMatchObject({ track: 'kitchen', playlist: true });
+    await advance(3 * loopOf('kitchen'));
+    expect(player.state().track).toBe('roof');
+  });
+
+  it('a streamed playlist track asked as an exception loops instead of running out', async () => {
+    const { player, advance, streams } = setup('menu');
+    player.playlist();
+    await advance(1);
+    player.play('menu');
+    expect(streams[0]?.looping).toBe(true);
+    player.playlist();
+    expect(streams[0]?.looping).toBe(false);
+  });
+
+  it('the daily screen decodes the tower track ahead, so its run starts without a decode', async () => {
+    const { player, advance, decodes } = setup('menu');
+    player.playlist();
+    await advance(1);
+    player.prepare('daily');
+    await advance(1);
+    expect(decodes).toEqual(['daily']);
+    player.busy(true);
+    player.play('daily');
+    await advance(1);
+    expect(decodes).toEqual(['daily']);
+    expect(player.state().track).toBe('daily');
+  });
+
+  it('a prepared track is let go when another menu screen comes', async () => {
+    const { player, advance } = setup('menu');
+    player.playlist();
+    await advance(1);
+    player.prepare('daily');
+    await advance(1);
+    expect(player.state().decodedBytes).toBe(bytesOf('daily'));
+    player.prepare(null);
+    expect(player.state().decodedBytes).toBe(0);
   });
 
   it('a hold stops the music where it is and the turn does not run meanwhile', async () => {

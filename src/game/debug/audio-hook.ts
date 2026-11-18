@@ -6,7 +6,8 @@ import {
 } from '../../services/audio/offline-render';
 import { MUSIC, MUSIC_TRACKS, type MusicTrackId } from '../../data/music';
 import { fetchAndDecode, trackUrl } from '../../services/audio/music/tune-loader';
-import { loopBounds, smoothSeam } from '../../services/audio/music/tune-loop';
+import { loopBounds, prepareLoop } from '../../services/audio/music/tune-loop';
+import { percentile } from '../perf/perf-stats';
 import { clippedSamples, durationAboveFloor, peakDb, rmsDb } from '../../services/audio/levels';
 import type { SoundArgs, SoundId } from '../../services/audio/sound-args';
 import { SOUND_BOOK, SOUND_IDS, soundVariants } from '../../services/audio/sound-book';
@@ -90,25 +91,15 @@ const SEAM_SIDE_SEC = 1;
 const SEAM_SAMPLES = 3;
 const Q999 = 0.999;
 
-function quantile(values: number[], q: number): number {
-  const sorted = [...values].sort((a, b) => a - b);
-  return sorted[Math.min(sorted.length - 1, Math.floor(sorted.length * q))] ?? 0;
-}
-
 async function musicSeam(track: MusicTrackId, rate: number, smooth = true): Promise<SeamReport> {
   const url = trackUrl(track);
   if (!url) throw new Error(`no file for ${track}`);
-  const spec = MUSIC_TRACKS[track];
   const side = Math.round(SEAM_SIDE_SEC * rate);
   const ctx = new OfflineAudioContext(2, side * 2, rate);
   const buffer = await fetchAndDecode(ctx, url);
-  const bounds = loopBounds(buffer.length, spec, rate, MUSIC.aacPrimingFrames);
-  if (smooth) {
-    const frames = Math.round(MUSIC.seamSmoothSec * rate);
-    for (let c = 0; c < buffer.numberOfChannels; c++) {
-      smoothSeam(buffer.getChannelData(c), bounds.start, bounds.end, frames, MUSIC.seam);
-    }
-  }
+  const bounds = smooth
+    ? prepareLoop(buffer, track)
+    : loopBounds(buffer.length, MUSIC_TRACKS[track], rate, MUSIC.aacPrimingFrames);
   const source = ctx.createBufferSource();
   source.buffer = buffer;
   source.loop = true;
@@ -140,9 +131,15 @@ async function musicSeam(track: MusicTrackId, rate: number, smooth = true): Prom
     loopStart: bounds.start,
     loopEnd: bounds.end,
     seamStep,
-    stepQ999: quantile(steps, Q999),
+    stepQ999: percentile(
+      steps.sort((a, b) => a - b),
+      Q999,
+    ),
     seamCurve,
-    curveQ999: quantile(curves, Q999),
+    curveQ999: percentile(
+      curves.sort((a, b) => a - b),
+      Q999,
+    ),
   };
 }
 

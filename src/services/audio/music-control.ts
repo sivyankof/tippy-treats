@@ -32,6 +32,11 @@ export interface MusicControl {
   play(track: MusicTrackId): void;
   /** The playlist's next track now (the soundboard). */
   next(): void;
+  /**
+   * Decodes `track` ahead while nothing else is changing (the daily tower's screen readies its
+   * track, so its run starts without a decode); null lets such a track go.
+   */
+  prepare(track: MusicTrackId | null): void;
   stop(): void;
   /** Stops the music where it is while any reason holds; it goes on from there after. */
   hold(reason: MusicHoldReason, on: boolean): void;
@@ -72,6 +77,7 @@ export const NO_MUSIC: MusicControl = {
   playlist: () => undefined,
   play: () => undefined,
   next: () => undefined,
+  prepare: () => undefined,
   stop: () => undefined,
   hold: () => undefined,
   busy: () => undefined,

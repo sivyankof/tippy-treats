@@ -1,4 +1,4 @@
-import type { MusicTrack } from '../../../data/music';
+import { MUSIC, MUSIC_TRACKS, type MusicTrack, type MusicTrackId } from '../../../data/music';
 
 /** Bytes of one decoded sample (Web Audio keeps 32-bit floats). */
 const BYTES_PER_SAMPLE = 4;
@@ -15,6 +15,16 @@ export function framesAt(track: TrackLength, rate: number): number {
 /** Memory of `track` decoded at `rate`, bytes. */
 export function decodedBytes(track: TrackLength, rate: number, channels = TRACK_CHANNELS): number {
   return framesAt(track, rate) * channels * BYTES_PER_SAMPLE;
+}
+
+/** Memory of a decoded buffer, bytes. */
+export function bufferBytes(buffer: Pick<AudioBuffer, 'length' | 'numberOfChannels'>): number {
+  return buffer.length * buffer.numberOfChannels * BYTES_PER_SAMPLE;
+}
+
+/** Length of a track's source (one loop of a seamless one), seconds. */
+export function trackLoopSec(track: TrackLength): number {
+  return track.frames / track.sampleRate;
 }
 
 /** The loop of a decoded seamless track, in frames of the decoded buffer: [start, end). */
@@ -142,4 +152,19 @@ export function fadeParam(
   for (let k = 1; k <= steps; k++) {
     param.linearRampToValueAtTime(equalPowerLevel(from, to, k / steps), begin + (sec * k) / steps);
   }
+}
+
+/**
+ * Makes a decoded seamless track ready to loop: finds its loop bounds and smooths the seam of
+ * every channel in place (once, as it comes out of the decoder). The live player and the seam
+ * measurement both go through here.
+ */
+export function prepareLoop(buffer: AudioBuffer, track: MusicTrackId): LoopBounds {
+  const rate = buffer.sampleRate;
+  const bounds = loopBounds(buffer.length, MUSIC_TRACKS[track], rate, MUSIC.aacPrimingFrames);
+  const frames = Math.round(MUSIC.seamSmoothSec * rate);
+  for (let c = 0; c < buffer.numberOfChannels; c++) {
+    smoothSeam(buffer.getChannelData(c), bounds.start, bounds.end, frames, MUSIC.seam);
+  }
+  return bounds;
 }
