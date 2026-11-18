@@ -5,7 +5,7 @@ export const FACE_TEXTURES = {
   eyeOpen: 'face_eye_open',
   eyeClosed: 'face_eye_closed',
   eyeHappy: 'face_eye_happy',
-  /** The half-shut eye of a layer at night: a flat lid over the upper half, a pupil looking down. */
+  /** The lid of the half-shut eye of a layer at night, over the white eye and a low pupil; tinted with the crust of the layer. */
   eyeSleepy: 'face_eye_sleepy',
   /** The eye squeezed tight in a yawn: a short thick droop. */
   eyeSqueeze: 'face_eye_squeeze',
@@ -40,7 +40,7 @@ export const EYE_TEXTURE: Readonly<Record<EyeKind, string>> = {
   happy: FACE_TEXTURES.eyeHappy,
   wide: FACE_TEXTURES.eyeOpen,
   wink: FACE_TEXTURES.eyeOpen,
-  sleepy: FACE_TEXTURES.eyeSleepy,
+  sleepy: FACE_TEXTURES.eyeOpen,
   squeeze: FACE_TEXTURES.eyeSqueeze,
 };
 

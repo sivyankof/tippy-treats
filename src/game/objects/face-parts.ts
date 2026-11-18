@@ -14,6 +14,8 @@ export interface PartsContext {
   recipe: FaceRecipe | null;
   /** Colour of the eyelids (the body of the creature). */
   lidColor: number;
+  /** Tint of the lid of a sleepy eye (the crust of the layer). */
+  sleepyLid: number;
   /** Mouth, cheeks and sweat fit on the layer. */
   showRest: boolean;
 }
@@ -49,6 +51,10 @@ export class FaceParts extends Phaser.GameObjects.Container {
   private sweatMs = 0;
   /** Sideways pupil shift of this face (twins look at each other). */
   private gaze = 0;
+  /** The eyes are the half-shut ones: the pupils sit low and do not follow the look. */
+  private sleepyEyes = false;
+  private lookX = 0;
+  private lookY = 0;
 
   constructor(scene: Phaser.Scene) {
     super(scene);
@@ -97,13 +103,19 @@ export class FaceParts extends Phaser.GameObjects.Container {
     const eyeScale = wide ? ANIM.face.wideEyeScale : 1;
     const pupilScale = wide ? ANIM.face.widePupilScale : 1;
 
+    const wasSleepy = this.sleepyEyes;
+    this.sleepyEyes = e.eyes === 'sleepy';
     for (const eye of [this.eyeL, this.eyeR])
       eye.setTexture(EYE_TEXTURE[e.eyes]).setScale(eyeScale);
     // A wink shuts the right eye only.
     if (winking) this.eyeR.setTexture(EYE_TEXTURE.closed);
-    this.pupilL.setVisible(pupilsShown).setScale(pupilScale);
-    this.pupilR.setVisible(pupilsShown && !winking).setScale(pupilScale);
+    const shown = pupilsShown || this.sleepyEyes;
+    const pupilsAt = this.sleepyEyes ? TOWER_WEATHER.sleepy.eye.pupilScale : pupilScale;
+    this.pupilL.setVisible(shown).setScale(pupilsAt);
+    this.pupilR.setVisible(shown && !winking).setScale(pupilsAt);
     this.applyLids(e.lids ? recipe : null, ctx.lidColor);
+    if (this.sleepyEyes) this.applySleepyLids(ctx.sleepyLid);
+    if (wasSleepy !== this.sleepyEyes) this.placePupils(this.lookX, this.lookY);
     for (const brow of [this.browL, this.browR]) brow.setVisible(e.brows);
     this.setBrowPose(recipe, e.ownBrows);
     this.mouth.setTexture(MOUTH_TEXTURE[e.mouth]).setVisible(showRest);
@@ -154,6 +166,14 @@ export class FaceParts extends Phaser.GameObjects.Container {
   /** Pupil position: `x`, `y` is the glide towards the look target plus the sway drift. */
   placePupils(x: number, y: number): void {
     const half = ANIM.face.eyeSpacing / 2;
+    this.lookX = x;
+    this.lookY = y;
+    if (this.sleepyEyes) {
+      const low = TOWER_WEATHER.sleepy.eye.pupilY;
+      this.pupilL.setPosition(-half, low);
+      this.pupilR.setPosition(half, low);
+      return;
+    }
     this.pupilL.setPosition(-half + x + this.gaze, y);
     this.pupilR.setPosition(half + x + this.gaze, y);
   }
@@ -299,7 +319,20 @@ export class FaceParts extends Phaser.GameObjects.Container {
       lid.setVisible(cover > 0);
       if (cover <= 0) continue;
       const shape = lidShape(cover);
+      FaceParts.show(lid, FACE_TEXTURES.lid).setOrigin(0.5, 1);
       lid.setTint(color).setY(shape.y).setScale(shape.scaleX, shape.scaleY);
+    }
+  }
+
+  /** The lid of a sleepy eye over the white: one picture, tinted with the crust, its lash band a tone darker. */
+  private applySleepyLids(tone: number): void {
+    for (const lid of [this.lidL, this.lidR]) {
+      FaceParts.show(lid, FACE_TEXTURES.eyeSleepy)
+        .setVisible(true)
+        .setOrigin(0.5)
+        .setTint(tone)
+        .setY(0)
+        .setScale(1);
     }
   }
 

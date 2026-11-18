@@ -2,7 +2,8 @@ import type * as Phaser from 'phaser';
 import { ANIM } from '../../data/anim';
 import { BALANCE } from '../../data/balance';
 import { DEG_TO_RAD, TWO_PI } from '../../util/math';
-import { shade } from '../../util/color';
+import { luma, shade } from '../../util/color';
+import { TOWER_WEATHER } from '../../data/tower-weather';
 import { DARK_OUTLINE } from '../objects/layer-draw';
 
 /** Outline thickness of the plain layers as a share of their height; icons use the same share of theirs. */
@@ -11,6 +12,13 @@ export const OUTLINE_SHARE = ANIM.layer.outline / BALANCE.layer.height;
 /** The warm dark outline of a body filled with `fill`, the tone the layers use. */
 export function outlineColor(fill: number): number {
   return shade(fill, DARK_OUTLINE);
+}
+
+/** The tint of a sleepy eyelid over the crust `crust`: the crust itself, lifted a little when it is very dark. */
+export function sleepyLidTone(crust: number): number {
+  const { minLuma, maxLift } = TOWER_WEATHER.sleepy.lid;
+  const dark = Math.max(0, (minLuma - luma(crust)) / minLuma);
+  return shade(crust, maxLift * dark);
 }
 
 export interface Pt {

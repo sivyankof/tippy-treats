@@ -21,7 +21,15 @@ import { LayerShade } from './layer-shade';
 import { LayerMaterial, type MaterialMotion } from './layer-material';
 import { LayerRig } from './layer-rig';
 import { hasNewLook } from '../../core/mastery';
-import { artWidth, creatureOfLayer, creatureStage, lookCodeFor, SHADOW_ROWS } from './layer-art';
+import {
+  artWidth,
+  cakeColorsFor,
+  creatureOfLayer,
+  creatureStage,
+  lookCodeFor,
+  SHADOW_ROWS,
+} from './layer-art';
+import { sleepyLidTone } from '../fx/plain-style';
 import { GrownAccentView } from './grown-accent-view';
 import { LayerArtSlot } from './layer-art-slot';
 import { RAINBOW_LOOK } from '../../data/rainbow-look';
@@ -221,6 +229,9 @@ export class LayerView extends Phaser.GameObjects.Container {
     if (this.shadowHidden) this.applyShadowCrop();
     this.rainbow.set(creature === 'rainbow', w, grown);
     this.accent.set(grown ? creature : null, w);
+    this.face.setSleepyLid(
+      sleepyLidTone(cakeColorsFor(creature, index, this.lookPlan.kind === 'golden').cake),
+    );
     this.face.layout(w);
     this.face.setVisible(this.faceEnabled);
     return this;

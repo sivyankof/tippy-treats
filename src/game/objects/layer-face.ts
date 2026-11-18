@@ -47,6 +47,7 @@ export class LayerFace extends Phaser.GameObjects.Container {
 
   private recipe: FaceRecipe | null = null;
   private lidColor = 0xffffff;
+  private sleepyLid = 0xf6c98c;
   private mood: Mood = 'calm';
   private mouthHint: MouthKind | undefined;
   private expression: Expression | null = null;
@@ -158,6 +159,14 @@ export class LayerFace extends Phaser.GameObjects.Container {
   setMood(mood: Mood): this {
     this.mood = mood;
     return this.refresh();
+  }
+
+  /** The crust tone the lid of a sleepy eye takes (set with the layer; a new tone repaints the face). */
+  setSleepyLid(tone: number): this {
+    if (tone === this.sleepyLid) return this;
+    this.sleepyLid = tone;
+    if (this.sleepy) this.applyExpression();
+    return this;
   }
 
   /** Night: half-shut eyes and slow blinks at rest (any reaction of an event goes over them). */
@@ -488,7 +497,12 @@ export class LayerFace extends Phaser.GameObjects.Container {
   private applyExpression(): void {
     const e = this.expression;
     if (!e) return;
-    const ctx = { recipe: this.recipe, lidColor: this.lidColor, showRest: this.showRest };
+    const ctx = {
+      recipe: this.recipe,
+      lidColor: this.lidColor,
+      sleepyLid: this.sleepyLid,
+      showRest: this.showRest,
+    };
     this.mainFace.apply(e, ctx);
     if (this.recipe?.pair) this.pairFace?.apply(e, ctx);
   }
