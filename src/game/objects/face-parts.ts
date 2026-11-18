@@ -121,11 +121,11 @@ export class FaceParts extends Phaser.GameObjects.Container {
    * The mouth of a yawn over the current expression: the tall oval mouth of the yawn at `scale` times its size, `open` (0..1)
    * wide; a mouth that is all but shut is left as the expression has it. Call `apply` again to go back.
    */
-  poseYawn(open: number, scale: number): void {
+  poseYawn(open: number, scale: number, y: number): void {
     if (open <= YAWN_MOUTH_MIN) return;
     FaceParts.show(this.mouth, FACE_TEXTURES.mouthYawn)
       .setOrigin(0.5, 0.3)
-      .setPosition(0, ANIM.face.mouthOffsetY)
+      .setPosition(0, y)
       .setScale(scale * (0.55 + 0.45 * open), scale * open);
   }
 

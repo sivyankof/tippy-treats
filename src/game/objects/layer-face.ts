@@ -8,7 +8,7 @@ import { fxGuard } from '../fx-guard';
 import { FaceParts } from './face-parts';
 import { faceLayout } from './face-recipe';
 import { FaceLick } from './face-lick';
-import { YAWN_TOTAL_MS, yawnPose, type YawnPose } from './face-yawn';
+import { YAWN_TOTAL_MS, fitYawnMouth, yawnPose, type YawnMouth, type YawnPose } from './face-yawn';
 import type { LickFrame, LickKind, LickScene, LoopShape } from './lick-plan';
 import type { LickStyle } from '../../data/lick';
 import {
@@ -59,6 +59,7 @@ export class LayerFace extends Phaser.GameObjects.Container {
   private sleepy = false;
   /** Time into the yawn running, -1 when none; the pose it lays over the face now. */
   private yawnMs = -1;
+  private readonly yawnMouth: YawnMouth = { y: 0, scale: 1 };
   private readonly yawnNow: YawnPose = { open: 0, stretch: 0, lift: 0 };
   /** Time left of the way back from the wide eyes of a startle. */
   private startleTailMs = 0;
@@ -246,7 +247,15 @@ export class LayerFace extends Phaser.GameObjects.Container {
     }
     this.yawnMs += dtMs;
     this.mainFace.setScale(1, 1 + pose.stretch).setY(-pose.lift);
-    this.mainFace.poseYawn(pose.open, TOWER_WEATHER.sleepy.yawn.mouthScale);
+    const mouth = fitYawnMouth(
+      pose.open,
+      pose.stretch,
+      pose.lift,
+      this.y,
+      this.scaleX,
+      this.yawnMouth,
+    );
+    this.mainFace.poseYawn(pose.open, mouth.scale, mouth.y);
   }
 
   /** The eyes shrink from the wide startle size to normal over `startle.returnMs` after the startle face goes. */
