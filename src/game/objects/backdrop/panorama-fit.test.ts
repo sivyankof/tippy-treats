@@ -5,6 +5,7 @@ import { BALANCE } from '../../../data/balance';
 import {
   coverFade,
   flightRowAt,
+  boltShare,
   moonAlpha,
   muteShare,
   panoramaFit,
@@ -134,5 +135,13 @@ describe('moonAlpha', () => {
   it('takes the mute: mutedAlpha of its alpha at the full mute', () => {
     expect(moonAlpha(1, 1)).toBeCloseTo(PANORAMA.moon.mutedAlpha);
     expect(moonAlpha(1, 0.5)).toBeLessThan(1);
+  });
+});
+
+describe('boltShare', () => {
+  it('is whole at the peak of the flash and gone while the light still shows', () => {
+    expect(boltShare(1)).toBe(1);
+    expect(boltShare(PANORAMA.flash.bolt.fade[0])).toBe(0);
+    expect(boltShare(0.6)).toBeLessThan(0.6);
   });
 });

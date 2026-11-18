@@ -6,6 +6,7 @@ import {
   WALL_LOOK,
   WINDOW_LOOK,
   WINDOW_SKY,
+  panoramaBoltKey,
   panoramaFlashKey,
   panoramaMoonKey,
   panoramaPieces,
@@ -25,6 +26,7 @@ import type { Life } from './life';
 import { LayerThing } from './layer-life';
 import { PanoramaFlash } from './panorama-flash';
 import {
+  bakePanoramaBolt,
   bakePanoramaFlash,
   bakePanoramaMoon,
   panePath,
@@ -235,7 +237,7 @@ const holds = new Map<string, number>();
 
 function panoramaKeys(place: StartPlaceId, weather: WeatherId): string[] {
   const keys = panoramaPieces(place, weather).map((piece) => piece.key);
-  if (weather === 'storm') keys.push(panoramaFlashKey(place));
+  if (weather === 'storm') keys.push(panoramaFlashKey(place), panoramaBoltKey(place));
   if (WINDOW_SKY[weather].moon) keys.push(panoramaMoonKey(place));
   return keys;
 }
@@ -252,7 +254,10 @@ export function bakePanoramaSet(
   weather: WeatherId,
 ): void {
   bakePanorama(scene, place, weather);
-  if (weather === 'storm') bakePanoramaFlash(scene, place, panoramaFlashKey(place));
+  if (weather === 'storm') {
+    bakePanoramaFlash(scene, place, panoramaFlashKey(place));
+    bakePanoramaBolt(scene, place, panoramaBoltKey(place));
+  }
   if (WINDOW_SKY[weather].moon) bakePanoramaMoon(scene, place, panoramaMoonKey(place));
   for (const key of panoramaKeys(place, weather)) holds.set(key, (holds.get(key) ?? 0) + 1);
 }
@@ -317,6 +322,8 @@ export function panoramaLives(
     : null;
   const glass = panoramaGlassLife(scene, weather, spot);
   const flash =
-    weather === 'storm' ? new PanoramaFlash(scene, panoramaFlashKey(place), spot) : null;
+    weather === 'storm'
+      ? new PanoramaFlash(scene, panoramaFlashKey(place), panoramaBoltKey(place), spot)
+      : null;
   return [window, ...(moon ? [moon] : []), ...(glass ? [glass] : []), ...(flash ? [flash] : [])];
 }

@@ -103,3 +103,9 @@ export function moonAlpha(windowAlpha: number, muted: number): number {
   const { goneAt, mutedAlpha } = PANORAMA.moon;
   return windowAlpha * rampBetween(windowAlpha, goneAt, 1) * (1 - (1 - mutedAlpha) * muted);
 }
+
+/** Alpha share of the bolt in the window flash at flash `strength` (0..1): whole near the peak, gone well before the light. */
+export function boltShare(strength: number): number {
+  const [from, full] = PANORAMA.flash.bolt.fade;
+  return rampBetween(strength, from, full);
+}
