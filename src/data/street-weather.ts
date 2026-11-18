@@ -7,6 +7,7 @@
 
 import { BALANCE } from './balance';
 import { LOGICAL_SIZE } from './screen';
+import type { WeatherId } from './weather';
 import type { EffectLevel } from './effect-levels';
 import { GLASS_WEATHER } from './window-look';
 import { WEATHER_LOOK } from './weather-look';
@@ -35,6 +36,7 @@ export interface StreetFallView extends StreetFallLook {
   outside?: { share: number; stripShare: number };
   slantShare?: number;
   sides?: { bias: number; share: number };
+  tint?: number;
 }
 
 export const STREET_WEATHER = {
@@ -54,13 +56,24 @@ export const STREET_WEATHER = {
    * it. The lean of the fall smears it, so it is more than the strips' own share (`stripShare`).
    */
   outsideShare: 0.55,
+  /** The flakes of the street are tinted this cool tone: white on the pale street they all but vanished. */
+  snowTint: 0xa9bbe6,
+  /**
+   * The heavy sky between the houses of the street (the Showcase's own sky, darker than the window's, so the
+   * cloud tone shows through the gaps): top and bottom colour of its gradient.
+   */
+  sky: {
+    rain: { top: 0x65738a, bottom: 0x97a6ba },
+    storm: { top: 0x3e475c, bottom: 0x6c778d },
+    snow: { top: 0xa4b0cf, bottom: 0xcbd3e8 },
+  } as Partial<Record<WeatherId, { top: number; bottom: number }>>,
   /** The snow starts mostly in the strips beside the tower (the lanes there; the middle is behind the tower). */
   snowSides: { bias: 0.9, share: 0.17 },
   /** The rain on the street leans this share of the Roof's lean. */
   slantShare: 0.5,
   /** The falling pictures are this share of their Roof alpha and size: they are out on the street. */
-  alpha: 0.85,
-  scale: 0.96,
+  alpha: 0.92,
+  scale: 0.98,
   /**
    * A kind whose pictures get lost at that share keeps more of its Roof look. White flakes on the pale street
    * of a tall screen all but vanished at 0.6 / 0.85 (their count cannot grow: the lite level is full with the
@@ -74,7 +87,7 @@ export const STREET_WEATHER = {
     alpha: 0.75,
     driftPx: 14,
     /** The storm flashes light the clouds as brightly as on the Roof; no bolt comes down to the street. */
-    flashShare: 1,
+    flashShare: 0,
     bolt: false,
   },
   /**
@@ -86,7 +99,7 @@ export const STREET_WEATHER = {
    */
   glow: {
     color: 0xfff2d2,
-    alpha: 0.34,
+    alpha: 0.46,
     picturePx: 256,
     widthPx: 1400,
     heightPx: 1300,
@@ -124,6 +137,7 @@ export function streetFallView(kind: StreetFallKind): StreetFallView {
           }
         : undefined,
     sides: kind === 'snow' ? STREET_WEATHER.snowSides : undefined,
+    tint: kind === 'snow' ? STREET_WEATHER.snowTint : undefined,
     slantShare: kind === 'rain' || kind === 'storm' ? STREET_WEATHER.slantShare : undefined,
     shown: {
       full: streetRoom(kind, 'full'),

@@ -31,6 +31,8 @@ export interface SceneryDef {
   sky?: string;
   /** Tint of the far plane, for a zone whose sky colour follows the weather (the plane is baked in the clear sky's tones). */
   farTint?: number;
+  /** The parallax layer the far plane sits above, when this run's art wants another than `BACKDROP_FAR.slot` (-1: behind them all). */
+  farSlot?: number;
   /** Alpha of the four parallax layers when the art needs other values than the zone's (an opaque night awning). */
   layerAlpha?: readonly number[];
 }
@@ -173,7 +175,7 @@ export class ZoneScenery {
     this.lives = def.lives.map(({ life }) => life);
     this.guest = def.guest ?? null;
     const children: Phaser.GameObjects.GameObject[] = [this.sky];
-    const farSlot = BACKDROP_FAR.slot[zone];
+    const farSlot = def.farSlot ?? BACKDROP_FAR.slot[zone];
     if (farSlot < 0) children.push(...this.far.objects);
     this.layers.forEach((layer, i) => {
       children.push(layer);
