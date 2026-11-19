@@ -1,3 +1,8 @@
+import { Capacitor } from '@capacitor/core';
+import { App } from '@capacitor/app';
+import { Haptics } from '@capacitor/haptics';
+import { Preferences } from '@capacitor/preferences';
+import { SplashScreen } from '@capacitor/splash-screen';
 import { STUB_PRICES } from '../data/economy/iap-stub';
 import { PRODUCT_KEYS, PRODUCTS } from '../data/economy/shop';
 import { t } from '../i18n';
@@ -16,6 +21,10 @@ import { WebShare } from './share/web';
 import type { AudioDevControl, AudioService } from './audio/types';
 import type { HapticsService } from './haptics/types';
 import { WebHaptics } from './haptics/web';
+import { NativeHaptics } from './haptics/native';
+import type { AppShellService } from './app-shell/types';
+import { WebAppShell } from './app-shell/web';
+import { NativeAppShell } from './app-shell/native';
 import { productIds } from './iap/product-ids';
 import type { IapDevControl, IapService } from './iap/types';
 import { WebIap, type StubProduct } from './iap/web';
@@ -23,6 +32,7 @@ import type { AnalyticsService } from './telemetry/types';
 import { WebAnalytics } from './telemetry/web';
 import type { StorageService } from './storage/types';
 import { WebStorage } from './storage/web';
+import { NativeStorage } from './storage/native';
 
 /** Everything the game asks of the device. Scenes use these and never pick an implementation. */
 export interface Services {
@@ -34,7 +44,12 @@ export interface Services {
   storage: StorageService;
   share: ShareService;
   telemetry: AnalyticsService;
+  /** The iOS or Android app around the game; a stub in the browser. */
+  appShell: AppShellService;
 }
+
+/** Inside the iOS or Android app (Capacitor); false in any browser. */
+const native = Capacitor.isNativePlatform();
 
 const webAds = new WebAds();
 
@@ -54,11 +69,6 @@ const stubCatalog: StubProduct[] = PRODUCT_KEYS.flatMap((key) => {
 
 const webIap = new WebIap(stubCatalog);
 
-/**
- * The single place that picks implementations. Capacitor is not installed yet, so these are
- * the web ones; native haptics, ads and purchases chosen by Capacitor.isNativePlatform() arrive
- * in stage M7.
- */
 // Before any audio context or media element: the page's audio session obeys the silent switch.
 const audioSession = setupAudioSession(typeof navigator === 'undefined' ? undefined : navigator);
 const musicPlaylist = playableTracks(MUSIC_PLAYLIST, audioSession.streams);
@@ -78,15 +88,23 @@ const webAudio = new WebAudioService(
   (on) => (on ? musicPreload.start() : musicPreload.release()),
 );
 
+/**
+ * The single place that picks implementations (docs/08-architecture.md, section 8). Inside the app
+ * the storage, haptics and the shell are native; the sound is the same Web Audio (the app's audio
+ * session is set natively, ios/App/App/AppDelegate.swift); the silent switch needs no reading
+ * there, the ambient session obeys it by itself. Ads, purchases, analytics and sharing stay the
+ * stubs until stage M8.
+ */
 export const services: Services = {
   audio: webAudio,
   silentMode: new WebSilentMode(),
-  haptics: new WebHaptics(),
+  haptics: native ? new NativeHaptics(Haptics) : new WebHaptics(),
   ads: webAds,
   iap: webIap,
-  storage: new WebStorage(),
+  storage: native ? new NativeStorage(Preferences) : new WebStorage(),
   share: new WebShare(),
   telemetry: new WebAnalytics(),
+  appShell: native ? new NativeAppShell(App, SplashScreen) : new WebAppShell(),
 };
 
 /** Dev switch of the ad stub (debug panel). Not part of the services: native ads have none. */

@@ -1,28 +1,20 @@
 import { HAPTICS } from '../../data/app/haptics';
-import type { HapticKind, HapticsService } from './types';
+import { SwitchableHaptics } from './switchable';
+import type { HapticKind } from './types';
 
 type VibrateFn = (pattern: number[]) => boolean;
 
 /** Browser stub: `navigator.vibrate` when the browser has it, otherwise silent. */
-export class WebHaptics implements HapticsService {
-  enabled = true;
+export class WebHaptics extends SwitchableHaptics {
   private readonly vibrate: VibrateFn | undefined;
 
   constructor(vibrate?: VibrateFn) {
+    super();
     this.vibrate = vibrate ?? WebHaptics.detect();
   }
 
-  setEnabled(on: boolean): void {
-    this.enabled = on;
-  }
-
-  play(kind: HapticKind): void {
-    if (!this.enabled || !this.vibrate) return;
-    try {
-      this.vibrate([...HAPTICS.patterns[kind]]);
-    } catch {
-      // Some browsers block vibration before a user gesture.
-    }
+  protected emit(kind: HapticKind): void {
+    this.vibrate?.([...HAPTICS.patterns[kind]]);
   }
 
   private static detect(): VibrateFn | undefined {

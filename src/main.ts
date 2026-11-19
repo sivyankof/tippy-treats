@@ -13,6 +13,8 @@ import { gameState } from './state';
 import { bindSaveFlush } from './state/page-lifecycle';
 import { followEffectsLevelDensity } from './game/app/follow-density';
 import { dropFramebufferHandlesOnLoss } from './game/app/lost-context-watch';
+import { bindNativeShell } from './game/app/native-shell';
+import { services } from './services';
 import { beginPerfSession } from './game/perf/perf-session';
 import { readDebugParams, readPerfParams, showsFpsMeter, withoutReset } from './util/debug-params';
 
@@ -98,6 +100,7 @@ async function start(): Promise<void> {
   if (perf?.densityCap === undefined) followEffectsLevelDensity(game);
   bindLogicalResize(game, parent);
   refreshTextsOnFontLoad(game);
+  bindNativeShell(game, services.appShell, services.audio, gameState);
   bootStage('started');
   // Works in production builds too, unlike the other debug parameters.
   if (showsFpsMeter(window.location.search))
