@@ -12,6 +12,7 @@ import { syncPurchases } from './game/economy/purchases';
 import { gameState } from './state';
 import { bindSaveFlush } from './state/page-lifecycle';
 import { followEffectsLevelDensity } from './game/app/follow-density';
+import { dropFramebufferHandlesOnLoss } from './game/app/lost-context-watch';
 import { beginPerfSession } from './game/perf/perf-session';
 import { readDebugParams, readPerfParams, showsFpsMeter, withoutReset } from './util/debug-params';
 
@@ -91,6 +92,7 @@ async function start(): Promise<void> {
   if (perf) beginPerfSession(perf);
   bootStage('game');
   const game = new Phaser.Game(createGameConfig(parent));
+  dropFramebufferHandlesOnLoss(game);
   perfDirector?.startPerfDirector(game);
   // The benchmark's `&dpr=` sets its own cap, to compare the variants.
   if (perf?.densityCap === undefined) followEffectsLevelDensity(game);

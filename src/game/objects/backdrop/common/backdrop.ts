@@ -302,6 +302,14 @@ export class Backdrop {
     for (const scenery of zones) scenery.root.setVisible(false);
     this.frozen = zones;
     this.scene.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.release());
+    this.scene.sys.game.renderer.on(Phaser.Renderer.Events.RESTORE_WEBGL, this.refreeze, this);
+  }
+
+  /** A restored WebGL context gives the still back blank: the zones show again and it is made anew. */
+  private refreeze(): void {
+    if (!this.still) return;
+    this.unfreeze();
+    this.freeze();
   }
 
   /** The still goes (the screen size changed, or the scene ends); the zones it replaced show again. */
@@ -309,6 +317,7 @@ export class Backdrop {
     if (!this.still) return;
     this.still.destroy();
     this.still = null;
+    this.scene.sys.game.renderer.off(Phaser.Renderer.Events.RESTORE_WEBGL, this.refreeze, this);
     this.scene.textures.remove(BD_TEX.still);
     for (const scenery of this.frozen) scenery.root.setVisible(true);
     this.frozen = [];
@@ -316,6 +325,7 @@ export class Backdrop {
 
   /** The scene ends: its still picture is not kept. */
   private release(): void {
+    this.scene.sys.game.renderer.off(Phaser.Renderer.Events.RESTORE_WEBGL, this.refreeze, this);
     this.still = null;
     this.frozen = [];
     if (this.scene.textures.exists(BD_TEX.still)) this.scene.textures.remove(BD_TEX.still);
