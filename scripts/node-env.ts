@@ -6,6 +6,13 @@ interface NodeFs {
   writeFileSync(path: string, data: string): void;
   readFileSync(path: string, encoding: 'utf8'): string;
   existsSync(path: string): boolean;
+  readdirSync(path: string, options: { withFileTypes: true }): NodeDirEntry[];
+}
+
+/** One entry of a folder listing. */
+interface NodeDirEntry {
+  name: string;
+  isDirectory(): boolean;
 }
 
 declare const process: {
