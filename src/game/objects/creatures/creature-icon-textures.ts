@@ -8,6 +8,7 @@ import { artTopPad } from '../tower/layer-art';
 import { iconPlacement } from './creature-icon-fit';
 import { LayerView } from '../tower/layer-view';
 import { devWarn } from '../../common/dev-warn';
+import { addDynamicTexture } from '../../app/dynamic-texture';
 
 /** Width of the layer a creature's icon is drawn from. */
 export function iconLayerWidth(id: CreatureId): number {
@@ -58,7 +59,7 @@ function bakeIcon(scene: Phaser.Scene, view: LayerView, id: CreatureId, grown = 
   const key = grown ? CREATURE_GROWN_ICON_KEYS[id] : CREATURE_ICON_KEYS[id];
   if (scene.textures.exists(key)) return;
   const { size } = CREATURE_ICON;
-  const icon = scene.textures.addDynamicTexture(key, size, size);
+  const icon = addDynamicTexture(scene.textures, key, size, size);
   if (!icon) throw new Error(`creature icon: no texture for ${id}`);
   drawIcon(icon, view, id, grown);
   watchContext(scene, key);
