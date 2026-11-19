@@ -1,6 +1,8 @@
 import type * as Phaser from 'phaser';
 import { SOAK } from '../../data/debug/soak';
-import { services } from '../../services';
+import { audioDev, services } from '../../services';
+import type { MusicPlayerState } from '../../services/audio/music-control';
+import type { AudioDebugStats } from '../../services/audio/types';
 import { uiRegionCount } from '../ui/common/ui-regions';
 import { soundNodes } from './soak-compare';
 import { countLastingTweens, tweenFacts } from './soak-tweens';
@@ -48,6 +50,12 @@ export interface SoakSample {
   domCanvases: number;
   /** Audio nodes alive (sounds in flight and music voices): must not grow from lap to lap. */
   audioNodes: number;
+  /** Live audio nodes of the music alone (decks, fades): must not grow over a long session. */
+  musicNodes: number;
+  /** Decoded music in memory now (decks, parked, prefetched, decodes under way), bytes. */
+  musicDecodedBytes: number;
+  /** Decoded tracks in memory now: never above `MUSIC.maxDecoded`. */
+  musicBuffers: number;
   /** Interface regions registered in `ui-regions` (a module-level set). */
   uiRegions: number;
 }
@@ -144,9 +152,22 @@ function textureGroups(keys: string[]): Record<string, number> {
   return Object.fromEntries(biggest);
 }
 
+/** What the music holds, for the soak log: nodes, decoded bytes and buffers alive. */
+export function musicSoak(
+  stats: Pick<AudioDebugStats, 'musicNodes'>,
+  state: Pick<MusicPlayerState, 'decodedBytes' | 'buffers'> | null,
+): Pick<SoakSample, 'musicNodes' | 'musicDecodedBytes' | 'musicBuffers'> {
+  return {
+    musicNodes: stats.musicNodes,
+    musicDecodedBytes: state?.decodedBytes ?? 0,
+    musicBuffers: state?.buffers ?? 0,
+  };
+}
+
 /** Reads every count the soak run watches. Cheap enough to call once a minute, not every frame. */
 export function readSoakSample(game: Phaser.Game): SoakSample {
   const scenes = game.scene.scenes.map(readScene);
+  const stats = services.audio.debugStats();
   const listenersBy: Record<string, number> = {};
   const addGlobal = (label: string, emitter: unknown): void => {
     const n = listenersOf(emitter);
@@ -186,6 +207,7 @@ export function readSoakSample(game: Phaser.Game): SoakSample {
     ),
     domCanvases: document.querySelectorAll('canvas').length,
     uiRegions: uiRegionCount(),
-    audioNodes: soundNodes(services.audio.debugStats()),
+    audioNodes: soundNodes(stats),
+    ...musicSoak(stats, audioDev?.musicState() ?? null),
   };
 }

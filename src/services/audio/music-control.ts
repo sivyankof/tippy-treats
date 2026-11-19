@@ -20,6 +20,8 @@ export interface MusicPlayerState {
   decks: number;
   /** Decoded music in memory now (decks, the prefetched track, decodes under way at full size), bytes. */
   decodedBytes: number;
+  /** Decoded tracks in memory now (the buffers alive: decks, the parked and prefetched ones, decodes under way). */
+  buffers: number;
   /** The most `decodedBytes` has been since the player was made or `resetPeak`. */
   peakBytes: number;
 }
@@ -44,8 +46,9 @@ export interface MusicControl {
   /** Stops the music where it is while any reason holds; it goes on from there after. */
   hold(reason: MusicHoldReason, on: boolean): void;
   /**
-   * A run is being played (not paused): no file is decoded meanwhile (a decode's end stalls the
-   * main thread), the playlist's track plays on by whole loops until the run lets go.
+   * A run is on (its pause window and countdown included): no file is decoded meanwhile (a
+   * decode's end stalls the main thread), the playlist's track plays on by whole loops until the
+   * run lets go.
    */
   busy(on: boolean): void;
   state(): MusicPlayerState;
@@ -72,6 +75,7 @@ const NO_STATE: MusicPlayerState = {
   turnSec: 0,
   decks: 0,
   decodedBytes: 0,
+  buffers: 0,
   peakBytes: 0,
 };
 

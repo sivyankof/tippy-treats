@@ -234,7 +234,12 @@ describe('PlaylistPlayer', () => {
       const ask = musicAskFor(cue);
       if (ask?.kind === 'playlist') player.playlist();
       await advance(5);
-      expect(player.state()).toMatchObject({ track: 'kitchen', decks: 1, playlist: true });
+      expect(player.state()).toMatchObject({
+        track: 'kitchen',
+        decks: 1,
+        buffers: 1,
+        playlist: true,
+      });
     }
     expect(decodes).toEqual(['kitchen']);
     expect(player.state().turnSec).toBeCloseTo(35, 0);
