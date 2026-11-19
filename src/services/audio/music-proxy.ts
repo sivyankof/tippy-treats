@@ -20,6 +20,8 @@ export class MusicProxy implements MusicControl {
   private ask: MusicAsk | null = null;
   private readonly holds = new Set<MusicHoldReason>();
   private isBusy = false;
+  /** The playlist's place, kept from a player let go until the next one comes. */
+  private carried: PlaylistPosition | null = null;
 
   /**
    * A new player in place of the one it has (the music switched on again): the old one is let go
@@ -27,9 +29,10 @@ export class MusicProxy implements MusicControl {
    */
   replace(real: MusicControl): void {
     const old = this.real;
-    let position: PlaylistPosition | null = null;
+    let position: PlaylistPosition | null = this.carried;
+    this.carried = null;
     try {
-      position = old.position();
+      position = old.position() ?? position;
     } catch {
       // The new player starts from its own first track.
     }
@@ -40,6 +43,13 @@ export class MusicProxy implements MusicControl {
       this.safely(() => real.resumeAt(at));
     }
     this.attach(real);
+  }
+
+  /** Lets the player go now (its context is going away); the next player goes on from its place. */
+  letGo(): void {
+    this.carried = this.position() ?? this.carried;
+    this.safely(() => this.real.dispose());
+    this.real = NO_MUSIC;
   }
 
   /** The watchdog: the playlist starts again from the turn it was on. */

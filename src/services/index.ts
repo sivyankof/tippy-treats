@@ -92,6 +92,8 @@ const webAudio = new WebAudioService(
     bless: !native,
   }),
   (on) => (on ? musicPreload.start() : musicPreload.release()),
+  // The app needs no gesture for sound: a dead context is made again at once.
+  native,
 );
 
 /**

@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
+import { MUSIC_WATCHDOG } from '../../data/audio/music-watchdog';
 import { AUDIO_MIX } from '../../data/audio/audio-mix';
 import { SFX } from '../../data/audio/sfx';
 import { NO_MUSIC, type MusicControl, type MusicFactory } from './music-control';
@@ -465,5 +466,118 @@ describe('WebAudioService', () => {
     service.resume('silent');
     service.click();
     expect(ctx.oscillators).toHaveLength(1);
+  });
+
+  it('makes the context again when it says it runs but its clock stands still, at most a few times', () => {
+    vi.useFakeTimers();
+    try {
+      const contexts: FakeContext[] = [];
+      const players: string[] = [];
+      let made = 0;
+      const factory: MusicFactory = () => {
+        const id = ++made;
+        return {
+          ...NO_MUSIC,
+          position: () => ({ index: 4, turnSec: 30 }),
+          resumeAt: (at) => players.push(`${id} resume ${at.index} ${at.turnSec}`),
+          dispose: () => players.push(`${id} dispose`),
+        };
+      };
+      const service = new WebAudioService(
+        () => {
+          const ctx = new FakeContext();
+          ctx.state = 'running';
+          contexts.push(ctx);
+          return ctx as unknown as AudioContext;
+        },
+        Math.random,
+        factory,
+        () => undefined,
+        true,
+      );
+      service.duckMusic('window', true);
+      service.unlock();
+      expect(contexts).toHaveLength(1);
+      vi.advanceTimersByTime(MUSIC_WATCHDOG.frozenClockMs + MUSIC_WATCHDOG.checkMs * 2);
+      expect(contexts).toHaveLength(2);
+      expect(contexts[0]?.closes).toBe(1);
+      // The old player went before its context; the new one took over its place.
+      expect(players.slice(0, 2)).toEqual(['1 dispose', '2 resume 4 30']);
+      expect(service.musicState().ducks).toEqual(['window']);
+      vi.advanceTimersByTime(60_000);
+      expect(contexts).toHaveLength(1 + MUSIC_WATCHDOG.maxContextRemakes);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('leaves a running context with a moving clock alone, and one held for the background', () => {
+    vi.useFakeTimers();
+    try {
+      let made = 0;
+      const ctx = new FakeContext();
+      ctx.state = 'running';
+      const service = new WebAudioService(() => {
+        made++;
+        return ctx as unknown as AudioContext;
+      });
+      service.unlock();
+      for (let i = 0; i < 20; i++) {
+        ctx.currentTime += 0.5;
+        vi.advanceTimersByTime(MUSIC_WATCHDOG.checkMs);
+      }
+      service.suspend('app');
+      vi.advanceTimersByTime(10_000);
+      expect(made).toBe(1);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('in a browser a dead context waits for the next tap to be made again', () => {
+    vi.useFakeTimers();
+    try {
+      const contexts: FakeContext[] = [];
+      const service = new WebAudioService(() => {
+        const ctx = new FakeContext();
+        ctx.state = 'running';
+        contexts.push(ctx);
+        return ctx as unknown as AudioContext;
+      });
+      service.unlock();
+      vi.advanceTimersByTime(MUSIC_WATCHDOG.frozenClockMs * 3);
+      expect(contexts).toHaveLength(1);
+      service.unlock();
+      expect(contexts).toHaveLength(2);
+      expect(contexts[0]?.closes).toBe(1);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('a clock that moved once is never judged dead, even if it stands later', () => {
+    vi.useFakeTimers();
+    try {
+      let made = 0;
+      const ctx = new FakeContext();
+      ctx.state = 'running';
+      const service = new WebAudioService(
+        () => {
+          made++;
+          return ctx as unknown as AudioContext;
+        },
+        Math.random,
+        undefined,
+        () => undefined,
+        true,
+      );
+      service.unlock();
+      ctx.currentTime = 0.5;
+      vi.advanceTimersByTime(MUSIC_WATCHDOG.checkMs);
+      vi.advanceTimersByTime(MUSIC_WATCHDOG.frozenClockMs * 5);
+      expect(made).toBe(1);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });
