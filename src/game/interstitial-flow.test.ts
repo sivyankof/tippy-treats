@@ -11,7 +11,7 @@ const state = createTestState();
 
 vi.mock('../state', () => ({ gameState: state }));
 vi.mock('./purchases', () => ({ loadPrices: () => Promise.resolve(h.prices) }));
-vi.mock('./ui/menu/premium-offer', () => ({ openNoAdsOffer: h.opened }));
+vi.mock('./ui/menu/shop/premium-offer', () => ({ openNoAdsOffer: h.opened }));
 vi.mock('../services', () => ({
   services: { audio: h.audio, ads: { showInterstitial: () => Promise.resolve(true) } },
 }));

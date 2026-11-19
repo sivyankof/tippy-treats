@@ -1,5 +1,5 @@
 import * as Phaser from 'phaser';
-import { runFontRefresh } from '../menu/fit-text';
+import { runFontRefresh } from '../menu/widgets/fit-text';
 
 /** Every object under `objects`, containers opened. */
 function collectObjects(

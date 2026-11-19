@@ -7,11 +7,11 @@ import { gameState } from '../../state';
 import { pickInt, pickRange } from '../../util/math';
 import { openScreen, SCENES, type CreatureDetailData } from '../scene-keys';
 import { enterScreen, leaveScreen } from '../ui/common/transition';
-import { collectionGrid } from '../ui/menu/collection-grid';
-import { CollectionCount } from '../ui/menu/collection-count';
-import { CollectionTile } from '../ui/menu/collection-tile';
+import { collectionGrid } from '../ui/menu/collection/collection-grid';
+import { CollectionCount } from '../ui/menu/collection/collection-count';
+import { CollectionTile } from '../ui/menu/collection/collection-tile';
 import { MenuScenery } from '../ui/style/menu-scenery';
-import { ScreenHeader } from '../ui/menu/screen-header';
+import { ScreenHeader } from '../ui/menu/widgets/screen-header';
 
 const cfg = MENU.collection;
 

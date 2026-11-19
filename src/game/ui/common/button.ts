@@ -2,7 +2,7 @@ import * as Phaser from 'phaser';
 import { ANIM } from '../../../data/common/anim';
 import { services } from '../../../services';
 import { createGlossBand, sweepGloss } from '../../fx/common/gloss-sweep';
-import { fitText } from '../menu/fit-text';
+import { fitText } from '../menu/widgets/fit-text';
 import { createOutlinedText } from './outlined-text';
 import { createVolumeImage, lookOf } from '../style/volume';
 

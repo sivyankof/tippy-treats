@@ -1,0 +1,148 @@
+import * as Phaser from 'phaser';
+import { MENU } from '../../../../data/common/menu-layout';
+import { PALETTE } from '../../../../data/common/palette';
+import { t, tn } from '../../../../i18n';
+import { gameState } from '../../../../state';
+import { cssColor } from '../../../../util/color';
+import { attachPressFeedback, type Button } from '../../common/button';
+import { createOutlinedText } from '../../common/outlined-text';
+import { faceOffsetY, VolumePlate } from '../../style/volume';
+import { fitText } from '../widgets/fit-text';
+import { FlameIcon } from '../widgets/flame-icon';
+import { createIconButton } from '../widgets/icon-button';
+import { GiftBox } from '../new-creature/new-creature-box';
+import { formatTimeLeft } from '../widgets/time-text';
+
+const cfg = MENU.home.badges;
+
+/** Makes a container tappable over a `width` x `height` area around its origin, with press feedback. */
+export function makeTappable(
+  box: Phaser.GameObjects.Container,
+  width: number,
+  height: number,
+  onTap: () => void,
+): void {
+  // Container hit areas are measured from the top-left corner of its size.
+  box.setSize(width, height);
+  box.setInteractive(
+    new Phaser.Geom.Rectangle(0, 0, width, height),
+    Phaser.Geom.Rectangle.Contains,
+  );
+  attachPressFeedback(box, { onTap });
+}
+
+/**
+ * The row under the level plate of Home: the streak flame with the day count (opens the
+ * calendar), the gift box with its timer (opens the gift window) and the settings gear beside it.
+ */
+export class HomeBadges {
+  readonly streak: Phaser.GameObjects.Container;
+  readonly gift: Phaser.GameObjects.Container;
+  readonly gear: Button;
+  private readonly streakPlate: VolumePlate;
+  private readonly streakFlame: FlameIcon;
+  private readonly streakLabel: Phaser.GameObjects.Text;
+  private readonly giftLabel: Phaser.GameObjects.Text;
+  private readonly giftBox: GiftBox;
+  private enabled = true;
+  private giftText = '';
+  private giftIsReady = false;
+
+  constructor(
+    scene: Phaser.Scene,
+    handlers: { streak: () => void; gift: () => void; settings: () => void },
+  ) {
+    const { height } = cfg;
+    this.streakPlate = new VolumePlate(scene, 'chip', height, { fill: cfg.streak.fill });
+    this.streakFlame = new FlameIcon(scene, 0, 0, cfg.streak.flame);
+    this.streakLabel = createOutlinedText(scene, 0, faceOffsetY('chip'), '', cfg.streak.font);
+    this.streak = scene.add.container(0, 0, [this.streakPlate, this.streakFlame, this.streakLabel]);
+
+    const giftPlate = new VolumePlate(scene, 'chip', height, { fill: cfg.gift.fill });
+    giftPlate.setBodyWidth(cfg.gift.width);
+    this.giftBox = new GiftBox(scene, -cfg.gift.width / 2 + cfg.gift.boxInset, 0).setScale(
+      cfg.gift.box,
+    );
+    this.giftBox.startSway(cfg.gift.motion, false);
+    this.giftLabel = createOutlinedText(scene, 0, faceOffsetY('chip'), '', cfg.gift.font);
+    this.gift = scene.add.container(0, 0, [giftPlate, this.giftBox, this.giftLabel]);
+
+    this.gear = createIconButton(scene, 0, 0, cfg.gear.size, cfg.gear.fill, 'settings', () =>
+      this.tap(handlers.settings),
+    );
+
+    this.refreshStreak();
+    this.update();
+    makeTappable(this.streak, this.streakPlate.width, height, () => this.tap(handlers.streak));
+    makeTappable(this.gift, cfg.gift.width, height, () => this.tap(handlers.gift));
+    scene.time.addEvent({
+      delay: cfg.gift.motion.hop.everyMs,
+      loop: true,
+      callback: () => this.hop(),
+    });
+  }
+
+  /** What slides in with the screen. */
+  get parts(): Phaser.GameObjects.Container[] {
+    return [this.streak, this.gift, this.gear];
+  }
+
+  /** Streak plate on the left edge, gift plate on the right edge and the gear left of it, on a screen `width` wide. */
+  layout(width: number): void {
+    this.streak.setPosition(cfg.edge + this.streakPlate.width / 2, cfg.y);
+    this.gift.setPosition(width - cfg.edge - cfg.gift.width / 2, cfg.y);
+    this.gear.setPosition(
+      width - cfg.edge - cfg.gift.width - cfg.gear.gap - cfg.gear.size / 2,
+      cfg.y,
+    );
+  }
+
+  setEnabled(enabled: boolean): void {
+    this.enabled = enabled;
+    this.gear.setEnabled(enabled);
+  }
+
+  /** The day count of the streak plate; call after the streak changed. */
+  refreshStreak(): void {
+    const { padX, flame, gap } = cfg.streak;
+    this.streakLabel.setText(tn('home.streakDays', gameState.data.streak.count));
+    const content = flame + gap + this.streakLabel.width;
+    this.streakPlate.setBodyWidth(content + padX * 2);
+    this.streakFlame.setX(-content / 2 + flame / 2);
+    this.streakLabel.setX(content / 2 - this.streakLabel.width / 2);
+    this.streak.setSize(this.streakPlate.width, cfg.height);
+    if (this.streak.input) {
+      this.streak.input.hitArea = new Phaser.Geom.Rectangle(
+        0,
+        0,
+        this.streakPlate.width,
+        cfg.height,
+      );
+    }
+  }
+
+  /** The timer of the gift plate; call every frame. True when its text changed (about once a second). */
+  update(): boolean {
+    const ready = gameState.giftReady;
+    const text = ready ? t('home.giftReady') : formatTimeLeft(gameState.msUntilGift);
+    if (text === this.giftText) return false;
+    this.giftText = text;
+    if (ready !== this.giftIsReady) this.giftBox.startSway(cfg.gift.motion, ready);
+    this.giftIsReady = ready;
+    const { width, boxInset, padRight } = cfg.gift;
+    const left = -width / 2 + boxInset * 2;
+    const right = width / 2 - padRight;
+    this.giftLabel.setText(text).setColor(cssColor(ready ? cfg.readyColor : PALETTE.textLight));
+    fitText(this.giftLabel, right - left).setX((left + right) / 2);
+    return true;
+  }
+
+  private tap(onTap: () => void): void {
+    if (this.enabled) onTap();
+  }
+
+  /** A ready box hops now and then. */
+  private hop(): void {
+    if (this.giftIsReady) this.giftBox.hop(cfg.gift.motion);
+  }
+}

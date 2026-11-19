@@ -1,7 +1,7 @@
 import type { RunSummary } from '../state/game-state';
 import type { RunRequest } from './run-request';
 import { SCENES, type CreatureDetailData, type NewCreatureData, type SceneKey } from './scene-keys';
-import { newCreaturesOf } from './ui/menu/results-text';
+import { newCreaturesOf } from './ui/menu/results/results-text';
 
 /** A screen to open, with its data. */
 export interface ScreenTarget {

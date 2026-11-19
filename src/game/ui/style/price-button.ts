@@ -3,8 +3,8 @@ import type { Currency } from '../../../core/economy/economy';
 import { MENU } from '../../../data/common/menu-layout';
 import { t } from '../../../i18n';
 import { createLabelButton, type Button, type LabelButtonLayout } from '../common/button';
-import { missingAmount } from '../menu/detail-model';
-import { PriceTag } from '../menu/price-tag';
+import { missingAmount } from '../menu/detail/detail-model';
+import { PriceTag } from '../menu/widgets/price-tag';
 
 export interface PriceButtonOptions {
   /** Label with `{price}`; the currency icon follows it, e.g. "Buy for {price} (icon)". */

@@ -5,7 +5,7 @@ import { ZONES } from '../../../data/zones/zones';
 import { t } from '../../../i18n';
 import { playFx } from '../../fx-sound';
 import { DEG_TO_RAD, sineWave } from '../../../util/math';
-import { fitText } from '../menu/fit-text';
+import { fitText } from '../menu/widgets/fit-text';
 import { createOutlinedText } from '../common/outlined-text';
 import { createVolumeImage, faceOffsetY, lookOf } from '../style/volume';
 

@@ -8,7 +8,7 @@ import { ContinueWindow } from '../ui/run/continue-window';
 import { DebugPanel } from '../debug/debug-panel';
 import { launchRun, restartRun, SCENES } from '../scene-keys';
 import type { Button } from '../ui/common/button';
-import { createIconButton } from '../ui/menu/icon-button';
+import { createIconButton } from '../ui/menu/widgets/icon-button';
 import { NumberRoll } from '../ui/common/number-roll';
 import { createOutlinedText } from '../ui/common/outlined-text';
 import { PauseOverlay } from '../ui/run/pause-overlay';

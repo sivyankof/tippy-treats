@@ -4,7 +4,7 @@ import { PAUSE } from '../../../data/run/hud-layout';
 import { PALETTE } from '../../../data/common/palette';
 import { t } from '../../../i18n';
 import { createTextButton, type Button } from '../common/button';
-import { createToggleRows, soundSettingRows } from '../menu/setting-toggles';
+import { createToggleRows, soundSettingRows } from '../menu/settings/setting-toggles';
 import { createOutlinedText } from '../common/outlined-text';
 import { PopupWindow } from '../style/dialog-window';
 import type { ToggleSwitch } from '../style/toggle-switch';

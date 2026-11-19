@@ -4,7 +4,7 @@ import { CONTINUE_ANIM } from '../../../data/run/continue-anim';
 import { PALETTE } from '../../../data/common/palette';
 import { t } from '../../../i18n';
 import { createLabelButton, type Button } from '../common/button';
-import { resetAdLabel, showAdCaption } from '../menu/ad-unavailable';
+import { resetAdLabel, showAdCaption } from '../menu/widgets/ad-unavailable';
 import { createOutlinedText } from '../common/outlined-text';
 import { createPriceButton } from '../style/price-button';
 

@@ -11,9 +11,9 @@ import { gameState } from '../../state';
 import { buyProduct, loadPrices, restorePurchases, type Prices } from '../purchases';
 import { showRewarded } from '../rewarded';
 import { openScreen, SCENES } from '../scene-keys';
-import type { DailySection } from '../ui/menu/daily-section';
-import { flyReward, type WalletTargets } from '../ui/menu/reward-flight';
-import { ScreenHeader } from '../ui/menu/screen-header';
+import type { DailySection } from '../ui/menu/daily/daily-section';
+import { flyReward, type WalletTargets } from '../ui/menu/widgets/reward-flight';
+import { ScreenHeader } from '../ui/menu/widgets/screen-header';
 import {
   berriesSection,
   creaturesSection,
@@ -22,9 +22,9 @@ import {
   noAdsSection,
   restoreBlock,
   type ShopActions,
-} from '../ui/menu/shop-blocks';
-import { ShopStarter } from '../ui/menu/shop-starter';
-import { Toast } from '../ui/menu/shop-toast';
+} from '../ui/menu/shop/shop-blocks';
+import { ShopStarter } from '../ui/menu/shop/shop-starter';
+import { Toast } from '../ui/menu/shop/shop-toast';
 import { MenuScenery } from '../ui/style/menu-scenery';
 import { ScrollList } from '../ui/style/scroll-list';
 import { enterScreen, leaveScreen } from '../ui/common/transition';

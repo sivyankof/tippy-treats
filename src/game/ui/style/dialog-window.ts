@@ -3,7 +3,7 @@ import { MENU } from '../../../data/common/menu-layout';
 import { PALETTE } from '../../../data/common/palette';
 import { windowDuck } from '../../music-cues';
 import { createDimOverlay } from '../common/dim-overlay';
-import { createIconButton } from '../menu/icon-button';
+import { createIconButton } from '../menu/widgets/icon-button';
 import { openPopup } from '../common/transition';
 import { TitleRibbon } from './title-ribbon';
 import { VolumePlate } from './volume';

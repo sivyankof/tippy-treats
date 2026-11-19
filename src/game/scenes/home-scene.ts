@@ -11,25 +11,25 @@ import type { RunRequest } from '../run-request';
 import { startRunFrom, openScreen, SCENES, type HomeData } from '../scene-keys';
 import type { PopupWindow } from '../ui/style/dialog-window';
 import { createTextButton, type Button } from '../ui/common/button';
-import { HomeStarterOffer } from '../ui/menu/home-starter';
-import { HomeStartFrom } from '../ui/menu/home-start-from';
-import { createHintBubble } from '../ui/menu/home-hint';
-import { HomeBadges } from '../ui/menu/home-badges';
-import { HomeNav } from '../ui/menu/home-nav';
+import { HomeStarterOffer } from '../ui/menu/home/home-starter';
+import { HomeStartFrom } from '../ui/menu/home/home-start-from';
+import { createHintBubble } from '../ui/menu/home/home-hint';
+import { HomeBadges } from '../ui/menu/home/home-badges';
+import { HomeNav } from '../ui/menu/home/home-nav';
 import {
   createLevelPlate,
   createPlayRing,
   createRecordPlate,
   refreshLevelPlate,
-} from '../ui/menu/home-plates';
-import { OvenPlate } from '../ui/menu/oven-plate';
-import { openOvenWindow } from '../ui/menu/oven-window';
-import { HomeShelf } from '../ui/menu/home-shelf';
-import { openGiftWindow } from '../ui/menu/gift-window';
-import { openMissionsWindow } from '../ui/menu/missions-window';
-import { openSettingsWindow } from '../ui/menu/settings-window';
-import { ScreenHeader } from '../ui/menu/screen-header';
-import { openStreakCalendar, openStreakEntry } from '../ui/menu/streak-windows';
+} from '../ui/menu/home/home-plates';
+import { OvenPlate } from '../ui/menu/oven/oven-plate';
+import { openOvenWindow } from '../ui/menu/oven/oven-window';
+import { HomeShelf } from '../ui/menu/home/home-shelf';
+import { openGiftWindow } from '../ui/menu/home/gift-window';
+import { openMissionsWindow } from '../ui/menu/missions/missions-window';
+import { openSettingsWindow } from '../ui/menu/settings/settings-window';
+import { ScreenHeader } from '../ui/menu/widgets/screen-header';
+import { openStreakCalendar, openStreakEntry } from '../ui/menu/streak/streak-windows';
 import type { StreakClaim } from '../../state/game-state';
 import { MenuScenery } from '../ui/style/menu-scenery';
 import { enterScreen, leaveScreen, type Movable } from '../ui/common/transition';

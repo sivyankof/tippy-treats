@@ -25,7 +25,7 @@ vi.mock('../services', () => ({
   services: { audio: h.audio, ads: h.ads, telemetry: h.telemetry },
 }));
 vi.mock('./purchases', () => ({ loadPrices: () => Promise.resolve({}) }));
-vi.mock('./ui/menu/premium-offer', () => ({ openNoAdsOffer: vi.fn() }));
+vi.mock('./ui/menu/shop/premium-offer', () => ({ openNoAdsOffer: vi.fn() }));
 
 const exit = {
   runMs: 60_000,

@@ -1,6 +1,9 @@
 import type * as Phaser from 'phaser';
 import { checkpointRows } from '../../core/zones/checkpoints';
-import { openCheckpointWindow, type CheckpointWindow } from '../ui/menu/checkpoint-window';
+import {
+  openCheckpointWindow,
+  type CheckpointWindow,
+} from '../ui/menu/checkpoint/checkpoint-window';
 
 /** How long the sample start "takes", so the locked buttons can be seen. */
 const CHOOSE_MS = 600;

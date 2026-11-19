@@ -13,17 +13,22 @@ import { starBurst } from '../fx/common/sparkle-fx';
 import { demoRun } from '../run-request';
 import { openScreen, SCENES, startRunFrom, type CreatureDetailData } from '../scene-keys';
 import { enterScreen, leaveScreen, type Movable } from '../ui/common/transition';
-import { DetailActions } from '../ui/menu/detail-actions';
-import { abilityText } from '../ui/menu/detail-model';
-import { DetailBio } from '../ui/menu/detail-bio';
-import { detailPlan, DETAIL_PLAN_STEPS, masterBlock, upgradeRows } from '../ui/menu/detail-rows';
-import { MasteryTransform } from '../ui/menu/mastery-transform';
-import { transformKind, type TransformKind } from '../ui/menu/transform-plan';
-import { DetailInfo } from '../ui/menu/detail-info';
-import { DetailStage } from '../ui/menu/detail-stage';
+import { DetailActions } from '../ui/menu/detail/detail-actions';
+import { abilityText } from '../ui/menu/detail/detail-model';
+import { DetailBio } from '../ui/menu/detail/detail-bio';
+import {
+  detailPlan,
+  DETAIL_PLAN_STEPS,
+  masterBlock,
+  upgradeRows,
+} from '../ui/menu/detail/detail-rows';
+import { MasteryTransform } from '../ui/menu/detail/mastery-transform';
+import { transformKind, type TransformKind } from '../ui/menu/detail/transform-plan';
+import { DetailInfo } from '../ui/menu/detail/detail-info';
+import { DetailStage } from '../ui/menu/detail/detail-stage';
 import { TitleRibbon } from '../ui/style/title-ribbon';
 import { MenuScenery } from '../ui/style/menu-scenery';
-import { ScreenHeader } from '../ui/menu/screen-header';
+import { ScreenHeader } from '../ui/menu/widgets/screen-header';
 
 const cfg = MENU.detail;
 

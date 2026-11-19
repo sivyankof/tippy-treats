@@ -9,11 +9,11 @@ import { gameState } from '../../state';
 import { CreaturePortrait } from '../objects/creatures/creature-portrait';
 import { openScreen, SCENES } from '../scene-keys';
 import { MenuScenery } from '../ui/style/menu-scenery';
-import { ScreenHeader } from '../ui/menu/screen-header';
-import { TeamOrderPlate } from '../ui/menu/team-order-plate';
-import { PressGesture } from '../ui/menu/team-gesture';
-import { ownedIds, TeamGrid } from '../ui/menu/team-grid';
-import { TeamSlots } from '../ui/menu/team-slots';
+import { ScreenHeader } from '../ui/menu/widgets/screen-header';
+import { TeamOrderPlate } from '../ui/menu/team/team-order-plate';
+import { PressGesture } from '../ui/menu/team/team-gesture';
+import { ownedIds, TeamGrid } from '../ui/menu/team/team-grid';
+import { TeamSlots } from '../ui/menu/team/team-slots';
 import { enterScreen, leaveScreen, type Movable } from '../ui/common/transition';
 
 const cfg = MENU.team;

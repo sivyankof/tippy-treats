@@ -1,8 +1,8 @@
 import type * as Phaser from 'phaser';
 import { MENU } from '../../data/common/menu-layout';
 import { PALETTE } from '../../data/common/palette';
-import { createIconButton } from '../ui/menu/icon-button';
-import { createNoAdsIcon } from '../ui/menu/shop-premium-icon';
+import { createIconButton } from '../ui/menu/widgets/icon-button';
+import { createNoAdsIcon } from '../ui/menu/shop/shop-premium-icon';
 import { GROWN_PICTURES } from './art-sheet-grown';
 
 /** A picture that is built from drawing calls instead of a texture: a name and a factory. */
