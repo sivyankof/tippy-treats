@@ -4,8 +4,10 @@ export const MUSIC_WATCHDOG = {
   checkMs: 500,
   /** The playlist is asked, nothing holds it, and the bus stays silent this long: it starts again, ms. */
   silentMs: 3000,
-  /** A track still loading or starting after this long counts as stuck too, ms. */
-  loadingMaxMs: 15000,
+  /** A track still loading or starting after this long counts as stuck too, ms (a decode under way is kept). */
+  loadingMaxMs: 30000,
+  /** A context that does not run while the playlist should be heard is asked to run this often, ms. */
+  resumeEveryMs: 3000,
   /** No two restarts closer than this, ms; each restart in a row doubles it up to `maxGapMs`. */
   minGapMs: 8000,
   maxGapMs: 60000,

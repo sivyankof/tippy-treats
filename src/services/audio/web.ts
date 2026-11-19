@@ -69,6 +69,8 @@ export class WebAudioService implements AudioService, AudioDevControl {
   private watchTimer: ReturnType<typeof setInterval> | null = null;
   /** The music bus peak at the last watchdog look. */
   private lastLevel: number | null = null;
+  /** When the watchdog last asked a stopped context to run (ms since the page start). */
+  private lastResumeAskMs = Number.NEGATIVE_INFINITY;
 
   constructor(
     private readonly createContext: AudioContextFactory = createBrowserAudioContext,
@@ -128,23 +130,28 @@ export class WebAudioService implements AudioService, AudioDevControl {
     }
     this.lastLevel = level;
     const music = this.musicProxy.state();
+    const nowMs = audioLog.uptimeSec() * MS_PER_SECOND;
     const wanted =
       this.musicProxy.asked()?.kind === 'playlist' &&
-      this.musicOn &&
+      mixer.musicBusOpen &&
       this.holds.size === 0 &&
       this.musicProxy.heldReasons().length === 0;
+    if (wanted && ctx.state !== 'running') {
+      // A stopped context leaves the meter on its last samples: it is only asked to run (no restart counted).
+      this.watchdog.reset();
+      if (nowMs - this.lastResumeAskMs < MUSIC_WATCHDOG.resumeEveryMs) return;
+      this.lastResumeAskMs = nowMs;
+      audioLog.add(`watchdog: playlist wanted, context ${ctx.state}, asked to run`);
+      this.run((c) => c.resume(), 'resume');
+      return;
+    }
     const restart = this.watchdog.check({
       wanted,
       audible: level > MUSIC_WATCHDOG.audibleLevel,
       loading: music.loading,
-      nowMs: audioLog.uptimeSec() * MS_PER_SECOND,
+      nowMs,
     });
     if (!restart) return;
-    if (ctx.state !== 'running') {
-      audioLog.add(`watchdog: playlist silent, context ${ctx.state}, asked to run`);
-      this.run((c) => c.resume(), 'resume');
-      return;
-    }
     audioLog.add(`watchdog: playlist silent (${music.track ?? 'no track'}), started again`);
     this.musicProxy.restart();
   }

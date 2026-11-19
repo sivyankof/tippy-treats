@@ -71,6 +71,11 @@ export class Mixer {
     this.tunePlaying = on;
   }
 
+  /** The music bus passes sound: the switch is on and the level is not turned to zero. */
+  get musicBusOpen(): boolean {
+    return this.musicOn && this.scales.music > 0;
+  }
+
   /** The music is really heard now (a tune plays, the switch is on, the level is not zero): the bell softens then. */
   get musicAudible(): boolean {
     return musicAudible(this.tunePlaying, this.musicOn, this.scales.music);

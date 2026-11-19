@@ -1,3 +1,13 @@
+import { DEBUG_MENU as M } from '../../data/debug/debug-menu';
+
+/** A section heading of the debug menu. */
+export function menuHeading(text: string): HTMLDivElement {
+  const el = document.createElement('div');
+  el.textContent = text;
+  el.style.cssText = `font:bold ${M.fontPx}px sans-serif;margin:${M.paddingPx}px 0 ${M.gapPx / 2}px;opacity:0.8;`;
+  return el;
+}
+
 /** One look for the buttons of the DOM tools over the canvas (benchmark summary, debug menu). */
 export function overlayButtonCss(fontPx: number, minHeightPx: number, fill: string): string {
   return (

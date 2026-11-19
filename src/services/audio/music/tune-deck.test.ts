@@ -1,24 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { MUSIC, MUSIC_TRACKS } from '../../../data/audio/music';
+import { FakeGain } from './fake-nodes';
 import { MediaPool, type MediaContext } from './media-pool';
 import { StreamDeck, type DeckClock } from './tune-deck';
-
-class FakeParam {
-  value = 0;
-  cancelScheduledValues(): void {}
-  setValueAtTime(v: number): void {
-    this.value = v;
-  }
-  linearRampToValueAtTime(v: number): void {
-    this.value = v;
-  }
-}
-
-class FakeGain {
-  gain = new FakeParam();
-  connect(): void {}
-  disconnect(): void {}
-}
 
 /** A media element whose clock the test moves. */
 class FakeMedia {

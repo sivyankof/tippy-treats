@@ -2,25 +2,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { MUSIC_PLAYLIST, MUSIC_TRACKS, type MusicTrackId } from '../../../data/audio/music';
 import type { MusicHost } from '../music-control';
 import { NodeTally } from '../node-tally';
+import { FakeGain } from './fake-nodes';
 import { PlaylistPlayer, type OpeningDeck, type PlayerSources } from './playlist-player';
 import type { DeckClock } from './tune-deck';
-
-class FakeParam {
-  value = 0;
-  cancelScheduledValues(): void {}
-  setValueAtTime(v: number): void {
-    this.value = v;
-  }
-  linearRampToValueAtTime(v: number): void {
-    this.value = v;
-  }
-}
-
-class FakeGain {
-  gain = new FakeParam();
-  connect(): void {}
-  disconnect(): void {}
-}
 
 /** A stream deck whose `play()` is refused while `refuse` says so. */
 class RefusingStream implements OpeningDeck {
@@ -155,5 +139,44 @@ describe('PlaylistPlayer, a track that does not start', () => {
     t.player.playlist();
     await t.settle();
     expect(t.opened).toHaveLength(1);
+  });
+
+  it('the several events of one tap retry once and do not skip the track under way', async () => {
+    let refusing = true;
+    const t = setup(STREAMED, () => refusing);
+    t.player.playlist();
+    await t.settle();
+    refusing = false;
+    // pointerdown, pointerup and touchend of one tap, before the retry has started.
+    t.player.gesture();
+    t.player.gesture();
+    t.player.gesture();
+    await t.settle();
+    expect(t.opened.map((d) => d.track)).toEqual([STREAMED, STREAMED]);
+    expect(t.player.state()).toMatchObject({ track: STREAMED, decks: 1 });
+  });
+
+  it('asking for the failed playlist again between taps keeps its count, so the next tap moves on', async () => {
+    const t = setup(STREAMED, (track) => track === STREAMED);
+    t.player.playlist();
+    await t.settle();
+    t.player.gesture();
+    await t.settle();
+    // A menu screen opens and asks for the playlist again (no tap).
+    t.player.playlist();
+    await t.settle();
+    t.player.gesture();
+    await t.settle();
+    const index = MUSIC_PLAYLIST.indexOf(STREAMED);
+    expect(t.player.state().track).toBe(MUSIC_PLAYLIST[(index + 1) % MUSIC_PLAYLIST.length]);
+  });
+
+  it('a new player goes on from the turn of the old one', async () => {
+    const t = setup(STREAMED, () => false);
+    const index = (MUSIC_PLAYLIST.indexOf(STREAMED) + 2) % MUSIC_PLAYLIST.length;
+    t.player.resumeAt({ index, turnSec: 12 });
+    t.player.playlist();
+    await t.settle();
+    expect(t.player.position()).toMatchObject({ index });
   });
 });

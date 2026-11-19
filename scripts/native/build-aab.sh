@@ -15,7 +15,7 @@ if [ "${2:-}" = "--store" ]; then kind="store"; fi
 repo="$(cd "$(dirname "$0")/../.." && pwd)"
 tools="${TIPPY_ANDROID_TOOLS:-$HOME/android-tools}"
 if [ -z "${JAVA_HOME:-}" ]; then
-  JAVA_HOME="$(ls -d "$tools"/jdk-21* 2>/dev/null | head -n 1)"
+  JAVA_HOME="$(ls -d "$tools"/jdk-21* 2>/dev/null | head -n 1 || true)"
 fi
 export JAVA_HOME
 export ANDROID_HOME="${ANDROID_HOME:-$tools/sdk}"

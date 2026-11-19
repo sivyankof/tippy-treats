@@ -4,6 +4,7 @@ import {
   type MusicControl,
   type MusicHoldReason,
   type MusicPlayerState,
+  type PlaylistPosition,
 } from './music-control';
 import { audioLog } from './audio-log';
 
@@ -26,15 +27,36 @@ export class MusicProxy implements MusicControl {
    */
   replace(real: MusicControl): void {
     const old = this.real;
+    let position: PlaylistPosition | null = null;
+    try {
+      position = old.position();
+    } catch {
+      // The new player starts from its own first track.
+    }
     this.real = NO_MUSIC;
     this.safely(() => old.dispose());
+    if (position) {
+      const at = position;
+      this.safely(() => real.resumeAt(at));
+    }
     this.attach(real);
   }
 
-  /** The watchdog: the player stops and plays what was asked again, from the turn it was on. */
+  /** The watchdog: the playlist starts again from the turn it was on. */
   restart(): void {
-    this.safely(() => this.real.stop());
-    if (this.enabled) this.replay();
+    if (this.enabled && this.ask?.kind === 'playlist') this.safely(() => this.real.restart());
+  }
+
+  position(): PlaylistPosition | null {
+    try {
+      return this.real.position();
+    } catch {
+      return null;
+    }
+  }
+
+  resumeAt(position: PlaylistPosition): void {
+    this.safely(() => this.real.resumeAt(position));
   }
 
   gesture(): void {

@@ -81,4 +81,33 @@ describe('MusicProxy', () => {
     expect(() => proxy.playlist()).not.toThrow();
     expect(proxy.state().track).toBeNull();
   });
+
+  it('a new player in place of the old one goes on from its turn; the old one is let go', () => {
+    const proxy = new MusicProxy();
+    proxy.playlist();
+    const old = { ...recorder(), position: () => ({ index: 3, turnSec: 40 }) };
+    old.dispose = () => old.log.push('dispose');
+    proxy.attach(old);
+    const next = recorder();
+    next.resumeAt = (at) => next.log.push(`resume ${at.index} ${at.turnSec}`);
+    proxy.replace(next);
+    expect(old.log).toEqual(['playlist', 'dispose']);
+    expect(next.log).toEqual(['resume 3 40', 'playlist']);
+  });
+
+  it('the watchdog restart reaches the player only while the playlist is asked and the music is on', () => {
+    const proxy = new MusicProxy();
+    const real = recorder();
+    real.restart = () => real.log.push('restart');
+    proxy.attach(real);
+    proxy.restart();
+    proxy.play('daily');
+    proxy.restart();
+    proxy.playlist();
+    proxy.setEnabled(false);
+    proxy.restart();
+    proxy.setEnabled(true);
+    proxy.restart();
+    expect(real.log.filter((l) => l === 'restart')).toHaveLength(1);
+  });
 });

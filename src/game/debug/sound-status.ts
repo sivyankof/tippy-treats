@@ -4,7 +4,7 @@ import { audioLog } from '../../services/audio/audio-log';
 import { formatAudioStatus } from '../../services/audio/audio-status';
 import { audioDev } from '../../services';
 import { copyText } from '../common/copy-text';
-import { overlayButtonCss } from './overlay-style';
+import { menuHeading, overlayButtonCss } from './overlay-style';
 
 /** The copied report: the status line, an empty line, then the last lines of the sound's log. */
 export function soundReport(statusLine: string, lines: readonly string[]): string {
@@ -19,9 +19,7 @@ export function buildSoundStatus(): { element: HTMLElement; dispose: () => void 
   const dev = audioDev;
   if (!dev) return null;
   const element = document.createElement('div');
-  const head = document.createElement('div');
-  head.textContent = 'Sound';
-  head.style.cssText = `font:bold ${M.fontPx}px sans-serif;margin:${M.paddingPx}px 0 ${M.gapPx / 2}px;opacity:0.8;`;
+  const head = menuHeading('Sound');
   const text = document.createElement('div');
   text.style.cssText =
     `font:${M.infoFontPx}px monospace;word-break:break-word;overflow-wrap:anywhere;` +

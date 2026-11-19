@@ -2,29 +2,17 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { MUSIC_PLAYLIST, MUSIC_TRACKS, type MusicTrackId } from '../../../data/audio/music';
 import type { MusicHost } from '../music-control';
 import { NodeTally } from '../node-tally';
+import { FakeGain } from './fake-nodes';
 import { MusicPreload } from './music-preload';
 import { playlistPlayerFactory } from './playlist-player';
 
-class FakeParam {
-  value = 0;
-  cancelScheduledValues(): void {}
-  setValueAtTime(v: number): void {
-    this.value = v;
-  }
-  linearRampToValueAtTime(v: number): void {
-    this.value = v;
-  }
-}
-
-class FakeNode {
-  gain = new FakeParam();
+/** A gain that also stands in for a buffer source. */
+class FakeNode extends FakeGain {
   buffer: AudioBuffer | null = null;
   loop = false;
   loopStart = 0;
   loopEnd = 0;
   onended: (() => void) | null = null;
-  connect(): void {}
-  disconnect(): void {}
   start(): void {}
   stop(): void {}
 }

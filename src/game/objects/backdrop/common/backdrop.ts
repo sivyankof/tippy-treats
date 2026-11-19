@@ -219,12 +219,12 @@ export class Backdrop {
     return this.zoneMix(haloZoneMult);
   }
 
-  /** True while the backdrop cross-fades from one zone into the next. */
   /** The colour at the top of the sky of the zone the run is in (the status bar stands over it). */
   topSkyColor(): number {
     return gradientColorAt(skyStops(zoneIdOf(this.fade.current), this.look.weather), 0);
   }
 
+  /** True while the backdrop cross-fades from one zone into the next. */
   get fading(): boolean {
     return this.fade.previous !== null;
   }

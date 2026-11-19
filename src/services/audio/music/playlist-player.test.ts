@@ -16,32 +16,9 @@ import {
   type PlayerSources,
 } from './playlist-player';
 import type { DeckClock } from './tune-deck';
+import { FakeGain, FakeNode, type FakeParam } from './fake-nodes';
 
 const RATE = 48_000;
-
-/** An `AudioParam` that follows its last scheduled value (enough for the levels the player sets). */
-class FakeParam {
-  value = 0;
-  /** Context time the last ramp ends at. */
-  rampEnd = 0;
-  cancelScheduledValues(): void {}
-  setValueAtTime(v: number): void {
-    this.value = v;
-  }
-  linearRampToValueAtTime(v: number, at: number): void {
-    this.value = v;
-    this.rampEnd = at;
-  }
-}
-
-class FakeNode {
-  connect(): void {}
-  disconnect(): void {}
-}
-
-class FakeGain extends FakeNode {
-  gain = new FakeParam();
-}
 
 class FakeSource extends FakeNode {
   buffer: AudioBuffer | null = null;

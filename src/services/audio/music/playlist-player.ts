@@ -8,6 +8,7 @@ import type {
   MusicHoldReason,
   MusicHost,
   MusicPlayerState,
+  PlaylistPosition,
 } from '../music-control';
 import { audioLog, errorText } from '../audio-log';
 import { MediaPool, type MediaContext } from './media-pool';
@@ -170,7 +171,9 @@ export class PlaylistPlayer implements MusicControl {
     // A playlist that plays (or is starting) goes on; one whose start failed starts again.
     if (this.mode?.kind === 'playlist' && (this.current || this.pending)) return;
     this.mode = { kind: 'playlist' };
-    this.failed = null;
+    // Asked again for the turn that failed: it keeps its count (a tap retries, then moves on).
+    const failed = this.failed;
+    if (!failed?.turn || failed.track !== this.turnTrack()) this.failed = null;
     const track = this.turnTrack();
     const shape = { loopSec: trackLoopSec(MUSIC_TRACKS[track]), seamless: this.seamless(track) };
     this.show(track, turnOffset(shape, this.turnBefore), true, true);
@@ -265,7 +268,8 @@ export class PlaylistPlayer implements MusicControl {
    */
   gesture(): void {
     const failed = this.failed;
-    if (!failed || this.disposed || !this.stillWanted(failed)) return;
+    // One tap brings several events (down, up, touch end): a retry still starting is not judged yet.
+    if (!failed || this.pending || this.disposed || !this.stillWanted(failed)) return;
     if (!failed.retried) {
       audioLog.add(`player: ${failed.track} asked again after a tap`);
       this.failed = { ...failed, retried: true };
@@ -277,6 +281,28 @@ export class PlaylistPlayer implements MusicControl {
       audioLog.add(`player: ${failed.track} failed twice, next track`);
       this.next();
     }
+  }
+
+  /**
+   * The watchdog: the playlist stops and starts again from its turn. A decode of the turn's track
+   * still under way is kept (it is not fetched again).
+   */
+  restart(): void {
+    const keep = this.prefetch;
+    this.stop();
+    if (keep && keep.track === this.turnTrack()) this.prefetch = keep;
+    this.playlist();
+  }
+
+  position(): PlaylistPosition {
+    return { index: this.index, turnSec: this.turnPlayed() };
+  }
+
+  resumeAt({ index, turnSec }: PlaylistPosition): void {
+    if (this.mode !== null || index < 0 || index >= this.sources.playlist.length) return;
+    if (index !== this.index) this.prefetch = null;
+    this.newTurn(index);
+    this.turnBefore = Math.max(0, turnSec);
   }
 
   /** Stops at once and lets the media elements go; the player is not used after this. */

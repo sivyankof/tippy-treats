@@ -14,7 +14,7 @@ import {
   WEATHER_OPTIONS,
   type DebugMenuChoice,
 } from './debug-menu-query';
-import { overlayButtonCss } from './overlay-style';
+import { menuHeading, overlayButtonCss } from './overlay-style';
 import { pushBack } from '../app/back-stack';
 import { buildSoundStatus } from './sound-status';
 
@@ -26,13 +26,6 @@ function button(label: string, onTap: () => void, fill: string = M.buttonFill): 
   el.textContent = label;
   el.style.cssText = overlayButtonCss(M.fontPx, M.buttonPx, fill) + 'touch-action:manipulation;';
   el.addEventListener('click', onTap);
-  return el;
-}
-
-function heading(text: string): HTMLDivElement {
-  const el = document.createElement('div');
-  el.textContent = text;
-  el.style.cssText = `font:bold ${M.fontPx}px sans-serif;margin:${M.paddingPx}px 0 ${M.gapPx / 2}px;opacity:0.8;`;
   return el;
 }
 
@@ -158,18 +151,18 @@ export function showDebugMenu(): void {
   inner.append(
     title,
     build,
-    heading('Benchmark (starts at once)'),
+    menuHeading('Benchmark (starts at once)'),
     perf,
-    heading('Run from'),
+    menuHeading('Run from'),
     optionRow(startOptions, choice.startHeight, (v) => (choice.startHeight = v)),
-    heading('Start place'),
+    menuHeading('Start place'),
     optionRow(placeOptions, choice.place, (v) => (choice.place = v)),
-    heading('Weather'),
+    menuHeading('Weather'),
     optionRow(weatherOptions, choice.weather, (v) => (choice.weather = v)),
-    heading('Tools'),
+    menuHeading('Tools'),
     tools,
     ...(sound ? [sound.element] : []),
-    heading('Go'),
+    menuHeading('Go'),
     finish,
   );
   document.body.appendChild(box);

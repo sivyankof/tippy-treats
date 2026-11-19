@@ -28,6 +28,12 @@ export interface MusicPlayerState {
   loading: boolean;
 }
 
+/** Where the playlist is: its track and the seconds the track has played in its turn. */
+export interface PlaylistPosition {
+  index: number;
+  turnSec: number;
+}
+
 /**
  * What the game asks of the music player. Every call is safe at any time: before the audio is
  * unlocked it is remembered (`MusicProxy`), and a player must not throw.
@@ -59,6 +65,12 @@ export interface MusicControl {
   gesture(): void;
   /** Stops at once and lets everything go; the player is not used after this. */
   dispose(): void;
+  /** The playlist stops and starts again from its turn (the music watchdog). */
+  restart(): void;
+  /** Where the playlist is (a new player goes on from there). */
+  position(): PlaylistPosition | null;
+  /** A new player, before it plays, takes the playlist's place over from the old one. */
+  resumeAt(position: PlaylistPosition): void;
 }
 
 /** What a music player gets to build on: the context, the music bus and the shared node tally. */
@@ -99,6 +111,9 @@ export const NO_MUSIC: MusicControl = {
   resetPeak: () => undefined,
   gesture: () => undefined,
   dispose: () => undefined,
+  restart: () => undefined,
+  position: () => null,
+  resumeAt: () => undefined,
 };
 
 export const NO_MUSIC_FACTORY: MusicFactory = () => NO_MUSIC;
