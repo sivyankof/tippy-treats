@@ -1,4 +1,5 @@
 import * as Phaser from 'phaser';
+import { rebakeGlyphsOnFontLoad } from './glyph-text';
 import { runFontRefresh } from '../menu/widgets/fit-text';
 
 /** Every object under `objects`, containers opened. */
@@ -22,6 +23,8 @@ function collectObjects(
  */
 export function refreshTextsOnFontLoad(game: Phaser.Game): void {
   document.fonts.addEventListener('loadingdone', () => {
+    // Glyph pictures first: the texts below size their plates from the glyph boxes.
+    rebakeGlyphsOnFontLoad();
     for (const scene of game.scene.getScenes(false)) {
       const objects = collectObjects(scene.children.list);
       for (const object of objects) {

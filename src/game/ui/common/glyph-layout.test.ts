@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { glyphBoxWidth, glyphChars, glyphKey, layoutGlyphs, pluralFormTexts } from './glyph-layout';
+import {
+  glyphBoxWidth,
+  glyphChars,
+  glyphKey,
+  glyphStrokeKey,
+  layoutGlyphs,
+  pluralFormTexts,
+} from './glyph-layout';
 
 /** Every letter 10 wide, a kerning pair "AV" pulls 3 closer. */
 const measure = (text: string): number => text.length * 10 - (text.includes('AV') ? 3 : 0);
@@ -44,6 +51,14 @@ describe('glyph helpers', () => {
       'in  layer',
       'in  layers',
     ]);
+  });
+
+  it('keeps a form without a category whole', () => {
+    expect(pluralFormTexts('plain {n}')).toEqual(['plain ']);
+  });
+
+  it('keys the outline apart from the fill', () => {
+    expect(glyphStrokeKey('52_8', '5')).not.toBe(glyphKey('52_8', '5'));
   });
 
   it('keys a glyph by its code point', () => {

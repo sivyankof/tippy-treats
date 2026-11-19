@@ -4,7 +4,7 @@ import { cssColor } from '../../../util/color';
 import { textPadding } from '../../../util/text-padding';
 import { bakeTexture } from './bake-texture';
 import { FONT_FAMILY, FONT_WEIGHT } from './fonts';
-import { glyphBoxWidth, glyphChars, glyphKey, layoutGlyphs } from './glyph-layout';
+import { glyphBoxWidth, glyphChars, glyphKey, glyphStrokeKey, layoutGlyphs } from './glyph-layout';
 
 /**
  * Text drawn from pictures of its glyphs on the shared atlas. A Phaser `Text` is a texture of its
@@ -13,6 +13,10 @@ import { glyphBoxWidth, glyphChars, glyphKey, layoutGlyphs } from './glyph-layou
  * `createStrokedText`: same font, fill and stroke, same box (`width` is the width of the Text it
  * replaces), and the origin is kept by placing the glyphs, so the container scales and rotates
  * around the same point.
+ *
+ * Every glyph has two pictures, its outline and its fill, and a text draws all the outlines before
+ * any fill (as a Text strokes the whole line and then fills it), so the outline of a glyph never
+ * covers the fill of the one before it.
  */
 
 /** The look of a glyph text: the font size, the outline and the two colours. */
@@ -50,7 +54,13 @@ const metricsOf = new Map<string, StyleMetrics>();
 /** The glyph pictures baked per style (their keys), to bake them again when the font arrives. */
 const bakedOf = new Map<
   string,
-  { style: GlyphStyle; chars: Set<string>; textures: Phaser.Textures.TextureManager }
+  {
+    style: GlyphStyle;
+    chars: Set<string>;
+    textures: Phaser.Textures.TextureManager;
+    /** Whether the font was there when the pictures were baked. */
+    fontReady: boolean;
+  }
 >();
 const live = new Set<GlyphText>();
 
@@ -95,14 +105,20 @@ function measureIn(style: GlyphStyle, text: string): number {
   return measureContext.measureText(text).width;
 }
 
-function bakeGlyph(scene: Phaser.Scene, style: GlyphStyle, id: string, char: string): void {
+function bakeGlyphLayer(
+  scene: Phaser.Scene,
+  style: GlyphStyle,
+  key: string,
+  char: string,
+  layer: 'stroke' | 'fill',
+): void {
   const m = styleMetrics(scene, style);
   const width = glyphBoxWidth(measureIn(style, char), style.strokeWidth, m.padX);
   const left = m.padX + style.strokeWidth / 2;
   const baseline = m.padY + style.strokeWidth / 2 + m.ascent;
   bakeTexture(
     scene,
-    glyphKey(id, char),
+    key,
     width,
     m.height,
     () => undefined,
@@ -112,12 +128,19 @@ function bakeGlyph(scene: Phaser.Scene, style: GlyphStyle, id: string, char: str
       context.lineJoin = 'round';
       context.lineCap = 'round';
       context.lineWidth = style.strokeWidth;
-      context.strokeStyle = cssColor(style.strokeColor);
-      context.fillStyle = cssColor(style.color);
-      context.strokeText(char, left, baseline);
-      context.fillText(char, left, baseline);
+      if (layer === 'stroke') {
+        context.strokeStyle = cssColor(style.strokeColor);
+        context.strokeText(char, left, baseline);
+      } else {
+        context.fillStyle = cssColor(style.color);
+        context.fillText(char, left, baseline);
+      }
     },
   );
+}
+
+function fontAvailable(style: GlyphStyle): boolean {
+  return typeof document === 'undefined' || !document.fonts || document.fonts.check(fontOf(style));
 }
 
 /**
@@ -130,26 +153,38 @@ export function prepareGlyphs(
   strings: readonly string[],
 ): void {
   const id = styleId(style);
-  const baked = bakedOf.get(id) ?? { style, chars: new Set<string>(), textures: scene.textures };
+  const baked = bakedOf.get(id) ?? {
+    style,
+    chars: new Set<string>(),
+    textures: scene.textures,
+    fontReady: fontAvailable(style),
+  };
   bakedOf.set(id, baked);
   for (const char of glyphChars(strings)) {
-    if (!scene.textures.exists(glyphKey(id, char))) bakeGlyph(scene, style, id, char);
+    bakeGlyphLayer(scene, style, glyphStrokeKey(id, char), char, 'stroke');
+    bakeGlyphLayer(scene, style, glyphKey(id, char), char, 'fill');
     baked.chars.add(char);
   }
 }
 
-/** The web font arrived after the first bake: the metrics and every glyph picture are made again. */
-function rebakeAll(): void {
+/**
+ * Called when fonts finish loading (from `refreshTextsOnFontLoad`). The glyph pictures are baked
+ * again only for a style whose font was missing at its bake and is there now; the other styles stay.
+ */
+export function rebakeGlyphsOnFontLoad(): void {
+  const stale = [...bakedOf].filter(([, baked]) => !baked.fontReady && fontAvailable(baked.style));
+  if (stale.length === 0) return;
   const scene = [...live][0]?.scene;
   metricsOf.clear();
-  for (const [id, { style, chars, textures }] of bakedOf) {
+  for (const [id, { style, chars, textures }] of stale) {
     for (const char of chars) {
-      const key = glyphKey(id, char);
-      if (textures.exists(key)) textures.remove(key);
+      for (const key of [glyphKey(id, char), glyphStrokeKey(id, char)]) {
+        if (textures.exists(key)) textures.remove(key);
+      }
     }
     // With no text on screen the next scene that needs the glyphs bakes them again.
+    bakedOf.delete(id);
     if (scene) prepareGlyphs(scene, style, [[...chars].join('')]);
-    else bakedOf.delete(id);
   }
   for (const text of live) {
     text.render();
@@ -157,13 +192,10 @@ function rebakeAll(): void {
   }
 }
 
-if (typeof document !== 'undefined' && document.fonts) {
-  document.fonts.addEventListener('loadingdone', rebakeAll);
-}
-
 /** A string of glyph pictures: a container whose `width` is the width of the box of the same Text. */
 export class GlyphText extends Phaser.GameObjects.Container {
-  private readonly images: Phaser.GameObjects.Image[] = [];
+  private readonly strokes: Phaser.GameObjects.Image[] = [];
+  private readonly fills: Phaser.GameObjects.Image[] = [];
   private readonly id: string;
   private current = '';
   /** Called after the glyphs were made again for a new font (the box may have changed size). */
@@ -184,7 +216,7 @@ export class GlyphText extends Phaser.GameObjects.Container {
   ) {
     super(scene, x, y);
     this.id = styleId(style);
-    for (let i = 0; i < capacity; i++) this.glyphImage(i);
+    for (let i = 0; i < capacity; i++) this.glyphImages(i);
     live.add(this);
     scene.add.existing(this);
   }
@@ -211,25 +243,37 @@ export class GlyphText extends Phaser.GameObjects.Container {
     const top = Math.round(-this.anchorY * m.height);
     this.setSize(width, m.height);
     layout.glyphs.forEach((glyph, i) => {
-      this.glyphImage(i)
-        .setTexture(glyphKey(this.id, glyph.char))
-        .setPosition(left + glyph.x, top)
-        .setVisible(true);
+      const [stroke, fill] = this.glyphImages(i);
+      stroke.setTexture(glyphStrokeKey(this.id, glyph.char)).setPosition(left + glyph.x, top);
+      fill.setTexture(glyphKey(this.id, glyph.char)).setPosition(left + glyph.x, top);
+      stroke.setVisible(true);
+      fill.setVisible(true);
     });
-    for (let i = layout.glyphs.length; i < this.images.length; i++)
-      this.images[i]?.setVisible(false);
+    for (let i = layout.glyphs.length; i < this.fills.length; i++) {
+      this.strokes[i]?.setVisible(false);
+      this.fills[i]?.setVisible(false);
+    }
   }
 
-  private glyphImage(index: number): Phaser.GameObjects.Image {
-    let image = this.images[index];
-    if (!image) {
-      image = new Phaser.GameObjects.Image(this.scene, 0, 0, '__DEFAULT')
-        .setOrigin(0, 0)
-        .setVisible(false);
-      this.images[index] = image;
-      this.add(image);
+  /** The outline and the fill picture of glyph `index`; every outline sits before every fill in the container. */
+  private glyphImages(index: number): [Phaser.GameObjects.Image, Phaser.GameObjects.Image] {
+    let stroke = this.strokes[index];
+    let fill = this.fills[index];
+    if (!stroke || !fill) {
+      stroke = this.newImage();
+      fill = this.newImage();
+      this.addAt(stroke, this.strokes.length);
+      this.add(fill);
+      this.strokes[index] = stroke;
+      this.fills[index] = fill;
     }
-    return image;
+    return [stroke, fill];
+  }
+
+  private newImage(): Phaser.GameObjects.Image {
+    return new Phaser.GameObjects.Image(this.scene, 0, 0, '__DEFAULT')
+      .setOrigin(0, 0)
+      .setVisible(false);
   }
 
   override preDestroy(): void {
