@@ -58,6 +58,8 @@
 
 Ключи текстур стабильны (`face_eye_open`, `icon_coin`…). Позже графику можно заменить работой художника без правок кода.
 
+**Исключение: иконка приложения** (решение владельца, сессия 8). Иконка для iPhone и Android — маркетинговый материал, она сделана вне правила «графика только кодом» и лежит вне репозитория (`tippy-treats-store-assets`: `tippy-icon-ios-1024.png`, `tippy-icon-android-foreground-1024.png`, `tippy-icon-android-background-1024.png`). Все размеры генерирует `scripts/native/make-icons.ps1`, результат закоммичен в `ios/` и `android/`. Заставка — сплошной цвет фона страницы `#2b1d16` (`docs/11a-device-build.md`).
+
 ## 3. Анатомия слоя
 
 Слой — контейнер из частей, чтобы каждую можно было анимировать отдельно:
@@ -808,6 +810,8 @@ LayerView (container)
 | Рекорд в забеге | Один лёгкий удар (`light`) |
 | Мастер-эффект в забеге | Лёгкий удар (`light`); «Кураж» — средний (`medium`) |
 | Превращение (уровни 3 и 5) | Уведомление «успех» |
+
+В приложениях (M7) типы идут в системную вибрацию через `@capacitor/haptics` (`services/haptics/native.ts`): удары — `impact` Light/Medium/Heavy, «успех» и «ошибка» — `notification`, выбор — `selectionStart` → `selectionChanged` → `selectionEnd` (iOS отдаёт щелчок выбора только внутри начала и конца), серия рекорда — три `impact` Medium через `HAPTICS.tripleGap` (70 мс). В браузере те же типы — шаблоны `navigator.vibrate` из `data/app/haptics.ts`.
 
 ## 9. Производительность
 
