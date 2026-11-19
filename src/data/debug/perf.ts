@@ -317,8 +317,28 @@ export const PERF = {
   towerStillMs: 600,
   /** The results screen of the benchmark shows a fresh oven: what its summary claims. */
   results: { xpGained: 3, oven: { fresh: 6, left: 14, ranOut: false } },
-  /** The table overlay: a small box at the bottom, the table folds out of it. */
-  overlay: { zIndex: 99999, fontPx: 11, decimals: 2, maxHeightVh: 60, copiedMs: 1500 },
+  /**
+   * The overlay: a small progress strip at the bottom while the benchmark runs; at the end a big
+   * summary (budget line, then draws, worst frame and fps per segment, to `summaryDecimals`) with
+   * finger-sized buttons, the full table folding out of it.
+   */
+  overlay: {
+    zIndex: 99999,
+    fontPx: 11,
+    decimals: 2,
+    maxHeightVh: 60,
+    copiedMs: 1500,
+    verdictFontPx: 22,
+    summaryFontPx: 14,
+    summaryDecimals: 1,
+    buttonFontPx: 16,
+    /** Height of a button, CSS px (a finger on a phone). */
+    buttonPx: 40,
+    /** Colours of the summary: within the budget, over it, and the column headings. */
+    okColor: '#7dff8a',
+    overColor: '#ff6b6b',
+    headColor: '#c8c8c8',
+  },
   /** `&mastery=on|off`: the team of the segments that have none (the creatures with a moving accent), at the grown level or one below it. */
   mastery: {
     team: ['honey', 'frosty', 'sprinkle'] as readonly CreatureId[],

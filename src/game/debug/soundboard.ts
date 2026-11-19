@@ -5,6 +5,7 @@ import type { SoundArgs, SoundId } from '../../services/audio/sound-args';
 import { SOUND_BOOK, SOUND_GROUPS, soundVariants } from '../../services/audio/sound-book';
 import { bindAudioUnlock } from '../audio/audio-unlock';
 import { buildMusicSection, musicChoice } from './soundboard-music';
+import { copyText } from '../common/copy-text';
 
 /** Slider scale: 0..SLIDER_MAX of the normal level (above 1 is louder than the game). */
 const SLIDER_MAX = 1.5;
@@ -78,32 +79,6 @@ function trimRow(id: SoundId): HTMLElement {
 /** One line per sound in board order: `drop: +3 dB`. */
 function trimList(ids: readonly SoundId[]): string {
   return ids.map((id) => `${id}: ${formatDb(trims.get(id) ?? 0)}`).join('\n');
-}
-
-/** The clipboard API is missing on a phone over plain http, so a hidden textarea stands in. */
-async function copyText(text: string): Promise<boolean> {
-  try {
-    if (navigator.clipboard) {
-      await navigator.clipboard.writeText(text);
-      return true;
-    }
-  } catch {
-    // falls through to the textarea
-  }
-  const area = el('textarea');
-  area.value = text;
-  area.setAttribute('readonly', '');
-  area.style.position = 'fixed';
-  area.style.opacity = '0';
-  document.body.append(area);
-  area.select();
-  try {
-    return document.execCommand('copy');
-  } catch {
-    return false;
-  } finally {
-    area.remove();
-  }
 }
 
 function copyRow(ids: readonly SoundId[]): HTMLElement {

@@ -290,3 +290,43 @@ export function formatHeader(header: PerfHeader): string {
     header.automated ? 'intervals: reference (automated)' : 'intervals: counted (device)',
   ].join(' ');
 }
+
+/** One line of the big summary at the end of a benchmark: the values the owner reads off the phone. */
+export interface SummaryRow {
+  id: string;
+  /** Draw calls per frame, `-` when they could not be counted. */
+  draws: string;
+  /** Worst frame work time, ms. */
+  worst: string;
+  /** Frames per second the window ran at. */
+  fps: string;
+  /** Which of them are over the budget; `any` is true when anything in the row is (the fade and the mean included). */
+  over: { draws: boolean; worst: boolean; fps: boolean; any: boolean };
+}
+
+/**
+ * The big summary of a benchmark: per segment the draws, the worst frame and the frame rate, with
+ * the values over the budget flagged. The fps column is flagged by the interval budget, so in an
+ * automated browser it is never over.
+ */
+export function summaryRows(
+  rows: readonly SegmentStats[],
+  decimals: number,
+  automated = false,
+): SummaryRow[] {
+  return rows.map((row) => {
+    const over = budgetOver(row, automated);
+    return {
+      id: row.id,
+      draws: row.drawCallsMean === null ? '-' : row.drawCallsMean.toFixed(1),
+      worst: row.worstMs.toFixed(decimals),
+      fps: row.fps.toFixed(1),
+      over: {
+        draws: over.draws || over.fadeDraws,
+        worst: over.worst,
+        fps: over.interval,
+        any: Object.values(over).some(Boolean),
+      },
+    };
+  });
+}

@@ -8,6 +8,7 @@ import {
   formatTable,
   percentile,
   SegmentSamples,
+  summaryRows,
   type SegmentStats,
 } from './perf-stats';
 
@@ -302,5 +303,35 @@ describe('atlas peak', () => {
     expect(atlasOk({ pages: 2, usedShare: 0.5 })).toBe(false);
     expect(formatAtlas({ pages: 1, usedShare: 0.75 })).toBe('atlas=pages:1 peak:0.75 spare:0.25');
     expect(formatAtlas({ pages: 2, usedShare: 0.9 })).toBe('atlas=pages:2 peak:0.90 spare:0.10!');
+  });
+});
+
+describe('summaryRows', () => {
+  it('gives draws, worst frame and fps per segment with the values over the budget flagged', () => {
+    const [calm, tower] = summaryRows(
+      [
+        stats({ id: 'calm', drawCallsMean: 41.26, worstMs: 9.5, fps: 59.94 }),
+        stats({ id: 'tower', drawCallsMean: null, worstMs: 51, intervalMeanMs: 19 }),
+      ],
+      1,
+    );
+    expect(calm).toEqual({
+      id: 'calm',
+      draws: '41.3',
+      worst: '9.5',
+      fps: '59.9',
+      over: { draws: true, worst: false, fps: false, any: true },
+    });
+    expect(tower?.draws).toBe('-');
+    expect(tower?.over).toEqual({ draws: false, worst: true, fps: true, any: true });
+  });
+
+  it('never flags the fps of an automated browser and counts the cross-fade draws and the mean', () => {
+    const fade = { frames: 90, drawsMax: 61, worstMs: 5 };
+    const [row] = summaryRows([stats({ id: 'transition-80', fade, intervalMeanMs: 30 })], 2, true);
+    expect(row?.over).toEqual({ draws: true, worst: false, fps: false, any: true });
+    const [slow] = summaryRows([stats({ meanMs: 9 })], 2);
+    expect(slow?.over.any).toBe(true);
+    expect(slow?.over.draws || slow?.over.worst || slow?.over.fps).toBe(false);
   });
 });

@@ -1,30 +1,47 @@
 import { PERF } from '../../data/debug/perf';
+import { copyText } from '../common/copy-text';
+import type { SummaryRow } from './perf-stats';
+
+const { overlay } = PERF;
 
 const BUTTON_CSS =
-  'pointer-events:auto;font:inherit;margin-left:6px;padding:2px 8px;border:1px solid #fff;' +
-  'border-radius:4px;color:#fff;background:rgba(255,255,255,0.15);';
+  `pointer-events:auto;font:bold ${overlay.buttonFontPx}px sans-serif;min-height:${overlay.buttonPx}px;` +
+  'margin:6px 8px 0 0;padding:0 16px;border:1px solid #fff;border-radius:6px;color:#fff;' +
+  'background:rgba(255,255,255,0.18);';
+
+/** What the end of a benchmark shows: the budget line, the per-segment summary and the full text to copy. */
+export interface PerfOutcome {
+  /** `budget: ok` or `budget: over in N segments (…)`. */
+  verdict: string;
+  ok: boolean;
+  rows: readonly SummaryRow[];
+  /** The header and the full table, as the console prints them. */
+  text: string;
+}
 
 /**
  * The benchmark's on-screen text, a plain DOM box over the canvas (numbers and ids only, like the
- * fps meter, so no i18n). It stays a small strip at the bottom: one line of progress while it runs;
- * at the end the table folds out with "table" and goes to the clipboard with "copy".
+ * fps meter, so no i18n). While it runs it is a small strip at the bottom with one line of progress;
+ * at the end it grows into a big summary the owner can read off the phone (budget, draws, worst
+ * frame and fps per segment) with "copy", which puts the full report on the clipboard, and "table",
+ * which folds the full table out.
  */
 export class PerfOverlay {
   private readonly box: HTMLDivElement;
-  private readonly line: HTMLSpanElement;
+  private readonly line: HTMLDivElement;
   private readonly body: HTMLPreElement;
   private text = '';
 
   constructor() {
-    const { zIndex, fontPx, maxHeightVh } = PERF.overlay;
     this.box = document.createElement('div');
     this.box.style.cssText =
-      `position:fixed;z-index:${zIndex};left:0;bottom:0;max-width:100%;margin:0;padding:4px;` +
-      `font:${fontPx}px/1.25 monospace;color:#fff;background:rgba(0,0,0,0.55);pointer-events:none;`;
-    this.line = document.createElement('span');
+      `position:fixed;z-index:${overlay.zIndex};left:0;right:0;bottom:0;margin:0;padding:4px;` +
+      `font:${overlay.fontPx}px/1.25 monospace;color:#fff;background:rgba(0,0,0,0.55);` +
+      'pointer-events:none;box-sizing:border-box;';
+    this.line = document.createElement('div');
     this.body = document.createElement('pre');
     this.body.style.cssText =
-      `display:none;margin:4px 0 0;max-height:${maxHeightVh}vh;overflow:auto;pointer-events:auto;` +
+      `display:none;margin:6px 0 0;max-height:${overlay.maxHeightVh}vh;overflow:auto;pointer-events:auto;` +
       'white-space:pre-wrap;word-break:break-all;user-select:text;-webkit-user-select:text;';
     this.box.append(this.line, this.body);
     document.body.appendChild(this.box);
@@ -35,29 +52,29 @@ export class PerfOverlay {
     this.line.textContent = text;
   }
 
-  /** The finished benchmark: a short line with the buttons, the table folded in. */
-  table(summary: string, text: string): void {
-    this.text = text;
-    this.line.textContent = summary;
-    this.body.textContent = text;
-    this.box.style.background = 'rgba(0,0,0,0.8)';
-    this.box.insertBefore(
+  /** The finished benchmark: the big summary and the buttons, the full table folded in. */
+  finish(outcome: PerfOutcome): void {
+    this.text = outcome.text;
+    this.body.textContent = outcome.text;
+    this.box.style.cssText +=
+      `top:0;padding:12px 16px calc(12px + env(safe-area-inset-bottom));overflow:auto;` +
+      'background:rgba(0,0,0,0.93);pointer-events:auto;';
+    this.line.replaceChildren(verdictLine(outcome), summaryGrid(outcome.rows));
+    const buttons = document.createElement('div');
+    buttons.append(
+      this.button('copy', (button) => {
+        void copyText(this.text, this.body).then((done) => {
+          button.textContent = done ? 'copied' : 'select';
+          window.setTimeout(() => (button.textContent = 'copy'), overlay.copiedMs);
+        });
+      }),
       this.button('table', (button) => {
         const open = this.body.style.display === 'none';
         this.body.style.display = open ? 'block' : 'none';
         button.textContent = open ? 'hide' : 'table';
       }),
-      this.body,
     );
-    this.box.insertBefore(
-      this.button('copy', (button) => {
-        void copyText(this.text, this.body).then((done) => {
-          button.textContent = done ? 'copied' : 'select';
-          window.setTimeout(() => (button.textContent = 'copy'), PERF.overlay.copiedMs);
-        });
-      }),
-      this.body,
-    );
+    this.box.insertBefore(buttons, this.body);
   }
 
   private button(label: string, onTap: (button: HTMLButtonElement) => void): HTMLButtonElement {
@@ -70,44 +87,39 @@ export class PerfOverlay {
   }
 }
 
-/**
- * Puts the text on the clipboard: the Clipboard API where the page may use it, a selected textarea
- * and `execCommand('copy')` where it may not (Safari over plain http on the local network). When
- * both fail the table is left open and selected on the screen for a manual copy. True when copied.
- */
-async function copyText(text: string, shown: HTMLElement): Promise<boolean> {
-  // Over plain http the API is missing; the old way must run inside the tap, before any await.
-  if (!window.isSecureContext || !('clipboard' in navigator)) return copyBySelection(text, shown);
-  try {
-    await navigator.clipboard.writeText(text);
-    return true;
-  } catch {
-    return copyBySelection(text, shown);
-  }
+function verdictLine(outcome: PerfOutcome): HTMLDivElement {
+  const line = document.createElement('div');
+  line.textContent = outcome.verdict;
+  line.style.cssText =
+    `font:bold ${overlay.verdictFontPx}px/1.2 sans-serif;margin-bottom:8px;word-break:break-word;` +
+    `color:${outcome.ok ? overlay.okColor : overlay.overColor};`;
+  return line;
 }
 
-function copyBySelection(text: string, shown: HTMLElement): boolean {
-  const area = document.createElement('textarea');
-  area.value = text;
-  area.readOnly = true;
-  area.style.cssText = 'position:fixed;left:0;top:0;opacity:0;font-size:16px;';
-  document.body.appendChild(area);
-  area.focus();
-  area.setSelectionRange(0, text.length);
-  let copied: boolean;
-  try {
-    copied = document.execCommand('copy');
-  } catch {
-    copied = false;
+/** Segment, draws, worst ms and fps in four columns; a value over the budget is red and ends in `!`. */
+function summaryGrid(rows: readonly SummaryRow[]): HTMLDivElement {
+  const grid = document.createElement('div');
+  grid.style.cssText =
+    `display:grid;grid-template-columns:1fr auto auto auto;column-gap:12px;row-gap:2px;` +
+    `font:${overlay.summaryFontPx}px/1.3 monospace;`;
+  const cell = (text: string, color: string, alignRight: boolean): HTMLSpanElement => {
+    const span = document.createElement('span');
+    span.textContent = text;
+    span.style.cssText = `color:${color};${alignRight ? 'text-align:right;' : ''}white-space:nowrap;`;
+    return span;
+  };
+  for (const head of ['segment', 'draws', 'worst ms', 'fps']) {
+    grid.append(cell(head, overlay.headColor, head !== 'segment'));
   }
-  area.remove();
-  if (!copied) {
-    shown.style.display = 'block';
-    const range = document.createRange();
-    range.selectNodeContents(shown);
-    const selection = window.getSelection();
-    selection?.removeAllRanges();
-    selection?.addRange(range);
+  const value = (text: string, over: boolean): HTMLSpanElement =>
+    cell(over ? `${text}!` : text, over ? overlay.overColor : '#fff', true);
+  for (const row of rows) {
+    grid.append(
+      cell(row.over.any ? `${row.id} !` : row.id, row.over.any ? overlay.overColor : '#fff', false),
+      value(row.draws, row.over.draws),
+      value(row.worst, row.over.worst),
+      value(row.fps, row.over.fps),
+    );
   }
-  return copied;
+  return grid;
 }

@@ -24,6 +24,7 @@ import {
   formatTable,
   isAutomatedBrowser,
   SegmentSamples,
+  summaryRows,
   type BudgetVerdict,
   type SegmentStats,
 } from './perf-stats';
@@ -316,7 +317,12 @@ class PerfDirector {
     });
     console.log(`[perf] ${JSON.stringify((window as PerfWindow).__tippyPerf)}`);
     console.log(`${header}\n${table}`);
-    this.overlay?.table(`perf done, ${this.rows.length} segments`, `${header}\n${table}`);
+    this.overlay?.finish({
+      verdict: formatBudgetLine(budget),
+      ok: budget.ok,
+      rows: summaryRows(this.rows, PERF.overlay.summaryDecimals, this.automated),
+      text: `${header}\n${table}`,
+    });
   }
 
   /** The progress line: changes only between segments, so it costs the frames nothing. */
