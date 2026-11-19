@@ -12,6 +12,7 @@
 | Сборки в GitHub | вкладка **Actions** репозитория: процессы **iOS** и **Android**, запускаются только вручную |
 | Иконки (исходники) | `C:\Users\Artem\Documents\my-projects\tippy-treats-store-assets\` (вне репозитория), все размеры генерирует `scripts/native/make-icons.ps1` |
 | Ключ подписи Android | `C:\Users\Artem\Documents\my-projects\tippy-treats-store-assets\android-signing\` (вне репозитория) |
+| Готовые файлы для пересылки (отладочный APK) | `C:\Users\Artem\Documents\my-projects\tippy-treats-store-assets\builds\` (вне репозитория) |
 
 Версия, которую видит игрок, одна на всё: `version` в `package.json` (сейчас 0.1.0). Номер сборки растёт с каждой загрузкой в TestFlight или Google Play: в GitHub это номер запуска процесса (можно задать вручную в поле **Build number**), на компьютере параметр `-PbuildNumber=`.
 
@@ -22,38 +23,68 @@
 - подписанные сборки (IPA, AAB) никогда не выкладываются файлами для скачивания: IPA уходит сразу в TestFlight, AAB делается на вашем компьютере;
 - отладочный APK выкладывается в GitHub на 1 день: он подписан одноразовым отладочным ключом и для магазина не годится.
 
-## 1. iPhone: ключ App Store Connect API и три секрета в GitHub
+## 1. iPhone: подпись и семь секретов в GitHub
 
-Делается один раз.
+Делается один раз. Новых ключей и сертификатов не создаётся: берутся те, что уже есть у команды Apple (проект Arcanum). Ничего не отзывайте и не удаляйте в Certificates, Identifiers & Profiles: сертификат распространения общий, Arcanum подписывается им же.
 
-1. Откройте https://appstoreconnect.apple.com → **Пользователи и доступ** (Users and Access).
-2. Вкладка **Интеграции** (Integrations) → слева **App Store Connect API** → раздел **Ключи команды** (Team Keys).
-   - Если ключей ещё не было, сначала нажмите **Запросить доступ** (Request Access) и согласитесь с условиями. Это может только владелец аккаунта (Account Holder).
-3. Нажмите **+** (или **Создать ключ API**, Generate API Key).
-   - **Имя** (Name): `GitHub Tippy Treats`.
-   - **Доступ** (Access): **Администратор** (Admin). Меньшая роль не даст сборке самой создать сертификат распространения и профиль.
-   - Нажмите **Создать** (Generate).
-4. В строке нового ключа нажмите **Загрузить ключ API** (Download API Key). Файл `AuthKey_XXXXXXXXXX.p8` скачивается **только один раз**: сохраните его в `tippy-treats-store-assets` (не в папку репозитория).
-5. Перепишите два значения с этой же страницы:
-   - **Идентификатор ключа** (Key ID): 10 знаков в строке ключа;
-   - **Идентификатор выдающего** (Issuer ID): длинная строка с дефисами над таблицей ключей, кнопка **Копировать** (Copy).
-6. Откройте репозиторий на GitHub → **Settings** → слева **Secrets and variables** → **Actions** → вкладка **Secrets** → **New repository secret**. Создайте три секрета (имя в поле **Name**, значение в **Secret**, затем **Add secret**):
+**Почему так.** Ключ App Store Connect API команды имеет роль App Manager. Такой ключ может загружать сборки, но не может подписывать через облако Apple (`xcodebuild` отвечает «Cloud signing permission error», включить доступ ключу нельзя). Поэтому сборка подписывается вручную: существующим сертификатом распространения и профилем App Store для Tippy Treats, а ключ только загружает сборку в TestFlight.
 
-| Name | Secret |
+### 1.1. Ключ App Store Connect API (уже есть)
+
+Идентификатор ключа (Key ID), идентификатор выдающего (Issuer ID) и путь к файлу `.p8` записаны в журнале Arcanum: `arcanum/docs/changelog.md`, поиск «ASC API key». Идентификатор команды Apple (Team ID) — там же, в `arcanum/eas.json` (`appleTeamId`). В репозиторий Tippy Treats эти значения не пишутся: они идут только секретами.
+
+### 1.2. Сертификат распространения из EAS (уже есть)
+
+Сертификат создал EAS для Arcanum, его закрытая часть хранится в Expo. Выгрузите его к себе (только скачивание, на серверах ничего не меняется). Git Bash:
+
+```
+cd /c/Users/Artem/Documents/my-projects/arcanum
+npx eas-cli@latest credentials -p ios
+```
+
+Ответы на вопросы: профиль сборки **production** → пункт **credentials.json: Upload/Download credentials between EAS servers and your local json** → **Download credentials from EAS to credentials.json**. Появятся файл `credentials.json` (в нём путь к `.p12` и его пароль) и папка `credentials/`. Сразу перенесите их из папки Arcanum в папку ключей, чтобы они не попали в git Arcanum:
+
+```
+mkdir -p /c/Users/Artem/Documents/keys/arcanum-eas
+mv credentials.json credentials /c/Users/Artem/Documents/keys/arcanum-eas/
+```
+
+Профиль Arcanum из этой выгрузки Tippy Treats не нужен, нужен только сертификат.
+
+### 1.3. Профиль App Store для Tippy Treats (новый, один раз)
+
+Профиля для `app.tippytreats.game` ещё нет, без него подписать нельзя.
+
+1. https://developer.apple.com/account → **Certificates, Identifiers & Profiles** → **Profiles** → синий **+**.
+2. Раздел **Distribution** → **App Store Connect** → **Continue**.
+3. **App ID**: `app.tippytreats.game` (Tippy Treats) → **Continue**.
+4. Сертификат: тот же, что у Arcanum (тип Distribution, срок до августа 2027; если в списке несколько, выберите с тем же сроком, что у сертификата в `credentials.json`, или спросите сессию) → **Continue**.
+5. **Provisioning Profile Name**: `Tippy Treats App Store` → **Generate** → **Download**.
+6. Положите файл в `C:\Users\Artem\Documents\keys\` под именем `Tippy_Treats_App_Store.mobileprovision`.
+
+### 1.4. Семь секретов
+
+Готовые команды с точными путями и значениями сессия выдаёт в отчёте, их нужно выполнить в Git Bash. `gh` уже вошёл в аккаунт `sivyankof` с правом на репозиторий. Значение секрета нигде не печатается: файлы и пароль передаются в `gh` напрямую. Вид команд:
+
+| Секрет | Откуда |
 |---|---|
-| `APP_STORE_CONNECT_KEY_ID` | Key ID из п. 5 |
-| `APP_STORE_CONNECT_ISSUER_ID` | Issuer ID из п. 5 |
-| `APP_STORE_CONNECT_KEY_P8` | всё содержимое файла `.p8`: откройте его Блокнотом и скопируйте целиком, вместе со строками `-----BEGIN PRIVATE KEY-----` и `-----END PRIVATE KEY-----` |
+| `APP_STORE_CONNECT_KEY_ID` | `gh secret set APP_STORE_CONNECT_KEY_ID --repo sivyankof/tippy-treats --body "<Key ID>"` |
+| `APP_STORE_CONNECT_ISSUER_ID` | `gh secret set APP_STORE_CONNECT_ISSUER_ID --repo sivyankof/tippy-treats --body "<Issuer ID>"` |
+| `APP_STORE_CONNECT_KEY_P8` | `gh secret set APP_STORE_CONNECT_KEY_P8 --repo sivyankof/tippy-treats < <путь к .p8>` |
+| `APPLE_TEAM_ID` | `gh secret set APPLE_TEAM_ID --repo sivyankof/tippy-treats --body "<Team ID>"` |
+| `APPLE_DIST_CERT_P12` | `.p12` из `credentials.json` в base64 (команда в отчёте) |
+| `APPLE_DIST_CERT_PASSWORD` | пароль из `credentials.json` (команда в отчёте) |
+| `APPLE_PROFILE` | `base64 -w0 <путь к .mobileprovision> \| gh secret set APPLE_PROFILE --repo sivyankof/tippy-treats` |
 
-Идентификатор команды Apple (Team ID) сборка узнаёт сама через ключ: это «префикс App ID» вашего идентификатора пакета. Если сборка всё же напишет, что команда не найдена, создайте на той же странице GitHub во вкладке **Variables** переменную `APPLE_TEAM_ID` со значением **Team ID** из https://developer.apple.com/account → **Membership details** (Сведения об участии).
+Без `gh` то же делается на сайте: репозиторий → **Settings** → **Secrets and variables** → **Actions** → **New repository secret**, имя в **Name**, значение в **Secret**, **Add secret** (для `.p12` и профиля значение — их base64, его даёт `base64 -w0 <файл>` в Git Bash).
 
-После этого напишите в сессию «секреты внесены»: первую сборку в TestFlight запустит Claude Code и проверит, что она дошла.
+Проверка: `gh secret list --repo sivyankof/tippy-treats` показывает семь имён (значения GitHub не показывает никому). После этого напишите в сессию «секреты внесены»: первую сборку в TestFlight запустит Claude Code.
 
 ## 2. iPhone: сборка в TestFlight и установка
 
 1. GitHub → **Actions** → слева **iOS** → справа **Run workflow**.
 2. **target**: `testflight`; **Internal build**: галочка (для проверок); **Build number**: пусто. Нажмите зелёную **Run workflow**.
-3. Сборка идёт 10–20 минут. Зелёная галочка значит, что Apple приняла файл. Красный крестик: откройте запуск, шаг с ошибкой покажет причину (частые: нет секрета; ключ не с ролью «Администратор»; номер сборки уже был — запустите с номером больше).
+3. Сборка идёт 10–20 минут. Зелёная галочка значит, что Apple приняла файл. Красный крестик: откройте запуск, шаг с ошибкой покажет причину (частые: нет секрета; неверный пароль `.p12`; профиль не того приложения; номер сборки уже был — запустите с номером больше).
 4. App Store Connect → **Приложения** (Apps) → Tippy Treats → вкладка **TestFlight**. Сборка сначала в статусе **Обработка** (Processing), через 5–30 минут готова. Вопрос о шифровании не появится: в проекте указано, что приложение использует только стандартное шифрование.
 5. Первый раз: слева **Внутреннее тестирование** (Internal Testing) → **+** → имя группы `Owner` → **Создать** (Create) → в группе **Тестировщики** (Testers) **+** → отметьте себя → **Добавить** (Add). Затем в группе **Сборки** (Builds) **+** → выберите сборку. Дальше новые сборки можно добавлять в эту группу так же или включить **Автоматическое распространение** (Automatic Distribution).
 6. На iPhone: поставьте из App Store приложение **TestFlight**, откройте письмо-приглашение (или сразу TestFlight под тем же Apple ID) → **Установить** (Install).
@@ -67,7 +98,23 @@
 3. Перенесите `app-debug.apk` на телефон (кабель, Google Диск, Telegram «Избранное»), откройте его на телефоне → разрешите установку из этого источника (**Настройки** → **Разрешить из этого источника**) → **Установить**.
 4. Отладочная сборка и сборка из Google Play подписаны разными ключами: перед установкой другой удалите прежнюю (прогресс при этом пропадёт).
 
-### 3.2. Подписанный AAB для внутреннего тестирования Google Play
+### 3.2. Памятка другу с Android-телефоном
+
+Перешлите ему файл `tippy-treats-<версия>-<сборка>-debug.apk` из папки `tippy-treats-store-assets\builds\` (Telegram, WhatsApp, почта, Google Диск) и текст ниже.
+
+> **Как поставить.** Открой присланный файл `.apk` на телефоне. Android спросит разрешение на установку из этого приложения (Telegram, Файлы, Chrome — откуда открываешь): нажми **Настройки** → включи **Разрешить из этого источника** → вернись назад → **Установить**. Если Google Play Защита скажет, что приложение неизвестно, нажми **Подробнее** → **Всё равно установить**. Это отладочная сборка игры, не из магазина.
+>
+> **Отладочное меню.** На главном экране нажми шестерёнку (настройки), пролистай окно вниз до строки «Версия 0.1.0» (или «Version 0.1.0») и быстро коснись её **5 раз подряд**. Откроется меню на английском.
+>
+> **Что сделать и прислать:**
+> 1. В меню нажми **Perf: no team**. Игра 2–3 минуты играет сама, телефон не трогай. В конце появится таблица и кнопка **copy**: нажми её и пришли скопированный текст. Потом **back to game**.
+> 2. Снова открой меню и нажми **Perf: master team**, тоже пришли текст.
+> 3. Кнопка или жест «назад» Android: (а) на экране «Магазин» или «Коллекция» — должна вернуть на главный; (б) открой настройки и нажми «назад» — окно должно закрыться; (в) во время игры «назад» ставит паузу, второе «назад» снимает её (3-2-1); (г) на главном экране «назад» сворачивает игру. Напиши по каждому: да или нет.
+> 4. Сверни игру посреди забега и вернись: игра на паузе, звук есть?
+> 5. Не перекрывает ли что-нибудь вырез камеры вверху и полоску жестов внизу (счёт, кнопки, монеты)? Если да, пришли снимок экрана.
+> 6. Модель телефона и версия Android.
+
+### 3.3. Подписанный AAB для внутреннего тестирования Google Play
 
 Подписанный пакет делается только на вашем компьютере: в публичном репозитории его нельзя выкладывать файлом.
 
