@@ -19,4 +19,9 @@ export class CollectionCount extends Phaser.GameObjects.Container {
     this.add([this.plate, label]);
     scene.add.existing(this);
   }
+
+  /** Puts the plate on its row under a header that starts `top` px down. */
+  place(x: number, top = 0): void {
+    this.setPosition(x, top + cfg.countY);
+  }
 }

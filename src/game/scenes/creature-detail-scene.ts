@@ -12,6 +12,7 @@ import { Particles } from '../fx/common/particles';
 import { starBurst } from '../fx/common/sparkle-fx';
 import { demoRun } from '../run/run-request';
 import { openScreen, SCENES, startRunFrom, type CreatureDetailData } from '../app/scene-keys';
+import { safeFrame, type SafeFrame } from '../ui/common/safe-frame';
 import { enterScreen, leaveScreen, type Movable } from '../ui/common/transition';
 import { DetailActions } from '../ui/menu/detail/detail-actions';
 import { abilityText } from '../ui/menu/detail/detail-model';
@@ -85,18 +86,18 @@ export class CreatureDetailScene extends Phaser.Scene {
    * window drops its secondary parts one step at a time until it fits (`detailPlan`).
    */
   private build(): void {
-    const height = this.scale.gameSize.height;
+    const frame = safeFrame(this.scale.gameSize.height);
     for (let step = 0; step < DETAIL_PLAN_STEPS; step++) {
       this.buildStep(step);
-      if (step === DETAIL_PLAN_STEPS - 1 || this.freeHeight(height) >= 0) return;
+      if (step === DETAIL_PLAN_STEPS - 1 || this.freeHeight(frame) >= 0) return;
       this.destroyLevelParts();
     }
   }
 
   /** Free height between the hero plate, the text block and the buttons; negative when they overlap. */
-  private freeHeight(height: number): number {
+  private freeHeight(frame: SafeFrame): number {
     const used = cfg.stage.height + cfg.blockGap + this.info.bodyHeight;
-    return this.actions.topY(height) - cfg.blockGap - cfg.stageTop - used;
+    return this.actions.topY(frame.bottom) - cfg.blockGap - (frame.top + cfg.stageTop) - used;
   }
 
   private buildStep(step: number): void {
@@ -186,14 +187,14 @@ export class CreatureDetailScene extends Phaser.Scene {
     const cx = width / 2;
     this.cameras.main.setSize(width, height);
     this.bg.resize(width, height);
-    this.header.layout(width);
-    this.actions.layout(width, height);
+    const frame = safeFrame(height);
+    this.header.layout(width, frame.top);
+    this.actions.layout(width, frame.bottom);
     // The free height between the header and the buttons is shared by the gaps around the blocks.
-    const used = cfg.stage.height + cfg.blockGap + this.info.bodyHeight;
-    const free = this.actions.topY(height) - cfg.blockGap - cfg.stageTop - used;
+    const free = this.freeHeight(frame);
     const gap = Math.max(0, free) / cfg.spreadGaps;
-    const stageTop = cfg.stageTop + gap;
-    this.name.setPosition(cx, cfg.ribbonY + gap);
+    const stageTop = frame.top + cfg.stageTop + gap;
+    this.name.setPosition(cx, frame.top + cfg.ribbonY + gap);
     this.stage.setPosition(cx, stageTop + cfg.stage.height / 2);
     // Too short a screen: the gap under the hero plate gives way before the text meets the buttons.
     const squeeze = Math.min(Math.max(0, -free), cfg.blockGap - cfg.minStageGap);

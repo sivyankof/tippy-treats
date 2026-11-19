@@ -3,6 +3,7 @@ import { MENU } from '../../../data/common/menu-layout';
 import { PALETTE } from '../../../data/common/palette';
 import { windowDuck } from '../../audio/music-cues';
 import { createDimOverlay } from '../common/dim-overlay';
+import { safeFrame } from '../common/safe-frame';
 import { createIconButton } from '../menu/widgets/icon-button';
 import { openPopup } from '../common/transition';
 import { TitleRibbon } from './title-ribbon';
@@ -37,7 +38,8 @@ export interface PopupOptions {
  *   popup.setContentHeight(400);
  *   // later: popup.close();
  *
- * It follows screen resizes (and shrinks to fit a short screen), goes away with its scene, pops
+ * It follows screen resizes (and shrinks to fit a short screen) and stands in the safe band of
+ * the canvas (the veil covers all of it), goes away with its scene, pops
  * in with `openPopup`, shrinks and fades out on close, then destroys itself.
  */
 export class PopupWindow {
@@ -75,7 +77,9 @@ export class PopupWindow {
     this.content = scene.add.container(0, 0);
     this.ribbon = new TitleRibbon(scene, 0, 0, options.title);
     this.body = scene.add.container(0, 0);
-    this.root = scene.add.container(width / 2, height / 2, [this.body]).setDepth(depth + 1);
+    this.root = scene.add
+      .container(width / 2, safeFrame(height).centerY, [this.body])
+      .setDepth(depth + 1);
     if (closable) {
       this.closeButton = createIconButton(
         scene,
@@ -168,12 +172,14 @@ export class PopupWindow {
     if (this.gone) return;
     const { width, height } = this.scene.scale.gameSize;
     this.dim.setSize(width, height);
+    // The veil covers the whole canvas; the window stands in the safe band, clear of the island and the gesture bar.
+    const frame = safeFrame(height);
     const fit = Math.min(
       1,
       (width - cfg.screenMargin * 2) / cfg.width,
-      (height - cfg.screenMargin * 2) / this.height,
+      (frame.height - cfg.screenMargin * 2) / this.height,
     );
-    this.root.setPosition(width / 2, height / 2);
+    this.root.setPosition(width / 2, frame.centerY);
     this.body.setScale(fit);
   }
 }

@@ -32,6 +32,7 @@ import { ScreenHeader } from '../ui/menu/widgets/screen-header';
 import { openStreakCalendar, openStreakEntry } from '../ui/menu/streak/streak-windows';
 import type { StreakClaim } from '../../state/game-state';
 import { MenuScenery } from '../ui/style/menu-scenery';
+import { safeFrame } from '../ui/common/safe-frame';
 import { enterScreen, leaveScreen, type Movable } from '../ui/common/transition';
 
 const cfg = MENU.home;
@@ -187,17 +188,18 @@ export class HomeScene extends Phaser.Scene {
   private layout(): void {
     const { width, height } = this.scale.gameSize;
     const cx = width / 2;
-    const extra = Math.max(0, height - cfg.baseHeight) * cfg.extraShare;
+    const frame = safeFrame(height);
+    const extra = Math.max(0, frame.height - cfg.baseHeight) * cfg.extraShare;
     this.cameras.main.setSize(width, height);
     this.scenery.resize(width, height);
-    this.header.layout(width);
-    this.badges.layout(width);
-    this.level.setPosition(cfg.levelPlate.left + cfg.levelPlate.width / 2, cfg.levelPlate.y);
-    this.oven.setPosition(cx, cfg.ovenPlate.y + extra * cfg.ovenPlate.extraShare);
-    const shelfY = cfg.shelf.y + extra;
-    this.shelf.root.setPosition(cx, shelfY);
-    this.record.setPosition(cx, cfg.record.y + extra * cfg.record.extraShare);
-    const navTop = this.nav.layout(width, height);
+    this.header.layout(width, frame.top);
+    this.badges.layout(width, frame.top);
+    const level = cfg.levelPlate;
+    this.level.setPosition(level.left + level.width / 2, frame.top + level.y);
+    this.oven.setPosition(cx, frame.top + cfg.ovenPlate.y + extra * cfg.ovenPlate.extraShare);
+    this.shelf.root.setPosition(cx, frame.top + cfg.shelf.y + extra);
+    this.record.setPosition(cx, frame.top + cfg.record.y + extra * cfg.record.extraShare);
+    const navTop = this.nav.layout(width, height, frame.bottom);
     const playY = navTop - cfg.playAboveNav - cfg.playHeight / 2;
     this.play.setPosition(cx, playY);
     this.ring?.setPosition(cx, playY);

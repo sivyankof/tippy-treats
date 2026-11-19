@@ -4,7 +4,8 @@ import { PALETTE } from '../../../../data/common/palette';
 import { t } from '../../../../i18n';
 import type { Button } from '../../common/button';
 import { createOutlinedText } from '../../common/outlined-text';
-import { VolumePlate } from '../../style/volume';
+import { RefitPlate } from '../../style/refit-plate';
+import type { VolumePlate } from '../../style/volume';
 import { fitText } from '../widgets/fit-text';
 import { createIconButton, type IconKind } from '../widgets/icon-button';
 import {
@@ -45,7 +46,7 @@ class NavItem {
 /** The bottom navigation bar of Home: Shop, Collection, Play, Daily, Missions on a glossy bar. */
 export class HomeNav {
   private readonly items: NavItem[];
-  private readonly bar: VolumePlate;
+  private readonly bar: RefitPlate;
 
   constructor(
     scene: Phaser.Scene,
@@ -96,7 +97,7 @@ export class HomeNav {
       },
     ];
     const { height, overhang } = cfg.navBar;
-    this.bar = new VolumePlate(scene, 'bar', height + overhang);
+    this.bar = new RefitPlate(scene, 'bar', height + overhang);
     this.items = specs.map((spec) => new NavItem(scene, spec, slotWidth));
     this.refresh();
   }
@@ -112,19 +113,23 @@ export class HomeNav {
 
   /** What slides in with the screen. */
   get parts(): Array<Phaser.GameObjects.Container | VolumePlate> {
-    return [this.bar, ...this.items.map((item) => item.root)];
+    return [this.bar.plate, ...this.items.map((item) => item.root)];
   }
 
   /**
    * The bar along the bottom of a `width` x `height` screen (its ends and bottom run past the
-   * edges) and five equal columns of buttons on it. Returns the top of the bar.
+   * edges) and five equal columns of buttons on it. The buttons stand above `safeBottom` (the
+   * top of the safe band at the bottom, `height` without one); the bar itself runs on under it
+   * to the screen edge. Returns the top of the bar.
    */
-  layout(width: number, height: number): number {
+  layout(width: number, height: number, safeBottom = height): number {
     const { height: barHeight, overhang, padTop } = cfg.navBar;
-    const top = height - barHeight;
+    const top = safeBottom - barHeight;
+    const reach = barHeight + (height - safeBottom) + overhang;
     this.bar
+      .setBodyHeight(reach)
       .setBodyWidth(width + overhang * 2)
-      .setPosition(width / 2, top + (barHeight + overhang) / 2);
+      .setPosition(width / 2, top + reach / 2);
     const y = top + padTop + cfg.navSize / 2;
     const step = width / this.items.length;
     this.items.forEach((item, i) => item.root.setPosition(step * (i + 0.5), y));

@@ -18,8 +18,9 @@ export class Toast {
     this.root = scene.add.container(0, 0, [this.plate, this.label]).setDepth(cfg.depth).setAlpha(0);
   }
 
-  layout(width: number): void {
-    this.root.setPosition(width / 2, MENU.header.band.bottom + cfg.belowBand);
+  /** `top` is the safe band at the top of the canvas, where the header starts. */
+  layout(width: number, top = 0): void {
+    this.root.setPosition(width / 2, top + MENU.header.band.bottom + cfg.belowBand);
   }
 
   show(text: string): void {
