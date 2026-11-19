@@ -1,4 +1,4 @@
-import { Capacitor } from '@capacitor/core';
+import { Capacitor, SystemBars } from '@capacitor/core';
 import { App } from '@capacitor/app';
 import { Haptics } from '@capacitor/haptics';
 import { Preferences } from '@capacitor/preferences';
@@ -105,7 +105,7 @@ export const services: Services = {
   storage: native ? new NativeStorage(Preferences) : new WebStorage(),
   share: new WebShare(),
   telemetry: new WebAnalytics(),
-  appShell: native ? new NativeAppShell(App, SplashScreen) : new WebAppShell(),
+  appShell: native ? new NativeAppShell(App, SplashScreen, SystemBars) : new WebAppShell(),
 };
 
 /** Dev switch of the ad stub (debug panel). Not part of the services: native ads have none. */

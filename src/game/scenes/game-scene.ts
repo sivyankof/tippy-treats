@@ -12,6 +12,7 @@ import { easeFn } from '../fx/common/ease';
 import { RunIntro } from '../fx/run/run-intro';
 import { effectsMode } from '../app/effects-mode';
 import { Backdrop } from '../objects/backdrop/common/backdrop';
+import { watchRunSky } from '../app/status-bar';
 import { RunWeather } from '../objects/backdrop/weather/run-weather';
 import { plainLooks } from '../objects/tower/plain-look';
 import { installSquashDebug } from '../debug/squash-debug';
@@ -154,6 +155,7 @@ export class GameScene extends Phaser.Scene {
     this.fx = new RunFx(this, TRAY_TOP_Y, this.seed, look.weather);
     this.weather = new RunWeather(this, look.weather, this.seed, this.background, this.fx.tower);
     this.fx.setBackdrop(this.background);
+    watchRunSky(this, () => this.background.topSkyColor());
     if (import.meta.env.DEV) installSquashDebug(this, this.sim, this.fx.tower);
     this.camera = new RunCamera(this, this.fx, this.background, TRAY_TOP_Y);
 

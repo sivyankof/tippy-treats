@@ -28,6 +28,8 @@ import { starsArt } from '../zones/stars-zone';
 import { ZoneFade } from '../zones/zone-fade';
 import { haloZoneMult, zoneMixOf } from '../zones/zone-mix';
 import { weatherShareOf } from '../weather/weather-share';
+import { skyStops } from '../weather/weather-palette';
+import { gradientColorAt } from './sky-gradient';
 import { PrepQueue, prepTarget, sameTarget, type PrepTarget } from '../zones/zone-prep';
 import {
   bakeSky,
@@ -218,6 +220,11 @@ export class Backdrop {
   }
 
   /** True while the backdrop cross-fades from one zone into the next. */
+  /** The colour at the top of the sky of the zone the run is in (the status bar stands over it). */
+  topSkyColor(): number {
+    return gradientColorAt(skyStops(zoneIdOf(this.fade.current), this.look.weather), 0);
+  }
+
   get fading(): boolean {
     return this.fade.previous !== null;
   }

@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { type AppPlugin, NativeAppShell, type SplashPlugin } from './native';
+import { type AppPlugin, type BarsPlugin, NativeAppShell, type SplashPlugin } from './native';
 
 type Listener = (state: { isActive: boolean }) => void;
 
@@ -25,12 +25,16 @@ const splash = (): SplashPlugin & { hide: ReturnType<typeof vi.fn> } => ({
   hide: vi.fn(() => Promise.resolve()),
 });
 
+const bars = (): BarsPlugin & { setStyle: ReturnType<typeof vi.fn> } => ({
+  setStyle: vi.fn(() => Promise.resolve()),
+});
+
 const flush = (): Promise<void> => new Promise((resolve) => setTimeout(resolve, 0));
 
 describe('NativeAppShell', () => {
   it('passes the active state of the app on', async () => {
     const fake = fakeApp();
-    const shell = new NativeAppShell(fake.app, splash());
+    const shell = new NativeAppShell(fake.app, splash(), bars());
     const seen: boolean[] = [];
     shell.onActiveChange((active) => seen.push(active));
     await flush();
@@ -41,7 +45,7 @@ describe('NativeAppShell', () => {
 
   it('removes a listener, also one stopped before the plugin answered', async () => {
     const fake = fakeApp();
-    const shell = new NativeAppShell(fake.app, splash());
+    const shell = new NativeAppShell(fake.app, splash(), bars());
     const stop = shell.onBack(() => undefined);
     stop();
     await flush();
@@ -56,7 +60,7 @@ describe('NativeAppShell', () => {
 
   it('hides the splash once', () => {
     const plugin = splash();
-    const shell = new NativeAppShell(fakeApp().app, plugin);
+    const shell = new NativeAppShell(fakeApp().app, plugin, bars());
     shell.hideSplash();
     shell.hideSplash();
     expect(plugin.hide).toHaveBeenCalledTimes(1);
@@ -65,8 +69,24 @@ describe('NativeAppShell', () => {
   it('minimizes the app and survives a plugin that fails', async () => {
     const fake = fakeApp();
     fake.raw.minimizeApp.mockImplementation(() => Promise.reject(new Error('ios')));
-    new NativeAppShell(fake.app, splash()).minimize();
+    new NativeAppShell(fake.app, splash(), bars()).minimize();
     await flush();
     expect(fake.raw.minimizeApp).toHaveBeenCalled();
+  });
+
+  it('sets the status bar icons only when they change, on the status bar alone', async () => {
+    const plugin = bars();
+    const shell = new NativeAppShell(fakeApp().app, splash(), plugin);
+    shell.setBarIcons('light');
+    shell.setBarIcons('light');
+    shell.setBarIcons('dark');
+    expect(plugin.setStyle.mock.calls).toEqual([
+      [{ style: 'DARK', bar: 'StatusBar' }],
+      [{ style: 'LIGHT', bar: 'StatusBar' }],
+    ]);
+    plugin.setStyle.mockImplementation(() => Promise.reject(new Error('old webview')));
+    shell.setBarIcons('light');
+    await flush();
+    expect(plugin.setStyle).toHaveBeenCalledTimes(3);
   });
 });

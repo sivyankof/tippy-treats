@@ -3,6 +3,10 @@
  * browser there is no shell: the page visibility covers going to the background, and the browser
  * owns its back button.
  */
+
+/** Colour of the status bar icons: `light` over a dark top of the screen, `dark` over a light one. */
+export type BarIcons = 'light' | 'dark';
+
 export interface AppShellService {
   /** True inside the iOS or Android app. */
   readonly native: boolean;
@@ -14,4 +18,6 @@ export interface AppShellService {
   minimize(): void;
   /** The game shows its first screen: the launch splash goes away. */
   hideSplash(): void;
+  /** Sets the colour of the status bar icons (the clock, the battery); the browser keeps its own. */
+  setBarIcons(icons: BarIcons): void;
 }

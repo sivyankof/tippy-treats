@@ -48,6 +48,7 @@ function setup(native = true) {
     }),
     minimize: vi.fn(),
     hideSplash: vi.fn(),
+    setBarIcons: vi.fn(),
   } satisfies AppShellService;
   const audio = { unlock: vi.fn() } as unknown as AudioService & {
     unlock: ReturnType<typeof vi.fn>;

@@ -17,4 +17,6 @@ export class WebAppShell implements AppShellService {
   minimize(): void {}
 
   hideSplash(): void {}
+
+  setBarIcons(): void {}
 }

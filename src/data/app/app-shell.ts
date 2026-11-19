@@ -4,4 +4,13 @@ export const APP_SHELL = {
   splashMaxMs: 8000,
   /** After the app comes back, the audio is asked to run again this much later: a call or an alarm may still hold it. */
   audioRetryMs: 600,
+  /** Colour of the status bar icons (src/game/app/status-bar.ts). */
+  statusBar: {
+    /** The screen is looked at this often. */
+    checkMs: 150,
+    /** A new colour is set only after this many checks in a row agree, so a window that flicks by does not blink the bar. */
+    holdChecks: 2,
+    /** A dark veil counts once this much of it covers the screen (its alpha times its fill alpha). */
+    veilDarkness: 0.3,
+  },
 } as const;

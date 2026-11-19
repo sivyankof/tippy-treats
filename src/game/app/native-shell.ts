@@ -4,6 +4,7 @@ import type { AppShellService } from '../../services/app-shell/types';
 import type { AudioService } from '../../services/audio/types';
 import { handleBack } from './back-stack';
 import { SCENES } from './scene-keys';
+import { followStatusBar } from './status-bar';
 
 /** What the shell needs of the state: the save is written at once when the app leaves. */
 interface Flushable {
@@ -19,7 +20,8 @@ interface Flushable {
  * without a gesture, so the audio starts right away. The launch splash goes away after the first
  * frame of a screen of the game. The Android back goes to the topmost screen or window that takes it
  * (`back-stack.ts`: a window closes, a run pauses, a menu screen goes home); when none does (Home),
- * the app goes to the background. Does nothing in a browser.
+ * the app goes to the background. The status bar icons follow the screen (`status-bar.ts`). Does
+ * nothing in a browser.
  */
 export function bindNativeShell(
   game: Phaser.Game,
@@ -49,6 +51,7 @@ export function bindNativeShell(
   });
   audio.unlock();
   hideSplashOnFirstScreen(game, shell);
+  followStatusBar(shell);
 }
 
 function hideSplashOnFirstScreen(game: Phaser.Game, shell: AppShellService): void {
