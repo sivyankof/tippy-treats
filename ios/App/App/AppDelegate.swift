@@ -1,3 +1,4 @@
+import AVFoundation
 import UIKit
 import Capacitor
 
@@ -7,7 +8,10 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     var window: UIWindow?
 
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
-        // Override point for customization after application launch.
+        // The game sound obeys the ring/silent switch and mixes with the music of another app
+        // instead of stopping it. The page sets the same type for itself (navigator.audioSession,
+        // services/audio/music/audio-session.ts); this covers the moments before the page runs.
+        try? AVAudioSession.sharedInstance().setCategory(.ambient, mode: .default, options: [])
         return true
     }
 

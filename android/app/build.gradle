@@ -1,5 +1,21 @@
 apply plugin: 'com.android.application'
 
+// Release signing comes from android/keystore.properties, a local file that is never committed
+// (storeFile, storePassword, keyAlias, keyPassword; docs/11a-device-build.md). Without it the
+// release build stays unsigned and the debug build uses the usual debug key.
+def keystorePropertiesFile = rootProject.file('keystore.properties')
+def keystoreProperties = new Properties()
+if (keystorePropertiesFile.exists()) {
+    keystorePropertiesFile.withInputStream { keystoreProperties.load(it) }
+}
+
+// The build number (versionCode): -PbuildNumber=N or TIPPY_BUILD_NUMBER, 1 by default.
+// Google Play needs a bigger one for every upload.
+def buildNumber = (project.findProperty('buildNumber') ?: System.getenv('TIPPY_BUILD_NUMBER') ?: '1') as Integer
+
+// The version the player sees is the one of package.json, like in the game's settings window.
+def appVersion = new groovy.json.JsonSlurper().parse(rootProject.file('../package.json')).version
+
 android {
     namespace = "app.tippytreats.game"
     compileSdk = rootProject.ext.compileSdkVersion
@@ -7,8 +23,8 @@ android {
         applicationId "app.tippytreats.game"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 1
-        versionName "1.0"
+        versionCode buildNumber
+        versionName appVersion
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
@@ -16,8 +32,21 @@ android {
             ignoreAssetsPattern = '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
         }
     }
+    signingConfigs {
+        if (keystorePropertiesFile.exists()) {
+            release {
+                storeFile file(keystoreProperties['storeFile'])
+                storePassword keystoreProperties['storePassword']
+                keyAlias keystoreProperties['keyAlias']
+                keyPassword keystoreProperties['keyPassword']
+            }
+        }
+    }
     buildTypes {
         release {
+            if (keystorePropertiesFile.exists()) {
+                signingConfig signingConfigs.release
+            }
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }

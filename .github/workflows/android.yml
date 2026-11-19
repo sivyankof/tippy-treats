@@ -1,0 +1,64 @@
+# Android builds. Manual runs only (Actions → Android → Run workflow), never on a push.
+# The debug APK (signed with a throwaway debug key, for installing straight onto a phone) is kept as
+# an artifact for 1 day. The release bundle is built unsigned here only to prove it compiles; the
+# signed AAB for Google Play is made on the owner's computer (docs/11a-device-build.md): the
+# repository is public, and anything signed must not become a downloadable artifact.
+name: Android
+
+on:
+  workflow_dispatch:
+    inputs:
+      internal:
+        description: 'Internal build (debug menu in the settings)'
+        type: boolean
+        default: true
+      build_number:
+        description: 'Build number, versionCode (empty: the number of this run)'
+        type: string
+        required: false
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: npm
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: 21
+          cache: gradle
+      - name: Install
+        run: npm ci
+      - name: Web build and sync
+        run: |
+          cp .env.example .env
+          if [ "${{ inputs.internal }}" = "true" ]; then npm run app:sync:internal; else npm run app:sync; fi
+      - name: Build number
+        env:
+          BUILD_INPUT: ${{ inputs.build_number }}
+        run: |
+          build="${BUILD_INPUT:-${{ github.run_number }}}"
+          case "$build" in ''|*[!0-9]*) echo "::error::Build number must be a whole number"; exit 1;; esac
+          echo "TIPPY_BUILD_NUMBER=$build" >> "$GITHUB_ENV"
+      - name: Debug APK and unsigned release bundle
+        working-directory: android
+        run: ./gradlew --no-daemon assembleDebug bundleRelease
+      - name: Sizes
+        run: |
+          ls -l android/app/build/outputs/apk/debug/*.apk android/app/build/outputs/bundle/release/*.aab
+          echo "Release bundle is unsigned and is not uploaded."
+      - name: Debug APK (kept 1 day)
+        uses: actions/upload-artifact@v5
+        with:
+          name: tippy-treats-debug-${{ env.TIPPY_BUILD_NUMBER }}
+          path: android/app/build/outputs/apk/debug/app-debug.apk
+          retention-days: 1
+          if-no-files-found: error

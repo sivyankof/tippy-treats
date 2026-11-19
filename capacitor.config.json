@@ -28,7 +28,7 @@
     "SystemBars": {
       "insetsHandling": "native",
       "initialViewportFitValueHint": "cover",
-      "style": "DARK",
+      "style": "LIGHT",
       "hidden": false,
       "animation": "NONE"
     }

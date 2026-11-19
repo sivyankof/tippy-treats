@@ -6,6 +6,9 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc --noEmit && vite build",
+    "build:internal": "tsc --noEmit && vite build --mode internal",
+    "app:sync": "npm run build && cap sync",
+    "app:sync:internal": "npm run build:internal && cap sync",
     "preview": "vite preview",
     "test": "vitest run",
     "coverage": "vitest run --coverage",

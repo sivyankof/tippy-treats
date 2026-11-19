@@ -1,0 +1,180 @@
+# iPhone builds. Manual runs only (Actions → iOS → Run workflow), never on a push.
+#   simulator  — no signing, no secrets: proves the iOS project compiles.
+#   testflight — signs with the App Store Connect API key and uploads the build to TestFlight.
+# Secrets (Settings → Secrets and variables → Actions), entered by the owner, docs/11a-device-build.md:
+#   APP_STORE_CONNECT_KEY_ID, APP_STORE_CONNECT_ISSUER_ID, APP_STORE_CONNECT_KEY_P8.
+# Nothing signed is kept as an artifact: the repository is public.
+name: iOS
+
+on:
+  workflow_dispatch:
+    inputs:
+      target:
+        description: 'simulator: compile check without signing; testflight: signed build to TestFlight'
+        type: choice
+        options: [simulator, testflight]
+        default: simulator
+      internal:
+        description: 'Internal build (debug menu in the settings)'
+        type: boolean
+        default: true
+      build_number:
+        description: 'Build number (empty: the number of this run)'
+        type: string
+        required: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ios-${{ inputs.target }}
+  cancel-in-progress: false
+
+env:
+  XCODE_PROJECT: ios/App/App.xcodeproj
+  XCODE_SCHEME: App
+  BUNDLE_ID: app.tippytreats.game
+
+jobs:
+  simulator:
+    if: inputs.target == 'simulator'
+    runs-on: macos-26
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: npm
+      - name: Install
+        run: npm ci
+      - name: Web build and sync
+        run: |
+          cp .env.example .env
+          if [ "${{ inputs.internal }}" = "true" ]; then npm run app:sync:internal; else npm run app:sync; fi
+      - name: Xcode
+        run: xcodebuild -version
+      - name: Build for the simulator (no signing)
+        run: |
+          set -o pipefail
+          xcodebuild build \
+            -project "$XCODE_PROJECT" -scheme "$XCODE_SCHEME" -configuration Debug \
+            -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' \
+            -derivedDataPath "$RUNNER_TEMP/derived" \
+            CODE_SIGNING_ALLOWED=NO | tail -n 60
+      - name: Size of the app
+        run: du -sh "$RUNNER_TEMP"/derived/Build/Products/Debug-iphonesimulator/App.app
+
+  testflight:
+    if: inputs.target == 'testflight'
+    runs-on: macos-26
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: npm
+      - name: Check the secrets are there
+        env:
+          KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
+          ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+          KEY_P8: ${{ secrets.APP_STORE_CONNECT_KEY_P8 }}
+        run: |
+          missing=""
+          [ -n "$KEY_ID" ] || missing="$missing APP_STORE_CONNECT_KEY_ID"
+          [ -n "$ISSUER_ID" ] || missing="$missing APP_STORE_CONNECT_ISSUER_ID"
+          [ -n "$KEY_P8" ] || missing="$missing APP_STORE_CONNECT_KEY_P8"
+          if [ -n "$missing" ]; then echo "::error::Missing secrets:$missing (docs/11a-device-build.md)"; exit 1; fi
+      - name: Install
+        run: npm ci
+      - name: Web build and sync
+        run: |
+          cp .env.example .env
+          if [ "${{ inputs.internal }}" = "true" ]; then npm run app:sync:internal; else npm run app:sync; fi
+      - name: Xcode
+        run: xcodebuild -version
+      - name: API key file
+        env:
+          KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
+          KEY_P8: ${{ secrets.APP_STORE_CONNECT_KEY_P8 }}
+        run: |
+          umask 077
+          mkdir -p "$RUNNER_TEMP/asc"
+          # The secret may hold the .p8 text itself or its base64; the file gets the text.
+          if printf '%s' "$KEY_P8" | grep -q 'BEGIN PRIVATE KEY'; then
+            printf '%s\n' "$KEY_P8" > "$RUNNER_TEMP/asc/AuthKey_$KEY_ID.p8"
+          else
+            printf '%s' "$KEY_P8" | base64 --decode > "$RUNNER_TEMP/asc/AuthKey_$KEY_ID.p8"
+          fi
+          echo "ASC_KEY_PATH=$RUNNER_TEMP/asc/AuthKey_$KEY_ID.p8" >> "$GITHUB_ENV"
+      - name: Team and build number
+        env:
+          KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
+          ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+          TEAM_ID_OVERRIDE: ${{ vars.APPLE_TEAM_ID }}
+          BUILD_INPUT: ${{ inputs.build_number }}
+        run: |
+          if [ -n "$TEAM_ID_OVERRIDE" ]; then
+            team="$TEAM_ID_OVERRIDE"
+          else
+            team=$(ruby .github/scripts/asc-team-id.rb "$ASC_KEY_PATH" "$KEY_ID" "$ISSUER_ID" "$BUNDLE_ID")
+          fi
+          echo "::add-mask::$team"
+          echo "TEAM_ID=$team" >> "$GITHUB_ENV"
+          build="${BUILD_INPUT:-${{ github.run_number }}}"
+          case "$build" in ''|*[!0-9]*) echo "::error::Build number must be a whole number"; exit 1;; esac
+          echo "BUILD_NUMBER=$build" >> "$GITHUB_ENV"
+          echo "APP_VERSION=$(node -p "require('./package.json').version")" >> "$GITHUB_ENV"
+          echo "Version $(node -p "require('./package.json').version"), build $build"
+      - name: Archive (signed through the API key)
+        env:
+          KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
+          ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+        run: |
+          set -o pipefail
+          xcodebuild archive \
+            -project "$XCODE_PROJECT" -scheme "$XCODE_SCHEME" -configuration Release \
+            -destination 'generic/platform=iOS' \
+            -archivePath "$RUNNER_TEMP/App.xcarchive" \
+            -derivedDataPath "$RUNNER_TEMP/derived" \
+            -allowProvisioningUpdates \
+            -authenticationKeyPath "$ASC_KEY_PATH" \
+            -authenticationKeyID "$KEY_ID" \
+            -authenticationKeyIssuerID "$ISSUER_ID" \
+            DEVELOPMENT_TEAM="$TEAM_ID" CODE_SIGN_STYLE=Automatic \
+            MARKETING_VERSION="$APP_VERSION" CURRENT_PROJECT_VERSION="$BUILD_NUMBER" | tail -n 80
+      - name: Upload to TestFlight
+        env:
+          KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
+          ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+        run: |
+          set -o pipefail
+          cat > "$RUNNER_TEMP/ExportOptions.plist" <<EOF
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+            <key>method</key><string>app-store-connect</string>
+            <key>destination</key><string>upload</string>
+            <key>teamID</key><string>$TEAM_ID</string>
+            <key>signingStyle</key><string>automatic</string>
+            <key>uploadSymbols</key><true/>
+            <key>manageAppVersionAndBuildNumber</key><false/>
+          </dict>
+          </plist>
+          EOF
+          xcodebuild -exportArchive \
+            -archivePath "$RUNNER_TEMP/App.xcarchive" \
+            -exportOptionsPlist "$RUNNER_TEMP/ExportOptions.plist" \
+            -exportPath "$RUNNER_TEMP/export" \
+            -allowProvisioningUpdates \
+            -authenticationKeyPath "$ASC_KEY_PATH" \
+            -authenticationKeyID "$KEY_ID" \
+            -authenticationKeyIssuerID "$ISSUER_ID" | tail -n 80
+      - name: Size of the app
+        if: success()
+        run: du -sh "$RUNNER_TEMP/App.xcarchive/Products/Applications/App.app"
+      - name: Remove the key and the archive
+        if: always()
+        run: rm -rf "$RUNNER_TEMP/asc" "$RUNNER_TEMP/App.xcarchive" "$RUNNER_TEMP/export" "$RUNNER_TEMP/ExportOptions.plist"

@@ -1,5 +1,16 @@
 package app.tippytreats.game;
 
+import android.os.Bundle;
+import androidx.activity.EdgeToEdge;
 import com.getcapacitor.BridgeActivity;
 
-public class MainActivity extends BridgeActivity {}
+public class MainActivity extends BridgeActivity {
+
+    @Override
+    public void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        // The game draws under the system bars; the page keeps its interface inside the safe area
+        // (env(safe-area-inset-*), SystemBars insetsHandling "native" in capacitor.config.json).
+        EdgeToEdge.enable(this);
+    }
+}

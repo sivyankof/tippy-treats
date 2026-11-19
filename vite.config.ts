@@ -4,6 +4,7 @@ import { cleanBuildHash, formatBuildStamp, formatBuildTime } from './src/util/bu
 
 /** Node global; the project does not pull in the Node type definitions. */
 declare const process: {
+  env: Record<string, string | undefined>;
   getBuiltinModule(id: 'node:fs'): { readFileSync(path: string, encoding: 'utf-8'): string };
   getBuiltinModule(id: 'node:child_process'): {
     execSync(
@@ -132,6 +133,9 @@ function buildStampInHtml(stamp: () => string): Plugin {
 
 export default defineConfig(({ command, mode }) => {
   const devServer = command === 'serve' && mode !== 'test';
+  // `vite build --mode internal`: the internal build of the apps (debug menu, URL debug parameters,
+  // `src/util/build-kind.ts`). Vite reads VITE_ variables of the environment after this function.
+  if (mode === 'internal') process.env.VITE_INTERNAL_BUILD = '1';
   const buildHash = gitHash();
   const buildTime = formatBuildTime(new Date());
   return {
