@@ -4,6 +4,7 @@ import { APP_SHELL } from '../../data/app/app-shell';
 import type { AppShellService } from '../../services/app-shell/types';
 import type { AudioService } from '../../services/audio/types';
 import { bindNativeShell } from './native-shell';
+import { pushBack } from './back-stack';
 
 vi.mock('phaser', () => ({
   Core: { Events: { HIDDEN: 'hidden', VISIBLE: 'visible', POST_RENDER: 'postrender' } },
@@ -34,13 +35,17 @@ function setup(native = true) {
     scene: { getScenes: () => active.map((key) => ({ scene: { key } })) },
   } as unknown as Phaser.Game;
   let onActive: (value: boolean) => void = () => undefined;
+  let onBack: () => void = () => undefined;
   const shell = {
     native,
     onActiveChange: vi.fn((cb: (value: boolean) => void) => {
       onActive = cb;
       return () => undefined;
     }),
-    onBack: vi.fn(() => () => undefined),
+    onBack: vi.fn((cb: () => void) => {
+      onBack = cb;
+      return () => undefined;
+    }),
     minimize: vi.fn(),
     hideSplash: vi.fn(),
   } satisfies AppShellService;
@@ -55,6 +60,7 @@ function setup(native = true) {
     audio,
     state,
     setActive: (value: boolean) => onActive(value),
+    back: () => onBack(),
     showScreens: (keys: string[]) => (active = keys),
   };
 }
@@ -98,6 +104,16 @@ describe('bindNativeShell', () => {
     t.events.emit('postrender');
     t.events.emit('postrender');
     expect(t.shell.hideSplash).toHaveBeenCalledTimes(1);
+  });
+
+  it('gives the back to the topmost screen or window, and sends the app away when none takes it', () => {
+    const t = setup();
+    const remove = pushBack(() => true);
+    t.back();
+    expect(t.shell.minimize).not.toHaveBeenCalled();
+    remove();
+    t.back();
+    expect(t.shell.minimize).toHaveBeenCalledTimes(1);
   });
 
   it('hides the splash anyway when no screen draws in time', () => {

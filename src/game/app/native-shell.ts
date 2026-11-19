@@ -2,6 +2,7 @@ import * as Phaser from 'phaser';
 import { APP_SHELL } from '../../data/app/app-shell';
 import type { AppShellService } from '../../services/app-shell/types';
 import type { AudioService } from '../../services/audio/types';
+import { handleBack } from './back-stack';
 import { SCENES } from './scene-keys';
 
 /** What the shell needs of the state: the save is written at once when the app leaves. */
@@ -16,7 +17,9 @@ interface Flushable {
  * and music stop) and writes the save at once; coming back resumes the loop and asks the audio to
  * run again a little later, since a call or an alarm may still hold it. The app may play sound
  * without a gesture, so the audio starts right away. The launch splash goes away after the first
- * frame of a screen of the game. Does nothing in a browser.
+ * frame of a screen of the game. The Android back goes to the topmost screen or window that takes it
+ * (`back-stack.ts`: a window closes, a run pauses, a menu screen goes home); when none does (Home),
+ * the app goes to the background. Does nothing in a browser.
  */
 export function bindNativeShell(
   game: Phaser.Game,
@@ -40,6 +43,9 @@ export function bindNativeShell(
       game.events.emit(Phaser.Core.Events.VISIBLE);
     }
     setTimeout(() => audio.unlock(), APP_SHELL.audioRetryMs);
+  });
+  shell.onBack(() => {
+    if (!handleBack()) shell.minimize();
   });
   audio.unlock();
   hideSplashOnFirstScreen(game, shell);
