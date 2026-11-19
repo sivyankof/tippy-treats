@@ -1,10 +1,11 @@
-import { DIFFICULTY } from '../src/data/tower/balance';
+import { BASE_MODIFIERS } from '../src/core/abilities/types';
+import { BALANCE, DIFFICULTY } from '../src/data/tower/balance';
 import { CREATURES, type CreatureId } from '../src/data/creatures/creatures';
 import { MASTERY } from '../src/data/creatures/mastery';
 import { ZONE_RULES } from '../src/data/zones/zones';
 
 /**
- * What-if values for the balance analysis (`--set=...` of `sim:teams`, `sim:coins`, `sim:economy`).
+ * What-if values for the balance analysis (`--set=...` of `sim:teams`, `sim:coins`, `sim:economy`, `sim:first40`).
  * The values are written over the data in memory before any run, so every script plays the real
  * sim with them; nothing is saved. Items are separated by `;`:
  *
@@ -15,6 +16,8 @@ import { ZONE_RULES } from '../src/data/zones/zones';
  *   difficulty.ghostCloudSdMult=1.1
  *                              a bot-model number of `DIFFICULTY` (data/tower/balance.ts)
  *   zones.spaceLaps.step=0.08  a number of `ZONE_RULES` (data/zones/zones.ts)
+ *   balance.drop.perfectTolerance=24
+ *                              a number of `BALANCE` (data/tower/balance.ts)
  */
 
 /** Creatures whose main levelled value the short `--set=<id>.<level>=N` replaces, and its field. */
@@ -34,6 +37,17 @@ function setNumber(root: Tree, path: string[], value: number, item: string): voi
     throw new Error(`Invalid --set item: ${item}`);
   }
   node[leaf] = value;
+}
+
+/**
+ * Writes a number of `BALANCE`. The perfect tolerance is also copied into the base drop modifiers
+ * when the abilities module loads, so that copy is written too.
+ */
+function setBalance(path: string[], value: number, item: string): void {
+  setNumber(BALANCE as unknown as Tree, path, value, item);
+  if (path.join('.') === 'drop.perfectTolerance') {
+    (BASE_MODIFIERS as { perfectTolerance: number }).perfectTolerance = value;
+  }
 }
 
 /** Writes a levelled ability value (a `LevelValues` field of the creature's ability). */
@@ -65,6 +79,7 @@ export function applySets(spec: string): string[] {
     if (head === 'mastery') setNumber(MASTERY as unknown as Tree, rest, value, item);
     else if (head === 'difficulty') setNumber(DIFFICULTY as unknown as Tree, rest, value, item);
     else if (head === 'zones') setNumber(ZONE_RULES as unknown as Tree, rest, value, item);
+    else if (head === 'balance') setBalance(rest, value, item);
     else if (rest.length === 1) {
       setLevelled(head, LEVELLED[head as keyof typeof LEVELLED], rest[0] ?? '', value, item);
     } else if (rest.length === 2) setLevelled(head, rest[0], rest[1] ?? '', value, item);
