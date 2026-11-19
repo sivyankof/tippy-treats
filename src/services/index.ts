@@ -6,6 +6,7 @@ import { SplashScreen } from '@capacitor/splash-screen';
 import { STUB_PRICES } from '../data/economy/iap-stub';
 import { PRODUCT_KEYS, PRODUCTS } from '../data/economy/shop';
 import { t } from '../i18n';
+import { DEBUG_TOOLS } from '../util/build-kind';
 import { WebAds } from './rewarded-video/web';
 import type { AdsDevControl, AdsService } from './rewarded-video/types';
 import { createBrowserAudioContext, WebAudioService } from './audio/web';
@@ -114,4 +115,4 @@ export const adsDev: AdsDevControl = webAds;
 export const iapDev: IapDevControl | null = import.meta.env.DEV ? webIap : null;
 
 /** Dev levels of the audio (soundboard sliders). Null outside the development build. */
-export const audioDev: AudioDevControl | null = import.meta.env.DEV ? webAudio : null;
+export const audioDev: AudioDevControl | null = DEBUG_TOOLS ? webAudio : null;

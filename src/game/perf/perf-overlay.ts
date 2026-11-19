@@ -1,13 +1,14 @@
 import { PERF } from '../../data/debug/perf';
+import { reloadWithQuery } from '../../util/page-reload';
+import { overlayButtonCss } from '../debug/overlay-style';
 import { copyText } from '../common/copy-text';
 import type { SummaryRow } from './perf-stats';
 
 const { overlay } = PERF;
 
 const BUTTON_CSS =
-  `pointer-events:auto;font:bold ${overlay.buttonFontPx}px sans-serif;min-height:${overlay.buttonPx}px;` +
-  'margin:6px 8px 0 0;padding:0 16px;border:1px solid #fff;border-radius:6px;color:#fff;' +
-  'background:rgba(255,255,255,0.18);';
+  overlayButtonCss(overlay.buttonFontPx, overlay.buttonPx, 'rgba(255,255,255,0.18)') +
+  'margin:6px 8px 0 0;';
 
 /** What the end of a benchmark shows: the budget line, the per-segment summary and the full text to copy. */
 export interface PerfOutcome {
@@ -68,6 +69,7 @@ export class PerfOverlay {
           window.setTimeout(() => (button.textContent = 'copy'), overlay.copiedMs);
         });
       }),
+      this.button('back to game', () => reloadWithQuery('')),
       this.button('table', (button) => {
         const open = this.body.style.display === 'none';
         this.body.style.display = open ? 'block' : 'none';

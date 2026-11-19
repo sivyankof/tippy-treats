@@ -6,6 +6,7 @@ import { SOUND_BOOK, SOUND_GROUPS, soundVariants } from '../../services/audio/so
 import { bindAudioUnlock } from '../audio/audio-unlock';
 import { buildMusicSection, musicChoice } from './soundboard-music';
 import { copyText } from '../common/copy-text';
+import { reloadWithQuery } from '../../util/page-reload';
 
 /** Slider scale: 0..SLIDER_MAX of the normal level (above 1 is louder than the game). */
 const SLIDER_MAX = 1.5;
@@ -131,7 +132,7 @@ function allAtOnce(): void {
   });
 }
 
-/** Builds the soundboard page in place of the game. Dev only (`?soundboard=1`). */
+/** Builds the soundboard page in place of the game. Dev and internal build only (`?soundboard=1`). */
 export function showSoundboard(): void {
   const lang = new URLSearchParams(location.search).get('lang');
   if (lang === 'en' || lang === 'ru') setLang(lang);
@@ -144,7 +145,10 @@ export function showSoundboard(): void {
 
   const root = el('div', 'sb');
   document.body.append(root);
-  root.append(el('h1', '', t('soundboard.title')));
+  const back = el('button', 'alt', `← ${t('soundboard.back')}`);
+  back.type = 'button';
+  back.addEventListener('click', () => reloadWithQuery(''));
+  root.append(back, el('h1', '', t('soundboard.title')));
   const status = el('div', 'sb-status', t('soundboard.tapToEnable'));
   root.append(status);
   const poll = (): void => {
