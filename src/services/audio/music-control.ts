@@ -24,6 +24,8 @@ export interface MusicPlayerState {
   buffers: number;
   /** The most `decodedBytes` has been since the player was made or `resetPeak`. */
   peakBytes: number;
+  /** A track was asked for and is still loading or starting. */
+  loading: boolean;
 }
 
 /**
@@ -77,6 +79,7 @@ const NO_STATE: MusicPlayerState = {
   decodedBytes: 0,
   buffers: 0,
   peakBytes: 0,
+  loading: false,
 };
 
 /** A player that does nothing (no music factory given). */

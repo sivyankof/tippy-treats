@@ -10,6 +10,7 @@ import { DEBUG_TOOLS } from '../util/build-kind';
 import { WebAds } from './rewarded-video/web';
 import type { AdsDevControl, AdsService } from './rewarded-video/types';
 import { createBrowserAudioContext, WebAudioService } from './audio/web';
+import { audioLog } from './audio/audio-log';
 import { MUSIC_PLAYLIST } from '../data/audio/music';
 import { playableTracks, setupAudioSession } from './audio/music/audio-session';
 import { createMusicPreload } from './audio/music/music-preload';
@@ -77,6 +78,9 @@ const musicPlaylist = playableTracks(MUSIC_PLAYLIST, audioSession.streams);
 // so the music starts right after the first tap.
 const musicPreload = createMusicPreload(musicPlaylist, audioSession.streams, (track) =>
   trackUrl(track),
+);
+audioLog.add(
+  `start: ${native ? 'app' : 'browser'}, session ${audioSession.ambient ? 'ambient' : 'default'}, streams ${audioSession.streams ? 'on' : 'off'}, first track ${musicPreload.track ?? 'none'}`,
 );
 const webAudio = new WebAudioService(
   createBrowserAudioContext,

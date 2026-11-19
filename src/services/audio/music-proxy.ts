@@ -5,6 +5,7 @@ import {
   type MusicHoldReason,
   type MusicPlayerState,
 } from './music-control';
+import { audioLog } from './audio-log';
 
 /**
  * The `AudioService.music` the game holds from the start. It remembers what the game asked last
@@ -21,6 +22,9 @@ export class MusicProxy implements MusicControl {
 
   /** Gives the proxy its player and brings it up to date with what was asked. */
   attach(real: MusicControl): void {
+    audioLog.add(
+      `music: player attached, asked ${this.ask?.kind ?? 'nothing'}, holds [${[...this.holds].join(',')}]`,
+    );
     this.real = real;
     for (const reason of this.holds) this.safely(() => this.real.hold(reason, true));
     if (this.isBusy) this.safely(() => this.real.busy(true));
@@ -36,11 +40,13 @@ export class MusicProxy implements MusicControl {
   }
 
   playlist(): void {
+    if (this.ask?.kind !== 'playlist') audioLog.add('music: playlist asked');
     this.ask = { kind: 'playlist' };
     if (this.enabled) this.safely(() => this.real.playlist());
   }
 
   play(track: MusicTrackId): void {
+    audioLog.add(`music: track ${track} asked`);
     this.ask = { kind: 'track', track };
     if (this.enabled) this.safely(() => this.real.play(track));
   }
@@ -60,6 +66,7 @@ export class MusicProxy implements MusicControl {
   }
 
   hold(reason: MusicHoldReason, on: boolean): void {
+    if (on !== this.holds.has(reason)) audioLog.add(`music: hold ${reason} ${on ? 'on' : 'off'}`);
     if (on) this.holds.add(reason);
     else this.holds.delete(reason);
     this.safely(() => this.real.hold(reason, on));
@@ -80,6 +87,11 @@ export class MusicProxy implements MusicControl {
 
   resetPeak(): void {
     this.safely(() => this.real.resetPeak());
+  }
+
+  /** Reasons the music is held for now. */
+  heldReasons(): MusicHoldReason[] {
+    return [...this.holds];
   }
 
   /** What the game asked for last (null when stopped or never asked), whether the music is on or not. */

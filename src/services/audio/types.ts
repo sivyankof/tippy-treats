@@ -1,6 +1,7 @@
 import type { Rarity } from '../../data/creatures/rarity';
 import type { BedKind } from '../../data/audio/weather-bed';
 import type { MusicAsk } from '../../data/audio/music';
+import type { AudioStatus } from './audio-status';
 import type { MusicControl, MusicPlayerState } from './music-control';
 import type { DuckReason } from './mixer-math';
 import type { SoundArgs, SoundId } from './sound-args';
@@ -101,6 +102,8 @@ export interface AudioDevControl {
   setLevels(levels: Partial<{ master: number; sfx: number; music: number }>): void;
   /** The music's asked state and the held ducks. */
   musicState(): MusicDebugState;
+  /** Everything the debug menu's sound line shows. */
+  status(): AudioStatus;
   /** Dev-only level correction of one sound in dB, on top of its trim; lives until the page reloads. */
   setSoundTrimDb(id: SoundId, db: number): void;
 }

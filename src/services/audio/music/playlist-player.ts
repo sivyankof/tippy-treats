@@ -9,6 +9,7 @@ import type {
   MusicHost,
   MusicPlayerState,
 } from '../music-control';
+import { audioLog, errorText } from '../audio-log';
 import { MediaPool, type MediaContext } from './media-pool';
 import type { MusicPreload } from './music-preload';
 import { firstIndex, nextIndex, turnLength, turnOffset } from './playlist-turn';
@@ -189,6 +190,7 @@ export class PlaylistPlayer implements MusicControl {
   }
 
   stop(): void {
+    audioLog.add('player: stop');
     this.mode = null;
     this.cancelPending();
     this.clearWatch();
@@ -209,6 +211,7 @@ export class PlaylistPlayer implements MusicControl {
     else this.holds.delete(reason);
     const held = this.holds.size > 0;
     if (held === was) return;
+    audioLog.add(`player: ${held ? 'held' : 'let go'} [${[...this.holds].join(',')}]`);
     for (const deck of this.liveDecks()) deck.hold(held);
     if (held) this.clearWatch();
     else this.watch();
@@ -229,6 +232,7 @@ export class PlaylistPlayer implements MusicControl {
       decodedBytes: this.bytesNow(),
       buffers: this.decodedTracks(),
       peakBytes: this.peak,
+      loading: this.pending !== null,
     };
   }
 
@@ -322,6 +326,7 @@ export class PlaylistPlayer implements MusicControl {
       this.cut(leaving);
     }
     const ticket = ++this.ticket;
+    audioLog.add(`player: ask ${track}${turn ? ' (playlist)' : ''} at ${offsetSec.toFixed(1)} s`);
     this.pending = { track, ticket, turn };
     this.whenFree(ticket, () => this.open(track, ticket, offsetSec, turn, park));
   }
@@ -337,6 +342,7 @@ export class PlaylistPlayer implements MusicControl {
     if (this.seamless(track)) {
       const decoded = this.decoded(track);
       if (!decoded) {
+        audioLog.add(`player: no file for ${track}`);
         this.dropPending(ticket);
         return;
       }
@@ -350,12 +356,16 @@ export class PlaylistPlayer implements MusicControl {
           this.enter(deck, { at: now, turn, park, adopted: false });
         },
         // A missing or broken file leaves the music silent, never the game broken.
-        () => this.dropPending(ticket),
+        (error: unknown) => {
+          audioLog.add(`player: decode of ${track} failed, ${errorText(error)}`);
+          this.dropPending(ticket);
+        },
       );
       return;
     }
     const deck = this.sources.openStream(track, !turn);
     if (!deck) {
+      audioLog.add(`player: no stream for ${track}`);
       this.dropPending(ticket);
       return;
     }
@@ -367,7 +377,8 @@ export class PlaylistPlayer implements MusicControl {
         }
         this.enter(deck, { at: this.host.ctx.currentTime, turn, park, adopted: false });
       },
-      () => {
+      (error: unknown) => {
+        audioLog.add(`player: stream ${track} did not start, ${errorText(error)}`);
         deck.dispose(this.host.ctx.currentTime);
         this.dropPending(ticket);
       },
@@ -422,6 +433,9 @@ export class PlaylistPlayer implements MusicControl {
     deck: Deck,
     { at, turn, park, adopted }: { at: number; turn: boolean; park: boolean; adopted: boolean },
   ): void {
+    audioLog.add(
+      `player: ${deck.track} in at ${at.toFixed(2)} (now ${this.host.ctx.currentTime.toFixed(2)}, ${this.host.ctx.state})`,
+    );
     this.pending = null;
     const leaving = this.leaving;
     if (leaving) {
@@ -580,6 +594,7 @@ export class PlaylistPlayer implements MusicControl {
   private switchAt(at: number): void {
     this.newTurn(nextIndex(this.index, this.sources.playlist.length));
     const track = this.turnTrack();
+    audioLog.add(`player: turn to ${track} at ${at.toFixed(2)}`);
     const ready = this.prefetch?.track === track ? this.prefetch.ready : null;
     if (ready) {
       // Exactly on the boundary: the new deck and both fades are put on the context's clock.

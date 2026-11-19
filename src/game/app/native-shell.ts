@@ -5,6 +5,7 @@ import type { AudioService } from '../../services/audio/types';
 import { handleBack } from './back-stack';
 import { SCENES } from './scene-keys';
 import { followStatusBar } from './status-bar';
+import { audioLog } from '../../services/audio/audio-log';
 
 /** What the shell needs of the state: the save is written at once when the app leaves. */
 interface Flushable {
@@ -32,6 +33,9 @@ export function bindNativeShell(
   if (!shell.native) return;
   let pausedByShell = false;
   shell.onActiveChange((active) => {
+    audioLog.add(
+      `app ${active ? 'active' : 'inactive'}${pausedByShell ? ' (paused by shell)' : ''}`,
+    );
     if (!active) {
       state.flush();
       if (!pausedByShell) {

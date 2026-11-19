@@ -1,6 +1,8 @@
 import type { Rarity } from '../../data/creatures/rarity';
 import type { BedKind } from '../../data/audio/weather-bed';
 import { MS_PER_SECOND } from '../../util/math';
+import { audioLog, errorText } from './audio-log';
+import type { AudioStatus } from './audio-status';
 import { BedPlayer } from './bed';
 import type { DuckReason } from './mixer-math';
 import { Mixer } from './mixer';
@@ -84,6 +86,7 @@ export class WebAudioService implements AudioService, AudioDevControl {
   }
 
   setMusicEnabled(on: boolean): void {
+    audioLog.add(`music switch ${on ? 'on' : 'off'}`);
     this.musicOn = on;
     this.onMusicSwitch(on);
     this.mixer?.setMusicOn(on);
@@ -103,6 +106,29 @@ export class WebAudioService implements AudioService, AudioDevControl {
     return { ...this.musicProxy.state(), asked: this.musicProxy.asked(), ducks: [...this.ducks] };
   }
 
+  status(): AudioStatus {
+    const music = this.musicProxy.state();
+    const session = (globalThis.navigator as { audioSession?: { type?: string } } | undefined)
+      ?.audioSession?.type;
+    return {
+      uptimeSec: audioLog.uptimeSec(),
+      contextState: this.ctx?.state ?? 'none',
+      contextTime: this.ctx ? this.ctx.currentTime : null,
+      musicOn: this.musicOn,
+      sfxOn: this.on,
+      session: session ?? 'none',
+      audioHolds: [...this.holds],
+      musicHolds: this.musicProxy.heldReasons(),
+      asked: this.musicProxy.asked(),
+      track: music.track,
+      playlist: music.playlist,
+      decks: music.decks,
+      loading: music.loading,
+      level: null,
+      restarts: 0,
+    };
+  }
+
   get music(): MusicControl {
     return this.musicProxy;
   }
@@ -119,7 +145,15 @@ export class WebAudioService implements AudioService, AudioDevControl {
       let ctx: AudioContext | null = null;
       try {
         ctx = this.createContext();
-        if (!ctx) return;
+        if (!ctx) {
+          audioLog.add('unlock: no Web Audio');
+          return;
+        }
+        audioLog.add(
+          `unlock: context made, ${ctx.state}, ${ctx.sampleRate} Hz, holds [${[...this.holds].join(',')}]`,
+        );
+        const made = ctx;
+        made.addEventListener?.('statechange', () => audioLog.add(`context ${made.state}`));
         const mixer = new Mixer(ctx);
         const synth = new Synth(ctx, mixer, this.random);
         this.ctx = ctx;
@@ -132,7 +166,8 @@ export class WebAudioService implements AudioService, AudioDevControl {
         mixer.setDevScales(this.devLevels);
         for (const reason of this.ducks) mixer.duckMusic(reason, true);
         this.musicProxy.attach(this.musicFactory(musicHostOf(mixer)));
-      } catch {
+      } catch (error) {
+        audioLog.add(`unlock: graph failed, ${errorText(error)}`);
         // Sound stays off: do not leave a context behind or make another one on the next tap.
         this.buildFailed = true;
         this.ctx = null;
@@ -148,21 +183,25 @@ export class WebAudioService implements AudioService, AudioDevControl {
       }
     }
     if (this.holds.size === 0) {
-      this.run((ctx) => ctx.resume());
+      if (this.ctx?.state !== 'running')
+        audioLog.add(`unlock: resume from ${this.ctx?.state ?? 'none'}`);
+      this.run((ctx) => ctx.resume(), 'resume');
       this.kick();
     }
   }
 
   suspend(reason: AudioSuspendReason): void {
+    audioLog.add(`suspend ${reason}, holds [${[...this.holds, reason].join(',')}]`);
     this.holds.add(reason);
     this.musicProxy.hold('app', true);
-    this.run((ctx) => ctx.suspend());
+    this.run((ctx) => ctx.suspend(), 'suspend');
   }
 
   resume(reason: AudioSuspendReason): void {
     this.holds.delete(reason);
+    audioLog.add(`resume ${reason}, holds [${[...this.holds].join(',')}]`);
     if (this.holds.size > 0) return;
-    this.run((ctx) => ctx.resume());
+    this.run((ctx) => ctx.resume(), 'resume');
     this.musicProxy.hold('app', false);
   }
 
@@ -244,13 +283,15 @@ export class WebAudioService implements AudioService, AudioDevControl {
     }
   }
 
-  /** Runs a context call, ignoring both sync errors and rejected promises. */
-  private run(call: (ctx: AudioContext) => Promise<void>): void {
+  /** Runs a context call; a sync error or a rejected promise is only logged. */
+  private run(call: (ctx: AudioContext) => Promise<void>, what: string): void {
     if (!this.ctx) return;
     try {
-      call(this.ctx).catch(() => undefined);
-    } catch {
-      // Ignore: the context may be closed.
+      call(this.ctx).catch((error: unknown) =>
+        audioLog.add(`${what} rejected: ${errorText(error)}`),
+      );
+    } catch (error) {
+      audioLog.add(`${what} threw: ${errorText(error)}`);
     }
   }
 }

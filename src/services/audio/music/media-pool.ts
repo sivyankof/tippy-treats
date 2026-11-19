@@ -1,3 +1,8 @@
+import { audioLog, errorText } from '../audio-log';
+
+/** Element events worth a line in the sound's log. */
+const LOGGED_EVENTS = ['playing', 'pause', 'ended', 'error', 'stalled', 'waiting'] as const;
+
 /** A media element wired into the audio graph once: element -> source node -> its own gain. */
 export interface PooledMedia {
   readonly el: HTMLMediaElement;
@@ -25,6 +30,13 @@ export class MediaPool {
     for (let i = 0; i < size; i++) {
       const el = make();
       el.preload = 'auto';
+      const index = i;
+      for (const type of LOGGED_EVENTS) {
+        el.addEventListener?.(type, () => {
+          const file = (el.getAttribute('src') ?? '').split('/').pop() ?? '';
+          audioLog.add(`element ${index} ${type} ${file} t=${el.currentTime.toFixed(1)}`);
+        });
+      }
       const source = ctx.createMediaElementSource(el);
       const gain = ctx.createGain();
       gain.gain.value = 0;
@@ -45,7 +57,10 @@ export class MediaPool {
         const pause = (): void => {
           if (!media.busy) media.el.pause();
         };
-        if (started) started.then(pause, () => undefined);
+        if (started)
+          started.then(pause, (error: unknown) =>
+            audioLog.add(`element bless rejected: ${errorText(error)}`),
+          );
         else pause();
       } catch {
         // Blessing is only needed on iOS outside the native shell; the music still plays elsewhere.

@@ -1,6 +1,7 @@
 import * as Phaser from 'phaser';
 import type { AudioService } from '../../services/audio/types';
 import { bindAudioUnlock } from './audio-unlock';
+import { audioLog } from '../../services/audio/audio-log';
 import type { SilentModeService } from '../../services/silent-mode/types';
 
 /**
@@ -14,8 +15,14 @@ export function bindAudioLifecycle(
   silentMode: SilentModeService,
 ): void {
   bindAudioUnlock(audio);
-  game.events.on(Phaser.Core.Events.HIDDEN, () => audio.suspend('app'));
-  game.events.on(Phaser.Core.Events.VISIBLE, () => audio.resume('app'));
+  game.events.on(Phaser.Core.Events.HIDDEN, () => {
+    audioLog.add(`game hidden (page ${document.visibilityState})`);
+    audio.suspend('app');
+  });
+  game.events.on(Phaser.Core.Events.VISIBLE, () => {
+    audioLog.add(`game visible (page ${document.visibilityState})`);
+    audio.resume('app');
+  });
   const follow = (silent: boolean): void =>
     silent ? audio.suspend('silent') : audio.resume('silent');
   if (silentMode.isSilent()) follow(true);

@@ -91,6 +91,9 @@ async function start(): Promise<void> {
       return;
     }
   }
+  if (import.meta.env.VITE_AUDIO_TRACE === '1') {
+    void import('./game/debug/audio-trace').then((trace) => trace.startAudioTrace());
+  }
   // `?perf=1` (any build): an automatic benchmark run, kept out of the save (docs/08-architecture.md, section 9).
   const perf = readPerfParams();
   const perfDirector = perf ? await import('./game/perf/perf-director') : null;

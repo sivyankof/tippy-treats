@@ -1,5 +1,6 @@
 import { MUSIC, type MusicTrack, type MusicTrackId } from '../../../data/audio/music';
 import { MS_PER_SECOND } from '../../../util/math';
+import { audioLog, errorText } from '../audio-log';
 import { releaseOnce, SOURCE_FOREVER_SEC, stopQuietly, type NodeTally } from '../node-tally';
 import type { MediaPool, PooledMedia } from './media-pool';
 import { bufferBytes, fadeParam, trackLoopSec, type LoopBounds } from './tune-loop';
@@ -298,7 +299,12 @@ export class StreamDeck implements Deck {
       }, MUSIC.holdFadeSec * MS_PER_SECOND);
       return;
     }
-    for (const p of this.paused) p.el.play().catch(() => undefined);
+    for (const p of this.paused)
+      p.el
+        .play()
+        .catch((error: unknown) =>
+          audioLog.add(`deck ${this.track}: play after hold rejected, ${errorText(error)}`),
+        );
     this.paused = [];
     hushTo(this.hush, now, 1);
     this.arm();
@@ -376,7 +382,11 @@ export class StreamDeck implements Deck {
     to.el.currentTime = 0;
     fadeParam(to.gain.gain, now, 1, overlap, MUSIC.fadeSteps);
     fadeParam(from.gain.gain, now, 0, overlap, MUSIC.fadeSteps);
-    to.el.play().catch(() => undefined);
+    to.el
+      .play()
+      .catch((error: unknown) =>
+        audioLog.add(`deck ${this.track}: loop play rejected, ${errorText(error)}`),
+      );
     this.clock.setTimeout(() => {
       if (this.disposed || this.players[this.active] === from) return;
       from.el.pause();
