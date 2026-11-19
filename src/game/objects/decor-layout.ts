@@ -1,4 +1,4 @@
-import type { CutSide } from '../../core/drop';
+import type { CutSide } from '../../core/tower/drop';
 import { PLAIN_LAYER, type DecorKind } from '../../data/tower/plain-layers';
 import { GOLDEN } from '../../util/math';
 import { cutStripWidth, glazeCrestY } from './glaze-wave';

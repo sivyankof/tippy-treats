@@ -1,4 +1,4 @@
-import type { TowerState } from '../../core/tower-sim';
+import type { TowerState } from '../../core/tower/tower-sim';
 import type { Stagger } from './tower-guest-plan';
 
 /** What the guest needs to know about the frame. */

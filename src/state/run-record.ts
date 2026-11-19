@@ -1,12 +1,12 @@
 // Run bookkeeping as pure functions over the save: stats, records, XP and level rewards.
-import { withReached } from '../core/checkpoints';
-import { earn, grantCreature } from '../core/economy';
-import type { DailyPayout } from '../core/daily';
-import { bakeLayers } from '../core/oven';
-import { runLayers } from '../core/progression';
-import { recordCreaturesReached } from '../core/record-unlocks';
-import { lapRewardBerries, spaceLap } from '../core/space-laps';
-import type { RunResult } from '../core/run-result';
+import { withReached } from '../core/zones/checkpoints';
+import { earn, grantCreature } from '../core/economy/economy';
+import type { DailyPayout } from '../core/progression/daily';
+import { bakeLayers } from '../core/economy/oven';
+import { runLayers } from '../core/progression/progression';
+import { recordCreaturesReached } from '../core/progression/record-unlocks';
+import { lapRewardBerries, spaceLap } from '../core/zones/space-laps';
+import type { RunResult } from '../core/run/run-result';
 import type { MissionProgress, Save } from '../core/save/schema';
 import type { CreatureId } from '../data/creatures/creatures';
 import { withXp, type LevelUp } from './level-up';

@@ -5,17 +5,17 @@ import type {
   EconomyResult,
   UpgradeError,
   Wallet,
-} from '../core/economy';
-import { doublesLeft, withDoubleUsed } from '../core/double-coins';
-import { exchangeBerries, spend } from '../core/economy';
-import { freshLeft } from '../core/oven';
+} from '../core/economy/economy';
+import { doublesLeft, withDoubleUsed } from '../core/economy/double-coins';
+import { exchangeBerries, spend } from '../core/economy/economy';
+import { freshLeft } from '../core/economy/oven';
 import {
   canShowInterstitial,
   shouldOfferRemoveAds,
   type InterstitialRunFacts,
-} from '../core/video-policy';
-import type { CheckpointHeight, CheckpointMethod, CheckpointRow } from '../core/checkpoints';
-import type { RunResult } from '../core/run-result';
+} from '../core/economy/video-policy';
+import type { CheckpointHeight, CheckpointMethod, CheckpointRow } from '../core/zones/checkpoints';
+import type { RunResult } from '../core/run/run-result';
 import {
   coinCreatureAffordable,
   freeCoinsLeft,
@@ -27,13 +27,13 @@ import {
   withProductGranted,
   withPurchasesRestored,
   withStarterPackShown,
-} from '../core/shop';
+} from '../core/economy/shop';
 import type { ProductKey } from '../data/economy/shop';
-import type { TeamSlot } from '../core/sim-types';
-import { runTeam, type TeamIds } from '../core/team';
+import type { TeamSlot } from '../core/tower/sim-types';
+import { runTeam, type TeamIds } from '../core/creatures/team';
 import type { HintId, Save } from '../core/save/schema';
 import type { CreatureId } from '../data/creatures/creatures';
-import type { CalendarCell, StreakEntry } from '../core/streak';
+import type { CalendarCell, StreakEntry } from '../core/progression/streak';
 import { clockWentBack, localDay, msUntilLocalMidnight, now, utcDay } from '../util/clock';
 import {
   infoOf,

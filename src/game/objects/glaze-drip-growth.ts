@@ -1,5 +1,5 @@
 import type * as Phaser from 'phaser';
-import type { TowerState } from '../../core/tower-sim';
+import type { TowerState } from '../../core/tower/tower-sim';
 import { faceRecipe } from '../../data/creatures/creature-looks';
 import { GLAZE_DRIPS } from '../../data/glaze/glaze-drips';
 import { pickRange } from '../../util/math';

@@ -1,6 +1,6 @@
 import * as Phaser from 'phaser';
-import type { Currency } from '../../core/economy';
-import { addToTeam } from '../../core/team';
+import type { Currency } from '../../core/economy/economy';
+import { addToTeam } from '../../core/creatures/team';
 import { CREATURES } from '../../data/creatures/creatures';
 import { MENU } from '../../data/common/menu-layout';
 import { TRANSFORM } from '../../data/creatures/transform-scene';

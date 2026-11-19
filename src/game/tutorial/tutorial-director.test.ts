@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { PlacedLayer, SimEvent } from '../../core/tower-sim';
+import type { PlacedLayer, SimEvent } from '../../core/tower/tower-sim';
 import { BALANCE } from '../../data/tower/balance';
 import { createTestState } from '../../state/test-state';
 import type { GameState } from '../../state/game-state';

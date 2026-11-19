@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { createDefaultSave } from '../core/save/defaults';
-import type { RunResult } from '../core/run-result';
-import { dailySeed } from '../core/daily';
+import type { RunResult } from '../core/run/run-result';
+import { dailySeed } from '../core/progression/daily';
 import { MS_PER_DAY } from '../data/app/clock';
 import { DAILY } from '../data/progression/daily';
 import { GIFT } from '../data/economy/gift';

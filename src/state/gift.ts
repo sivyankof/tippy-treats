@@ -1,6 +1,6 @@
 // The free gift box as pure functions over the save.
-import { earn } from '../core/economy';
-import { giftReady, msUntilGift, openGift } from '../core/gift';
+import { earn } from '../core/economy/economy';
+import { giftReady, msUntilGift, openGift } from '../core/economy/gift';
 import type { Save } from '../core/save/schema';
 
 export function isGiftReady(save: Save, nowMs: number, clockBack: boolean): boolean {

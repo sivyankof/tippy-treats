@@ -1,4 +1,4 @@
-import { checkpointBerryPrice, checkpointHasAd } from '../src/core/checkpoints';
+import { checkpointBerryPrice, checkpointHasAd } from '../src/core/zones/checkpoints';
 import { CHECKPOINT_HEIGHTS, CHECKPOINT_START_WIDTH } from '../src/data/zones/checkpoints';
 import { BERRY_PACKS } from '../src/data/economy/economy';
 import { NO_TEAM, type SimTeamSet } from '../src/data/debug/sim-teams';

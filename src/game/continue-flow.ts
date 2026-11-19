@@ -1,5 +1,5 @@
-import { continueOffer, type ContinueOffer } from '../core/continue-offer';
-import type { RunMode } from '../core/run-result';
+import { continueOffer, type ContinueOffer } from '../core/run/continue-offer';
+import type { RunMode } from '../core/run/run-result';
 import { BALANCE } from '../data/tower/balance';
 import { CONTINUE_ANIM } from '../data/run/continue-anim';
 import { continueInput } from './continue-input';

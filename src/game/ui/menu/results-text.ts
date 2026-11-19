@@ -1,7 +1,7 @@
-import type { Cost, Currency } from '../../../core/economy';
-import type { NearMiss } from '../../../core/near-miss';
-import type { RunTally } from '../../../core/run-tally';
-import type { CoinSource } from '../../../core/sim-types';
+import type { Cost, Currency } from '../../../core/economy/economy';
+import type { NearMiss } from '../../../core/run/near-miss';
+import type { RunTally } from '../../../core/run/run-tally';
+import type { CoinSource } from '../../../core/tower/sim-types';
 import { CREATURES, type CreatureId } from '../../../data/creatures/creatures';
 import { formatNumber, t, tn } from '../../../i18n';
 import type { LevelUp, RunSummary } from '../../../state/game-state';

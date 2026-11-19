@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { Rng } from '../../core/rng';
+import { Rng } from '../../core/common/rng';
 import type { Range } from '../../data/backdrop/backdrop-life';
 import { TOWER_GUEST, TOWER_GUESTS } from '../../data/guests/tower-guest';
 import { easeInQuad as easeIn, easeOutQuad as easeOut, pickRange } from '../../util/math';

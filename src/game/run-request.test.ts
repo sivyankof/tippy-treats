@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { DEMO } from '../data/run/demo';
-import { nextCreature } from '../core/team-queue';
+import { nextCreature } from '../core/creatures/team-queue';
 import { CLASSIC_RUN, checkpointRun, demoFinished, demoTeam } from './run-request';
 
 describe('creature demo', () => {

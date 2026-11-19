@@ -1,8 +1,8 @@
 // Every reward of the game is paid once: level-ups, the ad double of the results, the streak
 // calendar, missions, the chest, the gift, the shop and the day change.
 import { describe, expect, it } from 'vitest';
-import type { RunResult } from '../core/run-result';
-import { xpToNext } from '../core/progression';
+import type { RunResult } from '../core/run/run-result';
+import { xpToNext } from '../core/progression/progression';
 import { MS_PER_DAY } from '../data/app/clock';
 import { BERRY_PACKS } from '../data/economy/economy';
 import { GIFT } from '../data/economy/gift';

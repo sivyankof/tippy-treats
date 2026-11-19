@@ -1,4 +1,4 @@
-import { Rng } from '../../core/rng';
+import { Rng } from '../../core/common/rng';
 import { BALANCE } from '../../data/tower/balance';
 import type { CreatureId } from '../../data/creatures/creatures';
 import { GLAZE_DRIPS } from '../../data/glaze/glaze-drips';

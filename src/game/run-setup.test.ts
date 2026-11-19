@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { checkpointStartWidth } from '../core/checkpoints';
+import { checkpointStartWidth } from '../core/zones/checkpoints';
 import { DEMO } from '../data/run/demo';
 import { createTestState } from '../state/test-state';
 import { checkpointRun, CLASSIC_RUN, DAILY_RUN, demoRun } from './run-request';

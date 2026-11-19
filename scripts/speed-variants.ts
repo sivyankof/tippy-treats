@@ -1,5 +1,5 @@
-import type { SpeedScaleContext } from '../src/core/sim-types';
-import { zoneStartIndex } from '../src/core/zones';
+import type { SpeedScaleContext } from '../src/core/tower/sim-types';
+import { zoneStartIndex } from '../src/core/zones/zones';
 import { BALANCE, DIFFICULTY, type DifficultyTarget } from '../src/data/tower/balance';
 import { SAVE_DEFAULTS } from '../src/data/app/save-defaults';
 import { NO_TEAM, type SimTeamSet } from '../src/data/debug/sim-teams';
@@ -16,7 +16,7 @@ import {
 
 /**
  * `npm run sim:speed-variants`: what changes in height, coins and XP if the speed pacing is
- * tuned. The variants use the analysis hook `RunConfig.speedScale` (core/tower-sim.ts); no data
+ * tuned. The variants use the analysis hook `RunConfig.speedScale` (core/tower/tower-sim.ts); no data
  * value is edited. Every cell plays the same seeds and bot noise, so variants are compared on
  * equal runs. XP is the height of the run.
  */

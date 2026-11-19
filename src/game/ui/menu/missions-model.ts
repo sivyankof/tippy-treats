@@ -1,4 +1,4 @@
-import { isComplete } from '../../../core/missions';
+import { isComplete } from '../../../core/progression/missions';
 import type { MissionProgress } from '../../../core/save/schema';
 
 /** What a mission card offers right now. */

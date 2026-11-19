@@ -1,12 +1,12 @@
-import { abilityValues } from '../../../core/ability-values';
-import { unlockHint, unlockHints, type UnlockHint } from '../../../core/collection';
+import { abilityValues } from '../../../core/creatures/ability-values';
+import { unlockHint, unlockHints, type UnlockHint } from '../../../core/progression/collection';
 import {
   creaturePrice,
   upgradeCost,
   upgradeGate,
   upgradeLocked,
   type PriceOption,
-} from '../../../core/economy';
+} from '../../../core/economy/economy';
 import { CREATURES, MAX_CREATURE_LEVEL, type CreatureId } from '../../../data/creatures/creatures';
 import { formatDecimal, t } from '../../../i18n';
 

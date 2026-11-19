@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { RunResult } from '../core/run-result';
+import type { RunResult } from '../core/run/run-result';
 import { createDefaultSave } from '../core/save/defaults';
 import { LAP_REWARD } from '../data/zones/zones';
 import { loadTestState } from './test-state';

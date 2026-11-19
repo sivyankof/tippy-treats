@@ -1,4 +1,4 @@
-import { Rng } from '../../core/rng';
+import { Rng } from '../../core/common/rng';
 import type { LayerColors } from '../../data/common/palette';
 import {
   DECOR_KINDS,

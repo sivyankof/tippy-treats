@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { RunResult } from '../core/run-result';
+import type { RunResult } from '../core/run/run-result';
 import type { Save } from '../core/save/schema';
 import type { GameState } from './game-state';
 import { createDefaultSave } from '../core/save/defaults';

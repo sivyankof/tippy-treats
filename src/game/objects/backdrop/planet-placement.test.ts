@@ -8,7 +8,7 @@ import {
   type SpacePlanetId,
 } from '../../../data/zones/space-planets';
 import { BALANCE } from '../../../data/tower/balance';
-import { lapFirstIndex, lapProgress, spaceWidthLimit } from '../../../core/space-laps';
+import { lapFirstIndex, lapProgress, spaceWidthLimit } from '../../../core/zones/space-laps';
 import { flightClearBand } from '../../camera-layout';
 import { planetSize } from './dessert-planets';
 import {

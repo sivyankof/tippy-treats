@@ -1,5 +1,5 @@
 import type * as Phaser from 'phaser';
-import type { DailyPayout } from '../../../core/daily';
+import type { DailyPayout } from '../../../core/progression/daily';
 import { MENU } from '../../../data/common/menu-layout';
 import { formatNumber, t, tn } from '../../../i18n';
 import { createOutlinedText } from '../outlined-text';

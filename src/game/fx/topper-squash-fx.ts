@@ -1,6 +1,6 @@
 import * as Phaser from 'phaser';
-import type { TowerState } from '../../core/tower-sim';
-import { Rng } from '../../core/rng';
+import type { TowerState } from '../../core/tower/tower-sim';
+import { Rng } from '../../core/common/rng';
 import { PLAIN_TOPPERS, type TopperKind } from '../../data/toppers/plain-toppers';
 import {
   crushedLifeMs,
@@ -14,7 +14,7 @@ import { overlayColor } from '../../util/color';
 import { clamp01, lerp } from '../../util/math';
 import { DEPTH } from '../depth';
 import { effectsMode } from '../effects-mode';
-import type { CutSide } from '../../core/drop';
+import type { CutSide } from '../../core/tower/drop';
 import { plainDripColumns } from '../objects/glaze-drip-layer';
 import { glazeWave } from '../objects/glaze-wave';
 import { artWidth } from '../objects/layer-art';

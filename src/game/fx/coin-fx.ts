@@ -1,5 +1,5 @@
 import type * as Phaser from 'phaser';
-import type { SimEvent, TowerState } from '../../core/tower-sim';
+import type { SimEvent, TowerState } from '../../core/tower/tower-sim';
 import { BALANCE } from '../../data/tower/balance';
 import { FloatingCoin } from '../objects/floating-coin';
 import type { TowerView } from '../objects/tower-view';

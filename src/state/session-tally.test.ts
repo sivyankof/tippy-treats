@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import type { RunResult } from '../core/run-result';
-import { xpToNext } from '../core/progression';
+import type { RunResult } from '../core/run/run-result';
+import { xpToNext } from '../core/progression/progression';
 import { MS_PER_DAY } from '../data/app/clock';
 import { createDefaultSave } from '../core/save/defaults';
 import { DAILY } from '../data/progression/daily';

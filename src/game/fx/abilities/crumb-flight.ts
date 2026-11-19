@@ -1,5 +1,5 @@
-import { overhangSide } from '../../../core/drop';
-import type { SimEvent, TowerState } from '../../../core/tower-sim';
+import { overhangSide } from '../../../core/tower/drop';
+import type { SimEvent, TowerState } from '../../../core/tower/tower-sim';
 import { ABILITY_ANIM } from '../../../data/creatures/ability-anim';
 import { DEPTH } from '../../depth';
 import { effectsMode } from '../../effects-mode';

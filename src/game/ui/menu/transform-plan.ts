@@ -1,4 +1,4 @@
-import { upgradePreview } from '../../../core/mastery';
+import { upgradePreview } from '../../../core/creatures/mastery';
 import type { CreatureId } from '../../../data/creatures/creatures';
 import { TRANSFORM } from '../../../data/creatures/transform-scene';
 import { clamp01 } from '../../../util/math';

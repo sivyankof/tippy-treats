@@ -1,5 +1,5 @@
 import type * as Phaser from 'phaser';
-import type { TeamSlot } from '../../../core/sim-types';
+import type { TeamSlot } from '../../../core/tower/sim-types';
 import { CREATURES, type CreatureId } from '../../../data/creatures/creatures';
 import { MENU } from '../../../data/common/menu-layout';
 import { PALETTE } from '../../../data/common/palette';

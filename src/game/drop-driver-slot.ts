@@ -1,6 +1,6 @@
-import { TimingBot } from '../core/bot';
-import { Rng } from '../core/rng';
-import type { SimEvent, TowerSim } from '../core/tower-sim';
+import { TimingBot } from '../core/tower/bot';
+import { Rng } from '../core/common/rng';
+import type { SimEvent, TowerSim } from '../core/tower/tower-sim';
 import type { DropDriver } from './perf/perf-drivers';
 
 /** Who taps for the player in the current run: the benchmark's driver, the dev bot or nobody. The dev hooks swap it for a moment. */

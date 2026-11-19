@@ -1,4 +1,4 @@
-import type { UnlockHint } from '../../../core/collection';
+import type { UnlockHint } from '../../../core/progression/collection';
 import { t } from '../../../i18n';
 
 /**

@@ -1,5 +1,5 @@
-import type { CutSide } from '../../core/drop';
-import type { PlacedLayer } from '../../core/sim-types';
+import type { CutSide } from '../../core/tower/drop';
+import type { PlacedLayer } from '../../core/tower/sim-types';
 
 /** One placed layer as the share picture needs it. */
 export type SnapshotLayer = Pick<PlacedLayer, 'kind' | 'creature' | 'level' | 'x' | 'width'>;

@@ -1,5 +1,5 @@
-import type { CheckpointHeight } from '../core/checkpoints';
-import type { TeamSlot } from '../core/sim-types';
+import type { CheckpointHeight } from '../core/zones/checkpoints';
+import type { TeamSlot } from '../core/tower/sim-types';
 import { BALANCE } from '../data/tower/balance';
 import type { CreatureId } from '../data/creatures/creatures';
 import { DEMO } from '../data/run/demo';

@@ -1,5 +1,5 @@
 import type * as Phaser from 'phaser';
-import type { Cost } from '../../../core/economy';
+import type { Cost } from '../../../core/economy/economy';
 import { STREAK, type StreakReward } from '../../../data/progression/streak';
 import { MENU } from '../../../data/common/menu-layout';
 import { PALETTE } from '../../../data/common/palette';

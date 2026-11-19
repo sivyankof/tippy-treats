@@ -1,5 +1,5 @@
 import type * as Phaser from 'phaser';
-import type { ContinueOffer } from '../../core/continue-offer';
+import type { ContinueOffer } from '../../core/run/continue-offer';
 import { CONTINUE_ANIM } from '../../data/run/continue-anim';
 import { PALETTE } from '../../data/common/palette';
 import { t } from '../../i18n';

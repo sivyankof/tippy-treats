@@ -1,4 +1,4 @@
-import type { TowerState } from '../../core/tower-sim';
+import type { TowerState } from '../../core/tower/tower-sim';
 import { CONTINUE_ANIM } from '../../data/run/continue-anim';
 import { LOGICAL_SIZE } from '../../data/app/screen';
 

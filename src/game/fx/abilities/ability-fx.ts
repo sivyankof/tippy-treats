@@ -1,5 +1,5 @@
 import type { Modifiers } from '../../../core/abilities/types';
-import type { SimEvent, TowerState } from '../../../core/tower-sim';
+import type { SimEvent, TowerState } from '../../../core/tower/tower-sim';
 import { ABILITY_ANIM } from '../../../data/creatures/ability-anim';
 import { CREATURES } from '../../../data/creatures/creatures';
 import { RARITY_COLORS } from '../../../data/creatures/rarity';

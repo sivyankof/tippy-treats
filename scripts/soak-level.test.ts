@@ -30,7 +30,7 @@ describe('pickSoakLevel', () => {
       'src/game/ui/panel-textures.ts',
       'src/state/game-state.ts',
       'src/services/storage/local.ts',
-      'src/core/tower-sim.ts',
+      'src/core/tower/tower-sim.ts',
       'src/game/fx-guard.ts',
     ];
     for (const file of deep) {
@@ -42,6 +42,6 @@ describe('pickSoakLevel', () => {
   });
 
   it('does not count tests under core as game code', () => {
-    expect(pickSoakLevel(['src/core/tower-sim.test.ts']).level).toBe('none');
+    expect(pickSoakLevel(['src/core/tower/tower-sim.test.ts']).level).toBe('none');
   });
 });

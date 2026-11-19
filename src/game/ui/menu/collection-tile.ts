@@ -1,5 +1,5 @@
 import * as Phaser from 'phaser';
-import { isMaster } from '../../../core/mastery';
+import { isMaster } from '../../../core/creatures/mastery';
 import { MENU } from '../../../data/common/menu-layout';
 import { attachPressFeedback, type PressFeedback } from '../../ui/button';
 import { bakeMasteryFrame } from '../mastery-frame';

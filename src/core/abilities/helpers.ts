@@ -1,5 +1,5 @@
 import { BALANCE } from '../../data/tower/balance';
-import { gainCoins } from '../run-coins';
+import { gainCoins } from '../economy/run-coins';
 import type { AbilityContext, AbilityPayload, CreatureId, HookContext } from './types';
 
 /** Duration-only effects (ghost, rainbow) carry no strength value. */

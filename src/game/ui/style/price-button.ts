@@ -1,5 +1,5 @@
 import type * as Phaser from 'phaser';
-import type { Currency } from '../../../core/economy';
+import type { Currency } from '../../../core/economy/economy';
 import { MENU } from '../../../data/common/menu-layout';
 import { t } from '../../../i18n';
 import { createLabelButton, type Button, type LabelButtonLayout } from '../button';

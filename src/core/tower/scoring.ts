@@ -1,0 +1,31 @@
+import { BALANCE } from '../../data/tower/balance';
+
+/** Combo counter after a landed drop. */
+export function nextCombo(combo: number, perfect: boolean): number {
+  return perfect ? combo + 1 : 0;
+}
+
+/** How much a layer of this width can still grow: `amount`, capped at `cap` (the maximum width). */
+export function cappedWidening(width: number, amount: number, cap: number): number {
+  return Math.min(amount, Math.max(0, cap - width));
+}
+
+/**
+ * How much a perfect drop widens the layer at the given combo
+ * (the combo value already includes this drop).
+ */
+export function comboWidening(combo: number, width: number, cap: number): number {
+  if (combo < BALANCE.combo.widenFrom) return 0;
+  return cappedWidening(width, BALANCE.combo.widenBy, cap);
+}
+
+export function normalScore(scoreMult: number): number {
+  return Math.round(BALANCE.score.normal * scoreMult);
+}
+
+/** Score for a perfect drop; `combo` already includes this drop. */
+export function perfectScore(combo: number, scoreMult: number): number {
+  const { perfectBase, perfectPerCombo } = BALANCE.score;
+  const steps = Math.min(combo, BALANCE.combo.scoreCap);
+  return Math.round((perfectBase + perfectPerCombo * steps) * scoreMult);
+}

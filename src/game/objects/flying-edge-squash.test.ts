@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from 'vitest';
-import type { FlyingLayer } from '../../core/sim-types';
+import type { FlyingLayer } from '../../core/tower/sim-types';
 import { BALANCE } from '../../data/tower/balance';
 import type { CreatureId } from '../../data/creatures/creatures';
 import { EDGE_SQUASH } from '../../data/tower/edge-squash';

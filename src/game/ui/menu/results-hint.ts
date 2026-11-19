@@ -1,5 +1,5 @@
 import type * as Phaser from 'phaser';
-import { nearMiss } from '../../../core/near-miss';
+import { nearMiss } from '../../../core/run/near-miss';
 import { MENU } from '../../../data/common/menu-layout';
 import { PALETTE } from '../../../data/common/palette';
 import { gameState } from '../../../state';

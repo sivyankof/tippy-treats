@@ -1,5 +1,5 @@
 import type * as Phaser from 'phaser';
-import type { CutSide } from '../../core/drop';
+import type { CutSide } from '../../core/tower/drop';
 import type { CreatureId } from '../../data/creatures/creatures';
 import type { CreatureStage } from '../../data/creatures/mastery-look';
 import { acquireLayerArt, artAlpha, artOriginY, releaseLayerArt } from './layer-art';

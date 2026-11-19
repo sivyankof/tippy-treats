@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { Rng } from '../../core/rng';
+import { Rng } from '../../core/common/rng';
 import {
   DECOR_KINDS,
   PATTERN_KINDS,

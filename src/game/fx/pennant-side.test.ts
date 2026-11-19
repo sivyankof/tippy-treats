@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { PlacedLayer } from '../../core/sim-types';
+import type { PlacedLayer } from '../../core/tower/sim-types';
 import { CONTINUE_ANIM } from '../../data/run/continue-anim';
 import { LOGICAL_SIZE } from '../../data/app/screen';
 import { freeRoom, pennantSide } from './pennant-side';

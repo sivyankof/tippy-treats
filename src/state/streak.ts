@@ -1,5 +1,5 @@
 // The daily streak and its calendar as pure functions over the save.
-import { earn, grantCreature, spend, type Cost } from '../core/economy';
+import { earn, grantCreature, spend, type Cost } from '../core/economy/economy';
 import type { Save } from '../core/save/schema';
 import {
   calendarCells,
@@ -10,7 +10,7 @@ import {
   streakEntry,
   type CalendarCell,
   type StreakEntry,
-} from '../core/streak';
+} from '../core/progression/streak';
 import { STREAK, type StreakReward } from '../data/progression/streak';
 
 /** A claimed calendar reward. */

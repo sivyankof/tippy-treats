@@ -5,7 +5,7 @@ import { TREASURE } from '../../../data/economy/treasure-anim';
 import { gameState } from '../../../state';
 import { TREASURE_TEXTURES } from '../../fx/treasure-textures';
 import type { Button } from '../button';
-import type { Currency } from '../../../core/economy';
+import type { Currency } from '../../../core/economy/economy';
 import { shakeX } from '../shake-x';
 import { TitleRibbon } from '../style/title-ribbon';
 import { VolumePlate } from '../style/volume';

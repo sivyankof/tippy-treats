@@ -1,5 +1,5 @@
 import * as Phaser from 'phaser';
-import type { CutSide } from '../../core/drop';
+import type { CutSide } from '../../core/tower/drop';
 import { BALANCE } from '../../data/tower/balance';
 import { CREATURE_IDS, type CreatureId } from '../../data/creatures/creatures';
 import { LINEUP } from '../../data/debug/lineup';

@@ -1,6 +1,6 @@
 import * as Phaser from 'phaser';
-import { unlockHint, unlockHints, type UnlockHint } from '../../../core/collection';
-import { hasNewLook } from '../../../core/mastery';
+import { unlockHint, unlockHints, type UnlockHint } from '../../../core/progression/collection';
+import { hasNewLook } from '../../../core/creatures/mastery';
 import { CREATURES, type CreatureId } from '../../../data/creatures/creatures';
 import { MENU } from '../../../data/common/menu-layout';
 import { PALETTE } from '../../../data/common/palette';

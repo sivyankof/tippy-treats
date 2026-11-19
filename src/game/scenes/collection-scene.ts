@@ -1,5 +1,5 @@
 import * as Phaser from 'phaser';
-import { collectionCount } from '../../core/collection';
+import { collectionCount } from '../../core/progression/collection';
 import { CREATURE_IDS } from '../../data/creatures/creatures';
 import { MENU } from '../../data/common/menu-layout';
 import { formatNumber, t } from '../../i18n';

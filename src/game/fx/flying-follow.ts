@@ -1,4 +1,4 @@
-import type { TowerState } from '../../core/tower-sim';
+import type { TowerState } from '../../core/tower/tower-sim';
 import type { FlyingMemo } from './run-fx';
 
 /** Remembers the flying layer before each sim step, in one reused object. */

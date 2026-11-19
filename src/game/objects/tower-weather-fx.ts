@@ -1,4 +1,4 @@
-import { Rng } from '../../core/rng';
+import { Rng } from '../../core/common/rng';
 import type { EffectLevel } from '../../data/app/effect-levels';
 import { TOWER_WEATHER } from '../../data/weather/tower-weather';
 import { playFx } from '../fx-sound';

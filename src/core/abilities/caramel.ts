@@ -1,7 +1,7 @@
 import { BALANCE } from '../../data/tower/balance';
 import { abilityDef, levelValue } from '../../data/creatures/creatures';
 import { MASTERY } from '../../data/creatures/mastery';
-import { isMaster } from '../mastery';
+import { isMaster } from '../creatures/mastery';
 import { boostCount, payMastery, startEffect } from './helpers';
 import type { Ability } from './types';
 

@@ -1,4 +1,4 @@
-import { Rng } from '../../core/rng';
+import { Rng } from '../../core/common/rng';
 import { CUT_LOOK, type CutVariantName } from '../../data/cuts/cut-look';
 import type { EffectLevel } from '../../data/app/effect-levels';
 

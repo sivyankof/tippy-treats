@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { roofFactor } from '../../core/flight';
+import { roofFactor } from '../../core/tower/flight';
 import { BALANCE } from '../../data/tower/balance';
 import { ZONE_RULES } from '../../data/zones/zones';
 import { idleVisual, isCovered, ruleVisual, windStrength, type RuleFields } from './rule-state';

@@ -1,5 +1,5 @@
 import type { ActiveEffect, Modifiers } from '../../../core/abilities/types';
-import type { TowerState } from '../../../core/tower-sim';
+import type { TowerState } from '../../../core/tower/tower-sim';
 import { ABILITY_ANIM } from '../../../data/creatures/ability-anim';
 import { HUD_LAYOUT } from '../../../data/run/hud-layout';
 import { effectsMode } from '../../effects-mode';

@@ -1,5 +1,5 @@
 import type * as Phaser from 'phaser';
-import { starterPackContents } from '../../../core/shop';
+import { starterPackContents } from '../../../core/economy/shop';
 import { ANIM } from '../../../data/common/anim';
 import type { CreatureId } from '../../../data/creatures/creatures';
 import { MENU } from '../../../data/common/menu-layout';

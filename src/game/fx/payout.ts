@@ -1,4 +1,4 @@
-import type { SimEvent } from '../../core/tower-sim';
+import type { SimEvent } from '../../core/tower/tower-sim';
 
 /** What the events of one sim step pay out, as the screen needs it. */
 export interface Payout {

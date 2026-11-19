@@ -1,5 +1,5 @@
-import { lapFirstIndex, flyingLap } from '../../../core/space-laps';
-import { zoneStartIndex } from '../../../core/zones';
+import { lapFirstIndex, flyingLap } from '../../../core/zones/space-laps';
+import { zoneStartIndex } from '../../../core/zones/zones';
 import { ZONES } from '../../../data/zones/zones';
 
 /** What the backdrop gets ready ahead of the change: the next zone, or in Space the next lap's planet. */

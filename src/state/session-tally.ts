@@ -1,6 +1,6 @@
 // Dev-only tally of what the player was paid in this page load, by source (debug panel).
 // It lives in memory next to the save and never touches it.
-import type { CoinSource } from '../core/sim-types';
+import type { CoinSource } from '../core/tower/sim-types';
 
 /** Where a credit came from. Run coin sources are the ones of the run tally. */
 export type CreditSource =

@@ -1,5 +1,5 @@
 import * as Phaser from 'phaser';
-import type { Currency } from '../../../core/economy';
+import type { Currency } from '../../../core/economy/economy';
 import { PALETTE } from '../../../data/common/palette';
 import { formatNumber } from '../../../i18n';
 import { TREASURE_TEXTURES, createTreasureTextures } from '../../fx/treasure-textures';

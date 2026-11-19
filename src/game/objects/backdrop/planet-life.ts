@@ -6,8 +6,8 @@ import {
   planetKey,
   type SpacePlanetId,
 } from '../../../data/zones/space-planets';
-import { lapProgress } from '../../../core/space-laps';
-import { planetPassOf } from '../../../core/space-planet';
+import { lapProgress } from '../../../core/zones/space-laps';
+import { planetPassOf } from '../../../core/zones/space-planet';
 import { effectsMode } from '../../effects-mode';
 import type { FrameCtx, Life } from './life';
 import { inSky } from './layer-anchor';

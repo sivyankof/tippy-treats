@@ -1,5 +1,5 @@
 import type * as Phaser from 'phaser';
-import type { SimEvent, TowerState } from '../../core/tower-sim';
+import type { SimEvent, TowerState } from '../../core/tower/tower-sim';
 import type { WeatherId } from '../../data/weather/weather';
 import { RULE_ANIM } from '../../data/zones/rule-anim';
 import { LOGICAL_SIZE } from '../../data/app/screen';
@@ -8,7 +8,7 @@ import { clamp01 } from '../../util/math';
 import { effectsMode } from '../effects-mode';
 import type { FlyingLayerView } from '../objects/flying-layer-view';
 import { cloudEtaMs, CloudCover, layerHidden, type CloudInput } from './cloud-cover';
-import { flyingSpeed } from '../../core/flight';
+import { flyingSpeed } from '../../core/tower/flight';
 import { hopHeight, type Point } from './coin-flight-math';
 import { FLYING_FX_DEPTH } from './flying-fx-depth';
 import { FX_TEXTURES } from './fx-textures';

@@ -1,4 +1,4 @@
-import type { Rng } from '../../core/rng';
+import type { Rng } from '../../core/common/rng';
 import type { EffectLevel } from '../../data/app/effect-levels';
 import { BALANCE } from '../../data/tower/balance';
 import { CUT_PICTURE, CUT_TEXTURES } from '../../data/cuts/cut-look';

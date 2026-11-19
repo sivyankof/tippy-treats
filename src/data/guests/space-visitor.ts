@@ -39,7 +39,7 @@ export interface VisitorSpec {
 export const SPACE_VISITOR = {
   /** Thickness of the warm outline of every part, in picture px (the layers' share of their height, kept thick at this size). */
   outlinePx: 9,
-  /** Chance that a lap of Space gets a guest (docs/06; decided per lap from the run's seed, `core/space-visitor-pick.ts`). */
+  /** Chance that a lap of Space gets a guest (docs/06; decided per lap from the run's seed, `core/guests/space-visitor-pick.ts`). */
   chancePerLap: 0.5,
   /** Wait after the lap begins before the pass starts. */
   delayMs: [6000, 26000],

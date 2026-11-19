@@ -1,5 +1,5 @@
 // The missions of the day as pure functions over the save.
-import { earn } from '../core/economy';
+import { earn } from '../core/economy/economy';
 import {
   applyRunStats,
   claimChest,
@@ -8,7 +8,7 @@ import {
   missionsForDay,
   rerollMission,
   type RunStats,
-} from '../core/missions';
+} from '../core/progression/missions';
 import type { Save } from '../core/save/schema';
 import { withXp, type LevelUp } from './level-up';
 

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { SimEvent } from '../../core/tower-sim';
+import type { SimEvent } from '../../core/tower/tower-sim';
 import { MASTER_ANIM } from '../../data/creatures/master-anim';
 import {
   captionLook,

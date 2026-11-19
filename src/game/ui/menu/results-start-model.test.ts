@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { checkpointRows, type CheckpointHeight } from '../../../core/checkpoints';
+import { checkpointRows, type CheckpointHeight } from '../../../core/zones/checkpoints';
 import {
   adGreyAfter,
   resultsStartPlan,

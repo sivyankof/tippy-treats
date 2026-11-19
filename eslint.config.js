@@ -58,7 +58,7 @@ export default tseslint.config(
         {
           object: 'Math',
           property: 'random',
-          message: 'Use the seeded generator from core/rng.ts.',
+          message: 'Use the seeded generator from core/common/rng.ts.',
         },
       ],
     },

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { Rng } from '../../core/rng';
+import { Rng } from '../../core/common/rng';
 import { BALANCE } from '../../data/tower/balance';
 import { EFFECT_LEVELS } from '../../data/app/effect-levels';
 import { SQUASH_PICTURES, SQUASH_TEXTURES, TOPPER_SQUASH } from '../../data/toppers/topper-squash';

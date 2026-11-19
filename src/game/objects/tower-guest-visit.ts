@@ -1,5 +1,5 @@
-import type { Rng } from '../../core/rng';
-import type { TowerState } from '../../core/tower-sim';
+import type { Rng } from '../../core/common/rng';
+import type { TowerState } from '../../core/tower/tower-sim';
 import type { Range } from '../../data/backdrop/backdrop-life';
 import { BALANCE } from '../../data/tower/balance';
 import { TOWER_GUEST, type GuestLook } from '../../data/guests/tower-guest';

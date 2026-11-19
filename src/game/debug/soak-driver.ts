@@ -1,5 +1,5 @@
 import * as Phaser from 'phaser';
-import { CHECKPOINT_HEIGHTS } from '../../core/checkpoints';
+import { CHECKPOINT_HEIGHTS } from '../../core/zones/checkpoints';
 import { CREATURE_IDS } from '../../data/creatures/creatures';
 import { SOAK } from '../../data/debug/soak';
 import { services } from '../../services';

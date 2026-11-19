@@ -1,6 +1,6 @@
 import type * as Phaser from 'phaser';
 import type { AbilityPayload } from '../../../core/abilities/types';
-import type { TowerState } from '../../../core/tower-sim';
+import type { TowerState } from '../../../core/tower/tower-sim';
 import type { CreatureId } from '../../../data/creatures/creatures';
 import { ANIM } from '../../../data/common/anim';
 import type { LayerPose, TowerView } from '../../objects/tower-view';

@@ -15,7 +15,7 @@ import {
   type Migration,
 } from './migrations';
 import { MAX_BAKER_LEVEL } from '../../data/progression/progression';
-import { xpToNext } from '../progression';
+import { xpToNext } from '../progression/progression';
 import { legacyXpToNext, V5_RECORD_UNLOCKS, v5XpToNext } from './frozen-v5';
 import { V7_CHECKPOINT_HEIGHTS, v7CheckpointsReached } from './frozen-v7';
 import { V8_LAP_LENGTH, V8_SPACE_FIRST_LAYER, v8LapReached } from './frozen-v8';

@@ -1,4 +1,4 @@
-import type { SimEvent, TowerState } from '../../core/tower-sim';
+import type { SimEvent, TowerState } from '../../core/tower/tower-sim';
 import { CREATURES } from '../../data/creatures/creatures';
 import type { Rarity } from '../../data/creatures/rarity';
 import type { HapticKind } from '../../services/haptics/types';

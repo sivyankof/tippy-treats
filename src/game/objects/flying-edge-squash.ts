@@ -1,4 +1,4 @@
-import type { FlyingLayer } from '../../core/tower-sim';
+import type { FlyingLayer } from '../../core/tower/tower-sim';
 import {
   creatureMaterial,
   type CreatureMaterial,

@@ -1,9 +1,9 @@
 // What a finished run adds beyond XP and records: streak day, mission progress and daily tiers.
-import { dailyTowerChanged, type DailyPayout } from '../core/daily';
-import { runLayers } from '../core/progression';
-import type { RunStats } from '../core/missions';
-import type { CoinSource } from '../core/sim-types';
-import type { RunResult } from '../core/run-result';
+import { dailyTowerChanged, type DailyPayout } from '../core/progression/daily';
+import { runLayers } from '../core/progression/progression';
+import type { RunStats } from '../core/progression/missions';
+import type { CoinSource } from '../core/tower/sim-types';
+import type { RunResult } from '../core/run/run-result';
 import type { MissionProgress, Save } from '../core/save/schema';
 import { withDailyRun } from './daily';
 import { withMissionStats } from './missions';

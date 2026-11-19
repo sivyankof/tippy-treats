@@ -1,5 +1,5 @@
 import type * as Phaser from 'phaser';
-import { checkpointRows } from '../../core/checkpoints';
+import { checkpointRows } from '../../core/zones/checkpoints';
 import { openCheckpointWindow, type CheckpointWindow } from '../ui/menu/checkpoint-window';
 
 /** How long the sample start "takes", so the locked buttons can be seen. */

@@ -1,6 +1,6 @@
-import { TimingBot } from '../../core/bot';
-import { Rng } from '../../core/rng';
-import type { SimEvent, TowerSim } from '../../core/tower-sim';
+import { TimingBot } from '../../core/tower/bot';
+import { Rng } from '../../core/common/rng';
+import type { SimEvent, TowerSim } from '../../core/tower/tower-sim';
 import { BALANCE } from '../../data/tower/balance';
 import type { PerfDriverSpec } from '../../data/debug/perf';
 

@@ -11,7 +11,7 @@ import {
   setNotificationOn,
   type NotificationKind,
 } from '../../apply-settings';
-import { productOwned } from '../../../core/shop';
+import { productOwned } from '../../../core/economy/shop';
 import { buyProduct, loadPrices, restorePurchases } from '../../purchases';
 import { createTextButton } from '../button';
 import { createOutlinedText } from '../outlined-text';

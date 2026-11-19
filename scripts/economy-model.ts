@@ -29,9 +29,9 @@ import { SESSION_TIME } from './session-time';
 import {
   levelReward as currentLevelReward,
   xpToNext as currentXpToNext,
-} from '../src/core/progression';
+} from '../src/core/progression/progression';
 import { legacyXpToNext } from '../src/core/save/frozen-v5';
-import { Rng } from '../src/core/rng';
+import { Rng } from '../src/core/common/rng';
 import { DIFFICULTY } from '../src/data/tower/balance';
 import {
   CREATURE_IDS,
@@ -53,8 +53,8 @@ import { OVEN, type LevelReward } from '../src/data/progression/progression';
 import { REWARDED_OFFERS } from '../src/data/economy/rewarded-video';
 import { SHOP } from '../src/data/economy/shop';
 import { STREAK_REWARDS } from '../src/data/progression/streak';
-import { lapRewardBerries, spaceLap } from '../src/core/space-laps';
-import { checkpointBerryPrice, checkpointHasAd } from '../src/core/checkpoints';
+import { lapRewardBerries, spaceLap } from '../src/core/zones/space-laps';
+import { checkpointBerryPrice, checkpointHasAd } from '../src/core/zones/checkpoints';
 import { BALANCE } from '../src/data/tower/balance';
 import { CHECKPOINT_HEIGHTS, type CheckpointHeight } from '../src/data/zones/checkpoints';
 import { MS_PER_SECOND } from '../src/util/math';

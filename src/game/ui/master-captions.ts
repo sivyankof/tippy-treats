@@ -3,7 +3,7 @@ import { CREATURES, type CreatureId } from '../../data/creatures/creatures';
 import { HUD_LAYOUT } from '../../data/run/hud-layout';
 import { MASTERY } from '../../data/creatures/mastery';
 import { MASTER_ANIM } from '../../data/creatures/master-anim';
-import type { TeamSlots } from '../../core/sim-types';
+import type { TeamSlots } from '../../core/tower/sim-types';
 import { getLang } from '../../i18n';
 import { DEPTH } from '../depth';
 import { effectsMode } from '../effects-mode';

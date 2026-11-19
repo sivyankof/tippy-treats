@@ -1,5 +1,5 @@
 import { clampLevel } from '../../data/creatures/creatures';
-import type { PlacedLayer, SimEvent, TowerState } from '../sim-types';
+import type { PlacedLayer, SimEvent, TowerState } from '../tower/sim-types';
 import { addOrExtendEffect, tickEffects } from './effects';
 import { ABILITIES } from './registry';
 import type { AbilityContext, CreatureId, HookContext, Landing } from './types';

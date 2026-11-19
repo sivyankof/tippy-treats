@@ -1,6 +1,6 @@
 // The interstitial counters of the save as pure functions: sessions, runs and the last show.
 import type { Save } from '../core/save/schema';
-import { addUsed, usedToday, type DayCounter } from '../core/day-count';
+import { addUsed, usedToday, type DayCounter } from '../core/progression/day-count';
 
 /** A new launch of the app: the session counter grows by one. */
 export function withSessionStarted(save: Save): Save {
@@ -27,7 +27,7 @@ function shownCounter(save: Save): DayCounter {
 
 /**
  * Interstitials shown on the local day `today`. The count starts over only on a strictly later
- * day and not on a clock that looks set back (`core/day-count.ts`).
+ * day and not on a clock that looks set back (`core/progression/day-count.ts`).
  */
 export function shownTodayCount(save: Save, today: string, clockBack: boolean): number {
   return usedToday(shownCounter(save), today, clockBack);

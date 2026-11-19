@@ -1,6 +1,6 @@
 import * as Phaser from 'phaser';
-import { Rng } from '../../core/rng';
-import type { LayerPlan } from '../../core/sim-types';
+import { Rng } from '../../core/common/rng';
+import type { LayerPlan } from '../../core/tower/sim-types';
 import { BALANCE } from '../../data/tower/balance';
 import { LOGICAL_SIZE } from '../../data/app/screen';
 import { lerp, smoothstep } from '../../util/math';

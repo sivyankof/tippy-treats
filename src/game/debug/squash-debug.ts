@@ -1,5 +1,5 @@
 import * as Phaser from 'phaser';
-import type { TowerSim } from '../../core/tower-sim';
+import type { TowerSim } from '../../core/tower/tower-sim';
 import type { EffectLevel } from '../../data/app/effect-levels';
 import type { SquashKind } from '../../data/toppers/topper-squash';
 import { effectsMode } from '../effects-mode';

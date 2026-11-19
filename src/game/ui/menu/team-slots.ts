@@ -1,5 +1,5 @@
 import * as Phaser from 'phaser';
-import { openSlots, slotOpensAt, type TeamIds } from '../../../core/team';
+import { openSlots, slotOpensAt, type TeamIds } from '../../../core/creatures/team';
 import { BALANCE } from '../../../data/tower/balance';
 import { CREATURES, type CreatureId } from '../../../data/creatures/creatures';
 import { MENU } from '../../../data/common/menu-layout';

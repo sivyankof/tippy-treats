@@ -1,6 +1,6 @@
 import type * as Phaser from 'phaser';
-import { Rng } from '../../core/rng';
-import type { SimEvent, TowerState } from '../../core/tower-sim';
+import { Rng } from '../../core/common/rng';
+import type { SimEvent, TowerState } from '../../core/tower/tower-sim';
 import { BALANCE } from '../../data/tower/balance';
 import type { Range } from '../../data/backdrop/backdrop-life';
 import { TOWER_GUEST, TOWER_GUESTS, type GuestLook } from '../../data/guests/tower-guest';

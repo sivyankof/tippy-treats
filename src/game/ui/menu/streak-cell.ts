@@ -1,5 +1,5 @@
 import * as Phaser from 'phaser';
-import type { CalendarCell } from '../../../core/streak';
+import type { CalendarCell } from '../../../core/progression/streak';
 import { CREATURES } from '../../../data/creatures/creatures';
 import { MENU } from '../../../data/common/menu-layout';
 import { PALETTE } from '../../../data/common/palette';

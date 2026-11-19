@@ -1,4 +1,4 @@
-import type { SimEvent, TowerState } from '../src/core/sim-types';
+import type { SimEvent, TowerState } from '../src/core/tower/sim-types';
 
 /** Something that watches bot runs in `npm run sim` without changing them. */
 export interface RunObserver {

@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import type { SimEvent } from '../../core/tower-sim';
+import type { SimEvent } from '../../core/tower/tower-sim';
 import { CREATURE_IDS, CREATURES, type CreatureId } from '../../data/creatures/creatures';
 import { HAPTICS } from '../../data/app/haptics';
 import type { Services } from '../../services';

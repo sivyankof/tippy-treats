@@ -1,5 +1,5 @@
-import type { SimEvent, TowerState } from '../src/core/sim-types';
-import { wobbleAmplitude } from '../src/core/wobble';
+import type { SimEvent, TowerState } from '../src/core/tower/sim-types';
+import { wobbleAmplitude } from '../src/core/tower/wobble';
 import { BALANCE } from '../src/data/tower/balance';
 
 /** Wobble levels the report counts drops above. */

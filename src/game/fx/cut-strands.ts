@@ -1,5 +1,5 @@
 import type * as Phaser from 'phaser';
-import type { Rng } from '../../core/rng';
+import type { Rng } from '../../core/common/rng';
 import { BALANCE } from '../../data/tower/balance';
 import { CUT_LOOK, CUT_PICTURE, CUT_TEXTURES } from '../../data/cuts/cut-look';
 import { shade } from '../../util/color';

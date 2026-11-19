@@ -1,5 +1,5 @@
 import * as Phaser from 'phaser';
-import { isComplete, share } from '../../../core/missions';
+import { isComplete, share } from '../../../core/progression/missions';
 import type { MissionProgress } from '../../../core/save/schema';
 import { MENU } from '../../../data/common/menu-layout';
 import { PALETTE } from '../../../data/common/palette';

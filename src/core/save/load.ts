@@ -1,10 +1,10 @@
 import { CREATURE_IDS, MAX_CREATURE_LEVEL } from '../../data/creatures/creatures';
 import { MAX_BAKER_LEVEL, OVEN } from '../../data/progression/progression';
 import { SAVE_DEFAULTS } from '../../data/app/save-defaults';
-import { spaceLap } from '../space-laps';
-import { isCheckpointHeight, withReached, type CheckpointHeight } from '../checkpoints';
-import { xpToNext } from '../progression';
-import { pickTeam } from '../team';
+import { spaceLap } from '../zones/space-laps';
+import { isCheckpointHeight, withReached, type CheckpointHeight } from '../zones/checkpoints';
+import { xpToNext } from '../progression/progression';
+import { pickTeam } from '../creatures/team';
 import { createDefaultSave } from './defaults';
 import { migrate } from './migrations';
 import type { Lang, MissionGroup, MissionProgress, ReducedFxSetting, Save } from './schema';

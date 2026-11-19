@@ -1,6 +1,6 @@
-import { isEmptyRun, type RunResult } from '../core/run-result';
-import type { SimEvent } from '../core/tower-sim';
-import type { RunTally } from '../core/run-tally';
+import { isEmptyRun, type RunResult } from '../core/run/run-result';
+import type { SimEvent } from '../core/tower/tower-sim';
+import type { RunTally } from '../core/run/run-tally';
 import type { RunExtras, RunSummary } from '../state/game-state';
 
 /** The part of the save a run goes into. */

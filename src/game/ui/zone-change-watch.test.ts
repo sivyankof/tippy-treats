@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { checkpointStartWidth } from '../../core/checkpoints';
-import { config, mutable, untilFlying, untilSettled } from '../../core/sim-test-utils';
-import { TowerSim } from '../../core/tower-sim';
-import { zoneIndexOf } from '../../core/zones';
+import { checkpointStartWidth } from '../../core/zones/checkpoints';
+import { config, mutable, untilFlying, untilSettled } from '../../core/tower/sim-test-utils';
+import { TowerSim } from '../../core/tower/tower-sim';
+import { zoneIndexOf } from '../../core/zones/zones';
 import { BALANCE } from '../../data/tower/balance';
 import { CHECKPOINT_HEIGHTS } from '../../data/zones/checkpoints';
 import { ZoneChangeWatch } from './zone-change-watch';

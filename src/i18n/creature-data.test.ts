@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { CREATURE_IDS, CREATURES } from '../data/creatures/creatures';
 import { DICTIONARIES, keysOf, setLang, t } from './index';
 import { ABILITIES } from '../core/abilities/registry';
-import { masterInfo, perksAt } from '../core/mastery';
+import { masterInfo, perksAt } from '../core/creatures/mastery';
 
 describe('creature data integrity', () => {
   it('has a name, a description and a trait in every language', () => {

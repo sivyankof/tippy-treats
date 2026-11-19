@@ -1,4 +1,4 @@
-import type { RunResult } from '../src/core/run-result';
+import type { RunResult } from '../src/core/run/run-result';
 import { DIFFICULTY, type DifficultyTarget } from '../src/data/tower/balance';
 import { ZONES } from '../src/data/zones/zones';
 import {

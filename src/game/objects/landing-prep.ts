@@ -1,7 +1,11 @@
 import type * as Phaser from 'phaser';
-import type { CutSide } from '../../core/drop';
-import { hasNewLook } from '../../core/mastery';
-import { newLandingPreview, type FlyingLayer, type LandingPreview } from '../../core/sim-types';
+import type { CutSide } from '../../core/tower/drop';
+import { hasNewLook } from '../../core/creatures/mastery';
+import {
+  newLandingPreview,
+  type FlyingLayer,
+  type LandingPreview,
+} from '../../core/tower/sim-types';
 import { collectBakeSteps, type BakeStep } from '../ui/bake-texture';
 import { dripTexturesFor } from './glaze-drip-layer';
 import {

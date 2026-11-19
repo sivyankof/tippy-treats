@@ -1,5 +1,5 @@
 import type * as Phaser from 'phaser';
-import type { TowerState } from '../../core/tower-sim';
+import type { TowerState } from '../../core/tower/tower-sim';
 import { ANIM } from '../../data/common/anim';
 import { BALANCE } from '../../data/tower/balance';
 import { HINT_PULSE } from '../../data/common/idle-motion';

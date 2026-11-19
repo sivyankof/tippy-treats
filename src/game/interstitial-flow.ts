@@ -56,7 +56,7 @@ export function prepareRemoveAdsOffer(): RemoveAdsOffer {
 }
 
 /**
- * The player is leaving the results: shows an interstitial when the rules of `core/video-policy.ts`
+ * The player is leaving the results: shows an interstitial when the rules of `core/economy/video-policy.ts`
  * say so. The "No ads" offer does not delay the way on: it waits for Home. Resolves when the way is free.
  */
 export async function leaveResultsAds(exit: RunExit): Promise<void> {

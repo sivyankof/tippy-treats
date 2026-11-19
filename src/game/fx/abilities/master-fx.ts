@@ -1,4 +1,4 @@
-import type { SimEvent } from '../../../core/tower-sim';
+import type { SimEvent } from '../../../core/tower/tower-sim';
 import { MASTER_ANIM } from '../../../data/creatures/master-anim';
 import { PALETTE } from '../../../data/common/palette';
 import { formatNumber, t } from '../../../i18n';

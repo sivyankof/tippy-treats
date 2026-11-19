@@ -1,4 +1,4 @@
-import type { FlyingLayer, SimEvent, TowerState } from '../src/core/sim-types';
+import type { FlyingLayer, SimEvent, TowerState } from '../src/core/tower/sim-types';
 import { ZONES } from '../src/data/zones/zones';
 import type { RunObserver } from './run-observer';
 

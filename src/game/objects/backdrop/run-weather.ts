@@ -1,7 +1,7 @@
 import { strikeWindowFlashNow } from './panorama-flash';
 import * as Phaser from 'phaser';
-import { Rng } from '../../../core/rng';
-import type { TowerState } from '../../../core/tower-sim';
+import { Rng } from '../../../core/common/rng';
+import type { TowerState } from '../../../core/tower/tower-sim';
 import type { WeatherId } from '../../../data/weather/weather';
 import { DEPTH } from '../../depth';
 import { effectsMode } from '../../effects-mode';

@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { BALANCE } from '../../data/tower/balance';
 import type { CreatureId } from '../../data/creatures/creatures';
-import { config, mutable } from '../sim-test-utils';
-import type { PlacedLayer, SimEvent, TowerState } from '../sim-types';
-import { TowerSim } from '../tower-sim';
+import { config, mutable } from '../tower/sim-test-utils';
+import type { PlacedLayer, SimEvent, TowerState } from '../tower/sim-types';
+import { TowerSim } from '../tower/tower-sim';
 import { ABILITIES } from './registry';
 import { runAbility, tickRunEffects } from './run';
 import type { ActiveEffect } from './types';

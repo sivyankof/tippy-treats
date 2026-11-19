@@ -1,5 +1,5 @@
 import * as Phaser from 'phaser';
-import { Rng } from '../../../core/rng';
+import { Rng } from '../../../core/common/rng';
 import {
   STREET_WEATHER,
   streetFallView,

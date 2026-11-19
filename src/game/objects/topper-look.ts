@@ -1,4 +1,4 @@
-import { Rng } from '../../core/rng';
+import { Rng } from '../../core/common/rng';
 import { PLAIN_TOPPERS, TOPPER_KINDS, type TopperKind } from '../../data/toppers/plain-toppers';
 import type { DecorKind } from '../../data/tower/plain-layers';
 import { paddedOrigin, paddedSize } from '../../util/field-pad';

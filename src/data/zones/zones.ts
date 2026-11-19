@@ -6,7 +6,7 @@ export type ZoneRuleKind = LayerRuleKind | 'random';
 
 export type ZoneId = 'kitchen' | 'showcase' | 'roof' | 'clouds' | 'stars' | 'space';
 
-/** Zones have no speed multipliers: one speed curve for the whole tower (core/speed-curve.ts). */
+/** Zones have no speed multipliers: one speed curve for the whole tower (core/tower/speed-curve.ts). */
 export interface ZoneDef {
   id: ZoneId;
   /** Multiplies the score of a landing layer of this zone. */

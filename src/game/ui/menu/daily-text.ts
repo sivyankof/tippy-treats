@@ -1,5 +1,5 @@
 // Texts of the daily tower shared by its screen, its explainer and the results of a daily run.
-import { dailyProgress, tierReached } from '../../../core/daily';
+import { dailyProgress, tierReached } from '../../../core/progression/daily';
 import { DAILY } from '../../../data/progression/daily';
 import { formatNumber, t, tn } from '../../../i18n';
 

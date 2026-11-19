@@ -1,5 +1,5 @@
 import * as Phaser from 'phaser';
-import { isComplete } from '../../../core/missions';
+import { isComplete } from '../../../core/progression/missions';
 import { MENU } from '../../../data/common/menu-layout';
 import { PALETTE } from '../../../data/common/palette';
 import { gameState } from '../../../state';

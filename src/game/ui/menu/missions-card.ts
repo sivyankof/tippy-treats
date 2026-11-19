@@ -2,7 +2,7 @@ import * as Phaser from 'phaser';
 import { MISSIONS } from '../../../data/progression/missions';
 import { MENU } from '../../../data/common/menu-layout';
 import { PALETTE } from '../../../data/common/palette';
-import { share } from '../../../core/missions';
+import { share } from '../../../core/progression/missions';
 import type { MissionProgress } from '../../../core/save/schema';
 import { formatNumber, t } from '../../../i18n';
 import { createTextButton, type Button } from '../button';

@@ -1,6 +1,6 @@
 import { abilityDef, levelValue } from '../../data/creatures/creatures';
 import { MASTERY } from '../../data/creatures/mastery';
-import { isMaster } from '../mastery';
+import { isMaster } from '../creatures/mastery';
 import { boostAmount, boostCount, emitAbility, payMastery } from './helpers';
 import { PERCENT } from '../../util/math';
 import type { Ability } from './types';

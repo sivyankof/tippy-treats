@@ -1,4 +1,4 @@
-import { recordCreaturesReached } from '../record-unlocks';
+import { recordCreaturesReached } from '../progression/record-unlocks';
 import { legacyXpToNext, V5_RECORD_UNLOCKS, v5XpToNext } from './frozen-v5';
 import { v7CheckpointsReached } from './frozen-v7';
 import { v8LapReached } from './frozen-v8';

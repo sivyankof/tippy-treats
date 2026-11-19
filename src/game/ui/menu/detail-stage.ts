@@ -3,7 +3,7 @@ import type { CreatureId } from '../../../data/creatures/creatures';
 import { MENU } from '../../../data/common/menu-layout';
 import { PALETTE } from '../../../data/common/palette';
 import { shade } from '../../../util/color';
-import { hasNewLook, isMaster } from '../../../core/mastery';
+import { hasNewLook, isMaster } from '../../../core/creatures/mastery';
 import { CreaturePortrait } from '../../objects/creature-portrait';
 import { bakeTexture } from '../bake-texture';
 import { bakeMasteryFrame } from '../mastery-frame';

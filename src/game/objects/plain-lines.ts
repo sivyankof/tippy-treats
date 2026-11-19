@@ -1,4 +1,4 @@
-import type { CutSide } from '../../core/drop';
+import type { CutSide } from '../../core/tower/drop';
 import type { LayerBox } from './layer-draw';
 import { cutStripWidth } from './glaze-wave';
 

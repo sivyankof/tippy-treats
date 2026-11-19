@@ -1,5 +1,5 @@
-import { pickStartPlace, pickWeather, type RunLook } from '../core/run-look';
-import { planetSeedOf } from '../core/space-planet';
+import { pickStartPlace, pickWeather, type RunLook } from '../core/weather/run-look';
+import { planetSeedOf } from '../core/zones/space-planet';
 import { DEFAULT_START_PLACE, type StartPlaceId } from '../data/zones/start-places';
 import { WEATHER, type WeatherId } from '../data/weather/weather';
 

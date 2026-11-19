@@ -1,6 +1,6 @@
 import { DEPTH } from '../depth';
 import type * as Phaser from 'phaser';
-import type { SimEvent, TowerState } from '../../core/tower-sim';
+import type { SimEvent, TowerState } from '../../core/tower/tower-sim';
 import { ANIM } from '../../data/common/anim';
 import { BALANCE } from '../../data/tower/balance';
 import { pickInt } from '../../util/math';

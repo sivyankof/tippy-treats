@@ -1,6 +1,6 @@
 import type { ActiveEffect } from '../core/abilities/types';
-import type { RunMode } from '../core/run-result';
-import type { SimPhase, TeamSlot, TowerState } from '../core/sim-types';
+import type { RunMode } from '../core/run/run-result';
+import type { SimPhase, TeamSlot, TowerState } from '../core/tower/sim-types';
 
 /** Read-only snapshot of the run for the HUD and the debug panel. */
 export interface RunInfo {

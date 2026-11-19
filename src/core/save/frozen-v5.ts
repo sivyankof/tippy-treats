@@ -1,6 +1,6 @@
 // Numbers of the game as they were when save version 5 was introduced. The 4 -> 5 migration reads
 // these instead of the live data, so retuning the game later never changes what that step does.
-import type { RecordUnlock } from '../record-unlocks';
+import type { RecordUnlock } from '../progression/record-unlocks';
 
 /** Baker XP to leave a level before save version 5: `base + step * (level - 1)`. */
 export function legacyXpToNext(level: number): number {

@@ -1,6 +1,10 @@
 import * as Phaser from 'phaser';
-import { lapProgress } from '../../../core/space-laps';
-import { visitorOfLap, visitorPassRng, visitorSeedOf } from '../../../core/space-visitor-pick';
+import { lapProgress } from '../../../core/zones/space-laps';
+import {
+  visitorOfLap,
+  visitorPassRng,
+  visitorSeedOf,
+} from '../../../core/guests/space-visitor-pick';
 import {
   SPACE_VISITOR,
   SPACE_VISITOR_IDS,

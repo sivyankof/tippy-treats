@@ -8,8 +8,8 @@ import {
   type CheckpointHeight,
   type CheckpointMethod,
   type CheckpointRow,
-} from '../core/checkpoints';
-import { spend } from '../core/economy';
+} from '../core/zones/checkpoints';
+import { spend } from '../core/economy/economy';
 import type { Save } from '../core/save/schema';
 
 export function checkpointAdsLeftOf(save: Save, today: string, clockBack: boolean): number {

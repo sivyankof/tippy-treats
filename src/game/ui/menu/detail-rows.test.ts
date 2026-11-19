@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from 'vitest';
-import { upgradePreview } from '../../../core/mastery';
+import { upgradePreview } from '../../../core/creatures/mastery';
 import { CREATURE_IDS, MAX_CREATURE_LEVEL } from '../../../data/creatures/creatures';
 import { setLang, t } from '../../../i18n';
 import { changeRows, detailPlan, DETAIL_PLAN_STEPS, masterBlock, upgradeRows } from './detail-rows';

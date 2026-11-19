@@ -1,5 +1,5 @@
 import * as Phaser from 'phaser';
-import type { Currency } from '../../../core/economy';
+import type { Currency } from '../../../core/economy/economy';
 import { CREATURES } from '../../../data/creatures/creatures';
 import { MENU } from '../../../data/common/menu-layout';
 import { PALETTE } from '../../../data/common/palette';

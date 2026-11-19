@@ -1,5 +1,5 @@
 import * as Phaser from 'phaser';
-import { Rng } from '../../../core/rng';
+import { Rng } from '../../../core/common/rng';
 import type { WeatherId } from '../../../data/weather/weather';
 import { STRIKE_SIDES, WEATHER_LOOK, WEATHER_TEX } from '../../../data/weather/weather-look';
 import type { ZoneId } from '../../../data/zones/zones';

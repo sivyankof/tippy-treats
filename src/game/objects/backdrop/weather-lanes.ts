@@ -1,4 +1,4 @@
-import type { Rng } from '../../../core/rng';
+import type { Rng } from '../../../core/common/rng';
 import { WEATHER_LOOK } from '../../../data/weather/weather-look';
 
 const SNOW = WEATHER_LOOK.snow;

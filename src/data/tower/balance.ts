@@ -113,7 +113,7 @@ export const BALANCE = {
     extraAttempts: 1,
     teamLevel: 3,
   },
-  /** Interstitial ads (docs/05-economy-monetization.md, section 6); the rules are in core/video-policy.ts. */
+  /** Interstitial ads (docs/05-economy-monetization.md, section 6); the rules are in core/economy/video-policy.ts. */
   ads: {
     interstitial: {
       /** Sessions 1..firstSessionsFree have no interstitials at all. */

@@ -1,6 +1,6 @@
 import type * as Phaser from 'phaser';
 import type { WeatherId } from '../../data/weather/weather';
-import type { SimEvent, TowerState } from '../../core/tower-sim';
+import type { SimEvent, TowerState } from '../../core/tower/tower-sim';
 import type { FlyingLayerView } from '../objects/flying-layer-view';
 import type { TowerView } from '../objects/tower-view';
 import { AbilityBursts } from './abilities/ability-bursts';

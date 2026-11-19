@@ -1,5 +1,5 @@
 import * as Phaser from 'phaser';
-import { Rng } from '../../../core/rng';
+import { Rng } from '../../../core/common/rng';
 import { PANORAMA, WALL_LOOK } from '../../../data/weather/window-look';
 import { WEATHER_LOOK } from '../../../data/weather/weather-look';
 import { effectsMode } from '../../effects-mode';

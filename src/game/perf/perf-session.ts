@@ -1,5 +1,5 @@
-import type { TeamSlot } from '../../core/sim-types';
-import { checkpointStartWidth, isCheckpointHeight } from '../../core/checkpoints';
+import type { TeamSlot } from '../../core/tower/sim-types';
+import { checkpointStartWidth, isCheckpointHeight } from '../../core/zones/checkpoints';
 import {
   PERF,
   PERF_SEGMENTS,

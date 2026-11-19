@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
-import type { RunResult } from '../core/run-result';
-import { emptyTally } from '../core/run-tally';
+import type { RunResult } from '../core/run/run-result';
+import { emptyTally } from '../core/run/run-tally';
 import { extrasOf, RunRecorder } from './run-recorder';
 import { EMPTY_SUMMARY } from '../state/game-state';
 

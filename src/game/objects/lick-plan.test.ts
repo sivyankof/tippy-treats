@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { Rng } from '../../core/rng';
+import { Rng } from '../../core/common/rng';
 import { ANIM } from '../../data/common/anim';
 import { GLAZE_DRIPS } from '../../data/glaze/glaze-drips';
 import { LICK, type LickStyle } from '../../data/glaze/lick';

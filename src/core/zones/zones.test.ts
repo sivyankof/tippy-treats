@@ -1,0 +1,340 @@
+import { describe, expect, it } from 'vitest';
+import { BALANCE } from '../../data/tower/balance';
+import { SHOWCASE_ZONE_INDEX, SPACE_RULE_POOL, ZONE_RULES, ZONES } from '../../data/zones/zones';
+import { layerSpeed } from '../tower/drop';
+import { Rng } from '../common/rng';
+import {
+  allowedRulePairs,
+  cloudRoll,
+  doubleRuleStartIndex,
+  hasRule,
+  layerRules,
+  rushIndices,
+  zoneIndexOf,
+  zoneOf,
+  zoneStartIndex,
+} from './zones';
+
+const zonesRng = (seed: number): Rng => new Rng(seed).fork('zones');
+const SEEDS = Array.from({ length: 300 }, (_, i) => 1000 + i * 7919);
+const LEN = BALANCE.zones.length;
+const range = (from: number, to: number): number[] =>
+  Array.from({ length: to - from + 1 }, (_, i) => from + i);
+
+describe('zone table', () => {
+  it('lists the six zones with the numbers of the design document', () => {
+    expect(ZONES.map((z) => [z.id, z.scoreMult])).toEqual([
+      ['kitchen', 1],
+      ['showcase', 1.2],
+      ['roof', 1.5],
+      ['clouds', 1.8],
+      ['stars', 2.2],
+      ['space', 2.5],
+    ]);
+    expect(ZONES.map((z) => z.rule)).toEqual([
+      'none',
+      'showcase',
+      'roof',
+      'clouds',
+      'stars',
+      'random',
+    ]);
+  });
+
+  it('maps layer indices to zones, the last zone going on forever', () => {
+    const table: Array<[number, number]> = [
+      [1, 0],
+      [20, 0],
+      [21, 1],
+      [40, 1],
+      [41, 2],
+      [60, 2],
+      [61, 3],
+      [80, 3],
+      [81, 4],
+      [100, 4],
+      [101, 5],
+      [102, 5],
+      [5000, 5],
+    ];
+    for (const [index, zone] of table) expect(zoneIndexOf(index)).toBe(zone);
+    expect(zoneOf(45).id).toBe('roof');
+    expect(zoneStartIndex(3)).toBe(61);
+    expect(zoneIndexOf(0)).toBe(0);
+  });
+});
+
+describe('zone speed', () => {
+  it('zones do not change the speed: one curve for the whole tower', () => {
+    for (const zone of ZONES) expect(Object.keys(zone).sort()).toEqual(['id', 'rule', 'scoreMult']);
+    // Late Stars are no faster than early Space any more (it used to drop from 1470 to 1400).
+    expect(layerSpeed(99, 1)).toBeLessThan(layerSpeed(100, 1));
+    expect(layerSpeed(400, 1)).toBe(BALANCE.speed.max);
+    expect(layerSpeed(100, 1.2)).toBeCloseTo(layerSpeed(100, 1) * 1.2);
+  });
+});
+
+describe('rush schedule', () => {
+  it('starts 4-6 layers into the showcase zone and goes on every 4-6 layers, inside the zone', () => {
+    const start = zoneStartIndex(SHOWCASE_ZONE_INDEX);
+    const end = start + LEN - 1;
+    const [min, max] = ZONE_RULES.rush.gap;
+    for (const seed of SEEDS) {
+      const indices = rushIndices(zonesRng(seed));
+      expect(indices.length).toBeGreaterThanOrEqual(3);
+      expect(indices[0]).toBeGreaterThanOrEqual(start - 1 + min);
+      expect(indices[0]).toBeLessThanOrEqual(start - 1 + max);
+      for (const [i, index] of indices.entries()) {
+        expect(index).toBeGreaterThanOrEqual(start);
+        expect(index).toBeLessThanOrEqual(end);
+        if (i > 0) {
+          const gap = index - (indices[i - 1] ?? 0);
+          expect(gap).toBeGreaterThanOrEqual(min);
+          expect(gap).toBeLessThanOrEqual(max);
+        }
+      }
+    }
+  });
+
+  it('flags exactly the scheduled layers, and only inside zone 2 outside Space', () => {
+    for (const seed of SEEDS.slice(0, 40)) {
+      const rng = zonesRng(seed);
+      const scheduled = new Set(rushIndices(rng));
+      for (const index of range(1, 100)) {
+        expect(layerRules(rng, index).rush).toBe(scheduled.has(index));
+      }
+    }
+  });
+
+  it('depends on the seed', () => {
+    const schedules = new Set(SEEDS.map((seed) => rushIndices(zonesRng(seed)).join(',')));
+    expect(schedules.size).toBeGreaterThan(20);
+  });
+});
+
+describe('layer rules', () => {
+  it('gives the same schedule for the same seed, in any order of asking', () => {
+    const indices = range(1, 160);
+    for (const seed of SEEDS.slice(0, 30)) {
+      const forward = indices.map((i) => layerRules(zonesRng(seed), i));
+      const backward = [...indices]
+        .reverse()
+        .map((i) => layerRules(zonesRng(seed), i))
+        .reverse();
+      expect(backward).toEqual(forward);
+    }
+  });
+
+  it('differs between seeds', () => {
+    const fingerprint = (seed: number): string =>
+      range(21, 160)
+        .map((i) => {
+          const r = layerRules(zonesRng(seed), i);
+          return `${r.rule}${r.fromLeft ? 'L' : 'R'}${r.rush ? '!' : ''}${r.fakeoutX ?? ''}`;
+        })
+        .join('|');
+    expect(new Set(SEEDS.map(fingerprint)).size).toBe(SEEDS.length);
+  });
+
+  it('carries index, zone and rule: no rule in the kitchen, zone rules in zones 2 to 5', () => {
+    const rng = zonesRng(5);
+    expect(range(1, 20).map((i) => layerRules(rng, i).rule)).toEqual(Array(20).fill('none'));
+    expect(layerRules(rng, 30)).toMatchObject({ index: 30, zoneIndex: 1, rule: 'showcase' });
+    expect(layerRules(rng, 50).rule).toBe('roof');
+    expect(layerRules(rng, 70).rule).toBe('clouds');
+    expect(layerRules(rng, 90).rule).toBe('stars');
+  });
+
+  it('spawns by index parity except under the showcase rule, where the side is random', () => {
+    const rng = zonesRng(77);
+    for (const index of [...range(1, 20), ...range(41, 100)]) {
+      if (layerRules(rng, index).rule === 'showcase') continue;
+      expect(layerRules(rng, index).fromLeft).toBe(index % 2 === 1);
+    }
+    const sides = SEEDS.flatMap((seed) =>
+      range(21, 40).map((i) => layerRules(zonesRng(seed), i).fromLeft),
+    );
+    const lefts = sides.filter(Boolean).length / sides.length;
+    expect(lefts).toBeGreaterThan(0.45);
+    expect(lefts).toBeLessThan(0.55);
+    // Not the parity pattern: some seed puts two layers in a row on the same side.
+    const parityOnly = SEEDS.every((seed) =>
+      range(21, 40).every((i) => layerRules(zonesRng(seed), i).fromLeft === (i % 2 === 1)),
+    );
+    expect(parityOnly).toBe(false);
+  });
+
+  it('rolls a fake-out for about 30% of the stars layers, inside 20-80% of the track', () => {
+    const { minCenterX, maxCenterX } = BALANCE.layer;
+    const [lo, hi] = ZONE_RULES.stars.pointRange;
+    const rolls = SEEDS.flatMap((seed) => range(81, 100).map((i) => layerRules(zonesRng(seed), i)));
+    const fakeouts = rolls.filter((r) => r.fakeoutX !== null);
+    const share = fakeouts.length / rolls.length;
+    expect(share).toBeGreaterThan(0.26);
+    expect(share).toBeLessThan(0.34);
+    for (const r of fakeouts) {
+      const u = ((r.fakeoutX ?? 0) - minCenterX) / (maxCenterX - minCenterX);
+      expect(u).toBeGreaterThanOrEqual(lo);
+      expect(u).toBeLessThanOrEqual(hi);
+    }
+    const outside = SEEDS.flatMap((seed) =>
+      range(1, 80).map((i) => layerRules(zonesRng(seed), i).fakeoutX),
+    );
+    expect(outside.every((x) => x === null)).toBe(true);
+  });
+
+  describe('Space', () => {
+    const rolls = SEEDS.flatMap((seed) =>
+      range(101, 160).map((i) => layerRules(zonesRng(seed), i)),
+    );
+
+    it('gives every layer exactly one rule of the pool, all four in use', () => {
+      for (const r of rolls) expect(SPACE_RULE_POOL).toContain(r.rule);
+      expect(new Set(rolls.map((r) => r.rule)).size).toBe(SPACE_RULE_POOL.length);
+      for (const rule of SPACE_RULE_POOL) {
+        const share = rolls.filter((r) => r.rule === rule).length / rolls.length;
+        expect(share).toBeGreaterThan(0.2);
+        expect(share).toBeLessThan(0.3);
+      }
+    });
+
+    it('always fires the chosen rule: rush, fake-out and first-pass cloud are guaranteed', () => {
+      for (const r of rolls) {
+        expect(r.rush).toBe(r.rule === 'showcase');
+        expect(r.fakeoutX !== null).toBe(r.rule === 'stars');
+        const first = cloudRoll(zonesRng(1), { ...r }, 1);
+        expect(first !== null).toBe(r.rule === 'clouds');
+      }
+    });
+
+    it('chooses sides at random only for the showcase rule', () => {
+      for (const r of rolls.slice(0, 500)) {
+        if (r.rule !== 'showcase') expect(r.fromLeft).toBe(r.index % 2 === 1);
+      }
+    });
+  });
+});
+
+describe('Space double rules', () => {
+  const start = doubleRuleStartIndex();
+  const late = SEEDS.flatMap((seed) =>
+    range(start, start + 79).map((i) => layerRules(zonesRng(seed), i)),
+  );
+
+  it('starts on layer 161 (lap 4) and leaves earlier layers with a single rule', () => {
+    expect(start).toBe(161);
+    for (const seed of SEEDS.slice(0, 40)) {
+      for (const i of range(1, start - 1)) expect(layerRules(zonesRng(seed), i).rule2).toBeNull();
+    }
+  });
+
+  it('draws a pair of the pool, never an excluded one, and uses every allowed pair', () => {
+    const seen = new Set<string>();
+    for (const r of late) {
+      expect(r.rule2).not.toBeNull();
+      expect(r.rule2).not.toBe(r.rule);
+      expect(SPACE_RULE_POOL).toContain(r.rule);
+      expect(SPACE_RULE_POOL).toContain(r.rule2);
+      expect(hasRule(r, 'clouds') && hasRule(r, 'stars')).toBe(false);
+      seen.add(`${r.rule}+${r.rule2}`);
+    }
+    expect(seen.size).toBe(allowedRulePairs().length);
+  });
+
+  it('is a pure function of the seed and the layer', () => {
+    for (const seed of SEEDS.slice(0, 20)) {
+      for (const i of [161, 175, 199]) {
+        expect(layerRules(zonesRng(seed), i)).toEqual(layerRules(zonesRng(seed), i));
+      }
+    }
+  });
+
+  it('keeps every mechanic of each rule of the pair active on the one layer', () => {
+    for (const r of late) {
+      expect(r.rush).toBe(hasRule(r, 'showcase'));
+      expect(r.fakeoutX !== null).toBe(hasRule(r, 'stars'));
+      expect(cloudRoll(zonesRng(1), r, 1) !== null).toBe(hasRule(r, 'clouds'));
+    }
+    const both = late.find((r) => hasRule(r, 'showcase') && hasRule(r, 'roof'));
+    expect(both).toBeDefined();
+  });
+});
+
+describe('cloudRoll', () => {
+  const cloudLayer = (seed: number, index: number) => ({
+    rng: zonesRng(seed),
+    rules: layerRules(zonesRng(seed), index),
+  });
+
+  it('is a pure function of seed, layer and pass', () => {
+    for (const seed of SEEDS.slice(0, 30)) {
+      const { rng, rules } = cloudLayer(seed, 70);
+      const passes = range(1, 8).map((pass) => cloudRoll(rng, rules, pass));
+      const again = range(1, 8)
+        .reverse()
+        .map((pass) => cloudRoll(zonesRng(seed), rules, pass))
+        .reverse();
+      expect(again).toEqual(passes);
+    }
+  });
+
+  it('rolls nothing outside cloud layers', () => {
+    const rng = zonesRng(3);
+    for (const index of [5, 30, 50, 90]) {
+      expect(cloudRoll(rng, layerRules(rng, index), 1)).toBeNull();
+    }
+  });
+
+  it('comes in the share of passes, cover length and start window of the data', () => {
+    const [coverMin, coverMax] = ZONE_RULES.clouds.coverMs;
+    const [startMin, startMax] = ZONE_RULES.clouds.startProgress;
+    const rolls = SEEDS.flatMap((seed) =>
+      range(61, 80).flatMap((index) => {
+        const { rng, rules } = cloudLayer(seed, index);
+        return range(1, 3).map((pass) => cloudRoll(rng, rules, pass));
+      }),
+    );
+    const clouds = rolls.filter((r) => r !== null);
+    const { chance } = ZONE_RULES.clouds;
+    expect(clouds.length / rolls.length).toBeGreaterThan(chance - 0.04);
+    expect(clouds.length / rolls.length).toBeLessThan(chance + 0.04);
+    for (const cloud of clouds) {
+      expect(cloud.coverMs).toBeGreaterThanOrEqual(coverMin);
+      expect(cloud.coverMs).toBeLessThanOrEqual(coverMax);
+      expect(cloud.startProgress).toBeGreaterThanOrEqual(startMin);
+      expect(cloud.startProgress).toBeLessThanOrEqual(startMax);
+    }
+  });
+
+  it('differs between seeds and between passes', () => {
+    const covers = new Set(
+      SEEDS.map((seed) => {
+        const { rng, rules } = cloudLayer(seed, 70);
+        return range(1, 6)
+          .map((pass) => cloudRoll(rng, rules, pass)?.coverMs ?? 0)
+          .join(',');
+      }),
+    );
+    expect(covers.size).toBeGreaterThan(SEEDS.length / 2);
+  });
+
+  it('guarantees a cloud on the first pass of a Space cloud layer, the usual chance on later passes', () => {
+    let later = 0;
+    let laterClouds = 0;
+    for (const seed of SEEDS) {
+      for (const index of range(101, 140)) {
+        const rng = zonesRng(seed);
+        const rules = layerRules(rng, index);
+        if (rules.rule !== 'clouds') continue;
+        expect(cloudRoll(rng, rules, 1)).not.toBeNull();
+        for (const pass of [2, 3]) {
+          later++;
+          if (cloudRoll(rng, rules, pass)) laterClouds++;
+        }
+      }
+    }
+    const { chance } = ZONE_RULES.clouds;
+    expect(laterClouds / later).toBeGreaterThan(chance - 0.06);
+    expect(laterClouds / later).toBeLessThan(chance + 0.06);
+  });
+});

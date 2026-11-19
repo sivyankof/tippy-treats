@@ -1,8 +1,8 @@
 import { abilityDef, levelValue } from '../../data/creatures/creatures';
 import { MASTERY } from '../../data/creatures/mastery';
-import { growInField } from '../field';
-import { isMaster } from '../mastery';
-import { cappedWidening } from '../scoring';
+import { growInField } from '../tower/field';
+import { isMaster } from '../creatures/mastery';
+import { cappedWidening } from '../tower/scoring';
 import { boostAmount, emitAbility, payMastery } from './helpers';
 import type { Ability } from './types';
 

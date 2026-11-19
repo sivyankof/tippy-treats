@@ -1,4 +1,4 @@
-import type { TowerState } from '../../core/tower-sim';
+import type { TowerState } from '../../core/tower/tower-sim';
 import { TOWER_GUEST } from '../../data/guests/tower-guest';
 import { flinchPose, layerOverGuest, shouldFlinch } from './tower-guest-plan';
 

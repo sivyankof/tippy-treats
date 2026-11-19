@@ -1,5 +1,5 @@
 import type * as Phaser from 'phaser';
-import type { CutSide } from '../../core/drop';
+import type { CutSide } from '../../core/tower/drop';
 import { ANIM } from '../../data/common/anim';
 import { BALANCE } from '../../data/tower/balance';
 import { PALETTE } from '../../data/common/palette';

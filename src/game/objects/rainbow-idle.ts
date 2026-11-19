@@ -1,5 +1,5 @@
 import * as Phaser from 'phaser';
-import { Rng } from '../../core/rng';
+import { Rng } from '../../core/common/rng';
 import { arcCurve } from '../fx/abilities/rainbow-arc-geometry';
 import { paintBand } from '../fx/abilities/rainbow-band';
 import { outlineColor } from '../fx/plain-style';

@@ -1,6 +1,6 @@
-import { hasRule } from '../../core/zones';
-import { roofFactor, type SpeedFields } from '../../core/flight';
-import type { FlyingLayer, SimPhase } from '../../core/tower-sim';
+import { hasRule } from '../../core/zones/zones';
+import { roofFactor, type SpeedFields } from '../../core/tower/flight';
+import type { FlyingLayer, SimPhase } from '../../core/tower/tower-sim';
 import { RULE_ANIM } from '../../data/zones/rule-anim';
 import { ZONE_RULES } from '../../data/zones/zones';
 

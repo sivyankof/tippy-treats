@@ -1,6 +1,6 @@
-import { heightBonusCoins } from '../src/core/coins';
-import { emptyTally, tallyEvents, type RunTally } from '../src/core/run-tally';
-import type { CoinSource, SimEvent, TowerState } from '../src/core/sim-types';
+import { heightBonusCoins } from '../src/core/economy/coins';
+import { emptyTally, tallyEvents, type RunTally } from '../src/core/run/run-tally';
+import type { CoinSource, SimEvent, TowerState } from '../src/core/tower/sim-types';
 import type { RunObserver } from './run-observer';
 
 export type CoinsBySource = RunTally['coins'];

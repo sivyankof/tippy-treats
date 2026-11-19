@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { checkpointRows } from '../core/checkpoints';
-import type { RunResult } from '../core/run-result';
+import { checkpointRows } from '../core/zones/checkpoints';
+import type { RunResult } from '../core/run/run-result';
 import { createDefaultSave } from '../core/save/defaults';
 import { BALANCE } from '../data/tower/balance';
 import { MS_PER_DAY } from '../data/app/clock';

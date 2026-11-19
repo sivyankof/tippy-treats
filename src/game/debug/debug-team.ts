@@ -1,4 +1,4 @@
-import type { TeamSlot } from '../../core/sim-types';
+import type { TeamSlot } from '../../core/tower/sim-types';
 import { BALANCE } from '../../data/tower/balance';
 import { CREATURE_IDS, MAX_CREATURE_LEVEL, type CreatureId } from '../../data/creatures/creatures';
 import { readDebugParams } from '../../util/debug-params';

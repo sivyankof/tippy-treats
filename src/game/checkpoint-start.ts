@@ -4,7 +4,7 @@ import {
   highestOpened,
   type CheckpointHeight,
   type CheckpointMethod,
-} from '../core/checkpoints';
+} from '../core/zones/checkpoints';
 import { services } from '../services';
 import type { RewardedResult } from '../services/rewarded-video/types';
 import type { AnalyticsService } from '../services/telemetry/types';

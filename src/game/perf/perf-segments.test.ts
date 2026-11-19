@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { zoneIndexOf } from '../../core/zones';
+import { zoneIndexOf } from '../../core/zones/zones';
 import { PERF_SEGMENTS, PERF_TRANSITION, type PerfSegmentDef } from '../../data/debug/perf';
 
 describe('transition segments', () => {

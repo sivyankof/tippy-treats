@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { upgradeCost } from '../../../core/economy';
+import { upgradeCost } from '../../../core/economy/economy';
 import { CREATURE_IDS, MAX_CREATURE_LEVEL } from '../../../data/creatures/creatures';
 import { formatValues, mainAction, missingAmount } from './detail-model';
 

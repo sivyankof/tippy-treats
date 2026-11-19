@@ -1,5 +1,5 @@
 // Coins, berries and counters outside a run, as pure functions over the save.
-import { earn } from '../core/economy';
+import { earn } from '../core/economy/economy';
 import type { Save } from '../core/save/schema';
 
 /** The save with `coins` added; the same save when nothing whole and positive is given. */

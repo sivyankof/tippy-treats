@@ -1,6 +1,6 @@
 import * as Phaser from 'phaser';
-import type { TowerState } from '../../core/tower-sim';
-import { Rng } from '../../core/rng';
+import type { TowerState } from '../../core/tower/tower-sim';
+import { Rng } from '../../core/common/rng';
 import { BALANCE } from '../../data/tower/balance';
 import { PLAIN_TOPPERS } from '../../data/toppers/plain-toppers';
 import { TOPPER_SQUASH } from '../../data/toppers/topper-squash';

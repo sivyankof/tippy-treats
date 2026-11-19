@@ -1,5 +1,5 @@
-import { layerSpeed } from '../src/core/drop';
-import { zoneIndexOf } from '../src/core/zones';
+import { layerSpeed } from '../src/core/tower/drop';
+import { zoneIndexOf } from '../src/core/zones/zones';
 import { BALANCE } from '../src/data/tower/balance';
 import { ZONES } from '../src/data/zones/zones';
 import { MS_PER_SECOND } from '../src/util/math';
@@ -8,7 +8,7 @@ import { MS_PER_SECOND } from '../src/util/math';
  * `npm run sim:speed` part 1: the nominal flying speed of every layer from 1 to 165 and the time a
  * layer needs to cross the field. Nominal means without the ability multiplier, the rush
  * (x1.35, in Space at most 1350) and the roof profile (x0.8 at the walls, x1 in the middle).
- * One speed curve for the whole tower (core/speed-curve.ts): zones do not change the speed.
+ * One speed curve for the whole tower (core/tower/speed-curve.ts): zones do not change the speed.
  */
 
 const LAST_LAYER = 165;

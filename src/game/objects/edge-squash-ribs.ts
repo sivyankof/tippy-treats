@@ -1,4 +1,4 @@
-import { Rng } from '../../core/rng';
+import { Rng } from '../../core/common/rng';
 import { EDGE_SQUASH } from '../../data/tower/edge-squash';
 import { smoothstep } from '../../util/math';
 

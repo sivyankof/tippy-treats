@@ -1,5 +1,5 @@
 import { clampLevel } from '../../data/creatures/creatures';
-import type { LayerPlan } from '../sim-types';
+import type { LayerPlan } from '../tower/sim-types';
 import { ABILITIES } from './registry';
 import {
   BASE_MODIFIERS,

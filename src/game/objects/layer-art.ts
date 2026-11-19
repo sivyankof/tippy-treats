@@ -1,7 +1,7 @@
 import type * as Phaser from 'phaser';
-import type { CutSide } from '../../core/drop';
+import type { CutSide } from '../../core/tower/drop';
 import { ANIM } from '../../data/common/anim';
-import { zoneIndexOf } from '../../core/zones';
+import { zoneIndexOf } from '../../core/zones/zones';
 import { artRecipe } from '../../data/creatures/creature-looks';
 import type { CreatureId } from '../../data/creatures/creatures';
 import { BALANCE } from '../../data/tower/balance';

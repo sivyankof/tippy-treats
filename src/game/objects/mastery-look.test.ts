@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { artRecipe } from '../../data/creatures/creature-looks';
-import { hasNewLook } from '../../core/mastery';
+import { hasNewLook } from '../../core/creatures/mastery';
 import { MASTERY } from '../../data/creatures/mastery';
 import { CREATURE_IDS } from '../../data/creatures/creatures';
 import { GROWN_ACCENTS, GROWN_LOOKS, MASTERY_FRAME } from '../../data/creatures/mastery-look';

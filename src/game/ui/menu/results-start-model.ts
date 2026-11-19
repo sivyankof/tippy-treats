@@ -1,4 +1,4 @@
-import type { CheckpointHeight, CheckpointRow } from '../../../core/checkpoints';
+import type { CheckpointHeight, CheckpointRow } from '../../../core/zones/checkpoints';
 import type { CheckpointPayResult } from '../../checkpoint-start';
 import { buttonsFor, type CheckpointButtons } from './checkpoint-model';
 

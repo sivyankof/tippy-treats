@@ -1,5 +1,5 @@
 import type * as Phaser from 'phaser';
-import type { CheckpointRow } from '../../../core/checkpoints';
+import type { CheckpointRow } from '../../../core/zones/checkpoints';
 import { CHECKPOINT_WINDOW } from '../../../data/zones/checkpoint-look';
 import { PALETTE } from '../../../data/common/palette';
 import { ZONES, type ZoneId } from '../../../data/zones/zones';

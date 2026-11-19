@@ -1,6 +1,6 @@
 import type * as Phaser from 'phaser';
-import type { CutSide } from '../../core/drop';
-import type { LayerPlan } from '../../core/sim-types';
+import type { CutSide } from '../../core/tower/drop';
+import type { LayerPlan } from '../../core/tower/sim-types';
 import { ANIM } from '../../data/common/anim';
 import { lerp, smoothstep } from '../../util/math';
 import { DEPTH } from '../depth';

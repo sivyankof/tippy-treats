@@ -1,6 +1,6 @@
 // Baker XP and the level rewards it pays, as a pure function over the save.
-import { earn, grantCreature, type Cost } from '../core/economy';
-import { addXp, levelReward } from '../core/progression';
+import { earn, grantCreature, type Cost } from '../core/economy/economy';
+import { addXp, levelReward } from '../core/progression/progression';
 import type { Save } from '../core/save/schema';
 import type { LevelReward } from '../data/progression/progression';
 

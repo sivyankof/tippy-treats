@@ -1,5 +1,5 @@
 import { AUDIO_MIX } from '../../data/audio/audio-mix';
-import { Rng } from '../../core/rng';
+import { Rng } from '../../core/common/rng';
 import { Mixer } from './mixer';
 import type { SoundArgs, SoundId } from './sound-args';
 import { SoundPlayer } from './sound-player';

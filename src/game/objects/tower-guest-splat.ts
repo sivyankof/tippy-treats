@@ -1,5 +1,5 @@
 import type * as Phaser from 'phaser';
-import type { Rng } from '../../core/rng';
+import type { Rng } from '../../core/common/rng';
 import { ANIM } from '../../data/common/anim';
 import { TOWER_GUEST, type GuestLook } from '../../data/guests/tower-guest';
 import { clamp01 } from '../../util/math';

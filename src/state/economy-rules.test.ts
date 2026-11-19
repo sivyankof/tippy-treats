@@ -1,8 +1,8 @@
 // The economy rules as the game state applies them: the oven, mission XP, the x2 limit and the
 // record way of the twins.
 import { describe, expect, it } from 'vitest';
-import { xpToNext } from '../core/progression';
-import type { RunResult } from '../core/run-result';
+import { xpToNext } from '../core/progression/progression';
+import type { RunResult } from '../core/run/run-result';
 import { MS_PER_DAY } from '../data/app/clock';
 import { MISSIONS } from '../data/progression/missions';
 import { OVEN } from '../data/progression/progression';

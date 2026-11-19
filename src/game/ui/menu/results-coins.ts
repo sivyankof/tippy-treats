@@ -1,4 +1,4 @@
-import { canOfferDoubleCoins } from '../../../core/video-policy';
+import { canOfferDoubleCoins } from '../../../core/economy/video-policy';
 import * as Phaser from 'phaser';
 import { MENU } from '../../../data/common/menu-layout';
 import { PALETTE } from '../../../data/common/palette';

@@ -1,5 +1,5 @@
-import { checkpointStartWidth } from '../src/core/checkpoints';
-import type { SimEvent, TowerState } from '../src/core/sim-types';
+import { checkpointStartWidth } from '../src/core/zones/checkpoints';
+import type { SimEvent, TowerState } from '../src/core/tower/sim-types';
 import { DIFFICULTY } from '../src/data/tower/balance';
 import { CHECKPOINT_HEIGHTS, type CheckpointHeight } from '../src/data/zones/checkpoints';
 import type { SimTeamSet } from '../src/data/debug/sim-teams';

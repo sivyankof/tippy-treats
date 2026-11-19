@@ -1,5 +1,5 @@
 import type * as Phaser from 'phaser';
-import { dailyUnlockLevel } from '../../../core/daily';
+import { dailyUnlockLevel } from '../../../core/progression/daily';
 import { MENU } from '../../../data/common/menu-layout';
 import { t } from '../../../i18n';
 import { createOutlinedText } from '../outlined-text';

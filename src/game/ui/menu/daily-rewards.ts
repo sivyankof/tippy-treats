@@ -1,6 +1,6 @@
 import type * as Phaser from 'phaser';
-import { nextTier } from '../../../core/daily';
-import type { Currency } from '../../../core/economy';
+import { nextTier } from '../../../core/progression/daily';
+import type { Currency } from '../../../core/economy/economy';
 import { DAILY } from '../../../data/progression/daily';
 import { MENU } from '../../../data/common/menu-layout';
 import { REWARD_LOOK } from '../../../data/economy/reward-look';

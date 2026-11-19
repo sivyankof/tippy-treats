@@ -3,11 +3,11 @@ import {
   checkpointStartWidth,
   isCheckpointHeight,
   type CheckpointHeight,
-} from '../core/checkpoints';
-import { dailySeed, dailyTeam } from '../core/daily';
-import type { RunLook } from '../core/run-look';
-import type { RunMode } from '../core/run-result';
-import type { TeamSlot } from '../core/sim-types';
+} from '../core/zones/checkpoints';
+import { dailySeed, dailyTeam } from '../core/progression/daily';
+import type { RunLook } from '../core/weather/run-look';
+import type { RunMode } from '../core/run/run-result';
+import type { TeamSlot } from '../core/tower/sim-types';
 import { DEMO } from '../data/run/demo';
 import { gameState } from '../state';
 import { now, utcDay } from '../util/clock';

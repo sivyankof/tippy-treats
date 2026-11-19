@@ -1,5 +1,5 @@
 import type * as Phaser from 'phaser';
-import type { TowerState } from '../../core/tower-sim';
+import type { TowerState } from '../../core/tower/tower-sim';
 import { BALANCE } from '../../data/tower/balance';
 import { TREASURE } from '../../data/economy/treasure-anim';
 import { oscillate01, TWO_PI } from '../../util/math';

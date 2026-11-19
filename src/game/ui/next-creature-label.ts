@@ -1,4 +1,4 @@
-import type { NextCreature } from '../../core/team-queue';
+import type { NextCreature } from '../../core/creatures/team-queue';
 import { t, tn } from '../../i18n';
 
 /** The words of the indicator: "now" on the creature layer, "in N layers" before it. */

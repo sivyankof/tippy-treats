@@ -1,6 +1,6 @@
 import type * as Phaser from 'phaser';
-import { spaceLap } from '../../core/space-laps';
-import type { TowerState } from '../../core/tower-sim';
+import { spaceLap } from '../../core/zones/space-laps';
+import type { TowerState } from '../../core/tower/tower-sim';
 import { BALANCE } from '../../data/tower/balance';
 import { LAP_EDGE, LAP_EDGE_HEIGHT } from '../../data/zones/lap-edge';
 import { effectsMode } from '../effects-mode';

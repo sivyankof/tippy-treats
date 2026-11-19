@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest';
-import { pickStartPlace, pickWeather } from '../core/run-look';
-import { planetSeedOf } from '../core/space-planet';
+import { pickStartPlace, pickWeather } from '../core/weather/run-look';
+import { planetSeedOf } from '../core/zones/space-planet';
 import { chooseRunLook, resetRunLookHistory } from './run-look-choice';
 
 beforeEach(resetRunLookHistory);

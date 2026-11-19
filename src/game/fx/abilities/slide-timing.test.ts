@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { STEP, config, untilFlying } from '../../../core/sim-test-utils';
-import { TowerSim } from '../../../core/tower-sim';
+import { STEP, config, untilFlying } from '../../../core/tower/sim-test-utils';
+import { TowerSim } from '../../../core/tower/tower-sim';
 import { ABILITY_ANIM } from '../../../data/creatures/ability-anim';
 import { BALANCE } from '../../../data/tower/balance';
 

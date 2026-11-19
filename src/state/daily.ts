@@ -1,5 +1,5 @@
 // The daily tower as pure functions over the save.
-import { earn } from '../core/economy';
+import { earn } from '../core/economy/economy';
 import {
   addAttempt,
   attemptsLeft,
@@ -12,9 +12,9 @@ import {
   recordDailyRun,
   startAttempt,
   type DailyPayout,
-} from '../core/daily';
+} from '../core/progression/daily';
 import type { Save } from '../core/save/schema';
-import type { TeamSlot } from '../core/sim-types';
+import type { TeamSlot } from '../core/tower/sim-types';
 
 /** What the Daily screen shows. */
 export interface DailyInfo {

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { checkpointRows } from '../../../core/checkpoints';
+import { checkpointRows } from '../../../core/zones/checkpoints';
 import { buttonsFor, keepSelection } from './checkpoint-model';
 
 const rows = (opened: number[], berries: number, adReady = true) =>

@@ -1,4 +1,4 @@
-import type { CheckpointHeight, CheckpointRow } from '../../../core/checkpoints';
+import type { CheckpointHeight, CheckpointRow } from '../../../core/zones/checkpoints';
 
 export type StartHeight = 0 | CheckpointHeight;
 

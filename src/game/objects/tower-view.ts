@@ -1,13 +1,13 @@
 import type * as Phaser from 'phaser';
-import type { CutSide } from '../../core/drop';
+import type { CutSide } from '../../core/tower/drop';
 import {
   newLandingPreview,
   type LayerPlan,
   type PlacedLayer,
   type TowerSim,
   type TowerState,
-} from '../../core/tower-sim';
-import { wobbleAmplitude, wobbleOffset } from '../../core/wobble';
+} from '../../core/tower/tower-sim';
+import { wobbleAmplitude, wobbleOffset } from '../../core/tower/wobble';
 import { ANIM } from '../../data/common/anim';
 import { BALANCE } from '../../data/tower/balance';
 import { RAINBOW_LOOK } from '../../data/creatures/rainbow-look';

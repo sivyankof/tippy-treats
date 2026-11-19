@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { berriesFromEvents } from '../core/berries';
-import { TimingBot } from '../core/bot';
-import { Rng } from '../core/rng';
-import type { RunMode, RunResult } from '../core/run-result';
-import { TowerSim } from '../core/tower-sim';
+import { berriesFromEvents } from '../core/economy/berries';
+import { TimingBot } from '../core/tower/bot';
+import { Rng } from '../core/common/rng';
+import type { RunMode, RunResult } from '../core/run/run-result';
+import { TowerSim } from '../core/tower/tower-sim';
 import { CONTINUE_ANIM } from '../data/run/continue-anim';
 import { DAILY } from '../data/progression/daily';
 import { STORAGE_KEYS } from '../data/app/storage';
@@ -19,7 +19,7 @@ import { RunRecorder } from './run-recorder';
 import { CLASSIC_RUN, DAILY_RUN } from './run-request';
 import { decideRestart } from './run-restart';
 import { SCENES } from './scene-keys';
-import { emptyTally } from '../core/run-tally';
+import { emptyTally } from '../core/run/run-tally';
 
 const T0 = Date.UTC(2026, 5, 10, 12, 0, 0);
 const STEP_MS = 16;

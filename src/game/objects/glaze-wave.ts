@@ -1,5 +1,5 @@
-import type { CutSide } from '../../core/drop';
-import { Rng } from '../../core/rng';
+import type { CutSide } from '../../core/tower/drop';
+import { Rng } from '../../core/common/rng';
 import { GLAZE_DRIPS } from '../../data/glaze/glaze-drips';
 import { PLAIN_LAYER } from '../../data/tower/plain-layers';
 import { GOLDEN } from '../../util/math';

@@ -22,7 +22,7 @@ export interface AdsService {
   showRewarded(placement: RewardedPlacement): Promise<RewardedResult>;
   /**
    * Shows one interstitial and resolves when it is closed; true when an ad was shown. It knows no
-   * rules: the caller decides in `core/video-policy.ts` that it is time.
+   * rules: the caller decides in `core/economy/video-policy.ts` that it is time.
    */
   showInterstitial(): Promise<boolean>;
   setRemoveAds(removed: boolean): void;

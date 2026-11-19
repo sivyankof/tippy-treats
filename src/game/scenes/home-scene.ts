@@ -1,5 +1,5 @@
 import * as Phaser from 'phaser';
-import { canFillTeam } from '../../core/team';
+import { canFillTeam } from '../../core/creatures/team';
 import type { CreatureId } from '../../data/creatures/creatures';
 import { MENU } from '../../data/common/menu-layout';
 import { PALETTE } from '../../data/common/palette';

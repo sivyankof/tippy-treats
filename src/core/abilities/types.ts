@@ -1,6 +1,6 @@
 import { BALANCE } from '../../data/tower/balance';
 import type { CreatureId } from '../../data/creatures/creatures';
-import type { LandQuality, PlacedLayer, SimEvent, TowerState } from '../sim-types';
+import type { LandQuality, PlacedLayer, SimEvent, TowerState } from '../tower/sim-types';
 
 export type { CreatureId };
 
@@ -31,7 +31,7 @@ export interface ActiveEffect {
   spoiled?: boolean;
 }
 
-/** Everything abilities can change about a drop. Zone multipliers are applied separately (core/zones.ts). */
+/** Everything abilities can change about a drop. Zone multipliers are applied separately (core/zones/zones.ts). */
 export interface Modifiers {
   /** Multiplied. */
   speedMult: number;

@@ -1,5 +1,5 @@
 import * as Phaser from 'phaser';
-import { hasNewLook, masterInfo } from '../../../core/mastery';
+import { hasNewLook, masterInfo } from '../../../core/creatures/mastery';
 import type { CreatureId } from '../../../data/creatures/creatures';
 import { ANIM } from '../../../data/common/anim';
 import { MENU } from '../../../data/common/menu-layout';

@@ -1,6 +1,6 @@
 import * as Phaser from 'phaser';
-import type { Currency } from '../../core/economy';
-import { starterPackContents } from '../../core/shop';
+import type { Currency } from '../../core/economy/economy';
+import { starterPackContents } from '../../core/economy/shop';
 import type { CreatureId } from '../../data/creatures/creatures';
 import { BERRY_PACKS } from '../../data/economy/economy';
 import { MENU } from '../../data/common/menu-layout';

@@ -1,5 +1,5 @@
 import * as Phaser from 'phaser';
-import type { Rng } from '../../../core/rng';
+import type { Rng } from '../../../core/common/rng';
 import { TOWER_WEATHER } from '../../../data/weather/tower-weather';
 import { WEATHER_LOOK, WEATHER_TEX } from '../../../data/weather/weather-look';
 import { FIELD_PAD } from '../../../data/common/picture-fields';

@@ -1,5 +1,5 @@
 import * as Phaser from 'phaser';
-import { xpToNext } from '../../../core/progression';
+import { xpToNext } from '../../../core/progression/progression';
 import { MENU } from '../../../data/common/menu-layout';
 import { PALETTE } from '../../../data/common/palette';
 import { formatNumber, t } from '../../../i18n';

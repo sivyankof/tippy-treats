@@ -1,6 +1,6 @@
-import type { CheckpointHeight } from '../core/checkpoints';
-import type { RunResult } from '../core/run-result';
-import type { RunTally } from '../core/run-tally';
+import type { CheckpointHeight } from '../core/zones/checkpoints';
+import type { RunResult } from '../core/run/run-result';
+import type { RunTally } from '../core/run/run-tally';
 import { EMPTY_SUMMARY, type GameState } from '../state/game-state';
 import type { TowerSnapshot } from './objects/tower-snapshot';
 import type { RunRecorder } from './run-recorder';

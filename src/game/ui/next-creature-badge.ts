@@ -1,6 +1,6 @@
 import type * as Phaser from 'phaser';
-import { nextCreature, type NextCreature } from '../../core/team-queue';
-import type { TeamSlots } from '../../core/sim-types';
+import { nextCreature, type NextCreature } from '../../core/creatures/team-queue';
+import type { TeamSlots } from '../../core/tower/sim-types';
 import { ANIM } from '../../data/common/anim';
 import { HUD_LAYOUT } from '../../data/run/hud-layout';
 import { MENU } from '../../data/common/menu-layout';

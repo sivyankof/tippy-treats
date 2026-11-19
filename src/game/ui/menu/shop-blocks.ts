@@ -1,7 +1,7 @@
 import type * as Phaser from 'phaser';
-import type { Currency } from '../../../core/economy';
+import type { Currency } from '../../../core/economy/economy';
 import { adLabelRoom, markAdUnavailable, resetAdLabel } from './ad-unavailable';
-import { productOwned } from '../../../core/shop';
+import { productOwned } from '../../../core/economy/shop';
 import { BERRY_PACKS } from '../../../data/economy/economy';
 import { CREATURES, type CreatureId } from '../../../data/creatures/creatures';
 import { MENU } from '../../../data/common/menu-layout';

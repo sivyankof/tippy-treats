@@ -1,4 +1,4 @@
-import type { CutSide } from '../../core/drop';
+import type { CutSide } from '../../core/tower/drop';
 import { PLAIN_LAYER } from '../../data/tower/plain-layers';
 import { TWO_PI } from '../../util/math';
 import type { LayerBox } from './layer-draw';

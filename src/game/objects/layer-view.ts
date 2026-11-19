@@ -1,6 +1,6 @@
 import * as Phaser from 'phaser';
-import type { CutSide } from '../../core/drop';
-import type { LayerPlan } from '../../core/sim-types';
+import type { CutSide } from '../../core/tower/drop';
+import type { LayerPlan } from '../../core/tower/sim-types';
 import { ANIM } from '../../data/common/anim';
 import { BALANCE } from '../../data/tower/balance';
 import { ABILITY_ANIM } from '../../data/creatures/ability-anim';
@@ -20,7 +20,7 @@ import { LayerFace } from './layer-face';
 import { LayerShade } from './layer-shade';
 import { LayerMaterial, type MaterialMotion } from './layer-material';
 import { LayerRig } from './layer-rig';
-import { hasNewLook } from '../../core/mastery';
+import { hasNewLook } from '../../core/creatures/mastery';
 import {
   artWidth,
   cakeColorsFor,
