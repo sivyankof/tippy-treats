@@ -18,7 +18,7 @@ import { KITCHEN_COLORS } from '../../../../data/common/palette';
 import { cssColor, mixColor, shade } from '../../../../util/color';
 import { TWO_PI } from '../../../../util/math';
 import { outlineColor } from '../../../fx/common/plain-style';
-import { bakeTexture } from '../../../ui/bake-texture';
+import { bakeTexture } from '../../../ui/common/bake-texture';
 import { onLayer } from '../life/layer-anchor';
 import type { LayerSpot } from '../life/layer-life';
 import { GlassWeatherLife, type Rect } from '../weather/window-weather';

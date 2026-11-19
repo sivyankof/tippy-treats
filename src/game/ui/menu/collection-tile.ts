@@ -1,8 +1,8 @@
 import * as Phaser from 'phaser';
 import { isMaster } from '../../../core/creatures/mastery';
 import { MENU } from '../../../data/common/menu-layout';
-import { attachPressFeedback, type PressFeedback } from '../../ui/button';
-import { bakeMasteryFrame } from '../mastery-frame';
+import { attachPressFeedback, type PressFeedback } from '../common/button';
+import { bakeMasteryFrame } from '../creatures/mastery-frame';
 import { CreatureCard, type CardLayout, type CardState } from './creature-card';
 
 /** The card numbers of the collection: the shared card with the collection's own sizes on top. */

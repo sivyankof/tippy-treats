@@ -1,8 +1,8 @@
 import * as Phaser from 'phaser';
 import { MENU } from '../../../data/common/menu-layout';
-import { attachPressFeedback, type PressFeedback } from '../button';
+import { attachPressFeedback, type PressFeedback } from '../common/button';
 import { fitText } from '../menu/fit-text';
-import { createOutlinedText } from '../outlined-text';
+import { createOutlinedText } from '../common/outlined-text';
 import { createVolumeImage, faceOffsetY, lookOf } from './volume';
 
 const cfg = MENU.style.toggle;

@@ -6,7 +6,7 @@ import {
   TOPPER_SQUASH,
 } from '../../../data/toppers/topper-squash';
 import { DEG_TO_RAD } from '../../../util/math';
-import { bakeTexture } from '../../ui/bake-texture';
+import { bakeTexture } from '../../ui/common/bake-texture';
 import { bakeCreamRollTextures } from './cream-roll-textures';
 import {
   drawBlobs,

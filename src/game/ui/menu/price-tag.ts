@@ -3,7 +3,7 @@ import type { Currency } from '../../../core/economy/economy';
 import { PALETTE } from '../../../data/common/palette';
 import { formatNumber } from '../../../i18n';
 import { TREASURE_TEXTURES, createTreasureTextures } from '../../fx/economy/treasure-textures';
-import { createOutlinedText } from '../outlined-text';
+import { createOutlinedText } from '../common/outlined-text';
 
 /** Icon size and the gap before it, relative to the font size. */
 const ICON_SCALE = 1.1;

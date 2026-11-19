@@ -1,7 +1,7 @@
 import type * as Phaser from 'phaser';
 import { BERRY_LOOK } from '../../../data/economy/berry-look';
 import { DEG_TO_RAD } from '../../../util/math';
-import { bakePadded } from '../../ui/bake-texture';
+import { bakePadded } from '../../ui/common/bake-texture';
 import {
   OUTLINE_SHARE,
   drawFace,

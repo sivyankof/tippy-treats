@@ -16,8 +16,8 @@ describe('pickSoakLevel', () => {
   });
 
   it('runs the smoke lap for other game code', () => {
-    const choice = pickSoakLevel(['docs/a.md', 'src/game/ui/button.ts']);
-    expect(choice).toEqual({ level: 'smoke', triggers: ['src/game/ui/button.ts'] });
+    const choice = pickSoakLevel(['docs/a.md', 'src/game/ui/common/button.ts']);
+    expect(choice).toEqual({ level: 'smoke', triggers: ['src/game/ui/common/button.ts'] });
   });
 
   it('adds five minutes for scenes, pools, textures, save, core and the safety wrapper', () => {
@@ -34,7 +34,7 @@ describe('pickSoakLevel', () => {
       'src/game/fx-guard.ts',
     ];
     for (const file of deep) {
-      expect(pickSoakLevel(['src/game/ui/button.ts', file])).toEqual({
+      expect(pickSoakLevel(['src/game/ui/common/button.ts', file])).toEqual({
         level: 'smoke+5min',
         triggers: [file],
       });

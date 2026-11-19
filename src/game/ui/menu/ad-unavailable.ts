@@ -14,7 +14,7 @@ import {
   VIDEO_ICON_KEY,
   bakeVideoIcon,
 } from '../../fx/economy/video-icon-texture';
-import type { Button } from '../button';
+import type { Button } from '../common/button';
 import { fitText, onFontRefresh } from './fit-text';
 
 const ICON_KEY = 'offlineIcon';

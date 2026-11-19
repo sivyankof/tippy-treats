@@ -10,8 +10,8 @@ import { BERRY_PRODUCTS, PRODUCTS, SHOP, type ProductKey } from '../../../data/e
 import { formatNumber, t, tn } from '../../../i18n';
 import { gameState } from '../../../state';
 import type { Prices } from '../../purchases';
-import { createTextButton, type Button } from '../button';
-import { CREATURE_ICON_KEYS } from '../creature-icons';
+import { createTextButton, type Button } from '../common/button';
+import { CREATURE_ICON_KEYS } from '../creatures/creature-icons';
 import type { DailySection } from './daily-section';
 import { createBodyText } from './detail-info';
 import { createNoAdsIcon } from './shop-premium-icon';

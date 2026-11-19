@@ -6,8 +6,8 @@ import { t } from '../../../i18n';
 import { mixColor } from '../../../util/color';
 import { LayerView } from '../../objects/tower/layer-view';
 import type { TowerSnapshot } from '../../objects/tower/tower-snapshot';
-import { offList } from '../bake-texture';
-import { createOutlinedText } from '../outlined-text';
+import { offList } from '../common/bake-texture';
+import { createOutlinedText } from '../common/outlined-text';
 import { fitText } from './fit-text';
 import { fitTower } from './share-card-layout';
 

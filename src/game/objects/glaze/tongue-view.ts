@@ -1,7 +1,7 @@
 import * as Phaser from 'phaser';
 import { LICK } from '../../../data/glaze/lick';
 import { PALETTE } from '../../../data/common/palette';
-import { bakeTexture } from '../../ui/bake-texture';
+import { bakeTexture } from '../../ui/common/bake-texture';
 import { loopPoint, type LickScene, type LoopShape } from './lick-plan';
 import type { TongueParts } from './tongue-graphics';
 import { newRibbon, sampleRibbon, type Ribbon } from './tongue-ribbon';

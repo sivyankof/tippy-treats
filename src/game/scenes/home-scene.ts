@@ -10,7 +10,7 @@ import { syncPurchases } from '../purchases';
 import type { RunRequest } from '../run-request';
 import { startRunFrom, openScreen, SCENES, type HomeData } from '../scene-keys';
 import type { PopupWindow } from '../ui/style/dialog-window';
-import { createTextButton, type Button } from '../ui/button';
+import { createTextButton, type Button } from '../ui/common/button';
 import { HomeStarterOffer } from '../ui/menu/home-starter';
 import { HomeStartFrom } from '../ui/menu/home-start-from';
 import { createHintBubble } from '../ui/menu/home-hint';
@@ -32,7 +32,7 @@ import { ScreenHeader } from '../ui/menu/screen-header';
 import { openStreakCalendar, openStreakEntry } from '../ui/menu/streak-windows';
 import type { StreakClaim } from '../../state/game-state';
 import { MenuScenery } from '../ui/style/menu-scenery';
-import { enterScreen, leaveScreen, type Movable } from '../ui/transition';
+import { enterScreen, leaveScreen, type Movable } from '../ui/common/transition';
 
 const cfg = MENU.home;
 

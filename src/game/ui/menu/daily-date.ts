@@ -1,7 +1,7 @@
 import type * as Phaser from 'phaser';
 import { MENU } from '../../../data/common/menu-layout';
 import { getLang, t } from '../../../i18n';
-import { createOutlinedText } from '../outlined-text';
+import { createOutlinedText } from '../common/outlined-text';
 import { faceOffsetY, VolumePlate } from '../style/volume';
 import { fitText } from './fit-text';
 import type { DailySection } from './daily-section';

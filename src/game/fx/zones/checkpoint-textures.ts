@@ -9,7 +9,7 @@ import {
 import { ZONES, type ZoneId } from '../../../data/zones/zones';
 import { TWO_PI } from '../../../util/math';
 import { shade } from '../../../util/color';
-import { bakeTexture } from '../../ui/bake-texture';
+import { bakeTexture } from '../../ui/common/bake-texture';
 import {
   OUTLINE_SHARE,
   drawGlossMark,

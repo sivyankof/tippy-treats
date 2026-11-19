@@ -1,7 +1,7 @@
 import type * as Phaser from 'phaser';
 import { PALETTE } from '../../../data/common/palette';
 import { t } from '../../../i18n';
-import { createTextButton, type Button, type LabelButtonLayout } from '../button';
+import { createTextButton, type Button, type LabelButtonLayout } from '../common/button';
 
 /** The small "Choose start" button that opens the "Where from?" window (Home and the results). */
 export function createStartFromButton(

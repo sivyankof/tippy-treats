@@ -8,9 +8,9 @@ import { gameState } from '../../../state';
 import { shade } from '../../../util/color';
 import { glow } from '../../objects/backdrop/common/art-kit';
 import { CreaturePortrait } from '../../objects/creatures/creature-portrait';
-import { bakeTexture } from '../bake-texture';
+import { bakeTexture } from '../common/bake-texture';
 import { drawVolume, faceOffsetY, shadowMargin, VolumePlate } from '../style/volume';
-import { createOutlinedText } from '../outlined-text';
+import { createOutlinedText } from '../common/outlined-text';
 import { slotAt, slotX } from './home-shelf-math';
 
 const cfg = MENU.home;

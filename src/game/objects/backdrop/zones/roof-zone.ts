@@ -6,7 +6,7 @@ import { BACKDROP_LIFE } from '../../../../data/backdrop/backdrop-life';
 import { WEATHER_LOOK } from '../../../../data/weather/weather-look';
 import type { WeatherId } from '../../../../data/weather/weather';
 import { multiplyColor } from '../../../../util/color';
-import { bakeTexture } from '../../../ui/bake-texture';
+import { bakeTexture } from '../../../ui/common/bake-texture';
 import { tiled } from '../common/art-kit';
 import { inSky, onLayer } from '../life/layer-anchor';
 import { Hover, PuffColumn, Traveler } from '../life/life';

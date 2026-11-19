@@ -8,7 +8,7 @@ import { RARITY_COLORS } from '../../../data/creatures/rarity';
 import { t } from '../../../i18n';
 import { CreaturePortrait } from '../../objects/creatures/creature-portrait';
 import { SleepingSilhouette } from '../../objects/creatures/sleep-silhouette';
-import { createOutlinedText } from '../outlined-text';
+import { createOutlinedText } from '../common/outlined-text';
 import { fitText } from './fit-text';
 import { VolumePlate } from '../style/volume';
 import { shade } from '../../../util/color';

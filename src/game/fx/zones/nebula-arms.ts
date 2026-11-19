@@ -6,8 +6,8 @@ import { RULE_ANIM } from '../../../data/zones/rule-anim';
 import { channels, cssColor, mixColor } from '../../../util/color';
 import { clamp01, rampBetween, TWO_PI } from '../../../util/math';
 import { ditherNoise } from '../../objects/backdrop/common/sky-gradient';
-import { deferStep } from '../../ui/bake-texture';
-import { createCpuCanvas } from '../../ui/cpu-canvas';
+import { deferStep } from '../../ui/common/bake-texture';
+import { createCpuCanvas } from '../../ui/common/cpu-canvas';
 import { riseRoom } from './cloud-figure';
 
 /**

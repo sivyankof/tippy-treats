@@ -6,7 +6,7 @@ import {
   type FlyingLayer,
   type LandingPreview,
 } from '../../../core/tower/sim-types';
-import { collectBakeSteps, type BakeStep } from '../../ui/bake-texture';
+import { collectBakeSteps, type BakeStep } from '../../ui/common/bake-texture';
 import { dripTexturesFor } from '../glaze/glaze-drip-layer';
 import {
   cakeColorsFor,

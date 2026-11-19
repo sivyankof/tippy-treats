@@ -39,7 +39,7 @@ import { bakeTopperTextures } from '../fx/toppers/topper-texture';
 import { bakeHintTextures } from '../tutorial/hint-textures';
 import { bakeTongue } from '../objects/glaze/tongue-view';
 import { bakeStripTextures } from '../objects/glaze/tongue-strip-texture';
-import { bakeMasteryFrame } from '../ui/mastery-frame';
+import { bakeMasteryFrame } from '../ui/creatures/mastery-frame';
 
 /**
  * Pictures that the game bakes lazily (on first use) or in the boot scene are baked here so they

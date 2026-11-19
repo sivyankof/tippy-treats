@@ -35,7 +35,7 @@ import { MENU } from '../../../data/common/menu-layout';
 import { PALETTE } from '../../../data/common/palette';
 import { shade } from '../../../util/color';
 import { fillGradient } from '../../objects/tower/layer-draw';
-import { bakeTexture } from '../bake-texture';
+import { bakeTexture } from '../common/bake-texture';
 
 const S = MENU.style;
 

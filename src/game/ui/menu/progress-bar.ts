@@ -1,7 +1,7 @@
 import * as Phaser from 'phaser';
 import { MENU } from '../../../data/common/menu-layout';
 import { PALETTE } from '../../../data/common/palette';
-import { createOutlinedText } from '../outlined-text';
+import { createOutlinedText } from '../common/outlined-text';
 import { barFillWidth } from '../style/bar-geometry';
 import { drawBarFill, drawBarTrack } from '../style/volume-bar';
 import { fitText } from './fit-text';

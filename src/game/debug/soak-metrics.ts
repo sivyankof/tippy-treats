@@ -1,7 +1,7 @@
 import type * as Phaser from 'phaser';
 import { SOAK } from '../../data/debug/soak';
 import { services } from '../../services';
-import { uiRegionCount } from '../ui/ui-regions';
+import { uiRegionCount } from '../ui/common/ui-regions';
 import { soundNodes } from './soak-compare';
 import { countLastingTweens, tweenFacts } from './soak-tweens';
 

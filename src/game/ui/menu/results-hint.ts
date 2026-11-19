@@ -4,7 +4,7 @@ import { MENU } from '../../../data/common/menu-layout';
 import { PALETTE } from '../../../data/common/palette';
 import { gameState } from '../../../state';
 import type { ResultsData } from '../../scene-keys';
-import { createOutlinedText } from '../outlined-text';
+import { createOutlinedText } from '../common/outlined-text';
 import { dailyResultsText } from './daily-text';
 import { fitText } from './fit-text';
 import { nearMissText } from './results-text';

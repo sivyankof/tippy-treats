@@ -3,7 +3,7 @@ import { REWARD_LOOK } from '../../../data/economy/reward-look';
 import { paddedScale } from '../../../util/field-pad';
 import { TWO_PI } from '../../../util/math';
 import { FIELD_PAD } from '../../../data/common/picture-fields';
-import { bakePadded, bakeTexture } from '../../ui/bake-texture';
+import { bakePadded, bakeTexture } from '../../ui/common/bake-texture';
 import {
   drawGlossMark,
   drawTwoToneBody,

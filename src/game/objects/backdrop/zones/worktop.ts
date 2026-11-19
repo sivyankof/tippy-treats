@@ -6,7 +6,7 @@ import { KITCHEN_COLORS } from '../../../../data/common/palette';
 import { oscillate01, sineWave } from '../../../../util/math';
 import { shade } from '../../../../util/color';
 import { DEPTH } from '../../../depth';
-import { bakeTexture } from '../../../ui/bake-texture';
+import { bakeTexture } from '../../../ui/common/bake-texture';
 import { bakeSharedArt } from '../common/art-kit';
 import { FIXED } from '../life/layer-anchor';
 import { PuffColumn } from '../life/life';

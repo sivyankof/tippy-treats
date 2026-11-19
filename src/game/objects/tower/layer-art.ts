@@ -11,9 +11,9 @@ import { PLAIN_LAYER, PLAIN_PAIRS, SPONGES } from '../../../data/tower/plain-lay
 import { ZONES } from '../../../data/zones/zones';
 import { TREASURE } from '../../../data/economy/treasure-anim';
 import { shade } from '../../../util/color';
-import { bakeTexture } from '../../ui/bake-texture';
+import { bakeTexture } from '../../ui/common/bake-texture';
 import { drawCreatureLayer, finishCreatureLayer } from '../creatures/creature-art';
-import { TextureRefCache } from '../../ui/texture-ref-cache';
+import { TextureRefCache } from '../../ui/common/texture-ref-cache';
 import { creatureColors } from '../creatures/creature-art/primitives';
 import { DARK_OUTLINE, SHADOW_DROP } from './layer-draw';
 import { drawPlainLayer, type PlainArt } from './plain-layer-draw';

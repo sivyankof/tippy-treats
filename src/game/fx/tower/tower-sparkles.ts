@@ -4,7 +4,7 @@ import { TOWER_SPARKLES } from '../../../data/tower/tower-sparkles';
 import { DEG_TO_RAD, backOut, clamp01, lerp } from '../../../util/math';
 import { DEPTH } from '../../depth';
 import { sparkle } from '../../objects/backdrop/common/art-kit';
-import { bakeTexture } from '../../ui/bake-texture';
+import { bakeTexture } from '../../ui/common/bake-texture';
 import { hideItem, TimedPool, type PoolEntry } from '../common/timed-pool';
 import { sparkleSpot, type SparkleField } from './tower-sparkle-spot';
 

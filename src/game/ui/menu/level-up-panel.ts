@@ -15,9 +15,9 @@ import { REWARD_TEXTURES, REWARD_TOWER_FIELD_SCALE } from '../../fx/economy/rewa
 import { createTreasurePile } from '../../fx/economy/treasure-pile';
 import { TREASURE_TEXTURES } from '../../fx/economy/treasure-textures';
 import { CreaturePortrait } from '../../objects/creatures/creature-portrait';
-import { CREATURE_ICON_KEYS } from '../creature-icons';
-import { createTextButton } from '../button';
-import { createOutlinedText } from '../outlined-text';
+import { CREATURE_ICON_KEYS } from '../creatures/creature-icons';
+import { createTextButton } from '../common/button';
+import { createOutlinedText } from '../common/outlined-text';
 import { PopupWindow } from '../style/dialog-window';
 import { fitText } from './fit-text';
 import { PriceTag } from './price-tag';

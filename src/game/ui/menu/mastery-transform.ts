@@ -12,7 +12,7 @@ import { FX_TEXTURES } from '../../fx/common/fx-textures';
 import type { Particles } from '../../fx/common/particles';
 import { starBurst } from '../../fx/common/sparkle-fx';
 import { CreaturePortrait, squeakPitch } from '../../objects/creatures/creature-portrait';
-import { createDimOverlay } from '../dim-overlay';
+import { createDimOverlay } from '../common/dim-overlay';
 import { HudPlate } from '../style/hud-plate';
 import { TitleRibbon } from '../style/title-ribbon';
 import { createBodyText } from './detail-info';

@@ -16,7 +16,7 @@ import type { DailySection } from '../ui/menu/daily-section';
 import { DailyTeam, openAbilityWindow } from '../ui/menu/daily-team';
 import { ScreenHeader } from '../ui/menu/screen-header';
 import { MenuScenery } from '../ui/style/menu-scenery';
-import { enterScreen, leaveScreen, type Movable } from '../ui/transition';
+import { enterScreen, leaveScreen, type Movable } from '../ui/common/transition';
 
 const cfg = MENU.daily;
 

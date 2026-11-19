@@ -2,7 +2,7 @@ import * as Phaser from 'phaser';
 import { PALETTE } from '../../../data/common/palette';
 import { cssColor } from '../../../util/color';
 import { TWO_PI } from '../../../util/math';
-import { createOutlinedText } from '../outlined-text';
+import { createOutlinedText } from '../common/outlined-text';
 import { createVolumeImage, faceOffsetY, lookOf } from './volume';
 import { drawRingArc } from './volume-bar';
 

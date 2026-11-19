@@ -2,7 +2,7 @@ import type * as Phaser from 'phaser';
 import { BACKDROP, BD_TEX } from '../../../../data/backdrop/backdrop';
 import { BACKDROP_COLORS } from '../../../../data/backdrop/backdrop-colors';
 import { BACKDROP_LIFE } from '../../../../data/backdrop/backdrop-life';
-import { bakeTexture, deferStep } from '../../../ui/bake-texture';
+import { bakeTexture, deferStep } from '../../../ui/common/bake-texture';
 import { fillBlobRows } from './blob-pixels';
 import { glow, scatterPoints, sparkle, tiled } from '../common/art-kit';
 import { inSky } from '../life/layer-anchor';

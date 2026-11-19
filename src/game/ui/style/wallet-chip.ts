@@ -1,7 +1,7 @@
 import type * as Phaser from 'phaser';
 import { MENU } from '../../../data/common/menu-layout';
 import { TREASURE } from '../../../data/economy/treasure-anim';
-import { ResourceCounter, type CounterOptions } from '../resource-tally';
+import { ResourceCounter, type CounterOptions } from '../economy/resource-tally';
 import { VolumePlate } from './volume';
 
 const wallet = MENU.style.wallet;

@@ -1,6 +1,6 @@
 import * as Phaser from 'phaser';
 import { CUT_LOOK, CUT_PICTURE, CUT_TEXTURES } from '../../../data/cuts/cut-look';
-import { bakeTexture } from '../../ui/bake-texture';
+import { bakeTexture } from '../../ui/common/bake-texture';
 
 const { pad, outline } = CUT_PICTURE;
 const WHITE = 0xffffff;

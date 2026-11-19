@@ -3,7 +3,7 @@ import { BACKDROP, BD_TEX } from '../../../../data/backdrop/backdrop';
 import { BACKDROP_COLORS } from '../../../../data/backdrop/backdrop-colors';
 import { BACKDROP_LIFE, garlandWireY } from '../../../../data/backdrop/backdrop-life';
 import { LOGICAL_SIZE } from '../../../../data/app/screen';
-import { bakePadded, bakeTexture } from '../../../ui/bake-texture';
+import { bakePadded, bakeTexture } from '../../../ui/common/bake-texture';
 import { FIELD_PAD } from '../../../../data/common/picture-fields';
 import { glow, tiled } from '../common/art-kit';
 import { onLayer } from '../life/layer-anchor';

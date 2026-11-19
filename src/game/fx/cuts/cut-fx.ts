@@ -7,7 +7,7 @@ import { lerp, smoothstep } from '../../../util/math';
 import { mixColor } from '../../../util/color';
 import type { CreatureId } from '../../../data/creatures/creatures';
 import { CUT_LOOK } from '../../../data/cuts/cut-look';
-import { collectBakeSteps } from '../../ui/bake-texture';
+import { collectBakeSteps } from '../../ui/common/bake-texture';
 import { dripTexturesFor, glazeEdgeTone } from '../../objects/glaze/glaze-drip-layer';
 import { layerMarks } from '../../objects/tower/layer-marks';
 import type { LayerView } from '../../objects/tower/layer-view';

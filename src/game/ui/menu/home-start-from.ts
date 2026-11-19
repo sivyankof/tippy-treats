@@ -1,7 +1,7 @@
 import type * as Phaser from 'phaser';
 import { MENU } from '../../../data/common/menu-layout';
 import { gameState } from '../../../state';
-import type { Button } from '../button';
+import type { Button } from '../common/button';
 import type { HomeStarterOffer } from './home-starter';
 import type { StartRun } from '../../checkpoint-start';
 import { openStartChoice } from './start-choice';

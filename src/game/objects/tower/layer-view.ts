@@ -12,7 +12,7 @@ import { effectsMode } from '../../effects-mode';
 import { fxGuard } from '../../fx-guard';
 import { createGlossBand, sweepGloss } from '../../fx/common/gloss-sweep';
 import { springScaleBack, type ScaleStart } from '../../fx/common/spring-back';
-import { idlePose, type IdlePose } from '../../ui/idle-motion';
+import { idlePose, type IdlePose } from '../../ui/common/idle-motion';
 import { creatureColors } from '../creatures/creature-art/primitives';
 import type { EdgeShape } from './edge-squash/edge-squash';
 import { EdgeSquashSkin } from './edge-squash/edge-squash-skin';

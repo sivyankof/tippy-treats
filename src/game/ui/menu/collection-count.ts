@@ -2,7 +2,7 @@ import * as Phaser from 'phaser';
 import { MENU } from '../../../data/common/menu-layout';
 import { PALETTE } from '../../../data/common/palette';
 import { VolumePlate } from '../style/volume';
-import { createOutlinedText } from '../outlined-text';
+import { createOutlinedText } from '../common/outlined-text';
 
 const cfg = MENU.collection;
 

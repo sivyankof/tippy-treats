@@ -3,7 +3,7 @@ import { ART_SHEET, isSheetPicture } from '../../data/debug/art-sheet';
 import { SCENES } from '../scene-keys';
 import { LIVE_PICTURES } from './art-sheet-live';
 import { clipSummary, clipTightLines } from '../clip-guard';
-import { atlasPageCount } from '../ui/shared-atlas';
+import { atlasPageCount } from '../ui/common/shared-atlas';
 import { primeArtTextures } from './art-sheet-prime';
 
 /**

@@ -2,7 +2,7 @@ import type * as Phaser from 'phaser';
 import { GIFT_LOOK } from '../../../data/economy/gift-look';
 import { MENU } from '../../../data/common/menu-layout';
 import { DEG_TO_RAD } from '../../../util/math';
-import { bakeTexture } from '../../ui/bake-texture';
+import { bakeTexture } from '../../ui/common/bake-texture';
 import {
   OUTLINE_SHARE,
   drawFace,

@@ -4,7 +4,7 @@ import { PALETTE } from '../../../data/common/palette';
 import { LICK } from '../../../data/glaze/lick';
 import { TRANSFORM } from '../../../data/creatures/transform-scene';
 import { DEG_TO_RAD, TWO_PI } from '../../../util/math';
-import { bakeTexture } from '../../ui/bake-texture';
+import { bakeTexture } from '../../ui/common/bake-texture';
 import { bakeGrownAccentTextures } from '../creatures/grown-accent-textures';
 
 /** Keys of the small shared effect textures. All are white and meant to be tinted, except the heart. */

@@ -1,6 +1,6 @@
 import type * as Phaser from 'phaser';
 import { CHEST_LOOK } from '../../../data/economy/chest-look';
-import { bakeTexture } from '../../ui/bake-texture';
+import { bakeTexture } from '../../ui/common/bake-texture';
 import {
   OUTLINE_SHARE,
   domeShape,

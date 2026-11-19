@@ -2,9 +2,9 @@ import * as Phaser from 'phaser';
 import { MENU } from '../../../data/common/menu-layout';
 import { PALETTE } from '../../../data/common/palette';
 import { windowDuck } from '../../music-cues';
-import { createDimOverlay } from '../dim-overlay';
+import { createDimOverlay } from '../common/dim-overlay';
 import { createIconButton } from '../menu/icon-button';
-import { openPopup } from '../transition';
+import { openPopup } from '../common/transition';
 import { TitleRibbon } from './title-ribbon';
 import { VolumePlate } from './volume';
 

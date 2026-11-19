@@ -3,7 +3,7 @@ import { ANIM } from '../../../data/common/anim';
 import { BALANCE } from '../../../data/tower/balance';
 import { RULE_ANIM } from '../../../data/zones/rule-anim';
 import { TREASURE } from '../../../data/economy/treasure-anim';
-import { bakeTexture } from '../../ui/bake-texture';
+import { bakeTexture } from '../../ui/common/bake-texture';
 import { bakeBerry } from './berry-texture';
 import { shade } from '../../../util/color';
 import { bakeCloudFigure } from '../zones/cloud-figure';

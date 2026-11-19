@@ -3,7 +3,7 @@ import type { TeamIds } from '../../../core/creatures/team';
 import { CREATURE_IDS, type CreatureId } from '../../../data/creatures/creatures';
 import { MENU } from '../../../data/common/menu-layout';
 import { PALETTE } from '../../../data/common/palette';
-import { shakeX } from '../shake-x';
+import { shakeX } from '../common/shake-x';
 import { VolumePlate } from '../style/volume';
 import { CreatureCard } from './creature-card';
 import { cellAt, layoutGrid, type GridCell } from './team-layout';

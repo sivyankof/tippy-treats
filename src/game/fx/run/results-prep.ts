@@ -1,5 +1,5 @@
 import type * as Phaser from 'phaser';
-import { collectBakeSteps, type BakeStep } from '../../ui/bake-texture';
+import { collectBakeSteps, type BakeStep } from '../../ui/common/bake-texture';
 import { bakeOvenTextures } from '../economy/oven-texture';
 
 /**

@@ -2,7 +2,7 @@ import type * as Phaser from 'phaser';
 import type { DailyPayout } from '../../../core/progression/daily';
 import { MENU } from '../../../data/common/menu-layout';
 import { formatNumber, t, tn } from '../../../i18n';
-import { createOutlinedText } from '../outlined-text';
+import { createOutlinedText } from '../common/outlined-text';
 import { fitText } from './fit-text';
 import { PriceTag } from './price-tag';
 import { stackRows, type Row } from './results-layout';

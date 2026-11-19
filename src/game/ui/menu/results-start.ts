@@ -7,7 +7,7 @@ import { services } from '../../../services';
 import { gameState } from '../../../state';
 import { isLiveRun } from '../../results-data';
 import type { ResultsData, StartOffer } from '../../scene-keys';
-import { createTextButton, type Button } from '../button';
+import { createTextButton, type Button } from '../common/button';
 import { BalanceChip, followBalance } from '../style/balance-chip';
 import { createPriceButton } from '../style/price-button';
 import { createAdsSpentNote } from './no-more-starts-note';

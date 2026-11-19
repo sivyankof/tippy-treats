@@ -12,7 +12,7 @@ import { cssColor, mixColor, shade } from '../../../../util/color';
 import { TWO_PI } from '../../../../util/math';
 import { drawGlossMark, fillPolygon, outlineColor, type Pt } from '../../../fx/common/plain-style';
 import { FIELD_PAD } from '../../../../data/common/picture-fields';
-import { bakePadded, bakeTexture, deferStep } from '../../../ui/bake-texture';
+import { bakePadded, bakeTexture, deferStep } from '../../../ui/common/bake-texture';
 import { sparkle } from '../common/art-kit';
 import { bankPuffs, type Puff } from './weather-motion';
 import { zoneShowsWeatherSky } from './weather-share';

@@ -6,7 +6,7 @@ import { clamp01, lerp, oscillate01, sineWave, smoothstep } from '../../../util/
 import { effectsMode } from '../../effects-mode';
 import { scatter } from '../../objects/creatures/creature-art/primitives';
 import { PrepQueue } from '../../objects/backdrop/zones/zone-prep';
-import { collectBakeSteps } from '../../ui/bake-texture';
+import { collectBakeSteps } from '../../ui/common/bake-texture';
 import { bakeCloudFigure, cloudTopBaked, verticalRoom, type VerticalRoom } from './cloud-figure';
 import { FLYING_FX_DEPTH } from '../tower/flying-fx-depth';
 import {

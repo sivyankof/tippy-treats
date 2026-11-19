@@ -1,6 +1,6 @@
 import type * as Phaser from 'phaser';
 import { PALETTE } from '../../../data/common/palette';
-import { Button } from '../button';
+import { Button } from '../common/button';
 
 /** Icons drawn in code on round buttons. */
 export type IconKind =

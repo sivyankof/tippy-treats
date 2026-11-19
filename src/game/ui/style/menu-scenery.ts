@@ -5,7 +5,7 @@ import { bakeSharedArt } from '../../objects/backdrop/common/art-kit';
 import { kitchenArt } from '../../objects/backdrop/zones/kitchen-zone';
 import { newFrameCtx, type FrameCtx } from '../../objects/backdrop/life/life';
 import { ZoneScenery, type SceneryLook } from '../../objects/backdrop/zones/zone-scenery';
-import { bakeTexture } from '../bake-texture';
+import { bakeTexture } from '../common/bake-texture';
 
 const cfg = MENU.style.scenery;
 /** Menu screens always show the plain kitchen. */

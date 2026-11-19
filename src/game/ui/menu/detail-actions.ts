@@ -5,7 +5,7 @@ import type { CreatureId } from '../../../data/creatures/creatures';
 import { MENU } from '../../../data/common/menu-layout';
 import { PALETTE } from '../../../data/common/palette';
 import { formatNumber, t } from '../../../i18n';
-import { Button, createTextButton, type LabelButtonLayout } from '../button';
+import { Button, createTextButton, type LabelButtonLayout } from '../common/button';
 import { createPriceButton } from '../style/price-button';
 import { createIconButton } from './icon-button';
 import { createTextPlate } from './detail-info';

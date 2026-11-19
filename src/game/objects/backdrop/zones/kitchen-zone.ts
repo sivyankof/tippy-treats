@@ -5,7 +5,7 @@ import { BACKDROP_LIFE } from '../../../../data/backdrop/backdrop-life';
 import { KITCHEN_COLORS, PALETTE } from '../../../../data/common/palette';
 import { mixColor, shade } from '../../../../util/color';
 import { outlineColor } from '../../../fx/common/plain-style';
-import { bakePadded, bakeTexture } from '../../../ui/bake-texture';
+import { bakePadded, bakeTexture } from '../../../ui/common/bake-texture';
 import { FIELD_PAD } from '../../../../data/common/picture-fields';
 import { drawPlank } from '../common/art-kit';
 import { inSky, onLayer } from '../life/layer-anchor';

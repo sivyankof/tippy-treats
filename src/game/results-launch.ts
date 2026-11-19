@@ -2,7 +2,7 @@ import type * as Phaser from 'phaser';
 import { ANIM } from '../data/common/anim';
 import { gameState } from '../state';
 import { resultsBakeSteps } from './fx/run/results-prep';
-import type { BakeStep } from './ui/bake-texture';
+import type { BakeStep } from './ui/common/bake-texture';
 import { perfResultsData } from './perf/perf-session';
 import { buildResultsData, type RunOutcome } from './results-data';
 import type { ResultsScene } from './scenes/results-scene';

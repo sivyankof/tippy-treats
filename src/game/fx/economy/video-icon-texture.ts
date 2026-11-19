@@ -3,7 +3,7 @@ import { FIELD_PAD } from '../../../data/common/picture-fields';
 import { VIDEO_ICON_LOOK } from '../../../data/economy/video-icon-look';
 import { paddedScale } from '../../../util/field-pad';
 import { DEG_TO_RAD } from '../../../util/math';
-import { bakePadded } from '../../ui/bake-texture';
+import { bakePadded } from '../../ui/common/bake-texture';
 import { drawGlossMark, fillPolygon } from '../common/plain-style';
 
 const { textureSize: size, colors, disc, triangle, gloss } = VIDEO_ICON_LOOK;

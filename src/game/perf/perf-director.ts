@@ -28,7 +28,7 @@ import {
   type SegmentStats,
 } from './perf-stats';
 import { runHooks } from './run-hooks';
-import { atlasPeak } from '../ui/shared-atlas';
+import { atlasPeak } from '../ui/common/shared-atlas';
 import { cutOverride } from '../fx/cuts/cut-override';
 
 /** What the page reads from `window.__tippyPerf`. */

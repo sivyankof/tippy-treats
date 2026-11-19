@@ -2,7 +2,7 @@ import type * as Phaser from 'phaser';
 import { GLAZE_DRIPS } from '../../../data/glaze/glaze-drips';
 import { PALETTE } from '../../../data/common/palette';
 import { shade } from '../../../util/color';
-import { bakeTexture } from '../../ui/bake-texture';
+import { bakeTexture } from '../../ui/common/bake-texture';
 import { GLAZE_OUTLINE } from '../tower/layer-draw';
 
 /** Size of a drip: stem width, diameter of the round end and outline, in pixels. */

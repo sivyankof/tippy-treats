@@ -1,6 +1,6 @@
 import type * as Phaser from 'phaser';
 import { CREATURE_SLEEP } from '../../../data/creatures/creature-style';
-import { createOutlinedText } from '../../ui/outlined-text';
+import { createOutlinedText } from '../../ui/common/outlined-text';
 import { zPose, type ZPose } from './sleep-zs';
 
 /** Where the floating letters start and how far they reach, in the parent's pixels. */

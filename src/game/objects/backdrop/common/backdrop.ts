@@ -8,7 +8,7 @@ import type { RunLook } from '../../../../core/weather/run-look';
 import { flyingLap } from '../../../../core/zones/space-laps';
 import { DEPTH } from '../../../depth';
 import { markPerfPart } from '../../../perf/perf-marks';
-import { collectBakeSteps } from '../../../ui/bake-texture';
+import { collectBakeSteps } from '../../../ui/common/bake-texture';
 import { surfaceScreenY, travellerClearBand } from '../../../camera-layout';
 import { bakeSharedArt } from './art-kit';
 import { towerLayersAt } from '../zones/mountain-placement';

@@ -18,7 +18,7 @@ import {
   outlineColor,
   type Pt,
 } from '../../../fx/common/plain-style';
-import { bakeTexture } from '../../../ui/bake-texture';
+import { bakeTexture } from '../../../ui/common/bake-texture';
 
 type Graphics = Phaser.GameObjects.Graphics;
 

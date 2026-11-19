@@ -2,7 +2,7 @@ import * as Phaser from 'phaser';
 import { MENU } from '../../../data/common/menu-layout';
 import { formatNumber, t } from '../../../i18n';
 import { slotLayers } from '../../../core/creatures/team';
-import { createOutlinedText } from '../outlined-text';
+import { createOutlinedText } from '../common/outlined-text';
 import { faceOffsetY, VolumePlate } from '../style/volume';
 import { fitText } from './fit-text';
 

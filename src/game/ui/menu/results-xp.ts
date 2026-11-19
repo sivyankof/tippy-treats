@@ -5,7 +5,7 @@ import { PALETTE } from '../../../data/common/palette';
 import { formatNumber, t } from '../../../i18n';
 import { services } from '../../../services';
 import type { LevelUp, RunSummary } from '../../../state/game-state';
-import { createOutlinedText } from '../outlined-text';
+import { createOutlinedText } from '../common/outlined-text';
 import { fitText } from './fit-text';
 import { LevelUpPanel } from './level-up-panel';
 import { OvenMark } from './oven-mark';

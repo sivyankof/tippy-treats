@@ -7,7 +7,7 @@ import { PALETTE } from '../../../data/common/palette';
 import { RARITY_COLORS } from '../../../data/creatures/rarity';
 import { t } from '../../../i18n';
 import { CreaturePortrait } from '../../objects/creatures/creature-portrait';
-import { createOutlinedText } from '../outlined-text';
+import { createOutlinedText } from '../common/outlined-text';
 import { faceOffsetY, lookOf, VolumePlate } from '../style/volume';
 import { fitText } from './fit-text';
 

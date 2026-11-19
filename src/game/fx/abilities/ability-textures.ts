@@ -5,7 +5,7 @@ import { BALANCE } from '../../../data/tower/balance';
 import { MASTER_ANIM } from '../../../data/creatures/master-anim';
 import { PALETTE } from '../../../data/common/palette';
 import { DEG_TO_RAD } from '../../../util/math';
-import { bakeTexture } from '../../ui/bake-texture';
+import { bakeTexture } from '../../ui/common/bake-texture';
 import { bakeRainbowTextures } from './rainbow-textures';
 
 /** Keys of the textures the ability effects share. All but the bubble are white and meant to be tinted. */

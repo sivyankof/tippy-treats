@@ -1,7 +1,7 @@
 import type * as Phaser from 'phaser';
 import { LICK } from '../../../data/glaze/lick';
 import { PALETTE } from '../../../data/common/palette';
-import { bakeTexture } from '../../ui/bake-texture';
+import { bakeTexture } from '../../ui/common/bake-texture';
 import { TIP_BANDS, TONGUE_COLORS } from './tongue-draw';
 import { stripLayout } from './tongue-strip-geometry';
 

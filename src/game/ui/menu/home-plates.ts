@@ -3,7 +3,7 @@ import { MENU } from '../../../data/common/menu-layout';
 import { PALETTE } from '../../../data/common/palette';
 import { formatNumber, t } from '../../../i18n';
 import { gameState } from '../../../state';
-import { createOutlinedText } from '../outlined-text';
+import { createOutlinedText } from '../common/outlined-text';
 import { faceOffsetY, VolumePlate } from '../style/volume';
 import { XpBar } from './xp-bar';
 

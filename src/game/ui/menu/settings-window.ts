@@ -13,8 +13,8 @@ import {
 } from '../../apply-settings';
 import { productOwned } from '../../../core/economy/shop';
 import { buyProduct, loadPrices, restorePurchases } from '../../purchases';
-import { createTextButton } from '../button';
-import { createOutlinedText } from '../outlined-text';
+import { createTextButton } from '../common/button';
+import { createOutlinedText } from '../common/outlined-text';
 import { PopupWindow } from '../style/dialog-window';
 import { openConfirmWindow } from './confirm-window';
 import { fitText } from './fit-text';

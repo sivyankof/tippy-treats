@@ -1,6 +1,6 @@
 import type * as Phaser from 'phaser';
 import { ANIM } from '../../../../data/common/anim';
-import { picturePixel } from '../../../ui/bake-texture';
+import { picturePixel } from '../../../ui/common/bake-texture';
 import type { BodyFrame } from './edge-squash-marks';
 
 /** The colours the rounded silhouette of the crumpled part is drawn in: what the body of the picture has at its top and bottom edge. */

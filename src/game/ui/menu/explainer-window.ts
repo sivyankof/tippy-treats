@@ -1,8 +1,8 @@
 import type * as Phaser from 'phaser';
 import { PALETTE } from '../../../data/common/palette';
 import { t } from '../../../i18n';
-import { createTextButton } from '../button';
-import { createOutlinedText } from '../outlined-text';
+import { createTextButton } from '../common/button';
+import { createOutlinedText } from '../common/outlined-text';
 import { PopupWindow } from '../style/dialog-window';
 
 /** Where the parts of an explainer window sit, by their centres from the top of the content. */

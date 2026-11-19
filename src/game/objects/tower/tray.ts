@@ -5,8 +5,8 @@ import { IDLE_MOTION, IDLE_PHASE, TRAY_SHEEN } from '../../../data/common/idle-m
 import { KITCHEN_COLORS } from '../../../data/common/palette';
 import { DEPTH } from '../../depth';
 import { createGlossBand, sweepGloss } from '../../fx/common/gloss-sweep';
-import { bakeTexture } from '../../ui/bake-texture';
-import { applyIdlePose, idlePose, type IdlePose } from '../../ui/idle-motion';
+import { bakeTexture } from '../../ui/common/bake-texture';
+import { applyIdlePose, idlePose, type IdlePose } from '../../ui/common/idle-motion';
 
 const TRAY_TEXTURE = 'tray';
 const TRAY_SHADOW_WIDTH_RATIO = 1.04;

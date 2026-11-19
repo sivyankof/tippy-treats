@@ -5,7 +5,7 @@ import type { Point } from '../../../../data/backdrop/backdrop-life';
 import { SHOP_COLORS } from '../../../../data/weather/window-look';
 import { mixColor, shade } from '../../../../util/color';
 import { outlineColor } from '../../../fx/common/plain-style';
-import { bakeTexture } from '../../../ui/bake-texture';
+import { bakeTexture } from '../../../ui/common/bake-texture';
 
 type Graphics = Phaser.GameObjects.Graphics;
 

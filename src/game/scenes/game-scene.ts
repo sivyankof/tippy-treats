@@ -7,7 +7,7 @@ import type { TeamSlot } from '../../core/tower/sim-types';
 import { TowerSim, type TowerState } from '../../core/tower/tower-sim';
 import { fxGuard } from '../fx-guard';
 import { RunFx } from '../fx/run/run-fx';
-import type { MasterFeed } from '../ui/master-caption-state';
+import type { MasterFeed } from '../ui/creatures/master-caption-state';
 import { easeFn } from '../fx/common/ease';
 import { RunIntro } from '../fx/run/run-intro';
 import { effectsMode } from '../effects-mode';
@@ -40,8 +40,8 @@ import { DropDriverSlot } from '../drop-driver-slot';
 import { installCutDebug } from '../debug/cut-debug';
 import { ANIM } from '../../data/common/anim';
 import { DEMO } from '../../data/run/demo';
-import { enterWorld, leaveScreen } from '../ui/transition';
-import { isOverUi } from '../ui/ui-regions';
+import { enterWorld, leaveScreen } from '../ui/common/transition';
+import { isOverUi } from '../ui/common/ui-regions';
 import { TutorialDirector } from '../tutorial/tutorial-director';
 
 /** World y of the tray surface; the tower grows towards negative y. */

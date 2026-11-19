@@ -3,7 +3,7 @@ import { MENU } from '../../../data/common/menu-layout';
 import { services } from '../../../services';
 import { arcPoint, burstSpot, splitAmount, type Point } from '../../fx/economy/coin-flight-math';
 import { createTreasureTextures, TREASURE_TEXTURES } from '../../fx/economy/treasure-textures';
-import type { ResourceCounter } from '../resource-tally';
+import type { ResourceCounter } from '../economy/resource-tally';
 
 const cfg = MENU.rewardFlight;
 

@@ -12,7 +12,7 @@ import { Particles } from '../fx/common/particles';
 import { starBurst } from '../fx/common/sparkle-fx';
 import { demoRun } from '../run-request';
 import { openScreen, SCENES, startRunFrom, type CreatureDetailData } from '../scene-keys';
-import { enterScreen, leaveScreen, type Movable } from '../ui/transition';
+import { enterScreen, leaveScreen, type Movable } from '../ui/common/transition';
 import { DetailActions } from '../ui/menu/detail-actions';
 import { abilityText } from '../ui/menu/detail-model';
 import { DetailBio } from '../ui/menu/detail-bio';

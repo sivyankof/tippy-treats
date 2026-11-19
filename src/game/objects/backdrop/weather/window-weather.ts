@@ -15,7 +15,7 @@ import { WEATHER_LOOK } from '../../../../data/weather/weather-look';
 import { cssColor, shade } from '../../../../util/color';
 import { effectsMode } from '../../../effects-mode';
 import { fillPolygon, outlineColor } from '../../../fx/common/plain-style';
-import { bakePadded, bakeTexture } from '../../../ui/bake-texture';
+import { bakePadded, bakeTexture } from '../../../ui/common/bake-texture';
 import { FIELD_PAD } from '../../../../data/common/picture-fields';
 import { glassPose, newGlassPose } from '../panorama/glass-motion';
 import { bar, paintGlints, paintSky, paintValance, roundRect } from '../panorama/window-paint';

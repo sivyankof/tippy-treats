@@ -10,7 +10,7 @@ import type { ZoneId } from '../../../../data/zones/zones';
 import { mixColor } from '../../../../util/color';
 import { MS_PER_SECOND, oscillate01, sineWave } from '../../../../util/math';
 import { markPerfPart } from '../../../perf/perf-marks';
-import { bakeTexture, deferStep } from '../../../ui/bake-texture';
+import { bakeTexture, deferStep } from '../../../ui/common/bake-texture';
 import { bakeFarArt, FarPlane } from './far-plane';
 import { fillLayerFrame, layerSwayAt } from '../life/layer-anchor';
 import type { GuestSource } from '../life/guest-source';

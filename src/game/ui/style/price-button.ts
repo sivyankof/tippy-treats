@@ -2,7 +2,7 @@ import type * as Phaser from 'phaser';
 import type { Currency } from '../../../core/economy/economy';
 import { MENU } from '../../../data/common/menu-layout';
 import { t } from '../../../i18n';
-import { createLabelButton, type Button, type LabelButtonLayout } from '../button';
+import { createLabelButton, type Button, type LabelButtonLayout } from '../common/button';
 import { missingAmount } from '../menu/detail-model';
 import { PriceTag } from '../menu/price-tag';
 

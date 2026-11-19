@@ -10,8 +10,8 @@ import {
   VIDEO_ICON_KEY,
   bakeVideoIcon,
 } from '../../fx/economy/video-icon-texture';
-import { attachPressFeedback } from '../button';
-import { createOutlinedText } from '../outlined-text';
+import { attachPressFeedback } from '../common/button';
+import { createOutlinedText } from '../common/outlined-text';
 import { createPlate, faceOffsetY } from '../style/volume';
 import { fitText } from './fit-text';
 import { drawPadlock } from './padlock';

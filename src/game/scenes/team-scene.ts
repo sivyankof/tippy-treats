@@ -14,7 +14,7 @@ import { TeamOrderPlate } from '../ui/menu/team-order-plate';
 import { PressGesture } from '../ui/menu/team-gesture';
 import { ownedIds, TeamGrid } from '../ui/menu/team-grid';
 import { TeamSlots } from '../ui/menu/team-slots';
-import { enterScreen, leaveScreen, type Movable } from '../ui/transition';
+import { enterScreen, leaveScreen, type Movable } from '../ui/common/transition';
 
 const cfg = MENU.team;
 

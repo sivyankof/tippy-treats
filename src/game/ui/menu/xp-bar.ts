@@ -3,7 +3,7 @@ import { xpToNext } from '../../../core/progression/progression';
 import { MENU } from '../../../data/common/menu-layout';
 import { PALETTE } from '../../../data/common/palette';
 import { formatNumber, t } from '../../../i18n';
-import { createOutlinedText } from '../outlined-text';
+import { createOutlinedText } from '../common/outlined-text';
 import { drawProgressBar } from './progress-bar';
 
 const { width, height, radius, font, labelGap, border, numbersScale } = MENU.xpBar;

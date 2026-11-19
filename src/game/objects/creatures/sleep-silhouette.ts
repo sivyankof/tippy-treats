@@ -3,7 +3,7 @@ import { BALANCE } from '../../../data/tower/balance';
 import { CREATURE_SLEEP } from '../../../data/creatures/creature-style';
 import type { CreatureId } from '../../../data/creatures/creatures';
 import { shade } from '../../../util/color';
-import { bakeTexture } from '../../ui/bake-texture';
+import { bakeTexture } from '../../ui/common/bake-texture';
 import { drawCreatureLayer } from './creature-art';
 import { sleepLook } from './creature-art/sleep-look';
 import { stroke } from './creature-art/primitives';

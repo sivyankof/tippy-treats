@@ -3,7 +3,7 @@ import { BD_TEX } from '../../../../data/backdrop/backdrop';
 import { MOUNTAIN_SLOT } from '../../../../data/backdrop/backdrop-mountains';
 import { BACKDROP_COLORS } from '../../../../data/backdrop/backdrop-colors';
 import { BACKDROP_LIFE } from '../../../../data/backdrop/backdrop-life';
-import { bakeTexture } from '../../../ui/bake-texture';
+import { bakeTexture } from '../../../ui/common/bake-texture';
 import { cloudShape, tiled } from '../common/art-kit';
 import { inSky } from '../life/layer-anchor';
 import { Traveler } from '../life/life';

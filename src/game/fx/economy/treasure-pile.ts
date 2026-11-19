@@ -6,7 +6,7 @@ import {
   type PilePieceKind,
   type PileSize,
 } from '../../../data/economy/treasure-piles';
-import { bakeTexture } from '../../ui/bake-texture';
+import { bakeTexture } from '../../ui/common/bake-texture';
 import { idleBob } from '../common/idle-bob';
 import {
   drawGlossMark,

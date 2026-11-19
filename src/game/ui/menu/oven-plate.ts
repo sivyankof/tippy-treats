@@ -3,7 +3,7 @@ import { MENU } from '../../../data/common/menu-layout';
 import { OVEN } from '../../../data/progression/progression';
 import { PALETTE } from '../../../data/common/palette';
 import { formatNumber, t, tn } from '../../../i18n';
-import { createOutlinedText } from '../outlined-text';
+import { createOutlinedText } from '../common/outlined-text';
 import { faceOffsetY, VolumePlate } from '../style/volume';
 import { fitText } from './fit-text';
 import { makeTappable } from './home-badges';

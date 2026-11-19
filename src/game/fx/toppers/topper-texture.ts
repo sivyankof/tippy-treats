@@ -7,7 +7,7 @@ import {
   type TopperKind,
 } from '../../../data/toppers/plain-toppers';
 import { DEG_TO_RAD } from '../../../util/math';
-import { bakeTexture } from '../../ui/bake-texture';
+import { bakeTexture } from '../../ui/common/bake-texture';
 import { bakeBerry } from '../economy/berry-texture';
 import {
   drawGlossMark,

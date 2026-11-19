@@ -3,7 +3,7 @@ import type { Currency } from '../../../core/economy/economy';
 import { MENU } from '../../../data/common/menu-layout';
 import { TREASURE } from '../../../data/economy/treasure-anim';
 import { TREASURE_TEXTURES } from '../../fx/economy/treasure-textures';
-import { shakeX } from '../shake-x';
+import { shakeX } from '../common/shake-x';
 import { WalletChip } from './wallet-chip';
 
 const iconHalf = TREASURE.counter.iconSize / 2;

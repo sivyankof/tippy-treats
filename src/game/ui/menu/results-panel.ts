@@ -1,7 +1,7 @@
 import type * as Phaser from 'phaser';
 import { MENU } from '../../../data/common/menu-layout';
 import { createPlate, type VolumePlate } from '../style/volume';
-import type { Movable } from '../transition';
+import type { Movable } from '../common/transition';
 import type { ResultsCoins } from './results-coins';
 import { fitPanel, spreadBlocks } from './results-layout';
 import type { ResultsMissions } from './results-missions';

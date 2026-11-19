@@ -3,7 +3,7 @@ import { OFFLINE_LOOK } from '../../../data/economy/offline-look';
 import { paddedScale } from '../../../util/field-pad';
 import { DEG_TO_RAD } from '../../../util/math';
 import { FIELD_PAD } from '../../../data/common/picture-fields';
-import { bakePadded } from '../../ui/bake-texture';
+import { bakePadded } from '../../ui/common/bake-texture';
 import { drawGlossMark, fillPolygon, roundRectPoints } from '../common/plain-style';
 
 const { textureSize: size, colors, puffs, belly, slash, bandShare, gloss } = OFFLINE_LOOK;

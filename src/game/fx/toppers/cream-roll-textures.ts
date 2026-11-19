@@ -2,7 +2,7 @@ import type * as Phaser from 'phaser';
 import { PLAIN_TOPPERS } from '../../../data/toppers/plain-toppers';
 import { SQUASH_PICTURES, SQUASH_TEXTURES } from '../../../data/toppers/topper-squash';
 import { DEG_TO_RAD } from '../../../util/math';
-import { bakeTexture } from '../../ui/bake-texture';
+import { bakeTexture } from '../../ui/common/bake-texture';
 import {
   drawGlossMark,
   ellipsePoints,

@@ -27,7 +27,7 @@ import { ShopStarter } from '../ui/menu/shop-starter';
 import { Toast } from '../ui/menu/shop-toast';
 import { MenuScenery } from '../ui/style/menu-scenery';
 import { ScrollList } from '../ui/style/scroll-list';
-import { enterScreen, leaveScreen } from '../ui/transition';
+import { enterScreen, leaveScreen } from '../ui/common/transition';
 
 const cfg = MENU.shop;
 

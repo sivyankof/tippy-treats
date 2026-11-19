@@ -10,15 +10,15 @@ import { Particles } from '../fx/common/particles';
 import { CreaturePortrait } from '../objects/creatures/creature-portrait';
 import { SleepingSilhouette } from '../objects/creatures/sleep-silhouette';
 import { goNext, SCENES, type NewCreatureData } from '../scene-keys';
-import { createTextButton, type Button } from '../ui/button';
+import { createTextButton, type Button } from '../ui/common/button';
 import { fitText } from '../ui/menu/fit-text';
 import { TitleRibbon } from '../ui/style/title-ribbon';
 import { MenuScenery } from '../ui/style/menu-scenery';
 import { GiftBox } from '../ui/menu/new-creature-box';
 import { LightRays } from '../ui/menu/new-creature-rays';
 import { NewCreatureSequence } from '../ui/menu/new-creature-sequence';
-import { createOutlinedText } from '../ui/outlined-text';
-import { enterScreen, leaveScreen, type Movable } from '../ui/transition';
+import { createOutlinedText } from '../ui/common/outlined-text';
+import { enterScreen, leaveScreen, type Movable } from '../ui/common/transition';
 
 const cfg = MENU.newCreature;
 const BUTTON = MENU.wideButton;

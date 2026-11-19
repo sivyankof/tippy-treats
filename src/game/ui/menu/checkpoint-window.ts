@@ -5,7 +5,7 @@ import { MENU } from '../../../data/common/menu-layout';
 import { PALETTE } from '../../../data/common/palette';
 import { t } from '../../../i18n';
 import { bakeCheckpointTextures } from '../../fx/zones/checkpoint-textures';
-import { createTextButton, type Button } from '../button';
+import { createTextButton, type Button } from '../common/button';
 import { BalanceChip, followBalance } from '../style/balance-chip';
 import { PopupWindow } from '../style/dialog-window';
 import { createPriceButton } from '../style/price-button';

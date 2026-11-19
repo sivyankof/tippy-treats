@@ -6,7 +6,7 @@ import { t } from '../../i18n';
 import { sineWave } from '../../util/math';
 import { FLYING_REACH } from '../camera-layout';
 import { easeFn } from '../fx/common/ease';
-import { createOutlinedText } from '../ui/outlined-text';
+import { createOutlinedText } from '../ui/common/outlined-text';
 import { HintClock } from './timeline';
 
 const cfg = TUTORIAL_ANIM.firstPerfect;

@@ -9,7 +9,7 @@ import {
 } from '../../../../data/weather/window-look';
 import { mixColor, shade } from '../../../../util/color';
 import { outlineColor } from '../../../fx/common/plain-style';
-import { bakePadded, bakeTexture } from '../../../ui/bake-texture';
+import { bakePadded, bakeTexture } from '../../../ui/common/bake-texture';
 import { FIELD_PAD } from '../../../../data/common/picture-fields';
 import { paddedOrigin } from '../../../../util/field-pad';
 import { BACKDROP_LIFE } from '../../../../data/backdrop/backdrop-life';

@@ -18,7 +18,7 @@ import { startRainbowJokeNow } from '../../objects/creatures/rainbow-idle';
 import type { LickKind, LickScene } from '../../objects/glaze/lick-plan';
 import type { GuestSource } from '../../objects/backdrop/life/guest-source';
 import { TowerGuest, type GuestContext } from '../../objects/guests/tower-guest';
-import { MasterFeed } from '../../ui/master-caption-state';
+import { MasterFeed } from '../../ui/creatures/master-caption-state';
 import type { CreatureId } from '../../../data/creatures/creatures';
 import type { WeatherId } from '../../../data/weather/weather';
 import { TowerView } from '../../objects/tower/tower-view';

@@ -1,8 +1,8 @@
 import * as Phaser from 'phaser';
 import { MENU } from '../../../data/common/menu-layout';
 import { shade } from '../../../util/color';
-import { bakeTexture } from '../bake-texture';
-import { createOutlinedText } from '../outlined-text';
+import { bakeTexture } from '../common/bake-texture';
+import { createOutlinedText } from '../common/outlined-text';
 import { drawVolume, faceOffsetY, lookOf, shadowMargin } from '../style/volume';
 
 const cfg = MENU.home;

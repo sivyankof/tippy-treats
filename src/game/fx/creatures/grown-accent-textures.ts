@@ -3,7 +3,7 @@ import { GROWN_ACCENT_TEXTURES } from '../../../data/creatures/mastery-look';
 import { PALETTE } from '../../../data/common/palette';
 import { starPoints } from '../../objects/creatures/creature-art/rainbow-geometry';
 import { FIELD_PAD } from '../../../data/common/picture-fields';
-import { bakePadded, bakeTexture } from '../../ui/bake-texture';
+import { bakePadded, bakeTexture } from '../../ui/common/bake-texture';
 import { fillPolygon } from '../common/plain-style';
 
 /** Colours of the little bee and the spark (the bee is drawn in its own colours, the breath is white with a pale rim, the spark is pale yellow). */

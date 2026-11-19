@@ -6,7 +6,7 @@ import { targetScrollY, trayScrollY } from './camera-layout';
 import type { CameraInfo, RunFx } from './fx/run/run-fx';
 import type { RunIntro } from './fx/run/run-intro';
 import type { Backdrop } from './objects/backdrop/common/backdrop';
-import type { WorldEntry } from './ui/transition';
+import type { WorldEntry } from './ui/common/transition';
 
 /** The camera of a run: follows the tower top, shakes with the effects and drops in at the start. */
 export class RunCamera {
