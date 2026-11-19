@@ -192,6 +192,7 @@ function playCell(
   const stats = new FirstLayersStats();
   const heights: number[] = [];
   const coins: number[] = [];
+  let perfects = 0;
   const seconds: number[] = [];
   for (let i = 0; i < runs; i++) {
     const seed = seeds.int(0, 0xffffffff);
@@ -204,6 +205,7 @@ function playCell(
     );
     heights.push(result.height);
     coins.push(result.coins);
+    perfects += result.perfects;
     seconds.push(result.durationMs / 1000);
   }
   const sorted = [...heights].sort((a, b) => a - b);
@@ -217,12 +219,18 @@ function playCell(
     'median 95%': `${percentile(sorted, lo)}-${percentile(sorted, 1 - lo)}`,
     p75: percentile(sorted, 0.75),
     p90: percentile(sorted, 0.9),
+    mean: Number(mean(heights).toFixed(1)),
   };
   for (const h of SHARE_BELOW) {
     const share = heights.filter((x) => x < h).length / runs;
     summary[`<${h}, %`] = `${pct(share * runs, runs)} ±${noisePp(share, runs)}`;
   }
   summary['coins/run'] = Number(mean(coins).toFixed(1));
+  // What a save keeps: stats.perfects over stats.totalLayers (twins' bonus height left in).
+  summary['perfect %'] = pct(
+    perfects,
+    heights.reduce((sum, h) => sum + h, 0),
+  );
   summary['s/run'] = Number(mean(seconds).toFixed(1));
 
   const histogram: CellReport['histogram'] = { cell: name };
