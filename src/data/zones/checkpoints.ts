@@ -17,7 +17,10 @@ export type CheckpointHeight = (typeof CHECKPOINT_HEIGHTS)[number];
  * and their medians moved by 1-2 px only through the shifted bot noise). Owner's decision
  * 2026-11-15: the regular profile rarely reaches the high checkpoints and only with narrow layers,
  * so its medians are biased (146 at 40, narrower than at 60). The pre-built tower below narrows
- * evenly from the first width down to this one.
+ * evenly from the first width down to this one. The table lags behind its own rule: the speed
+ * curves of sessions 5b and 7b moved the expert medians (712 / 660 / 597 / 430 / 327 now) and it
+ * was not re-measured, a separate balance decision for the owner (docs/02-gameplay.md, section 10).
+ * The speed of the first layer always comes from the curve at the start height.
  */
 export const CHECKPOINT_START_WIDTH: Readonly<Record<CheckpointHeight, number>> = {
   20: 691,
