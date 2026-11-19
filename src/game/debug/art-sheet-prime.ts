@@ -18,27 +18,27 @@ import { createPileTextures } from '../fx/economy/treasure-pile';
 import { createTreasureTextures, TREASURE_TEXTURES } from '../fx/economy/treasure-textures';
 import { bakeNebulaArms, nebulaLayout } from '../fx/zones/nebula-arms';
 import { bakeLapEdge } from '../fx/zones/lap-edges';
-import { bakeSharedArt } from '../objects/backdrop/art-kit';
-import { bakeSpaceVisitors } from '../objects/backdrop/space-visitor-art';
-import { bakeAllPlanets } from '../objects/backdrop/dessert-planets';
-import { bakeAllFarArt } from '../objects/backdrop/far-plane';
-import { kitchenArt } from '../objects/backdrop/kitchen-zone';
-import { shopArt } from '../objects/backdrop/shop-zone';
-import { showcaseArt } from '../objects/backdrop/showcase-zone';
-import { bakeMountains } from '../objects/backdrop/mountains';
-import { roofArt } from '../objects/backdrop/roof-zone';
-import { bakeAllWeatherSky, bakeWeatherArt } from '../objects/backdrop/weather-art';
+import { bakeSharedArt } from '../objects/backdrop/common/art-kit';
+import { bakeSpaceVisitors } from '../objects/backdrop/space/space-visitor-art';
+import { bakeAllPlanets } from '../objects/backdrop/space/dessert-planets';
+import { bakeAllFarArt } from '../objects/backdrop/zones/far-plane';
+import { kitchenArt } from '../objects/backdrop/zones/kitchen-zone';
+import { shopArt } from '../objects/backdrop/zones/shop-zone';
+import { showcaseArt } from '../objects/backdrop/zones/showcase-zone';
+import { bakeMountains } from '../objects/backdrop/zones/mountains';
+import { roofArt } from '../objects/backdrop/zones/roof-zone';
+import { bakeAllWeatherSky, bakeWeatherArt } from '../objects/backdrop/weather/weather-art';
 import {
   createCreatureIconTextures,
   createGrownCreatureIconTextures,
-} from '../objects/creature-icon-textures';
-import { bakeShadeTextures } from '../objects/layer-shade';
-import { ensureSleepTexture } from '../objects/sleep-silhouette';
-import { bakeGuestFlat } from '../objects/tower-guest-art';
+} from '../objects/creatures/creature-icon-textures';
+import { bakeShadeTextures } from '../objects/tower/layer-shade';
+import { ensureSleepTexture } from '../objects/creatures/sleep-silhouette';
+import { bakeGuestFlat } from '../objects/guests/tower-guest-art';
 import { bakeTopperTextures } from '../fx/toppers/topper-texture';
 import { bakeHintTextures } from '../tutorial/hint-textures';
-import { bakeTongue } from '../objects/tongue-view';
-import { bakeStripTextures } from '../objects/tongue-strip-texture';
+import { bakeTongue } from '../objects/glaze/tongue-view';
+import { bakeStripTextures } from '../objects/glaze/tongue-strip-texture';
 import { bakeMasteryFrame } from '../ui/mastery-frame';
 
 /**

@@ -1,7 +1,7 @@
 import * as Phaser from 'phaser';
 import { OVEN_LOOK } from '../../../data/economy/oven-look';
 import { PALETTE } from '../../../data/common/palette';
-import { SleepLetters } from '../../objects/sleep-letters';
+import { SleepLetters } from '../../objects/creatures/sleep-letters';
 import { CREATURE_SLEEP } from '../../../data/creatures/creature-style';
 import { effectsMode } from '../../effects-mode';
 import {

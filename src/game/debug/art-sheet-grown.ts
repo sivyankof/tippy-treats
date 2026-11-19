@@ -1,8 +1,8 @@
 import { ART_SHEET } from '../../data/debug/art-sheet';
 import { CREATURE_IDS } from '../../data/creatures/creatures';
 import { MASTERY } from '../../data/creatures/mastery';
-import { artTopPad } from '../objects/layer-art';
-import { LayerView } from '../objects/layer-view';
+import { artTopPad } from '../objects/tower/layer-art';
+import { LayerView } from '../objects/tower/layer-view';
 import type { LivePicture } from './art-sheet-live';
 
 /** A creature layer at a real width, in its usual or its grown look, with its face (drawn, so it is not a texture of the sheet). */

@@ -15,11 +15,11 @@ import {
   squeezeDoneMs,
   squeezeScale,
   type LayerMark,
-} from '../../objects/layer-mark-store';
+} from '../../objects/tower/layer-mark-store';
 import { CUT_TEXTURES } from '../../../data/cuts/cut-look';
 import { faceHalfSpan } from '../glaze/glaze-growth';
-import { glazeWave, waveY } from '../../objects/glaze-wave';
-import { layerBox } from '../../objects/layer-draw';
+import { glazeWave, waveY } from '../../objects/glaze/glaze-wave';
+import { layerBox } from '../../objects/tower/layer-draw';
 import {
   burstCount,
   burstStates,

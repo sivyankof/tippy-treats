@@ -6,7 +6,7 @@ import { LOGICAL_SIZE } from '../../../data/app/screen';
 import { SPACE_ZONE_INDEX, ZONE_RULES } from '../../../data/zones/zones';
 import { clamp01 } from '../../../util/math';
 import { effectsMode } from '../../effects-mode';
-import type { FlyingLayerView } from '../../objects/flying-layer-view';
+import type { FlyingLayerView } from '../../objects/tower/flying-layer-view';
 import { cloudEtaMs, CloudCover, layerHidden, type CloudInput } from './cloud-cover';
 import { flyingSpeed } from '../../../core/tower/flight';
 import { hopHeight, type Point } from '../economy/coin-flight-math';

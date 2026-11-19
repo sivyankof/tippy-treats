@@ -18,8 +18,8 @@ import {
   simX,
   squashLevelPlan,
 } from './topper-squash-plan';
-import type { TopperWorld } from '../../objects/layer-topper';
-import type { TowerView } from '../../objects/tower-view';
+import type { TopperWorld } from '../../objects/toppers/layer-topper';
+import type { TowerView } from '../../objects/tower/tower-view';
 import {
   carriedOffset,
   plainToppers,
@@ -32,9 +32,9 @@ import {
   type FlightSpec,
   type PopLaunch,
   type PopPose,
-} from '../../objects/topper-look';
+} from '../../objects/toppers/topper-look';
 import type { FlyingMemo } from '../run/run-fx';
-import { plainLooks } from '../../objects/plain-look';
+import { plainLooks } from '../../objects/tower/plain-look';
 
 interface Flying {
   image: Phaser.GameObjects.Image;

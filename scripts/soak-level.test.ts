@@ -24,8 +24,8 @@ describe('pickSoakLevel', () => {
     const deep = [
       'src/game/scenes/home-scene.ts',
       'src/game/run-restart.ts',
-      'src/game/objects/landing-prep.ts',
-      'src/game/objects/tongue-view.ts',
+      'src/game/objects/tower/landing-prep.ts',
+      'src/game/objects/glaze/tongue-view.ts',
       'src/game/fx/shared-atlas.ts',
       'src/game/ui/panel-textures.ts',
       'src/state/game-state.ts',

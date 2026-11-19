@@ -3,10 +3,10 @@ import type { TowerSim } from '../../core/tower/tower-sim';
 import type { EffectLevel } from '../../data/app/effect-levels';
 import type { SquashKind } from '../../data/toppers/topper-squash';
 import { effectsMode } from '../effects-mode';
-import type { TopperWorld } from '../objects/layer-topper';
-import { lookCode, lookOfCode, plainLooks } from '../objects/plain-look';
-import { plainToppers, topperSize } from '../objects/topper-look';
-import type { TowerView } from '../objects/tower-view';
+import type { TopperWorld } from '../objects/toppers/layer-topper';
+import { lookCode, lookOfCode, plainLooks } from '../objects/tower/plain-look';
+import { plainToppers, topperSize } from '../objects/toppers/topper-look';
+import type { TowerView } from '../objects/tower/tower-view';
 
 /** How the next layer lands on the decoration: on its whole body, or on its edge only. */
 export type SquashMode = 'hit' | 'edge' | 'none';

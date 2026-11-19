@@ -4,7 +4,7 @@ import { CUT_LOOK, CUT_TEXTURES } from '../../../data/cuts/cut-look';
 import { clamp01, DEG_TO_RAD, lerp, smoothstep, TWO_PI } from '../../../util/math';
 import { mixColor } from '../../../util/color';
 import { DEPTH } from '../../depth';
-import type { LayerView } from '../../objects/layer-view';
+import type { LayerView } from '../../objects/tower/layer-view';
 import { armPictureSize } from './cut-textures';
 import { outlineColor } from '../common/plain-style';
 

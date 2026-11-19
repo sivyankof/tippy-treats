@@ -1,6 +1,6 @@
 import * as Phaser from 'phaser';
 import type { PerfPart } from '../../data/debug/perf';
-import { LayerView } from '../objects/layer-view';
+import { LayerView } from '../objects/tower/layer-view';
 import { SCENES } from '../scene-keys';
 import { perfPartOf } from './perf-marks';
 

@@ -23,7 +23,7 @@ import { LapChangeWatch } from '../../core/zones/space-planet';
 import { ZoneChangeWatch } from '../ui/zone-change-watch';
 import { RunMusic } from '../music-cues';
 import { BACKDROP } from '../../data/backdrop/backdrop';
-import { prepTarget, sameTarget, type PrepTarget } from '../objects/backdrop/zone-prep';
+import { prepTarget, sameTarget, type PrepTarget } from '../objects/backdrop/zones/zone-prep';
 import { HudNumbersIdle } from '../ui/hud-idle';
 import { isCompactNext } from '../ui/hud-row-layout';
 import { NextCreatureBadge } from '../ui/next-creature-badge';

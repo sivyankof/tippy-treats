@@ -1,6 +1,6 @@
 import { ANIM } from '../../../data/common/anim';
 import { pickRange } from '../../../util/math';
-import type { TowerView } from '../../objects/tower-view';
+import type { TowerView } from '../../objects/tower/tower-view';
 import { collapseDelayMs, collapseDurationMs } from '../common/anim-curves';
 import { easeFn } from '../common/ease';
 import type { FallingPieces } from './falling-piece';

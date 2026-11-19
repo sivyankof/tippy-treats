@@ -4,7 +4,7 @@ import { PALETTE } from '../../../data/common/palette';
 import { formatNumber, t } from '../../../i18n';
 import { DEPTH } from '../../depth';
 import { effectsMode } from '../../effects-mode';
-import type { TowerView } from '../../objects/tower-view';
+import type { TowerView } from '../../objects/tower/tower-view';
 import { easeFn } from '../common/ease';
 import { FX_TEXTURES } from '../common/fx-textures';
 import type { LandingFx } from '../tower/landing-fx';

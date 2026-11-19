@@ -4,7 +4,7 @@ import type { RunResult } from '../core/run/run-result';
 import type { RunTally } from '../core/run/run-tally';
 import type { CreatureId } from '../data/creatures/creatures';
 import type { RunSummary } from '../state/game-state';
-import type { TowerSnapshot } from './objects/tower-snapshot';
+import type { TowerSnapshot } from './objects/tower/tower-snapshot';
 import { gameState } from '../state';
 import { CLASSIC_RUN, type DemoBack, type RunRequest } from './run-request';
 import { decideRestart, restartRequest } from './run-restart';

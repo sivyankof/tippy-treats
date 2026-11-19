@@ -5,7 +5,7 @@ import { DEPTH } from '../../depth';
 import { effectsMode } from '../../effects-mode';
 import { easeFn } from '../common/ease';
 import { FX_TEXTURES } from '../common/fx-textures';
-import { cakeColorsFor } from '../../objects/layer-art';
+import { cakeColorsFor } from '../../objects/tower/layer-art';
 import type { FxKit } from './kit';
 import { makeSpec } from './sprite-motion';
 

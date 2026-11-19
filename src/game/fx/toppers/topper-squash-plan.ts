@@ -10,9 +10,9 @@ import {
 } from '../../../data/toppers/topper-squash';
 import { luma, mixColor } from '../../../util/color';
 import { clamp01, DEG_TO_RAD, lerp } from '../../../util/math';
-import { squeezeDoneMs, type LayerMark } from '../../objects/layer-mark-store';
-import { waveY, type GlazeWave } from '../../objects/glaze-wave';
-import type { PopLaunch } from '../../objects/topper-look';
+import { squeezeDoneMs, type LayerMark } from '../../objects/tower/layer-mark-store';
+import { waveY, type GlazeWave } from '../../objects/glaze/glaze-wave';
+import type { PopLaunch } from '../../objects/toppers/topper-look';
 import type { ParticleState } from '../common/particle-motion';
 import type { Blob } from '../common/plain-style';
 

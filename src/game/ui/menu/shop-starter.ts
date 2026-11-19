@@ -9,7 +9,7 @@ import { gameState } from '../../../state';
 import { cssColor } from '../../../util/color';
 import { createTextButton, type Button } from '../button';
 import { CREATURE_ICON_KEYS } from '../creature-icons';
-import { CreaturePortrait } from '../../objects/creature-portrait';
+import { CreaturePortrait } from '../../objects/creatures/creature-portrait';
 import { createOutlinedText } from '../outlined-text';
 import { faceOffsetY, VolumePlate } from '../style/volume';
 import type { DailySection } from './daily-section';

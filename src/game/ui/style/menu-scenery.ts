@@ -1,10 +1,10 @@
 import * as Phaser from 'phaser';
 import { ANIM } from '../../../data/common/anim';
 import { MENU } from '../../../data/common/menu-layout';
-import { bakeSharedArt } from '../../objects/backdrop/art-kit';
-import { kitchenArt } from '../../objects/backdrop/kitchen-zone';
-import { newFrameCtx, type FrameCtx } from '../../objects/backdrop/life';
-import { ZoneScenery, type SceneryLook } from '../../objects/backdrop/zone-scenery';
+import { bakeSharedArt } from '../../objects/backdrop/common/art-kit';
+import { kitchenArt } from '../../objects/backdrop/zones/kitchen-zone';
+import { newFrameCtx, type FrameCtx } from '../../objects/backdrop/life/life';
+import { ZoneScenery, type SceneryLook } from '../../objects/backdrop/zones/zone-scenery';
 import { bakeTexture } from '../bake-texture';
 
 const cfg = MENU.style.scenery;

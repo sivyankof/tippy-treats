@@ -1,0 +1,520 @@
+import type * as Phaser from 'phaser';
+import type { CutSide } from '../../../core/tower/drop';
+import {
+  newLandingPreview,
+  type LayerPlan,
+  type PlacedLayer,
+  type TowerSim,
+  type TowerState,
+} from '../../../core/tower/tower-sim';
+import { wobbleAmplitude, wobbleOffset } from '../../../core/tower/wobble';
+import { ANIM } from '../../../data/common/anim';
+import { BALANCE } from '../../../data/tower/balance';
+import { RAINBOW_LOOK } from '../../../data/creatures/rainbow-look';
+import { DEPTH } from '../../depth';
+import { effectsMode } from '../../effects-mode';
+import { fxGuard } from '../../fx-guard';
+import { waveStep } from '../../fx/common/anim-curves';
+import { moodForWobble, type MouthKind, type Reaction } from '../creatures/face-state';
+import { CollapsePrep } from './collapse-prep';
+import { GlazeDripGrowth } from '../glaze/glaze-drip-growth';
+import { LandingPrep } from './landing-prep';
+import { LickDirector, type LickContext } from '../glaze/lick-director';
+import { isAiming, type LickKind, type LickScene } from '../glaze/lick-plan';
+import { plainLooks } from './plain-look';
+import { prepareTongue } from '../glaze/face-lick';
+import { layerMarks } from './layer-mark-store';
+import { LayerView } from './layer-view';
+import type { FlashKind } from '../backdrop/weather/lightning-flash';
+import { TowerWeatherFx, type TowerWeatherContext } from '../weather/tower-weather-fx';
+import { SwayHold } from './sway-hold';
+import { snapshotTower, type TowerSnapshot } from './tower-snapshot';
+import { Tray } from './tray';
+
+const PLAIN_LOOK: LayerPlan = { kind: 'plain' };
+
+/** Phase step between neighbouring layers, so their material motion does not run in step (radians). */
+const MATERIAL_PHASE_STEP = 2.4;
+
+/** Where a placed layer is drawn: sway included. */
+export interface LayerPose {
+  x: number;
+  y: number;
+  width: number;
+  /** Sway rotation in degrees. */
+  angle: number;
+  /** Bitten edge, if the layer was cut when it landed. */
+  cut: CutSide | null;
+  /** What the layer is (the placed layer itself: do not keep or change it). */
+  look: LayerPlan;
+}
+
+/**
+ * The tray and the placed layers. Positions and widths come from the sim state
+ * every frame; only the top few layers get a view, deeper ones go back to a pool.
+ */
+export class TowerView {
+  private readonly active = new Map<number, LayerView>();
+  private readonly pool: LayerView[] = [];
+  /** Placement of the layer just placed in `sync`, for the shade of the one under it. */
+  private readonly shadeLower = { index: -1, x: 0, width: 0 };
+  /** Presentation memory: the bitten edge of each placed layer (0-based). */
+  private readonly cuts: Array<CutSide | null> = [];
+  private state: Readonly<TowerState> | null = null;
+  private layerCount = 0;
+  /** Layers from this index up are not drawn (the tower is collapsing). */
+  private hiddenFrom = Infinity;
+  /** Only the layers inside the screen are drawn, top ones too (the camera rises along the tower). */
+  private windowed = false;
+  private topViewXValue: number = BALANCE.tray.centerX;
+  private readonly span = {
+    left: BALANCE.tray.centerX - BALANCE.tray.width / 2,
+    right: BALANCE.tray.centerX + BALANCE.tray.width / 2,
+  };
+  /** Reused by `sync` for every layer, so a frame allocates no poses. */
+  private readonly scratchPose: LayerPose = {
+    x: 0,
+    y: 0,
+    width: 0,
+    angle: 0,
+    cut: null,
+    look: PLAIN_LOOK,
+  };
+
+  /** Reused by `widestSpan`. */
+  private readonly spanPose: LayerPose = {
+    x: 0,
+    y: 0,
+    width: 0,
+    angle: 0,
+    cut: null,
+    look: PLAIN_LOOK,
+  };
+
+  /** The sway the tower holds during a freeze. */
+  private readonly sway = new SwayHold();
+
+  /** Clock of the material motion. */
+  private clockMs = 0;
+  private readonly motion = { timeMs: 0, swayShare: 0, phase: 0 };
+
+  private readonly tray: Tray;
+  private readonly glazeGrowth: GlazeDripGrowth;
+  /** Bakes the pictures of the layer in the air and in the fall before it lands. */
+  private readonly prep: LandingPrep;
+  /** Bakes the pictures of the layers below the live ones once the run is ending, for the collapse. */
+  private readonly collapsePrep: CollapsePrep;
+  /** How the layer in the fall will land, refilled every frame it falls (the sim works it out once per drop). */
+  private readonly landing = newLandingPreview();
+  /** The rare lick of a layer; it draws from the cosmetic stream of the run. */
+  readonly licks = new LickDirector(plainLooks.cosmeticSeed);
+  /** The startle at lightning, the sleepy faces and the yawns of the night. */
+  private readonly weatherFx = new TowerWeatherFx(plainLooks.cosmeticSeed);
+  private readonly weatherCtx: TowerWeatherContext = {
+    views: this.active,
+    topIndex: -1,
+    flying: false,
+    lickScene: false,
+    bandTop: -Infinity,
+    bandBottom: Infinity,
+    level: 'full',
+  };
+  private bandTop = -Infinity;
+  private bandBottom = Infinity;
+  private calm = true;
+  private lookTarget: { x: number; y: number } | null = null;
+  private topMouthHint: MouthKind | undefined;
+
+  constructor(
+    private readonly scene: Phaser.Scene,
+    /** World y of the tray surface. */
+    readonly trayTopY: number,
+  ) {
+    this.tray = new Tray(scene, trayTopY);
+    this.glazeGrowth = new GlazeDripGrowth(scene);
+    this.prep = new LandingPrep(scene);
+    this.collapsePrep = new CollapsePrep(scene);
+    // The pictures of the lick tongue are baked now, not at the first lick.
+    prepareTongue(scene);
+  }
+
+  /** World centre y of the layer with the given 0-based index. */
+  layerCenterY(index: number): number {
+    return this.trayTopY - (index + 0.5) * BALANCE.layer.height;
+  }
+
+  /** World y of the top surface of the tower. */
+  topY(): number {
+    return this.trayTopY - this.layerCount * BALANCE.layer.height;
+  }
+
+  /** Current centre x of the top layer including sway, or the tray centre. */
+  topViewX(): number {
+    return this.topViewXValue;
+  }
+
+  /**
+   * Horizontal extent of the top layer (the tray when the tower is empty), sway included.
+   * The object is reused and updated by `sync`: read it at once, do not keep it.
+   */
+  topSpan(): Readonly<{ left: number; right: number }> {
+    return this.span;
+  }
+
+  /**
+   * The widest horizontal extent of the `layers` topmost layers (the tray when the tower is empty),
+   * sway included; fills and returns `out`.
+   */
+  widestSpan(
+    layers: number,
+    out: { left: number; right: number },
+  ): { left: number; right: number } {
+    out.left = this.span.left;
+    out.right = this.span.right;
+    for (let k = 1; k < layers; k++) {
+      const pose = this.layerPoseInto(this.spanPose, this.layerCount - 1 - k);
+      if (!pose) break;
+      out.left = Math.min(out.left, pose.x - pose.width / 2);
+      out.right = Math.max(out.right, pose.x + pose.width / 2);
+    }
+    return out;
+  }
+
+  /** The part of the world the screen shows (world y): only layers inside it lick. */
+  setScreenBand(top: number, bottom: number): void {
+    this.bandTop = top;
+    this.bandBottom = bottom;
+  }
+
+  /** What the weather pieces of the tower need to know now (one object, refilled). */
+  private weatherContext(): TowerWeatherContext {
+    const c = this.weatherCtx;
+    c.topIndex = this.layerCount - 1;
+    c.flying = this.state !== null && isAiming(this.state.phase, this.state.flying !== null);
+    c.lickScene = this.licks.stage !== null;
+    c.bandTop = this.bandTop;
+    c.bandBottom = this.bandBottom;
+    c.level = effectsMode.level;
+    return c;
+  }
+
+  /** A flash of lightning: the layers on screen start with fright (`street`: the weaker one behind the Showcase glass). */
+  startle(kind: FlashKind): void {
+    fxGuard.call(
+      'startle',
+      this.weatherFx,
+      TowerWeatherFx.prototype.startle,
+      kind,
+      this.weatherContext(),
+    );
+  }
+
+  /** The first layer from the top that is free yawns now, in any weather (a dev tool); true when one did. */
+  yawnNow(): boolean {
+    return this.weatherFx.yawnNow(this.weatherContext());
+  }
+
+  /** Makes a layer lick right away (a dev tool); returns whether one could. */
+  lickNow(scene?: LickScene, kind?: LickKind): boolean {
+    return this.licks.lickNow(this.lickContext(), scene, kind);
+  }
+
+  private lickContext(): LickContext {
+    return {
+      views: this.active,
+      topIndex: this.layerCount - 1,
+      calm: this.calm,
+      aiming: this.state !== null && isAiming(this.state.phase, this.state.flying !== null),
+      bandTop: this.bandTop,
+      bandBottom: this.bandBottom,
+      nowMs: this.scene.time.now,
+    };
+  }
+
+  /** The view of the top layer, if it is drawn. */
+  topView(): LayerView | null {
+    return this.active.get(this.layerCount - 1) ?? null;
+  }
+
+  /** Every drawn layer view with its 0-based index. */
+  views(): IterableIterator<[number, LayerView]> {
+    return this.active.entries();
+  }
+
+  /** The view of a placed layer (0-based index), if it is drawn. */
+  viewAt(index: number): LayerView | null {
+    return this.active.get(index) ?? null;
+  }
+
+  /** Called when the star of a Rainbow layer pops its small rainbow (the ding). */
+  onRainbowJoke: (() => void) | null = null;
+
+  /** The layers above and below look at the star while it jokes. */
+  private rainbowJoke(index: number, view: LayerView): void {
+    this.onRainbowJoke?.();
+    const star = view.starWorld();
+    for (const next of [index - 1, index + 1]) {
+      this.viewAt(next)?.glanceAtWorld(star.x, star.y, RAINBOW_LOOK.idle.joke.glanceMs);
+    }
+  }
+
+  /** The placed layers and their bitten edges as plain data, for the picture the player shares. */
+  snapshot(): TowerSnapshot {
+    return snapshotTower(this.state?.layers ?? [], this.cuts);
+  }
+
+  /**
+   * Asks the sim how the layer in the fall will land (nothing falls, or it misses: no preview):
+   * its pictures are baked over the next frames, so the landing frame finds them ready.
+   */
+  prepareLanding(sim: Pick<TowerSim, 'landingPreview'>): void {
+    if (sim.landingPreview(this.landing)) this.prep.noteLanding(this.landing);
+    else this.prep.endLanding();
+  }
+
+  /** Remembers which edge of the layer (0-based) was bitten; `null` for an intact one. */
+  noteCut(index: number, side: CutSide | null): void {
+    this.cuts[index] = side;
+  }
+
+  /** Pose of a placed layer as of the last `sync`. */
+  layerPose(index: number): LayerPose | null {
+    return this.layerPoseInto(
+      { x: 0, y: 0, width: 0, angle: 0, cut: null, look: PLAIN_LOOK },
+      index,
+    );
+  }
+
+  /** Like `layerPose`, but fills `out` (a caller that asks every frame keeps one and allocates nothing). */
+  layerPoseInto(out: LayerPose, index: number): LayerPose | null {
+    const layer = this.state?.layers[index];
+    if (!this.state || !layer) return null;
+    return this.fillPose(out, layer, index, this.swayOffset(this.state, index));
+  }
+
+  /** The tower has no wobble worries, so a guest may land on it. */
+  get isCalm(): boolean {
+    return this.calm;
+  }
+
+  /**
+   * Draws only the layers inside the screen, the top ones included, instead of the top few: for
+   * the run intro, where the camera runs along a tower that was built before the run.
+   */
+  setWindowed(on: boolean): void {
+    this.windowed = on;
+  }
+
+  /**
+   * Places the views. `cameraBottomY` and `cameraTopY` are the world y of the bottom and top
+   * screen edges: layers fully below the bottom are returned to the pool (and, while windowed,
+   * so are the ones above the top).
+   */
+  sync(state: Readonly<TowerState>, cameraBottomY: number, cameraTopY: number): void {
+    this.state = state;
+    this.prep.noteFlying(state.flying, state.layers.length + 1);
+    this.glazeGrowth.noteLayers(state.layers.length, this.clockMs);
+    const count = Math.min(state.layers.length, this.hiddenFrom);
+    this.layerCount = count;
+    const offscreen = Math.floor((this.trayTopY - cameraBottomY) / BALANCE.layer.height);
+    const firstVisible = Math.max(0, offscreen - ANIM.pool.offscreenMarginLayers);
+    const first = this.windowed
+      ? Math.min(firstVisible, count - 1)
+      : Math.min(Math.max(firstVisible, count - ANIM.pool.maxLiveLayers), count - 1);
+    const lastVisible = Math.floor((this.trayTopY - cameraTopY) / BALANCE.layer.height);
+    const end = this.windowed
+      ? Math.min(count, Math.max(0, lastVisible + ANIM.pool.windowMarginLayers + 1))
+      : count;
+
+    for (const [index, view] of this.active) {
+      if (index < first || index >= end) this.release(index, view);
+    }
+
+    this.sway.beginFrame();
+    for (let i = Math.max(first, 0); i < end; i++) {
+      const layer = state.layers[i];
+      if (!layer) continue;
+      const view = this.active.get(i) ?? this.acquire(i);
+      const offset = this.swayOffset(state, i);
+      this.sway.note(i, offset);
+      const pose = this.fillPose(this.scratchPose, layer, i, offset);
+      // Only the real top layer carries its topper: a layer below it (or one left when the tower collapses) has hopped it off.
+      view
+        .setLook(pose.look)
+        .setTopperAllowed(i === state.layers.length - 1)
+        .setJokeAllowed(true)
+        .setMarksAllowed(true)
+        .setLayer(i + 1, pose.width, pose.cut)
+        // Over a cream roll squeezed out on the layer below, no baked shadow greys the roll.
+        .setBakedShadow(!layerMarks.clearsShadowAbove(i));
+      view.setPosition(pose.x + view.slideX, pose.y).setAngle(pose.angle * view.material.tilt);
+      if (i === count - 1) this.updateTopSpan(pose.x, pose.width);
+      this.shadeBelow(i, view, pose.x + view.slideX, pose.width);
+    }
+    if (count === 0) this.updateTopSpan(BALANCE.tray.centerX, BALANCE.tray.width);
+  }
+
+  /** Advances the sway freeze and the faces: mood, eyes trailing the sway, gaze, blinking. */
+  tick(dtMs: number): void {
+    const state = this.state;
+    if (!state) return;
+    this.sway.advance(dtMs);
+    this.prep.tick();
+    if (state.phase === 'await_continue' || state.phase === 'over') {
+      this.collapsePrep.tick(state.layers, this.cuts, this.layerCount);
+    } else {
+      this.collapsePrep.stop();
+    }
+    this.clockMs += dtMs;
+    this.tray.tick(this.clockMs);
+    this.motion.timeMs = this.clockMs;
+    this.motion.swayShare = wobbleAmplitude(state.wobble) / BALANCE.wobble.amplitudeMax;
+    const mood = moodForWobble(state.wobble);
+    this.calm = mood === 'calm';
+    const top = this.layerCount - 1;
+    const { swayEyeLag, swayEyeMax } = ANIM.face;
+    fxGuard.call(
+      'tower weather',
+      this.weatherFx,
+      TowerWeatherFx.prototype.tick,
+      dtMs,
+      this.weatherContext(),
+    );
+    for (const [index, view] of this.active) {
+      const face = view.faceView;
+      const drift = mood === 'calm' ? 0 : -this.sway.shownOffset(index) * swayEyeLag;
+      face.setMood(mood);
+      face.setMouthHint(index === top ? this.topMouthHint : undefined);
+      face.setPupilDrift(Math.max(-swayEyeMax, Math.min(swayEyeMax, drift)));
+      const target = this.lookTarget;
+      face.lookAt(target ? target.x - view.x : 0, target ? target.y - view.y : 0);
+      this.motion.phase = index * MATERIAL_PHASE_STEP;
+      if (view.tick(dtMs, this.motion)) this.rainbowJoke(index, view);
+    }
+    if (this.hiddenFrom === Infinity) {
+      this.glazeGrowth.tick(this.active, state, this.clockMs, dtMs);
+      this.licks.update(dtMs, this.lickContext());
+    } else {
+      this.licks.stop();
+      this.glazeGrowth.clearFalls();
+    }
+  }
+
+  /** Every drawn face looks at the world point; `undefined` makes them look straight ahead. */
+  setLookTarget(x?: number, y?: number): void {
+    this.lookTarget = x === undefined || y === undefined ? null : { x, y };
+  }
+
+  /** Mouth shape of the top layer while it waits for the flying one (`undefined`: its own). */
+  setTopMouthHint(hint: MouthKind | undefined): void {
+    this.topMouthHint = hint;
+  }
+
+  /** Every drawn face makes the same expression for `ms`. */
+  reactAll(reaction: Reaction, ms: number): void {
+    for (const view of this.active.values()) view.faceView.react(reaction, ms);
+  }
+
+  /**
+   * The top layer squashes, then the layers below follow with a weaker, delayed wave; each one
+   * squashes the way its material does, `waveMul` makes the wave stronger (a heavy layer).
+   * "Fewer effects" keeps only the squash of the top layer.
+   */
+  playLanding(waveMul = 1): void {
+    this.topView()?.playImpact();
+    if (effectsMode.reduced) return;
+    for (let k = 1; k <= ANIM.wave.layers; k++) {
+      const view = this.active.get(this.layerCount - 1 - k);
+      if (!view) break;
+      const wave = waveStep(k);
+      view.playImpact(wave.strength * waveMul, wave.delayMs);
+    }
+  }
+
+  /**
+   * The tempo eased: a soft settle wave runs from the top layer down, weaker and later with
+   * each layer. "Fewer effects" skips it (the HUD badge is the only sign).
+   */
+  exhale(): void {
+    if (effectsMode.reduced) return;
+    const { layers, strength, falloff, stepDelayMs } = ANIM.exhale;
+    for (let k = 0; k < layers; k++) {
+      const view = this.active.get(this.layerCount - 1 - k);
+      if (!view) break;
+      view.playImpact(strength * Math.pow(falloff, k), k * stepDelayMs);
+    }
+  }
+
+  /** Quick squash of the top layer when the tower sneezes; every face squints. */
+  squashTop(): void {
+    this.topView()?.playSqueeze(ANIM.sneeze.squashScale, ANIM.sneeze.durationMs);
+    this.reactAll('squint', ANIM.sneeze.durationMs);
+  }
+
+  /**
+   * The sway stands still for `ms` (a sneeze), using the pose of the last frame.
+   * Call it before the `sync` that follows the sim step that caused it.
+   */
+  freeze(ms: number, catchUpLerp: number = ANIM.sneeze.catchUpLerp): void {
+    this.sway.freeze(ms, catchUpLerp);
+  }
+
+  /** Stops drawing the layers from this 0-based index up. */
+  hideFrom(index: number): void {
+    this.hiddenFrom = Math.min(this.hiddenFrom, Math.max(0, index));
+  }
+
+  private swayOffset(state: Readonly<TowerState>, index: number): number {
+    const live = wobbleOffset(state.wobble, state.wobblePhase, state.layers.length - 1 - index);
+    return this.sway.apply(index, live);
+  }
+
+  /** Fills `out` with where a placed layer is drawn; returns it. */
+  private fillPose(out: LayerPose, layer: PlacedLayer, index: number, offset: number): LayerPose {
+    out.x = layer.x + offset;
+    out.y = this.layerCenterY(index);
+    out.width = layer.width;
+    out.angle = ANIM.sway.maxRotationDeg * (offset / BALANCE.wobble.amplitudeMax);
+    out.cut = this.cuts[index] ?? null;
+    out.look = layer;
+    return out;
+  }
+
+  /** Where the shade of the layer `index` falls on the one below it, drawn once both are placed. */
+  private shadeBelow(index: number, view: LayerView, x: number, width: number): void {
+    view.setShadeFrom(null, x, width);
+    const below = this.active.get(index - 1);
+    const lower = this.shadeLower;
+    if (below && lower.index === index - 1) {
+      below.setShadeFrom({ x, width }, lower.x, lower.width);
+    }
+    lower.index = index;
+    lower.x = x;
+    lower.width = width;
+  }
+
+  private updateTopSpan(x: number, width: number): void {
+    this.topViewXValue = x;
+    this.span.left = x - width / 2;
+    this.span.right = x + width / 2;
+  }
+
+  private acquire(index: number): LayerView {
+    const view = this.pool.pop() ?? new LayerView(this.scene).setStageMode('level');
+    // The depth follows the index, so a view acquired for a lower layer (during the collapse)
+    // still draws under the layers above it.
+    view
+      .resetAnim()
+      .setDepth(DEPTH.tower + index * DEPTH.towerLayerStep)
+      .setVisible(true)
+      .setActive(true);
+    this.active.set(index, view);
+    return view;
+  }
+
+  private release(index: number, view: LayerView): void {
+    view.resetAnim().setVisible(false).setActive(false);
+    this.active.delete(index);
+    this.pool.push(view);
+  }
+}

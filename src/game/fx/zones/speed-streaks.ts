@@ -2,7 +2,7 @@ import type * as Phaser from 'phaser';
 import { BALANCE } from '../../../data/tower/balance';
 import type { WeatherId } from '../../../data/weather/weather';
 import { RULE_ANIM } from '../../../data/zones/rule-anim';
-import { scatter } from '../../objects/creature-art/primitives';
+import { scatter } from '../../objects/creatures/creature-art/primitives';
 import { FLYING_FX_DEPTH } from '../tower/flying-fx-depth';
 import { burstBoost, streakEnvelope } from './streak-math';
 import { createTreasureTextures, TREASURE_TEXTURES } from '../economy/treasure-textures';

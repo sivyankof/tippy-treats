@@ -9,7 +9,7 @@ import { services } from '../../../services';
 import { shade } from '../../../util/color';
 import { TWO_PI } from '../../../util/math';
 import { DEPTH } from '../../depth';
-import type { TowerView } from '../../objects/tower-view';
+import type { TowerView } from '../../objects/tower/tower-view';
 import { bakeTexture } from '../../ui/bake-texture';
 import { createOutlinedText } from '../../ui/outlined-text';
 import type { ComboGlow } from '../tower/combo-glow';

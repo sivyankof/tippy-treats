@@ -1,5 +1,5 @@
 import { BALANCE } from '../../../data/tower/balance';
-import type { SnapshotLayer } from '../../objects/tower-snapshot';
+import type { SnapshotLayer } from '../../objects/tower/tower-snapshot';
 
 /** Where the tower stands in the picture. */
 export interface TowerFit {

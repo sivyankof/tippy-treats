@@ -1,0 +1,586 @@
+import { describe, expect, it } from 'vitest';
+import { ANIM } from '../../../data/common/anim';
+import { CREATURE_LOOKS } from '../../../data/creatures/creature-looks';
+import {
+  FaceState,
+  aimMouth,
+  moodForWobble,
+  resolveExpression,
+  startleAllowed,
+  type Mood,
+  type Reaction,
+} from './face-state';
+
+const [BLINK_MIN, BLINK_MAX] = ANIM.face.blinkIntervalMs;
+
+/** A random source that returns the given values in turn and then repeats the last. */
+function sequence(...values: number[]): () => number {
+  let i = 0;
+  return () => values[Math.min(i++, values.length - 1)] ?? 0;
+}
+
+describe('moodForWobble', () => {
+  it('is calm up to the nervous threshold', () => {
+    expect(moodForWobble(0)).toBe('calm');
+    expect(moodForWobble(ANIM.wobble.nervousFrom)).toBe('calm');
+  });
+
+  it('is nervous above the nervous threshold up to the danger one', () => {
+    expect(moodForWobble(ANIM.wobble.nervousFrom + 0.01)).toBe('nervous');
+    expect(moodForWobble(ANIM.wobble.dangerFrom)).toBe('nervous');
+  });
+
+  it('is scared above the danger threshold', () => {
+    expect(moodForWobble(ANIM.wobble.dangerFrom + 0.01)).toBe('scared');
+    expect(moodForWobble(100)).toBe('scared');
+  });
+});
+
+describe('aimMouth', () => {
+  const width = 200;
+  const grin = ANIM.flying.grinShare * width;
+  const edge = ANIM.flying.edgeShare * width;
+
+  it('grins when aimed well, on either side', () => {
+    expect(aimMouth(0, width)).toBe('open');
+    expect(aimMouth(grin, width)).toBe('open');
+    expect(aimMouth(-grin, width)).toBe('open');
+  });
+
+  it('smiles between the grin and the edge', () => {
+    expect(aimMouth(grin + 0.5, width)).toBe('smile');
+    expect(aimMouth(-(edge - 0.5), width)).toBe('smile');
+  });
+
+  it('goes `o` near the edge and beyond', () => {
+    expect(aimMouth(edge, width)).toBe('o');
+    expect(aimMouth(-edge, width)).toBe('o');
+    expect(aimMouth(width * 3, width)).toBe('o');
+  });
+
+  it('smiles when the width is unknown', () => {
+    expect(aimMouth(10, 0)).toBe('smile');
+  });
+});
+
+describe('resolveExpression', () => {
+  const moods: Mood[] = ['calm', 'nervous', 'scared'];
+  const reactions: Reaction[] = ['blink', 'joy', 'ouch', 'squint', 'horror'];
+
+  it('shows the plain mood without a reaction', () => {
+    expect(resolveExpression('calm', null)).toEqual({
+      eyes: 'open',
+      mouth: 'smile',
+      brows: false,
+      ownBrows: false,
+      lids: false,
+      sweat: false,
+    });
+    expect(resolveExpression('nervous', null)).toEqual({
+      eyes: 'open',
+      mouth: 'flat',
+      brows: false,
+      ownBrows: false,
+      lids: false,
+      sweat: false,
+    });
+    expect(resolveExpression('scared', null)).toEqual({
+      eyes: 'open',
+      mouth: 'scared',
+      brows: false,
+      ownBrows: false,
+      lids: false,
+      sweat: true,
+    });
+  });
+
+  it('lets the mouth hint replace the calm mouth only', () => {
+    expect(resolveExpression('calm', null, 'yum').mouth).toBe('yum');
+    expect(resolveExpression('calm', null, 'open').mouth).toBe('open');
+    expect(resolveExpression('nervous', null, 'yum').mouth).toBe('flat');
+    expect(resolveExpression('scared', null, 'yum').mouth).toBe('scared');
+  });
+
+  it('blink and squint only close the eyes', () => {
+    for (const reaction of ['blink', 'squint'] as const) {
+      for (const mood of moods) {
+        expect(resolveExpression(mood, reaction)).toEqual({
+          ...resolveExpression(mood, null),
+          eyes: 'closed',
+        });
+      }
+    }
+    expect(resolveExpression('calm', 'squint', 'open').mouth).toBe('open');
+  });
+
+  it('joy is happy eyes and a smile whatever the mood', () => {
+    for (const mood of moods) {
+      expect(resolveExpression(mood, 'joy', 'o')).toEqual({
+        eyes: 'happy',
+        mouth: 'smile',
+        brows: false,
+        ownBrows: false,
+        lids: false,
+        sweat: false,
+      });
+    }
+  });
+
+  it('ouch raises the brows and opens an `o` with open eyes', () => {
+    for (const mood of moods) {
+      const e = resolveExpression(mood, 'ouch');
+      expect(e.eyes).toBe('open');
+      expect(e.mouth).toBe('o');
+      expect(e.brows).toBe(true);
+    }
+  });
+
+  it('panic is round eyes and an `o` with worried brows, whatever the mood', () => {
+    for (const mood of moods) {
+      expect(resolveExpression(mood, 'panic', 'yum')).toMatchObject({
+        eyes: 'wide',
+        mouth: 'o',
+        brows: true,
+        ownBrows: false,
+      });
+    }
+  });
+
+  it('horror is wide eyes, a scared mouth, brows and sweat whatever the mood', () => {
+    for (const mood of moods) {
+      expect(resolveExpression(mood, 'horror', 'yum')).toEqual({
+        eyes: 'wide',
+        mouth: 'scared',
+        brows: true,
+        ownBrows: false,
+        lids: false,
+        sweat: true,
+      });
+    }
+  });
+
+  it('every reaction differs from the calm face', () => {
+    const calm = resolveExpression('calm', null);
+    for (const reaction of reactions) {
+      expect(resolveExpression('calm', reaction)).not.toEqual(calm);
+    }
+  });
+});
+
+describe('resolveExpression for a creature face', () => {
+  const honey = CREATURE_LOOKS.honey.face;
+  const crumb = CREATURE_LOOKS.crumb.face;
+  const twins = CREATURE_LOOKS.twins.face;
+
+  it('always shows the creature brows, in its own pose when calm', () => {
+    const e = resolveExpression('calm', null, undefined, crumb);
+    expect(e.brows).toBe(true);
+    expect(e.ownBrows).toBe(true);
+    expect(e.mouth).toBe('yum');
+  });
+
+  it('the default mouth replaces the plain smile only', () => {
+    expect(resolveExpression('calm', null, undefined, twins).mouth).toBe('flat');
+    expect(resolveExpression('calm', null, 'smile', twins).mouth).toBe('flat');
+    expect(resolveExpression('calm', null, 'open', twins).mouth).toBe('open');
+    expect(resolveExpression('calm', null, 'o', crumb).mouth).toBe('o');
+  });
+
+  it('worried moods keep their mouth; nervous brows stay own, scared ones turn worried', () => {
+    expect(resolveExpression('nervous', null, 'open', crumb)).toMatchObject({
+      mouth: 'flat',
+      brows: true,
+      ownBrows: true,
+    });
+    expect(resolveExpression('scared', null, 'open', crumb)).toMatchObject({
+      mouth: 'scared',
+      brows: true,
+      ownBrows: false,
+    });
+  });
+
+  it('sleepy creatures show lids only on a calm open-eyed face', () => {
+    expect(resolveExpression('calm', null, undefined, honey).lids).toBe(true);
+    expect(resolveExpression('calm', null, undefined, crumb).lids).toBe(false);
+    expect(resolveExpression('nervous', null, undefined, honey).lids).toBe(false);
+    for (const reaction of ['blink', 'squint', 'ouch', 'horror'] as const) {
+      expect(resolveExpression('calm', reaction, undefined, honey).lids).toBe(false);
+    }
+  });
+
+  it('reactions work over the creature face', () => {
+    expect(resolveExpression('calm', 'joy', undefined, honey)).toMatchObject({
+      eyes: 'happy',
+      mouth: 'smile',
+      brows: true,
+      ownBrows: true,
+    });
+    expect(resolveExpression('calm', 'ouch', undefined, honey)).toMatchObject({
+      eyes: 'open',
+      mouth: 'o',
+      brows: true,
+      ownBrows: false,
+    });
+    expect(resolveExpression('calm', 'horror', undefined, honey)).toMatchObject({
+      eyes: 'wide',
+      mouth: 'scared',
+      ownBrows: false,
+    });
+    expect(resolveExpression('calm', 'blink', undefined, honey).eyes).toBe('closed');
+  });
+
+  it('every creature calm face differs from the plain one', () => {
+    const plain = resolveExpression('calm', null);
+    for (const look of Object.values(CREATURE_LOOKS)) {
+      expect(resolveExpression('calm', null, undefined, look.face)).not.toEqual(plain);
+    }
+  });
+});
+
+describe('FaceState reactions', () => {
+  // random() = 0.5 puts the idle blink in the middle of the interval: never within these tests.
+  const quiet = (): FaceState => new FaceState(() => 0.5);
+
+  it('has no reaction at first', () => {
+    expect(quiet().reaction()).toBeNull();
+  });
+
+  it('holds a reaction for its time, then drops it', () => {
+    const face = quiet();
+    face.react('joy', 300);
+    expect(face.reaction()).toBe('joy');
+    face.update(299);
+    expect(face.reaction()).toBe('joy');
+    face.update(2);
+    expect(face.reaction()).toBeNull();
+  });
+
+  it('a stronger reaction replaces a weaker one', () => {
+    const face = quiet();
+    face.react('joy', 1000);
+    face.react('ouch', 100);
+    expect(face.reaction()).toBe('ouch');
+    face.update(150);
+    // The weaker one was replaced, not suspended.
+    expect(face.reaction()).toBeNull();
+  });
+
+  it('a weaker reaction does not replace a stronger one', () => {
+    const face = quiet();
+    face.react('horror', 500);
+    face.react('joy', 1000);
+    face.react('blink', 1000);
+    expect(face.reaction()).toBe('horror');
+    face.update(600);
+    expect(face.reaction()).toBeNull();
+  });
+
+  it('keeps the strict order blink < joy < ouch < squint < horror', () => {
+    const order: Reaction[] = ['blink', 'joy', 'ouch', 'squint', 'horror'];
+    for (let low = 0; low < order.length; low++) {
+      for (let high = 0; high < order.length; high++) {
+        const face = quiet();
+        face.react(order[low]!, 1000);
+        face.react(order[high]!, 1000);
+        expect(face.reaction()).toBe(high >= low ? order[high] : order[low]);
+      }
+    }
+  });
+
+  it('the same reaction again restarts its time', () => {
+    const face = quiet();
+    face.react('ouch', 400);
+    face.update(300);
+    face.react('ouch', 400);
+    face.update(300);
+    expect(face.reaction()).toBe('ouch');
+    face.update(150);
+    expect(face.reaction()).toBeNull();
+  });
+
+  it('holds an infinite reaction until cleared', () => {
+    const face = quiet();
+    face.react('squint', Infinity);
+    face.update(1000);
+    expect(face.reaction()).toBe('squint');
+    face.clearReaction();
+    expect(face.reaction()).toBeNull();
+  });
+
+  it('a cleared high-priority reaction no longer blocks weaker ones', () => {
+    const face = quiet();
+    face.react('horror', Infinity);
+    face.clearReaction();
+    face.react('joy', 100);
+    expect(face.reaction()).toBe('joy');
+  });
+
+  it('ignores a reaction without time', () => {
+    const face = quiet();
+    face.react('joy', 0);
+    face.react('joy', -5);
+    face.react('joy', Number.NaN);
+    expect(face.reaction()).toBeNull();
+  });
+
+  it('reset drops the reaction', () => {
+    const face = quiet();
+    face.react('horror', Infinity);
+    face.reset();
+    expect(face.reaction()).toBeNull();
+  });
+});
+
+describe('FaceState blinking', () => {
+  const blinkMs = ANIM.face.blinkMs;
+
+  it('blinks after the scheduled pause for the blink duration', () => {
+    const face = new FaceState(() => 0); // shortest pause
+    face.update(BLINK_MIN - 1);
+    expect(face.reaction()).toBeNull();
+    face.update(1);
+    expect(face.reaction()).toBe('blink');
+    face.update(blinkMs - 1);
+    expect(face.reaction()).toBe('blink');
+    face.update(1);
+    expect(face.reaction()).toBeNull();
+  });
+
+  it('uses the injected random to pick the pause', () => {
+    const face = new FaceState(() => 1); // longest pause
+    face.update(BLINK_MAX - 1);
+    expect(face.reaction()).toBeNull();
+    face.update(1);
+    expect(face.reaction()).toBe('blink');
+  });
+
+  it('schedules the next blink from a new random draw', () => {
+    const face = new FaceState(sequence(0, 1));
+    face.update(BLINK_MIN);
+    expect(face.reaction()).toBe('blink');
+    face.update(blinkMs);
+    expect(face.reaction()).toBeNull();
+    face.update(BLINK_MAX - 1);
+    expect(face.reaction()).toBeNull();
+    face.update(1);
+    expect(face.reaction()).toBe('blink');
+  });
+
+  it('blinks again and again', () => {
+    const face = new FaceState(() => 0);
+    let blinks = 0;
+    let was: Reaction | null = null;
+    for (let t = 0; t < 20_000; t += 10) {
+      face.update(10);
+      const now = face.reaction();
+      if (now === 'blink' && was !== 'blink') blinks++;
+      was = now;
+    }
+    expect(blinks).toBeGreaterThanOrEqual(Math.floor(20_000 / (BLINK_MIN + blinkMs)) - 1);
+  });
+
+  it('a real reaction is shown over an idle blink and the blink goes on behind it', () => {
+    const face = new FaceState(() => 0);
+    face.update(BLINK_MIN);
+    expect(face.reaction()).toBe('blink');
+    face.react('joy', 10_000);
+    expect(face.reaction()).toBe('joy');
+    face.update(blinkMs);
+    expect(face.reaction()).toBe('joy');
+    face.clearReaction();
+    expect(face.reaction()).toBeNull();
+  });
+
+  it('reset cancels a running blink and re-randomises the timer', () => {
+    const draws = sequence(0, 1);
+    const face = new FaceState(draws);
+    face.update(BLINK_MIN);
+    expect(face.reaction()).toBe('blink');
+    face.reset();
+    expect(face.reaction()).toBeNull();
+    face.update(BLINK_MAX - 1);
+    expect(face.reaction()).toBeNull();
+    face.update(1);
+    expect(face.reaction()).toBe('blink');
+  });
+});
+
+describe('ability reactions', () => {
+  const honey = CREATURE_LOOKS.honey.face;
+
+  it('wink shuts one eye and smiles, whatever the mood', () => {
+    for (const mood of ['calm', 'nervous', 'scared'] as const) {
+      const e = resolveExpression(mood, 'wink', undefined, honey);
+      expect(e.eyes).toBe('wink');
+      expect(e.mouth).toBe('smile');
+      expect(e.sweat).toBe(false);
+    }
+  });
+
+  it('scrunch squeezes the eyes and draws a wavy mouth with worried brows', () => {
+    const e = resolveExpression('calm', 'scrunch', undefined, honey);
+    expect(e).toMatchObject({ eyes: 'closed', mouth: 'scared', brows: true, ownBrows: false });
+  });
+
+  it('gape opens the mouth wide and blow rounds it', () => {
+    expect(resolveExpression('calm', 'gape', undefined, honey)).toMatchObject({
+      eyes: 'open',
+      mouth: 'open',
+    });
+    expect(resolveExpression('calm', 'blow', undefined, honey)).toMatchObject({
+      eyes: 'open',
+      mouth: 'o',
+    });
+  });
+
+  it('puffed blows the cheeks up, strain does not', () => {
+    expect(resolveExpression('calm', 'puffed', undefined, honey).puffed).toBe(true);
+    expect(resolveExpression('calm', 'strain', undefined, honey).puffed).toBeUndefined();
+    expect(resolveExpression('calm', null, undefined, honey).puffed).toBeUndefined();
+  });
+
+  it('keeps the creature brows for the ability faces and none on a plain layer', () => {
+    expect(resolveExpression('calm', 'gape', undefined, honey).ownBrows).toBe(true);
+    expect(resolveExpression('calm', 'gape').brows).toBe(false);
+  });
+
+  it('ranks above joy and ouch but below squint and horror', () => {
+    const face = new FaceState(() => 0.5);
+    const order: Reaction[] = ['joy', 'ouch', 'wink', 'strain', 'squint', 'horror'];
+    for (let i = 1; i < order.length; i++) {
+      const lower = order[i - 1] as Reaction;
+      const higher = order[i] as Reaction;
+      face.reset();
+      face.react(higher, 1000);
+      face.react(lower, 1000);
+      expect(face.reaction()).toBe(higher);
+      face.reset();
+      face.react(lower, 1000);
+      face.react(higher, 1000);
+      expect(face.reaction()).toBe(higher);
+    }
+  });
+});
+
+describe('the lick reaction', () => {
+  it('keeps the eyes open and drops the sweat even on a worried face', () => {
+    const e = resolveExpression('scared', 'lick');
+    expect(e.sweat).toBe(false);
+    expect(e.eyes).toBe('open');
+    expect(e.lids).toBe(false);
+  });
+
+  it('is weaker than joy but stronger than a blink', () => {
+    const timers = new FaceState(() => 0.5);
+    timers.react('lick', 500);
+    timers.react('blink', 100);
+    expect(timers.reaction()).toBe('lick');
+    timers.react('joy', 500);
+    expect(timers.reaction()).toBe('joy');
+  });
+});
+
+describe('weather faces', () => {
+  it('the startle gives round eyes and a small o mouth, the Showcase one only the eyes', () => {
+    const full = resolveExpression('calm', 'startle');
+    expect(full.eyes).toBe('wide');
+    expect(full.mouth).toBe('o');
+    expect(full.brows).toBe(true);
+    const weak = resolveExpression('calm', 'startleEyes', 'smile');
+    expect(weak.eyes).toBe('wide');
+    expect(weak.mouth).toBe('smile');
+    expect(weak.brows).toBe(false);
+  });
+
+  it('a sleepy calm face has half-shut eyes, a worried one does not, a reaction goes over it', () => {
+    expect(resolveExpression('calm', null, undefined, null, true).eyes).toBe('sleepy');
+    expect(resolveExpression('nervous', null, undefined, null, true).eyes).toBe('open');
+    expect(resolveExpression('calm', 'joy', undefined, null, true).eyes).toBe('happy');
+    expect(resolveExpression('calm', 'blink', undefined, null, true).eyes).toBe('closed');
+  });
+
+  it('weather reactions never override an event reaction, and a stronger event takes them over', () => {
+    for (const event of ['lick', 'joy', 'ouch', 'panic', 'wink', 'squint', 'horror'] as const) {
+      const state = new FaceState(() => 0.5);
+      state.react(event, 500);
+      state.react('startle', 400);
+      state.react('yawn', 400);
+      expect(state.reaction()).toBe(event);
+    }
+    const state = new FaceState(() => 0.5);
+    state.react('yawn', 800);
+    state.react('startle', 400);
+    expect(state.reaction()).toBe('startle');
+    state.react('ouch', 300);
+    expect(state.reaction()).toBe('ouch');
+    // The yawn does not take over a startle.
+    const second = new FaceState(() => 0.5);
+    second.react('startle', 400);
+    second.react('yawn', 800);
+    expect(second.reaction()).toBe('startle');
+  });
+
+  it('a sleepy face blinks rarer and slower', () => {
+    const awake = new FaceState(() => 0);
+    const sleepy = new FaceState(() => 0);
+    sleepy.setSleepy(true);
+    const firstBlink = (state: FaceState): [number, number] => {
+      let t = 0;
+      while (state.reaction() !== 'blink') {
+        state.update(10);
+        t += 10;
+      }
+      let len = 0;
+      while (state.reaction() === 'blink') {
+        state.update(10);
+        len += 10;
+      }
+      return [t, len];
+    };
+    const [awakeAt, awakeLen] = firstBlink(awake);
+    const [sleepyAt, sleepyLen] = firstBlink(sleepy);
+    expect(sleepyAt).toBeGreaterThan(awakeAt);
+    expect(sleepyLen).toBeGreaterThan(awakeLen);
+  });
+});
+
+describe('startleAllowed', () => {
+  it('lets a plain idle face, a blinking one and a yawning one be startled', () => {
+    expect(startleAllowed(null, 'calm', undefined, false)).toBe(true);
+    expect(startleAllowed(null, 'calm', 'smile', false)).toBe(true);
+    expect(startleAllowed('blink', 'calm', undefined, false)).toBe(true);
+    expect(startleAllowed('yawn', 'calm', undefined, false)).toBe(true);
+  });
+
+  it('skips a face with any reaction, a lick, a worried mood or a mouth hint (yum, grin, o)', () => {
+    for (const r of [
+      'lick',
+      'joy',
+      'ouch',
+      'panic',
+      'wink',
+      'squint',
+      'horror',
+      'startle',
+    ] as const) {
+      expect(startleAllowed(r, 'calm', undefined, false)).toBe(false);
+    }
+    expect(startleAllowed(null, 'calm', undefined, true)).toBe(false);
+    expect(startleAllowed(null, 'nervous', undefined, false)).toBe(false);
+    expect(startleAllowed(null, 'scared', undefined, false)).toBe(false);
+    for (const hint of ['yum', 'open', 'o'] as const) {
+      expect(startleAllowed(null, 'calm', hint, false)).toBe(false);
+    }
+  });
+});
+
+describe('the plain-idle rule that cuts a running yawn', () => {
+  it('a yawn goes on while the face is calm with a plain mouth and stops for a worried mood, a hint or a lick', () => {
+    // `LayerFace.cutWeatherIfBusy` asks `startleAllowed(null, ...)` for a running yawn or startle.
+    expect(startleAllowed(null, 'calm', undefined, false)).toBe(true);
+    expect(startleAllowed(null, 'nervous', undefined, false)).toBe(false);
+    expect(startleAllowed(null, 'scared', undefined, false)).toBe(false);
+    expect(startleAllowed(null, 'calm', 'yum', false)).toBe(false);
+    expect(startleAllowed(null, 'calm', undefined, true)).toBe(false);
+  });
+});

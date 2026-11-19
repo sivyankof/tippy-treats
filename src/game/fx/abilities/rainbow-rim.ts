@@ -4,7 +4,7 @@ import { ANIM } from '../../../data/common/anim';
 import { BALANCE } from '../../../data/tower/balance';
 import { DEPTH } from '../../depth';
 import { effectsMode } from '../../effects-mode';
-import type { LayerPose } from '../../objects/tower-view';
+import type { LayerPose } from '../../objects/tower/tower-view';
 import { landedRimAlpha } from './active-state';
 import { bandAt, rimPolyline } from './rainbow-arc-geometry';
 

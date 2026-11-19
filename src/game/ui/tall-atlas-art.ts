@@ -4,7 +4,7 @@ import { SPACE_VISITOR } from '../../data/guests/space-visitor';
 import { paddedSize } from '../../util/field-pad';
 import { tallestFirst } from '../../util/shelf-packer';
 import { ensureTopperTexture } from '../fx/toppers/topper-texture';
-import { bakeSpaceVisitor } from '../objects/backdrop/space-visitor-art';
+import { bakeSpaceVisitor } from '../objects/backdrop/space/space-visitor-art';
 
 /**
  * The tall pictures that stay on the shared atlas for good once baked: the toppers of the plain layers and the

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { BALANCE } from '../../../data/tower/balance';
-import type { SnapshotLayer } from '../../objects/tower-snapshot';
+import type { SnapshotLayer } from '../../objects/tower/tower-snapshot';
 import { fitTower } from './share-card-layout';
 
 const layer = (x: number, width = 600): SnapshotLayer => ({ kind: 'plain', x, width });

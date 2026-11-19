@@ -14,7 +14,7 @@ import {
   startRunFrom,
   type SceneKey,
 } from '../scene-keys';
-import type { LickScene } from '../objects/lick-plan';
+import type { LickScene } from '../objects/glaze/lick-plan';
 import { runHooks } from '../perf/run-hooks';
 import type { GameScene } from '../scenes/game-scene';
 import { setSoakSpeed } from './soak-speed';

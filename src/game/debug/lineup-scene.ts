@@ -4,7 +4,7 @@ import { BALANCE } from '../../data/tower/balance';
 import { CREATURE_IDS, type CreatureId } from '../../data/creatures/creatures';
 import { LINEUP } from '../../data/debug/lineup';
 import { DEPTH } from '../depth';
-import { LayerView } from '../objects/layer-view';
+import { LayerView } from '../objects/tower/layer-view';
 import { SCENES } from '../scene-keys';
 
 /**

@@ -14,7 +14,7 @@ import { pileSizeFor } from '../../fx/economy/pile-size';
 import { REWARD_TEXTURES, REWARD_TOWER_FIELD_SCALE } from '../../fx/economy/reward-pictures';
 import { createTreasurePile } from '../../fx/economy/treasure-pile';
 import { TREASURE_TEXTURES } from '../../fx/economy/treasure-textures';
-import { CreaturePortrait } from '../../objects/creature-portrait';
+import { CreaturePortrait } from '../../objects/creatures/creature-portrait';
 import { CREATURE_ICON_KEYS } from '../creature-icons';
 import { createTextButton } from '../button';
 import { createOutlinedText } from '../outlined-text';

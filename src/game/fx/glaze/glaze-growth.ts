@@ -2,7 +2,7 @@ import { GLAZE_DRIPS } from '../../../data/glaze/glaze-drips';
 import type { CreatureId } from '../../../data/creatures/creatures';
 import type { FaceRecipe } from '../../../data/creatures/creature-looks';
 import { easeOutQuad, GOLDEN, MS_PER_SECOND } from '../../../util/math';
-import { faceLayout } from '../../objects/face-recipe';
+import { faceLayout } from '../../objects/creatures/face-recipe';
 
 /** How a creature changes the growth of its drips and how often they let a drop go. */
 export interface GrowthStyle {

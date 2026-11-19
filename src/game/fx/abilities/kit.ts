@@ -3,14 +3,14 @@ import type { AbilityPayload } from '../../../core/abilities/types';
 import type { TowerState } from '../../../core/tower/tower-sim';
 import type { CreatureId } from '../../../data/creatures/creatures';
 import { ANIM } from '../../../data/common/anim';
-import type { LayerPose, TowerView } from '../../objects/tower-view';
-import type { LayerView } from '../../objects/layer-view';
-import type { CreatureColors } from '../../objects/creature-art/primitives';
+import type { LayerPose, TowerView } from '../../objects/tower/tower-view';
+import type { LayerView } from '../../objects/tower/layer-view';
+import type { CreatureColors } from '../../objects/creatures/creature-art/primitives';
 import type { AbilityBursts } from './ability-bursts';
 import type { RainbowArc } from './rainbow-arc';
 import type { SpriteFx } from './sprite-fx';
 
-export { HALF_LAYER } from '../../objects/layer-art';
+export { HALF_LAYER } from '../../objects/tower/layer-art';
 
 /** Direction of a particle cone that points straight up (degrees, screen y runs down). */
 export const UP_DEG = -90;

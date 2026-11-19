@@ -4,7 +4,7 @@ import type { TowerState } from '../../../core/tower/tower-sim';
 import { BALANCE } from '../../../data/tower/balance';
 import { LAP_EDGE, LAP_EDGE_HEIGHT } from '../../../data/zones/lap-edge';
 import { effectsMode } from '../../effects-mode';
-import type { TowerView } from '../../objects/tower-view';
+import type { TowerView } from '../../objects/tower/tower-view';
 import { bakeTexture } from '../../ui/bake-texture';
 import { FLYING_FX_DEPTH } from '../tower/flying-fx-depth';
 import { EdgeTween, edgeAlpha, edgeX } from './lap-edge-math';

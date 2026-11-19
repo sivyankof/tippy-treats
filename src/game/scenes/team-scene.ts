@@ -6,7 +6,7 @@ import { MENU } from '../../data/common/menu-layout';
 import { t } from '../../i18n';
 import { services } from '../../services';
 import { gameState } from '../../state';
-import { CreaturePortrait } from '../objects/creature-portrait';
+import { CreaturePortrait } from '../objects/creatures/creature-portrait';
 import { openScreen, SCENES } from '../scene-keys';
 import { MenuScenery } from '../ui/style/menu-scenery';
 import { ScreenHeader } from '../ui/menu/screen-header';

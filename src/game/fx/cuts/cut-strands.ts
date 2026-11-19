@@ -5,9 +5,9 @@ import { CUT_LOOK, CUT_PICTURE, CUT_TEXTURES } from '../../../data/cuts/cut-look
 import { shade } from '../../../util/color';
 import { clamp01, lerp, smoothstep, TWO_PI } from '../../../util/math';
 import { DEPTH } from '../../depth';
-import { layerBox } from '../../objects/layer-draw';
-import type { LayerView } from '../../objects/layer-view';
-import { StripRope } from '../../objects/strip-rope';
+import { layerBox } from '../../objects/tower/layer-draw';
+import type { LayerView } from '../../objects/tower/layer-view';
+import { StripRope } from '../../objects/glaze/strip-rope';
 import {
   beadGrow,
   beadShare,

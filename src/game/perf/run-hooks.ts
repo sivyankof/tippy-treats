@@ -1,4 +1,4 @@
-import type { LickKind, LickScene, LickStage } from '../objects/lick-plan';
+import type { LickKind, LickScene, LickStage } from '../objects/glaze/lick-plan';
 
 /**
  * What the running scene lets the `?perf=1` director poke at, in dev and production builds alike
