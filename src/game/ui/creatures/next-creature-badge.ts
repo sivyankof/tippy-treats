@@ -5,18 +5,20 @@ import { ANIM } from '../../../data/common/anim';
 import { HUD_LAYOUT } from '../../../data/run/hud-layout';
 import { MENU } from '../../../data/common/menu-layout';
 import { IDLE_MOTION, IDLE_PHASE } from '../../../data/common/idle-motion';
-import { PALETTE } from '../../../data/common/palette';
 import { createCreatureIcon, setCreatureIcon } from './creature-icons';
 import { idlePose, type IdlePose } from '../common/idle-motion';
 import { nextChipSpan, nextLabelPopScale } from '../run/hud-row-layout';
-import { nextChipContent } from './next-creature-label';
+import { nextChipContent, nextLabelGlyphTexts } from './next-creature-label';
 import { effectsMode } from '../../app/effects-mode';
 import { fxGuard } from '../../common/fx-guard';
 import { formatNumber } from '../../../i18n';
-import { createStrokedText } from '../common/outlined-text';
+import { GlyphText, prepareGlyphs } from '../common/glyph-text';
+import { NEXT_LABEL_GLYPH_STYLE } from './hud-glyphs';
 import { HudPlate } from '../style/hud-plate';
 
-const { badgeSize, badgeRowY, nextFont, nextStroke, nextChip } = HUD_LAYOUT;
+const { badgeSize, badgeRowY, nextChip } = HUD_LAYOUT;
+/** Glyph pictures the label holds up front: the longest phrase of either language fits. */
+const LABEL_GLYPHS = 16;
 
 /**
  * "Next creature" at the right of the badge row: the creature icon and how many layers away
@@ -26,7 +28,7 @@ const { badgeSize, badgeRowY, nextFont, nextStroke, nextChip } = HUD_LAYOUT;
 export class NextCreatureBadge {
   private readonly chip: HudPlate;
   private readonly icon: Phaser.GameObjects.Image;
-  private readonly label: Phaser.GameObjects.Text;
+  private readonly label: GlyphText;
   private screenWidth = 0;
   private height = -1;
   private team: TeamSlots | null = null;
@@ -41,18 +43,18 @@ export class NextCreatureBadge {
   constructor(private readonly scene: Phaser.Scene) {
     this.chip = new HudPlate(scene, MENU.style.wallet.fill).setVisible(false);
     this.icon = createCreatureIcon(scene, 0, badgeRowY).setVisible(false);
-    this.label = createStrokedText(
+    // The words of the current language are baked now, not in a frame of the run.
+    prepareGlyphs(scene, NEXT_LABEL_GLYPH_STYLE, nextLabelGlyphTexts());
+    this.label = new GlyphText(
       scene,
       0,
       badgeRowY,
-      '',
-      nextFont,
-      PALETTE.textLight,
-      PALETTE.textDark,
-      nextStroke,
-    )
-      .setOrigin(0, 0.5)
-      .setVisible(false);
+      NEXT_LABEL_GLYPH_STYLE,
+      0,
+      0.5,
+      LABEL_GLYPHS,
+    ).setVisible(false);
+    this.label.onRefresh = () => this.place();
   }
 
   /** The parts, for screen transitions and tests of the layout. */
@@ -158,11 +160,11 @@ export class NextCreatureBadge {
   }
 
   /** The icon pops by `nextPopScale`; the text by less when it is wide (`nextLabelPopScale`). */
-  private popScale(target: Phaser.GameObjects.Image | Phaser.GameObjects.Text): number {
+  private popScale(target: Phaser.GameObjects.Image | GlyphText): number {
     return target === this.icon ? ANIM.badges.nextPopScale : nextLabelPopScale(this.label.width);
   }
 
-  private pop(target: Phaser.GameObjects.Image | Phaser.GameObjects.Text): void {
+  private pop(target: Phaser.GameObjects.Image | GlyphText): void {
     const { nextPopMs, nextPopEase } = ANIM.badges;
     // The icon rests at the scale that makes it `badgeSize` wide, the text at 1.
     const rest = target === this.icon ? badgeSize / this.icon.width : 1;
