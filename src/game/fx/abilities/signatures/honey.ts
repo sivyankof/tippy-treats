@@ -1,8 +1,8 @@
-import { ABILITY_ANIM } from '../../../data/creatures/ability-anim';
-import { DEPTH } from '../../common/depth';
-import { ABILITY_TEXTURES, STRAND_SIZE } from './ability-textures';
-import { HALF_LAYER, type SignatureFx } from './kit';
-import { makeSpec } from './sprite-motion';
+import { ABILITY_ANIM } from '../../../../data/creatures/ability-anim';
+import { DEPTH } from '../../../common/depth';
+import { ABILITY_TEXTURES, STRAND_SIZE } from '../ability-textures';
+import { HALF_LAYER, type SignatureFx } from '../kit';
+import { makeSpec } from '../sprite-motion';
 
 const cfg = ABILITY_ANIM.honey;
 

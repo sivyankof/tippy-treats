@@ -1,11 +1,11 @@
-import { ABILITY_ANIM } from '../../../data/creatures/ability-anim';
-import { PALETTE } from '../../../data/common/palette';
-import { effectsMode } from '../../app/effects-mode';
-import { DEPTH } from '../../common/depth';
-import { FX_TEXTURES } from '../common/fx-textures';
-import { easeFn } from '../common/ease';
-import { makeSpec } from './sprite-motion';
-import type { SpriteFx } from './sprite-fx';
+import { ABILITY_ANIM } from '../../../../data/creatures/ability-anim';
+import { PALETTE } from '../../../../data/common/palette';
+import { effectsMode } from '../../../app/effects-mode';
+import { DEPTH } from '../../../common/depth';
+import { FX_TEXTURES } from '../../common/fx-textures';
+import { easeFn } from '../../common/ease';
+import { makeSpec } from '../sprite-motion';
+import type { SpriteFx } from '../sprite-fx';
 
 const cfg = ABILITY_ANIM.clouds;
 const riseEase = easeFn(cfg.riseEase);

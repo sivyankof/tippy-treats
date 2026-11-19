@@ -1,6 +1,6 @@
-import type { ActiveEffect } from '../../../core/abilities/types';
-import { CREATURE_IDS, type CreatureId } from '../../../data/creatures/creatures';
-import { frameLerp } from '../../../util/math';
+import type { ActiveEffect } from '../../../../core/abilities/types';
+import { CREATURE_IDS, type CreatureId } from '../../../../data/creatures/creatures';
+import { frameLerp } from '../../../../util/math';
 
 /** Which while-active visuals are on: one flag per creature effect, plus the brownie shield. */
 export type ActiveFlags = Record<CreatureId, boolean> & { shield: boolean };

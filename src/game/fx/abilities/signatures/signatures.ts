@@ -1,4 +1,4 @@
-import type { CreatureId } from '../../../data/creatures/creatures';
+import type { CreatureId } from '../../../../data/creatures/creatures';
 import { brownieFx } from './brownie';
 import { caramelFx } from './caramel';
 import { crumbFx } from './crumb';
@@ -6,10 +6,10 @@ import { frostyFx } from './frosty';
 import { ghostFx } from './ghost';
 import { honeyFx } from './honey';
 import { jellyFx } from './jelly';
-import type { SignatureFx } from './kit';
+import type { SignatureFx } from '../kit';
 import { lemonFx } from './lemon';
 import { puffFx } from './puff';
-import { rainbowFx } from './rainbow';
+import { rainbowFx } from '../rainbow/rainbow';
 import { sprinkleFx } from './sprinkle';
 import { twinsFx } from './twins';
 

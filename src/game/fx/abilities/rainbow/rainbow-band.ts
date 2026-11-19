@@ -1,6 +1,6 @@
 import type * as Phaser from 'phaser';
-import { PALETTE } from '../../../data/common/palette';
-import { fillRibbon, type Pt } from '../common/plain-style';
+import { PALETTE } from '../../../../data/common/palette';
+import { fillRibbon, type Pt } from '../../common/plain-style';
 
 /** A point of a curve with the unit normal that points to the outer (upper) edge. */
 export type CurvePoint = Pt & { nx: number; ny: number };

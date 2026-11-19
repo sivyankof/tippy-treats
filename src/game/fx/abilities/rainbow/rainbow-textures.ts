@@ -1,12 +1,12 @@
 import type * as Phaser from 'phaser';
-import { ABILITY_ANIM } from '../../../data/creatures/ability-anim';
-import { PALETTE } from '../../../data/common/palette';
-import { GROWN_LOOKS } from '../../../data/creatures/mastery-look';
-import { RAINBOW_LOOK } from '../../../data/creatures/rainbow-look';
-import { paintStar } from '../../objects/creatures/creature-art/rainbow';
-import { starPoints } from '../../objects/creatures/creature-art/rainbow-geometry';
-import { bakeTexture } from '../../ui/common/bake-texture';
-import { fillPolygon, outlineColor } from '../common/plain-style';
+import { ABILITY_ANIM } from '../../../../data/creatures/ability-anim';
+import { PALETTE } from '../../../../data/common/palette';
+import { GROWN_LOOKS } from '../../../../data/creatures/mastery-look';
+import { RAINBOW_LOOK } from '../../../../data/creatures/rainbow-look';
+import { paintStar } from '../../../objects/creatures/creature-art/rainbow';
+import { starPoints } from '../../../objects/creatures/creature-art/rainbow-geometry';
+import { bakeTexture } from '../../../ui/common/bake-texture';
+import { fillPolygon, outlineColor } from '../../common/plain-style';
 
 /** Baked pictures of the Rainbow: the moving parts are shown by turning and scaling these, not by redrawing. */
 export const RAINBOW_TEXTURES = {

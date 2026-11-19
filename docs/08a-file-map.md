@@ -4,9 +4,9 @@
 
 Столбец «Почему» заполнен там, где файл подходил двум темам: он идёт туда, откуда его чаще импортируют.
 
-Не переносились: `src/game/scenes`, `src/game/debug`, `src/game/perf`, `src/game/tutorial`, `src/game/fx/abilities`, `src/game/ui/style`, `src/core/save`, `src/core/abilities`, `src/state`, `src/util`, `src/services`, `src/i18n`, корень `src`. Папка `src/game/objects/creature-art` переехала целиком в `src/game/objects/creatures/creature-art`.
+Не переносились: `src/game/scenes`, `src/game/debug`, `src/game/perf`, `src/game/tutorial`, `src/game/ui/style`, `src/core/save`, `src/core/abilities`, `src/state`, `src/util`, `src/services`, `src/i18n`, корень `src`. Папка `src/game/objects/creature-art` переехала целиком в `src/game/objects/creatures/creature-art`.
 
-Всего перенесено 777 файлов.
+Всего перенесено 777 файлов в сессии 6в и 31 в правке по приёмке (раздел `src/game/fx/abilities` в конце).
 
 ## src/data (106)
 
@@ -824,3 +824,41 @@
 | `src/game/weather-bed.test.ts` | `src/game/audio/weather-bed.test.ts` |  |
 | `src/game/weather-bed.ts` | `src/game/audio/weather-bed.ts` | звук погоды |
 | `src/game/webgl-renderer.ts` | `src/game/app/webgl-renderer.ts` |  |
+
+## src/game/fx/abilities (правка по приёмке 6в, 31)
+
+Папка поделена на семейства способностей, чтобы в ней и в каждой подпапке было не больше 25 файлов. В корне остались общий шаблон и помощники: `ability-fx.ts`, `ability-bursts.ts`, `ability-textures.ts`, `kit.ts`, `master-fx.ts`, `sprite-fx.ts`, `sprite-motion.ts` и тест `slide-timing.test.ts`. `src/core/abilities` (21 файл) не делилась.
+
+| Старый путь | Новый путь | Почему |
+|---|---|---|
+| `src/game/fx/abilities/active-state.test.ts` | `src/game/fx/abilities/while-active/active-state.test.ts` |  |
+| `src/game/fx/abilities/active-state.ts` | `src/game/fx/abilities/while-active/active-state.ts` |  |
+| `src/game/fx/abilities/brownie.ts` | `src/game/fx/abilities/signatures/brownie.ts` |  |
+| `src/game/fx/abilities/caramel.ts` | `src/game/fx/abilities/signatures/caramel.ts` |  |
+| `src/game/fx/abilities/clouds.ts` | `src/game/fx/abilities/signatures/clouds.ts` | облака, общие для фирменных анимаций «Морозика» и «Пышки» |
+| `src/game/fx/abilities/crumb-flight.ts` | `src/game/fx/abilities/while-active/crumb-flight.ts` | полёт крошек, пока действует «Крошка» |
+| `src/game/fx/abilities/crumb.ts` | `src/game/fx/abilities/signatures/crumb.ts` |  |
+| `src/game/fx/abilities/flying-coat.ts` | `src/game/fx/abilities/while-active/flying-coat.ts` |  |
+| `src/game/fx/abilities/frosty.ts` | `src/game/fx/abilities/signatures/frosty.ts` |  |
+| `src/game/fx/abilities/ghost.ts` | `src/game/fx/abilities/signatures/ghost.ts` |  |
+| `src/game/fx/abilities/guides.ts` | `src/game/fx/abilities/while-active/guides.ts` |  |
+| `src/game/fx/abilities/honey.ts` | `src/game/fx/abilities/signatures/honey.ts` |  |
+| `src/game/fx/abilities/hue.test.ts` | `src/game/fx/abilities/while-active/hue.test.ts` |  |
+| `src/game/fx/abilities/hue.ts` | `src/game/fx/abilities/while-active/hue.ts` | нужно только шубе летящего слоя (flying-coat) |
+| `src/game/fx/abilities/jelly.ts` | `src/game/fx/abilities/signatures/jelly.ts` |  |
+| `src/game/fx/abilities/lemon.ts` | `src/game/fx/abilities/signatures/lemon.ts` |  |
+| `src/game/fx/abilities/puff.ts` | `src/game/fx/abilities/signatures/puff.ts` |  |
+| `src/game/fx/abilities/rainbow-arc-geometry.test.ts` | `src/game/fx/abilities/rainbow/rainbow-arc-geometry.test.ts` |  |
+| `src/game/fx/abilities/rainbow-arc-geometry.ts` | `src/game/fx/abilities/rainbow/rainbow-arc-geometry.ts` |  |
+| `src/game/fx/abilities/rainbow-arc.ts` | `src/game/fx/abilities/rainbow/rainbow-arc.ts` |  |
+| `src/game/fx/abilities/rainbow-band.ts` | `src/game/fx/abilities/rainbow/rainbow-band.ts` |  |
+| `src/game/fx/abilities/rainbow-rim.ts` | `src/game/fx/abilities/rainbow/rainbow-rim.ts` |  |
+| `src/game/fx/abilities/rainbow-textures.ts` | `src/game/fx/abilities/rainbow/rainbow-textures.ts` |  |
+| `src/game/fx/abilities/rainbow.ts` | `src/game/fx/abilities/rainbow/rainbow.ts` | фирменная анимация Радужки, к своему семейству |
+| `src/game/fx/abilities/shield-bubble.ts` | `src/game/fx/abilities/while-active/shield-bubble.ts` |  |
+| `src/game/fx/abilities/signatures.test.ts` | `src/game/fx/abilities/signatures/signatures.test.ts` |  |
+| `src/game/fx/abilities/signatures.ts` | `src/game/fx/abilities/signatures/signatures.ts` |  |
+| `src/game/fx/abilities/sprinkle.ts` | `src/game/fx/abilities/signatures/sprinkle.ts` |  |
+| `src/game/fx/abilities/twins.ts` | `src/game/fx/abilities/signatures/twins.ts` |  |
+| `src/game/fx/abilities/vignette.ts` | `src/game/fx/abilities/while-active/vignette.ts` |  |
+| `src/game/fx/abilities/while-active.ts` | `src/game/fx/abilities/while-active/while-active.ts` |  |

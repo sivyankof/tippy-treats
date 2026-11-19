@@ -1,6 +1,6 @@
-import { ABILITY_ANIM } from '../../../data/creatures/ability-anim';
-import { FX_TEXTURES } from '../common/fx-textures';
-import { HALF_LAYER, UP_DEG, type SignatureFx } from './kit';
+import { ABILITY_ANIM } from '../../../../data/creatures/ability-anim';
+import { FX_TEXTURES } from '../../common/fx-textures';
+import { HALF_LAYER, UP_DEG, type SignatureFx } from '../kit';
 
 const cfg = ABILITY_ANIM.sprinkle;
 

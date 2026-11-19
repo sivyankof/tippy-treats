@@ -1,7 +1,7 @@
-import { ABILITY_ANIM } from '../../../data/creatures/ability-anim';
-import { FX_TEXTURES } from '../common/fx-textures';
+import { ABILITY_ANIM } from '../../../../data/creatures/ability-anim';
+import { FX_TEXTURES } from '../../common/fx-textures';
 import { spawnClouds } from './clouds';
-import { mouthPoint, UP_DEG, type SignatureFx } from './kit';
+import { mouthPoint, UP_DEG, type SignatureFx } from '../kit';
 
 const cfg = ABILITY_ANIM.frosty;
 

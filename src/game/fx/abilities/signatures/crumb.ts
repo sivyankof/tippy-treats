@@ -1,11 +1,11 @@
-import { ABILITY_ANIM } from '../../../data/creatures/ability-anim';
-import { TWO_PI } from '../../../util/math';
-import { DEPTH } from '../../common/depth';
-import { effectsMode } from '../../app/effects-mode';
-import { easeFn } from '../common/ease';
-import { FX_TEXTURES } from '../common/fx-textures';
-import { mouthPoint, type SignatureFx } from './kit';
-import { makeSpec } from './sprite-motion';
+import { ABILITY_ANIM } from '../../../../data/creatures/ability-anim';
+import { TWO_PI } from '../../../../util/math';
+import { DEPTH } from '../../../common/depth';
+import { effectsMode } from '../../../app/effects-mode';
+import { easeFn } from '../../common/ease';
+import { FX_TEXTURES } from '../../common/fx-textures';
+import { mouthPoint, type SignatureFx } from '../kit';
+import { makeSpec } from '../sprite-motion';
 
 const cfg = ABILITY_ANIM.crumb;
 const pull = easeFn(cfg.pullEase);

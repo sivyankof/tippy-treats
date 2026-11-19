@@ -1,6 +1,6 @@
-import { ABILITY_ANIM } from '../../../data/creatures/ability-anim';
-import { FX_TEXTURES } from '../common/fx-textures';
-import type { SignatureFx } from './kit';
+import { ABILITY_ANIM } from '../../../../data/creatures/ability-anim';
+import { FX_TEXTURES } from '../../common/fx-textures';
+import type { SignatureFx } from '../kit';
 
 const cfg = ABILITY_ANIM.lemon;
 

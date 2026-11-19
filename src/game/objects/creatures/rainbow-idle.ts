@@ -1,7 +1,7 @@
 import * as Phaser from 'phaser';
 import { Rng } from '../../../core/common/rng';
-import { arcCurve } from '../../fx/abilities/rainbow-arc-geometry';
-import { paintBand } from '../../fx/abilities/rainbow-band';
+import { arcCurve } from '../../fx/abilities/rainbow/rainbow-arc-geometry';
+import { paintBand } from '../../fx/abilities/rainbow/rainbow-band';
 import { outlineColor } from '../../fx/common/plain-style';
 import { easeFn } from '../../fx/common/ease';
 import { ANIM } from '../../../data/common/anim';
@@ -17,7 +17,7 @@ import { DEG_TO_RAD, TWO_PI } from '../../../util/math';
 import { DEPTH } from '../../common/depth';
 import { effectsMode } from '../../app/effects-mode';
 import { fillQuad, type Pt } from '../../fx/common/plain-style';
-import { RAINBOW_TEXTURES } from '../../fx/abilities/rainbow-textures';
+import { RAINBOW_TEXTURES } from '../../fx/abilities/rainbow/rainbow-textures';
 import { rainbowGlaze } from './creature-art/rainbow';
 import { bodySpan, spongeRows, waveAt } from './creature-art/rainbow-geometry';
 import {

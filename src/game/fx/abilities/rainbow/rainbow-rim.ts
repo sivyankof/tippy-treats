@@ -1,11 +1,11 @@
 import * as Phaser from 'phaser';
-import { ABILITY_ANIM } from '../../../data/creatures/ability-anim';
-import { ANIM } from '../../../data/common/anim';
-import { BALANCE } from '../../../data/tower/balance';
-import { DEPTH } from '../../common/depth';
-import { effectsMode } from '../../app/effects-mode';
-import type { LayerPose } from '../../objects/tower/tower-view';
-import { landedRimAlpha } from './active-state';
+import { ABILITY_ANIM } from '../../../../data/creatures/ability-anim';
+import { ANIM } from '../../../../data/common/anim';
+import { BALANCE } from '../../../../data/tower/balance';
+import { DEPTH } from '../../../common/depth';
+import { effectsMode } from '../../../app/effects-mode';
+import type { LayerPose } from '../../../objects/tower/tower-view';
+import { landedRimAlpha } from '../while-active/active-state';
 import { bandAt, rimPolyline } from './rainbow-arc-geometry';
 
 const cfg = ABILITY_ANIM.active.rainbow.rim;

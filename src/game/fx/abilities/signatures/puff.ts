@@ -1,6 +1,6 @@
-import { ABILITY_ANIM } from '../../../data/creatures/ability-anim';
+import { ABILITY_ANIM } from '../../../../data/creatures/ability-anim';
 import { spawnClouds } from './clouds';
-import { HALF_LAYER, type SignatureFx } from './kit';
+import { HALF_LAYER, type SignatureFx } from '../kit';
 
 const cfg = ABILITY_ANIM.puff;
 

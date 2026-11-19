@@ -1,6 +1,6 @@
-import { ABILITY_ANIM } from '../../../data/creatures/ability-anim';
-import { effectsMode } from '../../app/effects-mode';
-import type { SignatureFx } from './kit';
+import { ABILITY_ANIM } from '../../../../data/creatures/ability-anim';
+import { effectsMode } from '../../../app/effects-mode';
+import type { SignatureFx } from '../kit';
 
 const cfg = ABILITY_ANIM.jelly;
 

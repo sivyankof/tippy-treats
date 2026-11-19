@@ -1,10 +1,10 @@
 import type * as Phaser from 'phaser';
-import { ABILITY_ANIM } from '../../../data/creatures/ability-anim';
-import { MASTER_ANIM } from '../../../data/creatures/master-anim';
-import { effectsMode } from '../../app/effects-mode';
-import { DEPTH } from '../../common/depth';
-import { oscillate01 } from '../../../util/math';
-import { ABILITY_TEXTURES } from './ability-textures';
+import { ABILITY_ANIM } from '../../../../data/creatures/ability-anim';
+import { MASTER_ANIM } from '../../../../data/creatures/master-anim';
+import { effectsMode } from '../../../app/effects-mode';
+import { DEPTH } from '../../../common/depth';
+import { oscillate01 } from '../../../../util/math';
+import { ABILITY_TEXTURES } from '../ability-textures';
 import { fadeToward, isFadedIn } from './active-state';
 
 const cfg = ABILITY_ANIM.active;

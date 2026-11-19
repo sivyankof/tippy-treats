@@ -10,17 +10,17 @@ import { creatureColors } from '../../objects/creatures/creature-art/primitives'
 import type { TowerView } from '../../objects/tower/tower-view';
 import type { LandingFx } from '../tower/landing-fx';
 import type { CameraInfo, FlyingMemo } from '../run/run-fx';
-import { rainbowArcOnLand } from './active-state';
+import { rainbowArcOnLand } from './while-active/active-state';
 import { AbilityBursts } from './ability-bursts';
-import { CrumbFlight } from './crumb-flight';
+import { CrumbFlight } from './while-active/crumb-flight';
 import { effectsMode } from '../../app/effects-mode';
 import { FX_TEXTURES } from '../common/fx-textures';
 import { HALF_LAYER, UP_DEG, type FxKit, type SignatureContext } from './kit';
 import { MasterFx } from './master-fx';
-import { RainbowArc } from './rainbow-arc';
-import { SIGNATURES } from './signatures';
+import { RainbowArc } from './rainbow/rainbow-arc';
+import { SIGNATURES } from './signatures/signatures';
 import { SpriteFx } from './sprite-fx';
-import { WhileActiveFx } from './while-active';
+import { WhileActiveFx } from './while-active/while-active';
 
 type Scene = ConstructorParameters<typeof SpriteFx>[0];
 type AbilityEvent = Extract<SimEvent, { type: 'ability' }>;
