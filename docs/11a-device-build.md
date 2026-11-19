@@ -53,9 +53,7 @@ mv credentials.json credentials /c/Users/Artem/Documents/keys/arcanum-eas/
 
 ### 1.3. Профиль App Store для Tippy Treats (новый, один раз)
 
-**Сделано 2026-11-19, повторять не нужно.** Профиль «Tippy Treats App Store» (App ID `app.tippytreats.game`, тот же единственный сертификат распространения, действует до 27.08.2027) лежит в `C:UsersArtemDocumentskeysTippy_Treats_App_Store.mobileprovision`. Шаги ниже — на случай, когда профиль придётся выпустить заново (например, после продления сертификата).
-
-Профиля для `app.tippytreats.game` ещё нет, без него подписать нельзя.
+**Сделано 2026-11-19, повторять не нужно.** Профиль «Tippy Treats App Store» (App ID `app.tippytreats.game`, тот же единственный сертификат распространения, действует до 27.08.2027) лежит в `C:\Users\Artem\Documents\keys\Tippy_Treats_App_Store.mobileprovision`. Шаги ниже — на случай, когда профиль придётся выпустить заново (например, после продления сертификата): без профиля подписать нельзя.
 
 1. https://developer.apple.com/account → **Certificates, Identifiers & Profiles** → **Profiles** → синий **+**.
 2. Раздел **Distribution** → **App Store Connect** → **Continue**.
