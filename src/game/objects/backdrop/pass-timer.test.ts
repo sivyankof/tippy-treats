@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { BACKDROP_LIFE } from '../../../data/backdrop-life';
+import { BACKDROP_LIFE } from '../../../data/backdrop/backdrop-life';
 import { edgeFade, PassTimer } from './pass-timer';
 
 const spec = {

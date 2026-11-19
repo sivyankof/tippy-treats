@@ -1,5 +1,5 @@
 import * as Phaser from 'phaser';
-import { ART_SHEET, isSheetPicture } from '../../data/art-sheet';
+import { ART_SHEET, isSheetPicture } from '../../data/debug/art-sheet';
 import { SCENES } from '../scene-keys';
 import { LIVE_PICTURES } from './art-sheet-live';
 import { clipSummary, clipTightLines } from '../clip-guard';

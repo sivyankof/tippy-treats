@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { ANIM } from '../../data/anim';
-import { LICK } from '../../data/lick';
+import { ANIM } from '../../data/common/anim';
+import { LICK } from '../../data/glaze/lick';
 import { lickDurationMs, lickFrame, loopShape, tongueBody, type LickScene } from './lick-plan';
 import { eyesUnderTongue, ribbonGap, tongueOuterWidth, tongueWidthAt } from './tongue-shape';
 

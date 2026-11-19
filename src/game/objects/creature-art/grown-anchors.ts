@@ -1,5 +1,5 @@
-import { BALANCE } from '../../../data/balance';
-import { GROWN_LOOKS } from '../../../data/mastery-look';
+import { BALANCE } from '../../../data/tower/balance';
+import { GROWN_LOOKS } from '../../../data/creatures/mastery-look';
 
 /** A point in layer pixels, measured from the centre of the layer body. */
 export interface Anchor {

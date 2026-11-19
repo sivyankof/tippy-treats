@@ -1,6 +1,6 @@
 import type { SimEvent, TowerState } from '../src/core/sim-types';
 import { wobbleAmplitude } from '../src/core/wobble';
-import { BALANCE } from '../src/data/balance';
+import { BALANCE } from '../src/data/tower/balance';
 
 /** Wobble levels the report counts drops above. */
 const HIGH_WOBBLE = 40;

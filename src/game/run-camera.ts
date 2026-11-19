@@ -1,6 +1,6 @@
 import { fxGuard } from './fx-guard';
 import type * as Phaser from 'phaser';
-import { ANIM } from '../data/anim';
+import { ANIM } from '../data/common/anim';
 import { frameLerp } from '../util/math';
 import { targetScrollY, trayScrollY } from './camera-layout';
 import type { CameraInfo, RunFx } from './fx/run-fx';

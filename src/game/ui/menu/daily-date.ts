@@ -1,5 +1,5 @@
 import type * as Phaser from 'phaser';
-import { MENU } from '../../../data/menu-layout';
+import { MENU } from '../../../data/common/menu-layout';
 import { getLang, t } from '../../../i18n';
 import { createOutlinedText } from '../outlined-text';
 import { faceOffsetY, VolumePlate } from '../style/volume';

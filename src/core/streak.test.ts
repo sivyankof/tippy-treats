@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { STREAK, STREAK_REWARDS } from '../data/streak';
+import { STREAK, STREAK_REWARDS } from '../data/progression/streak';
 import {
   calendarCells,
   claimStreak,

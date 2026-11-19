@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { ANIM } from '../../data/anim';
+import { ANIM } from '../../data/common/anim';
 import { FrameWorkWatch } from './frame-work-watch';
 
 const A = ANIM.fx.auto;

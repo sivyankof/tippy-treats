@@ -1,7 +1,7 @@
-import { CREATURE_IDS } from '../data/creatures';
-import { DAILY, type DailyTier } from '../data/daily';
-import { MS_PER_DAY } from '../data/clock';
-import { LEVEL_REWARDS } from '../data/progression';
+import { CREATURE_IDS } from '../data/creatures/creatures';
+import { DAILY, type DailyTier } from '../data/progression/daily';
+import { MS_PER_DAY } from '../data/app/clock';
+import { LEVEL_REWARDS } from '../data/progression/progression';
 import type { Cost } from './economy';
 import { Rng } from './rng';
 import type { TeamSlot } from './sim-types';

@@ -1,6 +1,6 @@
 import type * as Phaser from 'phaser';
-import { TOPPER_KINDS, topperBakedSize } from '../../data/plain-toppers';
-import { SPACE_VISITOR } from '../../data/space-visitor';
+import { TOPPER_KINDS, topperBakedSize } from '../../data/toppers/plain-toppers';
+import { SPACE_VISITOR } from '../../data/guests/space-visitor';
 import { paddedSize } from '../../util/field-pad';
 import { tallestFirst } from '../../util/shelf-packer';
 import { ensureTopperTexture } from '../fx/topper-texture';

@@ -1,6 +1,6 @@
 import * as Phaser from 'phaser';
-import type { HoverSpec } from '../../../data/backdrop-life';
-import { PANORAMA, WALL_LOOK } from '../../../data/window-look';
+import type { HoverSpec } from '../../../data/backdrop/backdrop-life';
+import { PANORAMA, WALL_LOOK } from '../../../data/weather/window-look';
 import { applyPose, createImage, type FrameCtx, type Life } from './life';
 import { hoverPose, newPose } from './life-motion';
 import { mixColor } from '../../../util/color';

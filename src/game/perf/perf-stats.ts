@@ -1,5 +1,5 @@
 import type { BrowserInfo } from '../../util/browser-info';
-import { PERF_BUDGET, PERF_SEGMENTS, type PerfSegmentDef } from '../../data/perf';
+import { PERF_BUDGET, PERF_SEGMENTS, type PerfSegmentDef } from '../../data/debug/perf';
 
 /** The share of frames at or below the returned value (nearest rank), `share` in 0..1; `sorted` is ascending. */
 export function percentile(sorted: ArrayLike<number>, share: number): number {

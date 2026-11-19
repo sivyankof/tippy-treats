@@ -1,5 +1,5 @@
 import * as Phaser from 'phaser';
-import { ANIM } from '../../data/anim';
+import { ANIM } from '../../data/common/anim';
 import { bump } from './anim-curves';
 import { FX_TEXTURES } from './fx-textures';
 

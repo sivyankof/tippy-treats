@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { BALANCE } from '../data/balance';
+import { BALANCE } from '../data/tower/balance';
 import { config, mutable, only, pick, untilFlying, untilSettled } from './sim-test-utils';
 import type { SimEvent } from './sim-types';
 import { spaceWidthLimit } from './space-laps';

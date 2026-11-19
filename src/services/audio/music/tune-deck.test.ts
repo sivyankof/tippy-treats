@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { MUSIC, MUSIC_TRACKS } from '../../../data/music';
+import { MUSIC, MUSIC_TRACKS } from '../../../data/audio/music';
 import { MediaPool, type MediaContext } from './media-pool';
 import { StreamDeck, type DeckClock } from './tune-deck';
 

@@ -1,6 +1,6 @@
 import type * as Phaser from 'phaser';
 import { describe, expect, it } from 'vitest';
-import { ANIM } from '../../data/anim';
+import { ANIM } from '../../data/common/anim';
 import { bodyLookOf } from './edge-squash-look';
 import type { BodyFrame } from './edge-squash-marks';
 

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { ZONE_SKY } from '../../../data/backdrop-colors';
-import { ZONES } from '../../../data/zones';
+import { ZONE_SKY } from '../../../data/backdrop/backdrop-colors';
+import { ZONES } from '../../../data/zones/zones';
 import {
   ditherNoise,
   ditheredSky,

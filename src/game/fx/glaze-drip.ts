@@ -1,6 +1,6 @@
 import * as Phaser from 'phaser';
-import { ANIM } from '../../data/anim';
-import { BALANCE } from '../../data/balance';
+import { ANIM } from '../../data/common/anim';
+import { BALANCE } from '../../data/tower/balance';
 import type { LayerView } from '../objects/layer-view';
 import { rotatedOffset, squashedY } from './cut-trace-place';
 import { DEPTH } from '../depth';

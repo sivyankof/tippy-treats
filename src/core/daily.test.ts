@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { CREATURE_IDS } from '../data/creatures';
-import { MS_PER_DAY } from '../data/clock';
-import { DAILY } from '../data/daily';
-import { LEVEL_REWARDS } from '../data/progression';
+import { CREATURE_IDS } from '../data/creatures/creatures';
+import { MS_PER_DAY } from '../data/app/clock';
+import { DAILY } from '../data/progression/daily';
+import { LEVEL_REWARDS } from '../data/progression/progression';
 import {
   addAttempt,
   attemptsLeft,

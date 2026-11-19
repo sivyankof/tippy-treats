@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { LAP_EDGE } from '../../data/lap-edge';
+import { LAP_EDGE } from '../../data/zones/lap-edge';
 import { EdgeTween, edgeAlpha, edgeX, fadeIn } from './lap-edge-math';
 
 describe('lap edge maths', () => {

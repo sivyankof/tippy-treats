@@ -1,4 +1,4 @@
-import { abilityDef, levelValue } from '../../data/creatures';
+import { abilityDef, levelValue } from '../../data/creatures/creatures';
 import { isMaster } from '../mastery';
 import { boostCount, NO_EFFECT_VALUE, payMastery, startEffect } from './helpers';
 import type { Ability } from './types';

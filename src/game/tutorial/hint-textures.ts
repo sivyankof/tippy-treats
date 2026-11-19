@@ -1,7 +1,7 @@
 import type * as Phaser from 'phaser';
-import { TUTORIAL_ANIM } from '../../data/tutorial-anim';
-import { PALETTE } from '../../data/palette';
-import { FIELD_PAD } from '../../data/picture-fields';
+import { TUTORIAL_ANIM } from '../../data/tutorial/tutorial-anim';
+import { PALETTE } from '../../data/common/palette';
+import { FIELD_PAD } from '../../data/common/picture-fields';
 import { paddedOrigin } from '../../util/field-pad';
 import { OUTLINE_SHARE, outlineColor } from '../fx/plain-style';
 import { bakeTexture } from '../ui/bake-texture';

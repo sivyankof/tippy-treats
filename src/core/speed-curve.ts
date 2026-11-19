@@ -1,4 +1,4 @@
-import { BALANCE } from '../data/balance';
+import { BALANCE } from '../data/tower/balance';
 
 /**
  * Nominal flying speed above a tower of `height` layers, px/s (docs/02-gameplay.md, section 2):

@@ -1,7 +1,7 @@
 import * as Phaser from 'phaser';
-import { MAX_CREATURE_LEVEL } from '../../../data/creatures';
-import { MENU } from '../../../data/menu-layout';
-import { PALETTE } from '../../../data/palette';
+import { MAX_CREATURE_LEVEL } from '../../../data/creatures/creatures';
+import { MENU } from '../../../data/common/menu-layout';
+import { PALETTE } from '../../../data/common/palette';
 
 const { size, gap, on, off, master } = MENU.stars;
 const POINTS = 5;

@@ -1,4 +1,4 @@
-import { ABILITY_ANIM } from '../../../data/ability-anim';
+import { ABILITY_ANIM } from '../../../data/creatures/ability-anim';
 import { FX_TEXTURES } from '../fx-textures';
 import { HALF_LAYER, UP_DEG, type SignatureFx } from './kit';
 

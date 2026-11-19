@@ -1,4 +1,4 @@
-import { ANIM } from '../../data/anim';
+import { ANIM } from '../../data/common/anim';
 import type { EaseFn } from './ease';
 
 const intro = ANIM.runIntro;

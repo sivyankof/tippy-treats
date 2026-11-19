@@ -1,4 +1,4 @@
-import { BALANCE } from '../../data/balance';
+import { BALANCE } from '../../data/tower/balance';
 import { gainCoins } from '../run-coins';
 import type { AbilityContext, AbilityPayload, CreatureId, HookContext } from './types';
 

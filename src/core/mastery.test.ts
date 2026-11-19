@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { CREATURE_IDS, MAX_CREATURE_LEVEL } from '../data/creatures';
-import { MASTERY } from '../data/mastery';
+import { CREATURE_IDS, MAX_CREATURE_LEVEL } from '../data/creatures/creatures';
+import { MASTERY } from '../data/creatures/mastery';
 import { hasNewLook, isMaster, lookStage, masterInfo, perksAt, upgradePreview } from './mastery';
 
 const STEPS = [1, 2, 3, 4] as const;

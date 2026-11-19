@@ -3,10 +3,10 @@
 import { describe, expect, it } from 'vitest';
 import { xpToNext } from '../core/progression';
 import type { RunResult } from '../core/run-result';
-import { MS_PER_DAY } from '../data/clock';
-import { MISSIONS } from '../data/missions';
-import { OVEN } from '../data/progression';
-import { REWARDED_OFFERS } from '../data/rewarded-video';
+import { MS_PER_DAY } from '../data/app/clock';
+import { MISSIONS } from '../data/progression/missions';
+import { OVEN } from '../data/progression/progression';
+import { REWARDED_OFFERS } from '../data/economy/rewarded-video';
 import { createTestState } from './test-state';
 
 const T0 = Date.UTC(2026, 10, 10, 12, 0, 0);

@@ -1,7 +1,7 @@
 import * as Phaser from 'phaser';
 import type { Rng } from '../../../core/rng';
-import { LOGICAL_SIZE } from '../../../data/screen';
-import { WEATHER_LOOK, WEATHER_TEX } from '../../../data/weather-look';
+import { LOGICAL_SIZE } from '../../../data/app/screen';
+import { WEATHER_LOOK, WEATHER_TEX } from '../../../data/weather/weather-look';
 import { MS_PER_SECOND, TWO_PI } from '../../../util/math';
 import { laneCount, snowSpots, startU } from './weather-lanes';
 import {

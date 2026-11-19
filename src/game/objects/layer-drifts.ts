@@ -1,8 +1,8 @@
 import * as Phaser from 'phaser';
-import { BALANCE } from '../../data/balance';
-import { FIELD_PAD } from '../../data/picture-fields';
-import { TOWER_WEATHER } from '../../data/tower-weather';
-import { WEATHER_TEX } from '../../data/weather-look';
+import { BALANCE } from '../../data/tower/balance';
+import { FIELD_PAD } from '../../data/common/picture-fields';
+import { TOWER_WEATHER } from '../../data/weather/tower-weather';
+import { WEATHER_TEX } from '../../data/weather/weather-look';
 import { paddedOrigin } from '../../util/field-pad';
 import { effectsMode } from '../effects-mode';
 import { driftPicture } from './backdrop/weather-art';

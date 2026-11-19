@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from 'vitest';
-import { LICK, type LickStyle } from '../../data/lick';
+import { LICK, type LickStyle } from '../../data/glaze/lick';
 import { effectsMode } from '../effects-mode';
 import { LayerMarkStore, type LayerMark } from './layer-mark-store';
 import { LickDirector, type LickContext } from './lick-director';

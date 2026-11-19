@@ -1,7 +1,7 @@
 import type * as Phaser from 'phaser';
 import type { ContinueOffer } from '../../core/continue-offer';
-import { CONTINUE_ANIM } from '../../data/continue-anim';
-import { PALETTE } from '../../data/palette';
+import { CONTINUE_ANIM } from '../../data/run/continue-anim';
+import { PALETTE } from '../../data/common/palette';
 import { t } from '../../i18n';
 import { createLabelButton, type Button } from './button';
 import { resetAdLabel, showAdCaption } from './menu/ad-unavailable';

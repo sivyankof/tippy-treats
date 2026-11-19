@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { SFX } from '../../data/sfx';
+import { SFX } from '../../data/audio/sfx';
 import {
   clampComboStep,
   collapseThudGain,

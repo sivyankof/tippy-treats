@@ -1,4 +1,4 @@
-import { FLIGHT_CLEAR } from '../../../data/flight-clear';
+import { FLIGHT_CLEAR } from '../../../data/backdrop/flight-clear';
 import { hudKeepOutFade } from '../../camera-layout';
 
 /**

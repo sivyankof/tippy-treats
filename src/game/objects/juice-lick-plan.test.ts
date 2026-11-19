@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { LICK } from '../../data/lick';
+import { LICK } from '../../data/glaze/lick';
 import { JuiceQueue, stainTarget, type JuiceCheck } from './juice-lick-plan';
 
 const OK = (): JuiceCheck => 'ok';

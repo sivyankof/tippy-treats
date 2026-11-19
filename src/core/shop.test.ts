@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { MS_PER_DAY } from '../data/clock';
-import { PRODUCTS, SHOP } from '../data/shop';
+import { MS_PER_DAY } from '../data/app/clock';
+import { PRODUCTS, SHOP } from '../data/economy/shop';
 import { createDefaultSave } from './save/defaults';
 import type { Save } from './save/schema';
 import {

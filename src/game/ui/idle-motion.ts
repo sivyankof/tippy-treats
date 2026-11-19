@@ -1,4 +1,4 @@
-import { IDLE_CHANNEL_LAG, type IdleSpec } from '../../data/idle-motion';
+import { IDLE_CHANNEL_LAG, type IdleSpec } from '../../data/common/idle-motion';
 import { sineWave } from '../../util/math';
 
 /** What an idle sway makes of an object this frame. Scales are multipliers (1 = rest). */

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { BACKDROP } from '../../../data/backdrop';
+import { BACKDROP } from '../../../data/backdrop/backdrop';
 import { ZoneFade } from './zone-fade';
 
 describe('ZoneFade', () => {

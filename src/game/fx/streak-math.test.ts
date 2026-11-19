@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { RULE_ANIM } from '../../data/rule-anim';
+import { RULE_ANIM } from '../../data/zones/rule-anim';
 import { burstBoost, streakEnvelope } from './streak-math';
 
 const { rushEnvelope, windEnvelope, burst } = RULE_ANIM.streaks;

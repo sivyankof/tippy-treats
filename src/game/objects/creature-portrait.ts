@@ -1,9 +1,9 @@
 import * as Phaser from 'phaser';
-import { CREATURE_IDS, clampLevel, type CreatureId } from '../../data/creatures';
-import { MENU } from '../../data/menu-layout';
+import { CREATURE_IDS, clampLevel, type CreatureId } from '../../data/creatures/creatures';
+import { MENU } from '../../data/common/menu-layout';
 import { services } from '../../services';
-import { BALANCE } from '../../data/balance';
-import { creatureMaterial } from '../../data/creature-materials';
+import { BALANCE } from '../../data/tower/balance';
+import { creatureMaterial } from '../../data/creatures/creature-materials';
 import { PortraitSparkles } from './portrait-sparkles';
 import { LayerView } from './layer-view';
 

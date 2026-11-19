@@ -1,6 +1,6 @@
 import * as Phaser from 'phaser';
-import { BALANCE } from '../../data/balance';
-import { PLAIN_LAYER } from '../../data/plain-layers';
+import { BALANCE } from '../../data/tower/balance';
+import { PLAIN_LAYER } from '../../data/tower/plain-layers';
 import { bakeTexture } from '../ui/bake-texture';
 import { layerBox } from './layer-draw';
 import { shadeSegments, type ShadeSpan } from './overlap-shade';

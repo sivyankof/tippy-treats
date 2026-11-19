@@ -8,15 +8,15 @@ import {
   WINDOW_SKY,
   windowKey,
   type GlassWeather,
-} from '../../../data/window-look';
-import type { StartPlaceId } from '../../../data/start-places';
-import type { WeatherId } from '../../../data/weather';
-import { WEATHER_LOOK } from '../../../data/weather-look';
+} from '../../../data/weather/window-look';
+import type { StartPlaceId } from '../../../data/zones/start-places';
+import type { WeatherId } from '../../../data/weather/weather';
+import { WEATHER_LOOK } from '../../../data/weather/weather-look';
 import { cssColor, shade } from '../../../util/color';
 import { effectsMode } from '../../effects-mode';
 import { fillPolygon, outlineColor } from '../../fx/plain-style';
 import { bakePadded, bakeTexture } from '../../ui/bake-texture';
-import { FIELD_PAD } from '../../../data/picture-fields';
+import { FIELD_PAD } from '../../../data/common/picture-fields';
 import { glassPose, newGlassPose } from './glass-motion';
 import { bar, paintGlints, paintSky, paintValance, roundRect } from './window-paint';
 import { flightClearBand } from '../../camera-layout';

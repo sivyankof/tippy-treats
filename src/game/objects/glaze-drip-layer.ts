@@ -1,10 +1,10 @@
 import * as Phaser from 'phaser';
 import type { CutSide } from '../../core/drop';
-import { ANIM } from '../../data/anim';
-import { BALANCE } from '../../data/balance';
-import { artRecipe, faceRecipe } from '../../data/creature-looks';
-import type { CreatureId } from '../../data/creatures';
-import { GLAZE_DRIPS } from '../../data/glaze-drips';
+import { ANIM } from '../../data/common/anim';
+import { BALANCE } from '../../data/tower/balance';
+import { artRecipe, faceRecipe } from '../../data/creatures/creature-looks';
+import type { CreatureId } from '../../data/creatures/creatures';
+import { GLAZE_DRIPS } from '../../data/glaze/glaze-drips';
 import { backOut, clamp01 } from '../../util/math';
 import { shade } from '../../util/color';
 import {
@@ -32,7 +32,7 @@ import {
 import { glazeWave, waveDripSpots, type WaveDripSpot } from './glaze-wave';
 import { plainLooks } from './plain-look';
 import { chainDistance, lickedDripShare } from './lick-plan';
-import { RAINBOW_LOOK } from '../../data/rainbow-look';
+import { RAINBOW_LOOK } from '../../data/creatures/rainbow-look';
 import {
   DRIP_MIN_LAYER_WIDTH,
   dripSpots,

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { BALANCE } from '../data/balance';
-import { SHOWCASE_ZONE_INDEX, SPACE_ZONE_INDEX, ZONE_RULES } from '../data/zones';
+import { BALANCE } from '../data/tower/balance';
+import { SHOWCASE_ZONE_INDEX, SPACE_ZONE_INDEX, ZONE_RULES } from '../data/zones/zones';
 import { Flight, flyingSpeed, newFlyingLayer, roofFactor, rushSpeed } from './flight';
 import type { FlyingLayer, SimEvent } from './sim-types';
 import type { CloudRoll, LayerRules } from './zones';

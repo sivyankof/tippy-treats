@@ -1,4 +1,4 @@
-import { MUSIC_TRACKS, type MusicTrackId } from '../../../data/music';
+import { MUSIC_TRACKS, type MusicTrackId } from '../../../data/audio/music';
 import { firstIndex } from './playlist-turn';
 import { fetchAndDecode } from './tune-loader';
 import { prepareLoop, type Decoded } from './tune-loop';

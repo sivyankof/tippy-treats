@@ -1,9 +1,9 @@
 import type * as Phaser from 'phaser';
-import { ABILITY_ANIM } from '../../../data/ability-anim';
-import { ANIM } from '../../../data/anim';
-import { BALANCE } from '../../../data/balance';
-import { MASTER_ANIM } from '../../../data/master-anim';
-import { PALETTE } from '../../../data/palette';
+import { ABILITY_ANIM } from '../../../data/creatures/ability-anim';
+import { ANIM } from '../../../data/common/anim';
+import { BALANCE } from '../../../data/tower/balance';
+import { MASTER_ANIM } from '../../../data/creatures/master-anim';
+import { PALETTE } from '../../../data/common/palette';
 import { DEG_TO_RAD } from '../../../util/math';
 import { bakeTexture } from '../../ui/bake-texture';
 import { bakeRainbowTextures } from './rainbow-textures';

@@ -1,6 +1,6 @@
 import type * as Phaser from 'phaser';
-import { MENU } from '../../../data/menu-layout';
-import { OVEN } from '../../../data/progression';
+import { MENU } from '../../../data/common/menu-layout';
+import { OVEN } from '../../../data/progression/progression';
 import { formatNumber, t } from '../../../i18n';
 import { gameState } from '../../../state';
 import type { PopupWindow } from '../style/dialog-window';

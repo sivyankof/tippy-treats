@@ -1,8 +1,8 @@
 import * as Phaser from 'phaser';
 import { isComplete, share } from '../../../core/missions';
 import type { MissionProgress } from '../../../core/save/schema';
-import { MENU } from '../../../data/menu-layout';
-import { PALETTE } from '../../../data/palette';
+import { MENU } from '../../../data/common/menu-layout';
+import { PALETTE } from '../../../data/common/palette';
 import { formatNumber, t } from '../../../i18n';
 import { services } from '../../../services';
 import { createOutlinedText } from '../outlined-text';

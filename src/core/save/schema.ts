@@ -1,4 +1,4 @@
-import type { CreatureId } from '../../data/creatures';
+import type { CreatureId } from '../../data/creatures/creatures';
 
 export const SAVE_VERSION = 9;
 

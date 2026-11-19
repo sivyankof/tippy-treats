@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
-import { ABILITY_ANIM } from '../../../data/ability-anim';
-import { CREATURE_IDS } from '../../../data/creatures';
-import { RARITIES, RARITY_COLORS } from '../../../data/rarity';
+import { ABILITY_ANIM } from '../../../data/creatures/ability-anim';
+import { CREATURE_IDS } from '../../../data/creatures/creatures';
+import { RARITIES, RARITY_COLORS } from '../../../data/creatures/rarity';
 import { SIGNATURES } from './signatures';
 
 // Phaser needs a browser; the effects only look easing functions up when they are made.

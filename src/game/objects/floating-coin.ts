@@ -1,6 +1,6 @@
 import * as Phaser from 'phaser';
-import { TREASURE } from '../../data/treasure-anim';
-import { PALETTE } from '../../data/palette';
+import { TREASURE } from '../../data/economy/treasure-anim';
+import { PALETTE } from '../../data/common/palette';
 import { sineWave, TWO_PI } from '../../util/math';
 import { DEPTH } from '../depth';
 import { easeFn } from '../fx/ease';

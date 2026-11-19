@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { TUTORIAL_ANIM } from '../../data/tutorial-anim';
+import { TUTORIAL_ANIM } from '../../data/tutorial/tutorial-anim';
 import { pickPlateY, type SpotInput, type SpotRect } from './hint-spot';
 
 const { gap, screenMargin } = TUTORIAL_ANIM.hintSpot;

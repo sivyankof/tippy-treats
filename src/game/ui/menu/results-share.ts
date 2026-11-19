@@ -1,5 +1,5 @@
 import type * as Phaser from 'phaser';
-import { SHARE_CARD } from '../../../data/share';
+import { SHARE_CARD } from '../../../data/run/share';
 import { t, tn } from '../../../i18n';
 import { services } from '../../../services';
 import type { ResultsData } from '../../scene-keys';

@@ -1,8 +1,8 @@
 import type * as Phaser from 'phaser';
-import { ANIM } from '../../data/anim';
-import { BALANCE } from '../../data/balance';
-import { IDLE_MOTION, IDLE_PHASE, TRAY_SHEEN } from '../../data/idle-motion';
-import { KITCHEN_COLORS } from '../../data/palette';
+import { ANIM } from '../../data/common/anim';
+import { BALANCE } from '../../data/tower/balance';
+import { IDLE_MOTION, IDLE_PHASE, TRAY_SHEEN } from '../../data/common/idle-motion';
+import { KITCHEN_COLORS } from '../../data/common/palette';
 import { DEPTH } from '../depth';
 import { createGlossBand, sweepGloss } from '../fx/gloss-sweep';
 import { bakeTexture } from '../ui/bake-texture';

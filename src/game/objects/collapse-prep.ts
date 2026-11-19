@@ -2,7 +2,7 @@ import * as Phaser from 'phaser';
 import type { CutSide } from '../../core/drop';
 import { hasNewLook } from '../../core/mastery';
 import type { PlacedLayer } from '../../core/tower-sim';
-import { ANIM } from '../../data/anim';
+import { ANIM } from '../../data/common/anim';
 import { nextUnbaked } from './collapse-scan';
 import { dripTexturesFor } from './glaze-drip-layer';
 import {

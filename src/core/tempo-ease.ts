@@ -1,4 +1,4 @@
-import { BALANCE } from '../data/balance';
+import { BALANCE } from '../data/tower/balance';
 
 /** What the tempo does for one layer spawn. */
 export interface TempoStep {

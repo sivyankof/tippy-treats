@@ -1,5 +1,5 @@
-import { WEATHER, type WeatherView } from '../../../data/weather';
-import type { ZoneId } from '../../../data/zones';
+import { WEATHER, type WeatherView } from '../../../data/weather/weather';
+import type { ZoneId } from '../../../data/zones/zones';
 
 /**
  * How much of one kind of weather view is visible. The zone being flowed into fades in over the old

@@ -1,5 +1,5 @@
 import * as Phaser from 'phaser';
-import { SHARED_ATLAS } from '../../data/shared-atlas';
+import { SHARED_ATLAS } from '../../data/common/shared-atlas';
 import { bigPageFails } from '../../util/gl-page-error';
 import { ShelfPacker, type PackedBox } from '../../util/shelf-packer';
 import { devWarn } from '../dev-warn';

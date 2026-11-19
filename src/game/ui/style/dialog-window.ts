@@ -1,6 +1,6 @@
 import * as Phaser from 'phaser';
-import { MENU } from '../../../data/menu-layout';
-import { PALETTE } from '../../../data/palette';
+import { MENU } from '../../../data/common/menu-layout';
+import { PALETTE } from '../../../data/common/palette';
 import { windowDuck } from '../../music-cues';
 import { createDimOverlay } from '../dim-overlay';
 import { createIconButton } from '../menu/icon-button';

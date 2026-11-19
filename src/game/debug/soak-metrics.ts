@@ -1,5 +1,5 @@
 import type * as Phaser from 'phaser';
-import { SOAK } from '../../data/soak';
+import { SOAK } from '../../data/debug/soak';
 import { services } from '../../services';
 import { uiRegionCount } from '../ui/ui-regions';
 import { soundNodes } from './soak-compare';

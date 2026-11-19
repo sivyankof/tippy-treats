@@ -1,8 +1,8 @@
 import type * as Phaser from 'phaser';
 import type { CheckpointRow } from '../../../core/checkpoints';
-import { CHECKPOINT_WINDOW } from '../../../data/checkpoint-look';
-import { PALETTE } from '../../../data/palette';
-import { ZONES, type ZoneId } from '../../../data/zones';
+import { CHECKPOINT_WINDOW } from '../../../data/zones/checkpoint-look';
+import { PALETTE } from '../../../data/common/palette';
+import { ZONES, type ZoneId } from '../../../data/zones/zones';
 import { t } from '../../../i18n';
 import { checkpointZoneTexture } from '../../fx/checkpoint-textures';
 import { VIDEO_ICON_FIELD_SCALE, VIDEO_ICON_KEY, bakeVideoIcon } from '../../fx/video-icon-texture';

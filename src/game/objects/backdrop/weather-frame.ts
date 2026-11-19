@@ -1,5 +1,5 @@
 import type * as Phaser from 'phaser';
-import type { EffectLevel } from '../../../data/effect-levels';
+import type { EffectLevel } from '../../../data/app/effect-levels';
 
 /** What the weather pieces need of one frame (the object is reused). */
 export interface WeatherFrame {

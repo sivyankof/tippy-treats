@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { CREATURE_LOOKS } from '../../../data/creature-looks';
+import { CREATURE_LOOKS } from '../../../data/creatures/creature-looks';
 import { layerBox } from '../layer-draw';
 import { twinsSeam } from './twins-seam';
 

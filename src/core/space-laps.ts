@@ -1,5 +1,5 @@
-import { BALANCE } from '../data/balance';
-import { LAP_REWARD, SPACE_ZONE_INDEX, ZONE_RULES } from '../data/zones';
+import { BALANCE } from '../data/tower/balance';
+import { LAP_REWARD, SPACE_ZONE_INDEX, ZONE_RULES } from '../data/zones/zones';
 import { zoneStartIndex } from './zones';
 
 /** Lap of Space a 1-based layer index lies in: 1 for layers 101-120, 2 for 121-140…; 0 before Space. */

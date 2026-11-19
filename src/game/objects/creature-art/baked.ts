@@ -1,4 +1,4 @@
-import { ANIM } from '../../../data/anim';
+import { ANIM } from '../../../data/common/anim';
 import { parseHex, shade } from '../../../util/color';
 import { touches } from '../layer-draw';
 import { drawGlaze } from './flat-draw';

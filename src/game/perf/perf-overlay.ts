@@ -1,4 +1,4 @@
-import { PERF } from '../../data/perf';
+import { PERF } from '../../data/debug/perf';
 
 const BUTTON_CSS =
   'pointer-events:auto;font:inherit;margin-left:6px;padding:2px 8px;border:1px solid #fff;' +

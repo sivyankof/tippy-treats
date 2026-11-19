@@ -1,5 +1,5 @@
-import { BALANCE } from '../data/balance';
-import { clampLevel, type CreatureId } from '../data/creatures';
+import { BALANCE } from '../data/tower/balance';
+import { clampLevel, type CreatureId } from '../data/creatures/creatures';
 import type { LayerPlan, TeamSlot, TeamSlots } from './sim-types';
 
 /** Memory of the planner between layers. */

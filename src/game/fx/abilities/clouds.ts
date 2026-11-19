@@ -1,5 +1,5 @@
-import { ABILITY_ANIM } from '../../../data/ability-anim';
-import { PALETTE } from '../../../data/palette';
+import { ABILITY_ANIM } from '../../../data/creatures/ability-anim';
+import { PALETTE } from '../../../data/common/palette';
 import { effectsMode } from '../../effects-mode';
 import { DEPTH } from '../../depth';
 import { FX_TEXTURES } from '../fx-textures';

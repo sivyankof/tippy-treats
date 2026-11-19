@@ -1,7 +1,7 @@
 import type * as Phaser from 'phaser';
-import { DAILY } from '../../../data/daily';
-import { MENU } from '../../../data/menu-layout';
-import { REWARD_LOOK } from '../../../data/reward-look';
+import { DAILY } from '../../../data/progression/daily';
+import { MENU } from '../../../data/common/menu-layout';
+import { REWARD_LOOK } from '../../../data/economy/reward-look';
 import { t } from '../../../i18n';
 import { idleBob } from '../../fx/idle-bob';
 import { REWARD_TEXTURES } from '../../fx/reward-pictures';

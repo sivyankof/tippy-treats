@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { WEATHER } from '../../../data/weather';
-import type { ZoneId } from '../../../data/zones';
+import { WEATHER } from '../../../data/weather/weather';
+import type { ZoneId } from '../../../data/zones/zones';
 import { towerWeatherShown, weatherShareOf, zoneShowsWeatherSky } from './weather-share';
 
 /** The share of a list of zones, with a zone's index in the list standing for it; the last one is the zone being flowed into. */

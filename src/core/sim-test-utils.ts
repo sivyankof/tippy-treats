@@ -1,5 +1,5 @@
 import { expect } from 'vitest';
-import { BALANCE } from '../data/balance';
+import { BALANCE } from '../data/tower/balance';
 import { TowerSim, type RunConfig, type SimEvent, type TowerState } from './tower-sim';
 
 export const STEP = BALANCE.sim.stepMs;

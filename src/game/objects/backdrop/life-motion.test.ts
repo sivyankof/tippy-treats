@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { BACKDROP } from '../../../data/backdrop';
-import { PLANET_PLACE } from '../../../data/space-planets';
-import { BACKDROP_LIFE, type HoverSpec } from '../../../data/backdrop-life';
-import { ZONES } from '../../../data/zones';
+import { BACKDROP } from '../../../data/backdrop/backdrop';
+import { PLANET_PLACE } from '../../../data/zones/space-planets';
+import { BACKDROP_LIFE, type HoverSpec } from '../../../data/backdrop/backdrop-life';
+import { ZONES } from '../../../data/zones/zones';
 import { flightClearBand } from '../../camera-layout';
 import {
   blinkFactor,

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { ANIM } from '../../data/anim';
-import { BALANCE } from '../../data/balance';
-import { CUT_LOOK } from '../../data/cut-look';
+import { ANIM } from '../../data/common/anim';
+import { BALANCE } from '../../data/tower/balance';
+import { CUT_LOOK } from '../../data/cuts/cut-look';
 import { cutStripWidth, glazeWave, waveY } from '../objects/glaze-wave';
 import { layerBox } from '../objects/layer-draw';
 import { rotatedOffset, squashedY, traceSpot } from './cut-trace-place';

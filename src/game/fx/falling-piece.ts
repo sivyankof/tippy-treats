@@ -1,7 +1,7 @@
 import type * as Phaser from 'phaser';
 import type { CutSide } from '../../core/drop';
 import type { LayerPlan } from '../../core/sim-types';
-import { ANIM } from '../../data/anim';
+import { ANIM } from '../../data/common/anim';
 import { lerp, smoothstep } from '../../util/math';
 import { DEPTH } from '../depth';
 import type { Reaction } from '../objects/face-state';

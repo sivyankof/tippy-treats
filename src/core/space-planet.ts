@@ -1,4 +1,4 @@
-import { SPACE_PLANET_IDS, type SpacePlanetId } from '../data/space-planets';
+import { SPACE_PLANET_IDS, type SpacePlanetId } from '../data/zones/space-planets';
 import { Rng } from './rng';
 
 /** The stream of a run seed that decides the planets of its laps (a cosmetic stream, like the weather's). */

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { ActiveEffect } from '../../../core/abilities/types';
-import { CREATURE_IDS, type CreatureId } from '../../../data/creatures';
+import { CREATURE_IDS, type CreatureId } from '../../../data/creatures/creatures';
 import {
   bubbleInputFor,
   emptyFlags,

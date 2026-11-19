@@ -1,7 +1,7 @@
 import * as Phaser from 'phaser';
 import type { TowerSim } from '../../core/tower-sim';
-import type { EffectLevel } from '../../data/effect-levels';
-import type { SquashKind } from '../../data/topper-squash';
+import type { EffectLevel } from '../../data/app/effect-levels';
+import type { SquashKind } from '../../data/toppers/topper-squash';
 import { effectsMode } from '../effects-mode';
 import type { TopperWorld } from '../objects/layer-topper';
 import { lookCode, lookOfCode, plainLooks } from '../objects/plain-look';

@@ -1,8 +1,8 @@
 import { DEPTH } from '../depth';
 import type * as Phaser from 'phaser';
 import type { SimEvent, TowerState } from '../../core/tower-sim';
-import { ANIM } from '../../data/anim';
-import { BALANCE } from '../../data/balance';
+import { ANIM } from '../../data/common/anim';
+import { BALANCE } from '../../data/tower/balance';
 import { pickInt } from '../../util/math';
 import { decorTints } from '../objects/decor-draw';
 import { decorItems } from '../objects/decor-layout';

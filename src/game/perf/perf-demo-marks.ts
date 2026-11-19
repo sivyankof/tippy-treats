@@ -1,6 +1,6 @@
 import type { PlacedLayer } from '../../core/sim-types';
-import { PERF_STEPS } from '../../data/perf';
-import { SQUASH_TEXTURES, TOPPER_SQUASH } from '../../data/topper-squash';
+import { PERF_STEPS } from '../../data/debug/perf';
+import { SQUASH_TEXTURES, TOPPER_SQUASH } from '../../data/toppers/topper-squash';
 import { stainOrigin, stainPictureSize } from '../fx/squash-textures';
 import { layerStainSpot } from '../fx/topper-squash-fx';
 import { layerMarks } from '../objects/layer-marks';

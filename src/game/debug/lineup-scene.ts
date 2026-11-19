@@ -1,8 +1,8 @@
 import * as Phaser from 'phaser';
 import type { CutSide } from '../../core/drop';
-import { BALANCE } from '../../data/balance';
-import { CREATURE_IDS, type CreatureId } from '../../data/creatures';
-import { LINEUP } from '../../data/lineup';
+import { BALANCE } from '../../data/tower/balance';
+import { CREATURE_IDS, type CreatureId } from '../../data/creatures/creatures';
+import { LINEUP } from '../../data/debug/lineup';
 import { DEPTH } from '../depth';
 import { LayerView } from '../objects/layer-view';
 import { SCENES } from '../scene-keys';

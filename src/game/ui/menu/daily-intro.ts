@@ -1,6 +1,6 @@
 import * as Phaser from 'phaser';
-import { MENU } from '../../../data/menu-layout';
-import { PALETTE } from '../../../data/palette';
+import { MENU } from '../../../data/common/menu-layout';
+import { PALETTE } from '../../../data/common/palette';
 import { t } from '../../../i18n';
 import { gameState } from '../../../state';
 import { REWARD_TEXTURES, REWARD_TOWER_FIELD_SCALE } from '../../fx/reward-pictures';

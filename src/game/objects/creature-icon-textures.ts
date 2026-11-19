@@ -1,7 +1,7 @@
 import type * as Phaser from 'phaser';
-import { BALANCE } from '../../data/balance';
-import { CREATURE_ICON } from '../../data/creature-style';
-import { CREATURE_IDS, type CreatureId } from '../../data/creatures';
+import { BALANCE } from '../../data/tower/balance';
+import { CREATURE_ICON } from '../../data/creatures/creature-style';
+import { CREATURE_IDS, type CreatureId } from '../../data/creatures/creatures';
 import { offList } from '../ui/bake-texture';
 import { CREATURE_GROWN_ICON_KEYS, CREATURE_ICON_KEYS } from '../ui/creature-icons';
 import { artTopPad } from './layer-art';

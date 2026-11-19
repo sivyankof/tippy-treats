@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { TowerSim } from '../../core/tower-sim';
-import { BALANCE } from '../../data/balance';
+import { BALANCE } from '../../data/tower/balance';
 import { createDriver, IdleDriver, MissDriver, OffsetDriver } from './perf-drivers';
 
 type SimView = Pick<TowerSim, 'state' | 'topLayerX' | 'currentModifiers'>;

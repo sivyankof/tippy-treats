@@ -1,6 +1,6 @@
-import { DIFFICULTY, type DifficultyTarget } from '../src/data/balance';
-import { SAVE_DEFAULTS } from '../src/data/save-defaults';
-import { NO_TEAM, allFullTeams, type SimTeamSet } from '../src/data/sim-teams';
+import { DIFFICULTY, type DifficultyTarget } from '../src/data/tower/balance';
+import { SAVE_DEFAULTS } from '../src/data/app/save-defaults';
+import { NO_TEAM, allFullTeams, type SimTeamSet } from '../src/data/debug/sim-teams';
 import { COIN_SOURCES, CoinStats, type CoinsBySource } from './coin-stats';
 import { nodeFs, scriptArgs } from './node-env';
 import { applySets } from './what-if';

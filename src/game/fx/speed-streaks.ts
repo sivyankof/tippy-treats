@@ -1,7 +1,7 @@
 import type * as Phaser from 'phaser';
-import { BALANCE } from '../../data/balance';
-import type { WeatherId } from '../../data/weather';
-import { RULE_ANIM } from '../../data/rule-anim';
+import { BALANCE } from '../../data/tower/balance';
+import type { WeatherId } from '../../data/weather/weather';
+import { RULE_ANIM } from '../../data/zones/rule-anim';
 import { scatter } from '../objects/creature-art/primitives';
 import { FLYING_FX_DEPTH } from './flying-fx-depth';
 import { burstBoost, streakEnvelope } from './streak-math';

@@ -1,7 +1,7 @@
 /**
  * The volumetric look of the menu screens: the same glossy candy style as the run.
  *
- * What to use (numbers live in `MENU.style` of src/data/menu-layout.ts):
+ * What to use (numbers live in `MENU.style` of src/data/common/menu-layout.ts):
  * - Background of a menu screen: `new MenuScenery(scene, 'home' | 'list')` (menu-scenery.ts);
  *   call `resize` on layout and `update(delta)` every frame.
  * - A window, a block of text, a list area: `new VolumePlate(scene, 'window', height)`, then
@@ -31,8 +31,8 @@
  * plate may change its width at any time without redrawing.
  */
 import * as Phaser from 'phaser';
-import { MENU } from '../../../data/menu-layout';
-import { PALETTE } from '../../../data/palette';
+import { MENU } from '../../../data/common/menu-layout';
+import { PALETTE } from '../../../data/common/palette';
 import { shade } from '../../../util/color';
 import { fillGradient } from '../../objects/layer-draw';
 import { bakeTexture } from '../bake-texture';

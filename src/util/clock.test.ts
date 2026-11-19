@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { CLOCK_BACK_TOLERANCE_MS, MS_PER_DAY } from '../data/clock';
+import { CLOCK_BACK_TOLERANCE_MS, MS_PER_DAY } from '../data/app/clock';
 import {
   applyDayOffset,
   clockWentBack,

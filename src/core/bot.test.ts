@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { BALANCE, DIFFICULTY } from '../data/balance';
-import { SPACE_ZONE_INDEX, ZONES } from '../data/zones';
+import { BALANCE, DIFFICULTY } from '../data/tower/balance';
+import { SPACE_ZONE_INDEX, ZONES } from '../data/zones/zones';
 import { coverSdMult, TimingBot } from './bot';
 import { roofFactor } from './flight';
 import { Rng } from './rng';

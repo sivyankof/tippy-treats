@@ -1,7 +1,7 @@
-import { ZONE_SKY, type GradientStop } from '../../../data/backdrop-colors';
-import type { WeatherId } from '../../../data/weather';
-import { WEATHER_LOOK, type PerZone, type WeatherZone } from '../../../data/weather-look';
-import type { ZoneId } from '../../../data/zones';
+import { ZONE_SKY, type GradientStop } from '../../../data/backdrop/backdrop-colors';
+import type { WeatherId } from '../../../data/weather/weather';
+import { WEATHER_LOOK, type PerZone, type WeatherZone } from '../../../data/weather/weather-look';
+import type { ZoneId } from '../../../data/zones/zones';
 
 const SKY: Partial<Record<WeatherId, PerZone<readonly GradientStop[]>>> = WEATHER_LOOK.sky;
 const FAR_LIGHT: Partial<Record<WeatherId, PerZone<number>>> = WEATHER_LOOK.farLight;

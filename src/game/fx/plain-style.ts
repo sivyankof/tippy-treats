@@ -1,9 +1,9 @@
 import type * as Phaser from 'phaser';
-import { ANIM } from '../../data/anim';
-import { BALANCE } from '../../data/balance';
+import { ANIM } from '../../data/common/anim';
+import { BALANCE } from '../../data/tower/balance';
 import { DEG_TO_RAD, TWO_PI } from '../../util/math';
 import { luma, shade } from '../../util/color';
-import { TOWER_WEATHER } from '../../data/tower-weather';
+import { TOWER_WEATHER } from '../../data/weather/tower-weather';
 import { DARK_OUTLINE } from '../objects/layer-draw';
 
 /** Outline thickness of the plain layers as a share of their height; icons use the same share of theirs. */

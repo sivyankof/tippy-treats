@@ -4,7 +4,7 @@ import {
   type Rendered,
   type TimedSound,
 } from '../../services/audio/offline-render';
-import { MUSIC, MUSIC_TRACKS, type MusicTrackId } from '../../data/music';
+import { MUSIC, MUSIC_TRACKS, type MusicTrackId } from '../../data/audio/music';
 import { fetchAndDecode, trackUrl } from '../../services/audio/music/tune-loader';
 import { loopBounds, prepareLoop } from '../../services/audio/music/tune-loop';
 import { percentile } from '../perf/perf-stats';
@@ -15,7 +15,7 @@ import { encodeWav } from '../../services/audio/wav';
 import { audioDev, services } from '../../services';
 import type { MusicControl } from '../../services/audio/music-control';
 import type { AudioDebugStats, MusicDebugState } from '../../services/audio/types';
-import type { BedKind } from '../../data/weather-bed';
+import type { BedKind } from '../../data/audio/weather-bed';
 
 /** One renderable sound: an id with one argument set and the file-name stem it gets. */
 export interface AudioHookEntry {

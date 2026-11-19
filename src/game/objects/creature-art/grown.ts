@@ -1,10 +1,10 @@
-import { ANIM } from '../../../data/anim';
-import { faceRecipe } from '../../../data/creature-looks';
-import type { CreatureId } from '../../../data/creatures';
-import { GROWN_LOOKS, type CreatureStage } from '../../../data/mastery-look';
-import { PALETTE } from '../../../data/palette';
-import { RAINBOW_BAND_COLORS, RAINBOW_LOOK } from '../../../data/rainbow-look';
-import { SPRINKLE_COLORS } from '../../../data/creature-looks';
+import { ANIM } from '../../../data/common/anim';
+import { faceRecipe } from '../../../data/creatures/creature-looks';
+import type { CreatureId } from '../../../data/creatures/creatures';
+import { GROWN_LOOKS, type CreatureStage } from '../../../data/creatures/mastery-look';
+import { PALETTE } from '../../../data/common/palette';
+import { RAINBOW_BAND_COLORS, RAINBOW_LOOK } from '../../../data/creatures/rainbow-look';
+import { SPRINKLE_COLORS } from '../../../data/creatures/creature-looks';
 import { cssColor, mixColor, parseHex, shade } from '../../../util/color';
 import { TWO_PI } from '../../../util/math';
 import { faceHalfSpan } from '../../fx/glaze-growth';

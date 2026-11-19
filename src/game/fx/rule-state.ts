@@ -1,8 +1,8 @@
 import { hasRule } from '../../core/zones';
 import { roofFactor, type SpeedFields } from '../../core/flight';
 import type { FlyingLayer, SimPhase } from '../../core/tower-sim';
-import { RULE_ANIM } from '../../data/rule-anim';
-import { ZONE_RULES } from '../../data/zones';
+import { RULE_ANIM } from '../../data/zones/rule-anim';
+import { ZONE_RULES } from '../../data/zones/zones';
 
 /** The fields of the flying layer the rule visuals read. */
 export type RuleFields = SpeedFields & Pick<FlyingLayer, 'coverMs'>;

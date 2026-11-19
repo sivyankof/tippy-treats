@@ -1,6 +1,6 @@
 import * as Phaser from 'phaser';
-import { BALANCE } from '../../data/balance';
-import { EDGE_SQUASH } from '../../data/edge-squash';
+import { BALANCE } from '../../data/tower/balance';
+import { EDGE_SQUASH } from '../../data/tower/edge-squash';
 import { ribReach, type ColumnEdge, type EdgeShape, type SideSquash } from './edge-squash';
 import type { Columns } from './edge-squash-columns';
 import type { BodyLook } from './edge-squash-look';

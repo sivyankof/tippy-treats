@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { GLASS_WEATHER } from '../../../data/window-look';
+import { GLASS_WEATHER } from '../../../data/weather/window-look';
 import { cycleFade, glassPose, newGlassPose } from './glass-motion';
 
 const RAIN = GLASS_WEATHER.rain;

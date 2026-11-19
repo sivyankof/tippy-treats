@@ -1,5 +1,5 @@
-import { abilityDef, levelValue } from '../../data/creatures';
-import { MASTERY } from '../../data/mastery';
+import { abilityDef, levelValue } from '../../data/creatures/creatures';
+import { MASTERY } from '../../data/creatures/mastery';
 import { isMaster } from '../mastery';
 import { NO_EFFECT_VALUE, payMastery, startEffect } from './helpers';
 import type { Ability } from './types';

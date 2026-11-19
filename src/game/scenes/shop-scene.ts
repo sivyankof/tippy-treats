@@ -1,10 +1,10 @@
 import * as Phaser from 'phaser';
 import type { Currency } from '../../core/economy';
 import { starterPackContents } from '../../core/shop';
-import type { CreatureId } from '../../data/creatures';
-import { BERRY_PACKS } from '../../data/economy';
-import { MENU } from '../../data/menu-layout';
-import { PRODUCTS, SHOP, type ProductKey } from '../../data/shop';
+import type { CreatureId } from '../../data/creatures/creatures';
+import { BERRY_PACKS } from '../../data/economy/economy';
+import { MENU } from '../../data/common/menu-layout';
+import { PRODUCTS, SHOP, type ProductKey } from '../../data/economy/shop';
 import { t } from '../../i18n';
 import { services } from '../../services';
 import { gameState } from '../../state';

@@ -1,7 +1,7 @@
 import * as Phaser from 'phaser';
-import { MENU } from '../../../data/menu-layout';
-import { PALETTE } from '../../../data/palette';
-import { STREAK } from '../../../data/streak';
+import { MENU } from '../../../data/common/menu-layout';
+import { PALETTE } from '../../../data/common/palette';
+import { STREAK } from '../../../data/progression/streak';
 import { t, tn } from '../../../i18n';
 import { services } from '../../../services';
 import { gameState } from '../../../state';

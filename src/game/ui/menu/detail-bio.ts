@@ -1,6 +1,6 @@
 import * as Phaser from 'phaser';
-import type { CreatureId } from '../../../data/creatures';
-import { MENU } from '../../../data/menu-layout';
+import type { CreatureId } from '../../../data/creatures/creatures';
+import { MENU } from '../../../data/common/menu-layout';
 import { t } from '../../../i18n';
 import { VolumePlate } from '../style/volume';
 import { createBodyText } from './detail-info';

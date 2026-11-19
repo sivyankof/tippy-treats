@@ -1,7 +1,7 @@
 import type * as Phaser from 'phaser';
-import { ANIM } from '../../data/anim';
-import { creatureMaterial, type CreatureMaterial } from '../../data/creature-materials';
-import type { CreatureId } from '../../data/creatures';
+import { ANIM } from '../../data/common/anim';
+import { creatureMaterial, type CreatureMaterial } from '../../data/creatures/creature-materials';
+import type { CreatureId } from '../../data/creatures/creatures';
 import { effectsMode } from '../effects-mode';
 import { landSquash } from '../fx/anim-curves';
 import { materialShape, type Shape } from './material-shape';

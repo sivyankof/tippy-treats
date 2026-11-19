@@ -11,10 +11,10 @@ import {
   panoramaMoonKey,
   panoramaPieces,
   type GlassWeather,
-} from '../../../data/window-look';
-import type { StartPlaceId } from '../../../data/start-places';
-import type { WeatherId } from '../../../data/weather';
-import { KITCHEN_COLORS } from '../../../data/palette';
+} from '../../../data/weather/window-look';
+import type { StartPlaceId } from '../../../data/zones/start-places';
+import type { WeatherId } from '../../../data/weather/weather';
+import { KITCHEN_COLORS } from '../../../data/common/palette';
 import { cssColor, mixColor, shade } from '../../../util/color';
 import { TWO_PI } from '../../../util/math';
 import { outlineColor } from '../../fx/plain-style';

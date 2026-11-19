@@ -1,13 +1,13 @@
 import * as Phaser from 'phaser';
 import type { Rng } from '../../../core/rng';
-import { TOWER_WEATHER } from '../../../data/tower-weather';
-import { WEATHER_LOOK, WEATHER_TEX } from '../../../data/weather-look';
-import { FIELD_PAD } from '../../../data/picture-fields';
+import { TOWER_WEATHER } from '../../../data/weather/tower-weather';
+import { WEATHER_LOOK, WEATHER_TEX } from '../../../data/weather/weather-look';
+import { FIELD_PAD } from '../../../data/common/picture-fields';
 import { paddedOrigin } from '../../../util/field-pad';
 import { smoothstep } from '../../../util/math';
 import { DEPTH } from '../../depth';
 import { towerWeatherShown } from './weather-share';
-import type { EffectLevel } from '../../../data/effect-levels';
+import type { EffectLevel } from '../../../data/app/effect-levels';
 
 const CAP = WEATHER_LOOK.cap;
 const SPLASH = WEATHER_LOOK.splash;

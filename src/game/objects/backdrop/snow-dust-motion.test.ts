@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { TOWER_WEATHER } from '../../../data/tower-weather';
+import { TOWER_WEATHER } from '../../../data/weather/tower-weather';
 import { flakeAlpha, flakeGrow, launchFlake, stepFlake, type DustFlake } from './snow-dust-motion';
 
 const blank = (): DustFlake => ({ x: 0, y: 0, vx: 0, vy: 0, ageMs: 0, lifeMs: 0 });

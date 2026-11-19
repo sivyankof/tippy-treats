@@ -1,4 +1,4 @@
-import { STUB_IAP } from '../../data/iap-stub';
+import { STUB_IAP } from '../../data/economy/iap-stub';
 import { t } from '../../i18n';
 import type { IapService } from './types';
 

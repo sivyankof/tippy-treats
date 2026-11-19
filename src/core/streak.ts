@@ -1,5 +1,10 @@
 import { daysBetween } from '../util/clock';
-import { STREAK, STREAK_FIRST_CYCLE_DAY7, STREAK_REWARDS, type StreakReward } from '../data/streak';
+import {
+  STREAK,
+  STREAK_FIRST_CYCLE_DAY7,
+  STREAK_REWARDS,
+  type StreakReward,
+} from '../data/progression/streak';
 
 export interface StreakState {
   count: number;

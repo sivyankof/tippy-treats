@@ -1,5 +1,5 @@
-import type { Rarity } from '../../data/rarity';
-import type { BedKind } from '../../data/weather-bed';
+import type { Rarity } from '../../data/creatures/rarity';
+import type { BedKind } from '../../data/audio/weather-bed';
 import { MS_PER_SECOND } from '../../util/math';
 import { BedPlayer } from './bed';
 import type { DuckReason } from './mixer-math';

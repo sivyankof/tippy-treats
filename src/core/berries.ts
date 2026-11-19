@@ -1,4 +1,4 @@
-import { BALANCE } from '../data/balance';
+import { BALANCE } from '../data/tower/balance';
 import type { SimEvent } from './tower-sim';
 
 /**

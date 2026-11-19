@@ -1,7 +1,7 @@
 import type { ActiveEffect } from '../../core/abilities/types';
-import { ANIM } from '../../data/anim';
-import type { CreatureId } from '../../data/creatures';
-import { HUD_LAYOUT } from '../../data/hud-layout';
+import { ANIM } from '../../data/common/anim';
+import type { CreatureId } from '../../data/creatures/creatures';
+import { HUD_LAYOUT } from '../../data/run/hud-layout';
 import { oscillate01 } from '../../util/math';
 import type { EaseFn } from '../fx/ease';
 

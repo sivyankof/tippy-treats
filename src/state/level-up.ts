@@ -2,7 +2,7 @@
 import { earn, grantCreature, type Cost } from '../core/economy';
 import { addXp, levelReward } from '../core/progression';
 import type { Save } from '../core/save/schema';
-import type { LevelReward } from '../data/progression';
+import type { LevelReward } from '../data/progression/progression';
 
 /** One level reached by a gain of XP, with what it paid. */
 export interface LevelUp {

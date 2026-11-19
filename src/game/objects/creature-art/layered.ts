@@ -1,8 +1,8 @@
-import { ANIM } from '../../../data/anim';
-import { CREATURE_STYLE } from '../../../data/creature-style';
+import { ANIM } from '../../../data/common/anim';
+import { CREATURE_STYLE } from '../../../data/creatures/creature-style';
 import { shade } from '../../../util/color';
-import { PALETTE } from '../../../data/palette';
-import { faceRecipe } from '../../../data/creature-looks';
+import { PALETTE } from '../../../data/common/palette';
+import { faceRecipe } from '../../../data/creatures/creature-looks';
 import { faceHalfSpan } from '../../fx/glaze-growth';
 import { faceLayout } from '../face-recipe';
 import { drawShadow } from '../layer-draw';

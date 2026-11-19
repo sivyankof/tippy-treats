@@ -1,5 +1,5 @@
-import { ANIM } from '../../data/anim';
-import { RULE_ANIM } from '../../data/rule-anim';
+import { ANIM } from '../../data/common/anim';
+import { RULE_ANIM } from '../../data/zones/rule-anim';
 import { clamp01, oscillate01, smoothstep } from '../../util/math';
 
 const cfg = RULE_ANIM.cloud.shadow;

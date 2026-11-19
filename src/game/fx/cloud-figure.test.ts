@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { ANIM } from '../../data/anim';
-import { BALANCE } from '../../data/balance';
-import { FLIGHT_CLEAR } from '../../data/flight-clear';
-import { HUD_LAYOUT } from '../../data/hud-layout';
-import { RULE_ANIM } from '../../data/rule-anim';
-import { LOGICAL_SIZE } from '../../data/screen';
+import { ANIM } from '../../data/common/anim';
+import { BALANCE } from '../../data/tower/balance';
+import { FLIGHT_CLEAR } from '../../data/backdrop/flight-clear';
+import { HUD_LAYOUT } from '../../data/run/hud-layout';
+import { RULE_ANIM } from '../../data/zones/rule-anim';
+import { LOGICAL_SIZE } from '../../data/app/screen';
 import {
   bodyDisplaySize,
   cloudSilhouette,

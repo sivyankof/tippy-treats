@@ -1,9 +1,9 @@
 import * as Phaser from 'phaser';
 import { starterPackContents } from '../../../core/shop';
-import { CREATURES } from '../../../data/creatures';
-import { MENU } from '../../../data/menu-layout';
-import { PALETTE } from '../../../data/palette';
-import { PRODUCTS } from '../../../data/shop';
+import { CREATURES } from '../../../data/creatures/creatures';
+import { MENU } from '../../../data/common/menu-layout';
+import { PALETTE } from '../../../data/common/palette';
+import { PRODUCTS } from '../../../data/economy/shop';
 import { formatNumber, t, tn } from '../../../i18n';
 import { gameState } from '../../../state';
 import { cssColor } from '../../../util/color';

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { WEATHER_BED } from '../data/weather-bed';
+import { WEATHER_BED } from '../data/audio/weather-bed';
 import { bedWanted } from './weather-bed';
 
 describe('bedWanted', () => {

@@ -1,5 +1,5 @@
-import { BALANCE } from '../../../data/balance';
-import { MOUNTAIN_SPAN } from '../../../data/backdrop-mountains';
+import { BALANCE } from '../../../data/tower/balance';
+import { MOUNTAIN_SPAN } from '../../../data/backdrop/backdrop-mountains';
 import { smoothstep } from '../../../util/math';
 
 /**

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { roofFactor } from '../../core/flight';
-import { BALANCE } from '../../data/balance';
-import { ZONE_RULES } from '../../data/zones';
+import { BALANCE } from '../../data/tower/balance';
+import { ZONE_RULES } from '../../data/zones/zones';
 import { idleVisual, isCovered, ruleVisual, windStrength, type RuleFields } from './rule-state';
 
 const layer = (over: Partial<RuleFields> = {}): RuleFields => ({

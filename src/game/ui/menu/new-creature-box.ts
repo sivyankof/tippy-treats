@@ -1,6 +1,6 @@
 import * as Phaser from 'phaser';
-import type { HopMotion } from '../../../data/hop-motion';
-import { MENU } from '../../../data/menu-layout';
+import type { HopMotion } from '../../../data/common/hop-motion';
+import { MENU } from '../../../data/common/menu-layout';
 import {
   bakeGiftTextures,
   bodyKey,

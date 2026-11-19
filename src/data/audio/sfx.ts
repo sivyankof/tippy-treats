@@ -1,0 +1,680 @@
+import type { Rarity } from '../creatures/rarity';
+
+/**
+ * Sound recipes from section 7 of docs/06-art-animation-audio.md.
+ * Frequencies are Hz, times are seconds, gains are linear (0..1) before the master gain.
+ */
+
+/** Concert pitch C5 in Hz: the root of the combo ladder and of the record fanfare. */
+const C5_HZ = 523.25;
+
+export type SynthWave = 'sine' | 'triangle' | 'square' | 'sawtooth';
+
+/** One oscillator note with an attack ramp and an exponential decay over `duration`. */
+export interface ToneRecipe {
+  wave: SynthWave;
+  freq: number;
+  /** When set, the pitch glides exponentially from `freq` to this value over `duration`. */
+  endFreq?: number;
+  attack: number;
+  duration: number;
+  gain: number;
+}
+
+/** A burst of filtered noise. */
+export interface NoiseRecipe {
+  filter: 'lowpass' | 'highpass' | 'bandpass';
+  cutoff: number;
+  /** When set, the cutoff glides exponentially to this value over `duration`. */
+  endCutoff?: number;
+  q: number;
+  attack: number;
+  duration: number;
+  gain: number;
+}
+
+/** A tone with a start offset, used by multi-note sounds. */
+export interface TimedTone extends ToneRecipe {
+  delay: number;
+}
+
+/** A noise burst with a start offset. */
+export interface TimedNoise extends NoiseRecipe {
+  delay: number;
+}
+
+/** Ability sound: a short note sequence per rarity. */
+export interface AbilityRecipe {
+  notes: readonly TimedTone[];
+}
+
+/** Attack of every note of a rattle, seconds. */
+const RATTLE_ATTACK = 0.004;
+
+/** A rattle: `count` short notes `step` apart, the pitch going from `from` to `to`, each note bending down to `bend` of it. */
+function rattle(o: {
+  wave: SynthWave;
+  count: number;
+  step: number;
+  duration: number;
+  from: number;
+  to: number;
+  bend: number;
+  gain: number;
+}): TimedTone[] {
+  return Array.from({ length: o.count }, (_, i) => {
+    const freq = o.from + ((o.to - o.from) * i) / Math.max(1, o.count - 1);
+    return {
+      delay: i * o.step,
+      wave: o.wave,
+      freq,
+      endFreq: freq * o.bend,
+      attack: RATTLE_ATTACK,
+      duration: o.duration,
+      gain: o.gain,
+    };
+  });
+}
+
+export const SFX = {
+  /** Gain floor: exponential ramps never go to 0, they end here and the node is stopped. */
+  silence: 0.0001,
+  /** Extra time an oscillator runs past its decay before it is stopped. */
+  stopTail: 0.03,
+  noise: {
+    /** Length of the shared noise buffer; no noise burst may be longer. */
+    bufferSeconds: 0.5,
+  },
+  semitonesPerOctave: 12,
+
+  /** "Обычный бросок": soft low slap, pitch randomly +-5%. */
+  drop: {
+    pitchJitter: 0.05,
+    thump: {
+      wave: 'sine',
+      freq: 170,
+      endFreq: 70,
+      attack: 0.004,
+      duration: 0.14,
+      gain: 0.55,
+    } satisfies ToneRecipe,
+    slap: {
+      filter: 'lowpass',
+      cutoff: 700,
+      endCutoff: 250,
+      q: 0.7,
+      attack: 0.002,
+      duration: 0.06,
+      gain: 0.22,
+    } satisfies NoiseRecipe,
+  },
+
+  /** "Идеальный бросок": a clean bell; the pitch climbs the pentatonic ladder with the combo. */
+  perfect: {
+    rootFreq: C5_HZ,
+    /** Major pentatonic C D E G A, then the same an octave higher (offsets in semitones). */
+    ladderSemitones: [0, 2, 4, 7, 9, 12, 14, 16, 19, 21, 24, 26],
+    /** Bell partials: frequency ratio, gain share and decay share of the note length. */
+    partials: [
+      { ratio: 1, gain: 0.5, decay: 1 },
+      { ratio: 2, gain: 0.2, decay: 0.7 },
+      { ratio: 3.01, gain: 0.1, decay: 0.45 },
+      { ratio: 4.2, gain: 0.06, decay: 0.3 },
+    ],
+    attack: 0.003,
+    duration: 0.7,
+    /** Each combo step makes the bell a little louder, up to `maxGainScale`. */
+    gainPerStep: 0.07,
+    maxGainScale: 1.5,
+    /**
+     * While the music is on the bell is softer (a slower attack, the upper partials mostly gone)
+     * and 3 dB quieter, so it sits on the lofi bed instead of cutting through it.
+     */
+    underMusic: {
+      gainDb: -3,
+      attack: 0.008,
+      partials: [
+        { ratio: 1, gain: 0.5, decay: 1 },
+        { ratio: 2, gain: 0.13, decay: 0.6 },
+        { ratio: 3.01, gain: 0.035, decay: 0.35 },
+      ],
+    },
+  },
+
+  /** "Откусывание": a crunch, short filtered noise (two quick bursts). */
+  bite: {
+    bursts: [
+      {
+        delay: 0,
+        filter: 'bandpass',
+        cutoff: 2200,
+        endCutoff: 1200,
+        q: 1.4,
+        attack: 0.002,
+        duration: 0.07,
+        gain: 0.5,
+      },
+      {
+        delay: 0.055,
+        filter: 'bandpass',
+        cutoff: 1700,
+        endCutoff: 900,
+        q: 1.2,
+        attack: 0.002,
+        duration: 0.08,
+        gain: 0.4,
+      },
+    ] satisfies readonly TimedNoise[],
+  },
+
+  /** "Монета": a double high ding. */
+  coin: {
+    notes: [
+      { delay: 0, wave: 'triangle', freq: 1760, attack: 0.002, duration: 0.18, gain: 0.3 },
+      { delay: 0.075, wave: 'triangle', freq: 2349, attack: 0.002, duration: 0.3, gain: 0.3 },
+    ] satisfies readonly TimedTone[],
+  },
+
+  /** "Ягода": a chord of three notes (D major triad). */
+  berry: {
+    wave: 'sine',
+    freqs: [587.33, 739.99, 880],
+    stagger: 0.03,
+    attack: 0.01,
+    duration: 0.45,
+    gain: 0.28,
+  },
+
+  /** "Способность": own short sound per rarity plus a shared puff. */
+  ability: {
+    puff: {
+      filter: 'lowpass',
+      cutoff: 1400,
+      endCutoff: 300,
+      q: 0.5,
+      attack: 0.01,
+      duration: 0.18,
+      gain: 0.3,
+    } satisfies NoiseRecipe,
+    byRarity: {
+      common: {
+        notes: [
+          { delay: 0.04, wave: 'triangle', freq: 660, attack: 0.005, duration: 0.18, gain: 0.3 },
+        ],
+      },
+      rare: {
+        notes: [
+          { delay: 0.04, wave: 'triangle', freq: 660, attack: 0.005, duration: 0.15, gain: 0.3 },
+          { delay: 0.12, wave: 'triangle', freq: 880, attack: 0.005, duration: 0.2, gain: 0.3 },
+        ],
+      },
+      epic: {
+        notes: [
+          { delay: 0.04, wave: 'triangle', freq: 660, attack: 0.005, duration: 0.14, gain: 0.3 },
+          { delay: 0.11, wave: 'triangle', freq: 830, attack: 0.005, duration: 0.14, gain: 0.3 },
+          { delay: 0.18, wave: 'triangle', freq: 990, attack: 0.005, duration: 0.26, gain: 0.32 },
+        ],
+      },
+      legendary: {
+        notes: [
+          { delay: 0.04, wave: 'triangle', freq: 660, attack: 0.005, duration: 0.14, gain: 0.3 },
+          { delay: 0.1, wave: 'triangle', freq: 830, attack: 0.005, duration: 0.14, gain: 0.3 },
+          { delay: 0.16, wave: 'triangle', freq: 990, attack: 0.005, duration: 0.14, gain: 0.32 },
+          { delay: 0.22, wave: 'sine', freq: 1320, attack: 0.005, duration: 0.5, gain: 0.36 },
+          { delay: 0.22, wave: 'sine', freq: 1980, attack: 0.005, duration: 0.4, gain: 0.14 },
+        ],
+      },
+    } satisfies Record<Rarity, AbilityRecipe>,
+  },
+
+  /** The Rainbow layer flies in: a short quiet chime of three rising bells. */
+  rainbowChime: {
+    notes: [
+      { delay: 0, wave: 'sine', freq: 1175, attack: 0.004, duration: 0.22, gain: 0.14 },
+      { delay: 0.07, wave: 'sine', freq: 1568, attack: 0.004, duration: 0.22, gain: 0.14 },
+      { delay: 0.14, wave: 'sine', freq: 1976, attack: 0.004, duration: 0.4, gain: 0.12 },
+    ] satisfies TimedTone[],
+  },
+
+  /** The star of the Rainbow layer pops a small rainbow: a quiet two-note rising ding. */
+  rainbowJoke: {
+    notes: [
+      { delay: 0, wave: 'sine', freq: 1319, attack: 0.004, duration: 0.2, gain: 0.1 },
+      { delay: 0.1, wave: 'sine', freq: 1760, attack: 0.004, duration: 0.34, gain: 0.1 },
+    ] satisfies TimedTone[],
+  },
+
+  /** The cream cloud of the rainbow deflates: the ability puff, quieter. */
+  cloudPuff: { puffGainShare: 0.55 },
+
+  /** The brownie's chocolate bubble bursts: a short rising blip and a bright pop of noise. */
+  shieldPop: {
+    blip: {
+      wave: 'sine',
+      freq: 280,
+      endFreq: 940,
+      attack: 0.003,
+      duration: 0.1,
+      gain: 0.45,
+    } satisfies ToneRecipe,
+    pop: {
+      filter: 'highpass',
+      cutoff: 2600,
+      endCutoff: 900,
+      q: 0.6,
+      attack: 0.002,
+      duration: 0.09,
+      gain: 0.35,
+    } satisfies NoiseRecipe,
+  },
+
+  /** "Чих": a comic squeak sliding down. */
+  sneeze: {
+    squeak: {
+      wave: 'triangle',
+      freq: 1500,
+      endFreq: 380,
+      attack: 0.01,
+      duration: 0.26,
+      gain: 0.35,
+    } satisfies ToneRecipe,
+    puff: {
+      delay: 0.2,
+      filter: 'lowpass',
+      cutoff: 1800,
+      endCutoff: 400,
+      q: 0.5,
+      attack: 0.005,
+      duration: 0.1,
+      gain: 0.25,
+    } satisfies TimedNoise,
+  },
+
+  /** "Промах": a falling whistle, then a boom. */
+  miss: {
+    whistle: {
+      wave: 'sine',
+      freq: 1100,
+      endFreq: 160,
+      attack: 0.01,
+      duration: 0.45,
+      gain: 0.3,
+    } satisfies ToneRecipe,
+    boomDelay: 0.42,
+    boom: {
+      wave: 'sine',
+      freq: 110,
+      endFreq: 38,
+      attack: 0.005,
+      duration: 0.5,
+      gain: 0.8,
+    } satisfies ToneRecipe,
+    boomNoise: {
+      filter: 'lowpass',
+      cutoff: 400,
+      endCutoff: 100,
+      q: 0.7,
+      attack: 0.003,
+      duration: 0.3,
+      gain: 0.4,
+    } satisfies NoiseRecipe,
+  },
+
+  /** "Рассыпание башни": a series of slaps with falling volume, throttled. */
+  collapse: {
+    thud: {
+      wave: 'sine',
+      freq: 150,
+      endFreq: 60,
+      attack: 0.003,
+      duration: 0.1,
+      gain: 0.5,
+    } satisfies ToneRecipe,
+    pitchJitter: 0.1,
+    /** Each next slap in the series is this share of the previous one. */
+    gainFalloff: 0.9,
+    /** Slaps never get quieter than this share. */
+    gainFloor: 0.12,
+  },
+
+  /** "Рекорд": a fanfare of 5 notes. */
+  record: {
+    rootFreq: C5_HZ,
+    semitones: [0, 4, 7, 12, 16],
+    spacing: 0.11,
+    wave: 'triangle',
+    attack: 0.005,
+    duration: 0.22,
+    /** The last note rings longer. */
+    finalDuration: 0.7,
+    gain: 0.32,
+  },
+
+  /** "Рекорд в забеге": two quick rising notes, much shorter than the fanfare. */
+  recordBlip: {
+    notes: [
+      { delay: 0, wave: 'triangle', freq: C5_HZ * 2, attack: 0.003, duration: 0.09, gain: 0.26 },
+      { delay: 0.07, wave: 'triangle', freq: C5_HZ * 3, attack: 0.003, duration: 0.16, gain: 0.26 },
+    ] satisfies readonly TimedTone[],
+  },
+
+  /** "Кнопки": a short click. */
+  click: {
+    wave: 'triangle',
+    freq: 1300,
+    endFreq: 800,
+    attack: 0.001,
+    duration: 0.035,
+    gain: 0.3,
+  } satisfies ToneRecipe,
+
+  /**
+   * "Слизывание". The short scene: a juicy slurp (a rising note over a wet hiss that ends with a
+   * small pop). The big scene: a long "slu-u-urp" through the whole motion of the tongue (a wet
+   * hiss, a note up and down, little gulping bubbles), a smack when the tongue snaps in (a click of
+   * noise and a short pop down), and a short contented "mmm" at the happy end (a low hum that
+   * rises and settles, with a soft overtone).
+   */
+  lick: {
+    long: {
+      wet: {
+        filter: 'bandpass',
+        cutoff: 700,
+        endCutoff: 2600,
+        q: 1.6,
+        attack: 0.04,
+        duration: 0.6,
+        gain: 0.24,
+      } satisfies NoiseRecipe,
+      notes: [
+        {
+          delay: 0,
+          wave: 'sine',
+          freq: 260,
+          endFreq: 820,
+          attack: 0.03,
+          duration: 0.32,
+          gain: 0.2,
+        },
+        {
+          delay: 0.28,
+          wave: 'sine',
+          freq: 820,
+          endFreq: 480,
+          attack: 0.02,
+          duration: 0.3,
+          gain: 0.18,
+        },
+        {
+          delay: 0.08,
+          wave: 'sine',
+          freq: 520,
+          endFreq: 300,
+          attack: 0.003,
+          duration: 0.04,
+          gain: 0.14,
+        },
+        {
+          delay: 0.2,
+          wave: 'sine',
+          freq: 560,
+          endFreq: 320,
+          attack: 0.003,
+          duration: 0.04,
+          gain: 0.14,
+        },
+        {
+          delay: 0.33,
+          wave: 'sine',
+          freq: 600,
+          endFreq: 340,
+          attack: 0.003,
+          duration: 0.04,
+          gain: 0.14,
+        },
+        {
+          delay: 0.46,
+          wave: 'sine',
+          freq: 540,
+          endFreq: 310,
+          attack: 0.003,
+          duration: 0.04,
+          gain: 0.14,
+        },
+      ] satisfies readonly TimedTone[],
+    },
+    smack: {
+      click: {
+        filter: 'highpass',
+        cutoff: 2000,
+        q: 0.8,
+        attack: 0.002,
+        duration: 0.04,
+        gain: 0.3,
+      } satisfies NoiseRecipe,
+      pop: {
+        wave: 'sine',
+        freq: 900,
+        endFreq: 280,
+        attack: 0.002,
+        duration: 0.06,
+        gain: 0.26,
+      } satisfies ToneRecipe,
+    },
+    slurp: {
+      tone: {
+        wave: 'sine',
+        freq: 300,
+        endFreq: 1150,
+        attack: 0.01,
+        duration: 0.17,
+        gain: 0.28,
+      } satisfies ToneRecipe,
+      wet: {
+        filter: 'bandpass',
+        cutoff: 900,
+        endCutoff: 3800,
+        q: 1.8,
+        attack: 0.015,
+        duration: 0.2,
+        gain: 0.26,
+      } satisfies NoiseRecipe,
+      pop: {
+        delay: 0.16,
+        wave: 'sine',
+        freq: 1500,
+        endFreq: 600,
+        attack: 0.003,
+        duration: 0.05,
+        gain: 0.2,
+      } satisfies TimedTone,
+    },
+    mmm: [
+      { delay: 0, wave: 'sine', freq: 196, endFreq: 233, attack: 0.03, duration: 0.16, gain: 0.24 },
+      {
+        delay: 0.12,
+        wave: 'sine',
+        freq: 233,
+        endFreq: 185,
+        attack: 0.04,
+        duration: 0.32,
+        gain: 0.24,
+      },
+      {
+        delay: 0,
+        wave: 'triangle',
+        freq: 392,
+        endFreq: 440,
+        attack: 0.05,
+        duration: 0.42,
+        gain: 0.07,
+      },
+    ] satisfies readonly TimedTone[],
+  },
+
+  /**
+   * "Украшение на макушке слетает" (docs/06, section 7): a springy "boing", a triangle note that
+   * goes up and back down, and a short click; quieter than a normal drop.
+   */
+  topperHop: {
+    notes: [
+      {
+        delay: 0,
+        wave: 'triangle',
+        freq: 240,
+        endFreq: 700,
+        attack: 0.004,
+        duration: 0.09,
+        gain: 0.2,
+      },
+      {
+        delay: 0.09,
+        wave: 'triangle',
+        freq: 700,
+        endFreq: 320,
+        attack: 0.004,
+        duration: 0.16,
+        gain: 0.17,
+      },
+    ] satisfies readonly TimedTone[],
+    click: {
+      filter: 'highpass',
+      cutoff: 2400,
+      q: 0.8,
+      attack: 0.001,
+      duration: 0.03,
+      gain: 0.14,
+    } satisfies NoiseRecipe,
+  },
+
+  /** "Существо на главном экране": a squeak; `pitch` scales it per creature. */
+  squeak: {
+    wave: 'sine',
+    freq: 900,
+    endFreq: 1300,
+    attack: 0.008,
+    duration: 0.16,
+    gain: 0.35,
+  } satisfies ToneRecipe,
+
+  /**
+   * "Гость на башне" (the kitchen fly, docs/06, section 7): a low dense splat when a layer lands
+   * on it, a stretchy pop as it peels off, a giggle from a neighbour layer and the rattling buzz
+   * as it staggers away.
+   */
+  guest: {
+    /** "Шмяк": lower and denser than a drop, a thump over a deeper hum and a wet burst. */
+    splat: {
+      thump: {
+        wave: 'sine',
+        freq: 130,
+        endFreq: 42,
+        attack: 0.002,
+        duration: 0.2,
+        gain: 0.6,
+      } satisfies ToneRecipe,
+      sub: {
+        wave: 'triangle',
+        freq: 72,
+        endFreq: 30,
+        attack: 0.004,
+        duration: 0.26,
+        gain: 0.42,
+      } satisfies ToneRecipe,
+      wet: {
+        filter: 'lowpass',
+        cutoff: 1100,
+        endCutoff: 160,
+        q: 1.1,
+        attack: 0.002,
+        duration: 0.2,
+        gain: 0.42,
+      } satisfies NoiseRecipe,
+    },
+    /** The stretchy "чпок" of the peel: a note pulled up, then a short pop and a click. */
+    peel: {
+      notes: [
+        {
+          delay: 0,
+          wave: 'sine',
+          freq: 240,
+          endFreq: 760,
+          attack: 0.01,
+          duration: 0.16,
+          gain: 0.18,
+        },
+        {
+          delay: 0.16,
+          wave: 'sine',
+          freq: 980,
+          endFreq: 360,
+          attack: 0.002,
+          duration: 0.06,
+          gain: 0.34,
+        },
+      ] satisfies readonly TimedTone[],
+      click: {
+        delay: 0.16,
+        filter: 'bandpass',
+        cutoff: 2600,
+        q: 1.4,
+        attack: 0.001,
+        duration: 0.025,
+        gain: 0.28,
+      } satisfies TimedNoise,
+    },
+    /** The rattling buzz of the staggering flight away: short notes in a row, the pitch falling. */
+    buzz: [
+      ...rattle({
+        wave: 'sawtooth',
+        count: 12,
+        step: 0.065,
+        duration: 0.045,
+        from: 270,
+        to: 170,
+        bend: 0.8,
+        gain: 0.1,
+      }),
+      ...rattle({
+        wave: 'square',
+        count: 12,
+        step: 0.065,
+        duration: 0.045,
+        from: 135,
+        to: 85,
+        bend: 0.8,
+        gain: 0.04,
+      }),
+    ] satisfies readonly TimedTone[],
+    /** A neighbour giggles: "хи-хи-хи", three short notes going down. */
+    giggle: [
+      {
+        delay: 0,
+        wave: 'triangle',
+        freq: 1180,
+        endFreq: 1020,
+        attack: 0.005,
+        duration: 0.07,
+        gain: 0.14,
+      },
+      {
+        delay: 0.1,
+        wave: 'triangle',
+        freq: 1080,
+        endFreq: 930,
+        attack: 0.005,
+        duration: 0.07,
+        gain: 0.13,
+      },
+      {
+        delay: 0.2,
+        wave: 'triangle',
+        freq: 980,
+        endFreq: 820,
+        attack: 0.005,
+        duration: 0.09,
+        gain: 0.12,
+      },
+    ] satisfies readonly TimedTone[],
+  },
+} as const;

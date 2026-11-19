@@ -1,8 +1,8 @@
 import * as Phaser from 'phaser';
-import { EDGE_SQUASH } from '../../data/edge-squash';
+import { EDGE_SQUASH } from '../../data/tower/edge-squash';
 import { DEG_TO_RAD, lerp, smoothstep } from '../../util/math';
 import { UP_DEG } from '../fx/abilities/kit';
-import { BALANCE } from '../../data/balance';
+import { BALANCE } from '../../data/tower/balance';
 import { hollowAt, type RibRow } from './edge-squash-ribs';
 import type { Columns } from './edge-squash-columns';
 import { ribReach, type ColumnEdge, type EdgeShape, type SideSquash } from './edge-squash';

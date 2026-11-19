@@ -1,5 +1,5 @@
 import type * as Phaser from 'phaser';
-import { OVEN_LOOK } from '../../data/oven-look';
+import { OVEN_LOOK } from '../../data/economy/oven-look';
 import { DEG_TO_RAD } from '../../util/math';
 import { bakeTexture } from '../ui/bake-texture';
 import {

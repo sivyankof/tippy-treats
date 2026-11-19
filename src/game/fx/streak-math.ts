@@ -1,4 +1,4 @@
-import { RULE_ANIM } from '../../data/rule-anim';
+import { RULE_ANIM } from '../../data/zones/rule-anim';
 import { clamp01 } from '../../util/math';
 
 const burst = RULE_ANIM.streaks.burst;

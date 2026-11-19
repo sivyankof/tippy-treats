@@ -1,8 +1,8 @@
 import type * as Phaser from 'phaser';
 import type { CheckpointMethod, CheckpointRow } from '../../../core/checkpoints';
-import { CHECKPOINT_WINDOW } from '../../../data/checkpoint-look';
-import { MENU } from '../../../data/menu-layout';
-import { PALETTE } from '../../../data/palette';
+import { CHECKPOINT_WINDOW } from '../../../data/zones/checkpoint-look';
+import { MENU } from '../../../data/common/menu-layout';
+import { PALETTE } from '../../../data/common/palette';
 import { t } from '../../../i18n';
 import { bakeCheckpointTextures } from '../../fx/checkpoint-textures';
 import { createTextButton, type Button } from '../button';

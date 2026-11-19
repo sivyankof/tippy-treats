@@ -1,6 +1,6 @@
 import type * as Phaser from 'phaser';
-import { MENU } from '../../../data/menu-layout';
-import { TREASURE } from '../../../data/treasure-anim';
+import { MENU } from '../../../data/common/menu-layout';
+import { TREASURE } from '../../../data/economy/treasure-anim';
 import { ResourceCounter, type CounterOptions } from '../resource-tally';
 import { VolumePlate } from './volume';
 

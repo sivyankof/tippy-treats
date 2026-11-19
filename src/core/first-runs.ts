@@ -1,5 +1,5 @@
 // The first runs without sales (docs/05-economy-monetization.md, section 5).
-import { FIRST_RUNS } from '../data/first-runs';
+import { FIRST_RUNS } from '../data/economy/first-runs';
 
 /**
  * The run that comes after `runsBefore` finished runs is a clean one: no "Continue?" window

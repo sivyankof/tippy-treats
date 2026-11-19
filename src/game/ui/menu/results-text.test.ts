@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import { emptyTally } from '../../../core/run-tally';
-import { MISSION_POOL, MISSIONS } from '../../../data/missions';
+import { MISSION_POOL, MISSIONS } from '../../../data/progression/missions';
 import { setLang, t } from '../../../i18n';
 import type { LevelUp } from '../../../state/game-state';
 import {

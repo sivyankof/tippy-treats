@@ -1,6 +1,6 @@
 import type { SimEvent } from '../../../core/tower-sim';
-import { MASTER_ANIM } from '../../../data/master-anim';
-import { PALETTE } from '../../../data/palette';
+import { MASTER_ANIM } from '../../../data/creatures/master-anim';
+import { PALETTE } from '../../../data/common/palette';
 import { formatNumber, t } from '../../../i18n';
 import { DEPTH } from '../../depth';
 import { effectsMode } from '../../effects-mode';

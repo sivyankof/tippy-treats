@@ -4,11 +4,14 @@ import { arcCurve } from '../fx/abilities/rainbow-arc-geometry';
 import { paintBand } from '../fx/abilities/rainbow-band';
 import { outlineColor } from '../fx/plain-style';
 import { easeFn } from '../fx/ease';
-import { ANIM } from '../../data/anim';
-import { artRecipe } from '../../data/creature-looks';
-import { PALETTE } from '../../data/palette';
-import { GROWN_LOOKS } from '../../data/mastery-look';
-import { RAINBOW_BAND_COLORS as BAND_COLORS, RAINBOW_LOOK } from '../../data/rainbow-look';
+import { ANIM } from '../../data/common/anim';
+import { artRecipe } from '../../data/creatures/creature-looks';
+import { PALETTE } from '../../data/common/palette';
+import { GROWN_LOOKS } from '../../data/creatures/mastery-look';
+import {
+  RAINBOW_BAND_COLORS as BAND_COLORS,
+  RAINBOW_LOOK,
+} from '../../data/creatures/rainbow-look';
 import { mixColor } from '../../util/color';
 import { DEG_TO_RAD, TWO_PI } from '../../util/math';
 import { DEPTH } from '../depth';

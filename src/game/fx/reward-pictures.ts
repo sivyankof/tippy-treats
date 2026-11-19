@@ -1,8 +1,8 @@
 import type * as Phaser from 'phaser';
-import { REWARD_LOOK } from '../../data/reward-look';
+import { REWARD_LOOK } from '../../data/economy/reward-look';
 import { paddedScale } from '../../util/field-pad';
 import { TWO_PI } from '../../util/math';
-import { FIELD_PAD } from '../../data/picture-fields';
+import { FIELD_PAD } from '../../data/common/picture-fields';
 import { bakePadded, bakeTexture } from '../ui/bake-texture';
 import {
   drawGlossMark,

@@ -1,9 +1,9 @@
 import * as Phaser from 'phaser';
-import { BALANCE } from '../../data/balance';
-import { CREATURES, type CreatureId } from '../../data/creatures';
-import { MENU } from '../../data/menu-layout';
-import { PALETTE } from '../../data/palette';
-import { RARITY_COLORS } from '../../data/rarity';
+import { BALANCE } from '../../data/tower/balance';
+import { CREATURES, type CreatureId } from '../../data/creatures/creatures';
+import { MENU } from '../../data/common/menu-layout';
+import { PALETTE } from '../../data/common/palette';
+import { RARITY_COLORS } from '../../data/creatures/rarity';
 import { t } from '../../i18n';
 import { cssColor } from '../../util/color';
 import { Particles } from '../fx/particles';

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { TOWER_SPARKLES } from '../../data/tower-sparkles';
+import { TOWER_SPARKLES } from '../../data/tower/tower-sparkles';
 import { sparkleSpot, type SparkleField } from './tower-sparkle-spot';
 
 const field: SparkleField = {

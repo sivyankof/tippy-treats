@@ -1,8 +1,8 @@
 import type * as Phaser from 'phaser';
-import { ABILITY_ANIM } from '../../../data/ability-anim';
-import { PALETTE } from '../../../data/palette';
-import { GROWN_LOOKS } from '../../../data/mastery-look';
-import { RAINBOW_LOOK } from '../../../data/rainbow-look';
+import { ABILITY_ANIM } from '../../../data/creatures/ability-anim';
+import { PALETTE } from '../../../data/common/palette';
+import { GROWN_LOOKS } from '../../../data/creatures/mastery-look';
+import { RAINBOW_LOOK } from '../../../data/creatures/rainbow-look';
 import { paintStar } from '../../objects/creature-art/rainbow';
 import { starPoints } from '../../objects/creature-art/rainbow-geometry';
 import { bakeTexture } from '../../ui/bake-texture';

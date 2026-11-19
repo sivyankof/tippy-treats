@@ -1,6 +1,6 @@
-import { ANIM } from '../../../data/anim';
-import { BALANCE } from '../../../data/balance';
-import { PANORAMA } from '../../../data/window-look';
+import { ANIM } from '../../../data/common/anim';
+import { BALANCE } from '../../../data/tower/balance';
+import { PANORAMA } from '../../../data/weather/window-look';
 import { rampBetween, smoothstep } from '../../../util/math';
 import { FLYING_REACH, hudFloor } from '../../camera-layout';
 

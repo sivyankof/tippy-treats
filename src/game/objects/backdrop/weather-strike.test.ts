@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { bankFlashKey } from './weather-art';
-import { STRIKE_SIDES, WEATHER_LOOK, WEATHER_TEX } from '../../../data/weather-look';
+import { STRIKE_SIDES, WEATHER_LOOK, WEATHER_TEX } from '../../../data/weather/weather-look';
 
 describe('strike sides', () => {
   it('give the bolt ranges, the flash spots and the flash pictures one entry each', () => {

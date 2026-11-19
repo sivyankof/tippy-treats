@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { BALANCE } from '../data/balance';
-import { ZONE_RULES } from '../data/zones';
-import { LAP_REWARD } from '../data/zones';
+import { BALANCE } from '../data/tower/balance';
+import { ZONE_RULES } from '../data/zones/zones';
+import { LAP_REWARD } from '../data/zones/zones';
 import {
   flyingLap,
   lapFirstIndex,

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { WEATHER, WEATHER_IDS, type WeatherId } from '../data/weather';
+import { WEATHER, WEATHER_IDS, type WeatherId } from '../data/weather/weather';
 import { pickStartPlace, pickWeather } from './run-look';
 
 const SEEDS = 20000;

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { ANIM } from '../../data/anim';
+import { ANIM } from '../../data/common/anim';
 import { NumberRoll, rollDurationMs } from './number-roll';
 
 const [MIN_MS, MAX_MS] = ANIM.ui.numberRollMs;

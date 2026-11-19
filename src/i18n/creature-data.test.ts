@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { CREATURE_IDS, CREATURES } from '../data/creatures';
+import { CREATURE_IDS, CREATURES } from '../data/creatures/creatures';
 import { DICTIONARIES, keysOf, setLang, t } from './index';
 import { ABILITIES } from '../core/abilities/registry';
 import { masterInfo, perksAt } from '../core/mastery';

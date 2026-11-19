@@ -1,6 +1,6 @@
 import * as Phaser from 'phaser';
-import { MOUNTAIN_LOOK, MOUNTAIN_MOTION } from '../../../data/backdrop-mountains';
-import { BACKDROP_COLORS } from '../../../data/backdrop-colors';
+import { MOUNTAIN_LOOK, MOUNTAIN_MOTION } from '../../../data/backdrop/backdrop-mountains';
+import { BACKDROP_COLORS } from '../../../data/backdrop/backdrop-colors';
 import { lerp, sineWave, smoothstep } from '../../../util/math';
 import { effectsMode } from '../../effects-mode';
 import {

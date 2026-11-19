@@ -1,6 +1,6 @@
 import type * as Phaser from 'phaser';
-import { ANIM } from '../../data/anim';
-import { BALANCE } from '../../data/balance';
+import { ANIM } from '../../data/common/anim';
+import { BALANCE } from '../../data/tower/balance';
 import { FloatText } from './float-text';
 import { ParticleFx } from './particle-fx';
 import { Particles } from './particles';

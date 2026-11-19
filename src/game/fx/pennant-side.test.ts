@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { PlacedLayer } from '../../core/sim-types';
-import { CONTINUE_ANIM } from '../../data/continue-anim';
-import { LOGICAL_SIZE } from '../../data/screen';
+import { CONTINUE_ANIM } from '../../data/run/continue-anim';
+import { LOGICAL_SIZE } from '../../data/app/screen';
 import { freeRoom, pennantSide } from './pennant-side';
 
 const layer = (x: number, width: number): PlacedLayer => ({

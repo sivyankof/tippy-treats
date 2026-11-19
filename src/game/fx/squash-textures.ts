@@ -1,6 +1,6 @@
 import type * as Phaser from 'phaser';
-import { PLAIN_TOPPERS } from '../../data/plain-toppers';
-import { SQUASH_PICTURES, SQUASH_TEXTURES, TOPPER_SQUASH } from '../../data/topper-squash';
+import { PLAIN_TOPPERS } from '../../data/toppers/plain-toppers';
+import { SQUASH_PICTURES, SQUASH_TEXTURES, TOPPER_SQUASH } from '../../data/toppers/topper-squash';
 import { DEG_TO_RAD } from '../../util/math';
 import { bakeTexture } from '../ui/bake-texture';
 import { bakeCreamRollTextures } from './cream-roll-textures';

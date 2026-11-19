@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { BALANCE } from '../../data/balance';
-import { DECOR_KINDS, PLAIN_LAYER } from '../../data/plain-layers';
+import { BALANCE } from '../../data/tower/balance';
+import { DECOR_KINDS, PLAIN_LAYER } from '../../data/tower/plain-layers';
 import { faceHalfSpan } from '../fx/glaze-growth';
 import { decorItems, decorReach } from './decor-layout';
 import { cutStripWidth, glazeCrestY } from './glaze-wave';

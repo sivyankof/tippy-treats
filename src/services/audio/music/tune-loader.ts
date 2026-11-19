@@ -1,4 +1,4 @@
-import { MUSIC_TRACKS, type MusicTrackId } from '../../../data/music';
+import { MUSIC_TRACKS, type MusicTrackId } from '../../../data/audio/music';
 
 /** Track files in `assets/music/`, by path: their URLs in the build. */
 const FILE_URLS = import.meta.glob<string>('../../../../assets/music/*', {

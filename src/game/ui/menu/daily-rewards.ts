@@ -1,9 +1,9 @@
 import type * as Phaser from 'phaser';
 import { nextTier } from '../../../core/daily';
 import type { Currency } from '../../../core/economy';
-import { DAILY } from '../../../data/daily';
-import { MENU } from '../../../data/menu-layout';
-import { REWARD_LOOK } from '../../../data/reward-look';
+import { DAILY } from '../../../data/progression/daily';
+import { MENU } from '../../../data/common/menu-layout';
+import { REWARD_LOOK } from '../../../data/economy/reward-look';
 import { formatNumber, t } from '../../../i18n';
 import { effectsMode } from '../../effects-mode';
 import { REWARD_TEXTURES } from '../../fx/reward-pictures';

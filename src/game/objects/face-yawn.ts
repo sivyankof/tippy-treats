@@ -1,6 +1,6 @@
-import { ANIM } from '../../data/anim';
-import { BALANCE } from '../../data/balance';
-import { TOWER_WEATHER } from '../../data/tower-weather';
+import { ANIM } from '../../data/common/anim';
+import { BALANCE } from '../../data/tower/balance';
+import { TOWER_WEATHER } from '../../data/weather/tower-weather';
 import { smoothstep } from '../../util/math';
 
 const YAWN = TOWER_WEATHER.sleepy.yawn;

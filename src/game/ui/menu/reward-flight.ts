@@ -1,5 +1,5 @@
 import * as Phaser from 'phaser';
-import { MENU } from '../../../data/menu-layout';
+import { MENU } from '../../../data/common/menu-layout';
 import { services } from '../../../services';
 import { arcPoint, burstSpot, splitAmount, type Point } from '../../fx/coin-flight-math';
 import { createTreasureTextures, TREASURE_TEXTURES } from '../../fx/treasure-textures';

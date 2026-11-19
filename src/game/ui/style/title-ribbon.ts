@@ -1,5 +1,5 @@
 import * as Phaser from 'phaser';
-import { MENU } from '../../../data/menu-layout';
+import { MENU } from '../../../data/common/menu-layout';
 import { shade } from '../../../util/color';
 import { bakeTexture } from '../bake-texture';
 import { fitText } from '../menu/fit-text';

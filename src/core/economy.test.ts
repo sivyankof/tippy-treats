@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { CREATURES, CREATURE_IDS } from '../data/creatures';
-import { BERRY_PACKS, UPGRADE_COSTS } from '../data/economy';
+import { CREATURES, CREATURE_IDS } from '../data/creatures/creatures';
+import { BERRY_PACKS, UPGRADE_COSTS } from '../data/economy/economy';
 import {
   buyCreature,
   canAfford,

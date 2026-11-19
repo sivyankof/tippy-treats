@@ -1,8 +1,8 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import type { FlyingLayer } from '../../core/sim-types';
-import { BALANCE } from '../../data/balance';
-import type { CreatureId } from '../../data/creatures';
-import { EDGE_SQUASH } from '../../data/edge-squash';
+import { BALANCE } from '../../data/tower/balance';
+import type { CreatureId } from '../../data/creatures/creatures';
+import { EDGE_SQUASH } from '../../data/tower/edge-squash';
 import { effectsMode } from '../effects-mode';
 import type { EdgeShape } from './edge-squash';
 import { BUBBLE_RIBS } from './edge-squash-ribs';

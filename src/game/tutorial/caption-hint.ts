@@ -1,6 +1,6 @@
 import type * as Phaser from 'phaser';
-import { PALETTE } from '../../data/palette';
-import { TUTORIAL_ANIM } from '../../data/tutorial-anim';
+import { PALETTE } from '../../data/common/palette';
+import { TUTORIAL_ANIM } from '../../data/tutorial/tutorial-anim';
 import { cssColor } from '../../util/color';
 import { sineWave } from '../../util/math';
 import { FONT_FAMILY, FONT_WEIGHT } from '../ui/fonts';

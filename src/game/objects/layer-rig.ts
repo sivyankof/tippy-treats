@@ -1,8 +1,8 @@
 import * as Phaser from 'phaser';
-import { ABILITY_ANIM } from '../../data/ability-anim';
-import { ANIM } from '../../data/anim';
-import { BALANCE } from '../../data/balance';
-import { artRecipe } from '../../data/creature-looks';
+import { ABILITY_ANIM } from '../../data/creatures/ability-anim';
+import { ANIM } from '../../data/common/anim';
+import { BALANCE } from '../../data/tower/balance';
+import { artRecipe } from '../../data/creatures/creature-looks';
 import { shade } from '../../util/color';
 import { combineWiden } from '../fx/anim-curves';
 import { twinsSeam } from './creature-art/twins-seam';

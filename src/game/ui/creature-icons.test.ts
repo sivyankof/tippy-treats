@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { CREATURE_IDS } from '../../data/creatures';
+import { CREATURE_IDS } from '../../data/creatures/creatures';
 import { CREATURE_ICON_KEYS } from './creature-icons';
 
 describe('creature icons', () => {

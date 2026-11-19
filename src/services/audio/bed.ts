@@ -1,5 +1,5 @@
-import { SFX } from '../../data/sfx';
-import { WEATHER_BED, type BedKind, type BedRecipe } from '../../data/weather-bed';
+import { SFX } from '../../data/audio/sfx';
+import { WEATHER_BED, type BedKind, type BedRecipe } from '../../data/audio/weather-bed';
 import type { Mixer } from './mixer';
 import { releaseOnce } from './node-tally';
 import { noiseBuffer } from './noise-buffer';

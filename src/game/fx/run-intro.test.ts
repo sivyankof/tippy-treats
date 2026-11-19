@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { ANIM } from '../../data/anim';
+import { ANIM } from '../../data/common/anim';
 import { introProgress, introRiseMs, RunIntro } from './run-intro';
 
 const linear = (t: number): number => t;

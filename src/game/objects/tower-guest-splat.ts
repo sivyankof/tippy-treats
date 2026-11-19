@@ -1,7 +1,7 @@
 import type * as Phaser from 'phaser';
 import type { Rng } from '../../core/rng';
-import { ANIM } from '../../data/anim';
-import { TOWER_GUEST, type GuestLook } from '../../data/tower-guest';
+import { ANIM } from '../../data/common/anim';
+import { TOWER_GUEST, type GuestLook } from '../../data/guests/tower-guest';
 import { clamp01 } from '../../util/math';
 import { DEPTH } from '../depth';
 import { effectsMode } from '../effects-mode';

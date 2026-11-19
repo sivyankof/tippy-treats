@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { LICK } from '../../data/lick';
+import { LICK } from '../../data/glaze/lick';
 import { newRibbon, sampleRibbon } from './tongue-ribbon';
 import {
   BODY_STRIP_ROWS,

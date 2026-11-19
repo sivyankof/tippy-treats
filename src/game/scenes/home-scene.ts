@@ -1,8 +1,8 @@
 import * as Phaser from 'phaser';
 import { canFillTeam } from '../../core/team';
-import type { CreatureId } from '../../data/creatures';
-import { MENU } from '../../data/menu-layout';
-import { PALETTE } from '../../data/palette';
+import type { CreatureId } from '../../data/creatures/creatures';
+import { MENU } from '../../data/common/menu-layout';
+import { PALETTE } from '../../data/common/palette';
 import { t } from '../../i18n';
 import { gameState } from '../../state';
 import { prepareRemoveAdsOffer } from '../interstitial-flow';

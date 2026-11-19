@@ -1,8 +1,8 @@
 import type { CheckpointHeight } from '../core/checkpoints';
 import type { TeamSlot } from '../core/sim-types';
-import { BALANCE } from '../data/balance';
-import type { CreatureId } from '../data/creatures';
-import { DEMO } from '../data/demo';
+import { BALANCE } from '../data/tower/balance';
+import type { CreatureId } from '../data/creatures/creatures';
+import { DEMO } from '../data/run/demo';
 
 /**
  * What kind of run the game scene starts: a normal classic run, or the "Try it" demo of a

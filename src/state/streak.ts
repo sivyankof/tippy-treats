@@ -11,7 +11,7 @@ import {
   type CalendarCell,
   type StreakEntry,
 } from '../core/streak';
-import { STREAK, type StreakReward } from '../data/streak';
+import { STREAK, type StreakReward } from '../data/progression/streak';
 
 /** A claimed calendar reward. */
 export interface StreakClaim {

@@ -1,4 +1,4 @@
-import { faceRecipe } from '../../data/creature-looks';
+import { faceRecipe } from '../../data/creatures/creature-looks';
 import { faceHalfSpan } from '../fx/glaze-growth';
 import type { Span } from './tower-guest-plan';
 import type { GuestContext } from './tower-guest-types';

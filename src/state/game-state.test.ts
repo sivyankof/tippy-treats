@@ -3,10 +3,10 @@ import { createDefaultSave } from '../core/save/defaults';
 import type { RunResult } from '../core/run-result';
 import { serializeSave } from '../core/save/load';
 import type { Save } from '../core/save/schema';
-import { SAVE_WRITE_DEBOUNCE_MS, STORAGE_KEYS } from '../data/storage';
+import { SAVE_WRITE_DEBOUNCE_MS, STORAGE_KEYS } from '../data/app/storage';
 import { MemoryStorage } from '../services/storage/memory';
 import { xpToNext } from '../core/progression';
-import { LAP_REWARD } from '../data/zones';
+import { LAP_REWARD } from '../data/zones/zones';
 import { GameState, type LoadInfo, type Scheduler } from './game-state';
 import { layersForXp } from './test-state';
 

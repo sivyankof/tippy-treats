@@ -1,6 +1,6 @@
 import * as Phaser from 'phaser';
 import type { Rng } from '../../core/rng';
-import { TOWER_SPARKLES } from '../../data/tower-sparkles';
+import { TOWER_SPARKLES } from '../../data/tower/tower-sparkles';
 import { DEG_TO_RAD, backOut, clamp01, lerp } from '../../util/math';
 import { DEPTH } from '../depth';
 import { sparkle } from '../objects/backdrop/art-kit';

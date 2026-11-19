@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { BALANCE } from '../../data/balance';
+import { BALANCE } from '../../data/tower/balance';
 import { addOrExtendEffect, tickEffects } from './effects';
 import { collectModifiers } from './modifiers';
 import { ABILITIES } from './registry';

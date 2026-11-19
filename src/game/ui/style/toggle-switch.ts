@@ -1,5 +1,5 @@
 import * as Phaser from 'phaser';
-import { MENU } from '../../../data/menu-layout';
+import { MENU } from '../../../data/common/menu-layout';
 import { attachPressFeedback, type PressFeedback } from '../button';
 import { fitText } from '../menu/fit-text';
 import { createOutlinedText } from '../outlined-text';

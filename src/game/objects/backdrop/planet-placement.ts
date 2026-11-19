@@ -1,7 +1,7 @@
 import { spaceWidthLimit, lapFirstIndex } from '../../../core/space-laps';
 import { PlanetWalk } from '../../../core/space-planet';
-import { LOGICAL_SIZE } from '../../../data/screen';
-import { PLANET_DIM, PLANET_PLACE, type SpacePlanetId } from '../../../data/space-planets';
+import { LOGICAL_SIZE } from '../../../data/app/screen';
+import { PLANET_DIM, PLANET_PLACE, type SpacePlanetId } from '../../../data/zones/space-planets';
 import { planetSize } from './dessert-planets';
 import { clamp01 } from '../../../util/math';
 import { flightClearBand } from '../../camera-layout';

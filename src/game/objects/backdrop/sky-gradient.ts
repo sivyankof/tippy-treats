@@ -1,4 +1,4 @@
-import type { GradientStop } from '../../../data/backdrop-colors';
+import type { GradientStop } from '../../../data/backdrop/backdrop-colors';
 import { mixColor } from '../../../util/color';
 
 /** Colour of a gradient at `t` (0 top, 1 bottom); stops must be sorted by `at`. */

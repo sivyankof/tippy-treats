@@ -1,7 +1,7 @@
 import type * as Phaser from 'phaser';
 import type { CheckpointHeight, CheckpointMethod } from '../../../core/checkpoints';
-import { MENU } from '../../../data/menu-layout';
-import { PALETTE } from '../../../data/palette';
+import { MENU } from '../../../data/common/menu-layout';
+import { PALETTE } from '../../../data/common/palette';
 import { t } from '../../../i18n';
 import { services } from '../../../services';
 import { gameState } from '../../../state';

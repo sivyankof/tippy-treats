@@ -1,4 +1,4 @@
-import { CONTINUE_ANIM } from '../data/continue-anim';
+import { CONTINUE_ANIM } from '../data/run/continue-anim';
 
 /** What the "Continue?" window lets the player do `elapsedMs` after it opened. */
 export interface ContinueInput {

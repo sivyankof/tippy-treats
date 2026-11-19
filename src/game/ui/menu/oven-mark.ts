@@ -1,7 +1,7 @@
 import * as Phaser from 'phaser';
-import { MENU } from '../../../data/menu-layout';
-import { OVEN } from '../../../data/progression';
-import { PALETTE } from '../../../data/palette';
+import { MENU } from '../../../data/common/menu-layout';
+import { OVEN } from '../../../data/progression/progression';
+import { PALETTE } from '../../../data/common/palette';
 import { t } from '../../../i18n';
 import { createOutlinedText } from '../outlined-text';
 import { OVEN_PICTURE_HEIGHT } from '../../fx/oven-texture';

@@ -4,8 +4,8 @@ import {
   levelValue,
   MAX_CREATURE_LEVEL,
   type CreatureId,
-} from '../data/creatures';
-import { MASTERY, type PerkId } from '../data/mastery';
+} from '../data/creatures/creatures';
+import { MASTERY, type PerkId } from '../data/creatures/mastery';
 import { PERCENT } from '../util/math';
 import { abilityChanges } from './ability-values';
 

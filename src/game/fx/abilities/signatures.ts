@@ -1,4 +1,4 @@
-import type { CreatureId } from '../../../data/creatures';
+import type { CreatureId } from '../../../data/creatures/creatures';
 import { brownieFx } from './brownie';
 import { caramelFx } from './caramel';
 import { crumbFx } from './crumb';

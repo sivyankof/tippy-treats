@@ -1,8 +1,8 @@
 import * as Phaser from 'phaser';
-import { CREATURES, type CreatureId } from '../../data/creatures';
-import { HUD_LAYOUT } from '../../data/hud-layout';
-import { MASTERY } from '../../data/mastery';
-import { MASTER_ANIM } from '../../data/master-anim';
+import { CREATURES, type CreatureId } from '../../data/creatures/creatures';
+import { HUD_LAYOUT } from '../../data/run/hud-layout';
+import { MASTERY } from '../../data/creatures/mastery';
+import { MASTER_ANIM } from '../../data/creatures/master-anim';
 import type { TeamSlots } from '../../core/sim-types';
 import { getLang } from '../../i18n';
 import { DEPTH } from '../depth';
@@ -19,7 +19,7 @@ import {
   type MasterFeed,
 } from './master-caption-state';
 import { captionSpot, type CaptionSpot } from './hud-row-layout';
-import { LOGICAL_SIZE } from '../../data/screen';
+import { LOGICAL_SIZE } from '../../data/app/screen';
 import { bakeCaptionArt } from './master-caption-art';
 
 const cfg = MASTER_ANIM.caption;

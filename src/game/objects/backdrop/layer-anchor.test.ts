@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { ANIM } from '../../../data/anim';
-import { LOGICAL_SIZE } from '../../../data/screen';
-import { WALL_LOOK, WINDOW_LOOK } from '../../../data/window-look';
+import { ANIM } from '../../../data/common/anim';
+import { LOGICAL_SIZE } from '../../../data/app/screen';
+import { WALL_LOOK, WINDOW_LOOK } from '../../../data/weather/window-look';
 import {
   copyMirrored,
   fillLayerFrame,
@@ -13,8 +13,8 @@ import {
   slotCopy,
   type LayerSeries,
 } from './layer-anchor';
-import { BACKDROP } from '../../../data/backdrop';
-import { ZONES } from '../../../data/zones';
+import { BACKDROP } from '../../../data/backdrop/backdrop';
+import { ZONES } from '../../../data/zones/zones';
 
 const HEIGHTS = [LOGICAL_SIZE.minHeight, 2340, LOGICAL_SIZE.maxHeight];
 

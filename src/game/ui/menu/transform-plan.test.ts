@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { CREATURE_IDS, MAX_CREATURE_LEVEL } from '../../../data/creatures';
-import { TRANSFORM } from '../../../data/transform-scene';
+import { CREATURE_IDS, MAX_CREATURE_LEVEL } from '../../../data/creatures/creatures';
+import { TRANSFORM } from '../../../data/creatures/transform-scene';
 import { transformCues, transformFrame, transformKind } from './transform-plan';
 
 describe('transformKind', () => {

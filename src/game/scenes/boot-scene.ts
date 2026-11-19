@@ -1,5 +1,5 @@
 import * as Phaser from 'phaser';
-import { HUD_LAYOUT } from '../../data/hud-layout';
+import { HUD_LAYOUT } from '../../data/run/hud-layout';
 import { readDebugParams } from '../../util/debug-params';
 import { services } from '../../services';
 import { bindAudioLifecycle } from '../audio-lifecycle';

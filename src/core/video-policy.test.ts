@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { BALANCE } from '../data/balance';
-import { REWARDED_OFFERS } from '../data/rewarded-video';
+import { BALANCE } from '../data/tower/balance';
+import { REWARDED_OFFERS } from '../data/economy/rewarded-video';
 import {
   canOfferDoubleCoins,
   canShowInterstitial,

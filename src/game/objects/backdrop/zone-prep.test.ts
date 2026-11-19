@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { zoneIndexOf } from '../../../core/zones';
-import { SPACE_ZONE_INDEX } from '../../../data/zones';
+import { SPACE_ZONE_INDEX } from '../../../data/zones/zones';
 import { PrepQueue, prepTarget, sameTarget } from './zone-prep';
 
 const zoneAt = (height: number): number => zoneIndexOf(height + 1);

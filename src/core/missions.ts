@@ -1,5 +1,5 @@
-import { MISSION_POOL, MISSIONS } from '../data/missions';
-import type { MissionGroup, MissionTemplate } from '../data/missions';
+import { MISSION_POOL, MISSIONS } from '../data/progression/missions';
+import type { MissionGroup, MissionTemplate } from '../data/progression/missions';
 import { daysBetween } from '../util/clock';
 import { dailyUnlocked } from './daily';
 import { hashString, Rng } from './rng';

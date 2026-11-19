@@ -1,4 +1,4 @@
-import { RULE_ANIM } from '../../data/rule-anim';
+import { RULE_ANIM } from '../../data/zones/rule-anim';
 import { clamp01, lerp, smoothstep } from '../../util/math';
 
 const cfg = RULE_ANIM.windup;

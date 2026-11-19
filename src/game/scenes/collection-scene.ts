@@ -1,7 +1,7 @@
 import * as Phaser from 'phaser';
 import { collectionCount } from '../../core/collection';
-import { CREATURE_IDS } from '../../data/creatures';
-import { MENU } from '../../data/menu-layout';
+import { CREATURE_IDS } from '../../data/creatures/creatures';
+import { MENU } from '../../data/common/menu-layout';
 import { formatNumber, t } from '../../i18n';
 import { gameState } from '../../state';
 import { pickInt, pickRange } from '../../util/math';

@@ -1,5 +1,5 @@
 import * as Phaser from 'phaser';
-import { PANORAMA, WALL_LOOK } from '../../../data/window-look';
+import { PANORAMA, WALL_LOOK } from '../../../data/weather/window-look';
 import { EasedValue } from '../../../util/eased-value';
 import type { FrameCtx, Life } from './life';
 import { onLayer } from './layer-anchor';

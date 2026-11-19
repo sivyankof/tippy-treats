@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { BALANCE } from '../data/balance';
-import type { CreatureId } from '../data/creatures';
+import { BALANCE } from '../data/tower/balance';
+import type { CreatureId } from '../data/creatures/creatures';
 import { TimingBot } from './bot';
 import { layerSpeed } from './drop';
 import { Rng } from './rng';

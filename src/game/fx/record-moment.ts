@@ -1,9 +1,9 @@
 import * as Phaser from 'phaser';
 import type { TowerState } from '../../core/tower-sim';
-import { BALANCE } from '../../data/balance';
-import { CONTINUE_ANIM } from '../../data/continue-anim';
-import { LOGICAL_SIZE } from '../../data/screen';
-import { PALETTE } from '../../data/palette';
+import { BALANCE } from '../../data/tower/balance';
+import { CONTINUE_ANIM } from '../../data/run/continue-anim';
+import { LOGICAL_SIZE } from '../../data/app/screen';
+import { PALETTE } from '../../data/common/palette';
 import { t } from '../../i18n';
 import { services } from '../../services';
 import { shade } from '../../util/color';

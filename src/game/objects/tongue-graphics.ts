@@ -1,5 +1,5 @@
 import * as Phaser from 'phaser';
-import { LICK } from '../../data/lick';
+import { LICK } from '../../data/glaze/lick';
 import { drawTongueBody, drawTongueTip } from './tongue-draw';
 import type { Ribbon } from './tongue-ribbon';
 

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { BALANCE } from '../../data/balance';
-import { CREATURE_LOOKS } from '../../data/creature-looks';
-import { CREATURE_IDS, CREATURES } from '../../data/creatures';
+import { BALANCE } from '../../data/tower/balance';
+import { CREATURE_LOOKS } from '../../data/creatures/creature-looks';
+import { CREATURE_IDS, CREATURES } from '../../data/creatures/creatures';
 import { creatureColors } from './creature-art/primitives';
 import { artAlpha, artHeight, artOriginY, artTopPad, layerArtKey } from './layer-art';
 import { layerBox } from './layer-draw';

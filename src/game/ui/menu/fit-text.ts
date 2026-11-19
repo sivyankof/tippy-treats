@@ -1,5 +1,5 @@
 import type * as Phaser from 'phaser';
-import { MENU } from '../../../data/menu-layout';
+import { MENU } from '../../../data/common/menu-layout';
 
 const REFRESH_KEY = 'fontRefresh';
 

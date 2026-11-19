@@ -1,5 +1,5 @@
 import type * as Phaser from 'phaser';
-import { PALETTE } from '../../data/palette';
+import { PALETTE } from '../../data/common/palette';
 
 /** Full-screen dark veil. Resize it with `setSize`; call `setInteractive()` to catch taps. */
 export function createDimOverlay(

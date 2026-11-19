@@ -5,8 +5,8 @@ import {
   zoneBadgeColor,
   type EmblemPart,
   type EmblemShape,
-} from '../../data/checkpoint-look';
-import { ZONES, type ZoneId } from '../../data/zones';
+} from '../../data/zones/checkpoint-look';
+import { ZONES, type ZoneId } from '../../data/zones/zones';
 import { TWO_PI } from '../../util/math';
 import { shade } from '../../util/color';
 import { bakeTexture } from '../ui/bake-texture';

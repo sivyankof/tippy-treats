@@ -1,6 +1,6 @@
 import type * as Phaser from 'phaser';
-import { LICK } from '../../data/lick';
-import { PALETTE } from '../../data/palette';
+import { LICK } from '../../data/glaze/lick';
+import { PALETTE } from '../../data/common/palette';
 import { mixColor } from '../../util/color';
 import { TWO_PI } from '../../util/math';
 import type { Ribbon } from './tongue-ribbon';

@@ -1,4 +1,4 @@
-import { CUT_LOOK } from '../../data/cut-look';
+import { CUT_LOOK } from '../../data/cuts/cut-look';
 import { clamp01, lerp, smoothstep } from '../../util/math';
 
 /** Spin of a piece in degrees per second: fast when narrow, slow when big. */

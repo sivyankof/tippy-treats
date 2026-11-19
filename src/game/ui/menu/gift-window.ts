@@ -1,6 +1,6 @@
 import type * as Phaser from 'phaser';
-import { MENU } from '../../../data/menu-layout';
-import { PALETTE } from '../../../data/palette';
+import { MENU } from '../../../data/common/menu-layout';
+import { PALETTE } from '../../../data/common/palette';
 import { formatNumber, t, tn } from '../../../i18n';
 import { services } from '../../../services';
 import { gameState } from '../../../state';

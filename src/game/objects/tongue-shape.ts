@@ -1,5 +1,5 @@
-import { ANIM } from '../../data/anim';
-import { LICK } from '../../data/lick';
+import { ANIM } from '../../data/common/anim';
+import { LICK } from '../../data/glaze/lick';
 import { clamp01, smoothstep } from '../../util/math';
 import { pieceDistance, type LickScene } from './lick-plan';
 

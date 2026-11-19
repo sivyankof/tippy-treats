@@ -1,6 +1,10 @@
-import { CREATURE_SLEEP } from '../../../data/creature-style';
-import type { ArtRecipe } from '../../../data/creature-looks';
-import { CREATURES, type CreatureId, type CreaturePalette } from '../../../data/creatures';
+import { CREATURE_SLEEP } from '../../../data/creatures/creature-style';
+import type { ArtRecipe } from '../../../data/creatures/creature-looks';
+import {
+  CREATURES,
+  type CreatureId,
+  type CreaturePalette,
+} from '../../../data/creatures/creatures';
 import { cssColor, fromHsl, luminance, parseHex, toHsl } from '../../../util/color';
 import { colorsOf, type CreatureColors } from './primitives';
 

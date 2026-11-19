@@ -1,5 +1,5 @@
-import { WEATHER_LOOK } from '../../../data/weather-look';
-import type { EffectLevel } from '../../../data/effect-levels';
+import { WEATHER_LOOK } from '../../../data/weather/weather-look';
+import type { EffectLevel } from '../../../data/app/effect-levels';
 import { clamp01 } from '../../../util/math';
 
 /**

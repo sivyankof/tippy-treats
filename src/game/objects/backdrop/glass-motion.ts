@@ -1,4 +1,4 @@
-import { GLASS_LOOK, type GlassWeather } from '../../../data/window-look';
+import { GLASS_LOOK, type GlassWeather } from '../../../data/weather/window-look';
 import { GOLDEN, TWO_PI, lerp } from '../../../util/math';
 
 const PLASTIC = 0.754878;

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { MENU } from '../../../data/menu-layout';
+import { MENU } from '../../../data/common/menu-layout';
 import { collectionGrid } from './collection-grid';
 
 describe('collectionGrid', () => {

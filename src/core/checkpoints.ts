@@ -1,9 +1,9 @@
-import { BALANCE } from '../data/balance';
+import { BALANCE } from '../data/tower/balance';
 import {
   CHECKPOINT_HEIGHTS,
   CHECKPOINT_START_WIDTH,
   type CheckpointHeight,
-} from '../data/checkpoints';
+} from '../data/zones/checkpoints';
 import { addUsed, usedToday, type DayCounter } from './day-count';
 import type { RunMode } from './run-result';
 import { zoneIndexOf } from './zones';

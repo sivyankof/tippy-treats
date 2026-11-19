@@ -1,6 +1,6 @@
 import type * as Phaser from 'phaser';
-import { ANIM } from '../../data/anim';
-import { PALETTE } from '../../data/palette';
+import { ANIM } from '../../data/common/anim';
+import { PALETTE } from '../../data/common/palette';
 import { t } from '../../i18n';
 import { cssColor } from '../../util/color';
 import { DEPTH } from '../depth';

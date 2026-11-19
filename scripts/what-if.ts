@@ -1,7 +1,7 @@
-import { DIFFICULTY } from '../src/data/balance';
-import { CREATURES, type CreatureId } from '../src/data/creatures';
-import { MASTERY } from '../src/data/mastery';
-import { ZONE_RULES } from '../src/data/zones';
+import { DIFFICULTY } from '../src/data/tower/balance';
+import { CREATURES, type CreatureId } from '../src/data/creatures/creatures';
+import { MASTERY } from '../src/data/creatures/mastery';
+import { ZONE_RULES } from '../src/data/zones/zones';
 
 /**
  * What-if values for the balance analysis (`--set=...` of `sim:teams`, `sim:coins`, `sim:economy`).
@@ -11,10 +11,10 @@ import { ZONE_RULES } from '../src/data/zones';
  *   frosty.slowPercent.5=33    any levelled ability value: <creature>.<field>.<1-based level>
  *   honey.4=44                 short form for the main levelled value (see `LEVELLED`)
  *   mastery.frosty.toleranceAdd=12
- *                              a number of `MASTERY` (data/mastery.ts)
+ *                              a number of `MASTERY` (data/creatures/mastery.ts)
  *   difficulty.ghostCloudSdMult=1.1
- *                              a bot-model number of `DIFFICULTY` (data/balance.ts)
- *   zones.spaceLaps.step=0.08  a number of `ZONE_RULES` (data/zones.ts)
+ *                              a bot-model number of `DIFFICULTY` (data/tower/balance.ts)
+ *   zones.spaceLaps.step=0.08  a number of `ZONE_RULES` (data/zones/zones.ts)
  */
 
 /** Creatures whose main levelled value the short `--set=<id>.<level>=N` replaces, and its field. */

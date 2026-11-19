@@ -1,6 +1,6 @@
 import type * as Phaser from 'phaser';
-import { PALETTE } from '../../data/palette';
-import { PLAIN_LAYER, type DecorKind } from '../../data/plain-layers';
+import { PALETTE } from '../../data/common/palette';
+import { PLAIN_LAYER, type DecorKind } from '../../data/tower/plain-layers';
 import { shade } from '../../util/color';
 import { TWO_PI } from '../../util/math';
 import type { DecorItem } from './decor-layout';

@@ -1,6 +1,6 @@
 import * as Phaser from 'phaser';
-import { ANIM } from '../../data/anim';
-import { PALETTE } from '../../data/palette';
+import { ANIM } from '../../data/common/anim';
+import { PALETTE } from '../../data/common/palette';
 import { DEPTH } from '../depth';
 import { easeFn } from './ease';
 import { FX_TEXTURES, RING_DIAMETER } from './fx-textures';

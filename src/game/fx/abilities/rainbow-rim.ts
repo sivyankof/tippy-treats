@@ -1,7 +1,7 @@
 import * as Phaser from 'phaser';
-import { ABILITY_ANIM } from '../../../data/ability-anim';
-import { ANIM } from '../../../data/anim';
-import { BALANCE } from '../../../data/balance';
+import { ABILITY_ANIM } from '../../../data/creatures/ability-anim';
+import { ANIM } from '../../../data/common/anim';
+import { BALANCE } from '../../../data/tower/balance';
 import { DEPTH } from '../../depth';
 import { effectsMode } from '../../effects-mode';
 import type { LayerPose } from '../../objects/tower-view';

@@ -1,7 +1,7 @@
 import { serializeSave } from '../core/save/load';
 import type { Save } from '../core/save/schema';
-import { OVEN } from '../data/progression';
-import { STORAGE_KEYS } from '../data/storage';
+import { OVEN } from '../data/progression/progression';
+import { STORAGE_KEYS } from '../data/app/storage';
 import { MemoryStorage } from '../services/storage/memory';
 import { GameState } from './game-state';
 import type { SessionTally } from './session-tally';

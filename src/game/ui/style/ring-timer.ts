@@ -1,5 +1,5 @@
 import * as Phaser from 'phaser';
-import { PALETTE } from '../../../data/palette';
+import { PALETTE } from '../../../data/common/palette';
 import { cssColor } from '../../../util/color';
 import { TWO_PI } from '../../../util/math';
 import { createOutlinedText } from '../outlined-text';

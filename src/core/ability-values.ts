@@ -1,4 +1,4 @@
-import { abilityDef, levelValue, type CreatureId } from '../data/creatures';
+import { abilityDef, levelValue, type CreatureId } from '../data/creatures/creatures';
 
 /**
  * The numbers the ability text of a creature fills in at a level: `{value}` always, and

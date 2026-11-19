@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { REWARDED_OFFERS } from '../data/rewarded-video';
+import { REWARDED_OFFERS } from '../data/economy/rewarded-video';
 import { addUsed, isNewDay, usedToday } from './day-count';
 import { doublesLeft, withDoubleUsed } from './double-coins';
 

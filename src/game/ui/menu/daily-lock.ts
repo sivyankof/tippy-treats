@@ -1,6 +1,6 @@
 import type * as Phaser from 'phaser';
 import { dailyUnlockLevel } from '../../../core/daily';
-import { MENU } from '../../../data/menu-layout';
+import { MENU } from '../../../data/common/menu-layout';
 import { t } from '../../../i18n';
 import { createOutlinedText } from '../outlined-text';
 import { faceOffsetY, VolumePlate } from '../style/volume';

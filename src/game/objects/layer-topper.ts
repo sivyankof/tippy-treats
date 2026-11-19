@@ -1,6 +1,6 @@
 import * as Phaser from 'phaser';
-import { BALANCE } from '../../data/balance';
-import { PLAIN_TOPPERS, type TopperKind } from '../../data/plain-toppers';
+import { BALANCE } from '../../data/tower/balance';
+import { PLAIN_TOPPERS, type TopperKind } from '../../data/toppers/plain-toppers';
 import { ensureTopperTexture } from '../fx/topper-texture';
 import { faceHalfSpan } from '../fx/glaze-growth';
 import { plainToppers, restTilt, sideOfOffset, topperOffset, topperSize } from './topper-look';

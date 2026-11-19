@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { ANIM } from '../../data/anim';
-import { HUD_LAYOUT } from '../../data/hud-layout';
+import { ANIM } from '../../data/common/anim';
+import { HUD_LAYOUT } from '../../data/run/hud-layout';
 import { flightClearBand } from '../camera-layout';
 import { hudPlateRects, tempoCaptionLook, tempoCaptionSpot } from './tempo-caption';
 

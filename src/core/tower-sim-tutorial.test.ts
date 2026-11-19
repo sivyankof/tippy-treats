@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { BALANCE } from '../data/balance';
+import { BALANCE } from '../data/tower/balance';
 import { layerSpeed } from './drop';
 import { config, dropAt, only, pick, untilFlying } from './sim-test-utils';
 import { TowerSim, type LandQuality } from './tower-sim';

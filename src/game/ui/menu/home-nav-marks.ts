@@ -1,7 +1,7 @@
 import * as Phaser from 'phaser';
 import { isComplete } from '../../../core/missions';
-import { MENU } from '../../../data/menu-layout';
-import { PALETTE } from '../../../data/palette';
+import { MENU } from '../../../data/common/menu-layout';
+import { PALETTE } from '../../../data/common/palette';
 import { gameState } from '../../../state';
 
 const { navDots: dots, navAlert: alert } = MENU.home;

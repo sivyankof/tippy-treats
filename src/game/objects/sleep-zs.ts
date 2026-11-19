@@ -1,4 +1,4 @@
-import { CREATURE_SLEEP } from '../../data/creature-style';
+import { CREATURE_SLEEP } from '../../data/creatures/creature-style';
 
 /** Where one floating "z" is and how it looks, offsets from its anchor at scale 1. */
 export interface ZPose {

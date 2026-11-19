@@ -1,4 +1,4 @@
-import { AUDIO_MIX } from '../../data/audio-mix';
+import { AUDIO_MIX } from '../../data/audio/audio-mix';
 
 /** How much a sound matters when the output is crowded (docs/06, section 7). */
 export type SoundPriority = 'critical' | 'normal' | 'ambient';

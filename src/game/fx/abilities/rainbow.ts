@@ -1,4 +1,4 @@
-import { ABILITY_ANIM } from '../../../data/ability-anim';
+import { ABILITY_ANIM } from '../../../data/creatures/ability-anim';
 import { effectsMode } from '../../effects-mode';
 import { HALF_LAYER, type SignatureFx } from './kit';
 

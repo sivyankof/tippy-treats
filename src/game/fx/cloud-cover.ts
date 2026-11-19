@@ -1,7 +1,7 @@
 import type * as Phaser from 'phaser';
-import type { EffectLevel } from '../../data/effect-levels';
-import { RULE_ANIM } from '../../data/rule-anim';
-import { LOGICAL_SIZE } from '../../data/screen';
+import type { EffectLevel } from '../../data/app/effect-levels';
+import { RULE_ANIM } from '../../data/zones/rule-anim';
+import { LOGICAL_SIZE } from '../../data/app/screen';
 import { clamp01, lerp, oscillate01, sineWave, smoothstep } from '../../util/math';
 import { effectsMode } from '../effects-mode';
 import { scatter } from '../objects/creature-art/primitives';

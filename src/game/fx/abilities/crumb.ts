@@ -1,4 +1,4 @@
-import { ABILITY_ANIM } from '../../../data/ability-anim';
+import { ABILITY_ANIM } from '../../../data/creatures/ability-anim';
 import { TWO_PI } from '../../../util/math';
 import { DEPTH } from '../../depth';
 import { effectsMode } from '../../effects-mode';

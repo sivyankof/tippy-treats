@@ -6,7 +6,7 @@ import {
   PLAIN_LAYER,
   PLAIN_PAIRS,
   SPONGES,
-} from '../../data/plain-layers';
+} from '../../data/tower/plain-layers';
 import {
   cosmeticSeedOf,
   GOLDEN_LOOK,

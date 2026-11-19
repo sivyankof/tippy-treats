@@ -4,8 +4,8 @@ import {
   type TimedNoise,
   type TimedTone,
   type ToneRecipe,
-} from '../../data/sfx';
-import { WEATHER_BED, type BedKind } from '../../data/weather-bed';
+} from '../../data/audio/sfx';
+import { WEATHER_BED, type BedKind } from '../../data/audio/weather-bed';
 import { makeBedBuffer, startBed } from './bed';
 import { noiseBuffer } from './noise-buffer';
 import type { Mixer } from './mixer';
@@ -34,7 +34,7 @@ export class Synth {
   private base = 0;
   /** Latest end time (seconds from the context's now) of the notes scheduled since `measure` began. */
   private spanEnd = 0;
-  /** Gain factor of the sound being scheduled (its level trim, `data/sound-trim.ts`). */
+  /** Gain factor of the sound being scheduled (its level trim, `data/audio/sound-trim.ts`). */
   private level = 1;
 
   constructor(

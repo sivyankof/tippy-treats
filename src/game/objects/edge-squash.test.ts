@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { EDGE_SQUASH, type WallFeel } from '../../data/edge-squash';
-import { BALANCE } from '../../data/balance';
+import { EDGE_SQUASH, type WallFeel } from '../../data/tower/edge-squash';
+import { BALANCE } from '../../data/tower/balance';
 import { BUBBLE_RIBS, ribLayoutFor } from './edge-squash-ribs';
 import {
   bounceWave,

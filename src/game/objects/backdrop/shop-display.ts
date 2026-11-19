@@ -5,7 +5,7 @@ import {
   SHOP_TEX,
   WALL_LOOK,
   WINDOW_LOOK,
-} from '../../../data/window-look';
+} from '../../../data/weather/window-look';
 import { shade } from '../../../util/color';
 import { bakeTexture } from '../../ui/bake-texture';
 import type { FrameCtx, Life } from './life';

@@ -1,8 +1,8 @@
 import type * as Phaser from 'phaser';
 import type { TeamSlot } from '../../../core/sim-types';
-import { CREATURES, type CreatureId } from '../../../data/creatures';
-import { MENU } from '../../../data/menu-layout';
-import { PALETTE } from '../../../data/palette';
+import { CREATURES, type CreatureId } from '../../../data/creatures/creatures';
+import { MENU } from '../../../data/common/menu-layout';
+import { PALETTE } from '../../../data/common/palette';
 import { gameState } from '../../../state';
 import { t } from '../../../i18n';
 import { attachPressFeedback } from '../button';

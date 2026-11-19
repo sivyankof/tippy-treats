@@ -1,18 +1,18 @@
 import type * as Phaser from 'phaser';
-import { MOUNTAIN_LOOK } from '../../../data/backdrop-mountains';
-import type { WeatherId } from '../../../data/weather';
-import { STREET_WEATHER } from '../../../data/street-weather';
-import { STRIKE_SIDES, WEATHER_LOOK, WEATHER_TEX as TEX } from '../../../data/weather-look';
-import type { ZoneId } from '../../../data/zones';
+import { MOUNTAIN_LOOK } from '../../../data/backdrop/backdrop-mountains';
+import type { WeatherId } from '../../../data/weather/weather';
+import { STREET_WEATHER } from '../../../data/weather/street-weather';
+import { STRIKE_SIDES, WEATHER_LOOK, WEATHER_TEX as TEX } from '../../../data/weather/weather-look';
+import type { ZoneId } from '../../../data/zones/zones';
 import { cssColor, mixColor, shade } from '../../../util/color';
 import { TWO_PI } from '../../../util/math';
 import { drawGlossMark, fillPolygon, outlineColor, type Pt } from '../../fx/plain-style';
-import { FIELD_PAD } from '../../../data/picture-fields';
+import { FIELD_PAD } from '../../../data/common/picture-fields';
 import { bakePadded, bakeTexture, deferStep } from '../../ui/bake-texture';
 import { sparkle } from './art-kit';
 import { bankPuffs, type Puff } from './weather-motion';
 import { zoneShowsWeatherSky } from './weather-share';
-import { TOWER_WEATHER } from '../../../data/tower-weather';
+import { TOWER_WEATHER } from '../../../data/weather/tower-weather';
 import { driftThickness } from '../drift-geometry';
 
 type Graphics = Phaser.GameObjects.Graphics;

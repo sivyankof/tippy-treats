@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import { Rng } from '../../core/rng';
-import { BALANCE } from '../../data/balance';
-import { EFFECT_LEVELS } from '../../data/effect-levels';
-import { SQUASH_PICTURES, SQUASH_TEXTURES, TOPPER_SQUASH } from '../../data/topper-squash';
+import { BALANCE } from '../../data/tower/balance';
+import { EFFECT_LEVELS } from '../../data/app/effect-levels';
+import { SQUASH_PICTURES, SQUASH_TEXTURES, TOPPER_SQUASH } from '../../data/toppers/topper-squash';
 import { channels, luma, overlayColor } from '../../util/color';
-import { PLAIN_PAIRS } from '../../data/plain-layers';
+import { PLAIN_PAIRS } from '../../data/tower/plain-layers';
 import {
   MAX_PRESS_PICTURES,
   markVanish,
@@ -12,7 +12,7 @@ import {
   squeezeScale,
   type LayerMark,
 } from '../objects/layer-mark-store';
-import { CUT_TEXTURES } from '../../data/cut-look';
+import { CUT_TEXTURES } from '../../data/cuts/cut-look';
 import { faceHalfSpan } from './glaze-growth';
 import { glazeWave, waveY } from '../objects/glaze-wave';
 import { layerBox } from '../objects/layer-draw';

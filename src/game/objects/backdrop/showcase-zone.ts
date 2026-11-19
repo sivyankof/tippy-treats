@@ -1,10 +1,10 @@
 import type * as Phaser from 'phaser';
-import { BACKDROP, BD_TEX } from '../../../data/backdrop';
-import { BACKDROP_COLORS } from '../../../data/backdrop-colors';
-import { BACKDROP_LIFE, garlandWireY } from '../../../data/backdrop-life';
-import { LOGICAL_SIZE } from '../../../data/screen';
+import { BACKDROP, BD_TEX } from '../../../data/backdrop/backdrop';
+import { BACKDROP_COLORS } from '../../../data/backdrop/backdrop-colors';
+import { BACKDROP_LIFE, garlandWireY } from '../../../data/backdrop/backdrop-life';
+import { LOGICAL_SIZE } from '../../../data/app/screen';
 import { bakePadded, bakeTexture } from '../../ui/bake-texture';
-import { FIELD_PAD } from '../../../data/picture-fields';
+import { FIELD_PAD } from '../../../data/common/picture-fields';
 import { glow, tiled } from './art-kit';
 import { onLayer } from './layer-anchor';
 import { Hover, Traveler, Twinkles } from './life';
@@ -14,14 +14,14 @@ import {
   STREET_LOOK,
   WINDOW_SKY,
   type StreetLook,
-} from '../../../data/window-look';
-import type { WeatherId } from '../../../data/weather';
-import { BACKDROP_FAR } from '../../../data/backdrop-far';
+} from '../../../data/weather/window-look';
+import type { WeatherId } from '../../../data/weather/weather';
+import { BACKDROP_FAR } from '../../../data/backdrop/backdrop-far';
 import { channels, mixColor, shade } from '../../../util/color';
 import { gradientColorAt } from './sky-gradient';
-import { ZONE_SKY } from '../../../data/backdrop-colors';
+import { ZONE_SKY } from '../../../data/backdrop/backdrop-colors';
 import { bakeGlassItems, showcaseGlassLife } from './window-weather';
-import { STREET_WEATHER } from '../../../data/street-weather';
+import { STREET_WEATHER } from '../../../data/weather/street-weather';
 import { bakeStreetWeather } from './weather-art';
 import { StreetWeather } from './street-weather';
 

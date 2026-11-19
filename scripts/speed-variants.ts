@@ -1,8 +1,8 @@
 import type { SpeedScaleContext } from '../src/core/sim-types';
 import { zoneStartIndex } from '../src/core/zones';
-import { BALANCE, DIFFICULTY, type DifficultyTarget } from '../src/data/balance';
-import { SAVE_DEFAULTS } from '../src/data/save-defaults';
-import { NO_TEAM, type SimTeamSet } from '../src/data/sim-teams';
+import { BALANCE, DIFFICULTY, type DifficultyTarget } from '../src/data/tower/balance';
+import { SAVE_DEFAULTS } from '../src/data/app/save-defaults';
+import { NO_TEAM, type SimTeamSet } from '../src/data/debug/sim-teams';
 import { MS_PER_SECOND } from '../src/util/math';
 import { intArg, scriptArgs } from './node-env';
 import {

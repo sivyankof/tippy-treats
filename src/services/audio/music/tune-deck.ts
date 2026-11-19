@@ -1,4 +1,4 @@
-import { MUSIC, type MusicTrack, type MusicTrackId } from '../../../data/music';
+import { MUSIC, type MusicTrack, type MusicTrackId } from '../../../data/audio/music';
 import { MS_PER_SECOND } from '../../../util/math';
 import { releaseOnce, SOURCE_FOREVER_SEC, stopQuietly, type NodeTally } from '../node-tally';
 import type { MediaPool, PooledMedia } from './media-pool';

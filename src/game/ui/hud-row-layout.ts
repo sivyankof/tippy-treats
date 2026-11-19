@@ -1,5 +1,5 @@
-import { ANIM } from '../../data/anim';
-import { HUD_LAYOUT } from '../../data/hud-layout';
+import { ANIM } from '../../data/common/anim';
+import { HUD_LAYOUT } from '../../data/run/hud-layout';
 import { badgeCentreX } from './effect-badge-state';
 
 const { badgeSize, badgeMargin, badgeGap, compactNextFrom, nextBadgeGap, nextChip } = HUD_LAYOUT;

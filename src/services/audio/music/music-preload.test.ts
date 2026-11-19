@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { MUSIC_PLAYLIST, MUSIC_TRACKS, type MusicTrackId } from '../../../data/music';
+import { MUSIC_PLAYLIST, MUSIC_TRACKS, type MusicTrackId } from '../../../data/audio/music';
 import { MusicPreload, type PreloadDeps } from './music-preload';
 
 function fakeBuffer(track: MusicTrackId): AudioBuffer {

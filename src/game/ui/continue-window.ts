@@ -1,7 +1,7 @@
 import * as Phaser from 'phaser';
-import { CONTINUE_ANIM } from '../../data/continue-anim';
-import { MENU } from '../../data/menu-layout';
-import { PALETTE } from '../../data/palette';
+import { CONTINUE_ANIM } from '../../data/run/continue-anim';
+import { MENU } from '../../data/common/menu-layout';
+import { PALETTE } from '../../data/common/palette';
 import { formatNumber, t } from '../../i18n';
 import { services } from '../../services';
 import type { ContinueFlow } from '../continue-flow';

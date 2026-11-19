@@ -1,8 +1,8 @@
 import type { Modifiers } from '../../../core/abilities/types';
 import type { SimEvent, TowerState } from '../../../core/tower-sim';
-import { ABILITY_ANIM } from '../../../data/ability-anim';
-import { CREATURES } from '../../../data/creatures';
-import { RARITY_COLORS } from '../../../data/rarity';
+import { ABILITY_ANIM } from '../../../data/creatures/ability-anim';
+import { CREATURES } from '../../../data/creatures/creatures';
+import { RARITY_COLORS } from '../../../data/creatures/rarity';
 import { t } from '../../../i18n';
 import { DEPTH } from '../../depth';
 import type { FlyingLayerView } from '../../objects/flying-layer-view';

@@ -1,5 +1,5 @@
 import type * as Phaser from 'phaser';
-import { IDLE_MOTION, IDLE_PHASE } from '../../data/idle-motion';
+import { IDLE_MOTION, IDLE_PHASE } from '../../data/common/idle-motion';
 import { applyIdlePose, idlePose, type IdlePose } from './idle-motion';
 
 type Text = Phaser.GameObjects.Text;

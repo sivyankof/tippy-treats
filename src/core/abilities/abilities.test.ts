@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { BALANCE } from '../../data/balance';
-import type { CreatureId } from '../../data/creatures';
+import { BALANCE } from '../../data/tower/balance';
+import type { CreatureId } from '../../data/creatures/creatures';
 import { config, mutable } from '../sim-test-utils';
 import type { PlacedLayer, SimEvent, TowerState } from '../sim-types';
 import { TowerSim } from '../tower-sim';

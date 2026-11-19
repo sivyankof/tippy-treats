@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { BALANCE } from '../data/balance';
+import { BALANCE } from '../data/tower/balance';
 import { continueOffer, type ContinueOfferInput } from './continue-offer';
 
 const input = (overrides: Partial<ContinueOfferInput> = {}): ContinueOfferInput => ({

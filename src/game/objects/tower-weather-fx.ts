@@ -1,6 +1,6 @@
 import { Rng } from '../../core/rng';
-import type { EffectLevel } from '../../data/effect-levels';
-import { TOWER_WEATHER } from '../../data/tower-weather';
+import type { EffectLevel } from '../../data/app/effect-levels';
+import { TOWER_WEATHER } from '../../data/weather/tower-weather';
 import { playFx } from '../fx-sound';
 import type { FlashKind } from './backdrop/lightning-flash';
 import type { LayerView } from './layer-view';

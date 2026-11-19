@@ -1,4 +1,8 @@
-import { SPACE_VISITOR, SPACE_VISITOR_IDS, type SpaceVisitorId } from '../data/space-visitor';
+import {
+  SPACE_VISITOR,
+  SPACE_VISITOR_IDS,
+  type SpaceVisitorId,
+} from '../data/guests/space-visitor';
 import { Rng } from './rng';
 
 /**

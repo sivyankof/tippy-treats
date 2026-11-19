@@ -1,5 +1,5 @@
 import { Rng } from '../../core/rng';
-import type { LayerColors } from '../../data/palette';
+import type { LayerColors } from '../../data/common/palette';
 import {
   DECOR_KINDS,
   PATTERN_KINDS,
@@ -9,7 +9,7 @@ import {
   type DecorKind,
   type PatternKind,
   type PlainPair,
-} from '../../data/plain-layers';
+} from '../../data/tower/plain-layers';
 
 /**
  * What a plain layer looks like: its "sponge + glaze" pair and either a decoration, a pattern on

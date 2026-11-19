@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { FLIGHT_CLEAR } from '../../../data/flight-clear';
-import { HUD_LAYOUT } from '../../../data/hud-layout';
-import { SHOP_LOOK } from '../../../data/window-look';
+import { FLIGHT_CLEAR } from '../../../data/backdrop/flight-clear';
+import { HUD_LAYOUT } from '../../../data/run/hud-layout';
+import { SHOP_LOOK } from '../../../data/weather/window-look';
 import { hangAlpha, hangBottom, hangFadeEnd, hangRestDown } from './shop-hang';
 
 const WIDTH = 1080;

@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { HAPTICS } from '../../data/haptics';
+import { HAPTICS } from '../../data/app/haptics';
 import type { HapticKind } from './types';
 import { WebHaptics } from './web';
 

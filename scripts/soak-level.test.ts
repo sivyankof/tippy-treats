@@ -7,7 +7,7 @@ describe('pickSoakLevel', () => {
       'docs/08-architecture.md',
       'CLAUDE.md',
       'src/i18n/ru.ts',
-      'src/data/balance.ts',
+      'src/data/tower/balance.ts',
       'scripts/sim.ts',
       'src/game/ui/panel.test.ts',
     ];

@@ -1,8 +1,8 @@
-import { RARITIES } from '../../data/rarity';
-import { SFX } from '../../data/sfx';
-import { SFX_LIFE } from '../../data/sfx-life';
-import type { SquashKind } from '../../data/topper-squash';
-import { WEATHER_BED, type BedKind } from '../../data/weather-bed';
+import { RARITIES } from '../../data/creatures/rarity';
+import { SFX } from '../../data/audio/sfx';
+import { SFX_LIFE } from '../../data/audio/sfx-life';
+import type { SquashKind } from '../../data/toppers/topper-squash';
+import { WEATHER_BED, type BedKind } from '../../data/audio/weather-bed';
 import { pickRange } from '../../util/math';
 import {
   collapseThudGain,
@@ -52,7 +52,7 @@ const SKY_GLASS = [
 /**
  * One sound of the game. `play` schedules the notes on the synth and nothing else: gating,
  * the bus and the context are the caller's (`SoundPlayer`, live or offline), so a sound renders
- * the same everywhere. Recipes are data (`data/sfx.ts`); this only interprets them.
+ * the same everywhere. Recipes are data (`data/audio/sfx.ts`); this only interprets them.
  */
 export interface SoundEntry<A extends unknown[]> {
   group: SoundGroup;

@@ -1,7 +1,7 @@
 import type * as Phaser from 'phaser';
-import { ANIM } from '../../data/anim';
-import { PAUSE } from '../../data/hud-layout';
-import { PALETTE } from '../../data/palette';
+import { ANIM } from '../../data/common/anim';
+import { PAUSE } from '../../data/run/hud-layout';
+import { PALETTE } from '../../data/common/palette';
 import { t } from '../../i18n';
 import { createTextButton, type Button } from './button';
 import { createToggleRows, soundSettingRows } from './menu/setting-toggles';

@@ -1,12 +1,12 @@
 import type * as Phaser from 'phaser';
-import { BD_TEX } from '../../../data/backdrop';
-import { BACKDROP_COLORS } from '../../../data/backdrop-colors';
-import { BACKDROP_LIFE } from '../../../data/backdrop-life';
-import { KITCHEN_COLORS, PALETTE } from '../../../data/palette';
+import { BD_TEX } from '../../../data/backdrop/backdrop';
+import { BACKDROP_COLORS } from '../../../data/backdrop/backdrop-colors';
+import { BACKDROP_LIFE } from '../../../data/backdrop/backdrop-life';
+import { KITCHEN_COLORS, PALETTE } from '../../../data/common/palette';
 import { mixColor, shade } from '../../../util/color';
 import { outlineColor } from '../../fx/plain-style';
 import { bakePadded, bakeTexture } from '../../ui/bake-texture';
-import { FIELD_PAD } from '../../../data/picture-fields';
+import { FIELD_PAD } from '../../../data/common/picture-fields';
 import { drawPlank } from './art-kit';
 import { inSky, onLayer } from './layer-anchor';
 import { Hover, PuffColumn, Traveler } from './life';
@@ -14,7 +14,12 @@ import { LayerThing } from './layer-life';
 import type { ZoneArt } from './zone-scenery';
 import { RunOnly, bakeGlassItems, bakeWindow, windowGlassLives } from './window-weather';
 import { bakePanoramaSet, panoramaLives, panoramaMissing } from './panorama-window';
-import { KITCHEN_SHELF, WALL_LOOK, WINDOW_LOOK, windowKey } from '../../../data/window-look';
+import {
+  KITCHEN_SHELF,
+  WALL_LOOK,
+  WINDOW_LOOK,
+  windowKey,
+} from '../../../data/weather/window-look';
 
 const TILE = 512;
 const TILE_SIZE = 128;

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { ANIM } from '../../../data/anim';
-import type { ZoneId } from '../../../data/zones';
+import { ANIM } from '../../../data/common/anim';
+import type { ZoneId } from '../../../data/zones/zones';
 import { haloZoneMult, zoneMixOf } from './zone-mix';
 
 function mix(zones: readonly { zone: ZoneId; alpha: number }[]): number {

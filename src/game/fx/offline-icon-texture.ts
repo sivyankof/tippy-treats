@@ -1,8 +1,8 @@
 import type * as Phaser from 'phaser';
-import { OFFLINE_LOOK } from '../../data/offline-look';
+import { OFFLINE_LOOK } from '../../data/economy/offline-look';
 import { paddedScale } from '../../util/field-pad';
 import { DEG_TO_RAD } from '../../util/math';
-import { FIELD_PAD } from '../../data/picture-fields';
+import { FIELD_PAD } from '../../data/common/picture-fields';
 import { bakePadded } from '../ui/bake-texture';
 import { drawGlossMark, fillPolygon, roundRectPoints } from './plain-style';
 

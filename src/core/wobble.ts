@@ -1,4 +1,4 @@
-import { BALANCE } from '../data/balance';
+import { BALANCE } from '../data/tower/balance';
 import { TWO_PI } from '../util/math';
 
 const W = BALANCE.wobble;

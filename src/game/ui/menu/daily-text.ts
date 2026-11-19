@@ -1,6 +1,6 @@
 // Texts of the daily tower shared by its screen, its explainer and the results of a daily run.
 import { dailyProgress, tierReached } from '../../../core/daily';
-import { DAILY } from '../../../data/daily';
+import { DAILY } from '../../../data/progression/daily';
 import { formatNumber, t, tn } from '../../../i18n';
 
 /** "One tower for all players. 3 attempts. The higher, the more rewards." */

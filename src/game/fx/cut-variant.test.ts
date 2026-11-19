@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { CUT_LOOK } from '../../data/cut-look';
+import { CUT_LOOK } from '../../data/cuts/cut-look';
 import { chooseCutVariant, cutPlanFor, forcedCutVariant, type CutChoice } from './cut-variant';
 
 const base: CutChoice = {

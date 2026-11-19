@@ -1,4 +1,4 @@
-import { MUSIC_TRACKS, type MusicTrackId } from '../../../data/music';
+import { MUSIC_TRACKS, type MusicTrackId } from '../../../data/audio/music';
 import { isAppleTouch, type BrowserInfo } from '../../../util/browser-info';
 
 /** What the page may play: streamed tracks need media elements, which iOS before 16.4 cannot keep ambient. */

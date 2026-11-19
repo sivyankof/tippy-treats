@@ -1,4 +1,4 @@
-import { TOWER_GUEST } from '../../data/tower-guest';
+import { TOWER_GUEST } from '../../data/guests/tower-guest';
 import { easeInQuad, easeOutQuad } from '../../util/math';
 import { flightPoint, type FlightPoint } from './tower-guest-plan';
 import type { FlightSpec } from './tower-guest-types';

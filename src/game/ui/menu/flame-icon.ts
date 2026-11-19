@@ -1,5 +1,5 @@
 import * as Phaser from 'phaser';
-import { MENU } from '../../../data/menu-layout';
+import { MENU } from '../../../data/common/menu-layout';
 
 const cfg = MENU.home.badges.flicker;
 

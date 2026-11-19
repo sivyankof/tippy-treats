@@ -1,5 +1,5 @@
 import * as Phaser from 'phaser';
-import { ANIM } from '../../data/anim';
+import { ANIM } from '../../data/common/anim';
 import { shade } from '../../util/color';
 import { oscillate01 } from '../../util/math';
 import { DEPTH } from '../depth';

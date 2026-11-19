@@ -1,5 +1,5 @@
 import * as Phaser from 'phaser';
-import { MENU } from '../../../data/menu-layout';
+import { MENU } from '../../../data/common/menu-layout';
 import { DEG_TO_RAD, MS_PER_SECOND, TWO_PI } from '../../../util/math';
 
 const cfg = MENU.newCreature;

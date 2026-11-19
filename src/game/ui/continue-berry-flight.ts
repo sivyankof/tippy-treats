@@ -1,5 +1,5 @@
 import type * as Phaser from 'phaser';
-import { CONTINUE_ANIM } from '../../data/continue-anim';
+import { CONTINUE_ANIM } from '../../data/run/continue-anim';
 import type { Point } from '../fx/coin-flight-math';
 import { TREASURE_TEXTURES } from '../fx/treasure-textures';
 

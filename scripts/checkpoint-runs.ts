@@ -1,8 +1,8 @@
 import { checkpointStartWidth } from '../src/core/checkpoints';
 import type { SimEvent, TowerState } from '../src/core/sim-types';
-import { DIFFICULTY } from '../src/data/balance';
-import { CHECKPOINT_HEIGHTS, type CheckpointHeight } from '../src/data/checkpoints';
-import type { SimTeamSet } from '../src/data/sim-teams';
+import { DIFFICULTY } from '../src/data/tower/balance';
+import { CHECKPOINT_HEIGHTS, type CheckpointHeight } from '../src/data/zones/checkpoints';
+import type { SimTeamSet } from '../src/data/debug/sim-teams';
 import { MS_PER_SECOND } from '../src/util/math';
 import { COIN_SOURCES, CoinStats, type CoinsBySource } from './coin-stats';
 import type { RunObserver } from './run-observer';

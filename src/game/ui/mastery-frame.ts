@@ -1,5 +1,5 @@
 import type * as Phaser from 'phaser';
-import { MASTERY_FRAME } from '../../data/mastery-look';
+import { MASTERY_FRAME } from '../../data/creatures/mastery-look';
 import { parseHex } from '../../util/color';
 import { fillOutlinedPolygon } from '../fx/plain-style';
 import { starPoints } from '../objects/creature-art/rainbow-geometry';

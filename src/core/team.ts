@@ -1,6 +1,6 @@
-import { BALANCE } from '../data/balance';
-import { clampLevel, CREATURE_IDS, type CreatureId } from '../data/creatures';
-import { LEVEL_REWARDS } from '../data/progression';
+import { BALANCE } from '../data/tower/balance';
+import { clampLevel, CREATURE_IDS, type CreatureId } from '../data/creatures/creatures';
+import { LEVEL_REWARDS } from '../data/progression/progression';
 import type { TeamSlots } from './save/schema';
 import type { TeamSlot } from './sim-types';
 

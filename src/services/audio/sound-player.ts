@@ -1,4 +1,4 @@
-import { SOUND_TRIM_DB } from '../../data/sound-trim';
+import { SOUND_TRIM_DB } from '../../data/audio/sound-trim';
 import { fromDb } from './levels';
 import { SOUND_BOOK, type SoundEntry } from './sound-book';
 import type { SoundArgs, SoundId } from './sound-args';

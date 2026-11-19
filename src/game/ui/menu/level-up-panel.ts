@@ -1,9 +1,9 @@
 import * as Phaser from 'phaser';
 import type { Currency } from '../../../core/economy';
-import { CREATURES } from '../../../data/creatures';
-import { MENU } from '../../../data/menu-layout';
-import { PALETTE } from '../../../data/palette';
-import { REWARD_LOOK } from '../../../data/reward-look';
+import { CREATURES } from '../../../data/creatures/creatures';
+import { MENU } from '../../../data/common/menu-layout';
+import { PALETTE } from '../../../data/common/palette';
+import { REWARD_LOOK } from '../../../data/economy/reward-look';
 import { formatNumber, t, tn } from '../../../i18n';
 import { services } from '../../../services';
 import type { LevelUp } from '../../../state/game-state';

@@ -1,9 +1,13 @@
 import type * as Phaser from 'phaser';
 import type { CutSide } from '../../../core/drop';
-import { BALANCE } from '../../../data/balance';
-import type { ArtRecipe } from '../../../data/creature-looks';
-import { CREATURES, type CreatureId, type CreaturePalette } from '../../../data/creatures';
-import { CREATURE_STYLE } from '../../../data/creature-style';
+import { BALANCE } from '../../../data/tower/balance';
+import type { ArtRecipe } from '../../../data/creatures/creature-looks';
+import {
+  CREATURES,
+  type CreatureId,
+  type CreaturePalette,
+} from '../../../data/creatures/creatures';
+import { CREATURE_STYLE } from '../../../data/creatures/creature-style';
 import { mixColor, parseHex, shade } from '../../../util/color';
 import {
   GLAZE_OUTLINE,

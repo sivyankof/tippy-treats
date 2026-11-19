@@ -1,6 +1,6 @@
 import type * as Phaser from 'phaser';
-import { ABILITY_ANIM } from '../../../data/ability-anim';
-import { BALANCE } from '../../../data/balance';
+import { ABILITY_ANIM } from '../../../data/creatures/ability-anim';
+import { BALANCE } from '../../../data/tower/balance';
 import { oscillate01 } from '../../../util/math';
 import { DEPTH } from '../../depth';
 import { easeFn } from '../ease';

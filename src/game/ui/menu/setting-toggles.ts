@@ -1,5 +1,5 @@
 import type * as Phaser from 'phaser';
-import { MENU } from '../../../data/menu-layout';
+import { MENU } from '../../../data/common/menu-layout';
 import { t } from '../../../i18n';
 import { services } from '../../../services';
 import { setMusicOn, setReducedFxOn, setSoundOn, setVibrationOn } from '../../apply-settings';

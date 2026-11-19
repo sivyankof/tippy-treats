@@ -1,5 +1,5 @@
 import type * as Phaser from 'phaser';
-import type { HopMotion } from '../../../data/hop-motion';
+import type { HopMotion } from '../../../data/common/hop-motion';
 
 /** The target rocks `deg` degrees to each side, a full swing in `ms`, all the time. */
 export function startSwayTween(

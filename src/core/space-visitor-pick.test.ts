@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { SPACE_VISITOR, SPACE_VISITOR_IDS } from '../data/space-visitor';
+import { SPACE_VISITOR, SPACE_VISITOR_IDS } from '../data/guests/space-visitor';
 import { Rng } from './rng';
 import { pickGuest, visitorOfLap, visitorPassRng, visitorSeedOf } from './space-visitor-pick';
 

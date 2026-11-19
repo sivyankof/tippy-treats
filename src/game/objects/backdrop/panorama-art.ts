@@ -1,7 +1,7 @@
 import type * as Phaser from 'phaser';
-import { PANORAMA } from '../../../data/window-look';
-import { WEATHER_LOOK } from '../../../data/weather-look';
-import type { StartPlaceId } from '../../../data/start-places';
+import { PANORAMA } from '../../../data/weather/window-look';
+import { WEATHER_LOOK } from '../../../data/weather/weather-look';
+import type { StartPlaceId } from '../../../data/zones/start-places';
 import { cssColor } from '../../../util/color';
 import { TWO_PI } from '../../../util/math';
 import { bakeTexture } from '../../ui/bake-texture';

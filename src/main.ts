@@ -1,7 +1,7 @@
 import * as Phaser from 'phaser';
 import './style.css';
-import { APP_VERSION, BUILD_HASH, BUILD_TIME } from './data/app-info';
-import { BOOT } from './data/boot';
+import { APP_VERSION, BUILD_HASH, BUILD_TIME } from './data/app/app-info';
+import { BOOT } from './data/app/boot';
 import { formatBuildStamp } from './util/build-stamp';
 import { bindLogicalResize, createGameConfig } from './game/config';
 import { refreshTextsOnFontLoad } from './game/ui/font-refresh';

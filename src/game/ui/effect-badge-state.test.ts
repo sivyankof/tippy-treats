@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { ActiveEffect } from '../../core/abilities/types';
-import { ANIM } from '../../data/anim';
+import { ANIM } from '../../data/common/anim';
 import {
   badgeCreature,
   badgeVisual,

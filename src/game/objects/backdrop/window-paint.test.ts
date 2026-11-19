@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { PANORAMA, WINDOW_LOOK } from '../../../data/window-look';
+import { PANORAMA, WINDOW_LOOK } from '../../../data/weather/window-look';
 import { detailScale, moonSpot } from './window-paint';
 
 describe('detailScale', () => {

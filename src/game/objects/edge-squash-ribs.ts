@@ -1,5 +1,5 @@
 import { Rng } from '../../core/rng';
-import { EDGE_SQUASH } from '../../data/edge-squash';
+import { EDGE_SQUASH } from '../../data/tower/edge-squash';
 import { smoothstep } from '../../util/math';
 
 /** One row of ribs along an outline: where each one starts and how wide and high it is. */

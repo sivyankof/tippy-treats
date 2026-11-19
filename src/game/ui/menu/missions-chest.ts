@@ -1,7 +1,7 @@
 import * as Phaser from 'phaser';
-import { MISSIONS } from '../../../data/missions';
-import { MENU } from '../../../data/menu-layout';
-import { PALETTE } from '../../../data/palette';
+import { MISSIONS } from '../../../data/progression/missions';
+import { MENU } from '../../../data/common/menu-layout';
+import { PALETTE } from '../../../data/common/palette';
 import { t } from '../../../i18n';
 import { createTextButton } from '../button';
 import { createOutlinedText } from '../outlined-text';

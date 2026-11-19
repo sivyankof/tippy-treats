@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { CREATURE_SLEEP } from '../../data/creature-style';
+import { CREATURE_SLEEP } from '../../data/creatures/creature-style';
 import { zPose, type ZPose } from './sleep-zs';
 
 const pose = (t: number, i: number): ZPose => zPose(t, i, { x: 0, y: 0, alpha: 0, scale: 0 });

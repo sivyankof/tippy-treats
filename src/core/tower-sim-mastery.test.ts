@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { BALANCE } from '../data/balance';
-import type { CreatureId } from '../data/creatures';
-import { MASTERY } from '../data/mastery';
+import { BALANCE } from '../data/tower/balance';
+import type { CreatureId } from '../data/creatures/creatures';
+import { MASTERY } from '../data/creatures/mastery';
 import { TimingBot } from './bot';
 import { Rng } from './rng';
 import {

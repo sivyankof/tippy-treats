@@ -1,4 +1,4 @@
-import { GIFT } from '../data/gift';
+import { GIFT } from '../data/economy/gift';
 import { Rng, hashString } from './rng';
 
 export interface GiftState {

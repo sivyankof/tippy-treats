@@ -1,7 +1,7 @@
 import type * as Phaser from 'phaser';
-import { MENU } from '../../../data/menu-layout';
-import { PALETTE } from '../../../data/palette';
-import { TREASURE } from '../../../data/treasure-anim';
+import { MENU } from '../../../data/common/menu-layout';
+import { PALETTE } from '../../../data/common/palette';
+import { TREASURE } from '../../../data/economy/treasure-anim';
 import { gameState } from '../../../state';
 import { TREASURE_TEXTURES } from '../../fx/treasure-textures';
 import type { Button } from '../button';

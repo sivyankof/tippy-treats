@@ -1,6 +1,6 @@
 import type * as Phaser from 'phaser';
-import { ANIM } from '../../data/anim';
-import { PALETTE } from '../../data/palette';
+import { ANIM } from '../../data/common/anim';
+import { PALETTE } from '../../data/common/palette';
 import { channels } from '../../util/color';
 
 /** Anything a transition can slide and fade: texts, images, containers, buttons. */

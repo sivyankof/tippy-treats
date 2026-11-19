@@ -1,8 +1,8 @@
 import type * as Phaser from 'phaser';
 import type { AbilityPayload } from '../../../core/abilities/types';
 import type { TowerState } from '../../../core/tower-sim';
-import type { CreatureId } from '../../../data/creatures';
-import { ANIM } from '../../../data/anim';
+import type { CreatureId } from '../../../data/creatures/creatures';
+import { ANIM } from '../../../data/common/anim';
 import type { LayerPose, TowerView } from '../../objects/tower-view';
 import type { LayerView } from '../../objects/layer-view';
 import type { CreatureColors } from '../../objects/creature-art/primitives';

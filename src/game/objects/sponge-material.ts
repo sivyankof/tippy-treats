@@ -1,5 +1,5 @@
 import type { CutSide } from '../../core/drop';
-import { PLAIN_LAYER } from '../../data/plain-layers';
+import { PLAIN_LAYER } from '../../data/tower/plain-layers';
 import { TWO_PI } from '../../util/math';
 import type { LayerBox } from './layer-draw';
 import { clipPolylines, uAxis, xAt, type Polyline, type Stroke } from './plain-lines';

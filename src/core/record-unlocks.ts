@@ -1,4 +1,4 @@
-import { CREATURES, CREATURE_IDS, type CreatureId } from '../data/creatures';
+import { CREATURES, CREATURE_IDS, type CreatureId } from '../data/creatures/creatures';
 
 /** A creature that the best classic height hands over for free. */
 export interface RecordUnlock {

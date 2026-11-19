@@ -1,7 +1,7 @@
-import { ANIM } from '../../../data/anim';
-import { BACKDROP } from '../../../data/backdrop';
-import { WALL_LOOK } from '../../../data/window-look';
-import type { ZoneId } from '../../../data/zones';
+import { ANIM } from '../../../data/common/anim';
+import { BACKDROP } from '../../../data/backdrop/backdrop';
+import { WALL_LOOK } from '../../../data/weather/window-look';
+import type { ZoneId } from '../../../data/zones/zones';
 import { TWO_PI } from '../../../util/math';
 import { flightClearBand, hudKeepOutFade } from '../../camera-layout';
 import type { Pose } from './life-motion';

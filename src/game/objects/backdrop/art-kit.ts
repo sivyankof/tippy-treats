@@ -1,8 +1,8 @@
 import type * as Phaser from 'phaser';
-import { BD_TEX } from '../../../data/backdrop';
-import { BACKDROP_COLORS } from '../../../data/backdrop-colors';
-import type { Point } from '../../../data/backdrop-life';
-import { SHOP_COLORS } from '../../../data/window-look';
+import { BD_TEX } from '../../../data/backdrop/backdrop';
+import { BACKDROP_COLORS } from '../../../data/backdrop/backdrop-colors';
+import type { Point } from '../../../data/backdrop/backdrop-life';
+import { SHOP_COLORS } from '../../../data/weather/window-look';
 import { mixColor, shade } from '../../../util/color';
 import { outlineColor } from '../../fx/plain-style';
 import { bakeTexture } from '../../ui/bake-texture';

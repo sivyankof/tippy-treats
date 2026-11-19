@@ -1,8 +1,8 @@
 import { TimingBot } from '../../core/bot';
 import { Rng } from '../../core/rng';
 import type { SimEvent, TowerSim } from '../../core/tower-sim';
-import { BALANCE } from '../../data/balance';
-import type { PerfDriverSpec } from '../../data/perf';
+import { BALANCE } from '../../data/tower/balance';
+import type { PerfDriverSpec } from '../../data/debug/perf';
 
 /** Who drops the layers of a run: the dev bot (`TimingBot`) and the benchmark's drivers all fit. */
 export interface DropDriver {

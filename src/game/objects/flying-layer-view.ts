@@ -1,10 +1,10 @@
 import type * as Phaser from 'phaser';
 import type { TowerState } from '../../core/tower-sim';
-import { ANIM } from '../../data/anim';
-import { BALANCE } from '../../data/balance';
-import { HINT_PULSE } from '../../data/idle-motion';
-import { PALETTE } from '../../data/palette';
-import { RULE_ANIM } from '../../data/rule-anim';
+import { ANIM } from '../../data/common/anim';
+import { BALANCE } from '../../data/tower/balance';
+import { HINT_PULSE } from '../../data/common/idle-motion';
+import { PALETTE } from '../../data/common/palette';
+import { RULE_ANIM } from '../../data/zones/rule-anim';
 import { oscillate01, sineWave, stepToward } from '../../util/math';
 import { DEPTH } from '../depth';
 import { easeFn } from '../fx/ease';

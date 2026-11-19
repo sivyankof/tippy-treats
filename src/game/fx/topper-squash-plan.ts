@@ -1,13 +1,13 @@
 import type { Rng } from '../../core/rng';
-import type { EffectLevel } from '../../data/effect-levels';
-import { BALANCE } from '../../data/balance';
-import { CUT_PICTURE, CUT_TEXTURES } from '../../data/cut-look';
+import type { EffectLevel } from '../../data/app/effect-levels';
+import { BALANCE } from '../../data/tower/balance';
+import { CUT_PICTURE, CUT_TEXTURES } from '../../data/cuts/cut-look';
 import {
   SQUASH_PICTURES,
   SQUASH_TEXTURES,
   TOPPER_SQUASH,
   type SquashBurst,
-} from '../../data/topper-squash';
+} from '../../data/toppers/topper-squash';
 import { luma, mixColor } from '../../util/color';
 import { clamp01, DEG_TO_RAD, lerp } from '../../util/math';
 import { squeezeDoneMs, type LayerMark } from '../objects/layer-mark-store';

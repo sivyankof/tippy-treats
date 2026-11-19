@@ -1,4 +1,4 @@
-import type { SquashKind } from '../../data/topper-squash';
+import type { SquashKind } from '../../data/toppers/topper-squash';
 
 export type { SquashKind };
 

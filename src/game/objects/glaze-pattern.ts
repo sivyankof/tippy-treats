@@ -1,5 +1,5 @@
 import type { CutSide } from '../../core/drop';
-import { PLAIN_LAYER, type PatternKind } from '../../data/plain-layers';
+import { PLAIN_LAYER, type PatternKind } from '../../data/tower/plain-layers';
 import { luma, mixColor, shade } from '../../util/color';
 import { TWO_PI } from '../../util/math';
 import { deepestY, type GlazeWave, waveY } from './glaze-wave';

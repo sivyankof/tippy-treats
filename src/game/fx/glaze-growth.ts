@@ -1,6 +1,6 @@
-import { GLAZE_DRIPS } from '../../data/glaze-drips';
-import type { CreatureId } from '../../data/creatures';
-import type { FaceRecipe } from '../../data/creature-looks';
+import { GLAZE_DRIPS } from '../../data/glaze/glaze-drips';
+import type { CreatureId } from '../../data/creatures/creatures';
+import type { FaceRecipe } from '../../data/creatures/creature-looks';
 import { easeOutQuad, GOLDEN, MS_PER_SECOND } from '../../util/math';
 import { faceLayout } from '../objects/face-recipe';
 

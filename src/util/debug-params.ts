@@ -1,11 +1,17 @@
-import { isCreatureId, MAX_CREATURE_LEVEL, type CreatureId } from '../data/creatures';
-import { BALANCE } from '../data/balance';
-import { isSpaceVisitorId, type SpaceVisitorId } from '../data/space-visitor';
-import { isEffectLevel, type EffectLevel } from '../data/effect-levels';
-import { isPerfSegmentId, PERF, PERF_PARTS, type PerfPart, type PerfSegmentId } from '../data/perf';
-import { isStartPlaceId, type StartPlaceId } from '../data/start-places';
-import { isWeatherId, type WeatherId } from '../data/weather';
-import { isResultsDemoCase, type ResultsDemoCase } from '../data/results-demo';
+import { isCreatureId, MAX_CREATURE_LEVEL, type CreatureId } from '../data/creatures/creatures';
+import { BALANCE } from '../data/tower/balance';
+import { isSpaceVisitorId, type SpaceVisitorId } from '../data/guests/space-visitor';
+import { isEffectLevel, type EffectLevel } from '../data/app/effect-levels';
+import {
+  isPerfSegmentId,
+  PERF,
+  PERF_PARTS,
+  type PerfPart,
+  type PerfSegmentId,
+} from '../data/debug/perf';
+import { isStartPlaceId, type StartPlaceId } from '../data/zones/start-places';
+import { isWeatherId, type WeatherId } from '../data/weather/weather';
+import { isResultsDemoCase, type ResultsDemoCase } from '../data/debug/results-demo';
 import { UINT32_RANGE } from './math';
 
 export interface DebugParams {

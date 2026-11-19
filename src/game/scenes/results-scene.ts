@@ -1,6 +1,6 @@
 import * as Phaser from 'phaser';
-import { ANIM } from '../../data/anim';
-import { MENU } from '../../data/menu-layout';
+import { ANIM } from '../../data/common/anim';
+import { MENU } from '../../data/common/menu-layout';
 import { t } from '../../i18n';
 import { services } from '../../services';
 import { gameState } from '../../state';

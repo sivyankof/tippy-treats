@@ -1,7 +1,7 @@
 import * as Phaser from 'phaser';
-import { PALETTE } from '../../data/palette';
-import { ZONE_BANNER, type PlateSpec } from '../../data/zone-plate';
-import { ZONES } from '../../data/zones';
+import { PALETTE } from '../../data/common/palette';
+import { ZONE_BANNER, type PlateSpec } from '../../data/zones/zone-plate';
+import { ZONES } from '../../data/zones/zones';
 import { t } from '../../i18n';
 import { playFx } from '../fx-sound';
 import { DEG_TO_RAD, sineWave } from '../../util/math';

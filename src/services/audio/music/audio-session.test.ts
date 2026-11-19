@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { MUSIC_PLAYLIST } from '../../../data/music';
+import { MUSIC_PLAYLIST } from '../../../data/audio/music';
 import { playableTracks, setupAudioSession } from './audio-session';
 
 const IPHONE =

@@ -1,9 +1,9 @@
 import type * as Phaser from 'phaser';
-import { MENU } from '../../../data/menu-layout';
+import { MENU } from '../../../data/common/menu-layout';
 import { t } from '../../../i18n';
 import { services } from '../../../services';
 import { gameState } from '../../../state';
-import type { CreatureId } from '../../../data/creatures';
+import type { CreatureId } from '../../../data/creatures/creatures';
 import type { LevelUp } from '../../../state/game-state';
 import { msUntilLocalMidnight, now } from '../../../util/clock';
 import type { Button } from '../button';

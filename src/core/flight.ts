@@ -1,5 +1,5 @@
-import { BALANCE } from '../data/balance';
-import { SPACE_ZONE_INDEX, ZONE_RULES } from '../data/zones';
+import { BALANCE } from '../data/tower/balance';
+import { SPACE_ZONE_INDEX, ZONE_RULES } from '../data/zones/zones';
 import { MS_PER_SECOND } from '../util/math';
 import type { FlyingLayer, LayerPlan, SimEvent } from './sim-types';
 import { hasRule, type CloudRoll, type LayerRules } from './zones';

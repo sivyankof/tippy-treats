@@ -1,4 +1,4 @@
-import { TOWER_GUEST } from '../../data/tower-guest';
+import { TOWER_GUEST } from '../../data/guests/tower-guest';
 import { clamp01, DEG_TO_RAD, flapScale, lerp, sineWave } from '../../util/math';
 import { SPLAT_STAGES, splatShape, type GuestPhase, type GuestShape } from './tower-guest-plan';
 

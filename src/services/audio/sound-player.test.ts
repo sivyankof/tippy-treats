@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { SOUND_TRIM_DB } from '../../data/sound-trim';
+import { SOUND_TRIM_DB } from '../../data/audio/sound-trim';
 import { fromDb } from './levels';
 import { SoundPlayer, type DevSoundTrims } from './sound-player';
 import type { Synth } from './synth';

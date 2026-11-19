@@ -1,5 +1,5 @@
 import * as Phaser from 'phaser';
-import { ABILITY_ANIM } from '../../../data/ability-anim';
+import { ABILITY_ANIM } from '../../../data/creatures/ability-anim';
 import { hideItem, TimedPool, type PoolEntry } from '../timed-pool';
 import { sampleSprite, type SpriteFrame, type SpriteSpec } from './sprite-motion';
 

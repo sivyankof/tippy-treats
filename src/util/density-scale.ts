@@ -1,5 +1,5 @@
-import { RENDER_DENSITY } from '../data/screen';
-import type { EffectLevel } from '../data/effect-levels';
+import { RENDER_DENSITY } from '../data/app/screen';
+import type { EffectLevel } from '../data/app/effect-levels';
 
 /** Size of the canvas backing store for a render density cap. */
 export interface BackingSize {

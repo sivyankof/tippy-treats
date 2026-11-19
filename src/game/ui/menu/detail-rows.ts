@@ -1,5 +1,5 @@
 import { isMaster, masterInfo, upgradePreview } from '../../../core/mastery';
-import type { CreatureId } from '../../../data/creatures';
+import type { CreatureId } from '../../../data/creatures/creatures';
 import { formatDecimal, t } from '../../../i18n';
 import { formatValues } from './detail-model';
 

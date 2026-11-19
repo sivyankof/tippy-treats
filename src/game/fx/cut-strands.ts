@@ -1,7 +1,7 @@
 import type * as Phaser from 'phaser';
 import type { Rng } from '../../core/rng';
-import { BALANCE } from '../../data/balance';
-import { CUT_LOOK, CUT_PICTURE, CUT_TEXTURES } from '../../data/cut-look';
+import { BALANCE } from '../../data/tower/balance';
+import { CUT_LOOK, CUT_PICTURE, CUT_TEXTURES } from '../../data/cuts/cut-look';
 import { shade } from '../../util/color';
 import { clamp01, lerp, smoothstep, TWO_PI } from '../../util/math';
 import { DEPTH } from '../depth';

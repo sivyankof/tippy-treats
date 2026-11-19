@@ -1,5 +1,5 @@
-import { AUDIO_MIX } from '../../../data/audio-mix';
-import { MUSIC, MUSIC_TRACKS, type MusicTrackId } from '../../../data/music';
+import { AUDIO_MIX } from '../../../data/audio/audio-mix';
+import { MUSIC, MUSIC_TRACKS, type MusicTrackId } from '../../../data/audio/music';
 import { MS_PER_SECOND } from '../../../util/math';
 import { fromDb } from '../levels';
 import type {

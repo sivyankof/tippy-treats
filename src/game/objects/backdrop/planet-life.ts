@@ -1,11 +1,11 @@
 import * as Phaser from 'phaser';
-import type { HoverSpec } from '../../../data/backdrop-life';
+import type { HoverSpec } from '../../../data/backdrop/backdrop-life';
 import {
   PLANET_PLACE,
   planetDimKey,
   planetKey,
   type SpacePlanetId,
-} from '../../../data/space-planets';
+} from '../../../data/zones/space-planets';
 import { lapProgress } from '../../../core/space-laps';
 import { planetPassOf } from '../../../core/space-planet';
 import { effectsMode } from '../../effects-mode';

@@ -1,8 +1,8 @@
 // The shop as pure rules over the save (docs/05-economy-monetization.md, sections 4-6): the
 // starter pack, the free coins for an ad, the creatures sold for coins and what a purchase gives.
-import { CREATURE_IDS, type CreatureId } from '../data/creatures';
-import { MS_PER_DAY } from '../data/clock';
-import { PRODUCTS, SHOP, type ProductKey } from '../data/shop';
+import { CREATURE_IDS, type CreatureId } from '../data/creatures/creatures';
+import { MS_PER_DAY } from '../data/app/clock';
+import { PRODUCTS, SHOP, type ProductKey } from '../data/economy/shop';
 import { creaturePrice, earn } from './economy';
 import { pastQuietRuns } from './first-runs';
 import type { Save } from './save/schema';

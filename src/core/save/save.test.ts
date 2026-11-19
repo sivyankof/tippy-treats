@@ -14,7 +14,7 @@ import {
   SaveError,
   type Migration,
 } from './migrations';
-import { MAX_BAKER_LEVEL } from '../../data/progression';
+import { MAX_BAKER_LEVEL } from '../../data/progression/progression';
 import { xpToNext } from '../progression';
 import { legacyXpToNext, V5_RECORD_UNLOCKS, v5XpToNext } from './frozen-v5';
 import { V7_CHECKPOINT_HEIGHTS, v7CheckpointsReached } from './frozen-v7';

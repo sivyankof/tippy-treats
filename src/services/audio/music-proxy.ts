@@ -1,4 +1,4 @@
-import type { MusicAsk, MusicTrackId } from '../../data/music';
+import type { MusicAsk, MusicTrackId } from '../../data/audio/music';
 import {
   NO_MUSIC,
   type MusicControl,

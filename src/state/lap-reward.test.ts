@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { RunResult } from '../core/run-result';
 import { createDefaultSave } from '../core/save/defaults';
-import { LAP_REWARD } from '../data/zones';
+import { LAP_REWARD } from '../data/zones/zones';
 import { loadTestState } from './test-state';
 
 const T0 = Date.UTC(2026, 5, 10, 12, 0, 0);

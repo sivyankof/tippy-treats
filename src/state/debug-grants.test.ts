@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { CREATURE_IDS, MAX_CREATURE_LEVEL } from '../data/creatures';
-import { MAX_BAKER_LEVEL } from '../data/progression';
+import { CREATURE_IDS, MAX_CREATURE_LEVEL } from '../data/creatures/creatures';
+import { MAX_BAKER_LEVEL } from '../data/progression/progression';
 import { withBakerLevelBumped, withCreaturesBumped } from './debug-grants';
 import { createTestState } from './test-state';
 

@@ -1,6 +1,6 @@
 import type { SimEvent, TowerState } from '../../core/tower-sim';
-import { CREATURES } from '../../data/creatures';
-import type { Rarity } from '../../data/rarity';
+import { CREATURES } from '../../data/creatures/creatures';
+import type { Rarity } from '../../data/creatures/rarity';
 import type { HapticKind } from '../../services/haptics/types';
 import { isBigBite } from '../../services/haptics/bite';
 import type { Services } from '../../services';

@@ -8,7 +8,7 @@ import {
   planetKey,
   type PlanetColors,
   type SpacePlanetId,
-} from '../../../data/space-planets';
+} from '../../../data/zones/space-planets';
 import { dimPixels, mixColor } from '../../../util/color';
 import { TWO_PI } from '../../../util/math';
 import {

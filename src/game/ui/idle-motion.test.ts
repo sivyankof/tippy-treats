@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { IDLE_MOTION, MAX_IDLE_PERIOD_MS } from '../../data/idle-motion';
+import { IDLE_MOTION, MAX_IDLE_PERIOD_MS } from '../../data/common/idle-motion';
 import { applyIdlePose, idlePose } from './idle-motion';
 
 describe('idlePose', () => {

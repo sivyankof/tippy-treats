@@ -5,7 +5,7 @@ import {
   type PuffSpec,
   type TravelSpec,
   type TwinkleSpec,
-} from '../../../data/backdrop-life';
+} from '../../../data/backdrop/backdrop-life';
 import { mixColor } from '../../../util/color';
 import {
   DEG_TO_RAD,

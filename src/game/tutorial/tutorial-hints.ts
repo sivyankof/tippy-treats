@@ -1,7 +1,7 @@
 import * as Phaser from 'phaser';
-import { BALANCE } from '../../data/balance';
-import { HUD_LAYOUT } from '../../data/hud-layout';
-import { TUTORIAL_ANIM } from '../../data/tutorial-anim';
+import { BALANCE } from '../../data/tower/balance';
+import { HUD_LAYOUT } from '../../data/run/hud-layout';
+import { TUTORIAL_ANIM } from '../../data/tutorial/tutorial-anim';
 import { t } from '../../i18n';
 import { oscillate01 } from '../../util/math';
 import { FLYING_REACH } from '../camera-layout';

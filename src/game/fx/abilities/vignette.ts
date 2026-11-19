@@ -1,6 +1,6 @@
 import type * as Phaser from 'phaser';
-import { ABILITY_ANIM } from '../../../data/ability-anim';
-import { MASTER_ANIM } from '../../../data/master-anim';
+import { ABILITY_ANIM } from '../../../data/creatures/ability-anim';
+import { MASTER_ANIM } from '../../../data/creatures/master-anim';
 import { effectsMode } from '../../effects-mode';
 import { DEPTH } from '../../depth';
 import { oscillate01 } from '../../../util/math';

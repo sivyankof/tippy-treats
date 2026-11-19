@@ -1,5 +1,5 @@
 import type { SimEvent, TowerState } from '../../core/tower-sim';
-import { BALANCE } from '../../data/balance';
+import { BALANCE } from '../../data/tower/balance';
 import { berriesFromEvents } from '../../core/berries';
 import type { GameState } from '../../state/game-state';
 import { isCovered } from '../fx/rule-state';

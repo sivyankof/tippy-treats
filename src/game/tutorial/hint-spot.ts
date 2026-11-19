@@ -1,4 +1,4 @@
-import { TUTORIAL_ANIM } from '../../data/tutorial-anim';
+import { TUTORIAL_ANIM } from '../../data/tutorial/tutorial-anim';
 
 const { gap, screenMargin } = TUTORIAL_ANIM.hintSpot;
 

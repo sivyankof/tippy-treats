@@ -1,4 +1,4 @@
-import { LICK } from '../../data/lick';
+import { LICK } from '../../data/glaze/lick';
 
 /**
  * Plan of the juice licks (docs/06, "Слизывание глазури", "Сок"): a berry burst leaves a stain on

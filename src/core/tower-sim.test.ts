@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { BALANCE } from '../data/balance';
+import { BALANCE } from '../data/tower/balance';
 import type { RunResult } from './run-result';
 import { speedCurve } from './speed-curve';
 import {

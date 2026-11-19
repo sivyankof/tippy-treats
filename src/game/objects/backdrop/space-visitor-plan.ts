@@ -2,8 +2,8 @@ import {
   SPACE_VISITOR,
   type SpaceVisitorId,
   type VisitorFlight,
-} from '../../../data/space-visitor';
-import { HUD_LAYOUT } from '../../../data/hud-layout';
+} from '../../../data/guests/space-visitor';
+import { HUD_LAYOUT } from '../../../data/run/hud-layout';
 import { flightClearBand } from '../../camera-layout';
 import { DEG_TO_RAD, lerp, pickRange, sineWave } from '../../../util/math';
 import { edgeFade } from './pass-timer';

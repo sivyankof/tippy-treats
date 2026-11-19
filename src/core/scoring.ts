@@ -1,4 +1,4 @@
-import { BALANCE } from '../data/balance';
+import { BALANCE } from '../data/tower/balance';
 
 /** Combo counter after a landed drop. */
 export function nextCombo(combo: number, perfect: boolean): number {

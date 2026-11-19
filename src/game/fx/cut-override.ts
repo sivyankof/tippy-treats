@@ -1,4 +1,4 @@
-import type { CutVariantName } from '../../data/cut-look';
+import type { CutVariantName } from '../../data/cuts/cut-look';
 
 /**
  * A variant every cut is forced to, or the next cut only: the benchmark forces strands on every

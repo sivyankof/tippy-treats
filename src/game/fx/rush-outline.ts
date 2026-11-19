@@ -1,5 +1,5 @@
 import type * as Phaser from 'phaser';
-import { RULE_ANIM } from '../../data/rule-anim';
+import { RULE_ANIM } from '../../data/zones/rule-anim';
 import { oscillate01, smoothstep } from '../../util/math';
 import { FLYING_FX_DEPTH } from './flying-fx-depth';
 import {

@@ -1,8 +1,8 @@
 import * as Phaser from 'phaser';
 import type { Rng } from '../../../core/rng';
-import type { EffectLevel } from '../../../data/effect-levels';
-import { TOWER_WEATHER } from '../../../data/tower-weather';
-import { WEATHER_TEX } from '../../../data/weather-look';
+import type { EffectLevel } from '../../../data/app/effect-levels';
+import { TOWER_WEATHER } from '../../../data/weather/tower-weather';
+import { WEATHER_TEX } from '../../../data/weather/weather-look';
 import { DEG_TO_RAD } from '../../../util/math';
 import { launchFlake, stepFlake, flakeAlpha, flakeGrow, type DustFlake } from './snow-dust-motion';
 

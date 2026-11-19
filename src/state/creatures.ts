@@ -9,7 +9,7 @@ import {
 } from '../core/economy';
 import type { Save } from '../core/save/schema';
 import { pickTeam, type TeamIds } from '../core/team';
-import type { CreatureId } from '../data/creatures';
+import type { CreatureId } from '../data/creatures/creatures';
 
 /** The save with this team; creatures the player does not own and repeats become empty slots. */
 export function withTeam(save: Save, team: TeamIds): Save {

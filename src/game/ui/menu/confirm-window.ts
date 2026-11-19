@@ -1,6 +1,6 @@
 import type * as Phaser from 'phaser';
-import { MENU } from '../../../data/menu-layout';
-import { PALETTE } from '../../../data/palette';
+import { MENU } from '../../../data/common/menu-layout';
+import { PALETTE } from '../../../data/common/palette';
 import { createTextButton } from '../button';
 import { createOutlinedText } from '../outlined-text';
 import { PopupWindow } from '../style/dialog-window';

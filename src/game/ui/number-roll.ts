@@ -1,4 +1,4 @@
-import { ANIM } from '../../data/anim';
+import { ANIM } from '../../data/common/anim';
 
 /** Roll length for a change of `change`: the shortest for 1, the longest from `numberRollBigChange` on. */
 export function rollDurationMs(change: number): number {

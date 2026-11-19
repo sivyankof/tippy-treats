@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { CREATURE_STYLE } from '../../../data/creature-style';
+import { CREATURE_STYLE } from '../../../data/creatures/creature-style';
 import { layerBox } from '../layer-draw';
 import { glossMarkFor } from './flat-draw';
 import { twinsGlossSpot } from './layered';

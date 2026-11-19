@@ -1,5 +1,5 @@
 import type * as Phaser from 'phaser';
-import { PALETTE } from '../../../data/palette';
+import { PALETTE } from '../../../data/common/palette';
 import { fillRibbon, type Pt } from '../plain-style';
 
 /** A point of a curve with the unit normal that points to the outer (upper) edge. */

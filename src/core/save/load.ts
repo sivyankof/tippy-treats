@@ -1,6 +1,6 @@
-import { CREATURE_IDS, MAX_CREATURE_LEVEL } from '../../data/creatures';
-import { MAX_BAKER_LEVEL, OVEN } from '../../data/progression';
-import { SAVE_DEFAULTS } from '../../data/save-defaults';
+import { CREATURE_IDS, MAX_CREATURE_LEVEL } from '../../data/creatures/creatures';
+import { MAX_BAKER_LEVEL, OVEN } from '../../data/progression/progression';
+import { SAVE_DEFAULTS } from '../../data/app/save-defaults';
 import { spaceLap } from '../space-laps';
 import { isCheckpointHeight, withReached, type CheckpointHeight } from '../checkpoints';
 import { xpToNext } from '../progression';

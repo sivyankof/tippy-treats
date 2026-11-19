@@ -1,7 +1,7 @@
 // Dev-only level grants as pure functions over the save (debug panel buttons).
 import type { Save } from '../core/save/schema';
-import { CREATURE_IDS, MAX_CREATURE_LEVEL } from '../data/creatures';
-import { MAX_BAKER_LEVEL } from '../data/progression';
+import { CREATURE_IDS, MAX_CREATURE_LEVEL } from '../data/creatures/creatures';
+import { MAX_BAKER_LEVEL } from '../data/progression/progression';
 
 /** The save at the given baker level, XP in the level reset, no level reward granted. */
 export function withBakerLevel(save: Save, level: number): Save {

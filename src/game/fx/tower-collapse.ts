@@ -1,4 +1,4 @@
-import { ANIM } from '../../data/anim';
+import { ANIM } from '../../data/common/anim';
 import { pickRange } from '../../util/math';
 import type { TowerView } from '../objects/tower-view';
 import { collapseDelayMs, collapseDurationMs } from './anim-curves';

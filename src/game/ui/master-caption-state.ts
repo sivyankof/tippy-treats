@@ -1,6 +1,6 @@
 import type { SimEvent } from '../../core/tower-sim';
-import type { CreatureId } from '../../data/creatures';
-import { MASTER_ANIM } from '../../data/master-anim';
+import type { CreatureId } from '../../data/creatures/creatures';
+import { MASTER_ANIM } from '../../data/creatures/master-anim';
 import type { EaseFn } from '../fx/ease';
 
 const cfg = MASTER_ANIM.caption;

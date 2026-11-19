@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { EDGE_SQUASH } from '../../data/edge-squash';
+import { EDGE_SQUASH } from '../../data/tower/edge-squash';
 import { BUBBLE_RIBS, hollowAt, ribHeight, ribLayoutFor, type RibRow } from './edge-squash-ribs';
 
 const SEED = 987654;

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { CREATURE_MATERIALS, type CreatureMaterial } from '../../data/creature-materials';
+import { CREATURE_MATERIALS, type CreatureMaterial } from '../../data/creatures/creature-materials';
 import { idleBurstOn, materialShape, type Shape } from './material-shape';
 
 const still = { timeMs: 0, swayShare: 0, phase: 0, shiverLeft: 0 };

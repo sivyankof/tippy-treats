@@ -1,5 +1,5 @@
-import type { CreatureId } from '../../data/creatures';
-import { LICK, type LickStyle } from '../../data/lick';
+import type { CreatureId } from '../../data/creatures/creatures';
+import { LICK, type LickStyle } from '../../data/glaze/lick';
 import { backOut, clamp01, MS_PER_SECOND, pickRange, smoothstep, TWO_PI } from '../../util/math';
 
 /** The big scene (the whole loop round the face) or the short one (one sideways stroke). */

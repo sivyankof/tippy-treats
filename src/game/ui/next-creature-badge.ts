@@ -1,11 +1,11 @@
 import type * as Phaser from 'phaser';
 import { nextCreature, type NextCreature } from '../../core/team-queue';
 import type { TeamSlots } from '../../core/sim-types';
-import { ANIM } from '../../data/anim';
-import { HUD_LAYOUT } from '../../data/hud-layout';
-import { MENU } from '../../data/menu-layout';
-import { IDLE_MOTION, IDLE_PHASE } from '../../data/idle-motion';
-import { PALETTE } from '../../data/palette';
+import { ANIM } from '../../data/common/anim';
+import { HUD_LAYOUT } from '../../data/run/hud-layout';
+import { MENU } from '../../data/common/menu-layout';
+import { IDLE_MOTION, IDLE_PHASE } from '../../data/common/idle-motion';
+import { PALETTE } from '../../data/common/palette';
 import { createCreatureIcon, setCreatureIcon } from './creature-icons';
 import { idlePose, type IdlePose } from './idle-motion';
 import { nextChipSpan, nextLabelPopScale } from './hud-row-layout';

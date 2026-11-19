@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { MASTERY_FRAME } from '../../data/mastery-look';
-import { MENU } from '../../data/menu-layout';
+import { MASTERY_FRAME } from '../../data/creatures/mastery-look';
+import { MENU } from '../../data/common/menu-layout';
 import {
   COLLECTION_BODY,
   crownSpot,

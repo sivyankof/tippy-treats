@@ -1,8 +1,8 @@
 import * as Phaser from 'phaser';
 import { addToTeam, removeFromTeam, type TeamIds } from '../../core/team';
 import { placeInSlot } from '../../core/team-place';
-import { clampLevel, type CreatureId } from '../../data/creatures';
-import { MENU } from '../../data/menu-layout';
+import { clampLevel, type CreatureId } from '../../data/creatures/creatures';
+import { MENU } from '../../data/common/menu-layout';
 import { t } from '../../i18n';
 import { services } from '../../services';
 import { gameState } from '../../state';

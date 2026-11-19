@@ -1,6 +1,6 @@
 import type * as Phaser from 'phaser';
 import type { DailyPayout } from '../../../core/daily';
-import { MENU } from '../../../data/menu-layout';
+import { MENU } from '../../../data/common/menu-layout';
 import { formatNumber, t, tn } from '../../../i18n';
 import { createOutlinedText } from '../outlined-text';
 import { fitText } from './fit-text';

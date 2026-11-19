@@ -1,7 +1,7 @@
 import * as Phaser from 'phaser';
 import type { Currency } from '../../../core/economy';
-import { MENU } from '../../../data/menu-layout';
-import { TREASURE } from '../../../data/treasure-anim';
+import { MENU } from '../../../data/common/menu-layout';
+import { TREASURE } from '../../../data/economy/treasure-anim';
 import { TREASURE_TEXTURES } from '../../fx/treasure-textures';
 import { shakeX } from '../shake-x';
 import { WalletChip } from './wallet-chip';

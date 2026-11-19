@@ -1,8 +1,8 @@
 import type * as Phaser from 'phaser';
 import { spaceLap } from '../../core/space-laps';
 import type { TowerState } from '../../core/tower-sim';
-import { BALANCE } from '../../data/balance';
-import { LAP_EDGE, LAP_EDGE_HEIGHT } from '../../data/lap-edge';
+import { BALANCE } from '../../data/tower/balance';
+import { LAP_EDGE, LAP_EDGE_HEIGHT } from '../../data/zones/lap-edge';
 import { effectsMode } from '../effects-mode';
 import type { TowerView } from '../objects/tower-view';
 import { bakeTexture } from '../ui/bake-texture';

@@ -1,7 +1,11 @@
 import * as Phaser from 'phaser';
 import { lapProgress } from '../../../core/space-laps';
 import { visitorOfLap, visitorPassRng, visitorSeedOf } from '../../../core/space-visitor-pick';
-import { SPACE_VISITOR, SPACE_VISITOR_IDS, type SpaceVisitorId } from '../../../data/space-visitor';
+import {
+  SPACE_VISITOR,
+  SPACE_VISITOR_IDS,
+  type SpaceVisitorId,
+} from '../../../data/guests/space-visitor';
 import { readDebugParams, readPerfParams } from '../../../util/debug-params';
 import { effectsMode } from '../../effects-mode';
 import { fxGuard } from '../../fx-guard';

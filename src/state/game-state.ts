@@ -28,11 +28,11 @@ import {
   withPurchasesRestored,
   withStarterPackShown,
 } from '../core/shop';
-import type { ProductKey } from '../data/shop';
+import type { ProductKey } from '../data/economy/shop';
 import type { TeamSlot } from '../core/sim-types';
 import { runTeam, type TeamIds } from '../core/team';
 import type { HintId, Save } from '../core/save/schema';
-import type { CreatureId } from '../data/creatures';
+import type { CreatureId } from '../data/creatures/creatures';
 import type { CalendarCell, StreakEntry } from '../core/streak';
 import { clockWentBack, localDay, msUntilLocalMidnight, now, utcDay } from '../util/clock';
 import {

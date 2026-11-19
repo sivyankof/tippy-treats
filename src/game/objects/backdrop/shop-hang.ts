@@ -1,6 +1,6 @@
-import { ANIM } from '../../../data/anim';
-import { HUD_LAYOUT } from '../../../data/hud-layout';
-import { SHOP_LOOK, WALL_LOOK } from '../../../data/window-look';
+import { ANIM } from '../../../data/common/anim';
+import { HUD_LAYOUT } from '../../../data/run/hud-layout';
+import { SHOP_LOOK, WALL_LOOK } from '../../../data/weather/window-look';
 
 /** Lowest point (px from the top of the screen, on the zone's first frame) of the awning and the lamps, with the bob of the awning. */
 export function hangBottom(): number {

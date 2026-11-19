@@ -1,8 +1,8 @@
 import { Rng } from '../../core/rng';
-import { BALANCE } from '../../data/balance';
-import type { CreatureId } from '../../data/creatures';
-import { GLAZE_DRIPS } from '../../data/glaze-drips';
-import { LICK, type LickStyle } from '../../data/lick';
+import { BALANCE } from '../../data/tower/balance';
+import type { CreatureId } from '../../data/creatures/creatures';
+import { GLAZE_DRIPS } from '../../data/glaze/glaze-drips';
+import { LICK, type LickStyle } from '../../data/glaze/lick';
 import { fxGuard } from '../fx-guard';
 import { effectsMode } from '../effects-mode';
 import { faceHalfSpan } from '../fx/glaze-growth';

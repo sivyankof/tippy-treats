@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { faceRecipe } from '../../data/creature-looks';
-import { GLAZE_DRIPS } from '../../data/glaze-drips';
+import { faceRecipe } from '../../data/creatures/creature-looks';
+import { GLAZE_DRIPS } from '../../data/glaze/glaze-drips';
 import {
   belowSpan,
   DropLimiter,

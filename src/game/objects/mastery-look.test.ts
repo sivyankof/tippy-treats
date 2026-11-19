@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { artRecipe } from '../../data/creature-looks';
+import { artRecipe } from '../../data/creatures/creature-looks';
 import { hasNewLook } from '../../core/mastery';
-import { MASTERY } from '../../data/mastery';
-import { CREATURE_IDS } from '../../data/creatures';
-import { GROWN_ACCENTS, GROWN_LOOKS, MASTERY_FRAME } from '../../data/mastery-look';
+import { MASTERY } from '../../data/creatures/mastery';
+import { CREATURE_IDS } from '../../data/creatures/creatures';
+import { GROWN_ACCENTS, GROWN_LOOKS, MASTERY_FRAME } from '../../data/creatures/mastery-look';
 import { artTopPad, creatureStage, layerArtKey } from './layer-art';
 
 describe('grown look', () => {

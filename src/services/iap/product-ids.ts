@@ -1,4 +1,4 @@
-import { PRODUCT_KEYS, type ProductKey } from '../../data/shop';
+import { PRODUCT_KEYS, type ProductKey } from '../../data/economy/shop';
 
 /**
  * Store identifiers of the products. They live only in `.env` (see `.env.example`), never in the

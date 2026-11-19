@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { MISSION_POOL, MISSIONS } from '../data/missions';
+import { MISSION_POOL, MISSIONS } from '../data/progression/missions';
 import { dailyUnlockLevel } from './daily';
 import {
   applyRunStats,

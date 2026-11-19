@@ -7,7 +7,7 @@ import {
   upgradeLocked,
   type PriceOption,
 } from '../../../core/economy';
-import { CREATURES, MAX_CREATURE_LEVEL, type CreatureId } from '../../../data/creatures';
+import { CREATURES, MAX_CREATURE_LEVEL, type CreatureId } from '../../../data/creatures/creatures';
 import { formatDecimal, t } from '../../../i18n';
 
 /** What the main button area of a creature card offers. */

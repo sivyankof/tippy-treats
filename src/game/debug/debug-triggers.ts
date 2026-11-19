@@ -1,5 +1,5 @@
-import type { CutVariantName } from '../../data/cut-look';
-import type { SquashKind } from '../../data/topper-squash';
+import type { CutVariantName } from '../../data/cuts/cut-look';
+import type { SquashKind } from '../../data/toppers/topper-squash';
 import type { CutHook } from './cut-debug';
 import type { SquashHook } from './squash-debug';
 

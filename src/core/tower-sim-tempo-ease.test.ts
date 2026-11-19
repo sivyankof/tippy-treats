@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { BALANCE } from '../data/balance';
+import { BALANCE } from '../data/tower/balance';
 import { TimingBot } from './bot';
 import { Rng } from './rng';
 import { config, STEP } from './sim-test-utils';

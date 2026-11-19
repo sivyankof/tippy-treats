@@ -1,8 +1,8 @@
 import * as Phaser from 'phaser';
-import { BACKDROP_FAR, type FarShape } from '../../../data/backdrop-far';
-import { MOUNTAIN_FAR_ZONES } from '../../../data/backdrop-mountains';
-import type { WeatherId } from '../../../data/weather';
-import { ZONES, type ZoneId } from '../../../data/zones';
+import { BACKDROP_FAR, type FarShape } from '../../../data/backdrop/backdrop-far';
+import { MOUNTAIN_FAR_ZONES } from '../../../data/backdrop/backdrop-mountains';
+import type { WeatherId } from '../../../data/weather/weather';
+import { ZONES, type ZoneId } from '../../../data/zones/zones';
 import { mixColor } from '../../../util/color';
 import { MS_PER_SECOND } from '../../../util/math';
 import { effectsMode } from '../../effects-mode';

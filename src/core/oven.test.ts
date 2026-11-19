@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { OVEN } from '../data/progression';
+import { OVEN } from '../data/progression/progression';
 import { bakeLayers, freshLeft, type OvenState } from './oven';
 
 const EMPTY: OvenState = { day: '', used: 0, carry: 0 };

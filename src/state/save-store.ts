@@ -3,7 +3,7 @@ import type { SessionTally } from './session-tally';
 import { createDefaultSave } from '../core/save/defaults';
 import { loadSave, serializeSave, type SaveSource } from '../core/save/load';
 import type { Save } from '../core/save/schema';
-import { SAVE_RETRY_MS, SAVE_WRITE_DEBOUNCE_MS, STORAGE_KEYS } from '../data/storage';
+import { SAVE_RETRY_MS, SAVE_WRITE_DEBOUNCE_MS, STORAGE_KEYS } from '../data/app/storage';
 import type { StorageService } from '../services/storage/types';
 
 /** Starts and stops the delayed write; the page uses timers, the tests a manual one. */

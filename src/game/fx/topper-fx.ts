@@ -1,9 +1,9 @@
 import * as Phaser from 'phaser';
 import type { TowerState } from '../../core/tower-sim';
 import { Rng } from '../../core/rng';
-import { BALANCE } from '../../data/balance';
-import { PLAIN_TOPPERS } from '../../data/plain-toppers';
-import { TOPPER_SQUASH } from '../../data/topper-squash';
+import { BALANCE } from '../../data/tower/balance';
+import { PLAIN_TOPPERS } from '../../data/toppers/plain-toppers';
+import { TOPPER_SQUASH } from '../../data/toppers/topper-squash';
 import { effectsMode } from '../effects-mode';
 import { DEPTH } from '../depth';
 import { faceHalfSpan } from './glaze-growth';

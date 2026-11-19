@@ -1,6 +1,6 @@
-import type { EffectLevel } from '../data/effect-levels';
-import type { WeatherId } from '../data/weather';
-import { WEATHER_BED, type BedKind } from '../data/weather-bed';
+import type { EffectLevel } from '../data/app/effect-levels';
+import type { WeatherId } from '../data/weather/weather';
+import { WEATHER_BED, type BedKind } from '../data/audio/weather-bed';
 
 /**
  * The bed that should sound now, or `null`: only when the owner's switch (`WEATHER_BED.enabled`) is

@@ -1,5 +1,5 @@
 import * as Phaser from 'phaser';
-import { LICK, type LickStyle } from '../../data/lick';
+import { LICK, type LickStyle } from '../../data/glaze/lick';
 import { frameLerp } from '../../util/math';
 import { devWarn } from '../dev-warn';
 import { fxGuard } from '../fx-guard';

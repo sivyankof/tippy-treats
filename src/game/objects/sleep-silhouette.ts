@@ -1,13 +1,13 @@
 import * as Phaser from 'phaser';
-import { BALANCE } from '../../data/balance';
-import { CREATURE_SLEEP } from '../../data/creature-style';
-import type { CreatureId } from '../../data/creatures';
+import { BALANCE } from '../../data/tower/balance';
+import { CREATURE_SLEEP } from '../../data/creatures/creature-style';
+import type { CreatureId } from '../../data/creatures/creatures';
 import { shade } from '../../util/color';
 import { bakeTexture } from '../ui/bake-texture';
 import { drawCreatureLayer } from './creature-art';
 import { sleepLook } from './creature-art/sleep-look';
 import { stroke } from './creature-art/primitives';
-import { artRecipe } from '../../data/creature-looks';
+import { artRecipe } from '../../data/creatures/creature-looks';
 import { artHeight, artOriginY, artTextureWidth, artTopPad, artWidth } from './layer-art';
 import { eyeArcPoints, sleepEyes } from './sleep-eyes';
 import { SleepLetters } from './sleep-letters';

@@ -1,5 +1,5 @@
-import { DIFFICULTY } from '../data/balance';
-import { SPACE_ZONE_INDEX } from '../data/zones';
+import { DIFFICULTY } from '../data/tower/balance';
+import { SPACE_ZONE_INDEX } from '../data/zones/zones';
 import { flyingSpeed } from './flight';
 import { MS_PER_SECOND } from '../util/math';
 import type { Rng } from './rng';

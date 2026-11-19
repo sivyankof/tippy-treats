@@ -1,8 +1,8 @@
 import type * as Phaser from 'phaser';
 import type { CutSide } from '../../../core/drop';
-import { artRecipe, type ArtRecipe } from '../../../data/creature-looks';
-import type { CreatureId } from '../../../data/creatures';
-import type { CreatureStage } from '../../../data/mastery-look';
+import { artRecipe, type ArtRecipe } from '../../../data/creatures/creature-looks';
+import type { CreatureId } from '../../../data/creatures/creatures';
+import type { CreatureStage } from '../../../data/creatures/mastery-look';
 import { layerBox } from '../layer-draw';
 import { drawBrownie, drawCrumb, drawHoney, drawSprinkle } from './baked';
 import { drawCaramel, drawGhost, drawLemon, drawPuff } from './creamy';

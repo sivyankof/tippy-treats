@@ -1,5 +1,5 @@
-import { CREATURE_IDS, type CreatureId } from '../data/creatures';
-import { NEAR_MISS } from '../data/progression';
+import { CREATURE_IDS, type CreatureId } from '../data/creatures/creatures';
+import { NEAR_MISS } from '../data/progression/progression';
 import { creaturePrice } from './economy';
 import { closestMission } from './missions';
 import { xpToNext } from './progression';

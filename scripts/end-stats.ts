@@ -1,5 +1,5 @@
 import type { FlyingLayer, SimEvent, TowerState } from '../src/core/sim-types';
-import { ZONES } from '../src/data/zones';
+import { ZONES } from '../src/data/zones/zones';
 import type { RunObserver } from './run-observer';
 
 export type EndRow = Record<string, string | number>;

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { MUSIC, MUSIC_TRACKS, type MusicTrackId } from '../../../data/music';
+import { MUSIC, MUSIC_TRACKS, type MusicTrackId } from '../../../data/audio/music';
 import { firstIndex, nextIndex, turnLength, turnOffset } from './playlist-turn';
 
 const shape = (track: MusicTrackId) => ({

@@ -6,7 +6,7 @@ import {
   musicAskFor,
   type MusicCue,
   type MusicTrackId,
-} from '../../../data/music';
+} from '../../../data/audio/music';
 import type { MusicHost } from '../music-control';
 import { NodeTally } from '../node-tally';
 import {

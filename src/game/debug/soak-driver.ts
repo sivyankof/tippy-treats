@@ -1,7 +1,7 @@
 import * as Phaser from 'phaser';
 import { CHECKPOINT_HEIGHTS } from '../../core/checkpoints';
-import { CREATURE_IDS } from '../../data/creatures';
-import { SOAK } from '../../data/soak';
+import { CREATURE_IDS } from '../../data/creatures/creatures';
+import { SOAK } from '../../data/debug/soak';
 import { services } from '../../services';
 import { gameState } from '../../state';
 import { setLang, type Lang } from '../../i18n';

@@ -1,5 +1,5 @@
-import { BALANCE } from '../data/balance';
-import { ZONES } from '../data/zones';
+import { BALANCE } from '../data/tower/balance';
+import { ZONES } from '../data/zones/zones';
 import { collectModifiers, dropModifiers } from './abilities/modifiers';
 import { runAbility, runCloudHooks, runLandingHooks, tickRunEffects } from './abilities/run';
 import type { Modifiers } from './abilities/types';

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { Rng } from '../../../core/rng';
-import { LOGICAL_SIZE } from '../../../data/screen';
-import { WEATHER_LOOK } from '../../../data/weather-look';
+import { LOGICAL_SIZE } from '../../../data/app/screen';
+import { WEATHER_LOOK } from '../../../data/weather/weather-look';
 import { laneCount, laneU, snowSpots, startU, wrapGap } from './weather-lanes';
 
 const SNOW = WEATHER_LOOK.snow;

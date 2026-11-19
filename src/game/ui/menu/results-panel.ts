@@ -1,5 +1,5 @@
 import type * as Phaser from 'phaser';
-import { MENU } from '../../../data/menu-layout';
+import { MENU } from '../../../data/common/menu-layout';
 import { createPlate, type VolumePlate } from '../style/volume';
 import type { Movable } from '../transition';
 import type { ResultsCoins } from './results-coins';

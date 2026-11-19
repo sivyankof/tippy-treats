@@ -1,5 +1,5 @@
-import { BALANCE } from '../data/balance';
-import type { CreatureId } from '../data/creatures';
+import { BALANCE } from '../data/tower/balance';
+import type { CreatureId } from '../data/creatures/creatures';
 import { openSlots, type TeamIds } from './team';
 
 /**

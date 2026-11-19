@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { BALANCE } from '../data/balance';
-import { ZONE_RULES } from '../data/zones';
+import { BALANCE } from '../data/tower/balance';
+import { ZONE_RULES } from '../data/zones/zones';
 import { layerSpeed } from './drop';
 import { Rng } from './rng';
 import {

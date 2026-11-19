@@ -5,7 +5,7 @@ import {
   type PileCurrency,
   type PilePieceKind,
   type PileSize,
-} from '../../data/treasure-piles';
+} from '../../data/economy/treasure-piles';
 import { bakeTexture } from '../ui/bake-texture';
 import { idleBob } from './idle-bob';
 import {

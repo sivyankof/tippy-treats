@@ -1,7 +1,7 @@
 import type * as Phaser from 'phaser';
 import type { TowerState } from '../../core/tower-sim';
-import { faceRecipe } from '../../data/creature-looks';
-import { GLAZE_DRIPS } from '../../data/glaze-drips';
+import { faceRecipe } from '../../data/creatures/creature-looks';
+import { GLAZE_DRIPS } from '../../data/glaze/glaze-drips';
 import { pickRange } from '../../util/math';
 import { effectsMode } from '../effects-mode';
 import { GlazeDropFall, type DropLanding } from '../fx/glaze-drop-fall';

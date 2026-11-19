@@ -1,0 +1,199 @@
+import type { ZoneId } from '../zones/zones';
+
+/** Texture keys of the pictures baked for the backdrops. Shared by the art code and the life data. */
+export const BD_TEX = {
+  puff: 'bd_puff',
+  /** The still picture of the whole backdrop that stands in for it behind the results screen. */
+  still: 'bd_still',
+  star: 'bd_star4',
+  kitchen: {
+    wallpaper: 'bd_k_wallpaper',
+    tiles: 'bd_k_tiles',
+    shelves: 'bd_k_shelves',
+    utensils: 'bd_k_utensils',
+    pot: 'bd_k_pot',
+    lid: 'bd_k_lid',
+    ladle: 'bd_k_ladle',
+    rail: 'bd_k_rail',
+    clock: 'bd_k_clock',
+    hand: 'bd_k_hand',
+    pendulum: 'bd_k_pendulum',
+    fly: 'bd_k_fly',
+    mug: 'bd_k_mug',
+    sheen: 'bd_k_sheen',
+  },
+  showcase: {
+    street: 'bd_s_street',
+    panes: 'bd_s_panes',
+    treats: 'bd_s_treats',
+    awning: 'bd_s_awning',
+    bulb: 'bd_s_bulb',
+    wire: 'bd_s_wire',
+    walker: 'bd_s_walker',
+    stand: 'bd_s_stand',
+    cake: 'bd_s_cake',
+    sprinkle: 'bd_s_sprinkle',
+  },
+  roof: {
+    far: 'bd_r_far',
+    mid: 'bd_r_mid',
+    near: 'bd_r_near',
+    pipes: 'bd_r_pipes',
+    bird: 'bd_r_bird',
+    chimney: 'bd_r_chimney',
+    rope: 'bd_r_rope',
+    shirt: 'bd_r_shirt',
+    sock: 'bd_r_sock',
+    sheet: 'bd_r_sheet',
+  },
+  clouds: {
+    far: 'bd_c_far',
+    mid: 'bd_c_mid',
+    near: 'bd_c_near',
+    haze: 'bd_c_haze',
+    balloon: 'bd_c_balloon',
+    plane: 'bd_c_plane',
+  },
+  stars: {
+    dust: 'bd_t_dust',
+    mid: 'bd_t_mid',
+    sparkles: 'bd_t_sparkles',
+    glow: 'bd_t_glow',
+    shooting: 'bd_t_shooting',
+    moon: 'bd_t_moon',
+    eye: 'bd_t_eye',
+  },
+  space: {
+    dust: 'bd_p_dust',
+    nebula: 'bd_p_nebula',
+    nebulaTwo: 'bd_p_nebula2',
+    sparkles: 'bd_p_sparkles',
+    satellite: 'bd_p_satellite',
+    comet: 'bd_p_comet',
+  },
+} as const;
+
+/** Sideways sway of a parallax layer: amplitude in px and the period. */
+export interface LayerSway {
+  px: number;
+  periodMs: number;
+}
+
+/** Numbers of the zone backdrops; colours are in `backdrop-colors.ts`, life in `backdrop-life.ts`. */
+export const BACKDROP = {
+  /** The old zone flows into the new one over this long (docs/06, "Смена зоны"). */
+  fadeMs: 1500,
+  /**
+   * The coming change is got ready ahead (docs/06, "Смена зоны"): from `leadLayers` layers before
+   * it, the next zone's pictures are baked and the zone is built hidden (in Space: the next lap's
+   * planet), in steps worked off at about `budgetMs` of work per frame.
+   */
+  prep: { leadLayers: 6, budgetMs: 4 },
+  /** The sky is a thin strip of `skyBands` rows stretched over the screen (the filter blends the rows). */
+  skyBands: 64,
+  skyBandHeight: 4,
+  skyWidth: 4,
+  /**
+   * Zones whose dark sky is baked as a small 2D picture with light noise (dither) so the 8-bit
+   * gradient shows no steps. `scale`: screen px covered by one picture pixel. `levels`: width of the
+   * noise in 8-bit colour levels. `rowsPerStep`: picture rows filled per bake step, so the work is
+   * spread over frames when the zone is prepared ahead.
+   */
+  skyDither: { zones: ['space'], scale: 4, levels: 1.5, rowsPerStep: 96 },
+  /**
+   * Space nebulae: soft white blobs computed straight into pixels. `blobAlpha`: opacity at a blob's
+   * centre (0..1). `alphaNoise`: noise on the alpha in 8-bit levels, against steps in the soft edge.
+   * `rowsPerStep`: tile rows filled per bake step.
+   */
+  nebula: { blobAlpha: 0.36, alphaNoise: 1.5, rowsPerStep: 32 },
+  /** The sky picture is a bit larger than the screen so its slow breathing never shows an edge. */
+  skyOverscan: 1.06,
+  skyBreathe: { amount: 0.012, periodMs: 1800 },
+  /** Side of the square parallax tile pictures. */
+  tile: 512,
+  /** Zone scenery draws between the base of the background and the counter. */
+  depthBase: 0.5,
+  depthStep: 0.4,
+  /**
+   * Sideways drift of the four parallax layers in px/s (back to front). Every zone has one
+   * wind: all layers move the same way (a positive value slides the picture to the left) and
+   * the nearer the layer, the faster it goes, so the layers read as depth and never shear.
+   * Walls and buildings stay slow; they only need to never stand still.
+   */
+  drift: {
+    // A swaying layer (see `sway`) ignores its drift value. The kitchen tiles carry nothing, so they drift on.
+    kitchen: [2, 3, 5, 5],
+    showcase: [3, 4, 7, 11],
+    roof: [3, 5, 8, 12],
+    clouds: [8, 14, 24, 40],
+    stars: [2, 3, 5, 8],
+    space: [2, 3, 5, 8],
+  } satisfies Record<ZoneId, readonly [number, number, number, number]>,
+  /**
+   * A layer that carries pictures fixed to it (a wall with a clock, a roof with a chimney) does not drift on one way, or those
+   * pictures would slide out from behind the tower: it sways to and fro (`tilePositionX = px * sin(2 pi t / periodMs)`, so 0 at
+   * the start), and what stands on it sways the same. `null`: the layer carries nothing fixed and drifts as `drift` says. A layer drawn above a layer with fixed pictures must sway too, or its
+   * shapes slide across them.
+   */
+  sway: {
+    kitchen: [null, null, { px: 12, periodMs: 16000 }, { px: 8, periodMs: 12000 }],
+    showcase: [null, null, { px: 12, periodMs: 16000 }, null],
+    roof: [null, { px: 10, periodMs: 14000 }, { px: 12, periodMs: 16000 }, null],
+    clouds: [null, null, null, null],
+    stars: [null, null, null, null],
+    space: [null, null, null, null],
+  } satisfies Record<ZoneId, readonly (LayerSway | null)[]>,
+  /** Alpha of each parallax layer (back to front) per zone. */
+  layerAlpha: {
+    kitchen: [1, 1, 1, 1],
+    showcase: [0.9, 0.55, 0.95, 0.85],
+    roof: [0.7, 0.95, 0.95, 0.75],
+    clouds: [0.7, 0.8, 0.9, 0.6],
+    stars: [0.8, 0.9, 0.9, 0.7],
+    space: [0.8, 0.55, 0.5, 0.9],
+  } satisfies Record<ZoneId, readonly [number, number, number, number]>,
+  /** Colour shift of whole parallax layers (space nebula): `from` to `to` and back every `ms`. */
+  layerTint: {
+    space: [
+      null,
+      { from: 0xff5cb8, to: 0x5cc8ff, ms: 22000 },
+      { from: 0x7c5cff, to: 0xff9a5c, ms: 31000 },
+      null,
+    ],
+  } as Partial<Record<ZoneId, readonly ({ from: number; to: number; ms: number } | null)[]>>,
+} as const;
+
+/** The kitchen counter under the tray: it stays in every zone and has a little life of its own. */
+export const COUNTER = {
+  topHeight: 40,
+  edgeHeight: 8,
+  /** The body is a tall rectangle so it never ends above the bottom of the screen. */
+  bodyDepth: 6000,
+  /** Barely visible breathing of the whole counter (alpha). */
+  breathe: { lo: 0.93, hi: 1, periodMs: 1900 },
+  /** A soft highlight running along the worktop and resting for `restShare` of each trip. */
+  sheen: { width: 240, alpha: 0.5, periodMs: 4600, restShare: 0.25 },
+  sheenHeight: 40,
+  sheenLayers: 6,
+  mug: {
+    width: 90,
+    height: 100,
+    x: 92,
+    /** How far the bottom of the mug sinks into the worktop face. */
+    sink: 14,
+    steam: {
+      texture: BD_TEX.puff,
+      tint: 0xffffff,
+      count: 4,
+      riseHeight: 130,
+      periodMs: 2600,
+      startScale: 0.35,
+      endScale: 0.95,
+      alpha: 0.6,
+      swayPx: 12,
+    },
+    /** Where the steam leaves the cup, from the centre of the picture. */
+    steamOffsetY: -58,
+    pulse: { amount: 0.01, ms: 1500 },
+  },
+} as const;

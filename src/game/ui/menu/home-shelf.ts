@@ -1,8 +1,8 @@
 import * as Phaser from 'phaser';
 import { openSlots } from '../../../core/team';
-import { BALANCE } from '../../../data/balance';
-import { MENU } from '../../../data/menu-layout';
-import { PALETTE } from '../../../data/palette';
+import { BALANCE } from '../../../data/tower/balance';
+import { MENU } from '../../../data/common/menu-layout';
+import { PALETTE } from '../../../data/common/palette';
 import { t } from '../../../i18n';
 import { gameState } from '../../../state';
 import { shade } from '../../../util/color';

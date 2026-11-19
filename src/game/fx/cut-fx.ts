@@ -1,12 +1,12 @@
 import * as Phaser from 'phaser';
 import { Rng } from '../../core/rng';
 import type { LayerPlan } from '../../core/sim-types';
-import { BALANCE } from '../../data/balance';
-import { LOGICAL_SIZE } from '../../data/screen';
+import { BALANCE } from '../../data/tower/balance';
+import { LOGICAL_SIZE } from '../../data/app/screen';
 import { lerp, smoothstep } from '../../util/math';
 import { mixColor } from '../../util/color';
-import type { CreatureId } from '../../data/creatures';
-import { CUT_LOOK } from '../../data/cut-look';
+import type { CreatureId } from '../../data/creatures/creatures';
+import { CUT_LOOK } from '../../data/cuts/cut-look';
 import { collectBakeSteps } from '../ui/bake-texture';
 import { dripTexturesFor, glazeEdgeTone } from '../objects/glaze-drip-layer';
 import { layerMarks } from '../objects/layer-marks';

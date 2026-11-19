@@ -1,5 +1,5 @@
 import type * as Phaser from 'phaser';
-import { ANIM } from '../../data/anim';
+import { ANIM } from '../../data/common/anim';
 import { picturePixel } from '../ui/bake-texture';
 import type { BodyFrame } from './edge-squash-marks';
 

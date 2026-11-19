@@ -1,4 +1,4 @@
-import { AUDIO_MIX } from '../../data/audio-mix';
+import { AUDIO_MIX } from '../../data/audio/audio-mix';
 import { limiterCurve, musicAudible, musicTarget, type DuckReason } from './mixer-math';
 import { NodeTally } from './node-tally';
 
@@ -9,7 +9,7 @@ import { NodeTally } from './node-tally';
  *   music bus ---------------->  master -> limiter -> destination
  *
  * Sounds connect to `sfxBus`, the music to `musicBus`. The bus switches and the music duck ramp
- * the bus gain, so nothing clicks. Numbers: `data/audio-mix.ts`.
+ * the bus gain, so nothing clicks. Numbers: `data/audio/audio-mix.ts`.
  */
 export class Mixer {
   readonly sfxBus: GainNode;

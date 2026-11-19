@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { STEP, config, untilFlying } from '../../../core/sim-test-utils';
 import { TowerSim } from '../../../core/tower-sim';
-import { ABILITY_ANIM } from '../../../data/ability-anim';
-import { BALANCE } from '../../../data/balance';
+import { ABILITY_ANIM } from '../../../data/creatures/ability-anim';
+import { BALANCE } from '../../../data/tower/balance';
 
 describe('jelly slide', () => {
   const { slideMs, slideMarginMs } = ABILITY_ANIM.jelly;

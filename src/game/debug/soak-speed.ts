@@ -1,5 +1,5 @@
 import type * as Phaser from 'phaser';
-import { BALANCE } from '../../data/balance';
+import { BALANCE } from '../../data/tower/balance';
 
 /**
  * Game-time multiplier of the dev-only smoke lap (`tippySoak.smoke()`), applied in ONE place: the

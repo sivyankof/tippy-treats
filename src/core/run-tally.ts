@@ -1,4 +1,4 @@
-import { CREATURE_IDS, type CreatureId } from '../data/creatures';
+import { CREATURE_IDS, type CreatureId } from '../data/creatures/creatures';
 import type { CoinSource, SimEvent } from './sim-types';
 
 /** What a run collected, for the breakdown on the results screen. */

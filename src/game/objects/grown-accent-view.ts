@@ -1,12 +1,12 @@
 import * as Phaser from 'phaser';
-import { BALANCE } from '../../data/balance';
-import type { CreatureId } from '../../data/creatures';
+import { BALANCE } from '../../data/tower/balance';
+import type { CreatureId } from '../../data/creatures/creatures';
 import {
   GROWN_ACCENTS,
   GROWN_ACCENT_LEVELS,
   GROWN_ACCENT_TEXTURES,
   type GrownAccent,
-} from '../../data/mastery-look';
+} from '../../data/creatures/mastery-look';
 import { TWO_PI } from '../../util/math';
 import { effectsMode } from '../effects-mode';
 import { sparklerTip } from './creature-art/grown-anchors';

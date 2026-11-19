@@ -1,4 +1,4 @@
-import { ANIM } from '../../data/anim';
+import { ANIM } from '../../data/common/anim';
 import { REFERENCE_FRAME_MS } from '../../util/math';
 
 /** Out-and-back curve: 0 at both ends of `t` in 0..1, 1 in the middle. */

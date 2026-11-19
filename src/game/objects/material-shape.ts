@@ -1,4 +1,4 @@
-import type { CreatureMaterial, MaterialWave } from '../../data/creature-materials';
+import type { CreatureMaterial, MaterialWave } from '../../data/creatures/creature-materials';
 import { sineWave, TWO_PI } from '../../util/math';
 
 /** What the shape of a material layer depends on in one frame. */

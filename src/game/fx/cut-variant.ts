@@ -1,6 +1,6 @@
 import { Rng } from '../../core/rng';
-import { CUT_LOOK, type CutVariantName } from '../../data/cut-look';
-import type { EffectLevel } from '../../data/effect-levels';
+import { CUT_LOOK, type CutVariantName } from '../../data/cuts/cut-look';
+import type { EffectLevel } from '../../data/app/effect-levels';
 
 /** What a cut shows besides the falling piece and the crumbs (a piece always falls, thin ones too). */
 export interface CutVariant {

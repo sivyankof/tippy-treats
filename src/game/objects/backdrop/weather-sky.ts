@@ -1,12 +1,12 @@
 import * as Phaser from 'phaser';
 import { Rng } from '../../../core/rng';
-import type { WeatherId } from '../../../data/weather';
-import { STRIKE_SIDES, WEATHER_LOOK, WEATHER_TEX } from '../../../data/weather-look';
-import type { ZoneId } from '../../../data/zones';
+import type { WeatherId } from '../../../data/weather/weather';
+import { STRIKE_SIDES, WEATHER_LOOK, WEATHER_TEX } from '../../../data/weather/weather-look';
+import type { ZoneId } from '../../../data/zones/zones';
 import { TWO_PI } from '../../../util/math';
 import { effectsMode } from '../../effects-mode';
-import { FLIGHT_CLEAR } from '../../../data/flight-clear';
-import { HUD_LAYOUT } from '../../../data/hud-layout';
+import { FLIGHT_CLEAR } from '../../../data/backdrop/flight-clear';
+import { HUD_LAYOUT } from '../../../data/run/hud-layout';
 import { flightClearBand, hudFloor, hudKeepOutFade } from '../../camera-layout';
 import type { FrameCtx, Life } from './life';
 import { inSky } from './layer-anchor';

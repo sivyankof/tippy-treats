@@ -1,4 +1,4 @@
-import { LICK } from '../../data/lick';
+import { LICK } from '../../data/glaze/lick';
 
 /**
  * The centre line of the tongue as a smooth chain of samples: a position, the unit direction of

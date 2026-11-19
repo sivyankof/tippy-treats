@@ -1,10 +1,10 @@
 import * as Phaser from 'phaser';
-import { CREATURES, type CreatureId } from '../../../data/creatures';
-import { MENU } from '../../../data/menu-layout';
-import { MASTERY_FRAME } from '../../../data/mastery-look';
-import { PALETTE } from '../../../data/palette';
+import { CREATURES, type CreatureId } from '../../../data/creatures/creatures';
+import { MENU } from '../../../data/common/menu-layout';
+import { MASTERY_FRAME } from '../../../data/creatures/mastery-look';
+import { PALETTE } from '../../../data/common/palette';
 import { parseHex } from '../../../util/color';
-import { RARITY_COLORS } from '../../../data/rarity';
+import { RARITY_COLORS } from '../../../data/creatures/rarity';
 import { t } from '../../../i18n';
 import { createOutlinedText, createStrokedText } from '../outlined-text';
 import { VolumePlate, faceOffsetY } from '../style/volume';

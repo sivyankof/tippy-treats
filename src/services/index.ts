@@ -1,10 +1,10 @@
-import { STUB_PRICES } from '../data/iap-stub';
-import { PRODUCT_KEYS, PRODUCTS } from '../data/shop';
+import { STUB_PRICES } from '../data/economy/iap-stub';
+import { PRODUCT_KEYS, PRODUCTS } from '../data/economy/shop';
 import { t } from '../i18n';
 import { WebAds } from './rewarded-video/web';
 import type { AdsDevControl, AdsService } from './rewarded-video/types';
 import { createBrowserAudioContext, WebAudioService } from './audio/web';
-import { MUSIC_PLAYLIST } from '../data/music';
+import { MUSIC_PLAYLIST } from '../data/audio/music';
 import { playableTracks, setupAudioSession } from './audio/music/audio-session';
 import { createMusicPreload } from './audio/music/music-preload';
 import { playlistPlayerFactory } from './audio/music/playlist-player';

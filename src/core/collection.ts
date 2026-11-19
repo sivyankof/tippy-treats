@@ -1,4 +1,4 @@
-import { CREATURE_IDS, CREATURES, type CreatureId } from '../data/creatures';
+import { CREATURE_IDS, CREATURES, type CreatureId } from '../data/creatures/creatures';
 import type { Currency } from './economy';
 import type { OwnedCreatures } from './team';
 

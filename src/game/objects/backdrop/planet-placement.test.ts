@@ -1,13 +1,13 @@
 import { describe, expect, it } from 'vitest';
-import { LOGICAL_SIZE } from '../../../data/screen';
+import { LOGICAL_SIZE } from '../../../data/app/screen';
 import {
   PLANET_DIM,
   PLANET_LOOK,
   PLANET_PLACE,
   SPACE_PLANET_IDS,
   type SpacePlanetId,
-} from '../../../data/space-planets';
-import { BALANCE } from '../../../data/balance';
+} from '../../../data/zones/space-planets';
+import { BALANCE } from '../../../data/tower/balance';
 import { lapFirstIndex, lapProgress, spaceWidthLimit } from '../../../core/space-laps';
 import { flightClearBand } from '../../camera-layout';
 import { planetSize } from './dessert-planets';

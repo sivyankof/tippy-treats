@@ -2,10 +2,10 @@ import type {
   CreatureMaterial,
   MaterialBurst,
   MaterialTexture,
-} from '../../data/creature-materials';
-import { BALANCE } from '../../data/balance';
-import type { CreatureId } from '../../data/creatures';
-import { EDGE_SQUASH } from '../../data/edge-squash';
+} from '../../data/creatures/creature-materials';
+import { BALANCE } from '../../data/tower/balance';
+import type { CreatureId } from '../../data/creatures/creatures';
+import { EDGE_SQUASH } from '../../data/tower/edge-squash';
 import { parseHex } from '../../util/color';
 import { effectsMode } from '../effects-mode';
 import { creatureColors } from '../objects/creature-art/primitives';

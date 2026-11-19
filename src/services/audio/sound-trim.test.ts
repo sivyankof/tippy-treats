@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { SOUND_IDS } from './sound-book';
-import { SOUND_TRIM_DB } from '../../data/sound-trim';
+import { SOUND_TRIM_DB } from '../../data/audio/sound-trim';
 
 describe('SOUND_TRIM_DB', () => {
   it('trims only sounds of the registry', () => {

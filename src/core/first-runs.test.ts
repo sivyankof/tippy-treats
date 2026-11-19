@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { FIRST_RUNS } from '../data/first-runs';
+import { FIRST_RUNS } from '../data/economy/first-runs';
 import { isCleanRun, pastQuietRuns } from './first-runs';
 
 describe('first runs', () => {

@@ -1,6 +1,6 @@
 import type { ReducedFxSetting } from '../core/save/schema';
-import { ANIM } from '../data/anim';
-import { EFFECT_LEVELS, type EffectLevel } from '../data/effect-levels';
+import { ANIM } from '../data/common/anim';
+import { EFFECT_LEVELS, type EffectLevel } from '../data/app/effect-levels';
 import { FrameWorkWatch } from './fx/frame-work-watch';
 
 const FULL = EFFECT_LEVELS.indexOf('full');

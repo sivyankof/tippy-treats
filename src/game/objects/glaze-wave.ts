@@ -1,7 +1,7 @@
 import type { CutSide } from '../../core/drop';
 import { Rng } from '../../core/rng';
-import { GLAZE_DRIPS } from '../../data/glaze-drips';
-import { PLAIN_LAYER } from '../../data/plain-layers';
+import { GLAZE_DRIPS } from '../../data/glaze/glaze-drips';
+import { PLAIN_LAYER } from '../../data/tower/plain-layers';
 import { GOLDEN } from '../../util/math';
 import type { LayerBox } from './layer-draw';
 

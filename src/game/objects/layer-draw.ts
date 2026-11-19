@@ -1,8 +1,8 @@
 import type * as Phaser from 'phaser';
 import type { CutSide } from '../../core/drop';
-import { ANIM } from '../../data/anim';
-import { BALANCE } from '../../data/balance';
-import { PALETTE } from '../../data/palette';
+import { ANIM } from '../../data/common/anim';
+import { BALANCE } from '../../data/tower/balance';
+import { PALETTE } from '../../data/common/palette';
 import { mixColor, shade } from '../../util/color';
 
 /** Outline of a body: its fill darkened by this much. */

@@ -1,5 +1,5 @@
 import * as Phaser from 'phaser';
-import { ANIM } from '../data/anim';
+import { ANIM } from '../data/common/anim';
 import { effectsMode } from './effects-mode';
 import { FrameWorkStats } from './fx/frame-work-stats';
 

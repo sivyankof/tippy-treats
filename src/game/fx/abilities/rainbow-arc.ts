@@ -1,6 +1,6 @@
 import * as Phaser from 'phaser';
-import { ABILITY_ANIM } from '../../../data/ability-anim';
-import { RAINBOW_BAND_COLORS } from '../../../data/rainbow-look';
+import { ABILITY_ANIM } from '../../../data/creatures/ability-anim';
+import { RAINBOW_BAND_COLORS } from '../../../data/creatures/rainbow-look';
 import { clamp01, frameLerp } from '../../../util/math';
 import { DEPTH } from '../../depth';
 import { easeFn } from '../ease';

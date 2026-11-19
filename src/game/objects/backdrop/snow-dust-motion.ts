@@ -1,4 +1,4 @@
-import { TOWER_WEATHER } from '../../../data/tower-weather';
+import { TOWER_WEATHER } from '../../../data/weather/tower-weather';
 import { smoothstep } from '../../../util/math';
 
 const DUST = TOWER_WEATHER.dust;

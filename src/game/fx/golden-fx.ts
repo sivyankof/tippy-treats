@@ -1,7 +1,7 @@
 import type * as Phaser from 'phaser';
 import type { TowerState } from '../../core/tower-sim';
-import { BALANCE } from '../../data/balance';
-import { TREASURE } from '../../data/treasure-anim';
+import { BALANCE } from '../../data/tower/balance';
+import { TREASURE } from '../../data/economy/treasure-anim';
 import { oscillate01, TWO_PI } from '../../util/math';
 import { effectsMode } from '../effects-mode';
 import type { FlyingLayerView } from '../objects/flying-layer-view';

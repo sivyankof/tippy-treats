@@ -1,4 +1,4 @@
-import { CLIP_ALPHA_THRESHOLD, type ClipSide } from '../data/clip-guard';
+import { CLIP_ALPHA_THRESHOLD, type ClipSide } from '../data/debug/clip-guard';
 
 /** How many noticeably opaque pixels lie beyond each side of a field. */
 export type EdgeCounts = Record<ClipSide, number>;

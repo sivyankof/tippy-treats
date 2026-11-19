@@ -1,6 +1,6 @@
 import * as Phaser from 'phaser';
-import { ABILITY_ANIM } from '../../../data/ability-anim';
-import { ANIM } from '../../../data/anim';
+import { ABILITY_ANIM } from '../../../data/creatures/ability-anim';
+import { ANIM } from '../../../data/common/anim';
 import { oscillate01, TWO_PI } from '../../../util/math';
 import { DEPTH } from '../../depth';
 import { FX_TEXTURES } from '../fx-textures';

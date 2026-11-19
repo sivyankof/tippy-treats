@@ -1,8 +1,8 @@
 import type * as Phaser from 'phaser';
-import { GROWN_ACCENT_TEXTURES } from '../../data/mastery-look';
-import { PALETTE } from '../../data/palette';
+import { GROWN_ACCENT_TEXTURES } from '../../data/creatures/mastery-look';
+import { PALETTE } from '../../data/common/palette';
 import { starPoints } from '../objects/creature-art/rainbow-geometry';
-import { FIELD_PAD } from '../../data/picture-fields';
+import { FIELD_PAD } from '../../data/common/picture-fields';
 import { bakePadded, bakeTexture } from '../ui/bake-texture';
 import { fillPolygon } from './plain-style';
 

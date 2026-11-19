@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { ANIM } from '../../data/anim';
-import { RULE_ANIM } from '../../data/rule-anim';
+import { ANIM } from '../../data/common/anim';
+import { RULE_ANIM } from '../../data/zones/rule-anim';
 import { shadowLook } from './shadow-emphasis';
 
 const cfg = RULE_ANIM.cloud.shadow;

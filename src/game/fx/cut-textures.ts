@@ -1,5 +1,5 @@
 import * as Phaser from 'phaser';
-import { CUT_LOOK, CUT_PICTURE, CUT_TEXTURES } from '../../data/cut-look';
+import { CUT_LOOK, CUT_PICTURE, CUT_TEXTURES } from '../../data/cuts/cut-look';
 import { bakeTexture } from '../ui/bake-texture';
 
 const { pad, outline } = CUT_PICTURE;

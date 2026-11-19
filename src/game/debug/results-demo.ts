@@ -2,7 +2,7 @@ import { lapRewardBerries } from '../../core/space-laps';
 import { checkpointRows, checkpointsReached } from '../../core/checkpoints';
 import type { RunResult } from '../../core/run-result';
 import type { RunTally } from '../../core/run-tally';
-import { RESULTS_DEMO, type ResultsDemoCase } from '../../data/results-demo';
+import { RESULTS_DEMO, type ResultsDemoCase } from '../../data/debug/results-demo';
 import { gameState } from '../../state';
 import { EMPTY_SUMMARY, type RunSummary } from '../../state/game-state';
 import type { ResultsData } from '../scene-keys';

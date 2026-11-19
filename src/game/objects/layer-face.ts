@@ -1,8 +1,8 @@
 import * as Phaser from 'phaser';
-import { ANIM } from '../../data/anim';
-import type { FaceRecipe } from '../../data/creature-looks';
-import { LICK } from '../../data/lick';
-import { TOWER_WEATHER } from '../../data/tower-weather';
+import { ANIM } from '../../data/common/anim';
+import type { FaceRecipe } from '../../data/creatures/creature-looks';
+import { LICK } from '../../data/glaze/lick';
+import { TOWER_WEATHER } from '../../data/weather/tower-weather';
 import { frameLerp } from '../../util/math';
 import { fxGuard } from '../fx-guard';
 import { FaceParts } from './face-parts';
@@ -10,7 +10,7 @@ import { faceLayout } from './face-recipe';
 import { FaceLick } from './face-lick';
 import { YAWN_TOTAL_MS, fitYawnMouth, yawnPose, type YawnMouth, type YawnPose } from './face-yawn';
 import type { LickFrame, LickKind, LickScene, LoopShape } from './lick-plan';
-import type { LickStyle } from '../../data/lick';
+import type { LickStyle } from '../../data/glaze/lick';
 import {
   FaceState,
   resolveExpression,

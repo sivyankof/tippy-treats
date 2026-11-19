@@ -1,5 +1,5 @@
 import type * as Phaser from 'phaser';
-import { SPACE_VISITOR, SPACE_VISITOR_COLORS as K } from '../../../data/space-visitor';
+import { SPACE_VISITOR, SPACE_VISITOR_COLORS as K } from '../../../data/guests/space-visitor';
 import { DEG_TO_RAD, TWO_PI } from '../../../util/math';
 import {
   drawGlossMark,

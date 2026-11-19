@@ -1,4 +1,4 @@
-import { BALANCE } from '../data/balance';
+import { BALANCE } from '../data/tower/balance';
 import {
   SHOWCASE_ZONE_INDEX,
   SPACE_RULE_POOL,
@@ -7,7 +7,7 @@ import {
   ZONES,
   type LayerRuleKind,
   type ZoneDef,
-} from '../data/zones';
+} from '../data/zones/zones';
 import type { Rng } from './rng';
 
 /**

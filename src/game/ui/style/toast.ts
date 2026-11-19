@@ -1,6 +1,6 @@
 import type * as Phaser from 'phaser';
-import { PALETTE } from '../../../data/palette';
-import { MENU } from '../../../data/menu-layout';
+import { PALETTE } from '../../../data/common/palette';
+import { MENU } from '../../../data/common/menu-layout';
 import { fitText } from '../menu/fit-text';
 import { createOutlinedText } from '../outlined-text';
 import { createPlate } from './volume';

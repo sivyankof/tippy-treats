@@ -1,7 +1,7 @@
 import type * as Phaser from 'phaser';
-import { CUT_VARIANT_NAMES } from '../../data/cut-look';
-import { BALANCE } from '../../data/balance';
-import { PALETTE } from '../../data/palette';
+import { CUT_VARIANT_NAMES } from '../../data/cuts/cut-look';
+import { BALANCE } from '../../data/tower/balance';
+import { PALETTE } from '../../data/common/palette';
 import { cssColor } from '../../util/color';
 import { effectsMode } from '../effects-mode';
 import { frameWorkStats } from '../frame-work';

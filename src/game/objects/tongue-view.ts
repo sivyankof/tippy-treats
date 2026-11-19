@@ -1,6 +1,6 @@
 import * as Phaser from 'phaser';
-import { LICK } from '../../data/lick';
-import { PALETTE } from '../../data/palette';
+import { LICK } from '../../data/glaze/lick';
+import { PALETTE } from '../../data/common/palette';
 import { bakeTexture } from '../ui/bake-texture';
 import { loopPoint, type LickScene, type LoopShape } from './lick-plan';
 import type { TongueParts } from './tongue-graphics';

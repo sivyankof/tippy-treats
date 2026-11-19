@@ -1,6 +1,6 @@
 import type * as Phaser from 'phaser';
-import { FIELD_PAD } from '../../data/picture-fields';
-import { VIDEO_ICON_LOOK } from '../../data/video-icon-look';
+import { FIELD_PAD } from '../../data/common/picture-fields';
+import { VIDEO_ICON_LOOK } from '../../data/economy/video-icon-look';
 import { paddedScale } from '../../util/field-pad';
 import { DEG_TO_RAD } from '../../util/math';
 import { bakePadded } from '../ui/bake-texture';

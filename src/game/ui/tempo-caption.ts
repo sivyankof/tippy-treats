@@ -1,6 +1,6 @@
-import { ANIM } from '../../data/anim';
-import { HUD_LAYOUT } from '../../data/hud-layout';
-import type { EffectLevel } from '../../data/effect-levels';
+import { ANIM } from '../../data/common/anim';
+import { HUD_LAYOUT } from '../../data/run/hud-layout';
+import type { EffectLevel } from '../../data/app/effect-levels';
 import type { SpotRect } from '../tutorial/hint-spot';
 
 const { inMs, holdMs, outMs, rise } = ANIM.tempoChip.caption;

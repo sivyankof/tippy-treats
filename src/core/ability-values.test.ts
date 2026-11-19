@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { CREATURE_IDS, MAX_CREATURE_LEVEL } from '../data/creatures';
+import { CREATURE_IDS, MAX_CREATURE_LEVEL } from '../data/creatures/creatures';
 import { abilityChanges, abilityValues } from './ability-values';
 
 describe('ability values', () => {

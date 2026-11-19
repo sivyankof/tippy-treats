@@ -1,6 +1,11 @@
 import type { TeamSlot } from '../../core/sim-types';
 import { checkpointStartWidth, isCheckpointHeight } from '../../core/checkpoints';
-import { PERF, PERF_SEGMENTS, type PerfSegmentDef, type PerfSegmentId } from '../../data/perf';
+import {
+  PERF,
+  PERF_SEGMENTS,
+  type PerfSegmentDef,
+  type PerfSegmentId,
+} from '../../data/debug/perf';
 import type { PerfParams } from '../../util/debug-params';
 import { toTeamSlots } from '../debug/debug-team';
 import { effectsMode } from '../effects-mode';

@@ -1,4 +1,4 @@
-import { BALANCE } from '../data/balance';
+import { BALANCE } from '../data/tower/balance';
 import { describe, expect, it } from 'vitest';
 import { comboWidening, nextCombo, normalScore, perfectScore } from './scoring';
 

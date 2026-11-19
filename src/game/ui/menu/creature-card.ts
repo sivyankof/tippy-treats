@@ -1,10 +1,10 @@
 import * as Phaser from 'phaser';
 import { unlockHint, unlockHints, type UnlockHint } from '../../../core/collection';
 import { hasNewLook } from '../../../core/mastery';
-import { CREATURES, type CreatureId } from '../../../data/creatures';
-import { MENU } from '../../../data/menu-layout';
-import { PALETTE } from '../../../data/palette';
-import { RARITY_COLORS } from '../../../data/rarity';
+import { CREATURES, type CreatureId } from '../../../data/creatures/creatures';
+import { MENU } from '../../../data/common/menu-layout';
+import { PALETTE } from '../../../data/common/palette';
+import { RARITY_COLORS } from '../../../data/creatures/rarity';
 import { t } from '../../../i18n';
 import { CreaturePortrait } from '../../objects/creature-portrait';
 import { SleepingSilhouette } from '../../objects/sleep-silhouette';

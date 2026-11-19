@@ -1,8 +1,12 @@
 import * as Phaser from 'phaser';
 import { Rng } from '../../../core/rng';
-import { STREET_WEATHER, streetFallView, type StreetFallKind } from '../../../data/street-weather';
-import type { WeatherId } from '../../../data/weather';
-import { WEATHER_LOOK, WEATHER_TEX } from '../../../data/weather-look';
+import {
+  STREET_WEATHER,
+  streetFallView,
+  type StreetFallKind,
+} from '../../../data/weather/street-weather';
+import type { WeatherId } from '../../../data/weather/weather';
+import { WEATHER_LOOK, WEATHER_TEX } from '../../../data/weather/weather-look';
 import { flightClearBand } from '../../camera-layout';
 import { effectsMode } from '../../effects-mode';
 import { inSky } from './layer-anchor';

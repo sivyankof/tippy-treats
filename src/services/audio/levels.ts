@@ -1,4 +1,4 @@
-import { AUDIO_MIX } from '../../data/audio-mix';
+import { AUDIO_MIX } from '../../data/audio/audio-mix';
 
 /** Level of a linear amplitude in dBFS; silence is -Infinity. */
 export function toDb(amplitude: number): number {

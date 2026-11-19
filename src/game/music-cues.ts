@@ -1,5 +1,5 @@
 import * as Phaser from 'phaser';
-import { musicAskFor, type MusicCue } from '../data/music';
+import { musicAskFor, type MusicCue } from '../data/audio/music';
 import { services } from '../services';
 import { HoldCount } from '../util/hold-count';
 import { SCENES } from './scene-keys';

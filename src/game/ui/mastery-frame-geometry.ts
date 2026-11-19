@@ -1,4 +1,4 @@
-import { MASTERY_FRAME } from '../../data/mastery-look';
+import { MASTERY_FRAME } from '../../data/creatures/mastery-look';
 
 /** The plate a frame wraps: the collection card unless given. */
 export interface FrameBody {

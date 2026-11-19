@@ -1,7 +1,7 @@
-import { faceRecipe } from '../../../data/creature-looks';
-import { CREATURE_STYLE } from '../../../data/creature-style';
-import { RAINBOW_LOOK } from '../../../data/rainbow-look';
-import { PALETTE } from '../../../data/palette';
+import { faceRecipe } from '../../../data/creatures/creature-looks';
+import { CREATURE_STYLE } from '../../../data/creatures/creature-style';
+import { RAINBOW_LOOK } from '../../../data/creatures/rainbow-look';
+import { PALETTE } from '../../../data/common/palette';
 import { mixColor, parseHex } from '../../../util/color';
 import {
   drawGlossMark,

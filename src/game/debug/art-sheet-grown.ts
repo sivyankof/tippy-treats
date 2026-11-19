@@ -1,6 +1,6 @@
-import { ART_SHEET } from '../../data/art-sheet';
-import { CREATURE_IDS } from '../../data/creatures';
-import { MASTERY } from '../../data/mastery';
+import { ART_SHEET } from '../../data/debug/art-sheet';
+import { CREATURE_IDS } from '../../data/creatures/creatures';
+import { MASTERY } from '../../data/creatures/mastery';
 import { artTopPad } from '../objects/layer-art';
 import { LayerView } from '../objects/layer-view';
 import type { LivePicture } from './art-sheet-live';

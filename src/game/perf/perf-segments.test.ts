@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { zoneIndexOf } from '../../core/zones';
-import { PERF_SEGMENTS, PERF_TRANSITION, type PerfSegmentDef } from '../../data/perf';
+import { PERF_SEGMENTS, PERF_TRANSITION, type PerfSegmentDef } from '../../data/debug/perf';
 
 describe('transition segments', () => {
   const transitions: PerfSegmentDef[] = PERF_SEGMENTS.filter((segment) =>

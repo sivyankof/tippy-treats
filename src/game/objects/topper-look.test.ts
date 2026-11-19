@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { PLAIN_TOPPERS, TOPPER_KINDS } from '../../data/plain-toppers';
+import { PLAIN_TOPPERS, TOPPER_KINDS } from '../../data/toppers/plain-toppers';
 import { plainLookAt } from './plain-look';
 import {
   carriedOffset,

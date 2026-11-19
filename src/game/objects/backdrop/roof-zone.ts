@@ -1,10 +1,10 @@
 import type * as Phaser from 'phaser';
-import { BD_TEX } from '../../../data/backdrop';
-import { MOUNTAIN_SLOT } from '../../../data/backdrop-mountains';
-import { BACKDROP_COLORS } from '../../../data/backdrop-colors';
-import { BACKDROP_LIFE } from '../../../data/backdrop-life';
-import { WEATHER_LOOK } from '../../../data/weather-look';
-import type { WeatherId } from '../../../data/weather';
+import { BD_TEX } from '../../../data/backdrop/backdrop';
+import { MOUNTAIN_SLOT } from '../../../data/backdrop/backdrop-mountains';
+import { BACKDROP_COLORS } from '../../../data/backdrop/backdrop-colors';
+import { BACKDROP_LIFE } from '../../../data/backdrop/backdrop-life';
+import { WEATHER_LOOK } from '../../../data/weather/weather-look';
+import type { WeatherId } from '../../../data/weather/weather';
 import { multiplyColor } from '../../../util/color';
 import { bakeTexture } from '../../ui/bake-texture';
 import { tiled } from './art-kit';

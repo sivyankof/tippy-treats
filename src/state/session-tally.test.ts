@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import type { RunResult } from '../core/run-result';
 import { xpToNext } from '../core/progression';
-import { MS_PER_DAY } from '../data/clock';
+import { MS_PER_DAY } from '../data/app/clock';
 import { createDefaultSave } from '../core/save/defaults';
-import { DAILY } from '../data/daily';
+import { DAILY } from '../data/progression/daily';
 import { MemoryStorage } from '../services/storage/memory';
 import { runCoinCredits, SessionTally } from './session-tally';
 import { createTestState, loadTestState } from './test-state';

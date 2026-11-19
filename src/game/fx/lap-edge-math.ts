@@ -1,4 +1,4 @@
-import { LAP_EDGE } from '../../data/lap-edge';
+import { LAP_EDGE } from '../../data/zones/lap-edge';
 import { clamp01, lerp, oscillate01, smoothstep } from '../../util/math';
 
 /** World x of the left (-1) or right (1) edge: half the cap away from the centre of the top layer. */

@@ -1,5 +1,5 @@
 import * as Phaser from 'phaser';
-import type { ChestMotion } from '../../../data/chest-look';
+import type { ChestMotion } from '../../../data/economy/chest-look';
 import {
   CHEST_BODY_ORIGIN,
   CHEST_HINGE_Y,
@@ -10,7 +10,7 @@ import {
   CHEST_TOP_Y,
   bakeChestTextures,
 } from '../../fx/chest-texture';
-import { CHEST_LOOK } from '../../../data/chest-look';
+import { CHEST_LOOK } from '../../../data/economy/chest-look';
 import { effectsMode } from '../../effects-mode';
 import { HopSway } from './hop-motion';
 import { LightRays } from './new-creature-rays';

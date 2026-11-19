@@ -8,9 +8,9 @@ import {
   type TowerState,
 } from '../../core/tower-sim';
 import { wobbleAmplitude, wobbleOffset } from '../../core/wobble';
-import { ANIM } from '../../data/anim';
-import { BALANCE } from '../../data/balance';
-import { RAINBOW_LOOK } from '../../data/rainbow-look';
+import { ANIM } from '../../data/common/anim';
+import { BALANCE } from '../../data/tower/balance';
+import { RAINBOW_LOOK } from '../../data/creatures/rainbow-look';
 import { DEPTH } from '../depth';
 import { effectsMode } from '../effects-mode';
 import { fxGuard } from '../fx-guard';

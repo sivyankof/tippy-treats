@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from 'vitest';
-import { abilityDef } from '../src/data/creatures';
-import { MASTERY } from '../src/data/mastery';
+import { abilityDef } from '../src/data/creatures/creatures';
+import { MASTERY } from '../src/data/creatures/mastery';
 import { applySets } from './what-if';
 
 const frosty = abilityDef('frosty');

@@ -1,10 +1,10 @@
 import type * as Phaser from 'phaser';
 import { Rng } from '../../core/rng';
 import type { SimEvent, TowerState } from '../../core/tower-sim';
-import { BALANCE } from '../../data/balance';
-import type { Range } from '../../data/backdrop-life';
-import { TOWER_GUEST, TOWER_GUESTS, type GuestLook } from '../../data/tower-guest';
-import { ZONES } from '../../data/zones';
+import { BALANCE } from '../../data/tower/balance';
+import type { Range } from '../../data/backdrop/backdrop-life';
+import { TOWER_GUEST, TOWER_GUESTS, type GuestLook } from '../../data/guests/tower-guest';
+import { ZONES } from '../../data/zones/zones';
 import { clamp01, DEG_TO_RAD, lerp, stepToward } from '../../util/math';
 import { DEPTH } from '../depth';
 import { effectsMode } from '../effects-mode';

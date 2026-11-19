@@ -3,8 +3,8 @@ import { checkpointStartWidth } from '../../core/checkpoints';
 import { config, mutable, untilFlying, untilSettled } from '../../core/sim-test-utils';
 import { TowerSim } from '../../core/tower-sim';
 import { zoneIndexOf } from '../../core/zones';
-import { BALANCE } from '../../data/balance';
-import { CHECKPOINT_HEIGHTS } from '../../data/checkpoints';
+import { BALANCE } from '../../data/tower/balance';
+import { CHECKPOINT_HEIGHTS } from '../../data/zones/checkpoints';
 import { ZoneChangeWatch } from './zone-change-watch';
 
 /** The zones a run from a checkpoint reports to the watch, frame by frame, while it places perfect layers. */

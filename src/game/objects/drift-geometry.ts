@@ -1,5 +1,5 @@
-import { TOWER_WEATHER } from '../../data/tower-weather';
-import { WEATHER_LOOK } from '../../data/weather-look';
+import { TOWER_WEATHER } from '../../data/weather/tower-weather';
+import { WEATHER_LOOK } from '../../data/weather/weather-look';
 import { smoothstep } from '../../util/math';
 
 const DRIFT = TOWER_WEATHER.drift;

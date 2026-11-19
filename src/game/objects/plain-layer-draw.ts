@@ -5,8 +5,8 @@ import {
   type DecorKind,
   type PatternKind,
   type SpongeLook,
-} from '../../data/plain-layers';
-import { PALETTE, type LayerColors } from '../../data/palette';
+} from '../../data/tower/plain-layers';
+import { PALETTE, type LayerColors } from '../../data/common/palette';
 import { mixColor, shade } from '../../util/color';
 import { GOLDEN } from '../../util/math';
 import { faceHalfSpan } from '../fx/glaze-growth';

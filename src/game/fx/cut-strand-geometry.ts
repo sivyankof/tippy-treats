@@ -1,4 +1,4 @@
-import { CUT_LOOK } from '../../data/cut-look';
+import { CUT_LOOK } from '../../data/cuts/cut-look';
 import { backOut, clamp01, lerp, smoothstep } from '../../util/math';
 
 /**

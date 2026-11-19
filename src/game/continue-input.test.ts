@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { CONTINUE_ANIM } from '../data/continue-anim';
+import { CONTINUE_ANIM } from '../data/run/continue-anim';
 import { continueInput } from './continue-input';
 
 describe('continueInput', () => {

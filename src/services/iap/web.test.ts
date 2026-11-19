@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { STUB_IAP } from '../../data/iap-stub';
+import { STUB_IAP } from '../../data/economy/iap-stub';
 import { WebIap, type StubProduct } from './web';
 
 const CATALOG: StubProduct[] = [

@@ -2,7 +2,7 @@ import { strikeWindowFlashNow } from './panorama-flash';
 import * as Phaser from 'phaser';
 import { Rng } from '../../../core/rng';
 import type { TowerState } from '../../../core/tower-sim';
-import type { WeatherId } from '../../../data/weather';
+import type { WeatherId } from '../../../data/weather/weather';
 import { DEPTH } from '../../depth';
 import { effectsMode } from '../../effects-mode';
 import { flightClearBand } from '../../camera-layout';
@@ -16,15 +16,15 @@ import { SnowDust } from './snow-dust';
 import { playFx } from '../../fx-sound';
 import { bedWanted } from '../../weather-bed';
 import { services } from '../../../services';
-import type { BedKind } from '../../../data/weather-bed';
-import { TOWER_WEATHER } from '../../../data/tower-weather';
+import type { BedKind } from '../../../data/audio/weather-bed';
+import { TOWER_WEATHER } from '../../../data/weather/tower-weather';
 import { fxGuard } from '../../fx-guard';
 import { towerWeather } from '../tower-weather-state';
 import type { TowerView } from '../tower-view';
 import type { Backdrop } from './backdrop';
 import { WeatherTop, type TowerTop } from './weather-top';
-import { BALANCE } from '../../../data/balance';
-import type { EffectLevel } from '../../../data/effect-levels';
+import { BALANCE } from '../../../data/tower/balance';
+import type { EffectLevel } from '../../../data/app/effect-levels';
 
 /** Depth of the screen-space weather: over every zone of the backdrop, under the worktop and the tower. */
 const WEATHER_DEPTH = DEPTH.counter - 1;

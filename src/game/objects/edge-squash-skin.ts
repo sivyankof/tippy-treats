@@ -1,7 +1,7 @@
 import * as Phaser from 'phaser';
-import { BALANCE } from '../../data/balance';
+import { BALANCE } from '../../data/tower/balance';
 import { smoothstep } from '../../util/math';
-import { EDGE_SQUASH } from '../../data/edge-squash';
+import { EDGE_SQUASH } from '../../data/tower/edge-squash';
 import {
   columnEdge,
   crownCover,

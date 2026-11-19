@@ -6,7 +6,7 @@ import {
   CLIP_PROBE_PAD,
   CLIP_SIDES,
   type ClipSide,
-} from '../data/clip-guard';
+} from '../data/debug/clip-guard';
 import { readDebugParams } from '../util/debug-params';
 import { measureOverflow } from '../util/edge-clip';
 

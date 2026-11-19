@@ -1,7 +1,7 @@
 import type * as Phaser from 'phaser';
-import type { CreatureId } from '../../data/creatures';
-import { MASTER_ANIM } from '../../data/master-anim';
-import { PALETTE } from '../../data/palette';
+import type { CreatureId } from '../../data/creatures/creatures';
+import { MASTER_ANIM } from '../../data/creatures/master-anim';
+import { PALETTE } from '../../data/common/palette';
 import { t } from '../../i18n';
 import { cssColor } from '../../util/color';
 import { fillFan, starRadii } from '../fx/fx-textures';

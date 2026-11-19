@@ -1,6 +1,6 @@
 import * as Phaser from 'phaser';
-import { FPS_METER } from '../../data/fps-meter';
-import { HUD_LAYOUT } from '../../data/hud-layout';
+import { FPS_METER } from '../../data/debug/fps-meter';
+import { HUD_LAYOUT } from '../../data/run/hud-layout';
 import { frameWorkStats } from '../frame-work';
 
 /**

@@ -1,5 +1,5 @@
 import type * as Phaser from 'phaser';
-import type { CreatureId } from '../../../data/creatures';
+import type { CreatureId } from '../../../data/creatures/creatures';
 import { gameState } from '../../../state';
 import type { RunSummary } from '../../../state/game-state';
 import { CLASSIC_RUN, DAILY_RUN } from '../../run-request';

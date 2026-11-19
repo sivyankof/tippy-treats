@@ -1,4 +1,4 @@
-import type { ProductKey } from '../data/shop';
+import type { ProductKey } from '../data/economy/shop';
 import { productIds } from '../services/iap/product-ids';
 import { services } from '../services';
 import { gameState } from '../state';

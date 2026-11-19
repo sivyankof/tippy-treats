@@ -1,9 +1,9 @@
 import * as Phaser from 'phaser';
-import { ANIM } from '../../../data/anim';
-import { BACKDROP, BD_TEX } from '../../../data/backdrop';
-import type { StartPlaceId } from '../../../data/start-places';
-import { WEATHER } from '../../../data/weather';
-import { SPACE_ZONE_INDEX, ZONES, type ZoneId } from '../../../data/zones';
+import { ANIM } from '../../../data/common/anim';
+import { BACKDROP, BD_TEX } from '../../../data/backdrop/backdrop';
+import type { StartPlaceId } from '../../../data/zones/start-places';
+import { WEATHER } from '../../../data/weather/weather';
+import { SPACE_ZONE_INDEX, ZONES, type ZoneId } from '../../../data/zones/zones';
 import type { RunLook } from '../../../core/run-look';
 import { flyingLap } from '../../../core/space-laps';
 import { DEPTH } from '../../depth';

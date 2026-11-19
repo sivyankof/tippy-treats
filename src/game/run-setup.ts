@@ -8,7 +8,7 @@ import { dailySeed, dailyTeam } from '../core/daily';
 import type { RunLook } from '../core/run-look';
 import type { RunMode } from '../core/run-result';
 import type { TeamSlot } from '../core/sim-types';
-import { DEMO } from '../data/demo';
+import { DEMO } from '../data/run/demo';
 import { gameState } from '../state';
 import { now, utcDay } from '../util/clock';
 import { readDebugParams, savesRun, skipsTutorial } from '../util/debug-params';

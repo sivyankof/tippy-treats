@@ -5,7 +5,7 @@ import type {
   PuffSpec,
   TravelSpec,
   TwinkleSpec,
-} from '../../../data/backdrop-life';
+} from '../../../data/backdrop/backdrop-life';
 import type { GuestSource, SourcePoint } from './guest-source';
 import { newLayerFrame, rideLayer, type Anchor, type LayerFrame } from './layer-anchor';
 import { PassTimer } from './pass-timer';

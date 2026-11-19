@@ -1,5 +1,5 @@
-import { DIFFICULTY } from '../src/data/balance';
-import { NO_TEAM } from '../src/data/sim-teams';
+import { DIFFICULTY } from '../src/data/tower/balance';
+import { NO_TEAM } from '../src/data/debug/sim-teams';
 import { CoinStats, type CoinsBySource } from './coin-stats';
 import { intArg, scriptArgs } from './node-env';
 import {

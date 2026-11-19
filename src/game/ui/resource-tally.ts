@@ -1,6 +1,6 @@
 import * as Phaser from 'phaser';
-import { BERRY_LOOK } from '../../data/berry-look';
-import { TREASURE } from '../../data/treasure-anim';
+import { BERRY_LOOK } from '../../data/economy/berry-look';
+import { TREASURE } from '../../data/economy/treasure-anim';
 import { formatNumber } from '../../i18n';
 import { MS_PER_SECOND, oscillate01, sineWave } from '../../util/math';
 import { spinScale, shownTotal, type Point } from '../fx/coin-flight-math';

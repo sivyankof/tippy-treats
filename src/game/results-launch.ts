@@ -1,5 +1,5 @@
 import type * as Phaser from 'phaser';
-import { ANIM } from '../data/anim';
+import { ANIM } from '../data/common/anim';
 import { gameState } from '../state';
 import { resultsBakeSteps } from './fx/results-prep';
 import type { BakeStep } from './ui/bake-texture';

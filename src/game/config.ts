@@ -1,7 +1,7 @@
 import * as Phaser from 'phaser';
-import { LOGICAL_SIZE } from '../data/screen';
+import { LOGICAL_SIZE } from '../data/app/screen';
 import { computeLogicalSize, type LogicalSize } from '../util/logical-size';
-import { KITCHEN_COLORS } from '../data/palette';
+import { KITCHEN_COLORS } from '../data/common/palette';
 import { readDebugParams } from '../util/debug-params';
 import { BootScene } from './scenes/boot-scene';
 import { GameScene } from './scenes/game-scene';

@@ -1,4 +1,4 @@
-import { LICK } from '../../data/lick';
+import { LICK } from '../../data/glaze/lick';
 import type { Ribbon } from './tongue-ribbon';
 
 /**

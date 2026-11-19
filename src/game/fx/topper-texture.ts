@@ -5,7 +5,7 @@ import {
   TOPPER_KINDS,
   topperBakedSize,
   type TopperKind,
-} from '../../data/plain-toppers';
+} from '../../data/toppers/plain-toppers';
 import { DEG_TO_RAD } from '../../util/math';
 import { bakeTexture } from '../ui/bake-texture';
 import { bakeBerry } from './berry-texture';

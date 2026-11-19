@@ -5,7 +5,7 @@ import {
   MUSIC_TRACK_IDS,
   MUSIC_TRACKS,
   musicAskFor,
-} from '../../../data/music';
+} from '../../../data/audio/music';
 import { trackUrl } from './tune-loader';
 import { decodedBytes } from './tune-loop';
 

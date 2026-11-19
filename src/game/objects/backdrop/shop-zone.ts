@@ -6,13 +6,13 @@ import {
   WALL_LOOK,
   WINDOW_LOOK,
   windowKey,
-} from '../../../data/window-look';
+} from '../../../data/weather/window-look';
 import { mixColor, shade } from '../../../util/color';
 import { outlineColor } from '../../fx/plain-style';
 import { bakePadded, bakeTexture } from '../../ui/bake-texture';
-import { FIELD_PAD } from '../../../data/picture-fields';
+import { FIELD_PAD } from '../../../data/common/picture-fields';
 import { paddedOrigin } from '../../../util/field-pad';
-import { BACKDROP_LIFE } from '../../../data/backdrop-life';
+import { BACKDROP_LIFE } from '../../../data/backdrop/backdrop-life';
 import { OUTLINE, circle, drawPlank, ellipse, outlined, roundRect, tint } from './art-kit';
 import { inSky } from './layer-anchor';
 import { Traveler } from './life';

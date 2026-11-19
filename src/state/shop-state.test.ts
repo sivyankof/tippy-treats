@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { MS_PER_DAY } from '../data/clock';
-import { SHOP } from '../data/shop';
+import { MS_PER_DAY } from '../data/app/clock';
+import { SHOP } from '../data/economy/shop';
 import { createDefaultSave } from '../core/save/defaults';
 import { createTestState, loadTestState } from './test-state';
 

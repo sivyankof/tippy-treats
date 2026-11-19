@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { BALANCE } from '../data/balance';
+import { BALANCE } from '../data/tower/balance';
 import type { RewardedResult } from '../services/rewarded-video/types';
 import { createDefaultSave } from '../core/save/defaults';
 import { createTestState, loadTestState } from '../state/test-state';

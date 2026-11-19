@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { BALANCE } from '../data/balance';
-import { CHECKPOINT_HEIGHTS } from '../data/checkpoints';
+import { BALANCE } from '../data/tower/balance';
+import { CHECKPOINT_HEIGHTS } from '../data/zones/checkpoints';
 import { checkpointStartWidth } from './checkpoints';
 import { heightBonusCoins } from './coins';
 import { STEP, config, mutable, only, pick, untilFlying, untilSettled } from './sim-test-utils';

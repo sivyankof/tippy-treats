@@ -1,4 +1,4 @@
-import { MENU } from '../../../data/menu-layout';
+import { MENU } from '../../../data/common/menu-layout';
 
 const { collection } = MENU;
 const card = collection.card;

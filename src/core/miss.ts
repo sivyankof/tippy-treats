@@ -1,4 +1,4 @@
-import { BALANCE } from '../data/balance';
+import { BALANCE } from '../data/tower/balance';
 import { runMissHooks } from './abilities/run';
 import type { RunConfig, SimEvent, SimPhase, TowerState } from './sim-types';
 

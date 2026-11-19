@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { PANORAMA } from '../../../data/window-look';
+import { PANORAMA } from '../../../data/weather/window-look';
 import { hudFloor } from '../../camera-layout';
-import { BALANCE } from '../../../data/balance';
+import { BALANCE } from '../../../data/tower/balance';
 import {
   coverFade,
   flightRowAt,

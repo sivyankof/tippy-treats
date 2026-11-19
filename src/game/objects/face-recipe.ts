@@ -1,5 +1,5 @@
-import { ANIM } from '../../data/anim';
-import type { BrowPose, FaceRecipe, PairLayout } from '../../data/creature-looks';
+import { ANIM } from '../../data/common/anim';
+import type { BrowPose, FaceRecipe, PairLayout } from '../../data/creatures/creature-looks';
 
 /** Where and how big a half-closed eyelid is, relative to the centre of its eye. */
 export interface LidShape {

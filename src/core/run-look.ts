@@ -1,5 +1,5 @@
-import { START_PLACES, type StartPlaceId } from '../data/start-places';
-import { WEATHER, WEATHER_IDS, type WeatherId } from '../data/weather';
+import { START_PLACES, type StartPlaceId } from '../data/zones/start-places';
+import { WEATHER, WEATHER_IDS, type WeatherId } from '../data/weather/weather';
 import { Rng } from './rng';
 import { weightedPick } from './weighted-pick';
 

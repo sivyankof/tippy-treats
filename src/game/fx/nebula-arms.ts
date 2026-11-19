@@ -1,8 +1,8 @@
 import type * as Phaser from 'phaser';
-import { ANIM } from '../../data/anim';
-import { BALANCE } from '../../data/balance';
-import { PLAIN_LAYER } from '../../data/plain-layers';
-import { RULE_ANIM } from '../../data/rule-anim';
+import { ANIM } from '../../data/common/anim';
+import { BALANCE } from '../../data/tower/balance';
+import { PLAIN_LAYER } from '../../data/tower/plain-layers';
+import { RULE_ANIM } from '../../data/zones/rule-anim';
 import { channels, cssColor, mixColor } from '../../util/color';
 import { clamp01, rampBetween, TWO_PI } from '../../util/math';
 import { ditherNoise } from '../objects/backdrop/sky-gradient';

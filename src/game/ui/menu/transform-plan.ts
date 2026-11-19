@@ -1,6 +1,6 @@
 import { upgradePreview } from '../../../core/mastery';
-import type { CreatureId } from '../../../data/creatures';
-import { TRANSFORM } from '../../../data/transform-scene';
+import type { CreatureId } from '../../../data/creatures/creatures';
+import { TRANSFORM } from '../../../data/creatures/transform-scene';
 import { clamp01 } from '../../../util/math';
 import { shakeAngle } from './new-creature-reveal';
 

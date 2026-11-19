@@ -1,10 +1,10 @@
 import * as Phaser from 'phaser';
-import { ANIM } from '../../data/anim';
-import type { FaceRecipe } from '../../data/creature-looks';
+import { ANIM } from '../../data/common/anim';
+import type { FaceRecipe } from '../../data/creatures/creature-looks';
 import type { Expression } from './face-state';
 import { browTransform, lidShape, WORRIED_BROW } from './face-recipe';
-import { LICK } from '../../data/lick';
-import { TOWER_WEATHER } from '../../data/tower-weather';
+import { LICK } from '../../data/glaze/lick';
+import { TOWER_WEATHER } from '../../data/weather/tower-weather';
 import { yawnMouthShows } from './face-yawn';
 import type { EyeLook, LickFace, LipsTongue } from './lick-plan';
 import { EYE_TEXTURE, FACE_TEXTURES, MOUTH_TEXTURE } from './face-textures';

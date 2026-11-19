@@ -1,6 +1,11 @@
-import { DIFFICULTY } from '../src/data/balance';
-import { CREATURES, type CreatureId } from '../src/data/creatures';
-import { allFullTeams, NO_TEAM, TEAM_REFERENCE, type SimTeamSet } from '../src/data/sim-teams';
+import { DIFFICULTY } from '../src/data/tower/balance';
+import { CREATURES, type CreatureId } from '../src/data/creatures/creatures';
+import {
+  allFullTeams,
+  NO_TEAM,
+  TEAM_REFERENCE,
+  type SimTeamSet,
+} from '../src/data/debug/sim-teams';
 import { intArg, nodeFs, scriptArgs } from './node-env';
 import { ANALYSIS_MAX_HEIGHT, percentile, playRun, profileStreams, teamSlots } from './sim-runner';
 import { applySets, setArg } from './what-if';

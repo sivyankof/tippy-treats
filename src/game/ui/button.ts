@@ -1,5 +1,5 @@
 import * as Phaser from 'phaser';
-import { ANIM } from '../../data/anim';
+import { ANIM } from '../../data/common/anim';
 import { services } from '../../services';
 import { createGlossBand, sweepGloss } from '../fx/gloss-sweep';
 import { fitText } from './menu/fit-text';

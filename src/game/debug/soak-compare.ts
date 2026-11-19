@@ -1,4 +1,4 @@
-import { SOAK } from '../../data/soak';
+import { SOAK } from '../../data/debug/soak';
 import type { AudioDebugStats } from '../../services/audio/types';
 
 /** The counts read before and after the smoke lap (`tippySoak.smoke()`). */

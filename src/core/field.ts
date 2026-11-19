@@ -1,4 +1,4 @@
-import { LOGICAL_SIZE } from '../data/screen';
+import { LOGICAL_SIZE } from '../data/app/screen';
 
 /** Horizontal bounds of the play field: a placed layer never sticks out of them. */
 export const FIELD_BOUNDS = { left: 0, right: LOGICAL_SIZE.width } as const;

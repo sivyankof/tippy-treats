@@ -8,7 +8,7 @@ import { recordCreaturesReached } from '../core/record-unlocks';
 import { lapRewardBerries, spaceLap } from '../core/space-laps';
 import type { RunResult } from '../core/run-result';
 import type { MissionProgress, Save } from '../core/save/schema';
-import type { CreatureId } from '../data/creatures';
+import type { CreatureId } from '../data/creatures/creatures';
 import { withXp, type LevelUp } from './level-up';
 
 export type { LevelUp };

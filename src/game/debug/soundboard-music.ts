@@ -1,4 +1,4 @@
-import { MUSIC_TRACK_IDS, MUSIC_TRACKS, type MusicTrackId } from '../../data/music';
+import { MUSIC_TRACK_IDS, MUSIC_TRACKS, type MusicTrackId } from '../../data/audio/music';
 import { t } from '../../i18n';
 import { services } from '../../services';
 

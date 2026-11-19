@@ -1,7 +1,7 @@
-import { ANIM } from '../../data/anim';
-import { faceRecipe } from '../../data/creature-looks';
-import { CREATURE_SLEEP } from '../../data/creature-style';
-import type { CreatureId } from '../../data/creatures';
+import { ANIM } from '../../data/common/anim';
+import { faceRecipe } from '../../data/creatures/creature-looks';
+import { CREATURE_SLEEP } from '../../data/creatures/creature-style';
+import type { CreatureId } from '../../data/creatures/creatures';
 import { faceLayout } from './face-recipe';
 import type { Rect } from './layer-draw';
 

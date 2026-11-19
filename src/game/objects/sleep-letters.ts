@@ -1,5 +1,5 @@
 import type * as Phaser from 'phaser';
-import { CREATURE_SLEEP } from '../../data/creature-style';
+import { CREATURE_SLEEP } from '../../data/creatures/creature-style';
 import { createOutlinedText } from '../ui/outlined-text';
 import { zPose, type ZPose } from './sleep-zs';
 

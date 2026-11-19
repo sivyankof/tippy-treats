@@ -1,4 +1,4 @@
-import { WINDOW_LOOK, type WindowSky } from '../../../data/window-look';
+import { WINDOW_LOOK, type WindowSky } from '../../../data/weather/window-look';
 import { cssColor } from '../../../util/color';
 import { TWO_PI } from '../../../util/math';
 

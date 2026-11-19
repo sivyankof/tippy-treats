@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { GIFT } from '../data/gift';
+import { GIFT } from '../data/economy/gift';
 import { giftReady, msUntilGift, openGift } from './gift';
 
 describe('giftReady', () => {

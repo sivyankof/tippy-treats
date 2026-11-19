@@ -1,6 +1,6 @@
-import type { Rarity } from '../../data/rarity';
-import type { SquashKind } from '../../data/topper-squash';
-import type { BedKind } from '../../data/weather-bed';
+import type { Rarity } from '../../data/creatures/rarity';
+import type { SquashKind } from '../../data/toppers/topper-squash';
+import type { BedKind } from '../../data/audio/weather-bed';
 
 /**
  * Every sound id and the arguments its call takes (a tuple; `[]` for a sound without any).
@@ -40,7 +40,7 @@ export interface SoundArgs {
   topperHop: [];
   /** `pitch` is a multiplier (1 = base pitch). */
   squeak: [pitch: number];
-  // Sounds of sessions 3-5e (session 6, theme B), `data/sfx-life.ts`.
+  // Sounds of sessions 3-5e (session 6, theme B), `data/audio/sfx-life.ts`.
   cutStretch: [];
   cutStrandSnap: [];
   cutDrip: [];

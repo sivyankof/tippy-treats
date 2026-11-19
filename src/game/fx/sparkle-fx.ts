@@ -1,5 +1,5 @@
-import { LICK } from '../../data/lick';
-import { TREASURE } from '../../data/treasure-anim';
+import { LICK } from '../../data/glaze/lick';
+import { TREASURE } from '../../data/economy/treasure-anim';
 import { DEPTH } from '../depth';
 import { FX_TEXTURES } from './fx-textures';
 import { coneBurst, type ParticleStyle } from './particle-motion';

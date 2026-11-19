@@ -3,11 +3,11 @@
 import { describe, expect, it } from 'vitest';
 import type { RunResult } from '../core/run-result';
 import { xpToNext } from '../core/progression';
-import { MS_PER_DAY } from '../data/clock';
-import { BERRY_PACKS } from '../data/economy';
-import { GIFT } from '../data/gift';
-import { LEVEL_REWARDS } from '../data/progression';
-import { SHOP } from '../data/shop';
+import { MS_PER_DAY } from '../data/app/clock';
+import { BERRY_PACKS } from '../data/economy/economy';
+import { GIFT } from '../data/economy/gift';
+import { LEVEL_REWARDS } from '../data/progression/progression';
+import { SHOP } from '../data/economy/shop';
 import { MemoryStorage } from '../services/storage/memory';
 import type { RunSummary } from './game-state';
 import { createTestState, layersForXp } from './test-state';

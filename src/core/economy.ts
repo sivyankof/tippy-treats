@@ -1,11 +1,11 @@
-import { CREATURES, MAX_CREATURE_LEVEL, type CreatureId } from '../data/creatures';
+import { CREATURES, MAX_CREATURE_LEVEL, type CreatureId } from '../data/creatures/creatures';
 import {
   BERRY_PACKS,
   DUPLICATE_CREATURE_SHARE,
   LEGENDARY_UPGRADE_MIN_BAKER,
   UPGRADE_COSTS,
   UPGRADE_MIN_BAKER,
-} from '../data/economy';
+} from '../data/economy/economy';
 
 export interface Wallet {
   coins: number;

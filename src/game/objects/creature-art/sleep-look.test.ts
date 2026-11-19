@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { artRecipe } from '../../../data/creature-looks';
-import { CREATURE_IDS, CREATURES } from '../../../data/creatures';
+import { artRecipe } from '../../../data/creatures/creature-looks';
+import { CREATURE_IDS, CREATURES } from '../../../data/creatures/creatures';
 import { luminance, parseHex, toHsl } from '../../../util/color';
 import { mutedPalette, mutedRecipe } from './sleep-look';
 

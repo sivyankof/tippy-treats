@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
-import { AUDIO_MIX } from '../../data/audio-mix';
-import { SFX } from '../../data/sfx';
+import { AUDIO_MIX } from '../../data/audio/audio-mix';
+import { SFX } from '../../data/audio/sfx';
 import { NO_MUSIC, type MusicControl, type MusicFactory } from './music-control';
 import { WebAudioService } from './web';
 

@@ -1,6 +1,6 @@
 import * as Phaser from 'phaser';
-import { AD_UNAVAILABLE_CAPTION, OFFLINE_CAPTION_LAYOUT } from '../../../data/offline-look';
-import { VIDEO_CAPTION_LAYOUT } from '../../../data/video-icon-look';
+import { AD_UNAVAILABLE_CAPTION, OFFLINE_CAPTION_LAYOUT } from '../../../data/economy/offline-look';
+import { VIDEO_CAPTION_LAYOUT } from '../../../data/economy/video-icon-look';
 import { cssColor } from '../../../util/color';
 import { t } from '../../../i18n';
 import { currentAdCaption } from '../../ad-caption';

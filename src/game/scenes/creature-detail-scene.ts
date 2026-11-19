@@ -1,10 +1,10 @@
 import * as Phaser from 'phaser';
 import type { Currency } from '../../core/economy';
 import { addToTeam } from '../../core/team';
-import { CREATURES } from '../../data/creatures';
-import { MENU } from '../../data/menu-layout';
-import { TRANSFORM } from '../../data/transform-scene';
-import { RARITY_COLORS } from '../../data/rarity';
+import { CREATURES } from '../../data/creatures/creatures';
+import { MENU } from '../../data/common/menu-layout';
+import { TRANSFORM } from '../../data/creatures/transform-scene';
+import { RARITY_COLORS } from '../../data/creatures/rarity';
 import { t } from '../../i18n';
 import { services } from '../../services';
 import { gameState } from '../../state';

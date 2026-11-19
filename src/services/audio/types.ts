@@ -1,6 +1,6 @@
-import type { Rarity } from '../../data/rarity';
-import type { BedKind } from '../../data/weather-bed';
-import type { MusicAsk } from '../../data/music';
+import type { Rarity } from '../../data/creatures/rarity';
+import type { BedKind } from '../../data/audio/weather-bed';
+import type { MusicAsk } from '../../data/audio/music';
 import type { MusicControl, MusicPlayerState } from './music-control';
 import type { DuckReason } from './mixer-math';
 import type { SoundArgs, SoundId } from './sound-args';

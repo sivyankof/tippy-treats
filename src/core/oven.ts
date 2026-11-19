@@ -1,4 +1,4 @@
-import { OVEN } from '../data/progression';
+import { OVEN } from '../data/progression/progression';
 import { isNewDay, usedToday, type DayCounter } from './day-count';
 
 /**

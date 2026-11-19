@@ -1,4 +1,4 @@
-import { HAPTICS } from '../../data/haptics';
+import { HAPTICS } from '../../data/app/haptics';
 import type { HapticKind, HapticsService } from './types';
 
 type VibrateFn = (pattern: number[]) => boolean;

@@ -1,8 +1,8 @@
 import type * as Phaser from 'phaser';
-import { ANIM } from '../../data/anim';
-import { HUD_LAYOUT } from '../../data/hud-layout';
-import { IDLE_MOTION, IDLE_PHASE } from '../../data/idle-motion';
-import { PALETTE } from '../../data/palette';
+import { ANIM } from '../../data/common/anim';
+import { HUD_LAYOUT } from '../../data/run/hud-layout';
+import { IDLE_MOTION, IDLE_PHASE } from '../../data/common/idle-motion';
+import { PALETTE } from '../../data/common/palette';
 import { formatNumber, t } from '../../i18n';
 import { lerp, stepToward } from '../../util/math';
 import { flightClearBand } from '../camera-layout';

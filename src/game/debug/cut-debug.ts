@@ -1,4 +1,4 @@
-import { CUT_VARIANT_NAMES, type CutVariantName } from '../../data/cut-look';
+import { CUT_VARIANT_NAMES, type CutVariantName } from '../../data/cuts/cut-look';
 import * as Phaser from 'phaser';
 import { cutOverride } from '../fx/cut-override';
 import { OffsetDriver, type DropDriver } from '../perf/perf-drivers';

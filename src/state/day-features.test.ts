@@ -2,11 +2,11 @@ import { describe, expect, it } from 'vitest';
 import { createDefaultSave } from '../core/save/defaults';
 import type { RunResult } from '../core/run-result';
 import { dailySeed } from '../core/daily';
-import { MS_PER_DAY } from '../data/clock';
-import { DAILY } from '../data/daily';
-import { GIFT } from '../data/gift';
-import { MISSIONS } from '../data/missions';
-import { STREAK } from '../data/streak';
+import { MS_PER_DAY } from '../data/app/clock';
+import { DAILY } from '../data/progression/daily';
+import { GIFT } from '../data/economy/gift';
+import { MISSIONS } from '../data/progression/missions';
+import { STREAK } from '../data/progression/streak';
 import { localDay, utcDay } from '../util/clock';
 import { createTestState, loadTestState } from './test-state';
 

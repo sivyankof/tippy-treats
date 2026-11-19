@@ -44,9 +44,9 @@ import type * as Phaser from 'phaser';
 
 // The debug parameters read the page address; a test has no page.
 vi.stubGlobal('window', { location: { search: '' } });
-import { BACKDROP } from '../../../data/backdrop';
-import { WEATHER_IDS, type WeatherId } from '../../../data/weather';
-import type { ZoneId } from '../../../data/zones';
+import { BACKDROP } from '../../../data/backdrop/backdrop';
+import { WEATHER_IDS, type WeatherId } from '../../../data/weather/weather';
+import type { ZoneId } from '../../../data/zones/zones';
 import { travellerClearBand } from '../../camera-layout';
 import { cloudsArt } from './clouds-zone';
 import { onLayer, type Anchor, type SkyKind } from './layer-anchor';

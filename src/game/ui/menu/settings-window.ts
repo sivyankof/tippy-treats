@@ -1,7 +1,7 @@
 import type * as Phaser from 'phaser';
-import { APP_VERSION, BUILD_HASH, BUILD_TIME } from '../../../data/app-info';
-import { MENU } from '../../../data/menu-layout';
-import { PALETTE } from '../../../data/palette';
+import { APP_VERSION, BUILD_HASH, BUILD_TIME } from '../../../data/app/app-info';
+import { MENU } from '../../../data/common/menu-layout';
+import { PALETTE } from '../../../data/common/palette';
 import { getLang, t } from '../../../i18n';
 import { gameState } from '../../../state';
 import {

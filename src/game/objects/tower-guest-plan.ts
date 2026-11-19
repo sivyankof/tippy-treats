@@ -1,6 +1,6 @@
-import { TOWER_GUEST } from '../../data/tower-guest';
+import { TOWER_GUEST } from '../../data/guests/tower-guest';
 import { hasRule } from '../../core/zones';
-import type { LayerRuleKind } from '../../data/zones';
+import type { LayerRuleKind } from '../../data/zones/zones';
 import {
   DEG_TO_RAD,
   clamp01,

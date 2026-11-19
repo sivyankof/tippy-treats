@@ -1,7 +1,7 @@
 import { pickStartPlace, pickWeather, type RunLook } from '../core/run-look';
 import { planetSeedOf } from '../core/space-planet';
-import { DEFAULT_START_PLACE, type StartPlaceId } from '../data/start-places';
-import { WEATHER, type WeatherId } from '../data/weather';
+import { DEFAULT_START_PLACE, type StartPlaceId } from '../data/zones/start-places';
+import { WEATHER, type WeatherId } from '../data/weather/weather';
 
 /** What decides the look of one run. */
 export interface RunLookInput {

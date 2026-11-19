@@ -1,5 +1,5 @@
 import type * as Phaser from 'phaser';
-import { PALETTE } from '../../../data/palette';
+import { PALETTE } from '../../../data/common/palette';
 import { t } from '../../../i18n';
 import { createTextButton, type Button } from '../button';
 import { adLabelRoom, markAdUnavailable, resetAdLabel } from './ad-unavailable';

@@ -1,7 +1,7 @@
 import * as Phaser from 'phaser';
-import { HUD_LAYOUT } from '../../data/hud-layout';
-import { TUTORIAL_ANIM } from '../../data/tutorial-anim';
-import { PALETTE } from '../../data/palette';
+import { HUD_LAYOUT } from '../../data/run/hud-layout';
+import { TUTORIAL_ANIM } from '../../data/tutorial/tutorial-anim';
+import { PALETTE } from '../../data/common/palette';
 import { t } from '../../i18n';
 import { sineWave } from '../../util/math';
 import { FLYING_REACH } from '../camera-layout';

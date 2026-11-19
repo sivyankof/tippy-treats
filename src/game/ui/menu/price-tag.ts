@@ -1,6 +1,6 @@
 import * as Phaser from 'phaser';
 import type { Currency } from '../../../core/economy';
-import { PALETTE } from '../../../data/palette';
+import { PALETTE } from '../../../data/common/palette';
 import { formatNumber } from '../../../i18n';
 import { TREASURE_TEXTURES, createTreasureTextures } from '../../fx/treasure-textures';
 import { createOutlinedText } from '../outlined-text';

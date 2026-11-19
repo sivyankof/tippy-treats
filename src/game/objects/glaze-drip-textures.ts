@@ -1,6 +1,6 @@
 import type * as Phaser from 'phaser';
-import { GLAZE_DRIPS } from '../../data/glaze-drips';
-import { PALETTE } from '../../data/palette';
+import { GLAZE_DRIPS } from '../../data/glaze/glaze-drips';
+import { PALETTE } from '../../data/common/palette';
 import { shade } from '../../util/color';
 import { bakeTexture } from '../ui/bake-texture';
 import { GLAZE_OUTLINE } from './layer-draw';

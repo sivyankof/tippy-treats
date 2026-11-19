@@ -1,8 +1,8 @@
 import * as Phaser from 'phaser';
 import type { CalendarCell } from '../../../core/streak';
-import { CREATURES } from '../../../data/creatures';
-import { MENU } from '../../../data/menu-layout';
-import { PALETTE } from '../../../data/palette';
+import { CREATURES } from '../../../data/creatures/creatures';
+import { MENU } from '../../../data/common/menu-layout';
+import { PALETTE } from '../../../data/common/palette';
 import { formatNumber, t } from '../../../i18n';
 import { createTreasureTextures, TREASURE_TEXTURES } from '../../fx/treasure-textures';
 import { CREATURE_ICON_KEYS } from '../creature-icons';

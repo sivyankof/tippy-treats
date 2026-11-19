@@ -1,9 +1,9 @@
 import type * as Phaser from 'phaser';
 import { starterPackContents } from '../../../core/shop';
-import { ANIM } from '../../../data/anim';
-import type { CreatureId } from '../../../data/creatures';
-import { MENU } from '../../../data/menu-layout';
-import { PALETTE } from '../../../data/palette';
+import { ANIM } from '../../../data/common/anim';
+import type { CreatureId } from '../../../data/creatures/creatures';
+import { MENU } from '../../../data/common/menu-layout';
+import { PALETTE } from '../../../data/common/palette';
 import { t } from '../../../i18n';
 import { gameState } from '../../../state';
 import { buyProduct, loadPrices } from '../../purchases';

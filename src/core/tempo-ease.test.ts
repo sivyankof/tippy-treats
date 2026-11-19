@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { BALANCE } from '../data/balance';
+import { BALANCE } from '../data/tower/balance';
 import { TempoEase } from './tempo-ease';
 
 const { afterPerfects, layers, speedMult, minGapLayers } = BALANCE.tempoEase;

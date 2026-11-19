@@ -1,5 +1,5 @@
 import type * as Phaser from 'phaser';
-import { ANIM } from '../../data/anim';
+import { ANIM } from '../../data/common/anim';
 
 /** A short side-to-side shake ("this did nothing"); the target ends at its resting x. */
 export function shakeX(

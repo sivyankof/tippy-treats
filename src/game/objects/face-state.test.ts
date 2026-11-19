@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { ANIM } from '../../data/anim';
-import { CREATURE_LOOKS } from '../../data/creature-looks';
+import { ANIM } from '../../data/common/anim';
+import { CREATURE_LOOKS } from '../../data/creatures/creature-looks';
 import {
   FaceState,
   aimMouth,

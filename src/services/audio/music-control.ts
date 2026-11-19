@@ -1,4 +1,4 @@
-import type { MusicTrackId } from '../../data/music';
+import type { MusicTrackId } from '../../data/audio/music';
 import type { Mixer } from './mixer';
 import type { NodeTally } from './node-tally';
 

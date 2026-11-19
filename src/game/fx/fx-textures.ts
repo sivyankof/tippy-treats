@@ -1,8 +1,8 @@
 import type * as Phaser from 'phaser';
-import { ANIM } from '../../data/anim';
-import { PALETTE } from '../../data/palette';
-import { LICK } from '../../data/lick';
-import { TRANSFORM } from '../../data/transform-scene';
+import { ANIM } from '../../data/common/anim';
+import { PALETTE } from '../../data/common/palette';
+import { LICK } from '../../data/glaze/lick';
+import { TRANSFORM } from '../../data/creatures/transform-scene';
 import { DEG_TO_RAD, TWO_PI } from '../../util/math';
 import { bakeTexture } from '../ui/bake-texture';
 import { bakeGrownAccentTextures } from './grown-accent-textures';

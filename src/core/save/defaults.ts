@@ -1,4 +1,4 @@
-import { SAVE_DEFAULTS } from '../../data/save-defaults';
+import { SAVE_DEFAULTS } from '../../data/app/save-defaults';
 import { SAVE_VERSION, type Save } from './schema';
 
 /** A fresh save: the tutorial creature owned, everything else empty. */

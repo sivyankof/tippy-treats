@@ -1,4 +1,4 @@
-import { REWARDED_OFFERS } from '../data/rewarded-video';
+import { REWARDED_OFFERS } from '../data/economy/rewarded-video';
 import { addUsed, usedToday, type DayCounter } from './day-count';
 
 /** "×2 coins" ads left today; a new local day starts the count over. */

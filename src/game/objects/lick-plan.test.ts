@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { Rng } from '../../core/rng';
-import { ANIM } from '../../data/anim';
-import { GLAZE_DRIPS } from '../../data/glaze-drips';
-import { LICK, type LickStyle } from '../../data/lick';
+import { ANIM } from '../../data/common/anim';
+import { GLAZE_DRIPS } from '../../data/glaze/glaze-drips';
+import { LICK, type LickStyle } from '../../data/glaze/lick';
 import {
   beatMs,
   beatStartMs,

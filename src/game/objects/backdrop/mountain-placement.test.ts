@@ -1,11 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { BALANCE } from '../../../data/balance';
+import { BALANCE } from '../../../data/tower/balance';
 import {
   MOUNTAIN_FREE_BAND,
   MOUNTAIN_LOOK,
   MOUNTAIN_MOTION,
   MOUNTAIN_SPAN,
-} from '../../../data/backdrop-mountains';
+} from '../../../data/backdrop/backdrop-mountains';
 import { mountainRise, towerLayersAt } from './mountain-placement';
 
 describe('mountain placement', () => {

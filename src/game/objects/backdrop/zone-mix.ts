@@ -1,5 +1,5 @@
-import { ANIM } from '../../../data/anim';
-import type { ZoneId } from '../../../data/zones';
+import { ANIM } from '../../../data/common/anim';
+import type { ZoneId } from '../../../data/zones/zones';
 
 /**
  * A number that depends on the zone, blended the way the backdrop is drawn: the zone being flowed

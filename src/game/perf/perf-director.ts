@@ -1,6 +1,6 @@
 import * as Phaser from 'phaser';
-import type { EffectLevel } from '../../data/effect-levels';
-import { PERF, PERF_TRANSITION, type PerfSegmentDef } from '../../data/perf';
+import type { EffectLevel } from '../../data/app/effect-levels';
+import { PERF, PERF_TRANSITION, type PerfSegmentDef } from '../../data/debug/perf';
 import { services } from '../../services';
 import { setFrameWorkListener } from '../frame-work';
 import { capRenderDensity } from '../render-density';

@@ -1,7 +1,7 @@
 import { layerSpeed } from '../src/core/drop';
 import { zoneIndexOf } from '../src/core/zones';
-import { BALANCE } from '../src/data/balance';
-import { ZONES } from '../src/data/zones';
+import { BALANCE } from '../src/data/tower/balance';
+import { ZONES } from '../src/data/zones/zones';
 import { MS_PER_SECOND } from '../src/util/math';
 
 /**

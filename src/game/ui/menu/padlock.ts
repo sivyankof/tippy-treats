@@ -1,5 +1,5 @@
 import type * as Phaser from 'phaser';
-import { PALETTE } from '../../../data/palette';
+import { PALETTE } from '../../../data/common/palette';
 
 /** A padlock drawn in code, centred at (x, y), `size` tall. */
 export function drawPadlock(

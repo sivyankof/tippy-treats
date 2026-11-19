@@ -1,7 +1,7 @@
 import * as Phaser from 'phaser';
 import type { TowerState } from '../../core/tower-sim';
 import { Rng } from '../../core/rng';
-import { PLAIN_TOPPERS, type TopperKind } from '../../data/plain-toppers';
+import { PLAIN_TOPPERS, type TopperKind } from '../../data/toppers/plain-toppers';
 import {
   crushedLifeMs,
   SQUASH_PICTURES,
@@ -9,7 +9,7 @@ import {
   TOPPER_SQUASH,
   type SquashBurst,
   type SquashFlatten,
-} from '../../data/topper-squash';
+} from '../../data/toppers/topper-squash';
 import { overlayColor } from '../../util/color';
 import { clamp01, lerp } from '../../util/math';
 import { DEPTH } from '../depth';

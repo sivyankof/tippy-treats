@@ -1,10 +1,10 @@
 import * as Phaser from 'phaser';
-import { ANIM } from '../../data/anim';
-import { BALANCE } from '../../data/balance';
-import { HUD_LAYOUT } from '../../data/hud-layout';
-import { MENU } from '../../data/menu-layout';
-import { IDLE_MOTION, IDLE_PHASE } from '../../data/idle-motion';
-import { PALETTE } from '../../data/palette';
+import { ANIM } from '../../data/common/anim';
+import { BALANCE } from '../../data/tower/balance';
+import { HUD_LAYOUT } from '../../data/run/hud-layout';
+import { MENU } from '../../data/common/menu-layout';
+import { IDLE_MOTION, IDLE_PHASE } from '../../data/common/idle-motion';
+import { PALETTE } from '../../data/common/palette';
 import { t } from '../../i18n';
 import { cssColor } from '../../util/color';
 import { oscillate01 } from '../../util/math';

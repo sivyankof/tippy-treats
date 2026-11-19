@@ -1,5 +1,5 @@
 import type * as Phaser from 'phaser';
-import { MENU } from '../../../data/menu-layout';
+import { MENU } from '../../../data/common/menu-layout';
 import { gameState } from '../../../state';
 import type { Button } from '../button';
 import type { HomeStarterOffer } from './home-starter';

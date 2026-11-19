@@ -1,4 +1,4 @@
-import { TOWER_SPARKLES } from '../../data/tower-sparkles';
+import { TOWER_SPARKLES } from '../../data/tower/tower-sparkles';
 
 /** Where the tower is, as the sparkles need it (world space). */
 export interface SparkleField {

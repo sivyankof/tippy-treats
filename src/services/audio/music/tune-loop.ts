@@ -1,4 +1,4 @@
-import { MUSIC, MUSIC_TRACKS, type MusicTrack, type MusicTrackId } from '../../../data/music';
+import { MUSIC, MUSIC_TRACKS, type MusicTrack, type MusicTrackId } from '../../../data/audio/music';
 
 /** Bytes of one decoded sample (Web Audio keeps 32-bit floats). */
 const BYTES_PER_SAMPLE = 4;

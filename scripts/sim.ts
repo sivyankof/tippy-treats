@@ -1,6 +1,6 @@
 import type { RunResult } from '../src/core/run-result';
-import { DIFFICULTY, type DifficultyTarget } from '../src/data/balance';
-import { ZONES } from '../src/data/zones';
+import { DIFFICULTY, type DifficultyTarget } from '../src/data/tower/balance';
+import { ZONES } from '../src/data/zones/zones';
 import {
   NO_TEAM,
   allFullTeams,
@@ -8,7 +8,7 @@ import {
   SIM_TEAM_LEVEL,
   isFullTeam,
   type SimTeamSet,
-} from '../src/data/sim-teams';
+} from '../src/data/debug/sim-teams';
 import { printCheckpointSection } from './checkpoint-section';
 import { EndStats, type EndRow } from './end-stats';
 import type { RunObserver } from './run-observer';

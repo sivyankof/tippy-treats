@@ -1,7 +1,7 @@
 import * as Phaser from 'phaser';
-import { MENU } from '../../../data/menu-layout';
-import { PALETTE } from '../../../data/palette';
-import type { PileCurrency, PileSize } from '../../../data/treasure-piles';
+import { MENU } from '../../../data/common/menu-layout';
+import { PALETTE } from '../../../data/common/palette';
+import type { PileCurrency, PileSize } from '../../../data/economy/treasure-piles';
 import { pileSizeFor } from '../../fx/pile-size';
 import { createTreasurePile } from '../../fx/treasure-pile';
 import { createTextButton, type Button, type LabelButtonLayout } from '../button';

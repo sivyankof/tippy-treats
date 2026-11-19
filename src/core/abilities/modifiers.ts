@@ -1,4 +1,4 @@
-import { clampLevel } from '../../data/creatures';
+import { clampLevel } from '../../data/creatures/creatures';
 import type { LayerPlan } from '../sim-types';
 import { ABILITIES } from './registry';
 import {

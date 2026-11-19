@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { BALANCE } from '../../data/balance';
-import { PLAIN_LAYER } from '../../data/plain-layers';
+import { BALANCE } from '../../data/tower/balance';
+import { PLAIN_LAYER } from '../../data/tower/plain-layers';
 import { dripCountFor, faceClearance, faceHalfSpan } from '../fx/glaze-growth';
 import {
   cutStripWidth,

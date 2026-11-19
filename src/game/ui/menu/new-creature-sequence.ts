@@ -1,6 +1,6 @@
 import * as Phaser from 'phaser';
-import { CREATURE_SLEEP } from '../../../data/creature-style';
-import { MENU } from '../../../data/menu-layout';
+import { CREATURE_SLEEP } from '../../../data/creatures/creature-style';
+import { MENU } from '../../../data/common/menu-layout';
 import { services } from '../../../services';
 import { effectsMode } from '../../effects-mode';
 import { FX_TEXTURES } from '../../fx/fx-textures';

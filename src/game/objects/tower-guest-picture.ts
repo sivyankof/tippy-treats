@@ -1,5 +1,5 @@
 import * as Phaser from 'phaser';
-import type { GuestLook } from '../../data/tower-guest';
+import type { GuestLook } from '../../data/guests/tower-guest';
 import { DEPTH } from '../depth';
 import { drawFlatLimbs, drawGuestLegs } from './tower-guest-art';
 import type { GuestShape } from './tower-guest-plan';

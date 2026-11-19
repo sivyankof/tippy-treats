@@ -1,6 +1,6 @@
-import type { CreatureId } from '../data/creatures';
-import type { PerkId } from '../data/mastery';
-import type { LayerRuleKind } from '../data/zones';
+import type { CreatureId } from '../data/creatures/creatures';
+import type { PerkId } from '../data/creatures/mastery';
+import type { LayerRuleKind } from '../data/zones/zones';
 import type { ActiveEffect, AbilityPayload } from './abilities/types';
 import type { CutSide } from './drop';
 import type { RunEndReason, RunMode, RunResult } from './run-result';
@@ -34,7 +34,7 @@ export interface RunConfig {
   tutorial: boolean;
   /**
    * Layers already placed when the run begins: a checkpoint start (20, 40… with `startWidth` from
-   * `data/checkpoints.ts`) or the debug `?start=`. They earn nothing: score, coins and the height
+   * `data/zones/checkpoints.ts`) or the debug `?start=`. They earn nothing: score, coins and the height
    * bonus count only the layers placed in this run.
    */
   startHeight?: number;

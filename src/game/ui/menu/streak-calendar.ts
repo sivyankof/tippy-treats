@@ -1,8 +1,8 @@
 import type * as Phaser from 'phaser';
 import type { Cost } from '../../../core/economy';
-import { STREAK, type StreakReward } from '../../../data/streak';
-import { MENU } from '../../../data/menu-layout';
-import { PALETTE } from '../../../data/palette';
+import { STREAK, type StreakReward } from '../../../data/progression/streak';
+import { MENU } from '../../../data/common/menu-layout';
+import { PALETTE } from '../../../data/common/palette';
 import { t, tn } from '../../../i18n';
 import { services } from '../../../services';
 import { gameState } from '../../../state';

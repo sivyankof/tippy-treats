@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { RAINBOW_LOOK } from '../../../data/rainbow-look';
+import { RAINBOW_LOOK } from '../../../data/creatures/rainbow-look';
 import {
   glazeFloorAt,
   humpAt,

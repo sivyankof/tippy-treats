@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import { Rng } from '../../../core/rng';
-import { BALANCE } from '../../../data/balance';
-import { LOGICAL_SIZE } from '../../../data/screen';
+import { BALANCE } from '../../../data/tower/balance';
+import { LOGICAL_SIZE } from '../../../data/app/screen';
 import { flightClearBand } from '../../camera-layout';
 import { onScreen } from './weather-test-view';
-import { WEATHER_LOOK } from '../../../data/weather-look';
+import { WEATHER_LOOK } from '../../../data/weather/weather-look';
 import {
   bankEdge,
   boltEnd,

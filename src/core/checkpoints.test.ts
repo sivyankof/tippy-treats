@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { BALANCE } from '../data/balance';
-import { CHECKPOINT_START_WIDTH } from '../data/checkpoints';
+import { BALANCE } from '../data/tower/balance';
+import { CHECKPOINT_START_WIDTH } from '../data/zones/checkpoints';
 import {
   checkpointAdsLeft,
   checkpointBerryPrice,

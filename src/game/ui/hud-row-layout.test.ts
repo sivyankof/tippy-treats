@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { HUD_LAYOUT } from '../../data/hud-layout';
-import { LOGICAL_SIZE } from '../../data/screen';
+import { HUD_LAYOUT } from '../../data/run/hud-layout';
+import { LOGICAL_SIZE } from '../../data/app/screen';
 import { getLang, setLang, tn, type Lang } from '../../i18n';
 import {
   badgeRowRight,

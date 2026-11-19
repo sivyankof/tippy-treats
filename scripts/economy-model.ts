@@ -32,31 +32,31 @@ import {
 } from '../src/core/progression';
 import { legacyXpToNext } from '../src/core/save/frozen-v5';
 import { Rng } from '../src/core/rng';
-import { DIFFICULTY } from '../src/data/balance';
+import { DIFFICULTY } from '../src/data/tower/balance';
 import {
   CREATURE_IDS,
   CREATURES,
   isCreatureId,
   MAX_CREATURE_LEVEL,
   type CreatureId,
-} from '../src/data/creatures';
-import { DAILY } from '../src/data/daily';
+} from '../src/data/creatures/creatures';
+import { DAILY } from '../src/data/progression/daily';
 import {
   BERRY_PACKS,
   LEGENDARY_UPGRADE_MIN_BAKER,
   UPGRADE_COSTS,
   UPGRADE_MIN_BAKER,
-} from '../src/data/economy';
-import { GIFT } from '../src/data/gift';
-import { MISSIONS } from '../src/data/missions';
-import { OVEN, type LevelReward } from '../src/data/progression';
-import { REWARDED_OFFERS } from '../src/data/rewarded-video';
-import { SHOP } from '../src/data/shop';
-import { STREAK_REWARDS } from '../src/data/streak';
+} from '../src/data/economy/economy';
+import { GIFT } from '../src/data/economy/gift';
+import { MISSIONS } from '../src/data/progression/missions';
+import { OVEN, type LevelReward } from '../src/data/progression/progression';
+import { REWARDED_OFFERS } from '../src/data/economy/rewarded-video';
+import { SHOP } from '../src/data/economy/shop';
+import { STREAK_REWARDS } from '../src/data/progression/streak';
 import { lapRewardBerries, spaceLap } from '../src/core/space-laps';
 import { checkpointBerryPrice, checkpointHasAd } from '../src/core/checkpoints';
-import { BALANCE } from '../src/data/balance';
-import { CHECKPOINT_HEIGHTS, type CheckpointHeight } from '../src/data/checkpoints';
+import { BALANCE } from '../src/data/tower/balance';
+import { CHECKPOINT_HEIGHTS, type CheckpointHeight } from '../src/data/zones/checkpoints';
 import { MS_PER_SECOND } from '../src/util/math';
 import { playCheckpointRuns } from './checkpoint-runs';
 import { COIN_SOURCES, CoinStats, type CoinsBySource } from './coin-stats';

@@ -1,6 +1,6 @@
 import * as Phaser from 'phaser';
-import { ANIM } from '../../data/anim';
-import { PALETTE } from '../../data/palette';
+import { ANIM } from '../../data/common/anim';
+import { PALETTE } from '../../data/common/palette';
 import { t } from '../../i18n';
 import { shade } from '../../util/color';
 import { bakeTexture } from '../ui/bake-texture';

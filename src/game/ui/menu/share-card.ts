@@ -1,7 +1,7 @@
 import * as Phaser from 'phaser';
-import { ANIM } from '../../../data/anim';
-import { BALANCE } from '../../../data/balance';
-import { SHARE_CARD } from '../../../data/share';
+import { ANIM } from '../../../data/common/anim';
+import { BALANCE } from '../../../data/tower/balance';
+import { SHARE_CARD } from '../../../data/run/share';
 import { t } from '../../../i18n';
 import { mixColor } from '../../../util/color';
 import { LayerView } from '../../objects/layer-view';

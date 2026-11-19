@@ -1,4 +1,4 @@
-import { RAINBOW_LOOK } from '../../../data/rainbow-look';
+import { RAINBOW_LOOK } from '../../../data/creatures/rainbow-look';
 import type { Pt } from '../../fx/plain-style';
 import type { GlazeLayout } from '../layer-draw';
 

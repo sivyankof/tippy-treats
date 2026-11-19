@@ -1,4 +1,4 @@
-import type { PerfPart } from '../../data/perf';
+import type { PerfPart } from '../../data/debug/perf';
 
 /** Objects of the run screen that belong to a part `?perf=1` can hide (the backdrop marks its own). */
 const marks = new WeakMap<object, PerfPart>();

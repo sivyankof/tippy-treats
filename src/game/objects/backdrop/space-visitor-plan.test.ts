@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { HUD_LAYOUT } from '../../../data/hud-layout';
-import { LOGICAL_SIZE } from '../../../data/screen';
+import { HUD_LAYOUT } from '../../../data/run/hud-layout';
+import { LOGICAL_SIZE } from '../../../data/app/screen';
 import { flightClearBand } from '../../camera-layout';
-import { SPACE_VISITOR, SPACE_VISITOR_IDS } from '../../../data/space-visitor';
+import { SPACE_VISITOR, SPACE_VISITOR_IDS } from '../../../data/guests/space-visitor';
 import {
   newVisitorPose,
   planVisitor,

@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import type { SimEvent } from '../../core/tower-sim';
-import { CREATURE_IDS, CREATURES, type CreatureId } from '../../data/creatures';
-import { HAPTICS } from '../../data/haptics';
+import { CREATURE_IDS, CREATURES, type CreatureId } from '../../data/creatures/creatures';
+import { HAPTICS } from '../../data/app/haptics';
 import type { Services } from '../../services';
 import { cuesForEvents, playCues } from './run-cues';
 

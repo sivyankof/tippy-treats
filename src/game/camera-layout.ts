@@ -1,7 +1,7 @@
-import { ANIM } from '../data/anim';
-import { BALANCE } from '../data/balance';
-import { FLIGHT_CLEAR } from '../data/flight-clear';
-import { HUD_LAYOUT } from '../data/hud-layout';
+import { ANIM } from '../data/common/anim';
+import { BALANCE } from '../data/tower/balance';
+import { FLIGHT_CLEAR } from '../data/backdrop/flight-clear';
+import { HUD_LAYOUT } from '../data/run/hud-layout';
 
 /**
  * How far above the top of the tower the flying layer reaches: the gap it starts in, its own

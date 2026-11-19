@@ -1,5 +1,5 @@
 import * as Phaser from 'phaser';
-import { ANIM } from '../../data/anim';
+import { ANIM } from '../../data/common/anim';
 import { effectsMode } from '../effects-mode';
 import { hideItem, TimedPool, type PoolEntry } from './timed-pool';
 import { stepParticle, viewParticle, type ParticleState } from './particle-motion';

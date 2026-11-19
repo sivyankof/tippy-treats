@@ -1,6 +1,6 @@
-import { ANIM } from '../../data/anim';
-import type { FaceRecipe, MouthKind } from '../../data/creature-looks';
-import { TOWER_WEATHER } from '../../data/tower-weather';
+import { ANIM } from '../../data/common/anim';
+import type { FaceRecipe, MouthKind } from '../../data/creatures/creature-looks';
+import { TOWER_WEATHER } from '../../data/weather/tower-weather';
 import { pickRange } from '../../util/math';
 
 export type { MouthKind };

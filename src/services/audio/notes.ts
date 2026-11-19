@@ -1,4 +1,4 @@
-import { SFX } from '../../data/sfx';
+import { SFX } from '../../data/audio/sfx';
 
 /** Frequency ratio of a pitch shifted by `semitones`. */
 export function semitoneRatio(semitones: number): number {

@@ -1,8 +1,8 @@
 import * as Phaser from 'phaser';
-import { ANIM } from '../../../data/anim';
-import { BD_TEX, COUNTER } from '../../../data/backdrop';
-import { BACKDROP_COLORS } from '../../../data/backdrop-colors';
-import { KITCHEN_COLORS } from '../../../data/palette';
+import { ANIM } from '../../../data/common/anim';
+import { BD_TEX, COUNTER } from '../../../data/backdrop/backdrop';
+import { BACKDROP_COLORS } from '../../../data/backdrop/backdrop-colors';
+import { KITCHEN_COLORS } from '../../../data/common/palette';
 import { oscillate01, sineWave } from '../../../util/math';
 import { shade } from '../../../util/color';
 import { DEPTH } from '../../depth';

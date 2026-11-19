@@ -1,4 +1,4 @@
-import { STUB_ADS } from '../../data/rewarded-video';
+import { STUB_ADS } from '../../data/economy/rewarded-video';
 import { t } from '../../i18n';
 import type {
   RewardedUnavailableReason,

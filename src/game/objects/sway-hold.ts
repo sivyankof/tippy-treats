@@ -1,4 +1,4 @@
-import { ANIM } from '../../data/anim';
+import { ANIM } from '../../data/common/anim';
 import { frameLerp } from '../../util/math';
 
 /** The frozen sway counts as caught up with the simulation below this share. */

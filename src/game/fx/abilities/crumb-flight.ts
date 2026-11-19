@@ -1,6 +1,6 @@
 import { overhangSide } from '../../../core/drop';
 import type { SimEvent, TowerState } from '../../../core/tower-sim';
-import { ABILITY_ANIM } from '../../../data/ability-anim';
+import { ABILITY_ANIM } from '../../../data/creatures/ability-anim';
 import { DEPTH } from '../../depth';
 import { effectsMode } from '../../effects-mode';
 import { easeFn } from '../ease';

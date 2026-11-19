@@ -1,6 +1,6 @@
 import type * as Phaser from 'phaser';
-import { BAR_LOOK } from '../../../data/bar-look';
-import { PALETTE } from '../../../data/palette';
+import { BAR_LOOK } from '../../../data/common/bar-look';
+import { PALETTE } from '../../../data/common/palette';
 import { shade } from '../../../util/color';
 import { clamp01 } from '../../../util/math';
 import { fillPolygon } from '../../fx/plain-style';

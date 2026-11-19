@@ -1,10 +1,10 @@
 import * as Phaser from 'phaser';
 import { hasNewLook, masterInfo } from '../../../core/mastery';
-import type { CreatureId } from '../../../data/creatures';
-import { ANIM } from '../../../data/anim';
-import { MENU } from '../../../data/menu-layout';
-import { PALETTE } from '../../../data/palette';
-import { TRANSFORM } from '../../../data/transform-scene';
+import type { CreatureId } from '../../../data/creatures/creatures';
+import { ANIM } from '../../../data/common/anim';
+import { MENU } from '../../../data/common/menu-layout';
+import { PALETTE } from '../../../data/common/palette';
+import { TRANSFORM } from '../../../data/creatures/transform-scene';
 import { formatDecimal, t } from '../../../i18n';
 import { services } from '../../../services';
 import { effectsMode } from '../../effects-mode';

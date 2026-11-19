@@ -1,5 +1,5 @@
-import { BALANCE } from '../../data/balance';
-import { EDGE_SQUASH, type ByPower, type WallFeel } from '../../data/edge-squash';
+import { BALANCE } from '../../data/tower/balance';
+import { EDGE_SQUASH, type ByPower, type WallFeel } from '../../data/tower/edge-squash';
 import { clamp01, lerp, smoothstep } from '../../util/math';
 import { ribHeight, type RibLayout } from './edge-squash-ribs';
 

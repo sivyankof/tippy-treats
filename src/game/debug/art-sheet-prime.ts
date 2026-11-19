@@ -1,7 +1,7 @@
 import type * as Phaser from 'phaser';
-import { ART_SHEET } from '../../data/art-sheet';
-import { CREATURE_IDS } from '../../data/creatures';
-import { TOWER_GUESTS } from '../../data/tower-guest';
+import { ART_SHEET } from '../../data/debug/art-sheet';
+import { CREATURE_IDS } from '../../data/creatures/creatures';
+import { TOWER_GUESTS } from '../../data/guests/tower-guest';
 import { createAbilityTextures } from '../fx/abilities/ability-textures';
 import { bakeCheckpointTextures } from '../fx/checkpoint-textures';
 import { bakeOfflineIcon } from '../fx/offline-icon-texture';

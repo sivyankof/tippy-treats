@@ -1,8 +1,8 @@
 import type * as Phaser from 'phaser';
-import { ANIM } from '../../data/anim';
-import { RULE_ANIM } from '../../data/rule-anim';
-import { LOGICAL_SIZE } from '../../data/screen';
-import { ZONE_RULES } from '../../data/zones';
+import { ANIM } from '../../data/common/anim';
+import { RULE_ANIM } from '../../data/zones/rule-anim';
+import { LOGICAL_SIZE } from '../../data/app/screen';
+import { ZONE_RULES } from '../../data/zones/zones';
 import { clamp01, TWO_PI } from '../../util/math';
 import { flightClearBand, hudFloor } from '../camera-layout';
 import { bakeTexture } from '../ui/bake-texture';

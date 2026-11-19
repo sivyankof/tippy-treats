@@ -1,4 +1,4 @@
-import { HAPTICS } from '../../data/haptics';
+import { HAPTICS } from '../../data/app/haptics';
 
 /** True when the cut-off part is wide enough for a heavy impact. */
 export function isBigBite(cutWidth: number, layerWidth: number): boolean {

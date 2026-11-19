@@ -1,7 +1,7 @@
 import * as Phaser from 'phaser';
 import { Rng } from '../../../core/rng';
-import { PANORAMA, WALL_LOOK } from '../../../data/window-look';
-import { WEATHER_LOOK } from '../../../data/weather-look';
+import { PANORAMA, WALL_LOOK } from '../../../data/weather/window-look';
+import { WEATHER_LOOK } from '../../../data/weather/weather-look';
 import { effectsMode } from '../../effects-mode';
 import { fxGuard } from '../../fx-guard';
 import { playFx } from '../../fx-sound';

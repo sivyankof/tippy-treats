@@ -3,9 +3,9 @@ import { Rng } from '../src/core/rng';
 import type { RunResult } from '../src/core/run-result';
 import type { RunConfig } from '../src/core/sim-types';
 import { TowerSim } from '../src/core/tower-sim';
-import { BALANCE, type DifficultyTarget } from '../src/data/balance';
-import type { CreatureId } from '../src/data/creatures';
-import type { SimTeamSet } from '../src/data/sim-teams';
+import { BALANCE, type DifficultyTarget } from '../src/data/tower/balance';
+import type { CreatureId } from '../src/data/creatures/creatures';
+import type { SimTeamSet } from '../src/data/debug/sim-teams';
 import type { RunObserver } from './run-observer';
 
 /** Shared by the sim scripts: one bot run and the small statistics helpers. */

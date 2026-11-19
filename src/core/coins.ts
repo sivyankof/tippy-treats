@@ -1,4 +1,4 @@
-import { BALANCE } from '../data/balance';
+import { BALANCE } from '../data/tower/balance';
 import type { Modifiers } from './abilities/types';
 import type { Rng } from './rng';
 

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { SPACE_PLANET_IDS, type SpacePlanetId } from '../data/space-planets';
+import { SPACE_PLANET_IDS, type SpacePlanetId } from '../data/zones/space-planets';
 import {
   LapChangeWatch,
   PlanetWalk,

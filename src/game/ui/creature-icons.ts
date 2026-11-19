@@ -1,6 +1,6 @@
 import type * as Phaser from 'phaser';
-import { CREATURE_IDS, type CreatureId } from '../../data/creatures';
-import { HUD_LAYOUT } from '../../data/hud-layout';
+import { CREATURE_IDS, type CreatureId } from '../../data/creatures/creatures';
+import { HUD_LAYOUT } from '../../data/run/hud-layout';
 
 /** Texture key of the icon of each creature, baked at start-up from its layer picture (`creature-icon-textures.ts`). */
 export const CREATURE_ICON_KEYS = Object.fromEntries(

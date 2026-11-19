@@ -1,7 +1,7 @@
-import { ANIM } from '../../data/anim';
-import { BALANCE } from '../../data/balance';
-import { PALETTE } from '../../data/palette';
-import { PLAIN_LAYER } from '../../data/plain-layers';
+import { ANIM } from '../../data/common/anim';
+import { BALANCE } from '../../data/tower/balance';
+import { PALETTE } from '../../data/common/palette';
+import { PLAIN_LAYER } from '../../data/tower/plain-layers';
 import { pickInt } from '../../util/math';
 import { DEPTH } from '../depth';
 import { effectsMode } from '../effects-mode';

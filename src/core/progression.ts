@@ -5,7 +5,7 @@ import {
   LEVEL_REWARDS,
   XP_CURVE,
   type LevelReward,
-} from '../data/progression';
+} from '../data/progression/progression';
 
 /** XP needed to go from `level` to `level + 1`. */
 export function xpToNext(level: number): number {

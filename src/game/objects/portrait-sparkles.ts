@@ -1,6 +1,6 @@
 import * as Phaser from 'phaser';
-import { MENU } from '../../data/menu-layout';
-import type { CreatureMaterial } from '../../data/creature-materials';
+import { MENU } from '../../data/common/menu-layout';
+import type { CreatureMaterial } from '../../data/creatures/creature-materials';
 import { parseHex } from '../../util/color';
 import { bump } from '../fx/anim-curves';
 import { FX_TEXTURES } from '../fx/fx-textures';
