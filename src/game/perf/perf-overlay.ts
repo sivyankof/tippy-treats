@@ -20,8 +20,8 @@ export interface PerfOutcome {
 }
 
 /**
- * The benchmark's on-screen text, a plain DOM box over the canvas (numbers and ids only, like the
- * fps meter, so no i18n). While it runs it is a small strip at the bottom with one line of progress;
+ * The benchmark's on-screen text, a plain DOM box over the canvas. Like the debug panel and the fps
+ * meter it is a dev tool outside i18n: numbers, segment ids and short English labels. While it runs it is a small strip at the bottom with one line of progress;
  * at the end it grows into a big summary the owner can read off the phone (budget, draws, worst
  * frame and fps per segment) with "copy", which puts the full report on the clipboard, and "table",
  * which folds the full table out.

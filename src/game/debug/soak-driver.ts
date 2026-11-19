@@ -444,16 +444,20 @@ class SoakDriver implements TippySoak {
     this.counts.zoneRuns += 1;
     this.beginRun(SCENES.home, checkpointRun(height));
     const reached = await this.waitFor(() => this.isOn(SCENES.results), SOAK.zoneRunMaxMs);
+    // Stopped while waiting: leave the game where it is, count nothing.
+    if (!this.active) return;
     if (reached) {
       this.counts.results += 1;
       await sleep(this.dwell.resultsMs);
       openScreen(this.scene(SCENES.results), SCENES.home);
-    } else {
+    } else if (this.runLive()) {
       this.counts.abandoned += 1;
       (this.scene(SCENES.game) as GameScene).leaveRun();
     }
     await this.waitFor(() => this.isOn(SCENES.home), SOAK.runMaxMs);
+    if (!this.active || !this.isOn(SCENES.home)) return;
     await this.visit(SCENES.home, SCENES.results, resultsDemoData('record'));
+    if (!this.isOn(SCENES.results)) return;
     this.counts.records += 1;
     await sleep(SOAK.recordDwellMs);
     await this.visit(SCENES.results, SCENES.home);

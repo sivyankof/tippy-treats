@@ -301,7 +301,7 @@ export class Backdrop {
     markPerfPart(this.still, 'bg');
     for (const scenery of zones) scenery.root.setVisible(false);
     this.frozen = zones;
-    this.scene.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.release());
+    this.scene.events.once(Phaser.Scenes.Events.SHUTDOWN, this.release, this);
     this.scene.sys.game.renderer.on(Phaser.Renderer.Events.RESTORE_WEBGL, this.refreeze, this);
   }
 
@@ -318,6 +318,8 @@ export class Backdrop {
     this.still.destroy();
     this.still = null;
     this.scene.sys.game.renderer.off(Phaser.Renderer.Events.RESTORE_WEBGL, this.refreeze, this);
+    // The next freeze listens again: a freeze per resize or lost context must not stack them.
+    this.scene.events.off(Phaser.Scenes.Events.SHUTDOWN, this.release, this);
     this.scene.textures.remove(BD_TEX.still);
     for (const scenery of this.frozen) scenery.root.setVisible(true);
     this.frozen = [];

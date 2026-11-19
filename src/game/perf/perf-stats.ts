@@ -318,9 +318,9 @@ export function summaryRows(
     const over = budgetOver(row, automated);
     return {
       id: row.id,
-      draws: row.drawCallsMean === null ? '-' : row.drawCallsMean.toFixed(1),
+      draws: row.drawCallsMean === null ? '-' : row.drawCallsMean.toFixed(decimals),
       worst: row.worstMs.toFixed(decimals),
-      fps: row.fps.toFixed(1),
+      fps: row.fps.toFixed(decimals),
       over: {
         draws: over.draws || over.fadeDraws,
         worst: over.worst,
