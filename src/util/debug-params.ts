@@ -13,6 +13,7 @@ import { isStartPlaceId, type StartPlaceId } from '../data/zones/start-places';
 import { isWeatherId, type WeatherId } from '../data/weather/weather';
 import { isResultsDemoCase, type ResultsDemoCase } from '../data/debug/results-demo';
 import { UINT32_RANGE } from './math';
+import { DEBUG_TOOLS } from './build-kind';
 
 export interface DebugParams {
   debug: boolean;
@@ -44,6 +45,8 @@ export interface DebugParams {
   weather?: WeatherId;
   /** `?place=kitchen|shop` pins the start place of zone 1 (the run is not saved). */
   place?: StartPlaceId;
+  /** `?safe=59,34` stands in for the top and bottom safe-area insets (CSS px), to see the layout of a phone with an island in a browser. */
+  safe?: { top: number; bottom: number };
 }
 
 const UINT32_MAX = UINT32_RANGE - 1;
@@ -79,6 +82,17 @@ function parseTeam(raw: string | null): Array<CreatureId | null> | undefined {
     else if (isCreatureId(id)) slots.push(id);
   }
   return slots.slice(0, BALANCE.team.slots);
+}
+
+const MAX_SAFE_INSET = 200;
+
+/** `?safe=top,bottom`: two whole CSS px values from 0 to 200. */
+function parseSafe(raw: string | null): { top: number; bottom: number } | undefined {
+  const match = raw === null ? null : /^(\d{1,3}),(\d{1,3})$/.exec(raw.trim());
+  if (!match) return undefined;
+  const top = Number(match[1]);
+  const bottom = Number(match[2]);
+  return top <= MAX_SAFE_INSET && bottom <= MAX_SAFE_INSET ? { top, bottom } : undefined;
 }
 
 function parseLevel(raw: string | null): number | undefined {
@@ -119,6 +133,8 @@ export function parseDebugParams(search: string): DebugParams {
   if (isWeatherId(weather)) result.weather = weather;
   const place = params.get('place');
   if (isStartPlaceId(place)) result.place = place;
+  const safe = parseSafe(params.get('safe'));
+  if (safe) result.safe = safe;
   return result;
 }
 
@@ -205,9 +221,9 @@ export function readPerfParams(): PerfParams | null {
   return parsePerfParams(window.location.search);
 }
 
-/** Debug parameters of the current page. They only apply to dev builds. */
+/** Debug parameters of the current page. They only apply to the dev server and the internal build. */
 export function readDebugParams(): DebugParams {
-  return import.meta.env.DEV ? parseDebugParams(window.location.search) : NO_PARAMS;
+  return DEBUG_TOOLS ? parseDebugParams(window.location.search) : NO_PARAMS;
 }
 
 /**

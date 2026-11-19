@@ -3,6 +3,7 @@ import { LOGICAL_SIZE } from '../../data/app/screen';
 import { computeLogicalSize, type LogicalSize } from '../../util/logical-size';
 import { KITCHEN_COLORS } from '../../data/common/palette';
 import { readDebugParams } from '../../util/debug-params';
+import { readSafeInsets, setSafeBand } from './safe-area';
 import { BootScene } from '../scenes/boot-scene';
 import { GameScene } from '../scenes/game-scene';
 import { HudScene } from '../scenes/hud-scene';
@@ -17,8 +18,16 @@ import { DailyScene } from '../scenes/daily-scene';
 import { ShopScene } from '../scenes/shop-scene';
 import { NewCreatureScene } from '../scenes/new-creature-scene';
 
+/** The logical size of the game in `parent`, with the safe band of the screen insets; it also becomes the current safe band. */
 export function logicalSizeFor(parent: HTMLElement): LogicalSize {
-  return computeLogicalSize(parent.clientWidth, parent.clientHeight, LOGICAL_SIZE);
+  const size = computeLogicalSize(
+    parent.clientWidth,
+    parent.clientHeight,
+    LOGICAL_SIZE,
+    readSafeInsets(),
+  );
+  setSafeBand(size.safeTop, size.safeBottom);
+  return size;
 }
 
 export function createGameConfig(parent: HTMLElement): Phaser.Types.Core.GameConfig {
@@ -66,6 +75,7 @@ export function bindLogicalResize(game: Phaser.Game, parent: HTMLElement): void 
   const apply = (): void => {
     const size = logicalSizeFor(parent);
     game.scale.getParentBounds();
+    // A new safe band with the same height lays the scenes out again too: `refresh` sends `resize`.
     if (size.height !== game.scale.gameSize.height) {
       game.scale.setGameSize(size.width, size.height);
     } else {
@@ -73,4 +83,6 @@ export function bindLogicalResize(game: Phaser.Game, parent: HTMLElement): void 
     }
   };
   new ResizeObserver(apply).observe(parent);
+  // The insets can change without the size (the system bars of an app settle after the start).
+  window.addEventListener('resize', apply);
 }

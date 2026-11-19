@@ -9,6 +9,14 @@ import {
 } from './debug-params';
 
 describe('parseDebugParams', () => {
+  it('reads the stand-in safe-area insets as two whole CSS px values', () => {
+    expect(parseDebugParams('?safe=59,34').safe).toEqual({ top: 59, bottom: 34 });
+    expect(parseDebugParams('?safe=0,0').safe).toEqual({ top: 0, bottom: 0 });
+    for (const bad of ['?safe=59', '?safe=-1,2', '?safe=201,0', '?safe=1.5,2', '?safe=a,b']) {
+      expect(parseDebugParams(bad).safe).toBeUndefined();
+    }
+  });
+
   it('is off for an empty query', () => {
     expect(parseDebugParams('')).toEqual({ debug: false });
   });
