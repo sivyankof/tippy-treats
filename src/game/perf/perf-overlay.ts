@@ -46,7 +46,7 @@ export class PerfOverlay {
     this.line = document.createElement('div');
     this.body = document.createElement('pre');
     this.body.style.cssText =
-      `display:none;margin:6px 0 0;max-height:${overlay.maxHeightVh}vh;overflow:auto;pointer-events:auto;` +
+      `display:none;margin:6px 0 0;max-height:${overlay.maxHeightVh}vh;overflow:auto;pointer-events:auto;touch-action:pan-y;` +
       'white-space:pre;user-select:text;-webkit-user-select:text;';
     this.box.append(this.line, this.body);
     document.body.appendChild(this.box);
@@ -63,7 +63,7 @@ export class PerfOverlay {
     const insets = readSafeInsets();
     this.body.textContent = outcome.text;
     this.box.style.cssText +=
-      `top:0;padding:${12 + insets.top}px 16px ${12 + insets.bottom}px;overflow:auto;` +
+      `top:0;padding:${12 + insets.top}px 16px ${12 + insets.bottom}px;overflow:auto;touch-action:pan-y;overscroll-behavior:contain;` +
       'background:rgba(0,0,0,0.93);pointer-events:auto;';
     this.line.replaceChildren(verdictLine(outcome), summaryGrid(outcome.rows));
     const buttons = document.createElement('div');

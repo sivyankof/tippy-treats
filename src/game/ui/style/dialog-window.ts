@@ -189,15 +189,25 @@ export class PopupWindow {
   private layout(): void {
     if (this.gone) return;
     const { width, height } = this.scene.scale.gameSize;
-    this.dim.setSize(width, height);
+    // The run's scenes are laid out below the island: their camera scrolls by the top inset. The
+    // veil and the window stand on the canvas, wherever the camera of their scene is.
+    const cam = this.scene.cameras.main;
+    this.dim.setSize(width, height).setPosition(cam.scrollX, cam.scrollY);
     // The veil covers the whole canvas; the window stands in the safe band, clear of the island and the gesture bar.
     const frame = safeFrame(height);
+    // Under an island the ribbon, half of which stands above the window, must clear the band too:
+    // the window then fits with it and moves down by half of it. Without a top inset (a browser)
+    // the window keeps its old place.
+    const overhang = frame.top > 0 ? MENU.style.ribbon.height / 2 : 0;
     const fit = Math.min(
       1,
       (width - cfg.screenMargin * 2) / cfg.width,
-      (frame.height - cfg.screenMargin * 2) / this.height,
+      (frame.height - cfg.screenMargin * 2) / (this.height + overhang),
     );
-    this.root.setPosition(width / 2, frame.centerY);
+    this.root.setPosition(
+      cam.scrollX + width / 2,
+      cam.scrollY + frame.centerY + (overhang * fit) / 2,
+    );
     this.body.setScale(fit);
   }
 }

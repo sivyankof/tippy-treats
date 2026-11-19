@@ -1,5 +1,4 @@
 import * as Phaser from 'phaser';
-import { pushBack } from '../app/back-stack';
 import { ANIM } from '../../data/common/anim';
 import { MENU } from '../../data/common/menu-layout';
 import { t } from '../../i18n';
@@ -13,7 +12,7 @@ import { fadeInResultsDim } from '../run/results-launch';
 import { createDimOverlay } from '../ui/common/dim-overlay';
 import { enterScreen, leaveScreen, type Movable } from '../ui/common/transition';
 import { createDebugPlate } from '../ui/menu/results/results-debug-plate';
-import { ResultsButtons } from '../ui/menu/results/results-buttons';
+import { bindResultsBack, ResultsButtons } from '../ui/menu/results/results-buttons';
 import { ResultsCoins } from '../ui/menu/results/results-coins';
 import { ResultsHeader, createStats } from '../ui/menu/results/results-header';
 import { createResultsHint } from '../ui/menu/results/results-hint';
@@ -91,14 +90,8 @@ export class ResultsScene extends Phaser.Scene {
       () => this.buildPanel(),
     ];
     this.scale.on(Phaser.Scale.Events.RESIZE, this.layout, this);
-    // The Android back is "Home" (results over the run: the HUD handler under it never sees it).
-    // While the screen is built hidden under the collapsing tower, or its buttons are not built yet, it is taken.
-    const unregisterBack = pushBack(() => {
-      const buttons = this.buttons as ResultsButtons | undefined;
-      return this.sys.isVisible() && buttons ? buttons.pressBack() : true;
-    });
+    bindResultsBack(this, () => this.buttons as ResultsButtons | undefined);
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
-      unregisterBack();
       this.scale.off(Phaser.Scale.Events.RESIZE, this.layout, this);
       this.revealWanted = false;
       this.hudCamera?.setAlpha(1);
@@ -275,7 +268,7 @@ export class ResultsScene extends Phaser.Scene {
   /** Confetti, the ribbon, the fanfare and the three-hit vibration of a new record. */
   private celebrate(width: number, height: number): void {
     this.celebration ??= new RecordCelebration(this);
-    this.celebration.play(width, height);
+    this.celebration.play(width, height, safeBand().top);
     services.audio.record();
     services.haptics.play('triple');
   }

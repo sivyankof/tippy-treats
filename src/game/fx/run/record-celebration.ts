@@ -53,10 +53,13 @@ export class RecordCelebration {
     });
   }
 
-  /** Starts the celebration on a screen of `width` x `height`. */
-  play(width: number, height: number): void {
+  /**
+   * Starts the celebration on a screen of `width` x `height` whose top is `top` px down the canvas
+   * (the safe band under an island); the banner stands on the canvas, the confetti in the scene.
+   */
+  play(width: number, height: number, top = 0): void {
     this.fx.confetti(width, height);
-    this.banner.setPosition(width / 2, height * ribbon.y);
+    this.banner.setPosition(width / 2, top + height * ribbon.y);
     this.ageMs = 0;
     this.applyBanner();
   }

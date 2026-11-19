@@ -8,7 +8,6 @@ import { readDebugParams } from '../../util/debug-params';
 import { ContinueWindow } from '../ui/run/continue-window';
 import { DebugPanel } from '../debug/debug-panel';
 import { safeBand } from '../app/safe-area';
-import { toCanvasRegion } from '../run/band-space';
 import { frameOf } from '../ui/common/safe-frame';
 import { launchRun, restartRun, resultsShown, SCENES } from '../app/scene-keys';
 import type { Button } from '../ui/common/button';
@@ -16,7 +15,7 @@ import { createIconButton } from '../ui/menu/widgets/icon-button';
 import { NumberRoll } from '../ui/common/number-roll';
 import { createOutlinedText } from '../ui/common/outlined-text';
 import { PauseOverlay } from '../ui/run/pause-overlay';
-import { pushBack } from '../app/back-stack';
+import { bindHudInput } from '../ui/run/hud-input';
 import { EffectBadges } from '../ui/creatures/effect-badges';
 import { MasterCaptions } from '../ui/creatures/master-captions';
 import { TempoChip } from '../ui/tower/tempo-chip';
@@ -35,7 +34,6 @@ import { NextCreatureBadge } from '../ui/creatures/next-creature-badge';
 import { TreasureHud } from '../ui/economy/treasure-hud';
 import { fxGuard } from '../common/fx-guard';
 import { enterScreen } from '../ui/common/transition';
-import { addUiRegion } from '../ui/common/ui-regions';
 import { WobbleBar } from '../ui/tower/wobble-bar';
 import { TutorialHints } from '../tutorial/tutorial-hints';
 import type { RunInfo } from '../run/run-info';
@@ -125,33 +123,15 @@ export class HudScene extends Phaser.Scene {
     this.debugPanel = new DebugPanel(this, () => launchRun(this, this.gameScene()?.request));
     this.debugPanel.setVisible(DEBUG_TOOLS && readDebugParams().debug);
 
-    // The HUD is laid out in band coordinates (y 0 at the safe top); the tap regions are canvas ones.
-    const unregisterButton = addUiRegion(() =>
-      toCanvasRegion(
-        this.overlay.visible || !this.pauseEnabled()
-          ? null
-          : { x: pauseMargin, y: pauseMargin, width: pauseSize, height: pauseSize },
-        safeBand(),
-      ),
-    );
-    const unregisterPanel = addUiRegion(() => toCanvasRegion(this.debugPanel.bounds(), safeBand()));
-    const unregisterContinue = addUiRegion(() =>
-      toCanvasRegion(this.continueWindow.bounds(), safeBand()),
-    );
-    const unregisterOverlay = addUiRegion(() =>
-      this.overlay.visible
-        ? { x: 0, y: 0, width: this.scale.gameSize.width, height: this.scale.gameSize.height }
-        : null,
-    );
-
+    const releaseInput = bindHudInput({
+      scene: this,
+      overlay: this.overlay,
+      continueWindow: this.continueWindow,
+      debugPanel: this.debugPanel,
+      pauseEnabled: () => this.pauseEnabled(),
+      pause: () => this.pause(),
+    });
     this.game.events.on(Phaser.Core.Events.HIDDEN, this.pause, this);
-    // The Android back: the pause window closes, the continue offer says "no", a running run pauses.
-    const unregisterBack = pushBack(
-      () =>
-        this.overlay.back() ||
-        this.continueWindow.back() ||
-        (this.pauseEnabled() ? (this.pause(), true) : false),
-    );
     if (DEBUG_TOOLS) {
       this.input.keyboard?.on('keydown-D', () => {
         this.debugPanel.setVisible(!this.debugPanel.visible);
@@ -160,13 +140,9 @@ export class HudScene extends Phaser.Scene {
     this.scale.on(Phaser.Scale.Events.RESIZE, this.layout, this);
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       this.runMusic.end();
-      unregisterButton();
-      unregisterOverlay();
-      unregisterPanel();
+      releaseInput();
       this.treasure.destroy();
       this.masterCaptions.clear();
-      unregisterContinue();
-      unregisterBack();
       this.game.events.off(Phaser.Core.Events.HIDDEN, this.pause, this);
       this.scale.off(Phaser.Scale.Events.RESIZE, this.layout, this);
     });
@@ -304,7 +280,7 @@ export class HudScene extends Phaser.Scene {
   /**
    * The HUD is laid out in the safe band: the camera scrolls up by the top inset, so y 0 is the
    * safe top and the band is the height of `frameOf`. Windows and veils that cover the canvas are built
-   * pinned to it (`buildPinned`); the fade of a leaving screen covers the whole camera anyway.
+   * stand on the canvas whatever the scroll (`PopupWindow`); the fade of a leaving screen covers the whole camera anyway.
    */
   private layout(): void {
     const { width, height } = this.scale.gameSize;

@@ -15,6 +15,7 @@ import {
   type DebugMenuChoice,
 } from './debug-menu-query';
 import { overlayButtonCss } from './overlay-style';
+import { pushBack } from '../app/back-stack';
 
 let openMenu: HTMLElement | null = null;
 
@@ -91,6 +92,8 @@ export function showDebugMenu(): void {
   const box = document.createElement('div');
   box.style.cssText =
     `position:fixed;z-index:${M.zIndex};inset:0;overflow:auto;box-sizing:border-box;` +
+    // The page forbids touch gestures (style.css); the list scrolls with a finger all the same.
+    'touch-action:pan-y;overscroll-behavior:contain;-webkit-user-select:none;user-select:none;' +
     `padding:calc(${M.paddingPx}px + env(safe-area-inset-top)) ${M.paddingPx}px ` +
     `calc(${M.paddingPx}px + env(safe-area-inset-bottom));` +
     `background:${M.background};color:${M.color};font:${M.fontPx}px sans-serif;`;
@@ -105,10 +108,17 @@ export function showDebugMenu(): void {
   build.textContent = `${APP_VERSION} · ${formatBuildStamp(BUILD_HASH, BUILD_TIME)}`;
   build.style.cssText = `font:${M.infoFontPx}px monospace;opacity:0.7;margin-top:4px;word-break:break-word;`;
 
+  // The Android back closes the menu (it covers the window that opened it).
+  let releaseBack: () => void = () => undefined;
   const close = (): void => {
+    releaseBack();
     box.remove();
     openMenu = null;
   };
+  releaseBack = pushBack(() => {
+    close();
+    return true;
+  });
 
   const startOptions = START_OPTIONS.map((o) => ({
     value: o.height,

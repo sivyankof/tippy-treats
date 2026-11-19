@@ -78,7 +78,7 @@ mv credentials.json credentials /c/Users/Artem/Documents/keys/arcanum-eas/
 
 Без `gh` то же делается на сайте: репозиторий → **Settings** → **Secrets and variables** → **Actions** → **New repository secret**, имя в **Name**, значение в **Secret**, **Add secret** (для `.p12` и профиля значение — их base64, его даёт `base64 -w0 <файл>` в Git Bash).
 
-Проверка: `gh secret list --repo sivyankof/tippy-treats` показывает семь имён (значения GitHub не показывает никому). После этого напишите в сессию «секреты внесены»: первую сборку в TestFlight запустит Claude Code.
+Проверка: `gh secret list --repo sivyankof/tippy-treats` показывает семь имён (значения GitHub не показывает никому). После этого напишите в сессию «секреты внесены»: первую сборку в TestFlight запустит сессия разработки.
 
 ## 2. iPhone: сборка в TestFlight и установка
 
@@ -126,7 +126,7 @@ mv credentials.json credentials /c/Users/Artem/Documents/keys/arcanum-eas/
    - `ANDROID_HOME` = `C:\Users\Artem\AppData\Local\Android\Sdk`
    Перезапустите терминал.
 
-**Ключ подписи** (один раз; Claude Code делает это сам, когда вы назовёте пароль):
+**Ключ подписи** (один раз; его создаёт сессия разработки, когда вы назовёте пароль):
 ```
 TIPPY_KEY_PASSWORD='ваш пароль' bash scripts/native/make-upload-key.sh
 ```
@@ -161,7 +161,7 @@ cd android
    - **Run from** — старт с выбранной зоны или точки (0/20/40/60/80/100), **Place** — кухня или витрина, **Weather** — погода, **Frame counter** — счётчик кадров, **Debug panel** — панель отладки; затем **Start**. Такие забеги в сохранение не пишутся.
    - **Sound board** — звуковая доска (кнопка **back** возвращает в игру).
    - **Normal start** — обычный запуск, **Close** — закрыть меню.
-3. Когда замер кончится, на экране итог: строка вердикта (зелёная `budget: ok` или красная `budget: over in N segments`) и таблица по отрезкам. Кнопка **copy** копирует полный текст, его можно вставить в сообщение для Claude Code. **back to game** возвращает в игру.
+3. Когда замер кончится, на экране итог: строка вердикта (зелёная `budget: ok` или красная `budget: over in N segments`) и таблица по отрезкам. Кнопка **copy** копирует полный текст, его можно вставить в сообщение для сессии разработки. **back to game** возвращает в игру.
 
 Сделайте оба замера (**no team** и **master team**) и пришлите оба текста.
 

@@ -5,6 +5,7 @@ import { fitText } from '../menu/widgets/fit-text';
 import { createOutlinedText } from '../common/outlined-text';
 import { safeFrame } from '../common/safe-frame';
 import { createPlate } from './volume';
+import { pinToCanvas } from '../common/pin-canvas';
 
 const cfg = MENU.style.toast;
 
@@ -27,6 +28,8 @@ export function showToast(scene: Phaser.Scene, text: string): void {
     .container(width / 2, y + cfg.height, [plate, label])
     .setDepth(cfg.depth)
     .setAlpha(0);
+  // It stands on the canvas, also on a scene whose camera scrolls by the top inset (results).
+  pinToCanvas(toast);
   scene.tweens.add({ targets: toast, y, alpha: 1, duration: cfg.inMs, ease: 'Back.easeOut' });
   scene.tweens.add({
     targets: toast,

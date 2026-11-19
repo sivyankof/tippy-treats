@@ -5,7 +5,6 @@ import { t } from '../../../../i18n';
 import type { Button } from '../../common/button';
 import { createOutlinedText } from '../../common/outlined-text';
 import { RefitPlate } from '../../style/refit-plate';
-import type { VolumePlate } from '../../style/volume';
 import { fitText } from '../widgets/fit-text';
 import { createIconButton, type IconKind } from '../widgets/icon-button';
 import {
@@ -47,6 +46,8 @@ class NavItem {
 export class HomeNav {
   private readonly items: NavItem[];
   private readonly bar: RefitPlate;
+  /** Holds the bar: the screen's slide moves this, so a bar rebuilt for a new height mid-slide follows it. */
+  private readonly barRoot: Phaser.GameObjects.Container;
 
   constructor(
     scene: Phaser.Scene,
@@ -97,7 +98,9 @@ export class HomeNav {
       },
     ];
     const { height, overhang } = cfg.navBar;
-    this.bar = new RefitPlate(scene, 'bar', height + overhang);
+    this.barRoot = scene.add.container(0, 0);
+    this.bar = new RefitPlate(scene, 'bar', height + overhang, {}, this.barRoot);
+    this.barRoot.add(this.bar.plate);
     this.items = specs.map((spec) => new NavItem(scene, spec, slotWidth));
     this.refresh();
   }
@@ -112,8 +115,8 @@ export class HomeNav {
   }
 
   /** What slides in with the screen. */
-  get parts(): Array<Phaser.GameObjects.Container | VolumePlate> {
-    return [this.bar.plate, ...this.items.map((item) => item.root)];
+  get parts(): Phaser.GameObjects.Container[] {
+    return [this.barRoot, ...this.items.map((item) => item.root)];
   }
 
   /**

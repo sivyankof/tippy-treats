@@ -1,4 +1,5 @@
-import type * as Phaser from 'phaser';
+import * as Phaser from 'phaser';
+import { pushBack } from '../../../app/back-stack';
 import { MENU } from '../../../../data/common/menu-layout';
 import { PALETTE } from '../../../../data/common/palette';
 import { t } from '../../../../i18n';
@@ -118,4 +119,20 @@ export class ResultsButtons {
     for (const button of this.buttons) button.setEnabled(enabled);
     this.extra?.setEnabled(enabled);
   }
+}
+
+/**
+ * The Android back on the results screen is "Home" (the results stand over the run: the HUD's
+ * handler under them never sees it). While the screen is built hidden under the collapsing tower,
+ * or its buttons are not built yet, it is taken and nothing happens. Released when the scene ends.
+ */
+export function bindResultsBack(
+  scene: Phaser.Scene,
+  buttons: () => ResultsButtons | undefined,
+): void {
+  const release = pushBack(() => {
+    const ready = buttons();
+    return scene.sys.isVisible() && ready ? ready.pressBack() : true;
+  });
+  scene.events.once(Phaser.Scenes.Events.SHUTDOWN, release);
 }
