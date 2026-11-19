@@ -31,8 +31,9 @@ import { applySets, setArg } from './what-if';
  * - `rush`: a miss on a rush layer that would have landed at the speed without the rush multiplier;
  * - `speed`: the missed layer was still at least `WIDE_LAYER` wide, so one big timing error lost it;
  * - `narrowing`: the missed layer had shrunk below `WIDE_LAYER` after inaccurate drops.
- * Every drop miss also reports whether it would have landed at the start speed of the first layer (`BALANCE.speed.start`; 600 until session 7b, 540 since)
- * and whether it was a showcase layer (the side of departure does not change the bot's timing).
+ * Every drop miss also reports whether it would have landed at the start speed of the first layer
+ * (`BALANCE.speed.start`: 600 until session 7b, 540 since) and whether it was a showcase layer
+ * (the side of departure does not change the bot's timing).
  */
 
 /** Runs end below this height are split by cause; also the target of the share columns. */
