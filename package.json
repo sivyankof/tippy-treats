@@ -17,6 +17,7 @@
     "sim:speed-variants": "tsx scripts/speed-variants.ts",
     "sim:economy": "tsx scripts/economy-model.ts",
     "sim:teams": "tsx scripts/team-sweep.ts",
+    "sim:first40": "tsx scripts/first-layers.ts",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "format": "prettier --write .",
