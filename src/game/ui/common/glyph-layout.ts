@@ -1,3 +1,5 @@
+import { pluralForms } from '../../../i18n';
+
 /** Pure layout of a string drawn glyph by glyph from pictures (see glyph-text.ts). */
 
 /** A glyph of a laid-out string and its pen position, in pixels from the left edge of the text. */
@@ -50,13 +52,16 @@ export function glyphChars(strings: readonly string[]): string[] {
 
 /** The forms of a plural entry (`one=in {n} layer|other=in {n} layers`) with the `{n}` marks cut out. */
 export function pluralFormTexts(entry: string): string[] {
-  return entry.split('|').map((form) => {
-    const split = form.indexOf('=');
-    return (split > 0 ? form.slice(split + 1) : form).replace(/\{\w+\}/g, '');
-  });
+  const forms = [...pluralForms(entry).values()];
+  return (forms.length > 0 ? forms : [entry]).map((form) => form.replace(/\{\w+\}/g, ''));
 }
 
-/** Texture key of one glyph of a style (`styleId` comes from `glyphStyleId`). */
+/** Texture key of the fill picture of one glyph of a style. */
 export function glyphKey(styleId: string, char: string): string {
   return `ui_hud_glyph_${styleId}_${(char.codePointAt(0) ?? 0).toString(16)}`;
+}
+
+/** Texture key of the outline picture of one glyph of a style. */
+export function glyphStrokeKey(styleId: string, char: string): string {
+  return `ui_hud_glyphs_${styleId}_${(char.codePointAt(0) ?? 0).toString(16)}`;
 }

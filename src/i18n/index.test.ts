@@ -5,6 +5,7 @@ import {
   formatDecimal,
   formatNumber,
   keysOf,
+  pluralForms,
   resolveLang,
   setLang,
   t,
@@ -96,5 +97,15 @@ describe('i18n', () => {
     DICTIONARIES.en['probe'] = 'plain {n}';
     expect(tn('probe', 5)).toBe('plain 5');
     delete DICTIONARIES.en['probe'];
+  });
+});
+
+describe('pluralForms', () => {
+  it('splits an entry into its categories and drops forms without one', () => {
+    expect([...pluralForms('one=a {n}|few==b|other=c|stray')]).toEqual([
+      ['one', 'a {n}'],
+      ['few', '=b'],
+      ['other', 'c'],
+    ]);
   });
 });

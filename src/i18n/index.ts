@@ -46,6 +46,16 @@ export function t(key: string, params: Record<string, string | number> = {}): st
 
 const pluralRules = new Map<Lang, Intl.PluralRules>();
 
+/** The forms of a plural entry (`one=text|other=text`) by category; a form without a category is left out. */
+export function pluralForms(entry: string): Map<string, string> {
+  const forms = new Map<string, string>();
+  for (const form of entry.split('|')) {
+    const split = form.indexOf('=');
+    if (split > 0) forms.set(form.slice(0, split), form.slice(split + 1));
+  }
+  return forms;
+}
+
 /**
  * Translated string whose form depends on the number `n` (also filled in as `{n}`).
  * The entry lists the forms as `category=text` separated by `|` (`one`, `few`, `many`, `other`
@@ -59,11 +69,7 @@ export function tn(key: string, n: number, params: Record<string, string | numbe
     rules = new Intl.PluralRules(current);
     pluralRules.set(current, rules);
   }
-  const forms = new Map<string, string>();
-  for (const form of entry.split('|')) {
-    const split = form.indexOf('=');
-    if (split > 0) forms.set(form.slice(0, split), form.slice(split + 1));
-  }
+  const forms = pluralForms(entry);
   return forms.get(rules.select(n)) ?? forms.get('other') ?? [...forms.values()].at(-1) ?? entry;
 }
 
