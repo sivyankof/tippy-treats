@@ -6,6 +6,7 @@ import { WEATHER } from '../../../../data/weather/weather';
 import { SPACE_ZONE_INDEX, ZONES, type ZoneId } from '../../../../data/zones/zones';
 import type { RunLook } from '../../../../core/weather/run-look';
 import { flyingLap } from '../../../../core/zones/space-laps';
+import { addDynamicTexture } from '../../../app/dynamic-texture';
 import { DEPTH } from '../../../common/depth';
 import { markPerfPart } from '../../../perf/perf-marks';
 import { collectBakeSteps } from '../../../ui/common/bake-texture';
@@ -284,7 +285,7 @@ export class Backdrop {
     if (!first) return;
     const textures = this.scene.textures;
     if (textures.exists(BD_TEX.still)) textures.remove(BD_TEX.still);
-    const picture = textures.addDynamicTexture(BD_TEX.still, width, height);
+    const picture = addDynamicTexture(textures, BD_TEX.still, width, height);
     if (!picture) return;
     picture.draw(
       zones.map((scenery) => scenery.root),

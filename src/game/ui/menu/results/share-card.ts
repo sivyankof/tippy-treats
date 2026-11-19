@@ -4,6 +4,7 @@ import { BALANCE } from '../../../../data/tower/balance';
 import { SHARE_CARD } from '../../../../data/run/share';
 import { t } from '../../../../i18n';
 import { mixColor } from '../../../../util/color';
+import { addDynamicTexture } from '../../../app/dynamic-texture';
 import { LayerView } from '../../../objects/tower/layer-view';
 import type { TowerSnapshot } from '../../../objects/tower/tower-snapshot';
 import { offList } from '../../common/bake-texture';
@@ -117,7 +118,7 @@ export async function renderShareCard(
   tower: TowerSnapshot,
   height: number,
 ): Promise<Blob> {
-  const card = scene.textures.addDynamicTexture(CARD_KEY, cfg.width, cfg.height);
+  const card = addDynamicTexture(scene.textures, CARD_KEY, cfg.width, cfg.height);
   if (!card) throw new Error('share card: no texture');
   try {
     const { scale, centerX, trayY } = fitTower(tower.layers, {
