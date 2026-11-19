@@ -1,0 +1,36 @@
+{
+  "appId": "app.tippytreats.game",
+  "appName": "Tippy Treats",
+  "webDir": "dist",
+  "backgroundColor": "#2b1d16",
+  "loggingBehavior": "debug",
+  "ios": {
+    "contentInset": "never",
+    "scrollEnabled": false,
+    "allowsLinkPreview": false,
+    "preferredContentMode": "mobile"
+  },
+  "android": {
+    "allowMixedContent": false,
+    "captureInput": false,
+    "webContentsDebuggingEnabled": false
+  },
+  "plugins": {
+    "SplashScreen": {
+      "launchAutoHide": false,
+      "launchShowDuration": 0,
+      "launchFadeOutDuration": 250,
+      "backgroundColor": "#2b1d16",
+      "showSpinner": false,
+      "splashFullScreen": false,
+      "splashImmersive": false
+    },
+    "SystemBars": {
+      "insetsHandling": "native",
+      "initialViewportFitValueHint": "cover",
+      "style": "DARK",
+      "hidden": false,
+      "animation": "NONE"
+    }
+  }
+}

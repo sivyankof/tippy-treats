@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Tippy Treats</string>
+    <string name="title_activity_main">Tippy Treats</string>
+    <string name="package_name">app.tippytreats.game</string>
+    <string name="custom_url_scheme">app.tippytreats.game</string>
+</resources>

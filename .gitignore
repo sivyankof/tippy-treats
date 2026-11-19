@@ -17,7 +17,7 @@ Thumbs.db
 *.local
 .claude/settings.local.json
 
-# Native build output (projects appear on M7 / M9)
+# Native build output (each platform folder has its own .gitignore as well)
 ios/App/build/
 ios/App/Pods/
 ios/DerivedData/
@@ -25,6 +25,26 @@ android/.gradle/
 android/build/
 android/app/build/
 android/local.properties
+*.ipa
+*.xcarchive
+*.dSYM.zip
+*.apk
+*.aab
+
+# Signing keys and store credentials: never in the repository (docs/11a-device-build.md)
+*.jks
+*.keystore
+*.p8
+*.p12
+*.pem
+*.mobileprovision
+*.provisionprofile
+*.cer
+keystore.properties
+android/keystore.properties
+AuthKey_*.p8
+google-play-*.json
+service-account*.json
 
 # Browser automation output
 .playwright-mcp/
