@@ -1,4 +1,5 @@
 import * as Phaser from 'phaser';
+import { pushBack } from '../app/back-stack';
 import { BALANCE } from '../../data/tower/balance';
 import { CREATURES, type CreatureId } from '../../data/creatures/creatures';
 import { MENU } from '../../data/common/menu-layout';
@@ -66,7 +67,14 @@ export class NewCreatureScene extends Phaser.Scene {
     this.buildObjects(id);
 
     this.scale.on(Phaser.Scale.Events.RESIZE, this.layout, this);
+    // The Android back skips the reveal like a tap, then presses the button once it takes taps.
+    const releaseBack = pushBack(() => {
+      if (this.button.input?.enabled) this.confirm();
+      else this.skip();
+      return true;
+    });
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      releaseBack();
       this.scale.off(Phaser.Scale.Events.RESIZE, this.layout, this);
       this.particles.clear();
     });

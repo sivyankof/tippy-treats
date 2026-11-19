@@ -57,6 +57,7 @@ export class PauseOverlay {
     const popup = new PopupWindow(this.scene, {
       title: t('run.paused'),
       closable: false,
+      back: 'pass',
       closeOnVeil: false,
     });
     const button = (text: string, fill: number, row: number, onClick: () => void): Button =>

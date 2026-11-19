@@ -1,4 +1,5 @@
 import * as Phaser from 'phaser';
+import { pushBack } from '../../app/back-stack';
 import { MENU } from '../../../data/common/menu-layout';
 import { PALETTE } from '../../../data/common/palette';
 import { windowDuck } from '../../audio/music-cues';
@@ -23,6 +24,13 @@ export interface PopupOptions {
   layer?: number;
   /** Runs once the window is gone. */
   onClosed?: () => void;
+  /**
+   * The Android back while the window shows (`game/app/back-stack.ts`): `close` closes it like the
+   * close button, `hold` takes it and does nothing (a window that waits for its own buttons),
+   * `pass` leaves it to whatever is under the window (its owner handles it). Default: `close` for
+   * a closable window, `hold` otherwise.
+   */
+  back?: 'close' | 'hold' | 'pass';
 }
 
 /**
@@ -60,6 +68,7 @@ export class PopupWindow {
   private gone = false;
   /** Every open window turns the music down until it is gone (nested windows count). */
   private readonly releaseDuck = windowDuck.hold();
+  private readonly releaseBack: () => void;
 
   constructor(
     private readonly scene: Phaser.Scene,
@@ -67,6 +76,14 @@ export class PopupWindow {
   ) {
     const { width, height } = scene.scale.gameSize;
     const closable = options.closable ?? true;
+    const back = options.back ?? (closable ? 'close' : 'hold');
+    this.releaseBack =
+      back === 'pass'
+        ? () => undefined
+        : pushBack(() => {
+            if (back === 'close') this.close();
+            return true;
+          });
     this.contentHeight = options.contentHeight ?? cfg.minContentHeight;
     const depth = cfg.depth + (options.layer ?? 0) * cfg.layerStep;
     this.dim = createDimOverlay(scene, cfg.dimAlpha, width, height)
@@ -141,6 +158,7 @@ export class PopupWindow {
     if (this.gone) return;
     this.gone = true;
     this.releaseDuck();
+    this.releaseBack();
     this.scene.scale.off(Phaser.Scale.Events.RESIZE, this.layout, this);
     this.scene.events.off(Phaser.Scenes.Events.SHUTDOWN, this.destroy, this);
     this.scene.tweens.killTweensOf([this.dim, this.root]);

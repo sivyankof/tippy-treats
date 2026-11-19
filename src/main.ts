@@ -113,6 +113,13 @@ async function start(): Promise<void> {
     (window as Window & { tippyGame?: Phaser.Game }).tippyGame = game;
     // window.tippyIdleAudit(seconds): lists objects of the run screen that stand still for over 2 s.
     void import('./game/debug/idle-audit').then((audit) => audit.registerIdleAudit(game));
+    // Esc stands in for the Android back (game/app/back-stack.ts): the same handlers answer it.
+    void import('./game/app/back-stack').then((back) =>
+      window.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape' && !back.handleBack())
+          console.info('[back] nothing took it: the app would go to the background');
+      }),
+    );
     // window.tippySoak: the long play-through of the leak check (scripts keep the harness).
     void import('./game/debug/soak-driver').then((soak) => soak.registerSoak(game));
   }

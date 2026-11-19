@@ -1,4 +1,5 @@
-import type * as Phaser from 'phaser';
+import * as Phaser from 'phaser';
+import { pushBack } from '../../../app/back-stack';
 import { MENU } from '../../../../data/common/menu-layout';
 import { PALETTE } from '../../../../data/common/palette';
 import { TREASURE } from '../../../../data/economy/treasure-anim';
@@ -76,6 +77,15 @@ export class ScreenHeader {
           onBack,
         )
       : null;
+    if (onBack) {
+      // The Android back is the back button, while the screen runs and the button takes taps.
+      const release = pushBack(() => {
+        if (!scene.sys.isActive() || this.back?.input?.enabled === false) return false;
+        onBack();
+        return true;
+      });
+      scene.events.once(Phaser.Scenes.Events.SHUTDOWN, release);
+    }
     this.ribbon = title === '' ? null : new TitleRibbon(scene, 0, ribbon.y, title);
     this.title = this.ribbon?.label ?? null;
     this.coins = new WalletChip(scene, {
