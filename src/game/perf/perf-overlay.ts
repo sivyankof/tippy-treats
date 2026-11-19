@@ -42,7 +42,7 @@ export class PerfOverlay {
     this.body = document.createElement('pre');
     this.body.style.cssText =
       `display:none;margin:6px 0 0;max-height:${overlay.maxHeightVh}vh;overflow:auto;pointer-events:auto;` +
-      'white-space:pre-wrap;word-break:break-all;user-select:text;-webkit-user-select:text;';
+      'white-space:pre;user-select:text;-webkit-user-select:text;';
     this.box.append(this.line, this.body);
     document.body.appendChild(this.box);
   }
