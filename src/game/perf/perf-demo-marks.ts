@@ -1,8 +1,8 @@
 import type { PlacedLayer } from '../../core/tower/sim-types';
 import { PERF_STEPS } from '../../data/debug/perf';
 import { SQUASH_TEXTURES, TOPPER_SQUASH } from '../../data/toppers/topper-squash';
-import { stainOrigin, stainPictureSize } from '../fx/squash-textures';
-import { layerStainSpot } from '../fx/topper-squash-fx';
+import { stainOrigin, stainPictureSize } from '../fx/toppers/squash-textures';
+import { layerStainSpot } from '../fx/toppers/topper-squash-fx';
 import { layerMarks } from '../objects/layer-marks';
 import { currentSegment, perfSession } from './perf-session';
 

@@ -1,6 +1,6 @@
 import { RAINBOW_LOOK } from '../../../data/creatures/rainbow-look';
 import { TWO_PI } from '../../../util/math';
-import type { Pt } from '../../fx/plain-style';
+import type { Pt } from '../../fx/common/plain-style';
 import type { LayerBox } from '../layer-draw';
 
 const { wave } = RAINBOW_LOOK;

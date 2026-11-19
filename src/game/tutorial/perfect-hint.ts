@@ -5,7 +5,7 @@ import { PALETTE } from '../../data/common/palette';
 import { t } from '../../i18n';
 import { sineWave } from '../../util/math';
 import { FLYING_REACH } from '../camera-layout';
-import { easeFn } from '../fx/ease';
+import { easeFn } from '../fx/common/ease';
 import { createOutlinedText } from '../ui/outlined-text';
 import { HintClock } from './timeline';
 

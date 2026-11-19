@@ -1,8 +1,8 @@
 import * as Phaser from 'phaser';
 import { BALANCE } from '../../data/tower/balance';
 import { PLAIN_TOPPERS, type TopperKind } from '../../data/toppers/plain-toppers';
-import { ensureTopperTexture } from '../fx/topper-texture';
-import { faceHalfSpan } from '../fx/glaze-growth';
+import { ensureTopperTexture } from '../fx/toppers/topper-texture';
+import { faceHalfSpan } from '../fx/glaze/glaze-growth';
 import { plainToppers, restTilt, sideOfOffset, topperOffset, topperSize } from './topper-look';
 
 /** Where a shown topper is in the world, for the hop when the next layer lands. */

@@ -11,7 +11,7 @@ import {
   OVEN_WINDOW,
   bakeOvenTextures,
   type OvenState,
-} from '../../fx/oven-texture';
+} from '../../fx/economy/oven-texture';
 import { FlameIcon } from './flame-icon';
 import { startSwayTween } from './hop-motion';
 

@@ -8,8 +8,8 @@ import {
   fillOutlinedPolygon,
   fillPolygon,
   outlineColor,
-} from '../../fx/plain-style';
-import { faceHalfSpan } from '../../fx/glaze-growth';
+} from '../../fx/common/plain-style';
+import { faceHalfSpan } from '../../fx/glaze/glaze-growth';
 import { drawShadow, type GlazeOptions } from '../layer-draw';
 import { drawBody, drawGlaze } from './flat-draw';
 import {

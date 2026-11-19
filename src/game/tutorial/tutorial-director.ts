@@ -2,7 +2,7 @@ import type { SimEvent, TowerState } from '../../core/tower/tower-sim';
 import { BALANCE } from '../../data/tower/balance';
 import { berriesFromEvents } from '../../core/economy/berries';
 import type { GameState } from '../../state/game-state';
-import { isCovered } from '../fx/rule-state';
+import { isCovered } from '../fx/zones/rule-state';
 
 /** Something the hint screen has to show now. */
 export type TutorialCue =

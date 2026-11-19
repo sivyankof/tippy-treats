@@ -4,7 +4,7 @@ import { BALANCE } from '../../data/tower/balance';
 import { IDLE_MOTION, IDLE_PHASE, TRAY_SHEEN } from '../../data/common/idle-motion';
 import { KITCHEN_COLORS } from '../../data/common/palette';
 import { DEPTH } from '../depth';
-import { createGlossBand, sweepGloss } from '../fx/gloss-sweep';
+import { createGlossBand, sweepGloss } from '../fx/common/gloss-sweep';
 import { bakeTexture } from '../ui/bake-texture';
 import { applyIdlePose, idlePose, type IdlePose } from '../ui/idle-motion';
 

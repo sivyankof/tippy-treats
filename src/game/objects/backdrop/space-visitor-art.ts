@@ -9,7 +9,7 @@ import {
   outlineColor,
   roundRectPoints,
   type Pt,
-} from '../../fx/plain-style';
+} from '../../fx/common/plain-style';
 import { bakePadded } from '../../ui/bake-texture';
 
 type Graphics = Phaser.GameObjects.Graphics;

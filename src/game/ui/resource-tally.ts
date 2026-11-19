@@ -3,10 +3,10 @@ import { BERRY_LOOK } from '../../data/economy/berry-look';
 import { TREASURE } from '../../data/economy/treasure-anim';
 import { formatNumber } from '../../i18n';
 import { MS_PER_SECOND, oscillate01, sineWave } from '../../util/math';
-import { spinScale, shownTotal, type Point } from '../fx/coin-flight-math';
-import { easeFn } from '../fx/ease';
-import { FX_TEXTURES } from '../fx/fx-textures';
-import { createTreasureTextures } from '../fx/treasure-textures';
+import { spinScale, shownTotal, type Point } from '../fx/economy/coin-flight-math';
+import { easeFn } from '../fx/common/ease';
+import { FX_TEXTURES } from '../fx/common/fx-textures';
+import { createTreasureTextures } from '../fx/economy/treasure-textures';
 import { createOutlinedText } from './outlined-text';
 import { NumberRoll } from './number-roll';
 

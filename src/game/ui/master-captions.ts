@@ -7,8 +7,8 @@ import type { TeamSlots } from '../../core/tower/sim-types';
 import { getLang } from '../../i18n';
 import { DEPTH } from '../depth';
 import { effectsMode } from '../effects-mode';
-import { easeFn } from '../fx/ease';
-import { FX_TEXTURES } from '../fx/fx-textures';
+import { easeFn } from '../fx/common/ease';
+import { FX_TEXTURES } from '../fx/common/fx-textures';
 import {
   captionLook,
   endCaption,

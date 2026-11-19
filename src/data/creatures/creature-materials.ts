@@ -8,7 +8,7 @@ import type { WallFeelKind } from '../tower/edge-squash';
 /** Small shared effect pictures a material burst can use (`FX_TEXTURES` in the game). */
 export type MaterialTexture = 'drop' | 'circle' | 'star' | 'crumb' | 'spark';
 
-/** A particle burst of a material: the fields of `ParticleStyle` (`game/fx/particle-motion.ts`). */
+/** A particle burst of a material: the fields of `ParticleStyle` (`game/fx/common/particle-motion.ts`). */
 export interface MaterialBurst {
   /** Out of both side edges of the layer, or up from its top surface. */
   from: 'edges' | 'top';

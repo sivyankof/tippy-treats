@@ -20,7 +20,7 @@ import {
   runsOntoBelow,
   thaws,
   type BelowSpan,
-} from '../fx/glaze-growth';
+} from '../fx/glaze/glaze-growth';
 import { creatureColors } from './creature-art/primitives';
 import {
   bulbOuter,

@@ -4,7 +4,7 @@ import { BACKDROP_COLORS } from '../../../data/backdrop/backdrop-colors';
 import { BACKDROP_LIFE } from '../../../data/backdrop/backdrop-life';
 import { KITCHEN_COLORS, PALETTE } from '../../../data/common/palette';
 import { mixColor, shade } from '../../../util/color';
-import { outlineColor } from '../../fx/plain-style';
+import { outlineColor } from '../../fx/common/plain-style';
 import { bakePadded, bakeTexture } from '../../ui/bake-texture';
 import { FIELD_PAD } from '../../../data/common/picture-fields';
 import { drawPlank } from './art-kit';

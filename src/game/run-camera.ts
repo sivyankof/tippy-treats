@@ -3,8 +3,8 @@ import type * as Phaser from 'phaser';
 import { ANIM } from '../data/common/anim';
 import { frameLerp } from '../util/math';
 import { targetScrollY, trayScrollY } from './camera-layout';
-import type { CameraInfo, RunFx } from './fx/run-fx';
-import type { RunIntro } from './fx/run-intro';
+import type { CameraInfo, RunFx } from './fx/run/run-fx';
+import type { RunIntro } from './fx/run/run-intro';
 import type { Backdrop } from './objects/backdrop/backdrop';
 import type { WorldEntry } from './ui/transition';
 

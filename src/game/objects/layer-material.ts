@@ -3,7 +3,7 @@ import { ANIM } from '../../data/common/anim';
 import { creatureMaterial, type CreatureMaterial } from '../../data/creatures/creature-materials';
 import type { CreatureId } from '../../data/creatures/creatures';
 import { effectsMode } from '../effects-mode';
-import { landSquash } from '../fx/anim-curves';
+import { landSquash } from '../fx/common/anim-curves';
 import { materialShape, type Shape } from './material-shape';
 
 /** What the tower tells a layer about the frame: its clock, the sway and the layer's own phase. */

@@ -4,7 +4,7 @@ import { ANIM } from '../../data/common/anim';
 import { BALANCE } from '../../data/tower/balance';
 import { artRecipe } from '../../data/creatures/creature-looks';
 import { shade } from '../../util/color';
-import { combineWiden } from '../fx/anim-curves';
+import { combineWiden } from '../fx/common/anim-curves';
 import { twinsSeam } from './creature-art/twins-seam';
 import type { LayerFace } from './layer-face';
 import { DARK_OUTLINE, layerBox } from './layer-draw';

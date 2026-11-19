@@ -2,8 +2,8 @@ import type { RunMode } from '../../core/run/run-result';
 import type { SimEvent, TowerSim } from '../../core/tower/tower-sim';
 import { services } from '../../services';
 import type { ContinueFlow } from '../continue-flow';
-import { cuesForMoment } from '../fx/moment-cues';
-import { playCues } from '../fx/run-cues';
+import { cuesForMoment } from '../fx/audio/moment-cues';
+import { playCues } from '../fx/audio/run-cues';
 
 export interface ContinueDriveContext {
   flow: ContinueFlow | null;

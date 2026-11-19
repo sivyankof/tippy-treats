@@ -2,7 +2,7 @@ import type * as Phaser from 'phaser';
 import type { GuestLook } from '../../data/guests/tower-guest';
 import { TOWER_GUEST } from '../../data/guests/tower-guest';
 import { DEG_TO_RAD, sineWave } from '../../util/math';
-import { ellipsePoints, fillPolygon } from '../fx/plain-style';
+import { ellipsePoints, fillPolygon } from '../fx/common/plain-style';
 import { bakeTexture } from '../ui/bake-texture';
 import { trembleAngle } from './tower-guest-plan';
 

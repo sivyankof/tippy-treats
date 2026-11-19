@@ -2,8 +2,8 @@ import { ABILITY_ANIM } from '../../../data/creatures/ability-anim';
 import { TWO_PI } from '../../../util/math';
 import { DEPTH } from '../../depth';
 import { effectsMode } from '../../effects-mode';
-import { easeFn } from '../ease';
-import { FX_TEXTURES } from '../fx-textures';
+import { easeFn } from '../common/ease';
+import { FX_TEXTURES } from '../common/fx-textures';
 import { mouthPoint, type SignatureFx } from './kit';
 import { makeSpec } from './sprite-motion';
 

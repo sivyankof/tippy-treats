@@ -6,7 +6,7 @@ import { MENU } from '../../../data/common/menu-layout';
 import { REWARD_LOOK } from '../../../data/economy/reward-look';
 import { formatNumber, t } from '../../../i18n';
 import { effectsMode } from '../../effects-mode';
-import { REWARD_TEXTURES } from '../../fx/reward-pictures';
+import { REWARD_TEXTURES } from '../../fx/economy/reward-pictures';
 import { createOutlinedText } from '../outlined-text';
 import { faceOffsetY, VolumePlate } from '../style/volume';
 import { createCaption, type DailySection } from './daily-section';

@@ -21,7 +21,7 @@ const SLIDE_MARGIN_MS = 40;
 /** Width of the dashes of the ghost's guides: the texture and the guide are this wide. */
 const GUIDE_WIDTH = 14;
 
-/** Particle styles below have the fields of `ParticleStyle` (`game/fx/particle-motion.ts`). Soft puffs drifting up. */
+/** Particle styles below have the fields of `ParticleStyle` (`game/fx/common/particle-motion.ts`). Soft puffs drifting up. */
 const CLOUD_RISE = {
   speed: [40, 90],
   gravity: -30,

@@ -3,12 +3,12 @@ import { TREASURE } from '../../data/economy/treasure-anim';
 import { PALETTE } from '../../data/common/palette';
 import { sineWave, TWO_PI } from '../../util/math';
 import { DEPTH } from '../depth';
-import { easeFn } from '../fx/ease';
-import { spinScale, type Point } from '../fx/coin-flight-math';
-import { FX_TEXTURES } from '../fx/fx-textures';
-import type { Particles } from '../fx/particles';
-import { twinkle } from '../fx/sparkle-fx';
-import { createTreasureTextures, TREASURE_TEXTURES } from '../fx/treasure-textures';
+import { easeFn } from '../fx/common/ease';
+import { spinScale, type Point } from '../fx/economy/coin-flight-math';
+import { FX_TEXTURES } from '../fx/common/fx-textures';
+import type { Particles } from '../fx/common/particles';
+import { twinkle } from '../fx/common/sparkle-fx';
+import { createTreasureTextures, TREASURE_TEXTURES } from '../fx/economy/treasure-textures';
 
 const cfg = TREASURE.floating;
 const appearEase = easeFn(cfg.appearEase);

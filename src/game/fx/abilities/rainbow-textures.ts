@@ -6,7 +6,7 @@ import { RAINBOW_LOOK } from '../../../data/creatures/rainbow-look';
 import { paintStar } from '../../objects/creature-art/rainbow';
 import { starPoints } from '../../objects/creature-art/rainbow-geometry';
 import { bakeTexture } from '../../ui/bake-texture';
-import { fillPolygon, outlineColor } from '../plain-style';
+import { fillPolygon, outlineColor } from '../common/plain-style';
 
 /** Baked pictures of the Rainbow: the moving parts are shown by turning and scaling these, not by redrawing. */
 export const RAINBOW_TEXTURES = {

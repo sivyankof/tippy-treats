@@ -1,6 +1,6 @@
 import * as Phaser from 'phaser';
 import { ABILITY_ANIM } from '../../../data/creatures/ability-anim';
-import { hideItem, TimedPool, type PoolEntry } from '../timed-pool';
+import { hideItem, TimedPool, type PoolEntry } from '../common/timed-pool';
 import { sampleSprite, type SpriteFrame, type SpriteSpec } from './sprite-motion';
 
 interface LiveSprite extends PoolEntry<Phaser.GameObjects.Image> {

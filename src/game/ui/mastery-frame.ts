@@ -1,7 +1,7 @@
 import type * as Phaser from 'phaser';
 import { MASTERY_FRAME } from '../../data/creatures/mastery-look';
 import { parseHex } from '../../util/color';
-import { fillOutlinedPolygon } from '../fx/plain-style';
+import { fillOutlinedPolygon } from '../fx/common/plain-style';
 import { starPoints } from '../objects/creature-art/rainbow-geometry';
 import { bakeTexture } from './bake-texture';
 import {

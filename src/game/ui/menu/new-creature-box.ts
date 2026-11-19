@@ -7,7 +7,7 @@ import {
   GIFT_BODY_ORIGIN,
   GIFT_LID_ORIGIN,
   GIFT_TEXTURES,
-} from '../../fx/gift-texture';
+} from '../../fx/economy/gift-texture';
 import { HopSway } from './hop-motion';
 
 const cfg = MENU.newCreature;

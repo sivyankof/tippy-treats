@@ -7,9 +7,9 @@ import { PALETTE } from '../../data/common/palette';
 import { RULE_ANIM } from '../../data/zones/rule-anim';
 import { oscillate01, sineWave, stepToward } from '../../util/math';
 import { DEPTH } from '../depth';
-import { easeFn } from '../fx/ease';
+import { easeFn } from '../fx/common/ease';
 import { effectsMode } from '../effects-mode';
-import { shadowLook } from '../fx/shadow-emphasis';
+import { shadowLook } from '../fx/tower/shadow-emphasis';
 import { safeSides } from '../safe-sides';
 import { aimMouth, type Reaction } from './face-state';
 import {

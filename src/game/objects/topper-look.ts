@@ -3,7 +3,7 @@ import { PLAIN_TOPPERS, TOPPER_KINDS, type TopperKind } from '../../data/toppers
 import type { DecorKind } from '../../data/tower/plain-layers';
 import { paddedOrigin, paddedSize } from '../../util/field-pad';
 import { DEG_TO_RAD, lerp } from '../../util/math';
-import { faceHalfSpan } from '../fx/glaze-growth';
+import { faceHalfSpan } from '../fx/glaze/glaze-growth';
 import { plainLookAt, plainLooks } from './plain-look';
 
 /**

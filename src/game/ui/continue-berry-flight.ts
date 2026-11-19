@@ -1,7 +1,7 @@
 import type * as Phaser from 'phaser';
 import { CONTINUE_ANIM } from '../../data/run/continue-anim';
-import type { Point } from '../fx/coin-flight-math';
-import { TREASURE_TEXTURES } from '../fx/treasure-textures';
+import type { Point } from '../fx/economy/coin-flight-math';
+import { TREASURE_TEXTURES } from '../fx/economy/treasure-textures';
 
 const { balance: cfg } = CONTINUE_ANIM;
 

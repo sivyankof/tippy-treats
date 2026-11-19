@@ -8,7 +8,7 @@ import { RARITY_COLORS } from '../../../data/creatures/rarity';
 import { t } from '../../../i18n';
 import { createOutlinedText, createStrokedText } from '../outlined-text';
 import { VolumePlate, faceOffsetY } from '../style/volume';
-import { FX_TEXTURES } from '../../fx/fx-textures';
+import { FX_TEXTURES } from '../../fx/common/fx-textures';
 import { fitText } from './fit-text';
 import type { DetailRow } from './detail-rows';
 

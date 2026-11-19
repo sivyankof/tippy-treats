@@ -8,7 +8,7 @@ import { PALETTE } from '../../data/common/palette';
 import { t } from '../../i18n';
 import { cssColor } from '../../util/color';
 import { oscillate01 } from '../../util/math';
-import { stepSpring, type SpringState } from '../fx/anim-curves';
+import { stepSpring, type SpringState } from '../fx/common/anim-curves';
 import { bakeTexture } from './bake-texture';
 import { applyIdlePose, idlePose, type IdlePose } from './idle-motion';
 import { HudPlate, hudPlateWidth } from './style/hud-plate';

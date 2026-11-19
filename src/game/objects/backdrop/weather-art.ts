@@ -6,7 +6,7 @@ import { STRIKE_SIDES, WEATHER_LOOK, WEATHER_TEX as TEX } from '../../../data/we
 import type { ZoneId } from '../../../data/zones/zones';
 import { cssColor, mixColor, shade } from '../../../util/color';
 import { TWO_PI } from '../../../util/math';
-import { drawGlossMark, fillPolygon, outlineColor, type Pt } from '../../fx/plain-style';
+import { drawGlossMark, fillPolygon, outlineColor, type Pt } from '../../fx/common/plain-style';
 import { FIELD_PAD } from '../../../data/common/picture-fields';
 import { bakePadded, bakeTexture, deferStep } from '../../ui/bake-texture';
 import { sparkle } from './art-kit';

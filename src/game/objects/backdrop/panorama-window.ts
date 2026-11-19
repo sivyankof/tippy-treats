@@ -17,7 +17,7 @@ import type { WeatherId } from '../../../data/weather/weather';
 import { KITCHEN_COLORS } from '../../../data/common/palette';
 import { cssColor, mixColor, shade } from '../../../util/color';
 import { TWO_PI } from '../../../util/math';
-import { outlineColor } from '../../fx/plain-style';
+import { outlineColor } from '../../fx/common/plain-style';
 import { bakeTexture } from '../../ui/bake-texture';
 import { onLayer } from './layer-anchor';
 import type { LayerSpot } from './layer-life';

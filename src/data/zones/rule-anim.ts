@@ -218,7 +218,7 @@ export const RULE_ANIM = {
     ghostMaxDensity: 0.7,
     /**
      * The space nebula: the cloud of the Space zone is two glowing arms of a nebula that wind round each
-     * other across the flying row (`fx/nebula-arms.ts`). It has the same motion and the same figure size
+     * other across the flying row (`fx/zones/nebula-arms.ts`). It has the same motion and the same figure size
      * as the cloud and the same frame (1000 x 360 baked px, centre on the row), only other pictures: the
      * veil (`tr_nebula` frame `veil`, drawn normally) and the two arms (frames `blue` and `pink`, drawn
      * additively, so they light the veil up without hiding the layer more), with twinkling stars over it.

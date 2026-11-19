@@ -4,7 +4,7 @@ import { CHECKPOINT_WINDOW } from '../../../data/zones/checkpoint-look';
 import { MENU } from '../../../data/common/menu-layout';
 import { PALETTE } from '../../../data/common/palette';
 import { t } from '../../../i18n';
-import { bakeCheckpointTextures } from '../../fx/checkpoint-textures';
+import { bakeCheckpointTextures } from '../../fx/zones/checkpoint-textures';
 import { createTextButton, type Button } from '../button';
 import { BalanceChip, followBalance } from '../style/balance-chip';
 import { PopupWindow } from '../style/dialog-window';

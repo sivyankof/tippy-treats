@@ -4,7 +4,7 @@ import { OVEN } from '../../../data/progression/progression';
 import { PALETTE } from '../../../data/common/palette';
 import { t } from '../../../i18n';
 import { createOutlinedText } from '../outlined-text';
-import { OVEN_PICTURE_HEIGHT } from '../../fx/oven-texture';
+import { OVEN_PICTURE_HEIGHT } from '../../fx/economy/oven-texture';
 import { OvenPicture } from './oven-picture';
 
 const cfg = MENU.results.ovenMark;

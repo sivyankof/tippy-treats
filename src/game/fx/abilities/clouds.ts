@@ -2,8 +2,8 @@ import { ABILITY_ANIM } from '../../../data/creatures/ability-anim';
 import { PALETTE } from '../../../data/common/palette';
 import { effectsMode } from '../../effects-mode';
 import { DEPTH } from '../../depth';
-import { FX_TEXTURES } from '../fx-textures';
-import { easeFn } from '../ease';
+import { FX_TEXTURES } from '../common/fx-textures';
+import { easeFn } from '../common/ease';
 import { makeSpec } from './sprite-motion';
 import type { SpriteFx } from './sprite-fx';
 

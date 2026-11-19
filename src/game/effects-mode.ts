@@ -1,7 +1,7 @@
 import type { ReducedFxSetting } from '../core/save/schema';
 import { ANIM } from '../data/common/anim';
 import { EFFECT_LEVELS, type EffectLevel } from '../data/app/effect-levels';
-import { FrameWorkWatch } from './fx/frame-work-watch';
+import { FrameWorkWatch } from './fx/app/frame-work-watch';
 
 const FULL = EFFECT_LEVELS.indexOf('full');
 const LITE = EFFECT_LEVELS.indexOf('lite');

@@ -1,8 +1,8 @@
 import * as Phaser from 'phaser';
 import { MENU } from '../../../data/common/menu-layout';
 import { services } from '../../../services';
-import { arcPoint, burstSpot, splitAmount, type Point } from '../../fx/coin-flight-math';
-import { createTreasureTextures, TREASURE_TEXTURES } from '../../fx/treasure-textures';
+import { arcPoint, burstSpot, splitAmount, type Point } from '../../fx/economy/coin-flight-math';
+import { createTreasureTextures, TREASURE_TEXTURES } from '../../fx/economy/treasure-textures';
 import type { ResourceCounter } from '../resource-tally';
 
 const cfg = MENU.rewardFlight;

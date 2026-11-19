@@ -1,7 +1,7 @@
 import * as Phaser from 'phaser';
 import { ANIM } from '../data/common/anim';
 import { effectsMode } from './effects-mode';
-import { FrameWorkStats } from './fx/frame-work-stats';
+import { FrameWorkStats } from './fx/app/frame-work-stats';
 
 const { statsFrames, statsPercentile, statsRefreshFrames } = ANIM.fx.auto;
 

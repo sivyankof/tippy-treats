@@ -4,8 +4,12 @@ import { CHECKPOINT_WINDOW } from '../../../data/zones/checkpoint-look';
 import { PALETTE } from '../../../data/common/palette';
 import { ZONES, type ZoneId } from '../../../data/zones/zones';
 import { t } from '../../../i18n';
-import { checkpointZoneTexture } from '../../fx/checkpoint-textures';
-import { VIDEO_ICON_FIELD_SCALE, VIDEO_ICON_KEY, bakeVideoIcon } from '../../fx/video-icon-texture';
+import { checkpointZoneTexture } from '../../fx/zones/checkpoint-textures';
+import {
+  VIDEO_ICON_FIELD_SCALE,
+  VIDEO_ICON_KEY,
+  bakeVideoIcon,
+} from '../../fx/economy/video-icon-texture';
 import { attachPressFeedback } from '../button';
 import { createOutlinedText } from '../outlined-text';
 import { createPlate, faceOffsetY } from '../style/volume';

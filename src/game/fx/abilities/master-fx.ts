@@ -5,9 +5,9 @@ import { formatNumber, t } from '../../../i18n';
 import { DEPTH } from '../../depth';
 import { effectsMode } from '../../effects-mode';
 import type { TowerView } from '../../objects/tower-view';
-import { easeFn } from '../ease';
-import { FX_TEXTURES } from '../fx-textures';
-import type { LandingFx } from '../landing-fx';
+import { easeFn } from '../common/ease';
+import { FX_TEXTURES } from '../common/fx-textures';
+import type { LandingFx } from '../tower/landing-fx';
 import { HALF_LAYER, UP_DEG, type FxKit } from './kit';
 import { makeSpec } from './sprite-motion';
 

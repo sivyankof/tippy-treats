@@ -1,5 +1,5 @@
 import { RAINBOW_LOOK } from '../../../data/creatures/rainbow-look';
-import type { Pt } from '../../fx/plain-style';
+import type { Pt } from '../../fx/common/plain-style';
 import type { GlazeLayout } from '../layer-draw';
 
 const { idle } = RAINBOW_LOOK;

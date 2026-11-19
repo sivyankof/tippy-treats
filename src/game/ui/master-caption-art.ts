@@ -4,7 +4,7 @@ import { MASTER_ANIM } from '../../data/creatures/master-anim';
 import { PALETTE } from '../../data/common/palette';
 import { t } from '../../i18n';
 import { cssColor } from '../../util/color';
-import { fillFan, starRadii } from '../fx/fx-textures';
+import { fillFan, starRadii } from '../fx/common/fx-textures';
 import { bakeTexture } from './bake-texture';
 import { FONT_FAMILY, FONT_WEIGHT } from './fonts';
 

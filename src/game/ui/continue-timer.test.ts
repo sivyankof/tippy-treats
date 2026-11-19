@@ -9,7 +9,7 @@ vi.mock('./style/ring-timer', () => ({
   },
 }));
 vi.mock('../../services', () => ({ services: {} }));
-vi.mock('../fx/run-cues', () => ({
+vi.mock('../fx/audio/run-cues', () => ({
   playCues: (cues: { sounds: Array<{ kind: string; urgent?: boolean }> }) => {
     ticks.push(...cues.sounds);
   },

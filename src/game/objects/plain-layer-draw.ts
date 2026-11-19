@@ -9,7 +9,7 @@ import {
 import { PALETTE, type LayerColors } from '../../data/common/palette';
 import { mixColor, shade } from '../../util/color';
 import { GOLDEN } from '../../util/math';
-import { faceHalfSpan } from '../fx/glaze-growth';
+import { faceHalfSpan } from '../fx/glaze/glaze-growth';
 import { drawDecor } from './decor-draw';
 import { decorItems } from './decor-layout';
 import { cutStripWidth, deepestY, glazeWave, waveEdge, type GlazeWave } from './glaze-wave';

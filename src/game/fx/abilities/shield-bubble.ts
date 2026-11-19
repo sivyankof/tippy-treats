@@ -3,8 +3,8 @@ import { ABILITY_ANIM } from '../../../data/creatures/ability-anim';
 import { BALANCE } from '../../../data/tower/balance';
 import { oscillate01 } from '../../../util/math';
 import { DEPTH } from '../../depth';
-import { easeFn } from '../ease';
-import { FX_TEXTURES } from '../fx-textures';
+import { easeFn } from '../common/ease';
+import { FX_TEXTURES } from '../common/fx-textures';
 import type { AbilityBursts } from './ability-bursts';
 import { ABILITY_TEXTURES } from './ability-textures';
 import {

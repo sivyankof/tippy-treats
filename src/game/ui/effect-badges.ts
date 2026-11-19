@@ -6,8 +6,8 @@ import { IDLE_MOTION, IDLE_PHASE } from '../../data/common/idle-motion';
 import { PALETTE } from '../../data/common/palette';
 import { formatNumber } from '../../i18n';
 import { frameLerp } from '../../util/math';
-import { easeFn } from '../fx/ease';
-import { FX_TEXTURES } from '../fx/fx-textures';
+import { easeFn } from '../fx/common/ease';
+import { FX_TEXTURES } from '../fx/common/fx-textures';
 import { createCreatureIcon, setCreatureIcon } from './creature-icons';
 import { idlePose, type IdlePose } from './idle-motion';
 import {

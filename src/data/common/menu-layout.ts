@@ -813,7 +813,7 @@ export const MENU = {
     /** Sparkles flying out of the creature after an upgrade. */
     burst: {
       count: 14,
-      /** Shape of `ParticleStyle` (game/fx/particle-motion.ts): stars fly out in all directions. */
+      /** Shape of `ParticleStyle` (game/fx/common/particle-motion.ts): stars fly out in all directions. */
       style: {
         speed: [380, 620],
         gravity: 0,

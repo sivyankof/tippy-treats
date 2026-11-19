@@ -14,7 +14,7 @@ import { RAINBOW_LOOK } from '../../data/creatures/rainbow-look';
 import { DEPTH } from '../depth';
 import { effectsMode } from '../effects-mode';
 import { fxGuard } from '../fx-guard';
-import { waveStep } from '../fx/anim-curves';
+import { waveStep } from '../fx/common/anim-curves';
 import { moodForWobble, type MouthKind, type Reaction } from './face-state';
 import { CollapsePrep } from './collapse-prep';
 import { GlazeDripGrowth } from './glaze-drip-growth';

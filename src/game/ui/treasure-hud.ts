@@ -1,5 +1,5 @@
 import type * as Phaser from 'phaser';
-import { TREASURE_TEXTURES } from '../fx/treasure-textures';
+import { TREASURE_TEXTURES } from '../fx/economy/treasure-textures';
 import { WalletChip } from './style/wallet-chip';
 import { TreasureFlights } from './treasure-flights';
 

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { faceHalfSpan } from '../fx/glaze-growth';
+import { faceHalfSpan } from '../fx/glaze/glaze-growth';
 import { PLAIN_LAYER } from '../../data/tower/plain-layers';
 import { cutStripWidth, deepestY, glazeCrestY, glazeWave } from './glaze-wave';
 import { layerBox } from './layer-draw';

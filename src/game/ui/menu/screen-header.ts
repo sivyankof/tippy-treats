@@ -3,7 +3,7 @@ import { MENU } from '../../../data/common/menu-layout';
 import { PALETTE } from '../../../data/common/palette';
 import { TREASURE } from '../../../data/economy/treasure-anim';
 import { gameState } from '../../../state';
-import { TREASURE_TEXTURES } from '../../fx/treasure-textures';
+import { TREASURE_TEXTURES } from '../../fx/economy/treasure-textures';
 import type { Button } from '../button';
 import type { Currency } from '../../../core/economy/economy';
 import { shakeX } from '../shake-x';

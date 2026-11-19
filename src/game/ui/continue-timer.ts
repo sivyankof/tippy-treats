@@ -3,8 +3,8 @@ import { BALANCE } from '../../data/tower/balance';
 import { CONTINUE_ANIM } from '../../data/run/continue-anim';
 import { services } from '../../services';
 import type { ContinueFlow } from '../continue-flow';
-import { cuesForMoment } from '../fx/moment-cues';
-import { playCues } from '../fx/run-cues';
+import { cuesForMoment } from '../fx/audio/moment-cues';
+import { playCues } from '../fx/audio/run-cues';
 import { RingTimer } from './style/ring-timer';
 
 const { timer } = CONTINUE_ANIM;

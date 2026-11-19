@@ -1,0 +1,483 @@
+import { describe, expect, it } from 'vitest';
+import { ANIM } from '../../../data/common/anim';
+import { FLIGHT_CLEAR } from '../../../data/backdrop/flight-clear';
+import { HUD_LAYOUT } from '../../../data/run/hud-layout';
+import { RULE_ANIM } from '../../../data/zones/rule-anim';
+import { LOGICAL_SIZE } from '../../../data/app/screen';
+import { cloudTopBaked, flightRowY, topCeiling, verticalRoom } from './cloud-figure';
+import { nebulaLayout, nebulaTop } from './nebula-arms';
+import {
+  cloudEtaMs,
+  CloudMotion,
+  coverTaker,
+  densityCap,
+  followInput,
+  layerHidden,
+  ghostShare,
+  pickLook,
+  placeFigure,
+  puffsBillow,
+  armAlpha,
+  armMotion,
+  starActive,
+  starCount,
+  starsTwinkle,
+  starLook,
+  starPulse,
+  stepApproach,
+  type CloudInput,
+  type CloudPhase,
+  type CloudPose,
+} from './cloud-cover';
+
+const cfg = RULE_ANIM.cloud;
+
+describe('cloudEtaMs', () => {
+  it('turns the track left into time, with the nominal speed while the layer stands still', () => {
+    expect(cloudEtaMs(300, 600, 600)).toBeCloseTo(500);
+    expect(cloudEtaMs(300, 0, 600)).toBeCloseTo(500);
+    expect(cloudEtaMs(-1, 600, 600)).toBe(Infinity);
+  });
+});
+
+describe('stepApproach', () => {
+  it('only grows and reaches 1 when the cloud arrives', () => {
+    let p = 0;
+    let eta = 600;
+    while (eta > 0) {
+      const next = stepApproach(p, 20, eta);
+      expect(next).toBeGreaterThanOrEqual(p);
+      p = next;
+      eta -= 20;
+    }
+    expect(p).toBe(1);
+  });
+
+  it('never jumps the cloud in, even when it is found late at a high speed', () => {
+    // The cloud is due in less than a frame: it still takes at least approachMinMs to float in.
+    expect(stepApproach(0, 33, 10)).toBeCloseTo(33 / cfg.approachMinMs);
+    expect(stepApproach(0.2, 33, 40)).toBeLessThanOrEqual(0.2 + 33 / cfg.approachMinMs + 1e-9);
+  });
+
+  it('never steps back when the estimate jumps', () => {
+    const p = stepApproach(0.5, 20, 100);
+    expect(stepApproach(p, 20, 2000)).toBeGreaterThanOrEqual(p);
+  });
+});
+
+interface Frame {
+  t: number;
+  phase: CloudPhase;
+  pose: CloudPose;
+  y: number;
+}
+
+/**
+ * A cloud pass as the run would feed it: the layer flies at 600 px/s, the cloud is due once the
+ * layer has 900 px to go, the sim hides the layer for `coverMs`, then the layer flies on (or is
+ * dropped). Frame times come from `dts`, cycled.
+ */
+function film(dts: readonly number[], coverMs = 300, dropAfterCover = false): Frame[] {
+  const motion = new CloudMotion();
+  const speed = 600;
+  let ahead = 900;
+  let coverLeft = 0;
+  let covered = false;
+  let dropped = false;
+  const frames: Frame[] = [];
+  let t = 0;
+  for (let i = 0; t < 4000; i++) {
+    const dt = dts[i % dts.length] ?? 16;
+    t += dt;
+    if (!covered) {
+      ahead -= (speed * dt) / 1000;
+      if (ahead <= 0) {
+        covered = true;
+        coverLeft = coverMs;
+      }
+    } else if (coverLeft > 0) {
+      coverLeft -= dt;
+      if (coverLeft <= 0 && dropAfterCover) dropped = true;
+    }
+    const input: CloudInput = {
+      covering: covered && coverLeft > 0,
+      flying: !dropped,
+      etaMs: covered ? Infinity : (ahead / speed) * 1000,
+      // The flying row moves up when a new layer comes: the bank must not follow it.
+      y: t > 1500 ? 380 : 500,
+      dir: 1,
+      ghost: false,
+      nebula: false,
+    };
+    const pose = motion.update(dt, input);
+    frames.push({ t, phase: motion.phase, pose: { ...pose }, y: motion.y });
+  }
+  return frames;
+}
+
+/** Checks one filmed pass: monotonic, no jumps, a warning of at least 400 ms. */
+function checkSmooth(frames: Frame[]): void {
+  const seen = frames.filter((f) => f.phase !== 'idle');
+  expect(seen.length).toBeGreaterThan(10);
+  const firstCover = frames.find((f) => f.phase === 'cover');
+  const firstShown = seen[0];
+  expect(firstCover && firstShown).toBeTruthy();
+  if (!firstCover || !firstShown) return;
+  // "It is about to cover" shows at least 400 ms ahead.
+  expect(firstCover.t - firstShown.t).toBeGreaterThanOrEqual(400);
+  let peak = false;
+  for (let i = 1; i < seen.length; i++) {
+    const a = seen[i - 1];
+    const b = seen[i];
+    if (!a || !b) continue;
+    // It drifts one way only (dir = 1), never faster than a gentle glide (px per ms).
+    expect(b.pose.x).toBeGreaterThanOrEqual(a.pose.x - 1e-9);
+    expect((b.pose.x - a.pose.x) / (b.t - a.t)).toBeLessThan(1.5);
+    // Opacity rises to full, then only falls, and never by a jump (share per ms).
+    expect(Math.abs(b.pose.alpha - a.pose.alpha) / (b.t - a.t)).toBeLessThan(0.012);
+    if (b.pose.alpha < a.pose.alpha - 1e-9) peak = true;
+    if (peak) expect(b.pose.alpha).toBeLessThanOrEqual(a.pose.alpha + 1e-9);
+    // The bank stays at the height it came at.
+    expect(b.y).toBe(firstShown.y);
+  }
+  expect(seen.at(-1)?.pose.alpha ?? 1).toBeLessThan(0.02);
+}
+
+describe('CloudMotion', () => {
+  it('floats in, covers and leaves smoothly at 45 frames per second', () => {
+    checkSmooth(film([22]));
+  });
+
+  it('stays smooth with uneven frames like a slow phone', () => {
+    checkSmooth(film([16, 33, 22, 41, 18, 28]));
+  });
+
+  it('stays smooth when the layer is dropped right after the cover', () => {
+    checkSmooth(film([22], 250, true));
+  });
+
+  it('is solid while the sim hides the layer once it has turned solid', () => {
+    const frames = film([16]);
+    const solid = frames.filter(
+      (f) =>
+        f.phase === 'cover' && f.t - (frames.find((g) => g.phase === 'cover')?.t ?? 0) >= cfg.inMs,
+    );
+    expect(solid.length).toBeGreaterThan(0);
+    for (const f of solid) expect(f.pose.alpha).toBeCloseTo(1, 6);
+  });
+
+  it('fades away a cloud that never came because the layer was dropped', () => {
+    const motion = new CloudMotion();
+    const base: CloudInput = {
+      covering: false,
+      flying: true,
+      etaMs: 300,
+      y: 400,
+      dir: -1,
+      ghost: false,
+      nebula: false,
+    };
+    for (let i = 0; i < 5; i++) motion.update(20, base);
+    expect(motion.phase).toBe('approach');
+    const alpha = motion.pose.alpha;
+    expect(alpha).toBeGreaterThan(0);
+    motion.update(20, { ...base, flying: false, etaMs: Infinity });
+    expect(motion.phase).toBe('leave');
+    let last = motion.pose.alpha;
+    expect(last).toBeLessThanOrEqual(alpha);
+    for (let t = 0; t < cfg.abortMs + 40; t += 20) {
+      motion.update(20, { ...base, flying: false, etaMs: Infinity });
+      expect(motion.pose.alpha).toBeLessThanOrEqual(last + 1e-9);
+      last = motion.pose.alpha;
+    }
+    expect(motion.phase).toBe('idle');
+  });
+
+  it('grows in place when a cloud comes without a warning', () => {
+    const motion = new CloudMotion();
+    const pose = motion.update(16, {
+      covering: true,
+      flying: true,
+      etaMs: Infinity,
+      y: 400,
+      dir: 1,
+      ghost: false,
+      nebula: false,
+    });
+    expect(motion.phase).toBe('cover');
+    expect(Math.abs(pose.x)).toBeLessThan(5);
+    expect(pose.alpha).toBeLessThan(0.5);
+  });
+});
+
+/** One pass at `speed` px/s: the cloud is found `ahead` px away, the sim hides the layer for `coverMs`. */
+function pass(speed: number, ahead: number, coverMs: number, dt = 33, lift = 1): Frame[] {
+  const motion = new CloudMotion();
+  motion.lift = lift;
+  const frames: Frame[] = [];
+  let left = ahead;
+  let coverLeft = coverMs;
+  for (let t = dt; t < 3000; t += dt) {
+    if (left > 0) left -= (speed * dt) / 1000;
+    else coverLeft -= dt;
+    const covering = left <= 0 && coverLeft > 0;
+    const input: CloudInput = {
+      covering,
+      flying: true,
+      etaMs: left > 0 ? (left / speed) * 1000 : Infinity,
+      y: 500,
+      dir: 1,
+      ghost: false,
+      nebula: true,
+    };
+    const pose = motion.update(dt, input);
+    frames.push({ t, phase: motion.phase, pose: { ...pose }, y: motion.y });
+  }
+  return frames;
+}
+
+describe('entry at high speed', () => {
+  for (const speed of [1250, 1350, 1500]) {
+    // Found early, late, very late, or not at all before the cover (no warning).
+    for (const ahead of [speed * 0.65, speed * 0.3, speed * 0.1, 0]) {
+      for (const coverMs of [200, 350]) {
+        it(`is solid within inMs of the cover and moves every frame: ${speed} px/s, ${Math.round(ahead)} px ahead, ${coverMs} ms`, () => {
+          const frames = pass(speed, ahead, coverMs);
+          const start = frames.find((f) => f.phase === 'cover');
+          expect(start).toBeDefined();
+          if (!start) return;
+          for (let i = 1; i < frames.length; i++) {
+            const a = frames[i - 1];
+            const b = frames[i];
+            if (!a || !b || a.phase === 'idle') continue;
+            if (b.phase === 'leave') break;
+            // The game role: full density from inMs after the cover starts until it ends.
+            if (b.phase === 'cover' && b.t - start.t >= cfg.inMs) expect(b.pose.alpha).toBe(1);
+            // Smooth as far as that allows: the shown opacity steps by at most 0.3 a 33 ms frame ...
+            const shown = (f: Frame): number => Math.min(f.pose.alpha, cfg.maxDensity);
+            expect(Math.abs(shown(b) - shown(a))).toBeLessThanOrEqual(0.3);
+            // ... and no frame stands still until it is solid.
+            if (a.pose.alpha < 1) expect(b.pose.alpha).toBeGreaterThan(a.pose.alpha);
+          }
+        });
+      }
+    }
+  }
+});
+
+describe('a cloud given up a frame before the cover', () => {
+  it('is taken over by the bank that gave it up, which turns solid from where it is', () => {
+    const base: CloudInput = {
+      covering: false,
+      flying: true,
+      etaMs: 200,
+      y: 500,
+      dir: 1,
+      ghost: false,
+      nebula: true,
+    };
+    const banks = [new CloudMotion(), new CloudMotion()];
+    const [a, other] = banks;
+    if (!a || !other) return;
+    for (let i = 0; i < 4; i++) a.update(33, { ...base, etaMs: 200 - i * 33 });
+    expect(a.phase).toBe('approach');
+    // The time to arrival jumps a frame before the sim starts the cover: the bank gives the cloud up.
+    a.update(33, { ...base, etaMs: Infinity });
+    expect(a.phase).toBe('leave');
+    const before = a.pose.alpha;
+    expect(before).toBeGreaterThan(0);
+    // The cover begins: the bank that gave up resumes it, the idle one stays out.
+    expect(coverTaker(banks)).toBe(0);
+    a.update(33, { ...base, covering: true, etaMs: Infinity });
+    expect(a.phase).toBe('cover');
+    expect(a.pose.alpha).toBeGreaterThan(before);
+    for (let t = 33; t < cfg.inMs + 33; t += 33)
+      a.update(33, { ...base, covering: true, etaMs: Infinity });
+    expect(a.pose.alpha).toBe(1);
+    // A free bank takes a cover when nothing else can.
+    expect(coverTaker([new CloudMotion()])).toBe(0);
+  });
+});
+
+describe('HUD gap in every frame', () => {
+  const next = HUD_LAYOUT.nextPlate;
+  for (let css = 693; css <= 932; css += 10) {
+    const h = Math.min(
+      LOGICAL_SIZE.maxHeight,
+      Math.max(LOGICAL_SIZE.minHeight, Math.round((css * LOGICAL_SIZE.width) / 390)),
+    );
+    for (const look of ['cloud', 'nebula'] as const) {
+      it(`never moves the ${look} top nearer the plates on 390x${css}: approach, cover with sway, leave`, () => {
+        const topBaked = look === 'cloud' ? cloudTopBaked(h) : nebulaTop(nebulaLayout(h));
+        const room = verticalRoom(h, topBaked);
+        // Its top at rest on the row: under the ceiling, or on a short screen as low as it can stand.
+        const rest = flightRowY(h) - topBaked * cfg.figure.scale;
+        const ceiling = Math.min(topCeiling(), rest);
+        // Never lower than the cover margin allows.
+        expect(room.drop).toBeLessThanOrEqual(cfg.figure.layerMargin - ANIM.flying.bobAmplitude);
+        for (const bobUp of [ANIM.flying.bobAmplitude, 0, -ANIM.flying.bobAmplitude]) {
+          // The layer anywhere in its own bob when the bank takes its height.
+          const motionY = flightRowY(h) - bobUp;
+          for (const frames of [
+            pass(900, 700, 350, 33, room.leave),
+            pass(1350, 300, 200, 16, room.leave),
+            pass(1350, 0, 200, 16, room.leave),
+          ]) {
+            for (const f of frames) {
+              if (f.phase === 'idle') continue;
+              // The worst moments of the billow: bob at its highest, breath at its widest.
+              for (const [bob, breathe] of [
+                [-1, 1],
+                [-1, -1],
+                [1, 1],
+              ] as const) {
+                const at = placeFigure(motionY, f.pose, bob, breathe, true, room);
+                const top = at.y - topBaked * at.scale;
+                expect(top).toBeGreaterThanOrEqual(ceiling - 0.5);
+                // And always 40 px under the next creature plate.
+                expect(top).toBeGreaterThanOrEqual(
+                  next.y + next.height + FLIGHT_CLEAR.hudGapPx - 0.5,
+                );
+              }
+            }
+          }
+        }
+      });
+    }
+  }
+});
+
+describe('followInput', () => {
+  it('hands a leaving bank the density cap of the live input, so it stays see-through', () => {
+    const passive: CloudInput = {
+      covering: false,
+      flying: true,
+      etaMs: Infinity,
+      y: 0,
+      dir: 1,
+      ghost: false,
+      nebula: false,
+    };
+    const live: CloudInput = {
+      covering: true,
+      flying: false,
+      etaMs: 100,
+      y: 420,
+      dir: -1,
+      ghost: true,
+      nebula: true,
+    };
+    followInput(passive, live);
+    expect(passive).toEqual({
+      covering: false,
+      flying: false,
+      etaMs: Infinity,
+      y: 420,
+      dir: -1,
+      ghost: true,
+      nebula: true,
+    });
+  });
+});
+
+describe('nebula look', () => {
+  it('keeps the look of a bank until it has left, and takes the wanted one only while idle', () => {
+    expect(pickLook('idle', 'cloud', 'nebula')).toBe('nebula');
+    expect(pickLook('idle', 'nebula', 'cloud')).toBe('cloud');
+    for (const phase of ['approach', 'cover', 'leave'] as const) {
+      expect(pickLook(phase, 'nebula', 'cloud')).toBe('nebula');
+      expect(pickLook(phase, 'cloud', 'nebula')).toBe('cloud');
+    }
+  });
+
+  it('caps the nebula under the cloud, and "Not scary" lowers either by its own share', () => {
+    expect(densityCap('cloud', false)).toBe(cfg.maxDensity);
+    expect(cfg.maxDensity).toBeLessThan(1);
+    expect(densityCap('nebula', false)).toBeLessThan(densityCap('cloud', false));
+    expect(densityCap('nebula', false)).toBe(cfg.nebula.maxDensity);
+    expect(ghostShare(false, true)).toBe(1);
+    expect(ghostShare(true, false)).toBe(cfg.ghostMaxDensity);
+    expect(ghostShare(true, true)).toBe(cfg.nebula.ghostMaxDensity);
+    // One picture lets through about 1 - density: ~1/3 plain, at least ~0.7 with "Not scary".
+    expect(1 - densityCap('nebula', false)).toBeGreaterThan(0.28);
+    expect(1 - densityCap('nebula', false)).toBeLessThan(0.38);
+    expect(1 - densityCap('nebula', true)).toBeGreaterThanOrEqual(0.7);
+  });
+
+  it('takes the "Not scary" share from the look of the bank, not from the zone (Stars to Space boundary)', () => {
+    // A bank still drawing the dense cloud while the layer is already in Space keeps the cloud share ...
+    expect(densityCap('cloud', true)).toBeCloseTo(cfg.maxDensity * cfg.ghostMaxDensity);
+    // ... and a nebula still on screen after the layer left Space keeps the nebula share.
+    expect(densityCap('nebula', true)).toBeCloseTo(
+      cfg.nebula.maxDensity * cfg.nebula.ghostMaxDensity,
+    );
+  });
+
+  it('shows the core star and the sparks on full and lite (twinkling on full only), none on minimal', () => {
+    const slots = cfg.nebula.stars.spots.length;
+    expect(slots).toBe(5);
+    expect(starCount('full')).toBe(5);
+    expect(starCount('lite')).toBe(5);
+    expect(starCount('minimal')).toBe(0);
+    for (const level of ['full', 'lite', 'minimal'] as const) {
+      const on = Array.from({ length: slots }, (_, i) => starActive(i, slots, starCount(level)));
+      expect(on.filter(Boolean)).toHaveLength(starCount(level));
+    }
+    expect(starsTwinkle('full')).toBe(true);
+    expect(starsTwinkle('lite')).toBe(false);
+    // The first star is the core's: it sits on the crossing.
+    expect(cfg.nebula.stars.spots[0]).toEqual({ x: 0, y: 0 });
+  });
+
+  it('adds the arms as bright as the veil is dense and keeps them still when the nebula does not billow', () => {
+    expect(armAlpha(cfg.nebula.maxDensity)).toBeCloseTo(1);
+    expect(armAlpha(cfg.nebula.maxDensity * cfg.nebula.ghostMaxDensity)).toBeCloseTo(
+      cfg.nebula.ghostMaxDensity,
+    );
+    expect(armAlpha(0)).toBe(0);
+    expect(armMotion(1234, false)).toEqual({ flow: 0, sway: 0 });
+    const m = cfg.nebula.motion;
+    for (let t = 0; t < 8000; t += 90) {
+      const { flow, sway } = armMotion(t, true);
+      expect(Math.abs(flow)).toBeLessThanOrEqual(m.flowPx + 1e-9);
+      expect(Math.abs(sway)).toBeLessThanOrEqual(m.swayRad + 1e-9);
+      // Smooth: no jerk between frames.
+      const next = armMotion(t + 16, true);
+      expect(Math.abs(next.flow - flow)).toBeLessThan(0.2);
+    }
+  });
+
+  it('billows the cloud always and the nebula except on minimal', () => {
+    expect(puffsBillow('cloud', 'minimal')).toBe(true);
+    expect(puffsBillow('nebula', 'full')).toBe(true);
+    expect(puffsBillow('nebula', 'lite')).toBe(true);
+    expect(puffsBillow('nebula', 'minimal')).toBe(false);
+  });
+
+  it('twinkles within its bounds, each star on its own phase', () => {
+    const low = starLook(0);
+    const high = starLook(1);
+    expect(low.alpha).toBe(cfg.nebula.stars.alpha[0]);
+    expect(high.alpha).toBe(cfg.nebula.stars.alpha[1]);
+    expect(low.scale).toBeLessThan(1);
+    expect(high.scale).toBeGreaterThan(1);
+    for (let t = 0; t < 3000; t += 70) {
+      for (let slot = 0; slot < 4; slot++) {
+        const pulse = starPulse(t, slot);
+        expect(pulse).toBeGreaterThanOrEqual(0);
+        expect(pulse).toBeLessThanOrEqual(1);
+      }
+    }
+    expect(starPulse(100, 0)).not.toBeCloseTo(starPulse(100, 1));
+  });
+});
+
+describe('layerHidden', () => {
+  it('counts the layer as hidden under a dense cloud only', () => {
+    expect(layerHidden(false, false, true, 1)).toBe(true);
+    expect(layerHidden(false, false, false, 0.4)).toBe(true);
+    expect(layerHidden(false, false, false, 0)).toBe(false);
+    expect(layerHidden(true, false, true, 1)).toBe(false);
+    expect(layerHidden(false, true, true, 1)).toBe(false);
+  });
+});

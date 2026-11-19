@@ -10,8 +10,8 @@ import type { StageMode } from '../../data/creatures/mastery-look';
 import { IDLE_MOTION } from '../../data/common/idle-motion';
 import { effectsMode } from '../effects-mode';
 import { fxGuard } from '../fx-guard';
-import { createGlossBand, sweepGloss } from '../fx/gloss-sweep';
-import { springScaleBack, type ScaleStart } from '../fx/spring-back';
+import { createGlossBand, sweepGloss } from '../fx/common/gloss-sweep';
+import { springScaleBack, type ScaleStart } from '../fx/common/spring-back';
 import { idlePose, type IdlePose } from '../ui/idle-motion';
 import { creatureColors } from './creature-art/primitives';
 import type { EdgeShape } from './edge-squash';
@@ -29,7 +29,7 @@ import {
   lookCodeFor,
   SHADOW_ROWS,
 } from './layer-art';
-import { sleepyLidTone } from '../fx/plain-style';
+import { sleepyLidTone } from '../fx/common/plain-style';
 import { GrownAccentView } from './grown-accent-view';
 import { LayerArtSlot } from './layer-art-slot';
 import { RAINBOW_LOOK } from '../../data/creatures/rainbow-look';

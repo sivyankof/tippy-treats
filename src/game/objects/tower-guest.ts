@@ -8,7 +8,7 @@ import { ZONES } from '../../data/zones/zones';
 import { clamp01, DEG_TO_RAD, lerp, stepToward } from '../../util/math';
 import { DEPTH } from '../depth';
 import { effectsMode } from '../effects-mode';
-import type { LandingFx } from '../fx/landing-fx';
+import type { LandingFx } from '../fx/tower/landing-fx';
 import type { GuestSource, SourcePoint } from './backdrop/guest-source';
 import { plainLooks } from './plain-look';
 import { bakeGuestFlat } from './tower-guest-art';

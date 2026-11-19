@@ -3,7 +3,7 @@ import { TOPPER_KINDS, topperBakedSize } from '../../data/toppers/plain-toppers'
 import { SPACE_VISITOR } from '../../data/guests/space-visitor';
 import { paddedSize } from '../../util/field-pad';
 import { tallestFirst } from '../../util/shelf-packer';
-import { ensureTopperTexture } from '../fx/topper-texture';
+import { ensureTopperTexture } from '../fx/toppers/topper-texture';
 import { bakeSpaceVisitor } from '../objects/backdrop/space-visitor-art';
 
 /**

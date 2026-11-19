@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { BALANCE } from '../../data/tower/balance';
 import { PLAIN_LAYER } from '../../data/tower/plain-layers';
-import { dripCountFor, faceClearance, faceHalfSpan } from '../fx/glaze-growth';
+import { dripCountFor, faceClearance, faceHalfSpan } from '../fx/glaze/glaze-growth';
 import {
   cutStripWidth,
   dripLayouts,

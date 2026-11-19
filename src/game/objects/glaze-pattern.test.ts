@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { PATTERN_KINDS, PLAIN_LAYER, type PatternKind } from '../../data/tower/plain-layers';
-import { faceHalfSpan } from '../fx/glaze-growth';
+import { faceHalfSpan } from '../fx/glaze/glaze-growth';
 import { glazePattern, patternColor, type GlazePattern } from './glaze-pattern';
 import { glazeWave, waveY } from './glaze-wave';
 import { layerBox } from './layer-draw';

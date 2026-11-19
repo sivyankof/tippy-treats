@@ -3,7 +3,7 @@ import { BAR_LOOK } from '../../../data/common/bar-look';
 import { PALETTE } from '../../../data/common/palette';
 import { shade } from '../../../util/color';
 import { clamp01 } from '../../../util/math';
-import { fillPolygon } from '../../fx/plain-style';
+import { fillPolygon } from '../../fx/common/plain-style';
 import {
   ARC_START,
   arcEnd,

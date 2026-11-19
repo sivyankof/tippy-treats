@@ -7,14 +7,14 @@ import { RAINBOW_BAND_COLORS, RAINBOW_LOOK } from '../../../data/creatures/rainb
 import { SPRINKLE_COLORS } from '../../../data/creatures/creature-looks';
 import { cssColor, mixColor, parseHex, shade } from '../../../util/color';
 import { TWO_PI } from '../../../util/math';
-import { faceHalfSpan } from '../../fx/glaze-growth';
+import { faceHalfSpan } from '../../fx/glaze/glaze-growth';
 import {
   ellipsePoints,
   fillOutlinedPolygon,
   fillPolygon,
   outlineColor,
   type Pt,
-} from '../../fx/plain-style';
+} from '../../fx/common/plain-style';
 import { faceLayout } from '../face-recipe';
 import { layerBox } from '../layer-draw';
 import { sparklerTip, standX } from './grown-anchors';

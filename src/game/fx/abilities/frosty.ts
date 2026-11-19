@@ -1,5 +1,5 @@
 import { ABILITY_ANIM } from '../../../data/creatures/ability-anim';
-import { FX_TEXTURES } from '../fx-textures';
+import { FX_TEXTURES } from '../common/fx-textures';
 import { spawnClouds } from './clouds';
 import { mouthPoint, UP_DEG, type SignatureFx } from './kit';
 

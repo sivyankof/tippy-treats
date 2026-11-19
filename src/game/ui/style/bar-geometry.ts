@@ -1,7 +1,7 @@
 /** Pure numbers of bars and ring arcs (drawn in `volume-bar.ts`). */
 
 import { clamp01, TWO_PI } from '../../../util/math';
-import type { Pt } from '../../fx/plain-style';
+import type { Pt } from '../../fx/common/plain-style';
 
 /** A ring starts at twelve o'clock and runs clockwise. */
 export const ARC_START = -Math.PI / 2;

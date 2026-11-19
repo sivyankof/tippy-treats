@@ -9,7 +9,7 @@ import {
   CHEST_TEXTURES,
   CHEST_TOP_Y,
   bakeChestTextures,
-} from '../../fx/chest-texture';
+} from '../../fx/economy/chest-texture';
 import { CHEST_LOOK } from '../../../data/economy/chest-look';
 import { effectsMode } from '../../effects-mode';
 import { HopSway } from './hop-motion';

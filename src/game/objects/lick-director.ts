@@ -5,7 +5,7 @@ import { GLAZE_DRIPS } from '../../data/glaze/glaze-drips';
 import { LICK, type LickStyle } from '../../data/glaze/lick';
 import { fxGuard } from '../fx-guard';
 import { effectsMode } from '../effects-mode';
-import { faceHalfSpan } from '../fx/glaze-growth';
+import { faceHalfSpan } from '../fx/glaze/glaze-growth';
 import { dropOuter } from './glaze-drip-textures';
 import { glazeWave, waveY } from './glaze-wave';
 import { layerBox } from './layer-draw';

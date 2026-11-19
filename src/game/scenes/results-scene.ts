@@ -4,7 +4,7 @@ import { MENU } from '../../data/common/menu-layout';
 import { t } from '../../i18n';
 import { services } from '../../services';
 import { gameState } from '../../state';
-import { RecordCelebration } from '../fx/record-celebration';
+import { RecordCelebration } from '../fx/run/record-celebration';
 import { leaveResultsAds, type RunExit } from '../interstitial-flow';
 import { isDebugRun, isLiveRun } from '../results-data';
 import { SCENES, type ResultsData } from '../scene-keys';

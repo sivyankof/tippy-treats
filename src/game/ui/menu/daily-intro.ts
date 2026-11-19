@@ -3,7 +3,7 @@ import { MENU } from '../../../data/common/menu-layout';
 import { PALETTE } from '../../../data/common/palette';
 import { t } from '../../../i18n';
 import { gameState } from '../../../state';
-import { REWARD_TEXTURES, REWARD_TOWER_FIELD_SCALE } from '../../fx/reward-pictures';
+import { REWARD_TEXTURES, REWARD_TOWER_FIELD_SCALE } from '../../fx/economy/reward-pictures';
 import { attachPressFeedback } from '../button';
 import { createStrokedText } from '../outlined-text';
 import { faceOffsetY, VolumePlate } from '../style/volume';

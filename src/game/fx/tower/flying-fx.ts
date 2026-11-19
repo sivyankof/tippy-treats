@@ -1,0 +1,50 @@
+import type * as Phaser from 'phaser';
+import type { WeatherId } from '../../../data/weather/weather';
+import type { SimEvent, TowerState } from '../../../core/tower/tower-sim';
+import type { FlyingLayerView } from '../../objects/flying-layer-view';
+import type { TowerView } from '../../objects/tower-view';
+import { AbilityBursts } from '../abilities/ability-bursts';
+import { GoldenFx } from '../economy/golden-fx';
+import { wallGlazeDrops, wallKnockBurst } from '../creatures/material-fx';
+import type { Particles } from '../common/particles';
+import { RuleFx } from '../zones/rule-fx';
+
+/**
+ * What is laid around the flying layer beyond its own picture: the look of the zone rules
+ * (rush, roof wind, clouds, fake-out), the shine of a golden layer and what a hard layer knocks
+ * off the screen edge.
+ */
+export class FlyingFx {
+  private readonly rules: RuleFx;
+  private readonly golden: GoldenFx;
+  private readonly bursts: AbilityBursts;
+
+  constructor(
+    scene: Phaser.Scene,
+    tower: TowerView,
+    private readonly flying: FlyingLayerView,
+    particles: Particles,
+    weather: WeatherId,
+  ) {
+    this.rules = new RuleFx(scene, flying, particles, weather);
+    this.golden = new GoldenFx(scene, tower, flying, particles);
+    this.bursts = new AbilityBursts(particles);
+  }
+
+  handleEvents(events: readonly SimEvent[]): void {
+    this.rules.handleEvents(events);
+  }
+
+  /** Call after the flying view was synced for this frame. `ghostMaster`: the clouds are see-through (meringue level 5). */
+  update(dtMs: number, timeMs: number, state: Readonly<TowerState>, ghostMaster: boolean): void {
+    const pos = this.flying.position();
+    const hidden = this.rules.update(dtMs, timeMs, state, pos, ghostMaster);
+    this.golden.update(dtMs, timeMs, state, pos, hidden);
+    const touch = this.flying.takeWallTouch();
+    if (touch && !hidden) {
+      const { knock, creature, x, y, directionDeg, drops, dropSize, glaze } = touch;
+      if (knock && creature) wallKnockBurst(this.bursts, knock, creature, x, y, directionDeg);
+      wallGlazeDrops(this.bursts, drops, dropSize, glaze, x, y, directionDeg === 0 ? 1 : -1);
+    }
+  }
+}

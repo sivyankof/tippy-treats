@@ -6,7 +6,7 @@ import { formatNumber, t } from '../../../i18n';
 import { services } from '../../../services';
 import { gameState } from '../../../state';
 import { showRewarded } from '../../rewarded';
-import { TREASURE_TEXTURES, createTreasureTextures } from '../../fx/treasure-textures';
+import { TREASURE_TEXTURES, createTreasureTextures } from '../../fx/economy/treasure-textures';
 import { createTextButton, type Button } from '../button';
 import { NumberRoll } from '../number-roll';
 import { createOutlinedText } from '../outlined-text';

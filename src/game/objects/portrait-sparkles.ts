@@ -2,9 +2,9 @@ import * as Phaser from 'phaser';
 import { MENU } from '../../data/common/menu-layout';
 import type { CreatureMaterial } from '../../data/creatures/creature-materials';
 import { parseHex } from '../../util/color';
-import { bump } from '../fx/anim-curves';
-import { FX_TEXTURES } from '../fx/fx-textures';
-import { ringPoint, sparkleDelay } from '../fx/layer-sparkle';
+import { bump } from '../fx/common/anim-curves';
+import { FX_TEXTURES } from '../fx/common/fx-textures';
+import { ringPoint, sparkleDelay } from '../fx/tower/layer-sparkle';
 import { effectsMode } from '../effects-mode';
 
 const cfg = MENU.portrait.sparkle;

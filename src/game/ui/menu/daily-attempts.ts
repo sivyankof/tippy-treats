@@ -3,8 +3,8 @@ import { DAILY } from '../../../data/progression/daily';
 import { MENU } from '../../../data/common/menu-layout';
 import { REWARD_LOOK } from '../../../data/economy/reward-look';
 import { t } from '../../../i18n';
-import { idleBob } from '../../fx/idle-bob';
-import { REWARD_TEXTURES } from '../../fx/reward-pictures';
+import { idleBob } from '../../fx/common/idle-bob';
+import { REWARD_TEXTURES } from '../../fx/economy/reward-pictures';
 import { DailyAdButton } from './daily-ad-button';
 import { createCaption, type DailySection } from './daily-section';
 

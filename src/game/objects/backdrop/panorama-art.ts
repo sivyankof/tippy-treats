@@ -5,7 +5,7 @@ import type { StartPlaceId } from '../../../data/zones/start-places';
 import { cssColor } from '../../../util/color';
 import { TWO_PI } from '../../../util/math';
 import { bakeTexture } from '../../ui/bake-texture';
-import type { Pt } from '../../fx/plain-style';
+import type { Pt } from '../../fx/common/plain-style';
 import { BOLT_COLORS, boltLines } from './weather-art';
 import {
   HEAVY_CLOUDS,

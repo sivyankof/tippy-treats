@@ -29,7 +29,7 @@ import {
 } from './perf-stats';
 import { runHooks } from './run-hooks';
 import { atlasPeak } from '../ui/shared-atlas';
-import { cutOverride } from '../fx/cut-override';
+import { cutOverride } from '../fx/cuts/cut-override';
 
 /** What the page reads from `window.__tippyPerf`. */
 export interface PerfReport {

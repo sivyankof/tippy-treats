@@ -11,10 +11,10 @@ import {
   type FlightFrame,
   type FlightPlan,
   type Point,
-} from '../fx/coin-flight-math';
-import { easeFn } from '../fx/ease';
-import { FX_TEXTURES } from '../fx/fx-textures';
-import { createTreasureTextures, TREASURE_TEXTURES } from '../fx/treasure-textures';
+} from '../fx/economy/coin-flight-math';
+import { easeFn } from '../fx/common/ease';
+import { FX_TEXTURES } from '../fx/common/fx-textures';
+import { createTreasureTextures, TREASURE_TEXTURES } from '../fx/economy/treasure-textures';
 import { TREASURE_EVENTS, type CoinFlyPayload } from '../treasure-events';
 import type { ResourceCounter } from './resource-tally';
 

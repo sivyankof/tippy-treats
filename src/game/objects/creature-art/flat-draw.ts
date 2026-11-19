@@ -2,7 +2,7 @@ import type * as Phaser from 'phaser';
 import { ANIM } from '../../../data/common/anim';
 import { CREATURE_STYLE } from '../../../data/creatures/creature-style';
 import { PALETTE } from '../../../data/common/palette';
-import { drawGlossMark, type GlossMark } from '../../fx/plain-style';
+import { drawGlossMark, type GlossMark } from '../../fx/common/plain-style';
 import { DRIP_WIDTH, glazeLayout, type GlazeOptions, type LayerBox } from '../layer-draw';
 import type { CreatureColors } from './primitives';
 

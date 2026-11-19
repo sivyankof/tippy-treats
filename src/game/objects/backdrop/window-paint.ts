@@ -2,7 +2,7 @@ import { WINDOW_LOOK, type WindowSky } from '../../../data/weather/window-look';
 import { cssColor } from '../../../util/color';
 import { TWO_PI } from '../../../util/math';
 
-import { outlineColor } from '../../fx/plain-style';
+import { outlineColor } from '../../fx/common/plain-style';
 
 type Ctx2D = CanvasRenderingContext2D;
 

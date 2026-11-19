@@ -1,6 +1,6 @@
 import { DEPTH } from '../../depth';
-import { coneBurst, edgeBurst, type ParticleStyle } from '../particle-motion';
-import type { Particles } from '../particles';
+import { coneBurst, edgeBurst, type ParticleStyle } from '../common/particle-motion';
+import type { Particles } from '../common/particles';
 
 /** Particle bursts for the abilities; the counts go through `Particles.emit`, so "fewer effects" halves them. */
 export class AbilityBursts {

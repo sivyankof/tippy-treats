@@ -8,8 +8,12 @@ import {
   OFFLINE_ICON_FIELD_SCALE,
   OFFLINE_ICON_KEY,
   bakeOfflineIcon,
-} from '../../fx/offline-icon-texture';
-import { VIDEO_ICON_FIELD_SCALE, VIDEO_ICON_KEY, bakeVideoIcon } from '../../fx/video-icon-texture';
+} from '../../fx/economy/offline-icon-texture';
+import {
+  VIDEO_ICON_FIELD_SCALE,
+  VIDEO_ICON_KEY,
+  bakeVideoIcon,
+} from '../../fx/economy/video-icon-texture';
 import type { Button } from '../button';
 import { fitText, onFontRefresh } from './fit-text';
 

@@ -2,7 +2,12 @@ import * as Phaser from 'phaser';
 import { MENU } from '../../../data/common/menu-layout';
 import { PALETTE } from '../../../data/common/palette';
 import { shade } from '../../../util/color';
-import { drawGlossMark, glossFromShares, OUTLINE_SHARE, outlineColor } from '../../fx/plain-style';
+import {
+  drawGlossMark,
+  glossFromShares,
+  OUTLINE_SHARE,
+  outlineColor,
+} from '../../fx/common/plain-style';
 
 const cfg = MENU.shop.noAdsIcon;
 

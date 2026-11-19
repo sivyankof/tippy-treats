@@ -9,7 +9,7 @@ import {
   fillOutlinedPolygon,
   outlineColor,
   type Pt,
-} from '../../fx/plain-style';
+} from '../../fx/common/plain-style';
 import { bakeTexture } from '../../ui/bake-texture';
 import type { FrameCtx, Life } from './life';
 import { inSky } from './layer-anchor';

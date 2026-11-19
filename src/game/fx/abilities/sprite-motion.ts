@@ -1,5 +1,5 @@
 import { clamp01, lerp } from '../../../util/math';
-import type { EaseFn } from '../ease';
+import type { EaseFn } from '../common/ease';
 
 /** How a value travels from its start to its end: straight, out and back, or up and a sharp snap back. */
 export type Shape = 'linear' | 'bump' | 'snap';

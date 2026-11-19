@@ -17,7 +17,7 @@ import {
   fillPolygon,
   outlineColor,
   type Pt,
-} from '../../fx/plain-style';
+} from '../../fx/common/plain-style';
 import { bakeTexture } from '../../ui/bake-texture';
 
 type Graphics = Phaser.GameObjects.Graphics;

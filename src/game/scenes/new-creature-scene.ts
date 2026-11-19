@@ -6,7 +6,7 @@ import { PALETTE } from '../../data/common/palette';
 import { RARITY_COLORS } from '../../data/creatures/rarity';
 import { t } from '../../i18n';
 import { cssColor } from '../../util/color';
-import { Particles } from '../fx/particles';
+import { Particles } from '../fx/common/particles';
 import { CreaturePortrait } from '../objects/creature-portrait';
 import { SleepingSilhouette } from '../objects/sleep-silhouette';
 import { goNext, SCENES, type NewCreatureData } from '../scene-keys';

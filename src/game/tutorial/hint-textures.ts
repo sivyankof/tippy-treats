@@ -3,7 +3,7 @@ import { TUTORIAL_ANIM } from '../../data/tutorial/tutorial-anim';
 import { PALETTE } from '../../data/common/palette';
 import { FIELD_PAD } from '../../data/common/picture-fields';
 import { paddedOrigin } from '../../util/field-pad';
-import { OUTLINE_SHARE, outlineColor } from '../fx/plain-style';
+import { OUTLINE_SHARE, outlineColor } from '../fx/common/plain-style';
 import { bakeTexture } from '../ui/bake-texture';
 
 export const HINT_TEXTURES = { hand: 'tutorial_hand', arrow: 'tutorial_arrow' } as const;

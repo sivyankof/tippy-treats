@@ -3,7 +3,7 @@ import { ANIM } from '../../data/common/anim';
 import type { CreatureId } from '../../data/creatures/creatures';
 import { HUD_LAYOUT } from '../../data/run/hud-layout';
 import { oscillate01 } from '../../util/math';
-import type { EaseFn } from '../fx/ease';
+import type { EaseFn } from '../fx/common/ease';
 
 /** A badge shows an effect by its creature id, or the brownie shield. */
 export type BadgeKey = CreatureId | 'shield';

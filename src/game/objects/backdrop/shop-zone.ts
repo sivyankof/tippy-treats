@@ -8,7 +8,7 @@ import {
   windowKey,
 } from '../../../data/weather/window-look';
 import { mixColor, shade } from '../../../util/color';
-import { outlineColor } from '../../fx/plain-style';
+import { outlineColor } from '../../fx/common/plain-style';
 import { bakePadded, bakeTexture } from '../../ui/bake-texture';
 import { FIELD_PAD } from '../../../data/common/picture-fields';
 import { paddedOrigin } from '../../../util/field-pad';

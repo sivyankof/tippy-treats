@@ -3,7 +3,7 @@ import { CREATURE_STYLE } from '../../../data/creatures/creature-style';
 import { shade } from '../../../util/color';
 import { PALETTE } from '../../../data/common/palette';
 import { faceRecipe } from '../../../data/creatures/creature-looks';
-import { faceHalfSpan } from '../../fx/glaze-growth';
+import { faceHalfSpan } from '../../fx/glaze/glaze-growth';
 import { faceLayout } from '../face-recipe';
 import { drawShadow } from '../layer-draw';
 import type { GlossSpot } from './flat-draw';
