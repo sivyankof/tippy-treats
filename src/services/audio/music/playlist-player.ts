@@ -806,6 +806,12 @@ export interface LivePlayerOptions {
   /** Media elements may play (false on iOS before 16.4: no streams, no element pool). */
   streams: boolean;
   preload: MusicPreload;
+  /**
+   * Bless the elements at the unlock (a browser on iOS: an element may play later without a gesture
+   * once it played in one). The app plays media without a gesture and skips it: eight elements
+   * loading one file at once through the app's file scheme stall for seconds.
+   */
+  bless: boolean;
 }
 
 /** The live player of the game (`WebAudioService`'s music factory; runs inside the unlocking gesture). */
@@ -813,6 +819,7 @@ export function playlistPlayerFactory({
   playlist,
   streams,
   preload,
+  bless,
 }: LivePlayerOptions): MusicFactory {
   return (host) => {
     const { ctx } = host;
@@ -828,7 +835,7 @@ export function playlistPlayerFactory({
     const make = (): HTMLMediaElement => preload.takeElement() ?? new Audio();
     const pool = media ? new MediaPool(media, make, MUSIC.streamElements) : null;
     const blessUrl = trackUrl('menu');
-    if (pool && blessUrl) pool.bless(blessUrl);
+    if (bless && pool && blessUrl) pool.bless(blessUrl);
     return new PlaylistPlayer(host, {
       clock,
       playlist,

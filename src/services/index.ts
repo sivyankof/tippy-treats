@@ -89,6 +89,7 @@ const webAudio = new WebAudioService(
     playlist: musicPlaylist,
     streams: audioSession.streams,
     preload: musicPreload,
+    bless: !native,
   }),
   (on) => (on ? musicPreload.start() : musicPreload.release()),
 );
