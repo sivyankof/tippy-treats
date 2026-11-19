@@ -18,11 +18,15 @@ import {
   type BadgeState,
   type BadgeVisual,
 } from './effect-badge-state';
-import { createStrokedText } from '../common/outlined-text';
+import { GlyphText, hudGlyphStyle, prepareGlyphs } from '../common/glyph-text';
+import { numberGlyphTexts } from '../common/number-glyphs';
 import { HudPlate } from '../style/hud-plate';
 import type { ActiveEffect } from '../../../core/abilities/types';
 
 const { badgeSize, badgeRowY, badgeCounterFont, badgeCounterInset, badgeCounterDrop } = HUD_LAYOUT;
+const COUNTER_STYLE = hudGlyphStyle(badgeCounterFont, HUD_LAYOUT.badgeCounterStroke);
+/** Glyph pictures a counter holds up front: four digits and a separator. */
+const COUNTER_GLYPHS = 5;
 const { badges } = ANIM;
 const inEase = easeFn(badges.inEase);
 const counterEase = easeFn(badges.counterPopEase);
@@ -39,7 +43,7 @@ class BadgeSlot {
   readonly root: Phaser.GameObjects.Container;
   private readonly icon: Phaser.GameObjects.Image;
   private readonly chip: HudPlate;
-  private readonly counter: Phaser.GameObjects.Text;
+  private readonly counter: GlyphText;
   /** The gold dot of a mastery tail, on the top right corner of the icon. */
   private readonly dot: Phaser.GameObjects.Image;
   private key: BadgeState['key'] | null = null;
@@ -48,16 +52,16 @@ class BadgeSlot {
 
   constructor(scene: Phaser.Scene) {
     this.icon = createCreatureIcon(scene, 0, 0);
-    this.counter = createStrokedText(
+    this.counter = new GlyphText(
       scene,
       COUNTER_OFFSET_X,
       COUNTER_OFFSET_Y,
-      '',
-      badgeCounterFont,
-      PALETTE.textLight,
-      PALETTE.textDark,
-      HUD_LAYOUT.badgeCounterStroke,
+      COUNTER_STYLE,
+      0.5,
+      0.5,
+      COUNTER_GLYPHS,
     );
+    this.counter.onRefresh = () => this.placeChip();
     this.chip = new HudPlate(scene, MENU.style.wallet.fill);
     const dotSize = HUD_LAYOUT.badgeTailDot;
     this.dot = scene.add
@@ -80,9 +84,7 @@ class BadgeSlot {
     if (badge.layersLeft !== this.shownCount) {
       this.shownCount = badge.layersLeft;
       this.counter.setText(formatNumber(badge.layersLeft));
-      const { height, padX } = HUD_LAYOUT.badgeChip;
-      const width = Math.max(height, this.counter.width + padX * 2);
-      this.chip.place(COUNTER_OFFSET_X, COUNTER_OFFSET_Y, width, height);
+      this.placeChip();
     }
     this.dot.setVisible(badge.tail);
     const pop =
@@ -95,6 +97,13 @@ class BadgeSlot {
       .setScale(visual.scale)
       .setAlpha(visual.alpha)
       .setVisible(visual.scale > 0);
+  }
+
+  /** The chip is as wide as the digits and their padding, at least as wide as it is tall. */
+  private placeChip(): void {
+    const { height, padX } = HUD_LAYOUT.badgeChip;
+    const width = Math.max(height, this.counter.width + padX * 2);
+    this.chip.place(COUNTER_OFFSET_X, COUNTER_OFFSET_Y, width, height);
   }
 
   /** The badge rocks and bobs a little: angle and y only, the pop owns the scale. */
@@ -118,7 +127,10 @@ export class EffectBadges {
   private readonly tracker = new BadgeTracker();
   private readonly slots: BadgeSlot[] = [];
   private readonly visual: BadgeVisual = { scale: 1, alpha: 1 };
-  constructor(private readonly scene: Phaser.Scene) {}
+  constructor(private readonly scene: Phaser.Scene) {
+    // The digits are baked now, not on the frame a badge first shows.
+    prepareGlyphs(scene, COUNTER_STYLE, numberGlyphTexts());
+  }
 
   /** Badges in the row (those shrinking away included). */
   get count(): number {
