@@ -65,6 +65,9 @@ export function percentile(sorted: number[], p: number): number {
   return sorted[index] ?? 0;
 }
 
+/** A percentage with its sign: `+12.5%`, `-3%`, `0%`. */
+export const signedPct = (value: number): string => `${value > 0 ? '+' : ''}${value}%`;
+
 export const mean = (values: number[]): number =>
   values.reduce((sum, value) => sum + value, 0) / values.length;
 

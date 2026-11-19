@@ -9,7 +9,7 @@ import {
   type CheckpointSample,
 } from './checkpoint-runs';
 import { SESSION_TIME } from './session-time';
-import { mean, percentile } from './sim-runner';
+import { mean, percentile, signedPct } from './sim-runner';
 
 /**
  * The checkpoint section of `npm run sim`: runs from every start height for the bot profiles,
@@ -33,6 +33,47 @@ const SECTION_PLAYERS: ReadonlyArray<{ profile: string; team: SimTeamSet; level:
 /** Owner's noise tolerance: about one layer for the regular profile. */
 const TOLERANCE_PP = 3;
 
+/**
+ * Checks printed for reference only, not in the verdict (owner's decision 2026-11-19): (c) and (d)
+ * count the run minute alone, and a start from a checkpoint is always faster there (the speed of
+ * the curve at the start height). The verdict is the play minute and the start price, (e)-(h).
+ */
+const REFERENCE_CHECKS: ReadonlySet<string> = new Set(['c', 'd']);
+
+/**
+ * Accepted advantages of a checkpoint start, team none, keyed `<profile> <start> <check>` (owner's
+ * decisions 2026-11-15 for the novice from 20 and 2026-11-19 for the novice from 40 and the regular
+ * from 20: the start is paid with berries or an ad, so it is the player's choice). Each is the
+ * value of the 2026-11-19 measure in percent; it prints for reference and fails again past that
+ * value plus `ACCEPTED_DRIFT_PP`.
+ */
+const ACCEPTED: Readonly<Record<string, number>> = {
+  'novice 20 b': 116.7,
+  'novice 20 e': 82.7,
+  'novice 20 h': 9.9,
+  'novice 40 b': 100,
+  'novice 40 e': 62.3,
+  'regular 20 e': 14.4,
+};
+for (const key of Object.keys(ACCEPTED)) {
+  const [profile, start] = key.split(' ');
+  if (
+    !SECTION_PLAYERS.some((p) => p.profile === profile) ||
+    !START_HEIGHTS.some((h) => h === Number(start))
+  ) {
+    throw new Error(`accepted checkpoint advantage for an unknown player or start: ${key}`);
+  }
+}
+/** How far past its accepted value an accepted advantage may drift before it fails again. */
+const ACCEPTED_DRIFT_PP = 5;
+
+/** Counts of the checks of a section: passed, printed for reference, failed. */
+export interface CheckCounts {
+  ok: number;
+  reference: number;
+  fail: number;
+}
+
 /** Coins one berry is worth at the worst exchange rate of the data (the strictest price of a berry start). */
 const COINS_PER_BERRY = Math.min(...BERRY_PACKS.map((pack) => pack.coins / pack.berries));
 if (!Number.isFinite(COINS_PER_BERRY)) throw new Error('no berry exchange pack');
@@ -53,8 +94,35 @@ const medianOf = (values: number[]): number =>
   );
 const deltaPct = (value: number, base: number): number =>
   Number(((100 * (value - base)) / Math.max(1e-9, base)).toFixed(1));
-const verdict = (delta: number): string =>
-  `${delta > 0 ? '+' : ''}${delta}% ${delta > TOLERANCE_PP ? 'FAIL' : 'ok'}`;
+/**
+ * Verdict of one check: `ok`, `fail` or `reference`; `acceptedKey` (`<profile> <start> <check>`)
+ * finds an accepted advantage, `''` for none.
+ */
+export function judgeCheck(
+  delta: number,
+  check: string,
+  acceptedKey: string,
+): { kind: keyof CheckCounts; text: string } {
+  if (REFERENCE_CHECKS.has(check))
+    return { kind: 'reference', text: `${signedPct(delta)} reference` };
+  const accepted = ACCEPTED[acceptedKey];
+  if (accepted !== undefined && delta <= TOLERANCE_PP) {
+    // The advantage is gone: the check passes, and the accepted entry is no longer needed.
+    return { kind: 'ok', text: `${signedPct(delta)} ok (accepted entry no longer needed)` };
+  }
+  if (accepted !== undefined) {
+    const limit = Number((accepted + ACCEPTED_DRIFT_PP).toFixed(1));
+    return delta > limit
+      ? { kind: 'fail', text: `${signedPct(delta)} FAIL (accepted up to ${signedPct(limit)})` }
+      : {
+          kind: 'reference',
+          text: `${signedPct(delta)} reference (accepted, limit ${signedPct(limit)})`,
+        };
+  }
+  return delta > TOLERANCE_PP
+    ? { kind: 'fail', text: `${signedPct(delta)} FAIL` }
+    : { kind: 'ok', text: `${signedPct(delta)} ok` };
+}
 
 interface Stats {
   runs: number;
@@ -92,20 +160,32 @@ function statsOf(samples: CheckpointSample[]): Stats {
 }
 
 /** Prints the section; `profile` limits it to one profile like the `--profile=` option. */
-export function printCheckpointSection(runs: number, profile: string | null): void {
+export function printCheckpointSection(runs: number, profile: string | null): CheckCounts {
   const players = SECTION_PLAYERS.filter((p) => !profile || p.profile === profile);
   console.log(
     `\n## Checkpoint starts: ${runs} runs per profile, team and start height, same seeds for every start, continues: declined`,
   );
   console.log(
     'Duration is the sim clock of the run (placed layers only). A start from a checkpoint must not beat the run from zero by more than ' +
-      `${TOLERANCE_PP} percentage points on (a) median placed layers vs median height from zero, (b) median coins per run, (c) coins per minute, (d) placed layers per minute; (e) and (f) are (c) and (d) per minute of play with the ${SESSION_TIME.resultsSec} s results screen after every run; (g) and (h) count the price of the start, with berries at the worst exchange rate (${COINS_PER_BERRY} coins per berry): value = mean coins + (mean berries earned - berry price) x rate, per minute of run + ${SESSION_TIME.resultsSec} s results; (g) a berry start, (h) an ad start (heights with an ad only: no berry price, + ${SESSION_TIME.adSec} s ad). Both are compared with the same value of the run from zero (its berries counted, no price).`,
+      `${TOLERANCE_PP} percentage points on (a) median placed layers vs median height from zero, (b) median coins per run, (c) coins per minute, (d) placed layers per minute; (e) and (f) are (c) and (d) per minute of play with the ${SESSION_TIME.resultsSec} s results screen after every run; (g) and (h) count the price of the start, with berries at the worst exchange rate (${COINS_PER_BERRY} coins per berry): value = mean coins + (mean berries earned - berry price) x rate, per minute of run + ${SESSION_TIME.resultsSec} s results; (g) a berry start, (h) an ad start (heights with an ad only: no berry price, + ${SESSION_TIME.adSec} s ad). Both are compared with the same value of the run from zero (its berries counted, no price). ` +
+      `The verdict is (a), (b) and (e)-(h); (c) and (d) count the run minute alone and print for reference (owner's decision 2026-11-19). Accepted advantages print for reference with the limit past which they fail again (accepted value + ${ACCEPTED_DRIFT_PP} points): ${Object.entries(
+        ACCEPTED,
+      )
+        .map(([key, value]) => `${key} ${signedPct(value)}`)
+        .join(', ')}.`,
   );
   const widthRows: string[] = [];
   const failures: string[] = [];
-  const verdictOf = (d: number, label: string): string => {
-    const text = verdict(d);
-    if (text.endsWith('FAIL')) failures.push(`${label}: ${text}`);
+  const references: string[] = [];
+  const counts: CheckCounts = { ok: 0, reference: 0, fail: 0 };
+  const verdictOf = (d: number, label: string, check: string, acceptedKey: string): string => {
+    const { kind, text } = judgeCheck(d, check, acceptedKey);
+    counts[kind]++;
+    if (kind === 'fail') failures.push(`${label}: ${text}`);
+    // Reference values over the tolerance are listed with their numbers, so a drift stays in sight.
+    if ((kind === 'reference' && d > TOLERANCE_PP) || text.includes('no longer needed')) {
+      references.push(`${label}: ${text}`);
+    }
     return text;
   };
   for (const player of players) {
@@ -136,6 +216,13 @@ export function printCheckpointSection(runs: number, profile: string | null): vo
     const zeroValue = valuePerPlayMin(zero, 0, 0);
     for (const { start, stats } of rows) {
       const label = (check: string): string => `${title}, start ${start}, (${check})`;
+      const judge = (d: number, check: string): string =>
+        verdictOf(
+          d,
+          label(check),
+          check,
+          player.team === NO_TEAM ? `${player.profile} ${start} ${check}` : '',
+        );
       let cells: string[];
       if (start === 0) {
         cells = Array.from({ length: 10 }, () => '-');
@@ -153,11 +240,11 @@ export function printCheckpointSection(runs: number, profile: string | null): vo
           ['f', deltaPct(stats.layersPerPlayMin, zero.layersPerPlayMin)],
         ];
         cells = [
-          ...deltas.map(([check, d]) => verdictOf(d, label(check))),
+          ...deltas.map(([check, d]) => judge(d, check)),
           berryValue.toFixed(1),
           adValue === null ? '-' : adValue.toFixed(1),
-          verdictOf(deltaPct(berryValue, zeroValue), label('g')),
-          adValue === null ? '-' : verdictOf(deltaPct(adValue, zeroValue), label('h')),
+          judge(deltaPct(berryValue, zeroValue), 'g'),
+          adValue === null ? '-' : judge(deltaPct(adValue, zeroValue), 'h'),
         ];
       }
       console.log(
@@ -177,7 +264,12 @@ export function printCheckpointSection(runs: number, profile: string | null): vo
   console.log('| profile | height | runs reaching it | median width | CHECKPOINT_START_WIDTH |');
   console.log('|---|---|---|---|---|');
   widthRows.forEach((row) => console.log(row));
+  const list = (lines: string[]): string => lines.map((line) => `\n  ${line}`).join('');
   console.log(
-    `\nCheckpoint checks: ${failures.length ? `${failures.length} FAIL` : 'all ok'}${failures.length ? `\n${failures.map((f) => `  ${f}`).join('\n')}` : ''}`,
+    `\nReference, not in the verdict ((c) and (d) over +${TOLERANCE_PP}%, accepted advantages): ${references.length}${list(references)}`,
   );
+  console.log(
+    `\nCheckpoint checks: ${counts.ok} ok, ${counts.reference} reference, ${counts.fail} FAIL${list(failures)}`,
+  );
+  return counts;
 }

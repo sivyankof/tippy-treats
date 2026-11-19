@@ -12,11 +12,11 @@ import {
 import { printCheckpointSection } from './checkpoint-section';
 import { EndStats, type EndRow } from './end-stats';
 import type { RunObserver } from './run-observer';
-import { mean, percentile, playRun, profileStreams, teamSlots } from './sim-runner';
+import { mean, percentile, playRun, profileStreams, signedPct, teamSlots } from './sim-runner';
 import { WobbleStats, type WobbleRow } from './wobble-stats';
 
 /** Node global; the project does not pull in the Node type definitions. */
-declare const process: { argv: string[] };
+declare const process: { argv: string[]; exitCode?: number };
 
 /** Median height gain of a full level-3 team expected by the M4 exit criteria, in percent. */
 const GAIN_RANGE_PCT = [30, 50] as const;
@@ -27,9 +27,21 @@ const GAIN_RANGE_PCT = [30, 50] as const;
  */
 const GAIN_OVER_TOLERANCE_PP = 3;
 const OVER_LIMIT_PCT = GAIN_RANGE_PCT[1] + GAIN_OVER_TOLERANCE_PP;
-/** Owner's acceptance criteria for the creature balance. */
-const JELLY_PROFILE = 'regular';
-const JELLY_SOLO_RANGE_PCT = [8, 14] as const;
+/**
+ * Owner's acceptance criteria for the creature balance: the median gain of a lone Jelly by profile.
+ * The regular one is +8..+18 since 2026-11-19 (owner's decision): after session 7b its run is
+ * longer and the spring of every layer adds up, the creature itself did not change.
+ */
+const JELLY_SOLO_RANGE_PCT: Readonly<Record<string, readonly [number, number]>> = {
+  novice: [8, 14],
+  regular: [8, 18],
+  expert: [8, 14],
+};
+for (const profile of Object.keys(JELLY_SOLO_RANGE_PCT)) {
+  if (!DIFFICULTY.targets.some((t) => t.id === profile)) {
+    throw new Error(`jelly solo range for an unknown profile: ${profile}`);
+  }
+}
 const TOP_COUNT = 5;
 const RAINBOW = 'rainbow';
 const GHOST = 'ghost';
@@ -235,7 +247,8 @@ function main(): void {
   const missRows: EndRow[] = [];
   const dominantTeams: string[] = [];
   const plainOverTeams: string[] = [];
-  let jellySolo: number | null = null;
+  const jellySolo = new Map<string, number>();
+  const baselineOk: boolean[] = [];
   for (const target of targets) {
     const play = (set: SimTeamSet, observers: readonly RunObserver[] = []): TeamRow => {
       const { results, heights } = playProfile(target, set, options, observers);
@@ -262,12 +275,13 @@ function main(): void {
       `\nProfile ${target.id} (sd ${target.timingSdMs} ms), target median ${target.medianHeight.join('-')}, ` +
         `baseline status: ${verdict(base, target.medianHeight)}`,
     );
+    baselineOk.push(verdict(base, target.medianHeight) !== 'OFF');
     console.table(rows, TABLE_COLUMNS);
 
     const jelly = rows.find((r) => r.team === 'jelly');
     if (jelly) {
-      console.log(`[${target.id}] jelly solo: ${gainOf(jelly) > 0 ? '+' : ''}${gainOf(jelly)}%`);
-      if (target.id === JELLY_PROFILE) jellySolo = gainOf(jelly);
+      console.log(`[${target.id}] jelly solo: ${signedPct(gainOf(jelly))}`);
+      jellySolo.set(target.id, gainOf(jelly));
     }
 
     if (options.allTeams) {
@@ -316,14 +330,23 @@ Rule on the layer the run was lost on, % of runs, no team ` +
     `status of the baseline: ok = median inside the target range, near = within ${DIFFICULTY.tolerance * 100}% of it, OFF = median outside the target range by more than the tolerance`,
   );
 
-  const [jLo, jHi] = JELLY_SOLO_RANGE_PCT;
   console.log(`\nAcceptance criteria${options.allTeams ? '' : ' (2 and 3 need --all-teams)'}`);
-  console.log(
-    `(1) jelly solo at ${JELLY_PROFILE} within +${jLo}..+${jHi}%: ` +
-      (jellySolo === null
-        ? `n/a (profile ${JELLY_PROFILE} was not played)`
-        : `${status(jellySolo >= jLo && jellySolo <= jHi)} (${jellySolo}%)`),
-  );
+  const jellyOk: boolean[] = [];
+  for (const [profile, gain] of jellySolo) {
+    const range = JELLY_SOLO_RANGE_PCT[profile];
+    if (!range) {
+      console.log(`(1) jelly solo at ${profile}: n/a (no range for this profile) (${gain}%)`);
+      continue;
+    }
+    const [lo, hi] = range;
+    const ok = gain >= lo && gain <= hi;
+    jellyOk.push(ok);
+    console.log(`(1) jelly solo at ${profile} within +${lo}..+${hi}%: ${status(ok)} (${gain}%)`);
+  }
+  if (jellySolo.size === 0) console.log('(1) jelly solo: n/a (the jelly team was not played)');
+  const criteriaOk = options.allTeams
+    ? [dominantTeams.length === 0, plainOverTeams.length === 0]
+    : [];
   if (options.allTeams) {
     console.log(
       `(2) no dominant team on any profile (${everyTeam.length} teams): ${status(dominantTeams.length === 0)}` +
@@ -335,7 +358,16 @@ Rule on the layer the run was lost on, % of runs, no team ` +
     );
   }
 
-  printCheckpointSection(options.runs, options.profile);
+  const checkpoints = printCheckpointSection(options.runs, options.profile);
+  const verdicts = [...baselineOk, ...jellyOk, ...criteriaOk];
+  const ok = verdicts.filter(Boolean).length + checkpoints.ok;
+  const fail = verdicts.length - verdicts.filter(Boolean).length + checkpoints.fail;
+  console.log(
+    `\nAll checks: ${ok} ok, ${checkpoints.reference} reference, ${fail} FAIL ` +
+      `(baseline medians ok or near, ${jellyOk.length ? 'jelly solo, ' : ''}${options.allTeams ? 'dominance and teams over the gain range, ' : ''}checkpoint starts)`,
+  );
+  // A failed verdict stops a script chain (`npm run sim && ...`).
+  if (fail > 0) process.exitCode = 1;
 }
 
 main();
