@@ -1,4 +1,5 @@
 import * as Phaser from 'phaser';
+import { pushBack } from '../app/back-stack';
 import { ANIM } from '../../data/common/anim';
 import { MENU } from '../../data/common/menu-layout';
 import { t } from '../../i18n';
@@ -90,7 +91,14 @@ export class ResultsScene extends Phaser.Scene {
       () => this.buildPanel(),
     ];
     this.scale.on(Phaser.Scale.Events.RESIZE, this.layout, this);
+    // The Android back is "Home" (results over the run: the HUD handler under it never sees it).
+    // While the screen is built hidden under the collapsing tower, or its buttons are not built yet, it is taken.
+    const unregisterBack = pushBack(() => {
+      const buttons = this.buttons as ResultsButtons | undefined;
+      return this.sys.isVisible() && buttons ? buttons.pressBack() : true;
+    });
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      unregisterBack();
       this.scale.off(Phaser.Scale.Events.RESIZE, this.layout, this);
       this.revealWanted = false;
       this.hudCamera?.setAlpha(1);

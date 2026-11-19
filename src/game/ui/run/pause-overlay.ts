@@ -89,6 +89,18 @@ export class PauseOverlay {
     this.controls = [...buttons, ...toggles];
   }
 
+  /**
+   * The Android back while the pause shows: the window closes as by "Resume" (the 3-2-1 count
+   * follows); during the count it is taken and nothing else happens. False when nothing shows.
+   */
+  back(): boolean {
+    if (this.countdownTimer !== null) return true;
+    if (!this.popup) return false;
+    // While the window slides away to a new run or home, its controls are off: the back waits.
+    if (this.controls.some((control) => control.input?.enabled)) this.beginCountdown();
+    return true;
+  }
+
   /** Takes the window and the countdown away at once. */
   hide(): void {
     this.cancelCountdown();

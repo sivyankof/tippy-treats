@@ -101,6 +101,16 @@ export class ContinueWindow {
     if (this.shown && !this.slide?.isPlaying()) this.panel.y = this.targetY();
   }
 
+  /**
+   * The Android back while the offer shows: once its buttons are on, it says "no" like the pale
+   * caption under them; before that it is taken and nothing happens. False when the window is not shown.
+   */
+  back(): boolean {
+    if (!this.shown) return false;
+    if (this.declineShown && this.flow?.isOpen && !this.flow.paying) this.flow.decline();
+    return true;
+  }
+
   /** Follows the flow every frame: opens, runs and closes the window. `runHeight` is the tower height. */
   update(flow: ContinueFlow | null, runHeight: number): void {
     this.flow = flow;

@@ -15,6 +15,7 @@ import { createIconButton } from '../ui/menu/widgets/icon-button';
 import { NumberRoll } from '../ui/common/number-roll';
 import { createOutlinedText } from '../ui/common/outlined-text';
 import { PauseOverlay } from '../ui/run/pause-overlay';
+import { pushBack } from '../app/back-stack';
 import { EffectBadges } from '../ui/creatures/effect-badges';
 import { MasterCaptions } from '../ui/creatures/master-captions';
 import { TempoChip } from '../ui/tower/tempo-chip';
@@ -143,6 +144,13 @@ export class HudScene extends Phaser.Scene {
     );
 
     this.game.events.on(Phaser.Core.Events.HIDDEN, this.pause, this);
+    // The Android back: the pause window closes, the continue offer says "no", a running run pauses.
+    const unregisterBack = pushBack(
+      () =>
+        this.overlay.back() ||
+        this.continueWindow.back() ||
+        (this.pauseEnabled() ? (this.pause(), true) : false),
+    );
     if (DEBUG_TOOLS) {
       this.input.keyboard?.on('keydown-D', () => {
         this.debugPanel.setVisible(!this.debugPanel.visible);
@@ -157,6 +165,7 @@ export class HudScene extends Phaser.Scene {
       this.treasure.destroy();
       this.masterCaptions.clear();
       unregisterContinue();
+      unregisterBack();
       this.game.events.off(Phaser.Core.Events.HIDDEN, this.pause, this);
       this.scale.off(Phaser.Scale.Events.RESIZE, this.layout, this);
     });

@@ -28,6 +28,8 @@ export class ResultsButtons {
   /** Height of the block. */
   readonly height: number;
   private readonly buttons: Button[] = [];
+  private enabled = false;
+  private readonly back: () => void;
 
   constructor(
     scene: Phaser.Scene,
@@ -37,6 +39,8 @@ export class ResultsButtons {
     private readonly extra: ExtraButtons | null = null,
   ) {
     this.container = scene.add.container(0, 0);
+    // The Android back is "Home"; after the tutorial run, where there is none, it is "Next".
+    this.back = firstRun ? handlers.primary : handlers.home;
     const make = (
       text: string,
       fill: number,
@@ -100,7 +104,17 @@ export class ResultsButtons {
     this.extra?.refreshAd();
   }
 
+  /** The Android back: "Home" once the buttons are on; before that it is taken and nothing happens. */
+  pressBack(): boolean {
+    if (this.enabled) {
+      this.setEnabled(false);
+      this.back();
+    }
+    return true;
+  }
+
   setEnabled(enabled: boolean): void {
+    this.enabled = enabled;
     for (const button of this.buttons) button.setEnabled(enabled);
     this.extra?.setEnabled(enabled);
   }
