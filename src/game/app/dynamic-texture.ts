@@ -12,16 +12,18 @@ export function addDynamicTexture(
   width: number,
   height: number,
 ): Phaser.Textures.DynamicTexture | null {
+  // Phaser builds a texture for an invalid key before refusing it; a taken key it refuses at once.
+  if (!key || textures.exists(key)) return null;
   const renderer = asWebGLRenderer(textures.game.renderer);
   const before = renderer ? [...renderer.glTextureWrappers] : [];
   const texture = textures.addDynamicTexture(key, width, height);
-  if (!renderer) return texture;
-  // A refused key (taken or invalid) still built the texture before the check: nothing is kept.
-  const kept = texture
-    ? [texture.drawingContext.texture, ...texture.source.map((source) => source.glTexture)]
-    : [];
+  if (!renderer || !texture) return texture;
+  const kept = [
+    texture.drawingContext.texture,
+    ...texture.source.map((source) => source.glTexture),
+  ];
   for (const stray of strayTextures(before, renderer.glTextureWrappers, kept)) {
-    // As Phaser's own `DrawingContext.destroy`: no texture unit may keep pointing at it.
+    // No texture unit may keep pointing at a deleted texture (its `webGLTexture` turns null).
     renderer.glTextureUnits.unbindTexture(stray);
     renderer.deleteTexture(stray);
   }
