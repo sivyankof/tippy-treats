@@ -202,7 +202,7 @@ export const DIFFICULTY = {
   /** Allowed relative deviation from the expected range before balance must change. */
   tolerance: 0.25,
   targets: [
-    { id: 'novice', timingSdMs: 70, medianHeight: [12, 18] },
+    { id: 'novice', timingSdMs: 70, medianHeight: [18, 26] },
     { id: 'regular', timingSdMs: 45, medianHeight: [30, 45] },
     { id: 'expert', timingSdMs: 25, medianHeight: [80, 120] },
     // Live-player calibration (a tester's runs, no ads, no debug), not a design target:
