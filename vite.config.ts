@@ -88,6 +88,35 @@ function restartOnPackageJson(): Plugin {
   };
 }
 
+/** The game's own files on the dev server: the page itself and every module under /src/. */
+const GAME_FILES = /^\/(?:index\.html)?$|^\/src\//;
+
+/**
+ * Dev only: the game's own files go out with `Cache-Control: no-store`. Safari on the iPhone kept
+ * old modules in memory after a change of the imports and the game stopped with "Importing binding
+ * name … is not found". Phaser and the rest of node_modules keep Vite's usual caching. Vite sets
+ * its own Cache-Control just before the response is written, so the header is put in last, right
+ * before the head goes out.
+ */
+function noStoreGameFiles(): Plugin {
+  return {
+    name: 'no-store-game-files',
+    apply: 'serve',
+    configureServer(server) {
+      server.middlewares.use((req, res, next) => {
+        if (GAME_FILES.test((req as { url?: string }).url?.split('?')[0] ?? '')) {
+          const writeHead = res.writeHead as (...args: unknown[]) => typeof res;
+          res.writeHead = function (this: typeof res, ...args: unknown[]) {
+            this.setHeader('Cache-Control', 'no-store');
+            return writeHead.apply(this, args);
+          } as typeof res.writeHead;
+        }
+        next();
+      });
+    },
+  };
+}
+
 /** Puts the build stamp into index.html (`%BUILD_STAMP%`), where the dev error box prints it. */
 /**
  * The build stamp of the page: a production build bakes the one of its build, the dev server
@@ -101,7 +130,7 @@ function buildStampInHtml(stamp: () => string): Plugin {
   };
 }
 
-export default defineConfig(({ command, mode, isPreview }) => {
+export default defineConfig(({ command, mode }) => {
   const devServer = command === 'serve' && mode !== 'test';
   const buildHash = gitHash();
   const buildTime = formatBuildTime(new Date());
@@ -119,14 +148,10 @@ export default defineConfig(({ command, mode, isPreview }) => {
           ? () => `${formatBuildStamp(gitHash(), formatBuildTime(new Date()))} (page load)`
           : () => formatBuildStamp(buildHash, buildTime),
       ),
-      ...(devServer ? [leanDevPhaser(), restartOnPackageJson()] : []),
+      ...(devServer ? [leanDevPhaser(), restartOnPackageJson(), noStoreGameFiles()] : []),
     ],
     resolve: devServer ? { alias: [{ find: /^phaser$/, replacement: PHASER_MIN }] } : {},
     optimizeDeps: devServer ? { exclude: ['phaser'] } : {},
-    // Dev only: Safari on the iPhone kept old modules in memory after a change of the imports and
-    // the game stopped with "Importing binding name … is not found". The preview and the builds keep
-    // the usual caching.
-    server: devServer && !isPreview ? { headers: { 'Cache-Control': 'no-store' } } : {},
     build: {
       target: 'es2022',
       chunkSizeWarningLimit: 2000,
