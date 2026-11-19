@@ -10,6 +10,10 @@ export const SOAK = {
   runsPerLap: 3,
   /** A run that has not reached the results by then is left through the pause path. */
   runMaxMs: 45_000,
+  /** The checkpoint run of a lap may take longer: it plays a whole zone and its change. */
+  zoneRunMaxMs: 120_000,
+  /** How long the record results stay (the celebration plays and the record music comes in). */
+  recordDwellMs: 6_000,
   /** First screen of a run: how long its HUD takes to come in before the driver may leave it. */
   hudEnterMs: 800,
   /** A run that ended while the driver waited to leave it: how long its results or Home may take to show. */

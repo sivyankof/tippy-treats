@@ -26,6 +26,7 @@ import type { GameScene } from '../scenes/game-scene';
 import { setSoakSpeed } from './soak-speed';
 import { differing, type SmokeCounts } from './soak-compare';
 import { readSoakSample, type SoakSample } from './soak-metrics';
+import { resultsDemoData } from './results-demo';
 
 /** What the harness reads between laps. */
 export interface SoakStatus {
@@ -47,6 +48,10 @@ export interface SoakStatus {
   jokes: number;
   /** Runs in which the Rainbow arc grew out. */
   arcs: number;
+  /** Checkpoint runs of the laps (one per lap, the checkpoints in turn, so every zone is played). */
+  zoneRuns: number;
+  /** Record results screens shown (its celebration and music played). */
+  records: number;
   /** Parked on Home between two laps, waiting for `release()`. */
   parked: boolean;
   /** Where the driver is now, for the log. */
@@ -142,6 +147,8 @@ class SoakDriver implements TippySoak {
     shortLicks: 0,
     jokes: 0,
     arcs: 0,
+    zoneRuns: 0,
+    records: 0,
     parked: false,
     stage: 'idle',
   };
@@ -420,7 +427,36 @@ class SoakDriver implements TippySoak {
   private async lap(): Promise<void> {
     await this.parkIfAsked();
     await this.playRuns();
+    await this.zoneRun();
     await this.tour();
+  }
+
+  /**
+   * A run from the next checkpoint in turn (20, 40, … so every zone and its change are played),
+   * then the record results: bot runs never reach the save, so they never set a record, and the
+   * record celebration and its music come from the `?resultsDemo=record` screen instead.
+   */
+  private async zoneRun(): Promise<void> {
+    if (!this.active) return;
+    const heights = CHECKPOINT_HEIGHTS;
+    const height = heights[this.counts.zoneRuns % heights.length]!;
+    this.stage(`zone-${height}`);
+    this.counts.zoneRuns += 1;
+    this.beginRun(SCENES.home, checkpointRun(height));
+    const reached = await this.waitFor(() => this.isOn(SCENES.results), SOAK.zoneRunMaxMs);
+    if (reached) {
+      this.counts.results += 1;
+      await sleep(this.dwell.resultsMs);
+      openScreen(this.scene(SCENES.results), SCENES.home);
+    } else {
+      this.counts.abandoned += 1;
+      (this.scene(SCENES.game) as GameScene).leaveRun();
+    }
+    await this.waitFor(() => this.isOn(SCENES.home), SOAK.runMaxMs);
+    await this.visit(SCENES.home, SCENES.results, resultsDemoData('record'));
+    this.counts.records += 1;
+    await sleep(SOAK.recordDwellMs);
+    await this.visit(SCENES.results, SCENES.home);
   }
 
   /** Between laps, at Home: holds still while the harness reads the counts. */
