@@ -9,6 +9,7 @@ import {
 } from '../../data/debug/clip-guard';
 import { readDebugParams } from '../../util/debug-params';
 import { measureOverflow } from '../../util/edge-clip';
+import { drawGraphicsToCanvas } from './graphics-to-canvas';
 
 /** One picture whose drawing runs past its field: its key, the side and how many pixels lie beyond it. */
 export interface ClipOffender {
@@ -67,7 +68,7 @@ export function drawProbed(
   const big = document.createElement('canvas');
   big.width = width + pad * 2;
   big.height = height + pad * 2;
-  g.generateTexture(big, big.width, big.height);
+  drawGraphicsToCanvas(g, big, big.width, big.height);
   const field = document.createElement('canvas');
   field.width = width;
   field.height = height;

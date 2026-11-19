@@ -1,6 +1,7 @@
 import type * as Phaser from 'phaser';
 import { paddedSize } from '../../../util/field-pad';
 import { clipGuardActive, drawProbed } from '../../common/clip-guard';
+import { drawGraphicsToCanvas } from '../../common/graphics-to-canvas';
 
 /** One deferred bake: draws and uploads a single texture. */
 export type BakeStep = () => void;
@@ -116,7 +117,7 @@ export function bakeTexture(
       canvas = document.createElement('canvas');
       canvas.width = w;
       canvas.height = h;
-      g.generateTexture(canvas, w, h);
+      drawGraphicsToCanvas(g, canvas, w, h);
       // `finish` edits the finished pixels (cuts a piece out of the picture).
       const context = finish ? canvas.getContext('2d') : null;
       if (finish && context) finish(context);
