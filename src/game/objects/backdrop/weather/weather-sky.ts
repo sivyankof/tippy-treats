@@ -6,8 +6,7 @@ import type { ZoneId } from '../../../../data/zones/zones';
 import { TWO_PI } from '../../../../util/math';
 import { effectsMode } from '../../../app/effects-mode';
 import { FLIGHT_CLEAR } from '../../../../data/backdrop/flight-clear';
-import { HUD_LAYOUT } from '../../../../data/run/hud-layout';
-import { flightClearBand, hudFloor, hudKeepOutFade } from '../../../run/camera-layout';
+import { flightClearBand, hudFloor, hudKeepOutFade, hudPlates } from '../../../run/camera-layout';
 import type { FrameCtx, Life } from '../life/life';
 import { inSky } from '../life/layer-anchor';
 import { fxGuard } from '../../../common/fx-guard';
@@ -202,7 +201,7 @@ export class WeatherBank implements Life {
       const end = top + edge * BOLT.lengthShare;
       if (end - top < BOLT.height * BOLT.minLengthShare) continue;
       const half = BOLT.width * ((end - top) / BOLT.height) * BOLT.hudHalfShare;
-      const room = boltEnd(x, half, top, end, HUD_LAYOUT.plates, FLIGHT_CLEAR.hudGapPx);
+      const room = boltEnd(x, half, top, end, hudPlates(), FLIGHT_CLEAR.hudGapPx);
       if (room === null || room - top < BOLT.height * BOLT.minLengthShare) continue;
       return { x, y: top, scale: (room - top) / BOLT.height, side };
     }

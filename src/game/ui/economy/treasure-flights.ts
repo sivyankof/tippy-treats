@@ -3,6 +3,7 @@ import { TREASURE } from '../../../data/economy/treasure-anim';
 import { PALETTE } from '../../../data/common/palette';
 import { smoothstep, TWO_PI } from '../../../util/math';
 import { effectsMode } from '../../app/effects-mode';
+import { safeBand } from '../../app/safe-area';
 import {
   arcPoint,
   sampleFlight,
@@ -93,7 +94,8 @@ export class TreasureFlights {
         image,
         amount,
         ageMs: 0,
-        from: { x: payload.x + spread, y: payload.y },
+        // The run scene reports canvas places; this scene is laid out below the top inset.
+        from: { x: payload.x + spread, y: payload.y - safeBand().top },
         plan: {
           delayMs: payload.hop ? 0 : i * flight.staggerMs,
           hopMs: payload.hop ? flight.hopMs : 0,
@@ -142,9 +144,10 @@ export class TreasureFlights {
   private updateBerries(dtMs: number): void {
     const { popMs, holdMs, flightMs } = berryCfg;
     const { width, height } = this.scene.scale.gameSize;
+    const band = safeBand();
     const centre = this.centre;
     centre.x = width / 2;
-    centre.y = height * berryCfg.centerY;
+    centre.y = (height - band.top - band.bottom) * berryCfg.centerY;
     const target = this.berryCounter.anchor;
     for (let i = this.berries.length - 1; i >= 0; i--) {
       const berry = this.berries[i];

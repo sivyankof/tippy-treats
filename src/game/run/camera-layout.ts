@@ -2,6 +2,7 @@ import { ANIM } from '../../data/common/anim';
 import { BALANCE } from '../../data/tower/balance';
 import { FLIGHT_CLEAR } from '../../data/backdrop/flight-clear';
 import { HUD_LAYOUT } from '../../data/run/hud-layout';
+import { safeBand } from '../app/safe-area';
 
 /**
  * How far above the top of the tower the flying layer reaches: the gap it starts in, its own
@@ -10,9 +11,49 @@ import { HUD_LAYOUT } from '../../data/run/hud-layout';
 export const FLYING_REACH =
   BALANCE.layer.gapAboveTower + BALANCE.layer.height + ANIM.flying.bobAmplitude;
 
-/** Scroll that shows the tray (its top at world y `trayTopY`) low on a screen `screenH` tall. */
+/**
+ * The run HUD is laid out as if the safe band started at y 0 and the canvas moved down by the top
+ * inset (the HUD scene scrolls by it). These give its places in canvas coordinates, which is what
+ * the world and the background work in: with no insets they are the HUD coordinates themselves.
+ */
+export function hudTopShift(): number {
+  return safeBand().top;
+}
+
+/** Canvas y of the lowest HUD edge (height, score, wobble bar, badge row). */
+export function hudBottomEdgeY(): number {
+  return HUD_LAYOUT.bottomEdge + safeBand().top;
+}
+
+/** Canvas y of the lowest HUD edge including the counter chips under the badges. */
+export function hudBadgeRowBottomY(): number {
+  return HUD_LAYOUT.badgeRowBottom + safeBand().top;
+}
+
+/** Canvas y of the top of the wobble plate. */
+export function hudWobblePlateY(): number {
+  return HUD_LAYOUT.wobblePlate.y + safeBand().top;
+}
+
+type HudPlate = (typeof HUD_LAYOUT.plates)[number];
+let shiftedPlates: { top: number; plates: readonly HudPlate[] } | null = null;
+
+/** The HUD plates in canvas coordinates (cached per top inset: no allocation per frame). */
+export function hudPlates(): readonly HudPlate[] {
+  const top = safeBand().top;
+  if (top === 0) return HUD_LAYOUT.plates;
+  if (shiftedPlates?.top !== top) {
+    shiftedPlates = { top, plates: HUD_LAYOUT.plates.map((p) => ({ ...p, y: p.y + top })) };
+  }
+  return shiftedPlates.plates;
+}
+
+/**
+ * Scroll that shows the tray (its top at world y `trayTopY`) low on a screen `screenH` tall: the
+ * tray keeps `trayBottomOffset` px above the bottom safe edge.
+ */
 export function trayScrollY(trayTopY: number, screenH: number): number {
-  return trayTopY - (screenH - ANIM.camera.trayBottomOffset);
+  return trayTopY - (screenH - safeBand().bottom - ANIM.camera.trayBottomOffset);
 }
 
 /**
@@ -26,14 +67,14 @@ export function targetScrollY(trayTopY: number, screenH: number, towerTopY: numb
 /** Screen y the top of a tall tower stands at: the flying layer is above it, the HUD above that. */
 export function surfaceScreenY(screenH: number): number {
   return Math.max(
-    screenH - ANIM.camera.visibleLayers * BALANCE.layer.height,
-    HUD_LAYOUT.badgeRowBottom + ANIM.camera.hudClearance + FLYING_REACH,
+    screenH - safeBand().bottom - ANIM.camera.visibleLayers * BALANCE.layer.height,
+    hudBadgeRowBottomY() + ANIM.camera.hudClearance + FLYING_REACH,
   );
 }
 
 /** The highest the top of a background picture may go: `FLIGHT_CLEAR.hudGapPx` under the lowest HUD plate. */
 export function hudFloor(): number {
-  return HUD_LAYOUT.badgeRowBottom + FLIGHT_CLEAR.hudGapPx;
+  return hudBadgeRowBottomY() + FLIGHT_CLEAR.hudGapPx;
 }
 
 /**
@@ -44,7 +85,7 @@ export function hudFloor(): number {
 export function hudKeepOutFade(x: number, y: number, radius = 0, feather = 0): number {
   const gap = FLIGHT_CLEAR.hudGapPx + radius;
   let fade = 1;
-  for (const plate of HUD_LAYOUT.plates) {
+  for (const plate of hudPlates()) {
     const dx = Math.max(plate.x - x, 0, x - (plate.x + plate.width));
     const dy = Math.max(plate.y - y, 0, y - (plate.y + plate.height));
     const away = Math.hypot(dx, dy) - gap;

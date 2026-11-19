@@ -2,6 +2,7 @@ import { PERF } from '../../data/debug/perf';
 import { reloadWithQuery } from '../../util/page-reload';
 import { overlayButtonCss } from '../debug/overlay-style';
 import { copyText } from '../common/copy-text';
+import { readSafeInsets } from '../app/safe-area';
 import type { SummaryRow } from './perf-stats';
 
 const { overlay } = PERF;
@@ -34,9 +35,12 @@ export class PerfOverlay {
   private text = '';
 
   constructor() {
+    // The overlay keeps clear of the system bars (the insets of the screen, CSS px).
+    const insets = readSafeInsets();
     this.box = document.createElement('div');
     this.box.style.cssText =
-      `position:fixed;z-index:${overlay.zIndex};left:0;right:0;bottom:0;margin:0;padding:4px;` +
+      `position:fixed;z-index:${overlay.zIndex};left:0;right:0;bottom:0;margin:0;` +
+      `padding:4px 4px ${4 + insets.bottom}px;` +
       `font:${overlay.fontPx}px/1.25 monospace;color:#fff;background:rgba(0,0,0,0.55);` +
       'pointer-events:none;box-sizing:border-box;';
     this.line = document.createElement('div');
@@ -56,9 +60,10 @@ export class PerfOverlay {
   /** The finished benchmark: the big summary and the buttons, the full table folded in. */
   finish(outcome: PerfOutcome): void {
     this.text = outcome.text;
+    const insets = readSafeInsets();
     this.body.textContent = outcome.text;
     this.box.style.cssText +=
-      `top:0;padding:12px 16px calc(12px + env(safe-area-inset-bottom));overflow:auto;` +
+      `top:0;padding:${12 + insets.top}px 16px ${12 + insets.bottom}px;overflow:auto;` +
       'background:rgba(0,0,0,0.93);pointer-events:auto;';
     this.line.replaceChildren(verdictLine(outcome), summaryGrid(outcome.rows));
     const buttons = document.createElement('div');

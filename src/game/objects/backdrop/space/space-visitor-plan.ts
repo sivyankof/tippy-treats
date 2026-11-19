@@ -3,8 +3,8 @@ import {
   type SpaceVisitorId,
   type VisitorFlight,
 } from '../../../../data/guests/space-visitor';
-import { HUD_LAYOUT } from '../../../../data/run/hud-layout';
-import { flightClearBand } from '../../../run/camera-layout';
+import { safeBand } from '../../../app/safe-area';
+import { flightClearBand, hudBadgeRowBottomY } from '../../../run/camera-layout';
 import { DEG_TO_RAD, lerp, pickRange, sineWave } from '../../../../util/math';
 import { edgeFade } from '../life/pass-timer';
 
@@ -67,9 +67,12 @@ export function visitorBand(
   const clear = flightClearBand(screenH);
   if (lane === 'below') {
     const top = clear.bottom + pad;
-    return { top, bottom: Math.min(screenH - pad, top + SPACE_VISITOR.belowDepthPx) };
+    return {
+      top,
+      bottom: Math.min(screenH - safeBand().bottom - pad, top + SPACE_VISITOR.belowDepthPx),
+    };
   }
-  return { top: HUD_LAYOUT.badgeRowBottom + pad, bottom: clear.top - pad };
+  return { top: hudBadgeRowBottomY() + pad, bottom: clear.top - pad };
 }
 
 /** Height a guest takes up in flight: its picture, the slope of its path and its sway. */

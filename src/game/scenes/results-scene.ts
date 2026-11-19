@@ -26,6 +26,8 @@ import { ResultsTiers } from '../ui/menu/results/results-tiers';
 import { coinLines, presentedCreatures } from '../ui/menu/results/results-text';
 import { ResultsXp } from '../ui/menu/results/results-xp';
 import { cueMusic } from '../audio/music-cues';
+import { safeBand } from '../app/safe-area';
+import { bandHeight } from '../run/band-space';
 
 const cfg = MENU.results;
 
@@ -125,7 +127,10 @@ export class ResultsScene extends Phaser.Scene {
   private buildTop(): void {
     const { result, summary, tally } = this.run;
     const { width, height } = this.scale.gameSize;
-    this.dim = createDimOverlay(this, ANIM.results.overlayAlpha, width, height).setInteractive();
+    // The veil covers the canvas, the insets too: it ignores the scroll by the top inset.
+    this.dim = createDimOverlay(this, ANIM.results.overlayAlpha, width, height)
+      .setInteractive()
+      .setScrollFactor(0);
     const started =
       this.run.checkpoint === null ? null : startedLine(this.run.startHeight, result.height);
     this.header = new ResultsHeader(
@@ -212,7 +217,11 @@ export class ResultsScene extends Phaser.Scene {
     // The plate and the blocks go under the header and the buttons; the record ribbon, made last,
     // draws over all of them.
     this.panel = new ResultsPanel(this, this.parts as PanelParts, this.header.container);
-    this.panel.fit(this.scale.gameSize.height, this.header.height, this.buttons.height);
+    this.panel.fit(
+      bandHeight(this.scale.gameSize.height, safeBand()),
+      this.header.height,
+      this.buttons.height,
+    );
     if (this.run.summary.isRecord) this.celebration = new RecordCelebration(this);
     this.built = true;
     this.layout();
@@ -228,9 +237,11 @@ export class ResultsScene extends Phaser.Scene {
     const { width, height } = this.scale.gameSize;
     // A new record has its own track; without one the zone's track goes on.
     cueMusic({ kind: 'results', record: this.run.summary.isRecord });
-    if (this.run.summary.isRecord) this.celebrate(width, height);
+    if (this.run.summary.isRecord) this.celebrate(width, bandHeight(height, safeBand()));
     if (import.meta.env.DEV) {
-      this.input.keyboard?.on('keydown-R', () => this.celebrate(width, height));
+      this.input.keyboard?.on('keydown-R', () =>
+        this.celebrate(width, bandHeight(height, safeBand())),
+      );
     }
     // The run HUD (height, wobble bar, next creature) fades out: the results tell the story now.
     this.hudCamera = this.scene.get(SCENES.hud).cameras.main;
@@ -268,8 +279,10 @@ export class ResultsScene extends Phaser.Scene {
     if (!this.built) return;
     const { width, height } = this.scale.gameSize;
     this.cameras.main.setSize(width, height);
+    const band = safeBand();
+    this.cameras.main.setScroll(0, -band.top);
     this.dim.setSize(width, height);
-    this.panel.layout(width, height, this.header, this.buttons);
+    this.panel.layout(width, bandHeight(height, band), this.header, this.buttons);
   }
 
   /** Every way out and the doubling answer no taps (while a start is paid for, while leaving). */
