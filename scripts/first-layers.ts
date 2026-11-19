@@ -31,7 +31,7 @@ import { applySets, setArg } from './what-if';
  * - `rush`: a miss on a rush layer that would have landed at the speed without the rush multiplier;
  * - `speed`: the missed layer was still at least `WIDE_LAYER` wide, so one big timing error lost it;
  * - `narrowing`: the missed layer had shrunk below `WIDE_LAYER` after inaccurate drops.
- * Every drop miss also reports whether it would have landed at the base speed of the first layer
+ * Every drop miss also reports whether it would have landed at the start speed of the first layer (`BALANCE.speed.start`; 600 until session 7b, 540 since)
  * and whether it was a showcase layer (the side of departure does not change the bot's timing).
  */
 
@@ -73,7 +73,7 @@ class FirstLayersStats implements RunObserver {
   readonly causes = new Map<Cause, number>(CAUSES.map((c) => [c, 0]));
   /** Ends below the limit, by flags that are not causes. */
   showcaseEnds = 0;
-  baseSpeedSaves = 0;
+  startSpeedSaves = 0;
   causeRuns = 0;
   readonly missWidths: number[] = [];
   readonly missErrorsMs: number[] = [];
@@ -85,7 +85,7 @@ class FirstLayersStats implements RunObserver {
   private dropMissCause: {
     cause: Cause;
     showcase: boolean;
-    baseSaves: boolean;
+    startSaves: boolean;
     width: number;
   } | null = null;
 
@@ -125,7 +125,7 @@ class FirstLayersStats implements RunObserver {
         else if (this.dropMissCause) {
           cause = this.dropMissCause.cause;
           if (this.dropMissCause.showcase) this.showcaseEnds += 1;
-          if (this.dropMissCause.baseSaves) this.baseSpeedSaves += 1;
+          if (this.dropMissCause.startSaves) this.startSpeedSaves += 1;
           this.missWidths.push(this.dropMissCause.width);
         }
         this.causes.set(cause, (this.causes.get(cause) ?? 0) + 1);
@@ -140,15 +140,15 @@ class FirstLayersStats implements RunObserver {
     if (!tap) return null;
     const sway = tap.targetAtTap - topTarget(s);
     const { width, timingOff, speed } = tap;
-    const base = BALANCE.speed.start;
-    const baseSaves = speed > 0 && lands((timingOff * base) / speed + sway, width);
+    const start = BALANCE.speed.start;
+    const startSaves = speed > 0 && lands((timingOff * start) / speed + sway, width);
     let cause: Cause;
     if (lands(timingOff, width)) cause = 'sway';
     else if (tap.rush && lands(timingOff / ZONE_RULES.rush.speedMult + sway, width)) cause = 'rush';
     else if (width >= WIDE_LAYER) cause = 'speed';
     else cause = 'narrowing';
     if (speed > 0) this.missErrorsMs.push((1000 * Math.abs(timingOff)) / speed);
-    return { cause, showcase: tap.showcase, baseSaves, width };
+    return { cause, showcase: tap.showcase, startSaves, width };
   }
 }
 
@@ -256,7 +256,7 @@ function playCell(
     causes[cause] = pct(stats.causes.get(cause) ?? 0, stats.causeRuns);
   }
   causes['showcase no rush'] = pct(stats.showcaseEnds, stats.causeRuns);
-  causes['base speed saves'] = pct(stats.baseSpeedSaves, stats.causeRuns);
+  causes['start speed saves'] = pct(stats.startSpeedSaves, stats.causeRuns);
   causes['miss width med'] = Math.round(med(stats.missWidths));
   causes['miss error med, ms'] = Math.round(med(stats.missErrorsMs));
   causes['perfect % (1-40)'] = pct(stats.perfects, stats.drops);

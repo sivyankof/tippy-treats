@@ -178,7 +178,7 @@ describe('Flight: walls and passes', () => {
 });
 
 describe('Flight: rush', () => {
-  it('holds still for the wind-up and then flies at 1.35 times the speed', () => {
+  it('holds still for the wind-up and then flies at `rush.speedMult` times the speed', () => {
     const layer = layerOf(rules({ rule: 'showcase', rush: true }));
     const flight = new Flight(layer, null, NO_CLOUD);
     fly(flight, ZONE_RULES.rush.windupMs - 2 * STEP);

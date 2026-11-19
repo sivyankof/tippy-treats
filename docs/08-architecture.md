@@ -340,17 +340,17 @@ export interface FlyingLayer extends LayerPlan {
   x: number;                   // centre
   width: number;
   dir: 1 | -1;
-  speed: number;               // nominal px/s: base × zone mult (capped in Space) × ability mult
+  speed: number;               // nominal px/s: speedCurve(height) × ability mult
   zoneIndex: number;           // index into ZONES (data/zones/zones.ts)
   rule: LayerRuleKind;         // 'none' | 'showcase' | 'roof' | 'clouds' | 'stars'
-  rush: boolean;               // showcase rush: holds still for the wind-up, then ×1.35
+  rush: boolean;               // rush: holds still for the wind-up, then ×speedMult (Showcase 1.2) or ×spaceSpeedMult (Space 1.35, capped)
   windupMs: number;            // wind-up left, the layer does not move while > 0
   stopMs: number;              // fake-out stop left; the layer reverses when it reaches 0
   coverMs: number;             // cloud cover left, the layer is hidden while > 0
   pass: number;                // 1-based pass across the screen (+1 at every wall bounce)
 }
 // flyingSpeed(layer) in core/tower/flight.ts is the speed right now: 0 while windupMs or stopMs > 0,
-// otherwise speed × (rush ? 1.35 : 1) × (rule === 'roof' ? roof profile at x : 1)
+// otherwise rushSpeed(speed) if rush × (rule === 'roof' ? roof profile at x : 1)
 
 export interface PlacedLayer extends LayerPlan {
   x: number;                   // resting centre, wobble not included
@@ -443,7 +443,7 @@ export interface RunResult {
 - Кадр длиннее 250 мс обрезается, чтобы свёрнутая вкладка не «проматывала» забег.
 - Зона слоя считается по его индексу: `min(5, floor((i − 1) / 20))`. `state.zoneIndex` обновляется при появлении слоя, `zone_change` приходит один раз перед `spawn` первого слоя новой зоны (слои 21, 41, 61, 81, 101); повтор того же индекса (щит, продолжение) событие не повторяет. Отладочный `startHeight` ставит `zoneIndex` сразу по `startHeight + 1`, без события.
 - Правила зон выбираются по индексу слоя, а не по ходу игры: `rng.fork('zones')` и под-потоки `fork('layer:<индекс>')` (рывок, обманка, сторона, правило Космоса) и `fork('cloud:<проход>')` внутри него. Поэтому расписание зависит только от зерна и индекса: повтор слоя, пропуск индексов двойняшками и действия игрока ничего не сдвигают. Парящая монета бросается так же, из `coins.fork('layer:<индекс>')`. Чистое API лежит в `core/zones/zones.ts` (`zoneIndexOf`, `layerRules`, `rushIndices`, `cloudRoll`, `nominalSpeed`).
-- Движение летящего слоя (стены, профиль «Крыши», ожидание рывка, остановка и разворот обманки, счёт проходов, укрытие облаком) живёт в `core/tower/flight.ts`; `TowerSim` остаётся машиной состояний и вызывает `Flight.step` на каждом шаге. Скорость в данный момент даёт `flyingSpeed(layer)`: 0 во время ожидания рывка и остановки обманки, иначе номинальная `speed`, умноженная на 1,35 у рывка и на профиль у «Крыши». Бот и сцена берут скорость только оттуда.
+- Движение летящего слоя (стены, профиль «Крыши», ожидание рывка, остановка и разворот обманки, счёт проходов, укрытие облаком) живёт в `core/tower/flight.ts`; `TowerSim` остаётся машиной состояний и вызывает `Flight.step` на каждом шаге. Скорость в данный момент даёт `flyingSpeed(layer)`: 0 во время ожидания рывка и остановки обманки, иначе номинальная `speed`, умноженная на множитель рывка (`rushSpeed`: Витрина ×1,2, Космос ×1,35 не быстрее 1350) и на профиль у «Крыши». Бот и сцена берут скорость только оттуда.
 - Множителей скорости у зон нет (с 2026-11-16): номинальная скорость слоя — `layerSpeed(высота, speedMult способностей)` = `speedCurve(высота)` × множитель способностей (`core/tower/speed-curve.ts`), рывок (`rushSpeed`, в Космосе не выше 1350) и профиль Крыши умножают поверх. Множитель очков зоны умножается на `scoreMult` способностей при начислении очков слоя (зона берётся по летящему слою); плоский бонус золотого слоя не умножается.
 - Облако не меняет физику: `FlyingLayer.coverMs` и событие `cloud` нужны сцене и боту. Обманка шлёт `fakeout` в начале остановки.
 
