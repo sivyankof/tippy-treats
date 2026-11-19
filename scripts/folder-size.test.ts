@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { nodeFs } from './node-env';
+import { folderTree } from './node-env';
 
 /** Most files one folder of `src` may hold, tests included (docs/08-architecture.md, section 2). */
 const FOLDER_LIMIT = 40;
@@ -10,24 +10,9 @@ const FOLDER_LIMIT = 40;
  */
 const EXCEPTIONS: Readonly<Record<string, string>> = {};
 
-/**
- * Number of files directly inside every folder of `src`, keyed by the path from `src` (`''` is
- * `src` itself). Hidden files (`.gitkeep`, `.DS_Store`) do not count. Tests run from the project root.
- */
+/** Number of files directly inside every folder of `src`, keyed by the path from `src` (`''` is `src` itself). */
 function folderSizes(): Map<string, number> {
-  const fs = nodeFs();
-  const sizes = new Map<string, number>();
-  const visit = (dir: string): void => {
-    let files = 0;
-    for (const entry of fs.readdirSync(dir ? `src/${dir}` : 'src', { withFileTypes: true })) {
-      if (entry.name.startsWith('.')) continue;
-      if (entry.isDirectory()) visit(dir ? `${dir}/${entry.name}` : entry.name);
-      else files++;
-    }
-    sizes.set(dir, files);
-  };
-  visit('');
-  return sizes;
+  return new Map([...folderTree('src')].map(([dir, files]) => [dir, files.length]));
 }
 
 /** Folders over the limit that are not listed as exceptions, with their size. */

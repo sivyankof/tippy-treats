@@ -34,3 +34,23 @@ export function intArg(args: readonly string[], name: string, fallback: number):
   if (!Number.isInteger(value) || value <= 0) throw new Error(`Invalid argument: ${arg}`);
   return value;
 }
+
+/**
+ * The visible files of every folder under `root`, keyed by the folder path from `root` (`''` is
+ * `root` itself). Hidden entries (`.gitkeep`, `.DS_Store`) are skipped. Paths run from the project root.
+ */
+export function folderTree(root: string): Map<string, string[]> {
+  const fs = nodeFs();
+  const tree = new Map<string, string[]>();
+  const visit = (dir: string): void => {
+    const files: string[] = [];
+    for (const entry of fs.readdirSync(dir ? `${root}/${dir}` : root, { withFileTypes: true })) {
+      if (entry.name.startsWith('.')) continue;
+      if (entry.isDirectory()) visit(dir ? `${dir}/${entry.name}` : entry.name);
+      else files.push(entry.name);
+    }
+    tree.set(dir, files);
+  };
+  visit('');
+  return tree;
+}
