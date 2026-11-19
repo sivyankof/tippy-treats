@@ -26,7 +26,7 @@ describe('pickSoakLevel', () => {
       'src/game/run/run-restart.ts',
       'src/game/objects/tower/landing-prep.ts',
       'src/game/objects/glaze/tongue-view.ts',
-      'src/game/fx/shared-atlas.ts',
+      'src/game/ui/common/shared-atlas.ts',
       'src/game/ui/panel-textures.ts',
       'src/state/game-state.ts',
       'src/services/storage/local.ts',

@@ -10,17 +10,21 @@ const FOLDER_LIMIT = 40;
  */
 const EXCEPTIONS: Readonly<Record<string, string>> = {};
 
-/** Number of files directly inside every folder of `src` (tests run from the project root). */
+/**
+ * Number of files directly inside every folder of `src`, keyed by the path from `src` (`''` is
+ * `src` itself). Hidden files (`.gitkeep`, `.DS_Store`) do not count. Tests run from the project root.
+ */
 function folderSizes(): Map<string, number> {
   const fs = nodeFs();
   const sizes = new Map<string, number>();
   const visit = (dir: string): void => {
     let files = 0;
-    for (const entry of fs.readdirSync(`src/${dir}`, { withFileTypes: true })) {
+    for (const entry of fs.readdirSync(dir ? `src/${dir}` : 'src', { withFileTypes: true })) {
+      if (entry.name.startsWith('.')) continue;
       if (entry.isDirectory()) visit(dir ? `${dir}/${entry.name}` : entry.name);
       else files++;
     }
-    sizes.set(dir || '.', files);
+    sizes.set(dir, files);
   };
   visit('');
   return sizes;
@@ -34,7 +38,7 @@ export function oversizeFolders(
 ): string[] {
   return [...sizes]
     .filter(([folder, files]) => files > limit && !(folder in exceptions))
-    .map(([folder, files]) => `src/${folder}: ${files} files`);
+    .map(([folder, files]) => `${folder ? `src/${folder}` : 'src'}: ${files} files`);
 }
 
 describe('folder size', () => {
