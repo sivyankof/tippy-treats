@@ -6,7 +6,7 @@ import { CREATURES } from '../../data/creatures/creatures';
 import { readDebugParams } from '../../util/debug-params';
 import { ContinueWindow } from '../ui/run/continue-window';
 import { DebugPanel } from '../debug/debug-panel';
-import { launchRun, restartRun, SCENES } from '../app/scene-keys';
+import { launchRun, restartRun, resultsShown, SCENES } from '../app/scene-keys';
 import type { Button } from '../ui/common/button';
 import { createIconButton } from '../ui/menu/widgets/icon-button';
 import { NumberRoll } from '../ui/common/number-roll';
@@ -166,7 +166,7 @@ export class HudScene extends Phaser.Scene {
     const live = info && info.phase !== 'over' ? info : null;
     const announced = this.zoneWatch.observe(live ? live.zoneIndex : null);
     const lap = this.lapWatch.observe(live ? flyingLap(live.height) : null);
-    this.runMusic.observe(live !== null, info?.mode === 'daily');
+    this.runMusic.observe(live !== null, info?.mode === 'daily', resultsShown(this.game.scene));
     const coming = live ? prepTarget(live.height, live.zoneIndex, BACKDROP.prep.leadLayers) : null;
     fxGuard.call('hud-zone-banner', this, this.updateZoneBanner, announced, lap, coming, time);
     if (info) {
