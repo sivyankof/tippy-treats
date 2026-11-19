@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { countDisplayObjects, countTextureCanvases } from './soak-metrics';
+import { countDisplayObjects, countTextureCanvases, musicSoak } from './soak-metrics';
 
 describe('countDisplayObjects', () => {
   it('counts a flat list', () => {
@@ -32,5 +32,23 @@ describe('countTextureCanvases', () => {
 
   it('counts nothing without textures', () => {
     expect(countTextureCanvases([])).toBe(0);
+  });
+});
+
+describe('musicSoak', () => {
+  it('reports the music nodes, decoded bytes and buffers', () => {
+    expect(musicSoak({ musicNodes: 7 }, { decodedBytes: 1234, buffers: 2 })).toEqual({
+      musicNodes: 7,
+      musicDecodedBytes: 1234,
+      musicBuffers: 2,
+    });
+  });
+
+  it('reports zero memory when no music state is there', () => {
+    expect(musicSoak({ musicNodes: 0 }, null)).toEqual({
+      musicNodes: 0,
+      musicDecodedBytes: 0,
+      musicBuffers: 0,
+    });
   });
 });

@@ -3,6 +3,7 @@ import { musicAskFor, type MusicCue } from '../../data/audio/music';
 import { services } from '../../services';
 import { HoldCount } from '../../util/hold-count';
 import { SCENES } from '../app/scene-keys';
+import { RunMusic } from './run-music';
 
 /**
  * Where the game tells the music what to play (docs/06-art-animation-audio.md, section 7,
@@ -54,34 +55,9 @@ export function bindMenuMusic(game: Phaser.Game): void {
     ?.sys.events.on(Phaser.Scenes.Events.CREATE, playDailyScreenMusic);
 }
 
-/**
- * The music of one run (made by the HUD, fed every frame): its first frame asks for the playlist
- * or the daily tower's track; while the run is played (not paused) the player decodes nothing
- * (`busy`); the pause window only ducks the music, like any window. `end` lets go when the run's
- * HUD goes away.
- */
-export class RunMusic {
-  private asked = false;
-  private busy = false;
-
-  /** `live`: the run is on screen (not over); `paused`: its pause window or countdown is up. */
-  observe(live: boolean, daily: boolean, paused: boolean): void {
-    if (live && !this.asked) {
-      this.asked = true;
-      cueMusic({ kind: 'run', daily });
-    }
-    this.setBusy(live && !paused);
-  }
-
-  end(): void {
-    this.setBusy(false);
-  }
-
-  private setBusy(on: boolean): void {
-    if (on === this.busy) return;
-    this.busy = on;
-    services.audio.music.busy(on);
-  }
+/** The music of one run, wired to the game's music player (the HUD makes one per run). */
+export function createRunMusic(): RunMusic {
+  return new RunMusic(cueMusic, (on) => services.audio.music.busy(on));
 }
 
 /** Open windows hold the music duck; it lets go when the last one closes. */

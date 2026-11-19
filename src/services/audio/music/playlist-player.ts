@@ -227,6 +227,7 @@ export class PlaylistPlayer implements MusicControl {
       turnSec: this.turnPlayed(),
       decks: this.liveDecks().length,
       decodedBytes: this.bytesNow(),
+      buffers: this.decodedTracks(),
       peakBytes: this.peak,
     };
   }
