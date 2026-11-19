@@ -1,7 +1,8 @@
 apply plugin: 'com.android.application'
 
 // Release signing comes from android/keystore.properties, a local file that is never committed
-// (storeFile, storePassword, keyAlias, keyPassword; docs/11a-device-build.md). Without it the
+// (storeFile, storeType, storePassword, keyAlias, keyPassword; docs/11a-device-build.md;
+// scripts/native/make-upload-key.sh writes it). Without it the
 // release build stays unsigned and the debug build uses the usual debug key.
 def keystorePropertiesFile = rootProject.file('keystore.properties')
 def keystoreProperties = new Properties()
@@ -36,6 +37,7 @@ android {
         if (keystorePropertiesFile.exists()) {
             release {
                 storeFile file(keystoreProperties['storeFile'])
+                storeType keystoreProperties['storeType'] ?: 'pkcs12'
                 storePassword keystoreProperties['storePassword']
                 keyAlias keystoreProperties['keyAlias']
                 keyPassword keystoreProperties['keyPassword']
