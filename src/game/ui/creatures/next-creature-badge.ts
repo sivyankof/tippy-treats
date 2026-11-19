@@ -12,11 +12,11 @@ import { nextChipContent, nextLabelGlyphTexts } from './next-creature-label';
 import { effectsMode } from '../../app/effects-mode';
 import { fxGuard } from '../../common/fx-guard';
 import { formatNumber } from '../../../i18n';
-import { GlyphText, hudGlyphStyle, prepareGlyphs } from '../common/glyph-text';
+import { GlyphText, prepareGlyphs } from '../common/glyph-text';
+import { NEXT_LABEL_GLYPH_STYLE } from './hud-glyphs';
 import { HudPlate } from '../style/hud-plate';
 
-const { badgeSize, badgeRowY, nextFont, nextStroke, nextChip } = HUD_LAYOUT;
-const LABEL_STYLE = hudGlyphStyle(nextFont, nextStroke);
+const { badgeSize, badgeRowY, nextChip } = HUD_LAYOUT;
 /** Glyph pictures the label holds up front: the longest phrase of either language fits. */
 const LABEL_GLYPHS = 16;
 
@@ -44,10 +44,16 @@ export class NextCreatureBadge {
     this.chip = new HudPlate(scene, MENU.style.wallet.fill).setVisible(false);
     this.icon = createCreatureIcon(scene, 0, badgeRowY).setVisible(false);
     // The words of the current language are baked now, not in a frame of the run.
-    prepareGlyphs(scene, LABEL_STYLE, nextLabelGlyphTexts());
-    this.label = new GlyphText(scene, 0, badgeRowY, LABEL_STYLE, 0, 0.5, LABEL_GLYPHS).setVisible(
-      false,
-    );
+    prepareGlyphs(scene, NEXT_LABEL_GLYPH_STYLE, nextLabelGlyphTexts());
+    this.label = new GlyphText(
+      scene,
+      0,
+      badgeRowY,
+      NEXT_LABEL_GLYPH_STYLE,
+      0,
+      0.5,
+      LABEL_GLYPHS,
+    ).setVisible(false);
     this.label.onRefresh = () => this.place();
   }
 

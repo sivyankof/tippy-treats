@@ -40,6 +40,7 @@ import { bakeHintTextures } from '../tutorial/hint-textures';
 import { bakeTongue } from '../objects/glaze/tongue-view';
 import { bakeStripTextures } from '../objects/glaze/tongue-strip-texture';
 import { bakeMasteryFrame } from '../ui/creatures/mastery-frame';
+import { bakeHudGlyphs } from '../ui/creatures/hud-glyphs';
 
 /**
  * Pictures that the game bakes lazily (on first use) or in the boot scene are baked here so they
@@ -60,6 +61,7 @@ const PRIME_STEPS: ReadonlyArray<(scene: Phaser.Scene) => void> = [
   createCreatureIconTextures,
   createGrownCreatureIconTextures,
   bakeMasteryFrame,
+  bakeHudGlyphs,
   bakeSharedArt,
   bakeAllFarArt,
   bakeSpaceVisitors,

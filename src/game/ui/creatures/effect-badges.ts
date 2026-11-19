@@ -18,13 +18,13 @@ import {
   type BadgeState,
   type BadgeVisual,
 } from './effect-badge-state';
-import { GlyphText, hudGlyphStyle, prepareGlyphs } from '../common/glyph-text';
+import { GlyphText, prepareGlyphs } from '../common/glyph-text';
+import { COUNTER_GLYPH_STYLE } from './hud-glyphs';
 import { numberGlyphTexts } from '../common/number-glyphs';
 import { HudPlate } from '../style/hud-plate';
 import type { ActiveEffect } from '../../../core/abilities/types';
 
-const { badgeSize, badgeRowY, badgeCounterFont, badgeCounterInset, badgeCounterDrop } = HUD_LAYOUT;
-const COUNTER_STYLE = hudGlyphStyle(badgeCounterFont, HUD_LAYOUT.badgeCounterStroke);
+const { badgeSize, badgeRowY, badgeCounterInset, badgeCounterDrop } = HUD_LAYOUT;
 /** Glyph pictures a counter holds up front: four digits and a separator. */
 const COUNTER_GLYPHS = 5;
 const { badges } = ANIM;
@@ -56,7 +56,7 @@ class BadgeSlot {
       scene,
       COUNTER_OFFSET_X,
       COUNTER_OFFSET_Y,
-      COUNTER_STYLE,
+      COUNTER_GLYPH_STYLE,
       0.5,
       0.5,
       COUNTER_GLYPHS,
@@ -129,7 +129,7 @@ export class EffectBadges {
   private readonly visual: BadgeVisual = { scale: 1, alpha: 1 };
   constructor(private readonly scene: Phaser.Scene) {
     // The digits are baked now, not on the frame a badge first shows.
-    prepareGlyphs(scene, COUNTER_STYLE, numberGlyphTexts());
+    prepareGlyphs(scene, COUNTER_GLYPH_STYLE, numberGlyphTexts());
   }
 
   /** Badges in the row (those shrinking away included). */
