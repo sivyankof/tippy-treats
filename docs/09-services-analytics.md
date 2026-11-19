@@ -6,11 +6,11 @@
 
 | Задача | Кандидат | Этап |
 |---|---|---|
-| Хранилище | `@capacitor/preferences` | M7 |
-| Вибрация | `@capacitor/haptics` | M7 |
-| Беззвучный режим | нативный плагин или код в `services/silent-mode/` (в браузере заглушка, никогда не беззвучная; звук держится по причине `silent`) | M7 |
-| Жизненный цикл приложения | `@capacitor/app` | M7 |
-| Заставка, статус-бар | `@capacitor/splash-screen`, `@capacitor/status-bar` | M7 |
+| Хранилище | `@capacitor/preferences` 8.0.1 (поставлен) | M7 |
+| Вибрация | `@capacitor/haptics` 8.0.2 (поставлен) | M7 |
+| Беззвучный режим | плагин не нужен: звуковая сессия iOS `ambient` (нативно в `AppDelegate` и `navigator.audioSession` страницы) сама молчит при выключенном звуке; `services/silent-mode/` в приложении — та же заглушка «никогда не беззвучно» (журнал `08`, 2026-11-19) | M7 |
+| Жизненный цикл приложения, кнопка «назад» Android | `@capacitor/app` 8.1.2 (поставлен; `services/app-shell/`) | M7 |
+| Заставка, системные панели | `@capacitor/splash-screen` 8.0.2 (поставлен); строка состояния — `SystemBars` из ядра Capacitor 8 вместо `@capacitor/status-bar` | M7 |
 | Локальные уведомления | `@capacitor/local-notifications` | M8 |
 | Поделиться | `@capacitor/share` + `@capacitor/filesystem` | M8 |
 | Реклама | `@capacitor-community/admob` | M8 |
@@ -27,6 +27,8 @@ export interface StorageService {
   remove(key: string): Promise<void>;
 }
 ```
+
+Реализация приложений (M7): `services/storage/native.ts` на `@capacitor/preferences` (UserDefaults на iOS, SharedPreferences на Android). Те же строки под теми же ключами, что в браузере (формат сохранения не меняется, тест `native.test.ts`); сохранение переживает выгрузку приложения из памяти и пишется сразу при уходе приложения в фон (`game/app/native-shell.ts`). Ошибки плагина не прячутся: чтение со сбоем даёт `read_failed`, запись со сбоем повторяется (`08`, раздел 5).
 
 Реализация для браузера: `services/storage/web.ts` на `localStorage`; любое обращение обёрнуто в `try/catch`, при сбое (приватный режим, заблокированные данные сайта, переполнение) значения живут в памяти страницы, исключений нет. Ключи: `save`, `save_backup`, `save_corrupt_*`. Формат и правила в `08-architecture.md`, раздел 5. Облачного сохранения в 1.0 нет: при удалении приложения прогресс теряется. Об этом честно сказано в окне сброса прогресса и в описании поддержки. Разовые покупки восстанавливаются через стор.
 
