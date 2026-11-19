@@ -7,8 +7,8 @@ import { TREASURE_TEXTURES } from '../../../fx/economy/treasure-textures';
 import type { Button } from '../../common/button';
 import type { Currency } from '../../../../core/economy/economy';
 import { shakeX } from '../../common/shake-x';
+import { RefitPlate } from '../../style/refit-plate';
 import { TitleRibbon } from '../../style/title-ribbon';
-import { VolumePlate } from '../../style/volume';
 import { WalletChip } from '../../style/wallet-chip';
 import { createIconButton } from './icon-button';
 import type { WalletTargets } from './reward-flight';
@@ -37,7 +37,7 @@ export class ScreenHeader {
   readonly title: Phaser.GameObjects.Text | null;
   readonly ribbon: TitleRibbon | null;
   private readonly band: Phaser.GameObjects.Container | null;
-  private readonly bandPlate: VolumePlate | null = null;
+  private readonly bandPlate: RefitPlate | null = null;
   private readonly bandShield: Phaser.GameObjects.Zone | null = null;
   private readonly coins: WalletChip;
   private readonly berries: WalletChip;
@@ -52,9 +52,16 @@ export class ScreenHeader {
     options: ScreenHeaderOptions = {},
   ) {
     if (options.band) {
-      this.bandPlate = new VolumePlate(scene, 'window', bandCfg.bottom + bandCfg.overhang);
+      this.band = scene.add.container(0, 0);
+      this.bandPlate = new RefitPlate(
+        scene,
+        'window',
+        bandCfg.bottom + bandCfg.overhang,
+        {},
+        this.band,
+      );
       this.bandShield = scene.add.zone(0, 0, 1, bandCfg.bottom).setOrigin(0).setInteractive();
-      this.band = scene.add.container(0, 0, [this.bandShield, this.bandPlate]);
+      this.band.add([this.bandShield, this.bandPlate.plate]);
     } else {
       this.band = null;
     }
@@ -99,17 +106,28 @@ export class ScreenHeader {
     return parts;
   }
 
-  layout(width: number): void {
+  /**
+   * Places the header on a screen `width` wide. `top` is the safe band at the top of the canvas:
+   * the buttons and plates sit below it and the band plate (when there is one) still starts at
+   * the canvas edge.
+   */
+  layout(width: number, top = 0): void {
     this.width = width;
+    const bandBottom = top + bandCfg.bottom;
     this.bandPlate
-      ?.setBodyWidth(width + bandCfg.overhang * 2)
-      .setPosition(width / 2, (bandCfg.bottom - bandCfg.overhang) / 2);
-    this.bandShield?.setSize(width, bandCfg.bottom);
+      ?.setBodyHeight(bandBottom + bandCfg.overhang)
+      .setBodyWidth(width + bandCfg.overhang * 2)
+      .setPosition(width / 2, (bandBottom - bandCfg.overhang) / 2);
+    this.bandShield?.setSize(width, bandBottom);
+    this.back?.setY(top + margin + backSize / 2);
+    this.ribbon?.setY(top + ribbon.y);
     this.ribbon?.setX(width / 2);
     this.lastReach = -1;
     this.fitRibbon();
-    this.coins.counter.layout(width);
-    this.berries.counter.layout(width);
+    for (const chip of [this.coins, this.berries]) {
+      chip.counter.layout(width);
+      chip.counter.root.y += top;
+    }
     this.restX = { coins: this.coins.counter.root.x, berries: this.berries.counter.root.x };
   }
 

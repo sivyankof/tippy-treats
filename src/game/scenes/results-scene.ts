@@ -28,7 +28,7 @@ import { coinLines, presentedCreatures } from '../ui/menu/results/results-text';
 import { ResultsXp } from '../ui/menu/results/results-xp';
 import { cueMusic } from '../audio/music-cues';
 import { safeBand } from '../app/safe-area';
-import { bandHeight } from '../run/band-space';
+import { frameOf, safeFrame } from '../ui/common/safe-frame';
 
 const cfg = MENU.results;
 
@@ -226,7 +226,7 @@ export class ResultsScene extends Phaser.Scene {
     // draws over all of them.
     this.panel = new ResultsPanel(this, this.parts as PanelParts, this.header.container);
     this.panel.fit(
-      bandHeight(this.scale.gameSize.height, safeBand()),
+      safeFrame(this.scale.gameSize.height).height,
       this.header.height,
       this.buttons.height,
     );
@@ -245,11 +245,9 @@ export class ResultsScene extends Phaser.Scene {
     const { width, height } = this.scale.gameSize;
     // A new record has its own track; without one the zone's track goes on.
     cueMusic({ kind: 'results', record: this.run.summary.isRecord });
-    if (this.run.summary.isRecord) this.celebrate(width, bandHeight(height, safeBand()));
+    if (this.run.summary.isRecord) this.celebrate(width, safeFrame(height).height);
     if (import.meta.env.DEV) {
-      this.input.keyboard?.on('keydown-R', () =>
-        this.celebrate(width, bandHeight(height, safeBand())),
-      );
+      this.input.keyboard?.on('keydown-R', () => this.celebrate(width, safeFrame(height).height));
     }
     // The run HUD (height, wobble bar, next creature) fades out: the results tell the story now.
     this.hudCamera = this.scene.get(SCENES.hud).cameras.main;
@@ -290,7 +288,7 @@ export class ResultsScene extends Phaser.Scene {
     const band = safeBand();
     this.cameras.main.setScroll(0, -band.top);
     this.dim.setSize(width, height);
-    this.panel.layout(width, bandHeight(height, band), this.header, this.buttons);
+    this.panel.layout(width, frameOf(height, band).height, this.header, this.buttons);
   }
 
   /** Every way out and the doubling answer no taps (while a start is paid for, while leaving). */

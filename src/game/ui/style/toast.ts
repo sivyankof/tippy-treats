@@ -3,6 +3,7 @@ import { PALETTE } from '../../../data/common/palette';
 import { MENU } from '../../../data/common/menu-layout';
 import { fitText } from '../menu/widgets/fit-text';
 import { createOutlinedText } from '../common/outlined-text';
+import { safeFrame } from '../common/safe-frame';
 import { createPlate } from './volume';
 
 const cfg = MENU.style.toast;
@@ -20,7 +21,8 @@ export function showToast(scene: Phaser.Scene, text: string): void {
     createOutlinedText(scene, 0, 0, text, cfg.font),
     cfg.width - cfg.textPadding,
   );
-  const y = height - cfg.bottom;
+  // The plate stands above the safe band at the bottom (the gesture bar).
+  const y = safeFrame(height).bottom - cfg.bottom;
   const toast = scene.add
     .container(width / 2, y + cfg.height, [plate, label])
     .setDepth(cfg.depth)

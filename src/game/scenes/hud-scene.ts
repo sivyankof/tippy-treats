@@ -8,7 +8,8 @@ import { readDebugParams } from '../../util/debug-params';
 import { ContinueWindow } from '../ui/run/continue-window';
 import { DebugPanel } from '../debug/debug-panel';
 import { safeBand } from '../app/safe-area';
-import { bandHeight, toCanvasRegion } from '../run/band-space';
+import { toCanvasRegion } from '../run/band-space';
+import { frameOf } from '../ui/common/safe-frame';
 import { launchRun, restartRun, resultsShown, SCENES } from '../app/scene-keys';
 import type { Button } from '../ui/common/button';
 import { createIconButton } from '../ui/menu/widgets/icon-button';
@@ -302,13 +303,13 @@ export class HudScene extends Phaser.Scene {
 
   /**
    * The HUD is laid out in the safe band: the camera scrolls up by the top inset, so y 0 is the
-   * safe top and the band is `bandHeight` tall. Windows and veils that cover the canvas are built
+   * safe top and the band is the height of `frameOf`. Windows and veils that cover the canvas are built
    * pinned to it (`buildPinned`); the fade of a leaving screen covers the whole camera anyway.
    */
   private layout(): void {
     const { width, height } = this.scale.gameSize;
     const band = safeBand();
-    const inner = bandHeight(height, band);
+    const inner = frameOf(height, band).height;
     this.cameras.main.setSize(width, height);
     this.cameras.main.setScroll(0, -band.top);
     this.demoLabel.setPosition(width / 2, inner - HUD_LAYOUT.demoLabelBottom);

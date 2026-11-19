@@ -16,6 +16,7 @@ import type { DailySection } from '../ui/menu/daily/daily-section';
 import { DailyTeam, openAbilityWindow } from '../ui/menu/daily/daily-team';
 import { ScreenHeader } from '../ui/menu/widgets/screen-header';
 import { MenuScenery } from '../ui/style/menu-scenery';
+import { safeFrame } from '../ui/common/safe-frame';
 import { enterScreen, leaveScreen, type Movable } from '../ui/common/transition';
 
 const cfg = MENU.daily;
@@ -163,11 +164,12 @@ export class DailyScene extends Phaser.Scene {
     const { width, height } = this.scale.gameSize;
     this.cameras.main.setSize(width, height);
     this.bg.resize(width, height);
-    this.header.layout(width);
-    const top = MENU.header.contentTop;
+    const frame = safeFrame(height);
+    this.header.layout(width, frame.top);
+    const top = frame.top + MENU.header.contentTop;
     const used = this.sections.reduce((sum, s) => sum + s.height, 0);
     const slots = this.sections.length - 1;
-    const spare = height - top - cfg.bottom - used;
+    const spare = frame.bottom - top - cfg.bottom - used;
     const gap = Math.min(cfg.maxGap, Math.max(cfg.minGap, spare / slots));
     let y = top + Math.max(0, (spare - gap * slots) / 2);
     const cx = width / 2;

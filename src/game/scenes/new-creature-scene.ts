@@ -18,6 +18,7 @@ import { GiftBox } from '../ui/menu/new-creature/new-creature-box';
 import { LightRays } from '../ui/menu/new-creature/new-creature-rays';
 import { NewCreatureSequence } from '../ui/menu/new-creature/new-creature-sequence';
 import { createOutlinedText } from '../ui/common/outlined-text';
+import { safeFrame } from '../ui/common/safe-frame';
 import { enterScreen, leaveScreen, type Movable } from '../ui/common/transition';
 
 const cfg = MENU.newCreature;
@@ -150,16 +151,18 @@ export class NewCreatureScene extends Phaser.Scene {
 
   private get center(): { x: number; y: number } {
     const { width, height } = this.scale.gameSize;
-    return { x: width / 2, y: height * cfg.boxY };
+    const frame = safeFrame(height);
+    return { x: width / 2, y: frame.top + frame.height * cfg.boxY };
   }
 
   private layout(): void {
     const { width, height } = this.scale.gameSize;
     const { x, y } = this.center;
+    const frame = safeFrame(height);
     this.cameras.main.setSize(width, height);
     this.background.resize(width, height);
     this.veil.setSize(width, height);
-    this.title.setPosition(x, height * cfg.titleY);
+    this.title.setPosition(x, frame.top + frame.height * cfg.titleY);
     this.rays.setPosition(x, y);
     const { phase } = this.sequence;
     if (phase === 'intro' || phase === 'shake') this.box.setPosition(x, y);
@@ -167,7 +170,7 @@ export class NewCreatureScene extends Phaser.Scene {
     const nameY = y + BALANCE.layer.height / 2 + cfg.nameGap;
     this.nameText.setPosition(x - this.nameWidth / 2, nameY);
     this.rarityText.setPosition(x - this.rarityWidth / 2, nameY + cfg.rarityGap);
-    this.button.setPosition(x, height * cfg.buttonY);
+    this.button.setPosition(x, frame.top + frame.height * cfg.buttonY);
   }
 
   private skip(): void {

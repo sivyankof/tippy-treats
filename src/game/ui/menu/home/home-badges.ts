@@ -87,14 +87,15 @@ export class HomeBadges {
     return [this.streak, this.gift, this.gear];
   }
 
-  /** Streak plate on the left edge, gift plate on the right edge and the gear left of it, on a screen `width` wide. */
-  layout(width: number): void {
-    this.streak.setPosition(cfg.edge + this.streakPlate.width / 2, cfg.y);
-    this.gift.setPosition(width - cfg.edge - cfg.gift.width / 2, cfg.y);
-    this.gear.setPosition(
-      width - cfg.edge - cfg.gift.width - cfg.gear.gap - cfg.gear.size / 2,
-      cfg.y,
-    );
+  /**
+   * Streak plate on the left edge, gift plate on the right edge and the gear left of it, on a
+   * screen `width` wide; `top` is the safe band at the top of the canvas.
+   */
+  layout(width: number, top = 0): void {
+    const y = top + cfg.y;
+    this.streak.setPosition(cfg.edge + this.streakPlate.width / 2, y);
+    this.gift.setPosition(width - cfg.edge - cfg.gift.width / 2, y);
+    this.gear.setPosition(width - cfg.edge - cfg.gift.width - cfg.gear.gap - cfg.gear.size / 2, y);
   }
 
   setEnabled(enabled: boolean): void {

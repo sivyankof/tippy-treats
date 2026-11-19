@@ -14,6 +14,7 @@ import { TeamOrderPlate } from '../ui/menu/team/team-order-plate';
 import { PressGesture } from '../ui/menu/team/team-gesture';
 import { ownedIds, TeamGrid } from '../ui/menu/team/team-grid';
 import { TeamSlots } from '../ui/menu/team/team-slots';
+import { safeFrame } from '../ui/common/safe-frame';
 import { enterScreen, leaveScreen, type Movable } from '../ui/common/transition';
 
 const cfg = MENU.team;
@@ -98,11 +99,12 @@ export class TeamScene extends Phaser.Scene {
     const { width, height } = this.scale.gameSize;
     this.cameras.main.setSize(width, height);
     this.bg.resize(width, height);
-    this.header.layout(width);
-    const extra = Math.max(0, height - cfg.baseHeight);
-    this.slots.layout(width, cfg.slotsY + extra * cfg.slotsExtra);
-    this.order.layout(width, cfg.orderY + extra * cfg.orderExtra);
-    this.grid.layout(width, height, cfg.gridTop + extra * cfg.gridExtra);
+    const frame = safeFrame(height);
+    this.header.layout(width, frame.top);
+    const extra = Math.max(0, frame.height - cfg.baseHeight);
+    this.slots.layout(width, frame.top + cfg.slotsY + extra * cfg.slotsExtra);
+    this.order.layout(width, frame.top + cfg.orderY + extra * cfg.orderExtra);
+    this.grid.layout(width, frame.bottom, frame.top + cfg.gridTop + extra * cfg.gridExtra);
   }
 
   // --- Input: tap, long press and drag are told apart by one gesture per press ---

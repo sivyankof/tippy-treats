@@ -6,6 +6,7 @@ import { formatNumber, t } from '../../i18n';
 import { gameState } from '../../state';
 import { pickInt, pickRange } from '../../util/math';
 import { openScreen, SCENES, type CreatureDetailData } from '../app/scene-keys';
+import { safeFrame } from '../ui/common/safe-frame';
 import { enterScreen, leaveScreen } from '../ui/common/transition';
 import { collectionGrid } from '../ui/menu/collection/collection-grid';
 import { CollectionCount } from '../ui/menu/collection/collection-count';
@@ -91,9 +92,10 @@ export class CollectionScene extends Phaser.Scene {
     const { width, height } = this.scale.gameSize;
     this.cameras.main.setSize(width, height);
     this.background.resize(width, height);
-    this.header.layout(width);
-    this.count.setX(width / 2);
-    const grid = collectionGrid(width, height, this.tiles.length);
+    const frame = safeFrame(height);
+    this.header.layout(width, frame.top);
+    this.count.place(width / 2, frame.top);
+    const grid = collectionGrid(width, frame.bottom, this.tiles.length, frame.top);
     this.tiles.forEach((tile, i) => {
       const cell = grid.cells[i];
       if (cell) tile.setBaseScale(grid.scale).setPosition(cell.x, cell.y);

@@ -13,7 +13,7 @@ export const MENU = {
       width: 760,
       height: 120,
       font: 44,
-      /** Distance from the bottom edge of the screen to the plate centre. */
+      /** Distance from the bottom edge of the screen (of its safe band, where there is one) to the plate centre. */
       bottom: 80,
       textPadding: 50,
       inMs: 220,
@@ -205,6 +205,12 @@ export const MENU = {
      * far it runs past the top and the sides of the screen.
      */
     band: { bottom: 214, overhang: 80 },
+    /**
+     * A bar over the safe band at the bottom of a screen whose list scrolls: the list stops at the
+     * band and the bar hides what runs under it. The bar's top edge is how far it runs past the
+     * screen edge below.
+     */
+    bottomCover: { overhang: 80 },
   },
   /** The popup window of the menus (missions, streak, gift). */
   popup: {

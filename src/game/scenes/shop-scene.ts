@@ -25,8 +25,10 @@ import {
 } from '../ui/menu/shop/shop-blocks';
 import { ShopStarter } from '../ui/menu/shop/shop-starter';
 import { Toast } from '../ui/menu/shop/shop-toast';
+import { BottomCover } from '../ui/style/bottom-cover';
 import { MenuScenery } from '../ui/style/menu-scenery';
 import { ScrollList } from '../ui/style/scroll-list';
+import { safeFrame } from '../ui/common/safe-frame';
 import { enterScreen, leaveScreen } from '../ui/common/transition';
 
 const cfg = MENU.shop;
@@ -36,6 +38,7 @@ export class ShopScene extends Phaser.Scene {
   private bg!: MenuScenery;
   private header!: ScreenHeader;
   private list!: ScrollList;
+  private cover!: BottomCover;
   private toast!: Toast;
   private blocks: DailySection[] = [];
   private starter: ShopStarter | null = null;
@@ -62,6 +65,7 @@ export class ShopScene extends Phaser.Scene {
     this.header = new ScreenHeader(this, t('shop.title'), () => this.leave(() => this.toHome()), {
       band: true,
     });
+    this.cover = new BottomCover(this);
     this.toast = new Toast(this);
     this.scale.on(Phaser.Scale.Events.RESIZE, this.layout, this);
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
@@ -137,9 +141,11 @@ export class ShopScene extends Phaser.Scene {
     const { width, height } = this.scale.gameSize;
     this.cameras.main.setSize(width, height);
     this.bg.resize(width, height);
-    this.header.layout(width);
-    this.list.layout(width, height, MENU.header.contentTop);
-    this.toast.layout(width);
+    const frame = safeFrame(height);
+    this.header.layout(width, frame.top);
+    this.list.layout(width, frame.bottom, frame.top + MENU.header.contentTop);
+    this.cover.layout(width, height, frame.bottom);
+    this.toast.layout(width, frame.top);
   }
 
   /** Where a reward flies from: the finger that tapped. */
