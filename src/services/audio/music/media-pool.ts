@@ -91,6 +91,21 @@ export class MediaPool {
     media.gain.disconnect();
   }
 
+  /** Lets every element go for good (the player is replaced): stopped, emptied, unplugged. */
+  dispose(): void {
+    for (const media of this.all) {
+      media.busy = true;
+      try {
+        media.el.pause();
+        media.el.removeAttribute('src');
+        media.el.load();
+      } catch {
+        // Gone anyway.
+      }
+      media.gain.disconnect();
+    }
+  }
+
   get free(): number {
     return this.all.filter((m) => !m.busy).length;
   }

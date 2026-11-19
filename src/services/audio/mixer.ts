@@ -1,6 +1,7 @@
 import { AUDIO_MIX } from '../../data/audio/audio-mix';
 import { limiterCurve, musicAudible, musicTarget, type DuckReason } from './mixer-math';
 import { NodeTally } from './node-tally';
+import { MUSIC_WATCHDOG } from '../../data/audio/music-watchdog';
 
 /**
  * The output chain over any audio context (live or offline, so renders hear what the player hears):
@@ -25,6 +26,8 @@ export class Mixer {
   /** Dev-only multipliers of the bus levels (the soundboard sliders); 1 in the game. */
   private scales = { master: 1, sfx: 1, music: 1 };
   private readonly ducks = new Set<DuckReason>();
+  /** Reads the music bus for the watchdog; made on the first look. */
+  private meter: { node: AnalyserNode; samples: Float32Array<ArrayBuffer> } | null = null;
 
   constructor(readonly ctx: BaseAudioContext) {
     const mix = AUDIO_MIX;
@@ -107,6 +110,27 @@ export class Mixer {
   /** Reasons that hold the duck now (diagnostics). */
   get duckReasons(): readonly DuckReason[] {
     return [...this.ducks];
+  }
+
+  /**
+   * Peak of the music bus over the last `MUSIC_WATCHDOG.meterSize` samples, 0..1 (after the switch
+   * and the duck). The analyser is a dead end: it is read, never heard.
+   */
+  musicPeak(): number {
+    if (!this.meter) {
+      const node = this.ctx.createAnalyser();
+      node.fftSize = MUSIC_WATCHDOG.meterSize;
+      this.musicBus.connect(node);
+      const samples = new Float32Array(
+        new ArrayBuffer(node.fftSize * Float32Array.BYTES_PER_ELEMENT),
+      );
+      this.meter = { node, samples };
+    }
+    const { node, samples } = this.meter;
+    node.getFloatTimeDomainData(samples);
+    let peak = 0;
+    for (const value of samples) peak = Math.max(peak, Math.abs(value));
+    return peak;
   }
 
   /** Plays a silent one-sample source: old iOS only starts the context for a source played inside the gesture. */

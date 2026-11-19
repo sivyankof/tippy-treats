@@ -20,6 +20,32 @@ export class MusicProxy implements MusicControl {
   private readonly holds = new Set<MusicHoldReason>();
   private isBusy = false;
 
+  /**
+   * A new player in place of the one it has (the music switched on again): the old one is let go
+   * at once and the new one is brought up to date.
+   */
+  replace(real: MusicControl): void {
+    const old = this.real;
+    this.real = NO_MUSIC;
+    this.safely(() => old.dispose());
+    this.attach(real);
+  }
+
+  /** The watchdog: the player stops and plays what was asked again, from the turn it was on. */
+  restart(): void {
+    this.safely(() => this.real.stop());
+    if (this.enabled) this.replay();
+  }
+
+  gesture(): void {
+    if (this.enabled) this.safely(() => this.real.gesture());
+  }
+
+  dispose(): void {
+    this.safely(() => this.real.dispose());
+    this.real = NO_MUSIC;
+  }
+
   /** Gives the proxy its player and brings it up to date with what was asked. */
   attach(real: MusicControl): void {
     audioLog.add(

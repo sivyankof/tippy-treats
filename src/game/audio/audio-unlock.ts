@@ -8,6 +8,10 @@ const GESTURE_EVENTS = ['pointerdown', 'pointerup', 'touchend', 'keydown'] as co
  * itself, not from a queue of frames. The listeners live as long as the page.
  */
 export function bindAudioUnlock(audio: AudioService): void {
-  const unlock = (): void => audio.unlock();
+  // A tap also lets a track that did not start (a refused play) try again.
+  const unlock = (): void => {
+    audio.unlock();
+    audio.music.gesture();
+  };
   for (const type of GESTURE_EVENTS) window.addEventListener(type, unlock, { passive: true });
 }

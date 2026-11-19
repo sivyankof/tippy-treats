@@ -13,6 +13,8 @@ import {
   type MusicFactory,
 } from './music-control';
 import { MusicProxy } from './music-proxy';
+import { MusicWatchdog } from './music/music-watchdog';
+import { MUSIC_WATCHDOG } from '../../data/audio/music-watchdog';
 import type { SoundArgs, SoundId } from './sound-args';
 import { SoundPlayer, type DevSoundTrims } from './sound-player';
 import { Synth } from './synth';
@@ -63,6 +65,10 @@ export class WebAudioService implements AudioService, AudioDevControl {
   /** The soundboard's per-sound corrections; shared with the player, which exists only after unlock. */
   private readonly devSoundTrims: DevSoundTrims = {};
   private devLevels: Partial<{ master: number; sfx: number; music: number }> = {};
+  private readonly watchdog = new MusicWatchdog();
+  private watchTimer: ReturnType<typeof setInterval> | null = null;
+  /** The music bus peak at the last watchdog look. */
+  private lastLevel: number | null = null;
 
   constructor(
     private readonly createContext: AudioContextFactory = createBrowserAudioContext,
@@ -87,10 +93,60 @@ export class WebAudioService implements AudioService, AudioDevControl {
 
   setMusicEnabled(on: boolean): void {
     audioLog.add(`music switch ${on ? 'on' : 'off'}`);
+    const was = this.musicOn;
     this.musicOn = on;
     this.onMusicSwitch(on);
     this.mixer?.setMusicOn(on);
+    // Switched on again: a new player from scratch (new elements, nothing left of the old one).
+    if (on && !was && this.mixer) this.rebuildMusic();
     this.musicProxy.setEnabled(on);
+  }
+
+  /** The music player is made again over the live mixer; the context is asked to run. */
+  private rebuildMusic(): void {
+    const { mixer } = this;
+    if (!mixer) return;
+    audioLog.add('music: new player');
+    this.watchdog.reset();
+    this.musicProxy.replace(this.musicFactory(musicHostOf(mixer)));
+    if (this.holds.size === 0) this.run((ctx) => ctx.resume(), 'resume');
+  }
+
+  /**
+   * Once per `MUSIC_WATCHDOG.checkMs`: a playlist that should be heard and has been silent for a
+   * while starts again (`MusicWatchdog`); a context that does not run is only asked to run.
+   */
+  private watchMusic(): void {
+    const { ctx, mixer } = this;
+    if (!ctx || !mixer) return;
+    let level: number;
+    try {
+      level = mixer.musicPeak();
+    } catch {
+      // No meter: the watchdog stays quiet.
+      return;
+    }
+    this.lastLevel = level;
+    const music = this.musicProxy.state();
+    const wanted =
+      this.musicProxy.asked()?.kind === 'playlist' &&
+      this.musicOn &&
+      this.holds.size === 0 &&
+      this.musicProxy.heldReasons().length === 0;
+    const restart = this.watchdog.check({
+      wanted,
+      audible: level > MUSIC_WATCHDOG.audibleLevel,
+      loading: music.loading,
+      nowMs: audioLog.uptimeSec() * MS_PER_SECOND,
+    });
+    if (!restart) return;
+    if (ctx.state !== 'running') {
+      audioLog.add(`watchdog: playlist silent, context ${ctx.state}, asked to run`);
+      this.run((c) => c.resume(), 'resume');
+      return;
+    }
+    audioLog.add(`watchdog: playlist silent (${music.track ?? 'no track'}), started again`);
+    this.musicProxy.restart();
   }
 
   setLevels(levels: Partial<{ master: number; sfx: number; music: number }>): void {
@@ -124,8 +180,8 @@ export class WebAudioService implements AudioService, AudioDevControl {
       playlist: music.playlist,
       decks: music.decks,
       loading: music.loading,
-      level: null,
-      restarts: 0,
+      level: this.lastLevel,
+      restarts: this.watchdog.restarts,
     };
   }
 
@@ -166,6 +222,7 @@ export class WebAudioService implements AudioService, AudioDevControl {
         mixer.setDevScales(this.devLevels);
         for (const reason of this.ducks) mixer.duckMusic(reason, true);
         this.musicProxy.attach(this.musicFactory(musicHostOf(mixer)));
+        this.watchTimer ??= setInterval(() => this.watchMusic(), MUSIC_WATCHDOG.checkMs);
       } catch (error) {
         audioLog.add(`unlock: graph failed, ${errorText(error)}`);
         // Sound stays off: do not leave a context behind or make another one on the next tap.

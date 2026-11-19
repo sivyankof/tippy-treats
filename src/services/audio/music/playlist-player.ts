@@ -52,6 +52,18 @@ export interface PlayerSources {
   decode(track: MusicTrackId): Promise<AudioBuffer> | null;
   /** A stream deck of a non-seamless track (`looping` when it plays on its own), or null when it cannot be streamed. */
   openStream(track: MusicTrackId, looping: boolean): OpeningDeck | null;
+  /** Lets go of everything the sources hold (the media elements); the player is done. */
+  release?(): void;
+}
+
+/** A track that did not start: what to ask again on the next tap. */
+interface Failed {
+  track: MusicTrackId;
+  offsetSec: number;
+  turn: boolean;
+  park: boolean;
+  /** It was asked again once already (the next failure moves the playlist on). */
+  retried: boolean;
 }
 
 /** A track asked for and not playing yet; `turn`: as the playlist's turn. */
@@ -103,6 +115,8 @@ export class PlaylistPlayer implements MusicControl {
   /** Decodes running now (a cancelled one too: its memory is taken until it ends), bytes each. */
   private readonly decoding = new Set<{ bytes: number }>();
   private pending: Pending | null = null;
+  private failed: Failed | null = null;
+  private disposed = false;
   private ticket = 0;
   private leaveWait: Wait | null = null;
   private watchTimer: unknown = null;
@@ -153,8 +167,10 @@ export class PlaylistPlayer implements MusicControl {
   }
 
   playlist(): void {
-    if (this.mode?.kind === 'playlist') return;
+    // A playlist that plays (or is starting) goes on; one whose start failed starts again.
+    if (this.mode?.kind === 'playlist' && (this.current || this.pending)) return;
     this.mode = { kind: 'playlist' };
+    this.failed = null;
     const track = this.turnTrack();
     const shape = { loopSec: trackLoopSec(MUSIC_TRACKS[track]), seamless: this.seamless(track) };
     this.show(track, turnOffset(shape, this.turnBefore), true, true);
@@ -163,6 +179,7 @@ export class PlaylistPlayer implements MusicControl {
   play(track: MusicTrackId): void {
     if (this.mode?.kind === 'track' && this.mode.track === track) return;
     this.mode = { kind: 'track', track };
+    this.failed = null;
     this.clearWatch();
     if (this.prefetch && this.prefetch.track !== track) this.prefetch = null;
     this.show(track, 0, false, true);
@@ -170,6 +187,7 @@ export class PlaylistPlayer implements MusicControl {
 
   next(): void {
     this.mode = { kind: 'playlist' };
+    this.failed = null;
     this.clearWatch();
     this.prefetch = null;
     this.newTurn(nextIndex(this.index, this.sources.playlist.length));
@@ -192,6 +210,7 @@ export class PlaylistPlayer implements MusicControl {
   stop(): void {
     audioLog.add('player: stop');
     this.mode = null;
+    this.failed = null;
     this.cancelPending();
     this.clearWatch();
     this.clearLeaveWait();
@@ -238,6 +257,52 @@ export class PlaylistPlayer implements MusicControl {
 
   resetPeak(): void {
     this.peak = this.bytesNow();
+  }
+
+  /**
+   * A tap: a track that did not start (a refused `play()`, a failed decode) is asked once more; if it
+   * had been asked again already, the playlist moves on to its next track instead.
+   */
+  gesture(): void {
+    const failed = this.failed;
+    if (!failed || this.disposed || !this.stillWanted(failed)) return;
+    if (!failed.retried) {
+      audioLog.add(`player: ${failed.track} asked again after a tap`);
+      this.failed = { ...failed, retried: true };
+      this.show(failed.track, failed.offsetSec, failed.turn, failed.park);
+      return;
+    }
+    this.failed = null;
+    if (failed.turn) {
+      audioLog.add(`player: ${failed.track} failed twice, next track`);
+      this.next();
+    }
+  }
+
+  /** Stops at once and lets the media elements go; the player is not used after this. */
+  dispose(): void {
+    if (this.disposed) return;
+    this.stop();
+    this.disposed = true;
+    this.clearLeaveWait();
+    for (const deck of [...this.retiring.keys()]) deck.dispose(this.host.ctx.currentTime);
+    this.retiring.clear();
+    this.sources.release?.();
+  }
+
+  /** The failed track is still what the game wants. */
+  private stillWanted(failed: Failed): boolean {
+    const { mode } = this;
+    if (failed.turn) return mode?.kind === 'playlist' && this.turnTrack() === failed.track;
+    return mode?.kind === 'track' && mode.track === failed.track;
+  }
+
+  /** `track` did not start: it waits for the next tap (`gesture`); a second failure in a row is kept as such. */
+  private startFailed(ticket: number, failed: Omit<Failed, 'retried'>): void {
+    if (ticket !== this.ticket) return;
+    this.pending = null;
+    const again = this.failed?.track === failed.track && this.failed.retried;
+    this.failed = { ...failed, retried: again };
   }
 
   /** The playlist's track now, and the one after it. */
@@ -325,6 +390,7 @@ export class PlaylistPlayer implements MusicControl {
       this.clearLeaveWait();
       this.cut(leaving);
     }
+    if (this.disposed) return;
     const ticket = ++this.ticket;
     audioLog.add(`player: ask ${track}${turn ? ' (playlist)' : ''} at ${offsetSec.toFixed(1)} s`);
     this.pending = { track, ticket, turn };
@@ -343,7 +409,7 @@ export class PlaylistPlayer implements MusicControl {
       const decoded = this.decoded(track);
       if (!decoded) {
         audioLog.add(`player: no file for ${track}`);
-        this.dropPending(ticket);
+        this.startFailed(ticket, { track, offsetSec, turn, park });
         return;
       }
       decoded.then(
@@ -358,7 +424,7 @@ export class PlaylistPlayer implements MusicControl {
         // A missing or broken file leaves the music silent, never the game broken.
         (error: unknown) => {
           audioLog.add(`player: decode of ${track} failed, ${errorText(error)}`);
-          this.dropPending(ticket);
+          this.startFailed(ticket, { track, offsetSec, turn, park });
         },
       );
       return;
@@ -366,7 +432,7 @@ export class PlaylistPlayer implements MusicControl {
     const deck = this.sources.openStream(track, !turn);
     if (!deck) {
       audioLog.add(`player: no stream for ${track}`);
-      this.dropPending(ticket);
+      this.startFailed(ticket, { track, offsetSec, turn, park });
       return;
     }
     deck.start(offsetSec).then(
@@ -380,7 +446,7 @@ export class PlaylistPlayer implements MusicControl {
       (error: unknown) => {
         audioLog.add(`player: stream ${track} did not start, ${errorText(error)}`);
         deck.dispose(this.host.ctx.currentTime);
-        this.dropPending(ticket);
+        this.startFailed(ticket, { track, offsetSec, turn, park });
       },
     );
   }
@@ -437,6 +503,7 @@ export class PlaylistPlayer implements MusicControl {
       `player: ${deck.track} in at ${at.toFixed(2)} (now ${this.host.ctx.currentTime.toFixed(2)}, ${this.host.ctx.state})`,
     );
     this.pending = null;
+    this.failed = null;
     const leaving = this.leaving;
     if (leaving) {
       this.leaving = null;
@@ -688,10 +755,6 @@ export class PlaylistPlayer implements MusicControl {
     this.ticket += 1;
   }
 
-  private dropPending(ticket: number): void {
-    if (ticket === this.ticket) this.pending = null;
-  }
-
   private clearLeaveWait(): void {
     this.leaveWait?.cancel();
     this.leaveWait = null;
@@ -776,6 +839,7 @@ export function playlistPlayerFactory({
         const url = trackUrl(track);
         return url ? fetchAndDecode(ctx, url) : null;
       },
+      release: () => pool?.dispose(),
       openStream: (track, looping) => {
         const url = trackUrl(track);
         if (!pool || !url) return null;

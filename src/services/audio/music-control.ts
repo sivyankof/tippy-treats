@@ -55,6 +55,10 @@ export interface MusicControl {
   busy(on: boolean): void;
   state(): MusicPlayerState;
   resetPeak(): void;
+  /** A user tap: a track that did not start is asked again (then the playlist moves on). */
+  gesture(): void;
+  /** Stops at once and lets everything go; the player is not used after this. */
+  dispose(): void;
 }
 
 /** What a music player gets to build on: the context, the music bus and the shared node tally. */
@@ -93,6 +97,8 @@ export const NO_MUSIC: MusicControl = {
   busy: () => undefined,
   state: () => ({ ...NO_STATE }),
   resetPeak: () => undefined,
+  gesture: () => undefined,
+  dispose: () => undefined,
 };
 
 export const NO_MUSIC_FACTORY: MusicFactory = () => NO_MUSIC;
