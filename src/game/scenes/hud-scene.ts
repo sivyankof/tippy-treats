@@ -3,6 +3,7 @@ import { HUD_LAYOUT } from '../../data/run/hud-layout';
 import { PALETTE } from '../../data/common/palette';
 import { formatNumber, t } from '../../i18n';
 import { CREATURES } from '../../data/creatures/creatures';
+import { DEBUG_TOOLS } from '../../util/build-kind';
 import { readDebugParams } from '../../util/debug-params';
 import { ContinueWindow } from '../ui/run/continue-window';
 import { DebugPanel } from '../debug/debug-panel';
@@ -118,7 +119,7 @@ export class HudScene extends Phaser.Scene {
     });
     this.continueWindow = new ContinueWindow(this);
     this.debugPanel = new DebugPanel(this, () => launchRun(this, this.gameScene()?.request));
-    this.debugPanel.setVisible(import.meta.env.DEV && readDebugParams().debug);
+    this.debugPanel.setVisible(DEBUG_TOOLS && readDebugParams().debug);
 
     const unregisterButton = addUiRegion(() =>
       this.overlay.visible || !this.pauseEnabled()
@@ -134,7 +135,7 @@ export class HudScene extends Phaser.Scene {
     );
 
     this.game.events.on(Phaser.Core.Events.HIDDEN, this.pause, this);
-    if (import.meta.env.DEV) {
+    if (DEBUG_TOOLS) {
       this.input.keyboard?.on('keydown-D', () => {
         this.debugPanel.setVisible(!this.debugPanel.visible);
       });

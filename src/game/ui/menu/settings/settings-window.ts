@@ -4,6 +4,8 @@ import { MENU } from '../../../../data/common/menu-layout';
 import { PALETTE } from '../../../../data/common/palette';
 import { getLang, t } from '../../../../i18n';
 import { gameState } from '../../../../state';
+import { DEBUG_MENU } from '../../../../data/debug/debug-menu';
+import { createTapSequence } from '../../../../util/tap-sequence';
 import {
   notificationsAnyOn,
   setAllNotifications,
@@ -117,6 +119,14 @@ export function openSettingsWindow(scene: Phaser.Scene, handlers: SettingsHandle
       cfg.infoAlpha,
     ),
   );
+  // Internal builds only: taps on the version line open the debug menu. The test is written out here, not
+  // taken from `build-kind.ts`: the bundler folds only a direct `import.meta.env` test, and the store build must lose the menu chunk.
+  if (import.meta.env.DEV || import.meta.env.VITE_INTERNAL_BUILD === '1') {
+    const taps = createTapSequence(DEBUG_MENU.openTaps, DEBUG_MENU.openWindowMs);
+    info[0]?.setInteractive().on('pointerup', () => {
+      if (taps.tap()) void import('../../../debug/debug-menu').then((menu) => menu.showDebugMenu());
+    });
+  }
   y += cfg.infoLine * info.length + cfg.blockGap;
 
   const reset = wide(t('settings.reset'), PALETTE.danger, y, () =>

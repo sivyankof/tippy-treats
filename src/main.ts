@@ -78,6 +78,9 @@ async function start(): Promise<void> {
   if (import.meta.env.DEV) {
     // window.__tippyAudio: offline render and measurement of the sounds (docs/08-architecture.md, section 9).
     void import('./game/debug/audio-hook').then((hook) => hook.registerAudioHook());
+  }
+  // Written out (not `DEBUG_TOOLS`) so that the store build drops the soundboard module (see build-kind.ts).
+  if (import.meta.env.DEV || import.meta.env.VITE_INTERNAL_BUILD === '1') {
     // `?soundboard=1`: the sound test page instead of the game.
     if (new URLSearchParams(window.location.search).get('soundboard') === '1') {
       const board = await import('./game/debug/soundboard');
