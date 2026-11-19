@@ -17,6 +17,42 @@
 
 ## 2. Структура проекта
 
+### Темы внутри слоёв
+
+Верхний уровень `src/` разложен по слоям (раздел 3). Внутри слоёв `data/`, `core/`, `game/fx/`, `game/objects/`, `game/ui/` и в корне `game/` файлы лежат в подпапках по темам (сессия 6в, таблица переноса «старый путь → новый путь»: `08a-file-map.md`). Названия тем одни и те же во всех слоях; тема есть в слое, только если в нём есть её файлы.
+
+| Тема | Что в ней |
+|---|---|
+| `tower` | слои башни, бросок, полёт, качка, обвал, придавливание края, простые слои, отрисовка слоя |
+| `creatures` | существа, лица, сон и зевок, способности, мастерство, портреты, бригада |
+| `glaze` | подтёки, слизывание, язык |
+| `cuts` | срезы |
+| `toppers` | украшения, их придавливание, кремовый валик |
+| `guests` | гость на башне, космический гость |
+| `zones` | зоны, правила зон, табличка зоны, круги (витки), контрольные точки |
+| `weather` | погода забега, уличная погода, погода на башне, снежная пыль, молния |
+| `backdrop` | фоны; в `game/objects/backdrop/` внутри разбиты на `zones`, `weather`, `panorama`, `life`, `space`, `common` |
+| `economy` | монеты, ягоды, магазин, подарок, печь, сокровища, реклама за награду, покупки |
+| `progression` | уровни, задания, серия, башня дня, рекорды, коллекция |
+| `run` | запуск и завершение забега, камера, «Ещё попытка?», итоги, старт с точки, HUD забега |
+| `audio` | звук и музыка вне `services/` |
+| `app` | конфигурация, ключи сцен, настройки, жизненный цикл, рендерер, экран |
+| `tutorial` | обучение (в `data/`; в `game/` это уже папка `game/tutorial/`) |
+| `debug` | инструменты разработки и замера (в `data/`; в `game/` это папки `game/debug/` и `game/perf/`) |
+| `common` | общее для слоя, что не относится ни к одной теме (кнопка, текст с обводкой, атлас, кривые, частицы) |
+
+В `game/ui/menu/` подпапки по экранам и окнам: `home`, `collection`, `detail`, `team`, `daily`, `shop`, `results`, `streak`, `missions`, `oven`, `new-creature`, `settings`, `checkpoint`, `widgets` (общие виджеты меню).
+
+Правила:
+- Новый файл кладётся в папку своей темы внутри слоя. Если файл подходит двум темам, он идёт туда, откуда его чаще импортируют.
+- В одной папке не больше 40 файлов вместе с тестами, `common/` тоже. Это проверяет тест `scripts/folder-size.test.ts`; исключения перечислены в нём явным списком с причиной.
+- Новая тема получает свою подпапку и строку в таблице выше; названия тем одинаковы во всех слоях.
+- Папка, которой стало тесно, делится на подпапки внутри своей темы (так `game/objects/tower/edge-squash/`).
+- Тест лежит рядом со своим модулем. Импорты относительные; псевдонимов путей и файлов `index.ts` для реэкспорта нет.
+- Без подпапок по темам остаются: `game/scenes/` (одна сцена на файл), `game/debug/`, `game/perf/`, `game/tutorial/`, `game/fx/abilities/` (по файлу на существо, как `core/abilities/`), `game/ui/style/` (общий набор интерфейса), `core/save/`, `core/abilities/`, `state/`, `services/*`, `util/`, `i18n/`.
+
+### Дерево
+
 ```
 tippy-treats/
 ├── CLAUDE.md
@@ -35,42 +71,63 @@ tippy-treats/
 ├── ios/                создаётся Capacitor (этап M7)
 ├── android/            создаётся Capacitor (этап M9)
 ├── scripts/
-│   └── sim.ts          бот-симуляция для баланса
+│   ├── sim.ts          бот-симуляция для баланса
+│   └── folder-size.test.ts   не больше 40 файлов в папке src
 └── src/
     ├── main.ts         точка входа: конфигурация Phaser, запуск сервисов
     ├── core/           ЧИСТАЯ ЛОГИКА. Без Phaser, Capacitor, DOM
-    │   ├── rng.ts              генератор с зерном (mulberry32)
-    │   ├── tower-sim.ts        симуляция забега (машина состояний)
-    │   ├── sim-types.ts        типы состояния, событий и конфигурации забега
-    │   ├── miss.ts             промах: щит, окно продолжения или конец забега
-    │   ├── run-coins.ts        монеты забега: начисление и события выплат
-    │   ├── coins.ts            чистые правила монет (парящая монета, комбо, бонус высоты)
-    │   ├── team-queue.ts       расписание существ бригады, «следующее существо»
-    │   ├── bot.ts              бот игрока для симуляции
-    │   ├── drop.ts             расчёт результата броска
-    │   ├── wobble.ts           качка
-    │   ├── scoring.ts          очки, комбо, монеты
-    │   ├── zones.ts            правила зон, расписание событий по зерну
-    │   ├── flight.ts           движение летящего слоя: стены, правила зон, ожидание, обманка, облака
+    │   ├── tower/
+    │   │   ├── tower-sim.ts        симуляция забега (машина состояний); тесты tower-sim-*.test.ts по частям
+    │   │   ├── sim-types.ts        типы состояния, событий и конфигурации забега
+    │   │   ├── drop.ts             расчёт результата броска
+    │   │   ├── wobble.ts           качка
+    │   │   ├── flight.ts           движение летящего слоя: стены, правила зон, ожидание, обманка, облака
+    │   │   ├── miss.ts             промах: щит, окно продолжения или конец забега
+    │   │   ├── scoring.ts          очки, комбо
+    │   │   ├── field.ts, speed-curve.ts, tempo-ease.ts   поле, кривая скорости, смягчение темпа
+    │   │   ├── bot.ts              бот игрока для симуляции
+    │   │   └── sim-test-utils.ts   доступ тестов к состоянию симуляции
+    │   ├── creatures/
+    │   │   ├── team.ts             слоты бригады: открытые слоты, поставить, убрать, бригада забега из сохранения, порядок 6 → 12 → 18
+    │   │   ├── team-place.ts       поставить существо в выбранный слот (перетаскивание): перенос, обмен, замена
+    │   │   ├── team-queue.ts       расписание существ бригады, «следующее существо»
+    │   │   ├── mastery.ts          мастерство существ для экранов
+    │   │   └── ability-values.ts   числа текста способности на уровне и что растёт со следующим
     │   ├── abilities/          по файлу на способность + registry.ts
-    │   ├── run-result.ts       итог забега
-    │   ├── progression.ts      опыт, уровень пекаря, награды
-    │   ├── missions.ts         выбор и прогресс заданий
-    │   ├── streak.ts           серия дней: вход, календарь, награда, восстановление, отказ, день забега
-    │   ├── daily.ts            башня дня: зерно, бригада, попытки, ступени наград, `recordDailyRun`
-    │   ├── gift.ts             бесплатная коробка: готовность, сумма от `installId` и времени, остаток ожидания
-    │   ├── continue-offer.ts   что показывает окно «Продолжить?» (или ничего)
-    │   ├── berries.ts          ягоды забега: `berriesFromEvents`
-    │   ├── economy.ts          кошелёк, покупки, прокачка, обмен ягод (`spend`, `buyCreature`, `upgradeCreature`, `exchangeBerries`),
-    │   │                       награда-существо и замена дубликата (`grantCreature`, `duplicateCompensation`)
-    │   ├── shop.ts             правила магазина: стартовый набор (срок, состав, замена дубликата), бесплатные монеты, существа за монеты по уровню, выдача товара
-    │   ├── team.ts             слоты бригады: открытые слоты, поставить, убрать, бригада забега из сохранения, порядок 6 → 12 → 18
-    │   ├── team-place.ts       поставить существо в выбранный слот (перетаскивание): перенос, обмен, замена
-    │   ├── collection.ts       способ получения закрытого существа, счётчик коллекции
-    │   ├── near-miss.ts        строка «почти получилось» на результатах
-    │   ├── ability-values.ts   числа текста способности на уровне и что растёт со следующим
-    │   ├── run-tally.ts        монеты по источникам, число способностей и наибольшая качка за забег
-    │   ├── video-policy.ts     когда предлагать рекламу за награду (`canOfferDoubleCoins`) и когда показывать межстраничную (`canShowInterstitial`, `shouldOfferRemoveAds`)
+    │   ├── zones/
+    │   │   ├── zones.ts            правила зон, расписание событий по зерну
+    │   │   ├── checkpoints.ts      оплата старта с контрольной точки
+    │   │   └── space-laps.ts, space-planet.ts   витки «Космоса» и их планеты
+    │   ├── guests/space-visitor-pick.ts   гости «Космоса» по зерну
+    │   ├── weather/run-look.ts     вид забега: погода и место старта по зерну
+    │   ├── economy/
+    │   │   ├── coins.ts            чистые правила монет (парящая монета, комбо, бонус высоты)
+    │   │   ├── run-coins.ts        монеты забега: начисление и события выплат
+    │   │   ├── berries.ts          ягоды забега: `berriesFromEvents`
+    │   │   ├── economy.ts          кошелёк, покупки, прокачка, обмен ягод (`spend`, `buyCreature`, `upgradeCreature`, `exchangeBerries`),
+    │   │   │                       награда-существо и замена дубликата (`grantCreature`, `duplicateCompensation`)
+    │   │   ├── shop.ts             правила магазина: стартовый набор (срок, состав, замена дубликата), бесплатные монеты, существа за монеты по уровню, выдача товара
+    │   │   ├── gift.ts             бесплатная коробка: готовность, сумма от `installId` и времени, остаток ожидания
+    │   │   ├── oven.ts             «Свежая печь» опыта
+    │   │   ├── double-coins.ts     счётчик удвоений за день
+    │   │   ├── first-runs.ts       первые забеги без продаж
+    │   │   └── video-policy.ts     когда предлагать рекламу за награду (`canOfferDoubleCoins`) и когда показывать межстраничную (`canShowInterstitial`, `shouldOfferRemoveAds`)
+    │   ├── progression/
+    │   │   ├── progression.ts      опыт, уровень пекаря, награды
+    │   │   ├── missions.ts         выбор и прогресс заданий
+    │   │   ├── streak.ts           серия дней: вход, календарь, награда, восстановление, отказ, день забега
+    │   │   ├── daily.ts            башня дня: зерно, бригада, попытки, ступени наград, `recordDailyRun`
+    │   │   ├── day-count.ts        счётчик одного местного дня
+    │   │   ├── record-unlocks.ts   существа за рекорд высоты
+    │   │   └── collection.ts       способ получения закрытого существа, счётчик коллекции
+    │   ├── run/
+    │   │   ├── run-result.ts       итог забега
+    │   │   ├── run-tally.ts        монеты по источникам, число способностей и наибольшая качка за забег
+    │   │   ├── continue-offer.ts   что показывает окно «Продолжить?» (или ничего)
+    │   │   └── near-miss.ts        строка «почти получилось» на результатах
+    │   ├── common/
+    │   │   ├── rng.ts              генератор с зерном (mulberry32)
+    │   │   └── weighted-pick.ts    выбор по весам
     │   └── save/
     │       ├── schema.ts       типы сохранения, `HINT_IDS`
     │       ├── migrations.ts   цепочка миграций (`migrate`, цепочку можно подменить в тесте)
@@ -78,52 +135,47 @@ tippy-treats/
     │       ├── load.ts         `loadSave` (основное, копия, новое), нормализация, `serializeSave`
     │       └── save.test.ts
     ├── data/           ВСЕ ЧИСЛА И КОНТЕНТ
-    │   ├── balance.ts
-    │   ├── anim.ts
-    │   ├── ability-anim.ts     числа и цвета анимаций способностей
-    │   ├── creature-looks.ts   рецепты рисунка и лица каждого существа
-    │   ├── creature-materials.ts материал существа: приземление, колыхание, покой, частицы
-    │   ├── creatures.ts
-    │   ├── zones.ts            зоны и числа правил
-    │   ├── backdrop.ts, backdrop-colors.ts, backdrop-life.ts   фоны зон: слои, цвета неба и картинок, числа фоновой жизни
-    │   ├── zone-plate.ts      плашка зоны
-    │   ├── treasure-anim.ts    монеты, ягоды, счётчики, золотой слой
-    │   ├── rule-anim.ts        визуал правил зон: контур рывка, полосы скорости, облако, обманка
-    │   ├── continue-anim.ts    замедление промаха, окно «Продолжить?», флажок рекорда
-    │   ├── tutorial-anim.ts    вид и время подсказок обучения
-    │   ├── rewarded-video.ts   вид и время браузерной заглушки рекламы
-    │   ├── idle-motion.ts      тихое покачивание объектов экрана (правило «нет неподвижных объектов»)
-    │   ├── hud-layout.ts       раскладка HUD, плашка шкалы качки
-    │   ├── shared-atlas.ts     размер страниц общего атласа, шаг полок, поля, какие ключи текстур идут в атлас
-    │   ├── menu-layout.ts      раскладка и анимации экранов меню (Home, Team, Collection, карточка, результаты, новое существо)
-    │   ├── demo.ts             демо «Попробовать»: стартовая высота, число бросков
-    │   ├── progression.ts      XP за уровень, награды уровней
-    │   ├── economy.ts          цены прокачки, пакеты обмена ягод
-    │   ├── shop.ts             товары за деньги по ключу (что даёт каждый), числа магазина: 7 дней набора, 25 монет × 3 в день
-    │   ├── iap-stub.ts         цены и вид окна браузерной заглушки покупок
-    │   ├── save-defaults.ts    начальное состояние нового сохранения
-    │   ├── storage.ts          ключи хранилища, задержка записи (500 мс)
-    │   ├── clock.ts            допуск перевода часов, миллисекунд в сутках
-    │   ├── missions.ts         пул заданий, группы, награды, число «почти готово»
-    │   ├── streak.ts           награды календаря, цена восстановления серии
-    │   ├── daily.ts            попытки, команда и ступени наград башни дня
-    │   ├── gift.ts             интервал и вилка монет бесплатной коробки
-    │   ├── rewards.ts          уровни пекаря, серия, башня дня
-    │   └── products.ts         идентификаторы покупок
+    │   ├── tower/              balance.ts, plain-layers.ts (простые слои), edge-squash.ts (придавливание края), tower-sparkles.ts
+    │   ├── creatures/          creatures.ts, creature-looks.ts (рецепты рисунка и лица), creature-materials.ts (материал: приземление,
+    │   │                       колыхание, покой, частицы), creature-style.ts, rarity.ts, mastery.ts, mastery-look.ts, master-anim.ts,
+    │   │                       ability-anim.ts (числа и цвета анимаций способностей), rainbow-look.ts, transform-scene.ts
+    │   ├── glaze/              glaze-drips.ts, lick.ts
+    │   ├── cuts/               cut-look.ts
+    │   ├── toppers/            plain-toppers.ts, topper-squash.ts
+    │   ├── guests/             tower-guest.ts, space-visitor.ts
+    │   ├── zones/              zones.ts (зоны и числа правил), rule-anim.ts (визуал правил зон: контур рывка, полосы скорости, облако,
+    │   │                       обманка), zone-plate.ts (плашка зоны), checkpoints.ts, checkpoint-look.ts, lap-edge.ts, space-planets.ts, start-places.ts
+    │   ├── weather/            weather.ts, weather-look.ts, street-weather.ts, tower-weather.ts, window-look.ts
+    │   ├── backdrop/           backdrop.ts, backdrop-colors.ts, backdrop-life.ts, backdrop-far.ts, backdrop-mountains.ts, flight-clear.ts
+    │   ├── economy/            economy.ts (цены прокачки, пакеты обмена ягод), shop.ts (товары за деньги по ключу, 7 дней набора, 25 монет × 3 в день),
+    │   │                       gift.ts, iap-stub.ts (цены и вид окна заглушки покупок), rewarded-video.ts (вид и время заглушки рекламы),
+    │   │                       first-runs.ts, treasure-anim.ts (монеты, ягоды, счётчики, золотой слой), treasure-piles.ts и вид наград
+    │   │                       (berry-look, chest-look, gift-look, oven-look, reward-look, video-icon-look, offline-look)
+    │   ├── progression/        progression.ts (XP за уровень, награды уровней), missions.ts, streak.ts, daily.ts
+    │   ├── run/                continue-anim.ts (замедление промаха, окно «Продолжить?», флажок рекорда), hud-layout.ts (раскладка HUD),
+    │   │                       demo.ts (демо «Попробовать»), share.ts
+    │   ├── audio/              sfx.ts, sfx-life.ts, audio-mix.ts, music.ts, sound-trim.ts, weather-bed.ts
+    │   ├── app/                screen.ts, effect-levels.ts, storage.ts (ключи хранилища, задержка записи), save-defaults.ts (начальное состояние
+    │   │                       нового сохранения), clock.ts (допуск перевода часов), boot.ts, app-info.ts, haptics.ts
+    │   ├── tutorial/           tutorial-anim.ts (вид и время подсказок обучения)
+    │   ├── debug/              perf.ts, soak.ts, art-sheet.ts, clip-guard.ts, fps-meter.ts, lineup.ts, results-demo.ts, sim-teams.ts
+    │   └── common/             anim.ts, palette.ts, idle-motion.ts (правило «нет неподвижных объектов»), menu-layout.ts (раскладка экранов меню),
+    │                           shared-atlas.ts (страницы общего атласа), picture-fields.ts, bar-look.ts, hop-motion.ts
     ├── game/           ОТРИСОВКА (Phaser)
-    │   ├── config.ts
-    │   ├── camera-layout.ts    математика прокрутки камеры (trayScrollY, targetScrollY, FLYING_REACH), с тестами
-    │   ├── continue-flow.ts    ход после промаха: окно, реклама, оплата, отказ (сцены только показывают)
-    │   ├── apply-settings.ts   сохранённые настройки в сервисы и режим эффектов; выключатели окна паузы
-    │   ├── run-request.ts      что за забег: обычный, башня дня или демо существа (`CLASSIC_RUN`, `DAILY_RUN`, `demoRun`)
-    │   ├── run-recorder.ts     запись забега в сохранение один раз, счётчики из `RunTally` (`extrasOf`)
-    │   ├── run-setup.ts        бригада, зерно, обучение и запись забега по запросу и отладочным параметрам
-    │   ├── run-info.ts         снимок забега для HUD и панели отладки
-    │   ├── run-camera.ts       камера забега: следование за башней, вход мира сверху
-    │   ├── run-exit.ts         куда уходит забег без результатов: карточка после демо, экран башни дня, Home (через новых существ)
-    │   ├── scene-keys.ts       ключи сцен, переходы (`openScreen`, `startRunFrom`, `launchRun`, `goNext`), данные сцен
-    │   ├── per-scene.ts        `PerScene`: объект, приготовленный заранее на один запуск сцены (уничтожается на `SHUTDOWN`)
-    │   ├── dev-warn.ts         предупреждение в консоль только в сборке разработки (пропущенное украшение)
+    │   ├── app/                config.ts, scene-keys.ts (ключи сцен, переходы `openScreen`, `startRunFrom`, `launchRun`, `goNext`, данные сцен),
+    │   │                       apply-settings.ts (сохранённые настройки в сервисы и режим эффектов), effects-mode.ts, frame-work.ts,
+    │   │                       webgl-renderer.ts, render-density.ts, follow-density.ts, safe-sides.ts
+    │   ├── run/                run-request.ts (обычный забег, башня дня или демо: `CLASSIC_RUN`, `DAILY_RUN`, `demoRun`), run-setup.ts (бригада,
+    │   │                       зерно, обучение и запись забега), run-recorder.ts (запись забега один раз, `extrasOf`), run-info.ts (снимок для
+    │   │                       HUD и отладки), run-camera.ts (следование за башней, вход мира сверху), camera-layout.ts (математика прокрутки:
+    │   │                       trayScrollY, targetScrollY, FLYING_REACH), continue-flow.ts (ход после промаха: окно, реклама, оплата, отказ),
+    │   │                       continue-input.ts, run-exit.ts (куда уходит забег без результатов), run-restart.ts, results-data.ts,
+    │   │                       results-launch.ts, checkpoint-start.ts, drop-driver-slot.ts, run-telemetry.ts
+    │   ├── economy/            purchases.ts, rewarded.ts, interstitial-flow.ts, ad-caption.ts, treasure-events.ts
+    │   ├── audio/              audio-lifecycle.ts, audio-unlock.ts, music-cues.ts, fx-sound.ts, weather-bed.ts
+    │   ├── weather/            run-look-choice.ts
+    │   ├── common/             fx-guard.ts (страховочная обёртка декораций), per-scene.ts (`PerScene`: объект на один запуск сцены),
+    │   │                       dev-warn.ts (предупреждение только в разработке), depth.ts (порядок отрисовки), clip-guard.ts (страж обрезки)
     │   ├── tutorial/           обучение: `tutorial-director.ts` (когда что показывать), `timeline.ts`, подсказки
     │   │                       `tap-hint.ts`, `perfect-hint.ts`, `caption-hint.ts`, `tutorial-hints.ts`, `hint-spot.ts` (выбор места плашки), `hint-textures.ts`
     │   ├── scenes/
@@ -137,50 +189,70 @@ tippy-treats/
     │   │   ├── team-scene.ts
     │   │   ├── collection-scene.ts
     │   │   ├── creature-detail-scene.ts
-    │   │   ├── daily-scene.ts      экран башни дня (пока заглушка)
-    │   │   ├── shop-scene.ts       магазин: блоки `ui/menu/shop-*.ts`, покупки через `game/purchases.ts`
+    │   │   ├── daily-scene.ts      экран башни дня
+    │   │   ├── shop-scene.ts       магазин: блоки `ui/menu/shop/`, покупки через `game/economy/purchases.ts`
     │   │   └── modal-scene.ts      окна: задания, серия, настройки, продолжение
     │   ├── objects/
-    │   │   ├── layer-view.ts       слой: картинка, лицо, анимации
-    │   │   ├── layer-art-slot.ts   кэш запечённой картинки слоя (вынесен из layer-view.ts)
-    │   │   ├── layer-rig.ts        вспышка, прыжок, прозрачность, разрез «Двойняшек»
-    │   │   ├── layer-material.ts   материал существа на слое (форма из material-shape.ts)
-    │   │   ├── layer-face.ts, face-*.ts   лицо: части, состояние, рецепт
-    │   │   ├── creature-art/       12 рисовальщиков существ (baked, creamy, layered)
-    │   │   ├── tower-view.ts
-    │   │   ├── sway-hold.ts        «замороженная» качка при чихе
-    │   │   ├── flying-layer-view.ts
-    │   │   ├── floating-coin.ts    парящая монета на строке посадки
-    │   │   ├── tray.ts             поднос (класс Tray: покой и блик)
-    │   │   ├── creature-portrait.ts живое существо для меню: моргает, дышит, подпрыгивает и пищит от касания
-    │   │   ├── backdrop/           фоны зон: `backdrop.ts` (контроллер, кросс-фейд, прилавок), `zone-scenery.ts`
-    │   │   │                       (одна зона), по файлу на зону (`kitchen-zone.ts` … `space-zone.ts`), `life.ts`
-    │   │   │                       (Hover, PuffColumn, Traveler, Twinkles), `life-motion.ts`, `pass-timer.ts`,
-    │   │   │                       `sky-gradient.ts`, `zone-fade.ts`, `zone-prep.ts` (подготовка следующей зоны заранее по шагам), `worktop.ts` (кухонный прилавок), `space-visitor*.ts` (редкие гости «Космоса»)
-    │   │   └── coin-view.ts
-    │   ├── fx/                 частицы, кольца, конфетти, текст-всплывашки, осколки (debris-fx.ts), частицы материалов (material-fx.ts)
-    │   │   │                   монеты и золотой слой (`coin-fx.ts`, `coin-flight-math.ts`, `golden-fx.ts`), визуал правил зон
-    │   │   │                   (`flying-fx.ts`, `rule-fx.ts`, `rush-outline.ts`, `speed-streaks.ts`, `cloud-cover.ts`, `rule-state.ts`)
-    │   │   │                   `spring-back.ts` (пружинный твин масштаба, вынесен из layer-view.ts), `record-moment.ts` (линия и флажок рекорда,
-    │   │   │                   конфетти), замедление промаха (`timeScale`) в `run-fx.ts`
+    │   │   ├── tower/              tower-view.ts, layer-view.ts (слой: картинка, лицо, анимации), layer-art.ts, layer-art-slot.ts (кэш
+    │   │   │   │                   запечённой картинки слоя), layer-rig.ts (вспышка, прыжок, прозрачность, разрез «Двойняшек»),
+    │   │   │   │                   flying-layer-view.ts, sway-hold.ts («замороженная» качка при чихе), tray.ts (поднос: покой и блик),
+    │   │   │   │                   простые слои (plain-*), украшения поверх них (decor-*), тени, обвал (collapse-*), приземление
+    │   │   │   └── edge-squash/    придавливание края летящего слоя
+    │   │   ├── creatures/          creature-portrait.ts (живое существо для меню), лицо (layer-face.ts, face-*.ts), сон (sleep-*.ts),
+    │   │   │   │                   материал (layer-material.ts, форма из material-shape.ts, sponge-*), значки существ, рост мастерства
+    │   │   │   └── creature-art/   12 рисовальщиков существ (baked, creamy, layered)
+    │   │   ├── glaze/              подтёки глазури (glaze-*), слизывание (lick-*, face-lick.ts, juice-lick-plan.ts), язык (tongue-*, strip-rope.ts)
+    │   │   ├── toppers/            layer-topper.ts, topper-look.ts
+    │   │   ├── guests/             гость на башне (tower-guest*.ts)
+    │   │   ├── weather/            погода на башне (tower-weather-*.ts), сугробы на выступах (layer-drifts.ts, drift-geometry.ts)
+    │   │   ├── economy/            floating-coin.ts (парящая монета на строке посадки)
+    │   │   ├── run/                continue-driver.ts
+    │   │   ├── common/             svg-textures.ts (картинки из assets/svg)
+    │   │   └── backdrop/           фоны зон
+    │   │       ├── common/         backdrop.ts (контроллер, кросс-фейд, прилавок), sky-gradient.ts, art-kit.ts
+    │   │       ├── zones/          по файлу на зону (`kitchen-zone.ts` … `stars-zone.ts`), zone-scenery.ts (одна зона), zone-fade.ts,
+    │   │       │                   zone-mix.ts, zone-prep.ts (подготовка следующей зоны заранее по шагам), worktop.ts (кухонный прилавок),
+    │   │       │                   магазин (shop-*), горы (mountains.ts, mountain-placement.ts), far-plane.ts
+    │   │       ├── weather/        погода на весь экран (run-weather.ts, weather-*.ts), уличная погода, погода за окном, снежная пыль, молния
+    │   │       ├── panorama/       панорамное окно (panorama-*.ts, window-paint.ts, glass-motion.ts)
+    │   │       ├── life/           life.ts (Hover, PuffColumn, Traveler, Twinkles), life-motion.ts, layer-life.ts, layer-anchor.ts, pass-timer.ts, guest-source.ts
+    │   │       └── space/          space-zone.ts, планеты (dessert-planets.ts, planet-*.ts), редкие гости «Космоса» (space-visitor*.ts), blob-pixels.ts
+    │   ├── fx/
+    │   │   ├── common/             частицы (particles.ts, particle-fx.ts, particle-motion.ts), кривые (anim-curves.ts, ease.ts), текст-всплывашки,
+    │   │   │                       spring-back.ts (пружинный твин масштаба), timed-pool.ts, fx-textures.ts, sparkle-fx.ts, plain-style.ts
+    │   │   ├── tower/              осколки (debris-fx.ts), обвал, приземление, кольцо «идеально», свечение комбо, искорки у башни, всё вокруг летящего слоя (flying-*.ts)
+    │   │   ├── creatures/          частицы материалов (material-fx.ts), картинки роста мастерства
+    │   │   ├── glaze/              капли и рост глазури
+    │   │   ├── cuts/               срезы (cut-*.ts)
+    │   │   ├── toppers/            украшения и их придавливание, кремовый валик
+    │   │   ├── zones/              визуал правил зон (rule-fx.ts, rule-state.ts, rush-outline.ts, speed-streaks.ts, cloud-cover.ts), края витков, картинки контрольных точек
+    │   │   ├── economy/            монеты и золотой слой (coin-fx.ts, coin-flight-math.ts, golden-fx.ts), выплаты, картинки наград и сокровищ
+    │   │   ├── run/                run-fx.ts (замедление промаха `timeScale`), record-moment.ts (линия и флажок рекорда, конфетти), вход забега, итоги
+    │   │   ├── audio/              звуковые подсказки эффектов (*-cues.ts, cue-sounds.ts)
+    │   │   ├── app/                работа кадра для уровня эффектов (frame-work-*.ts)
     │   │   └── abilities/          анимации способностей: фирменные (по файлу на существо) и «пока действует»
     │   ├── debug/              панель отладки, выбор бригады, сцены `?lineup=1` и `?artsheet=1`, проверка неподвижных объектов
     │   │                       `idle-audit.ts` + `still-watch.ts`, заплыв на утечки `soak-driver.ts` + `soak-metrics.ts` (только сборка разработки)
     │   ├── perf/               замер `?perf=1`: `perf-director.ts` (проигрывает отрезки), `perf-session.ts` (состояние замера, настройка забега),
     │   │                       `perf-drivers.ts` (кто роняет слои), `perf-stats.ts` (чистая математика и таблица), `draw-calls.ts`, `run-hooks.ts`
-    │   └── ui/                 кнопка, панель, счётчик, полоса прогресса, карточка; счётчики монет и ягод
-    │                           (`resource-tally.ts`, `treasure-hud.ts`, `treasure-flights.ts`), плашка зоны (`zone-plate.ts`),
-    │                           покачивание HUD (`idle-motion.ts`, `hud-idle.ts`), окно паузы (`pause-overlay.ts`),
-    │                           окно «Продолжить?»: `continue-window.ts`, `continue-timer.ts`, `continue-buttons.ts`;
-    │                           `style/`: общий набор интерфейса, из него собираются все экраны и окна (`volume.ts`:
-    │                           панели, карточки, плашки, полоса, объёмная кнопка; `title-ribbon.ts`: лента заголовка;
-    │                           `dialog-window.ts`: окно с вуалью; `toggle-switch.ts`: переключатель; `ring-timer.ts`:
-    │                           круговой таймер; `wallet-chip.ts`: счётчик валюты на плашке; `hud-plate.ts`: полупрозрачная
-    │                           плашка HUD; `menu-scenery.ts`: кухня забега за меню);
-    │                           `menu/`: общие элементы экранов меню (шапка с лентой и кошельком на плашках, кнопки-иконки, звёзды,
-    │                           цена с иконкой, полоса опыта, карточка существа, подпись способа получения, `fitText`)
-    │                           и куски отдельных экранов (`home-*`, `team-*`, `collection-*`, `detail-*`, `results-*`, `level-up-*`);
-    │                           `bake-texture.ts` (запекание картинок), `cpu-canvas.ts` (холст с пикселями в памяти для картинок, которые пишутся через `putImageData`), `shared-atlas.ts` (общий атлас мелких картинок, раздел 12) и `tall-atlas-art.ts` (высокие картинки атласа, которые запекаются при загрузке, от высоких к низким)
+    │   └── ui/
+    │       ├── common/         кнопка, текст с обводкой, затемнение, переход, шрифты, `bake-texture.ts` (запекание картинок), `cpu-canvas.ts`
+    │       │                   (холст с пикселями в памяти для картинок через `putImageData`), `shared-atlas.ts` (общий атлас мелких картинок,
+    │       │                   раздел 12), `tall-atlas-art.ts` (высокие картинки атласа, от высоких к низким), покачивание `idle-motion.ts`
+    │       ├── run/            окно паузы (`pause-overlay.ts`), окно «Продолжить?» (`continue-window.ts`, `continue-timer.ts`,
+    │       │                   `continue-buttons.ts`), покачивание HUD (`hud-idle.ts`), раскладка строки HUD
+    │       ├── tower/          шкала качки, плашка темпа
+    │       ├── creatures/      плашка следующего существа, значки эффектов, подписи мастер-эффектов, рамка мастерства, значки существ
+    │       ├── economy/        счётчики монет и ягод (`resource-tally.ts`, `treasure-hud.ts`, `treasure-flights.ts`)
+    │       ├── zones/          плашка зоны (`zone-plate.ts`), смена зоны
+    │       ├── style/          общий набор интерфейса, из него собираются все экраны и окна (`volume.ts`: панели, карточки, плашки,
+    │       │                   полоса, объёмная кнопка; `title-ribbon.ts`: лента заголовка; `dialog-window.ts`: окно с вуалью;
+    │       │                   `toggle-switch.ts`: переключатель; `ring-timer.ts`: круговой таймер; `wallet-chip.ts`: счётчик валюты на
+    │       │                   плашке; `hud-plate.ts`: полупрозрачная плашка HUD; `menu-scenery.ts`: кухня забега за меню)
+    │       └── menu/           куски экранов меню по папкам экранов и окон: home/, collection/, detail/, team/, daily/, shop/,
+    │                           results/ (и новый уровень), streak/, missions/, oven/, new-creature/, settings/, checkpoint/;
+    │                           widgets/: общие элементы (шапка с лентой и кошельком на плашках, кнопки-иконки, звёзды, цена с иконкой,
+    │                           полоса опыта, карточка существа, подпись способа получения, `fitText`)
     ├── services/       ВНЕШНИЙ МИР (интерфейс + native + web-заглушка)
     │   ├── storage/            `types.ts` (`StorageService`), `web.ts` (localStorage, при сбое память страницы), `memory.ts`
     │   ├── rewarded-video/     реклама: `types.ts`, `web.ts` (заглушка; нативная появится в M7)
@@ -946,6 +1018,7 @@ interface MissionProgress { id: string; group: 'easy' | 'medium' | 'hard'; targe
 | 2026-11-18 | (заменено в сессии 6б: музыка из файлов, см. ниже) Музыка в игре (`game/music-cues.ts`): меню (Home, новое существо, результаты) включает слой 1 тише, забег каждый кадр из HUD ставит слой по зоне (`zoneLayer`: зона + 1, на минимальном уровне эффектов не больше 3), без перезапуска цикла. Приглушение окон: `PopupWindow` держит приглушение от создания до `destroy`, окно продолжения от показа до скрытия; держатели считаются (`HoldCount`), снимается при последнем. Выключатель музыки встал в общий набор `soundSettingRows()` (пауза и настройки), флаг `MUSIC_AVAILABLE` удалён | Одно место на каждый вид окна, вложенные окна не снимают приглушение раньше времени |
 | 2026-11-18 | Платформа: контекст по-прежнему создаётся только в жесте; на разблокировке (пока контекст не `running`) играет тихий источник из одного отсчёта (старому iOS нужен проигранный источник внутри жеста). Причины паузы `app`, `ad`, `silent`; беззвучный режим даёт новый сервис `services.silentMode` (`SilentModeService`: `isSilent`, `onChange`), браузерная заглушка не беззвучна, нативная часть в M7; подписка в `game/audio-lifecycle.ts`. Привязка жестов вынесена в `game/audio-unlock.ts` (нужна и стенду без Phaser) | Задание сессии 6 |
 | 2026-11-18 | Узлы считает один `NodeTally` на контекст (`Mixer.tally`); каждый голос идёт через `runSource` (старт, остановка, отключение и учёт), поэтому плеер музыки тоже считается. `AudioService.debugStats()` отдаёт `liveNodes` и `contextState`; `audioNodes` добавлен в выборку заплыва (допуск `SOAK.audioNodesTolerance` у дым-круга) | Утечка узлов не видна ни в объектах Phaser, ни в куче |
+| 2026-11-19 | Сессия 6в: файлы внутри слоёв разложены по темам (раздел 2, таблица переноса `08a-file-map.md`). Только перенос через `git mv` и правка путей; относительные импорты остались, псевдонимов и `index.ts` нет. Импорты и полные пути в комментариях и документах переписаны разовым скриптом по графу импортов (каждая строка-путь разрешалась от старого места файла и пересчитывалась от нового), пути вне проверки типов (`import.meta.glob` картинок и музыки, динамические `import()` в `main.ts`, `vite.config.ts`, скрипты) проверены запуском. Решения: `game/fx/abilities`, `game/ui/style`, `game/objects/backdrop` (внутри по своим подпапкам) остались на местах; `game/objects/creature-art` переехала целиком в `game/objects/creatures/`; придавливание края в `game/objects/tower/edge-squash/` (без неё в `tower` больше 40 файлов); в `data` две темы сверх списка: `tutorial` и `debug` (как папки `game/tutorial`, `game/debug`, `game/perf`). Предел 40 файлов на папку проверяет `scripts/folder-size.test.ts`. |
 
 ## 13. Бюджет кадра
 
