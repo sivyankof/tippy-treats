@@ -101,7 +101,7 @@ function buildStampInHtml(stamp: () => string): Plugin {
   };
 }
 
-export default defineConfig(({ command, mode }) => {
+export default defineConfig(({ command, mode, isPreview }) => {
   const devServer = command === 'serve' && mode !== 'test';
   const buildHash = gitHash();
   const buildTime = formatBuildTime(new Date());
@@ -123,6 +123,10 @@ export default defineConfig(({ command, mode }) => {
     ],
     resolve: devServer ? { alias: [{ find: /^phaser$/, replacement: PHASER_MIN }] } : {},
     optimizeDeps: devServer ? { exclude: ['phaser'] } : {},
+    // Dev only: Safari on the iPhone kept old modules in memory after a change of the imports and
+    // the game stopped with "Importing binding name … is not found". The preview and the builds keep
+    // the usual caching.
+    server: devServer && !isPreview ? { headers: { 'Cache-Control': 'no-store' } } : {},
     build: {
       target: 'es2022',
       chunkSizeWarningLimit: 2000,
