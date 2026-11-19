@@ -17,6 +17,11 @@ props="$repo/android/keystore.properties"
 
 if [ -z "${TIPPY_KEY_PASSWORD:-}" ]; then echo "Set TIPPY_KEY_PASSWORD first." >&2; exit 1; fi
 if [ "${#TIPPY_KEY_PASSWORD}" -lt 8 ]; then echo "The password needs at least 8 characters." >&2; exit 1; fi
+# Java (Gradle, jarsigner) refuses a PKCS12 password outside ASCII, and openssl on Windows reads a
+# non-ASCII one in the local code page: such a key opens only in openssl.
+if LC_ALL=C grep -q '[^ -~]' <<<"$TIPPY_KEY_PASSWORD"; then
+  echo "Use only Latin letters, digits and ASCII symbols in the password." >&2; exit 1
+fi
 if [ -e "$key" ]; then echo "A key already exists: $key (not overwritten)." >&2; exit 1; fi
 
 mkdir -p "$dir"
