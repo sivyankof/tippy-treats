@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { BALANCE } from '../../data/tower/balance';
 import { layerSpeed } from './drop';
-import { config, dropAt, only, pick, untilFlying } from './sim-test-utils';
+import { config, dropAt, mutable, only, pick, untilFlying } from './sim-test-utils';
 import { TowerSim, type LandQuality } from './tower-sim';
 
 const { slowLayers, slowSpeedMult, assistAfterLayers, assistTolerance } = BALANCE.tutorial;
@@ -20,10 +20,15 @@ function spawnSpeeds(tutorial: boolean, count: number): number[] {
   return speeds;
 }
 
-/** Qualities of `count` drops, each made `offset` px past the target. */
+/**
+ * Qualities of `count` drops, each made `offset` px past the target. The tower is calmed before
+ * every drop, so the sway during the fall does not move the landing off `offset` (only the
+ * tolerance is under test here, not how far the tower sways at the speed of that layer).
+ */
 function qualities(sim: TowerSim, count: number, offset: number): Array<LandQuality | 'none'> {
   const result: Array<LandQuality | 'none'> = [];
   for (let i = 0; i < count; i++) {
+    mutable(sim).wobble = 0;
     result.push(pick(dropAt(sim, offset), 'land')[0]?.quality ?? 'none');
   }
   return result;
