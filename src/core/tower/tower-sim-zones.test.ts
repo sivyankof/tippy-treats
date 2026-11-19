@@ -142,7 +142,7 @@ describe('TowerSim: zone speed and score', () => {
       const sim = newSim(3, start);
       expect(spawnOf(sim.update(STEP)).speed).toBeCloseTo(layerSpeed(start, 1));
     }
-    expect(spawnOf(newSim(3, 160).update(STEP)).speed).toBe(BALANCE.speed.max);
+    expect(spawnOf(newSim(3, 160).update(STEP)).speed).toBe(BALANCE.speed.top);
 
     const lemon = newSim(3, 160);
     mutable(lemon).effects.push({
@@ -152,7 +152,7 @@ describe('TowerSim: zone speed and score', () => {
       boosted: false,
       value: 1.25,
     });
-    expect(spawnOf(lemon.update(STEP)).speed).toBeCloseTo(BALANCE.speed.max * 1.25);
+    expect(spawnOf(lemon.update(STEP)).speed).toBeCloseTo(BALANCE.speed.top * 1.25);
   });
 
   it('multiplies the score of the landing layer by the zone', () => {
@@ -204,7 +204,7 @@ describe('TowerSim: rules in flight', () => {
     throw new Error('no such layer in 500 seeds');
   }
 
-  it('holds a rush layer still for the wind-up, then flies it 1.35 times faster', () => {
+  it('holds a rush layer still for the wind-up, then flies it `rush.speedMult` times faster', () => {
     const { seed, index } = find(21, 40, (rng, i) => rushIndices(rng).includes(i));
     const sim = newSim(seed, index - 1);
     const spawn = spawnOf(sim.update(STEP));

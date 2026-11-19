@@ -169,12 +169,12 @@ export function slideShift(
 }
 
 /**
- * How strong the touch is for a layer flying at `speed` px/s: 0 at the base speed of the run and
- * 1 at the maximum one (`BALANCE.speed`), smooth in between.
+ * How strong the touch is for a layer flying at `speed` px/s: 0 at the start speed of the run and
+ * 1 at the top one (`BALANCE.speed`), smooth in between.
  */
 export function speedPower(speed: number): number {
-  const { base, max } = BALANCE.speed;
-  return max > base ? clamp01((speed - base) / (max - base)) : 0;
+  const { start, top } = BALANCE.speed;
+  return top > start ? clamp01((speed - start) / (top - start)) : 0;
 }
 
 /** A value at `power` between its slow and its fast end. */

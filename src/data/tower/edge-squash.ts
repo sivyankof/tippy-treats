@@ -112,8 +112,8 @@ export const EDGE_SQUASH = {
     maxShare: 1 / 3,
   },
   /**
-   * How strong everything is, by the speed of the layer: `power` is its share between the base
-   * and the maximum speed of `BALANCE.speed`. Slow: +12-15% of the height at the wall with the
+   * How strong everything is, by the speed of the layer: `power` is its share between the start
+   * and the top speed of `BALANCE.speed`. Slow: +12-15% of the height at the wall with the
    * glaze, calm, 3 small ribs on top and 2 at the bottom. Fast: +25-30%, 4 ribs on top and 3 at the bottom, a bigger bulge, drops and strokes, a squint.
    */
   byPower: {

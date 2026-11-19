@@ -69,7 +69,7 @@ describe('zone speed', () => {
     for (const zone of ZONES) expect(Object.keys(zone).sort()).toEqual(['id', 'rule', 'scoreMult']);
     // Late Stars are no faster than early Space any more (it used to drop from 1470 to 1400).
     expect(layerSpeed(99, 1)).toBeLessThan(layerSpeed(100, 1));
-    expect(layerSpeed(400, 1)).toBe(BALANCE.speed.max);
+    expect(layerSpeed(400, 1)).toBe(BALANCE.speed.top);
     expect(layerSpeed(100, 1.2)).toBeCloseTo(layerSpeed(100, 1) * 1.2);
   });
 });

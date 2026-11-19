@@ -33,7 +33,7 @@ describe('TowerSim: flight', () => {
       x: 140,
       width: 720,
       dir: 1,
-      speed: SPEED.base,
+      speed: SPEED.start,
       kind: 'plain',
     });
     expect(sim.state.phase).toBe('flying');
@@ -45,7 +45,7 @@ describe('TowerSim: flight', () => {
     untilFlying(sim);
     sim.update(1000);
     // maxFrameMs caps a long frame at 250 ms: 30 steps at the base speed.
-    expect(sim.state.flying?.x).toBeCloseTo(140 + SPEED.base * 0.25, 5);
+    expect(sim.state.flying?.x).toBeCloseTo(140 + SPEED.start * 0.25, 5);
 
     const xs: number[] = [];
     let turns = 0;

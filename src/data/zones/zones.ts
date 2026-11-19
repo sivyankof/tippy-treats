@@ -48,8 +48,13 @@ export const ZONE_RULES = {
     gap: [4, 6],
     /** The rush layer holds still this long after spawning (outlined in red by the scene). */
     windupMs: 300,
-    /** Speed of the rush layer after the wind-up, times its nominal speed. */
-    speedMult: 1.35,
+    /**
+     * Speed of a Showcase rush layer after the wind-up, times its nominal speed (1.35 until
+     * session 7b, owner's decision 2026-11-19).
+     */
+    speedMult: 1.2,
+    /** The same for a Space rush layer, which is also capped by `spaceMaxSpeed`. */
+    spaceSpeedMult: 1.35,
     /**
      * Space only: a rush layer flies no faster than this, px/s, unless its nominal speed is
      * already higher (then the rush adds nothing). Showcase rushes are not capped.

@@ -28,13 +28,13 @@ export function roofFactor(x: number): number {
 }
 
 /**
- * Speed of a rush layer after the wind-up: its nominal speed times the rush multiplier; in Space
- * no faster than `spaceMaxSpeed`, but never slower than the nominal speed itself.
+ * Speed of a rush layer after the wind-up: its nominal speed times the rush multiplier of its
+ * zone; in Space no faster than `spaceMaxSpeed`, but never slower than the nominal speed itself.
  */
 export function rushSpeed(nominal: number, zoneIndex: number): number {
-  const rushed = nominal * ZONE_RULES.rush.speedMult;
-  if (zoneIndex !== SPACE_ZONE_INDEX) return rushed;
-  return Math.min(rushed, Math.max(ZONE_RULES.rush.spaceMaxSpeed, nominal));
+  const { speedMult, spaceSpeedMult, spaceMaxSpeed } = ZONE_RULES.rush;
+  if (zoneIndex !== SPACE_ZONE_INDEX) return nominal * speedMult;
+  return Math.min(nominal * spaceSpeedMult, Math.max(spaceMaxSpeed, nominal));
 }
 
 /**

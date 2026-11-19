@@ -10,7 +10,7 @@ import { FlyingEdgeSquash, type Walls, type WallTouch } from './flying-edge-squa
 import type { LayerView } from '../layer-view';
 
 const WALLS: Walls = { left: 12, right: 1068 };
-const { base, max } = BALANCE.speed;
+const { start, top } = BALANCE.speed;
 const by = EDGE_SQUASH.byPower;
 const MS = 16;
 
@@ -46,7 +46,7 @@ function hitWall(creature: CreatureId | null, power: number): Hit {
     x: 400,
     width: 720,
     dir: -1,
-    speed: base + (max - base) * power,
+    speed: start + (top - start) * power,
   } as unknown as FlyingLayer;
   squash.reset(layer, WALLS, 7);
   let touch: WallTouch | null = null;

@@ -94,8 +94,8 @@ export interface FlyingLayer extends LayerPlan {
   width: number;
   dir: 1 | -1;
   /**
-   * Nominal speed in px/s: base speed times the zone multiplier (capped in Space) times the
-   * ability multiplier. What the layer really does each moment is `flyingSpeed(layer)`
+   * Nominal speed in px/s: the speed curve at the tower height times the ability multiplier
+   * (`layerSpeed`, core/tower/drop.ts). What the layer really does each moment is `flyingSpeed(layer)`
    * (core/tower/flight.ts): rush, the roof profile and holds are applied there.
    */
   speed: number;

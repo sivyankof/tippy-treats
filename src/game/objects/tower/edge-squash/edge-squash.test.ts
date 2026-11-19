@@ -341,14 +341,14 @@ describe('hard layer slide', () => {
 });
 
 describe('wedge strength by speed', () => {
-  const { base, max } = BALANCE.speed;
+  const { start, top } = BALANCE.speed;
 
-  it('maps the speed to a share between the base and the maximum speed, smoothly', () => {
-    expect(speedPower(base)).toBe(0);
-    expect(speedPower(max)).toBe(1);
-    expect(speedPower(base - 100)).toBe(0);
-    expect(speedPower(max + 500)).toBe(1);
-    expect(speedPower((base + max) / 2)).toBeCloseTo(0.5, 9);
+  it('maps the speed to a share between the start and the top speed, smoothly', () => {
+    expect(speedPower(start)).toBe(0);
+    expect(speedPower(top)).toBe(1);
+    expect(speedPower(start - 100)).toBe(0);
+    expect(speedPower(top + 500)).toBe(1);
+    expect(speedPower((start + top) / 2)).toBeCloseTo(0.5, 9);
     expect(byPower(EDGE_SQUASH.byPower.rise, 0)).toBe(EDGE_SQUASH.byPower.rise[0]);
     expect(byPower(EDGE_SQUASH.byPower.rise, 1)).toBe(EDGE_SQUASH.byPower.rise[1]);
   });

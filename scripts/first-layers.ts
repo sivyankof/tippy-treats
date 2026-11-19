@@ -140,7 +140,7 @@ class FirstLayersStats implements RunObserver {
     if (!tap) return null;
     const sway = tap.targetAtTap - topTarget(s);
     const { width, timingOff, speed } = tap;
-    const base = BALANCE.speed.base;
+    const base = BALANCE.speed.start;
     const baseSaves = speed > 0 && lands((timingOff * base) / speed + sway, width);
     let cause: Cause;
     if (lands(timingOff, width)) cause = 'sway';
