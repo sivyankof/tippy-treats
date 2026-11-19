@@ -9,7 +9,7 @@ import { cssColor } from '../../util/color';
 import { Particles } from '../fx/common/particles';
 import { CreaturePortrait } from '../objects/creatures/creature-portrait';
 import { SleepingSilhouette } from '../objects/creatures/sleep-silhouette';
-import { goNext, SCENES, type NewCreatureData } from '../scene-keys';
+import { goNext, SCENES, type NewCreatureData } from '../app/scene-keys';
 import { createTextButton, type Button } from '../ui/common/button';
 import { fitText } from '../ui/menu/widgets/fit-text';
 import { TitleRibbon } from '../ui/style/title-ribbon';

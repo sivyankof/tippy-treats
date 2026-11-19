@@ -5,7 +5,7 @@ import {
   type CreatureMaterial,
 } from '../../../data/creatures/creature-materials';
 import type { CreatureId } from '../../../data/creatures/creatures';
-import { effectsMode } from '../../effects-mode';
+import { effectsMode } from '../../app/effects-mode';
 import { landSquash } from '../../fx/common/anim-curves';
 import { materialShape, type Shape } from './material-shape';
 

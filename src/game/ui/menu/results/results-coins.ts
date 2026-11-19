@@ -5,7 +5,7 @@ import { PALETTE } from '../../../../data/common/palette';
 import { formatNumber, t } from '../../../../i18n';
 import { services } from '../../../../services';
 import { gameState } from '../../../../state';
-import { showRewarded } from '../../../rewarded';
+import { showRewarded } from '../../../economy/rewarded';
 import { TREASURE_TEXTURES, createTreasureTextures } from '../../../fx/economy/treasure-textures';
 import { createTextButton, type Button } from '../../common/button';
 import { NumberRoll } from '../../common/number-roll';

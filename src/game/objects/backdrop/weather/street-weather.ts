@@ -7,8 +7,8 @@ import {
 } from '../../../../data/weather/street-weather';
 import type { WeatherId } from '../../../../data/weather/weather';
 import { WEATHER_LOOK, WEATHER_TEX } from '../../../../data/weather/weather-look';
-import { flightClearBand } from '../../../camera-layout';
-import { effectsMode } from '../../../effects-mode';
+import { flightClearBand } from '../../../run/camera-layout';
+import { effectsMode } from '../../../app/effects-mode';
 import { inSky } from '../life/layer-anchor';
 import type { FrameCtx, Life } from '../life/life';
 import { WeatherFall } from './weather-fall';

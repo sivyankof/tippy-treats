@@ -3,7 +3,7 @@ import { ANIM } from '../../../data/common/anim';
 import { BALANCE } from '../../../data/tower/balance';
 import type { LayerView } from '../../objects/tower/layer-view';
 import { rotatedOffset, squashedY } from '../cuts/cut-trace-place';
-import { DEPTH } from '../../depth';
+import { DEPTH } from '../../common/depth';
 import { easeFn } from '../common/ease';
 import { FX_TEXTURES } from '../common/fx-textures';
 import { hideItem, TimedPool, type PoolEntry } from '../common/timed-pool';

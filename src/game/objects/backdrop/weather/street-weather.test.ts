@@ -9,7 +9,7 @@ import { STREET_WEATHER, streetFallView } from '../../../../data/weather/street-
 import { WEATHER_LOOK } from '../../../../data/weather/weather-look';
 import { GLASS_WEATHER } from '../../../../data/weather/window-look';
 import { TWO_PI } from '../../../../util/math';
-import { flightClearBand, hudFloor } from '../../../camera-layout';
+import { flightClearBand, hudFloor } from '../../../run/camera-layout';
 import { laneCount, snowSpots, startU } from './weather-lanes';
 import { onScreen } from './weather-test-view';
 import {

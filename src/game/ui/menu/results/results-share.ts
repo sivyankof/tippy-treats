@@ -2,7 +2,7 @@ import type * as Phaser from 'phaser';
 import { SHARE_CARD } from '../../../../data/run/share';
 import { t, tn } from '../../../../i18n';
 import { services } from '../../../../services';
-import type { ResultsData } from '../../../scene-keys';
+import type { ResultsData } from '../../../app/scene-keys';
 import { showToast } from '../../style/toast';
 import { renderShareCard } from './share-card';
 

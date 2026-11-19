@@ -7,7 +7,7 @@ import { t } from '../../i18n';
 import { services } from '../../services';
 import { gameState } from '../../state';
 import { CreaturePortrait } from '../objects/creatures/creature-portrait';
-import { openScreen, SCENES } from '../scene-keys';
+import { openScreen, SCENES } from '../app/scene-keys';
 import { MenuScenery } from '../ui/style/menu-scenery';
 import { ScreenHeader } from '../ui/menu/widgets/screen-header';
 import { TeamOrderPlate } from '../ui/menu/team/team-order-plate';

@@ -4,7 +4,7 @@ import { PALETTE } from '../../../../data/common/palette';
 import { formatNumber, t, tn } from '../../../../i18n';
 import { services } from '../../../../services';
 import { gameState } from '../../../../state';
-import { showRewarded } from '../../../rewarded';
+import { showRewarded } from '../../../economy/rewarded';
 import { markAdUnavailable, plainAdLabel, resetAdLabel } from '../widgets/ad-unavailable';
 import { cssColor } from '../../../../util/color';
 import { createTextButton, type Button } from '../../common/button';

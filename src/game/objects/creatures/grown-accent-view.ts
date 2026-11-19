@@ -8,7 +8,7 @@ import {
   type GrownAccent,
 } from '../../../data/creatures/mastery-look';
 import { TWO_PI } from '../../../util/math';
-import { effectsMode } from '../../effects-mode';
+import { effectsMode } from '../../app/effects-mode';
 import { sparklerTip } from './creature-art/grown-anchors';
 
 const HALF_HEIGHT = BALANCE.layer.height / 2;

@@ -47,7 +47,7 @@ vi.stubGlobal('window', { location: { search: '' } });
 import { BACKDROP } from '../../../../data/backdrop/backdrop';
 import { WEATHER_IDS, type WeatherId } from '../../../../data/weather/weather';
 import type { ZoneId } from '../../../../data/zones/zones';
-import { travellerClearBand } from '../../../camera-layout';
+import { travellerClearBand } from '../../../run/camera-layout';
 import { cloudsArt } from './clouds-zone';
 import { onLayer, type Anchor, type SkyKind } from '../life/layer-anchor';
 import { kitchenArt } from './kitchen-zone';

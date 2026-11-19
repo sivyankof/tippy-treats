@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { Rng } from '../../../../core/common/rng';
 import { BALANCE } from '../../../../data/tower/balance';
 import { LOGICAL_SIZE } from '../../../../data/app/screen';
-import { flightClearBand } from '../../../camera-layout';
+import { flightClearBand } from '../../../run/camera-layout';
 import { onScreen } from './weather-test-view';
 import { WEATHER_LOOK } from '../../../../data/weather/weather-look';
 import {

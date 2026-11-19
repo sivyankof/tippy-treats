@@ -6,7 +6,7 @@ import {
 import { VIDEO_CAPTION_LAYOUT } from '../../../../data/economy/video-icon-look';
 import { cssColor } from '../../../../util/color';
 import { t } from '../../../../i18n';
-import { currentAdCaption } from '../../../ad-caption';
+import { currentAdCaption } from '../../../economy/ad-caption';
 import {
   OFFLINE_ICON_FIELD_SCALE,
   OFFLINE_ICON_KEY,

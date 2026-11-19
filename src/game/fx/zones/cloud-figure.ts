@@ -4,7 +4,7 @@ import { RULE_ANIM } from '../../../data/zones/rule-anim';
 import { LOGICAL_SIZE } from '../../../data/app/screen';
 import { ZONE_RULES } from '../../../data/zones/zones';
 import { clamp01, TWO_PI } from '../../../util/math';
-import { flightClearBand, hudFloor } from '../../camera-layout';
+import { flightClearBand, hudFloor } from '../../run/camera-layout';
 import { bakeTexture } from '../../ui/common/bake-texture';
 import { outlineColor } from '../common/plain-style';
 

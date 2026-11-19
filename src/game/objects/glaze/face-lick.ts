@@ -1,10 +1,10 @@
 import * as Phaser from 'phaser';
 import { LICK, type LickStyle } from '../../../data/glaze/lick';
 import { frameLerp } from '../../../util/math';
-import { devWarn } from '../../dev-warn';
-import { fxGuard } from '../../fx-guard';
-import { effectsMode } from '../../effects-mode';
-import { PerScene } from '../../per-scene';
+import { devWarn } from '../../common/dev-warn';
+import { fxGuard } from '../../common/fx-guard';
+import { effectsMode } from '../../app/effects-mode';
+import { PerScene } from '../../common/per-scene';
 import type { FaceParts } from '../creatures/face-parts';
 import type { Reaction } from '../creatures/face-state';
 import {

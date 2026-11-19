@@ -4,7 +4,7 @@ import {
   type VisitorFlight,
 } from '../../../../data/guests/space-visitor';
 import { HUD_LAYOUT } from '../../../../data/run/hud-layout';
-import { flightClearBand } from '../../../camera-layout';
+import { flightClearBand } from '../../../run/camera-layout';
 import { DEG_TO_RAD, lerp, pickRange, sineWave } from '../../../../util/math';
 import { edgeFade } from '../life/pass-timer';
 

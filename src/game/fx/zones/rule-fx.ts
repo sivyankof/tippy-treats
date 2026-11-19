@@ -5,7 +5,7 @@ import { RULE_ANIM } from '../../../data/zones/rule-anim';
 import { LOGICAL_SIZE } from '../../../data/app/screen';
 import { SPACE_ZONE_INDEX, ZONE_RULES } from '../../../data/zones/zones';
 import { clamp01 } from '../../../util/math';
-import { effectsMode } from '../../effects-mode';
+import { effectsMode } from '../../app/effects-mode';
 import type { FlyingLayerView } from '../../objects/tower/flying-layer-view';
 import { cloudEtaMs, CloudCover, layerHidden, type CloudInput } from './cloud-cover';
 import { flyingSpeed } from '../../../core/tower/flight';

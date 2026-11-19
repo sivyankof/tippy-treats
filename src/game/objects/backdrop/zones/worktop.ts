@@ -5,7 +5,7 @@ import { BACKDROP_COLORS } from '../../../../data/backdrop/backdrop-colors';
 import { KITCHEN_COLORS } from '../../../../data/common/palette';
 import { oscillate01, sineWave } from '../../../../util/math';
 import { shade } from '../../../../util/color';
-import { DEPTH } from '../../../depth';
+import { DEPTH } from '../../../common/depth';
 import { bakeTexture } from '../../../ui/common/bake-texture';
 import { bakeSharedArt } from '../common/art-kit';
 import { FIXED } from '../life/layer-anchor';

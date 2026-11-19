@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import { EDGE_SQUASH } from '../../../data/tower/edge-squash';
-import { effectsMode } from '../../effects-mode';
+import { effectsMode } from '../../app/effects-mode';
 import type { AbilityBursts } from '../abilities/ability-bursts';
 import { DROP_BIG_SCALE, FX_TEXTURES } from '../common/fx-textures';
 import { wallGlazeDrops } from './material-fx';

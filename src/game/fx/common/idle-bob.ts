@@ -1,5 +1,5 @@
 import * as Phaser from 'phaser';
-import { effectsMode } from '../../effects-mode';
+import { effectsMode } from '../../app/effects-mode';
 
 /** A slow rise and fall of a picture; `periodMs` is a whole cycle, the start is spread over `phaseSpreadMs`. */
 export interface IdleBob {

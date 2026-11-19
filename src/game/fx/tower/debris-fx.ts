@@ -1,4 +1,4 @@
-import { DEPTH } from '../../depth';
+import { DEPTH } from '../../common/depth';
 import type * as Phaser from 'phaser';
 import type { SimEvent, TowerState } from '../../../core/tower/tower-sim';
 import { ANIM } from '../../../data/common/anim';
@@ -10,8 +10,8 @@ import { glazeCrestY } from '../../objects/glaze/glaze-wave';
 import { cakeColorsFor, lookCodeFor } from '../../objects/tower/layer-art';
 import { layerBox } from '../../objects/tower/layer-draw';
 import { lookOfCode } from '../../objects/tower/plain-look';
-import { effectsMode } from '../../effects-mode';
-import { fxGuard } from '../../fx-guard';
+import { effectsMode } from '../../app/effects-mode';
+import { fxGuard } from '../../common/fx-guard';
 import type { LayerView } from '../../objects/tower/layer-view';
 import type { LayerPose, TowerView } from '../../objects/tower/tower-view';
 import { driftMotion } from '../common/anim-curves';

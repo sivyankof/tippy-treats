@@ -3,7 +3,7 @@ import type { SimEvent, TowerState } from '../../../core/tower/tower-sim';
 import { BALANCE } from '../../../data/tower/balance';
 import { FloatingCoin } from '../../objects/economy/floating-coin';
 import type { TowerView } from '../../objects/tower/tower-view';
-import { TREASURE_EVENTS, type CoinFlyPayload } from '../../treasure-events';
+import { TREASURE_EVENTS, type CoinFlyPayload } from '../../economy/treasure-events';
 import { payoutFromEvents } from './payout';
 import type { Particles } from '../common/particles';
 

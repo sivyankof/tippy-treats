@@ -4,7 +4,7 @@ import { TUTORIAL_ANIM } from '../../data/tutorial/tutorial-anim';
 import { PALETTE } from '../../data/common/palette';
 import { t } from '../../i18n';
 import { sineWave } from '../../util/math';
-import { FLYING_REACH } from '../camera-layout';
+import { FLYING_REACH } from '../run/camera-layout';
 import { easeFn } from '../fx/common/ease';
 import { createOutlinedText } from '../ui/common/outlined-text';
 import { HintClock } from './timeline';

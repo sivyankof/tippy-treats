@@ -8,11 +8,11 @@ import {
 } from '../../data/debug/perf';
 import type { PerfParams } from '../../util/debug-params';
 import { toTeamSlots } from '../debug/debug-team';
-import { effectsMode } from '../effects-mode';
-import type { RunRequest } from '../run-request';
-import { chooseRunLook } from '../run-look-choice';
-import type { RunSetup } from '../run-setup';
-import type { ResultsData } from '../scene-keys';
+import { effectsMode } from '../app/effects-mode';
+import type { RunRequest } from '../run/run-request';
+import { chooseRunLook } from '../weather/run-look-choice';
+import type { RunSetup } from '../run/run-setup';
+import type { ResultsData } from '../app/scene-keys';
 import { createDriver, type DropDriver } from './perf-drivers';
 
 /** What the benchmark is doing right now; lives from the start of the page to the end of the benchmark. */

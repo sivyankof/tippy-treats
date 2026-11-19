@@ -1,7 +1,7 @@
 import * as Phaser from 'phaser';
 import { MENU } from '../../../data/common/menu-layout';
 import { PALETTE } from '../../../data/common/palette';
-import { windowDuck } from '../../music-cues';
+import { windowDuck } from '../../audio/music-cues';
 import { createDimOverlay } from '../common/dim-overlay';
 import { createIconButton } from '../menu/widgets/icon-button';
 import { openPopup } from '../common/transition';

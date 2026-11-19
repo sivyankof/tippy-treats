@@ -1,6 +1,6 @@
 import type * as Phaser from 'phaser';
 import { paddedSize } from '../../../util/field-pad';
-import { clipGuardActive, drawProbed } from '../../clip-guard';
+import { clipGuardActive, drawProbed } from '../../common/clip-guard';
 
 /** One deferred bake: draws and uploads a single texture. */
 export type BakeStep = () => void;

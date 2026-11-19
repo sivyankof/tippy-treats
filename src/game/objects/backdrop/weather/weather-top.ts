@@ -5,7 +5,7 @@ import { WEATHER_LOOK, WEATHER_TEX } from '../../../../data/weather/weather-look
 import { FIELD_PAD } from '../../../../data/common/picture-fields';
 import { paddedOrigin } from '../../../../util/field-pad';
 import { smoothstep } from '../../../../util/math';
-import { DEPTH } from '../../../depth';
+import { DEPTH } from '../../../common/depth';
 import { towerWeatherShown } from './weather-share';
 import type { EffectLevel } from '../../../../data/app/effect-levels';
 

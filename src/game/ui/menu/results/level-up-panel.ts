@@ -7,7 +7,7 @@ import { REWARD_LOOK } from '../../../../data/economy/reward-look';
 import { formatNumber, t, tn } from '../../../../i18n';
 import { services } from '../../../../services';
 import type { LevelUp } from '../../../../state/game-state';
-import { effectsMode } from '../../../effects-mode';
+import { effectsMode } from '../../../app/effects-mode';
 import { FX_TEXTURES } from '../../../fx/common/fx-textures';
 import { idleBob } from '../../../fx/common/idle-bob';
 import { pileSizeFor } from '../../../fx/economy/pile-size';

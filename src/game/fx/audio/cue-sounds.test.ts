@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 const played: unknown[][] = [];
-vi.mock('../../fx-sound', () => ({ playFx: (...args: unknown[]) => played.push(args) }));
+vi.mock('../../audio/fx-sound', () => ({ playFx: (...args: unknown[]) => played.push(args) }));
 
 import { listenCueSounds, soundOfCue } from './cue-sounds';
 import { effectCues } from './effect-cues';

@@ -3,7 +3,7 @@ import { HUD_LAYOUT } from '../../data/run/hud-layout';
 import { TUTORIAL_ANIM } from '../../data/tutorial/tutorial-anim';
 import { t } from '../../i18n';
 import { oscillate01, sineWave } from '../../util/math';
-import { FLYING_REACH } from '../camera-layout';
+import { FLYING_REACH } from '../run/camera-layout';
 import { createOutlinedText } from '../ui/common/outlined-text';
 import { HAND, HAND_TOP_ORIGIN, HINT_TEXTURES } from './hint-textures';
 

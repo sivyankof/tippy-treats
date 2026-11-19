@@ -12,8 +12,8 @@ import {
 } from '../../../data/toppers/topper-squash';
 import { overlayColor } from '../../../util/color';
 import { clamp01, lerp } from '../../../util/math';
-import { DEPTH } from '../../depth';
-import { effectsMode } from '../../effects-mode';
+import { DEPTH } from '../../common/depth';
+import { effectsMode } from '../../app/effects-mode';
 import type { CutSide } from '../../../core/tower/drop';
 import { plainDripColumns } from '../../objects/glaze/glaze-drip-layer';
 import { glazeWave } from '../../objects/glaze/glaze-wave';

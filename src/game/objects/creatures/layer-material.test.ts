@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import type * as Phaser from 'phaser';
 import { ANIM } from '../../../data/common/anim';
 import { CREATURE_MATERIALS } from '../../../data/creatures/creature-materials';
-import { effectsMode } from '../../effects-mode';
+import { effectsMode } from '../../app/effects-mode';
 import { LayerMaterial } from './layer-material';
 
 /** Just enough of a container: the material only scales it. */

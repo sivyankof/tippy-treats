@@ -1,6 +1,6 @@
 import { TOWER_SPARKLES } from '../../../data/tower/tower-sparkles';
 import * as Phaser from 'phaser';
-import { fxGuard } from '../../fx-guard';
+import { fxGuard } from '../../common/fx-guard';
 import type { Modifiers } from '../../../core/abilities/types';
 import type { FlyingLayer, SimEvent, TowerState } from '../../../core/tower/tower-sim';
 import type { RunResult } from '../../../core/run/run-result';
@@ -10,7 +10,7 @@ import { CONTINUE_ANIM } from '../../../data/run/continue-anim';
 import { services } from '../../../services';
 import { Rng } from '../../../core/common/rng';
 import { gameState } from '../../../state';
-import { effectsMode } from '../../effects-mode';
+import { effectsMode } from '../../app/effects-mode';
 import { aimMouth } from '../../objects/creatures/face-state';
 import { FlyingLayerView } from '../../objects/tower/flying-layer-view';
 import type { LayerView } from '../../objects/tower/layer-view';

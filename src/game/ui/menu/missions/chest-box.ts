@@ -11,7 +11,7 @@ import {
   bakeChestTextures,
 } from '../../../fx/economy/chest-texture';
 import { CHEST_LOOK } from '../../../../data/economy/chest-look';
-import { effectsMode } from '../../../effects-mode';
+import { effectsMode } from '../../../app/effects-mode';
 import { HopSway } from '../widgets/hop-motion';
 import { LightRays } from '../new-creature/new-creature-rays';
 

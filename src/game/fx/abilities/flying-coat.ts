@@ -2,7 +2,7 @@ import * as Phaser from 'phaser';
 import { ABILITY_ANIM } from '../../../data/creatures/ability-anim';
 import { ANIM } from '../../../data/common/anim';
 import { oscillate01, TWO_PI } from '../../../util/math';
-import { DEPTH } from '../../depth';
+import { DEPTH } from '../../common/depth';
 import { FX_TEXTURES } from '../common/fx-textures';
 import { ABILITY_TEXTURES, COAT_SIZE } from './ability-textures';
 import { fadeToward, isFadedIn } from './active-state';

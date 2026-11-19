@@ -5,12 +5,12 @@ import type { CheckpointHeight } from '../../core/zones/checkpoints';
 import type { RunMode, RunResult } from '../../core/run/run-result';
 import type { TeamSlot } from '../../core/tower/sim-types';
 import { TowerSim, type TowerState } from '../../core/tower/tower-sim';
-import { fxGuard } from '../fx-guard';
+import { fxGuard } from '../common/fx-guard';
 import { RunFx } from '../fx/run/run-fx';
 import type { MasterFeed } from '../ui/creatures/master-caption-state';
 import { easeFn } from '../fx/common/ease';
 import { RunIntro } from '../fx/run/run-intro';
-import { effectsMode } from '../effects-mode';
+import { effectsMode } from '../app/effects-mode';
 import { Backdrop } from '../objects/backdrop/common/backdrop';
 import { RunWeather } from '../objects/backdrop/weather/run-weather';
 import { plainLooks } from '../objects/tower/plain-look';
@@ -19,24 +19,29 @@ import { prepareStartTower } from '../perf/perf-demo-marks';
 import { perfSession } from '../perf/perf-session';
 import { layerMarks } from '../objects/tower/layer-marks';
 import { trimHudPlates } from '../ui/style/hud-plate';
-import { RunCamera } from '../run-camera';
-import { ContinueFlow } from '../continue-flow';
-import { beginRunRewardedMemo, rewardedAds } from '../rewarded';
-import { extrasOf, RunRecorder } from '../run-recorder';
+import { RunCamera } from '../run/run-camera';
+import { ContinueFlow } from '../run/continue-flow';
+import { beginRunRewardedMemo, rewardedAds } from '../economy/rewarded';
+import { extrasOf, RunRecorder } from '../run/run-recorder';
 import { FlyingTracker } from '../fx/tower/flying-follow';
 import { placeTutorialTarget } from '../fx/run/tutorial-target';
 import { driveContinue } from '../objects/run/continue-driver';
 import { berriesFromEvents } from '../../core/economy/berries';
 import { gameState } from '../../state';
-import { emptyRunInfo, fillRunInfo, type RunInfo } from '../run-info';
+import { emptyRunInfo, fillRunInfo, type RunInfo } from '../run/run-info';
 import { bindPageLeave } from '../../state/page-lifecycle';
-import { logRunStart } from '../run-telemetry';
-import { dropHeldResults, RESULTS_SETTLED, ResultsHandoff, revealResults } from '../results-launch';
-import { openScreen, restartRun, SCENES } from '../scene-keys';
-import { exitTarget } from '../run-exit';
-import { CLASSIC_RUN, demoFinished, type RunRequest } from '../run-request';
-import { setupRun } from '../run-setup';
-import { DropDriverSlot } from '../drop-driver-slot';
+import { logRunStart } from '../run/run-telemetry';
+import {
+  dropHeldResults,
+  RESULTS_SETTLED,
+  ResultsHandoff,
+  revealResults,
+} from '../run/results-launch';
+import { openScreen, restartRun, SCENES } from '../app/scene-keys';
+import { exitTarget } from '../run/run-exit';
+import { CLASSIC_RUN, demoFinished, type RunRequest } from '../run/run-request';
+import { setupRun } from '../run/run-setup';
+import { DropDriverSlot } from '../run/drop-driver-slot';
 import { installCutDebug } from '../debug/cut-debug';
 import { ANIM } from '../../data/common/anim';
 import { DEMO } from '../../data/run/demo';

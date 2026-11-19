@@ -1,4 +1,4 @@
-import { DEPTH } from '../../depth';
+import { DEPTH } from '../../common/depth';
 import { coneBurst, edgeBurst, type ParticleStyle } from '../common/particle-motion';
 import type { Particles } from '../common/particles';
 

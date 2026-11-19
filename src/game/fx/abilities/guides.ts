@@ -1,9 +1,9 @@
 import * as Phaser from 'phaser';
 import { ABILITY_ANIM } from '../../../data/creatures/ability-anim';
 import { MASTER_ANIM } from '../../../data/creatures/master-anim';
-import { effectsMode } from '../../effects-mode';
+import { effectsMode } from '../../app/effects-mode';
 import { MS_PER_SECOND, oscillate01 } from '../../../util/math';
-import { DEPTH } from '../../depth';
+import { DEPTH } from '../../common/depth';
 import { ABILITY_TEXTURES } from './ability-textures';
 import { fadeToward, isFadedIn } from './active-state';
 

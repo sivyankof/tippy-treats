@@ -2,7 +2,7 @@ import * as Phaser from 'phaser';
 import { TREASURE } from '../../../data/economy/treasure-anim';
 import { PALETTE } from '../../../data/common/palette';
 import { sineWave, TWO_PI } from '../../../util/math';
-import { DEPTH } from '../../depth';
+import { DEPTH } from '../../common/depth';
 import { easeFn } from '../../fx/common/ease';
 import { spinScale, type Point } from '../../fx/economy/coin-flight-math';
 import { FX_TEXTURES } from '../../fx/common/fx-textures';

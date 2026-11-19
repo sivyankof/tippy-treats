@@ -3,8 +3,8 @@ import { BALANCE } from '../../../data/tower/balance';
 import { PALETTE } from '../../../data/common/palette';
 import { PLAIN_LAYER } from '../../../data/tower/plain-layers';
 import { pickInt } from '../../../util/math';
-import { DEPTH } from '../../depth';
-import { effectsMode } from '../../effects-mode';
+import { DEPTH } from '../../common/depth';
+import { effectsMode } from '../../app/effects-mode';
 import { FX_TEXTURES } from './fx-textures';
 import {
   confettiRain,

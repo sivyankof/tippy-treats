@@ -3,7 +3,7 @@ import { MENU } from '../../../../data/common/menu-layout';
 import { gameState } from '../../../../state';
 import type { Button } from '../../common/button';
 import type { HomeStarterOffer } from './home-starter';
-import type { StartRun } from '../../../checkpoint-start';
+import type { StartRun } from '../../../run/checkpoint-start';
 import { openStartChoice } from '../checkpoint/start-choice';
 import { createStartFromButton } from '../checkpoint/start-from-button';
 

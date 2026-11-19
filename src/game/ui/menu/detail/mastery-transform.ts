@@ -7,7 +7,7 @@ import { PALETTE } from '../../../../data/common/palette';
 import { TRANSFORM } from '../../../../data/creatures/transform-scene';
 import { formatDecimal, t } from '../../../../i18n';
 import { services } from '../../../../services';
-import { effectsMode } from '../../../effects-mode';
+import { effectsMode } from '../../../app/effects-mode';
 import { FX_TEXTURES } from '../../../fx/common/fx-textures';
 import type { Particles } from '../../../fx/common/particles';
 import { starBurst } from '../../../fx/common/sparkle-fx';

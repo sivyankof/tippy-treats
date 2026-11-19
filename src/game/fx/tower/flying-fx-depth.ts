@@ -1,4 +1,4 @@
-import { DEPTH } from '../../depth';
+import { DEPTH } from '../../common/depth';
 
 /** Draw order of what is laid around the flying layer, derived from the scene depths. */
 export const FLYING_FX_DEPTH = {

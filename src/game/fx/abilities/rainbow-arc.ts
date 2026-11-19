@@ -2,7 +2,7 @@ import * as Phaser from 'phaser';
 import { ABILITY_ANIM } from '../../../data/creatures/ability-anim';
 import { RAINBOW_BAND_COLORS } from '../../../data/creatures/rainbow-look';
 import { clamp01, frameLerp } from '../../../util/math';
-import { DEPTH } from '../../depth';
+import { DEPTH } from '../../common/depth';
 import { easeFn } from '../common/ease';
 import { FX_TEXTURES } from '../common/fx-textures';
 import { outlineColor } from '../common/plain-style';

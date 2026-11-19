@@ -2,7 +2,7 @@ import * as Phaser from 'phaser';
 import { TREASURE } from '../../../data/economy/treasure-anim';
 import { PALETTE } from '../../../data/common/palette';
 import { smoothstep, TWO_PI } from '../../../util/math';
-import { effectsMode } from '../../effects-mode';
+import { effectsMode } from '../../app/effects-mode';
 import {
   arcPoint,
   sampleFlight,
@@ -15,7 +15,7 @@ import {
 import { easeFn } from '../../fx/common/ease';
 import { FX_TEXTURES } from '../../fx/common/fx-textures';
 import { createTreasureTextures, TREASURE_TEXTURES } from '../../fx/economy/treasure-textures';
-import { TREASURE_EVENTS, type CoinFlyPayload } from '../../treasure-events';
+import { TREASURE_EVENTS, type CoinFlyPayload } from '../../economy/treasure-events';
 import type { ResourceCounter } from './resource-tally';
 
 const flight = TREASURE.flight;

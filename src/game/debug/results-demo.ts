@@ -5,7 +5,7 @@ import type { RunTally } from '../../core/run/run-tally';
 import { RESULTS_DEMO, type ResultsDemoCase } from '../../data/debug/results-demo';
 import { gameState } from '../../state';
 import { EMPTY_SUMMARY, type RunSummary } from '../../state/game-state';
-import type { ResultsData } from '../scene-keys';
+import type { ResultsData } from '../app/scene-keys';
 
 /** The run of a case: classic unless it is the daily tower, higher after a checkpoint or a record. */
 function demoResult(kind: ResultsDemoCase): RunResult {

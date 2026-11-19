@@ -1,6 +1,6 @@
 import * as Phaser from 'phaser';
 import { easeInQuad } from '../../../util/math';
-import { DEPTH } from '../../depth';
+import { DEPTH } from '../../common/depth';
 import { fallTimeMs } from './glaze-growth';
 
 /** Where a falling drop lands: the layer (0-based index) and the world point. */

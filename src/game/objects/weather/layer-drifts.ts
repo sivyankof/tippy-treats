@@ -4,7 +4,7 @@ import { FIELD_PAD } from '../../../data/common/picture-fields';
 import { TOWER_WEATHER } from '../../../data/weather/tower-weather';
 import { WEATHER_TEX } from '../../../data/weather/weather-look';
 import { paddedOrigin } from '../../../util/field-pad';
-import { effectsMode } from '../../effects-mode';
+import { effectsMode } from '../../app/effects-mode';
 import { driftPicture } from '../backdrop/weather/weather-art';
 import {
   driftGrowStep,

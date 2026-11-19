@@ -1,7 +1,7 @@
 import type { RunMode } from '../../../core/run/run-result';
 import type { SimEvent, TowerSim } from '../../../core/tower/tower-sim';
 import { services } from '../../../services';
-import type { ContinueFlow } from '../../continue-flow';
+import type { ContinueFlow } from '../../run/continue-flow';
 import { cuesForMoment } from '../../fx/audio/moment-cues';
 import { playCues } from '../../fx/audio/run-cues';
 

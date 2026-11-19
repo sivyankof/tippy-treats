@@ -3,7 +3,7 @@ import { spaceLap } from '../../../core/zones/space-laps';
 import type { TowerState } from '../../../core/tower/tower-sim';
 import { BALANCE } from '../../../data/tower/balance';
 import { LAP_EDGE, LAP_EDGE_HEIGHT } from '../../../data/zones/lap-edge';
-import { effectsMode } from '../../effects-mode';
+import { effectsMode } from '../../app/effects-mode';
 import type { TowerView } from '../../objects/tower/tower-view';
 import { bakeTexture } from '../../ui/common/bake-texture';
 import { FLYING_FX_DEPTH } from '../tower/flying-fx-depth';

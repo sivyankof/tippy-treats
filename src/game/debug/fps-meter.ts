@@ -1,7 +1,7 @@
 import * as Phaser from 'phaser';
 import { FPS_METER } from '../../data/debug/fps-meter';
 import { HUD_LAYOUT } from '../../data/run/hud-layout';
-import { frameWorkStats } from '../frame-work';
+import { frameWorkStats } from '../app/frame-work';
 
 /**
  * A tiny frame counter in the top left corner under the pause button: the frame rate and the average work time of a

@@ -3,7 +3,7 @@ import type { CutSide } from '../../../core/tower/drop';
 import type { LayerPlan } from '../../../core/tower/sim-types';
 import { ANIM } from '../../../data/common/anim';
 import { lerp, smoothstep } from '../../../util/math';
-import { DEPTH } from '../../depth';
+import { DEPTH } from '../../common/depth';
 import type { Reaction } from '../../objects/creatures/face-state';
 import { LayerView } from '../../objects/tower/layer-view';
 import type { PieceMotion } from '../common/anim-curves';

@@ -5,7 +5,7 @@ import { STREAK } from '../../../../data/progression/streak';
 import { t, tn } from '../../../../i18n';
 import { services } from '../../../../services';
 import { gameState } from '../../../../state';
-import { showRewarded } from '../../../rewarded';
+import { showRewarded } from '../../../economy/rewarded';
 import { markAdUnavailable, resetAdLabel } from '../widgets/ad-unavailable';
 import { createTextButton, type Button } from '../../common/button';
 import { createOutlinedText } from '../../common/outlined-text';

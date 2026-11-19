@@ -3,7 +3,7 @@ import type { EffectLevel } from '../../../data/app/effect-levels';
 import { RULE_ANIM } from '../../../data/zones/rule-anim';
 import { LOGICAL_SIZE } from '../../../data/app/screen';
 import { clamp01, lerp, oscillate01, sineWave, smoothstep } from '../../../util/math';
-import { effectsMode } from '../../effects-mode';
+import { effectsMode } from '../../app/effects-mode';
 import { scatter } from '../../objects/creatures/creature-art/primitives';
 import { PrepQueue } from '../../objects/backdrop/zones/zone-prep';
 import { collectBakeSteps } from '../../ui/common/bake-texture';

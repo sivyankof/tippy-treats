@@ -1,5 +1,5 @@
 import type { CheckpointHeight, CheckpointRow } from '../../../../core/zones/checkpoints';
-import type { CheckpointPayResult } from '../../../checkpoint-start';
+import type { CheckpointPayResult } from '../../../run/checkpoint-start';
 import { buttonsFor, type CheckpointButtons } from '../checkpoint/checkpoint-model';
 
 /** What the results offer besides "Play again" (which always starts from zero for free). */

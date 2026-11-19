@@ -6,8 +6,8 @@ import {
   payAndStart,
   type PayGuard,
   type StartRun,
-} from '../../../checkpoint-start';
-import { CLASSIC_RUN } from '../../../run-request';
+} from '../../../run/checkpoint-start';
+import { CLASSIC_RUN } from '../../../run/run-request';
 import { openCheckpointWindow, type CheckpointWindow } from './checkpoint-window';
 
 /**

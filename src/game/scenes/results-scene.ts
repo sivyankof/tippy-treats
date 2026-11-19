@@ -5,10 +5,10 @@ import { t } from '../../i18n';
 import { services } from '../../services';
 import { gameState } from '../../state';
 import { RecordCelebration } from '../fx/run/record-celebration';
-import { leaveResultsAds, type RunExit } from '../interstitial-flow';
-import { isDebugRun, isLiveRun } from '../results-data';
-import { SCENES, type ResultsData } from '../scene-keys';
-import { fadeInResultsDim } from '../results-launch';
+import { leaveResultsAds, type RunExit } from '../economy/interstitial-flow';
+import { isDebugRun, isLiveRun } from '../run/results-data';
+import { SCENES, type ResultsData } from '../app/scene-keys';
+import { fadeInResultsDim } from '../run/results-launch';
 import { createDimOverlay } from '../ui/common/dim-overlay';
 import { enterScreen, leaveScreen, type Movable } from '../ui/common/transition';
 import { createDebugPlate } from '../ui/menu/results/results-debug-plate';
@@ -25,7 +25,7 @@ import { resultsFlow } from '../ui/menu/results/results-flow';
 import { ResultsTiers } from '../ui/menu/results/results-tiers';
 import { coinLines, presentedCreatures } from '../ui/menu/results/results-text';
 import { ResultsXp } from '../ui/menu/results/results-xp';
-import { cueMusic } from '../music-cues';
+import { cueMusic } from '../audio/music-cues';
 
 const cfg = MENU.results;
 

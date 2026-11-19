@@ -1,7 +1,7 @@
 import * as Phaser from 'phaser';
 import { ANIM } from '../../../data/common/anim';
 import { PALETTE } from '../../../data/common/palette';
-import { DEPTH } from '../../depth';
+import { DEPTH } from '../../common/depth';
 import { easeFn } from '../common/ease';
 import { FX_TEXTURES, RING_DIAMETER } from '../common/fx-textures';
 import { hideItem, TimedPool, type PoolEntry } from '../common/timed-pool';

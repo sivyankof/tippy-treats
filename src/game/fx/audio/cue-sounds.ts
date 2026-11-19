@@ -1,4 +1,4 @@
-import { playFx } from '../../fx-sound';
+import { playFx } from '../../audio/fx-sound';
 import { effectCues, type EffectCue } from './effect-cues';
 
 /** The sound of one effect cue (the strands, the panic, the squashed toppers). */

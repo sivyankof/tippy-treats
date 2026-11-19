@@ -11,8 +11,8 @@ import {
   type SpaceVisitorId,
 } from '../../../../data/guests/space-visitor';
 import { readDebugParams, readPerfParams } from '../../../../util/debug-params';
-import { effectsMode } from '../../../effects-mode';
-import { fxGuard } from '../../../fx-guard';
+import { effectsMode } from '../../../app/effects-mode';
+import { fxGuard } from '../../../common/fx-guard';
 import type { GuestSource } from '../life/guest-source';
 import type { FrameCtx, Life } from '../life/life';
 import { inSky } from '../life/layer-anchor';

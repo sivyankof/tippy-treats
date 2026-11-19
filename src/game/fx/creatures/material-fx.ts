@@ -7,7 +7,7 @@ import { BALANCE } from '../../../data/tower/balance';
 import type { CreatureId } from '../../../data/creatures/creatures';
 import { EDGE_SQUASH } from '../../../data/tower/edge-squash';
 import { parseHex } from '../../../util/color';
-import { effectsMode } from '../../effects-mode';
+import { effectsMode } from '../../app/effects-mode';
 import { creatureColors } from '../../objects/creatures/creature-art/primitives';
 import type { LayerPose, TowerView } from '../../objects/tower/tower-view';
 import { AbilityBursts } from '../abilities/ability-bursts';

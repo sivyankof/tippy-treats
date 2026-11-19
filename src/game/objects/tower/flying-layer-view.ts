@@ -6,11 +6,11 @@ import { HINT_PULSE } from '../../../data/common/idle-motion';
 import { PALETTE } from '../../../data/common/palette';
 import { RULE_ANIM } from '../../../data/zones/rule-anim';
 import { oscillate01, sineWave, stepToward } from '../../../util/math';
-import { DEPTH } from '../../depth';
+import { DEPTH } from '../../common/depth';
 import { easeFn } from '../../fx/common/ease';
-import { effectsMode } from '../../effects-mode';
+import { effectsMode } from '../../app/effects-mode';
 import { shadowLook } from '../../fx/tower/shadow-emphasis';
-import { safeSides } from '../../safe-sides';
+import { safeSides } from '../../app/safe-sides';
 import { aimMouth, type Reaction } from '../creatures/face-state';
 import {
   FlyingEdgeSquash,

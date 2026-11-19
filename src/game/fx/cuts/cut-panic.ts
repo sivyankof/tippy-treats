@@ -3,7 +3,7 @@ import type { Rng } from '../../../core/common/rng';
 import { CUT_LOOK, CUT_TEXTURES } from '../../../data/cuts/cut-look';
 import { clamp01, DEG_TO_RAD, lerp, smoothstep, TWO_PI } from '../../../util/math';
 import { mixColor } from '../../../util/color';
-import { DEPTH } from '../../depth';
+import { DEPTH } from '../../common/depth';
 import type { LayerView } from '../../objects/tower/layer-view';
 import { armPictureSize } from './cut-textures';
 import { outlineColor } from '../common/plain-style';

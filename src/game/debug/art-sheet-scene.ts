@@ -1,8 +1,8 @@
 import * as Phaser from 'phaser';
 import { ART_SHEET, isSheetPicture } from '../../data/debug/art-sheet';
-import { SCENES } from '../scene-keys';
+import { SCENES } from '../app/scene-keys';
 import { LIVE_PICTURES } from './art-sheet-live';
-import { clipSummary, clipTightLines } from '../clip-guard';
+import { clipSummary, clipTightLines } from '../common/clip-guard';
 import { atlasPageCount } from '../ui/common/shared-atlas';
 import { primeArtTextures } from './art-sheet-prime';
 

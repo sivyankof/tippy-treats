@@ -1,8 +1,8 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import { PERF } from '../../data/debug/perf';
-import { CLASSIC_RUN } from '../run-request';
-import type { ResultsData } from '../scene-keys';
-import { isLiveRun } from '../results-data';
+import { CLASSIC_RUN } from '../run/run-request';
+import type { ResultsData } from '../app/scene-keys';
+import { isLiveRun } from '../run/results-data';
 import {
   beginPerfSession,
   endPerfSession,

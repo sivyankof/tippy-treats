@@ -2,8 +2,13 @@ import type * as Phaser from 'phaser';
 import { MENU } from '../../../../data/common/menu-layout';
 import { t } from '../../../../i18n';
 import { services } from '../../../../services';
-import { setMusicOn, setReducedFxOn, setSoundOn, setVibrationOn } from '../../../apply-settings';
-import { effectsMode } from '../../../effects-mode';
+import {
+  setMusicOn,
+  setReducedFxOn,
+  setSoundOn,
+  setVibrationOn,
+} from '../../../app/apply-settings';
+import { effectsMode } from '../../../app/effects-mode';
 import { ToggleSwitch } from '../../style/toggle-switch';
 
 const { height, gap } = MENU.style.toggle;

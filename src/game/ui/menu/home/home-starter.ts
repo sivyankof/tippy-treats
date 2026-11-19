@@ -6,7 +6,7 @@ import { MENU } from '../../../../data/common/menu-layout';
 import { PALETTE } from '../../../../data/common/palette';
 import { t } from '../../../../i18n';
 import { gameState } from '../../../../state';
-import { buyProduct, loadPrices } from '../../../purchases';
+import { buyProduct, loadPrices } from '../../../economy/purchases';
 import { createTextButton, type Button } from '../../common/button';
 
 const cfg = MENU.home.starter;

@@ -3,7 +3,7 @@ import type { FlyingLayer } from '../../../../core/tower/sim-types';
 import { BALANCE } from '../../../../data/tower/balance';
 import type { CreatureId } from '../../../../data/creatures/creatures';
 import { EDGE_SQUASH } from '../../../../data/tower/edge-squash';
-import { effectsMode } from '../../../effects-mode';
+import { effectsMode } from '../../../app/effects-mode';
 import type { EdgeShape } from './edge-squash';
 import { BUBBLE_RIBS } from './edge-squash-ribs';
 import { FlyingEdgeSquash, type Walls, type WallTouch } from './flying-edge-squash';

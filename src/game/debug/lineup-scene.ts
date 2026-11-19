@@ -3,9 +3,9 @@ import type { CutSide } from '../../core/tower/drop';
 import { BALANCE } from '../../data/tower/balance';
 import { CREATURE_IDS, type CreatureId } from '../../data/creatures/creatures';
 import { LINEUP } from '../../data/debug/lineup';
-import { DEPTH } from '../depth';
+import { DEPTH } from '../common/depth';
 import { LayerView } from '../objects/tower/layer-view';
-import { SCENES } from '../scene-keys';
+import { SCENES } from '../app/scene-keys';
 
 /**
  * Temporary art-review screen (`?lineup=1`, dev build): all 12 creature layers as a tower with

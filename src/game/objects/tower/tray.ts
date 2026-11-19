@@ -3,7 +3,7 @@ import { ANIM } from '../../../data/common/anim';
 import { BALANCE } from '../../../data/tower/balance';
 import { IDLE_MOTION, IDLE_PHASE, TRAY_SHEEN } from '../../../data/common/idle-motion';
 import { KITCHEN_COLORS } from '../../../data/common/palette';
-import { DEPTH } from '../../depth';
+import { DEPTH } from '../../common/depth';
 import { createGlossBand, sweepGloss } from '../../fx/common/gloss-sweep';
 import { bakeTexture } from '../../ui/common/bake-texture';
 import { applyIdlePose, idlePose, type IdlePose } from '../../ui/common/idle-motion';

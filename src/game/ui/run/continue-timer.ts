@@ -2,7 +2,7 @@ import type * as Phaser from 'phaser';
 import { BALANCE } from '../../../data/tower/balance';
 import { CONTINUE_ANIM } from '../../../data/run/continue-anim';
 import { services } from '../../../services';
-import type { ContinueFlow } from '../../continue-flow';
+import type { ContinueFlow } from '../../run/continue-flow';
 import { cuesForMoment } from '../../fx/audio/moment-cues';
 import { playCues } from '../../fx/audio/run-cues';
 import { RingTimer } from '../style/ring-timer';

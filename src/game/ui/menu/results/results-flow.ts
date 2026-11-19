@@ -2,10 +2,10 @@ import type * as Phaser from 'phaser';
 import type { CreatureId } from '../../../../data/creatures/creatures';
 import { gameState } from '../../../../state';
 import type { RunSummary } from '../../../../state/game-state';
-import { CLASSIC_RUN, DAILY_RUN } from '../../../run-request';
-import { decideRestart } from '../../../run-restart';
-import { goNext, openScreen, SCENES, type NextStep } from '../../../scene-keys';
-import type { StartRun } from '../../../checkpoint-start';
+import { CLASSIC_RUN, DAILY_RUN } from '../../../run/run-request';
+import { decideRestart } from '../../../run/run-restart';
+import { goNext, openScreen, SCENES, type NextStep } from '../../../app/scene-keys';
+import type { StartRun } from '../../../run/checkpoint-start';
 import type { ResultsButtonHandlers, ResultsButtonLabels } from './results-buttons';
 
 /** What the two buttons of the results do and say. */

@@ -3,7 +3,7 @@ import { BACKDROP } from '../../../../data/backdrop/backdrop';
 import { WALL_LOOK } from '../../../../data/weather/window-look';
 import type { ZoneId } from '../../../../data/zones/zones';
 import { TWO_PI } from '../../../../util/math';
-import { flightClearBand, hudKeepOutFade } from '../../../camera-layout';
+import { flightClearBand, hudKeepOutFade } from '../../../run/camera-layout';
 import type { Pose } from './life-motion';
 
 /**

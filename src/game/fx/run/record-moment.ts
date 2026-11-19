@@ -8,7 +8,7 @@ import { t } from '../../../i18n';
 import { services } from '../../../services';
 import { shade } from '../../../util/color';
 import { TWO_PI } from '../../../util/math';
-import { DEPTH } from '../../depth';
+import { DEPTH } from '../../common/depth';
 import type { TowerView } from '../../objects/tower/tower-view';
 import { bakeTexture } from '../../ui/common/bake-texture';
 import { createOutlinedText } from '../../ui/common/outlined-text';

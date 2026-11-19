@@ -3,7 +3,7 @@ import { ANIM } from '../../../data/common/anim';
 import { PALETTE } from '../../../data/common/palette';
 import { t } from '../../../i18n';
 import { cssColor } from '../../../util/color';
-import { DEPTH } from '../../depth';
+import { DEPTH } from '../../common/depth';
 import { createOutlinedText } from '../../ui/common/outlined-text';
 import { comboTextScale } from './anim-curves';
 import { easeFn } from './ease';

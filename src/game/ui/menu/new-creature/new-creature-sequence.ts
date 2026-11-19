@@ -2,7 +2,7 @@ import * as Phaser from 'phaser';
 import { CREATURE_SLEEP } from '../../../../data/creatures/creature-style';
 import { MENU } from '../../../../data/common/menu-layout';
 import { services } from '../../../../services';
-import { effectsMode } from '../../../effects-mode';
+import { effectsMode } from '../../../app/effects-mode';
 import { FX_TEXTURES } from '../../../fx/common/fx-textures';
 import { CONFETTI_TINTS } from '../../../fx/common/particle-fx';
 import { coneBurst } from '../../../fx/common/particle-motion';

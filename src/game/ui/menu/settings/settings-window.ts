@@ -10,9 +10,9 @@ import {
   setLanguage,
   setNotificationOn,
   type NotificationKind,
-} from '../../../apply-settings';
+} from '../../../app/apply-settings';
 import { productOwned } from '../../../../core/economy/shop';
-import { buyProduct, loadPrices, restorePurchases } from '../../../purchases';
+import { buyProduct, loadPrices, restorePurchases } from '../../../economy/purchases';
 import { createTextButton } from '../../common/button';
 import { createOutlinedText } from '../../common/outlined-text';
 import { PopupWindow } from '../../style/dialog-window';

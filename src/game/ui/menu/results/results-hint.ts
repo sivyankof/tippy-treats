@@ -3,7 +3,7 @@ import { nearMiss } from '../../../../core/run/near-miss';
 import { MENU } from '../../../../data/common/menu-layout';
 import { PALETTE } from '../../../../data/common/palette';
 import { gameState } from '../../../../state';
-import type { ResultsData } from '../../../scene-keys';
+import type { ResultsData } from '../../../app/scene-keys';
 import { createOutlinedText } from '../../common/outlined-text';
 import { dailyResultsText } from '../daily/daily-text';
 import { fitText } from '../widgets/fit-text';

@@ -2,7 +2,7 @@ import * as Phaser from 'phaser';
 import type { Rng } from '../../../core/common/rng';
 import { TOWER_SPARKLES } from '../../../data/tower/tower-sparkles';
 import { DEG_TO_RAD, backOut, clamp01, lerp } from '../../../util/math';
-import { DEPTH } from '../../depth';
+import { DEPTH } from '../../common/depth';
 import { sparkle } from '../../objects/backdrop/common/art-kit';
 import { bakeTexture } from '../../ui/common/bake-texture';
 import { hideItem, TimedPool, type PoolEntry } from '../common/timed-pool';

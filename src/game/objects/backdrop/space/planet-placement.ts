@@ -4,7 +4,7 @@ import { LOGICAL_SIZE } from '../../../../data/app/screen';
 import { PLANET_DIM, PLANET_PLACE, type SpacePlanetId } from '../../../../data/zones/space-planets';
 import { planetSize } from './dessert-planets';
 import { clamp01 } from '../../../../util/math';
-import { flightClearBand } from '../../../camera-layout';
+import { flightClearBand } from '../../../run/camera-layout';
 
 /** The lane of a planet and the scale it is shown at there. */
 export interface PlanetFit {

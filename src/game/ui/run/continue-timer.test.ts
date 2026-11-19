@@ -16,7 +16,7 @@ vi.mock('../../fx/audio/run-cues', () => ({
 }));
 
 import type Phaser from 'phaser';
-import type { ContinueFlow } from '../../continue-flow';
+import type { ContinueFlow } from '../../run/continue-flow';
 import { ContinueTimer } from './continue-timer';
 
 function flowLeft(ms: number): ContinueFlow {

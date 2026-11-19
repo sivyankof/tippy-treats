@@ -5,8 +5,8 @@ import { MASTERY } from '../../../data/creatures/mastery';
 import { MASTER_ANIM } from '../../../data/creatures/master-anim';
 import type { TeamSlots } from '../../../core/tower/sim-types';
 import { getLang } from '../../../i18n';
-import { DEPTH } from '../../depth';
-import { effectsMode } from '../../effects-mode';
+import { DEPTH } from '../../common/depth';
+import { effectsMode } from '../../app/effects-mode';
 import { easeFn } from '../../fx/common/ease';
 import { FX_TEXTURES } from '../../fx/common/fx-textures';
 import {

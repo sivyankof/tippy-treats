@@ -2,7 +2,7 @@ import { ANIM } from '../../../../data/common/anim';
 import { BALANCE } from '../../../../data/tower/balance';
 import { PANORAMA } from '../../../../data/weather/window-look';
 import { rampBetween, smoothstep } from '../../../../util/math';
-import { FLYING_REACH, hudFloor } from '../../../camera-layout';
+import { FLYING_REACH, hudFloor } from '../../../run/camera-layout';
 
 /** Where the panoramic window stands on the start view of a screen: its centre y and the scale of its picture. */
 export interface PanoramaFit {

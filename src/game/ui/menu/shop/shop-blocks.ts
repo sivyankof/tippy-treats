@@ -9,7 +9,7 @@ import { PALETTE } from '../../../../data/common/palette';
 import { BERRY_PRODUCTS, PRODUCTS, SHOP, type ProductKey } from '../../../../data/economy/shop';
 import { formatNumber, t, tn } from '../../../../i18n';
 import { gameState } from '../../../../state';
-import type { Prices } from '../../../purchases';
+import type { Prices } from '../../../economy/purchases';
 import { createTextButton, type Button } from '../../common/button';
 import { CREATURE_ICON_KEYS } from '../../creatures/creature-icons';
 import type { DailySection } from '../daily/daily-section';

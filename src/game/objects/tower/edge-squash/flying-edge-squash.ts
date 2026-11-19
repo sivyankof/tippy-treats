@@ -8,7 +8,7 @@ import type { CreatureId } from '../../../../data/creatures/creatures';
 import type { MouthKind } from '../../../../data/creatures/creature-looks';
 import { EDGE_SQUASH, type WallFeel } from '../../../../data/tower/edge-squash';
 import { lerp, rampBetween, smoothstep } from '../../../../util/math';
-import { effectsMode } from '../../../effects-mode';
+import { effectsMode } from '../../../app/effects-mode';
 import {
   bounceWave,
   edgeOverflow,

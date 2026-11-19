@@ -3,7 +3,7 @@ import type { TowerState } from '../../../core/tower/tower-sim';
 import { BALANCE } from '../../../data/tower/balance';
 import { TREASURE } from '../../../data/economy/treasure-anim';
 import { oscillate01, TWO_PI } from '../../../util/math';
-import { effectsMode } from '../../effects-mode';
+import { effectsMode } from '../../app/effects-mode';
 import type { FlyingLayerView } from '../../objects/tower/flying-layer-view';
 import type { TowerView } from '../../objects/tower/tower-view';
 import type { Point } from './coin-flight-math';

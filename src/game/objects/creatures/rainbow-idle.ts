@@ -14,8 +14,8 @@ import {
 } from '../../../data/creatures/rainbow-look';
 import { mixColor } from '../../../util/color';
 import { DEG_TO_RAD, TWO_PI } from '../../../util/math';
-import { DEPTH } from '../../depth';
-import { effectsMode } from '../../effects-mode';
+import { DEPTH } from '../../common/depth';
+import { effectsMode } from '../../app/effects-mode';
 import { fillQuad, type Pt } from '../../fx/common/plain-style';
 import { RAINBOW_TEXTURES } from '../../fx/abilities/rainbow-textures';
 import { rainbowGlaze } from './creature-art/rainbow';

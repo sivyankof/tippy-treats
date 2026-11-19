@@ -23,7 +23,7 @@ describe('pickSoakLevel', () => {
   it('adds five minutes for scenes, pools, textures, save, core and the safety wrapper', () => {
     const deep = [
       'src/game/scenes/home-scene.ts',
-      'src/game/run-restart.ts',
+      'src/game/run/run-restart.ts',
       'src/game/objects/tower/landing-prep.ts',
       'src/game/objects/glaze/tongue-view.ts',
       'src/game/fx/shared-atlas.ts',
@@ -31,7 +31,7 @@ describe('pickSoakLevel', () => {
       'src/state/game-state.ts',
       'src/services/storage/local.ts',
       'src/core/tower/tower-sim.ts',
-      'src/game/fx-guard.ts',
+      'src/game/common/fx-guard.ts',
     ];
     for (const file of deep) {
       expect(pickSoakLevel(['src/game/ui/common/button.ts', file])).toEqual({

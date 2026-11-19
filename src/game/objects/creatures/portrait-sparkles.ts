@@ -5,7 +5,7 @@ import { parseHex } from '../../../util/color';
 import { bump } from '../../fx/common/anim-curves';
 import { FX_TEXTURES } from '../../fx/common/fx-textures';
 import { ringPoint, sparkleDelay } from '../../fx/tower/layer-sparkle';
-import { effectsMode } from '../../effects-mode';
+import { effectsMode } from '../../app/effects-mode';
 
 const cfg = MENU.portrait.sparkle;
 

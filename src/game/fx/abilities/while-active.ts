@@ -2,7 +2,7 @@ import type { ActiveEffect, Modifiers } from '../../../core/abilities/types';
 import type { TowerState } from '../../../core/tower/tower-sim';
 import { ABILITY_ANIM } from '../../../data/creatures/ability-anim';
 import { HUD_LAYOUT } from '../../../data/run/hud-layout';
-import { effectsMode } from '../../effects-mode';
+import { effectsMode } from '../../app/effects-mode';
 import { FX_TEXTURES } from '../common/fx-textures';
 import { UP_DEG } from './kit';
 import type { FlyingLayerView } from '../../objects/tower/flying-layer-view';

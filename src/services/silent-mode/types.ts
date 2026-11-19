@@ -1,6 +1,6 @@
 /**
  * The silent switch of the device. Sound follows it: while it is on, the audio is held back
- * (`AudioService.suspend('silent')`, wired in `game/audio-lifecycle.ts`).
+ * (`AudioService.suspend('silent')`, wired in `game/audio/audio-lifecycle.ts`).
  */
 export interface SilentModeService {
   isSilent(): boolean;

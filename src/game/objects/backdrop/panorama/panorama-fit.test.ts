@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { PANORAMA } from '../../../../data/weather/window-look';
-import { hudFloor } from '../../../camera-layout';
+import { hudFloor } from '../../../run/camera-layout';
 import { BALANCE } from '../../../../data/tower/balance';
 import {
   coverFade,

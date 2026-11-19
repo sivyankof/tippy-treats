@@ -1,6 +1,6 @@
 import * as Phaser from 'phaser';
 import { MAX_IDLE_PERIOD_MS } from '../../data/common/idle-motion';
-import { SCENES } from '../scene-keys';
+import { SCENES } from '../app/scene-keys';
 import {
   LongestStill,
   StillTracker,

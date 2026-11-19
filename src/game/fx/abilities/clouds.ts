@@ -1,7 +1,7 @@
 import { ABILITY_ANIM } from '../../../data/creatures/ability-anim';
 import { PALETTE } from '../../../data/common/palette';
-import { effectsMode } from '../../effects-mode';
-import { DEPTH } from '../../depth';
+import { effectsMode } from '../../app/effects-mode';
+import { DEPTH } from '../../common/depth';
 import { FX_TEXTURES } from '../common/fx-textures';
 import { easeFn } from '../common/ease';
 import { makeSpec } from './sprite-motion';

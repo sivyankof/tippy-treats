@@ -4,7 +4,7 @@ import type { FaceRecipe } from '../../../data/creatures/creature-looks';
 import { LICK } from '../../../data/glaze/lick';
 import { TOWER_WEATHER } from '../../../data/weather/tower-weather';
 import { frameLerp } from '../../../util/math';
-import { fxGuard } from '../../fx-guard';
+import { fxGuard } from '../../common/fx-guard';
 import { FaceParts } from './face-parts';
 import { faceLayout } from './face-recipe';
 import { FaceLick } from '../glaze/face-lick';

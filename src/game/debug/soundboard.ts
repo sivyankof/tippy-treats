@@ -3,7 +3,7 @@ import { getLang, setLang, t } from '../../i18n';
 import { audioDev, services } from '../../services';
 import type { SoundArgs, SoundId } from '../../services/audio/sound-args';
 import { SOUND_BOOK, SOUND_GROUPS, soundVariants } from '../../services/audio/sound-book';
-import { bindAudioUnlock } from '../audio-unlock';
+import { bindAudioUnlock } from '../audio/audio-unlock';
 import { buildMusicSection, musicChoice } from './soundboard-music';
 
 /** Slider scale: 0..SLIDER_MAX of the normal level (above 1 is louder than the game). */

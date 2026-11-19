@@ -5,7 +5,13 @@ import { SOAK } from '../../data/debug/soak';
 import { services } from '../../services';
 import { gameState } from '../../state';
 import { setLang, type Lang } from '../../i18n';
-import { checkpointRun, CLASSIC_RUN, DAILY_RUN, demoRun, type RunRequest } from '../run-request';
+import {
+  checkpointRun,
+  CLASSIC_RUN,
+  DAILY_RUN,
+  demoRun,
+  type RunRequest,
+} from '../run/run-request';
 import {
   openScreen,
   restartRun,
@@ -13,7 +19,7 @@ import {
   SCENES,
   startRunFrom,
   type SceneKey,
-} from '../scene-keys';
+} from '../app/scene-keys';
 import type { LickScene } from '../objects/glaze/lick-plan';
 import { runHooks } from '../perf/run-hooks';
 import type { GameScene } from '../scenes/game-scene';

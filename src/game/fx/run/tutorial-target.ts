@@ -1,6 +1,6 @@
 import type * as Phaser from 'phaser';
 import { BALANCE } from '../../../data/tower/balance';
-import type { RunCamera } from '../../run-camera';
+import type { RunCamera } from '../../run/run-camera';
 import type { TutorialDirector } from '../../tutorial/tutorial-director';
 import type { RunFx } from './run-fx';
 

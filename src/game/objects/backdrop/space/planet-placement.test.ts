@@ -9,7 +9,7 @@ import {
 } from '../../../../data/zones/space-planets';
 import { BALANCE } from '../../../../data/tower/balance';
 import { lapFirstIndex, lapProgress, spaceWidthLimit } from '../../../../core/zones/space-laps';
-import { flightClearBand } from '../../../camera-layout';
+import { flightClearBand } from '../../../run/camera-layout';
 import { planetSize } from './dessert-planets';
 import {
   corridorHalf,

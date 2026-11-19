@@ -5,7 +5,7 @@ import type { WeatherId } from '../../../../data/weather/weather';
 import { ZONES, type ZoneId } from '../../../../data/zones/zones';
 import { mixColor } from '../../../../util/color';
 import { MS_PER_SECOND } from '../../../../util/math';
-import { effectsMode } from '../../../effects-mode';
+import { effectsMode } from '../../../app/effects-mode';
 import { bakeTexture } from '../../../ui/common/bake-texture';
 import { cloudShape, sparkle } from '../common/art-kit';
 import type { FrameCtx } from '../life/life';

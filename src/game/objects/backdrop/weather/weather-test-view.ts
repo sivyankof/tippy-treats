@@ -1,5 +1,5 @@
 import { FLIGHT_CLEAR } from '../../../../data/backdrop/flight-clear';
-import { hudKeepOutFade } from '../../../camera-layout';
+import { hudKeepOutFade } from '../../../run/camera-layout';
 
 /**
  * Whether a weather particle centred at (`x`, `y`) is seen by the player on a screen `height` tall: on the screen and not

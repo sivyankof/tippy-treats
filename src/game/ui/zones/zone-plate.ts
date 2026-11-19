@@ -3,7 +3,7 @@ import { PALETTE } from '../../../data/common/palette';
 import { ZONE_BANNER, type PlateSpec } from '../../../data/zones/zone-plate';
 import { ZONES } from '../../../data/zones/zones';
 import { t } from '../../../i18n';
-import { playFx } from '../../fx-sound';
+import { playFx } from '../../audio/fx-sound';
 import { DEG_TO_RAD, sineWave } from '../../../util/math';
 import { fitText } from '../menu/widgets/fit-text';
 import { createOutlinedText } from '../common/outlined-text';

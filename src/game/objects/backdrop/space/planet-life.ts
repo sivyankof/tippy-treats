@@ -8,7 +8,7 @@ import {
 } from '../../../../data/zones/space-planets';
 import { lapProgress } from '../../../../core/zones/space-laps';
 import { planetPassOf } from '../../../../core/zones/space-planet';
-import { effectsMode } from '../../../effects-mode';
+import { effectsMode } from '../../../app/effects-mode';
 import type { FrameCtx, Life } from '../life/life';
 import { inSky } from '../life/layer-anchor';
 import { hoverPose, newPose } from '../life/life-motion';

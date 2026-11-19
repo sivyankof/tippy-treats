@@ -1,8 +1,8 @@
 import { overhangSide } from '../../../core/tower/drop';
 import type { SimEvent, TowerState } from '../../../core/tower/tower-sim';
 import { ABILITY_ANIM } from '../../../data/creatures/ability-anim';
-import { DEPTH } from '../../depth';
-import { effectsMode } from '../../effects-mode';
+import { DEPTH } from '../../common/depth';
+import { effectsMode } from '../../app/effects-mode';
 import { easeFn } from '../common/ease';
 import { FX_TEXTURES } from '../common/fx-textures';
 import { cakeColorsFor } from '../../objects/tower/layer-art';

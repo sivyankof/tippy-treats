@@ -2,7 +2,7 @@ import * as Phaser from 'phaser';
 import { ANIM } from '../../../data/common/anim';
 import { shade } from '../../../util/color';
 import { oscillate01 } from '../../../util/math';
-import { DEPTH } from '../../depth';
+import { DEPTH } from '../../common/depth';
 import { FX_TEXTURES } from '../common/fx-textures';
 
 /** High-combo effects: a brief background flash and a soft halo around the tower. */

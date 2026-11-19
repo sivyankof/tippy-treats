@@ -5,7 +5,7 @@ import { DAILY } from '../../../../data/progression/daily';
 import { MENU } from '../../../../data/common/menu-layout';
 import { REWARD_LOOK } from '../../../../data/economy/reward-look';
 import { formatNumber, t } from '../../../../i18n';
-import { effectsMode } from '../../../effects-mode';
+import { effectsMode } from '../../../app/effects-mode';
 import { REWARD_TEXTURES } from '../../../fx/economy/reward-pictures';
 import { createOutlinedText } from '../../common/outlined-text';
 import { faceOffsetY, VolumePlate } from '../../style/volume';
