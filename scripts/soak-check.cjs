@@ -16,6 +16,9 @@ const { chromium } = require(process.env.PLAYWRIGHT_PATH || 'playwright');
 const IPHONE_UA =
   'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1';
 
+/** Time for the first page load of a cold dev server. */
+const COLD_LOAD_MS = 120000;
+
 // Expected noise of a headless run on a fresh profile, not defects of the game.
 const EXPECTED = [/Blocked call to navigator\.vibrate/, /^Save loaded from: new$/];
 
@@ -70,7 +73,9 @@ async function main() {
       problems.push(`${msg.type()}: ${msg.text()}`);
   });
   page.on('pageerror', (error) => problems.push(`pageerror: ${error.message}`));
-  await page.goto(`${url}${url.includes('?') ? '&' : '?'}bot=120`);
+  // A vite server soak:auto has just started serves every module unbundled and uncached on the
+  // first load, which can take longer than the default 30 s.
+  await page.goto(`${url}${url.includes('?') ? '&' : '?'}bot=120`, { timeout: COLD_LOAD_MS });
   await page.waitForFunction(() => window.tippySoak !== undefined, null, { timeout: 60000 });
   if (arg('smoke', false) === true) {
     const report = await page.evaluate(() => window.tippySoak.smoke());
