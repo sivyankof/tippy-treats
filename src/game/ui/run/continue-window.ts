@@ -41,6 +41,7 @@ export class ContinueWindow {
   private shown = false;
   private declineShown = false;
   private screenH = 0;
+  private canvasBottom = 0;
   private slide: Phaser.Tweens.Tween | null = null;
   private bobTween: Phaser.Tweens.Tween | null = null;
   /** Lets the music duck go; set while the window is shown. */
@@ -92,8 +93,10 @@ export class ContinueWindow {
     };
   }
 
-  layout(width: number, height: number): void {
+  /** `height` is the room the window stands in; `canvasBottom` is the bottom of the canvas it slides out through. */
+  layout(width: number, height: number, canvasBottom = height): void {
     this.screenH = height;
+    this.canvasBottom = canvasBottom;
     this.panel.x = width / 2;
     if (this.shown && !this.slide?.isPlaying()) this.panel.y = this.targetY();
   }
@@ -170,7 +173,7 @@ export class ContinueWindow {
 
   /** Below the bottom edge, ribbon included. */
   private offscreenY(): number {
-    return this.screenH + ribbonReach;
+    return this.canvasBottom + ribbonReach;
   }
 
   private targetY(): number {

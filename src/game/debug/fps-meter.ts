@@ -2,6 +2,7 @@ import * as Phaser from 'phaser';
 import { FPS_METER } from '../../data/debug/fps-meter';
 import { HUD_LAYOUT } from '../../data/run/hud-layout';
 import { frameWorkStats } from '../app/frame-work';
+import { safeBand } from '../app/safe-area';
 
 /**
  * A tiny frame counter in the top left corner under the pause button: the frame rate and the average work time of a
@@ -20,7 +21,7 @@ export function showFpsMeter(game: Phaser.Game): void {
     const rect = game.canvas.getBoundingClientRect();
     const scale = rect.width / game.scale.gameSize.width;
     box.style.left = `${rect.left + HUD_LAYOUT.pauseMargin * scale}px`;
-    box.style.top = `${rect.top + (HUD_LAYOUT.pauseMargin + HUD_LAYOUT.pauseSize) * scale + FPS_METER.insetPx}px`;
+    box.style.top = `${rect.top + (safeBand().top + HUD_LAYOUT.pauseMargin + HUD_LAYOUT.pauseSize) * scale + FPS_METER.insetPx}px`;
   };
   place();
   let lastMs = 0;

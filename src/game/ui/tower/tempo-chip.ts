@@ -5,7 +5,7 @@ import { IDLE_MOTION, IDLE_PHASE } from '../../../data/common/idle-motion';
 import { PALETTE } from '../../../data/common/palette';
 import { formatNumber, t } from '../../../i18n';
 import { lerp, stepToward } from '../../../util/math';
-import { flightClearBand } from '../../run/camera-layout';
+import { flightClearBand, hudTopShift } from '../../run/camera-layout';
 import { effectsMode } from '../../app/effects-mode';
 import { TEMPO_ICON_KEY } from '../creatures/creature-icons';
 import { idlePose, REST_POSE, type IdlePose } from '../common/idle-motion';
@@ -67,12 +67,17 @@ export class TempoChip {
     this.root = scene.add.container(0, 0, [this.plate, icon, this.counter]).setVisible(false);
   }
 
-  /** Docks the chip to the wobble plate; call after the plate is laid out. */
+  /**
+   * Docks the chip to the wobble plate; call after the plate is laid out. `screenHeight` is the canvas
+   * height; the HUD itself is laid out in band coordinates (below the top inset).
+   */
   layout(edge: Readonly<PlateEdge>, screenWidth: number, screenHeight: number): void {
     this.plate.place(0, 0, cfg.width, edge.height);
     const x = tempoChipX(edge.right, cfg.width, cfg.gap);
     this.root.setPosition(x, edge.y);
-    const band = flightClearBand(screenHeight);
+    const shift = hudTopShift();
+    const clear = flightClearBand(screenHeight);
+    const band = { top: clear.top - shift, bottom: clear.bottom - shift };
     const spot = tempoCaptionSpot({
       textWidth: this.caption.width,
       textHeight: this.caption.height,

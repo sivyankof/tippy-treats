@@ -19,6 +19,7 @@ import { CREATURE_ICON_KEYS } from '../../creatures/creature-icons';
 import { createTextButton } from '../../common/button';
 import { createOutlinedText } from '../../common/outlined-text';
 import { PopupWindow } from '../../style/dialog-window';
+import { displayMark, pinSince } from '../../run/pin-canvas';
 import { fitText } from '../widgets/fit-text';
 import { PriceTag } from '../widgets/price-tag';
 import { rewardLines, type RewardLine } from './results-text';
@@ -41,6 +42,8 @@ export class LevelUpPanel {
     levelUp: LevelUp,
     onClose: () => void,
   ) {
+    // The results scene is laid out in the safe band; the window and its veil cover the canvas.
+    const mark = displayMark(scene);
     this.popup = new PopupWindow(scene, {
       title: t('levelUp.title', { n: levelUp.level }),
       closable: false,
@@ -49,6 +52,7 @@ export class LevelUpPanel {
       onClosed: onClose,
     });
     this.build(levelUp);
+    pinSince(scene, mark);
     services.audio.record();
     services.haptics.play('triple');
   }

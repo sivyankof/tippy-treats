@@ -6,6 +6,8 @@ import { CREATURES } from '../../data/creatures/creatures';
 import { readDebugParams } from '../../util/debug-params';
 import { ContinueWindow } from '../ui/run/continue-window';
 import { DebugPanel } from '../debug/debug-panel';
+import { safeBand } from '../app/safe-area';
+import { bandHeight, toCanvasRegion } from '../run/band-space';
 import { launchRun, restartRun, resultsShown, SCENES } from '../app/scene-keys';
 import type { Button } from '../ui/common/button';
 import { createIconButton } from '../ui/menu/widgets/icon-button';
@@ -120,13 +122,19 @@ export class HudScene extends Phaser.Scene {
     this.debugPanel = new DebugPanel(this, () => launchRun(this, this.gameScene()?.request));
     this.debugPanel.setVisible(import.meta.env.DEV && readDebugParams().debug);
 
+    // The HUD is laid out in band coordinates (y 0 at the safe top); the tap regions are canvas ones.
     const unregisterButton = addUiRegion(() =>
-      this.overlay.visible || !this.pauseEnabled()
-        ? null
-        : { x: pauseMargin, y: pauseMargin, width: pauseSize, height: pauseSize },
+      toCanvasRegion(
+        this.overlay.visible || !this.pauseEnabled()
+          ? null
+          : { x: pauseMargin, y: pauseMargin, width: pauseSize, height: pauseSize },
+        safeBand(),
+      ),
     );
-    const unregisterPanel = addUiRegion(() => this.debugPanel.bounds());
-    const unregisterContinue = addUiRegion(() => this.continueWindow.bounds());
+    const unregisterPanel = addUiRegion(() => toCanvasRegion(this.debugPanel.bounds(), safeBand()));
+    const unregisterContinue = addUiRegion(() =>
+      toCanvasRegion(this.continueWindow.bounds(), safeBand()),
+    );
     const unregisterOverlay = addUiRegion(() =>
       this.overlay.visible
         ? { x: 0, y: 0, width: this.scale.gameSize.width, height: this.scale.gameSize.height }
@@ -282,19 +290,27 @@ export class HudScene extends Phaser.Scene {
     }
   }
 
+  /**
+   * The HUD is laid out in the safe band: the camera scrolls up by the top inset, so y 0 is the
+   * safe top and the band is `bandHeight` tall. Windows and veils that cover the canvas are built
+   * pinned to it (`buildPinned`); the fade of a leaving screen covers the whole camera anyway.
+   */
   private layout(): void {
     const { width, height } = this.scale.gameSize;
-    this.demoLabel.setPosition(width / 2, height - HUD_LAYOUT.demoLabelBottom);
+    const band = safeBand();
+    const inner = bandHeight(height, band);
     this.cameras.main.setSize(width, height);
-    this.overlay.layout(width, height);
-    this.continueWindow.layout(width, height);
+    this.cameras.main.setScroll(0, -band.top);
+    this.demoLabel.setPosition(width / 2, inner - HUD_LAYOUT.demoLabelBottom);
+    this.overlay.layout(width, inner);
+    this.continueWindow.layout(width, inner, height - band.top);
     this.wobbleBar.layout(width);
     this.tempoChip.layout(this.wobbleBar.plateEdge, width, height);
     this.nextBadge.layout(width);
     this.zoneBanner.layout(width);
     this.lapBanner.layout(width);
     this.treasure.layout(width);
-    this.tutorialHints.layout(width, height);
-    this.debugPanel.layout(height);
+    this.tutorialHints.layout(width, inner);
+    this.debugPanel.layout(inner);
   }
 }

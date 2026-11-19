@@ -9,6 +9,7 @@ import { createOutlinedText } from '../common/outlined-text';
 import { PopupWindow } from '../style/dialog-window';
 import type { ToggleSwitch } from '../style/toggle-switch';
 import { leaveScreen } from '../common/transition';
+import { buildPinned } from './pin-canvas';
 
 const btn = PAUSE.button;
 
@@ -45,9 +46,14 @@ export class PauseOverlay {
     return this.popup !== null || this.countdownTimer !== null;
   }
 
+  /** The window covers the whole canvas, the insets too: it is built pinned to it (`buildPinned`). */
   show(): void {
     this.cancelCountdown();
     this.popup?.destroy();
+    buildPinned(this.scene, () => this.build());
+  }
+
+  private build(): void {
     const popup = new PopupWindow(this.scene, {
       title: t('run.paused'),
       closable: false,

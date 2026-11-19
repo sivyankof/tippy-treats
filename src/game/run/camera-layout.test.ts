@@ -1,10 +1,14 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it } from 'vitest';
 import { ANIM } from '../../data/common/anim';
 import { BALANCE } from '../../data/tower/balance';
 import { HUD_LAYOUT } from '../../data/run/hud-layout';
 import { FLIGHT_CLEAR } from '../../data/backdrop/flight-clear';
+import { setSafeBand } from '../app/safe-area';
 import {
   FLYING_REACH,
+  hudBadgeRowBottomY,
+  hudFloor,
+  hudPlates,
   hudKeepOutFade,
   flightClearBand,
   surfaceScreenY,
@@ -66,5 +70,34 @@ describe('hudKeepOutFade', () => {
   it('ramps up over the feather outside the gap', () => {
     const edge = 120 + FLIGHT_CLEAR.hudGapPx;
     expect(hudKeepOutFade(70, edge + 15, 0, 30)).toBeCloseTo(0.5);
+  });
+});
+
+describe('with insets', () => {
+  afterEach(() => setSafeBand(0, 0));
+
+  it('keeps the tray its usual distance above the bottom safe edge', () => {
+    setSafeBand(140, 80);
+    expect(trayScrollY(0, SCREEN_H)).toBe(-(SCREEN_H - 80 - ANIM.camera.trayBottomOffset));
+  });
+
+  it('moves the HUD clearance down with the top inset', () => {
+    const base = hudBadgeRowBottomY();
+    const floor = hudFloor();
+    setSafeBand(140, 0);
+    expect(hudBadgeRowBottomY()).toBe(base + 140);
+    expect(hudFloor()).toBe(floor + 140);
+    expect(hudPlates()[0]?.y).toBe((HUD_LAYOUT.plates[0]?.y ?? 0) + 140);
+    // A short screen: the surface stands right under the flying reach below the moved HUD.
+    expect(surfaceScreenY(0)).toBe(base + 140 + ANIM.camera.hudClearance + FLYING_REACH);
+  });
+
+  it('keeps the top of a tall tower under the shifted HUD', () => {
+    setSafeBand(140, 80);
+    const towerTopY = -50000;
+    const scroll = targetScrollY(0, SCREEN_H, towerTopY);
+    expect(towerTopY - scroll - FLYING_REACH).toBeGreaterThanOrEqual(
+      HUD_LAYOUT.badgeRowBottom + 140 + ANIM.camera.hudClearance - 1e-9,
+    );
   });
 });

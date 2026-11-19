@@ -2,6 +2,7 @@ import { ANIM } from '../../../../data/common/anim';
 import { BALANCE } from '../../../../data/tower/balance';
 import { PANORAMA } from '../../../../data/weather/window-look';
 import { rampBetween, smoothstep } from '../../../../util/math';
+import { safeBand } from '../../../app/safe-area';
 import { FLYING_REACH, hudFloor } from '../../../run/camera-layout';
 
 /** Where the panoramic window stands on the start view of a screen: its centre y and the scale of its picture. */
@@ -13,7 +14,11 @@ export interface PanoramaFit {
 /** Screen y the flying layer's reach starts at on the start view (its top when it bobs highest above the tower). */
 export function startViewFlightTop(screenH: number): number {
   const L = PANORAMA.layout;
-  const towerTop = screenH - ANIM.camera.trayBottomOffset - L.towerLayers * BALANCE.layer.height;
+  const towerTop =
+    screenH -
+    safeBand().bottom -
+    ANIM.camera.trayBottomOffset -
+    L.towerLayers * BALANCE.layer.height;
   // The layer's outline, its sway and the tray's own height reach a little higher than the nominal reach.
   return towerTop - FLYING_REACH - L.reachExtraPx;
 }
