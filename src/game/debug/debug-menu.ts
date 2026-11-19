@@ -16,6 +16,7 @@ import {
 } from './debug-menu-query';
 import { overlayButtonCss } from './overlay-style';
 import { pushBack } from '../app/back-stack';
+import { buildSoundStatus } from './sound-status';
 
 let openMenu: HTMLElement | null = null;
 
@@ -110,7 +111,9 @@ export function showDebugMenu(): void {
 
   // The Android back closes the menu (it covers the window that opened it).
   let releaseBack: () => void = () => undefined;
+  const sound = buildSoundStatus();
   const close = (): void => {
+    sound?.dispose();
     releaseBack();
     box.remove();
     openMenu = null;
@@ -165,6 +168,7 @@ export function showDebugMenu(): void {
     optionRow(weatherOptions, choice.weather, (v) => (choice.weather = v)),
     heading('Tools'),
     tools,
+    ...(sound ? [sound.element] : []),
     heading('Go'),
     finish,
   );

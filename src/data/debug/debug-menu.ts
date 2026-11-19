@@ -19,4 +19,6 @@ export const DEBUG_MENU = {
   startFill: '#ff8a4c',
   /** The weather and the place a run is left to roll by itself when none is chosen. */
   autoLabel: 'auto',
+  /** How long a copy button shows its result, ms. */
+  copyNoteMs: 2500,
 } as const;
