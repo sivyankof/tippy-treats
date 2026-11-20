@@ -74,7 +74,8 @@ tippy-treats/
 │   ├── sim.ts          бот-симуляция для баланса
 │   ├── dev-tools.cjs   общее для браузерных скриптов: параметры, свой vite, поиск Playwright
 │   ├── store/          npm run store:shots: скриншоты для сторов (11-release-store.md, раздел 5)
-│   └── folder-size.test.ts   не больше 40 файлов в папке src
+│   ├── folder-size.test.ts   не больше 40 файлов в папке src
+│   └── secrets-guard.test.ts в отслеживаемых файлах нет ключей рекламы, покупок и Firebase
 └── src/
     ├── main.ts         точка входа: конфигурация Phaser, запуск сервисов
     ├── core/           ЧИСТАЯ ЛОГИКА. Без Phaser, Capacitor, DOM
@@ -637,6 +638,7 @@ interface MissionProgress { id: string; group: 'easy' | 'medium' | 'hard'; targe
 | Инструмент | Как включить |
 |---|---|
 | Панель отладки (частота кадров, среднее и 95-й процентиль времени работы кадра, зерно, скорость летящего слоя, качка, высота, фаза, бригада, уровень эффектов `fx full`, `fx lite` или `fx minimal`, при автоматическом снижении метка `(auto)`, например `fx lite (auto)`) | `?debug=1` или клавиша `D`. В панели кнопки для телефона, где нет консоли: срезы `cut plain`, `cut strands`, `cut panic`, `cut big` (то же, что `window.tippyCut('<вариант>')`) и украшения `top cherry`, `top strawberry`, `top lemon`, `top mint`, `top wafer`, `top cream` (то же, что `window.tippySquash('<вид>', 'hit')`), с сессии 5г `lightning` (то же, что `window.tippyLightning()`: вспышка с молнией там, где гроза, иначе только испуг слоёв) и `yawn` (`window.tippyYawn()`: ближайший подходящий слой зевает); работают в идущем забеге, подписи английские, как у остальных кнопок панели (панель вне i18n) |
+| Страж ключей | `scripts/secrets-guard.test.ts` входит в `npm run check` (этап M8): падает, если в отслеживаемых git файлах есть идентификатор AdMob (кроме общедоступных тестовых Google, издатель `3940256099942544`), ключ RevenueCat, ключ Google API, идентификатор приложения Firebase или сам секретный файл (`.env`, `GoogleService-Info.plist`, `google-services.json`, `ids.local.*`). Печатает только файл и вид находки, значение никогда |
 | Задать зерно | `?seed=12345` |
 | Начать с высоты N | `?start=60` |
 | Погода забега | `?weather=clear\|sunset\|night\|rain\|snow\|leaves\|storm` (такие забеги не сохраняются; в замере `?perf=1&weather=<имя>`, без параметра замер ясный) |
