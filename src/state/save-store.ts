@@ -5,6 +5,7 @@ import { loadSave, serializeSave, type SaveSource } from '../core/save/load';
 import type { Save } from '../core/save/schema';
 import { SAVE_RETRY_MS, SAVE_WRITE_DEBOUNCE_MS, STORAGE_KEYS } from '../data/app/storage';
 import type { StorageService } from '../services/storage/types';
+import type { AnalyticsService } from '../services/telemetry/types';
 
 /** Starts and stops the delayed write; the page uses timers, the tests a manual one. */
 export interface Scheduler {
@@ -28,6 +29,8 @@ export interface GameStateDeps {
   scheduler: Scheduler;
   /** Dev only: counts what is credited, by source. Never part of the save. */
   tally?: SessionTally;
+  /** Where the events of the save layer go (docs/09-services-analytics.md, section 6); none in tests that do not look. */
+  telemetry?: AnalyticsService;
 }
 
 /** How the save was found at start-up. */
@@ -67,7 +70,11 @@ export class SaveStore {
   /** False after a load timeout: nothing goes to the storage, so the unread save cannot be overwritten. */
   private persist = true;
 
-  constructor(private readonly deps: GameStateDeps) {
+  constructor(
+    private readonly deps: GameStateDeps,
+    /** Told about every save that replaces the current one (a change, or the save just read). */
+    private readonly onChange?: (save: Save) => void,
+  ) {
     const nowMs = deps.realNow();
     this.current = createDefaultSave(nowMs, deps.makeInstallId());
     this.previousSeenAt = nowMs;
@@ -81,6 +88,7 @@ export class SaveStore {
   replace(next: Save): void {
     this.current = next;
     this.markDirty();
+    this.onChange?.(next);
   }
 
   /**
@@ -146,6 +154,7 @@ export class SaveStore {
       result.source === 'primary' ? primary : result.source === 'backup' ? backup : null;
     this.touch(nowMs);
     this.markDirty();
+    this.onChange?.(this.current);
     if (reset) this.flush();
     return {
       status: 'loaded',

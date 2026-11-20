@@ -3,6 +3,7 @@ import { productIds } from '../../services/iap/product-ids';
 import { services } from '../../services';
 import type { PurchaseReport, PurchaseResult } from '../../services/iap/types';
 import { gameState } from '../../state';
+import { logIapResult, logIapStart } from './economy-telemetry';
 
 /**
  * How a purchase ended: the store's result (`PurchaseResult`, what `iap_result` logs) plus
@@ -60,11 +61,14 @@ export async function buyProduct(key: ProductKey): Promise<BuyOutcome> {
   const id = productIds.idOf(key);
   if (id === null) return 'unavailable';
   let report: PurchaseReport;
+  logIapStart(key);
   try {
     report = await services.iap.purchase(id);
   } catch {
+    logIapResult(key, 'failed');
     return 'failed';
   }
+  logIapResult(key, report.result);
   if (report.result === 'failed') return report.reason === 'network' ? 'offline' : 'failed';
   if (report.result !== 'purchased') return report.result;
   gameState.grantProduct(key, report.transactionId);

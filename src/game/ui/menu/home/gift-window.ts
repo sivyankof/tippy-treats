@@ -4,6 +4,7 @@ import { PALETTE } from '../../../../data/common/palette';
 import { formatNumber, t, tn } from '../../../../i18n';
 import { services } from '../../../../services';
 import { gameState } from '../../../../state';
+import { logGiftOpen } from '../../../economy/economy-telemetry';
 import { showRewarded } from '../../../economy/rewarded';
 import { markAdUnavailable, plainAdLabel, resetAdLabel } from '../widgets/ad-unavailable';
 import { cssColor } from '../../../../util/color';
@@ -33,7 +34,13 @@ export function openGiftWindow(
     onClosed,
   });
   let shake: Phaser.Tweens.Tween | null = null;
-  popup.content.once('destroy', () => shake?.stop());
+  // The gift counts as opened once, when its window is gone and the player has had the chance to double it.
+  let opened = false;
+  let doubledByAd = false;
+  popup.content.once('destroy', () => {
+    shake?.stop();
+    if (opened) logGiftOpen(doubledByAd);
+  });
   const box = new GiftBox(scene, 0, cfg.boxY, { face: true }).setScale(cfg.boxScale);
   box.startSway(cfg.motion, false);
   popup.content.add(box);
@@ -113,6 +120,7 @@ export function openGiftWindow(
       popup.close();
       return;
     }
+    opened = true;
     services.audio.coin();
     services.haptics.play('heavy');
     box.popLid();
@@ -151,6 +159,7 @@ export function openGiftWindow(
       if (!button.active) return;
       if (result === 'rewarded') {
         gameState.addCoins(coins, 'gift_double');
+        doubledByAd = true;
         const m = button.getWorldTransformMatrix();
         flyReward(scene, { currency: 'coins', amount: coins, from: { x: m.tx, y: m.ty }, wallet });
         label.setText(t('gift.doubled'));

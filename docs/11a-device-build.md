@@ -204,6 +204,7 @@ bash scripts/native/build-aab.sh 4 --store    # сборка для игроко
    - **Run from** — старт с выбранной зоны или точки (0/20/40/60/80/100), **Place** — кухня или витрина, **Weather** — погода, **Frame counter** — счётчик кадров, **Debug panel** — панель отладки; затем **Start**. Такие забеги в сохранение не пишутся.
    - **Sound board** — звуковая доска (кнопка **back** возвращает в игру).
    - Раздел **Sound** — строка состояния звука, обновляется раз в секунду (трек, плейлист или трек, удержания, состояние звука, пик музыки `level`, перезапуски сторожа `restarts`). Кнопка **Copy sound report** копирует эту строку и последние 30 строк журнала звука.
+   - Раздел **Events and failure reports** — последние 25 событий аналитики этой загрузки (строки со знаком `!` — события, которые проверка имён отбросила или поправила), кнопки **Copy events**, **Test non-fatal** (нефатальная запись в Crashlytics) и **Test crash (app closes)** (настоящий вылет приложения). Подробнее: раздел 6.1.
    - **Normal start** — обычный запуск, **Close** — закрыть меню.
 3. Когда замер кончится, на экране итог: строка вердикта (зелёная `budget: ok` или красная `budget: over in N segments`) и таблица по отрезкам. Кнопка **copy** копирует полный текст, его можно вставить в сообщение для сессии разработки. **back to game** возвращает в игру.
 
@@ -253,3 +254,15 @@ base64 -w0 android/app/google-services.json | gh secret set FIREBASE_ANDROID_JSO
 ```
 
 Шаг сборки `scripts/native/ci-keys.sh` кладёт их в `.env` и в папки проектов перед `npm run app:sync` и печатает только имена найденных и недостающих секретов.
+
+### 6.1. Как увидеть аналитику и сбои на телефоне
+
+Аналитика и Crashlytics работают только в сборке с файлом настроек Firebase своей системы (`GoogleService-Info.plist` для iPhone, `google-services.json` для Android; см. таблицу выше). Без файла внутренняя сборка всё равно ведёт журнал событий в отладочном меню (раздел 4), но в Firebase ничего не уходит.
+
+1. **Журнал в самой игре (любая внутренняя сборка).** Отладочное меню → раздел **Events and failure reports**: последние события в порядке отправки, **Copy events** копирует их. Так видно, что игра событие *отправила*; дошло ли оно до Firebase, покажут пункты ниже.
+2. **Android, DebugView (события за секунды).** Телефон по USB, отладка по USB включена, на компьютере: `adb shell setprop debug.firebase.analytics.app app.tippytreats.game`, затем перезапустить игру. В консоли Firebase: **Analytics → DebugView**, выбрать устройство. Выключить: `adb shell setprop debug.firebase.analytics.app .none.`.
+3. **iPhone, DebugView.** Ключ запуска `-FIRDebugEnabled` задаётся только из Xcode (Product → Scheme → Edit Scheme → Run → Arguments Passed On Launch) и работает при запуске приложения из Xcode на подключённом телефоне. Для сборки из TestFlight его не включить, тогда события видны так, как в пункте 4.
+4. **Без DebugView (iPhone из TestFlight, любой Android).** События появляются в **Analytics → Realtime** (последние 30 минут) примерно через несколько минут, в **Events** и остальных отчётах от нескольких часов до суток. Свойства пользователя (`baker_level`, `creatures_owned`, `best_height_bucket`, `payer`, `install_age_bucket`) в отчётах видны после регистрации в **Custom definitions** (пользовательские определения, тип «Пользователь»); до этого они только накапливаются.
+5. **Crashlytics, нефатальная запись.** Отладочное меню → **Test non-fatal**. В консоли Firebase: **Crashlytics → Issues**, фильтр «Non-fatals»; запись называется `Error: Test non-fatal from the debug menu` с ключами `scene`, `save_version`, `report_kind` = `test`. Появляется через несколько минут.
+6. **Crashlytics, настоящий вылет.** Отладочное меню → **Test crash (app closes)**: приложение закроется. Отчёт отправляется при **следующем запуске** приложения, поэтому его надо открыть снова и подождать несколько минут. Запускать не из Xcode (отладчик перехватывает вылет); на iPhone из TestFlight с символами Crashlytics (шаг сборки «Firebase settings and crash symbols», `docs/08-architecture.md`) стек читаем.
+7. Ошибки JavaScript игры (необработанные исключения и отказы промисов) уходят в Crashlytics нефатально сами. Проверить без кнопки нельзя, не ломая игру, поэтому достаточно пункта 5: он идёт тем же путём (`CrashReporter` → плагин).

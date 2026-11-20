@@ -21,6 +21,7 @@ import { ensureNotifPermission } from '../app/notif-permission';
 import { services } from '../../services';
 import { gameState } from '../../state';
 import { notifTest } from './notif-test';
+import { buildTelemetryStatus } from './telemetry-status';
 
 let openMenu: HTMLElement | null = null;
 
@@ -109,8 +110,10 @@ export function showDebugMenu(): void {
   // The Android back closes the menu (it covers the window that opened it).
   let releaseBack: () => void = () => undefined;
   const sound = buildSoundStatus();
+  const events = buildTelemetryStatus();
   const close = (): void => {
     sound?.dispose();
+    events.dispose();
     releaseBack();
     box.remove();
     openMenu = null;
@@ -181,6 +184,7 @@ export function showDebugMenu(): void {
     tools,
     ...(sound ? [sound.element] : []),
     notif,
+    events.element,
     menuHeading('Go'),
     finish,
   );

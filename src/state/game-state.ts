@@ -87,6 +87,17 @@ import {
 } from './streak';
 import { withBakerLevel, withBakerLevelBumped, withCreaturesBumped } from './debug-grants';
 import { withProgressReset } from './reset';
+import {
+  earnEvents,
+  levelUpEvents,
+  runEvents,
+  settingsEvents,
+  spendEvents,
+  teamEvents,
+  unlockEvents,
+  type TelemetryEvent,
+} from './events/state-events';
+import { UserPropertySync } from './events/user-properties';
 import { runCoinCredits, type CreditSource } from './session-tally';
 import { SaveStore, type GameStateDeps, type LoadOptions, type LoadOutcome } from './save-store';
 import { withAdWatched, withBerries, withCoins } from './wallet';
@@ -115,7 +126,19 @@ export class GameState {
   private dailyAttemptDay = '';
 
   constructor(private readonly deps: GameStateDeps) {
-    this.store = new SaveStore(deps);
+    const properties = deps.telemetry ? new UserPropertySync(deps.telemetry) : null;
+    this.store = new SaveStore(
+      deps,
+      properties
+        ? (save) => {
+            try {
+              properties.sync(save, (deps.now ?? now)());
+            } catch {
+              // The user properties are a convenience; the save must not suffer for them.
+            }
+          }
+        : undefined,
+    );
   }
 
   /** Reads the save from the storage; see `SaveStore.load`. Never throws. */
@@ -203,7 +226,9 @@ export class GameState {
       dailyStale: progress.dailyStale,
     };
     this.noteRun(this.store.save, next, summary, extras);
+    const before = this.store.save;
     this.store.replace(next);
+    this.emit(runEvents(before, next, result, summary, extras));
     return summary;
   }
 
@@ -267,6 +292,7 @@ export class GameState {
 
   /** An interstitial was shown just now. */
   noteInterstitialShown(): void {
+    this.emit([{ name: 'ad_interstitial_show' }]);
     this.store.replace(
       withInterstitialShown(
         this.store.save,
@@ -342,22 +368,38 @@ export class GameState {
   claimStreak(): StreakClaim | null {
     const claimed = withStreakClaimed(this.store.save, this.today(), this.clockBehind);
     if (!claimed) return null;
+    const before = this.store.save;
     this.commit(claimed.save, 'streak');
+    this.emit([
+      {
+        name: 'streak_day',
+        params: { count: claimed.save.streak.count, cycle: claimed.save.streak.cycle },
+      },
+      ...unlockEvents(before, claimed.save, () => 'streak'),
+    ]);
     return claimed.claim;
   }
 
   /** Forgives the missed day; false (nothing charged) when it is not allowed or the berries are short. */
   restoreStreak(payment: RestorePayment): boolean {
-    const next = withStreakRestored(this.store.save, this.today(), this.clockBehind, payment);
+    const before = this.store.save;
+    const next = withStreakRestored(before, this.today(), this.clockBehind, payment);
     if (!next) return false;
     this.store.replace(next);
+    this.emit([
+      { name: 'streak_restore', params: { method: payment } },
+      ...spendEvents(before, next, 'streak_restore'),
+    ]);
     return true;
   }
 
   /** The player gives the streak up: it starts over. */
   declineStreak(): void {
-    const next = withStreakDeclined(this.store.save, this.today());
-    if (next !== this.store.save) this.store.replace(next);
+    const before = this.store.save;
+    const next = withStreakDeclined(before, this.today());
+    if (next === before) return;
+    this.store.replace(next);
+    this.emit([{ name: 'streak_lost', params: { count: before.streak.count } }]);
   }
 
   // --- Missions ---
@@ -375,7 +417,12 @@ export class GameState {
   claimMission(index: number): MissionClaim | null {
     const claimed = withMissionClaimed(this.store.save, index);
     if (!claimed) return null;
+    const before = this.store.save;
     this.commit(claimed.save, 'mission');
+    this.emit([
+      ...levelUpEvents(claimed.levelUps),
+      ...unlockEvents(before, claimed.save, () => 'level'),
+    ]);
     return { coins: claimed.coins, xp: claimed.xp, levelUps: claimed.levelUps };
   }
 
@@ -392,6 +439,7 @@ export class GameState {
     const claimed = withChestClaimed(this.store.save);
     if (!claimed) return 0;
     this.commit(claimed.save, 'chest');
+    this.emit([{ name: 'mission_chest' }]);
     return claimed.berries;
   }
 
@@ -469,20 +517,33 @@ export class GameState {
 
   /** Saves the team; creatures the player does not own and repeats become empty slots. */
   setTeam(team: TeamIds): void {
-    this.store.replace(withTeam(this.store.save, team));
+    const before = this.store.save;
+    const next = withTeam(before, team);
+    this.store.replace(next);
+    this.emit(teamEvents(before, next));
   }
 
   buyCreature(id: CreatureId, currency: Currency): EconomyResult<null, BuyError> {
-    const result = withCreatureBought(this.store.save, id, currency);
+    const before = this.store.save;
+    const result = withCreatureBought(before, id, currency);
     if (!result.ok) return result;
     this.store.replace(result.value);
+    this.emit([
+      ...spendEvents(before, result.value, `creature_${id}`),
+      ...unlockEvents(before, result.value, () => `shop_${currency}`),
+    ]);
     return { ok: true, value: null };
   }
 
   upgradeCreature(id: CreatureId): EconomyResult<number, UpgradeError> {
-    const result = withCreatureUpgraded(this.store.save, id);
+    const before = this.store.save;
+    const result = withCreatureUpgraded(before, id);
     if (!result.ok) return result;
     this.store.replace(result.value.save);
+    this.emit([
+      ...spendEvents(before, result.value.save, `upgrade_${id}`),
+      { name: 'creature_upgrade', params: { creature: id, level: result.value.level } },
+    ]);
     return { ok: true, value: result.value.level };
   }
 
@@ -543,8 +604,12 @@ export class GameState {
     return true;
   }
 
-  spendBerries(berries: number): boolean {
-    return berries >= 0 && this.spend({ berries });
+  /** `item` says what the berries paid for (the `currency_spend` event). */
+  spendBerries(berries: number, item = 'berries'): boolean {
+    const before = this.store.save;
+    if (berries < 0 || !this.spend({ berries })) return false;
+    this.emit(spendEvents(before, this.store.save, item));
+    return true;
   }
 
   canAffordBerries(berries: number): boolean {
@@ -599,9 +664,11 @@ export class GameState {
 
   /** Swaps a pack of berries (10, 50 or 100) for coins; false (nothing taken) when the berries are short. */
   exchangeBerries(berries: number): boolean {
-    const result = exchangeBerries(this.store.save, berries);
+    const before = this.store.save;
+    const result = exchangeBerries(before, berries);
     if (!result.ok) return false;
-    this.commit({ ...this.store.save, ...result.value }, 'berry_exchange');
+    this.commit({ ...before, ...result.value }, 'berry_exchange');
+    this.emit(spendEvents(before, this.store.save, 'berry_exchange'));
     return true;
   }
 
@@ -610,11 +677,13 @@ export class GameState {
    * the store transaction was already paid out. The transaction is remembered in the same save.
    */
   grantProduct(key: ProductKey, transactionId?: string): boolean {
-    if (transactionId !== undefined && txProcessed(this.store.save, transactionId)) return false;
-    let next = withProductGranted(this.store.save, key);
+    const before = this.store.save;
+    if (transactionId !== undefined && txProcessed(before, transactionId)) return false;
+    let next = withProductGranted(before, key);
     if (!next) return false;
     if (transactionId !== undefined) next = withTxRecorded(next, transactionId);
     this.commit(next, 'purchase');
+    this.emit(unlockEvents(before, next, () => 'purchase'));
     return true;
   }
 
@@ -655,7 +724,9 @@ export class GameState {
 
   markHint(id: HintId): void {
     const next = this.hints.mark(this.store.save, id);
-    if (next !== null) this.store.replace(next);
+    if (next === null) return;
+    this.store.replace(next);
+    this.emit([{ name: 'tutorial_step', params: { step: id } }]);
   }
 
   // --- Notifications ---
@@ -677,7 +748,9 @@ export class GameState {
 
   updateSettings(patch: SettingsPatch): void {
     const save = this.store.save;
-    this.store.replace({ ...save, settings: { ...save.settings, ...patch } });
+    const settings = { ...save.settings, ...patch };
+    this.store.replace({ ...save, settings });
+    this.emit(settingsEvents(save.settings, settings));
   }
 
   /** Wipes the progress (a new save as at the first launch) and writes it at once; see `withProgressReset`. */
@@ -691,8 +764,21 @@ export class GameState {
    * wallet gained by it for `source`. Without a tally (production) it is a plain `replace`.
    */
   private commit(next: Save, source: CreditSource): void {
-    this.deps.tally?.addWalletChange(source, this.store.save, next);
+    const before = this.store.save;
+    this.deps.tally?.addWalletChange(source, before, next);
     this.store.replace(next);
+    this.emit(earnEvents(before, next, source));
+  }
+
+  /** Sends events to the analytics; a failure there never reaches the save. */
+  private emit(events: readonly TelemetryEvent[]): void {
+    const telemetry = this.deps.telemetry;
+    if (!telemetry) return;
+    try {
+      for (const event of events) telemetry.logEvent(event.name, event.params);
+    } catch {
+      // Analytics is a decoration of the game: its failure is not the save's.
+    }
   }
 
   /** Splits what a finished run paid: its own coins by source, level rewards, daily tiers, XP. */

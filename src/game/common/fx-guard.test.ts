@@ -112,4 +112,21 @@ describe('FxGuard', () => {
     expect(warn).toHaveBeenCalledOnce();
     expect(warn.mock.calls[0]?.[0]).toContain('lick (cleanup)');
   });
+  it('hands a failing effect to the reporter once per run, and survives a reporter that throws', () => {
+    const reporter = vi.fn();
+    const guard = new FxGuard(vi.fn());
+    guard.setReporter(reporter);
+    const boom = new Error('boom');
+    const fail = (): void => {
+      throw boom;
+    };
+    guard.run('smoke', fail);
+    guard.run('smoke', fail);
+    expect(reporter).toHaveBeenCalledOnce();
+    expect(reporter).toHaveBeenCalledWith('smoke', boom);
+    guard.setReporter(() => {
+      throw new Error('reporter broke');
+    });
+    expect(() => guard.run('other', fail)).not.toThrow();
+  });
 });

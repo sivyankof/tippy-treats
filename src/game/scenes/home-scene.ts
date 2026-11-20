@@ -85,7 +85,7 @@ export class HomeScene extends Phaser.Scene {
     this.shelf = new HomeShelf(this, () => this.goTo(() => openScreen(this, SCENES.team)));
     this.record = createRecordPlate(this);
     this.nav = new HomeNav(this, {
-      shop: () => this.goTo(() => openScreen(this, SCENES.shop)),
+      shop: () => this.goTo(() => openScreen(this, SCENES.shop, { source: 'home' })),
       collection: () => this.goTo(() => openScreen(this, SCENES.collection)),
       play: () => this.startRun(),
       daily: () => this.goTo(() => openScreen(this, SCENES.daily)),

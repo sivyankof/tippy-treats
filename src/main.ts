@@ -17,6 +17,7 @@ import { bindNativeShell } from './game/app/native-shell';
 import { bindPlayDays } from './game/app/play-days';
 import { bindNotifSchedule } from './game/app/notif-schedule';
 import { realNow } from './util/clock';
+import { bindCrashScenes, installCrashReporting } from './game/app/crash-reporting';
 import { services } from './services';
 import { beginPerfSession } from './game/perf/perf-session';
 import { readDebugParams, readPerfParams, showsFpsMeter, withoutReset } from './util/debug-params';
@@ -67,6 +68,7 @@ async function loadSave(): Promise<void> {
 }
 
 async function start(): Promise<void> {
+  installCrashReporting();
   // The first console line of a dev session: which build a tester is running.
   if (import.meta.env.DEV) {
     console.info(`Tippy Treats ${APP_VERSION} (${formatBuildStamp(BUILD_HASH, BUILD_TIME)})`);
@@ -109,6 +111,7 @@ async function start(): Promise<void> {
   bootStage('game');
   const game = new Phaser.Game(createGameConfig(parent));
   dropFramebufferHandlesOnLoss(game);
+  bindCrashScenes(game);
   perfDirector?.startPerfDirector(game);
   // The benchmark's `&dpr=` sets its own cap, to compare the variants.
   if (perf?.densityCap === undefined) followEffectsLevelDensity(game);

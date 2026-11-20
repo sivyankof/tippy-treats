@@ -29,6 +29,7 @@ import { placeTutorialTarget } from '../fx/run/tutorial-target';
 import { driveContinue } from '../objects/run/continue-driver';
 import { berriesFromEvents } from '../../core/economy/berries';
 import { gameState } from '../../state';
+import { services } from '../../services';
 import { emptyRunInfo, fillRunInfo, type RunInfo } from '../run/run-info';
 import { bindPageLeave } from '../../state/page-lifecycle';
 import { logRunStart } from '../run/run-telemetry';
@@ -145,6 +146,7 @@ export class GameScene extends Phaser.Scene {
     this.continueFlow?.dispose();
     this.continueFlow = new ContinueFlow({
       ads: rewardedAds,
+      telemetry: this.writesSave ? services.telemetry : undefined,
       wallet: gameState,
       player: gameState,
     });

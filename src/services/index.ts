@@ -36,6 +36,11 @@ import { createStubIap } from './iap/stub-iap';
 import { NativeIap } from './iap/native';
 import type { AnalyticsService } from './telemetry/types';
 import { WebAnalytics } from './telemetry/web';
+import { NativeAnalytics, type AnalyticsPlugin } from './telemetry/native';
+import { LoggedAnalytics, telemetryLog } from './telemetry/event-log';
+import type { CrashService } from './crash/types';
+import { WebCrash } from './crash/web';
+import { NativeCrash, type CrashPlugin } from './crash/native';
 import type { StorageService } from './storage/types';
 import { WebStorage } from './storage/web';
 import { NativeStorage } from './storage/native';
@@ -56,6 +61,8 @@ export interface Services {
   telemetry: AnalyticsService;
   /** Local reminders (gift, streak, daily tower, come back); a stub in the browser. */
   notifications: NotificationsService;
+  /** Failure reports (Crashlytics inside the app, when its settings file is in the build). */
+  crash: CrashService;
   /** The iOS or Android app around the game; a stub in the browser. */
   appShell: AppShellService;
   /** The system's rating window; a stub in the browser. */
@@ -64,6 +71,35 @@ export interface Services {
 
 /** Inside the iOS or Android app (Capacitor); false in any browser. */
 const native = Capacitor.isNativePlatform();
+
+/**
+ * The Firebase SDKs are configured only when the build had the settings file of its system
+ * (`vite.config.ts` sets the flags): without it a call to the plugin would reach an SDK that was
+ * never started. Then analytics and failure reports stay the silent browser services.
+ */
+const appPlatform = Capacitor.getPlatform();
+const firebaseOn =
+  (appPlatform === 'ios' && __FIREBASE_IOS__) ||
+  (appPlatform === 'android' && __FIREBASE_ANDROID__);
+
+/**
+ * Firebase Analytics, with the debug log of the internal build in front of it. The two Firebase
+ * plugins are reached by name through `registerPlugin`, not by importing their packages: the
+ * packages' web part needs the `firebase` web SDK, which this game does not install, and the
+ * native side registers the plugins under these names all the same.
+ */
+function createTelemetry(): AnalyticsService {
+  const warn = DEBUG_TOOLS
+    ? (message: string): void => {
+        telemetryLog.add(`! ${message}`);
+        if (import.meta.env.DEV) console.warn(`[telemetry] ${message}`);
+      }
+    : undefined;
+  const inner = firebaseOn
+    ? new NativeAnalytics(registerPlugin<AnalyticsPlugin>('FirebaseAnalytics'), warn)
+    : new WebAnalytics();
+  return DEBUG_TOOLS ? new LoggedAnalytics(inner, telemetryLog) : inner;
+}
 
 /**
  * The test stubs of ads and purchases act only where the debug tools are (the dev server and the
@@ -125,7 +161,10 @@ export const services: Services = {
   iap,
   storage: native ? new NativeStorage(Preferences) : new WebStorage(),
   share: new WebShare(),
-  telemetry: new WebAnalytics(),
+  telemetry: createTelemetry(),
+  crash: firebaseOn
+    ? new NativeCrash(registerPlugin<CrashPlugin>('FirebaseCrashlytics'))
+    : new WebCrash(),
   appShell: native
     ? new NativeAppShell(
         App,

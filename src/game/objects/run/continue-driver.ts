@@ -24,7 +24,8 @@ export function driveContinue(ctx: ContinueDriveContext, delta: number, events: 
   if (!flow || sim.state.phase !== 'await_continue') return;
   if (!flow.isOpen) {
     if (!ctx.canDecline) return;
-    const opened = !ctx.noContinue && flow.open(ctx.mode, sim.state.continuesUsed);
+    const opened =
+      !ctx.noContinue && flow.open(ctx.mode, sim.state.continuesUsed, sim.state.height);
     if (!opened) events.push(...sim.decline());
     return;
   }

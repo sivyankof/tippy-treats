@@ -33,7 +33,14 @@ vi.mock('../../services', () => {
     completedTransactions: () =>
       h.fail ? Promise.reject(new Error('x')) : Promise.resolve(h.transactions),
   };
-  return { services: { iap, ads: { setRemoveAds: h.setRemoveAds }, audio: { play: h.play } } };
+  return {
+    services: {
+      iap,
+      ads: { setRemoveAds: h.setRemoveAds },
+      audio: { play: h.play },
+      telemetry: { logEvent: () => undefined, setUserProperty: () => undefined },
+    },
+  };
 });
 
 import { buyOutcomeKey, buyProduct, restorePurchases, syncPurchases } from './purchases';
