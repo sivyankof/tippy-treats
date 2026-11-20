@@ -5,6 +5,7 @@ import {
   combineWiden,
   collapseDelayMs,
   collapseDurationMs,
+  boostedLabelLift,
   comboTextScale,
   driftMotion,
   stepSpring,
@@ -189,6 +190,17 @@ describe('comboTextScale', () => {
 
   it('never exceeds the cap', () => {
     expect(comboTextScale(1000)).toBe(ANIM.perfect.text.maxScale);
+  });
+});
+
+describe('boostedLabelLift', () => {
+  it('keeps one scaled line above the Perfect text at every combo', () => {
+    const { fontSize, lineGapRatio, liftY } = ANIM.perfect.text;
+    for (const combo of [1, 3, 9, 50]) {
+      const gap = boostedLabelLift(combo) - liftY;
+      expect(gap).toBeGreaterThanOrEqual(fontSize * lineGapRatio * comboTextScale(combo) - 1);
+      expect(gap).toBeGreaterThanOrEqual(fontSize * lineGapRatio - 1);
+    }
   });
 });
 

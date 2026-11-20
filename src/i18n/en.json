@@ -532,7 +532,7 @@
     "nextIn": "Next tower in {time}",
     "best": "Best today: {n}",
     "bestNone": "Best today: none yet",
-    "explain": "one=One tower for all players. {n} attempt. The higher, the more rewards|other=One tower for all players. {n} attempts. The higher, the more rewards",
+    "explain": "one=One tower for all players. {n} attempt.\nThe higher, the more rewards.|other=One tower for all players. {n} attempts.\nThe higher, the more rewards.",
     "progress": {
       "start": "one=Reach {n} layer to get the first reward|other=Reach {n} layers to get the first reward",
       "next": "one=Best attempt: {best}. {n} layer to the next reward|other=Best attempt: {best}. {n} layers to the next reward",

@@ -14,6 +14,7 @@ import { rainbowArcOnLand } from './while-active/active-state';
 import { AbilityBursts } from './ability-bursts';
 import { CrumbFlight } from './while-active/crumb-flight';
 import { effectsMode } from '../../app/effects-mode';
+import { boostedLabelLift } from '../common/anim-curves';
 import { FX_TEXTURES } from '../common/fx-textures';
 import { HALF_LAYER, UP_DEG, type FxKit, type SignatureContext } from './kit';
 import { MasterFx } from './master-fx';
@@ -205,7 +206,7 @@ export class AbilityFx {
     if (!pose) return;
     const view = this.tower.viewAt(index);
     const color = RARITY_COLORS[CREATURES[event.creature].rarity];
-    const { flash, ring, boostedText } = ABILITY_ANIM;
+    const { flash, ring } = ABILITY_ANIM;
 
     view?.rig.flash(color, flash.alpha, flash.inMs, flash.outMs);
     this.landing.ring.play(pose.x, pose.y, pose.width, { tint: color, scale: ring.scale });
@@ -217,7 +218,7 @@ export class AbilityFx {
       });
       this.landing.text.showLabel(
         pose.x,
-        pose.y - HALF_LAYER - boostedText.liftY,
+        pose.y - HALF_LAYER - boostedLabelLift(state.combo),
         t('run.boosted'),
         color,
         DEPTH.boostedText,

@@ -403,9 +403,13 @@ async function shoot(
             (s) => (window as StoreWindow).storeCompose!.shot(s),
             spec,
           );
-          write(join(options.out, platform, lang, `${shot.file}.png`), composed, 'rgb');
+          write(
+            join(options.out, STORE_DEVICES[platform].folder, lang, `${shot.file}.png`),
+            composed,
+            'rgb',
+          );
           console.log(
-            `${platform}/${lang}/${shot.file}.png  ${composed.fit?.lines.join(' / ') ?? ''}`,
+            `${STORE_DEVICES[platform].folder}/${lang}/${shot.file}.png  ${composed.fit?.lines.join(' / ') ?? ''}`,
           );
         }
       }
@@ -517,7 +521,13 @@ function expectedFiles(options: Options): CheckRow[] {
     const { width, height } = storeShotSize(platform);
     for (const lang of options.langs) {
       for (const shot of STORE_SHOTS.filter((s) => wanted(s.id))) {
-        rows.push([join(platform, lang, `${shot.file}.png`), width, height, 'rgb', MAX_SHOT_BYTES]);
+        rows.push([
+          join(STORE_DEVICES[platform].folder, lang, `${shot.file}.png`),
+          width,
+          height,
+          'rgb',
+          MAX_SHOT_BYTES,
+        ]);
       }
     }
   }

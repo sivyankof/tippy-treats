@@ -22,22 +22,25 @@ export interface StoreDevice {
   safeTop: number;
   safeBottom: number;
   userAgent: string;
+  /** Folder of the platform's shots inside the output folder. */
+  folder: string;
   /** Height of the caption plate, a share of the shot width (the top of its waves). */
   plateHeight: number;
 }
 
 /**
- * iPhone 6.9" (1320 x 2868, the largest accepted size: App Store Connect scales it down for the
- * smaller iPhones) and an Android phone of 9:16 (1080 x 1920, the size Google Play asks for).
+ * iPhone 6.3" (1206 x 2622, the iPhone 16 Pro screen: the size of the App Store Connect block
+ * "iPhone with Dynamic Island (medium display)", which it accepts; 1320 x 2868 was rejected) and an Android phone of 9:16 (1080 x 1920, the size Google Play asks for).
  * The two are separate layouts of the game, not one picture squeezed.
  */
 export const STORE_DEVICES: Readonly<Record<StorePlatform, StoreDevice>> = {
   ios: {
-    cssWidth: 440,
-    cssHeight: 956,
+    cssWidth: 402,
+    cssHeight: 874,
     density: 3,
     safeTop: 62,
     safeBottom: 34,
+    folder: 'ios-6.3',
     userAgent:
       'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1',
     plateHeight: 0.33,
@@ -50,6 +53,7 @@ export const STORE_DEVICES: Readonly<Record<StorePlatform, StoreDevice>> = {
     // with one would get bars at the sides (a 9:16 phone has no cutout).
     safeTop: 0,
     safeBottom: 0,
+    folder: 'android',
     userAgent:
       'Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Mobile Safari/537.36',
     plateHeight: 0.3,
