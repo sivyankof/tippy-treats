@@ -266,3 +266,16 @@ base64 -w0 android/app/google-services.json | gh secret set FIREBASE_ANDROID_JSO
 5. **Crashlytics, нефатальная запись.** Отладочное меню → **Test non-fatal**. В консоли Firebase: **Crashlytics → Issues**, фильтр «Non-fatals»; запись называется `Error: Test non-fatal from the debug menu` с ключами `scene`, `save_version`, `report_kind` = `test`. Появляется через несколько минут.
 6. **Crashlytics, настоящий вылет.** Отладочное меню → **Test crash (app closes)**: приложение закроется. Отчёт отправляется при **следующем запуске** приложения, поэтому его надо открыть снова и подождать несколько минут. Запускать не из Xcode (отладчик перехватывает вылет); на iPhone из TestFlight с символами Crashlytics (шаг сборки «Firebase settings and crash symbols», `docs/08-architecture.md`) стек читаем.
 7. Ошибки JavaScript игры (необработанные исключения и отказы промисов) уходят в Crashlytics нефатально сами. Проверить без кнопки нельзя, не ломая игру, поэтому достаточно пункта 5: он идёт тем же путём (`CrashReporter` → плагин).
+
+### 6.2. Сборки M8 (2026-11-20)
+
+Все ключи на месте (`.env`, файлы Firebase, десять секретов GitHub; журнал сборки печатает только имена: «Keys of this build: … Not set: none»).
+
+| Сборка | Где | Что внутри |
+|---|---|---|
+| iOS 0.1.0 (5), внутренняя | TestFlight (GitHub Actions, `internal: true`) | отладочное меню; тестовая реклама Google; RevenueCat (песочница TestFlight); Firebase и Crashlytics (символы отданы при сборке) |
+| iOS 0.1.0 (6), выпускная | TestFlight (`internal: false`) | без отладочного меню; боевые идентификаторы AdMob; RevenueCat; Firebase |
+| Android 0.1.0 (5), внутренняя | `tippy-treats-store-assets\builds\tippy-treats-0.1.0-5-internal.aab` | отладочное меню; тестовый идентификатор приложения и тестовые блоки Google; RevenueCat; Firebase |
+| Android 0.1.0 (6), выпускная | `tippy-treats-store-assets\builds\tippy-treats-0.1.0-6-store.aab` | без отладочного меню; идентификатор приложения и блоки AdMob из `.env`; RevenueCat; Firebase |
+
+Нажимать на рекламу в выпускной сборке нельзя (боевая реклама, блокировка AdMob); рекламу проверять во внутренней.
