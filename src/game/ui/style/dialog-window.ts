@@ -198,11 +198,16 @@ export class PopupWindow {
     // Under an island the ribbon, half of which stands above the window, must clear the band too:
     // the window then fits with it and moves down by half of it. Without a top inset (a browser)
     // the window keeps its old place.
-    const overhang = frame.top > 0 ? MENU.style.ribbon.height / 2 : 0;
+    const ribbonHalf = MENU.style.ribbon.height / 2;
+    const overhang = frame.top > 0 ? ribbonHalf : 0;
+    // Where the window stays centred, the ribbon sticks out above it by `ribbonHalf` and the window has
+    // to leave the same room below, so the ribbon never reaches the screen edge; under an island the
+    // window moves down by the overhang instead.
+    const reserve = frame.top > 0 ? overhang : ribbonHalf * 2;
     const fit = Math.min(
       1,
       (width - cfg.screenMargin * 2) / cfg.width,
-      (frame.height - cfg.screenMargin * 2) / (this.height + overhang),
+      (frame.height - cfg.screenMargin * 2) / (this.height + reserve),
     );
     this.root.setPosition(
       cam.scrollX + width / 2,
