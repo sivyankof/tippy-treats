@@ -3,6 +3,7 @@ import { resolveLang, setLang } from '../../i18n';
 import { services } from '../../services';
 import { gameState } from '../../state';
 import { effectsMode } from './effects-mode';
+import { ensureNotifPermission } from './notif-permission';
 
 /** Puts the saved settings into the services and the effects mode; called once at start-up. */
 export function applySavedSettings(): void {
@@ -49,10 +50,11 @@ export function setLanguage(lang: Lang): void {
 
 export type NotificationKind = keyof Save['settings']['notifications'];
 
-/** Only stores the choice; the notifications service (M8) reads it. */
+/** Stores the choice (the plan reads it when the app goes to the background); turning one on asks the system for the permission if the game has none. */
 export function setNotificationOn(kind: NotificationKind, on: boolean): void {
   const { notifications } = gameState.settings;
   gameState.updateSettings({ notifications: { ...notifications, [kind]: on } });
+  if (on) askNotifPermission();
 }
 
 /** The general notifications switch has no field of its own: it is on while any type is on. */
@@ -64,5 +66,14 @@ export function notificationsAnyOn(): boolean {
 export function setAllNotifications(on: boolean): void {
   gameState.updateSettings({
     notifications: { gift: on, streak: on, daily: on, comeback: on },
+  });
+  if (on) askNotifPermission();
+}
+
+function askNotifPermission(): void {
+  void ensureNotifPermission({
+    notifications: services.notifications,
+    telemetry: services.telemetry,
+    markAsked: () => gameState.markNotifAsked(),
   });
 }

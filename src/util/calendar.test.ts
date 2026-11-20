@@ -1,10 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import { CLOCK_BACK_TOLERANCE_MS, MS_PER_DAY } from '../data/app/clock';
 import {
+  addLocalDays,
   applyDayOffset,
+  atLocalHour,
   clockWentBack,
   daysBetween,
   localDay,
+  localHour,
   msUntilLocalMidnight,
   utcDay,
 } from './calendar';
@@ -89,5 +92,30 @@ describe('msUntilLocalMidnight', () => {
     expect(msUntilLocalMidnight(noon)).toBe(12 * 3600 * 1000);
     const late = new Date(2026, 5, 10, 23, 59, 59).getTime();
     expect(msUntilLocalMidnight(late)).toBe(1000);
+  });
+});
+
+describe('local time helpers', () => {
+  it('finds the local hour and builds a moment at a local hour', () => {
+    const at = new Date(2026, 10, 20, 15, 40).getTime();
+    expect(localHour(at)).toBe(15);
+    expect(atLocalHour(at, 0, 9)).toBe(new Date(2026, 10, 20, 9).getTime());
+    expect(atLocalHour(at, 1, 10)).toBe(new Date(2026, 10, 21, 10).getTime());
+    expect(atLocalHour(at, -1, 19)).toBe(new Date(2026, 10, 19, 19).getTime());
+  });
+
+  it('crosses month and year ends', () => {
+    const at = new Date(2026, 11, 31, 23, 0).getTime();
+    expect(atLocalHour(at, 1, 9)).toBe(new Date(2027, 0, 1, 9).getTime());
+    expect(addLocalDays(at, 3)).toBe(new Date(2027, 0, 3, 23).getTime());
+  });
+
+  it('keeps the time of day when adding days, even over a clock change', () => {
+    for (const month of [2, 9]) {
+      // Late March and late October fall inside these spans in the usual zones.
+      const at = new Date(2026, month, 25, 14, 30).getTime();
+      const later = new Date(addLocalDays(at, 7));
+      expect([later.getHours(), later.getMinutes()]).toEqual([14, 30]);
+    }
   });
 });

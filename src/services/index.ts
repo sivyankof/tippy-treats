@@ -1,6 +1,7 @@
 import { Capacitor, SystemBars } from '@capacitor/core';
 import { App } from '@capacitor/app';
 import { Haptics } from '@capacitor/haptics';
+import { LocalNotifications } from '@capacitor/local-notifications';
 import { Preferences } from '@capacitor/preferences';
 import { SplashScreen } from '@capacitor/splash-screen';
 import { DEBUG_TOOLS } from '../util/build-kind';
@@ -32,6 +33,10 @@ import { WebAnalytics } from './telemetry/web';
 import type { StorageService } from './storage/types';
 import { WebStorage } from './storage/web';
 import { NativeStorage } from './storage/native';
+import type { NotificationsService } from './notifications/types';
+import { WebNotifications } from './notifications/web';
+import { NativeNotifications } from './notifications/native';
+import { t } from '../i18n';
 
 /** Everything the game asks of the device. Scenes use these and never pick an implementation. */
 export interface Services {
@@ -43,6 +48,8 @@ export interface Services {
   storage: StorageService;
   share: ShareService;
   telemetry: AnalyticsService;
+  /** Local reminders (gift, streak, daily tower, come back); a stub in the browser. */
+  notifications: NotificationsService;
   /** The iOS or Android app around the game; a stub in the browser. */
   appShell: AppShellService;
 }
@@ -102,6 +109,9 @@ export const services: Services = {
   storage: native ? new NativeStorage(Preferences) : new WebStorage(),
   share: new WebShare(),
   telemetry: new WebAnalytics(),
+  notifications: native
+    ? new NativeNotifications(LocalNotifications, (key) => t(key))
+    : new WebNotifications(import.meta.env.DEV),
   appShell: native ? new NativeAppShell(App, SplashScreen, SystemBars) : new WebAppShell(),
 };
 

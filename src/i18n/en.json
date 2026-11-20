@@ -483,6 +483,34 @@
     "buy": "No ads for {price}",
     "later": "Not now"
   },
+  "notifAsk": {
+    "title": "Reminders",
+    "text": "Remind you when the gift and the new daily tower are ready?",
+    "yes": "Yes, remind me",
+    "later": "Not now"
+  },
+  "notif": {
+    "gift": {
+      "title": "Your gift is ready!",
+      "body": "A free box of coins is waiting for you."
+    },
+    "streak": {
+      "title": "Your streak is about to end!",
+      "body": "Stack one tower today to keep it going."
+    },
+    "daily": {
+      "title": "New daily tower!",
+      "body": "A fresh tower and a new crew are waiting."
+    },
+    "comeback3": {
+      "title": "Your treats miss you",
+      "body": "The tower is waiting. Come and stack some layers!"
+    },
+    "comeback7": {
+      "title": "Tippy Treats misses you",
+      "body": "Your treats have waited all week. Come back for a free gift!"
+    }
+  },
   "gift": {
     "title": "Free gift",
     "open": "Open",

@@ -17,6 +17,10 @@ import {
 import { menuHeading, overlayButtonCss } from './overlay-style';
 import { pushBack } from '../app/back-stack';
 import { buildSoundStatus } from './sound-status';
+import { ensureNotifPermission } from '../app/notif-permission';
+import { services } from '../../services';
+import { gameState } from '../../state';
+import { notifTest } from './notif-test';
 
 let openMenu: HTMLElement | null = null;
 
@@ -141,6 +145,20 @@ export function showDebugMenu(): void {
     switchButton('Frame counter', choice.fps, (on) => (choice.fps = on)),
     switchButton('Debug panel', choice.panel, (on) => (choice.panel = on)),
   );
+  const notif = row();
+  const notifButton = button('Notifications: test in 1 min', () => {
+    void ensureNotifPermission({
+      notifications: services.notifications,
+      telemetry: services.telemetry,
+      markAsked: () => gameState.markNotifAsked(),
+    }).then((granted) => {
+      if (granted) notifTest.arm();
+      notifButton.textContent = granted
+        ? 'Armed: send the app to the background, it arrives in 1 min'
+        : 'No permission: allow notifications in the system settings';
+    });
+  });
+  notif.append(notifButton);
   const finish = row();
   finish.append(
     button('Start', () => reloadWithQuery(composeRunQuery(choice)), M.startFill),
@@ -162,6 +180,7 @@ export function showDebugMenu(): void {
     menuHeading('Tools'),
     tools,
     ...(sound ? [sound.element] : []),
+    notif,
     menuHeading('Go'),
     finish,
   );

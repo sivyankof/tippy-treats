@@ -607,6 +607,21 @@ export class GameState {
     if (next !== null) this.store.replace(next);
   }
 
+  // --- Notifications ---
+
+  /** The permission question was asked (or the system asked through the settings): never again by itself. */
+  markNotifAsked(): void {
+    const save = this.store.save;
+    if (save.consent.notifAsked) return;
+    this.store.replace({ ...save, consent: { ...save.consent, notifAsked: true } });
+  }
+
+  /** Stores the local day of a gift notification that has gone out (`notif.giftDay`, docs/04, section 7). */
+  setGiftNotifDay(day: string): void {
+    const save = this.store.save;
+    if (save.notif.giftDay !== day) this.store.replace({ ...save, notif: { giftDay: day } });
+  }
+
   // --- Settings ---
 
   updateSettings(patch: SettingsPatch): void {
