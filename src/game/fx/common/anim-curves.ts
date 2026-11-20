@@ -109,6 +109,15 @@ export function comboTextScale(combo: number): number {
   return Math.min(maxScale, 1 + Math.max(0, combo - 1) * comboScaleStep);
 }
 
+/**
+ * Height of the "Boosted!" label above the top edge of the layer (world px): one line above the
+ * "Perfect!" text, whose size grows with the combo, so the two never overlap.
+ */
+export function boostedLabelLift(combo: number): number {
+  const { liftY, fontSize, lineGapRatio } = ANIM.perfect.text;
+  return liftY + Math.round(fontSize * lineGapRatio * comboTextScale(combo));
+}
+
 /** A combined widening never starts narrower than this share of the layer. */
 const MIN_WIDEN_SCALE = 0.1;
 

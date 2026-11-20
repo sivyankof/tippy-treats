@@ -1,5 +1,4 @@
 import { parseHex } from '../../util/color';
-import { ANIM } from '../common/anim';
 import { BALANCE } from '../tower/balance';
 import { CREATURES } from './creatures';
 import { PALETTE } from '../common/palette';
@@ -62,16 +61,6 @@ export const ABILITY_ANIM = {
   flash: { alpha: 0.75, inMs: 70, outMs: 320 },
   /** Rings of an ability: the first one is a bit larger than the perfect ring. */
   ring: { scale: 1.2, boostedScale: 1.55, boostedDelayMs: 160 },
-  /**
-   * "Boosted!" label (world px above the layer top edge): one line above "Perfect!", so the two
-   * labels do not overlap.
-   */
-  boostedText: {
-    liftY:
-      ANIM.perfect.text.liftY +
-      Math.round(ANIM.perfect.text.fontSize * ANIM.perfect.text.lineGapRatio),
-  },
-
   /** Tweens of the layer rig that the abilities use. */
   rig: { inflateRiseEase: 'Quad.easeOut', hopEase: 'Quad.easeOut', fadeEase: 'Sine.easeInOut' },
   /** Soft clouds (puff, frosty): each one swells from `startScale` of its size while it rises. */
