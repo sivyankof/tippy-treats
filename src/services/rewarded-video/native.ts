@@ -38,6 +38,10 @@ export class NativeAds implements AdsService {
   private settleRewarded: ((result: RewardedResult) => void) | null = null;
   private settleInterstitial: ((shown: boolean) => void) | null = null;
   private earned = false;
+  /** The SDK did not start or its events are not heard: no loads, every show is unavailable. */
+  private broken = false;
+  /** Numbers the shows, so a safety timer only settles the show it was set for. */
+  private showSeq = 0;
 
   constructor(
     private readonly plugin: AdsPlugin,
@@ -57,7 +61,8 @@ export class NativeAds implements AdsService {
       await this.plugin.initialize();
       await this.listen();
     } catch {
-      // A failing SDK leaves the ads unavailable; the game goes on.
+      // A failing SDK (or events nobody hears) leaves the ads unavailable; the game goes on.
+      this.broken = true;
     }
     this.load('rewarded');
     this.load('interstitial');
@@ -82,8 +87,14 @@ export class NativeAds implements AdsService {
     const closed = new Promise<RewardedResult>((resolve) => {
       this.settleRewarded = resolve;
     });
+    const seq = ++this.showSeq;
     Promise.resolve()
       .then(() => this.plugin.showRewarded())
+      .then(() =>
+        this.schedule(() => {
+          if (seq === this.showSeq) this.finishRewarded('dismissed');
+        }, AD_LOAD.showSafetyMs),
+      )
       .catch(() => this.finishRewarded('unavailable'));
     const result = await closed;
     this.load('rewarded');
@@ -99,8 +110,14 @@ export class NativeAds implements AdsService {
     const closed = new Promise<boolean>((resolve) => {
       this.settleInterstitial = resolve;
     });
+    const seq = ++this.showSeq;
     Promise.resolve()
       .then(() => this.plugin.showInterstitial())
+      .then(() =>
+        this.schedule(() => {
+          if (seq === this.showSeq) this.finishInterstitial(true);
+        }, AD_LOAD.showSafetyMs),
+      )
       .catch(() => this.finishInterstitial(false));
     const shown = await closed;
     this.load('interstitial');
@@ -146,7 +163,8 @@ export class NativeAds implements AdsService {
 
   private load(kind: 'rewarded' | 'interstitial'): void {
     const slot = kind === 'rewarded' ? this.rewarded : this.interstitial;
-    if (!this.inited || slot.unit === undefined || slot.loading || slot.ready) return;
+    if (!this.inited || this.broken || slot.unit === undefined || slot.loading || slot.ready)
+      return;
     slot.loading = true;
     const unit = slot.unit;
     // `Promise.resolve().then` also catches a plugin that throws at once.
