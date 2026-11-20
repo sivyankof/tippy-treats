@@ -1,7 +1,7 @@
 /**
  * `npm run store:shots`: the screenshots of the store pages (docs/11-release-store.md, section 5).
  *
- *   npm run store:shots -- [--only cover,tap] [--platform ios|android] [--lang en|ru]
+ *   npm run store:shots -- [--only cover,tap,...,feature,iap,icon] [--platform ios|android] [--lang en|ru]
  *     [--out <dir>] [--assets <dir>] [--url <dev server>] [--playwright <dir>] [--check]
  *
  * Starts its own vite (unless --url), opens the game in headless Chromium with the page clock
@@ -362,13 +362,9 @@ const wantedBy =
   (id: string): boolean =>
     options.only === null || options.only.has(id);
 
-/** The feature graphic is laid on the iOS frame of its shot and belongs to the Android page. */
+/** The feature graphic (`--only feature`) belongs to the Android page; its frame is shot once, its text per language. */
 function makesFeature(options: Options): boolean {
-  return (
-    wantedBy(options)(STORE_FEATURE.background.shot) &&
-    options.platforms.includes('ios') &&
-    options.platforms.includes('android')
-  );
+  return wantedBy(options)('feature') && options.platforms.includes('android');
 }
 
 async function shoot(
@@ -411,20 +407,41 @@ async function shoot(
           console.log(
             `${platform}/${lang}/${shot.file}.png  ${composed.fit?.lines.join(' / ') ?? ''}`,
           );
-          if (
-            platform === 'ios' &&
-            shot.id === STORE_FEATURE.background.shot &&
-            makesFeature(options)
-          ) {
-            const featureSpec: FeatureSpec = { frame: spec.frame, hero, lang };
-            const graphic = await compose.page.evaluate(
-              (s) => (window as StoreWindow).storeCompose!.feature(s),
-              featureSpec,
-            );
-            write(join(options.out, 'android', `feature-graphic-${lang}.png`), graphic, 'rgb');
-            console.log(`android/feature-graphic-${lang}.png`);
-          }
         }
+      }
+    }
+    if (makesFeature(options)) {
+      const bg = STORE_FEATURE.background;
+      const { width } = storeShotSize(bg.platform);
+      const towerArts: CreatureArtSpec[] = STORE_FEATURE.tower.creatures.map((c) => ({
+        ...c,
+        level: 5,
+        grown: true,
+        widthPx: Math.round(STORE_FEATURE.tower.width * width),
+      }));
+      const raw = await capture(
+        browser,
+        base,
+        compose.page,
+        bg.platform,
+        'en',
+        'feature',
+        bg.stage,
+        towerArts,
+      );
+      for (const lang of options.langs) {
+        const featureSpec: FeatureSpec = {
+          frame: dataUrl(raw.frame),
+          hero,
+          tower: raw.arts,
+          lang,
+        };
+        const graphic = await compose.page.evaluate(
+          (s) => (window as StoreWindow).storeCompose!.feature(s),
+          featureSpec,
+        );
+        write(join(options.out, 'android', `feature-graphic-${lang}.png`), graphic, 'rgb');
+        console.log(`android/feature-graphic-${lang}.png`);
       }
     }
     if (wanted('iap')) {

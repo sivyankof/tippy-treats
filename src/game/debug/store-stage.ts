@@ -3,6 +3,7 @@ import { BALANCE } from '../../data/tower/balance';
 import { clampLevel, type CreatureId } from '../../data/creatures/creatures';
 import {
   STORE_CLOCK,
+  STORE_FEATURE,
   STORE_IAP_SHOT,
   STORE_SHOTS,
   type StoreFace,
@@ -70,6 +71,8 @@ class StageDriver implements DropDriver {
   topX = 0;
   /** Length of the last game step. */
   frameMs = 16;
+  /** The last pass of the flying layer that had a cloud over it. */
+  cloudyPass = -1;
   /** Game time of the last ability of each creature. */
   readonly abilities = new Map<CreatureId, number>();
   timeMs = 0;
@@ -90,6 +93,7 @@ class StageDriver implements DropDriver {
   shouldDrop(sim: Sim): boolean {
     const { flying, phase } = sim.state;
     this.topX = sim.topLayerX();
+    if (flying && flying.coverMs > 0) this.cloudyPass = flying.pass;
     if (this.dropsDone || phase !== 'flying' || !flying) return false;
     const dx = flying.x - this.topX;
     const driver = this.stage.driver;
@@ -126,7 +130,12 @@ class StoreDirector implements TippyStore {
 
   /** Starts the shot `id` from scratch (a second call forgets the first shot). */
   begin(id: string): void {
-    const stage = id === 'iap' ? STORE_IAP_SHOT.stage : STORE_SHOTS.find((s) => s.id === id)?.stage;
+    const stage =
+      id === 'iap'
+        ? STORE_IAP_SHOT.stage
+        : id === 'feature'
+          ? STORE_FEATURE.background.stage
+          : STORE_SHOTS.find((s) => s.id === id)?.stage;
     this.driver = null;
     this.scene = null;
     this.momentStart = null;
@@ -195,7 +204,10 @@ class StoreDirector implements TippyStore {
       case 'flying': {
         const { flying, phase } = state;
         if (since < moment.afterMs || phase !== 'flying' || !flying) return false;
-        return inShareWindow((flying.x - driver.topX) / flying.width, moment.share);
+        // In the open: a pass across the screen with no cloud (the nebula of Space) at all, as
+        // the picture of a cloud lingers a little after it has let the layer go.
+        const clear = flying.cloudAheadPx < 0 && driver.cloudyPass !== flying.pass;
+        return clear && inShareWindow((flying.x - driver.topX) / flying.width, moment.share);
       }
       case 'wobble':
         return state.wobble >= moment.atLeast && Math.sin(state.wobblePhase) >= SWAY_TOP;

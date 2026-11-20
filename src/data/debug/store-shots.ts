@@ -111,7 +111,7 @@ export type StoreDriver =
 
 /** The moment the frame is taken, after the driver is done. */
 export type StoreMoment =
-  /** At least `afterMs` after the driver is done, the flying layer is `share` of its width right of the top of the tower. */
+  /** At least `afterMs` after the driver is done, the flying layer is `share` of its width right of the top of the tower, in the open (no cloud or nebula over it or coming). */
   | { kind: 'flying'; share: number; afterMs: number }
   /** The wobble is at least `atLeast` (of `BALANCE.wobble.max`), and the top of the sway is reached. */
   | { kind: 'wobble'; atLeast: number }
@@ -296,8 +296,10 @@ export const STORE_SHOTS: readonly StoreShot[] = [
     stage: {
       kind: 'run',
       query: 'tutorial=0&team=rainbow,caramel,jelly&level=5&start=20&seed=11',
-      driver: { kind: 'perfect', drops: 99 },
-      moment: { kind: 'ability', creature: 'caramel', afterMs: 200 },
+      // A little off the middle: on a perfect landing the game writes "Boosted!" and "Perfect!" in
+      // one place over each other; off the middle the ability goes off with its arc and no words.
+      driver: { kind: 'offset', share: 0.03, drops: 99 },
+      moment: { kind: 'ability', creature: 'rainbow', afterMs: 200 },
     },
     overlays: [peek('left', 'rainbow', 'wink')],
   },
@@ -312,7 +314,7 @@ export const STORE_SHOTS: readonly StoreShot[] = [
   {
     id: 'weather',
     file: '06-weather',
-    caption: { en: 'RAIN, SNOW & THUNDER!', ru: 'ДОЖДЬ, СНЕГ И ГРОЗА!' },
+    caption: { en: 'RAIN & THUNDER!', ru: 'ДОЖДЬ И ГРОЗА!' },
     stage: {
       kind: 'run',
       // The Roof: the storm sky is open there (in the Kitchen it shows only through the small window).
@@ -399,24 +401,54 @@ export const STORE_CAPTION = {
   padding: 0.035,
 } as const;
 
-/** The feature graphic of Google Play: 1024 x 500, no alpha; Google crops the edges, so the hero and the title keep to the middle. */
+/**
+ * The feature graphic of Google Play: 1024 x 500, no alpha. Google crops the edges and may put a
+ * play button in the middle: the tower and the hero stand left of it, the title right of it.
+ */
 export const STORE_FEATURE = {
   width: 1024,
   height: 500,
-  /** The background: a band of the raw frame of this shot (iOS layout), its centre at `centreY` of the frame height. */
-  background: { shot: 'cover' as StoreShotId, centreY: 0.11 },
-  /** A dark veil over the background so the title reads. */
-  veil: 'rgba(59, 42, 74, 0.25)',
-  /** The hero: centre and height, shares of the graphic. */
-  hero: { x: 0.31, y: 0.53, height: 0.9 },
+  /**
+   * The background: a frame of its own (the bright Showcase street, HUD hidden), its whole width,
+   * a band centred at `centreY` of the frame height (above the tower of the frame).
+   */
+  background: {
+    platform: 'ios' as StorePlatform,
+    stage: {
+      kind: 'run',
+      query: 'tutorial=0&team=rainbow,sprinkle,jelly&level=5&start=20&seed=2001&weather=clear',
+      driver: { kind: 'perfect', drops: 7 },
+      moment: { kind: 'landed', ms: 40 },
+      hideHud: true,
+    } as StoreStage,
+    centreY: 0.25,
+  },
+  /**
+   * A short tower of creatures on the left, as the game draws them (bottom first): centre `x`,
+   * the bottom of the lowest at `bottom`, each `width` wide (shares of the width) and `step` above
+   * the one below (a share of the height), every other one shifted by `shift` (of the width).
+   */
+  tower: {
+    creatures: [
+      { creature: 'rainbow', face: 'joy' },
+      { creature: 'jelly', face: 'wink' },
+    ] as ReadonlyArray<{ creature: CreatureId; face: StoreFace }>,
+    x: 0.25,
+    bottom: 1.03,
+    width: 0.28,
+    step: 0.245,
+    shift: 0.015,
+  },
+  /** The hero standing on the tower: its centre is `rise` (of the height) above the top creature's centre; height a share of the height. */
+  hero: { rise: 0.345, height: 0.68 },
   /** The title and the line under it, one block centred at `x`, `centreY` (shares); sizes are shares of the width. */
-  text: { x: 0.7, centreY: 0.5, maxWidth: 0.44, gap: 0.02 },
-  title: { text: 'TIPPY TREATS', maxSize: 0.11, minSize: 0.06, maxLines: 2 },
+  text: { x: 0.74, centreY: 0.5, maxWidth: 0.42, gap: 0.02 },
+  title: { text: 'TIPPY TREATS', maxSize: 0.12, minSize: 0.06, maxLines: 2 },
   subtitle: {
     text: { en: 'Stack & collect cute desserts', ru: 'Башня из живых десертов' } as Readonly<
       Record<StoreLang, string>
     >,
-    maxSize: 0.042,
+    maxSize: 0.045,
     minSize: 0.03,
     maxLines: 2,
   },

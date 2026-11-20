@@ -38,6 +38,8 @@ export interface ShotSpec {
 export interface FeatureSpec {
   frame: string;
   hero: string;
+  /** The creatures of `STORE_FEATURE.tower`, bottom first, as the game drew them. */
+  tower: string[];
   lang: StoreLang;
 }
 
@@ -224,23 +226,34 @@ async function feature(spec: FeatureSpec): Promise<Composed> {
   const f = STORE_FEATURE;
   const ctx = canvas2d(f.width, f.height);
   const frame = await load(spec.frame);
-  const scale = f.width / frame.width;
-  const band = f.height / scale;
+  const band = (frame.width * f.height) / f.width;
   const sy = Math.min(
     Math.max(0, frame.height * f.background.centreY - band / 2),
     frame.height - band,
   );
   ctx.drawImage(frame, 0, sy, frame.width, band, 0, 0, f.width, f.height);
-  ctx.fillStyle = f.veil;
-  ctx.fillRect(0, 0, f.width, f.height);
+  const t = f.tower;
+  const layers: ComposeOverlay[] = [];
+  let centreY = 0;
+  for (const [i, image] of spec.tower.entries()) {
+    const picture = await load(image);
+    const width = t.width * f.width;
+    const height = (width * picture.height) / picture.width;
+    centreY = (t.bottom - i * t.step) * f.height - height / 2;
+    const x = (t.x + (i % 2 === 0 ? -t.shift : t.shift)) * f.width;
+    layers.push({ image, x, y: centreY, width, angle: 0 });
+  }
   const hero = await load(spec.hero);
   const heroH = f.hero.height * f.height;
   const heroW = (heroH * hero.width) / hero.height;
-  await drawOverlays(
-    ctx,
-    [{ image: hero.src, x: f.hero.x * f.width, y: f.hero.y * f.height, width: heroW, angle: 0 }],
-    f.width,
-  );
+  layers.push({
+    image: hero.src,
+    x: t.x * f.width,
+    y: centreY - f.hero.rise * f.height,
+    width: heroW,
+    angle: 0,
+  });
+  await drawOverlays(ctx, layers, f.width);
   const limits = (part: { maxSize: number; minSize: number; maxLines: number }) => ({
     maxSize: part.maxSize * f.width,
     minSize: part.minSize * f.width,
