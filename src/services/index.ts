@@ -3,9 +3,6 @@ import { App } from '@capacitor/app';
 import { Haptics } from '@capacitor/haptics';
 import { Preferences } from '@capacitor/preferences';
 import { SplashScreen } from '@capacitor/splash-screen';
-import { STUB_PRICES } from '../data/economy/iap-stub';
-import { PRODUCT_KEYS, PRODUCTS } from '../data/economy/shop';
-import { t } from '../i18n';
 import { DEBUG_TOOLS } from '../util/build-kind';
 import { showStubOverlay, WebAds } from './rewarded-video/web';
 import type { AdsDevControl, AdsService } from './rewarded-video/types';
@@ -29,7 +26,7 @@ import { WebAppShell } from './app-shell/web';
 import { NativeAppShell } from './app-shell/native';
 import { productIds } from './iap/product-ids';
 import type { IapDevControl, IapService } from './iap/types';
-import { WebIap, type StubProduct } from './iap/web';
+import { createStubIap } from './iap/stub-iap';
 import type { AnalyticsService } from './telemetry/types';
 import { WebAnalytics } from './telemetry/web';
 import type { StorageService } from './storage/types';
@@ -62,21 +59,7 @@ const TEST_STUBS = DEBUG_TOOLS;
 
 const webAds = new WebAds(showStubOverlay, TEST_STUBS ? 'reward' : 'no_fill');
 
-/** The products of the store stub: the ones `.env` gives an id to, at stub prices. */
-const stubCatalog: StubProduct[] = PRODUCT_KEYS.flatMap((key) => {
-  const id = productIds.idOf(key);
-  if (id === null || !TEST_STUBS) return [];
-  return [
-    {
-      id,
-      priceString: STUB_PRICES[key],
-      title: () => t(`shop.product.${key}`),
-      consumable: PRODUCTS[key].kind === 'consumable',
-    },
-  ];
-});
-
-const webIap = new WebIap(stubCatalog);
+const webIap = createStubIap(productIds, TEST_STUBS);
 
 // Before any audio context or media element: the page's audio session obeys the silent switch.
 const audioSession = setupAudioSession(typeof navigator === 'undefined' ? undefined : navigator);
