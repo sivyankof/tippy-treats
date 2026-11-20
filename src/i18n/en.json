@@ -551,6 +551,7 @@
     "buyFor": "Buy for {price}",
     "pending": "Purchase is waiting for approval",
     "failed": "Purchase did not go through",
+    "storeDown": "Store is unavailable, try again later",
     "restore": "Restore purchases",
     "coinsN": "one={amount} coin|other={amount} coins",
     "coinsPlus": "one=+{amount} coin|other=+{amount} coins",

@@ -1,6 +1,6 @@
 import { STUB_IAP } from '../../data/economy/iap-stub';
 import { t } from '../../i18n';
-import type { IapService } from './types';
+import type { IapService, PurchaseReport, StoreTransaction } from './types';
 
 /** One product of the stub store. */
 export interface StubProduct {
@@ -124,17 +124,17 @@ export class WebIap implements IapService {
     );
   }
 
-  async purchase(id: string): Promise<'purchased' | 'cancelled' | 'failed' | 'pending'> {
+  async purchase(id: string): Promise<PurchaseReport> {
     const product = this.catalog.find((entry) => entry.id === id);
-    if (!product || this.busy) return 'failed';
+    if (!product || this.busy) return { result: 'failed' };
     // A store never sells a non-consumable twice.
-    if (!product.consumable && this.owned().includes(id)) return 'failed';
+    if (!product.consumable && this.owned().includes(id)) return { result: 'failed' };
     this.busy = true;
     try {
       const bought = await this.confirm({ title: product.title(), price: product.priceString });
-      if (!bought) return 'cancelled';
+      if (!bought) return { result: 'cancelled' };
       if (!product.consumable) this.remember(id);
-      return 'purchased';
+      return { result: 'purchased' };
     } finally {
       this.busy = false;
     }
@@ -146,6 +146,11 @@ export class WebIap implements IapService {
 
   ownedNonConsumables(): Promise<string[]> {
     return Promise.resolve(this.owned());
+  }
+
+  /** The stub keeps no transactions: a consumable is paid at once and never comes back. */
+  completedTransactions(): Promise<StoreTransaction[]> {
+    return Promise.resolve([]);
   }
 
   /** Forgets every purchase of this stub store, in the page and in the storage. Debug panel only. */

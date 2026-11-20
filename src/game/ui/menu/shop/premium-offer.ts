@@ -6,7 +6,7 @@ import { effectsMode } from '../../../app/effects-mode';
 import { createTextButton } from '../../common/button';
 import { createOutlinedText } from '../../common/outlined-text';
 import { PopupWindow } from '../../style/dialog-window';
-import { buyProduct } from '../../../economy/purchases';
+import { buyOutcomeKey, buyProduct } from '../../../economy/purchases';
 import { createBodyText } from '../detail/detail-info';
 import { fitText } from '../widgets/fit-text';
 import { createNoAdsIcon } from './shop-premium-icon';
@@ -64,8 +64,9 @@ export function openNoAdsOffer(scene: Phaser.Scene, price: string, onClosed: () 
         }
         busy = false;
         buy.setEnabled(true);
-        if (outcome !== 'cancelled') {
-          note.setText(t(outcome === 'pending' ? 'shop.pending' : 'shop.failed'));
+        const key = buyOutcomeKey(outcome);
+        if (key !== null) {
+          note.setText(t(key));
           fitText(note, popup.innerWidth);
         }
       });

@@ -6,6 +6,12 @@ import type {
   UpgradeError,
   Wallet,
 } from '../core/economy/economy';
+import {
+  txProcessed,
+  unpaidConsumables,
+  withTxRecorded,
+  type KnownTransaction,
+} from '../core/economy/purchase-tx';
 import { doublesLeft, withDoubleUsed } from '../core/economy/double-coins';
 import { exchangeBerries, spend } from '../core/economy/economy';
 import { freshLeft } from '../core/economy/oven';
@@ -564,12 +570,22 @@ export class GameState {
     return true;
   }
 
-  /** Pays out a purchase the store confirmed; false when a one-time product was already given. */
-  grantProduct(key: ProductKey): boolean {
-    const next = withProductGranted(this.store.save, key);
+  /**
+   * Pays out a purchase the store confirmed; false when a one-time product was already given or
+   * the store transaction was already paid out. The transaction is remembered in the same save.
+   */
+  grantProduct(key: ProductKey, transactionId?: string): boolean {
+    if (transactionId !== undefined && txProcessed(this.store.save, transactionId)) return false;
+    let next = withProductGranted(this.store.save, key);
     if (!next) return false;
+    if (transactionId !== undefined) next = withTxRecorded(next, transactionId);
     this.commit(next, 'purchase');
     return true;
+  }
+
+  /** The consumable transactions of the store that were never paid out here (see `unpaidConsumables`). */
+  unpaidTransactions(transactions: readonly KnownTransaction[]): KnownTransaction[] {
+    return unpaidConsumables(this.store.save, transactions);
   }
 
   /** Brings the save in line with the one-time products the store says are owned; true when it changed. */

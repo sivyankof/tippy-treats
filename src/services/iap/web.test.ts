@@ -33,15 +33,15 @@ describe('WebIap', () => {
   it('asks with the title and the price and answers purchased or cancelled', async () => {
     const confirm = vi.fn().mockResolvedValueOnce(true).mockResolvedValueOnce(false);
     const iap = new WebIap(CATALOG, confirm, () => null);
-    await expect(iap.purchase('berries')).resolves.toBe('purchased');
+    await expect(iap.purchase('berries')).resolves.toEqual({ result: 'purchased' });
     expect(confirm).toHaveBeenCalledWith({ title: '80 berries', price: '$0.99' });
-    await expect(iap.purchase('berries')).resolves.toBe('cancelled');
+    await expect(iap.purchase('berries')).resolves.toEqual({ result: 'cancelled' });
   });
 
   it('fails an unknown product and never asks', async () => {
     const confirm = vi.fn();
     const iap = new WebIap(CATALOG, confirm, () => null);
-    await expect(iap.purchase('nope')).resolves.toBe('failed');
+    await expect(iap.purchase('nope')).resolves.toEqual({ result: 'failed' });
     expect(confirm).not.toHaveBeenCalled();
   });
 
@@ -54,7 +54,7 @@ describe('WebIap', () => {
     );
     await iap.purchase('ads');
     expect(storage.getItem(STUB_IAP.storageKey)).toBe('["ads"]');
-    await expect(iap.purchase('ads')).resolves.toBe('failed');
+    await expect(iap.purchase('ads')).resolves.toEqual({ result: 'failed' });
     // A new page: the store still knows what was bought.
     const again = new WebIap(
       CATALOG,
@@ -134,8 +134,8 @@ describe('WebIap', () => {
       () => null,
     );
     const first = iap.purchase('berries');
-    await expect(iap.purchase('berries')).resolves.toBe('failed');
+    await expect(iap.purchase('berries')).resolves.toEqual({ result: 'failed' });
     finish(true);
-    await expect(first).resolves.toBe('purchased');
+    await expect(first).resolves.toEqual({ result: 'purchased' });
   });
 });

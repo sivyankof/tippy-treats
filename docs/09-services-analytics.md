@@ -77,18 +77,32 @@ export interface AdsService {
 ## 5. Покупки
 
 ```ts
+export type PurchaseResult = 'purchased' | 'cancelled' | 'failed' | 'pending';  // значения для iap_result
+
+export interface PurchaseReport {
+  result: PurchaseResult;
+  transactionId?: string;                 // только при 'purchased': ид. транзакции стора
+  reason?: 'unavailable' | 'network';     // только при 'failed': стор недоступен / нет сети
+}
+
+export interface StoreTransaction { productId: string; transactionId: string; purchasedAt: number }  // epoch ms
+
 export interface IapService {
   init(): Promise<void>;
   getProducts(): Promise<Array<{ id: string; priceString: string; title: string }>>;
-  purchase(id: string): Promise<'purchased' | 'cancelled' | 'failed' | 'pending'>;
+  purchase(id: string): Promise<PurchaseReport>;
   restore(): Promise<string[]>;     // owned non-consumable ids
   ownedNonConsumables(): Promise<string[]>;
+  completedTransactions(): Promise<StoreTransaction[]>;   // все завершённые разовые транзакции аккаунта стора (расходуемые тоже)
 }
 ```
 
 - Цены в интерфейсе всегда берутся из стора (`priceString`), а не из кода: они зависят от страны.
 - Выдача товара происходит **только после подтверждённой покупки**. Расходуемые товары (ягоды) выдаются один раз на транзакцию; идентификаторы обработанных транзакций хранятся в сохранении (последние 50) для защиты от двойной выдачи.
 - Состояние `pending` (например, «Попросить купить» в семейном доступе): показать сообщение «Покупка ожидает подтверждения», выдать товар при следующем запуске, когда транзакция завершится.
+- Выдача на запуске (`syncPurchases()` в `game/economy/purchases.ts`): кроме сверки разовых покупок, берутся `completedTransactions()`; расходуемую транзакцию (ягоды), которой нет в `iap.processedTx`, выдают, **если дата покупки не раньше `save.createdAt`**. Так выдаётся одобренная «Попросить купить» и покупка, прерванная убийством приложения между ответом стора и выдачей; переустановка и сброс прогресса (`createdAt` = момент сброса) старые ягоды второй раз не платят. Решение 2026-11-20. Ограничение: транзакция, вытесненная из списка из 50 (после 50 новых покупок), но не раньше `createdAt`, теоретически выдалась бы повторно; на практике недостижимо. Транзакция записывается в `iap.processedTx` тем же сохранением, что и выдача.
+- Нативная реализация: `services/iap/native.ts` (RevenueCat, `@revenuecat/purchases-capacitor`), ключи `VITE_REVENUECAT_API_KEY_IOS` / `_ANDROID`. Без ключа (или если `configure` упал) сервис работает как «стор недоступен»: нет товаров, `purchase` даёт `failed` с причиной `unavailable`, `restore` бросает ошибку (кнопка покажет «Не удалось связаться со стором»), `ownedNonConsumables` и `completedTransactions` пусты. Заглушка в нативной сборке не подставляется никогда. Ошибки плагина: `PURCHASE_CANCELLED_ERROR` → `cancelled`, `PAYMENT_PENDING_ERROR` → `pending`, `NETWORK_ERROR` / `OFFLINE_CONNECTION_ERROR` → `failed` + `network` (сообщение «Магазин недоступен, попробуйте позже»), прочее → `failed`. Необработанных отказов нет.
+- Восстановление (`restore`): только разовые товары. `remove_ads` включает флаг; `starter_pack` возвращает только флаг и существо, если его нет; монеты и ягоды набора не платятся повторно (они выданы один раз на устройстве покупки, `withPurchasesRestored` в `core/economy/shop.ts`).
 - При каждом запуске `ownedNonConsumables()` сверяется с сохранением (`game/economy/purchases.ts`: ключи товаров попадают в `purchases.*`, затем `services.ads.setRemoveAds`).
 - Идентификаторы товаров в репозитории не лежат: код знает товар по логическому ключу (`data/economy/shop.ts`: `remove_ads`, `starter_pack`, `berries_80` ... `berries_2800`), а ключ в ид. стора переводит `services/iap/product-ids.ts` по переменным `VITE_IAP_*` из `.env` (образец в `.env.example`; ид. в сторах с приставкой игры `tippy_`, `05-economy-monetization.md`, раздел 5). Товар без ид. в магазине показывается недоступным.
 - Браузерная заглушка: `services/iap/web.ts` (DOM-окно «Купить (тест)?», купленные разовые товары хранит как стор, отдельно от сохранения). Цены в ней — данные заглушки (`data/economy/iap-stub.ts`), в игре цены всегда приходят из `getProducts()`. В сборке для игроков до M8 у заглушки нет товаров и ничего не числится купленным (`services/iap/stub-iap.ts`, `createStubIap`): окна «Купить (тест)?» нет, в магазине покупки показаны недоступными, строки «Без рекламы» в настройках нет, тестовая покупка внутренней сборки на том же телефоне не восстанавливается (решение 2026-11-20).

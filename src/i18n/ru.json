@@ -551,6 +551,7 @@
     "buyFor": "Купить за {price}",
     "pending": "Покупка ожидает подтверждения",
     "failed": "Покупка не удалась",
+    "storeDown": "Магазин недоступен, попробуйте позже",
     "restore": "Восстановить покупки",
     "coinsN": "one={amount} монета|few={amount} монеты|many={amount} монет|other={amount} монеты",
     "coinsPlus": "one=+{amount} монета|few=+{amount} монеты|many=+{amount} монет|other=+{amount} монеты",
