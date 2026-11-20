@@ -30,6 +30,7 @@ import { openMissionsWindow } from '../ui/menu/missions/missions-window';
 import { openSettingsWindow } from '../ui/menu/settings/settings-window';
 import { ScreenHeader } from '../ui/menu/widgets/screen-header';
 import { openStreakCalendar, openStreakEntry } from '../ui/menu/streak/streak-windows';
+import { runHomeAsks } from '../ui/menu/home/home-asks';
 import type { StreakClaim } from '../../state/game-state';
 import { MenuScenery } from '../ui/style/menu-scenery';
 import { safeFrame } from '../ui/common/safe-frame';
@@ -140,7 +141,7 @@ export class HomeScene extends Phaser.Scene {
     enterScreen(this, this.content(), () => {
       this.setEnabled(true);
       if (data?.reopenSettings) this.openSettings();
-      else this.showDayEntry();
+      else runHomeAsks(this, () => this.showDayEntry());
     });
   }
 
