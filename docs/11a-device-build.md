@@ -93,6 +93,18 @@ mv credentials.json credentials /c/Users/Artem/Documents/keys/arcanum-eas/
 5. Первый раз: слева **Внутреннее тестирование** (Internal Testing) → **+** → имя группы `Owner` → **Создать** (Create) → в группе **Тестировщики** (Testers) **+** → отметьте себя → **Добавить** (Add). Затем в группе **Сборки** (Builds) **+** → выберите сборку. Дальше новые сборки можно добавлять в эту группу так же или включить **Автоматическое распространение** (Automatic Distribution).
 6. На iPhone: поставьте из App Store приложение **TestFlight**, откройте письмо-приглашение (или сразу TestFlight под тем же Apple ID) → **Установить** (Install).
 
+### 2.1. Проверка манифестов конфиденциальности (сессия 10, 2026-11-21)
+
+**Что случилось.** Apple отклонил сборку 1.0 (8) при отправке на проверку: Invalid Binary, ITMS-91064, «NSPrivacyTracking must be true if NSPrivacyTrackingDomains isn't empty» для пути `PrivacyInfo.xcprivacy`.
+
+**Что показала собранная сборка** (пробный прогон GitHub 44826188487, выпускная, `upload: false`; тот же код, что у сборки 8). В `.ipa` 23 манифеста. В корне `.app` лежит наш файл, его содержимое совпадает с `ios/App/App/PrivacyInfo.xcprivacy`: `NSPrivacyTracking` = true, `NSPrivacyTrackingDomains` пустой. Все 22 манифеста библиотек лежат в своих местах (`Frameworks/*.framework/` у Capacitor, Cordova, Google Mobile Ads и UMP, `*.bundle/` у Firebase, GoogleUtilities, GoogleDataTransport, nanopb, Promises и RevenueCat), и у всех `NSPrivacyTracking` = false без доменов. Чужого файла в корне нет, ничего не перезаписано: проект Xcode включает наш манифест один раз (`Copy Bundle Resources`).
+
+**Причина.** Правило Apple действует в обе стороны, хотя текст ошибки называет только одну: «When set to true you need to provide a list of internet domains in NSPrivacyTrackingDomains» (https://developer.apple.com/documentation/bundleresources/privacy-manifest-files). Наш файл ставил `true` без единого домена.
+
+**Решение.** В нашем манифесте `NSPrivacyTracking` = false, доменов нет. Перечислять домены нельзя: «If the user has not granted tracking permission through the App Tracking Transparency framework, network requests to these domains fail» (https://developer.apple.com/documentation/bundleresources/app-privacy-configuration/nsprivacytrackingdomains). Если вписать домены рекламы Google, после отказа от ATT реклама перестанет приходить. Сама игра к доменам отслеживания не обращается, а Google Mobile Ads в своём манифесте тоже ставит false и доменов не даёт. Рекламный идентификатор по-прежнему записан в собираемых данных с пометкой «отслеживание» (с разрешения ATT). Ответы анкеты App Store Connect («Конфиденциальность приложения») от этого не меняются: там идентификатор устройства по-прежнему отмечен как данные для отслеживания.
+
+**Проверка в сборке.** После архивации процесс **iOS** экспортирует `.ipa` и запускает `scripts/native/check-privacy.sh`. Скрипт выводит в журнал список всех манифестов с `NSPrivacyTracking` и числом доменов, затем содержимое каждого. Сборка падает, если в каком-то манифесте `NSPrivacyTracking` = true без доменов или домены есть при false, а также если корневой манифест отсутствует или отличается от `ios/App/App/PrivacyInfo.xcprivacy`. Только после этого сборка уходит в TestFlight. Галочка **upload** снята — архив, экспорт и проверка без загрузки.
+
 ## 3. Android
 
 ### 3.1. Отладочный APK из GitHub (для прямой установки)

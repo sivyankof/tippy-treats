@@ -4,8 +4,8 @@
 #   bash scripts/native/check-privacy.sh <App.ipa> <ios/App/App/PrivacyInfo.xcprivacy>
 # Lists every .xcprivacy inside the .app (the root one and those of the bundles and frameworks)
 # with its NSPrivacyTracking and number of NSPrivacyTrackingDomains, prints them all, and fails when
-#  - any of them has NSPrivacyTracking false while NSPrivacyTrackingDomains is not empty
-#    (App Store Connect refuses the build: ITMS-91064), or
+#  - any of them breaks Apple's tracking rule either way: domains listed while NSPrivacyTracking is
+#    false, or NSPrivacyTracking true with no domain (App Store Connect refuses: ITMS-91064), or
 #  - the one at the root of the .app is missing or is not the app's own manifest.
 set -euo pipefail
 
@@ -36,6 +36,10 @@ while IFS= read -r file; do
   echo "  $rel  NSPrivacyTracking=$tracking  NSPrivacyTrackingDomains=$domains"
   if [ "$tracking" != "true" ] && [ "$domains" -gt 0 ]; then
     echo "::error::$rel: NSPrivacyTracking must be true when NSPrivacyTrackingDomains is not empty (ITMS-91064)"
+    fail=1
+  fi
+  if [ "$tracking" = "true" ] && [ "$domains" -eq 0 ]; then
+    echo "::error::$rel: NSPrivacyTracking true needs at least one NSPrivacyTrackingDomains entry (ITMS-91064, build 1.0 (8))"
     fail=1
   fi
 done < <(find "$app" -name '*.xcprivacy' | sort)

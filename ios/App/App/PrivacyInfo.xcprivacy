@@ -10,9 +10,15 @@
 -->
 <plist version="1.0">
 <dict>
-	<!-- With the player's permission (ATT) the ads may use the advertising identifier for tracking. -->
+	<!--
+	  False, with no tracking domains: Apple needs at least one domain when this is true, and blocks
+	  requests to those domains when the player refuses tracking (ATT), which would stop the ads.
+	  The game itself calls no tracking domain; Google Mobile Ads declares false in its own manifest
+	  too. The advertising identifier below stays marked as used for tracking (only with ATT).
+	  docs/11a-device-build.md, section 2.1 (ITMS-91064 on build 1.0 (8)).
+	-->
 	<key>NSPrivacyTracking</key>
-	<true/>
+	<false/>
 	<key>NSPrivacyTrackingDomains</key>
 	<array/>
 	<key>NSPrivacyCollectedDataTypes</key>
