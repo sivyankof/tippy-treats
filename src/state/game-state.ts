@@ -590,6 +590,14 @@ export class GameState {
     this.store.replace(withAdWatched(this.store.save));
   }
 
+  /** The tracking explainer and the system question were gone through; they are not shown again. */
+  noteAttAsked(): void {
+    const save = this.store.save;
+    if (save.consent.attAsked) return;
+    this.store.replace({ ...save, consent: { ...save.consent, attAsked: true } });
+    this.store.flush();
+  }
+
   /** Berries go in the moment they are earned, so they can pay for the continue of the same run. */
   addBerries(berries: number, source: CreditSource = 'run_berries'): void {
     const next = withBerries(this.store.save, berries);

@@ -1,4 +1,5 @@
 import type * as Phaser from 'phaser';
+import { consentAsk } from '../consent/consent-ask';
 import { notifAsk } from './notif-ask';
 
 /**
@@ -18,7 +19,7 @@ export interface HomeAsk {
 }
 
 /** The questions in the order they are asked. */
-export const HOME_ASKS: readonly HomeAsk[] = [notifAsk];
+export const HOME_ASKS: readonly HomeAsk[] = [consentAsk, notifAsk];
 
 /** Runs the first due question, then `then`; with nothing due, `then` runs at once. */
 export function runHomeAsks(

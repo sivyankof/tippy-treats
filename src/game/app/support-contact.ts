@@ -5,7 +5,7 @@ import { t } from '../../i18n';
 import { gameState } from '../../state';
 import { services } from '../../services';
 import type { AppShellService } from '../../services/app-shell/types';
-import { buildMailBody, buildMailto } from '../../util/mailto';
+import { buildMailBody, buildMailto } from './mailto';
 
 /** The install id as the settings window shows it: the first characters only. */
 export function shortInstallId(installId: string): string {

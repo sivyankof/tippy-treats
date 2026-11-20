@@ -7,7 +7,15 @@ import { Preferences } from '@capacitor/preferences';
 import { Purchases } from '@revenuecat/purchases-capacitor';
 import { SplashScreen } from '@capacitor/splash-screen';
 import { DEBUG_TOOLS } from '../util/build-kind';
+import { AdMob } from '@capacitor-community/admob';
 import { showStubOverlay, WebAds } from './rewarded-video/web';
+import { NativeAds } from './rewarded-video/native';
+import { pickAdUnits } from './rewarded-video/ad-units';
+import { createAdMobAdsPlugin } from './rewarded-video/plugin';
+import type { ConsentService } from './consent/types';
+import { WebConsent } from './consent/web';
+import { NativeConsent } from './consent/native';
+import { readDebugParams } from '../util/debug-params';
 import type { AdsDevControl, AdsService } from './rewarded-video/types';
 import { createBrowserAudioContext, WebAudioService } from './audio/web';
 import { audioLog } from './audio/audio-log';
@@ -55,6 +63,8 @@ export interface Services {
   silentMode: SilentModeService;
   haptics: HapticsService;
   ads: AdsService;
+  /** Google UMP and, on iOS, the tracking question (docs/09-services-analytics.md, section 4). */
+  consent: ConsentService;
   iap: IapService;
   storage: StorageService;
   share: ShareService;
@@ -110,6 +120,20 @@ const TEST_STUBS = DEBUG_TOOLS;
 
 const webAds = new WebAds(showStubOverlay, TEST_STUBS ? 'reward' : 'no_fill');
 
+/** `ios` or `android` inside the app. */
+const platform = Capacitor.getPlatform() === 'ios' ? 'ios' : 'android';
+
+const ads: AdsService = native
+  ? new NativeAds(
+      createAdMobAdsPlugin(AdMob),
+      pickAdUnits({ debugTools: DEBUG_TOOLS, platform, env: import.meta.env }),
+    )
+  : webAds;
+
+const consent: ConsentService = native
+  ? new NativeConsent(AdMob, platform)
+  : new WebConsent(typeof window !== 'undefined' && readDebugParams().consent === true);
+
 const webIap = createStubIap(productIds, TEST_STUBS);
 
 /** The public RevenueCat key of this platform; undefined until the owner puts it into `.env`. */
@@ -150,14 +174,15 @@ const webAudio = new WebAudioService(
  * The single place that picks implementations (docs/08-architecture.md, section 8). Inside the app
  * the storage, haptics and the shell are native; the sound is the same Web Audio (the app's audio
  * session is set natively, ios/App/App/AppDelegate.swift); the silent switch needs no reading
- * there, the ambient session obeys it by itself. Purchases are RevenueCat in the app; ads, analytics and sharing stay the
- * stubs until stage M8.
+ * there, the ambient session obeys it by itself. Ads and consent are the AdMob plugin, purchases
+ * RevenueCat, the analytics and crash reports Firebase (when its settings file is in the build).
  */
 export const services: Services = {
   audio: webAudio,
   silentMode: new WebSilentMode(),
   haptics: native ? new NativeHaptics(Haptics) : new WebHaptics(),
-  ads: webAds,
+  ads,
+  consent,
   iap,
   storage: native ? new NativeStorage(Preferences) : new WebStorage(),
   share: new WebShare(),
