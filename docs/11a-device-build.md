@@ -284,7 +284,20 @@ base64 -w0 android/app/google-services.json | gh secret set FIREBASE_ANDROID_JSO
 
 Нажимать на рекламу в выпускной сборке нельзя (боевая реклама, блокировка AdMob); рекламу проверять во внутренней.
 
-### 6.3. Товары Google Play (сессия 10, 2026-11-21)
+### 6.3. Сборки 1.0 (сессия 10, 2026-11-21)
+
+Версия 1.0 (раздел 0), номера по порядку. Журнал GitHub печатает только имена ключей: «Keys of this build: ADMOB_APP_ID_IOS ADMOB_REWARDED_ID_IOS ADMOB_INTERSTITIAL_ID_IOS REVENUECAT_API_KEY_IOS FIREBASE_IOS_PLIST», «Not set: none». Android проверен по содержимому AAB: `versionName` 1.0, `versionCode`, подпись ключом загрузки (`CN=Tippy Treats`, отпечаток как у `tippy-upload-certificate.pem`), ключ RevenueCat и идентификаторы товаров в коде игры, настройки Firebase в ресурсах.
+
+| Сборка | Где | Что внутри |
+|---|---|---|
+| iOS 1.0 (7), внутренняя | TestFlight (GitHub Actions, запуск 44820041504) | отладочное меню; тестовая реклама Google; RevenueCat; Firebase |
+| iOS 1.0 (8), выпускная | TestFlight (запуск 44820059580) | без отладочного меню; идентификаторы AdMob из секретов; RevenueCat; Firebase |
+| Android 1.0 (7), внутренняя | `tippy-treats-store-assets\builds\tippy-treats-1.0-7-internal.aab` | отладочное меню; тестовые идентификаторы Google; RevenueCat; Firebase |
+| Android 1.0 (8), выпускная | `tippy-treats-store-assets\builds\tippy-treats-1.0-8-store.aab` | без отладочного меню; идентификатор приложения и блоки AdMob из `.env`; RevenueCat; Firebase |
+
+Перед проверкой порядка согласий на iPhone игру удалить и поставить заново: ответ на ATT система хранит до удаления.
+
+### 6.4. Товары Google Play (сессия 10, 2026-11-21)
 
 В Play Console заведены шесть разовых товаров `tippy_*`, у каждого один вариант покупки (purchase option) с идентификатором `buy`. Код покупок на Android находит их без правок:
 - игра просит у RevenueCat товары по простым идентификаторам из `.env` (`tippy_berries_80` и т. д., тип `NON_SUBSCRIPTION`, `services/iap/native.ts`); вариант покупки в идентификатор не входит;
