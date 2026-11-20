@@ -1,3 +1,4 @@
+import { fireAndForget, ignore } from '../common/fire-and-forget';
 import type { AnalyticsService, EventParams } from './types';
 import { checkEvent, checkProperty } from './validate';
 
@@ -6,8 +7,6 @@ export interface AnalyticsPlugin {
   logEvent(options: { name: string; params?: Record<string, string | number> }): Promise<void>;
   setUserProperty(options: { key: string; value: string | null }): Promise<void>;
 }
-
-const ignore = (): undefined => undefined;
 
 /**
  * Firebase Analytics (docs/09-services-analytics.md, section 6). Every call is fire and forget:
@@ -26,23 +25,17 @@ export class NativeAnalytics implements AnalyticsService {
     const checked = checkEvent(name, params);
     for (const problem of checked.problems) this.warn(problem);
     if (checked.name === null) return;
-    this.send(() => this.plugin.logEvent({ name: checked.name ?? name, params: checked.params }));
+    fireAndForget(() =>
+      this.plugin.logEvent({ name: checked.name ?? name, params: checked.params }),
+    );
   }
 
   setUserProperty(name: string, value: string): void {
     const checked = checkProperty(name, value);
     for (const problem of checked.problems) this.warn(problem);
     if (checked.name === null) return;
-    this.send(() =>
+    fireAndForget(() =>
       this.plugin.setUserProperty({ key: checked.name ?? name, value: checked.value }),
     );
-  }
-
-  private send(call: () => Promise<void>): void {
-    try {
-      call().catch(ignore);
-    } catch {
-      // A plugin that throws at once is as harmless as one that rejects.
-    }
   }
 }

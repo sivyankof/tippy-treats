@@ -1,3 +1,4 @@
+import { ignore } from '../common/fire-and-forget';
 import { ImpactStyle, NotificationType } from '@capacitor/haptics';
 import { HAPTICS } from '../../data/app/haptics';
 import { SwitchableHaptics } from './switchable';
@@ -27,8 +28,6 @@ const NOTIFICATION: Partial<Record<HapticKind, NotificationType>> = {
 
 /** How many medium hits the record series has (docs/06, section 8). */
 const TRIPLE_HITS = 3;
-
-const ignore = (): undefined => undefined;
 
 /**
  * The system haptics of the phone (docs/06-art-animation-audio.md, section 8): impacts, the

@@ -1,3 +1,4 @@
+import { ignore } from '../common/fire-and-forget';
 import { SystemBarsStyle, SystemBarType } from '@capacitor/core';
 import { pageUserAgent, parseUserAgent } from './device-info';
 import type { AppShellService, BarIcons, DeviceInfo } from './types';
@@ -40,8 +41,6 @@ export interface DevicePlugin {
 }
 
 const PLATFORM_NAMES: Record<string, string> = { ios: 'iOS', android: 'Android' };
-
-const ignore = (): undefined => undefined;
 
 /** Subscribes through a plugin whose handle comes later; the returned function works before it does. */
 function subscribe(add: () => Promise<ListenerHandle>): () => void {

@@ -3,9 +3,11 @@ import {
   giftDayToStore,
   type PlannedNotif,
 } from '../../core/progression/notif-plan';
+import { NOTIF } from '../../data/progression/notif';
 import type { Save } from '../../core/save/schema';
 import type { AppShellService } from '../../services/app-shell/types';
 import type { NotificationsService } from '../../services/notifications/types';
+import { localDay } from '../../util/calendar';
 
 /** What the schedule reads and writes of the game state. */
 export interface NotifScheduleState {
@@ -29,24 +31,38 @@ export function bindNotifSchedule(
 ): () => void {
   let active = true;
   let queue: Promise<void> = Promise.resolve();
+  // The gift moment the last background really scheduled (null: none); undefined until the first
+  // open of this launch (the launch itself), when the memory of an earlier launch is gone.
+  let scheduledGiftAt: number | null | undefined;
   const enqueue = (job: () => Promise<void>): void => {
     queue = queue.then(job).catch(() => undefined);
   };
 
+  /** The day of the scheduled gift notification when its moment has passed (it went out while away). */
+  const sentDay = (): string | null =>
+    scheduledGiftAt !== null && scheduledGiftAt !== undefined && scheduledGiftAt <= nowMs()
+      ? localDay(scheduledGiftAt)
+      : null;
+
   const opened = (): void => {
     active = true;
-    const day = giftDayToStore(state.data, nowMs());
-    if (day !== null) state.setGiftNotifDay(day);
+    const day = scheduledGiftAt === undefined ? giftDayToStore(state.data, nowMs()) : sentDay();
+    scheduledGiftAt = null;
+    if (day !== null && day !== state.data.notif.giftDay) state.setGiftNotifDay(day);
     enqueue(() => notifications.cancelAll());
   };
 
   const closed = (): void => {
     active = false;
-    const plan = [...buildNotifPlan(state.data, nowMs()), ...extra()];
+    const plan = buildNotifPlan(state.data, nowMs());
     enqueue(async () => {
       // Back in the app before this job's turn: nothing to schedule.
       if (active || !(await notifications.hasPermission()) || active) return;
-      await notifications.rescheduleAll(plan);
+      // Taken only now, so a debug test is not used up by a job that schedules nothing.
+      const all = [...plan, ...extra()];
+      await notifications.rescheduleAll(all);
+      const gift = plan.find((item) => item.id === NOTIF.ids.gift);
+      scheduledGiftAt = gift ? gift.at.getTime() : null;
     });
   };
 

@@ -186,4 +186,79 @@ describe('NativeAds', () => {
     plugin.initFails = true;
     await expect(ads.init()).resolves.toBeUndefined();
   });
+
+  it('is unavailable without loads when the SDK fails to start', async () => {
+    const { ads, plugin } = setup();
+    plugin.initFails = true;
+    await ads.init();
+    await flush();
+    expect(plugin.prepared).toEqual([]);
+    expect(ads.isRewardedReady()).toBe(false);
+    expect(await ads.showRewarded()).toBe('unavailable');
+    expect(await ads.showInterstitial()).toBe(false);
+  });
+
+  it('is unavailable without loads when an event listener cannot be registered', async () => {
+    const { ads, plugin } = setup();
+    plugin.on = () => Promise.reject(new Error('x'));
+    await ads.init();
+    await flush();
+    expect(plugin.prepared).toEqual([]);
+    expect(await ads.showRewarded()).toBe('unavailable');
+  });
+
+  it('settles a rewarded show whose close event never comes, after the safety wait', async () => {
+    const { ads, plugin, timers } = setup();
+    await ads.init();
+    await flush();
+    plugin.onShow = [];
+    const shown = ads.showRewarded();
+    await flush();
+    const safety = timers.find((t) => t.delay === AD_LOAD.showSafetyMs);
+    expect(safety).toBeDefined();
+    safety?.run();
+    expect(await shown).toBe('dismissed');
+    expect(ads.isRewardedReady()).toBe(false);
+  });
+
+  it('still pays a timed-out show whose reward event had fired', async () => {
+    const { ads, plugin, timers } = setup();
+    await ads.init();
+    await flush();
+    plugin.onShow = ['rewarded'];
+    const shown = ads.showRewarded();
+    await flush();
+    timers.find((t) => t.delay === AD_LOAD.showSafetyMs)?.run();
+    expect(await shown).toBe('rewarded');
+  });
+
+  it('a stale safety timer does not touch a later show', async () => {
+    const { ads, plugin, timers } = setup();
+    await ads.init();
+    await flush();
+    expect(await ads.showRewarded()).toBe('rewarded');
+    const stale = timers.find((t) => t.delay === AD_LOAD.showSafetyMs);
+    await flush();
+    plugin.onShow = [];
+    const second = ads.showRewarded();
+    await flush();
+    stale?.run();
+    let settled = false;
+    void second.then(() => (settled = true));
+    await flush();
+    expect(settled).toBe(false);
+    timers.filter((t) => t.delay === AD_LOAD.showSafetyMs)[1]?.run();
+    expect(await second).toBe('dismissed');
+  });
+
+  it('settles an interstitial whose close event never comes', async () => {
+    const { ads, plugin, timers } = setup();
+    await ads.init();
+    await flush();
+    plugin.onShowInterstitial = [];
+    const shown = ads.showInterstitial();
+    await flush();
+    timers.find((t) => t.delay === AD_LOAD.showSafetyMs)?.run();
+    expect(await shown).toBe(true);
+  });
 });

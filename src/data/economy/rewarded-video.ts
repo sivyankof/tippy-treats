@@ -18,6 +18,11 @@ export const AD_LOAD = {
   retryDelaysMs: [5000, 15000, 45000, 120000],
   /** A consent request that has not answered in this long counts as failed, so Home never waits for the network. */
   consentTimeoutMs: 8000,
+  /**
+   * Safety net of a show: when the plugin's show call has returned and no close event arrives in
+   * this long (a rewarded ad can run 30+ s, so it is generous), the show settles as closed.
+   */
+  showSafetyMs: 120000,
 } as const;
 
 /**

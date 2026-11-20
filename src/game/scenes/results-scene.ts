@@ -1,36 +1,30 @@
 import * as Phaser from 'phaser';
 import { ANIM } from '../../data/common/anim';
-import { MENU } from '../../data/common/menu-layout';
 import { t } from '../../i18n';
 import { services } from '../../services';
-import { gameState } from '../../state';
 import { RecordCelebration } from '../fx/run/record-celebration';
 import { leaveResultsAds, type RunExit } from '../economy/interstitial-flow';
-import { isDebugRun, isLiveRun } from '../run/results-data';
+import { isLiveRun } from '../run/results-data';
 import { SCENES, type ResultsData } from '../app/scene-keys';
 import { fadeInResultsDim } from '../run/results-launch';
 import { createDimOverlay } from '../ui/common/dim-overlay';
 import { enterScreen, leaveScreen, type Movable } from '../ui/common/transition';
-import { createDebugPlate } from '../ui/menu/results/results-debug-plate';
 import { bindResultsBack, ResultsButtons } from '../ui/menu/results/results-buttons';
 import { ResultsCoins } from '../ui/menu/results/results-coins';
+import { createResultsBlocks, createResultsFoot } from '../ui/menu/results/results-build';
 import { ResultsHeader, createStats } from '../ui/menu/results/results-header';
-import { createResultsHint } from '../ui/menu/results/results-hint';
 import { createResultsStart } from '../ui/menu/results/results-start';
 import { startedLine } from '../ui/menu/results/results-start-model';
 import { shareResult } from '../ui/menu/results/results-share';
 import { ResultsMissions } from '../ui/menu/results/results-missions';
 import { ResultsPanel, type PanelParts } from '../ui/menu/results/results-panel';
 import { resultsFlow } from '../ui/menu/results/results-flow';
-import { ResultsTiers } from '../ui/menu/results/results-tiers';
-import { coinLines, presentedCreatures } from '../ui/menu/results/results-text';
+import { presentedCreatures } from '../ui/menu/results/results-text';
 import { ResultsXp } from '../ui/menu/results/results-xp';
 import { askForRatingOnResults } from '../ui/menu/results/results-rating';
 import { cueMusic } from '../audio/music-cues';
 import { safeBand } from '../app/safe-area';
 import { frameOf, safeFrame } from '../ui/common/safe-frame';
-
-const cfg = MENU.results;
 
 /**
  * The end of a run: height, stats, coins, XP and the way on (docs/07-ui-screens.md, section 6).
@@ -146,36 +140,18 @@ export class ResultsScene extends Phaser.Scene {
 
   /** The coins, the daily tiers and the missions. */
   private buildBlocks(): void {
-    const { result, summary, tally } = this.run;
-    // The coins of a daily run are not doubled by an ad: that place is for the classic run only.
-    const canDouble = isLiveRun(this.run) && result.mode !== 'daily';
-    this.coins = new ResultsCoins(this, result.coins, coinLines(tally), canDouble);
-    this.parts.coins = this.coins;
-    this.parts.tiers = new ResultsTiers(this, summary.dailyTiers, summary.lapBerries);
-    this.missions = new ResultsMissions(
-      this,
-      summary.missions.before,
-      summary.missions.after,
-      cfg.missions.maxRows,
-    );
-    this.parts.missions = this.missions;
+    const blocks = createResultsBlocks(this, this.run);
+    this.coins = blocks.coins;
+    this.missions = blocks.missions;
+    Object.assign(this.parts, blocks);
   }
 
   /** The XP bar, the dev plate and the "so close" line. */
   private buildFoot(): void {
-    const { recorded, summary } = this.run;
-    this.xp = new ResultsXp(this, summary, {
-      level: gameState.data.bakerLevel,
-      xp: gameState.data.bakerXp,
-    });
-    // A run that is not saved gained no XP and set no record: the XP block and the hint stay out.
-    this.xp.container.setVisible(recorded);
-    this.parts.xp = this.xp;
-    this.parts.recorded = recorded;
-    this.parts.debugPlate = isDebugRun(recorded, import.meta.env.DEV)
-      ? createDebugPlate(this)
-      : null;
-    this.parts.hint = createResultsHint(this, this.run);
+    const foot = createResultsFoot(this, this.run);
+    this.xp = foot.xp;
+    this.parts.recorded = this.run.recorded;
+    Object.assign(this.parts, foot);
   }
 
   /** The buttons and the way on: what each of them does. */

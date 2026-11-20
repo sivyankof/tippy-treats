@@ -40,9 +40,12 @@ function slotMoment(slot: NotifSlot, save: Save, nowMs: number): number | null {
       return localDay(at) === save.notif.giftDay ? null : at;
     }
     case 'streak': {
-      // Only a streak that is alive (the last run was yesterday) and not yet extended today.
+      // A streak that is alive: the last run was yesterday (remind today at 19:00 if still ahead)
+      // or today (remind tomorrow at 19:00, the day is already extended).
       if (save.streak.count < NOTIF.streakMin) return null;
-      if (daysBetween(save.streak.lastDay, today) !== 1) return null;
+      const gap = daysBetween(save.streak.lastDay, today);
+      if (gap === 0) return atLocalHour(nowMs, 1, NOTIF.streakHour);
+      if (gap !== 1) return null;
       const at = atLocalHour(nowMs, 0, NOTIF.streakHour);
       return at > nowMs ? at : null;
     }

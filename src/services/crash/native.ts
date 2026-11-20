@@ -1,3 +1,4 @@
+import { fireAndForget } from '../common/fire-and-forget';
 import { describeError, type Frame } from './describe';
 import type { CrashContext, CrashService } from './types';
 
@@ -12,8 +13,6 @@ export interface CrashPlugin {
   crash(options: { message: string }): Promise<void>;
 }
 
-const ignore = (): undefined => undefined;
-
 /** The text of the forced crash of the debug menu. */
 const TEST_CRASH_MESSAGE = 'Test crash from the debug menu';
 
@@ -27,17 +26,17 @@ export class NativeCrash implements CrashService {
   constructor(private readonly plugin: CrashPlugin) {}
 
   recordError(error: unknown, context: CrashContext): void {
-    this.send(() =>
+    fireAndForget(() =>
       this.plugin.setCustomKey({ key: 'scene', value: context.scene || 'none', type: 'string' }),
     );
-    this.send(() =>
+    fireAndForget(() =>
       this.plugin.setCustomKey({ key: 'save_version', value: context.saveVersion, type: 'int' }),
     );
-    this.send(() =>
+    fireAndForget(() =>
       this.plugin.setCustomKey({ key: 'report_kind', value: context.kind, type: 'string' }),
     );
     const { message, frames } = describeError(error);
-    this.send(() =>
+    fireAndForget(() =>
       this.plugin.recordException({
         message,
         ...(frames.length > 0 ? { stacktrace: frames } : {}),
@@ -46,14 +45,6 @@ export class NativeCrash implements CrashService {
   }
 
   crash(): void {
-    this.send(() => this.plugin.crash({ message: TEST_CRASH_MESSAGE }));
-  }
-
-  private send(call: () => Promise<void>): void {
-    try {
-      call().catch(ignore);
-    } catch {
-      // A plugin that throws at once is as harmless as one that rejects.
-    }
+    fireAndForget(() => this.plugin.crash({ message: TEST_CRASH_MESSAGE }));
   }
 }

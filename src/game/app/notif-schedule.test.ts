@@ -123,13 +123,78 @@ describe('bindNotifSchedule', () => {
     expect(service.plans[0]).toContainEqual(extra);
   });
 
-  it('stores the day of a gift notification that has gone out when the app opens', async () => {
-    const shell = fakeShell();
-    const service = fakeService(true);
+  it('stores the gift day after a cold start when the gift moment has passed', () => {
     const save = { ...boundSave(), gift: { nextAt: NOW - 3_600_000 } };
     const state = fakeState(save);
-    bindNotifSchedule(shell, service, state, () => NOW);
+    bindNotifSchedule(fakeShell(), fakeService(true), state, () => NOW);
     expect(state.giftDays).toEqual(['2026-11-20']);
+  });
+
+  it('stores the gift day when the scheduled gift moment has passed at the next open', async () => {
+    const shell = fakeShell();
+    const state = fakeState(boundSave());
+    let now = NOW;
+    bindNotifSchedule(shell, fakeService(true), state, () => now);
+    shell.emit(false);
+    await flush();
+    now = NOW + 3 * 3_600_000;
+    shell.emit(true);
+    expect(state.giftDays).toEqual(['2026-11-20']);
+  });
+
+  it('does not store the gift day when no gift notification was scheduled', async () => {
+    for (const granted of [true, false]) {
+      const shell = fakeShell();
+      const state = fakeState(boundSave());
+      let now = NOW;
+      bindNotifSchedule(shell, fakeService(granted), state, () => now);
+      // The first background of the launch; the gift moment then passes while in the foreground.
+      shell.emit(false);
+      shell.emit(true);
+      await flush();
+      now = NOW + 3 * 3_600_000;
+      shell.emit(false);
+      await flush();
+      shell.emit(true);
+      expect(state.giftDays).toEqual([]);
+    }
+  });
+
+  it('does not use up the extra items when nothing is scheduled', async () => {
+    const shell = fakeShell();
+    let taken = 0;
+    bindNotifSchedule(
+      shell,
+      fakeService(false),
+      fakeState(boundSave()),
+      () => NOW,
+      () => {
+        taken++;
+        return [];
+      },
+    );
+    shell.emit(false);
+    await flush();
+    expect(taken).toBe(0);
+    const granted = fakeService(true);
+    const shell2 = fakeShell();
+    bindNotifSchedule(
+      shell2,
+      granted,
+      fakeState(boundSave()),
+      () => NOW,
+      () => {
+        taken++;
+        return [];
+      },
+    );
+    shell2.emit(false);
+    shell2.emit(true);
+    await flush();
+    expect(taken).toBe(0);
+    shell2.emit(false);
+    await flush();
+    expect(taken).toBe(1);
   });
 });
 
