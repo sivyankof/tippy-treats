@@ -105,9 +105,39 @@ export interface AnalyticsService {
 }
 ```
 
-В браузере сервис уже есть: `services/telemetry/web.ts` печатает `[telemetry] имя {параметры}` через `console.info` в режиме разработки, в продакшен-сборке молчит; он зарегистрирован как `services.telemetry`. Нативная Firebase-реализация придёт на M8.
+В браузере сервис: `services/telemetry/web.ts` печатает `[telemetry] имя {параметры}` через `console.info` в режиме разработки, в продакшен-сборке молчит; он зарегистрирован как `services.telemetry`. Внутри приложения `services/telemetry/native.ts` отправляет события в Firebase Analytics (`logEvent`, `setUserProperty`), но только когда в сборке есть файл настроек Firebase своей системы (`__FIREBASE_IOS__` / `__FIREBASE_ANDROID__`, `vite.config.ts`); без файла работает тихая браузерная заглушка и плагин Firebase не вызывается ни разу (его SDK не настроен). Плагины `@capacitor-firebase/analytics` и `crashlytics` берутся из JS по имени через `registerPlugin('FirebaseAnalytics')` и `registerPlugin('FirebaseCrashlytics')`, пакеты в JS не импортируются: их веб-часть требует SDK `firebase`, которого в игре нет.
 
-Отправляются уже сейчас: `run_start` (сцена забега, только для забегов, которые пишутся в сохранение: не для демо и отладочных `?bot=`, `?start=`, `?team=`, `?level=`; `team` без пустых слотов, `run_index` = число законченных забегов + 1, `game/run/run-telemetry.ts`), `checkpoint_offer` (`logCheckpointOffer` в `game/run/checkpoint-start.ts`, окно вызывает его при открытии; `max_height` = старшая открытая точка), `checkpoint_start` и `currency_spend` (`item` = `checkpoint_<высота>`, только за ягоды) из `payForCheckpoint`, `ad_rewarded_show` и `ad_rewarded_result` для каждого места показа (внутри `showRewarded`). Остальные события таблицы появятся позже.
+Каждый вызов нативного сервиса «выстрелил и забыл»: отказ плагина, заблокированные домены Firebase, исключение мостика гасятся без следа (ни необработанного отказа, ни ошибки в игре). Перед отправкой имя и параметры проверяет чистая `services/telemetry/validate.ts`: `snake_case`, имя события и параметра до 40 символов, имя свойства пользователя до 24, значение параметра до 100, значение свойства до 36, не больше 25 параметров, без префиксов `firebase_`, `google_`, `ga_`. Неправильное событие отбрасывается (в разработке и во внутренней сборке с предупреждением), параметр с плохим именем отбрасывается, длинный текст обрезается, булево становится 1 или 0 (числа и строки Firebase понимает, булево нет). Лимиты лежат в `data/app/telemetry.ts`.
+
+События, которые строит слой сохранения, отправляет `GameState` (`state/game-state.ts`, строители параметров с тестами в `state/state-events.ts`): так точка отправки одна на событие и их не обойти из сцены. В сервис события попадают только из забегов, которые пишутся в сохранение, как и `run_start`. Свойства пользователя считает `state/user-properties.ts` при каждой смене сохранения и при загрузке, отправляются только изменившиеся.
+
+Отправляются (всё из таблицы ниже):
+
+| Событие | Откуда |
+|---|---|
+| `tutorial_step` | `GameState.markHint`: каждая новая подсказка (`step` = ид. подсказки из `HINT_IDS`) |
+| `tutorial_complete` | `recordRun`: самый первый забег в сохранении |
+| `run_start` | сцена забега, `game/run/run-telemetry.ts`: только для забегов, которые пишутся в сохранение (не демо и не отладочные `?bot=`, `?start=`, `?team=`, `?level=`); `team` без пустых слотов, `run_index` = число законченных забегов + 1 |
+| `checkpoint_offer`, `checkpoint_start`, `currency_spend` за старт | `game/run/checkpoint-start.ts` (`item` = `checkpoint_<высота>`, только за ягоды) |
+| `run_end`, `new_record`, `level_up`, `creature_unlock` (`source` `record`/`level`), `mission_complete`, `daily_attempt`, `currency_earn` (`run`, `lap`) | `GameState.recordRun`; `duration_s` округлена до секунд, `abilities_used` из счётчиков забега |
+| `continue_offer`, `continue_used` | `game/run/continue-flow.ts` (параметры: `game/run/continue-telemetry.ts`); `option` = `ad`, `berries` или `both` (что окно предлагает сейчас), `height` = высота башни в момент промаха |
+| `creature_unlock` (`source` `shop_coins`/`shop_berries`/`streak`/`level`/`purchase`), `creature_upgrade`, `currency_spend` (`item` = `creature_<ид>`, `upgrade_<ид>`, `continue`, `berry_exchange`, `streak_restore`) | `buyCreature`, `upgradeCreature`, `spendBerries`, `exchangeBerries`, `restoreStreak` |
+| `team_change` | `GameState.setTeam`, только если состав изменился |
+| `mission_chest`, `streak_day`, `streak_lost`, `streak_restore` | `claimChest`, `claimStreak`, `declineStreak` (серия сброшена игроком; `count` = длина до сброса), `restoreStreak` |
+| `gift_open` | окно подарка (`game/ui/menu/home/gift-window.ts`, `game/economy/economy-telemetry.ts`): при закрытии окна, `doubled` = удвоено ли рекламой |
+| `ad_rewarded_show`, `ad_rewarded_result` | `showRewarded`, каждое место показа |
+| `ad_interstitial_show` | `GameState.noteInterstitialShown` |
+| `shop_open` | `ShopScene.create`: `source` = `home` (кнопка Дома) или `return` (возврат с экрана нового существа) |
+| `iap_start`, `iap_result` | `buyProduct` (`game/economy/purchases.ts`): `product` = ключ товара (`remove_ads`…), не идентификатор магазина; `result` = `purchased`/`cancelled`/`failed`/`pending` |
+| `currency_earn` | `GameState` при любом начислении от крупного источника: от 100 монет или от 1 ягоды (`TELEMETRY.earnMin`); не `debug` и не ягоды, подобранные в забеге (их сумма в `run_end`) |
+| `notif_permission` | вспомогательная `logNotifPermission(granted)` в `game/app/notif-telemetry.ts`; вызывает код уведомлений на каждый ответ системы |
+| `settings_change` | `GameState.updateSettings`: по событию на каждый сдвинувшийся ключ (`music`, `sfx`, `haptics`, `reducedFx`, `lang`, `notif_gift`, `notif_streak`, `notif_daily`, `notif_comeback`); значение 1/0 или язык |
+
+Согласие (EU). В Firebase есть режим согласия Google (`setConsent`). Осторожный выбор для 1.0: сбор оставлен включённым по умолчанию, `setConsent` и `setEnabled` не вызываются, пользовательский идентификатор не задаётся (`setUserId` не вызывается нигде), сигналы персонализации рекламы игра Analytics не передаёт. Данные только об использовании, без личных данных (раздел 10). Если юрист потребует отдельный выключатель для ЕС, он добавляется как переключатель в настройках и вызов `setEnabled`; решение владельца.
+
+### Отладка событий
+
+В отладочной сборке (dev и внутренняя) все события пишутся в журнал `services/telemetry/event-log.ts` (последние 100 строк), отладочное меню показывает 25 последних и копирует их. Предупреждения проверки имён идут в тот же журнал со знаком `!`. Как смотреть события в Firebase на телефоне: `11a-device-build.md`, раздел 6.
 
 ### События
 
@@ -120,7 +150,7 @@ export interface AnalyticsService {
 | `checkpoint_start` | `height`, `method` (`ad`/`berries`), `price` | Начат забег с контрольной точки |
 | `run_end` | `mode`, `height`, `score`, `duration_s`, `perfects`, `best_combo`, `coins`, `abilities_used`, `continues`, `zone`, `end_reason` (`miss`/`sneeze`/`quit`) | Конец забега |
 | `new_record` | `height`, `prev` | Побит рекорд |
-| `continue_offer` | `height`, `option` (`ad`/`berries`) | Показано окно продолжения |
+| `continue_offer` | `height`, `option` (`ad`/`berries`/`both`: что окно предлагает) | Показано окно продолжения |
 | `continue_used` | `height`, `method` | Игрок продолжил |
 | `level_up` | `level` | Новый уровень пекаря |
 | `creature_unlock` | `creature`, `source` | Получено существо |
@@ -145,7 +175,7 @@ export interface AnalyticsService {
 | `settings_change` | `key`, `value` | Изменение настройки |
 
 ### Свойства пользователя
-`baker_level`, `creatures_owned`, `best_height_bucket` (`0-19`, `20-49`, `50-99`, `100+`), `payer` (`0`/`1`), `days_since_install_bucket`.
+`baker_level`, `creatures_owned`, `best_height_bucket` (`0-19`, `20-49`, `50-99`, `100+`), `payer` (`0`/`1`: куплено что-либо), `install_age_bucket` (дней с создания сохранения: `0`, `1`, `2-3`, `4-7`, `8-14`, `15-30`, `31+`). Имя `days_since_install_bucket` из первой версии таблицы не годится: у Firebase имя свойства не длиннее 24 символов, а в нём 25. Границы корзин лежат в `data/app/telemetry.ts` (`TELEMETRY`). Идентификатор игрока и установки в аналитику не уходит.
 
 ### На что смотреть в отчётах
 - Воронка обучения: `tutorial_step` по шагам.
@@ -156,7 +186,13 @@ export interface AnalyticsService {
 
 ## 7. Сбои
 
-Firebase Crashlytics. Дополнительно глобальный обработчик ошибок JavaScript (`window.onerror`, `unhandledrejection`) записывает нефатальные ошибки с именем текущей сцены и версией сохранения.
+Firebase Crashlytics (`services/crash/`: интерфейс `CrashService` с `recordError(error, context)` и `crash()` для проверки; `native.ts` на плагине, `web.ts` печатает `[crash] …` только в разработке). Как и аналитика, нативная реализация включается только при файле настроек Firebase своей системы, иначе тихая браузерная.
+
+Глобальный обработчик (`services/crash/reporter.ts`, подключается первой строкой `start()` в `main.ts`, `game/app/crash-reporting.ts`): слушает `error` и `unhandledrejection` окна и записывает нефатальные ошибки с именем текущей сцены (ключи включённых сцен через `+`, например `game+hud`) и версией сохранения. Сцена и версия идут как пользовательские ключи Crashlytics `scene`, `save_version` (и `report_kind`: `error`, `rejection`, `effect:<имя>`, `test`), стек разбирается в кадры для группировки (в имени файла только последняя часть). Обработчик не бросает ошибок и не мешает браузеру печатать ошибку как раньше (в разработке она видна в консоли). Один и тот же сбой (сообщение и верх стека) не отправляется дважды, всего не больше 25 отчётов за загрузку страницы, безобидные сообщения браузера (`ResizeObserver loop`, `Script error.`) не отправляются. Числа: `CRASH` в `data/app/telemetry.ts`.
+
+Эффекты, которые `fxGuard` молча пропускает, тоже уходят в Crashlytics нефатально: один отчёт на имя эффекта за загрузку страницы, не больше 8 эффектов за загрузку (иначе поломка украшения затопила бы отчёты). Ядро (`src/core`, шаг симуляции, очки, сохранение) через `fxGuard` не идёт, его ошибки доходят до обработчика окна как обычные.
+
+Проверка на телефоне (внутренняя сборка с файлом настроек Firebase): отладочное меню, раздел «Events and failure reports», кнопки «Test non-fatal» (нефатальная запись) и «Test crash (app closes)» (настоящий вылет; отчёт о вылете уходит при следующем запуске приложения). Результат виден в Firebase, Crashlytics, через несколько минут.
 
 ## 8. Уведомления
 
