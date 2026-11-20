@@ -17,6 +17,7 @@ import {
 import { menuHeading, overlayButtonCss } from './overlay-style';
 import { pushBack } from '../app/back-stack';
 import { buildSoundStatus } from './sound-status';
+import { buildTelemetryStatus } from './telemetry-status';
 
 let openMenu: HTMLElement | null = null;
 
@@ -105,8 +106,10 @@ export function showDebugMenu(): void {
   // The Android back closes the menu (it covers the window that opened it).
   let releaseBack: () => void = () => undefined;
   const sound = buildSoundStatus();
+  const events = buildTelemetryStatus();
   const close = (): void => {
     sound?.dispose();
+    events.dispose();
     releaseBack();
     box.remove();
     openMenu = null;
@@ -162,6 +165,7 @@ export function showDebugMenu(): void {
     menuHeading('Tools'),
     tools,
     ...(sound ? [sound.element] : []),
+    events.element,
     menuHeading('Go'),
     finish,
   );

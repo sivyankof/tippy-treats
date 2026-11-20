@@ -19,4 +19,5 @@ export const gameState = new GameState({
   makeInstallId,
   scheduler: timers,
   tally: sessionTally,
+  telemetry: services.telemetry,
 });

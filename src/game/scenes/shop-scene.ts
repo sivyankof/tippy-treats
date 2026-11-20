@@ -8,6 +8,7 @@ import { PRODUCTS, SHOP, type ProductKey } from '../../data/economy/shop';
 import { t } from '../../i18n';
 import { services } from '../../services';
 import { gameState } from '../../state';
+import { logShopOpen, type ShopSource } from '../economy/economy-telemetry';
 import { buyProduct, loadPrices, restorePurchases, type Prices } from '../economy/purchases';
 import { showRewarded } from '../economy/rewarded';
 import { openScreen, SCENES } from '../app/scene-keys';
@@ -47,12 +48,19 @@ export class ShopScene extends Phaser.Scene {
   private adReady = false;
   private busy = false;
   private leaving = false;
+  private source: ShopSource = 'return';
 
   constructor() {
     super(SCENES.shop);
   }
 
+  /** `source`: the place that opened the shop; a return from the new creature screen counts as `return`. */
+  init(data?: { source?: ShopSource }): void {
+    this.source = data?.source ?? 'return';
+  }
+
   create(): void {
+    logShopOpen(this.source);
     this.leaving = false;
     this.busy = false;
     this.loaded = false;

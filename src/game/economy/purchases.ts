@@ -2,6 +2,7 @@ import type { ProductKey } from '../../data/economy/shop';
 import { productIds } from '../../services/iap/product-ids';
 import { services } from '../../services';
 import { gameState } from '../../state';
+import { logIapResult, logIapStart } from './economy-telemetry';
 
 /** How a purchase ended; `unavailable` means `.env` has no store id for the product. */
 export type BuyOutcome = 'purchased' | 'cancelled' | 'failed' | 'pending' | 'unavailable';
@@ -40,11 +41,14 @@ export async function buyProduct(key: ProductKey): Promise<BuyOutcome> {
   const id = productIds.idOf(key);
   if (id === null) return 'unavailable';
   let result: Awaited<ReturnType<typeof services.iap.purchase>>;
+  logIapStart(key);
   try {
     result = await services.iap.purchase(id);
   } catch {
+    logIapResult(key, 'failed');
     return 'failed';
   }
+  logIapResult(key, result);
   if (result !== 'purchased') return result;
   gameState.grantProduct(key);
   applyRemoveAds();

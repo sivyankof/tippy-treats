@@ -18,8 +18,17 @@ type GuardedMethod = (
  */
 export class FxGuard {
   private readonly warned = new Set<string>();
+  private reporter: ((name: string, error: unknown) => void) | null = null;
 
   constructor(private readonly warn: (message: string, error?: unknown) => void) {}
+
+  /**
+   * Where a skipped effect is reported besides the warning (Crashlytics, as a non-fatal; the
+   * reporter limits how often itself). It hears of each failing effect once per run, like the warning.
+   */
+  setReporter(reporter: ((name: string, error: unknown) => void) | null): void {
+    this.reporter = reporter;
+  }
 
   /**
    * The per-frame form: calls `method` on `target` with the given arguments, so no closure is
@@ -121,6 +130,11 @@ export class FxGuard {
     if (this.warned.has(name)) return;
     this.warned.add(name);
     this.warn(`Effect "${name}" failed and was skipped`, error);
+    try {
+      this.reporter?.(name, error);
+    } catch {
+      // Reporting is a decoration of a decoration.
+    }
   }
 }
 

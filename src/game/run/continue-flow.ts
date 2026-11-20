@@ -4,11 +4,15 @@ import { BALANCE } from '../../data/tower/balance';
 import { CONTINUE_ANIM } from '../../data/run/continue-anim';
 import { continueInput } from './continue-input';
 import type { AdsService } from '../../services/rewarded-video/types';
+import type { AnalyticsService } from '../../services/telemetry/types';
 import type { GameState } from '../../state/game-state';
+import { continueOfferParams, continueUsedParams, type ContinueMethod } from './continue-telemetry';
 
 export type ContinueAction = 'continue' | 'decline';
 
 export interface ContinueFlowDeps {
+  /** Where `continue_offer` and `continue_used` go; left out for runs that do not reach the save. */
+  telemetry?: Pick<AnalyticsService, 'logEvent'>;
   ads: Pick<AdsService, 'isRewardedReady' | 'showRewarded'>;
   /** The save: the berry balance and the payment. */
   wallet: Pick<GameState, 'berries' | 'spendBerries'>;
@@ -30,6 +34,9 @@ export class ContinueFlow {
   private disposed = false;
   /** Time left of the pause after a payment, while the window shows the berries flying. */
   private holdMs = 0;
+  /** Tower height the open offer was made at, and how the player paid (for the events). */
+  private offerHeight = 0;
+  private method: ContinueMethod | null = null;
 
   constructor(private readonly deps: ContinueFlowDeps) {}
 
@@ -69,7 +76,7 @@ export class ContinueFlow {
   }
 
   /** Opens the offer; false (nothing opened) when the window must not be shown at all. */
-  open(mode: RunMode, continuesUsed: number): boolean {
+  open(mode: RunMode, continuesUsed: number, height = 0): boolean {
     const offer = continueOffer({
       mode,
       continuesUsed,
@@ -83,6 +90,9 @@ export class ContinueFlow {
     this.left = BALANCE.continues.offerMs;
     this.pending = null;
     this.holdMs = 0;
+    this.offerHeight = height;
+    this.method = null;
+    this.deps.telemetry?.logEvent('continue_offer', continueOfferParams(offer, height));
     return true;
   }
 
@@ -106,8 +116,9 @@ export class ContinueFlow {
   payWithBerries(): boolean {
     const cost = this.current?.berryCost ?? null;
     if (cost === null || !this.inputReady || this.adShowing || this.pending) return false;
-    if (!this.deps.wallet.spendBerries(cost)) return false;
+    if (!this.deps.wallet.spendBerries(cost, 'continue')) return false;
     this.pending = 'continue';
+    this.method = 'berries';
     this.holdMs = CONTINUE_ANIM.balance.paidHoldMs;
     return true;
   }
@@ -122,8 +133,10 @@ export class ContinueFlow {
     const result = await this.deps.ads.showRewarded('continue');
     this.adShowing = false;
     if (this.disposed || !this.current) return;
-    if (result === 'rewarded') this.pending = 'continue';
-    else if (result === 'unavailable') this.current = { ...this.current, ad: 'unavailable' };
+    if (result === 'rewarded') {
+      this.pending = 'continue';
+      this.method = 'ad';
+    } else if (result === 'unavailable') this.current = { ...this.current, ad: 'unavailable' };
   }
 
   /** The decision once it is made, then `null` until the next offer. Closes the offer. */
@@ -132,6 +145,11 @@ export class ContinueFlow {
     if (!action || this.holdMs > 0) return null;
     this.pending = null;
     this.current = null;
+    if (action === 'continue' && this.method)
+      this.deps.telemetry?.logEvent(
+        'continue_used',
+        continueUsedParams(this.offerHeight, this.method),
+      );
     return action;
   }
 

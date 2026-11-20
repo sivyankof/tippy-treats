@@ -4,6 +4,7 @@ import { OVEN } from '../data/progression/progression';
 import { STORAGE_KEYS } from '../data/app/storage';
 import { MemoryStorage } from '../services/storage/memory';
 import { GameState } from './game-state';
+import type { AnalyticsService } from '../services/telemetry/types';
 import type { SessionTally } from './session-tally';
 
 /**
@@ -14,8 +15,9 @@ export function createTestState(
   clock: { ms: number } = { ms: 1_700_000_000_000 },
   storage: MemoryStorage = new MemoryStorage(),
   tally?: SessionTally,
+  telemetry?: AnalyticsService,
 ): GameState {
-  return build(storage, clock, tally);
+  return build(storage, clock, tally, telemetry);
 }
 
 /** Like `createTestState`, but starts from a given save (read through the normal load). */
@@ -23,15 +25,21 @@ export async function loadTestState(
   save: Save,
   clock: { ms: number },
   tally?: SessionTally,
+  telemetry?: AnalyticsService,
 ): Promise<GameState> {
   const storage = new MemoryStorage();
   await storage.set(STORAGE_KEYS.save, serializeSave(save));
-  const state = build(storage, clock, tally);
+  const state = build(storage, clock, tally, telemetry);
   await state.load();
   return state;
 }
 
-function build(storage: MemoryStorage, clock: { ms: number }, tally?: SessionTally): GameState {
+function build(
+  storage: MemoryStorage,
+  clock: { ms: number },
+  tally?: SessionTally,
+  telemetry?: AnalyticsService,
+): GameState {
   let counter = 0;
   return new GameState({
     storage,
@@ -40,6 +48,7 @@ function build(storage: MemoryStorage, clock: { ms: number }, tally?: SessionTal
     makeInstallId: () => `test-${++counter}`,
     scheduler: { set: () => 0, clear: () => undefined },
     tally,
+    telemetry,
   });
 }
 
