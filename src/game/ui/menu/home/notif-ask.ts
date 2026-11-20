@@ -2,9 +2,8 @@ import type * as Phaser from 'phaser';
 import { NOTIF } from '../../../../data/progression/notif';
 import { PALETTE } from '../../../../data/common/palette';
 import { t } from '../../../../i18n';
-import { services } from '../../../../services';
 import { gameState } from '../../../../state';
-import { ensureNotifPermission } from '../../../app/notif-permission';
+import { askNotifPermission } from '../../../app/ask-notif-permission';
 import { openConfirmWindow } from '../settings/confirm-window';
 import type { HomeAsk } from './home-asks';
 
@@ -28,11 +27,7 @@ export const notifAsk: HomeAsk = {
       confirmFill: PALETTE.accent,
       onConfirm: () => {
         answeredYes = true;
-        void ensureNotifPermission({
-          notifications: services.notifications,
-          telemetry: services.telemetry,
-          markAsked: () => gameState.markNotifAsked(),
-        }).finally(done);
+        void askNotifPermission().finally(done);
       },
       onClosed: () => {
         if (!answeredYes) done();

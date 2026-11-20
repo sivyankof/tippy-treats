@@ -17,9 +17,7 @@ import {
 import { menuHeading, overlayButtonCss } from './overlay-style';
 import { pushBack } from '../app/back-stack';
 import { buildSoundStatus } from './sound-status';
-import { ensureNotifPermission } from '../app/notif-permission';
-import { services } from '../../services';
-import { gameState } from '../../state';
+import { askNotifPermission } from '../app/ask-notif-permission';
 import { notifTest } from './notif-test';
 import { buildTelemetryStatus } from './telemetry-status';
 
@@ -150,11 +148,7 @@ export function showDebugMenu(): void {
   );
   const notif = row();
   const notifButton = button('Notifications: test in 1 min', () => {
-    void ensureNotifPermission({
-      notifications: services.notifications,
-      telemetry: services.telemetry,
-      markAsked: () => gameState.markNotifAsked(),
-    }).then((granted) => {
+    void askNotifPermission().then((granted) => {
       if (granted) notifTest.arm();
       notifButton.textContent = granted
         ? 'Armed: send the app to the background, it arrives in 1 min'

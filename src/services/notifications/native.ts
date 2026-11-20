@@ -1,3 +1,4 @@
+import { ignore } from '../common/fire-and-forget';
 import type { PlannedNotif } from '../../core/progression/notif-plan';
 import type { NotificationsService, NotifText } from './types';
 
@@ -21,8 +22,6 @@ export interface LocalNotificationsPlugin {
     }>;
   }): Promise<unknown>;
 }
-
-const ignore = (): undefined => undefined;
 
 /**
  * The system's local notifications. Inexact on Android (the exact-alarm permission is removed
