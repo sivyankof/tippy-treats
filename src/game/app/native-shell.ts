@@ -15,10 +15,12 @@ interface Flushable {
 /**
  * Ties the iOS and Android app to the game (docs/09-services-analytics.md, section 1). The app
  * stopping being active (background, a call, the control centre) pauses the game the way a hidden
- * page does (`Phaser.Core.Events.HIDDEN`: the loop stops, a run shows its pause window, the sound
- * and music stop) and writes the save at once; coming back resumes the loop and asks the audio to
- * run again a little later, since a call or an alarm may still hold it. The app may play sound
- * without a gesture, so the audio starts right away. The launch splash goes away after the first
+ * page does (`Phaser.Core.Events.HIDDEN`: the loop stops, a run shows its pause window) and
+ * writes the save at once; in the app the shell alone holds the sound then (`audio.suspend('app')`,
+ * the page's visibility does not touch it). Active again: the loop goes on and the sound is let go
+ * at once (`audio.resume('app')`); the service then checks the context by its clock and mends it
+ * step by step (`services/audio/context-health.ts`). The app may play sound without a gesture, so
+ * the audio starts right away. The launch splash goes away after the first
  * frame of a screen of the game. The Android back goes to the topmost screen or window that takes it
  * (`back-stack.ts`: a window closes, a run pauses, a menu screen goes home); when none does (Home),
  * the app goes to the background. The status bar icons follow the screen (`status-bar.ts`). Does

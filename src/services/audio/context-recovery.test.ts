@@ -32,6 +32,18 @@ class DeviceContext extends FakeContext {
     this.state = 'suspended';
     return Promise.resolve();
   };
+  private listener: (() => void) | null = null;
+  addEventListener(_type: string, fn: () => void): void {
+    this.listener = fn;
+  }
+  removeEventListener(): void {
+    this.listener = null;
+  }
+  /** The state changes and the service hears it, as from WebKit. */
+  setState(state: string): void {
+    this.state = state;
+    this.listener?.();
+  }
   /** The clock moves only while running on a live device. */
   tick(ms: number): void {
     if (this.state === 'running' && !this.deviceDead) this.currentTime += ms / 1000;
@@ -216,5 +228,89 @@ describe('the sound after a return from the background (owner log, build 0.1.0 (
     expect(contexts).toHaveLength(1);
     service.unlock();
     expect(contexts).toHaveLength(2);
+  });
+
+  it('taps that keep being refused do not set the check back: the remake still comes', async () => {
+    const t = setup(true);
+    t.service.unlock();
+    t.run(1000);
+    const first = t.contexts[0];
+    if (!first) throw new Error('no context');
+    t.service.suspend('app');
+    await t.settle();
+    first.refuseResume = true;
+    t.service.resume('app');
+    await t.settle();
+    // The player taps every 400 ms; every resume is refused.
+    for (let ms = 0; ms < 3200; ms += 400) {
+      t.service.unlock();
+      await t.settle();
+      t.run(400);
+      await t.settle();
+    }
+    expect(t.contexts.length).toBeGreaterThan(1);
+  });
+
+  it('each return gets its remakes again once a context came alive', async () => {
+    const contexts: DeviceContext[] = [];
+    const service = new WebAudioService(
+      () => {
+        const ctx = new DeviceContext(false);
+        contexts.push(ctx);
+        return ctx as unknown as AudioContext;
+      },
+      Math.random,
+      undefined,
+      () => undefined,
+      true,
+    );
+    const run = (ms: number): void => {
+      for (let x = 0; x < ms; x += 50) {
+        for (const c of contexts) c.tick(50);
+        vi.advanceTimersByTime(50);
+      }
+    };
+    service.unlock();
+    run(1000);
+    // Five returns, each with a context whose clock stands until it is made again.
+    for (let i = 0; i < 5; i++) {
+      service.suspend('app');
+      const live = contexts.at(-1);
+      if (live) live.deviceDead = true;
+      service.resume('app');
+      await vi.advanceTimersByTimeAsync(0);
+      run(3500);
+      await vi.advanceTimersByTimeAsync(0);
+    }
+    expect(service.status().remakes).toBe(5);
+  });
+
+  it('a context made while the sound is held is held at once', () => {
+    const t = setup(false);
+    t.service.unlock();
+    t.service.suspend('silent');
+    t.service.setEnabled(false);
+    t.service.setEnabled(true);
+    expect(t.contexts).toHaveLength(2);
+    expect(t.live()?.suspends).toBeGreaterThan(0);
+  });
+
+  it('an interruption holds the check: no remake while it lasts, a check after it ends', async () => {
+    const t = setup(false);
+    t.service.unlock();
+    t.run(1000);
+    const ctx = t.contexts[0];
+    if (!ctx) throw new Error('no context');
+    // A call: interrupted, the clock stands, the app stays active (no hold).
+    ctx.setState('interrupted');
+    t.run(10_000);
+    await t.settle();
+    expect(t.contexts).toHaveLength(1);
+    // The call ends, the state comes back but the clock still stands: the check mends it.
+    ctx.deviceDead = true;
+    ctx.setState('running');
+    t.run(3500);
+    await t.settle();
+    expect(t.contexts).toHaveLength(2);
   });
 });

@@ -131,7 +131,7 @@ jobs:
           LAUNCHES: ${{ inputs.launches }}
         run: |
           count="${LAUNCHES%x*}"; secs="${LAUNCHES#*x}"
-          case "$count$secs" in ''|*[!0-9]*) echo "::error::launches must look like 10x8"; exit 1;; esac
+          case "$count$secs" in ''|*[!0-9]*) echo "::error::launches must look like 12x10 (cycles x seconds back)"; exit 1;; esac
           xcrun simctl launch --console-pty --terminate-running-process "$UDID" "$BUNDLE_ID" > trace/cycles.log 2>&1 &
           pid=$!
           sleep 20

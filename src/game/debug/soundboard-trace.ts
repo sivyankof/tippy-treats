@@ -1,11 +1,11 @@
 import { MUSIC_TRACKS, type MusicTrackId } from '../../data/audio/music';
 import { services } from '../../services';
 import { audioLog } from '../../services/audio/audio-log';
+import { MS_PER_SECOND as MS } from '../../util/math';
 
 /** Seconds each track is given before the next one, and the wait before the first. */
 const TRACK_SEC = 7;
 const START_SEC = 3;
-const MS = 1000;
 
 /**
  * The simulator trace of the sound test page (`VITE_AUDIO_TRACE=soundboard`): asks the music for

@@ -78,6 +78,10 @@ export class WebAudioService implements AudioService, AudioDevControl {
   private healthTimer: ReturnType<typeof setInterval> | null = null;
   /** Remakes the check did by itself (capped), and all remakes (the switches too). */
   private autoRemakes = 0;
+  /** The clock of a context marked dead (a browser): if it moved by the next tap, it lives after all. */
+  private deadClockSec = 0;
+  /** The context went `interrupted`; its next state starts the check again. */
+  private wasInterrupted = false;
   private remakes = 0;
   private resumeRejects = 0;
   /** A dead context waits for the next tap to be made again (a browser). */
@@ -193,13 +197,21 @@ export class WebAudioService implements AudioService, AudioDevControl {
       this.stopHealthTimer();
       return;
     }
+    // An interruption (a call, Siri, an alarm) holds the sound like the background does.
+    const held = this.holds.size > 0 || (ctx.state as string) === 'interrupted';
     const verdict = this.health.look({
       nowMs: audioLog.uptimeSec() * MS_PER_SECOND,
       clockSec: ctx.currentTime,
-      held: this.holds.size > 0,
+      held,
     });
     if (verdict.kind === 'alive') {
       audioLog.add(`check: clock going, ${ctx.state} t=${ctx.currentTime.toFixed(2)}`);
+      // A context that came alive: the next return gets its remakes again, nothing is dead.
+      this.autoRemakes = 0;
+      this.deadContext = false;
+      this.stopHealthTimer();
+    } else if (held) {
+      // Nothing to do while held; the return (resume) or the end of the interruption looks again.
       this.stopHealthTimer();
     } else if (verdict.kind === 'given-up') {
       audioLog.add('check: nothing more to try');
@@ -216,14 +228,18 @@ export class WebAudioService implements AudioService, AudioDevControl {
     if (step === 'resume') {
       this.run((c) => c.resume(), 'resume', false);
     } else if (step === 'bounce') {
-      this.run((c) => c.suspend().then(() => c.resume()), 'suspend and resume', false);
-    } else if (!this.remakeWithoutGesture) {
-      if (!this.deadContext) audioLog.add('check: context made again at the next tap');
-      this.deadContext = true;
-    } else if (this.autoRemakes < CONTEXT_HEALTH.maxRemakes) {
+      // The resume only if nothing came to hold the sound meanwhile (the app went away again).
+      const resumeIfFree = (c: AudioContext): Promise<void> =>
+        this.ctx === c && this.holds.size === 0 ? c.resume() : Promise.resolve();
+      this.run((c) => c.suspend().then(() => resumeIfFree(c)), 'suspend and resume', false);
+    } else if (this.autoRemakes >= CONTEXT_HEALTH.maxRemakes) {
+      audioLog.add('check: no remakes left');
+    } else if (this.remakeWithoutGesture) {
       this.remakeContext('clock stands', true);
     } else {
-      audioLog.add('check: no remakes left');
+      if (!this.deadContext) audioLog.add('check: context made again at the next tap');
+      this.deadContext = true;
+      this.deadClockSec = ctx.currentTime;
     }
   }
 
@@ -257,6 +273,7 @@ export class WebAudioService implements AudioService, AudioDevControl {
     this.beds = null;
     this.health.forget();
     this.stopHealthTimer();
+    this.wasInterrupted = false;
     try {
       ctx?.close().catch(() => undefined);
     } catch {
@@ -315,9 +332,14 @@ export class WebAudioService implements AudioService, AudioDevControl {
 
   unlock(): void {
     if (this.deadContext && this.ctx) {
-      // A tap: the dead context is made again inside it.
-      this.remakeContext('tap', false);
-      return;
+      if (this.ctx.currentTime !== this.deadClockSec) {
+        // Its clock moved after all: it lives.
+        this.deadContext = false;
+      } else {
+        // A tap: the dead context is made again inside it (it counts like any automatic remake).
+        this.remakeContext('tap', true);
+        return;
+      }
     }
     if (!this.ctx) {
       if (this.buildFailed) return;
@@ -334,7 +356,14 @@ export class WebAudioService implements AudioService, AudioDevControl {
         const made = ctx;
         const listener = (): void => {
           audioLog.add(`context ${made.state}`);
-          if ((made.state as string) === 'interrupted') this.markSuspect('interrupted');
+          const state = made.state as string;
+          if (state === 'interrupted') {
+            this.wasInterrupted = true;
+            this.markSuspect('interrupted');
+          } else if (this.wasInterrupted) {
+            this.wasInterrupted = false;
+            this.markSuspect('after an interruption');
+          }
         };
         made.addEventListener?.('statechange', listener);
         const mixer = new Mixer(ctx);
@@ -353,6 +382,8 @@ export class WebAudioService implements AudioService, AudioDevControl {
         this.musicProxy.replace(this.musicFactory(musicHostOf(mixer)));
         this.watchTimer ??= setInterval(() => this.watchMusic(), MUSIC_WATCHDOG.checkMs);
         this.markSuspect('made');
+        // Made while the sound is held (a switch turned in silent mode, during an ad): held too.
+        if (this.holds.size > 0) this.run((c) => c.suspend(), 'suspend');
       } catch (error) {
         audioLog.add(`unlock: graph failed, ${errorText(error)}`);
         // Sound stays off: do not leave a context behind or make another one on the next tap.
@@ -481,7 +512,10 @@ export class WebAudioService implements AudioService, AudioDevControl {
       audioLog.add(`${what} ${verb}: ${errorText(error)}`);
       if (!what.includes('resume')) return;
       this.resumeRejects += 1;
-      if (checkOnRefusal && this.ctx === ctx) this.markSuspect('resume refused');
+      // A check under way goes on with its steps (a tap's resume must not set it back to the start).
+      if (checkOnRefusal && this.ctx === ctx && !this.health.isSuspect) {
+        this.markSuspect('resume refused');
+      }
     };
     try {
       call(ctx).catch((error: unknown) => refused(error, 'rejected'));
