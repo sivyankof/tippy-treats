@@ -4,7 +4,7 @@ import type { RunResult } from '../core/run/run-result';
 import { createDefaultSave } from '../core/save/defaults';
 import { BALANCE } from '../data/tower/balance';
 import { MS_PER_DAY } from '../data/app/clock';
-import { localDay } from '../util/clock';
+import { localDay } from '../util/calendar';
 import { NO_EXTRAS, statsOf } from './run-progress';
 import { loadTestState } from './test-state';
 

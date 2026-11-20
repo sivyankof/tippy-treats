@@ -7,7 +7,7 @@ import { DAILY } from '../data/progression/daily';
 import { GIFT } from '../data/economy/gift';
 import { MISSIONS } from '../data/progression/missions';
 import { STREAK } from '../data/progression/streak';
-import { localDay, utcDay } from '../util/clock';
+import { localDay, utcDay } from '../util/calendar';
 import { createTestState, loadTestState } from './test-state';
 
 const T0 = Date.UTC(2026, 5, 10, 12, 0, 0);

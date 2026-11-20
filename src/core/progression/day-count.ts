@@ -1,4 +1,4 @@
-import { daysBetween } from '../../util/clock';
+import { daysBetween } from '../../util/calendar';
 
 /**
  * A counter that belongs to one local day. It starts over only on a day strictly later than the

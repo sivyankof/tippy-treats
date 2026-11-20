@@ -1,6 +1,6 @@
 import { MISSION_POOL, MISSIONS } from '../../data/progression/missions';
 import type { MissionGroup, MissionTemplate } from '../../data/progression/missions';
-import { daysBetween } from '../../util/clock';
+import { daysBetween } from '../../util/calendar';
 import { dailyUnlocked } from './daily';
 import { hashString, Rng } from '../common/rng';
 import type { MissionProgress, Save } from '../save/schema';

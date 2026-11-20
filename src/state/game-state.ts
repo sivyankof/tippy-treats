@@ -34,7 +34,8 @@ import { runTeam, type TeamIds } from '../core/creatures/team';
 import type { HintId, Save } from '../core/save/schema';
 import type { CreatureId } from '../data/creatures/creatures';
 import type { CalendarCell, StreakEntry } from '../core/progression/streak';
-import { clockWentBack, localDay, msUntilLocalMidnight, now, utcDay } from '../util/clock';
+import { now } from '../util/clock';
+import { clockWentBack, localDay, msUntilLocalMidnight, utcDay } from '../util/calendar';
 import {
   infoOf,
   withAttemptAdded,

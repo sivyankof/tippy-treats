@@ -1,4 +1,4 @@
-import { daysBetween } from '../../util/clock';
+import { daysBetween } from '../../util/calendar';
 import {
   STREAK,
   STREAK_FIRST_CYCLE_DAY7,
