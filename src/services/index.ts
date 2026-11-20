@@ -7,7 +7,7 @@ import { STUB_PRICES } from '../data/economy/iap-stub';
 import { PRODUCT_KEYS, PRODUCTS } from '../data/economy/shop';
 import { t } from '../i18n';
 import { DEBUG_TOOLS } from '../util/build-kind';
-import { WebAds } from './rewarded-video/web';
+import { showStubOverlay, WebAds } from './rewarded-video/web';
 import type { AdsDevControl, AdsService } from './rewarded-video/types';
 import { createBrowserAudioContext, WebAudioService } from './audio/web';
 import { audioLog } from './audio/audio-log';
@@ -53,12 +53,19 @@ export interface Services {
 /** Inside the iOS or Android app (Capacitor); false in any browser. */
 const native = Capacitor.isNativePlatform();
 
-const webAds = new WebAds();
+/**
+ * The test stubs of ads and purchases act only where the debug tools are (the dev server and the
+ * internal build). The store build keeps them silent until the real SDKs come (M8): no fake ads,
+ * nothing on sale (docs/09-services-analytics.md, sections 3 and 5).
+ */
+const TEST_STUBS = DEBUG_TOOLS;
+
+const webAds = new WebAds(showStubOverlay, TEST_STUBS ? 'reward' : 'no_fill');
 
 /** The products of the store stub: the ones `.env` gives an id to, at stub prices. */
 const stubCatalog: StubProduct[] = PRODUCT_KEYS.flatMap((key) => {
   const id = productIds.idOf(key);
-  if (id === null) return [];
+  if (id === null || !TEST_STUBS) return [];
   return [
     {
       id,

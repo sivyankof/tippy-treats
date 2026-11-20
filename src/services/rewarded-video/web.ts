@@ -43,10 +43,16 @@ export class WebAds implements AdsService, AdsDevControl {
   private busy = false;
   private removed = false;
 
-  /** `showOverlay` returns the function that removes the overlay it drew. */
+  /**
+   * `showOverlay` returns the function that removes the overlay it drew; `mode` is the answer the
+   * stub starts with (the store build starts at `no_fill`: no test ads for players).
+   */
   constructor(
     private readonly showOverlay: (label: string) => (() => void) | null = showStubOverlay,
-  ) {}
+    mode: StubAdMode = 'reward',
+  ) {
+    this.current = mode;
+  }
 
   get mode(): StubAdMode {
     return this.current;

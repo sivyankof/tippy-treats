@@ -116,4 +116,14 @@ describe('WebAds', () => {
     await expect(removed.showInterstitial()).resolves.toBe(false);
     expect(show).not.toHaveBeenCalled();
   });
+
+  it('starts silent in the store build: no ad, no overlay, the reason is no fill', async () => {
+    const show = vi.fn(() => () => {});
+    const ads = new WebAds(show, 'no_fill');
+    expect(ads.isRewardedReady()).toBe(false);
+    expect(ads.rewardedUnavailableReason()).toBe('no_fill');
+    await expect(ads.showRewarded()).resolves.toBe('unavailable');
+    await expect(ads.showInterstitial()).resolves.toBe(false);
+    expect(show).not.toHaveBeenCalled();
+  });
 });
