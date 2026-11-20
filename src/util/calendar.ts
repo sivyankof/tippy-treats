@@ -53,3 +53,31 @@ export function daysBetween(from: string, to: string): number {
     Date.UTC(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
   return Math.round((utc(b) - utc(a)) / MS_PER_DAY);
 }
+
+/** Local hour of the day (0-23) at `ms`. */
+export function localHour(ms: number): number {
+  return new Date(ms).getHours();
+}
+
+/**
+ * The moment `hour`:00 local time on the calendar day `days` after (or before, negative) the day
+ * of `ms`. Built from calendar fields, so a daylight-saving change does not shift the hour.
+ */
+export function atLocalHour(ms: number, days: number, hour: number): number {
+  const date = new Date(ms);
+  return new Date(date.getFullYear(), date.getMonth(), date.getDate() + days, hour).getTime();
+}
+
+/** `ms` moved by `days` calendar days with the local time of day kept (a DST change does not shift it). */
+export function addLocalDays(ms: number, days: number): number {
+  const date = new Date(ms);
+  return new Date(
+    date.getFullYear(),
+    date.getMonth(),
+    date.getDate() + days,
+    date.getHours(),
+    date.getMinutes(),
+    date.getSeconds(),
+    date.getMilliseconds(),
+  ).getTime();
+}

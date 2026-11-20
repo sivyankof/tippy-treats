@@ -171,14 +171,14 @@ export interface SaveV9 extends Omit<SaveV8, 'version' | 'shop'> {
  * keeps the store transactions already paid out, newest last (`IAP_RULES.processedTxKeep`), so a
  * consumable is never paid twice. `review` keeps the system rating request: the game version and
  * the moment it was last asked, and the count of local days the game was played on. `notif.giftDay`
- * is the local day of the last planned "gift ready" notification (at most one a day).
+ * is the local day of the last "gift ready" notification that came (at most one a day).
  */
 export interface SaveV10 extends Omit<SaveV9, 'version'> {
   version: 10;
   iap: { processedTx: string[] };
   /** `askedVersion`: game version of the last request, '' when never; `askedAt`: epoch ms, 0 when never; `playDays`: local days played; `lastPlayDay`: the last of them, '' when none. */
   review: { askedVersion: string; askedAt: number; playDays: number; lastPlayDay: string };
-  /** `giftDay`: local day `YYYY-MM-DD` of the last planned gift notification, '' when none. */
+  /** `giftDay`: local day `YYYY-MM-DD` of the last gift notification that came (its moment passed while the game was away), '' when none. */
   notif: { giftDay: string };
 }
 

@@ -25,6 +25,10 @@
       "splashFullScreen": false,
       "splashImmersive": false
     },
+    "LocalNotifications": {
+      "smallIcon": "ic_stat_notify",
+      "iconColor": "#FF5C8A"
+    },
     "SystemBars": {
       "insetsHandling": "native",
       "initialViewportFitValueHint": "cover",

@@ -1,4 +1,5 @@
 import type * as Phaser from 'phaser';
+import { notifAsk } from './notif-ask';
 
 /**
  * A one-time question the game asks on entering Home after some finished runs (stage M8): the
@@ -17,7 +18,7 @@ export interface HomeAsk {
 }
 
 /** The questions in the order they are asked. */
-export const HOME_ASKS: readonly HomeAsk[] = [];
+export const HOME_ASKS: readonly HomeAsk[] = [notifAsk];
 
 /** Runs the first due question, then `then`; with nothing due, `then` runs at once. */
 export function runHomeAsks(

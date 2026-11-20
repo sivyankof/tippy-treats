@@ -15,6 +15,8 @@ import { followEffectsLevelDensity } from './game/app/follow-density';
 import { dropFramebufferHandlesOnLoss } from './game/app/lost-context-watch';
 import { bindNativeShell } from './game/app/native-shell';
 import { bindPlayDays } from './game/app/play-days';
+import { bindNotifSchedule } from './game/app/notif-schedule';
+import { realNow } from './util/clock';
 import { services } from './services';
 import { beginPerfSession } from './game/perf/perf-session';
 import { readDebugParams, readPerfParams, showsFpsMeter, withoutReset } from './util/debug-params';
@@ -113,6 +115,18 @@ async function start(): Promise<void> {
   bindLogicalResize(game, parent);
   refreshTextsOnFontLoad(game);
   bindNativeShell(game, services.appShell, services.audio, gameState);
+  // The debug test notification (menu button) joins the plan; the store build never loads it.
+  const notifTest =
+    import.meta.env.DEV || import.meta.env.VITE_INTERNAL_BUILD === '1'
+      ? await import('./game/debug/notif-test')
+      : null;
+  bindNotifSchedule(
+    services.appShell,
+    services.notifications,
+    gameState,
+    realNow,
+    notifTest?.notifTest.take,
+  );
   bootStage('started');
   // Works in production builds too, unlike the other debug parameters.
   if (showsFpsMeter(window.location.search))

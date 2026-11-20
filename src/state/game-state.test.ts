@@ -465,6 +465,25 @@ describe('GameState wallet', () => {
   });
 });
 
+describe('GameState notifications', () => {
+  it('marks the permission question asked once', async () => {
+    const { state } = setup();
+    await state.load();
+    expect(state.data.consent.notifAsked).toBe(false);
+    state.markNotifAsked();
+    state.markNotifAsked();
+    expect(state.data.consent.notifAsked).toBe(true);
+  });
+
+  it('stores the day of the last gift notification', async () => {
+    const { state } = setup();
+    await state.load();
+    state.setGiftNotifDay('2026-11-20');
+    state.setGiftNotifDay('2026-11-20');
+    expect(state.data.notif.giftDay).toBe('2026-11-20');
+  });
+});
+
 describe('GameState hints', () => {
   it('keeps the tutorial pending until it is marked done, and keeps hints across a reload', async () => {
     const { state, create, scheduler } = setup();

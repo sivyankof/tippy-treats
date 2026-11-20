@@ -2,6 +2,11 @@ import { describe, expect, it, vi } from 'vitest';
 import type * as Phaser from 'phaser';
 import { runHomeAsks, type HomeAsk } from './home-asks';
 
+// The real questions open Phaser windows; the runner is tested with its own list.
+vi.mock('./notif-ask', () => ({
+  notifAsk: { name: 'notifications', due: () => false, run: vi.fn() },
+}));
+
 const scene = {} as Phaser.Scene;
 
 function ask(name: string, due: boolean, log: string[]): HomeAsk {

@@ -17,6 +17,8 @@ export interface ConfirmOptions {
   confirmFill: number;
   /** Runs once the window has started to close. */
   onConfirm: () => void;
+  /** Runs once the window is gone, whichever button or the veil closed it. */
+  onClosed?: () => void;
 }
 
 /**
@@ -24,7 +26,7 @@ export interface ConfirmOptions {
  * and the veil) on top, the confirming one under it.
  */
 export function openConfirmWindow(scene: Phaser.Scene, options: ConfirmOptions): PopupWindow {
-  const popup = new PopupWindow(scene, { title: options.title });
+  const popup = new PopupWindow(scene, { title: options.title, onClosed: options.onClosed });
   const text = createOutlinedText(scene, 0, 0, options.text, cfg.textFont)
     .setOrigin(0.5, 0)
     .setAlign('center')
