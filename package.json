@@ -7,8 +7,8 @@
     "dev": "vite",
     "build": "tsc --noEmit && vite build",
     "build:internal": "tsc --noEmit && vite build --mode internal",
-    "app:sync": "npm run build && cap sync",
-    "app:sync:internal": "npm run build:internal && cap sync",
+    "app:sync": "npm run build && node scripts/native/native-ids.cjs && cap sync",
+    "app:sync:internal": "npm run build:internal && node scripts/native/native-ids.cjs --internal && cap sync",
     "preview": "vite preview",
     "test": "vitest run",
     "coverage": "vitest run --coverage",
@@ -28,13 +28,19 @@
     "check": "npm run typecheck && npm run lint && npm run test"
   },
   "dependencies": {
+    "@capacitor-community/admob": "8.2.1",
+    "@capacitor-community/in-app-review": "8.0.0",
+    "@capacitor-firebase/analytics": "8.6.0",
+    "@capacitor-firebase/crashlytics": "8.6.0",
     "@capacitor/android": "8.6.2",
     "@capacitor/app": "8.1.2",
     "@capacitor/core": "8.6.2",
     "@capacitor/haptics": "8.0.2",
     "@capacitor/ios": "8.6.2",
+    "@capacitor/local-notifications": "8.3.1",
     "@capacitor/preferences": "8.0.1",
     "@capacitor/splash-screen": "8.0.2",
+    "@revenuecat/purchases-capacitor": "14.1.2",
     "phaser": "4.2.1"
   },
   "devDependencies": {

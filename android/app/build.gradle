@@ -14,6 +14,15 @@ if (keystorePropertiesFile.exists()) {
 // Google Play needs a bigger one for every upload.
 def buildNumber = (project.findProperty('buildNumber') ?: System.getenv('TIPPY_BUILD_NUMBER') ?: '1') as Integer
 
+// The AdMob app id comes from the git-ignored android/ids.local.properties, which
+// scripts/native/native-ids.cjs writes from .env (npm run app:sync); Google's sample app id without it.
+def idsFile = rootProject.file('ids.local.properties')
+def ids = new Properties()
+if (idsFile.exists()) {
+    idsFile.withInputStream { ids.load(it) }
+}
+def admobAppId = ids['admobAppId'] ?: 'ca-app-pub-3940256099942544~3347511713'
+
 // The version the player sees is the one of package.json, like in the game's settings window.
 def appVersion = new groovy.json.JsonSlurper().parse(rootProject.file('../package.json')).version
 
@@ -26,6 +35,7 @@ android {
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode buildNumber
         versionName appVersion
+        manifestPlaceholders = [admobAppId: admobAppId]
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
@@ -75,11 +85,13 @@ dependencies {
 
 apply from: 'capacitor.build.gradle'
 
-try {
-    def servicesJSON = file('google-services.json')
-    if (servicesJSON.text) {
-        apply plugin: 'com.google.gms.google-services'
-    }
-} catch(Exception e) {
-    logger.info("google-services.json not found, google-services plugin not applied. Push Notifications won't work")
+// Firebase (docs/11a-device-build.md): google-services.json is git-ignored. With it the Firebase
+// settings and the Crashlytics build id go into the app; without it the app runs with the
+// analytics and the crash reports off (the game knows it at build time, vite.config.ts).
+def servicesJSON = file('google-services.json')
+if (servicesJSON.exists() && servicesJSON.text) {
+    apply plugin: 'com.google.gms.google-services'
+    apply plugin: 'com.google.firebase.crashlytics'
+} else {
+    logger.info("google-services.json not found: Firebase stays off in this build")
 }

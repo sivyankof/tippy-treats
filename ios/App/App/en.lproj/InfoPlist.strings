@@ -1,0 +1,2 @@
+/* The reason of the App Tracking Transparency request (docs/09-services-analytics.md, section 4). */
+"NSUserTrackingUsageDescription" = "This lets us show you more relevant ads and keep the game free.";

@@ -1,0 +1,5 @@
+// The AdMob app id of Info.plist (GADApplicationIdentifier). Google's sample app id by default;
+// scripts/native/native-ids.cjs (run by npm run app:sync) writes the git-ignored ids.local.xcconfig
+// next to this file with the id of the build, which wins. Never put a real id here.
+ADMOB_APP_ID = ca-app-pub-3940256099942544~1458002511
+#include? "ids.local.xcconfig"

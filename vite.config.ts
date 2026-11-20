@@ -5,7 +5,10 @@ import { cleanBuildHash, formatBuildStamp, formatBuildTime } from './src/util/bu
 /** Node global; the project does not pull in the Node type definitions. */
 declare const process: {
   env: Record<string, string | undefined>;
-  getBuiltinModule(id: 'node:fs'): { readFileSync(path: string, encoding: 'utf-8'): string };
+  getBuiltinModule(id: 'node:fs'): {
+    readFileSync(path: string, encoding: 'utf-8'): string;
+    existsSync(path: string): boolean;
+  };
   getBuiltinModule(id: 'node:child_process'): {
     execSync(
       command: string,
@@ -30,6 +33,20 @@ function gitHash(): string {
   } catch {
     return cleanBuildHash(null);
   }
+}
+
+/**
+ * The Firebase settings files of the native projects. They are git-ignored (the owner puts them
+ * in, docs/11a-device-build.md); without one the app of that platform keeps the analytics and the
+ * crash reports silent instead of touching an unconfigured Firebase.
+ */
+const FIREBASE_FILES = {
+  ios: 'ios/App/App/GoogleService-Info.plist',
+  android: 'android/app/google-services.json',
+} as const;
+
+function hasFile(path: string): boolean {
+  return process.getBuiltinModule('node:fs').existsSync(path);
 }
 
 /** Wait this long after the last package.json change before restarting the dev server. */
@@ -145,6 +162,8 @@ export default defineConfig(({ command, mode }) => {
       __APP_VERSION__: JSON.stringify(packageVersion()),
       __BUILD_HASH__: JSON.stringify(buildHash),
       __BUILD_TIME__: JSON.stringify(buildTime),
+      __FIREBASE_IOS__: JSON.stringify(hasFile(FIREBASE_FILES.ios)),
+      __FIREBASE_ANDROID__: JSON.stringify(hasFile(FIREBASE_FILES.android)),
     },
     plugins: [
       buildStampInHtml(

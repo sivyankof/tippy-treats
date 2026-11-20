@@ -224,3 +224,30 @@ bash scripts/native/build-aab.sh 4 --store    # сборка для игроко
 - [ ] Android: кнопка или жест «назад» закрывает верхнее окно; в забеге ставит паузу (второе «назад» закрывает окно паузы); на экранах меню возвращает на главный; на главном сворачивает игру.
 - [ ] Слои 78–81 и смена зон без рывков (**Run from 60** и играть до 82; и обычный забег до 80+).
 - [ ] Поворот телефона: игра остаётся вертикальной.
+
+## 6. Ключи рекламы, покупок и Firebase (этап M8)
+
+Репозиторий публичный: ни один ключ и ни один идентификатор рекламы или покупок в него не попадает. Это проверяет страж `scripts/secrets-guard.test.ts` (входит в `npm run check`): он падает, если в отслеживаемом файле есть идентификатор AdMob (кроме общедоступных тестовых Google), ключ RevenueCat, ключ Google API, идентификатор приложения Firebase или сам файл `.env`, `GoogleService-Info.plist`, `google-services.json`. Без ключа часть работает на тестовых идентификаторах Google или на заглушке, игра от этого не ломается.
+
+**На компьютере** (сборка AAB, `npm run app:sync`):
+
+| Что | Куда | Без него |
+|---|---|---|
+| Идентификаторы приложения AdMob (`ca-app-pub-…~…`) | `.env`: `VITE_ADMOB_APP_ID_IOS`, `VITE_ADMOB_APP_ID_ANDROID` | тестовый идентификатор приложения Google |
+| Рекламные блоки за награду и межстраничные (`ca-app-pub-…/…`) | `.env`: `VITE_ADMOB_REWARDED_ID_IOS`, `VITE_ADMOB_INTERSTITIAL_ID_IOS`, то же с `_ANDROID` | в сборке для магазина рекламы нет («Реклама недоступна»); во внутренней сборке всегда тестовые блоки Google |
+| Публичные ключи RevenueCat (`appl_…`, `goog_…`) | `.env`: `VITE_REVENUECAT_API_KEY_IOS`, `VITE_REVENUECAT_API_KEY_ANDROID` | покупки показаны недоступными |
+| Идентификаторы товаров | `.env`: `VITE_IAP_*` (образец в `.env.example`, все шесть `tippy_…`) | товар без идентификатора недоступен |
+| Настройки Firebase iOS | файл `ios/App/App/GoogleService-Info.plist` | аналитика и отчёты о сбоях молчат |
+| Настройки Firebase Android | файл `android/app/google-services.json` | аналитика и отчёты о сбоях молчат |
+
+Идентификатор приложения AdMob попадает в `Info.plist` и манифест Android не напрямую: `npm run app:sync` запускает `scripts/native/native-ids.cjs`, который пишет его из `.env` в `ios/App/ids.local.xcconfig` и `android/ids.local.properties` (оба файла не в git). Внутренняя сборка (`app:sync:internal`) всегда получает тестовые идентификаторы Google, даже если в `.env` есть настоящие: нажимать на свою боевую рекламу нельзя. Скрипт печатает только, откуда взят идентификатор (`google sample` или `.env`), но не сам идентификатор.
+
+**В GitHub** (сборки iOS и Android в Actions) — те же значения секретами репозитория, все необязательны: `ADMOB_APP_ID_IOS`, `ADMOB_REWARDED_ID_IOS`, `ADMOB_INTERSTITIAL_ID_IOS`, `REVENUECAT_API_KEY_IOS`, `FIREBASE_IOS_PLIST` (base64 файла `GoogleService-Info.plist`), и то же для Android: `ADMOB_APP_ID_ANDROID`, `ADMOB_REWARDED_ID_ANDROID`, `ADMOB_INTERSTITIAL_ID_ANDROID`, `REVENUECAT_API_KEY_ANDROID`, `FIREBASE_ANDROID_JSON` (base64 файла `google-services.json`). Команды Git Bash (значение не печатается, файл передаётся напрямую):
+
+```
+gh secret set ADMOB_APP_ID_IOS --repo sivyankof/tippy-treats          # спросит значение, вставьте его
+base64 -w0 ios/App/App/GoogleService-Info.plist | gh secret set FIREBASE_IOS_PLIST --repo sivyankof/tippy-treats
+base64 -w0 android/app/google-services.json | gh secret set FIREBASE_ANDROID_JSON --repo sivyankof/tippy-treats
+```
+
+Шаг сборки `scripts/native/ci-keys.sh` кладёт их в `.env` и в папки проектов перед `npm run app:sync` и печатает только имена найденных и недостающих секретов.

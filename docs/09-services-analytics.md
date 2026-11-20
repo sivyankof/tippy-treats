@@ -12,12 +12,13 @@
 | Жизненный цикл приложения, кнопка «назад» Android | `@capacitor/app` 8.1.2 (поставлен; `services/app-shell/`) | M7 |
 | Внешние ссылки (страницы сайта из настроек) | без плагина: `AppShellService.openExternal`; в приложении переход на внешний адрес, его перехватывает оболочка Capacitor и отдаёт системе (iOS `UIApplication.open`, Android `Intent.ACTION_VIEW`), в браузере — новая вкладка | M7 (2026-11-20) |
 | Заставка, системные панели | `@capacitor/splash-screen` 8.0.2 (поставлен); строка состояния — `SystemBars` из ядра Capacitor 8 вместо `@capacitor/status-bar`; цвет значков следует за экраном (`AppShellService.setBarIcons`, `08-architecture.md`, журнал 2026-11-20) | M7 |
-| Локальные уведомления | `@capacitor/local-notifications` | M8 |
+| Локальные уведомления | `@capacitor/local-notifications` 8.3.1 (поставлен; `SCHEDULE_EXACT_ALARM` убран из манифеста) | M8 |
 | Поделиться | `@capacitor/share` + `@capacitor/filesystem` | M8 |
-| Реклама | `@capacitor-community/admob` | M8 |
-| Покупки | `@revenuecat/purchases-capacitor` | M8 |
-| Аналитика и сбои | `@capacitor-firebase/analytics`, `@capacitor-firebase/crashlytics` | M8 |
-| Запрос отслеживания (iOS) | входит в плагин AdMob или отдельный плагин ATT | M8 |
+| Реклама | `@capacitor-community/admob` 8.2.1 (поставлен; не новее: с 8.3 лишняя зависимость, журнал `08`, 2026-11-20) | M8 |
+| Покупки | `@revenuecat/purchases-capacitor` 14.1.2 (поставлен) | M8 |
+| Аналитика и сбои | `@capacitor-firebase/analytics`, `@capacitor-firebase/crashlytics` 8.6.0 (поставлены; работают, только если в проекте есть файл настроек Firebase) | M8 |
+| Запрос отслеживания (iOS) и форма согласия UMP | входят в плагин AdMob (`requestTrackingAuthorization`, `requestConsentInfo`, `showConsentForm`, `showPrivacyOptionsForm`) | M8 |
+| Системная просьба оценить игру | `@capacitor-community/in-app-review` 8.0.0 (поставлен, одобрен владельцем 2026-11-20; StoreKit и Play In-App Review) | M8 |
 
 ## 2. Хранилище
 

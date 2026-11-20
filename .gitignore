@@ -6,6 +6,12 @@ coverage/
 .env
 .env.*
 !.env.example
+# Firebase settings of the native projects and the ad app ids written from .env
+# (scripts/native/native-ids.cjs); scripts/secrets-guard.test.ts refuses them as well
+GoogleService-Info.plist
+google-services.json
+ids.local.xcconfig
+ids.local.properties
 
 # Editors and OS
 .DS_Store

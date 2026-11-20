@@ -1,0 +1,2 @@
+// Base settings of the Release configuration: the ad app id (App/ids.xcconfig).
+#include "App/ids.xcconfig"
