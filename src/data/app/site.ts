@@ -14,11 +14,11 @@ export const SITE = {
     support: 'support.html',
   },
   /**
-   * The support mailbox, the only e-mail address the site may show (it replaces
-   * `[SUPPORT_EMAIL]` at publication). Null until the owner sets the mailbox up: the publication
-   * refuses to run until then. Never a personal address.
+   * The support mailbox (public, the owner's decision of 2026-11-20): the only e-mail address the
+   * site and the game may show. The pages carry `[SUPPORT_EMAIL]`, filled in from here at
+   * publication, so the address lives in this one place. Never a personal address.
    */
-  supportEmail: null as string | null,
+  supportEmail: 'tippy.games@icloud.com',
 } as const;
 
 export type SitePage = keyof typeof SITE.pages;

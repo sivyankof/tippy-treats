@@ -12,7 +12,7 @@ GitHub Pages репозитория `sivyankof/tippy-treats-site`, адрес ht
 
 | В исходнике | Чем заменяется |
 |---|---|
-| `[SUPPORT_EMAIL]` | `SITE.supportEmail` (пока `null`: публикация отказывает) |
+| `[SUPPORT_EMAIL]` | `SITE.supportEmail` (`tippy.games@icloud.com`; без него публикация отказывает) |
 | `<time data-effective></time>` | дата начала действия (первая публикация — дата этого дня) |
 
 Других заглушек в страницах нет (это проверяет тест `scripts/site/site-guard.test.ts`).

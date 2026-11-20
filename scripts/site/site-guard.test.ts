@@ -36,26 +36,27 @@ function siteFiles(): Record<string, string> {
 const FAKE_SUPPORT = 'help@example.org';
 
 describe('the site source', () => {
-  it('has no placeholder but the support address, and no placeholder highlight', () => {
+  it('has no placeholder but the support address token, filled from SITE.supportEmail', () => {
     const files = siteFiles();
     const left = Object.entries(files).flatMap(([name, text]) =>
       [...new Set(text.match(PLACEHOLDER_RE) ?? [])].map((p) => `${name} ${p}`),
     );
-    const allowed = SITE.supportEmail === null ? ['[SUPPORT_EMAIL]'] : [];
-    expect(left.filter((l) => !allowed.some((p) => l.endsWith(p)))).toEqual([]);
+    expect(left.filter((l) => !l.endsWith('[SUPPORT_EMAIL]'))).toEqual([]);
+    expect(SITE.supportEmail).toMatch(/^[^@\s]+@[^@\s]+\.[a-z]{2,}$/);
     for (const [name, text] of Object.entries(files)) {
       expect(text.includes('class="ph"'), name).toBe(false);
     }
   });
 
-  it('goes out clean once the support address and the date are put in', () => {
-    const files = fillSite(siteFiles(), { email: FAKE_SUPPORT, date: '2026-11-20' });
-    expect(findProblems(files, FAKE_SUPPORT)).toEqual([]);
+  it('goes out clean with the support address of the game and the date put in', () => {
+    const files = fillSite(siteFiles(), { email: SITE.supportEmail, date: '2026-11-20' });
+    expect(findProblems(files, SITE.supportEmail)).toEqual([]);
+    expect(files['site/support.html']).toContain(`mailto:${SITE.supportEmail}`);
     expect(files['site/privacy.html']).toContain('<time data-effective datetime="2026-11-20">');
     expect(files['site/terms.html']).toContain('<time data-effective datetime="2026-11-20">');
   });
 
-  it('is stopped by the guard while the support address is not set', () => {
+  it('would be stopped by the guard without a support address', () => {
     const files = fillSite(siteFiles(), { email: null, date: '2026-11-20' });
     const problems = findProblems(files, null);
     expect(problems.length).toBeGreaterThan(0);
