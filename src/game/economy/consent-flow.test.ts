@@ -84,13 +84,18 @@ describe('runConsentFlow', () => {
   it('starts the ads even when every consent step throws', async () => {
     const { deps, log } = setup();
     deps.consent.gather = () => Promise.reject(new Error('blocked'));
-    await expect(runConsentFlow(deps)).resolves.toBeUndefined();
+    await expect(runConsentFlow(deps)).resolves.toBe(false);
     expect(log).toEqual(['ads']);
   });
 
   it('never rejects when the ads fail to start', async () => {
     const { deps } = setup();
     deps.ads.init = () => Promise.reject(new Error('x'));
-    await expect(runConsentFlow(deps)).resolves.toBeUndefined();
+    await expect(runConsentFlow(deps)).resolves.toBe(true);
+  });
+
+  it('reports whether the explainer was shown', async () => {
+    expect(await runConsentFlow(setup().deps)).toBe(true);
+    expect(await runConsentFlow(setup({ tracking: 'unavailable' }).deps)).toBe(false);
   });
 });

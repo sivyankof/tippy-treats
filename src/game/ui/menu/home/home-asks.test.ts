@@ -9,14 +9,14 @@ vi.mock('./notif-ask', () => ({
 
 const scene = {} as Phaser.Scene;
 
-function ask(name: string, due: boolean, log: string[]): HomeAsk {
+function ask(name: string, due: boolean, log: string[], shown = true): HomeAsk {
   return {
     name,
     due: () => due,
     run: (_scene, done) => {
       log.push(name);
-      done();
-      done();
+      done(shown);
+      done(shown);
     },
   };
 }
@@ -33,6 +33,26 @@ describe('runHomeAsks', () => {
     const then = vi.fn();
     runHomeAsks(scene, then, [ask('a', false, log), ask('b', true, log), ask('c', true, log)]);
     expect(log).toEqual(['b']);
+    expect(then).toHaveBeenCalledOnce();
+  });
+
+  it('goes on to the next due question when the previous showed no window', () => {
+    const log: string[] = [];
+    const then = vi.fn();
+    runHomeAsks(scene, then, [
+      ask('a', true, log, false),
+      ask('b', true, log),
+      ask('c', true, log),
+    ]);
+    expect(log).toEqual(['a', 'b']);
+    expect(then).toHaveBeenCalledOnce();
+  });
+
+  it('goes on once when every due question stayed silent', () => {
+    const log: string[] = [];
+    const then = vi.fn();
+    runHomeAsks(scene, then, [ask('a', true, log, false), ask('b', true, log, false)]);
+    expect(log).toEqual(['a', 'b']);
     expect(then).toHaveBeenCalledOnce();
   });
 });
