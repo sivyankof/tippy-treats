@@ -66,10 +66,14 @@
         continue;
       }
 
+      // Links to other sites (https:, mailto:) keep their address.
+      if (/^[a-z][a-z0-9+.-]*:/i.test(href)) {
+        continue;
+      }
       var withoutHash = href.split('#')[0];
       var path = withoutHash.split('?')[0];
-      // The 404 page links from the site root ("/privacy.html"): the page name is what counts.
-      if (SITE_PAGES.indexOf(path.replace(/^\//, '')) === -1) {
+      // The 404 page links by the full path ("/tippy-treats-site/privacy.html"): the page name is what counts.
+      if (SITE_PAGES.indexOf(path.split('/').pop()) === -1) {
         continue;
       }
 

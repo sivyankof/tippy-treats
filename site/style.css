@@ -4,21 +4,21 @@
    The dark theme is switched on only by the system prefers-color-scheme setting. */
 
 :root {
-  --bg: #fff6ec;      /* PALETTE.panel */
-  --text: #3b2a4a;    /* PALETTE.textDark */
+  --bg: #fff6ec; /* PALETTE.panel */
+  --text: #3b2a4a; /* PALETTE.textDark */
   --head: #3b2a4a;
   --muted: #7a6573;
-  --accent: #c4203a;  /* PALETTE.berry, darkened for text contrast */
-  --line: #e9d5c3;    /* PALETTE.panelShadow */
+  --accent: #c4203a; /* PALETTE.berry, darkened for text contrast */
+  --line: #e9d5c3; /* PALETTE.panelShadow */
   --panel: rgba(255, 201, 60, 0.18);
-  --mark: #ff5c8a;    /* PALETTE.accent */
+  --mark: #ff5c8a; /* PALETTE.accent */
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --bg: #2b1d16;    /* app splash colour */
+    --bg: #2b1d16; /* app splash colour */
     --text: #fff0e2;
-    --head: #ffc93c;  /* PALETTE.gold */
+    --head: #ffc93c; /* PALETTE.gold */
     --muted: #c9b3a3;
     --accent: #ff7fa3;
     --line: #4a3428;
@@ -40,7 +40,14 @@ body {
 body {
   background: var(--bg);
   color: var(--text);
-  font-family: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  font-family:
+    system-ui,
+    -apple-system,
+    'Segoe UI',
+    Roboto,
+    Helvetica,
+    Arial,
+    sans-serif;
   line-height: 1.6;
   -webkit-font-smoothing: antialiased;
 }
@@ -81,7 +88,7 @@ a:focus-visible {
 }
 
 .brand {
-  font-family: "Trebuchet MS", system-ui, sans-serif;
+  font-family: 'Trebuchet MS', system-ui, sans-serif;
   font-size: 22px;
   font-weight: 800;
   color: var(--head);
@@ -119,7 +126,7 @@ main {
 }
 
 section[data-lang] h1 {
-  font-family: "Trebuchet MS", system-ui, sans-serif;
+  font-family: 'Trebuchet MS', system-ui, sans-serif;
   font-size: 28px;
   line-height: 1.25;
   color: var(--head);
@@ -127,7 +134,7 @@ section[data-lang] h1 {
 }
 
 section[data-lang] h2 {
-  font-family: "Trebuchet MS", system-ui, sans-serif;
+  font-family: 'Trebuchet MS', system-ui, sans-serif;
   font-size: 20px;
   color: var(--head);
   margin: 32px 0 8px;
@@ -171,15 +178,6 @@ section[data-lang] dt {
 
 section[data-lang] dd {
   margin: 4px 0 0;
-}
-
-/* Owner placeholders such as [SUPPORT_EMAIL]: must be impossible to miss before publishing */
-.ph {
-  background: #ffe14d;
-  color: #000;
-  padding: 0 4px;
-  border-radius: 4px;
-  font-weight: 700;
 }
 
 .page-footer {
