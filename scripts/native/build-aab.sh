@@ -32,7 +32,7 @@ cd "$repo"
 if [ "$kind" = "store" ]; then npm run app:sync; else npm run app:sync:internal; fi
 (cd android && ./gradlew --no-daemon bundleRelease -PbuildNumber="$build")
 
-version="$(node -p "require('./package.json').version")"
+version="$(node scripts/native/app-version.cjs)"
 out_dir="$repo/../tippy-treats-store-assets/builds"
 out="$out_dir/tippy-treats-$version-$build-$kind.aab"
 mkdir -p "$out_dir"

@@ -23,8 +23,12 @@ if (idsFile.exists()) {
 }
 def admobAppId = ids['admobAppId'] ?: 'ca-app-pub-3940256099942544~3347511713'
 
-// The version the player sees is the one of package.json, like in the game's settings window.
-def appVersion = new groovy.json.JsonSlurper().parse(rootProject.file('../package.json')).version
+// The version the player sees, the same as in the game's settings window: scripts/native/native-ids.cjs
+// writes it to ids.local.properties from package.json (scripts/native/app-version.cjs: 1.0.0 -> 1.0).
+def appVersion = ids['appVersion']
+if (!appVersion) {
+    throw new GradleException('No appVersion in android/ids.local.properties: run npm run app:sync first')
+}
 
 android {
     namespace = "app.tippytreats.game"

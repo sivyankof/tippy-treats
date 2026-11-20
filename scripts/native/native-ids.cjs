@@ -1,5 +1,6 @@
 /* global require, module, __dirname, process, console */
-// Writes the AdMob app ids of the native projects from `.env` (docs/11a-device-build.md, "Ключи").
+// Writes the AdMob app ids of the native projects from `.env` (docs/11a-device-build.md, "Ключи"),
+// and the version the stores get (`app-version.cjs`): MARKETING_VERSION and `appVersion`.
 // The ids are never committed: Info.plist reads `$(ADMOB_APP_ID)` from ios/App/ids.xcconfig, which
 // includes the git-ignored ios/App/ids.local.xcconfig written here; android/app/build.gradle reads
 // the git-ignored android/ids.local.properties. The internal build always gets Google's sample app
@@ -12,6 +13,7 @@
 
 const fs = require('node:fs');
 const path = require('node:path');
+const { appVersion } = require('./app-version.cjs');
 
 /** Google's sample AdMob app ids (developers.google.com/admob, "Enable test ads"). */
 const SAMPLE_APP_IDS = {
@@ -55,17 +57,18 @@ function main() {
   const envFile = path.join(repo, '.env');
   const env = fs.existsSync(envFile) ? parseEnv(fs.readFileSync(envFile, 'utf8')) : {};
   const ids = pickAppIds(env, internal);
+  const version = appVersion(repo);
   const note = 'Written by scripts/native/native-ids.cjs from .env. Never commit this file.';
   fs.writeFileSync(
     path.join(repo, 'ios', 'App', 'ids.local.xcconfig'),
-    `// ${note}\nADMOB_APP_ID = ${ids.ios.id}\n`,
+    `// ${note}\nADMOB_APP_ID = ${ids.ios.id}\nMARKETING_VERSION = ${version}\n`,
   );
   fs.writeFileSync(
     path.join(repo, 'android', 'ids.local.properties'),
-    `# ${note}\nadmobAppId=${ids.android.id}\n`,
+    `# ${note}\nadmobAppId=${ids.android.id}\nappVersion=${version}\n`,
   );
   console.log(
-    `native ids (${internal ? 'internal' : 'store'} build): AdMob app id ios ${ids.ios.source}, android ${ids.android.source}`,
+    `native ids (${internal ? 'internal' : 'store'} build): AdMob app id ios ${ids.ios.source}, android ${ids.android.source}; version ${version}`,
   );
 }
 

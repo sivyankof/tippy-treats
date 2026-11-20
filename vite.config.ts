@@ -1,5 +1,6 @@
 import { normalizePath, type Plugin } from 'vite';
 import { defineConfig } from 'vitest/config';
+import { storeVersion } from './scripts/native/app-version.cjs';
 import { cleanBuildHash, formatBuildStamp, formatBuildTime } from './src/util/build-stamp.ts';
 
 /** Node global; the project does not pull in the Node type definitions. */
@@ -17,7 +18,7 @@ declare const process: {
   };
 };
 
-/** The `version` of package.json: the one source of the version the game shows. */
+/** The `version` of package.json: the one source of the version (the game shows it as `storeVersion`). */
 function packageVersion(): string {
   const text = process.getBuiltinModule('node:fs').readFileSync('./package.json', 'utf-8');
   return (JSON.parse(text) as { version: string }).version;
@@ -159,7 +160,7 @@ export default defineConfig(({ command, mode }) => {
     // Relative base so the build also works from the Capacitor webview.
     base: './',
     define: {
-      __APP_VERSION__: JSON.stringify(packageVersion()),
+      __APP_VERSION__: JSON.stringify(storeVersion(packageVersion())),
       __BUILD_HASH__: JSON.stringify(buildHash),
       __BUILD_TIME__: JSON.stringify(buildTime),
       __FIREBASE_IOS__: JSON.stringify(hasFile(FIREBASE_FILES.ios)),
