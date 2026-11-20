@@ -8,6 +8,11 @@ export const TELEMETRY = {
   propertyValueMax: 36,
   /** Most parameters of one event (Firebase: 25). */
   paramsMax: 25,
+  /**
+   * Events kept while the consent decision is not known yet (`GatedAnalytics`); older ones are
+   * dropped. A first launch offline in a regulated region waits the longest.
+   */
+  pendingEvents: 100,
   /** Name prefixes Firebase keeps for itself. */
   reservedPrefixes: ['firebase_', 'google_', 'ga_'],
   /** `currency_earn` is sent for a source that paid at least this much (not every small coin). */

@@ -1,3 +1,4 @@
+import type { ConsentRegion } from '../telemetry/consent-gate';
 import type { ConsentService, TrackingStatus } from './types';
 
 /**
@@ -30,5 +31,18 @@ export class WebConsent implements ConsentService {
   requestTracking(): Promise<void> {
     this.asked = true;
     return Promise.resolve();
+  }
+
+  /** The browser has no consent form: consent is not required here. */
+  region(): ConsentRegion {
+    return 'not_required';
+  }
+
+  refreshInfo(): Promise<void> {
+    return Promise.resolve();
+  }
+
+  onChange(): void {
+    // Nothing ever changes in the browser.
   }
 }

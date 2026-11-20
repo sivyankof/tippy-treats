@@ -1,3 +1,5 @@
+import type { ConsentRegion } from '../telemetry/consent-gate';
+
 /**
  * Where the system tracking question (iOS App Tracking Transparency) stands: `not_determined` =
  * it can still be asked; `decided` = the player already answered; `unavailable` = there is no such
@@ -19,4 +21,10 @@ export interface ConsentService {
   trackingStatus(): Promise<TrackingStatus>;
   /** Shows the system tracking question; resolves when it is answered. Never rejects. */
   requestTracking(): Promise<void>;
+  /** What the last UMP info said about the region: consent required here or not ('unknown' before any). */
+  region(): ConsentRegion;
+  /** Refreshes the UMP info silently (never a form), to learn the region. Never rejects. */
+  refreshInfo(): Promise<void>;
+  /** Called after every change the consent may have had: the info refreshed, a form closed. */
+  onChange(listener: () => void): void;
 }

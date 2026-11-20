@@ -46,6 +46,13 @@ import type { AnalyticsService } from './telemetry/types';
 import { WebAnalytics } from './telemetry/web';
 import { NativeAnalytics, type AnalyticsPlugin } from './telemetry/native';
 import { LoggedAnalytics, telemetryLog } from './telemetry/event-log';
+import { GatedAnalytics } from './telemetry/gated';
+import {
+  bindAnalyticsConsent,
+  toConsentSignals,
+  type ConsentSource,
+  type RawConsentSignals,
+} from './telemetry/collection-consent';
 import type { CrashService } from './crash/types';
 import { WebCrash } from './crash/web';
 import { NativeCrash, type CrashPlugin } from './crash/native';
@@ -98,17 +105,34 @@ const firebaseOn =
  * packages' web part needs the `firebase` web SDK, which this game does not install, and the
  * native side registers the plugins under these names all the same.
  */
-function createTelemetry(): AnalyticsService {
+function createTelemetry(consentSource: ConsentSource): AnalyticsService {
   const warn = DEBUG_TOOLS
     ? (message: string): void => {
         telemetryLog.add(`! ${message}`);
         if (import.meta.env.DEV) console.warn(`[telemetry] ${message}`);
       }
     : undefined;
-  const inner = firebaseOn
-    ? new NativeAnalytics(registerPlugin<AnalyticsPlugin>('FirebaseAnalytics'), warn)
-    : new WebAnalytics();
+  let inner: AnalyticsService = new WebAnalytics();
+  if (firebaseOn) {
+    // `setEnabled` turns the collection on or off; Firebase keeps it across launches.
+    const plugin = registerPlugin<
+      AnalyticsPlugin & { setEnabled(options: { enabled: boolean }): Promise<void> }
+    >('FirebaseAnalytics');
+    // Collection follows the consent in the EEA, the UK and Switzerland (docs 09, section 6).
+    const gate = new GatedAnalytics(new NativeAnalytics(plugin, warn), (enabled) =>
+      plugin.setEnabled({ enabled }),
+    );
+    bindAnalyticsConsent(gate, consentSource, () =>
+      tippyDevice.consentSignals().then(toConsentSignals),
+    );
+    inner = gate;
+  }
   return DEBUG_TOOLS ? new LoggedAnalytics(inner, telemetryLog) : inner;
+}
+
+/** `TippyDevice.consentSignals`: the IAB TCF strings UMP wrote on the device. */
+interface ConsentSignalsPlugin {
+  consentSignals(): Promise<RawConsentSignals>;
 }
 
 /**
@@ -129,6 +153,9 @@ const ads: AdsService = native
       pickAdUnits({ debugTools: DEBUG_TOOLS, platform, env: import.meta.env }),
     )
   : webAds;
+
+/** The app's own plugin (`ios/App/App/TippyDevicePlugin.swift`, `android/.../TippyDevicePlugin.java`). */
+const tippyDevice = registerPlugin<DevicePlugin & ConsentSignalsPlugin>('TippyDevice');
 
 const consent: ConsentService = native
   ? new NativeConsent(AdMob, platform)
@@ -186,18 +213,12 @@ export const services: Services = {
   iap,
   storage: native ? new NativeStorage(Preferences) : new WebStorage(),
   share: new WebShare(),
-  telemetry: createTelemetry(),
+  telemetry: createTelemetry(consent),
   crash: firebaseOn
     ? new NativeCrash(registerPlugin<CrashPlugin>('FirebaseCrashlytics'))
     : new WebCrash(),
   appShell: native
-    ? new NativeAppShell(
-        App,
-        SplashScreen,
-        SystemBars,
-        undefined,
-        registerPlugin<DevicePlugin>('TippyDevice'),
-      )
+    ? new NativeAppShell(App, SplashScreen, SystemBars, undefined, tippyDevice)
     : new WebAppShell(),
   rating: native
     ? new NativeRating(InAppReview)

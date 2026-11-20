@@ -26,6 +26,11 @@
 
         </activity>
 
+        <!-- Firebase Analytics starts off; the game turns it on or off by the consent (docs/09, section 6). -->
+        <meta-data
+            android:name="firebase_analytics_collection_enabled"
+            android:value="false" />
+
         <!-- AdMob app id: android/ids.local.properties (scripts/native/native-ids.cjs), Google's sample id without it. -->
         <meta-data
             android:name="com.google.android.gms.ads.APPLICATION_ID"

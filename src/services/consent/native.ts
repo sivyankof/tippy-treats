@@ -1,5 +1,6 @@
 import { AD_LOAD } from '../../data/economy/rewarded-video';
 import { withTimeout } from '../../util/with-timeout';
+import { regionOfStatus, type ConsentRegion } from '../telemetry/consent-gate';
 import type { ConsentService, TrackingStatus } from './types';
 
 interface ConsentInfo {
@@ -28,6 +29,8 @@ const NOT_DETERMINED = 'notDetermined';
  */
 export class NativeConsent implements ConsentService {
   private optionsRequired = false;
+  private lastRegion: ConsentRegion = 'unknown';
+  private readonly listeners: Array<() => void> = [];
 
   constructor(
     private readonly plugin: ConsentPlugin,
@@ -37,14 +40,53 @@ export class NativeConsent implements ConsentService {
 
   async gather(): Promise<void> {
     try {
-      let info = await withTimeout(this.plugin.requestConsentInfo(), this.timeoutMs);
+      let info = await this.requestInfo();
       // Google's order: refresh the info at every launch, show the form only where it is needed.
       if (info.status === REQUIRED && info.isConsentFormAvailable !== false) {
         info = await this.plugin.showConsentForm();
+        this.note(info);
       }
-      this.optionsRequired = info.privacyOptionsRequirementStatus === REQUIRED;
     } catch {
       // Offline or blocked: carry on, the ads decide for themselves what they may show.
+    }
+    this.changed();
+  }
+
+  region(): ConsentRegion {
+    return this.lastRegion;
+  }
+
+  async refreshInfo(): Promise<void> {
+    try {
+      await this.requestInfo();
+    } catch {
+      // Offline or blocked: the region stays unknown.
+    }
+    this.changed();
+  }
+
+  onChange(listener: () => void): void {
+    this.listeners.push(listener);
+  }
+
+  private async requestInfo(): Promise<ConsentInfo> {
+    const info = await withTimeout(this.plugin.requestConsentInfo(), this.timeoutMs);
+    this.note(info);
+    return info;
+  }
+
+  private note(info: ConsentInfo): void {
+    this.optionsRequired = info.privacyOptionsRequirementStatus === REQUIRED;
+    this.lastRegion = regionOfStatus(info.status);
+  }
+
+  private changed(): void {
+    for (const listener of this.listeners) {
+      try {
+        listener();
+      } catch {
+        // A listener's failure is not the consent's.
+      }
     }
   }
 
@@ -58,6 +100,7 @@ export class NativeConsent implements ConsentService {
     } catch {
       // Nothing to do: the form could not open.
     }
+    this.changed();
   }
 
   async trackingStatus(): Promise<TrackingStatus> {

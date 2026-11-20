@@ -66,6 +66,8 @@
 		<string>en</string>
 		<string>ru</string>
 	</array>
+	<key>FIREBASE_ANALYTICS_COLLECTION_ENABLED</key>
+	<false/>
 	<key>GADApplicationIdentifier</key>
 	<string>$(ADMOB_APP_ID)</string>
 	<key>NSUserTrackingUsageDescription</key>

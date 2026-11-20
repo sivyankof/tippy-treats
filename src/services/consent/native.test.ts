@@ -52,6 +52,34 @@ describe('NativeConsent', () => {
     expect(calls).toEqual(['form', 'options']);
   });
 
+  it('knows the region and tells the listeners after every change', async () => {
+    const { plugin, info } = fake();
+    const consent = new NativeConsent(plugin, 'android');
+    let heard = 0;
+    consent.onChange(() => heard++);
+    expect(consent.region()).toBe('unknown');
+    await consent.refreshInfo();
+    expect(consent.region()).toBe('not_required');
+    plugin.requestConsentInfo = () => Promise.resolve(info('REQUIRED'));
+    await consent.gather();
+    expect(consent.region()).toBe('required');
+    await consent.showPrivacyOptions();
+    expect(heard).toBe(3);
+  });
+
+  it('refreshes the info without ever showing the form', async () => {
+    const { plugin, calls, info } = fake();
+    plugin.requestConsentInfo = () => {
+      calls.push('info');
+      return Promise.resolve(info('REQUIRED'));
+    };
+    const consent = new NativeConsent(plugin, 'ios');
+    await consent.refreshInfo();
+    expect(calls).toEqual(['info']);
+    plugin.requestConsentInfo = () => Promise.reject(new Error('offline'));
+    await expect(consent.refreshInfo()).resolves.toBeUndefined();
+  });
+
   it('never throws when the calls fail or hang', async () => {
     const failing = fake({
       requestConsentInfo: () => Promise.reject(new Error('blocked')),

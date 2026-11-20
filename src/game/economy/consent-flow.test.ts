@@ -11,7 +11,8 @@ function setup(
   options: { tracking?: TrackingStatus; attAsked?: boolean; explained?: boolean } = {},
 ) {
   const log: string[] = [];
-  const consent: ConsentService = {
+  const consent: Pick<ConsentService, 'gather' | 'trackingStatus' | 'requestTracking'> &
+    Partial<ConsentService> = {
     gather: () => {
       log.push('ump');
       return Promise.resolve();

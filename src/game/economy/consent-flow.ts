@@ -3,7 +3,7 @@ import type { AdsService } from '../../services/rewarded-video/types';
 
 /** What the flow needs from the game around it (injected, so the decisions are tested without the app). */
 export interface ConsentFlowDeps {
-  consent: ConsentService;
+  consent: Pick<ConsentService, 'gather' | 'trackingStatus' | 'requestTracking'>;
   ads: Pick<AdsService, 'init'>;
   /** The tracking explainer and question were already gone through (`save.consent.attAsked`). */
   attAsked: boolean;
