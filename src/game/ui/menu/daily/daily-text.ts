@@ -3,7 +3,7 @@ import { dailyProgress, tierReached } from '../../../../core/progression/daily';
 import { DAILY } from '../../../../data/progression/daily';
 import { formatNumber, t, tn } from '../../../../i18n';
 
-/** "One tower for all players. 3 attempts. The higher, the more rewards." */
+/** "One tower for all players. 3 attempts." and, on the second line, "The higher, the more rewards." */
 export function dailyExplainText(): string {
   return tn('daily.explain', DAILY.attempts);
 }
