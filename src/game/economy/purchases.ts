@@ -1,4 +1,5 @@
 import type { ProductKey } from '../../data/economy/shop';
+import { productOwned } from '../../core/economy/shop';
 import { productIds } from '../../services/iap/product-ids';
 import { services } from '../../services';
 import type { PurchaseReport, PurchaseResult } from '../../services/iap/types';
@@ -79,12 +80,36 @@ export async function buyProduct(key: ProductKey): Promise<BuyOutcome> {
   return 'purchased';
 }
 
-/** Puts what the store says is owned into the save; null when the store cannot be asked. */
-async function syncOwned(fetchOwned: () => Promise<string[]>): Promise<ProductKey[] | null> {
+/** Listeners of a launch check that gave back a one-time product (see `onLaunchRestore`). */
+const launchRestoreListeners = new Set<(keys: ProductKey[]) => void>();
+
+/**
+ * Calls `listener` with the one-time products the launch check gave back (the store says the
+ * account owns them, the save did not). The check waits only `BOOT.purchasesWaitMs` before the game
+ * starts and may end later, on any screen: the shop uses this to say why the starter pack left.
+ * Returns the unsubscribe.
+ */
+export function onLaunchRestore(listener: (keys: ProductKey[]) => void): () => void {
+  launchRestoreListeners.add(listener);
+  return () => launchRestoreListeners.delete(listener);
+}
+
+/**
+ * Puts what the store says is owned into the save; null when the store cannot be asked. `owned`:
+ * what the store says; `restored`: the one-time products the save did not have and now has.
+ */
+async function syncOwned(
+  fetchOwned: () => Promise<string[]>,
+): Promise<{ owned: ProductKey[]; restored: ProductKey[] } | null> {
   try {
-    const keys = productIds.keysOf(await fetchOwned());
-    if (gameState.restorePurchases(keys)) gameState.flush();
-    return keys;
+    const owned = productIds.keysOf(await fetchOwned());
+    const before = gameState.data;
+    if (!gameState.restorePurchases(owned)) return { owned, restored: [] };
+    gameState.flush();
+    const restored = owned.filter(
+      (key) => !productOwned(before, key) && productOwned(gameState.data, key),
+    );
+    return { owned, restored };
   } catch {
     return null;
   } finally {
@@ -120,12 +145,20 @@ export async function syncPurchases(): Promise<void> {
   // The payout goes first: a starter pack approved later is paid in full, not taken for a
   // restore (which gives back the creature only).
   await payUnpaidTransactions();
-  await syncOwned(() => services.iap.ownedNonConsumables());
+  const synced = await syncOwned(() => services.iap.ownedNonConsumables());
+  if (synced === null || synced.restored.length === 0) return;
+  for (const listener of launchRestoreListeners) {
+    try {
+      listener(synced.restored);
+    } catch {
+      // A screen's failure is not the purchases'.
+    }
+  }
 }
 
 /** The "Restore purchases" button. */
 export async function restorePurchases(): Promise<RestoreOutcome> {
-  const keys = await syncOwned(() => services.iap.restore());
-  if (keys === null) return 'failed';
-  return keys.length > 0 ? 'restored' : 'nothing';
+  const synced = await syncOwned(() => services.iap.restore());
+  if (synced === null) return 'failed';
+  return synced.owned.length > 0 ? 'restored' : 'nothing';
 }

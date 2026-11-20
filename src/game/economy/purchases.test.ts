@@ -6,6 +6,8 @@ const h = vi.hoisted(() => ({
   report: { result: 'purchased', transactionIds: ['tx-1'] } as PurchaseReport,
   transactions: [] as StoreTransaction[],
   owned: [] as string[],
+  /** Holds the store's answer about owned products until released (a slow network at launch). */
+  gate: null as Promise<void> | null,
   fail: false,
   setRemoveAds: vi.fn(),
   play: vi.fn(),
@@ -29,7 +31,7 @@ vi.mock('../../services', () => {
     getProducts: () => Promise.resolve([]),
     purchase: () => (h.fail ? Promise.reject(new Error('x')) : Promise.resolve(h.report)),
     restore: () => Promise.resolve(h.owned),
-    ownedNonConsumables: () => Promise.resolve(h.owned),
+    ownedNonConsumables: () => (h.gate ?? Promise.resolve()).then(() => h.owned),
     completedTransactions: () =>
       h.fail ? Promise.reject(new Error('x')) : Promise.resolve(h.transactions),
   };
@@ -43,13 +45,21 @@ vi.mock('../../services', () => {
   };
 });
 
-import { buyOutcomeKey, buyProduct, restorePurchases, syncPurchases } from './purchases';
+import { withTimeout } from '../../util/with-timeout';
+import {
+  buyOutcomeKey,
+  buyProduct,
+  onLaunchRestore,
+  restorePurchases,
+  syncPurchases,
+} from './purchases';
 
 describe('purchases', () => {
   beforeEach(() => {
     h.fail = false;
     h.transactions = [];
     h.owned = [];
+    h.gate = null;
   });
 
   it('pays a consumable only once for the same transaction', async () => {
@@ -98,6 +108,34 @@ describe('purchases', () => {
     await syncPurchases();
     expect(state.data.purchases.starterPack).toBe(true);
     expect(state.coins).toBeGreaterThan(coins);
+  });
+
+  it('a launch check that ends after the start wait gives back an owned starter pack and says so once', async () => {
+    // Device report (session 10): the pack left the shop right after an ad, nothing was bought.
+    state.resetProgress();
+    const { coins, berries } = state;
+    const heard: string[][] = [];
+    const stop = onLaunchRestore((keys) => heard.push(keys));
+    let release = (): void => undefined;
+    h.gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    h.owned = ['tippy_starter_pack'];
+    const sync = syncPurchases();
+    // The game starts without waiting for the store any longer (BOOT.purchasesWaitMs).
+    await expect(withTimeout(sync, 5)).rejects.toThrow();
+    expect(state.data.purchases.starterPack).toBe(false);
+    release();
+    await sync;
+    expect(state.data.purchases.starterPack).toBe(true);
+    expect(state.data.creatures.crumb).toBeDefined();
+    expect([state.coins, state.berries]).toEqual([coins, berries]);
+    expect(heard).toEqual([['starter_pack']]);
+    // Nothing new on the next check, and the restore button tells its own result.
+    await syncPurchases();
+    await restorePurchases();
+    expect(heard).toHaveLength(1);
+    stop();
   });
 
   it('survives a store that cannot be asked at launch', async () => {
