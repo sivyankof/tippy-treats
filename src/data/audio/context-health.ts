@@ -17,6 +17,11 @@ export const CONTEXT_HEALTH = {
     { atMs: 2300, step: 'bounce' },
     { atMs: 2700, step: 'remake' },
   ],
+  /**
+   * Two steps never come closer than this, ms: a main thread busy loading the game lets several
+   * steps fall due at once, and each needs a moment to work.
+   */
+  minStepGapMs: 250,
   /** At most this many automatic remakes per page. */
   maxRemakes: 3,
 } as const;

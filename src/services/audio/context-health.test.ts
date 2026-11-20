@@ -4,6 +4,7 @@ import { ContextHealth, type HealthVerdict } from './context-health';
 const cfg = {
   aliveMs: 200,
   minRate: 0.5,
+  minStepGapMs: 250,
   ladder: [
     { atMs: 300, step: 'resume' },
     { atMs: 1000, step: 'resume' },
@@ -70,6 +71,15 @@ describe('ContextHealth', () => {
     expect(steps(looks(health, 0, 400, () => 5))).toEqual(['300 resume']);
     expect(steps(looks(health, 500, 5000, () => 5, true))).toEqual([]);
     expect(steps(looks(health, 5100, 5500, () => 5))).toEqual(['5400 resume']);
+  });
+
+  it('steps that fell due together (a busy main thread) still come at least 250 ms apart', () => {
+    const health = new ContextHealth(cfg);
+    health.suspectNow();
+    expect(health.look({ nowMs: 0, clockSec: 0, held: false }).kind).toBe('waiting');
+    // The page was busy for 2.5 s: four steps are overdue at once.
+    const seen = looks(health, 2500, 3600, () => 0);
+    expect(steps(seen)).toEqual(['2500 resume', '2800 resume', '3100 resume', '3400 bounce']);
   });
 
   it('after the last step the check gives up; a new suspicion starts it again', () => {

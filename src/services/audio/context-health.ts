@@ -26,6 +26,7 @@ type Ladder = readonly { atMs: number; step: HealthStep }[];
 export interface HealthConfig {
   aliveMs: number;
   minRate: number;
+  minStepGapMs: number;
   ladder: Ladder;
 }
 
@@ -42,6 +43,7 @@ export class ContextHealth {
   /** When the ladder started (null while held). */
   private startMs: number | null = null;
   private nextStep = 0;
+  private lastStepMs: number | null = null;
   private last: { nowMs: number; clockSec: number } | null = null;
   private goingMs = 0;
   /** The clock was going at the last look (null before any look). */
@@ -58,6 +60,7 @@ export class ContextHealth {
     this.suspect = true;
     this.startMs = null;
     this.nextStep = 0;
+    this.lastStepMs = null;
     this.last = null;
     this.goingMs = 0;
   }
@@ -67,6 +70,7 @@ export class ContextHealth {
     this.suspect = false;
     this.startMs = null;
     this.nextStep = 0;
+    this.lastStepMs = null;
     this.last = null;
     this.goingMs = 0;
     this.running = null;
@@ -85,6 +89,7 @@ export class ContextHealth {
     if (held) {
       this.startMs = null;
       this.nextStep = 0;
+      this.lastStepMs = null;
       return { kind: 'waiting' };
     }
     if (this.goingMs >= this.cfg.aliveMs) {
@@ -98,6 +103,10 @@ export class ContextHealth {
       return { kind: 'given-up' };
     }
     if (nowMs - this.startMs < due.atMs) return { kind: 'waiting' };
+    if (this.lastStepMs !== null && nowMs - this.lastStepMs < this.cfg.minStepGapMs) {
+      return { kind: 'waiting' };
+    }
+    this.lastStepMs = nowMs;
     this.nextStep += 1;
     return { kind: 'step', step: due.step };
   }
