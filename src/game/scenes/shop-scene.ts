@@ -13,7 +13,7 @@ import {
   buyOutcomeKey,
   buyProduct,
   loadPrices,
-  onLaunchRestore,
+  takeLaunchRestored,
   restorePurchases,
   type Prices,
 } from '../economy/purchases';
@@ -54,8 +54,6 @@ export class ShopScene extends Phaser.Scene {
   private loaded = false;
   private adReady = false;
   private busy = false;
-  /** The launch check of the store gave back a purchase while this screen was open: say so once. */
-  private restoredNote = false;
   private leaving = false;
   private source: ShopSource = 'return';
 
@@ -72,7 +70,6 @@ export class ShopScene extends Phaser.Scene {
     logShopOpen(this.source);
     this.leaving = false;
     this.busy = false;
-    this.restoredNote = false;
     this.loaded = false;
     this.blocks = [];
     this.starter = null;
@@ -86,13 +83,7 @@ export class ShopScene extends Phaser.Scene {
     this.cover = new BottomCover(this);
     this.toast = new Toast(this);
     this.scale.on(Phaser.Scale.Events.RESIZE, this.layout, this);
-    // The launch check may end on this screen (or during an ad): the starter pack then leaves the
-    // list because the account owns it, and the player is told why.
-    const stopRestore = onLaunchRestore(() => {
-      this.restoredNote = true;
-    });
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
-      stopRestore();
       this.scale.off(Phaser.Scale.Events.RESIZE, this.layout, this);
     });
     this.layout();
@@ -111,10 +102,9 @@ export class ShopScene extends Phaser.Scene {
     this.list.tick(delta);
     this.starter?.tick(delta);
     if (!this.loaded || this.busy || this.leaving) return;
-    if (this.restoredNote) {
-      this.restoredNote = false;
-      this.toast.show(t('shop.restoreResult.restored'));
-    }
+    // The launch check may end later (on another screen, or during an ad here): the starter pack
+    // then leaves the list because the account owns it, and the player is told why, once.
+    if (takeLaunchRestored().length > 0) this.toast.show(t('shop.restoreResult.restored'));
     const ready = services.ads.isRewardedReady();
     const offered = gameState.starterPackInShop;
     if (ready !== this.adReady || offered !== (this.starter !== null)) this.rebuild();

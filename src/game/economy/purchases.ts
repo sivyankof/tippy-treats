@@ -80,18 +80,19 @@ export async function buyProduct(key: ProductKey): Promise<BuyOutcome> {
   return 'purchased';
 }
 
-/** Listeners of a launch check that gave back a one-time product (see `onLaunchRestore`). */
-const launchRestoreListeners = new Set<(keys: ProductKey[]) => void>();
+/** One-time products the launch check gave back that the player was not told about yet. */
+const untold = new Set<ProductKey>();
 
 /**
- * Calls `listener` with the one-time products the launch check gave back (the store says the
- * account owns them, the save did not). The check waits only `BOOT.purchasesWaitMs` before the game
- * starts and may end later, on any screen: the shop uses this to say why the starter pack left.
- * Returns the unsubscribe.
+ * The one-time products the launch check gave back (the store says the account owns them, the
+ * save did not) since the last call; empty when none. The check waits only `BOOT.purchasesWaitMs`
+ * before the game starts and may end later, on any screen: the shop takes this when it can speak
+ * and says why the starter pack left. "Restore purchases" tells its own result and clears it.
  */
-export function onLaunchRestore(listener: (keys: ProductKey[]) => void): () => void {
-  launchRestoreListeners.add(listener);
-  return () => launchRestoreListeners.delete(listener);
+export function takeLaunchRestored(): ProductKey[] {
+  const keys = [...untold];
+  untold.clear();
+  return keys;
 }
 
 /**
@@ -146,19 +147,13 @@ export async function syncPurchases(): Promise<void> {
   // restore (which gives back the creature only).
   await payUnpaidTransactions();
   const synced = await syncOwned(() => services.iap.ownedNonConsumables());
-  if (synced === null || synced.restored.length === 0) return;
-  for (const listener of launchRestoreListeners) {
-    try {
-      listener(synced.restored);
-    } catch {
-      // A screen's failure is not the purchases'.
-    }
-  }
+  for (const key of synced?.restored ?? []) untold.add(key);
 }
 
 /** The "Restore purchases" button. */
 export async function restorePurchases(): Promise<RestoreOutcome> {
   const synced = await syncOwned(() => services.iap.restore());
   if (synced === null) return 'failed';
+  untold.clear();
   return synced.owned.length > 0 ? 'restored' : 'nothing';
 }

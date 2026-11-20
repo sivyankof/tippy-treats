@@ -49,7 +49,7 @@ import { withTimeout } from '../../util/with-timeout';
 import {
   buyOutcomeKey,
   buyProduct,
-  onLaunchRestore,
+  takeLaunchRestored,
   restorePurchases,
   syncPurchases,
 } from './purchases';
@@ -114,8 +114,7 @@ describe('purchases', () => {
     // Device report (session 10): the pack left the shop right after an ad, nothing was bought.
     state.resetProgress();
     const { coins, berries } = state;
-    const heard: string[][] = [];
-    const stop = onLaunchRestore((keys) => heard.push(keys));
+    takeLaunchRestored();
     let release = (): void => undefined;
     h.gate = new Promise<void>((resolve) => {
       release = resolve;
@@ -130,12 +129,21 @@ describe('purchases', () => {
     expect(state.data.purchases.starterPack).toBe(true);
     expect(state.data.creatures.crumb).toBeDefined();
     expect([state.coins, state.berries]).toEqual([coins, berries]);
-    expect(heard).toEqual([['starter_pack']]);
-    // Nothing new on the next check, and the restore button tells its own result.
+    // Told once, even when the shop opens only later.
+    expect(takeLaunchRestored()).toEqual(['starter_pack']);
+    expect(takeLaunchRestored()).toEqual([]);
+    // Nothing new on the next check.
     await syncPurchases();
-    await restorePurchases();
-    expect(heard).toHaveLength(1);
-    stop();
+    expect(takeLaunchRestored()).toEqual([]);
+  });
+
+  it('the restore button tells its own result and drops an untold launch restore', async () => {
+    state.resetProgress();
+    takeLaunchRestored();
+    h.owned = ['tippy_starter_pack'];
+    await syncPurchases();
+    expect(await restorePurchases()).toBe('restored');
+    expect(takeLaunchRestored()).toEqual([]);
   });
 
   it('survives a store that cannot be asked at launch', async () => {
