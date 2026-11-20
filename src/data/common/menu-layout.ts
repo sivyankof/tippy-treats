@@ -631,6 +631,13 @@ export const MENU = {
     button: { width: 680, height: 112, radius: 40, shadowOffset: 10, font: 52 },
     buttonGap: 26,
   },
+  /** The explainer before the system tracking question: lines of text and one button. */
+  consent: {
+    textFont: 44,
+    lineSpacing: 10,
+    textGap: 56,
+    button: { width: 680, height: 124, radius: 44, shadowOffset: 10, font: 52 },
+  },
   team: {
     /** The design height the layout numbers are made for; a taller screen shifts the blocks down by these shares of the extra height. */
     baseHeight: 1920,

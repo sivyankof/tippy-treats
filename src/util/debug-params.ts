@@ -41,6 +41,8 @@ export interface DebugParams {
   spaceGuest?: SpaceVisitorId;
   /** `?reset=1` makes the state layer start from a fresh save. */
   reset?: boolean;
+  /** `?consent=1` makes the browser play the phone's consent: the tracking question is open and the privacy options are offered (a dev tool for screenshots). */
+  consent?: boolean;
   /** `?weather=clear|sunset|night|rain|snow|leaves|storm` pins the weather of the run (the run is not saved). */
   weather?: WeatherId;
   /** `?place=kitchen|shop` pins the start place of zone 1 (the run is not saved). */
@@ -127,6 +129,7 @@ export function parseDebugParams(search: string): DebugParams {
   const dayOffset = parseDayOffset(params.get('dayOffset'));
   if (dayOffset !== undefined) result.dayOffset = dayOffset;
   if (params.get('reset') === '1') result.reset = true;
+  if (params.get('consent') === '1') result.consent = true;
   const spaceGuest = params.get('spaceGuest');
   if (isSpaceVisitorId(spaceGuest)) result.spaceGuest = spaceGuest;
   const weather = params.get('weather');

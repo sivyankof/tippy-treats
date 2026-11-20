@@ -561,7 +561,7 @@
       "free": "Free",
       "berries": "Berries",
       "exchange": "Berries to coins",
-      "noAds": "No ads"
+        "noAds": "No ads"
     },
     "starter": {
       "title": "Starter pack",
@@ -606,6 +606,7 @@
       "terms": "Terms",
       "support": "Support"
     },
+    "privacyOptions": "Privacy settings",
     "noAds": "No ads · {price}",
     "musicCredits": "Music: Josh Lim (www.joshjameslim.com), Tad, Fupi, gilzoide",
     "version": "Version {version}",
@@ -626,6 +627,11 @@
   },
   "explainer": {
     "ok": "Got it!"
+  },
+  "consent": {
+    "title": "A free game",
+    "text": "Tippy Treats is free thanks to ads. Next, your phone will ask whether the app may track your activity across other apps and websites. If you allow it, the ads will fit you better. If you refuse, the game and the ads stay the same, just less tailored.",
+    "continue": "Continue"
   },
   "resultsLap": {
     "reward": "one=New lap: +{n} berry|other=New lap: +{n} berries"

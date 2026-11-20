@@ -109,6 +109,14 @@ export function openSettingsWindow(scene: Phaser.Scene, handlers: SettingsHandle
   const links = createSiteLinks(scene, y, width);
   y += cfg.links.height + cfg.blockGap;
 
+  // Only where the consent form of the ads is required (known once the consent flow has run).
+  const privacy = services.consent.privacyOptionsRequired()
+    ? wide(t('settings.privacyOptions'), cfg.links.fill, y, () => {
+        void services.consent.showPrivacyOptions();
+      })
+    : null;
+  if (privacy) y += cfg.wideButton.height + cfg.blockGap;
+
   // The credits line may wrap onto a second line; the lines under it move down by what it took.
   const credits = createOutlinedText(scene, 0, 0, t('settings.musicCredits'), cfg.infoFont)
     .setAlign('center')
@@ -148,6 +156,7 @@ export function openSettingsWindow(scene: Phaser.Scene, handlers: SettingsHandle
     restore,
     result,
     ...links,
+    ...(privacy ? [privacy] : []),
     credits,
     ...info,
     reset,

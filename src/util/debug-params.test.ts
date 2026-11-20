@@ -84,6 +84,11 @@ describe('parseDebugParams', () => {
     expect(parseDebugParams('?spaceGuest=bus').spaceGuest).toBeUndefined();
   });
 
+  it('reads the consent demo flag only when it is 1', () => {
+    expect(parseDebugParams('?consent=1').consent).toBe(true);
+    expect(parseDebugParams('?consent=0').consent).toBeUndefined();
+  });
+
   it('reads the reset flag only when it is 1', () => {
     expect(parseDebugParams('?reset=1').reset).toBe(true);
     expect(parseDebugParams('?reset=0').reset).toBeUndefined();
