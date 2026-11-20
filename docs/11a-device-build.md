@@ -14,7 +14,7 @@
 | Ключ подписи Android | `C:\Users\Artem\Documents\my-projects\tippy-treats-store-assets\android-signing\` (вне репозитория) |
 | Готовые файлы (отладочный APK, подписанный AAB) | `C:\Users\Artem\Documents\my-projects\tippy-treats-store-assets\builds\` (вне репозитория) |
 
-Версия, которую видит игрок, одна на всё: она выводится из `version` в `package.json` (сейчас 1.0.0) правилом `scripts/native/app-version.cjs`: нулевой третий номер отбрасывается (1.0.0 → **1.0**, 1.2.0 → 1.2, 1.0.3 → 1.0.3). Эту версию показывает окно настроек, она уходит в `CFBundleShortVersionString` iPhone (`MARKETING_VERSION`: его пишет `scripts/native/native-ids.cjs` в `ios/App/ids.local.xcconfig`, сборка в GitHub передаёт его и в `xcodebuild`) и в `versionName` Android (`android/ids.local.properties`, без него Gradle останавливается с просьбой сделать `npm run app:sync`).
+Версия, которую видит игрок, одна на всё: она выводится из `version` в `package.json` (сейчас 1.0.0) правилом `scripts/native/app-version.cjs`: нулевой третий номер отбрасывается (1.0.0 → **1.0**, 1.2.0 → 1.2, 1.0.3 → 1.0.3). Эту версию показывает окно настроек, она уходит в `CFBundleShortVersionString` iPhone (`MARKETING_VERSION`: его пишет `scripts/native/native-ids.cjs` в `ios/App/ids.local.xcconfig`, сборка в GitHub передаёт его и в `xcodebuild`) и в `versionName` Android (Gradle сам спрашивает `node scripts/native/app-version.cjs` при каждой сборке, поэтому версия не отстаёт от `package.json`). Предварительная версия (`1.1.0-rc.1`) в магазины не уходит: правило её не принимает, игра в разработке показывает её как есть.
 
 **Почему 1.0, а не 1.0.0 (сессия 10, 2026-11-21).** В App Store Connect заведена версия **1.0**. Apple: версия сборки (`CFBundleShortVersionString`) «should match the version number you enter in App Store Connect» (https://developer.apple.com/help/glossary/version-number), и к версии приложения прикрепляется сборка, загруженная под этой версией (https://developer.apple.com/help/app-store-connect/manage-builds/choose-a-build-to-submit). Совпадают ли «1.0» и «1.0.0», Apple нигде не пишет, поэтому сборка несёт ровно «1.0» — так же, как версия в App Store Connect. Сборки 0.1.0 (1)–(6) остаются в TestFlight под своей версией 0.1.0 и к 1.0 не прикрепляются. Номер сборки (`CFBundleVersion`) продолжает расти по порядку (7, 8, …). Для следующего обновления: сначала завести версию в App Store Connect (например, 1.0.1 или 1.1), затем выставить `package.json` так, чтобы правило дало ровно её (1.0.1 → 1.0.1, 1.1.0 → 1.1). В Google Play `versionName` — только подпись для игрока, сборку определяет `versionCode` (номер сборки).
 
@@ -283,3 +283,15 @@ base64 -w0 android/app/google-services.json | gh secret set FIREBASE_ANDROID_JSO
 | Android 0.1.0 (6), выпускная | `tippy-treats-store-assets\builds\tippy-treats-0.1.0-6-store.aab` | без отладочного меню; идентификатор приложения и блоки AdMob из `.env`; RevenueCat; Firebase |
 
 Нажимать на рекламу в выпускной сборке нельзя (боевая реклама, блокировка AdMob); рекламу проверять во внутренней.
+
+### 6.3. Товары Google Play (сессия 10, 2026-11-21)
+
+В Play Console заведены шесть разовых товаров `tippy_*`, у каждого один вариант покупки (purchase option) с идентификатором `buy`. Код покупок на Android находит их без правок:
+- игра просит у RevenueCat товары по простым идентификаторам из `.env` (`tippy_berries_80` и т. д., тип `NON_SUBSCRIPTION`, `services/iap/native.ts`); вариант покупки в идентификатор не входит;
+- RevenueCat 11.4 (`purchases-hybrid-common` 20.10.0, Play Billing 9.1) переводит ответ Google в товар через `ProductDetails.getProductId()` и цену варианта `getOneTimePurchaseOfferDetails()`; этот вызов возвращает вариант, отмеченный как **обратно совместимый** (Backwards compatible). Справка Google: «Buy purchase options marked as 'Backwards compatible' are returned in responses to querySkuDetailsAsync calls», «At least one buy purchase option should be marked as legacy compatible» (https://developer.android.com/google/play/billing/one-time-product-multi-purchase-options-offers).
+
+Что проверить в Play Console (владелец):
+1. **Монетизация → Товары → Разовые товары** → каждый `tippy_*` → вариант `buy`: стоит отметка **Обратная совместимость** (Backwards compatible). У единственного варианта она обычно стоит сама; без неё товар придёт без цены, и игра покажет его недоступным.
+2. Товары в статусе **Активен** (Active) — уже так.
+3. RevenueCat → проект → приложение Android: загружен JSON сервисного аккаунта Google Play (без него RevenueCat не может подтвердить покупку) и заведены товары с теми же идентификаторами `tippy_*` (для разовых товаров — без `:buy`).
+4. Для тестовых покупок адрес Google владельца в **Настройки → Тестирование лицензий** (License testing): тогда покупка проходит без списания денег.

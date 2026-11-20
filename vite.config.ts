@@ -24,6 +24,15 @@ function packageVersion(): string {
   return (JSON.parse(text) as { version: string }).version;
 }
 
+/** The version the game shows: the store version; a pre-release (1.1.0-rc.1) as it is, so dev and tests still start. */
+function shownVersion(version: string): string {
+  try {
+    return storeVersion(version);
+  } catch {
+    return version;
+  }
+}
+
 /** The short hash of HEAD; 'unknown' when git or the repository is not there (a source archive). */
 function gitHash(): string {
   try {
@@ -160,7 +169,7 @@ export default defineConfig(({ command, mode }) => {
     // Relative base so the build also works from the Capacitor webview.
     base: './',
     define: {
-      __APP_VERSION__: JSON.stringify(storeVersion(packageVersion())),
+      __APP_VERSION__: JSON.stringify(shownVersion(packageVersion())),
       __BUILD_HASH__: JSON.stringify(buildHash),
       __BUILD_TIME__: JSON.stringify(buildTime),
       __FIREBASE_IOS__: JSON.stringify(hasFile(FIREBASE_FILES.ios)),

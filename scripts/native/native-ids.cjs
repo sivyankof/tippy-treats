@@ -1,6 +1,6 @@
 /* global require, module, __dirname, process, console */
 // Writes the AdMob app ids of the native projects from `.env` (docs/11a-device-build.md, "Ключи"),
-// and the version the stores get (`app-version.cjs`): MARKETING_VERSION and `appVersion`.
+// and the iPhone version (MARKETING_VERSION, `app-version.cjs`; Gradle asks that script itself).
 // The ids are never committed: Info.plist reads `$(ADMOB_APP_ID)` from ios/App/ids.xcconfig, which
 // includes the git-ignored ios/App/ids.local.xcconfig written here; android/app/build.gradle reads
 // the git-ignored android/ids.local.properties. The internal build always gets Google's sample app
@@ -65,7 +65,7 @@ function main() {
   );
   fs.writeFileSync(
     path.join(repo, 'android', 'ids.local.properties'),
-    `# ${note}\nadmobAppId=${ids.android.id}\nappVersion=${version}\n`,
+    `# ${note}\nadmobAppId=${ids.android.id}\n`,
   );
   console.log(
     `native ids (${internal ? 'internal' : 'store'} build): AdMob app id ios ${ids.ios.source}, android ${ids.android.source}; version ${version}`,
