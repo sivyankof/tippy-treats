@@ -42,6 +42,11 @@
         </provider>
     </application>
 
+    <!-- The game is portrait-only, but a device that cannot be held upright (a TV, a laptop, a car
+         screen) may still install it: the requirement that Google Play adds for a portrait
+         activity is made optional. -->
+    <uses-feature android:name="android.hardware.screen.portrait" android:required="false" />
+
     <!-- Permissions -->
 
     <uses-permission android:name="android.permission.INTERNET" />
