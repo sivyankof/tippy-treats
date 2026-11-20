@@ -303,7 +303,9 @@ base64 -w0 android/app/google-services.json | gh secret set FIREBASE_ANDROID_JSO
 | Сборка | Где | Что внутри |
 |---|---|---|
 | iOS 1.0 (7), внутренняя | TestFlight (GitHub Actions, запуск 44820041504) | отладочное меню; тестовая реклама Google; RevenueCat; Firebase |
-| iOS 1.0 (8), выпускная | TestFlight (запуск 44820059580) | без отладочного меню; идентификаторы AdMob из секретов; RevenueCat; Firebase |
+| iOS 1.0 (8), выпускная | TestFlight (запуск 44820059580) | без отладочного меню; идентификаторы AdMob из секретов; RevenueCat; Firebase. **Отклонена Apple при отправке на проверку** (ITMS-91064, раздел 2.1), не использовать |
+| iOS 1.0 (9), внутренняя | TestFlight (запуск 44827809107) | как 7, манифест исправлен; проверка манифестов: ok |
+| iOS 1.0 (10), выпускная | TestFlight (запуск 44827829585) | как 8, манифест исправлен; проверка манифестов: ok (корень: `NSPrivacyTracking` false, доменов 0, совпадает с репозиторием). Её отправлять на проверку |
 | Android 1.0 (7), внутренняя | `tippy-treats-store-assets\builds\tippy-treats-1.0-7-internal.aab` | отладочное меню; тестовые идентификаторы Google; RevenueCat; Firebase |
 | Android 1.0 (8), выпускная | `tippy-treats-store-assets\builds\tippy-treats-1.0-8-store.aab` | без отладочного меню; идентификатор приложения и блоки AdMob из `.env`; RevenueCat; Firebase |
 
