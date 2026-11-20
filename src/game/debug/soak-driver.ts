@@ -116,7 +116,7 @@ const DEFAULT_DWELL: Readonly<Dwell> = {
 
 const sleep = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
 
-/** Buys and upgrades every creature, puts a full team on the run and ends the first runs, so the menus show a rich save. */
+/** Buys and upgrades every creature, puts a full team on the run, ends the first runs and answers the Home questions, so the menus show a rich save. */
 function enrichSave(): void {
   gameState.debugSetBakerLevel(SOAK.richBakerLevel);
   gameState.debugSetRuns(SOAK.richRuns);
@@ -129,6 +129,9 @@ function enrichSave(): void {
     }
   }
   gameState.setTeam(CREATURE_IDS.slice(0, SOAK.richTeamSize));
+  // A player with these runs answered the one-time Home questions long ago (the notification
+  // window would otherwise open on a Home entry in the middle of the round and be counted).
+  gameState.markNotifAsked();
 }
 
 /** Plays laps of: runs with restarts, a quit through the pause path, a tour of the menu screens. */
