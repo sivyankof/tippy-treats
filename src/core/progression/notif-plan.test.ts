@@ -157,8 +157,21 @@ describe('buildNotifPlan: streak', () => {
     expect(buildNotifPlan(save, morning)).toEqual([]);
   });
 
-  it('is not planned when a run was already played today', () => {
+  it('goes out tomorrow at 19:00 when a run was already played today', () => {
     const save = withSwitches(withStreak(quietSave(morning), 5, '2026-11-20'), only);
+    const plan = buildNotifPlan(save, morning);
+    expect(ids(plan)).toEqual([NOTIF.ids.streak]);
+    expect(plan[0]?.at.getTime()).toBe(local(11, 21, 19));
+  });
+
+  it('goes out tomorrow at 19:00 when today was played and it is past 19:00', () => {
+    const evening = local(11, 20, 20);
+    const save = withSwitches(withStreak(quietSave(evening), 3, '2026-11-20'), only);
+    expect(buildNotifPlan(save, evening)[0]?.at.getTime()).toBe(local(11, 21, 19));
+  });
+
+  it('needs a streak of at least 2 also after a run today', () => {
+    const save = withSwitches(withStreak(quietSave(morning), 1, '2026-11-20'), only);
     expect(buildNotifPlan(save, morning)).toEqual([]);
   });
 
