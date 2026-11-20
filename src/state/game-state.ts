@@ -8,7 +8,7 @@ import type {
 } from '../core/economy/economy';
 import {
   txProcessed,
-  unpaidConsumables,
+  unpaidTransactions,
   withTxRecorded,
   type KnownTransaction,
 } from '../core/economy/purchase-tx';
@@ -684,20 +684,20 @@ export class GameState {
    * Pays out a purchase the store confirmed; false when a one-time product was already given or
    * the store transaction was already paid out. The transaction is remembered in the same save.
    */
-  grantProduct(key: ProductKey, transactionId?: string): boolean {
+  grantProduct(key: ProductKey, transactionIds: readonly string[] = []): boolean {
     const before = this.store.save;
-    if (transactionId !== undefined && txProcessed(before, transactionId)) return false;
+    if (txProcessed(before, transactionIds)) return false;
     let next = withProductGranted(before, key);
     if (!next) return false;
-    if (transactionId !== undefined) next = withTxRecorded(next, transactionId);
+    next = withTxRecorded(next, transactionIds);
     this.commit(next, 'purchase');
     this.emit(unlockEvents(before, next, () => 'purchase'));
     return true;
   }
 
-  /** The consumable transactions of the store that were never paid out here (see `unpaidConsumables`). */
+  /** The completed store transactions that were never paid out here (see `unpaidTransactions`). */
   unpaidTransactions(transactions: readonly KnownTransaction[]): KnownTransaction[] {
-    return unpaidConsumables(this.store.save, transactions);
+    return unpaidTransactions(this.store.save, transactions, this.deps.realNow());
   }
 
   /** Brings the save in line with the one-time products the store says are owned; true when it changed. */

@@ -52,6 +52,26 @@ function failedPurchase(error: unknown): PurchaseReport {
   return { result: 'failed' };
 }
 
+type ListedTransaction = CustomerInfo['nonSubscriptionTransactions'][number];
+
+/**
+ * The newest transaction of a product in the account's list: right after a purchase it is that
+ * purchase, under the id the list uses (RevenueCat may list it under its own id, not the store's).
+ */
+function newestTransactionOf(
+  info: CustomerInfo | undefined,
+  productId: string,
+): ListedTransaction | undefined {
+  let newest: ListedTransaction | undefined;
+  for (const tx of info?.nonSubscriptionTransactions ?? []) {
+    if (tx.productIdentifier !== productId) continue;
+    if (newest === undefined || Date.parse(tx.purchaseDate) > Date.parse(newest.purchaseDate)) {
+      newest = tx;
+    }
+  }
+  return newest;
+}
+
 /**
  * Purchases through RevenueCat (docs/09-services-analytics.md, section 5). Without an API key, or
  * when the SDK cannot start, the service is "store unavailable": no products, no purchases, and no
@@ -115,8 +135,12 @@ export class NativeIap implements IapService {
       if (!this.products.has(id)) await this.getProducts();
       const product = this.products.get(id);
       if (product === undefined) return { result: 'failed', reason: 'unavailable' };
-      const { transaction } = await this.plugin.purchaseStoreProduct({ product });
-      return { result: 'purchased', transactionId: transaction.transactionIdentifier };
+      const { transaction, customerInfo } = await this.plugin.purchaseStoreProduct({ product });
+      const listed = newestTransactionOf(customerInfo, id);
+      const transactionIds = [transaction.transactionIdentifier, listed?.transactionIdentifier]
+        .filter((tx): tx is string => typeof tx === 'string' && tx !== '')
+        .filter((tx, i, all) => all.indexOf(tx) === i);
+      return { result: 'purchased', transactionIds };
     } catch (error) {
       return failedPurchase(error);
     }

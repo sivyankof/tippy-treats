@@ -7,4 +7,9 @@ export const BOOT = {
   fontWaitMs: 3000,
   /** Longest wait for the save to be read; the storage of a phone answers in milliseconds. */
   saveWaitMs: 2000,
+  /**
+   * Longest wait for the launch check of the purchases (the store may sit on a slow network); the
+   * check goes on in the background after it and puts its result into the save when it comes.
+   */
+  purchasesWaitMs: 2000,
 } as const;

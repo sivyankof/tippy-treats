@@ -3,7 +3,7 @@ import type { IapService, PurchaseReport, StoreTransaction } from '../../service
 import { gameState as state } from '../../state';
 
 const h = vi.hoisted(() => ({
-  report: { result: 'purchased', transactionId: 'tx-1' } as PurchaseReport,
+  report: { result: 'purchased', transactionIds: ['tx-1'] } as PurchaseReport,
   transactions: [] as StoreTransaction[],
   owned: [] as string[],
   fail: false,
@@ -53,7 +53,7 @@ describe('purchases', () => {
   });
 
   it('pays a consumable only once for the same transaction', async () => {
-    h.report = { result: 'purchased', transactionId: 'dup' };
+    h.report = { result: 'purchased', transactionIds: ['dup'] };
     expect(await buyProduct('berries_80')).toBe('purchased');
     expect(await buyProduct('berries_80')).toBe('purchased');
     expect(state.berries).toBe(80);
@@ -87,6 +87,17 @@ describe('purchases', () => {
     await syncPurchases();
     await syncPurchases();
     expect(state.berries).toBe(before + 500);
+  });
+
+  it('pays a starter pack approved later in full, not as a restore', async () => {
+    const coins = state.coins;
+    h.owned = ['tippy_starter_pack'];
+    h.transactions = [
+      { productId: 'tippy_starter_pack', transactionId: 'pack-1', purchasedAt: clock.ms + 10 },
+    ];
+    await syncPurchases();
+    expect(state.data.purchases.starterPack).toBe(true);
+    expect(state.coins).toBeGreaterThan(coins);
   });
 
   it('survives a store that cannot be asked at launch', async () => {

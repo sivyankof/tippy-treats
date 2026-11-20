@@ -4,8 +4,12 @@ export type PurchaseResult = 'purchased' | 'cancelled' | 'failed' | 'pending';
 /** What a purchase gave back: the result, the store transaction when paid, why when failed. */
 export interface PurchaseReport {
   result: PurchaseResult;
-  /** Store transaction id; only with `purchased` from a real store. */
-  transactionId?: string;
+  /**
+   * Ids of the paid transaction, only with `purchased` from a real store: the store's id from the
+   * purchase answer and the id the account's transaction list (`completedTransactions`) shows for
+   * it, when the two differ. All are remembered, so the launch check never pays it again.
+   */
+  transactionIds?: string[];
   /** Only with `failed`: the store is not there at all, or the network is. */
   reason?: 'unavailable' | 'network';
 }

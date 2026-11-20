@@ -2,6 +2,7 @@ import * as Phaser from 'phaser';
 import './style.css';
 import { APP_VERSION, BUILD_HASH, BUILD_TIME } from './data/app/app-info';
 import { BOOT } from './data/app/boot';
+import { withTimeout } from './util/with-timeout';
 import { formatBuildStamp } from './util/build-stamp';
 import { bindLogicalResize, createGameConfig } from './game/app/config';
 import { refreshTextsOnFontLoad } from './game/ui/common/font-refresh';
@@ -64,7 +65,8 @@ async function loadSave(): Promise<void> {
   bindSaveFlush(gameState);
   bindPlayDays(gameState, services.appShell);
   applySavedSettings();
-  await syncPurchases();
+  // Never blocks the start for long: on a slow network the check finishes in the background.
+  await withTimeout(syncPurchases(), BOOT.purchasesWaitMs).catch(() => undefined);
 }
 
 async function start(): Promise<void> {

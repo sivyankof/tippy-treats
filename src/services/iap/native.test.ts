@@ -107,11 +107,33 @@ describe('NativeIap purchase', () => {
     const iap = new NativeIap(plugin, 'key', IDS);
     expect(await iap.purchase('tippy_berries_80')).toEqual({
       result: 'purchased',
-      transactionId: 'tx-1',
+      transactionIds: ['tx-1'],
     });
     expect(plugin.getProducts).toHaveBeenCalledTimes(1);
     await iap.purchase('tippy_berries_80');
     expect(plugin.getProducts).toHaveBeenCalledTimes(1);
+  });
+
+  it('also returns the id the account list shows for the new purchase', async () => {
+    const listed = info([
+      transaction('rc-old', 'tippy_berries_80', '2026-10-01T10:00:00Z'),
+      transaction('rc-new', 'tippy_berries_80', '2026-11-02T10:00:00Z'),
+      transaction('rc-ads', 'tippy_remove_ads', '2026-11-03T10:00:00Z'),
+    ]).customerInfo;
+    const plugin = fakePlugin({
+      purchaseStoreProduct: vi.fn(() =>
+        Promise.resolve({
+          productIdentifier: 'tippy_berries_80',
+          transaction: transaction('store-1', 'tippy_berries_80'),
+          customerInfo: listed,
+        }),
+      ),
+    });
+    const iap = new NativeIap(plugin, 'key', IDS);
+    expect(await iap.purchase('tippy_berries_80')).toEqual({
+      result: 'purchased',
+      transactionIds: ['store-1', 'rc-new'],
+    });
   });
 
   it('fails a product the store does not list', async () => {

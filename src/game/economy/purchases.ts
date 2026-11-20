@@ -71,7 +71,7 @@ export async function buyProduct(key: ProductKey): Promise<BuyOutcome> {
   logIapResult(key, report.result);
   if (report.result === 'failed') return report.reason === 'network' ? 'offline' : 'failed';
   if (report.result !== 'purchased') return report.result;
-  gameState.grantProduct(key, report.transactionId);
+  gameState.grantProduct(key, report.transactionIds);
   applyRemoveAds();
   gameState.flush();
   // One reward sound for every successful purchase, whichever screen it was made on.
@@ -93,11 +93,11 @@ async function syncOwned(fetchOwned: () => Promise<string[]>): Promise<ProductKe
 }
 
 /**
- * Pays out the consumables the store completed that were never paid here: an approved "Ask to
- * Buy", or a purchase cut off between the store's answer and the payout. Only transactions not
- * older than the save, once each (`unpaidConsumables`).
+ * Pays out what the store completed that was never paid here: an approved "Ask to Buy", or a
+ * purchase cut off between the store's answer and the payout. Only recent transactions not older
+ * than the save, once each (`unpaidTransactions`); a one-time product already owned is skipped.
  */
-async function payUnpaidConsumables(): Promise<void> {
+async function payUnpaidTransactions(): Promise<void> {
   try {
     const known = (await services.iap.completedTransactions()).flatMap((tx) => {
       const key = productIds.keyOf(tx.productId);
@@ -107,7 +107,7 @@ async function payUnpaidConsumables(): Promise<void> {
     });
     let paid = false;
     for (const tx of gameState.unpaidTransactions(known)) {
-      paid = gameState.grantProduct(tx.key, tx.transactionId) || paid;
+      paid = gameState.grantProduct(tx.key, [tx.transactionId]) || paid;
     }
     if (paid) gameState.flush();
   } catch {
@@ -117,8 +117,10 @@ async function payUnpaidConsumables(): Promise<void> {
 
 /** At launch: reconciles the store's one-time purchases with the save, pays unpaid consumables, switches ads off if owned. */
 export async function syncPurchases(): Promise<void> {
+  // The payout goes first: a starter pack approved later is paid in full, not taken for a
+  // restore (which gives back the creature only).
+  await payUnpaidTransactions();
   await syncOwned(() => services.iap.ownedNonConsumables());
-  await payUnpaidConsumables();
 }
 
 /** The "Restore purchases" button. */
