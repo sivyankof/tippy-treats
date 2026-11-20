@@ -13,6 +13,7 @@ import {
   readField,
   readSupportEmail,
   repoOfBase,
+  slugOfRepo,
 } from './site-guard.cjs';
 
 const ROOT = join(__dirname, '..', '..');
@@ -96,6 +97,7 @@ describe('the site addresses', () => {
     expect(readSupportEmail(source)).toBe(SITE.supportEmail);
     expect(readField(source, 'base')).toBe(SITE.base);
     expect(repoOfBase(SITE.base)).toBe('https://github.com/sivyankof/tippy-treats-site.git');
+    expect(slugOfRepo(repoOfBase(SITE.base))).toBe('sivyankof/tippy-treats-site');
   });
 
   it('the language switch knows every page of SITE.pages', () => {

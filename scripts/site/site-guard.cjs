@@ -37,6 +37,13 @@ function repoOfBase(base) {
   return `https://github.com/${found[1]}/${found[2]}.git`;
 }
 
+/** `owner/name` of a GitHub repository address (for the GitHub CLI). */
+function slugOfRepo(repo) {
+  const found = /^https:\/\/github\.com\/([^/]+\/[^/]+?)(?:\.git)?$/.exec(repo ?? '');
+  if (!found) throw new Error(`not a GitHub repository address: ${repo}`);
+  return found[1];
+}
+
 /** The effective date of the published policy, or null when its page has none. */
 function publishedDate(html) {
   const found = PUBLISHED_DATE_RE.exec(html ?? '');
@@ -98,6 +105,7 @@ module.exports = {
   readSupportEmail,
   readField,
   repoOfBase,
+  slugOfRepo,
   publishedDate,
   isText,
   fillSite,

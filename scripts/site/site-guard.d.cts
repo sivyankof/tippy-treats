@@ -4,6 +4,7 @@ export const PLACEHOLDER_RE: RegExp;
 export function readSupportEmail(source: string): string | null;
 export function readField(source: string, name: string): string | null;
 export function repoOfBase(base: string): string;
+export function slugOfRepo(repo: string): string;
 export function publishedDate(html: string | null | undefined): string | null;
 export function isText(name: string): boolean;
 export function fillSite(

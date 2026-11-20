@@ -13,9 +13,12 @@
 // --keep-date for a correction that keeps the date). The guard (site-guard.cjs) stops the
 // publication before the commit on any placeholder left, any e-mail address but the support one, or
 // anything like a phone number. The public commit is signed with the GitHub noreply address: its
-// author is public, a personal address has no place there.
+// author is public, a personal address has no place there. After the push the script waits for the
+// Pages deploy of that commit (with the GitHub CLI `gh`), runs a failed deploy again (up to
+// DEPLOY_TRIES in all: GitHub's artifact list may lag behind the upload), then checks the live
+// privacy page for the effective date and the support address.
 'use strict';
-/* global process, console, require, __dirname */
+/* global process, console, require, __dirname, fetch, setTimeout */
 /* eslint-disable @typescript-eslint/no-require-imports */
 const { spawnSync } = require('node:child_process');
 const fs = require('node:fs');
@@ -28,6 +31,83 @@ const AUTHOR_EMAIL = '49230480+sivyankof@users.noreply.github.com';
 const ROOT = path.resolve(__dirname, '..', '..');
 const SITE_SOURCE = 'src/data/app/site.ts';
 const MAX_OUTPUT_BYTES = 64 * 1024 * 1024;
+/** Deploy attempts in all (the first one and the reruns of a failed one). */
+const DEPLOY_TRIES = 3;
+/** How long the deploy run may take to show up after the push, and the live page to update, ms. */
+const RUN_APPEAR_MS = 90_000;
+const LIVE_WAIT_MS = 180_000;
+const POLL_MS = 5_000;
+
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+/** Runs the GitHub CLI; null when it is missing or fails (the caller then says what to do by hand). */
+function gh(args) {
+  const done = spawnSync('gh', args, { encoding: 'utf8' });
+  return done.status === 0 ? done.stdout : null;
+}
+
+/** The id of the Pages deploy run of `sha`, once it shows up; null when it never does. */
+async function deployRun(slug, sha) {
+  const until = Date.now() + RUN_APPEAR_MS;
+  while (Date.now() < until) {
+    const out = gh([
+      'run',
+      'list',
+      '-R',
+      slug,
+      '--workflow',
+      'pages.yml',
+      '--commit',
+      sha,
+      '--json',
+      'databaseId',
+      '--jq',
+      '.[0].databaseId',
+    ]);
+    if (out && out.trim()) return out.trim();
+    await sleep(POLL_MS);
+  }
+  return null;
+}
+
+/** Waits for the deploy of `sha` and runs it again while it fails; true once it succeeded. */
+async function waitForDeploy(slug, sha) {
+  const id = await deployRun(slug, sha);
+  if (!id) return false;
+  for (let attempt = 1; attempt <= DEPLOY_TRIES; attempt++) {
+    const watched = spawnSync('gh', ['run', 'watch', id, '-R', slug, '--exit-status', '-i', '5'], {
+      encoding: 'utf8',
+    });
+    if (watched.status === 0) {
+      console.log(`Pages deploy ${id} succeeded (attempt ${attempt}).`);
+      return true;
+    }
+    if (attempt === DEPLOY_TRIES) break;
+    console.log(`Pages deploy ${id} failed (attempt ${attempt}), running it again.`);
+    if (gh(['run', 'rerun', id, '-R', slug, '--failed']) === null) return false;
+    await sleep(POLL_MS);
+  }
+  return false;
+}
+
+/** The live privacy page shows the effective date and the support address (Pages may lag a little). */
+async function liveCheck(base, date, email) {
+  const url = `${base}privacy.html`;
+  const until = Date.now() + LIVE_WAIT_MS;
+  while (Date.now() < until) {
+    try {
+      const response = await fetch(url, { cache: 'no-store' });
+      const html = response.ok ? await response.text() : '';
+      if (html.includes(`datetime="${date}"`) && (!email || html.includes(`mailto:${email}`))) {
+        return true;
+      }
+    } catch {
+      // Not up yet.
+    }
+    await sleep(POLL_MS);
+  }
+  return false;
+}
 
 /** Runs git; its output as bytes. A non-zero exit throws with git's message. */
 function gitBytes(args, cwd = ROOT) {
@@ -110,7 +190,7 @@ function removeQuietly(dir) {
   }
 }
 
-function main() {
+async function main() {
   const args = parseArgs(process.argv.slice(2));
   const dirty = git(['status', '--porcelain', '--', 'site', SITE_SOURCE]).trim();
   if (dirty) throw new Error(`uncommitted edits, commit them first:\n${dirty}`);
@@ -163,17 +243,27 @@ function main() {
       work,
     );
     git(['push', '--quiet', 'origin', 'HEAD:main'], work);
-    console.log(
-      'Pushed. Pages deploy in 1-2 minutes: gh run list -R sivyankof/tippy-treats-site -L 1',
-    );
+    const pushed = git(['rev-parse', 'HEAD'], work).trim();
+    const slug = guard.slugOfRepo(repo);
+    console.log(`Pushed ${pushed.slice(0, 7)} to ${slug}; waiting for the Pages deploy.`);
+    if (!(await waitForDeploy(slug, pushed))) {
+      throw new Error(
+        `The Pages deploy did not succeed (or gh is missing): gh run list -R ${slug} -L 1, then gh run rerun <id> -R ${slug} --failed`,
+      );
+    }
+    const base = guard.readField(siteSource, 'base');
+    if (!(await liveCheck(base, date, email))) {
+      throw new Error(
+        `Deployed, but ${base}privacy.html does not show the new version yet: check it by hand.`,
+      );
+    }
+    console.log(`Live: ${base} (effective date ${date}).`);
   } finally {
     removeQuietly(work);
   }
 }
 
-try {
-  main();
-} catch (error) {
+main().catch((error) => {
   console.error(error instanceof Error ? error.message : String(error));
   process.exit(1);
-}
+});
