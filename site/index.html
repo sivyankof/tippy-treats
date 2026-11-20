@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Tippy Treats</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <header class="site-header">
+      <div class="wrap">
+        <a class="brand" href="index.html">Tippy Treats</a>
+        <nav class="lang-switch" aria-label="Language switch">
+          <a href="?lang=en" data-lang-link="en">EN</a>
+          <a href="?lang=ru" data-lang-link="ru">RU</a>
+        </nav>
+      </div>
+    </header>
+
+    <main>
+      <div class="wrap">
+        <!-- Without lang.js both sections are visible one after another: expected -->
+        <section data-lang="en" lang="en">
+          <h1>Tippy Treats</h1>
+          <p>Tippy Treats is a mobile game about stacking a wobbling tower of treats.</p>
+          <footer class="page-footer">
+            <div class="footer-links">
+              <a href="privacy.html">Privacy Policy</a>
+              <a href="terms.html">Terms of Use</a>
+              <a href="support.html">Support</a>
+            </div>
+            <p><a href="mailto:[SUPPORT_EMAIL]"><span class="ph">[SUPPORT_EMAIL]</span></a></p>
+          </footer>
+        </section>
+
+        <section data-lang="ru" lang="ru">
+          <h1>Tippy Treats</h1>
+          <p>Tippy Treats — мобильная игра про шаткую башню из сладостей.</p>
+          <footer class="page-footer">
+            <div class="footer-links">
+              <a href="privacy.html">Политика конфиденциальности</a>
+              <a href="terms.html">Условия использования</a>
+              <a href="support.html">Поддержка</a>
+            </div>
+            <p><a href="mailto:[SUPPORT_EMAIL]"><span class="ph">[SUPPORT_EMAIL]</span></a></p>
+          </footer>
+        </section>
+      </div>
+    </main>
+
+    <script src="lang.js"></script>
+  </body>
+</html>
