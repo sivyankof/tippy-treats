@@ -296,10 +296,11 @@ export const STORE_SHOTS: readonly StoreShot[] = [
     stage: {
       kind: 'run',
       query: 'tutorial=0&team=rainbow,caramel,jelly&level=5&start=20&seed=11',
-      // A little off the middle: on a perfect landing the game writes "Boosted!" and "Perfect!" in
-      // one place over each other; off the middle the ability goes off with its arc and no words.
-      driver: { kind: 'offset', share: 0.03, drops: 99 },
-      moment: { kind: 'ability', creature: 'rainbow', afterMs: 200 },
+      // Off the middle by more than the perfect tolerance (20 px): on a perfect landing the game
+      // writes "Boosted!" and "Perfect!" in one place over each other. The frame is taken when the
+      // arc has reached the next layer and paints it in rainbow colours.
+      driver: { kind: 'offset', share: 0.05, drops: 99 },
+      moment: { kind: 'ability', creature: 'rainbow', afterMs: 550 },
     },
     overlays: [peek('left', 'rainbow', 'wink')],
   },
@@ -430,19 +431,19 @@ export const STORE_FEATURE = {
    */
   tower: {
     creatures: [
-      { creature: 'rainbow', face: 'joy' },
-      { creature: 'jelly', face: 'wink' },
-    ] as ReadonlyArray<{ creature: CreatureId; face: StoreFace }>,
+      { creature: 'rainbow', level: 5, grown: false, face: 'joy' },
+      { creature: 'puff', level: 5, grown: false, face: 'wink' },
+    ] as ReadonlyArray<{ creature: CreatureId; level: number; grown: boolean; face: StoreFace }>,
     x: 0.25,
-    bottom: 1.03,
-    width: 0.28,
-    step: 0.245,
+    bottom: 0.95,
+    width: 0.25,
+    step: 0.2,
     shift: 0.015,
   },
   /** The hero standing on the tower: its centre is `rise` (of the height) above the top creature's centre; height a share of the height. */
-  hero: { rise: 0.345, height: 0.68 },
+  hero: { rise: 0.29, height: 0.56 },
   /** The title and the line under it, one block centred at `x`, `centreY` (shares); sizes are shares of the width. */
-  text: { x: 0.74, centreY: 0.5, maxWidth: 0.42, gap: 0.02 },
+  text: { x: 0.77, centreY: 0.5, maxWidth: 0.36, gap: 0.02 },
   title: { text: 'TIPPY TREATS', maxSize: 0.12, minSize: 0.06, maxLines: 2 },
   subtitle: {
     text: { en: 'Stack & collect cute desserts', ru: 'Башня из живых десертов' } as Readonly<

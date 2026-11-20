@@ -415,21 +415,20 @@ async function shoot(
       const { width } = storeShotSize(bg.platform);
       const towerArts: CreatureArtSpec[] = STORE_FEATURE.tower.creatures.map((c) => ({
         ...c,
-        level: 5,
-        grown: true,
         widthPx: Math.round(STORE_FEATURE.tower.width * width),
       }));
-      const raw = await capture(
-        browser,
-        base,
-        compose.page,
-        bg.platform,
-        'en',
-        'feature',
-        bg.stage,
-        towerArts,
-      );
       for (const lang of options.langs) {
+        // Shot per language: a floating word of the game may fall into the band.
+        const raw = await capture(
+          browser,
+          base,
+          compose.page,
+          bg.platform,
+          lang,
+          'feature',
+          bg.stage,
+          towerArts,
+        );
         const featureSpec: FeatureSpec = {
           frame: dataUrl(raw.frame),
           hero,

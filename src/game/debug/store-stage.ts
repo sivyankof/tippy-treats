@@ -54,6 +54,8 @@ const PERFECT_FRAME_SHARE = 0.6;
 const PERFECT_MIN_PX = 2;
 /** An offset drop and the `flying` moment hit inside this window past their share of the layer width. */
 const SHARE_WINDOW = 0.05;
+/** How long the picture of a cloud stays near the layer after it has let it go, ms. */
+const CLOUD_LINGER_MS = 900;
 /** The sway is at its top when `sin(phase)` is at least this. */
 const SWAY_TOP = 0.97;
 
@@ -71,8 +73,8 @@ class StageDriver implements DropDriver {
   topX = 0;
   /** Length of the last game step. */
   frameMs = 16;
-  /** The last pass of the flying layer that had a cloud over it. */
-  cloudyPass = -1;
+  /** Game time the flying layer was last under a cloud (the nebula of Space); none yet. */
+  coveredAt = Number.NEGATIVE_INFINITY;
   /** Game time of the last ability of each creature. */
   readonly abilities = new Map<CreatureId, number>();
   timeMs = 0;
@@ -93,12 +95,14 @@ class StageDriver implements DropDriver {
   shouldDrop(sim: Sim): boolean {
     const { flying, phase } = sim.state;
     this.topX = sim.topLayerX();
-    if (flying && flying.coverMs > 0) this.cloudyPass = flying.pass;
+    if (flying && flying.coverMs > 0) this.coveredAt = this.timeMs;
     if (this.dropsDone || phase !== 'flying' || !flying) return false;
     const dx = flying.x - this.topX;
     const driver = this.stage.driver;
     if (driver.kind === 'offset') {
-      return inShareWindow(dx / flying.width, driver.share);
+      // Never a perfect landing: it would write its own words over the ability's.
+      const perfect = Math.abs(dx) <= BALANCE.drop.perfectTolerance;
+      return !perfect && inShareWindow(dx / flying.width, driver.share);
     }
     const frameTravel = (flying.speed * this.frameMs) / 1000;
     return Math.abs(dx) <= Math.max(PERFECT_MIN_PX, frameTravel * PERFECT_FRAME_SHARE);
@@ -204,9 +208,9 @@ class StoreDirector implements TippyStore {
       case 'flying': {
         const { flying, phase } = state;
         if (since < moment.afterMs || phase !== 'flying' || !flying) return false;
-        // In the open: a pass across the screen with no cloud (the nebula of Space) at all, as
-        // the picture of a cloud lingers a little after it has let the layer go.
-        const clear = flying.cloudAheadPx < 0 && driver.cloudyPass !== flying.pass;
+        // In the open: no cloud (the nebula of Space) due in this pass, and the last one let a
+        // layer go long enough ago for its picture to have drifted away.
+        const clear = flying.cloudAheadPx < 0 && this.timeMs - driver.coveredAt >= CLOUD_LINGER_MS;
         return clear && inShareWindow((flying.x - driver.topX) / flying.width, moment.share);
       }
       case 'wobble':

@@ -233,6 +233,7 @@ async function feature(spec: FeatureSpec): Promise<Composed> {
   );
   ctx.drawImage(frame, 0, sy, frame.width, band, 0, 0, f.width, f.height);
   const t = f.tower;
+  if (spec.tower.length === 0) throw new Error('feature graphic: no creatures for the tower');
   const layers: ComposeOverlay[] = [];
   let centreY = 0;
   for (const [i, image] of spec.tower.entries()) {
