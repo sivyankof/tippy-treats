@@ -20,7 +20,8 @@ interface Flushable {
  * the page's visibility does not touch it). Active again: the loop goes on and the sound is let go
  * at once (`audio.resume('app')`); the service then checks the context by its clock and mends it
  * step by step (`services/audio/context-health.ts`). The app may play sound without a gesture, so
- * the audio starts right away. The launch splash goes away after the first
+ * the audio starts right away, and the playlist with the first screen if that screen asked for no
+ * music itself. The launch splash goes away after the first
  * frame of a screen of the game. The Android back goes to the topmost screen or window that takes it
  * (`back-stack.ts`: a window closes, a run pauses, a menu screen goes home); when none does (Home),
  * the app goes to the background. The status bar icons follow the screen (`status-bar.ts`). Does
@@ -61,19 +62,43 @@ export function bindNativeShell(
   });
   audio.unlock();
   hideSplashOnFirstScreen(game, shell);
+  startMusicOnFirstScreen(game, audio);
   followStatusBar(shell);
 }
 
-function hideSplashOnFirstScreen(game: Phaser.Game, shell: AppShellService): void {
-  const fallback = setTimeout(done, APP_SHELL.splashMaxMs);
+/** Calls `call` once, after the first frame of a screen of the game (not of the boot scene); returns the function that calls it at once instead. */
+function onFirstScreen(game: Phaser.Game, call: () => void): () => void {
+  let called = false;
   function shown(): void {
     const screen = game.scene.getScenes(true).some((scene) => scene.scene.key !== SCENES.boot);
-    if (screen) done();
+    if (screen) now();
   }
-  function done(): void {
-    clearTimeout(fallback);
+  function now(): void {
+    if (called) return;
+    called = true;
     game.events.off(Phaser.Core.Events.POST_RENDER, shown);
-    shell.hideSplash();
+    call();
   }
   game.events.on(Phaser.Core.Events.POST_RENDER, shown);
+  return now;
+}
+
+function hideSplashOnFirstScreen(game: Phaser.Game, shell: AppShellService): void {
+  const fallback = setTimeout(() => hide(), APP_SHELL.splashMaxMs);
+  const hide = onFirstScreen(game, () => {
+    clearTimeout(fallback);
+    shell.hideSplash();
+  });
+}
+
+/**
+ * The app may play without a gesture: the playlist starts with the first screen. A menu screen asks
+ * for it itself; the tutorial run of a first launch asked late or not at all (docs/06, section 7,
+ * "Запуск"). A screen that already asked for something (a track of its own, the playlist) keeps it.
+ */
+function startMusicOnFirstScreen(game: Phaser.Game, audio: AudioService): void {
+  onFirstScreen(game, () => {
+    const asked = audio.music.state();
+    if (asked.track === null && !asked.playlist) audio.music.playlist();
+  });
 }

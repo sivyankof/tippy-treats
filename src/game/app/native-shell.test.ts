@@ -27,6 +27,9 @@ class FakeEvents {
   }
 }
 
+/** What the first screen asked of the music before the shell looks (a test sets it). */
+const firstAsk: { track: string | null } = { track: null };
+
 function setup(native = true) {
   const events = new FakeEvents();
   let active: string[] = ['boot'];
@@ -52,6 +55,10 @@ function setup(native = true) {
   } satisfies AppShellService;
   const audioCalls: string[] = [];
   const audio = {
+    music: {
+      playlist: vi.fn(() => audioCalls.push('playlist')),
+      state: () => ({ track: firstAsk.track, playlist: false }),
+    },
     unlock: vi.fn(() => audioCalls.push('unlock')),
     suspend: vi.fn((reason: string) => audioCalls.push(`suspend ${reason}`)),
     resume: vi.fn((reason: string) => audioCalls.push(`resume ${reason}`)),
@@ -102,6 +109,28 @@ describe('bindNativeShell', () => {
     t.setActive(true);
     vi.advanceTimersByTime(5000);
     expect(t.audioCalls).toEqual(['unlock', 'suspend app', 'resume app']);
+  });
+
+  it('asks for the playlist once, with the first frame of a screen of the game (a tutorial asks nothing itself)', () => {
+    const t = setup();
+    t.events.emit('postrender');
+    expect(t.audioCalls).not.toContain('playlist');
+    t.showScreens(['boot', 'game']);
+    t.events.emit('postrender');
+    t.events.emit('postrender');
+    expect(t.audioCalls.filter((c) => c === 'playlist')).toHaveLength(1);
+  });
+
+  it('leaves the music alone when the first screen asked for a track of its own (the daily tower)', () => {
+    firstAsk.track = 'daily';
+    try {
+      const t = setup();
+      t.showScreens(['boot', 'hud']);
+      t.events.emit('postrender');
+      expect(t.audioCalls).not.toContain('playlist');
+    } finally {
+      firstAsk.track = null;
+    }
   });
 
   it('hides the splash after the first frame of a screen of the game, not of the boot scene', () => {
