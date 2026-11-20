@@ -68,7 +68,8 @@
 
       var withoutHash = href.split('#')[0];
       var path = withoutHash.split('?')[0];
-      if (SITE_PAGES.indexOf(path) === -1) {
+      // The 404 page links from the site root ("/privacy.html"): the page name is what counts.
+      if (SITE_PAGES.indexOf(path.replace(/^\//, '')) === -1) {
         continue;
       }
 
