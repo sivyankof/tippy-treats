@@ -44,8 +44,9 @@ on:
 permissions:
   contents: read
 
+# Signed uploads wait for each other; simulator traces run side by side (each its own group).
 concurrency:
-  group: ios-${{ inputs.target }}
+  group: ios-${{ inputs.target }}${{ inputs.target == 'trace' && format('-{0}', github.run_id) || '' }}
   cancel-in-progress: false
 
 env:
