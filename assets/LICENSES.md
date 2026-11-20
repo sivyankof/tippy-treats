@@ -4,6 +4,7 @@
 
 | Файл | Что это | Автор | Лицензия | Источник |
 |---|---|---|---|---|
+| `tippy-icon-hero-transparent.png` (вне репозитория, папка `tippy-treats-store-assets`) | Глянцевый рендер героя: кадр 1 скриншотов и обложка Google Play (`npm run store:shots`); в саму игру не входит | Получен от владельца | Источник и условия использования владелец подтверждает отдельно | Владелец проекта |
 | `fonts/nunito-*-wght-normal.woff2` | Шрифт Nunito (вариативный, наборы latin, latin-ext, cyrillic, cyrillic-ext) | The Nunito Project Authors | SIL Open Font License 1.1, текст в `fonts/OFL.txt` | https://github.com/googlefonts/nunito, файлы woff2 из пакета `@fontsource-variable/nunito` 5.3.0 |
 | `music/menu-cup-of-tea.m4a` | Плейлист: «A Cup of Tea» (сборник «LoFi Compilation»); тишина по краям обрезана, громкость −16 LUFS, срез ниже 70 Гц, AAC | Tad | CC0 (автор просит указывать: Tad) | https://opengameart.org/content/lofi-compilation, скачано 18.11.2026. В роликах для YouTube не использовать: на трек бывали ложные заявки ContentID |
 | `music/kitchen-what-would-you-give.m4a` | Плейлист: «What Would You Give» (70 BPM Loop, набор «Cozy Cats — Lofi Beat Loops»); −16 LUFS, срез ниже 70 Гц, AAC | Josh Lim | CC BY 4.0, указание: «Music by Josh Lim», www.joshjameslim.com | https://joshjameslim.itch.io/cozy-cats-lofi-beat-loops-to-game-to, скачано 18.11.2026 |

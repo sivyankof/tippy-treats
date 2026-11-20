@@ -50,6 +50,7 @@
 | `npm run typecheck` | `tsc --noEmit` |
 | `npm run check` | typecheck + lint + test, запускать перед каждым коммитом |
 | `npm run sim` | Бот-симуляция забегов для проверки баланса |
+| `npm run store:shots` | Скриншоты для App Store и Google Play в `../tippy-treats-store-assets/screenshots/` (`docs/11-release-store.md`, раздел 5) |
 | `npx cap sync` | Копирует сборку в нативные проекты (входит в `app:sync`) |
 
 ## Главные архитектурные правила

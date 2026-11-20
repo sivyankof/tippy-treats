@@ -129,6 +129,8 @@ async function start(): Promise<void> {
     );
     // window.tippySoak: the long play-through of the leak check (scripts keep the harness).
     void import('./game/debug/soak-driver').then((soak) => soak.registerSoak(game));
+    // window.tippyStore: the in-game half of `npm run store:shots` (docs/11-release-store.md, section 5).
+    void import('./game/debug/store-stage').then((store) => store.registerStoreStage(game));
   }
 }
 

@@ -13,6 +13,7 @@
     "test": "vitest run",
     "coverage": "vitest run --coverage",
     "soak:auto": "node scripts/soak-auto.cjs",
+    "store:shots": "tsx scripts/store/store-shots.ts",
     "sim": "tsx scripts/sim.ts",
     "sim:strong": "tsx scripts/strong-fit.ts",
     "sim:coins": "tsx scripts/coin-sources.ts",
