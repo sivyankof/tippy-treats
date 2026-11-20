@@ -1,0 +1,37 @@
+import Capacitor
+import UIKit
+
+/// The device model and the system version for the "Contact us" mail of the settings
+/// (`src/services/app-shell/native.ts`, `TippyDevice.get`). The model is the hardware identifier
+/// (`iPhone15,3`), which support maps to a name; nothing else about the device is read.
+@objc(TippyDevicePlugin)
+public class TippyDevicePlugin: CAPPlugin, CAPBridgedPlugin {
+    public let identifier = "TippyDevicePlugin"
+    public let jsName = "TippyDevice"
+    public let pluginMethods: [CAPPluginMethod] = [
+        CAPPluginMethod(name: "get", returnType: CAPPluginReturnPromise)
+    ]
+
+    @objc func get(_ call: CAPPluginCall) {
+        DispatchQueue.main.async {
+            call.resolve([
+                "model": Self.hardwareModel(),
+                "osVersion": UIDevice.current.systemVersion,
+                "platform": "ios"
+            ])
+        }
+    }
+
+    /// `iPhone15,3` on a phone; the simulator reports the model it imitates.
+    private static func hardwareModel() -> String {
+        if let simulated = ProcessInfo.processInfo.environment["SIMULATOR_MODEL_IDENTIFIER"] {
+            return simulated
+        }
+        var info = utsname()
+        uname(&info)
+        let size = MemoryLayout.size(ofValue: info.machine)
+        return withUnsafePointer(to: &info.machine) {
+            $0.withMemoryRebound(to: CChar.self, capacity: size) { String(cString: $0) }
+        }
+    }
+}

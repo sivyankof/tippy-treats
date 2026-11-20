@@ -18,6 +18,8 @@
 		9582B6832FE993A70072D4E8 /* SceneDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9582B6822FE993A50072D4E8 /* SceneDelegate.swift */; };
 		7A1B0C0D2EE0000000000003 /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = 7A1B0C0D2EE0000000000004 /* InfoPlist.strings */; };
 		7A1B0C0D2EE0000000000009 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 7A1B0C0D2EE0000000000008 /* PrivacyInfo.xcprivacy */; };
+		7A1B0C0D2EE000000000000B /* TippyDevicePlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7A1B0C0D2EE000000000000A /* TippyDevicePlugin.swift */; };
+		7A1B0C0D2EE000000000000D /* GameViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7A1B0C0D2EE000000000000C /* GameViewController.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -37,6 +39,8 @@
 		7A1B0C0D2EE0000000000005 /* en */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = en; path = en.lproj/InfoPlist.strings; sourceTree = "<group>"; };
 		7A1B0C0D2EE0000000000006 /* ru */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = ru; path = ru.lproj/InfoPlist.strings; sourceTree = "<group>"; };
 		7A1B0C0D2EE0000000000008 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
+		7A1B0C0D2EE000000000000A /* TippyDevicePlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TippyDevicePlugin.swift; sourceTree = "<group>"; };
+		7A1B0C0D2EE000000000000C /* GameViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameViewController.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -80,6 +84,8 @@
 				504EC30E1FED79650016851F /* Assets.xcassets */,
 				504EC3101FED79650016851F /* LaunchScreen.storyboard */,
 				504EC3131FED79650016851F /* Info.plist */,
+				7A1B0C0D2EE000000000000C /* GameViewController.swift */,
+				7A1B0C0D2EE000000000000A /* TippyDevicePlugin.swift */,
 				7A1B0C0D2EE0000000000008 /* PrivacyInfo.xcprivacy */,
 				7A1B0C0D2EE0000000000004 /* InfoPlist.strings */,
 				2FAD9762203C412B000D30F8 /* config.xml */,
@@ -202,6 +208,8 @@
 			files = (
 				504EC3081FED79650016851F /* AppDelegate.swift in Sources */,
 				9582B6832FE993A70072D4E8 /* SceneDelegate.swift in Sources */,
+				7A1B0C0D2EE000000000000D /* GameViewController.swift in Sources */,
+				7A1B0C0D2EE000000000000B /* TippyDevicePlugin.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
