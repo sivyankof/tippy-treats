@@ -56,22 +56,28 @@ export function prepareRemoveAdsOffer(): RemoveAdsOffer {
 }
 
 /**
+ * An interstitial would show on leaving the results of `exit` (the rules of `core/economy/video-policy.ts`
+ * as they stand now). The rating request asks this too, so it never meets an ad.
+ */
+export function interstitialDue(exit: RunExit): boolean {
+  if (!exit.recorded) return false;
+  const { runMs, newRecord, levelUp, newCreature } = exit;
+  return gameState.canShowInterstitial({
+    runMs,
+    newRecord,
+    levelUp,
+    newCreature,
+    rewardedInRun: rewardedWatchedInRun(),
+    shownInSession: session.shown,
+  });
+}
+
+/**
  * The player is leaving the results: shows an interstitial when the rules of `core/economy/video-policy.ts`
  * say so. The "No ads" offer does not delay the way on: it waits for Home. Resolves when the way is free.
  */
 export async function leaveResultsAds(exit: RunExit): Promise<void> {
-  if (!exit.recorded) return;
-  const { runMs, newRecord, levelUp, newCreature } = exit;
-  const facts = { runMs, newRecord, levelUp, newCreature };
-  if (
-    !gameState.canShowInterstitial({
-      ...facts,
-      rewardedInRun: rewardedWatchedInRun(),
-      shownInSession: session.shown,
-    })
-  ) {
-    return;
-  }
+  if (!interstitialDue(exit)) return;
   services.audio.suspend('ad');
   let shown: boolean;
   try {

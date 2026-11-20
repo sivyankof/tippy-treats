@@ -1,5 +1,6 @@
 import { SystemBarsStyle, SystemBarType } from '@capacitor/core';
-import type { AppShellService, BarIcons } from './types';
+import { pageUserAgent, parseUserAgent } from './device-info';
+import type { AppShellService, BarIcons, DeviceInfo } from './types';
 
 /** A listener handle of a Capacitor plugin. */
 interface ListenerHandle {
@@ -14,6 +15,7 @@ export interface AppPlugin {
   ): Promise<ListenerHandle>;
   addListener(event: 'backButton', callback: () => void): Promise<ListenerHandle>;
   minimizeApp(): Promise<void>;
+  getInfo(): Promise<{ build: string }>;
 }
 
 /** What the shell needs of `@capacitor/splash-screen`. */
@@ -31,6 +33,13 @@ const BAR_STYLE: Record<BarIcons, SystemBarsStyle> = {
   light: SystemBarsStyle.Dark,
   dark: SystemBarsStyle.Light,
 };
+
+/** What the game needs of the project's own plugin `TippyDevice` (Swift and Java sides in `ios/` and `android/`). */
+export interface DevicePlugin {
+  get(): Promise<{ model: string; osVersion: string; platform: string }>;
+}
+
+const PLATFORM_NAMES: Record<string, string> = { ios: 'iOS', android: 'Android' };
 
 const ignore = (): undefined => undefined;
 
@@ -64,6 +73,9 @@ export class NativeAppShell implements AppShellService {
     private readonly bars: BarsPlugin,
     /** Sends the web view to an address (injected in tests). */
     private readonly navigate: (url: string) => void = (url) => globalThis.location?.assign(url),
+    /** The plugin that knows the model; without it, or when it fails, the user agent is read. */
+    private readonly device: DevicePlugin | null = null,
+    private readonly userAgent: () => string = pageUserAgent,
   ) {}
 
   onActiveChange(callback: (active: boolean) => void): () => void {
@@ -93,6 +105,27 @@ export class NativeAppShell implements AppShellService {
    */
   openExternal(url: string): void {
     this.navigate(url);
+  }
+
+  async deviceInfo(): Promise<DeviceInfo> {
+    try {
+      const info = await this.device?.get();
+      if (info?.model) {
+        const platform = PLATFORM_NAMES[info.platform.toLowerCase()] ?? info.platform;
+        return { model: info.model, os: `${platform} ${info.osVersion}`.trim() };
+      }
+    } catch {
+      // The plugin is missing or failed: the user agent tells what it can.
+    }
+    return parseUserAgent(this.userAgent());
+  }
+
+  async appBuild(): Promise<string | null> {
+    try {
+      return (await this.app.getInfo()).build || null;
+    } catch {
+      return null;
+    }
   }
 
   setBarIcons(icons: BarIcons): void {

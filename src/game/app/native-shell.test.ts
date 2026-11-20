@@ -53,6 +53,8 @@ function setup(native = true) {
     hideSplash: vi.fn(),
     setBarIcons: vi.fn(),
     openExternal: vi.fn(),
+    deviceInfo: () => Promise.resolve({ model: 'test', os: 'test' }),
+    appBuild: () => Promise.resolve(null),
   } satisfies AppShellService;
   const audioCalls: string[] = [];
   const audio = {

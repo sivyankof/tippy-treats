@@ -32,3 +32,37 @@ export function fitText<T extends Phaser.GameObjects.Text>(
   if (scale < 1) text.setScale(Math.max(MENU.text.minFitScale, scale));
   return text;
 }
+
+/** The scale one label needs to fit `maxWidth` (1 when it fits), never below `minScale`. */
+export function fitScaleOf(width: number, maxWidth: number, minScale: number): number {
+  if (width <= 0) return 1;
+  return Math.max(minScale, Math.min(1, maxWidth / width));
+}
+
+/** The one scale for labels of the given natural widths: the smallest any of them needs. */
+export function sharedFitScale(
+  widths: readonly number[],
+  maxWidth: number,
+  minScale: number,
+): number {
+  return Math.min(1, ...widths.map((width) => fitScaleOf(width, maxWidth, minScale)));
+}
+
+/**
+ * Fits one-line labels of a row of buttons to `maxWidth` and gives them all the same size: the
+ * smallest scale any of them needs (docs/07-ui-screens.md, section 13), so a short label does not
+ * look larger than its long neighbour. After a late font load the whole group fits again.
+ */
+export function fitTextGroup(texts: readonly Phaser.GameObjects.Text[], maxWidth: number): void {
+  const layout = (): void => {
+    for (const text of texts) text.setScale(1);
+    const scale = sharedFitScale(
+      texts.map((text) => text.width),
+      maxWidth,
+      MENU.text.minFitScale,
+    );
+    for (const text of texts) text.setScale(scale);
+  };
+  layout();
+  for (const text of texts) onFontRefresh(text, layout);
+}
