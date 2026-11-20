@@ -55,10 +55,10 @@ describe('consentDue', () => {
 });
 
 describe('runConsentFlow', () => {
-  it('on iOS goes UMP, explainer, tracking question, ads', async () => {
+  it('on iOS goes explainer, tracking question, UMP, ads', async () => {
     const { deps, log } = setup();
     await runConsentFlow(deps);
-    expect(log).toEqual(['ump', 'explain', 'att', 'marked', 'ads']);
+    expect(log).toEqual(['explain', 'att', 'marked', 'ump', 'ads']);
   });
 
   it('on Android (no tracking question) goes UMP then ads, no explainer', async () => {
@@ -79,14 +79,44 @@ describe('runConsentFlow', () => {
   it('skips the question when the explainer could not be shown, and still starts the ads', async () => {
     const { deps, log } = setup({ explained: false });
     await runConsentFlow(deps);
-    expect(log).toEqual(['ump', 'explain', 'ads']);
+    expect(log).toEqual(['explain', 'ump', 'ads']);
   });
 
   it('starts the ads even when every consent step throws', async () => {
     const { deps, log } = setup();
+    deps.consent.trackingStatus = () => Promise.reject(new Error('blocked'));
     deps.consent.gather = () => Promise.reject(new Error('blocked'));
     await expect(runConsentFlow(deps)).resolves.toBe(false);
     expect(log).toEqual(['ads']);
+  });
+
+  it('still asks UMP when the tracking step throws', async () => {
+    const { deps, log } = setup();
+    deps.consent.trackingStatus = () => Promise.reject(new Error('x'));
+    await runConsentFlow(deps);
+    expect(log).toEqual(['ump', 'ads']);
+  });
+
+  it('asks the tracking question only after our explainer, even when the UMP form would ask it itself', async () => {
+    // UMP with an IDFA message published in AdMob: its form asks the system question while it is open.
+    let tracking: TrackingStatus = 'not_determined';
+    const { deps, log } = setup();
+    deps.consent.trackingStatus = () => Promise.resolve(tracking);
+    deps.consent.requestTracking = () => {
+      log.push('att');
+      tracking = 'decided';
+      return Promise.resolve();
+    };
+    deps.consent.gather = () => {
+      log.push('ump');
+      if (tracking === 'not_determined') {
+        log.push('att by ump');
+        tracking = 'decided';
+      }
+      return Promise.resolve();
+    };
+    await runConsentFlow(deps);
+    expect(log).toEqual(['explain', 'att', 'marked', 'ump', 'ads']);
   });
 
   it('never rejects when the ads fail to start', async () => {

@@ -27,19 +27,21 @@ export function resetConsentSession(): void {
 }
 
 /**
- * The consent of ads, in the order the docs set: (1) Google UMP refreshes its info and shows its
- * form only where the law asks; (2) on iOS, once, our explainer and then the system tracking
- * question; (3) the ads start. At every later launch the same steps run silently (UMP is meant to
- * be asked each launch, the explainer and the question are not repeated). A failing step never
- * stops the next: the ads start whatever the answers were, and show non-personalised ones when
- * consent or tracking is refused (the SDK decides that itself). Resolves with true when our own
- * explainer window was shown (the Google form is native and not reported by the service). Never rejects.
+ * The consent of ads, in the order the docs set: (1) on iOS, once, our explainer and then the
+ * system tracking question; (2) Google UMP refreshes its info and shows its form only where the law
+ * asks; (3) the ads start. The tracking question goes first because UMP, when an IDFA message is
+ * published in AdMob, asks it itself with Google's own explainer while it is still open; once it is
+ * answered UMP has no such form (docs/09-services-analytics.md, section 4). At every later launch
+ * the same steps run silently (UMP is meant to be asked each launch, the explainer and the question
+ * are not repeated). A failing step never stops the next: the ads start whatever the answers were,
+ * and show non-personalised ones when consent or tracking is refused (the SDK decides that itself).
+ * Resolves with true when our own explainer window was shown (the Google form is native and not
+ * reported by the service). Never rejects.
  */
 export async function runConsentFlow(deps: ConsentFlowDeps): Promise<boolean> {
   session.started = true;
   let shown = false;
   try {
-    await deps.consent.gather();
     if (!deps.attAsked && (await deps.consent.trackingStatus()) === 'not_determined') {
       if (await deps.explain()) {
         shown = true;
@@ -48,7 +50,12 @@ export async function runConsentFlow(deps: ConsentFlowDeps): Promise<boolean> {
       }
     }
   } catch {
-    // Consent services never reject; this keeps a surprise from stopping the ads.
+    // Consent services never reject; this keeps a surprise from stopping the next step.
+  }
+  try {
+    await deps.consent.gather();
+  } catch {
+    // Same: the ads start whatever happened here.
   }
   try {
     await deps.ads.init();
