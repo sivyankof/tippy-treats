@@ -1,5 +1,10 @@
+import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
+import { PRODUCT_KEYS } from '../../data/economy/shop';
 import { ProductIds } from './product-ids';
+
+/** An App Store product id is unique across the developer account, so the ids carry the game's prefix. */
+const STORE_ID_PREFIX = 'tippy_';
 
 describe('ProductIds', () => {
   it('maps keys to store ids and back', () => {
@@ -26,5 +31,18 @@ describe('ProductIds', () => {
     expect(ids.idOf('berries_80')).toBe('same');
     expect(ids.idOf('berries_500')).toBeNull();
     expect(ids.keyOf('same')).toBe('berries_80');
+  });
+});
+
+describe('.env.example', () => {
+  it('names every product with the store id of App Store Connect: the key with the game prefix', () => {
+    const text = readFileSync(new URL('../../../.env.example', import.meta.url), 'utf8');
+    const ids = Object.fromEntries(
+      [...text.matchAll(/^VITE_IAP_([A-Z0-9_]+)=(.*)$/gm)].map((m) => [m[1], m[2]?.trim()]),
+    );
+    for (const key of PRODUCT_KEYS) {
+      expect(ids[key.toUpperCase()]).toBe(`${STORE_ID_PREFIX}${key}`);
+    }
+    expect(Object.keys(ids)).toHaveLength(PRODUCT_KEYS.length);
   });
 });
