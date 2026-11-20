@@ -601,6 +601,11 @@
       "daily": "Башня дня",
       "comeback": "Возвращение"
     },
+    "links": {
+      "privacy": "Политика",
+      "terms": "Условия",
+      "support": "Поддержка"
+    },
     "noAds": "Без рекламы · {price}",
     "musicCredits": "Музыка: Josh Lim (www.joshjameslim.com), Tad, Fupi, gilzoide",
     "version": "Версия {version}",

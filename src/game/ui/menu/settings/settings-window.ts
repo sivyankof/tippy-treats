@@ -14,8 +14,11 @@ import {
   type NotificationKind,
 } from '../../../app/apply-settings';
 import { productOwned } from '../../../../core/economy/shop';
+import { sitePageIn, type SitePage } from '../../../../data/app/site';
+import { services } from '../../../../services';
 import { buyProduct, loadPrices, restorePurchases } from '../../../economy/purchases';
 import { createTextButton } from '../../common/button';
+import { rowCentres } from '../../common/button-row';
 import { createOutlinedText } from '../../common/outlined-text';
 import { PopupWindow } from '../../style/dialog-window';
 import { openConfirmWindow } from './confirm-window';
@@ -48,7 +51,8 @@ function notificationRows(): ToggleRowSpec[] {
 
 /**
  * The settings window (docs/07, section 13): sounds, music, vibration and effects, language,
- * notifications, restore purchases, version and "Reset progress" with two confirmations.
+ * notifications, restore purchases, the site links, version and "Reset progress" with two
+ * confirmations.
  */
 export function openSettingsWindow(scene: Phaser.Scene, handlers: SettingsHandlers): PopupWindow {
   const popup = new PopupWindow(scene, { title: t('settings.title'), onClosed: handlers.onClosed });
@@ -102,6 +106,9 @@ export function openSettingsWindow(scene: Phaser.Scene, handlers: SettingsHandle
   });
   y += cfg.wideButton.height + cfg.resultHeight + cfg.blockGap;
 
+  const links = createSiteLinks(scene, y, width);
+  y += cfg.links.height + cfg.blockGap;
+
   // The credits line may wrap onto a second line; the lines under it move down by what it took.
   const credits = createOutlinedText(scene, 0, 0, t('settings.musicCredits'), cfg.infoFont)
     .setAlign('center')
@@ -140,6 +147,7 @@ export function openSettingsWindow(scene: Phaser.Scene, handlers: SettingsHandle
     ...notify.toggles,
     restore,
     result,
+    ...links,
     credits,
     ...info,
     reset,
@@ -175,6 +183,34 @@ export function openSettingsWindow(scene: Phaser.Scene, handlers: SettingsHandle
   return popup;
 }
 
+const SITE_LINKS: readonly SitePage[] = ['privacy', 'terms', 'support'];
+
+/** Privacy, terms, support: equal buttons across the window, each opens its page of the site in the game's language. */
+function createSiteLinks(
+  scene: Phaser.Scene,
+  top: number,
+  width: number,
+): Phaser.GameObjects.GameObject[] {
+  const { height, radius, shadowOffset, font, gap, fill } = cfg.links;
+  const buttonWidth = (width - gap * (SITE_LINKS.length - 1)) / SITE_LINKS.length;
+  const layout = { width: buttonWidth, height, radius, shadowOffset, font };
+  const xs = rowCentres(width / 2, buttonWidth, SITE_LINKS.length, gap);
+  return SITE_LINKS.map(
+    (page, i) =>
+      createTextButton(scene, {
+        text: t(`settings.links.${page}`),
+        font,
+        maxLabelWidth: buttonWidth - radius * 2,
+        fill,
+        layout,
+        keyPrefix: 'ui_settings_link',
+        x: xs[i],
+        y: top + height / 2,
+        onClick: () => services.appShell.openExternal(sitePageIn(page, getLang())),
+      }).button,
+  );
+}
+
 /** "Language" and the two buttons; the chosen one is lit and cannot be pressed again. */
 function createLanguageRow(
   scene: Phaser.Scene,
@@ -197,6 +233,7 @@ function createLanguageRow(
     { lang: 'en', label: t('settings.langEn') },
     { lang: 'ru', label: t('settings.langRu') },
   ] as const;
+  const xs = rowCentres(width / 2, button.width, options.length, buttonGap);
   const buttons = options.map(({ lang, label: text }, i) => {
     const chosen = getLang() === lang;
     const made = createTextButton(scene, {
@@ -206,7 +243,7 @@ function createLanguageRow(
       fill: chosen ? picked : other,
       layout: button,
       keyPrefix: 'ui_settings_lang',
-      x: width / 2 - buttonsWidth + button.width / 2 + i * (button.width + buttonGap),
+      x: xs[i],
       y: centre,
       onClick: () => {
         setLanguage(lang);

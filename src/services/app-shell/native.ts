@@ -62,6 +62,8 @@ export class NativeAppShell implements AppShellService {
     private readonly app: AppPlugin,
     private readonly splash: SplashPlugin,
     private readonly bars: BarsPlugin,
+    /** Sends the web view to an address (injected in tests). */
+    private readonly navigate: (url: string) => void = (url) => globalThis.location?.assign(url),
   ) {}
 
   onActiveChange(callback: (active: boolean) => void): () => void {
@@ -82,6 +84,15 @@ export class NativeAppShell implements AppShellService {
     if (this.splashHidden) return;
     this.splashHidden = true;
     this.splash.hide().catch(ignore);
+  }
+
+  /**
+   * The web view is sent to the address; the Capacitor shell does not load an outside address
+   * itself but hands it to the system (iOS `UIApplication.open`, Android `ACTION_VIEW`), so the
+   * page opens in the browser and the game stays where it is.
+   */
+  openExternal(url: string): void {
+    this.navigate(url);
   }
 
   setBarIcons(icons: BarIcons): void {

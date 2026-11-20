@@ -615,6 +615,8 @@ export const MENU = {
     /** The result line under "Restore purchases": its room and font. */
     resultHeight: 56,
     resultFont: 38,
+    /** The three site links (privacy, terms, support): one row of equal buttons across the window. */
+    links: { height: 88, radius: 30, shadowOffset: 8, font: 36, gap: 18, fill: 0x7c5cff },
     /** Version and install id lines, small. */
     infoFont: 30,
     infoLine: 40,

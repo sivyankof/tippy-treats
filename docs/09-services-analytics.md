@@ -10,6 +10,7 @@
 | Вибрация | `@capacitor/haptics` 8.0.2 (поставлен) | M7 |
 | Беззвучный режим | плагин не нужен: звуковая сессия iOS `ambient` (нативно в `AppDelegate` и `navigator.audioSession` страницы) сама молчит при выключенном звуке; `services/silent-mode/` в приложении — та же заглушка «никогда не беззвучно» (журнал `08`, 2026-11-19) | M7 |
 | Жизненный цикл приложения, кнопка «назад» Android | `@capacitor/app` 8.1.2 (поставлен; `services/app-shell/`) | M7 |
+| Внешние ссылки (страницы сайта из настроек) | без плагина: `AppShellService.openExternal`; в приложении переход на внешний адрес, его перехватывает оболочка Capacitor и отдаёт системе (iOS `UIApplication.open`, Android `Intent.ACTION_VIEW`), в браузере — новая вкладка | M7 (2026-11-20) |
 | Заставка, системные панели | `@capacitor/splash-screen` 8.0.2 (поставлен); строка состояния — `SystemBars` из ядра Capacitor 8 вместо `@capacitor/status-bar`; цвет значков следует за экраном (`AppShellService.setBarIcons`, `08-architecture.md`, журнал 2026-11-20) | M7 |
 | Локальные уведомления | `@capacitor/local-notifications` | M8 |
 | Поделиться | `@capacitor/share` + `@capacitor/filesystem` | M8 |

@@ -19,4 +19,8 @@ export class WebAppShell implements AppShellService {
   hideSplash(): void {}
 
   setBarIcons(): void {}
+
+  openExternal(url: string): void {
+    globalThis.open?.(url, '_blank', 'noopener');
+  }
 }

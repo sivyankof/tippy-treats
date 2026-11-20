@@ -27,3 +27,8 @@ export type SitePage = keyof typeof SITE.pages;
 export function siteUrl(page: SitePage): string {
   return SITE.base + SITE.pages[page];
 }
+
+/** A page of the site in the game's language (the site switches by `?lang=`). */
+export function sitePageIn(page: SitePage, lang: string): string {
+  return `${siteUrl(page)}?lang=${encodeURIComponent(lang)}`;
+}

@@ -52,6 +52,7 @@ function setup(native = true) {
     minimize: vi.fn(),
     hideSplash: vi.fn(),
     setBarIcons: vi.fn(),
+    openExternal: vi.fn(),
   } satisfies AppShellService;
   const audioCalls: string[] = [];
   const audio = {

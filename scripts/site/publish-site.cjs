@@ -70,43 +70,77 @@ async function deployRun(slug, sha) {
   return null;
 }
 
-/** Waits for the deploy of `sha` and runs it again while it fails; true once it succeeded. */
-async function waitForDeploy(slug, sha) {
-  const id = await deployRun(slug, sha);
-  if (!id) return false;
-  for (let attempt = 1; attempt <= DEPLOY_TRIES; attempt++) {
-    const watched = spawnSync('gh', ['run', 'watch', id, '-R', slug, '--exit-status', '-i', '5'], {
-      encoding: 'utf8',
-    });
-    if (watched.status === 0) {
-      console.log(`Pages deploy ${id} succeeded (attempt ${attempt}).`);
-      return true;
-    }
-    if (attempt === DEPLOY_TRIES) break;
-    console.log(`Pages deploy ${id} failed (attempt ${attempt}), running it again.`);
-    if (gh(['run', 'rerun', id, '-R', slug, '--failed']) === null) return false;
+/** Status, conclusion and attempt of a run; null when gh cannot tell. */
+function runState(slug, id) {
+  const out = gh(['run', 'view', id, '-R', slug, '--json', 'status,conclusion,attempt']);
+  try {
+    return out ? JSON.parse(out) : null;
+  } catch {
+    return null;
+  }
+}
+
+/** After a rerun: waits until GitHub shows the new attempt (or the run is no longer completed). */
+async function newAttempt(slug, id, before) {
+  const until = Date.now() + RUN_APPEAR_MS;
+  while (Date.now() < until) {
+    const state = runState(slug, id);
+    if (state && (state.attempt > before || state.status !== 'completed')) return true;
     await sleep(POLL_MS);
   }
   return false;
 }
 
-/** The live privacy page shows the effective date and the support address (Pages may lag a little). */
-async function liveCheck(base, date, email) {
-  const url = `${base}privacy.html`;
-  const until = Date.now() + LIVE_WAIT_MS;
-  while (Date.now() < until) {
-    try {
-      const response = await fetch(url, { cache: 'no-store' });
-      const html = response.ok ? await response.text() : '';
-      if (html.includes(`datetime="${date}"`) && (!email || html.includes(`mailto:${email}`))) {
-        return true;
-      }
-    } catch {
-      // Not up yet.
+/**
+ * Waits for the deploy of `sha` and runs it again while it fails; true once it succeeded. A watch
+ * that ends without the run being over (the network dropped) is only watched again: a rerun is
+ * sent only for a run that completed with a failure.
+ */
+async function waitForDeploy(slug, sha) {
+  const id = await deployRun(slug, sha);
+  if (!id) return false;
+  let reruns = 0;
+  for (;;) {
+    spawnSync('gh', ['run', 'watch', id, '-R', slug, '-i', '5'], { stdio: 'inherit' });
+    const state = runState(slug, id);
+    if (!state) return false;
+    if (state.status !== 'completed') continue;
+    if (state.conclusion === 'success') {
+      console.log(`Pages deploy ${id} succeeded (attempt ${state.attempt}).`);
+      return true;
     }
-    await sleep(POLL_MS);
+    if (reruns + 1 >= DEPLOY_TRIES) return false;
+    reruns += 1;
+    console.log(
+      `Pages deploy ${id} ended ${state.conclusion} (attempt ${state.attempt}), running it again.`,
+    );
+    if (gh(['run', 'rerun', id, '-R', slug, '--failed']) === null) return false;
+    if (!(await newAttempt(slug, id, state.attempt))) return false;
   }
-  return false;
+}
+
+/**
+ * Every published text file is served as it was pushed. A query unique to this publication keeps
+ * the Pages CDN from answering with a copy it cached before.
+ */
+async function liveCheck(base, files, pushed) {
+  const until = Date.now() + LIVE_WAIT_MS;
+  let waiting = Object.keys(files);
+  while (Date.now() < until && waiting.length > 0) {
+    const still = [];
+    for (const name of waiting) {
+      const url = `${base}${name.slice('site/'.length)}?publish=${pushed}`;
+      try {
+        const response = await fetch(url, { cache: 'no-store' });
+        if (!response.ok || (await response.text()) !== files[name]) still.push(name);
+      } catch {
+        still.push(name);
+      }
+    }
+    waiting = still;
+    if (waiting.length > 0) await sleep(POLL_MS);
+  }
+  return waiting;
 }
 
 /** Runs git; its output as bytes. A non-zero exit throws with git's message. */
@@ -229,6 +263,12 @@ async function main() {
       console.log('Dry run: nothing pushed.');
       return;
     }
+    // The deploy is waited for with the GitHub CLI: without it, stop before anything is pushed.
+    if (gh(['auth', 'status']) === null) {
+      throw new Error(
+        'The GitHub CLI (gh) is missing or not logged in: gh auth login, then run again.',
+      );
+    }
     git(
       [
         '-c',
@@ -252,9 +292,10 @@ async function main() {
       );
     }
     const base = guard.readField(siteSource, 'base');
-    if (!(await liveCheck(base, date, email))) {
+    const stale = await liveCheck(base, files, pushed);
+    if (stale.length > 0) {
       throw new Error(
-        `Deployed, but ${base}privacy.html does not show the new version yet: check it by hand.`,
+        `Deployed, but these pages are not served as pushed yet: ${stale.join(', ')}. Check them by hand.`,
       );
     }
     console.log(`Live: ${base} (effective date ${date}).`);

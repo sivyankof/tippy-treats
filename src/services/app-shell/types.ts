@@ -20,4 +20,6 @@ export interface AppShellService {
   hideSplash(): void;
   /** Sets the colour of the status bar icons (the clock, the battery); the browser keeps its own. */
   setBarIcons(icons: BarIcons): void;
+  /** Opens an outside address (a page of the game's site): the system browser in the app, a new tab in a browser. */
+  openExternal(url: string): void;
 }

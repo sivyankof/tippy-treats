@@ -89,4 +89,11 @@ describe('NativeAppShell', () => {
     await flush();
     expect(plugin.setStyle).toHaveBeenCalledTimes(3);
   });
+
+  it('sends the web view to an outside address (the shell hands it to the system browser)', () => {
+    const went: string[] = [];
+    const shell = new NativeAppShell(fakeApp().app, splash(), bars(), (url) => went.push(url));
+    shell.openExternal('https://sivyankof.github.io/tippy-treats-site/privacy.html?lang=ru');
+    expect(went).toEqual(['https://sivyankof.github.io/tippy-treats-site/privacy.html?lang=ru']);
+  });
 });

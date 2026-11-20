@@ -117,6 +117,7 @@ describe('followStatusBar', () => {
       minimize: () => undefined,
       hideSplash: () => undefined,
       setBarIcons: vi.fn(),
+      openExternal: () => undefined,
     }) satisfies AppShellService;
 
   it('sets the icons at once and then only on a lasting change', () => {

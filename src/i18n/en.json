@@ -601,6 +601,11 @@
       "daily": "Daily tower",
       "comeback": "Come back"
     },
+    "links": {
+      "privacy": "Privacy",
+      "terms": "Terms",
+      "support": "Support"
+    },
     "noAds": "No ads · {price}",
     "musicCredits": "Music: Josh Lim (www.joshjameslim.com), Tad, Fupi, gilzoide",
     "version": "Version {version}",
