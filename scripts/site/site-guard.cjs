@@ -5,6 +5,10 @@
 
 /** Files of site/ that stay in this repository (internal notes). */
 const UNPUBLISHED = ['site/README.md'];
+/** Files that are text: filled in and checked. Anything else (images) is copied byte for byte. */
+const TEXT_EXTENSIONS = ['.html', '.css', '.js', '.txt', '.svg', '.xml', '.json', '.webmanifest'];
+/** The legal pages: a change of their text needs a new effective date. */
+const LEGAL_PAGES = ['site/privacy.html', 'site/terms.html'];
 
 const PLACEHOLDER_RE = /\[[A-Z_]+\]/g;
 const EMAIL_RE = /[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/g;
@@ -12,21 +16,38 @@ const PHONE_RE = /\+\d[\d ()-]{8,}\d/;
 const EMPTY_DATE = '<time data-effective></time>';
 const PUBLISHED_DATE_RE = /<time data-effective datetime="(\d{4}-\d{2}-\d{2})">/;
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+const PAGES_BASE_RE = /^https:\/\/([a-z0-9-]+)\.github\.io\/([A-Za-z0-9._-]+)\/$/;
 
-/** `SITE.supportEmail` of src/data/app/site.ts: the address, or null while it is not set. */
-function readSupportEmail(source) {
-  const found = /supportEmail:\s*(?:null|'([^']*)')/.exec(source);
-  if (!found) throw new Error('supportEmail not found in src/data/app/site.ts');
+/** A string field of src/data/app/site.ts (`name: 'value'`), or null when it is `null`. */
+function readField(source, name) {
+  const found = new RegExp(`${name}:\\s*(?:null|'([^']*)')`).exec(source);
+  if (!found) throw new Error(`${name} not found in src/data/app/site.ts`);
   return found[1] ? found[1] : null;
 }
 
-/** The effective date of the published policy, or null when nothing is published yet. */
+/** `SITE.supportEmail`: the address, or null while it is not set. */
+function readSupportEmail(source) {
+  return readField(source, 'supportEmail');
+}
+
+/** The public repository whose GitHub Pages serve `SITE.base` (one place for both). */
+function repoOfBase(base) {
+  const found = PAGES_BASE_RE.exec(base ?? '');
+  if (!found) throw new Error(`SITE.base is not a GitHub Pages project address: ${base}`);
+  return `https://github.com/${found[1]}/${found[2]}.git`;
+}
+
+/** The effective date of the published policy, or null when its page has none. */
 function publishedDate(html) {
   const found = PUBLISHED_DATE_RE.exec(html ?? '');
   return found ? found[1] : null;
 }
 
-/** The files with the support address and the effective date put in (others unchanged). */
+function isText(name) {
+  return TEXT_EXTENSIONS.some((ext) => name.toLowerCase().endsWith(ext));
+}
+
+/** The text files with the support address and the effective date put in (others unchanged). */
 function fillSite(files, { email, date }) {
   if (!DATE_RE.test(date)) throw new Error(`effective date must look like 2026-11-20: ${date}`);
   const out = {};
@@ -38,6 +59,13 @@ function fillSite(files, { email, date }) {
     out[name] = filled;
   }
   return out;
+}
+
+/** The legal pages whose text differs from the published ones (both filled with the same date). */
+function changedLegal(filled, published) {
+  return LEGAL_PAGES.filter(
+    (name) => published[name] !== undefined && filled[name] !== published[name],
+  );
 }
 
 /** What stops the publication, one line per finding; empty when the files may go out. */
@@ -68,9 +96,15 @@ function publishable(names) {
 
 module.exports = {
   readSupportEmail,
+  readField,
+  repoOfBase,
   publishedDate,
+  isText,
   fillSite,
+  changedLegal,
   findProblems,
   publishable,
   UNPUBLISHED,
+  LEGAL_PAGES,
+  PLACEHOLDER_RE,
 };

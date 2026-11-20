@@ -3,20 +3,33 @@ import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { SITE, siteUrl, type SitePage } from '../../src/data/app/site';
 import {
+  changedLegal,
   fillSite,
   findProblems,
+  isText,
+  PLACEHOLDER_RE,
   publishable,
   publishedDate,
+  readField,
   readSupportEmail,
+  repoOfBase,
 } from './site-guard.cjs';
 
 const ROOT = join(__dirname, '..', '..');
 const SITE_DIR = join(ROOT, 'site');
 const PAGES = Object.keys(SITE.pages) as SitePage[];
 
-/** The published files of site/ as they are in the working tree: path -> text. */
+/** The published text files of site/ (all folders) as they are in the working tree: path -> text. */
 function siteFiles(): Record<string, string> {
-  const names = publishable(readdirSync(SITE_DIR).map((name) => `site/${name}`));
+  const all = readdirSync(SITE_DIR, { recursive: true, withFileTypes: true })
+    .filter((entry) => entry.isFile())
+    .map(
+      (entry) =>
+        `site/${join(entry.parentPath, entry.name)
+          .slice(SITE_DIR.length + 1)
+          .replace(/\\/g, '/')}`,
+    );
+  const names = publishable(all).filter(isText);
   return Object.fromEntries(names.map((name) => [name, readFileSync(join(ROOT, name), 'utf8')]));
 }
 
@@ -26,7 +39,7 @@ describe('the site source', () => {
   it('has no placeholder but the support address, and no placeholder highlight', () => {
     const files = siteFiles();
     const left = Object.entries(files).flatMap(([name, text]) =>
-      [...new Set(text.match(/\[[A-Z_]+\]/g) ?? [])].map((p) => `${name} ${p}`),
+      [...new Set(text.match(PLACEHOLDER_RE) ?? [])].map((p) => `${name} ${p}`),
     );
     const allowed = SITE.supportEmail === null ? ['[SUPPORT_EMAIL]'] : [];
     expect(left.filter((l) => !allowed.some((p) => l.endsWith(p)))).toEqual([]);
@@ -77,9 +90,17 @@ describe('the site addresses', () => {
     for (const link of local) expect(link.startsWith(prefix), link).toBe(true);
   });
 
-  it('the publication reads the same support address as the game', () => {
+  it('the publication reads the same support address and site address as the game', () => {
     const source = readFileSync(join(ROOT, 'src', 'data', 'app', 'site.ts'), 'utf8');
     expect(readSupportEmail(source)).toBe(SITE.supportEmail);
+    expect(readField(source, 'base')).toBe(SITE.base);
+    expect(repoOfBase(SITE.base)).toBe('https://github.com/sivyankof/tippy-treats-site.git');
+  });
+
+  it('the language switch knows every page of SITE.pages', () => {
+    const lang = readFileSync(join(SITE_DIR, 'lang.js'), 'utf8');
+    const listed = /SITE_PAGES = \[([^\]]*)\]/.exec(lang)?.[1] ?? '';
+    for (const page of PAGES) expect(listed).toContain(`'${SITE.pages[page]}'`);
   });
 });
 
@@ -100,6 +121,20 @@ describe('the guard', () => {
       FAKE_SUPPORT,
     );
     expect(problems).toHaveLength(3);
+  });
+
+  it('sees a changed text of the legal pages, not a page that stayed the same', () => {
+    const old = { 'site/privacy.html': 'a', 'site/terms.html': 'b' };
+    expect(changedLegal({ 'site/privacy.html': 'a', 'site/terms.html': 'b' }, old)).toEqual([]);
+    expect(changedLegal({ 'site/privacy.html': 'a2', 'site/terms.html': 'b' }, old)).toEqual([
+      'site/privacy.html',
+    ]);
+    expect(changedLegal({ 'site/privacy.html': 'x' }, {})).toEqual([]);
+  });
+
+  it('copies images byte for byte: only text files are filled in and checked', () => {
+    expect(isText('site/privacy.html')).toBe(true);
+    expect(isText('site/img/badge.png')).toBe(false);
   });
 
   it('reads the effective date back from the published policy', () => {

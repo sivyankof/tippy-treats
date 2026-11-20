@@ -66,8 +66,8 @@
         continue;
       }
 
-      // Links to other sites (https:, mailto:) keep their address.
-      if (/^[a-z][a-z0-9+.-]*:/i.test(href)) {
+      // Links to other sites (https:, mailto:, //host) keep their address.
+      if (/^[a-z][a-z0-9+.-]*:/i.test(href) || href.indexOf('//') === 0) {
         continue;
       }
       var withoutHash = href.split('#')[0];
