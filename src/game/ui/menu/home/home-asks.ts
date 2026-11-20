@@ -14,14 +14,20 @@ export interface HomeAsk {
   readonly name: string;
   /** True when it is time to ask (read on each Home entry). */
   due(): boolean;
-  /** Asks; `done` is called once when the whole question is over, whatever the answer. */
-  run(scene: Phaser.Scene, done: () => void): void;
+  /**
+   * Asks; `done` is called once when the whole question is over, whatever the answer. `shown` is
+   * true when the question put a window in front of the player (then no other question follows).
+   */
+  run(scene: Phaser.Scene, done: (shown: boolean) => void): void;
 }
 
 /** The questions in the order they are asked. */
 export const HOME_ASKS: readonly HomeAsk[] = [consentAsk, notifAsk];
 
-/** Runs the first due question, then `then`; with nothing due, `then` runs at once. */
+/**
+ * Runs the due questions in order until one shows a window, then `then`; a question that showed
+ * nothing (the silent consent refresh) does not use up the slot. With nothing due, `then` runs at once.
+ */
 export function runHomeAsks(
   scene: Phaser.Scene,
   then: () => void,
@@ -32,10 +38,12 @@ export function runHomeAsks(
     then();
     return;
   }
+  const rest = asks.slice(asks.indexOf(ask) + 1);
   let finished = false;
-  ask.run(scene, () => {
+  ask.run(scene, (shown) => {
     if (finished) return;
     finished = true;
-    then();
+    if (shown) then();
+    else runHomeAsks(scene, then, rest);
   });
 }

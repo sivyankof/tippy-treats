@@ -113,15 +113,17 @@ export function openSettingsWindow(scene: Phaser.Scene, handlers: SettingsHandle
   y += cfg.wideButton.height + cfg.resultHeight + cfg.blockGap;
 
   const links = createSiteLinks(scene, y, width);
-  y += cfg.links.height + cfg.links.gap + cfg.links.height + cfg.blockGap;
+  y += cfg.links.height + cfg.links.gap + cfg.links.height;
 
-  // Only where the consent form of the ads is required (known once the consent flow has run).
+  // Only where the consent form of the ads is required (known once the consent flow has run); a full-width
+  // link row like "Contact us", right under it.
   const privacy = services.consent.privacyOptionsRequired()
-    ? wide(t('settings.privacyOptions'), cfg.links.fill, y, () => {
+    ? createLinkButton(scene, t('settings.privacyOptions'), width, y + cfg.links.gap, () => {
         void services.consent.showPrivacyOptions();
       })
     : null;
-  if (privacy) y += cfg.wideButton.height + cfg.blockGap;
+  if (privacy) y += cfg.links.gap + cfg.links.height;
+  y += cfg.blockGap;
 
   // The credits line may wrap onto a second line; the lines under it move down by what it took.
   const credits = createOutlinedText(scene, 0, 0, t('settings.musicCredits'), cfg.infoFont)
@@ -230,17 +232,35 @@ function createSiteLinks(
     links.map((link) => link.label),
     buttonWidth - radius * 2,
   );
-  const contact = createTextButton(scene, {
-    text: t('settings.contact'),
+  const contact = createLinkButton(
+    scene,
+    t('settings.contact'),
+    width,
+    top + height + gap,
+    () => void openSupportMail(),
+  );
+  return [...links.map((link) => link.button), contact];
+}
+
+/** A full-width button of the link style (height, font and fill of the site links) with its top edge at `top`. */
+function createLinkButton(
+  scene: Phaser.Scene,
+  label: string,
+  width: number,
+  top: number,
+  onClick: () => void,
+): Phaser.GameObjects.Container {
+  const { height, radius, shadowOffset, font, fill } = cfg.links;
+  return createTextButton(scene, {
+    text: label,
     font,
     maxLabelWidth: width - radius * 2,
     fill,
-    layout: { ...layout, width },
-    keyPrefix: 'ui_settings_contact',
-    y: top + height + gap + height / 2,
-    onClick: () => void openSupportMail(),
-  });
-  return [...links.map((link) => link.button), contact.button];
+    layout: { width, height, radius, shadowOffset },
+    keyPrefix: 'ui_settings_link_wide',
+    y: top + height / 2,
+    onClick,
+  }).button;
 }
 
 /** "Language" and the two buttons; the chosen one is lit and cannot be pressed again. */

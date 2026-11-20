@@ -16,7 +16,7 @@ import type { HomeAsk } from './home-asks';
 export const notifAsk: HomeAsk = {
   name: 'notifications',
   due: () => !gameState.data.consent.notifAsked && gameState.runsFinished >= NOTIF.askAfterRuns,
-  run(scene: Phaser.Scene, done: () => void): void {
+  run(scene: Phaser.Scene, done: (shown: boolean) => void): void {
     gameState.markNotifAsked();
     let answeredYes = false;
     openConfirmWindow(scene, {
@@ -27,10 +27,10 @@ export const notifAsk: HomeAsk = {
       confirmFill: PALETTE.accent,
       onConfirm: () => {
         answeredYes = true;
-        void askNotifPermission().finally(done);
+        void askNotifPermission().finally(() => done(true));
       },
       onClosed: () => {
-        if (!answeredYes) done();
+        if (!answeredYes) done(true);
       },
     });
   },

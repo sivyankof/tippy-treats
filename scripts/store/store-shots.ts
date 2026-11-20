@@ -396,7 +396,7 @@ async function shoot(
             width: plan.width,
             height: plan.height,
             caption: shot.caption[lang],
-            plateHeight: STORE_DEVICES[platform].plateHeight,
+            plateHeight: STORE_DEVICES[platform].plateHeight + (shot.plateGrow?.[platform] ?? 0),
             overlays: plan.resolveImages(raw.arts),
           };
           const composed = await compose.page.evaluate(

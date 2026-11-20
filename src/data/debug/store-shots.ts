@@ -176,6 +176,8 @@ export interface StoreShot {
   caption: Readonly<Record<StoreLang, string>>;
   stage: StoreStage;
   overlays: readonly StoreOverlay[];
+  /** A higher plate for this shot on a platform: added to the device's `plateHeight` (a share of the width). */
+  plateGrow?: Readonly<Partial<Record<StorePlatform, number>>>;
 }
 
 /** The big creatures that peek over the plate (the plate hides their bottom). */
@@ -349,6 +351,9 @@ export const STORE_SHOTS: readonly StoreShot[] = [
     // No big creature: the attempts row and the play button stand right above the plate, and a
     // creature low enough to leave them free would show no face. The team cards show three.
     overlays: [],
+    // The play button stands under the plate on the taller iPhone screen (the layout spreads its gaps
+    // there): the plate rises to hide it whole instead of leaving a sliver of it above the waves.
+    plateGrow: { ios: 0.045 },
   },
 ];
 

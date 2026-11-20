@@ -32,14 +32,17 @@ export function resetConsentSession(): void {
  * question; (3) the ads start. At every later launch the same steps run silently (UMP is meant to
  * be asked each launch, the explainer and the question are not repeated). A failing step never
  * stops the next: the ads start whatever the answers were, and show non-personalised ones when
- * consent or tracking is refused (the SDK decides that itself). Never rejects.
+ * consent or tracking is refused (the SDK decides that itself). Resolves with true when our own
+ * explainer window was shown (the Google form is native and not reported by the service). Never rejects.
  */
-export async function runConsentFlow(deps: ConsentFlowDeps): Promise<void> {
+export async function runConsentFlow(deps: ConsentFlowDeps): Promise<boolean> {
   session.started = true;
+  let shown = false;
   try {
     await deps.consent.gather();
     if (!deps.attAsked && (await deps.consent.trackingStatus()) === 'not_determined') {
       if (await deps.explain()) {
+        shown = true;
         await deps.consent.requestTracking();
         deps.markAttAsked();
       }
@@ -52,4 +55,5 @@ export async function runConsentFlow(deps: ConsentFlowDeps): Promise<void> {
   } catch {
     // The ads stay unavailable; the game goes on.
   }
+  return shown;
 }
