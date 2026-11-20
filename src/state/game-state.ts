@@ -14,6 +14,12 @@ import {
   shouldOfferRemoveAds,
   type InterstitialRunFacts,
 } from '../core/economy/video-policy';
+import {
+  canAskForReview,
+  withPlayDay,
+  withReviewAsked,
+  type ReviewContext,
+} from '../core/progression/review';
 import type { CheckpointHeight, CheckpointMethod, CheckpointRow } from '../core/zones/checkpoints';
 import type { RunResult } from '../core/run/run-result';
 import {
@@ -274,6 +280,35 @@ export class GameState {
   /** The "No ads" offer was shown today: it does not come again before tomorrow. */
   noteRemoveAdsOffered(): void {
     this.store.replace(withOfferShown(this.store.save, this.today()));
+  }
+
+  // --- Rating request ---
+
+  /** The game was launched or came back to the front: a new local day of play is counted (once per day). */
+  notePlayDay(): void {
+    const next = withPlayDay(this.store.save.review, this.today(), this.clockBehind);
+    if (next !== this.store.save.review) this.store.replace({ ...this.store.save, review: next });
+  }
+
+  /** The rules of docs/04, section 10: the system rating window may be asked for on the results `facts` describe. */
+  canAskForReview(
+    version: string,
+    facts: Pick<ReviewContext, 'daily' | 'newRecord' | 'newCreature' | 'interstitialDue' | 'busy'>,
+  ): boolean {
+    return canAskForReview({
+      ...facts,
+      review: this.store.save.review,
+      version,
+      nowMs: (this.deps.now ?? now)(),
+      runsFinished: this.runsFinished,
+      clockBehind: this.clockBehind,
+    });
+  }
+
+  /** The system rating window is being asked for in game version `version`: not again for this version and for 30 days. */
+  noteReviewAsked(version: string): void {
+    const review = withReviewAsked(this.store.save.review, version, (this.deps.now ?? now)());
+    this.store.replace({ ...this.store.save, review });
   }
 
   // --- Days ---

@@ -588,6 +588,15 @@
       "failed": "Не удалось связаться со стором"
     }
   },
+  "contact": {
+    "subject": "Tippy Treats: письмо в поддержку",
+    "intro": "Напишите сообщение здесь, выше черты. Строки ниже помогут нам найти причину.",
+    "game": "Игра",
+    "build": "Сборка",
+    "install": "Идентификатор установки",
+    "device": "Устройство",
+    "os": "Система"
+  },
   "settings": {
     "title": "Настройки",
     "language": "Язык",
@@ -606,6 +615,7 @@
       "terms": "Условия",
       "support": "Поддержка"
     },
+    "contact": "Написать нам",
     "noAds": "Без рекламы · {price}",
     "musicCredits": "Музыка: Josh Lim (www.joshjameslim.com), Tad, Fupi, gilzoide",
     "version": "Версия {version}",

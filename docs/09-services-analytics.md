@@ -188,3 +188,10 @@ export interface NotificationsService {
 - в файле манифеста конфиденциальности iOS (`PrivacyInfo.xcprivacy`), если его не добавляют сами SDK.
 
 Перечень в `11-release-store.md`.
+
+## 12. Оценка игры и сведения об устройстве (M8, 2026-11-20)
+
+**Оценка.** Сервис `services/rating/` (`types.ts`, `web.ts`, `native.ts`; выбор в `services/index.ts`): один метод `requestReview()`. В приложении он зовёт `InAppReview.requestReview()` из `@capacitor-community/in-app-review` 8.0.0 (системное окно: StoreKit на iOS, Play In-App Review на Android; системные квоты у них свои, окно может не показаться, приложение этого не узнаёт). Ошибка плагина глотается. В браузере заглушка: в разработке строка в консоль, в игровой сборке ничего. Своего окна, вопроса «Нравится ли игра?» и кнопки «Оцените нас» нет. Когда просить и как это записывается в сохранение (`review.*`) — `04-meta-retention.md`, раздел 10. Аналитики у просьбы пока нет.
+
+**Сведения об устройстве.** `AppShellService.deviceInfo(): Promise<{ model: string; os: string }>` и `AppShellService.appBuild(): Promise<string | null>` нужны одному месту: письму «Написать нам» (`07-ui-screens.md`, раздел 13). В браузере модель и ОС разбираются из `navigator.userAgent` (`services/app-shell/device-info.ts`, по возможности: «iPhone / iOS 18.1», «Pixel 7 / Android 15»). В приложении `deviceInfo` зовёт собственный плагин проекта `TippyDevice` (`registerPlugin('TippyDevice')`, метод `get(): Promise<{ model: string; osVersion: string; platform: string }>`; нативная часть на Swift и Java лежит в `ios/` и `android/`), при ошибке плагина падает обратно на разбор user agent. `appBuild` в приложении берёт номер сборки из `App.getInfo().build` (`@capacitor/app`), в браузере `null`. Идентификаторов устройства (IDFA, IDFV, серийных) плагин не читает: модель и версия системы.
+

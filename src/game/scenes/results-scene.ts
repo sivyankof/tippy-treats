@@ -25,6 +25,7 @@ import { resultsFlow } from '../ui/menu/results/results-flow';
 import { ResultsTiers } from '../ui/menu/results/results-tiers';
 import { coinLines, presentedCreatures } from '../ui/menu/results/results-text';
 import { ResultsXp } from '../ui/menu/results/results-xp';
+import { askForRatingOnResults } from '../ui/menu/results/results-rating';
 import { cueMusic } from '../audio/music-cues';
 import { safeBand } from '../app/safe-area';
 import { frameOf, safeFrame } from '../ui/common/safe-frame';
@@ -256,6 +257,12 @@ export class ResultsScene extends Phaser.Scene {
       this.missions.start();
       this.xp.start(() => {
         if (!this.leaving) this.buttons.setEnabled(true);
+        // After every animation of the results: the system may ask for a rating.
+        askForRatingOnResults(this, {
+          exit: this.runExit,
+          daily: this.run.result.mode === 'daily',
+          busy: () => this.leaving || this.sharing || this.coins.inProgress,
+        });
       });
     });
   }

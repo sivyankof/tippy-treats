@@ -14,6 +14,7 @@ import { bindSaveFlush } from './state/page-lifecycle';
 import { followEffectsLevelDensity } from './game/app/follow-density';
 import { dropFramebufferHandlesOnLoss } from './game/app/lost-context-watch';
 import { bindNativeShell } from './game/app/native-shell';
+import { bindPlayDays } from './game/app/play-days';
 import { services } from './services';
 import { beginPerfSession } from './game/perf/perf-session';
 import { readDebugParams, readPerfParams, showsFpsMeter, withoutReset } from './util/debug-params';
@@ -58,6 +59,7 @@ async function loadSave(): Promise<void> {
   }
   gameState.beginSession();
   bindSaveFlush(gameState);
+  bindPlayDays(gameState, services.appShell);
   applySavedSettings();
   await syncPurchases();
 }

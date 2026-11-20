@@ -85,6 +85,11 @@ export class ResultsCoins {
     if (this.button && !this.adGone && !services.ads.isRewardedReady()) this.markAdGone();
   }
 
+  /** The doubling ad is being shown or paid out. */
+  get inProgress(): boolean {
+    return this.busy;
+  }
+
   /** The button is live only while the screen is in. */
   setEnabled(enabled: boolean): void {
     this.buttonEnabled = enabled;

@@ -1,4 +1,5 @@
-import { Capacitor, SystemBars } from '@capacitor/core';
+import { Capacitor, registerPlugin, SystemBars } from '@capacitor/core';
+import { InAppReview } from '@capacitor-community/in-app-review';
 import { App } from '@capacitor/app';
 import { Haptics } from '@capacitor/haptics';
 import { Preferences } from '@capacitor/preferences';
@@ -23,7 +24,10 @@ import { WebHaptics } from './haptics/web';
 import { NativeHaptics } from './haptics/native';
 import type { AppShellService } from './app-shell/types';
 import { WebAppShell } from './app-shell/web';
-import { NativeAppShell } from './app-shell/native';
+import { type DevicePlugin, NativeAppShell } from './app-shell/native';
+import type { RatingService } from './rating/types';
+import { WebRating } from './rating/web';
+import { NativeRating } from './rating/native';
 import { productIds } from './iap/product-ids';
 import type { IapDevControl, IapService } from './iap/types';
 import { createStubIap } from './iap/stub-iap';
@@ -45,6 +49,8 @@ export interface Services {
   telemetry: AnalyticsService;
   /** The iOS or Android app around the game; a stub in the browser. */
   appShell: AppShellService;
+  /** The system's rating window; a stub in the browser. */
+  rating: RatingService;
 }
 
 /** Inside the iOS or Android app (Capacitor); false in any browser. */
@@ -102,7 +108,18 @@ export const services: Services = {
   storage: native ? new NativeStorage(Preferences) : new WebStorage(),
   share: new WebShare(),
   telemetry: new WebAnalytics(),
-  appShell: native ? new NativeAppShell(App, SplashScreen, SystemBars) : new WebAppShell(),
+  appShell: native
+    ? new NativeAppShell(
+        App,
+        SplashScreen,
+        SystemBars,
+        undefined,
+        registerPlugin<DevicePlugin>('TippyDevice'),
+      )
+    : new WebAppShell(),
+  rating: native
+    ? new NativeRating(InAppReview)
+    : new WebRating(DEBUG_TOOLS ? (line) => console.info(line) : null),
 };
 
 /** Dev switch of the ad stub (debug panel). Not part of the services: native ads have none. */

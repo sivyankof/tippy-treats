@@ -118,6 +118,8 @@ describe('followStatusBar', () => {
       hideSplash: () => undefined,
       setBarIcons: vi.fn(),
       openExternal: () => undefined,
+      deviceInfo: () => Promise.resolve({ model: 'test', os: 'test' }),
+      appBuild: () => Promise.resolve(null),
     }) satisfies AppShellService;
 
   it('sets the icons at once and then only on a lasting change', () => {

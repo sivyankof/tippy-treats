@@ -1,5 +1,11 @@
 import { describe, expect, it, vi } from 'vitest';
-import { type AppPlugin, type BarsPlugin, NativeAppShell, type SplashPlugin } from './native';
+import {
+  type AppPlugin,
+  type BarsPlugin,
+  type DevicePlugin,
+  NativeAppShell,
+  type SplashPlugin,
+} from './native';
 
 type Listener = (state: { isActive: boolean }) => void;
 
@@ -17,6 +23,7 @@ function fakeApp() {
       });
     }),
     minimizeApp: vi.fn(() => Promise.resolve()),
+    getInfo: vi.fn(() => Promise.resolve({ build: '4' })),
   };
   return { app: app as unknown as AppPlugin, raw: app, listeners, removed };
 }
@@ -95,5 +102,55 @@ describe('NativeAppShell', () => {
     const shell = new NativeAppShell(fakeApp().app, splash(), bars(), (url) => went.push(url));
     shell.openExternal('https://sivyankof.github.io/tippy-treats-site/privacy.html?lang=ru');
     expect(went).toEqual(['https://sivyankof.github.io/tippy-treats-site/privacy.html?lang=ru']);
+  });
+
+  it('hands a mail address to the system the same way', () => {
+    const went: string[] = [];
+    const shell = new NativeAppShell(fakeApp().app, splash(), bars(), (url) => went.push(url));
+    shell.openExternal('mailto:help@example.org?subject=Hi');
+    expect(went).toEqual(['mailto:help@example.org?subject=Hi']);
+  });
+
+  describe('device and build', () => {
+    const phone = 'Mozilla/5.0 (Linux; Android 15; Pixel 7 Build/AP4A) Chrome/131.0';
+    const build = (device: DevicePlugin | null) =>
+      new NativeAppShell(
+        fakeApp().app,
+        splash(),
+        bars(),
+        () => undefined,
+        device,
+        () => phone,
+      );
+
+    it('asks the TippyDevice plugin', async () => {
+      const get = vi.fn(() =>
+        Promise.resolve({ model: 'iPhone15,3', osVersion: '18.1', platform: 'ios' }),
+      );
+      expect(await build({ get }).deviceInfo()).toEqual({ model: 'iPhone15,3', os: 'iOS 18.1' });
+      const android = { model: 'Pixel 7', osVersion: '15', platform: 'android' };
+      expect(await build({ get: () => Promise.resolve(android) }).deviceInfo()).toEqual({
+        model: 'Pixel 7',
+        os: 'Android 15',
+      });
+    });
+
+    it('reads the user agent when the plugin fails, answers empty or is missing', async () => {
+      const fromAgent = { model: 'Pixel 7', os: 'Android 15' };
+      expect(await build({ get: () => Promise.reject(new Error('x')) }).deviceInfo()).toEqual(
+        fromAgent,
+      );
+      const empty = { model: '', osVersion: '', platform: 'android' };
+      expect(await build({ get: () => Promise.resolve(empty) }).deviceInfo()).toEqual(fromAgent);
+      expect(await build(null).deviceInfo()).toEqual(fromAgent);
+    });
+
+    it('gives the build number of the app, or null when it cannot be read', async () => {
+      expect(await build(null).appBuild()).toBe('4');
+      const fake = fakeApp();
+      fake.raw.getInfo.mockImplementation(() => Promise.reject(new Error('x')));
+      const shell = new NativeAppShell(fake.app, splash(), bars());
+      expect(await shell.appBuild()).toBeNull();
+    });
   });
 });

@@ -22,7 +22,8 @@ import { rowCentres } from '../../common/button-row';
 import { createOutlinedText } from '../../common/outlined-text';
 import { PopupWindow } from '../../style/dialog-window';
 import { openConfirmWindow } from './confirm-window';
-import { fitText } from '../widgets/fit-text';
+import { fitText, fitTextGroup } from '../widgets/fit-text';
+import { openSupportMail, shortInstallId } from '../../../app/support-contact';
 import { createToggleRows, soundSettingRows, type ToggleRowSpec } from './setting-toggles';
 
 const cfg = MENU.settings;
@@ -107,7 +108,7 @@ export function openSettingsWindow(scene: Phaser.Scene, handlers: SettingsHandle
   y += cfg.wideButton.height + cfg.resultHeight + cfg.blockGap;
 
   const links = createSiteLinks(scene, y, width);
-  y += cfg.links.height + cfg.blockGap;
+  y += cfg.links.height + cfg.links.gap + cfg.links.height + cfg.blockGap;
 
   // The credits line may wrap onto a second line; the lines under it move down by what it took.
   const credits = createOutlinedText(scene, 0, 0, t('settings.musicCredits'), cfg.infoFont)
@@ -120,7 +121,7 @@ export function openSettingsWindow(scene: Phaser.Scene, handlers: SettingsHandle
   const info = [
     t('settings.version', { version: APP_VERSION }),
     t('settings.build', { hash: BUILD_HASH, date: BUILD_TIME }),
-    t('settings.installId', { id: gameState.data.installId.slice(0, cfg.installIdChars) }),
+    t('settings.installId', { id: shortInstallId(gameState.data.installId) }),
   ].map((line, i) =>
     createOutlinedText(scene, 0, y + cfg.infoLine * (i + 0.5), line, cfg.infoFont).setAlpha(
       cfg.infoAlpha,
@@ -185,7 +186,10 @@ export function openSettingsWindow(scene: Phaser.Scene, handlers: SettingsHandle
 
 const SITE_LINKS: readonly SitePage[] = ['privacy', 'terms', 'support'];
 
-/** Privacy, terms, support: equal buttons across the window, each opens its page of the site in the game's language. */
+/**
+ * Privacy, terms, support: equal buttons across the window, each opens its page of the site in the
+ * game's language; their labels share one size. Under them the wide "Contact us" button.
+ */
 function createSiteLinks(
   scene: Phaser.Scene,
   top: number,
@@ -195,20 +199,34 @@ function createSiteLinks(
   const buttonWidth = (width - gap * (SITE_LINKS.length - 1)) / SITE_LINKS.length;
   const layout = { width: buttonWidth, height, radius, shadowOffset, font };
   const xs = rowCentres(width / 2, buttonWidth, SITE_LINKS.length, gap);
-  return SITE_LINKS.map(
-    (page, i) =>
-      createTextButton(scene, {
-        text: t(`settings.links.${page}`),
-        font,
-        maxLabelWidth: buttonWidth - radius * 2,
-        fill,
-        layout,
-        keyPrefix: 'ui_settings_link',
-        x: xs[i],
-        y: top + height / 2,
-        onClick: () => services.appShell.openExternal(sitePageIn(page, getLang())),
-      }).button,
+  const links = SITE_LINKS.map((page, i) =>
+    createTextButton(scene, {
+      text: t(`settings.links.${page}`),
+      font,
+      maxLabelWidth: buttonWidth - radius * 2,
+      fill,
+      layout,
+      keyPrefix: 'ui_settings_link',
+      x: xs[i],
+      y: top + height / 2,
+      onClick: () => services.appShell.openExternal(sitePageIn(page, getLang())),
+    }),
   );
+  fitTextGroup(
+    links.map((link) => link.label),
+    buttonWidth - radius * 2,
+  );
+  const contact = createTextButton(scene, {
+    text: t('settings.contact'),
+    font,
+    maxLabelWidth: width - radius * 2,
+    fill,
+    layout: { ...layout, width },
+    keyPrefix: 'ui_settings_contact',
+    y: top + height + gap + height / 2,
+    onClick: () => void openSupportMail(),
+  });
+  return [...links.map((link) => link.button), contact.button];
 }
 
 /** "Language" and the two buttons; the chosen one is lit and cannot be pressed again. */

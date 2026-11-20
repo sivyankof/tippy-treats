@@ -588,6 +588,15 @@
       "failed": "Could not reach the store"
     }
   },
+  "contact": {
+    "subject": "Tippy Treats: message to support",
+    "intro": "Write your message here, above the line. The lines below help us find the problem.",
+    "game": "Game",
+    "build": "Build",
+    "install": "Install ID",
+    "device": "Device",
+    "os": "System"
+  },
   "settings": {
     "title": "Settings",
     "language": "Language",
@@ -606,6 +615,7 @@
       "terms": "Terms",
       "support": "Support"
     },
+    "contact": "Contact us",
     "noAds": "No ads · {price}",
     "musicCredits": "Music: Josh Lim (www.joshjameslim.com), Tad, Fupi, gilzoide",
     "version": "Version {version}",
