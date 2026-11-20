@@ -1,6 +1,7 @@
-import { existsSync, readdirSync, readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { dirname, join, relative, resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
+import { folderTree } from './node-env';
 
 /**
  * `npm run sim` and the other `tsx` scripts run the game's logic in plain Node, where
@@ -11,10 +12,12 @@ import { describe, expect, it } from 'vitest';
 
 const ROOT = resolve(__dirname, '..');
 
-/** The relative modules a file loads at run time (`import type` and `export type` load nothing). */
+/** The relative modules a file loads at run time (`import type` and `export type` load nothing), dynamic `import()` included. */
 function runtimeImports(file: string): string[] {
   const text = readFileSync(file, 'utf8');
   const found: string[] = [];
+  const dynamic = /\bimport\(\s*['"](\.[^'"]+)['"]\s*\)/g;
+  for (const match of text.matchAll(dynamic)) found.push(match[1]!);
   const pattern = /^\s*(import|export)\s+(type\s+)?[^'"]*?from\s+['"](\.[^'"]+)['"]/gm;
   for (const match of text.matchAll(pattern)) {
     if (match[2]) continue;
@@ -24,12 +27,16 @@ function runtimeImports(file: string): string[] {
   return found;
 }
 
+/** The TypeScript file a relative import names; null for a file of another kind (`.cjs`, `.json`, `.css`). */
 function resolveModule(from: string, spec: string): string | null {
   const base = resolve(dirname(from), spec);
-  for (const candidate of [base, `${base}.ts`, join(base, 'index.ts')]) {
+  const asTs = base.replace(/\.js$/, '.ts');
+  for (const candidate of [base, `${base}.ts`, asTs, join(base, 'index.ts')]) {
     if (existsSync(candidate) && candidate.endsWith('.ts')) return candidate;
   }
-  return null;
+  if (existsSync(base)) return null;
+  // A module the walk cannot find could be the one that reads `import.meta.env`: never skip it.
+  throw new Error(`${relative(ROOT, from)}: cannot resolve the import '${spec}'`);
 }
 
 /** Every module `entry` loads, itself included. */
@@ -48,12 +55,13 @@ function closure(entries: readonly string[]): Set<string> {
   return seen;
 }
 
+/** The modules (not the tests) under `dir`. */
 function tsFiles(dir: string): string[] {
-  return readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
-    const path = join(dir, entry.name);
-    if (entry.isDirectory()) return tsFiles(path);
-    return entry.name.endsWith('.ts') && !entry.name.endsWith('.test.ts') ? [path] : [];
-  });
+  return [...folderTree(dir)].flatMap(([sub, files]) =>
+    files
+      .filter((name) => name.endsWith('.ts') && !name.endsWith('.test.ts'))
+      .map((name) => join(dir, sub, name)),
+  );
 }
 
 /** The scripts of package.json that `tsx` runs. */
