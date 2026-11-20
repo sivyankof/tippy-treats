@@ -30,6 +30,10 @@ on:
         description: 'Internal build (debug menu in the settings)'
         type: boolean
         default: true
+      upload:
+        description: 'testflight: upload the build (off: archive, export and check only)'
+        type: boolean
+        default: true
       build_number:
         description: 'Build number (empty: the number of this run)'
         type: string
@@ -312,22 +316,21 @@ jobs:
             printf '%s' "$KEY_P8" | base64 --decode > "$RUNNER_TEMP/asc/AuthKey_$KEY_ID.p8"
           fi
           echo "ASC_KEY_PATH=$RUNNER_TEMP/asc/AuthKey_$KEY_ID.p8" >> "$GITHUB_ENV"
-      - name: Upload to TestFlight
+      - name: Export the .ipa
         env:
-          KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
-          ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
           TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
         run: |
           set -o pipefail
           # Manual signing with the certificate and profile above: no cloud signing, which a key
-          # with the App Manager role may not use. The key only uploads the build.
+          # with the App Manager role may not use. The key only uploads the build. The same options
+          # export the .ipa here (checked in the next step) and then upload it.
           cat > "$RUNNER_TEMP/ExportOptions.plist" <<EOF
           <?xml version="1.0" encoding="UTF-8"?>
           <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
           <plist version="1.0">
           <dict>
             <key>method</key><string>app-store-connect</string>
-            <key>destination</key><string>upload</string>
+            <key>destination</key><string>export</string>
             <key>teamID</key><string>$TEAM_ID</string>
             <key>signingStyle</key><string>manual</string>
             <key>signingCertificate</key><string>$SIGN_IDENTITY</string>
@@ -338,6 +341,22 @@ jobs:
           </dict>
           </plist>
           EOF
+          xcodebuild -exportArchive \
+            -archivePath "$RUNNER_TEMP/App.xcarchive" \
+            -exportOptionsPlist "$RUNNER_TEMP/ExportOptions.plist" \
+            -exportPath "$RUNNER_TEMP/ipa" | tail -n 40
+      - name: Privacy manifests
+        # App Store Connect refused build 1.0 (8) for its root manifest (ITMS-91064). This fails
+        # first, and lists and prints every manifest of the app.
+        run: bash scripts/native/check-privacy.sh "$RUNNER_TEMP/ipa/App.ipa" ios/App/App/PrivacyInfo.xcprivacy
+      - name: Upload to TestFlight
+        if: inputs.upload
+        env:
+          KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
+          ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+        run: |
+          set -o pipefail
+          plutil -replace destination -string upload "$RUNNER_TEMP/ExportOptions.plist"
           xcodebuild -exportArchive \
             -archivePath "$RUNNER_TEMP/App.xcarchive" \
             -exportOptionsPlist "$RUNNER_TEMP/ExportOptions.plist" \
@@ -352,6 +371,6 @@ jobs:
         if: always()
         run: |
           security delete-keychain "$KEYCHAIN" 2>/dev/null || true
-          rm -rf "$RUNNER_TEMP/asc" "$RUNNER_TEMP/App.xcarchive" "$RUNNER_TEMP/export" \
+          rm -rf "$RUNNER_TEMP/asc" "$RUNNER_TEMP/App.xcarchive" "$RUNNER_TEMP/export" "$RUNNER_TEMP/ipa" \
             "$RUNNER_TEMP/ExportOptions.plist" "$RUNNER_TEMP/profile.mobileprovision" "$RUNNER_TEMP/dist.p12" \
             "$HOME/Library/MobileDevice/Provisioning Profiles" "$HOME/Library/Developer/Xcode/UserData/Provisioning Profiles"
