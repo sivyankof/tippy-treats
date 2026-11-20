@@ -1,7 +1,9 @@
 # iPhone builds. Manual runs only (Actions → iOS → Run workflow), never on a push.
 #   simulator  — no signing, no secrets: proves the iOS project compiles.
-#   trace      — the internal build with the sound trace (VITE_AUDIO_TRACE=1) on a simulator: a few
-#                cold launches, each one's console kept as an artifact (the sound's log, 1 day).
+#   trace      — the internal build with the sound trace on a simulator, the console kept as an
+#                artifact (the sound's log, 1 day). trace_mode: cold (cold launches), cycles (one
+#                launch, then to the background and back again and again), soundboard (the sound
+#                test page plays every track in turn).
 #   testflight — signs by hand with the team's distribution certificate and the App Store profile of
 #                the app, then uploads the build to TestFlight with the App Store Connect API key.
 #                No cloud signing and nothing created in the developer account: the key has the
@@ -30,9 +32,14 @@ on:
         type: string
         required: false
       launches:
-        description: 'trace: cold launches, and seconds each runs'
+        description: 'trace: cold launches (or cycles), and seconds each runs (or stays back)'
         type: string
         default: '12x30'
+      trace_mode:
+        description: 'trace: what the simulator does'
+        type: choice
+        options: [cold, cycles, soundboard]
+        default: cold
 
 permissions:
   contents: read
@@ -93,9 +100,11 @@ jobs:
       - name: Install
         run: npm ci
       - name: Web build with the sound trace, and sync
+        env:
+          TRACE_MODE: ${{ inputs.trace_mode }}
         run: |
           cp .env.example .env
-          echo "VITE_AUDIO_TRACE=1" >> .env
+          if [ "$TRACE_MODE" = "soundboard" ]; then echo "VITE_AUDIO_TRACE=soundboard" >> .env; else echo "VITE_AUDIO_TRACE=1" >> .env; fi
           npm run app:sync:internal
       - name: Build for the simulator (no signing)
         run: |
@@ -105,19 +114,56 @@ jobs:
             -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' \
             -derivedDataPath "$RUNNER_TEMP/derived" \
             CODE_SIGNING_ALLOWED=NO | tail -n 20
-      - name: Cold launches
-        env:
-          LAUNCHES: ${{ inputs.launches }}
+      - name: Simulator
         run: |
-          count="${LAUNCHES%x*}"; secs="${LAUNCHES#*x}"
-          case "$count$secs" in ''|*[!0-9]*) echo "::error::launches must look like 12x30"; exit 1;; esac
           app="$RUNNER_TEMP/derived/Build/Products/Debug-iphonesimulator/App.app"
           udid="$(xcrun simctl list devices available | grep -m 1 -E 'iPhone [0-9]+ Pro \(' | grep -oE '[0-9A-F-]{36}')"
           echo "Device: $(xcrun simctl list devices | grep "$udid")"
           xcrun simctl boot "$udid"
           xcrun simctl bootstatus "$udid" -b > /dev/null
           xcrun simctl install "$udid" "$app"
+          echo "UDID=$udid" >> "$GITHUB_ENV"
           mkdir -p trace
+      - name: Cycles to the background and back
+        if: inputs.trace_mode == 'cycles'
+        env:
+          LAUNCHES: ${{ inputs.launches }}
+        run: |
+          count="${LAUNCHES%x*}"; secs="${LAUNCHES#*x}"
+          case "$count$secs" in ''|*[!0-9]*) echo "::error::launches must look like 10x8"; exit 1;; esac
+          xcrun simctl launch --console-pty --terminate-running-process "$UDID" "$BUNDLE_ID" > trace/cycles.log 2>&1 &
+          pid=$!
+          sleep 20
+          for i in $(seq 1 "$count"); do
+            echo "cycle $i: to the background"
+            xcrun simctl launch "$UDID" com.apple.Preferences > /dev/null
+            sleep 5
+            echo "cycle $i: back"
+            xcrun simctl launch "$UDID" "$BUNDLE_ID" > /dev/null
+            sleep "$secs"
+          done
+          xcrun simctl terminate "$UDID" "$BUNDLE_ID" || true
+          kill "$pid" 2> /dev/null || true
+          wait "$pid" 2> /dev/null || true
+          grep -a -F '[audio]' trace/cycles.log | sed 's/.*\[audio\] //' | tail -n 400
+      - name: Sound test page
+        if: inputs.trace_mode == 'soundboard'
+        run: |
+          xcrun simctl launch --console-pty --terminate-running-process "$UDID" "$BUNDLE_ID" > trace/soundboard.log 2>&1 &
+          pid=$!
+          sleep 75
+          xcrun simctl terminate "$UDID" "$BUNDLE_ID" || true
+          kill "$pid" 2> /dev/null || true
+          wait "$pid" 2> /dev/null || true
+          grep -a -F '[audio]' trace/soundboard.log | sed 's/.*\[audio\] //' | tail -n 200
+      - name: Cold launches
+        if: inputs.trace_mode == 'cold'
+        env:
+          LAUNCHES: ${{ inputs.launches }}
+        run: |
+          count="${LAUNCHES%x*}"; secs="${LAUNCHES#*x}"
+          case "$count$secs" in ''|*[!0-9]*) echo "::error::launches must look like 12x30"; exit 1;; esac
+          udid="$UDID"
           for i in $(seq 1 "$count"); do
             xcrun simctl launch --console-pty --terminate-running-process "$udid" "$BUNDLE_ID" > "trace/launch-$i.log" 2>&1 &
             pid=$!

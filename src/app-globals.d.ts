@@ -9,6 +9,6 @@ declare const __BUILD_TIME__: string;
 interface ImportMetaEnv {
   /** `1` in the internal build of the apps (debug menu, URL debug parameters); unset in the store build. */
   readonly VITE_INTERNAL_BUILD?: string;
-  /** `1` in the iOS simulator trace build: the sound's status goes to the log every few seconds. */
+  /** The iOS simulator trace build: `1` logs the sound's status every few seconds; `soundboard` opens the sound test page and plays every track. */
   readonly VITE_AUDIO_TRACE?: string;
 }

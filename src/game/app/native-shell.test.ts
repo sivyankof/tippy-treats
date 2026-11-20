@@ -50,15 +50,19 @@ function setup(native = true) {
     hideSplash: vi.fn(),
     setBarIcons: vi.fn(),
   } satisfies AppShellService;
-  const audio = { unlock: vi.fn() } as unknown as AudioService & {
-    unlock: ReturnType<typeof vi.fn>;
-  };
+  const audioCalls: string[] = [];
+  const audio = {
+    unlock: vi.fn(() => audioCalls.push('unlock')),
+    suspend: vi.fn((reason: string) => audioCalls.push(`suspend ${reason}`)),
+    resume: vi.fn((reason: string) => audioCalls.push(`resume ${reason}`)),
+  } as unknown as AudioService & { unlock: ReturnType<typeof vi.fn> };
   const state = { flush: vi.fn() };
   bindNativeShell(game, shell, audio, state);
   return {
     events,
     shell,
     audio,
+    audioCalls,
     state,
     setActive: (value: boolean) => onActive(value),
     back: () => onBack(),
@@ -88,13 +92,16 @@ describe('bindNativeShell', () => {
     expect(t.events.emitted.filter((e) => e === 'visible')).toHaveLength(1);
   });
 
-  it('starts the audio at once and asks it again a little after the app is back', () => {
+  it('starts the audio at once; holds it when the app leaves and lets it go only once the app is active', () => {
     const t = setup();
-    expect(t.audio.unlock).toHaveBeenCalledTimes(1);
+    expect(t.audioCalls).toEqual(['unlock']);
     t.setActive(false);
+    // The page shows again before the app is active (owner log, 81.93 then 82.24): nothing here.
+    t.events.emit('visible');
+    expect(t.audioCalls).toEqual(['unlock', 'suspend app']);
     t.setActive(true);
-    vi.advanceTimersByTime(APP_SHELL.audioRetryMs);
-    expect(t.audio.unlock).toHaveBeenCalledTimes(2);
+    vi.advanceTimersByTime(5000);
+    expect(t.audioCalls).toEqual(['unlock', 'suspend app', 'resume app']);
   });
 
   it('hides the splash after the first frame of a screen of the game, not of the boot scene', () => {

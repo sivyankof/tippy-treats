@@ -84,9 +84,13 @@ async function start(): Promise<void> {
   // Written out (not `DEBUG_TOOLS`) so that the store build drops the soundboard module (see build-kind.ts).
   if (import.meta.env.DEV || import.meta.env.VITE_INTERNAL_BUILD === '1') {
     // `?soundboard=1`: the sound test page instead of the game.
-    if (new URLSearchParams(window.location.search).get('soundboard') === '1') {
+    // The simulator trace of the sound test page opens it without a query (an app has no address bar).
+    const traceBoard = import.meta.env.VITE_AUDIO_TRACE === 'soundboard';
+    if (traceBoard || new URLSearchParams(window.location.search).get('soundboard') === '1') {
       const board = await import('./game/debug/soundboard');
       board.showSoundboard();
+      if (traceBoard)
+        void import('./game/debug/soundboard-trace').then((t) => t.runSoundboardTrace());
       bootStage('started');
       return;
     }

@@ -12,7 +12,36 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         // instead of stopping it. The page sets the same type for itself (navigator.audioSession,
         // services/audio/music/audio-session.ts); this covers the moments before the page runs.
         try? AVAudioSession.sharedInstance().setCategory(.ambient, mode: .default, options: [])
+        // Registered before the bridge loads its plugins, so this runs before the page hears that
+        // the app is active (the App plugin observes the same notification; the page gets it
+        // asynchronously after that). The page then asks its audio context to run on a session that
+        // is already active: asked too early, WebKit answered "Failed to start the audio device".
+        NotificationCenter.default.addObserver(
+            self, selector: #selector(appDidBecomeActive),
+            name: UIApplication.didBecomeActiveNotification, object: nil)
+        NotificationCenter.default.addObserver(
+            self, selector: #selector(audioInterruption(_:)),
+            name: AVAudioSession.interruptionNotification, object: AVAudioSession.sharedInstance())
         return true
+    }
+
+    @objc private func appDidBecomeActive() {
+        activateAudioSession()
+    }
+
+    /// A call or an alarm is over: the session is made active again.
+    @objc private func audioInterruption(_ notification: Notification) {
+        guard let raw = notification.userInfo?[AVAudioSessionInterruptionTypeKey] as? UInt,
+              AVAudioSession.InterruptionType(rawValue: raw) == .ended else { return }
+        activateAudioSession()
+    }
+
+    /// The same category as at launch, then active; a refusal (another app holds the audio) is harmless:
+    /// the page checks its context by its clock and mends it (services/audio/context-health.ts).
+    private func activateAudioSession() {
+        let session = AVAudioSession.sharedInstance()
+        try? session.setCategory(.ambient, mode: .default, options: [])
+        try? session.setActive(true)
     }
 
     func applicationWillResignActive(_ application: UIApplication) {

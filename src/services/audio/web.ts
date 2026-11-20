@@ -4,6 +4,8 @@ import { MS_PER_SECOND } from '../../util/math';
 import { audioLog, errorText } from './audio-log';
 import type { AudioStatus } from './audio-status';
 import { BedPlayer } from './bed';
+import { ContextHealth, type HealthStep } from './context-health';
+import { CONTEXT_HEALTH } from '../../data/audio/context-health';
 import type { DuckReason } from './mixer-math';
 import { Mixer } from './mixer';
 import {
@@ -71,11 +73,13 @@ export class WebAudioService implements AudioService, AudioDevControl {
   private lastLevel: number | null = null;
   /** When the watchdog last asked a stopped context to run (ms since the page start). */
   private lastResumeAskMs = Number.NEGATIVE_INFINITY;
-  /** The context's clock when it was made; null once it has moved (a moved clock is never judged dead). */
-  private clockAtMake: number | null = null;
-  /** Since when a running, unheld context has kept its clock still at `clockAtMake`. */
-  private clockStillSinceMs: number | null = null;
-  private contextRemakes = 0;
+  /** Whether the context really runs (`context-health.ts`), looked at while it is suspect. */
+  private readonly health = new ContextHealth();
+  private healthTimer: ReturnType<typeof setInterval> | null = null;
+  /** Remakes the check did by itself (capped), and all remakes (the switches too). */
+  private autoRemakes = 0;
+  private remakes = 0;
+  private resumeRejects = 0;
   /** A dead context waits for the next tap to be made again (a browser). */
   private deadContext = false;
   private stateListener: (() => void) | null = null;
@@ -98,8 +102,11 @@ export class WebAudioService implements AudioService, AudioDevControl {
   }
 
   setEnabled(on: boolean): void {
+    const was = this.on;
     this.on = on;
     this.mixer?.setSfxOn(on);
+    // Switched on again: the whole context is made again (the player's way to mend a silent one).
+    if (on && !was && this.ctx) this.remakeContext('sound switch', false);
   }
 
   get musicEnabled(): boolean {
@@ -112,19 +119,9 @@ export class WebAudioService implements AudioService, AudioDevControl {
     this.musicOn = on;
     this.onMusicSwitch(on);
     this.mixer?.setMusicOn(on);
-    // Switched on again: a new player from scratch (new elements, nothing left of the old one).
-    if (on && !was && this.mixer) this.rebuildMusic();
+    // Switched on again: the whole context and a new player from scratch (the place is kept).
+    if (on && !was && this.ctx) this.remakeContext('music switch', false);
     this.musicProxy.setEnabled(on);
-  }
-
-  /** The music player is made again over the live mixer; the context is asked to run. */
-  private rebuildMusic(): void {
-    const { mixer } = this;
-    if (!mixer) return;
-    audioLog.add('music: new player');
-    this.watchdog.reset();
-    this.musicProxy.replace(this.musicFactory(musicHostOf(mixer)));
-    if (this.holds.size === 0) this.run((ctx) => ctx.resume(), 'resume');
   }
 
   /**
@@ -135,18 +132,8 @@ export class WebAudioService implements AudioService, AudioDevControl {
     const { ctx, mixer } = this;
     if (!ctx || !mixer) return;
     const nowMs = audioLog.uptimeSec() * MS_PER_SECOND;
-    if (this.clockFrozen(ctx, nowMs)) {
-      if (this.remakeWithoutGesture) {
-        this.remakeContext();
-        return;
-      }
-      if (!this.deadContext) {
-        this.deadContext = true;
-        audioLog.add(
-          `watchdog: context clock stands at ${ctx.currentTime.toFixed(2)}, made again at the next tap`,
-        );
-      }
-    }
+    // A suspect context is the check's business; the watchdog waits until it is settled.
+    if (this.health.isSuspect) return;
     let level: number;
     try {
       level = mixer.musicPeak();
@@ -182,37 +169,75 @@ export class WebAudioService implements AudioService, AudioDevControl {
   }
 
   /**
-   * The context says it runs and nothing holds the sound, yet its clock has not moved once since it
-   * was made, for `frozenClockMs` (a cold launch in the iOS simulator). A clock that ever moved is
-   * never judged: a slow return from the background is not a dead context.
+   * The context may not really run (made, back from the background, a refused resume,
+   * `interrupted`): it is looked at every `CONTEXT_HEALTH.tickMs` until its clock is seen going.
    */
-  private clockFrozen(ctx: AudioContext, nowMs: number): boolean {
-    if (this.clockAtMake === null) return false;
-    if (ctx.currentTime !== this.clockAtMake) {
-      this.clockAtMake = null;
-      this.clockStillSinceMs = null;
-      return false;
-    }
-    if (ctx.state !== 'running' || this.holds.size > 0) {
-      this.clockStillSinceMs = null;
-      return false;
-    }
-    this.clockStillSinceMs ??= nowMs;
-    return (
-      nowMs - this.clockStillSinceMs >= MUSIC_WATCHDOG.frozenClockMs &&
-      this.contextRemakes < MUSIC_WATCHDOG.maxContextRemakes
+  private markSuspect(why: string): void {
+    if (!this.ctx) return;
+    audioLog.add(
+      `check: context suspect (${why}), ${this.ctx.state} t=${this.ctx.currentTime.toFixed(2)}`,
     );
+    this.health.suspectNow();
+    this.healthTimer ??= setInterval(() => this.lookAtContext(), CONTEXT_HEALTH.tickMs);
+  }
+
+  private stopHealthTimer(): void {
+    if (this.healthTimer !== null) clearInterval(this.healthTimer);
+    this.healthTimer = null;
+  }
+
+  /** One look of the check; a due step of the way back is taken here. */
+  private lookAtContext(): void {
+    const { ctx } = this;
+    if (!ctx) {
+      this.stopHealthTimer();
+      return;
+    }
+    const verdict = this.health.look({
+      nowMs: audioLog.uptimeSec() * MS_PER_SECOND,
+      clockSec: ctx.currentTime,
+      held: this.holds.size > 0,
+    });
+    if (verdict.kind === 'alive') {
+      audioLog.add(`check: clock going, ${ctx.state} t=${ctx.currentTime.toFixed(2)}`);
+      this.stopHealthTimer();
+    } else if (verdict.kind === 'given-up') {
+      audioLog.add('check: nothing more to try');
+      this.stopHealthTimer();
+    } else if (verdict.kind === 'step') {
+      this.takeStep(ctx, verdict.step);
+    } else if (verdict.kind === 'idle') {
+      this.stopHealthTimer();
+    }
+  }
+
+  private takeStep(ctx: AudioContext, step: HealthStep): void {
+    audioLog.add(`check: clock stands at ${ctx.currentTime.toFixed(2)} (${ctx.state}), ${step}`);
+    if (step === 'resume') {
+      this.run((c) => c.resume(), 'resume', false);
+    } else if (step === 'bounce') {
+      this.run((c) => c.suspend().then(() => c.resume()), 'suspend and resume', false);
+    } else if (!this.remakeWithoutGesture) {
+      if (!this.deadContext) audioLog.add('check: context made again at the next tap');
+      this.deadContext = true;
+    } else if (this.autoRemakes < CONTEXT_HEALTH.maxRemakes) {
+      this.remakeContext('clock stands', true);
+    } else {
+      audioLog.add('check: no remakes left');
+    }
   }
 
   /**
-   * A dead context is closed and the whole graph is made again: the music player is let go first
-   * (the new one goes on from its place), then the context.
+   * The context is closed and the whole graph is made again: the music player is let go first
+   * (the new one goes on from its place), then the context. The switches, levels, ducks, the bed
+   * and the holds carry over (they live in the service).
    */
-  private remakeContext(): void {
-    this.contextRemakes += 1;
+  private remakeContext(why: string, automatic: boolean): void {
+    if (automatic) this.autoRemakes += 1;
+    this.remakes += 1;
     this.deadContext = false;
     audioLog.add(
-      `watchdog: context clock stands at ${this.ctx?.currentTime.toFixed(2) ?? '-'}, context made again`,
+      `context made again (${why}), was ${this.ctx?.state ?? 'none'} t=${this.ctx?.currentTime.toFixed(2) ?? '-'}`,
     );
     this.musicProxy.letGo();
     this.dropGraph();
@@ -230,8 +255,8 @@ export class WebAudioService implements AudioService, AudioDevControl {
     this.mixer = null;
     this.player = null;
     this.beds = null;
-    this.clockAtMake = null;
-    this.clockStillSinceMs = null;
+    this.health.forget();
+    this.stopHealthTimer();
     try {
       ctx?.close().catch(() => undefined);
     } catch {
@@ -272,6 +297,9 @@ export class WebAudioService implements AudioService, AudioDevControl {
       loading: music.loading,
       level: this.lastLevel,
       restarts: this.watchdog.restarts,
+      clockRunning: this.health.running,
+      resumeRejects: this.resumeRejects,
+      remakes: this.remakes,
     };
   }
 
@@ -288,7 +316,7 @@ export class WebAudioService implements AudioService, AudioDevControl {
   unlock(): void {
     if (this.deadContext && this.ctx) {
       // A tap: the dead context is made again inside it.
-      this.remakeContext();
+      this.remakeContext('tap', false);
       return;
     }
     if (!this.ctx) {
@@ -304,13 +332,15 @@ export class WebAudioService implements AudioService, AudioDevControl {
           `unlock: context made, ${ctx.state}, ${ctx.sampleRate} Hz, holds [${[...this.holds].join(',')}]`,
         );
         const made = ctx;
-        const listener = (): void => audioLog.add(`context ${made.state}`);
+        const listener = (): void => {
+          audioLog.add(`context ${made.state}`);
+          if ((made.state as string) === 'interrupted') this.markSuspect('interrupted');
+        };
         made.addEventListener?.('statechange', listener);
         const mixer = new Mixer(ctx);
         const synth = new Synth(ctx, mixer, this.random);
         this.ctx = ctx;
         this.stateListener = listener;
-        this.clockAtMake = ctx.currentTime;
         this.mixer = mixer;
         this.player = new SoundPlayer(synth, undefined, this.devSoundTrims);
         this.beds = new BedPlayer(ctx, mixer, this.random);
@@ -322,6 +352,7 @@ export class WebAudioService implements AudioService, AudioDevControl {
         // `replace` lets the player of a remade context go and keeps the playlist's place.
         this.musicProxy.replace(this.musicFactory(musicHostOf(mixer)));
         this.watchTimer ??= setInterval(() => this.watchMusic(), MUSIC_WATCHDOG.checkMs);
+        this.markSuspect('made');
       } catch (error) {
         audioLog.add(`unlock: graph failed, ${errorText(error)}`);
         // Sound stays off: do not leave a context behind or make another one on the next tap.
@@ -353,6 +384,8 @@ export class WebAudioService implements AudioService, AudioDevControl {
     if (this.holds.size > 0) return;
     this.run((ctx) => ctx.resume(), 'resume');
     this.musicProxy.hold('app', false);
+    // Back (from the background, an ad, silent mode): whether the context runs is checked, not taken on trust.
+    this.markSuspect(`back from ${reason}`);
   }
 
   setBed(kind: BedKind | null): void {
@@ -433,15 +466,27 @@ export class WebAudioService implements AudioService, AudioDevControl {
     }
   }
 
-  /** Runs a context call; a sync error or a rejected promise is only logged. */
-  private run(call: (ctx: AudioContext) => Promise<void>, what: string): void {
-    if (!this.ctx) return;
+  /**
+   * Runs a context call; a sync error or a rejected promise is logged. A refused resume is counted,
+   * and (unless the check itself asked, `checkOnRefusal` false) makes the context suspect.
+   */
+  private run(
+    call: (ctx: AudioContext) => Promise<void>,
+    what: string,
+    checkOnRefusal = true,
+  ): void {
+    const ctx = this.ctx;
+    if (!ctx) return;
+    const refused = (error: unknown, verb: string): void => {
+      audioLog.add(`${what} ${verb}: ${errorText(error)}`);
+      if (!what.includes('resume')) return;
+      this.resumeRejects += 1;
+      if (checkOnRefusal && this.ctx === ctx) this.markSuspect('resume refused');
+    };
     try {
-      call(this.ctx).catch((error: unknown) =>
-        audioLog.add(`${what} rejected: ${errorText(error)}`),
-      );
+      call(ctx).catch((error: unknown) => refused(error, 'rejected'));
     } catch (error) {
-      audioLog.add(`${what} threw: ${errorText(error)}`);
+      refused(error, 'threw');
     }
   }
 }

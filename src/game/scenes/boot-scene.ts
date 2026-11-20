@@ -42,7 +42,7 @@ export class BootScene extends Phaser.Scene {
     createFxTextures(this);
     bakeSquashTextures(this);
     createAbilityTextures(this);
-    bindAudioLifecycle(this.game, services.audio, services.silentMode);
+    bindAudioLifecycle(this.game, services.audio, services.silentMode, !services.appShell.native);
     bindMenuMusic(this.game);
     bindSystemReducedMotion(effectsMode);
     bindFrameWork(this.game);

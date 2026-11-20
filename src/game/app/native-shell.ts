@@ -38,6 +38,8 @@ export function bindNativeShell(
     );
     if (!active) {
       state.flush();
+      // In the app only the shell holds and lets go the sound (not the page's visibility).
+      audio.suspend('app');
       if (!pausedByShell) {
         pausedByShell = true;
         game.events.emit(Phaser.Core.Events.HIDDEN);
@@ -48,7 +50,9 @@ export function bindNativeShell(
       pausedByShell = false;
       game.events.emit(Phaser.Core.Events.VISIBLE);
     }
-    setTimeout(() => audio.unlock(), APP_SHELL.audioRetryMs);
+    // Active again: the native side has woken the audio session first (AppDelegate). The service
+    // checks the context by its clock after this and mends it (services/audio/context-health.ts).
+    audio.resume('app');
   });
   shell.onBack(() => {
     if (!handleBack()) shell.minimize();

@@ -30,6 +30,12 @@ export interface AudioStatus {
   level: number | null;
   /** Times the watchdog started the playlist again. */
   restarts: number;
+  /** The context clock was going at the last check (null before the first look). */
+  clockRunning: boolean | null;
+  /** `resume()` calls the context refused. */
+  resumeRejects: number;
+  /** Times the context was made again (by the check and by the switches). */
+  remakes: number;
 }
 
 function list(items: readonly string[]): string {
@@ -57,5 +63,8 @@ export function formatAudioStatus(s: AudioStatus): string {
     `music holds ${list(s.musicHolds)}`,
     `sound holds ${list(s.audioHolds)}`,
     `restarts ${s.restarts}`,
+    `clock ${s.clockRunning === null ? '-' : s.clockRunning ? 'going' : 'stands'}`,
+    `resume refused ${s.resumeRejects}`,
+    `remakes ${s.remakes}`,
   ].join(' | ');
 }

@@ -13,13 +13,6 @@ export const MUSIC_WATCHDOG = {
   maxGapMs: 60000,
   /** Peak of the music bus (0..1) above which the music counts as heard (-60 dBFS). */
   audibleLevel: 0.001,
-  /**
-   * A context that says it runs while its clock has not moved for this long is dead (seen in the
-   * iOS simulator at a cold launch): it is closed and made again, ms.
-   */
-  frozenClockMs: 2000,
-  /** At most this many such remakes per page. */
-  maxContextRemakes: 3,
   /** Samples the meter reads per look. */
   meterSize: 512,
 } as const;
