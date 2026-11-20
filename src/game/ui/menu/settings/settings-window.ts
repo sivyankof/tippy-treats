@@ -16,7 +16,12 @@ import {
 import { productOwned } from '../../../../core/economy/shop';
 import { sitePageIn, type SitePage } from '../../../../data/app/site';
 import { services } from '../../../../services';
-import { buyProduct, loadPrices, restorePurchases } from '../../../economy/purchases';
+import {
+  buyOutcomeKey,
+  buyProduct,
+  loadPrices,
+  restorePurchases,
+} from '../../../economy/purchases';
 import { createTextButton } from '../../common/button';
 import { rowCentres } from '../../common/button-row';
 import { createOutlinedText } from '../../common/outlined-text';
@@ -171,8 +176,8 @@ export function openSettingsWindow(scene: Phaser.Scene, handlers: SettingsHandle
           result.setText(t('shop.owned'));
         } else {
           button.setEnabled(true);
-          if (outcome === 'pending') result.setText(t('shop.pending'));
-          else if (outcome !== 'cancelled') result.setText(t('shop.failed'));
+          const key = buyOutcomeKey(outcome);
+          if (key !== null) result.setText(t(key));
         }
         fitText(result, width);
       });

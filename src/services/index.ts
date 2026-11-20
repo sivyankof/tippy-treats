@@ -2,6 +2,7 @@ import { Capacitor, SystemBars } from '@capacitor/core';
 import { App } from '@capacitor/app';
 import { Haptics } from '@capacitor/haptics';
 import { Preferences } from '@capacitor/preferences';
+import { Purchases } from '@revenuecat/purchases-capacitor';
 import { SplashScreen } from '@capacitor/splash-screen';
 import { DEBUG_TOOLS } from '../util/build-kind';
 import { showStubOverlay, WebAds } from './rewarded-video/web';
@@ -27,6 +28,7 @@ import { NativeAppShell } from './app-shell/native';
 import { productIds } from './iap/product-ids';
 import type { IapDevControl, IapService } from './iap/types';
 import { createStubIap } from './iap/stub-iap';
+import { NativeIap } from './iap/native';
 import type { AnalyticsService } from './telemetry/types';
 import { WebAnalytics } from './telemetry/web';
 import type { StorageService } from './storage/types';
@@ -61,6 +63,15 @@ const webAds = new WebAds(showStubOverlay, TEST_STUBS ? 'reward' : 'no_fill');
 
 const webIap = createStubIap(productIds, TEST_STUBS);
 
+/** The public RevenueCat key of this platform; undefined until the owner puts it into `.env`. */
+const revenueCatKey =
+  Capacitor.getPlatform() === 'ios'
+    ? import.meta.env.VITE_REVENUECAT_API_KEY_IOS
+    : import.meta.env.VITE_REVENUECAT_API_KEY_ANDROID;
+
+/** In the app the store is RevenueCat, with or without a key (no key: "store unavailable"), never the browser stub. */
+const iap: IapService = native ? new NativeIap(Purchases, revenueCatKey, productIds) : webIap;
+
 // Before any audio context or media element: the page's audio session obeys the silent switch.
 const audioSession = setupAudioSession(typeof navigator === 'undefined' ? undefined : navigator);
 const musicPlaylist = playableTracks(MUSIC_PLAYLIST, audioSession.streams);
@@ -90,7 +101,7 @@ const webAudio = new WebAudioService(
  * The single place that picks implementations (docs/08-architecture.md, section 8). Inside the app
  * the storage, haptics and the shell are native; the sound is the same Web Audio (the app's audio
  * session is set natively, ios/App/App/AppDelegate.swift); the silent switch needs no reading
- * there, the ambient session obeys it by itself. Ads, purchases, analytics and sharing stay the
+ * there, the ambient session obeys it by itself. Purchases are RevenueCat in the app; ads, analytics and sharing stay the
  * stubs until stage M8.
  */
 export const services: Services = {
@@ -98,7 +109,7 @@ export const services: Services = {
   silentMode: new WebSilentMode(),
   haptics: native ? new NativeHaptics(Haptics) : new WebHaptics(),
   ads: webAds,
-  iap: webIap,
+  iap,
   storage: native ? new NativeStorage(Preferences) : new WebStorage(),
   share: new WebShare(),
   telemetry: new WebAnalytics(),

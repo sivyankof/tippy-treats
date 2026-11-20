@@ -33,6 +33,6 @@ describe('the purchase stub of the build', () => {
     expect(await iap.getProducts()).toEqual([]);
     expect(await iap.ownedNonConsumables()).toEqual([]);
     expect(await iap.restore()).toEqual([]);
-    expect(await iap.purchase('tippy_berries_80')).toBe('failed');
+    expect(await iap.purchase('tippy_berries_80')).toEqual({ result: 'failed' });
   });
 });

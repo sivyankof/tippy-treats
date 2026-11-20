@@ -1,10 +1,30 @@
 import type { ProductKey } from '../../data/economy/shop';
 import { productIds } from '../../services/iap/product-ids';
 import { services } from '../../services';
+import type { PurchaseReport, PurchaseResult } from '../../services/iap/types';
 import { gameState } from '../../state';
 
-/** How a purchase ended; `unavailable` means `.env` has no store id for the product. */
-export type BuyOutcome = 'purchased' | 'cancelled' | 'failed' | 'pending' | 'unavailable';
+/**
+ * How a purchase ended: the store's result (`PurchaseResult`, what `iap_result` logs) plus
+ * `unavailable` (`.env` has no store id for the product) and `offline` (the store or the network
+ * is not there).
+ */
+export type BuyOutcome = PurchaseResult | 'unavailable' | 'offline';
+
+/** The i18n key of the line a failed purchase shows; null when nothing is to be said (done or cancelled). */
+export function buyOutcomeKey(outcome: BuyOutcome): string | null {
+  switch (outcome) {
+    case 'pending':
+      return 'shop.pending';
+    case 'offline':
+      return 'shop.storeDown';
+    case 'failed':
+    case 'unavailable':
+      return 'shop.failed';
+    default:
+      return null;
+  }
+}
 
 /** What "Restore purchases" found. */
 export type RestoreOutcome = 'restored' | 'nothing' | 'failed';
@@ -39,14 +59,15 @@ export async function loadPrices(): Promise<Prices> {
 export async function buyProduct(key: ProductKey): Promise<BuyOutcome> {
   const id = productIds.idOf(key);
   if (id === null) return 'unavailable';
-  let result: Awaited<ReturnType<typeof services.iap.purchase>>;
+  let report: PurchaseReport;
   try {
-    result = await services.iap.purchase(id);
+    report = await services.iap.purchase(id);
   } catch {
     return 'failed';
   }
-  if (result !== 'purchased') return result;
-  gameState.grantProduct(key);
+  if (report.result === 'failed') return report.reason === 'network' ? 'offline' : 'failed';
+  if (report.result !== 'purchased') return report.result;
+  gameState.grantProduct(key, report.transactionId);
   applyRemoveAds();
   gameState.flush();
   // One reward sound for every successful purchase, whichever screen it was made on.
@@ -67,9 +88,33 @@ async function syncOwned(fetchOwned: () => Promise<string[]>): Promise<ProductKe
   }
 }
 
-/** At launch: reconciles the store's one-time purchases with the save and switches ads off if owned. */
+/**
+ * Pays out the consumables the store completed that were never paid here: an approved "Ask to
+ * Buy", or a purchase cut off between the store's answer and the payout. Only transactions not
+ * older than the save, once each (`unpaidConsumables`).
+ */
+async function payUnpaidConsumables(): Promise<void> {
+  try {
+    const known = (await services.iap.completedTransactions()).flatMap((tx) => {
+      const key = productIds.keyOf(tx.productId);
+      return key === null
+        ? []
+        : [{ key, transactionId: tx.transactionId, purchasedAt: tx.purchasedAt }];
+    });
+    let paid = false;
+    for (const tx of gameState.unpaidTransactions(known)) {
+      paid = gameState.grantProduct(tx.key, tx.transactionId) || paid;
+    }
+    if (paid) gameState.flush();
+  } catch {
+    // The store cannot be asked now; the next launch tries again.
+  }
+}
+
+/** At launch: reconciles the store's one-time purchases with the save, pays unpaid consumables, switches ads off if owned. */
 export async function syncPurchases(): Promise<void> {
   await syncOwned(() => services.iap.ownedNonConsumables());
+  await payUnpaidConsumables();
 }
 
 /** The "Restore purchases" button. */

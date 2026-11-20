@@ -33,6 +33,11 @@ export class ProductIds {
     return this.byKey.get(key) ?? null;
   }
 
+  /** Every store id `.env` gave. */
+  allIds(): string[] {
+    return [...this.byId.keys()];
+  }
+
   keyOf(id: string): ProductKey | null {
     return this.byId.get(id) ?? null;
   }

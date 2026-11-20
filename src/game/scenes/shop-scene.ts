@@ -8,7 +8,13 @@ import { PRODUCTS, SHOP, type ProductKey } from '../../data/economy/shop';
 import { t } from '../../i18n';
 import { services } from '../../services';
 import { gameState } from '../../state';
-import { buyProduct, loadPrices, restorePurchases, type Prices } from '../economy/purchases';
+import {
+  buyOutcomeKey,
+  buyProduct,
+  loadPrices,
+  restorePurchases,
+  type Prices,
+} from '../economy/purchases';
 import { showRewarded } from '../economy/rewarded';
 import { openScreen, SCENES } from '../app/scene-keys';
 import type { DailySection } from '../ui/menu/daily/daily-section';
@@ -200,8 +206,8 @@ export class ShopScene extends Phaser.Scene {
     const outcome = await buyProduct(key);
     this.busy = false;
     if (!this.scene.isActive()) return;
-    if (outcome === 'pending') this.toast.show(t('shop.pending'));
-    else if (outcome === 'failed' || outcome === 'unavailable') this.toast.show(t('shop.failed'));
+    const message = buyOutcomeKey(outcome);
+    if (message !== null) this.toast.show(t(message));
     if (outcome !== 'purchased') return;
     services.haptics.play('success');
     const { berries = 0 } = PRODUCTS[key].grant;
