@@ -1,6 +1,7 @@
 import { CREATURE_IDS, MAX_CREATURE_LEVEL } from '../../data/creatures/creatures';
 import { MAX_BAKER_LEVEL, OVEN } from '../../data/progression/progression';
 import { SAVE_DEFAULTS } from '../../data/app/save-defaults';
+import { IAP_RULES } from '../../data/economy/iap-rules';
 import { spaceLap } from '../zones/space-laps';
 import { isCheckpointHeight, withReached, type CheckpointHeight } from '../zones/checkpoints';
 import { xpToNext } from '../progression/progression';
@@ -113,6 +114,8 @@ function normalize(raw: Obj, d: Save): Save {
   const notifications = obj(settings.notifications);
   const ads = obj(raw.ads);
   const consent = obj(raw.consent);
+  const iap = obj(raw.iap);
+  const review = obj(raw.review);
   const oven = obj(raw.oven);
   const doubles = obj(raw.doubles);
   const checkpointAds = obj(raw.checkpointAds);
@@ -216,6 +219,15 @@ function normalize(raw: Obj, d: Save): Save {
       attAsked: bool(consent.attAsked, false),
       notifAsked: bool(consent.notifAsked, false),
     },
+    // The newest transactions are at the end; only the last ones are kept.
+    iap: { processedTx: strings(iap.processedTx).slice(-IAP_RULES.processedTxKeep) },
+    review: {
+      askedVersion: typeof review.askedVersion === 'string' ? review.askedVersion : '',
+      askedAt: uint(review.askedAt, 0),
+      playDays: uint(review.playDays, 0),
+      lastPlayDay: day(review.lastPlayDay),
+    },
+    notif: { giftDay: day(obj(raw.notif).giftDay) },
   };
 }
 

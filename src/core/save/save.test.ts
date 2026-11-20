@@ -11,6 +11,7 @@ import {
   migrateV6,
   migrateV7,
   migrateV8,
+  migrateV9,
   SaveError,
   type Migration,
 } from './migrations';
@@ -20,6 +21,7 @@ import { legacyXpToNext, V5_RECORD_UNLOCKS, v5XpToNext } from './frozen-v5';
 import { V7_CHECKPOINT_HEIGHTS, v7CheckpointsReached } from './frozen-v7';
 import { V8_LAP_LENGTH, V8_SPACE_FIRST_LAYER, v8LapReached } from './frozen-v8';
 import { V9_STARTER_PACK_MIN_RUNS } from './frozen-v9';
+import { IAP_RULES } from '../../data/economy/iap-rules';
 import { SAVE_VERSION, type Save } from './schema';
 
 const NOW = 1_700_000_000_000;
@@ -757,5 +759,42 @@ describe('migration 8 to 9', () => {
     );
     const bad = { ...fresh(), shop: { ...shop, starterPackShownAt: 'x' } };
     expect(load(JSON.stringify(bad)).save.shop.starterPackShownAt).toBe(0);
+  });
+});
+
+describe('migration 9 -> 10', () => {
+  const v9 = { ...fresh(), version: 9 } as Record<string, unknown>;
+  delete v9.iap;
+  delete v9.review;
+  delete v9.notif;
+
+  it('starts with no paid transaction, no rating request and no counted play day', () => {
+    expect(migrateV9(v9)).toMatchObject({
+      iap: { processedTx: [] },
+      review: { askedVersion: '', askedAt: 0, playDays: 0, lastPlayDay: '' },
+      notif: { giftDay: '' },
+    });
+  });
+
+  it('loads a version 9 text and keeps the rest', () => {
+    const result = load(JSON.stringify({ ...v9, coins: 77 }));
+    expect(result.save.version).toBe(SAVE_VERSION);
+    expect(result.save.coins).toBe(77);
+    expect(result.save.iap.processedTx).toEqual([]);
+    expect(result.save.review.askedVersion).toBe('');
+  });
+
+  it('keeps only the newest transactions and repairs damaged fields', () => {
+    const many = Array.from({ length: IAP_RULES.processedTxKeep + 5 }, (_, i) => `tx${i}`);
+    const stored = {
+      ...fresh(),
+      iap: { processedTx: [...many, 7] },
+      review: { askedVersion: 3, askedAt: -1, playDays: 'x', lastPlayDay: 'bad' },
+      notif: { giftDay: '2026-11-20' },
+    };
+    const save = load(JSON.stringify(stored)).save;
+    expect(save.iap.processedTx).toEqual(many.slice(-IAP_RULES.processedTxKeep));
+    expect(save.review).toEqual({ askedVersion: '', askedAt: 0, playDays: 0, lastPlayDay: '' });
+    expect(save.notif.giftDay).toBe('2026-11-20');
   });
 });

@@ -4,8 +4,15 @@ import type { Save } from '../core/save/schema';
 
 /**
  * A new save as at the first launch. The install id and the settings (language, sound,
- * vibration, effects, notifications) stay: they describe the device, not the progress.
+ * vibration, effects, notifications) stay: they describe the device, not the progress. So do the
+ * store transactions already paid out (a reset never makes the store pay one again) and the
+ * rating request (asked once per game version, whatever the progress).
  */
 export function withProgressReset(save: Save, nowMs: number): Save {
-  return { ...createDefaultSave(nowMs, save.installId), settings: save.settings };
+  return {
+    ...createDefaultSave(nowMs, save.installId),
+    settings: save.settings,
+    iap: save.iap,
+    review: save.review,
+  };
 }

@@ -14,11 +14,15 @@ describe('withProgressReset', () => {
       tutorial: { firstRunDone: true, hintsShown: ['tutorial', 'tap'] },
       purchases: { removeAds: true, starterPack: true },
       settings: { ...old.settings, sfx: false, lang: 'ru', reducedFx: 'on' },
+      iap: { processedTx: ['tx-1', 'tx-2'] },
+      review: { askedVersion: '0.1.0', askedAt: 4000, playDays: 4, lastPlayDay: '2026-11-20' },
     };
     const next = withProgressReset(played, 5000);
     expect(next).toEqual({
       ...createDefaultSave(5000, 'install-1'),
       settings: played.settings,
+      iap: played.iap,
+      review: played.review,
     });
     expect(next.tutorial.hintsShown).toEqual([]);
     expect(next.purchases.removeAds).toBe(false);

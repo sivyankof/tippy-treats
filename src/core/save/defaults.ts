@@ -50,5 +50,8 @@ export function createDefaultSave(nowMs: number, installId: string): Save {
     checkpointAds: { day: '', used: 0 },
     bestLap: 0,
     consent: { attAsked: false, notifAsked: false },
+    iap: { processedTx: [] },
+    review: { askedVersion: '', askedAt: 0, playDays: 0, lastPlayDay: '' },
+    notif: { giftDay: '' },
   };
 }

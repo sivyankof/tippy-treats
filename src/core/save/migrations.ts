@@ -129,6 +129,19 @@ export function migrateV8(raw: RawSave, nowMs: number): RawSave {
   return { ...raw, shop: { ...shop, starterPackShownAt: due ? nowMs : 0 } };
 }
 
+/**
+ * 9 -> 10: no store transaction is known yet (owned one-time purchases come back through the
+ * launch check with the store), the rating was never asked and no play day is counted yet.
+ */
+export function migrateV9(raw: RawSave): RawSave {
+  return {
+    ...raw,
+    iap: { processedTx: [] },
+    review: { askedVersion: '', askedAt: 0, playDays: 0, lastPlayDay: '' },
+    notif: { giftDay: '' },
+  };
+}
+
 /** Hands over creatures whose record way (as of version 5) the best classic height already reached. */
 function withRecordCreatures(raw: RawSave): RawSave {
   const height = rawClassicHeight(raw);
@@ -155,6 +168,7 @@ export const MIGRATIONS: MigrationChain = {
   6: migrateV6,
   7: migrateV7,
   8: migrateV8,
+  9: migrateV9,
 };
 
 /**
