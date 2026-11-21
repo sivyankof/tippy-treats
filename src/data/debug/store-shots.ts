@@ -1,3 +1,4 @@
+import { PALETTE } from '../common/palette';
 import type { CreatureId } from '../creatures/creatures';
 
 /**
@@ -500,25 +501,157 @@ export const STORE_CREATIVES: readonly StoreCreative[] = [
   },
 ];
 
+/** A creature of the decor of the App Store pictures, as the game draws it (level 5, usual look). */
+export interface StoreDecorCreature {
+  creature: CreatureId;
+  face: StoreFace;
+}
+
+/** The two layouts of the App Store pictures the owner chooses from (docs/11, section 5). */
+export type StoreVariant = 'a' | 'b';
+export const STORE_VARIANTS: readonly StoreVariant[] = ['a', 'b'];
+
 export const STORE_CREATIVE = {
-  /** Folder of the pictures inside the output folder; a file is `<id>-<lang>.png`. */
+  /** Folder of the pictures inside the output folder; a variant goes to `variants/<variant>/<id>-<lang>.png`. */
   folder: 'ios',
-  /**
-   * The background: the frame of the feature graphic (`STORE_FEATURE.background.stage`) taken on
-   * the Android window, whose 1080 px are the game's own pixels (the game draws no more than its
-   * logical 1080 across). A band of it centred at `centreY`, all of it above `bottom` (the word
-   * "Perfect!" of the last landing floats below), blurred by `blur` of the picture width: magnified
-   * three to five times, the street would look soft anyway, so it is out of focus on purpose and
-   * the poster in front stays sharp.
-   */
-  background: {
-    platform: 'android' as StorePlatform,
-    centreY: 0.25,
-    bottom: 0.35,
-    blur: 0.0035,
-  },
+  variantsFolder: 'variants',
+  /** Beside every picture: `-safe` (the safe area alone, 1:1) and `-full` (the whole picture this wide). */
+  previewWidth: 1500,
   /** Room kept free inside the safe area around the poster, a share of its smaller side. */
   inset: 0.03,
+  /**
+   * The game's pictures of the background (the showcase tiles, coins, berries, sprinkles) are
+   * drawn by the game's own bakers at picture width / `sceneWidth` times their size in the game:
+   * vector, at the size they are shown.
+   */
+  sceneWidth: 1300,
+  /**
+   * The creatures come from the game as pictures of its 280 px layer; up to `sharpScale` times
+   * larger they stay sharp. A creature drawn larger goes out of focus on purpose (a near
+   * foreground picture), blurred by `blur` of the picture width.
+   */
+  sharpScale: 1.8,
+  artLayerWidth: 280,
+  /** Level of every decor creature (the grown look stays off: the same look as the poster's). */
+  level: 5,
+  /** Out of focus layers, a share of the picture width: the street behind the glass, the panes, a near picture. */
+  blur: { street: 0.0022, panes: 0.0008, near: 0.0035 },
+  /**
+   * The background, shares of a 512 px tile of the game (`showcase-zone.ts`): the street and the
+   * panes tile the whole picture (moved by `offset` of a tile), the awning hangs at the top, the
+   * garland under it (`garlandGap` below the awning's scallops, out of the safe area), the shelf of treats stands at the
+   * bottom (`bottomGap` of the picture height under it), and more shelves above it while they keep
+   * `shelfClear` (of the picture height) from the safe area.
+   */
+  backdrop: {
+    streetOffset: { x: 0.3, y: 0.45 },
+    panesOffset: { x: 0.12, y: 0 },
+    /** The rows of the tiles that hold the awning (scallops included) and the shelf with the treats, px of a tile. */
+    awningRows: [0, 100],
+    treatsRows: [300, 416],
+    shelfTop: 386,
+    garlandGap: 0.04,
+    /** How far the garland reaches down (its sag and a bulb), px of the game, and the room it keeps above the safe area (of the height). */
+    garlandDepth: 110,
+    garlandClear: 0.015,
+    bottomGap: 0.03,
+    shelfSpacing: 1.35,
+    shelfClear: 0.02,
+  },
+  /**
+   * A short tower of creatures on the lowest shelf at each side, outside the safe area: each
+   * `width` (a share of the gap beside the safe area, at most `sharpScale` times the layer), its
+   * centre `edge` of its width in from the outer edge (below 0.5 a part goes off the picture), each
+   * a layer above the one below as in the game's tower, leaning out by `lean` degrees per creature.
+   */
+  stacks: {
+    left: [
+      { creature: 'jelly', face: 'joy' },
+      { creature: 'honey', face: 'wink' },
+      { creature: 'sprinkle', face: 'joy' },
+    ] as readonly StoreDecorCreature[],
+    right: [
+      { creature: 'caramel', face: 'wink' },
+      { creature: 'frosty', face: 'joy' },
+      { creature: 'brownie', face: 'joy' },
+    ] as readonly StoreDecorCreature[],
+    width: 0.62,
+    edge: 0.32,
+    /** The lowest one's picture goes this share of its height below the shelf line (its shadow). */
+    sink: 0.1,
+    lean: 3,
+  },
+  /**
+   * Glass jars of sweets on the lowest shelf, between the side towers and the safe area: in a row
+   * from the safe area outwards, the first one's centre `first` of a jar width off the safe area,
+   * each next `spacing` widths further, at most `most` a side and only where they stand clear of the
+   * side tower; size in px of the game (scaled like the background); a lid colour each (the
+   * palette: accent, second accent, success, coins).
+   */
+  jars: {
+    first: 0.75,
+    spacing: 1.2,
+    most: 2,
+    width: 84,
+    height: 112,
+    /** Room around the jar for its outline, px of the game. */
+    pad: 6,
+    lids: [PALETTE.accent, PALETTE.accentSecondary, PALETTE.success, PALETTE.gold],
+    glass: 0xd6f0ff,
+  },
+  /**
+   * A layer flying in above the poster's tower, outside the safe area: as wide as the tower's
+   * creatures, `gap` of its height above the safe area, turned by `angle` degrees.
+   */
+  flyer: { creature: 'twins', face: 'joy', gap: 0.12, angle: -8 } as const,
+  /**
+   * Near pictures at the top corners, out of focus: a layer tumbling past, `width` of the picture
+   * height, its centre at `x`, `y` of its own width and height off the corner, turned by `angle`.
+   */
+  near: [
+    { creature: 'ghost', face: 'joy', width: 0.36, x: 0.18, y: 0.32, angle: 14 },
+    { creature: 'honey', face: 'joy', width: 0.32, x: 0.2, y: 0.36, angle: -12 },
+  ] as ReadonlyArray<StoreDecorCreature & { width: number; x: number; y: number; angle: number }>,
+  /**
+   * Coins, berries and sprinkles of the game floating outside the safe area, placed by a seeded
+   * random stream: so many per million px of the room outside it, each `size` of the picture
+   * height, no two closer than `spacing` of their sizes, `clear` (of the height) off the safe area.
+   */
+  scatter: {
+    seed: 'store-creative',
+    perMegapixel: { coin: 0.5, berry: 0.4, sprinkle: 3 },
+    size: { coin: 0.05, berry: 0.06, sprinkle: 0.022 },
+    spacing: 2.2,
+    clear: 0.08,
+    /** Tries for each item before it is left out. */
+    tries: 60,
+  },
+  /**
+   * Variant B: the tower is taller and larger and goes on below the safe area to the lowest
+   * shelf, the hero on top of it inside the safe area, the title at the right. Sizes are shares of
+   * the height of the poster box (the safe area less the inset); x, of its width.
+   */
+  b: {
+    /** Under the poster's two (`STORE_FEATURE.tower`, at the top), top first, as many as reach the bottom edge (the list repeats). */
+    below: [
+      { creature: 'honey', face: 'joy' },
+      { creature: 'jelly', face: 'wink' },
+      { creature: 'caramel', face: 'joy' },
+      { creature: 'frosty', face: 'joy' },
+      { creature: 'sprinkle', face: 'wink' },
+      { creature: 'brownie', face: 'joy' },
+    ] as readonly StoreDecorCreature[],
+    towerX: 0.27,
+    /** Creature width (of the box height, at most `sharpScale` times the layer); they stack a layer apart as in the game. */
+    width: 0.62,
+    shift: 0.015,
+    /** The hero: `height` of the box height, its bottom `sink` of its height below the top creature's centre. */
+    hero: { height: 0.74, sink: 0.02, top: 0.045 },
+    /** The text block, right of the hero (its left edge is kept off the hero's picture in any case). */
+    text: { x: 0.75, centreY: 0.5, maxWidth: 0.44, gap: 0.016 },
+    title: { maxSize: 0.11, minSize: 0.05, maxLines: 2 },
+    subtitle: { maxSize: 0.042, minSize: 0.025, maxLines: 2 },
+  },
 } as const;
 
 /** The Google Play icon: the iOS icon scaled down. */

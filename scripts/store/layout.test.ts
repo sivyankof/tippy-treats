@@ -150,13 +150,6 @@ describe('backgroundBand', () => {
     expect(backgroundBand(frame, 2, 0.25)).toEqual({ x: 0, y: 210, width: 1080, height: 540 });
     expect(backgroundBand(frame, 2, 0)).toEqual({ x: 0, y: 0, width: 1080, height: 540 });
   });
-
-  it('stays above the floor, narrowing when the band is taller than the room', () => {
-    const band = backgroundBand(frame, 1.5, 0.25, 0.35);
-    expect(band.y + band.height).toBeLessThanOrEqual(1920 * 0.35 + 1e-9);
-    expect(band.width / band.height).toBeCloseTo(1.5);
-    expect(band.x).toBeCloseTo((1080 - band.width) / 2);
-  });
 });
 
 /** Apple's sizes (Creative assets specifications, checked 2026-11-21). */

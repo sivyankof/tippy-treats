@@ -29,9 +29,11 @@ import {
   STORE_LANGS,
   STORE_PLATFORMS,
   STORE_SHOTS,
+  STORE_VARIANTS,
   type StoreCreative,
   type StoreLang,
   type StorePlatform,
+  type StoreVariant,
   storeShotSize,
   type StoreShot,
   type StoreStage,
@@ -40,12 +42,13 @@ import { encodePng, readPngHeader, type PngColor } from './png';
 import type {
   Composed,
   ComposeOverlay,
+  CreativePart,
   CreativeResult,
   CreativeSpec,
   FeatureSpec,
   ShotSpec,
 } from './compose-page';
-import { creativePosterBox } from './layout';
+import { creativeCreatures } from './creative-layout';
 import type { CreatureArtSpec } from '../../src/game/debug/store-stage';
 
 const require = createRequire(import.meta.url);
@@ -122,7 +125,7 @@ type StoreWindow = Window & {
     shot(spec: ShotSpec): Promise<Composed>;
     feature(spec: FeatureSpec): Promise<Composed>;
     creative(spec: CreativeSpec): Promise<CreativeResult>;
-    rows(from: number, count: number): string;
+    rows(part: CreativePart, from: number, count: number): string;
     icon(src: string, size: number): Promise<Composed>;
     saveText(lang: StoreLang): string;
   };
@@ -401,8 +404,25 @@ function creativesWanted(options: Options): StoreCreative[] {
   return STORE_CREATIVES.filter((c) => wantedBy(options)(c.id));
 }
 
-const creativeFile = (creative: StoreCreative, lang: StoreLang): string =>
-  join(STORE_CREATIVE.folder, `${creative.id}-${lang}.png`);
+/** The files of an App Store picture in a variant: the picture, its safe area alone, the whole picture made small. */
+const CREATIVE_PARTS: ReadonlyArray<{ part: CreativePart; suffix: string }> = [
+  { part: 'main', suffix: '' },
+  { part: 'safe', suffix: '-safe' },
+  { part: 'full', suffix: '-full' },
+];
+
+const creativeFile = (
+  creative: StoreCreative,
+  variant: StoreVariant,
+  lang: StoreLang,
+  suffix: string,
+): string =>
+  join(
+    STORE_CREATIVE.folder,
+    STORE_CREATIVE.variantsFolder,
+    variant,
+    `${creative.id}-${lang}${suffix}.png`,
+  );
 
 /** The tower creatures of the poster, drawn by the game at the width a picture lays them out at. */
 function posterArts(width: number): CreatureArtSpec[] {
@@ -413,8 +433,9 @@ function posterArts(width: number): CreatureArtSpec[] {
 }
 
 /**
- * The App Store creative assets of every language: the background frame is shot once per language
- * (a floating word of the game may fall into the band), the creatures at the size of each picture.
+ * The App Store creative assets, both variants, every language. The game draws every creature of
+ * every picture once (at the width the picture lays it out at); the compose page lays out and
+ * draws the rest, and the picture and its two check pictures are read back row by row.
  */
 async function shootCreatives(
   options: Options,
@@ -424,42 +445,64 @@ async function shootCreatives(
   base: string,
   hero: string,
 ): Promise<void> {
-  const bg = STORE_CREATIVE.background;
-  const arts = creatives.map((c) => posterArts(creativePosterBox(c).width));
+  const plans = STORE_VARIANTS.flatMap((variant) =>
+    creatives.map((c) => ({ c, variant, creatures: creativeCreatures(c, variant) })),
+  );
+  const arts: CreatureArtSpec[] = plans.flatMap((p) =>
+    p.creatures.map((x) => ({
+      creature: x.creature,
+      level: x.level,
+      grown: x.grown,
+      face: x.face,
+      widthPx: x.width,
+    })),
+  );
+  // Any moment of the game will do: only its pictures of the creatures are used.
+  const raw = await capture(
+    browser,
+    base,
+    compose,
+    'ios',
+    'en',
+    'feature',
+    STORE_FEATURE.background.stage,
+    arts,
+  );
   for (const lang of options.langs) {
-    const raw = await capture(
-      browser,
-      base,
-      compose,
-      bg.platform,
-      lang,
-      'feature',
-      STORE_FEATURE.background.stage,
-      arts.flat(),
-    );
     let next = 0;
-    for (const [i, c] of creatives.entries()) {
-      const tower = raw.arts.slice(next, next + (arts[i]?.length ?? 0));
-      next += tower.length;
-      const spec: CreativeSpec = { id: c.id, frame: dataUrl(raw.frame), hero, tower, lang };
+    for (const { c, variant, creatures } of plans) {
+      const pictures = raw.arts.slice(next, next + creatures.length);
+      next += creatures.length;
+      const spec: CreativeSpec = { id: c.id, variant, lang, hero, creatures: pictures };
       const result = await compose.evaluate(
         (s) => (window as StoreWindow).storeCompose!.creative(s),
         spec,
       );
-      const rgba = Buffer.alloc(result.width * result.height * 4);
-      for (let y = 0; y < result.height; y += CREATIVE_ROWS_PER_CALL) {
-        const part = await compose.evaluate(
-          ({ from, count }) => (window as StoreWindow).storeCompose!.rows(from, count),
-          { from: y, count: CREATIVE_ROWS_PER_CALL },
+      for (const { part, suffix } of CREATIVE_PARTS) {
+        const { width, height } = result.parts[part];
+        const rgba = Buffer.alloc(width * height * 4);
+        for (let y = 0; y < height; y += CREATIVE_ROWS_PER_CALL) {
+          const chunk = await compose.evaluate(
+            ({ which, from, count }) =>
+              (window as StoreWindow).storeCompose!.rows(which, from, count),
+            { which: part, from: y, count: CREATIVE_ROWS_PER_CALL },
+          );
+          Buffer.from(chunk, 'base64').copy(rgba, y * width * 4);
+        }
+        writeRgba(
+          join(options.out, creativeFile(c, variant, lang, suffix)),
+          width,
+          height,
+          rgba,
+          'rgb',
         );
-        Buffer.from(part, 'base64').copy(rgba, y * result.width * 4);
       }
-      const file = creativeFile(c, lang);
-      writeRgba(join(options.out, file), result.width, result.height, rgba, 'rgb');
       const b = result.bounds;
       const at = [b.x, b.y, b.width, b.height].map((v) => String(Math.round(v))).join(',');
       const lines = (fit: CreativeResult['title']) => fit.lines.join(' / ');
-      console.log(`${file}  ${lines(result.title)} | ${lines(result.subtitle)}  poster ${at}`);
+      console.log(
+        `${creativeFile(c, variant, lang, '')}  ${lines(result.title)} | ${lines(result.subtitle)}  key ${at}`,
+      );
     }
   }
 }
@@ -634,9 +677,23 @@ function expectedFiles(options: Options): CheckRow[] {
       rows.push([file, STORE_FEATURE.width, STORE_FEATURE.height, 'rgb', MAX_SHOT_BYTES]);
     }
   }
-  for (const c of creativesWanted(options)) {
-    for (const lang of options.langs) {
-      rows.push([creativeFile(c, lang), c.width, c.height, 'rgb', MAX_CREATIVE_BYTES]);
+  const preview = (c: StoreCreative) => ({
+    main: { width: c.width, height: c.height },
+    safe: { width: c.safe.width, height: c.safe.height },
+    full: {
+      width: STORE_CREATIVE.previewWidth,
+      height: Math.round((STORE_CREATIVE.previewWidth * c.height) / c.width),
+    },
+  });
+  for (const variant of STORE_VARIANTS) {
+    for (const c of creativesWanted(options)) {
+      for (const lang of options.langs) {
+        for (const { part, suffix } of CREATIVE_PARTS) {
+          const { width, height } = preview(c)[part];
+          const file = creativeFile(c, variant, lang, suffix);
+          rows.push([file, width, height, 'rgb', MAX_CREATIVE_BYTES]);
+        }
+      }
     }
   }
   if (wanted('icon')) {

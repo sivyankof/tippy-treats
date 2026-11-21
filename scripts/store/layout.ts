@@ -143,17 +143,12 @@ export function containsRect(outer: Rect, inner: Rect, slack = 1e-6): boolean {
 
 /**
  * The band of a portrait frame a landscape picture of `aspect` takes for its background: the
- * whole frame width, centred at `centreY` (a share of the frame height), kept inside the frame
- * and above `bottom`.
+ * whole frame width, centred at `centreY` (a share of the frame height), kept inside the frame.
  */
-export function backgroundBand(frame: Size, aspect: number, centreY: number, bottom = 1): Rect {
-  // Nothing below `bottom` (a share of the frame height): a band that does not fit above it
-  // gets narrower instead, centred across the frame.
-  const floor = frame.height * bottom;
-  const height = Math.min(floor, frame.width / aspect);
-  const width = height * aspect;
-  const y = Math.min(Math.max(0, frame.height * centreY - height / 2), floor - height);
-  return { x: (frame.width - width) / 2, y, width, height };
+export function backgroundBand(frame: Size, aspect: number, centreY: number): Rect {
+  const height = Math.min(frame.height, frame.width / aspect);
+  const y = Math.min(Math.max(0, frame.height * centreY - height / 2), frame.height - height);
+  return { x: 0, y, width: frame.width, height };
 }
 
 /**
@@ -187,6 +182,13 @@ export interface PosterLayout {
   subtitle: Rect;
 }
 
+/** The sizes of the poster's text, shares of the box width (the feature graphic's, or variant B's). */
+export interface PosterTextSpec {
+  text: { maxWidth: number };
+  title: { maxSize: number; minSize: number; maxLines: number };
+  subtitle: { maxSize: number; minSize: number; maxLines: number };
+}
+
 /**
  * The title of the poster and the line under it in `lang`, fitted to a box of the poster:
  * `widthAt1` is the drawn width of a line at a font size of 1 px.
@@ -195,21 +197,22 @@ export function posterText(
   lang: StoreLang,
   box: Size,
   widthAt1: (line: string) => number,
+  spec: PosterTextSpec = STORE_FEATURE,
 ): PosterText {
   const f = STORE_FEATURE;
   const c = STORE_CAPTION;
   const limits = (part: { maxSize: number; minSize: number; maxLines: number }) => ({
     maxSize: part.maxSize * box.width,
     minSize: part.minSize * box.width,
-    maxWidth: f.text.maxWidth * box.width,
+    maxWidth: spec.text.maxWidth * box.width,
     maxHeight: box.height,
     maxLines: part.maxLines,
     lineHeight: c.lineHeight,
     glueUpTo: c.glueUpTo,
     moreLinesCost: c.moreLinesCost,
   });
-  const title = fitCaption(f.title.text, widthAt1, limits(f.title));
-  const subtitle = fitCaption(f.subtitle.text[lang], widthAt1, limits(f.subtitle));
+  const title = fitCaption(f.title.text, widthAt1, limits(spec.title));
+  const subtitle = fitCaption(f.subtitle.text[lang], widthAt1, limits(spec.subtitle));
   if (!title || !subtitle) throw new Error('poster: text does not fit');
   return { title, subtitle, lineHeight: c.lineHeight, drop: c.drop };
 }
@@ -275,7 +278,8 @@ function boundsOf(rects: readonly Rect[]): Rect {
 }
 
 /**
- * Everything the poster puts on the picture: the pictures with their shadow (`OVERLAY_SHADOW`,
+ * Everything the poster puts on the picture (without its tower, when `withTower` is false: the
+ * hero and the text only): the pictures with their shadow (`OVERLAY_SHADOW`,
  * blurred around them and moved down) and the text with its outline above and below the line
  * box (`outline`, a share of the font size; the drop is in the text rectangles already).
  */
@@ -284,6 +288,7 @@ export function posterInk(
   text: PosterText,
   boxWidth: number,
   outline: number,
+  withTower = true,
 ): Rect {
   const blur = OVERLAY_SHADOW.blur * boxWidth;
   const drop = OVERLAY_SHADOW.drop * boxWidth;
@@ -301,7 +306,7 @@ export function posterInk(
     return { ...r, y: r.y - pad, height: r.height + 2 * pad };
   };
   return boundsOf([
-    ...layout.tower.map(shadowed),
+    ...(withTower ? layout.tower.map(shadowed) : []),
     shadowed(layout.hero),
     outlined(layout.title, text.title),
     outlined(layout.subtitle, text.subtitle),
