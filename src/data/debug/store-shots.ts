@@ -464,5 +464,62 @@ export const STORE_FEATURE = {
   },
 } as const;
 
+export type StoreCreativeId = 'header' | 'search' | 'universal';
+
+/** A rectangle in pixels: top-left corner and size. */
+export interface StoreRect {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
+export interface StoreCreative {
+  id: StoreCreativeId;
+  width: number;
+  height: number;
+  /** Apple's art safe area of the placement, pixels of the picture (Creative assets specifications). */
+  safe: StoreRect;
+}
+
+/**
+ * The App Store creative assets (docs/11-release-store.md, section 5): the product page header, the
+ * search results picture and the universal one, sizes and art safe areas as Apple's page gives them
+ * (checked 2026-11-21). The poster of the feature graphic (its tower, hero and text, the same
+ * shares) is laid out inside the safe area; the background fills the rest, where the App Store
+ * crops the picture and lays the name and the button over it.
+ */
+export const STORE_CREATIVES: readonly StoreCreative[] = [
+  { id: 'header', width: 3840, height: 1646, safe: { x: 1097, y: 493, width: 1646, height: 661 } },
+  { id: 'search', width: 3840, height: 2560, safe: { x: 836, y: 765, width: 2168, height: 1030 } },
+  {
+    id: 'universal',
+    width: 5244,
+    height: 2950,
+    safe: { x: 1921, y: 660, width: 1402, height: 962 },
+  },
+];
+
+export const STORE_CREATIVE = {
+  /** Folder of the pictures inside the output folder; a file is `<id>-<lang>.png`. */
+  folder: 'ios',
+  /**
+   * The background: the frame of the feature graphic (`STORE_FEATURE.background.stage`) taken on
+   * the Android window, whose 1080 px are the game's own pixels (the game draws no more than its
+   * logical 1080 across). A band of it centred at `centreY`, all of it above `bottom` (the word
+   * "Perfect!" of the last landing floats below), blurred by `blur` of the picture width: magnified
+   * three to five times, the street would look soft anyway, so it is out of focus on purpose and
+   * the poster in front stays sharp.
+   */
+  background: {
+    platform: 'android' as StorePlatform,
+    centreY: 0.25,
+    bottom: 0.35,
+    blur: 0.0035,
+  },
+  /** Room kept free inside the safe area around the poster, a share of its smaller side. */
+  inset: 0.03,
+} as const;
+
 /** The Google Play icon: the iOS icon scaled down. */
 export const STORE_ICON = { size: 512, maxBytes: 1024 * 1024 } as const;

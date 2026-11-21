@@ -1,5 +1,26 @@
 import { describe, expect, it } from 'vitest';
-import { fitCaption, glueShortWords, wavePoints, type CaptionLimits } from './layout';
+import {
+  STORE_CAPTION,
+  STORE_CREATIVES,
+  STORE_FEATURE,
+  STORE_LANGS,
+  type StoreCreativeId,
+} from '../../src/data/debug/store-shots';
+import {
+  backgroundBand,
+  containsRect,
+  creativePosterBox,
+  fitAspect,
+  fitCaption,
+  glueShortWords,
+  insetRect,
+  posterInk,
+  posterLayout,
+  posterText,
+  wavePoints,
+  type CaptionLimits,
+  type Rect,
+} from './layout';
 
 /** Every letter and space is 0.6 of the font size wide. */
 const mono = (line: string): number => line.length * 0.6;
@@ -103,5 +124,96 @@ describe('wavePoints', () => {
     expect(points.find((p) => p.x === 100)?.y).toBeCloseTo(480);
     expect(points.find((p) => p.x === 500)?.y).toBeCloseTo(480);
     expect(points.find((p) => p.x === 300)?.y).toBeCloseTo(520);
+  });
+});
+
+describe('fitAspect, insetRect, containsRect', () => {
+  const box: Rect = { x: 100, y: 50, width: 400, height: 100 };
+
+  it('takes the largest rectangle of the proportions, centred', () => {
+    expect(fitAspect(2, box)).toEqual({ x: 200, y: 50, width: 200, height: 100 });
+    expect(fitAspect(8, box)).toEqual({ x: 100, y: 75, width: 400, height: 50 });
+  });
+
+  it('insets by a share of the smaller side and tells what lies inside', () => {
+    expect(insetRect(box, 0.1)).toEqual({ x: 110, y: 60, width: 380, height: 80 });
+    expect(containsRect(box, insetRect(box, 0.1))).toBe(true);
+    expect(containsRect(box, { ...box, x: 99 })).toBe(false);
+    expect(containsRect(box, { ...box, height: 101 })).toBe(false);
+  });
+});
+
+describe('backgroundBand', () => {
+  const frame = { width: 1080, height: 1920 };
+
+  it('takes the whole width, centred and kept inside the frame', () => {
+    expect(backgroundBand(frame, 2, 0.25)).toEqual({ x: 0, y: 210, width: 1080, height: 540 });
+    expect(backgroundBand(frame, 2, 0)).toEqual({ x: 0, y: 0, width: 1080, height: 540 });
+  });
+
+  it('stays above the floor, narrowing when the band is taller than the room', () => {
+    const band = backgroundBand(frame, 1.5, 0.25, 0.35);
+    expect(band.y + band.height).toBeLessThanOrEqual(1920 * 0.35 + 1e-9);
+    expect(band.width / band.height).toBeCloseTo(1.5);
+    expect(band.x).toBeCloseTo((1080 - band.width) / 2);
+  });
+});
+
+/** Apple's sizes (Creative assets specifications, checked 2026-11-21). */
+const APPLE: Record<StoreCreativeId, { width: number; height: number; aspect: number }> = {
+  header: { width: 3840, height: 1646, aspect: 21 / 9 },
+  search: { width: 3840, height: 2560, aspect: 3 / 2 },
+  universal: { width: 5244, height: 2950, aspect: 16 / 9 },
+};
+
+describe('App Store creative assets', () => {
+  it('have the sizes of the spec and a safe area inside the picture', () => {
+    expect(STORE_CREATIVES.map((c) => c.id).sort()).toEqual(['header', 'search', 'universal']);
+    for (const c of STORE_CREATIVES) {
+      const apple = APPLE[c.id];
+      expect([c.width, c.height]).toEqual([apple.width, apple.height]);
+      expect(c.width / c.height).toBeCloseTo(apple.aspect, 2);
+      expect(containsRect({ x: 0, y: 0, width: c.width, height: c.height }, c.safe)).toBe(true);
+    }
+  });
+
+  // The hero render is 1254 x 1254. The creature pictures the game draws are 0.62 times as tall
+  // as wide (Rainbow 0.616, Puff 0.625, measured 2026-11-21); a margin either way is tried, and
+  // the compose page checks the real ones again.
+  const hero = { width: 1254, height: 1254 };
+  const towers = [0.55, 0.62, 0.68].map((h) => [
+    { width: 100, height: 100 * h },
+    { width: 100, height: 100 * h },
+  ]);
+  // Glyphs as wide as a slanted outlined Nunito Black and a narrower font: the text fits either way.
+  const measures = [(line: string) => line.length * 0.8, (line: string) => line.length * 0.55];
+
+  for (const c of STORE_CREATIVES) {
+    it(`${c.id}: the tower, the hero and the text lie in the art safe area`, () => {
+      const box = creativePosterBox(c);
+      expect(containsRect(c.safe, box)).toBe(true);
+      expect(box.width / box.height).toBeCloseTo(STORE_FEATURE.width / STORE_FEATURE.height);
+      for (const lang of STORE_LANGS) {
+        for (const measure of measures) {
+          const text = posterText(lang, box, measure);
+          for (const tower of towers) {
+            const layout = posterLayout(box, STORE_FEATURE, { tower, hero }, text);
+            for (const part of [...layout.tower, layout.hero, layout.title, layout.subtitle]) {
+              expect(containsRect(c.safe, part)).toBe(true);
+            }
+            const ink = posterInk(layout, text, box.width, STORE_CAPTION.outlineWidth);
+            expect(containsRect(c.safe, ink)).toBe(true);
+          }
+        }
+      }
+    });
+  }
+
+  it('keeps the hero no larger than its render (no magnified, soft hero)', () => {
+    for (const c of STORE_CREATIVES) {
+      expect(STORE_FEATURE.hero.height * creativePosterBox(c).height).toBeLessThanOrEqual(
+        hero.height,
+      );
+    }
   });
 });

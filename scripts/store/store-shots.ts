@@ -1,8 +1,12 @@
 /**
  * `npm run store:shots`: the screenshots of the store pages (docs/11-release-store.md, section 5).
  *
- *   npm run store:shots -- [--only cover,tap,...,feature,iap,icon] [--platform ios|android] [--lang en|ru]
+ *   npm run store:shots -- [--only cover,tap,...,feature,header,search,universal,iap,icon]
+ *     [--platform ios|android] [--lang en|ru]
  *     [--out <dir>] [--assets <dir>] [--url <dev server>] [--playwright <dir>] [--check]
+ *
+ * Besides the screenshots it lays out the Google Play feature graphic and the App Store creative
+ * assets (the product page header, the search results picture, the universal one).
  *
  * Starts its own vite (unless --url), opens the game in headless Chromium with the page clock
  * stopped (Playwright `clock`) and `Math.random` seeded, sets the save, moves the game frame by
@@ -16,6 +20,8 @@ import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
   STORE_CLOCK,
+  STORE_CREATIVE,
+  STORE_CREATIVES,
   STORE_DEVICES,
   STORE_FEATURE,
   STORE_IAP_SHOT,
@@ -23,6 +29,7 @@ import {
   STORE_LANGS,
   STORE_PLATFORMS,
   STORE_SHOTS,
+  type StoreCreative,
   type StoreLang,
   type StorePlatform,
   storeShotSize,
@@ -30,7 +37,15 @@ import {
   type StoreStage,
 } from '../../src/data/debug/store-shots';
 import { encodePng, readPngHeader, type PngColor } from './png';
-import type { Composed, ComposeOverlay, FeatureSpec, ShotSpec } from './compose-page';
+import type {
+  Composed,
+  ComposeOverlay,
+  CreativeResult,
+  CreativeSpec,
+  FeatureSpec,
+  ShotSpec,
+} from './compose-page';
+import { creativePosterBox } from './layout';
 import type { CreatureArtSpec } from '../../src/game/debug/store-stage';
 
 const require = createRequire(import.meta.url);
@@ -53,6 +68,13 @@ const PAGE_TIMEOUT_MS = 120_000;
 const MAX_RESTARTS = 3;
 /** Google Play takes screenshots up to 8 MB. */
 const MAX_SHOT_BYTES = 8 * 1024 * 1024;
+/**
+ * Apple names no file size for the creative assets; the In-App Event media of the same page may
+ * weigh 500 MB. This only catches a broken file.
+ */
+const MAX_CREATIVE_BYTES = 100 * 1024 * 1024;
+/** Rows of an App Store picture read from the compose page in one call (about 5 MB of RGBA at 5244 px). */
+const CREATIVE_ROWS_PER_CALL = 256;
 
 // The few Playwright calls this script makes (Playwright is not a dependency of the project).
 interface Page {
@@ -99,6 +121,8 @@ type StoreWindow = Window & {
     ready: Promise<void>;
     shot(spec: ShotSpec): Promise<Composed>;
     feature(spec: FeatureSpec): Promise<Composed>;
+    creative(spec: CreativeSpec): Promise<CreativeResult>;
+    rows(from: number, count: number): string;
     icon(src: string, size: number): Promise<Composed>;
     saveText(lang: StoreLang): string;
   };
@@ -146,15 +170,19 @@ function readOptions(): Options {
 
 const dataUrl = (png: Buffer): string => `data:image/png;base64,${png.toString('base64')}`;
 
-function write(path: string, composed: Composed, color: PngColor): void {
+function writeRgba(
+  path: string,
+  width: number,
+  height: number,
+  rgba: Buffer,
+  color: PngColor,
+): void {
   mkdirSync(dirname(path), { recursive: true });
-  const png = encodePng(
-    composed.width,
-    composed.height,
-    Buffer.from(composed.rgba, 'base64'),
-    color,
-  );
-  writeFileSync(path, png);
+  writeFileSync(path, encodePng(width, height, rgba, color));
+}
+
+function write(path: string, composed: Composed, color: PngColor): void {
+  writeRgba(path, composed.width, composed.height, Buffer.from(composed.rgba, 'base64'), color);
 }
 
 /** A page of the game in the size of `platform`, its clock stopped at the start, the save of `lang` in place. */
@@ -367,6 +395,75 @@ function makesFeature(options: Options): boolean {
   return wantedBy(options)('feature') && options.platforms.includes('android');
 }
 
+/** The App Store creative assets the options ask for (`--only header,search,universal`, iOS). */
+function creativesWanted(options: Options): StoreCreative[] {
+  if (!options.platforms.includes('ios')) return [];
+  return STORE_CREATIVES.filter((c) => wantedBy(options)(c.id));
+}
+
+const creativeFile = (creative: StoreCreative, lang: StoreLang): string =>
+  join(STORE_CREATIVE.folder, `${creative.id}-${lang}.png`);
+
+/** The tower creatures of the poster, drawn by the game at the width a picture lays them out at. */
+function posterArts(width: number): CreatureArtSpec[] {
+  return STORE_FEATURE.tower.creatures.map((c) => ({
+    ...c,
+    widthPx: Math.round(STORE_FEATURE.tower.width * width),
+  }));
+}
+
+/**
+ * The App Store creative assets of every language: the background frame is shot once per language
+ * (a floating word of the game may fall into the band), the creatures at the size of each picture.
+ */
+async function shootCreatives(
+  options: Options,
+  creatives: readonly StoreCreative[],
+  browser: Browser,
+  compose: Page,
+  base: string,
+  hero: string,
+): Promise<void> {
+  const bg = STORE_CREATIVE.background;
+  const arts = creatives.map((c) => posterArts(creativePosterBox(c).width));
+  for (const lang of options.langs) {
+    const raw = await capture(
+      browser,
+      base,
+      compose,
+      bg.platform,
+      lang,
+      'feature',
+      STORE_FEATURE.background.stage,
+      arts.flat(),
+    );
+    let next = 0;
+    for (const [i, c] of creatives.entries()) {
+      const tower = raw.arts.slice(next, next + (arts[i]?.length ?? 0));
+      next += tower.length;
+      const spec: CreativeSpec = { id: c.id, frame: dataUrl(raw.frame), hero, tower, lang };
+      const result = await compose.evaluate(
+        (s) => (window as StoreWindow).storeCompose!.creative(s),
+        spec,
+      );
+      const rgba = Buffer.alloc(result.width * result.height * 4);
+      for (let y = 0; y < result.height; y += CREATIVE_ROWS_PER_CALL) {
+        const part = await compose.evaluate(
+          ({ from, count }) => (window as StoreWindow).storeCompose!.rows(from, count),
+          { from: y, count: CREATIVE_ROWS_PER_CALL },
+        );
+        Buffer.from(part, 'base64').copy(rgba, y * result.width * 4);
+      }
+      const file = creativeFile(c, lang);
+      writeRgba(join(options.out, file), result.width, result.height, rgba, 'rgb');
+      const b = result.bounds;
+      const at = [b.x, b.y, b.width, b.height].map((v) => String(Math.round(v))).join(',');
+      const lines = (fit: CreativeResult['title']) => fit.lines.join(' / ');
+      console.log(`${file}  ${lines(result.title)} | ${lines(result.subtitle)}  poster ${at}`);
+    }
+  }
+}
+
 async function shoot(
   options: Options,
   browser: Browser,
@@ -416,11 +513,7 @@ async function shoot(
     }
     if (makesFeature(options)) {
       const bg = STORE_FEATURE.background;
-      const { width } = storeShotSize(bg.platform);
-      const towerArts: CreatureArtSpec[] = STORE_FEATURE.tower.creatures.map((c) => ({
-        ...c,
-        widthPx: Math.round(STORE_FEATURE.tower.width * width),
-      }));
+      const towerArts = posterArts(storeShotSize(bg.platform).width);
       for (const lang of options.langs) {
         // Shot per language: a floating word of the game may fall into the band.
         const raw = await capture(
@@ -446,6 +539,10 @@ async function shoot(
         write(join(options.out, 'android', `feature-graphic-${lang}.png`), graphic, 'rgb');
         console.log(`android/feature-graphic-${lang}.png`);
       }
+    }
+    const creatives = creativesWanted(options);
+    if (creatives.length > 0) {
+      await shootCreatives(options, creatives, browser, compose.page, base, hero);
     }
     if (wanted('iap')) {
       const iap = STORE_IAP_SHOT;
@@ -535,6 +632,11 @@ function expectedFiles(options: Options): CheckRow[] {
     for (const lang of options.langs) {
       const file = join('android', `feature-graphic-${lang}.png`);
       rows.push([file, STORE_FEATURE.width, STORE_FEATURE.height, 'rgb', MAX_SHOT_BYTES]);
+    }
+  }
+  for (const c of creativesWanted(options)) {
+    for (const lang of options.langs) {
+      rows.push([creativeFile(c, lang), c.width, c.height, 'rgb', MAX_CREATIVE_BYTES]);
     }
   }
   if (wanted('icon')) {

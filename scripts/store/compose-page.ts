@@ -2,11 +2,29 @@ import '../../src/style.css';
 import { FONT_FAMILY } from '../../src/game/ui/common/fonts';
 import {
   STORE_CAPTION,
+  STORE_CREATIVE,
+  STORE_CREATIVES,
   STORE_FEATURE,
   STORE_PLATE,
+  type StoreCreativeId,
   type StoreLang,
 } from '../../src/data/debug/store-shots';
-import { fitCaption, wavePoints, type CaptionFit } from './layout';
+import {
+  backgroundBand,
+  captionBlockHeight,
+  containsRect,
+  creativePosterBox,
+  fitCaption,
+  posterInk,
+  OVERLAY_SHADOW,
+  posterLayout,
+  posterText,
+  wavePoints,
+  type CaptionFit,
+  type PosterLayout,
+  type PosterText,
+  type Rect,
+} from './layout';
 import { storeSaveText } from './store-save';
 
 /**
@@ -35,12 +53,31 @@ export interface ShotSpec {
   overlays: ComposeOverlay[];
 }
 
-export interface FeatureSpec {
-  frame: string;
+/** The pictures and the language of the poster (the tower, the hero, the text). */
+export interface PosterArt {
   hero: string;
   /** The creatures of `STORE_FEATURE.tower`, bottom first, as the game drew them. */
   tower: string[];
   lang: StoreLang;
+}
+
+export interface FeatureSpec extends PosterArt {
+  frame: string;
+}
+
+export interface CreativeSpec extends PosterArt {
+  id: StoreCreativeId;
+  frame: string;
+}
+
+/** An App Store picture is read with `rows` afterwards: its pixels are too many for one answer. */
+export interface CreativeResult {
+  width: number;
+  height: number;
+  /** Where the poster went with its shadows and outlines (it lies inside the safe area), for the report. */
+  bounds: Rect;
+  title: CaptionFit;
+  subtitle: CaptionFit;
 }
 
 export interface Composed {
@@ -54,7 +91,6 @@ export interface Composed {
 
 const WAVE_STEP_PX = 4;
 /** Shadow under the big creatures and the hero, shares of the width. */
-const OVERLAY_SHADOW = { color: 'rgba(59, 42, 74, 0.35)', blur: 0.025, drop: 0.01 };
 /** A slanted line is wider than its advance by about the cap height times the slant. */
 const CAP_HEIGHT = 0.72;
 
@@ -181,8 +217,11 @@ function drawPlate(
   return top;
 }
 
-function pixels(ctx: CanvasRenderingContext2D): string {
-  const data = ctx.getImageData(0, 0, ctx.canvas.width, ctx.canvas.height).data;
+function pixels(
+  ctx: CanvasRenderingContext2D,
+  area: Rect = { x: 0, y: 0, width: ctx.canvas.width, height: ctx.canvas.height },
+): string {
+  const data = ctx.getImageData(area.x, area.y, area.width, area.height).data;
   let out = '';
   const chunk = 0x8000;
   for (let i = 0; i < data.length; i += chunk) {
@@ -222,65 +261,117 @@ async function shot(spec: ShotSpec): Promise<Composed> {
   return { width, height, rgba: pixels(ctx), fit };
 }
 
+/**
+ * The poster of `STORE_FEATURE` (the tower of creatures with the hero on it, the title and the
+ * line under it) inside `box`; returns where its parts went.
+ */
+async function drawPoster(
+  ctx: CanvasRenderingContext2D,
+  box: Rect,
+  spec: PosterArt,
+): Promise<{ layout: PosterLayout; text: PosterText }> {
+  const tower = await Promise.all(spec.tower.map(load));
+  const hero = await load(spec.hero);
+  const text = posterText(spec.lang, box, (line) => widthAt1(ctx, line));
+  const layout = posterLayout(box, STORE_FEATURE, { tower, hero }, text);
+  const centre = (r: Rect) => ({ x: r.x + r.width / 2, y: r.y + r.height / 2, width: r.width });
+  const layers: ComposeOverlay[] = [
+    ...layout.tower.map((r, i) => ({ image: spec.tower[i] ?? '', ...centre(r), angle: 0 })),
+    { image: spec.hero, ...centre(layout.hero), angle: 0 },
+  ];
+  await drawOverlays(ctx, layers, box.width);
+  const x = layout.title.x + layout.title.width / 2;
+  const block = (fit: CaptionFit, top: number) =>
+    top + captionBlockHeight(fit, STORE_CAPTION.lineHeight) / 2;
+  drawCaption(ctx, text.title, x, block(text.title, layout.title.y), {
+    fill: STORE_CAPTION.fill,
+    drop: STORE_CAPTION.dropColor,
+  });
+  drawCaption(ctx, text.subtitle, x, block(text.subtitle, layout.subtitle.y), {
+    fill: STORE_CAPTION.fill,
+    drop: STORE_PLATE.color,
+  });
+  return { layout, text };
+}
+
 async function feature(spec: FeatureSpec): Promise<Composed> {
   const f = STORE_FEATURE;
   const ctx = canvas2d(f.width, f.height);
   const frame = await load(spec.frame);
-  const band = (frame.width * f.height) / f.width;
-  const sy = Math.min(
-    Math.max(0, frame.height * f.background.centreY - band / 2),
-    frame.height - band,
-  );
-  ctx.drawImage(frame, 0, sy, frame.width, band, 0, 0, f.width, f.height);
-  const t = f.tower;
-  if (spec.tower.length === 0) throw new Error('feature graphic: no creatures for the tower');
-  const layers: ComposeOverlay[] = [];
-  let centreY = 0;
-  for (const [i, image] of spec.tower.entries()) {
-    const picture = await load(image);
-    const width = t.width * f.width;
-    const height = (width * picture.height) / picture.width;
-    centreY = (t.bottom - i * t.step) * f.height - height / 2;
-    const x = (t.x + (i % 2 === 0 ? -t.shift : t.shift)) * f.width;
-    layers.push({ image, x, y: centreY, width, angle: 0 });
+  const band = backgroundBand(frame, f.width / f.height, f.background.centreY);
+  ctx.drawImage(frame, band.x, band.y, band.width, band.height, 0, 0, f.width, f.height);
+  const { text } = await drawPoster(ctx, { x: 0, y: 0, width: f.width, height: f.height }, spec);
+  return { width: f.width, height: f.height, rgba: pixels(ctx), fit: text.title };
+}
+
+/**
+ * The background of an App Store picture: the band of the frame over the whole picture, out of
+ * focus. The blurred copy goes over a sharp one a little larger than the picture, so its edges,
+ * where the blur thins out, still lie on opaque pixels.
+ */
+function drawSoftBackground(
+  ctx: CanvasRenderingContext2D,
+  frame: HTMLImageElement,
+  width: number,
+  height: number,
+): void {
+  const bg = STORE_CREATIVE.background;
+  const band = backgroundBand(frame, width / height, bg.centreY, bg.bottom);
+  const blur = bg.blur * width;
+  // Room for the blur at the edges, the same share of both sides, so the band keeps its proportions.
+  const bleedY = blur * 3;
+  const bleedX = (bleedY * width) / height;
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = 'high';
+  const draw = () =>
+    ctx.drawImage(
+      frame,
+      band.x,
+      band.y,
+      band.width,
+      band.height,
+      -bleedX,
+      -bleedY,
+      width + 2 * bleedX,
+      height + 2 * bleedY,
+    );
+  draw();
+  ctx.save();
+  ctx.filter = `blur(${String(blur)}px)`;
+  draw();
+  ctx.restore();
+}
+
+/** The canvas of the last App Store picture, read row by row (`rows`): it is too big for one call. */
+let lastCreative: CanvasRenderingContext2D | null = null;
+
+/** The poster inside the art safe area of an App Store picture (`STORE_CREATIVES`), the street behind it. */
+async function creative(spec: CreativeSpec): Promise<CreativeResult> {
+  const c = STORE_CREATIVES.find((x) => x.id === spec.id);
+  if (!c) throw new Error(`no App Store picture ${spec.id}`);
+  const ctx = canvas2d(c.width, c.height);
+  drawSoftBackground(ctx, await load(spec.frame), c.width, c.height);
+  const box = creativePosterBox(c);
+  const { layout, text } = await drawPoster(ctx, box, spec);
+  const bounds = posterInk(layout, text, box.width, STORE_CAPTION.outlineWidth);
+  if (!containsRect(c.safe, bounds)) {
+    throw new Error(`${c.id}: the poster leaves the safe area (${JSON.stringify(bounds)})`);
   }
-  const hero = await load(spec.hero);
-  const heroH = f.hero.height * f.height;
-  const heroW = (heroH * hero.width) / hero.height;
-  layers.push({
-    image: hero.src,
-    x: t.x * f.width,
-    y: centreY - f.hero.rise * f.height,
-    width: heroW,
-    angle: 0,
-  });
-  await drawOverlays(ctx, layers, f.width);
-  const limits = (part: { maxSize: number; minSize: number; maxLines: number }) => ({
-    maxSize: part.maxSize * f.width,
-    minSize: part.minSize * f.width,
-    maxWidth: f.text.maxWidth * f.width,
-    maxHeight: f.height,
-    maxLines: part.maxLines,
-    lineHeight: STORE_CAPTION.lineHeight,
-    glueUpTo: STORE_CAPTION.glueUpTo,
-    moreLinesCost: STORE_CAPTION.moreLinesCost,
-  });
-  const measure = (line: string) => widthAt1(ctx, line);
-  const title = fitCaption(f.title.text, measure, limits(f.title));
-  const subtitle = fitCaption(f.subtitle.text[spec.lang], measure, limits(f.subtitle));
-  if (!title || !subtitle) throw new Error('feature graphic: text does not fit');
-  const blockH = (fit: CaptionFit) => fit.lines.length * fit.size * STORE_CAPTION.lineHeight;
-  const gap = f.text.gap * f.width;
-  const total = blockH(title) + gap + blockH(subtitle);
-  const x = f.text.x * f.width;
-  const top = f.text.centreY * f.height - total / 2;
-  const colors = { fill: STORE_CAPTION.fill, drop: STORE_CAPTION.dropColor };
-  drawCaption(ctx, title, x, top + blockH(title) / 2, colors);
-  drawCaption(ctx, subtitle, x, top + blockH(title) + gap + blockH(subtitle) / 2, {
-    fill: STORE_CAPTION.fill,
-    drop: STORE_PLATE.color,
-  });
-  return { width: f.width, height: f.height, rgba: pixels(ctx), fit: title };
+  lastCreative = ctx;
+  return {
+    width: c.width,
+    height: c.height,
+    bounds,
+    title: text.title,
+    subtitle: text.subtitle,
+  };
+}
+
+/** Rows `from` to `from + count` of the last App Store picture as base64 RGBA. */
+function rows(from: number, count: number): string {
+  if (!lastCreative) throw new Error('no App Store picture to read');
+  const { width, height } = lastCreative.canvas;
+  return pixels(lastCreative, { x: 0, y: from, width, height: Math.min(count, height - from) });
 }
 
 /** The picture scaled to `size` square (the Google Play icon from the iOS one). */
@@ -308,6 +399,6 @@ function saveText(lang: StoreLang): string {
   return storeSaveText(lang);
 }
 
-const api = { ready: fontsReady(), shot, feature, icon, saveText };
+const api = { ready: fontsReady(), shot, feature, creative, rows, icon, saveText };
 export type StoreCompose = typeof api;
 (window as Window & { storeCompose?: StoreCompose }).storeCompose = api;
