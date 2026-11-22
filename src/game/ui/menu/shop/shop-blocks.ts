@@ -14,6 +14,8 @@ import { createTextButton, type Button } from '../../common/button';
 import { CREATURE_ICON_KEYS } from '../../creatures/creature-icons';
 import type { DailySection } from '../daily/daily-section';
 import { createBodyText } from '../detail/detail-info';
+import { createOutlinedText } from '../../common/outlined-text';
+import { fitText } from '../widgets/fit-text';
 import { createNoAdsIcon } from './shop-premium-icon';
 import {
   createShopRow,
@@ -166,9 +168,9 @@ export function noAdsSection(scene: Phaser.Scene, a: ShopActions, prices: Prices
   return { root: section.root, height: section.height + gap + note.height };
 }
 
-/** The small "Restore purchases" button at the end of the list. */
-export function restoreBlock(scene: Phaser.Scene, a: ShopActions): DailySection {
-  const { width, height, radius, shadowOffset, font, fill } = cfg.restore;
+/** "Restore purchases" and, under it, `note`: how the last restore went ('' before any). */
+export function restoreBlock(scene: Phaser.Scene, a: ShopActions, note: string): DailySection {
+  const { width, height, radius, shadowOffset, font, fill, noteHeight, noteFont } = cfg.restore;
   const button = createTextButton(scene, {
     text: t('shop.restore'),
     font,
@@ -180,5 +182,9 @@ export function restoreBlock(scene: Phaser.Scene, a: ShopActions): DailySection 
     y: height / 2,
     onClick: () => a.restore(),
   }).button;
-  return { root: scene.add.container(0, 0, [button]), height };
+  const line = fitText(
+    createOutlinedText(scene, 0, height + noteHeight / 2, note, noteFont),
+    cfg.toast.maxWidth,
+  );
+  return { root: scene.add.container(0, 0, [button, line]), height: height + noteHeight };
 }

@@ -1171,12 +1171,28 @@ export const MENU = {
       /** The timer is redrawn this often. */
       tickMs: 500,
     },
-    /** The small "Restore purchases" button at the end of the list. */
-    restore: { width: 520, height: 88, radius: 30, shadowOffset: 6, font: 34, fill: 0x7c5cff },
+    /**
+     * The small "Restore purchases" button at the end of the list, and the room under it for the
+     * line that says how the restore went (kept even while empty, so the list does not grow).
+     */
+    restore: {
+      width: 520,
+      height: 88,
+      radius: 30,
+      shadowOffset: 6,
+      font: 34,
+      fill: 0x7c5cff,
+      noteHeight: 64,
+      noteFont: 34,
+    },
     /** A short message under the header ("Purchase failed"). */
     toast: {
-      /** Middle of the message, measured from the lower edge of the header band. */
-      belowBand: 90,
+      /**
+       * Middle of the message, measured from the lower edge of the header band: it stands between
+       * the berry chip of the wallet and the title of the first block (the starter pack), over
+       * neither of them.
+       */
+      belowBand: 34,
       height: 96,
       font: 38,
       padX: 48,

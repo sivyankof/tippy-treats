@@ -56,6 +56,8 @@ export class ShopScene extends Phaser.Scene {
   private busy = false;
   private leaving = false;
   private source: ShopSource = 'return';
+  /** How the last restore on this visit went, shown under its button ('' before any). */
+  private restoreNote = '';
 
   constructor() {
     super(SCENES.shop);
@@ -74,6 +76,7 @@ export class ShopScene extends Phaser.Scene {
     this.blocks = [];
     this.starter = null;
     this.prices = {};
+    this.restoreNote = '';
     gameState.refreshDay();
     this.bg = new MenuScenery(this, 'list');
     this.list = new ScrollList(this);
@@ -144,7 +147,7 @@ export class ShopScene extends Phaser.Scene {
       berriesSection(this, a, this.prices),
       exchangeSection(this, a),
       noAdsSection(this, a, this.prices),
-      restoreBlock(this, a),
+      restoreBlock(this, a, this.restoreNote),
     ].filter((block): block is DailySection => block !== null);
     let y = cfg.top;
     for (const block of this.blocks) {
@@ -241,7 +244,8 @@ export class ShopScene extends Phaser.Scene {
     const outcome = await restorePurchases();
     this.busy = false;
     if (!this.scene.isActive()) return;
-    this.toast.show(t(`shop.restoreResult.${outcome}`));
+    // Under the button the player has just tapped, not on the toast at the top of the list.
+    this.restoreNote = t(`shop.restoreResult.${outcome}`);
     this.rebuild();
   }
 
