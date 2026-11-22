@@ -27,7 +27,7 @@ import { rowCentres } from '../../common/button-row';
 import { createOutlinedText } from '../../common/outlined-text';
 import { PopupWindow } from '../../style/dialog-window';
 import { openConfirmWindow } from './confirm-window';
-import { fitText, fitTextGroup } from '../widgets/fit-text';
+import { fitText, fitTextGroup, wrapWithoutLoneWord } from '../widgets/fit-text';
 import { openSupportMail, shortInstallId } from '../../../app/support-contact';
 import { createToggleRows, soundSettingRows, type ToggleRowSpec } from './setting-toggles';
 
@@ -87,6 +87,14 @@ export function openSettingsWindow(scene: Phaser.Scene, handlers: SettingsHandle
     }).button;
 
   let busy = false;
+  // The price comes from the store a moment later: its place is kept, the button joins when it is
+  // known. Once "No ads" is bought there is no place for it: nothing is left empty.
+  const noAdsTop = y;
+  const noAdsRoom = productOwned(gameState.data, 'remove_ads')
+    ? 0
+    : cfg.wideButton.height + cfg.noAdsGap;
+  y += noAdsRoom;
+  // The result line stands in its own room under "Restore purchases", never over a button.
   const result = createOutlinedText(
     scene,
     0,
@@ -94,10 +102,6 @@ export function openSettingsWindow(scene: Phaser.Scene, handlers: SettingsHandle
     '',
     cfg.resultFont,
   );
-  // The price comes from the store a moment later: its place is kept, the button joins when it is known.
-  const noAdsTop = y;
-  const noAdsRoom = cfg.wideButton.height + cfg.noAdsGap;
-  y += noAdsRoom;
   const restore = wide(t('shop.restore'), cfg.restoreFill, y, () => {
     if (busy) return;
     busy = true;
@@ -108,6 +112,8 @@ export function openSettingsWindow(scene: Phaser.Scene, handlers: SettingsHandle
       restore.setEnabled(true);
       result.setText(t(`shop.restoreResult.${outcome}`));
       fitText(result, width);
+      // The restore may have given "No ads" back: its button goes, like after a purchase.
+      if (productOwned(gameState.data, 'remove_ads')) dropNoAds();
     });
   });
   y += cfg.wideButton.height + cfg.resultHeight + cfg.blockGap;
@@ -128,9 +134,8 @@ export function openSettingsWindow(scene: Phaser.Scene, handlers: SettingsHandle
   // The credits line may wrap onto a second line; the lines under it move down by what it took.
   const credits = createOutlinedText(scene, 0, 0, t('settings.musicCredits'), cfg.infoFont)
     .setAlign('center')
-    .setWordWrapWidth(width, true)
     .setAlpha(cfg.infoAlpha);
-  const creditLines = credits.getWrappedText().length;
+  const creditLines = wrapWithoutLoneWord(credits, width);
   credits.setY(y + (cfg.infoLine * creditLines) / 2);
   y += cfg.infoLine * creditLines;
   const info = [
@@ -157,10 +162,8 @@ export function openSettingsWindow(scene: Phaser.Scene, handlers: SettingsHandle
   );
   y += cfg.wideButton.height;
 
-  popup.content.add([
-    ...sounds.toggles,
-    ...language,
-    ...notify.toggles,
+  // Everything under the place of "No ads": it moves up into that place once "No ads" is bought here.
+  const underNoAds: Array<Phaser.GameObjects.Container | Phaser.GameObjects.Text> = [
     restore,
     result,
     ...links,
@@ -168,14 +171,34 @@ export function openSettingsWindow(scene: Phaser.Scene, handlers: SettingsHandle
     credits,
     ...info,
     reset,
-  ]);
+  ];
+  popup.content.add([...sounds.toggles, ...language, ...notify.toggles, ...underNoAds]);
   popup.setContentHeight(y);
+  let noAdsButton: Phaser.GameObjects.Container | null = null;
+  let noAdsGone = noAdsRoom === 0;
+  /** "No ads" is owned now: its button (if it came) goes and the parts under it move up into its place, once. */
+  function dropNoAds(): void {
+    if (noAdsGone) return;
+    noAdsGone = true;
+    noAdsButton?.destroy();
+    noAdsButton = null;
+    for (const part of underNoAds) part.y -= noAdsRoom;
+    popup.setContentHeight(y - noAdsRoom);
+  }
 
-  /** "No ads · {price}": only while it is not bought and the store gave a price; otherwise the place stays empty. */
+  /**
+   * "No ads · {price}": only while it is not bought and the store gave a price. While the price is
+   * unknown its place stays empty; when "No ads" is owned there is no place at all.
+   */
   const addNoAdsButton = async (): Promise<void> => {
-    if (productOwned(gameState.data, 'remove_ads')) return;
+    if (noAdsGone) return;
     const price = (await loadPrices()).remove_ads;
-    if (price === undefined || !result.active) return;
+    if (!result.active || noAdsGone) return;
+    if (productOwned(gameState.data, 'remove_ads')) {
+      dropNoAds();
+      return;
+    }
+    if (price === undefined) return;
     const button = wide(t('settings.noAds', { price }), cfg.noAdsFill, noAdsTop, () => {
       if (busy) return;
       busy = true;
@@ -184,7 +207,7 @@ export function openSettingsWindow(scene: Phaser.Scene, handlers: SettingsHandle
         busy = false;
         if (!result.active) return;
         if (outcome === 'purchased') {
-          button.setVisible(false);
+          dropNoAds();
           result.setText(t('shop.owned'));
         } else {
           button.setEnabled(true);
@@ -194,6 +217,7 @@ export function openSettingsWindow(scene: Phaser.Scene, handlers: SettingsHandle
         fitText(result, width);
       });
     });
+    noAdsButton = button;
     popup.content.add(button);
   };
   void addNoAdsButton();
@@ -210,7 +234,7 @@ function createSiteLinks(
   scene: Phaser.Scene,
   top: number,
   width: number,
-): Phaser.GameObjects.GameObject[] {
+): Phaser.GameObjects.Container[] {
   const { height, radius, shadowOffset, font, gap, fill } = cfg.links;
   const buttonWidth = (width - gap * (SITE_LINKS.length - 1)) / SITE_LINKS.length;
   const layout = { width: buttonWidth, height, radius, shadowOffset, font };

@@ -66,3 +66,27 @@ export function fitTextGroup(texts: readonly Phaser.GameObjects.Text[], maxWidth
   layout();
   for (const text of texts) onFontRefresh(text, layout);
 }
+
+/**
+ * Wraps `text` within `maxWidth` like the usual word wrap; only when that leaves a lone word on
+ * the last line, the lines are made even instead: the narrowest wrap width that keeps the same
+ * number of lines. Returns the number of lines.
+ */
+export function wrapWithoutLoneWord(text: Phaser.GameObjects.Text, maxWidth: number): number {
+  text.setWordWrapWidth(maxWidth, true);
+  const wrapped = text.getWrappedText();
+  const lines = wrapped.length;
+  const last = wrapped[lines - 1]?.trim() ?? '';
+  if (lines < 2 || last.includes(' ')) return lines;
+  let fits = maxWidth;
+  let tooNarrow = maxWidth / lines;
+  // Whole pixels are enough: about a dozen measures, once when the text is made.
+  while (fits - tooNarrow > 1) {
+    const mid = Math.floor((fits + tooNarrow) / 2);
+    text.setWordWrapWidth(mid, true);
+    if (text.getWrappedText().length > lines) tooNarrow = mid;
+    else fits = mid;
+  }
+  text.setWordWrapWidth(fits, true);
+  return lines;
+}
