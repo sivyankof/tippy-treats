@@ -2,7 +2,7 @@ import { PALETTE } from '../common/palette';
 
 /**
  * Pictures of rewards that are not creatures, coins or berries: the empty team slot and the little
- * daily tower (docs/06-art-animation-audio.md, "Окно нового уровня"). Sizes are texture pixels.
+ * daily tower (docs/07-ui-screens.md, section 6, "Окно нового уровня"). Sizes are texture pixels.
  */
 export const REWARD_LOOK = {
   textureSize: 160,
