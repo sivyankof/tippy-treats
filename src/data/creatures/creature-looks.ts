@@ -290,7 +290,7 @@ export const CREATURE_LOOKS: Readonly<Record<CreatureId, CreatureLook>> = {
 
 const grownFaces = new Map<CreatureId, FaceRecipe>();
 
-/** The face recipe of a creature layer; `grown` gives the face of the grown look (docs/06, "Взрослый вид"). */
+/** The face recipe of a creature layer; `grown` gives the face of the grown look (docs/06, "Новый вид (уровень 3)"). */
 export function faceRecipe(id: CreatureId, grown = false): FaceRecipe {
   const usual = CREATURE_LOOKS[id].face;
   const change = grown ? GROWN_FACE[id] : undefined;
