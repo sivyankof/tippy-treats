@@ -177,6 +177,8 @@ export interface PosterLayout {
   /** The creatures, bottom first. */
   tower: Rect[];
   hero: Rect;
+  /** The drawn part of the hero, where it is known (variant C): the rest of `hero` is empty margin. */
+  heroInk?: Rect;
   /** Room of the title and of the line under it: the widest line allowed, every line and the drop below. */
   title: Rect;
   subtitle: Rect;
@@ -307,7 +309,7 @@ export function posterInk(
   };
   return boundsOf([
     ...(withTower ? layout.tower.map(shadowed) : []),
-    shadowed(layout.hero),
+    shadowed(layout.heroInk ?? layout.hero),
     outlined(layout.title, text.title),
     outlined(layout.subtitle, text.subtitle),
   ]);

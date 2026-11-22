@@ -33,7 +33,7 @@ import {
   widthAt1,
   type ComposeOverlay,
 } from './canvas-draw';
-import { creativeLayout, posterTextBox } from './creative-layout';
+import { creativeBox, creativeLayout, creativeText } from './creative-layout';
 import { drawScene } from './creative-scene';
 
 export type { ComposeOverlay };
@@ -78,6 +78,8 @@ export interface CreativeSpec {
 
 /** The picture itself, the safe area alone (1:1) and the whole picture made small. */
 export type CreativePart = 'main' | 'safe' | 'full';
+/** A canvas the script reads row by row: a part of the last picture, or the last comparison sheet. */
+export type ReadablePart = CreativePart | 'compare';
 
 /** An App Store picture is read with `rows` afterwards: its pixels are too many for one answer. */
 export interface CreativeResult {
@@ -216,7 +218,7 @@ async function feature(spec: FeatureSpec): Promise<Composed> {
 }
 
 /** The canvases of the last App Store picture, read row by row (`rows`): they are too big for one call. */
-const lastCreative: Partial<Record<CreativePart, CanvasRenderingContext2D>> = {};
+const lastCreative: Partial<Record<ReadablePart, CanvasRenderingContext2D>> = {};
 
 /** A part of `source` (`area`, scaled to `width` x `height`) on a canvas of its own. */
 function copyOf(
@@ -248,9 +250,10 @@ async function creative(spec: CreativeSpec): Promise<CreativeResult> {
     width: p.naturalWidth,
     height: p.naturalHeight,
   }));
-  const { box, spec: textSpec } = posterTextBox(c, spec.variant);
-  const text = posterText(spec.lang, box, (line) => widthAt1(ctx, line), textSpec);
   const heroSize = { width: hero.naturalWidth, height: hero.naturalHeight };
+  if (spec.variant === 'c') checkHeroInk(hero);
+  const box = creativeBox(c, spec.variant);
+  const text = creativeText(c, spec.variant, spec.lang, (line) => widthAt1(ctx, line), heroSize);
   const layout = creativeLayout(c, spec.variant, pictures, heroSize, text);
   const outline = STORE_CAPTION.outlineWidth;
   const bounds = posterInk(layout.poster, text, box.width, outline, spec.variant === 'a');
@@ -284,12 +287,74 @@ async function creative(spec: CreativeSpec): Promise<CreativeResult> {
   };
 }
 
+/** Px of rounding the bounds of the hero's drawn part may differ by. */
+const INK_SLACK = 2;
+
+/**
+ * Variant C lays the hero out by its drawn part as `STORE_CREATIVE.c.hero` gives it: the render
+ * must be that size and its opaque pixels must have those bounds.
+ */
+function checkHeroInk(hero: HTMLImageElement): void {
+  const want = STORE_CREATIVE.c.hero;
+  const { naturalWidth: width, naturalHeight: height } = hero;
+  if (width !== want.width || height !== want.height) {
+    throw new Error(`the hero render is ${String(width)} x ${String(height)}, not as in the data`);
+  }
+  const ctx = canvas2d(width, height);
+  ctx.drawImage(hero, 0, 0);
+  const alpha = ctx.getImageData(0, 0, width, height).data;
+  let x0: number = width;
+  let y0: number = height;
+  let x1 = -1;
+  let y1 = -1;
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      if ((alpha[(y * width + x) * 4 + 3] ?? 0) === 0) continue;
+      x0 = Math.min(x0, x);
+      x1 = Math.max(x1, x);
+      y0 = Math.min(y0, y);
+      y1 = Math.max(y1, y);
+    }
+  }
+  const got = { x: x0, y: y0, width: x1 + 1 - x0, height: y1 + 1 - y0 };
+  const off = (Object.keys(got) as Array<keyof typeof got>).some(
+    (k) => Math.abs(got[k] - want.ink[k]) > INK_SLACK,
+  );
+  if (off) throw new Error(`the hero's drawn part is ${JSON.stringify(got)}, not as in the data`);
+}
+
 /** Rows `from` to `from + count` of a part of the last App Store picture as base64 RGBA. */
-function rows(part: CreativePart, from: number, count: number): string {
+function rows(part: ReadablePart, from: number, count: number): string {
   const ctx = lastCreative[part];
   if (!ctx) throw new Error('no App Store picture to read');
   const { width, height } = ctx.canvas;
   return pixels(ctx, { x: 0, y: from, width, height: Math.min(count, height - from) });
+}
+
+/** The comparison sheet: a band, its label, then the picture, for every picture (all as wide), read with `rows('compare')`. */
+const COMPARE = STORE_CREATIVE.compare;
+
+async function compare(
+  pictures: ReadonlyArray<{ label: string; image: string }>,
+): Promise<{ width: number; height: number }> {
+  const images = await Promise.all(pictures.map((p) => load(p.image)));
+  const width = Math.max(...images.map((i) => i.naturalWidth));
+  const height = images.reduce((sum, i) => sum + COMPARE.band + i.naturalHeight, 0);
+  const ctx = canvas2d(width, height);
+  ctx.fillStyle = STORE_CAPTION.fill;
+  ctx.fillRect(0, 0, width, height);
+  let y = 0;
+  images.forEach((image, i) => {
+    ctx.fillStyle = STORE_CAPTION.outline;
+    ctx.font = font(COMPARE.labelSize);
+    ctx.textBaseline = 'middle';
+    ctx.fillText(pictures[i]?.label ?? '', COMPARE.labelX, y + COMPARE.band / 2);
+    y += COMPARE.band;
+    ctx.drawImage(image, 0, y);
+    y += image.naturalHeight;
+  });
+  lastCreative.compare = ctx;
+  return { width, height };
 }
 
 /** The picture scaled to `size` square (the Google Play icon from the iOS one). */
@@ -317,6 +382,6 @@ function saveText(lang: StoreLang): string {
   return storeSaveText(lang);
 }
 
-const api = { ready: fontsReady(), shot, feature, creative, rows, icon, saveText };
+const api = { ready: fontsReady(), shot, feature, creative, compare, rows, icon, saveText };
 export type StoreCompose = typeof api;
 (window as Window & { storeCompose?: StoreCompose }).storeCompose = api;

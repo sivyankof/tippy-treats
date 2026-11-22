@@ -507,9 +507,9 @@ export interface StoreDecorCreature {
   face: StoreFace;
 }
 
-/** The two layouts of the App Store pictures the owner chooses from (docs/11, section 5). */
-export type StoreVariant = 'a' | 'b';
-export const STORE_VARIANTS: readonly StoreVariant[] = ['a', 'b'];
+/** The layouts of the App Store pictures the owner chooses from (docs/11, section 5). */
+export type StoreVariant = 'a' | 'b' | 'c';
+export const STORE_VARIANTS: readonly StoreVariant[] = ['a', 'b', 'c'];
 
 export const STORE_CREATIVE = {
   /** Folder of the pictures inside the output folder; a variant goes to `variants/<variant>/<id>-<lang>.png`. */
@@ -517,6 +517,8 @@ export const STORE_CREATIVE = {
   variantsFolder: 'variants',
   /** Beside every picture: `-safe` (the safe area alone, 1:1) and `-full` (the whole picture this wide). */
   previewWidth: 1500,
+  /** The comparison sheet of variant C (`compare-<id>-<lang>.png`): over each `-full` picture a white band of this height with its label, px. */
+  compare: { band: 90, labelSize: 60, labelX: 24 },
   /** Room kept free inside the safe area around the poster, a share of its smaller side. */
   inset: 0.03,
   /**
@@ -652,7 +654,59 @@ export const STORE_CREATIVE = {
     title: { maxSize: 0.11, minSize: 0.05, maxLines: 2 },
     subtitle: { maxSize: 0.042, minSize: 0.025, maxLines: 2 },
   },
+  /**
+   * Variant C: B made as large as the safe area takes. The hero's drawn part (the render less its
+   * empty margin) fills the box from top to bottom with its shadow, at its left edge; the title
+   * takes the rest of the width at the right; the tower goes on below as in B. The scene around
+   * is larger to match, its small decor thinned out to a few large pieces.
+   */
+  c: {
+    creatives: ['header', 'search'] as readonly StoreCreativeId[],
+    /**
+     * The hero render (`tippy-icon-hero-transparent.png`) and its drawn part, px of the render (the
+     * bounds of its opaque pixels). The compose page measures the file and fails if they differ.
+     */
+    hero: { width: 1254, height: 1254, ink: { x: 245, y: 193, width: 731, height: 918 } },
+    /** Room kept free inside the safe area, a share of its smaller side (the shadows and the outline are inside it). */
+    inset: 0.012,
+    /** The background pictures are drawn at picture width / `sceneWidth` (B: `STORE_CREATIVE.sceneWidth`). */
+    sceneWidth: 900,
+    /** The top tower creature's centre is `sink` of the hero's picture height above its bottom, as in B. */
+    heroSink: 0.02,
+    /** Tower creature width, times the width of the hero's drawn part (at most `sharpScale` times the layer). */
+    towerWidth: 1.25,
+    /** Between the hero's shadow and the text, a share of the box width. */
+    textGap: 0.02,
+    /** Between the title and the line under it, a share of the title size (their outlines stay apart). */
+    lineGap: 0.2,
+    title: { minSize: 0.05, maxLines: 2 },
+    /** The line under the title: `ratio` of the title size at most. */
+    subtitle: { ratio: 0.4, minSize: 0.02, maxLines: 2 },
+    /**
+     * The side towers, `scale` times as wide as B's: wider than a game picture stays sharp, so they
+     * are a near foreground, evenly out of focus (`blur` of the picture width). The lowest one's
+     * body centre is at `base` of the picture height; the centre `edge` of a width in from the
+     * outer edge.
+     */
+    stacks: { scale: 1.75, edge: 0.25, base: 0.96, blur: 0.0022 },
+    /** One jar a side at most, right at the safe area (`first` of a jar width off it, see `jars`), where it stands clear of the side tower. */
+    jars: { most: 1, first: 0.5 },
+    /** The garland is too deep to hang under the larger awning above the safe area: it goes over the awning. */
+    garlandOverAwning: true,
+    /** No layer flying above the tower: over the larger awning it would cover the garland's bulbs. */
+    flyer: false,
+    /** A few large coins and berries instead of the scatter, kept off the awning and the garland: how many in a picture, size a share of its height. */
+    scatter: {
+      count: { coin: 2, berry: 2, sprinkle: 0 },
+      size: { coin: 0.075, berry: 0.085, sprinkle: 0.03 },
+    },
+  },
 } as const;
+
+/** The pictures a variant is made in: variant C has no universal picture (it is not used). */
+export function variantMakes(variant: StoreVariant, id: StoreCreativeId): boolean {
+  return variant !== 'c' || STORE_CREATIVE.c.creatives.includes(id);
+}
 
 /** The Google Play icon: the iOS icon scaled down. */
 export const STORE_ICON = { size: 512, maxBytes: 1024 * 1024 } as const;

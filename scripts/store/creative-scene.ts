@@ -210,8 +210,17 @@ function drawBackdrop(
     const picture = art.jars[jar.jar % art.jars.length];
     if (picture) ctx.drawImage(picture, jar.rect.x, jar.rect.y, jar.rect.width, jar.rect.height);
   }
-  // The wire spans the game's screen; it is drawn across the picture at an even scale (its sag and
-  // thickness grow with it), and the bulbs hang on it where the game hangs them.
+  // The awning goes over the garland, so where the garland rises behind it, its ends tuck under;
+  // in variant C the garland hangs over the awning instead.
+  const awning = () => band(ctx, need(art.tiles, S.awning), k, bd.awningRows, 0, AWNING_ALPHA);
+  if (layout.backdrop.garlandOver) awning();
+  drawGarland(ctx, layout, art);
+  if (!layout.backdrop.garlandOver) awning();
+}
+
+/** The wire spans the game's screen; it is drawn across the picture at an even scale (its sag and thickness grow with it), and the bulbs hang on it where the game hangs them. */
+function drawGarland(ctx: CanvasRenderingContext2D, layout: CreativeLayout, art: SceneArt): void {
+  const { width } = ctx.canvas;
   const wire = need(art.tiles, S.wire);
   const top = layout.backdrop.garlandTop;
   const stretch = width / wire.width;
@@ -222,8 +231,6 @@ function drawBackdrop(
     const y = top + wireRow(wire, p.x * wire.width) * stretch - BULB_HANG * bulb.height;
     ctx.drawImage(bulb, p.x * width - bulb.width / 2, y);
   });
-  // The awning goes over the garland, so where the garland rises behind it, its ends tuck under.
-  band(ctx, need(art.tiles, S.awning), k, bd.awningRows, 0, AWNING_ALPHA);
 }
 
 /** One creature picture, turned about its centre, with the poster's shadow or out of focus. */

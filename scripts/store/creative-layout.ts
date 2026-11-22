@@ -5,6 +5,7 @@ import {
   STORE_FEATURE,
   type StoreCreative,
   type StoreDecorCreature,
+  type StoreLang,
   type StoreVariant,
 } from '../../src/data/debug/store-shots';
 import {
@@ -12,12 +13,14 @@ import {
   creativePosterBox,
   insetRect,
   posterLayout,
+  posterText,
   type PosterLayout,
   type PosterText,
   type PosterTextSpec,
   type Rect,
   type Size,
 } from './layout';
+import { boxC, creativeTextC, heroC, textRectsC } from './creative-c';
 
 /**
  * Pure layout of the App Store pictures (no DOM): where the game's background pictures, the
@@ -72,6 +75,8 @@ export interface Backdrop {
   awningBottom: number;
   /** Top of the garland wire picture. */
   garlandTop: number;
+  /** The garland goes over the awning (variant C), not behind its scallops. */
+  garlandOver: boolean;
   /** Top of the band of each shelf with treats (bottom first) and the shelf line in it. */
   shelves: Array<{ top: number; shelfTop: number }>;
 }
@@ -92,9 +97,9 @@ export interface CreativeLayout {
   scatter: ScatterItem[];
 }
 
-/** Picture px per px of the game for the background pictures. */
-export function backdropScale(creative: StoreCreative): number {
-  return creative.width / CR.sceneWidth;
+/** Picture px per px of the game for the background pictures (variant C draws them larger). */
+export function backdropScale(creative: StoreCreative, variant: StoreVariant): number {
+  return creative.width / (variant === 'c' ? CR.c.sceneWidth : CR.sceneWidth);
 }
 
 /** The widest a creature from the game may be drawn and stay sharp. */
@@ -142,11 +147,27 @@ function layerStep(width: number): number {
   return BALANCE.layer.height * (width / CR.artLayerWidth);
 }
 
-/** The creatures of variant B's tower, bottom first: as many as reach below the bottom edge. */
-function towerB(c: StoreCreative): Array<StoreDecorCreature & { level: number; grown: boolean }> {
-  const w = widthB(c);
+/** The hero render as variant C counts with it (the compose page checks the real one against it). */
+const HERO_C: Size = { width: CR.c.hero.width, height: CR.c.hero.height };
+
+/** Width of the tower creatures of variant C: as wide as the hero's drawn part asks, while they stay sharp. */
+function widthC(c: StoreCreative): number {
+  return Math.round(Math.min(CR.c.towerWidth * heroC(c, HERO_C).ink.width, SHARP_WIDTH));
+}
+
+/** The centre of the top creature of variant C's tower: under the hero, as in B. */
+function topCentreC(c: StoreCreative, hero: Size): number {
+  const { rect } = heroC(c, hero);
+  return rect.y + rect.height - CR.c.heroSink * rect.height;
+}
+
+/** The creatures of a tower that goes below the bottom edge (B, C), bottom first: as many as reach past it. */
+function towerDown(
+  c: StoreCreative,
+  w: number,
+  topCentreY: number,
+): Array<StoreDecorCreature & { level: number; grown: boolean }> {
   const h = w * FLATTEST_ASPECT;
-  const { topCentreY } = heroB(c, { width: 1, height: 1 });
   let bottom = topCentreY + h / 2 + (POSTER_TOP.length - 1) * layerStep(w);
   const below: StoreDecorCreature[] = [];
   for (let i = 0; bottom < c.height; i++) {
@@ -160,29 +181,47 @@ function towerB(c: StoreCreative): Array<StoreDecorCreature & { level: number; g
 
 /** Width of the poster's tower creatures in a variant. */
 function posterCreatureWidth(c: StoreCreative, variant: StoreVariant): number {
-  return variant === 'a'
-    ? Math.round(STORE_FEATURE.tower.width * creativePosterBox(c).width)
-    : widthB(c);
+  if (variant === 'a') return Math.round(STORE_FEATURE.tower.width * creativePosterBox(c).width);
+  return variant === 'b' ? widthB(c) : widthC(c);
+}
+
+/** The poster's creatures in a variant, bottom first. */
+function posterCreatures(c: StoreCreative, variant: StoreVariant) {
+  if (variant === 'a') return POSTER_TOP;
+  return variant === 'b'
+    ? towerDown(c, widthB(c), heroB(c, { width: 1, height: 1 }).topCentreY)
+    : towerDown(c, widthC(c), topCentreC(c, HERO_C));
+}
+
+/** Width of the side towers' creatures: C's are larger than a game picture stays sharp (and out of focus). */
+function stackWidth(c: StoreCreative, variant: StoreVariant): number {
+  const b = Math.min(CR.stacks.width * sideGap(c), SHARP_WIDTH);
+  return Math.round(variant === 'c' ? CR.c.stacks.scale * b : b);
 }
 
 /** Every creature the game draws for a picture of a variant, in the order `creativeLayout` takes their sizes. */
 export function creativeCreatures(c: StoreCreative, variant: StoreVariant): PlannedCreature[] {
   const posterWidth = posterCreatureWidth(c, variant);
-  const poster = variant === 'a' ? POSTER_TOP : towerB(c);
-  const stackWidth = Math.round(Math.min(CR.stacks.width * sideGap(c), SHARP_WIDTH));
+  const sideWidth = stackWidth(c, variant);
+  const near = variant === 'c' ? [] : CR.near;
+  const flyers = variant === 'c' && !CR.c.flyer ? [] : [CR.flyer];
   return [
-    ...poster.map((p) => ({ ...p, role: 'poster' as const, width: posterWidth })),
+    ...posterCreatures(c, variant).map((p) => ({
+      ...p,
+      role: 'poster' as const,
+      width: posterWidth,
+    })),
     ...[...CR.stacks.left, ...CR.stacks.right].map((p) => ({
       ...decor(p),
       role: 'stack' as const,
-      width: stackWidth,
+      width: sideWidth,
     })),
-    {
-      ...decor({ creature: CR.flyer.creature, face: CR.flyer.face }),
-      role: 'flyer',
+    ...flyers.map((f) => ({
+      ...decor({ creature: f.creature, face: f.face }),
+      role: 'flyer' as const,
       width: posterWidth,
-    },
-    ...CR.near.map((n) => ({
+    })),
+    ...near.map((n) => ({
       ...decor({ creature: n.creature, face: n.face }),
       role: 'near' as const,
       width: Math.round(n.width * c.height),
@@ -190,8 +229,8 @@ export function creativeCreatures(c: StoreCreative, variant: StoreVariant): Plan
   ];
 }
 
-function backdropOf(c: StoreCreative): Backdrop {
-  const k = backdropScale(c);
+function backdropOf(c: StoreCreative, variant: StoreVariant): Backdrop {
+  const k = backdropScale(c, variant);
   const bd = CR.backdrop;
   const awningBottom = bd.awningRows[1] * k;
   const band = (bd.treatsRows[1] - bd.treatsRows[0]) * k;
@@ -208,23 +247,30 @@ function backdropOf(c: StoreCreative): Backdrop {
     awningBottom + bd.garlandGap * c.height,
     c.safe.y - bd.garlandClear * c.height - bd.garlandDepth * k,
   );
-  return { scale: k, awningBottom, garlandTop, shelves };
+  const garlandOver = variant === 'c' && CR.c.garlandOverAwning;
+  return { scale: k, awningBottom, garlandTop, garlandOver, shelves };
 }
 
 /**
- * The jars on the lowest shelf at each side: in a row from the safe area outwards, as many as
- * stand clear of the side tower (`towerEdge`: how far the towers reach in from the outer edges).
+ * The jars on the lowest shelf at each side: in a row from the safe area outwards, at most `most`
+ * a side, as many as stand clear of the side tower (`towerEdge`: how far the towers reach in from
+ * the outer edges).
  */
-function jarsOf(c: StoreCreative, backdrop: Backdrop, towerEdge: number): PlacedJar[] {
+function jarsOf(
+  c: StoreCreative,
+  backdrop: Backdrop,
+  towerEdge: number,
+  row: { most: number; first: number },
+): PlacedJar[] {
   const J = CR.jars;
   const k = backdrop.scale;
   const size = { width: (J.width + 2 * J.pad) * k, height: (J.height + 2 * J.pad) * k };
   const shelf = backdrop.shelves[0]?.shelfTop ?? c.height;
   const gap = sideGap(c);
   const jars: PlacedJar[] = [];
-  for (let n = 0; n < J.most; n++) {
+  for (let n = 0; n < row.most; n++) {
     // The distance of the jar's centre from the outer edge.
-    const from = gap - size.width * (J.first + n * J.spacing);
+    const from = gap - size.width * (row.first + n * J.spacing);
     if (from - size.width / 2 < towerEdge) break;
     for (const side of [0, 1]) {
       const x = side === 0 ? from : c.width - from;
@@ -232,6 +278,14 @@ function jarsOf(c: StoreCreative, backdrop: Backdrop, towerEdge: number): Placed
     }
   }
   return jars;
+}
+
+/** How far down the awning and the garland reach, px. */
+function garlandBottom(backdrop: Backdrop): number {
+  return Math.max(
+    backdrop.awningBottom,
+    backdrop.garlandTop + CR.backdrop.garlandDepth * backdrop.scale,
+  );
 }
 
 /** A rectangle of `size` with its bottom centre at (`x`, `bottom`). */
@@ -257,6 +311,31 @@ function grow(r: Rect, by: number): Rect {
   return { x: r.x - by, y: r.y - by, width: r.width + 2 * by, height: r.height + 2 * by };
 }
 
+/** A tower under the hero (B, C), bottom first: the top one centred at `topCentreY`, each next one a layer lower. */
+function towerUnder(sizes: readonly Size[], x: number, topCentreY: number): Rect[] {
+  const tower: Rect[] = [];
+  let bottom = 0;
+  for (let i = sizes.length - 1; i >= 0; i--) {
+    const size = sizes[i]!;
+    const shift = (i % 2 === 0 ? -1 : 1) * CR.b.shift * size.width;
+    bottom = i === sizes.length - 1 ? topCentreY + size.height / 2 : bottom + layerStep(size.width);
+    tower[i] = standing(size, x + shift, bottom);
+  }
+  return tower;
+}
+
+/** The poster of variant C: the hero's drawn part as tall as the safe area takes, the title right of it. */
+function posterC(
+  c: StoreCreative,
+  sizes: readonly Size[],
+  hero: Size,
+  text: PosterText,
+): PosterLayout {
+  const { rect, ink } = heroC(c, hero);
+  const tower = towerUnder(sizes, ink.x + ink.width / 2, topCentreC(c, hero));
+  return { tower, hero: rect, heroInk: ink, ...textRectsC(c, hero, text) };
+}
+
 /** The poster of variant B: the tower on which the hero stands, going on below the bottom edge. */
 function posterB(
   c: StoreCreative,
@@ -266,16 +345,7 @@ function posterB(
 ): PosterLayout {
   const box = boxB(c);
   const { rect: heroRect, topCentreY } = heroB(c, hero);
-  const x = box.x + CR.b.towerX * box.width;
-  const tower: Rect[] = [];
-  // Top first: the top one centred where the hero stands, each next one a layer lower.
-  let bottom = 0;
-  for (let i = sizes.length - 1; i >= 0; i--) {
-    const size = sizes[i]!;
-    const shift = (i % 2 === 0 ? -1 : 1) * CR.b.shift * size.width;
-    bottom = i === sizes.length - 1 ? topCentreY + size.height / 2 : bottom + layerStep(size.width);
-    tower[i] = standing(size, x + shift, bottom);
-  }
+  const tower = towerUnder(sizes, box.x + CR.b.towerX * box.width, topCentreY);
   const t = CR.b.text;
   const titleH = captionBlockHeight(text.title, text.lineHeight);
   const subtitleH = captionBlockHeight(text.subtitle, text.lineHeight);
@@ -297,31 +367,55 @@ function posterB(
   };
 }
 
-/** The box and the text shares the poster's text is fitted to in a variant. */
-export function posterTextBox(
-  c: StoreCreative,
-  variant: StoreVariant,
-): { box: Rect; spec: PosterTextSpec } {
+/** The box and the text shares the poster's text is fitted to in variants A and B. */
+function posterTextBox(c: StoreCreative, variant: 'a' | 'b'): { box: Rect; spec: PosterTextSpec } {
   return variant === 'a'
     ? { box: creativePosterBox(c), spec: STORE_FEATURE }
     : { box: boxB(c), spec: CR.b };
 }
 
-/** A short tower of the decor on the lowest shelf at one side. */
+/** The box the poster of a variant is laid out in: its width is the unit of the poster's shadow. */
+export function creativeBox(c: StoreCreative, variant: StoreVariant): Rect {
+  return variant === 'c' ? boxC(c) : posterTextBox(c, variant).box;
+}
+
+/** The poster's title and the line under it in `lang`, fitted to the poster of a variant. */
+export function creativeText(
+  c: StoreCreative,
+  variant: StoreVariant,
+  lang: StoreLang,
+  widthAt1: (line: string) => number,
+  hero: Size,
+): PosterText {
+  if (variant === 'c') return creativeTextC(c, lang, widthAt1, hero);
+  const { box, spec } = posterTextBox(c, variant);
+  return posterText(lang, box, widthAt1, spec);
+}
+
+/**
+ * A short tower of the decor at one side: on the lowest shelf (A, B), or in front of it, nearer,
+ * larger and out of focus, its lowest one going off the bottom edge (C).
+ */
 function stack(
   c: StoreCreative,
+  variant: StoreVariant,
   side: 'left' | 'right',
   sizes: readonly Size[],
   shelfTop: number,
   first: number,
 ): PlacedCreature[] {
   const s = CR.stacks;
+  const near = variant === 'c' ? CR.c.stacks : null;
   const out = side === 'left' ? -1 : 1;
   const w = sizes[0]?.width ?? 0;
-  const x0 = side === 'left' ? s.edge * w : c.width - s.edge * w;
+  const edge = near ? near.edge : s.edge;
+  const x0 = side === 'left' ? edge * w : c.width - edge * w;
+  const blur = near ? near.blur * c.width : 0;
   const placed: PlacedCreature[] = [];
-  // The lowest one's shadow hangs over the shelf; each next one stands a layer higher.
-  let bottom = shelfTop + s.sink * (sizes[0]?.height ?? 0);
+  const lowest = sizes[0]?.height ?? 0;
+  // The lowest one's shadow hangs over the shelf (in C its centre is low on the picture); each
+  // next one stands a layer higher.
+  let bottom = near ? near.base * c.height + lowest / 2 : shelfTop + s.sink * lowest;
   sizes.forEach((size, i) => {
     if (i > 0) bottom -= layerStep(sizes[i - 1]!.width);
     // Leaning out: every one a little further out than the one below.
@@ -331,7 +425,7 @@ function stack(
       role: 'stack',
       rect: standing(size, x, bottom),
       angle: out * s.lean * i,
-      blur: 0,
+      blur,
     });
   });
   return placed;
@@ -341,16 +435,17 @@ function stack(
  * Coins, berries and sprinkles outside the safe area and off every creature, from the seeded
  * stream: the same picture every run.
  */
-function scatter(c: StoreCreative, avoid: readonly Rect[]): ScatterItem[] {
+function scatter(c: StoreCreative, variant: StoreVariant, avoid: readonly Rect[]): ScatterItem[] {
   const sc = CR.scatter;
+  const few = variant === 'c' ? CR.c.scatter : null;
   const rng = new Rng(hashString(`${sc.seed}:${c.id}`));
   const room = (c.width * c.height - c.safe.width * c.safe.height) / 1e6;
   const safe = grow(c.safe, sc.clear * c.height);
   const items: ScatterItem[] = [];
   const kinds: ScatterKind[] = ['coin', 'berry', 'sprinkle'];
   for (const kind of kinds) {
-    const count = Math.round(sc.perMegapixel[kind] * room);
-    const size = sc.size[kind] * c.height;
+    const count = few ? few.count[kind] : Math.round(sc.perMegapixel[kind] * room);
+    const size = (few ? few.size : sc.size)[kind] * c.height;
     for (let n = 0; n < count; n++) {
       for (let attempt = 0; attempt < sc.tries; attempt++) {
         const x = rng.range(0, c.width - size);
@@ -379,7 +474,7 @@ function scatter(c: StoreCreative, avoid: readonly Rect[]): ScatterItem[] {
 
 /**
  * The whole picture: `sizes` are the real sizes of `creativeCreatures(c, variant)` as the game
- * drew them, `hero` the hero render's, `text` the poster's text fitted to `posterTextBox`.
+ * drew them, `hero` the hero render's, `text` the poster's text (`creativeText`).
  */
 export function creativeLayout(
   c: StoreCreative,
@@ -390,7 +485,7 @@ export function creativeLayout(
 ): CreativeLayout {
   const plan = creativeCreatures(c, variant);
   if (sizes.length !== plan.length) throw new Error('creativeLayout: wrong number of creatures');
-  const backdrop = backdropOf(c);
+  const backdrop = backdropOf(c, variant);
   const roles = (role: DecorRole) =>
     plan.map((p, i) => ({ p, i })).filter(({ p }) => p.role === role);
   const posterIdx = roles('poster').map(({ i }) => i);
@@ -398,7 +493,9 @@ export function creativeLayout(
   const poster =
     variant === 'a'
       ? posterLayout(creativePosterBox(c), STORE_FEATURE, { tower: posterSizes, hero }, text)
-      : posterB(c, posterSizes, hero, text);
+      : variant === 'b'
+        ? posterB(c, posterSizes, hero, text)
+        : posterC(c, posterSizes, hero, text);
   const shelfTop = backdrop.shelves[0]?.shelfTop ?? c.height;
   const stackIdx = roles('stack').map(({ i }) => i);
   const left = stackIdx.slice(0, CR.stacks.left.length);
@@ -406,6 +503,7 @@ export function creativeLayout(
   const stacks = [
     ...stack(
       c,
+      variant,
       'left',
       left.map((i) => sizes[i]!),
       shelfTop,
@@ -413,25 +511,28 @@ export function creativeLayout(
     ),
     ...stack(
       c,
+      variant,
       'right',
       right.map((i) => sizes[i]!),
       shelfTop,
       right[0] ?? 0,
     ),
   ];
-  const flyerIdx = roles('flyer')[0]?.i ?? 0;
-  const flyerSize = sizes[flyerIdx]!;
-  const towerX = poster.hero.x + poster.hero.width / 2;
-  // Turned, it reaches lower than its rectangle: the turned bounds stay above the safe area.
-  const flyerRect = standing(flyerSize, towerX, c.safe.y - CR.flyer.gap * flyerSize.height);
-  const flyerReach = turnedBounds(flyerRect, CR.flyer.angle);
-  const flyer: PlacedCreature = {
-    art: flyerIdx,
-    role: 'flyer',
-    rect: { ...flyerRect, y: flyerRect.y - (flyerReach.height - flyerRect.height) / 2 },
-    angle: CR.flyer.angle,
-    blur: 0,
-  };
+  const heroInk = poster.heroInk ?? poster.hero;
+  const towerX = heroInk.x + heroInk.width / 2;
+  const flyers = roles('flyer').map(({ i }): PlacedCreature => {
+    const size = sizes[i]!;
+    // Turned, it reaches lower than its rectangle: the turned bounds stay above the safe area.
+    const rect = standing(size, towerX, c.safe.y - CR.flyer.gap * size.height);
+    const reach = turnedBounds(rect, CR.flyer.angle);
+    return {
+      art: i,
+      role: 'flyer',
+      rect: { ...rect, y: rect.y - (reach.height - rect.height) / 2 },
+      angle: CR.flyer.angle,
+      blur: 0,
+    };
+  });
   const near = roles('near').map(({ i }, n) => {
     const spec = CR.near[n]!;
     const size = sizes[i]!;
@@ -459,7 +560,7 @@ export function creativeLayout(
     angle: 0,
     blur: 0,
   }));
-  const creatures = [...stacks, ...posterCreatures, flyer, ...near];
+  const creatures = [...stacks, ...posterCreatures, ...flyers, ...near];
   const towerEdge = Math.max(
     0,
     ...stacks.map((p) => {
@@ -467,11 +568,15 @@ export function creativeLayout(
       return Math.min(r.x + r.width, c.width - r.x);
     }),
   );
-  const jars = jarsOf(c, backdrop, towerEdge);
+  const jars = jarsOf(c, backdrop, towerEdge, variant === 'c' ? CR.c.jars : CR.jars);
+  // Variant C keeps its few pieces off the awning and the garland hanging over it.
+  const top =
+    variant === 'c' ? [{ x: 0, y: 0, width: c.width, height: garlandBottom(backdrop) }] : [];
   const avoid = [
     ...creatures.map((p) => turnedBounds(p.rect, p.angle)),
     ...jars.map((j) => j.rect),
     poster.title,
+    ...top,
   ];
-  return { backdrop, jars, poster, creatures, scatter: scatter(c, avoid) };
+  return { backdrop, jars, poster, creatures, scatter: scatter(c, variant, avoid) };
 }

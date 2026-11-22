@@ -2,7 +2,7 @@
  * `npm run store:shots`: the screenshots of the store pages (docs/11-release-store.md, section 5).
  *
  *   npm run store:shots -- [--only cover,tap,...,feature,header,search,universal,iap,icon]
- *     [--platform ios|android] [--lang en|ru]
+ *     [--platform ios|android] [--lang en|ru] [--variant a,b,c]
  *     [--out <dir>] [--assets <dir>] [--url <dev server>] [--playwright <dir>] [--check]
  *
  * Besides the screenshots it lays out the Google Play feature graphic and the App Store creative
@@ -35,6 +35,7 @@ import {
   type StorePlatform,
   type StoreVariant,
   storeShotSize,
+  variantMakes,
   type StoreShot,
   type StoreStage,
 } from '../../src/data/debug/store-shots';
@@ -46,6 +47,7 @@ import type {
   CreativeResult,
   CreativeSpec,
   FeatureSpec,
+  ReadablePart,
   ShotSpec,
 } from './compose-page';
 import { creativeCreatures } from './creative-layout';
@@ -125,7 +127,10 @@ type StoreWindow = Window & {
     shot(spec: ShotSpec): Promise<Composed>;
     feature(spec: FeatureSpec): Promise<Composed>;
     creative(spec: CreativeSpec): Promise<CreativeResult>;
-    rows(part: CreativePart, from: number, count: number): string;
+    compare(
+      pictures: ReadonlyArray<{ label: string; image: string }>,
+    ): Promise<{ width: number; height: number }>;
+    rows(part: ReadablePart, from: number, count: number): string;
     icon(src: string, size: number): Promise<Composed>;
     saveText(lang: StoreLang): string;
   };
@@ -135,6 +140,8 @@ interface Options {
   only: Set<string> | null;
   platforms: StorePlatform[];
   langs: StoreLang[];
+  /** The variants of the App Store pictures to make (`--variant b,c`; all by default). */
+  variants: StoreVariant[];
   out: string;
   assets: string;
   url: string | null;
@@ -147,6 +154,7 @@ function readOptions(): Options {
     'only',
     'platform',
     'lang',
+    'variant',
     'out',
     'assets',
     'url',
@@ -157,12 +165,16 @@ function readOptions(): Options {
     return typeof value === 'string' ? value : null;
   };
   const assets = resolve(text('assets') ?? DEFAULT_ASSETS);
+  const variants = text('variant')?.split(',') ?? STORE_VARIANTS;
+  const unknown = variants.filter((v) => !(STORE_VARIANTS as readonly string[]).includes(v));
+  if (unknown.length > 0) throw new Error(`--variant: no variant ${unknown.join(', ')}`);
   const platform = text('platform');
   const lang = text('lang');
   return {
     only: text('only') ? new Set(text('only')!.split(',')) : null,
     platforms: STORE_PLATFORMS.filter((p) => platform === null || p === platform),
     langs: STORE_LANGS.filter((l) => lang === null || l === lang),
+    variants: STORE_VARIANTS.filter((v) => variants.includes(v)),
     out: resolve(text('out') ?? join(assets, 'screenshots')),
     assets,
     url: text('url'),
@@ -411,6 +423,20 @@ const CREATIVE_PARTS: ReadonlyArray<{ part: CreativePart; suffix: string }> = [
   { part: 'full', suffix: '-full' },
 ];
 
+/** The comparison sheet of variant C: B's whole picture over C's (`-full` of each). */
+const COMPARED: readonly StoreVariant[] = ['b', 'c'];
+const compareFile = (creative: StoreCreative, lang: StoreLang): string =>
+  join(
+    STORE_CREATIVE.folder,
+    STORE_CREATIVE.variantsFolder,
+    'c',
+    `compare-${creative.id}-${lang}.png`,
+  );
+
+/** Whether a run makes the comparison sheet of `creative` (it makes C's picture of it). */
+const makesCompare = (options: Options, creative: StoreCreative): boolean =>
+  options.variants.includes('c') && variantMakes('c', creative.id);
+
 const creativeFile = (
   creative: StoreCreative,
   variant: StoreVariant,
@@ -433,7 +459,7 @@ function posterArts(width: number): CreatureArtSpec[] {
 }
 
 /**
- * The App Store creative assets, both variants, every language. The game draws every creature of
+ * The App Store creative assets, every variant asked for, every language. The game draws every creature of
  * every picture once (at the width the picture lays it out at); the compose page lays out and
  * draws the rest, and the picture and its two check pictures are read back row by row.
  */
@@ -445,8 +471,20 @@ async function shootCreatives(
   base: string,
   hero: string,
 ): Promise<void> {
-  const plans = STORE_VARIANTS.flatMap((variant) =>
-    creatives.map((c) => ({ c, variant, creatures: creativeCreatures(c, variant) })),
+  // The comparison sheets take B's whole pictures from the output folder: missing ones fail the
+  // run before any picture is drawn, unless this run makes B itself first.
+  if (!options.variants.includes('b')) {
+    for (const c of creatives.filter((x) => makesCompare(options, x))) {
+      for (const lang of options.langs) {
+        const file = join(options.out, creativeFile(c, 'b', lang, '-full'));
+        if (!existsSync(file)) throw new Error(`no ${file} for the comparison sheet`);
+      }
+    }
+  }
+  const plans = options.variants.flatMap((variant) =>
+    creatives
+      .filter((c) => variantMakes(variant, c.id))
+      .map((c) => ({ c, variant, creatures: creativeCreatures(c, variant) })),
   );
   const arts: CreatureArtSpec[] = plans.flatMap((p) =>
     p.creatures.map((x) => ({
@@ -479,32 +517,59 @@ async function shootCreatives(
         spec,
       );
       for (const { part, suffix } of CREATIVE_PARTS) {
-        const { width, height } = result.parts[part];
-        const rgba = Buffer.alloc(width * height * 4);
-        for (let y = 0; y < height; y += CREATIVE_ROWS_PER_CALL) {
-          const chunk = await compose.evaluate(
-            ({ which, from, count }) =>
-              (window as StoreWindow).storeCompose!.rows(which, from, count),
-            { which: part, from: y, count: CREATIVE_ROWS_PER_CALL },
-          );
-          Buffer.from(chunk, 'base64').copy(rgba, y * width * 4);
-        }
-        writeRgba(
-          join(options.out, creativeFile(c, variant, lang, suffix)),
-          width,
-          height,
-          rgba,
-          'rgb',
-        );
+        const file = join(options.out, creativeFile(c, variant, lang, suffix));
+        await readPart(compose, part, result.parts[part], file);
       }
       const b = result.bounds;
       const at = [b.x, b.y, b.width, b.height].map((v) => String(Math.round(v))).join(',');
       const lines = (fit: CreativeResult['title']) => fit.lines.join(' / ');
       console.log(
-        `${creativeFile(c, variant, lang, '')}  ${lines(result.title)} | ${lines(result.subtitle)}  key ${at}`,
+        `${creativeFile(c, variant, lang, '')}  ${lines(result.title)} | ${lines(result.subtitle)}  key ${at}  title ${result.title.size.toFixed(0)} px`,
       );
     }
+    for (const c of creatives.filter((x) => makesCompare(options, x))) {
+      await shootCompare(options, compose, c, lang);
+    }
   }
+}
+
+/** Reads a canvas of the compose page row by row into a PNG file. */
+async function readPart(
+  compose: Page,
+  part: ReadablePart,
+  size: { width: number; height: number },
+  file: string,
+): Promise<void> {
+  const { width, height } = size;
+  const rgba = Buffer.alloc(width * height * 4);
+  for (let y = 0; y < height; y += CREATIVE_ROWS_PER_CALL) {
+    const chunk = await compose.evaluate(
+      ({ which, from, count }) => (window as StoreWindow).storeCompose!.rows(which, from, count),
+      { which: part, from: y, count: CREATIVE_ROWS_PER_CALL },
+    );
+    Buffer.from(chunk, 'base64').copy(rgba, y * width * 4);
+  }
+  writeRgba(file, width, height, rgba, 'rgb');
+}
+
+/** B's whole picture over C's, from the `-full` files in the output folder. */
+async function shootCompare(
+  options: Options,
+  compose: Page,
+  c: StoreCreative,
+  lang: StoreLang,
+): Promise<void> {
+  const pictures = COMPARED.map((variant) => {
+    const file = join(options.out, creativeFile(c, variant, lang, '-full'));
+    if (!existsSync(file)) throw new Error(`no ${file} to compare with`);
+    return { label: variant.toUpperCase(), image: dataUrl(readFileSync(file)) };
+  });
+  const size = await compose.evaluate(
+    (p) => (window as StoreWindow).storeCompose!.compare(p),
+    pictures,
+  );
+  await readPart(compose, 'compare', size, join(options.out, compareFile(c, lang)));
+  console.log(compareFile(c, lang));
 }
 
 async function shoot(
@@ -685,8 +750,8 @@ function expectedFiles(options: Options): CheckRow[] {
       height: Math.round((STORE_CREATIVE.previewWidth * c.height) / c.width),
     },
   });
-  for (const variant of STORE_VARIANTS) {
-    for (const c of creativesWanted(options)) {
+  for (const variant of options.variants) {
+    for (const c of creativesWanted(options).filter((x) => variantMakes(variant, x.id))) {
       for (const lang of options.langs) {
         for (const { part, suffix } of CREATIVE_PARTS) {
           const { width, height } = preview(c)[part];
@@ -694,6 +759,18 @@ function expectedFiles(options: Options): CheckRow[] {
           rows.push([file, width, height, 'rgb', MAX_CREATIVE_BYTES]);
         }
       }
+    }
+  }
+  for (const c of creativesWanted(options).filter((x) => makesCompare(options, x))) {
+    const height = COMPARED.length * (STORE_CREATIVE.compare.band + preview(c).full.height);
+    for (const lang of options.langs) {
+      rows.push([
+        compareFile(c, lang),
+        STORE_CREATIVE.previewWidth,
+        height,
+        'rgb',
+        MAX_CREATIVE_BYTES,
+      ]);
     }
   }
   if (wanted('icon')) {
