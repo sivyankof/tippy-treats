@@ -311,6 +311,17 @@ base64 -w0 android/app/google-services.json | gh secret set FIREBASE_ANDROID_JSO
 
 Перед проверкой порядка согласий на iPhone игру удалить и поставить заново: ответ на ATT система хранит до удаления.
 
+### 6.5. Сборки 1.0.1 (2026-11-22)
+
+Версия 1.0.1 (раздел 0), номера 11 и 12 одинаковые для обеих платформ (в Google Play выше всех прежних, последний был 8). Журнал GitHub обеих iOS-сборок: «Keys of this build: ADMOB_APP_ID_IOS ADMOB_REWARDED_ID_IOS ADMOB_INTERSTITIAL_ID_IOS REVENUECAT_API_KEY_IOS FIREBASE_IOS_PLIST», «Not set: none», `privacy manifests: ok`. Android: подпись ключом загрузки (`CN=Tippy Treats`, SHA-256 `FA:B8:02:34:…:8C:9E:F7:A1`), `versionName` 1.0.1 в манифесте пакета. В App Store Connect и Google Play ничего не отправлялось: версию 1.0.1, Marketing URL и отправку на проверку делает владелец после проверки на телефоне (`11-release-store.md`, раздел 4).
+
+| Сборка | Где | Что внутри |
+|---|---|---|
+| iOS 1.0.1 (11), внутренняя | TestFlight (запуск 44995347323) | отладочное меню; тестовая реклама Google; RevenueCat; Firebase |
+| iOS 1.0.1 (12), выпускная | TestFlight (запуск 44995354502) | без отладочного меню; идентификаторы AdMob из секретов; RevenueCat; Firebase. Её отправлять на проверку |
+| Android 1.0.1 (11), внутренняя | `tippy-treats-store-assetsuilds	ippy-treats-1.0.1-11-internal.aab` | отладочное меню; тестовые идентификаторы Google; RevenueCat; Firebase |
+| Android 1.0.1 (12), выпускная | `tippy-treats-store-assetsuilds	ippy-treats-1.0.1-12-store.aab` | без отладочного меню; идентификатор приложения и блоки AdMob из `.env`; RevenueCat; Firebase |
+
 ### 6.4. Товары Google Play (сессия 10, 2026-11-21)
 
 В Play Console заведены шесть разовых товаров `tippy_*`, у каждого один вариант покупки (purchase option) с идентификатором `buy`. Код покупок на Android находит их без правок:
