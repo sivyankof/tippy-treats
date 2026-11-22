@@ -280,7 +280,7 @@ base64 -w0 android/app/google-services.json | gh secret set FIREBASE_ANDROID_JSO
 
 ### 6.5. Сборки 1.0.1 (2026-11-22)
 
-Версия 1.0.1 (раздел 0), номера 11 и 12 одинаковые для обеих платформ (в Google Play выше всех прежних, последний был 8). Журнал GitHub обеих iOS-сборок: «Keys of this build: ADMOB_APP_ID_IOS ADMOB_REWARDED_ID_IOS ADMOB_INTERSTITIAL_ID_IOS REVENUECAT_API_KEY_IOS FIREBASE_IOS_PLIST», «Not set: none», `privacy manifests: ok`. Android: подпись ключом загрузки (`CN=Tippy Treats`, SHA-256 `FA:B8:02:34:…:8C:9E:F7:A1`), `versionName` 1.0.1 в манифесте пакета. В App Store Connect и Google Play ничего не отправлялось: версию 1.0.1, Marketing URL и отправку на проверку делает владелец после проверки на телефоне (`11-release-store.md`, раздел 4).
+Версия 1.0.1 (раздел 0), номера 11 и 12 одинаковые для обеих платформ (в Google Play выше всех прежних, последний был 8). Журнал GitHub обеих iOS-сборок: «Keys of this build: ADMOB_APP_ID_IOS ADMOB_REWARDED_ID_IOS ADMOB_INTERSTITIAL_ID_IOS REVENUECAT_API_KEY_IOS FIREBASE_IOS_PLIST», «Not set: none», `privacy manifests: ok`. Android: подпись ключом загрузки (`CN=Tippy Treats`, SHA-256 `FA:B8:02:34:…:8C:9E:F7:A1`), `versionName` 1.0.1 в манифесте пакета. iOS 1.0.1 (12) отправлена в Apple 2026-11-22 без проверки на телефоне (решение владельца), выпуск автоматический после одобрения. Android 1.0.1 (12) в Google Play не загружается до окончания закрытого теста (около 5 декабря); до выхода в рабочую версию вписать адрес сайта в карточку Google Play.
 
 | Сборка | Где | Что внутри |
 |---|---|---|
