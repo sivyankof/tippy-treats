@@ -523,7 +523,7 @@
   "daily": {
     "title": "Daily tower",
     "date": "Tower of {date}",
-    "team": "Today's team, the same for everyone",
+    "team": "Today's team",
     "rewards": "Rewards",
     "attempts": "Attempts left: {n}",
     "extraAttempt": "+1 attempt for an ad",
