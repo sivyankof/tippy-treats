@@ -1445,7 +1445,7 @@ LayerView (container)
 | Мастер-эффект в забеге | Лёгкий удар (`light`), только если в этом шаге нет другой вибрации; «Кураж» так же (`game/fx/audio/run-cues.ts`) |
 | Превращение (уровни 3 и 5) | Уведомление «успех» |
 
-В приложениях (M7) типы идут в системную вибрацию через `@capacitor/haptics` (`services/haptics/native.ts`): удары — `impact` Light/Medium/Heavy, «успех» и «ошибка» — `notification`, выбор — `selectionStart` → `selectionChanged` → `selectionEnd` (iOS отдаёт щелчок выбора только внутри начала и конца), серия рекорда — три `impact` Medium через `HAPTICS.tripleGap` (70 мс). В браузере те же типы — шаблоны `navigator.vibrate` из `data/app/haptics.ts`.
+В приложениях типы идут в системную вибрацию через `@capacitor/haptics` (`services/haptics/native.ts`): удары — `impact` Light/Medium/Heavy, «успех» и «ошибка» — `notification`, выбор — `selectionStart` → `selectionChanged` → `selectionEnd` (iOS отдаёт щелчок выбора только внутри начала и конца), серия рекорда — три `impact` Medium через `HAPTICS.tripleGap` (70 мс). В браузере те же типы — шаблоны `navigator.vibrate` из `data/app/haptics.ts`.
 
 ## 9. Производительность
 
