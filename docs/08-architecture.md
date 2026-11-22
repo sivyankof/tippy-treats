@@ -61,7 +61,7 @@ tippy-treats/
 ├── index.html
 ├── package.json
 ├── vite.config.ts
-├── capacitor.config.ts
+├── capacitor.config.json
 ├── .env.example
 ├── assets/
 │   ├── svg/            лица, иконки, элементы интерфейса, фоны
@@ -69,11 +69,15 @@ tippy-treats/
 │   ├── music/          треки музыки (m4a, AAC), лицензии в LICENSES.md
 │   └── LICENSES.md
 ├── ios/                создаётся Capacitor (этап M7)
-├── android/            создаётся Capacitor (этап M9)
+├── android/            создаётся Capacitor (этап M7)
+├── .github/workflows/  ios.yml и android.yml: сборки в GitHub Actions, только ручной запуск (11a-device-build.md)
+├── site/               сайт игры: политика, условия, поддержка, en и ru (11-release-store.md, раздел 9)
 ├── scripts/
 │   ├── sim.ts          бот-симуляция для баланса
 │   ├── dev-tools.cjs   общее для браузерных скриптов: параметры, свой vite, поиск Playwright
 │   ├── store/          npm run store:shots: скриншоты для сторов (11-release-store.md, раздел 5)
+│   ├── native/         сборка AAB, иконки, ключ загрузки, версия приложения, проверка манифестов конфиденциальности
+│   ├── site/           выкладка и страж сайта (`site-guard.test.ts`)
 │   ├── folder-size.test.ts   не больше 40 файлов в папке src
 │   └── secrets-guard.test.ts в отслеживаемых файлах нет ключей рекламы, покупок и Firebase
 └── src/
@@ -183,7 +187,6 @@ tippy-treats/
     │   │                       `tap-hint.ts`, `perfect-hint.ts`, `caption-hint.ts`, `tutorial-hints.ts`, `hint-spot.ts` (выбор места плашки), `hint-textures.ts`
     │   ├── scenes/
     │   │   ├── boot-scene.ts
-    │   │   ├── preload-scene.ts
     │   │   ├── home-scene.ts
     │   │   ├── new-creature-scene.ts  сцена нового существа (коробка, лучи, имя по буквам)
     │   │   ├── game-scene.ts
@@ -193,8 +196,7 @@ tippy-treats/
     │   │   ├── collection-scene.ts
     │   │   ├── creature-detail-scene.ts
     │   │   ├── daily-scene.ts      экран башни дня
-    │   │   ├── shop-scene.ts       магазин: блоки `ui/menu/shop/`, покупки через `game/economy/purchases.ts`
-    │   │   └── modal-scene.ts      окна: задания, серия, настройки, продолжение
+    │   │   └── shop-scene.ts       магазин: блоки `ui/menu/shop/`, покупки через `game/economy/purchases.ts`
     │   ├── objects/
     │   │   ├── tower/              tower-view.ts, layer-view.ts (слой: картинка, лицо, анимации), layer-art.ts, layer-art-slot.ts (кэш
     │   │   │   │                   запечённой картинки слоя), layer-rig.ts (вспышка, прыжок, прозрачность, разрез «Двойняшек»),
@@ -257,24 +259,28 @@ tippy-treats/
     │       │                   `toggle-switch.ts`: переключатель; `ring-timer.ts`: круговой таймер; `wallet-chip.ts`: счётчик валюты на
     │       │                   плашке; `hud-plate.ts`: полупрозрачная плашка HUD; `menu-scenery.ts`: кухня забега за меню)
     │       └── menu/           куски экранов меню по папкам экранов и окон: home/, collection/, detail/, team/, daily/, shop/,
-    │                           results/ (и новый уровень), streak/, missions/, oven/, new-creature/, settings/, checkpoint/;
+    │                           results/ (и новый уровень), streak/, missions/, oven/, new-creature/, settings/, checkpoint/,
+    │                           consent/ (окно-пояснение перед системным вопросом ATT);
     │                           widgets/: общие элементы (шапка с лентой и кошельком на плашках, кнопки-иконки, звёзды, цена с иконкой,
     │                           полоса опыта, карточка существа, подпись способа получения, `fitText`)
     ├── services/       ВНЕШНИЙ МИР (интерфейс + native + web-заглушка)
     │   ├── storage/            `types.ts` (`StorageService`), `web.ts` (localStorage, при сбое память страницы), `memory.ts`, `native.ts` (`@capacitor/preferences`)
     │   ├── app-shell/          приложение вокруг игры: `types.ts` (`AppShellService`: активность, «назад», свернуть, убрать заставку), `native.ts` (`@capacitor/app`, `@capacitor/splash-screen`), `web.ts` (в браузере ничего)
-    │   ├── rewarded-video/     реклама: `types.ts`, `web.ts` (заглушка; нативная появится в M7)
+    │   ├── rewarded-video/     реклама: `types.ts`, `web.ts` (заглушка), `native.ts` (AdMob), `plugin.ts` (события плагина), `ad-units.ts` (идентификаторы блоков по платформе)
     │   ├── iap/                покупки: `types.ts` (`IapService`), `web.ts` (заглушка стора), `native.ts` (RevenueCat), `product-ids.ts` (ключ товара ↔ ид. из `.env`)
     │   ├── telemetry/          аналитика: `types.ts`, `web.ts` (консоль в dev), `native.ts` (Firebase Analytics через плагин, только при файле настроек), `validate.ts` (проверка имён и параметров), `event-log.ts` (журнал для отладочного меню)
     │   ├── crash/              сбои: `types.ts` (`CrashService`), `web.ts`, `native.ts` (Crashlytics), `reporter.ts` (глобальный обработчик, ограничения), `describe.ts` (стек в кадры)
     │   ├── haptics/            `types.ts`, `switchable.ts` (общий выключатель), `web.ts` (`navigator.vibrate`), `native.ts` (`@capacitor/haptics`)
     │   ├── audio/              звук и музыка: `web.ts` (`WebAudioService`), `synth.ts` (кирпичики звуков), `mixer.ts` + `mixer-math.ts` (шины, ограничитель, приглушение), `sound-args.ts` + `sound-book.ts` (реестр звуков `SOUND_BOOK`), `sound-player.ts` + `voice-gate.ts` (допуск звуков: приоритеты, предел, повтор), `node-tally.ts` (счёт живых узлов), `music-control.ts` + `music-proxy.ts` (интерфейс музыки, заглушка и запоминание вызовов), `music/` (плеер готовых треков: `playlist-player.ts` плейлист и исключения, переходы между треками, не больше двух одновременно, `playlist-turn.ts` чистые расчёты хода плейлиста (длина хода трека, позиция, первый и следующий трек), `tune-deck.ts` один трек на своей громкости с петлёй (разобранный буфер или поток через элементы `audio`), `media-pool.ts` элементы `audio` потока, `tune-loop.ts` чистые расчёты петли (границы с учётом добавочных отсчётов AAC, сглаживание стыка) и кривые перехода, `tune-loader.ts` загрузка и разбор файла; раскладка мест и треков в `data/audio/music.ts`, кто что просит в `musicAskFor` там же), `offline-render.ts`, `wav.ts`, `levels.ts` (запись звука без устройства и измерения), `notes.ts`
     │   ├── silent-mode/        беззвучный режим устройства: `types.ts`, `web.ts` (заглушка, никогда не беззвучный)
-    │   ├── notifications/
-    │   ├── consent/
-    │   ├── share/
+    │   ├── notifications/      локальные уведомления: `types.ts`, `web.ts`, `native.ts`
+    │   ├── consent/            согласия (UMP, ATT): `types.ts`, `web.ts`, `native.ts`
+    │   ├── rating/             системное окно оценки: `types.ts` (`RatingService`), `web.ts`, `native.ts`
+    │   ├── share/              `types.ts`, `web.ts` (`navigator.share` или скачивание PNG)
+    │   ├── common/             `fire-and-forget.ts` (вызов плагина без ожидания, сбой не доходит до игры)
     │   └── index.ts            выбор реализации по платформе
     ├── state/
+    │   ├── events/             события аналитики слоя сохранения (`state-events.ts`) и свойства игрока (`user-properties.ts`)
     │   ├── game-state.ts       единственный владелец сохранения в памяти (класс `GameState`, зависимости внедряются)
     │   ├── save-store.ts       загрузка с таймаутом, отложенная запись, копия и повтор (класс `SaveStore`)
     │   ├── run-record.ts       чистые правила конца забега: статистика, рекорд, XP, награды уровней
@@ -606,7 +612,7 @@ interface MissionProgress { id: string; group: 'easy' | 'medium' | 'hard'; targe
 ## 7. Сцены
 
 - `game-scene` и `hud-scene` работают параллельно: забег и его интерфейс.
-- `modal-scene` запускается поверх любой сцены и ставит нижнюю на паузу.
+- Отдельной сцены для окон нет. Окна меню (задания, серия, настройки, подарок, подтверждения) — `PopupWindow` (`ui/style/dialog-window.ts`) внутри сцены своего экрана: вуаль окна закрывает всё под ним от касаний. Окна забега (пауза, «Ещё попытка?») стоят в `hud-scene` (`ui/run/pause-overlay.ts`, `ui/run/continue-window.ts`).
 - Переходы между экранами идут через единый помощник `ui/common/transition.ts`, чтобы анимация переходов была одинаковой.
 - Сцена забега в каждом кадре: `events = sim.update(dt)` → передать события в `TowerView` и `fx` → обновить камеру. По касанию: `events = sim.drop()`.
 - Объекты слоёв, частиц и всплывающих текстов берутся из пулов.
