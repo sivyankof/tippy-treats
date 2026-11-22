@@ -675,6 +675,14 @@ export const STORE_CREATIVE = {
     heroSink: 0.02,
     /** Tower creature width, times the width of the hero's drawn part (at most `sharpScale` times the layer). */
     towerWidth: 1.25,
+    /**
+     * Pictures whose tower is as wide as the hero's drawn part times this, wider than a game picture
+     * stays sharp: the game draws those creatures at its own layer width (`artLayerWidth`, one
+     * texture pixel to one picture pixel) and the compose page enlarges them with high-quality
+     * smoothing (the picture is shown several times smaller on a phone). Elsewhere `towerWidth`
+     * and the sharp limit hold.
+     */
+    towerEnlarged: { search: 1 } as Readonly<Partial<Record<StoreCreativeId, number>>>,
     /** Between the hero's shadow and the text, a share of the box width. */
     textGap: 0.02,
     /** Between the title and the line under it, a share of the title size (their outlines stay apart). */

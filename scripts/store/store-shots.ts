@@ -492,7 +492,7 @@ async function shootCreatives(
       level: x.level,
       grown: x.grown,
       face: x.face,
-      widthPx: x.width,
+      widthPx: x.artWidth,
     })),
   );
   // Any moment of the game will do: only its pictures of the creatures are used.

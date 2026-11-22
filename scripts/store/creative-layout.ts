@@ -35,7 +35,10 @@ export type DecorRole = 'poster' | 'stack' | 'flyer' | 'near';
 /** A creature the game draws for a picture, `width` px wide. */
 export interface PlannedCreature extends StoreDecorCreature {
   role: DecorRole;
+  /** Width on the picture. */
   width: number;
+  /** Width the game draws it at: `width`, or less for a picture enlarged on the compose page. */
+  artWidth: number;
   level: number;
   /** The grown look of mastery (only where the poster of the feature graphic has it). */
   grown: boolean;
@@ -55,6 +58,8 @@ export interface PlacedCreature {
   rect: Rect;
   angle: number;
   blur: number;
+  /** The game's picture is enlarged to `rect` (high-quality smoothing). */
+  enlarged?: boolean;
 }
 
 export type ScatterKind = 'coin' | 'berry' | 'sprinkle';
@@ -150,9 +155,20 @@ function layerStep(width: number): number {
 /** The hero render as variant C counts with it (the compose page checks the real one against it). */
 const HERO_C: Size = { width: CR.c.hero.width, height: CR.c.hero.height };
 
-/** Width of the tower creatures of variant C: as wide as the hero's drawn part asks, while they stay sharp. */
+/** How many times the hero's drawn part variant C's tower is as wide in a picture where it is enlarged, else null. */
+function enlargedC(c: StoreCreative): number | null {
+  return CR.c.towerEnlarged[c.id] ?? null;
+}
+
+/**
+ * Width of the tower creatures of variant C: as wide as the hero's drawn part asks, while they
+ * stay sharp; as wide as `towerEnlarged` asks where they are enlarged.
+ */
 function widthC(c: StoreCreative): number {
-  return Math.round(Math.min(CR.c.towerWidth * heroC(c, HERO_C).ink.width, SHARP_WIDTH));
+  const ink = heroC(c, HERO_C).ink.width;
+  const enlarged = enlargedC(c);
+  if (enlarged !== null) return Math.round(enlarged * ink);
+  return Math.round(Math.min(CR.c.towerWidth * ink, SHARP_WIDTH));
 }
 
 /** The centre of the top creature of variant C's tower: under the hero, as in B. */
@@ -202,6 +218,7 @@ function stackWidth(c: StoreCreative, variant: StoreVariant): number {
 /** Every creature the game draws for a picture of a variant, in the order `creativeLayout` takes their sizes. */
 export function creativeCreatures(c: StoreCreative, variant: StoreVariant): PlannedCreature[] {
   const posterWidth = posterCreatureWidth(c, variant);
+  const posterArt = variant === 'c' && enlargedC(c) !== null ? CR.artLayerWidth : posterWidth;
   const sideWidth = stackWidth(c, variant);
   const near = variant === 'c' ? [] : CR.near;
   const flyers = variant === 'c' && !CR.c.flyer ? [] : [CR.flyer];
@@ -210,21 +227,25 @@ export function creativeCreatures(c: StoreCreative, variant: StoreVariant): Plan
       ...p,
       role: 'poster' as const,
       width: posterWidth,
+      artWidth: posterArt,
     })),
     ...[...CR.stacks.left, ...CR.stacks.right].map((p) => ({
       ...decor(p),
       role: 'stack' as const,
       width: sideWidth,
+      artWidth: sideWidth,
     })),
     ...flyers.map((f) => ({
       ...decor({ creature: f.creature, face: f.face }),
       role: 'flyer' as const,
       width: posterWidth,
+      artWidth: posterWidth,
     })),
     ...near.map((n) => ({
       ...decor({ creature: n.creature, face: n.face }),
       role: 'near' as const,
       width: Math.round(n.width * c.height),
+      artWidth: Math.round(n.width * c.height),
     })),
   ];
 }
@@ -474,17 +495,24 @@ function scatter(c: StoreCreative, variant: StoreVariant, avoid: readonly Rect[]
 
 /**
  * The whole picture: `sizes` are the real sizes of `creativeCreatures(c, variant)` as the game
- * drew them, `hero` the hero render's, `text` the poster's text (`creativeText`).
+ * drew them (at `artWidth`; one drawn smaller is laid out enlarged to `width`), `hero` the hero render's, `text` the poster's text (`creativeText`).
  */
 export function creativeLayout(
   c: StoreCreative,
   variant: StoreVariant,
-  sizes: readonly Size[],
+  drawn: readonly Size[],
   hero: Size,
   text: PosterText,
 ): CreativeLayout {
   const plan = creativeCreatures(c, variant);
-  if (sizes.length !== plan.length) throw new Error('creativeLayout: wrong number of creatures');
+  if (drawn.length !== plan.length) throw new Error('creativeLayout: wrong number of creatures');
+  // A picture the game drew smaller than it is shown is laid out at its shown width; every other
+  // one at the size the game drew it.
+  const sizes = drawn.map((size, i) => {
+    const { width, artWidth } = plan[i]!;
+    if (artWidth >= width) return size;
+    return { width, height: (size.height * width) / size.width };
+  });
   const backdrop = backdropOf(c, variant);
   const roles = (role: DecorRole) =>
     plan.map((p, i) => ({ p, i })).filter(({ p }) => p.role === role);
@@ -559,6 +587,7 @@ export function creativeLayout(
     rect: poster.tower[n]!,
     angle: 0,
     blur: 0,
+    enlarged: plan[i]!.artWidth < plan[i]!.width,
   }));
   const creatures = [...stacks, ...posterCreatures, ...flyers, ...near];
   const towerEdge = Math.max(

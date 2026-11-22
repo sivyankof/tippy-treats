@@ -33,7 +33,8 @@ function layouts() {
       for (const lang of STORE_LANGS) {
         for (const aspect of ASPECTS) {
           const plan = creativeCreatures(c, variant);
-          const sizes = plan.map((p) => ({ width: p.width, height: p.width * aspect }));
+          // As the game draws them: at `artWidth`.
+          const sizes = plan.map((p) => ({ width: p.artWidth, height: p.artWidth * aspect }));
           const box = creativeBox(c, variant);
           const text = creativeText(c, variant, lang, measure, HERO);
           const layout = creativeLayout(c, variant, sizes, HERO, text);
@@ -101,13 +102,22 @@ describe('App Store pictures, every variant', () => {
     }
   });
 
-  it('draw every sharp creature no wider than the game picture stands', () => {
+  it('draw every sharp creature no wider than the game picture stands, but the enlarged tower of C', () => {
     for (const x of ALL) {
-      for (const p of x.layout.creatures.filter((q) => q.blur === 0)) {
+      for (const p of x.layout.creatures.filter((q) => q.blur === 0 && !q.enlarged)) {
         expect(p.rect.width, name(x)).toBeLessThanOrEqual(SHARP_WIDTH + 1);
       }
-      for (const p of x.layout.creatures.filter((q) => q.rect.width > SHARP_WIDTH + 1)) {
+      for (const p of x.layout.creatures.filter(
+        (q) => q.rect.width > SHARP_WIDTH + 1 && !q.enlarged,
+      )) {
         expect(p.blur, name(x)).toBeGreaterThan(0);
+      }
+      const enlarged = x.layout.creatures.filter((q) => q.enlarged);
+      const allowed = x.variant === 'c' && x.c.id in STORE_CREATIVE.c.towerEnlarged;
+      expect(enlarged.length > 0, name(x)).toBe(allowed);
+      for (const p of enlarged) {
+        expect(p.role, name(x)).toBe('poster');
+        expect(x.plan[p.art]!.artWidth, name(x)).toBe(STORE_CREATIVE.artLayerWidth);
       }
     }
   });
@@ -233,6 +243,18 @@ describe('App Store pictures, variant C', () => {
         name(x),
       ).toEqual([]);
       expect(x.layout.scatter.length, name(x)).toBeLessThanOrEqual(few.coin + few.berry);
+    }
+  });
+
+  it('makes the tower as wide as the hero where it is enlarged, keeps it sharp elsewhere', () => {
+    for (const x of C_ALL) {
+      const share = STORE_CREATIVE.c.towerEnlarged[x.c.id];
+      const tower = x.layout.creatures.filter((p) => p.role === 'poster');
+      const ink = heroOf(x).width;
+      for (const p of tower) {
+        if (share === undefined) expect(p.rect.width, name(x)).toBeLessThanOrEqual(SHARP_WIDTH + 1);
+        else expect(Math.abs(p.rect.width - share * ink), name(x)).toBeLessThanOrEqual(1);
+      }
     }
   });
 

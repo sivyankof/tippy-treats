@@ -251,11 +251,21 @@ async function drawCreature(
     ctx.restore();
     return;
   }
-  await drawOverlays(
-    ctx,
-    [{ image, x: r.x + r.width / 2, y: r.y + r.height / 2, width: r.width, angle: placed.angle }],
-    shadowUnit,
-  );
+  const draw = () =>
+    drawOverlays(
+      ctx,
+      [{ image, x: r.x + r.width / 2, y: r.y + r.height / 2, width: r.width, angle: placed.angle }],
+      shadowUnit,
+    );
+  if (!placed.enlarged) {
+    await draw();
+    return;
+  }
+  // An enlarged picture gets the smooth (cubic) filter: no steps along its outline.
+  ctx.save();
+  ctx.imageSmoothingQuality = 'high';
+  await draw();
+  ctx.restore();
 }
 
 /** Coins, berries and sprinkles. */
