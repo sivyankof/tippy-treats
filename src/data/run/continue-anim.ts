@@ -34,6 +34,9 @@ export const CONTINUE_ANIM = {
     berryButtonY: 850,
     /** Berry balance counter: right edge in line with the buttons, between the timer and the buttons. */
     balanceY: 570,
+    /** "You have:" left of the balance counter: its font and the gap to the counter's plate. */
+    balanceCaptionFont: 52,
+    balanceCaptionGap: 18,
     declineY: 970,
   },
   timer: {

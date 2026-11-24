@@ -6,7 +6,12 @@ import { services } from '../../../../services';
 import { gameState } from '../../../../state';
 import { logGiftOpen } from '../../../economy/economy-telemetry';
 import { showRewarded } from '../../../economy/rewarded';
-import { markAdUnavailable, plainAdLabel, resetAdLabel } from '../widgets/ad-unavailable';
+import {
+  followAdButton,
+  markAdUnavailable,
+  plainAdLabel,
+  resetAdLabel,
+} from '../widgets/ad-unavailable';
 import { cssColor } from '../../../../util/color';
 import { createTextButton, type Button } from '../../common/button';
 import { createOutlinedText } from '../../common/outlined-text';
@@ -166,8 +171,10 @@ export function openGiftWindow(
         plainAdLabel(label, adLabelWidth);
         return;
       }
-      if (result === 'unavailable') markAdGone(button, label);
-      else {
+      if (result === 'unavailable') {
+        markAdGone(button, label);
+        busy = false;
+      } else {
         busy = false;
         button.setEnabled(true);
       }
@@ -179,6 +186,12 @@ export function openGiftWindow(
       });
       if (!services.ads.isRewardedReady()) markAdGone(doubled.button, doubled.label);
       else resetAdLabel(doubled.label, adLabelWidth);
+      followAdButton(doubled.button, doubled.label, {
+        text: t('gift.double'),
+        maxWidth: adLabelWidth,
+        alpha: cfg.adDisabledAlpha,
+        paused: () => busy,
+      });
     });
   };
 

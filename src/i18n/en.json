@@ -22,10 +22,13 @@
     "demo": "Demo: {name}"
   },
   "continue": {
-    "title": "One more try?",
+    "title": "Continue?",
     "height": "Height {n}",
-    "watchAd": "Watch an ad",
+    "watchAd": "Continue for an ad",
+    "payFor": "Continue for {price}",
+    "balance": "You have: {n}",
     "adUnavailable": "Ad unavailable",
+    "adLoading": "Loading…",
     "noInternet": "No internet",
     "decline": "No thanks"
   },
@@ -38,8 +41,8 @@
       "locked": "Reach layer {n} from scratch",
       "free": "free",
       "play": "Play",
-      "playFor": "Play · {price}",
-      "watchAd": "Watch ad"
+      "playFor": "Play for {price}",
+      "watchAd": "Play for an ad"
     }
   },
   "ads": {

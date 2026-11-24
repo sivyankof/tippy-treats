@@ -25,6 +25,7 @@ export function openStartChoice(
   const window: CheckpointWindow = openCheckpointWindow(scene, {
     rows: rows(),
     berries: gameState.berries,
+    liveRows: rows,
     onChoose: async (height, method) => {
       if (method === 'free' || height === 0) {
         start(CLASSIC_RUN);

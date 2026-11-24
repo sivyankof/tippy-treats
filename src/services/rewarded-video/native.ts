@@ -10,6 +10,8 @@ interface Slot {
   unit: string | undefined;
   ready: boolean;
   loading: boolean;
+  /** When the load under way began (`now()`); meaningful only while `loading`. */
+  loadStartedAt: number;
   failures: number;
   retry: unknown;
 }
@@ -18,6 +20,7 @@ const newSlot = (unit: string | undefined): Slot => ({
   unit,
   ready: false,
   loading: false,
+  loadStartedAt: 0,
   failures: 0,
   retry: null,
 });
@@ -49,6 +52,7 @@ export class NativeAds implements AdsService {
     private readonly isOnline: () => boolean = () =>
       typeof navigator === 'undefined' || navigator.onLine !== false,
     private readonly schedule: Schedule = (run, delayMs) => setTimeout(run, delayMs),
+    private readonly now: () => number = () => Date.now(),
   ) {
     this.rewarded = newSlot(units.rewarded);
     this.interstitial = newSlot(units.interstitial);
@@ -74,7 +78,10 @@ export class NativeAds implements AdsService {
 
   rewardedUnavailableReason(): RewardedUnavailableReason | null {
     if (this.isRewardedReady() || this.settleRewarded !== null) return null;
-    return this.isOnline() ? 'no_fill' : 'offline';
+    if (!this.isOnline()) return 'offline';
+    const slot = this.rewarded;
+    const fresh = this.now() - slot.loadStartedAt < AD_LOAD.loadingCaptionMaxMs;
+    return slot.loading && fresh ? 'loading' : 'no_fill';
   }
 
   async showRewarded(): Promise<RewardedResult> {
@@ -166,6 +173,7 @@ export class NativeAds implements AdsService {
     if (!this.inited || this.broken || slot.unit === undefined || slot.loading || slot.ready)
       return;
     slot.loading = true;
+    slot.loadStartedAt = this.now();
     const unit = slot.unit;
     // `Promise.resolve().then` also catches a plugin that throws at once.
     Promise.resolve()

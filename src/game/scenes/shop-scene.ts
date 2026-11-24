@@ -17,6 +17,7 @@ import {
   restorePurchases,
   type Prices,
 } from '../economy/purchases';
+import { currentAdState, type AdState } from '../economy/ad-caption';
 import { showRewarded } from '../economy/rewarded';
 import { openScreen, SCENES } from '../app/scene-keys';
 import type { DailySection } from '../ui/menu/daily/daily-section';
@@ -52,7 +53,8 @@ export class ShopScene extends Phaser.Scene {
   private starter: ShopStarter | null = null;
   private prices: Prices = {};
   private loaded = false;
-  private adReady = false;
+  /** The ad state the free block was built for ("Loading…" turns into the button when it loads). */
+  private adState: AdState = 'no_fill';
   private busy = false;
   private leaving = false;
   private source: ShopSource = 'return';
@@ -108,9 +110,8 @@ export class ShopScene extends Phaser.Scene {
     // The launch check may end later (on another screen, or during an ad here): the starter pack
     // then leaves the list because the account owns it, and the player is told why, once.
     if (takeLaunchRestored().length > 0) this.toast.show(t('shop.restoreResult.restored'));
-    const ready = services.ads.isRewardedReady();
     const offered = gameState.starterPackInShop;
-    if (ready !== this.adReady || offered !== (this.starter !== null)) this.rebuild();
+    if (currentAdState() !== this.adState || offered !== (this.starter !== null)) this.rebuild();
     this.starter?.refreshTimer();
   }
 
@@ -133,7 +134,7 @@ export class ShopScene extends Phaser.Scene {
   /** (Re)builds the blocks from the save, keeping the place the list is scrolled to. */
   private rebuild(): void {
     for (const block of this.blocks) block.root.destroy();
-    this.adReady = services.ads.isRewardedReady();
+    this.adState = currentAdState();
     this.starter = gameState.starterPackInShop
       ? new ShopStarter(this, this.prices.starter_pack ?? null, () =>
           this.actions.buy('starter_pack'),
@@ -143,7 +144,7 @@ export class ShopScene extends Phaser.Scene {
     this.blocks = [
       this.starter,
       creaturesSection(this, a),
-      freeSection(this, a, this.adReady),
+      freeSection(this, a, this.adState === 'ready'),
       berriesSection(this, a, this.prices),
       exchangeSection(this, a),
       noAdsSection(this, a, this.prices),

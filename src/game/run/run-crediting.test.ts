@@ -158,7 +158,11 @@ describe('a run is credited once', () => {
     const state = createTestState({ ms: T0 });
     state.addBerries(50);
     const flow = new ContinueFlow({
-      ads: { isRewardedReady: () => false, showRewarded: () => Promise.resolve('unavailable') },
+      ads: {
+        isRewardedReady: () => false,
+        rewardedUnavailableReason: () => 'no_fill',
+        showRewarded: () => Promise.resolve('unavailable'),
+      },
       wallet: state,
       // A player past the clean first runs, so the window opens.
       player: { runsFinished: 3 },
@@ -178,7 +182,11 @@ describe('a run is credited once', () => {
   it('an ad continue credits nothing (the ad is only counted by showRewarded)', async () => {
     const state = createTestState({ ms: T0 });
     const flow = new ContinueFlow({
-      ads: { isRewardedReady: () => true, showRewarded: () => Promise.resolve('rewarded') },
+      ads: {
+        isRewardedReady: () => true,
+        rewardedUnavailableReason: () => null,
+        showRewarded: () => Promise.resolve('rewarded'),
+      },
       wallet: state,
       // A player past the clean first runs, so the window opens.
       player: { runsFinished: 3 },

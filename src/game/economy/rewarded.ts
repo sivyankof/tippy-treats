@@ -3,7 +3,9 @@ import { gameState } from '../../state';
 import type {
   AdsService,
   RewardedPlacement,
+  RewardedReasonParam,
   RewardedResult,
+  RewardedUnavailableReason,
 } from '../../services/rewarded-video/types';
 
 /** A rewarded ad was watched since the current run began (the interstitial rule 4). */
@@ -23,6 +25,15 @@ export function rewardedWatchedInRun(): boolean {
 }
 
 /**
+ * The `reason` of `ad_rewarded_result`. After a failed show the service is already loading the
+ * next ad, so its answer is often `loading`; the event keeps its two values and writes it as
+ * `no_fill` (docs/09-services-analytics.md, section 3).
+ */
+function reasonParam(reason: RewardedUnavailableReason | null): RewardedReasonParam | null {
+  return reason === 'loading' ? 'no_fill' : reason;
+}
+
+/**
  * The only way the game asks for a rewarded ad. The sound is suspended while it shows; a broken
  * ad service counts as `unavailable`; a `rewarded` answer is counted in the stats and remembered
  * for the interstitial rules. The caller pays the reward.
@@ -38,7 +49,8 @@ export async function showRewarded(placement: RewardedPlacement): Promise<Reward
   } finally {
     services.audio.resume('ad');
   }
-  const reason = result === 'unavailable' ? services.ads.rewardedUnavailableReason() : null;
+  const reason =
+    result === 'unavailable' ? reasonParam(services.ads.rewardedUnavailableReason()) : null;
   services.telemetry.logEvent(
     'ad_rewarded_result',
     reason ? { placement, result, reason } : { placement, result },
@@ -51,7 +63,11 @@ export async function showRewarded(placement: RewardedPlacement): Promise<Reward
 }
 
 /** The rewarded half of the ad service as the run scene hands it to the continue offer. */
-export const rewardedAds: Pick<AdsService, 'isRewardedReady' | 'showRewarded'> = {
+export const rewardedAds: Pick<
+  AdsService,
+  'isRewardedReady' | 'rewardedUnavailableReason' | 'showRewarded'
+> = {
   isRewardedReady: () => services.ads.isRewardedReady(),
+  rewardedUnavailableReason: () => services.ads.rewardedUnavailableReason(),
   showRewarded,
 };

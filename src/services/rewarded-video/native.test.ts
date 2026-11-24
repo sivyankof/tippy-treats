@@ -17,12 +17,27 @@ class FakePlugin implements AdsPlugin {
   onShow: AdEvent[] = ['rewarded', 'rewardedDismissed'];
   onShowInterstitial: AdEvent[] = ['interstitialDismissed'];
   initFails = false;
+  /** Loads stay under way until `answer` is called with their outcome. */
+  hold = false;
+  private held: Array<(filled: boolean) => void> = [];
+
+  /** Ends the loads under way: `filled` true when the network had an ad. */
+  answer(filled: boolean): void {
+    const held = this.held;
+    this.held = [];
+    held.forEach((settle) => settle(filled));
+  }
 
   initialize(): Promise<void> {
     return this.initFails ? Promise.reject(new Error('x')) : Promise.resolve();
   }
   private prepare(adId: string): Promise<void> {
     this.prepared.push(adId);
+    if (this.hold) {
+      return new Promise((resolve, reject) => {
+        this.held.push((filled) => (filled ? resolve() : reject(new Error('no fill'))));
+      });
+    }
     if (this.loadFails > 0) {
       this.loadFails -= 1;
       return Promise.reject(new Error('no fill'));
@@ -52,13 +67,16 @@ const UNITS: AdUnits = { rewarded: 'r', interstitial: 'i' };
 function setup(options: { online?: boolean; units?: AdUnits } = {}) {
   const plugin = new FakePlugin();
   const timers: Array<{ run: () => void; delay: number }> = [];
+  const net = { online: options.online ?? true };
+  const clock = { ms: 0 };
   const ads = new NativeAds(
     plugin,
     options.units ?? UNITS,
-    () => options.online ?? true,
+    () => net.online,
     (run, delay) => timers.push({ run, delay }),
+    () => clock.ms,
   );
-  return { plugin, ads, timers };
+  return { plugin, ads, timers, net, clock };
 }
 
 describe('NativeAds', () => {
@@ -128,6 +146,70 @@ describe('NativeAds', () => {
     const offline = setup({ online: false });
     expect(online.ads.rewardedUnavailableReason()).toBe('no_fill');
     expect(offline.ads.rewardedUnavailableReason()).toBe('offline');
+  });
+
+  it('says loading while the load request runs, then nothing once the ad is in', async () => {
+    const { ads, plugin } = setup();
+    plugin.hold = true;
+    await ads.init();
+    await flush();
+    expect(ads.isRewardedReady()).toBe(false);
+    expect(ads.rewardedUnavailableReason()).toBe('loading');
+    plugin.answer(true);
+    await flush();
+    expect(ads.isRewardedReady()).toBe(true);
+    expect(ads.rewardedUnavailableReason()).toBeNull();
+  });
+
+  it('says loading for the next ad right after a show', async () => {
+    const { ads, plugin } = setup();
+    await ads.init();
+    await flush();
+    plugin.hold = true;
+    expect(await ads.showRewarded()).toBe('rewarded');
+    await flush();
+    expect(ads.rewardedUnavailableReason()).toBe('loading');
+  });
+
+  it('is not loading in the wait before a retry: the reason is no_fill', async () => {
+    const { ads, plugin, timers } = setup();
+    plugin.hold = true;
+    await ads.init();
+    await flush();
+    plugin.answer(false);
+    await flush();
+    expect(timers.length).toBeGreaterThan(0);
+    expect(ads.rewardedUnavailableReason()).toBe('no_fill');
+    // The retry runs: loading again while its request is under way.
+    timers.shift()?.run();
+    await flush();
+    expect(ads.rewardedUnavailableReason()).toBe('loading');
+  });
+
+  it('says no_fill once a load has run longer than the caption limit, though it goes on', async () => {
+    const { ads, plugin, clock } = setup();
+    plugin.hold = true;
+    await ads.init();
+    await flush();
+    clock.ms = AD_LOAD.loadingCaptionMaxMs - 1;
+    expect(ads.rewardedUnavailableReason()).toBe('loading');
+    clock.ms = AD_LOAD.loadingCaptionMaxMs;
+    expect(ads.rewardedUnavailableReason()).toBe('no_fill');
+    // The request was not dropped: when it answers, the ad is ready.
+    plugin.answer(true);
+    await flush();
+    expect(ads.isRewardedReady()).toBe(true);
+  });
+
+  it('puts offline above loading', async () => {
+    const { ads, plugin, net } = setup();
+    plugin.hold = true;
+    await ads.init();
+    await flush();
+    net.online = false;
+    expect(ads.rewardedUnavailableReason()).toBe('offline');
+    net.online = true;
+    expect(ads.rewardedUnavailableReason()).toBe('loading');
   });
 
   it('retries a failed load a bounded number of times, then stops until asked', async () => {

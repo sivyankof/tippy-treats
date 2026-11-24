@@ -21,13 +21,41 @@ describe('WebAds', () => {
     expect(ads.isRewardedReady()).toBe(true);
   });
 
-  it('cycles reward, dismissed, offline, no_fill', () => {
+  it('cycles reward, dismissed, offline, no_fill, loading', () => {
     const ads = new WebAds(() => null);
     expect(ads.mode).toBe('reward');
     expect(ads.cycleMode()).toBe('dismissed');
     expect(ads.cycleMode()).toBe('offline');
     expect(ads.cycleMode()).toBe('no_fill');
+    expect(ads.cycleMode()).toBe('loading');
     expect(ads.cycleMode()).toBe('reward');
+  });
+
+  it('loads in the loading mode, then is ready, and loads again after each show', async () => {
+    const show = vi.fn(() => null);
+    const ads = new WebAds(show, 'loading');
+    expect(ads.isRewardedReady()).toBe(false);
+    expect(ads.rewardedUnavailableReason()).toBe('loading');
+    await expect(ads.showRewarded()).resolves.toBe('unavailable');
+    expect(show).not.toHaveBeenCalled();
+    await vi.advanceTimersByTimeAsync(STUB_ADS.loadingMs);
+    expect(ads.isRewardedReady()).toBe(true);
+    expect(ads.rewardedUnavailableReason()).toBeNull();
+    const result = ads.showRewarded();
+    await vi.advanceTimersByTimeAsync(STUB_ADS.durationMs);
+    await expect(result).resolves.toBe('rewarded');
+    expect(ads.rewardedUnavailableReason()).toBe('loading');
+    await vi.advanceTimersByTimeAsync(STUB_ADS.loadingMs);
+    expect(ads.isRewardedReady()).toBe(true);
+  });
+
+  it('starts the load when the debug panel switches to the loading mode', async () => {
+    const ads = new WebAds(() => null, 'no_fill');
+    await vi.advanceTimersByTimeAsync(STUB_ADS.loadingMs);
+    expect(ads.cycleMode()).toBe('loading');
+    expect(ads.rewardedUnavailableReason()).toBe('loading');
+    await vi.advanceTimersByTimeAsync(STUB_ADS.loadingMs);
+    expect(ads.isRewardedReady()).toBe(true);
   });
 
   it('reports why the ad is unavailable', async () => {
@@ -43,6 +71,7 @@ describe('WebAds', () => {
     expect(ads.rewardedUnavailableReason()).toBe('no_fill');
     await expect(ads.showRewarded()).resolves.toBe('unavailable');
     expect(show).not.toHaveBeenCalled();
+    ads.cycleMode();
     ads.cycleMode();
     expect(ads.isRewardedReady()).toBe(true);
     expect(ads.rewardedUnavailableReason()).toBeNull();

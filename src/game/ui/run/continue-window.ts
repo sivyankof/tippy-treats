@@ -36,6 +36,8 @@ export class ContinueWindow {
   private readonly timer: ContinueTimer;
   private readonly buttons: ContinueButtons;
   private readonly balance: BalanceChip;
+  /** "You have:" left of the balance chip; it follows the chip's left end as the number changes. */
+  private readonly balanceCaption: Phaser.GameObjects.Text;
   private readonly declineText: Phaser.GameObjects.Text;
   private flow: ContinueFlow | null = null;
   private shown = false;
@@ -59,6 +61,13 @@ export class ContinueWindow {
       onShort: () => this.balance.shake(),
     });
     this.balance = new BalanceChip(scene, 'berries', balanceRight, win.balanceY);
+    this.balanceCaption = createOutlinedText(
+      scene,
+      0,
+      win.balanceY,
+      t('continue.balance', { n: '' }).trimEnd(),
+      win.balanceCaptionFont,
+    ).setOrigin(1, 0.5);
     this.declineText = createOutlinedText(
       scene,
       0,
@@ -75,6 +84,7 @@ export class ContinueWindow {
       this.heightText,
       this.timer.root,
       this.balance.root,
+      this.balanceCaption,
       this.buttons.root,
       this.declineText,
     ]);
@@ -116,7 +126,10 @@ export class ContinueWindow {
     this.flow = flow;
     if (flow?.isOpen && !this.shown) this.show(flow, runHeight);
     // The balance keeps rolling for as long as the window is on screen.
-    if (this.panel.visible && flow) this.balance.update(flow.balance);
+    if (this.panel.visible && flow) {
+      this.balance.update(flow.balance);
+      this.placeBalanceCaption();
+    }
     if (!flow?.isOpen) {
       if (this.shown) this.hide();
       return;
@@ -125,10 +138,15 @@ export class ContinueWindow {
     // While a payment is shown the buttons stay off.
     if (flow.paying) this.buttons.disable();
     else if (flow.offer) {
-      this.buttons.sync(flow.offer, flow.adBusy);
+      this.buttons.sync(flow.offer, flow.adBusy, flow.adReason);
       this.buttons.setActive(flow.inputReady);
     }
     this.syncDecline(flow);
+  }
+
+  private placeBalanceCaption(): void {
+    const x = this.balance.leftX - win.balanceCaptionGap;
+    if (this.balanceCaption.x !== x) this.balanceCaption.setX(x);
   }
 
   /** Taps the pay button: berries fly into it on success, the balance shakes when short. */
@@ -150,6 +168,7 @@ export class ContinueWindow {
     this.letDuckGo();
     this.releaseDuck = windowDuck.hold();
     this.balance.snap(flow.balance);
+    this.placeBalanceCaption();
     this.declineShown = false;
     this.timer.reset();
     this.heightText.setText(t('continue.height', { n: formatNumber(runHeight) }));

@@ -11,7 +11,12 @@ import { createTextButton, type Button } from '../../common/button';
 import { BalanceChip, followBalance } from '../../style/balance-chip';
 import { createPriceButton } from '../../style/price-button';
 import { createAdsSpentNote } from '../checkpoint/no-more-starts-note';
-import { adLabelRoom, markAdUnavailable, resetAdLabel } from '../widgets/ad-unavailable';
+import {
+  adLabelRoom,
+  markAdUnavailable,
+  resetAdLabel,
+  watchAdState,
+} from '../widgets/ad-unavailable';
 import type { ResultsHeader } from './results-header';
 import type { Row } from './results-layout';
 import { adGreyAfter, resultsStartPlan, type ResultsStartPlan } from './results-start-model';
@@ -68,7 +73,7 @@ export class ResultsStart implements ExtraButtons {
   refreshAd(): void {
     if (!this.ad) return;
     if (services.ads.isRewardedReady()) this.unGreyAd();
-    else if (!this.adGrey) this.greyAd();
+    else this.greyAd();
   }
 
   private addChoose(): void {
@@ -131,6 +136,8 @@ export class ResultsStart implements ExtraButtons {
     this.buttons.push(button);
     if (plan.ad === 'unavailable') this.greyAd();
     else resetAdLabel(label, pairLabelWidth);
+    // "Loading…" turns into the ad button once the ad has loaded (not while one shows).
+    watchAdState(button, (state) => (state === 'busy' ? false : this.refreshAd()));
     const shift = (pair.width + cfg.pairGap) / 2;
     price.setX(-shift);
     button.setX(shift);

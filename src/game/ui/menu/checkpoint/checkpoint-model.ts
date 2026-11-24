@@ -5,7 +5,7 @@ export type StartHeight = 0 | CheckpointHeight;
 /** What the buttons under the steps show for the selected step. */
 export interface CheckpointButtons {
   /**
-   * `free`: "Play"; `pay`: "Play · price", grey with "Not enough N" when `missing` is above 0;
+   * `free`: "Play"; `pay`: "Play for price", grey with "Not enough N" when `missing` is above 0;
    * `none`: a locked step has no way to start.
    */
   main: { kind: 'free' } | { kind: 'none' } | { kind: 'pay'; price: number; missing: number };

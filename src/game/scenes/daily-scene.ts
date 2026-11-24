@@ -1,8 +1,8 @@
 import * as Phaser from 'phaser';
 import { MENU } from '../../data/common/menu-layout';
 import { t } from '../../i18n';
-import { services } from '../../services';
 import { gameState } from '../../state';
+import { currentAdState, type AdState } from '../economy/ad-caption';
 import { showRewarded } from '../economy/rewarded';
 import { DAILY_RUN } from '../run/run-request';
 import { openScreen, SCENES, startRunFrom } from '../app/scene-keys';
@@ -34,7 +34,8 @@ export class DailyScene extends Phaser.Scene {
   private leaving = false;
   private adRunning = false;
   /** Whether an ad was ready the last time the attempts block was drawn. */
-  private adReady = true;
+  /** The ad state the ad buttons show ("Loading…" turns into the button when it loads). */
+  private adState: AdState = 'ready';
   private clockMs = 0;
 
   constructor() {
@@ -93,7 +94,7 @@ export class DailyScene extends Phaser.Scene {
     this.bg.update(delta);
     this.header.update(time, delta);
     this.team.tick(delta);
-    if (this.attempts && !this.leaving && services.ads.isRewardedReady() !== this.adReady) {
+    if (this.attempts && !this.leaving && currentAdState() !== this.adState) {
       this.refresh();
     }
     this.clockMs += delta;
@@ -116,11 +117,12 @@ export class DailyScene extends Phaser.Scene {
   private refresh(): void {
     const info = gameState.dailyInfo();
     const view = { left: info.attemptsLeft, canAddAttempt: info.canAddAttempt };
-    this.adReady = services.ads.isRewardedReady();
-    this.attempts?.refresh(view, this.adReady);
+    this.adState = currentAdState();
+    const adReady = this.adState === 'ready';
+    this.attempts?.refresh(view, adReady);
     // One timer on the screen: once the attempts ran out it stands in the Play slot.
     this.date.showTimer(!this.play || view.left > 0);
-    this.play?.refresh(view, this.adReady, info.unlocked && !this.leaving);
+    this.play?.refresh(view, adReady, info.unlocked && !this.leaving);
     // The buttons may not come back while an ad plays or the screen is leaving.
     if (this.adRunning || this.leaving) this.disableAds();
   }

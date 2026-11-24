@@ -14,6 +14,7 @@ function setup(berries: number, ad: 'rewarded' | 'dismissed') {
   };
   const ads = {
     isRewardedReady: () => true,
+    rewardedUnavailableReason: () => null,
     showRewarded: vi.fn(() => Promise.resolve(ad as RewardedResult)),
     maybeShowInterstitial: vi.fn(),
     setRemoveAds: vi.fn(),
@@ -76,6 +77,7 @@ describe('ContinueFlow events', () => {
     const flow = new ContinueFlow({
       ads: {
         isRewardedReady: () => true,
+        rewardedUnavailableReason: () => null,
         showRewarded: () => Promise.resolve('dismissed'),
       },
       wallet: { berries: 100, spendBerries: () => true },

@@ -1,12 +1,15 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { RewardedResult } from '../../services/rewarded-video/types';
+import type {
+  RewardedResult,
+  RewardedUnavailableReason,
+} from '../../services/rewarded-video/types';
 import { createTestState } from '../../state/test-state';
 
 const h = vi.hoisted(() => ({
   audio: { suspend: vi.fn(), resume: vi.fn() },
   ads: {
     showRewarded: vi.fn<(placement: string) => Promise<RewardedResult>>(),
-    rewardedUnavailableReason: vi.fn<() => 'offline' | 'no_fill' | null>(() => null),
+    rewardedUnavailableReason: vi.fn<() => RewardedUnavailableReason | null>(() => null),
   },
   telemetry: { logEvent: vi.fn(), setUserProperty: vi.fn() },
 }));
@@ -81,6 +84,18 @@ describe('showRewarded', () => {
       placement: 'shop_coins',
       result: 'unavailable',
       reason: 'offline',
+    });
+  });
+
+  it('writes a next ad that is already loading as no_fill: the event keeps its two reasons', async () => {
+    const { showRewarded } = await import('./rewarded');
+    h.ads.showRewarded.mockResolvedValue('unavailable');
+    h.ads.rewardedUnavailableReason.mockReturnValue('loading');
+    await showRewarded('continue');
+    expect(h.telemetry.logEvent).toHaveBeenLastCalledWith('ad_rewarded_result', {
+      placement: 'continue',
+      result: 'unavailable',
+      reason: 'no_fill',
     });
   });
 

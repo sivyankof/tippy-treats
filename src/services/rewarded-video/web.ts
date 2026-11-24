@@ -8,7 +8,7 @@ import type {
   StubAdMode,
 } from './types';
 
-const MODES: readonly StubAdMode[] = ['reward', 'dismissed', 'offline', 'no_fill'];
+const MODES: readonly StubAdMode[] = ['reward', 'dismissed', 'offline', 'no_fill', 'loading'];
 
 /** A grey full-screen DOM overlay with a label; `null` where there is no DOM (tests). */
 export function showStubOverlay(label: string): (() => void) | null {
@@ -36,12 +36,16 @@ export function showStubOverlay(label: string): (() => void) | null {
 /**
  * Browser stand-in for the ad SDK: a fake rewarded ad that pays out after a couple of seconds and
  * a fake interstitial of the same length.
- * In dev the debug panel switches its answer (`cycleMode`) to try every branch of the flow.
+ * In dev the debug panel switches its answer (`cycleMode`) to try every branch of the flow. The
+ * `loading` mode "loads" the next ad for `STUB_ADS.loadingMs` (on entering the mode and after each
+ * show) and then pays out like `reward`.
  */
 export class WebAds implements AdsService, AdsDevControl {
   private current: StubAdMode = 'reward';
   private busy = false;
   private removed = false;
+  /** In the `loading` mode: the moment (`Date.now()`) the ad being "loaded" is ready. */
+  private loadedAt = 0;
 
   /**
    * `showOverlay` returns the function that removes the overlay it drew; `mode` is the answer the
@@ -52,6 +56,7 @@ export class WebAds implements AdsService, AdsDevControl {
     mode: StubAdMode = 'reward',
   ) {
     this.current = mode;
+    this.startLoading();
   }
 
   get mode(): StubAdMode {
@@ -61,6 +66,7 @@ export class WebAds implements AdsService, AdsDevControl {
   cycleMode(): StubAdMode {
     const next = MODES[(MODES.indexOf(this.current) + 1) % MODES.length];
     this.current = next ?? 'reward';
+    this.startLoading();
     return this.current;
   }
 
@@ -69,14 +75,23 @@ export class WebAds implements AdsService, AdsDevControl {
   }
 
   isRewardedReady(): boolean {
-    return this.current !== 'offline' && this.current !== 'no_fill' && !this.busy;
+    return this.reason() === null && !this.busy;
   }
 
   rewardedUnavailableReason(): RewardedUnavailableReason | null {
-    if (this.current === 'offline') return 'offline';
-    if (this.current === 'no_fill') return 'no_fill';
     // Ready, or only busy showing another ad: no reason to give.
+    return this.busy ? null : this.reason();
+  }
+
+  private reason(): RewardedUnavailableReason | null {
+    if (this.current === 'offline' || this.current === 'no_fill') return this.current;
+    if (this.current === 'loading' && Date.now() < this.loadedAt) return 'loading';
     return null;
+  }
+
+  /** In the `loading` mode the next ad starts "loading" now. */
+  private startLoading(): void {
+    if (this.current === 'loading') this.loadedAt = Date.now() + STUB_ADS.loadingMs;
   }
 
   showRewarded(): Promise<RewardedResult> {
@@ -89,6 +104,7 @@ export class WebAds implements AdsService, AdsDevControl {
       setTimeout(() => {
         hide?.();
         this.busy = false;
+        this.startLoading();
         resolve(dismissed ? 'dismissed' : 'rewarded');
       }, delay);
     });

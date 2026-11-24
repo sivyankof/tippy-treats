@@ -1,7 +1,11 @@
 import { describe, expect, it, vi } from 'vitest';
 import { BALANCE } from '../../data/tower/balance';
 import { CONTINUE_ANIM } from '../../data/run/continue-anim';
-import type { RewardedResult } from '../../services/rewarded-video/types';
+import { AD_BUTTON_WATCH } from '../../data/economy/rewarded-video';
+import type {
+  RewardedResult,
+  RewardedUnavailableReason,
+} from '../../services/rewarded-video/types';
 import { ContinueFlow } from './continue-flow';
 import { createTestState } from '../../state/test-state';
 
@@ -14,12 +18,17 @@ function setup(
   const wallet = createTestState();
   wallet.addBerries(berries);
   let release: (r: RewardedResult) => void = () => {};
+  /** The ad service as the test sets it; a failed show leaves the next ad loading. */
+  const service = { ready, reason: 'no_fill' as RewardedUnavailableReason };
   const ads = {
     init: vi.fn(),
-    isRewardedReady: () => ready,
+    isRewardedReady: () => service.ready,
+    rewardedUnavailableReason: () => (service.ready ? null : service.reason),
     showRewarded: vi.fn(
       () =>
         new Promise<RewardedResult>((resolve) => {
+          if (adResult === 'unavailable')
+            Object.assign(service, { ready: false, reason: 'loading' });
           if (adResult === 'never') release = resolve;
           else resolve(adResult);
         }),
@@ -28,7 +37,7 @@ function setup(
     setRemoveAds: vi.fn(),
   };
   const flow = new ContinueFlow({ ads, wallet, player: { runsFinished } });
-  return { flow, wallet, ads, release: (r: RewardedResult) => release(r) };
+  return { flow, wallet, ads, service, release: (r: RewardedResult) => release(r) };
 }
 
 describe('ContinueFlow', () => {
@@ -128,7 +137,60 @@ describe('ContinueFlow', () => {
     flow.update(CONTINUE_ANIM.inputDelayMs);
     await flow.watchAd();
     expect(flow.offer).toEqual({ ad: 'unavailable', berryCost: 15, berriesMissing: 0 });
+    expect(flow.adReason).toBe('loading');
     expect(flow.takeAction()).toBeNull();
+  });
+
+  it('switches the ad button on once the loading ad has loaded, with the timer untouched', async () => {
+    const { flow, service, ads } = setup('rewarded', false, 20);
+    service.reason = 'loading';
+    flow.open('classic', 0);
+    expect(flow.offer?.ad).toBe('unavailable');
+    expect(flow.adReason).toBe('loading');
+    flow.update(CONTINUE_ANIM.inputDelayMs);
+    service.ready = true;
+    // Not every frame: the service is looked at again only after the poll interval.
+    flow.update(1);
+    expect(flow.offer?.ad).toBe('unavailable');
+    flow.update(AD_BUTTON_WATCH.pollMs);
+    expect(flow.offer?.ad).toBe('ready');
+    expect(flow.adReason).toBeNull();
+    expect(flow.remainingMs).toBe(
+      BALANCE.continues.offerMs - CONTINUE_ANIM.inputDelayMs - 1 - AD_BUTTON_WATCH.pollMs,
+    );
+    await flow.watchAd();
+    expect(ads.showRewarded).toHaveBeenCalledOnce();
+    expect(flow.takeAction()).toBe('continue');
+  });
+
+  it('turns "Loading…" into "Ad unavailable" when the load gives up', () => {
+    const { flow, service } = setup('rewarded', false, 20);
+    service.reason = 'loading';
+    flow.open('classic', 0);
+    service.reason = 'no_fill';
+    flow.update(AD_BUTTON_WATCH.pollMs);
+    expect(flow.offer?.ad).toBe('unavailable');
+    expect(flow.adReason).toBe('no_fill');
+  });
+
+  it('greys a ready ad button out when its ad goes away while the window is open', () => {
+    const { flow, service } = setup('rewarded', true, 20);
+    flow.open('classic', 0);
+    service.ready = false;
+    service.reason = 'offline';
+    flow.update(AD_BUTTON_WATCH.pollMs);
+    expect(flow.offer?.ad).toBe('unavailable');
+    expect(flow.adReason).toBe('offline');
+  });
+
+  it('leaves a later offer without an ad button as it is', () => {
+    const { flow, service } = setup('rewarded', true, 100);
+    flow.open('classic', 1);
+    expect(flow.offer?.ad).toBeNull();
+    service.ready = false;
+    flow.update(AD_BUTTON_WATCH.pollMs);
+    expect(flow.offer?.ad).toBeNull();
+    expect(flow.adReason).toBeNull();
   });
 
   it('spends berries and continues', () => {

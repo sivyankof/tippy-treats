@@ -9,15 +9,25 @@ export type RewardedPlacement =
 
 export type RewardedResult = 'rewarded' | 'dismissed' | 'unavailable';
 
-/** Why no rewarded ad can be shown: no network, or the network is fine but there is nothing to show. */
-export type RewardedUnavailableReason = 'offline' | 'no_fill';
+/**
+ * Why no rewarded ad can be shown: no network; the next ad is being loaded right now; or the
+ * network is fine but there is nothing to show.
+ */
+export type RewardedUnavailableReason = 'offline' | 'loading' | 'no_fill';
+
+/** The reasons the analytics events know: a load under way counts as `no_fill` there. */
+export type RewardedReasonParam = Exclude<RewardedUnavailableReason, 'loading'>;
 
 /** Ads of the game; the rules of what to show and when live in core, the service only executes. */
 export interface AdsService {
   /** Call after consent. */
   init(): Promise<void>;
   isRewardedReady(): boolean;
-  /** Null while a rewarded ad is ready; otherwise why it is not. */
+  /**
+   * Null while a rewarded ad is ready or another one shows; otherwise why it is not. `offline`
+   * wins over `loading`; `loading` only while the load request itself runs (not in the waits
+   * between retries) and for at most `AD_LOAD.loadingCaptionMaxMs`.
+   */
   rewardedUnavailableReason(): RewardedUnavailableReason | null;
   showRewarded(placement: RewardedPlacement): Promise<RewardedResult>;
   /**

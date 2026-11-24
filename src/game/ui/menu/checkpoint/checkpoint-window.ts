@@ -9,7 +9,7 @@ import { createTextButton, type Button } from '../../common/button';
 import { BalanceChip, followBalance } from '../../style/balance-chip';
 import { PopupWindow } from '../../style/dialog-window';
 import { createPriceButton } from '../../style/price-button';
-import { markAdUnavailable, resetAdLabel } from '../widgets/ad-unavailable';
+import { markAdUnavailable, resetAdLabel, watchAdState } from '../widgets/ad-unavailable';
 import { buttonsFor, keepSelection, type StartHeight } from './checkpoint-model';
 import { createAdsSpentNote } from './no-more-starts-note';
 import { createCheckpointStep } from './checkpoint-step';
@@ -22,6 +22,11 @@ export interface CheckpointWindowOptions {
   /** The free start first, then every checkpoint, lowest first (`checkpointRows`). */
   rows: CheckpointRow[];
   berries: number;
+  /**
+   * The rows as they are now. With it the window follows the ad service while it is open: when the
+   * ad state changes ("Loading…" to ready, ready to unavailable), the rows are taken anew.
+   */
+  liveRows?: () => CheckpointRow[];
   /**
    * A button was pressed. While the promise is pending every button is locked. `started` closes the
    * window (without `onClose`), `stay` keeps it; the caller may `refresh` it.
@@ -191,6 +196,16 @@ export function openCheckpointWindow(
   }
 
   render();
+  const { liveRows } = options;
+  if (liveRows) {
+    watchAdState(content, () => {
+      // While a payment runs the buttons stay as they are; the change is taken after it.
+      if (busy || gone) return false;
+      rows = liveRows();
+      selected = keepSelection(rows, selected);
+      render();
+    });
+  }
   return {
     refresh(nextRows, nextBerries) {
       if (gone) return;

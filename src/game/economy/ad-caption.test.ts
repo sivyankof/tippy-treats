@@ -9,4 +9,8 @@ describe('adCaptionFor', () => {
   it('keeps the old caption without the icon when there is nothing to show', () => {
     expect(adCaptionFor('no_fill')).toEqual({ key: 'continue.adUnavailable', offline: false });
   });
+
+  it('says "Loading…" without an icon while the next ad loads', () => {
+    expect(adCaptionFor('loading')).toEqual({ key: 'continue.adLoading', offline: false });
+  });
 });

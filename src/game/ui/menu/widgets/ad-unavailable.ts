@@ -3,10 +3,16 @@ import {
   AD_UNAVAILABLE_CAPTION,
   OFFLINE_CAPTION_LAYOUT,
 } from '../../../../data/economy/offline-look';
+import { AD_BUTTON_WATCH } from '../../../../data/economy/rewarded-video';
 import { VIDEO_CAPTION_LAYOUT } from '../../../../data/economy/video-icon-look';
 import { cssColor } from '../../../../util/color';
 import { t } from '../../../../i18n';
-import { currentAdCaption } from '../../../economy/ad-caption';
+import {
+  currentAdCaption,
+  currentAdState,
+  type AdCaption,
+  type AdState,
+} from '../../../economy/ad-caption';
 import {
   OFFLINE_ICON_FIELD_SCALE,
   OFFLINE_ICON_KEY,
@@ -134,9 +140,15 @@ export function resetAdLabel(label: Phaser.GameObjects.Text, maxWidth: number): 
   onFontRefresh(label, () => resetAdLabel(label, maxWidth));
 }
 
-/** The label of an unavailable ad button: the caption for the current reason, with an icon when offline. */
-export function showAdCaption(label: Phaser.GameObjects.Text, maxWidth: number): void {
-  const caption = currentAdCaption();
+/**
+ * The label of an unavailable ad button: the caption for the reason (by default the service's
+ * current one), with an icon when offline; "Loading…" and "Ad unavailable" have none.
+ */
+export function showAdCaption(
+  label: Phaser.GameObjects.Text,
+  maxWidth: number,
+  caption: AdCaption = currentAdCaption(),
+): void {
   darkenLabel(label);
   label.setText(t(caption.key));
   iconOf(label, VIDEO_KEY)?.setVisible(false);
@@ -147,13 +159,13 @@ export function showAdCaption(label: Phaser.GameObjects.Text, maxWidth: number):
   bakeOfflineIcon(label.scene);
   const icon = ensureIcon(label, ICON_KEY, OFFLINE_ICON_KEY);
   layoutWithIcon(label, icon, OFFLINE_CAPTION_LAYOUT, OFFLINE_ICON_FIELD_SCALE, maxWidth);
-  onFontRefresh(label, () => showAdCaption(label, maxWidth));
+  onFontRefresh(label, () => showAdCaption(label, maxWidth, caption));
 }
 
 /**
  * A rewarded-ad button while no ad can be shown: inactive, its plate dimmed to `alpha` (the caption and icon stay at full opacity) and labelled
- * "Ad unavailable", or "No internet" with a small icon when the reason is no network
- * (docs/05-economy-monetization.md, section 6). With `disable` false the button only looks so
+ * "Ad unavailable", "Loading…" while the next ad loads, or "No internet" with a small icon when
+ * the reason is no network (docs/05-economy-monetization.md, section 6). With `disable` false the button only looks so
  * and still takes a tap (the caller looks at the ad again then).
  */
 export function markAdUnavailable(
@@ -166,4 +178,59 @@ export function markAdUnavailable(
   showAdCaption(label, maxWidth);
   if (disable) button.setEnabled(false);
   button.setPlateAlpha(alpha);
+}
+
+/**
+ * Calls `onChange` with the ad state each time it changes while `owner` lives. The state is
+ * looked at every `AD_BUTTON_WATCH.pollMs`, not every frame; the state at the call is taken as
+ * already shown. `onChange` returning false leaves the change for the next look (the button is
+ * busy now).
+ */
+export function watchAdState(
+  owner: Phaser.GameObjects.GameObject,
+  onChange: (state: AdState) => boolean | void,
+): void {
+  let shown = currentAdState();
+  const timer = owner.scene.time.addEvent({
+    delay: AD_BUTTON_WATCH.pollMs,
+    loop: true,
+    callback: () => {
+      const state = currentAdState();
+      if (state !== shown && onChange(state) !== false) shown = state;
+    },
+  });
+  owner.once(Phaser.GameObjects.Events.DESTROY, () => timer.remove());
+}
+
+export interface FollowAdOptions {
+  /** The caption of the button while the ad can be shown. */
+  text: string;
+  maxWidth: number;
+  /** Plate alpha while no ad can be shown. */
+  alpha: number;
+  /** True while the button must not change (its ad shows, or its reward was paid). */
+  paused: () => boolean;
+}
+
+/**
+ * Keeps a rewarded-ad button in step with the ad service while it lives: "Loading…" turns into
+ * the usual video button (live again) once the ad has loaded, or into "Ad unavailable" when the
+ * load fails; a ready ad that goes away greys the button out (`markAdUnavailable`).
+ */
+export function followAdButton(
+  button: Button,
+  label: Phaser.GameObjects.Text,
+  options: FollowAdOptions,
+): void {
+  watchAdState(button, (state) => {
+    if (state === 'busy' || options.paused()) return false;
+    if (state !== 'ready') {
+      markAdUnavailable(button, label, options.maxWidth, options.alpha);
+      return;
+    }
+    label.setText(options.text);
+    resetAdLabel(label, options.maxWidth);
+    button.setPlateAlpha(1);
+    button.setEnabled(true);
+  });
 }

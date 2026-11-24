@@ -6,7 +6,7 @@ import { t, tn } from '../../../../i18n';
 import { services } from '../../../../services';
 import { gameState } from '../../../../state';
 import { showRewarded } from '../../../economy/rewarded';
-import { markAdUnavailable, resetAdLabel } from '../widgets/ad-unavailable';
+import { followAdButton, markAdUnavailable, resetAdLabel } from '../widgets/ad-unavailable';
 import { createTextButton, type Button } from '../../common/button';
 import { createOutlinedText } from '../../common/outlined-text';
 import { BalanceChip, followBalance } from '../../style/balance-chip';
@@ -73,17 +73,12 @@ export function openStreakThreat(scene: Phaser.Scene, onClosed?: () => void): vo
   followBalance(scene, balance, content, () => gameState.berries);
 
   let busy = false;
+  const adWidth = cfg.buttonWidth - cfg.buttonRadius * 2;
   const settle = (): void => popup.close();
   const ad = make(t('streakThreat.restoreAd'), PALETTE.accentSecondary, 'ui_threat_ad', () => {
     void watchAd();
   });
-  const markAdGone = (): void =>
-    markAdUnavailable(
-      ad.button,
-      ad.label,
-      cfg.buttonWidth - cfg.buttonRadius * 2,
-      cfg.disabledAlpha,
-    );
+  const markAdGone = (): void => markAdUnavailable(ad.button, ad.label, adWidth, cfg.disabledAlpha);
   const watchAd = async (): Promise<void> => {
     if (busy) return;
     busy = true;
@@ -103,7 +98,13 @@ export function openStreakThreat(scene: Phaser.Scene, onClosed?: () => void): vo
   };
 
   if (!services.ads.isRewardedReady()) markAdGone();
-  else resetAdLabel(ad.label, cfg.buttonWidth - cfg.buttonRadius * 2);
+  else resetAdLabel(ad.label, adWidth);
+  followAdButton(ad.button, ad.label, {
+    text: t('streakThreat.restoreAd'),
+    maxWidth: adWidth,
+    alpha: cfg.disabledAlpha,
+    paused: () => busy,
+  });
 
   place(
     createPriceButton(scene, {

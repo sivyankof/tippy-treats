@@ -40,6 +40,11 @@ export class BalanceChip {
     return this.chip.counter.root;
   }
 
+  /** The left end of the plate at rest, in the parent's coordinates (it moves as the number grows). */
+  get leftX(): number {
+    return this.x - this.chip.plateReach;
+  }
+
   /** Where the icon sits, in the parent's coordinates. */
   get position(): { x: number; y: number } {
     return { x: this.root.x, y: this.root.y };

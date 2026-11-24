@@ -4,6 +4,8 @@ export const STUB_ADS = {
   durationMs: 2000,
   /** In the `dismissed` mode the player "closes" the ad after this long. */
   dismissAfterMs: 700,
+  /** In the `loading` mode the next ad "loads" this long (on entering the mode and after each show). */
+  loadingMs: 2500,
   overlayColor: '#8a8a8a',
   textColor: '#ffffff',
   fontFamily: 'sans-serif',
@@ -23,6 +25,17 @@ export const AD_LOAD = {
    * this long (a rewarded ad can run 30+ s, so it is generous), the show settles as closed.
    */
   showSafetyMs: 120000,
+  /**
+   * A load under way is reported as `loading` ("Loading…" on the buttons) only this long; a
+   * slower one is reported as `no_fill`, though the load itself goes on.
+   */
+  loadingCaptionMaxMs: 10000,
+} as const;
+
+/** How the open rewarded-ad buttons follow the ad service. */
+export const AD_BUTTON_WATCH = {
+  /** The ad state is looked at this often while a button shows (not every frame). */
+  pollMs: 300,
 } as const;
 
 /**
