@@ -41,6 +41,9 @@ import { bakeTongue } from '../objects/glaze/tongue-view';
 import { bakeStripTextures } from '../objects/glaze/tongue-strip-texture';
 import { bakeMasteryFrame } from '../ui/creatures/mastery-frame';
 import { bakeHudGlyphs } from '../ui/creatures/hud-glyphs';
+import { bakeScoreStar } from '../fx/economy/score-star-texture';
+import { bakeTileMark } from '../ui/style/stat-tile';
+import { bakeCalloutArrow } from '../ui/style/callout';
 
 /**
  * Pictures that the game bakes lazily (on first use) or in the boot scene are baked here so they
@@ -80,6 +83,9 @@ const PRIME_STEPS: ReadonlyArray<(scene: Phaser.Scene) => void> = [
   bakeCheckpointTextures,
   bakeOfflineIcon,
   bakeVideoIcon,
+  bakeScoreStar,
+  bakeTileMark,
+  bakeCalloutArrow,
   (scene) => bakeShadeTextures(scene),
   bakeTopperTextures,
   (scene) => bakeGiftTextures(scene, false),

@@ -368,7 +368,6 @@
     "left": "one={amount} layer left today|other={amount} layers left today",
     "back": "The oven heats up in {time}",
     "explain": "The first {n} layers of every day give {x} times more XP. Bake while the oven is hot!",
-    "mark": "×{n} fresh oven",
     "ranOut": "The fresh oven lights up again tomorrow!"
   },
   "newCreature": {
@@ -376,10 +375,6 @@
     "ok": "Great!"
   },
   "results": {
-    "score": "Score",
-    "bestCombo": "Best combo",
-    "abilities": "Abilities triggered",
-    "coins": "Coins",
     "source": {
       "floating": "Floating",
       "combo": "Combo",
@@ -393,6 +388,20 @@
     "doubled": "Doubled!",
     "xp": "+{n} XP",
     "abilityCount": "×{n}",
+    "tile": {
+      "coins": "coins",
+      "xp": "XP",
+      "xpOven": "XP ×{n}",
+      "score": "score"
+    },
+    "frame": {
+      "rewards": "Rewards",
+      "team": "Team",
+      "missions": "Missions"
+    },
+    "combo": "Combo",
+    "total": "Total {n}",
+    "newLevel": "Level up!",
     "debugRun": "Debug run: not saved",
     "home": "Home",
     "next": "Next",
@@ -557,7 +566,6 @@
     "stale": "The daily tower changed.\nThis attempt does not count"
   },
   "resultsMissions": {
-    "title": "Missions",
     "folded": "Missions: {done}/{total}"
   },
   "iap": {

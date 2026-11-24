@@ -1,39 +1,49 @@
-import type * as Phaser from 'phaser';
 import { nearMiss } from '../../../../core/run/near-miss';
-import { MENU } from '../../../../data/common/menu-layout';
-import { PALETTE } from '../../../../data/common/palette';
+import { t } from '../../../../i18n';
 import { gameState } from '../../../../state';
 import type { ResultsData } from '../../../app/scene-keys';
-import { createOutlinedText } from '../../common/outlined-text';
-import { dailyResultsText } from '../daily/daily-text';
-import { fitText } from '../widgets/fit-text';
+import { dailyAttemptText, dailyProgressText } from '../daily/daily-text';
+import { resultsLines, type ResultsLines } from './results-lines';
+import { startedLine } from './results-start-model';
 import { nearMissText } from './results-text';
 
-const cfg = MENU.results;
-
 /**
- * The "so close" line under the blocks; a daily run shows two: the tier of the attempt and the
- * day's progress. A run that is not saved gained no XP and set no record: the line stays out.
+ * The lines of the results: what stands under the height and the hint at the bottom of the
+ * Missions frame (docs/07-ui-screens.md, section 6). A run that is not saved gained no XP and set
+ * no record: it has no "so close" line.
  */
-export function createResultsHint(scene: Phaser.Scene, data: ResultsData): Phaser.GameObjects.Text {
+export function resultsLinesOf(data: ResultsData, missionsFrame: boolean): ResultsLines {
   const { result, summary } = data;
-  const text =
-    result.mode === 'daily'
-      ? dailyResultsText(result.height, gameState.dailyInfo().best, summary.dailyStale)
-      : nearMissText(
-          nearMiss({
-            height: result.height,
-            previousRecord: summary.previousRecord,
-            bakerLevel: gameState.data.bakerLevel,
-            bakerXp: gameState.data.bakerXp,
-            coins: gameState.coins,
-            owned: gameState.data.creatures,
-            todayBest: gameState.todayBest,
-            missions: summary.missions.after,
-          }),
-        );
-  const hint = createOutlinedText(scene, 0, 0, text, cfg.nearMissFont, PALETTE.gold);
-  hint.setAlign('center');
-  fitText(hint, cfg.nearMissWidth);
-  return hint.setVisible(data.recorded);
+  const daily = result.mode === 'daily';
+  const started =
+    data.checkpoint === null
+      ? null
+      : t('results.startedAt', startedLine(data.startHeight, result.height));
+  let hint: { text: string; towardRecord: boolean } | null = null;
+  if (data.recorded && daily && !summary.dailyStale) {
+    hint = { text: dailyProgressText(gameState.dailyInfo().best, true), towardRecord: false };
+  } else if (data.recorded && !daily) {
+    const miss = nearMiss({
+      height: result.height,
+      previousRecord: summary.previousRecord,
+      bakerLevel: gameState.data.bakerLevel,
+      bakerXp: gameState.data.bakerXp,
+      coins: gameState.coins,
+      owned: gameState.data.creatures,
+      todayBest: gameState.todayBest,
+      missions: summary.missions.after,
+    });
+    hint = { text: nearMissText(miss), towardRecord: miss.kind === 'record' };
+  }
+  return resultsLines({
+    record: summary.isRecord ? t('run.newRecord') : null,
+    started,
+    daily: daily
+      ? summary.dailyStale
+        ? t('resultsDaily.stale')
+        : dailyAttemptText(result.height)
+      : null,
+    hint,
+    missionsFrame,
+  });
 }
