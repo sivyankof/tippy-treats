@@ -5,6 +5,7 @@ import { PALETTE } from '../../../../data/common/palette';
 import { formatNumber, t } from '../../../../i18n';
 import { services } from '../../../../services';
 import { gameState } from '../../../../state';
+import type { AdState } from '../../../economy/ad-caption';
 import { showRewarded } from '../../../economy/rewarded';
 import { TREASURE_TEXTURES, createTreasureTextures } from '../../../fx/economy/treasure-textures';
 import { createTextButton, type Button } from '../../common/button';
@@ -15,6 +16,7 @@ import {
   markAdUnavailable,
   plainAdLabel,
   resetAdLabel,
+  watchAdState,
 } from '../widgets/ad-unavailable';
 import { fitText } from '../widgets/fit-text';
 import { stackRows, type Row } from './results-layout';
@@ -74,6 +76,7 @@ export class ResultsCoins {
       this.buttonLabel = label;
       this.button = button;
       resetAdLabel(label, adRoom);
+      watchAdState(button, (state) => this.followAd(state));
       rows.push({ obj: this.button, height: cfg.adButton.height });
     }
     this.height = stackRows(this.container, rows, cfg.rowGap);
@@ -127,6 +130,24 @@ export class ResultsCoins {
     return { obj: grid, height: rowCount * cfg.breakdownRowHeight };
   }
 
+  /**
+   * The ad state changed while the screen shows: "Loading…" turns into the live button once the
+   * ad has loaded, a ready ad that went away greys it out. Not while its ad shows or after it paid.
+   */
+  private followAd(state: AdState): boolean {
+    if (state === 'busy' || this.busy || !this.button || !this.buttonLabel) return false;
+    if (state !== 'ready') {
+      this.markAdGone();
+      return true;
+    }
+    this.adGone = false;
+    this.buttonLabel.setText(t('results.doubleLeft', { n: gameState.doublesLeft }));
+    resetAdLabel(this.buttonLabel, adRoom);
+    this.button.setPlateAlpha(1);
+    this.button.setEnabled(this.buttonEnabled);
+    return true;
+  }
+
   /** No ad can be shown: the button stays, inactive, saying so. */
   private markAdGone(): void {
     if (!this.button || !this.buttonLabel) return;
@@ -154,6 +175,7 @@ export class ResultsCoins {
     }
     if (result === 'unavailable') {
       this.markAdGone();
+      this.busy = false;
       return;
     }
     this.busy = false;
