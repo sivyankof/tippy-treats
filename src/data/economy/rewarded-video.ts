@@ -5,7 +5,7 @@ export const STUB_ADS = {
   /** In the `dismissed` mode the player "closes" the ad after this long. */
   dismissAfterMs: 700,
   /** In the `loading` mode the next ad "loads" this long (on entering the mode and after each show). */
-  loadingMs: 2500,
+  loadingMs: 5000,
   overlayColor: '#8a8a8a',
   textColor: '#ffffff',
   fontFamily: 'sans-serif',
