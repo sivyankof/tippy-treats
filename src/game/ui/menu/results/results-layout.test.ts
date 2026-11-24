@@ -177,9 +177,9 @@ describe('results layout', () => {
   });
 
   it('keeps the minimum air above the buttons when the room runs out', () => {
-    // 60 of free room: less than three even gaps of 40, so the air above the header gives way first.
-    const places = placeResults(1000, 200, 230, 300);
-    expect(places.panelTop + 230 + cfg.buttonsGap).toBeLessThanOrEqual(places.buttonsY - 150 + 0.5);
+    // 80 of free room: less than three even gaps of 40, so the air above the header gives way first.
+    const places = placeResults(1000, 200, 210, 300);
+    expect(places.panelTop + 210 + cfg.buttonsGap).toBeLessThanOrEqual(places.buttonsY - 150 + 0.5);
     expect(places.panelTop - (places.headerY + 100)).toBeGreaterThanOrEqual(cfg.sectionGap - 0.5);
     expect(places.headerY - 100 + 0.5).toBeGreaterThanOrEqual(cfg.top);
   });

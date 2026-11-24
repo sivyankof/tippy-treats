@@ -1073,7 +1073,7 @@ export const MENU = {
      * The header, the frames and the buttons keep at least this much air between them (the frames
      * never come closer to "Play again"); on a taller screen they spread out.
      */
-    sectionGap: 16,
+    sectionGap: 28,
     /** The frames keep at least this much air above "Play again" (more than `sectionGap`). */
     buttonsGap: 40,
     /** The dev-only plate over a run that is not saved. */
