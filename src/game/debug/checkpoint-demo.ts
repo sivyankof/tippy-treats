@@ -1,5 +1,6 @@
 import type * as Phaser from 'phaser';
 import { checkpointRows } from '../../core/zones/checkpoints';
+import { services } from '../../services';
 import {
   openCheckpointWindow,
   type CheckpointWindow,
@@ -14,7 +15,10 @@ interface Sample {
   adReady: boolean;
 }
 
-/** States the opener cycles through: all locked, ads ready, berries short, ad unavailable. */
+/**
+ * States the opener cycles through: all locked, ads ready, berries short, ad unavailable. "Ready"
+ * is ready only while the ad stub is too, so its modes (loading, offline) show in the window.
+ */
 const SAMPLES: readonly Sample[] = [
   { opened: [], berries: 30, adReady: true },
   { opened: [20, 40, 60], berries: 30, adReady: true },
@@ -31,9 +35,15 @@ export function openCheckpointDemo(scene: Phaser.Scene): void {
   const sample = SAMPLES[next % SAMPLES.length];
   next += 1;
   if (!sample) return;
-  const rows = checkpointRows({ ...sample, adsLeft: 3 });
+  const rows = () =>
+    checkpointRows({
+      ...sample,
+      adReady: sample.adReady && services.ads.isRewardedReady(),
+      adsLeft: 3,
+    });
   current = openCheckpointWindow(scene, {
-    rows,
+    rows: rows(),
+    liveRows: rows,
     berries: sample.berries,
     onChoose: (height, method) => {
       console.log('checkpoint window: choose', height, method);
