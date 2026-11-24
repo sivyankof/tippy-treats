@@ -24,8 +24,8 @@
   "continue": {
     "title": "Продолжить?",
     "height": "Высота {n}",
-    "watchAd": "Продолжить за рекламу",
-    "payFor": "Продолжить за {price}",
+    "watchAd": "За рекламу",
+    "payFor": "За {price}",
     "balance": "У тебя: {n}",
     "adUnavailable": "Реклама недоступна",
     "adLoading": "Загрузка…",

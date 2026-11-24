@@ -24,8 +24,8 @@
   "continue": {
     "title": "Continue?",
     "height": "Height {n}",
-    "watchAd": "Continue for an ad",
-    "payFor": "Continue for {price}",
+    "watchAd": "For an ad",
+    "payFor": "For {price}",
     "balance": "You have: {n}",
     "adUnavailable": "Ad unavailable",
     "adLoading": "Loading…",

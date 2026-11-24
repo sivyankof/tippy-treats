@@ -22,9 +22,9 @@ export interface ContinueButtonActions {
 }
 
 /**
- * The "Continue for an ad" and "Continue for N (berry)" buttons. The ad button is made once and
- * only changes its caption (`setText`) as the ad state changes; the price button is redone only
- * when the price or the busy state changes.
+ * The "For an ad" and "For N (berry)" buttons, one font size in every state. The ad button is
+ * made once and only changes its caption (`setText`) as the ad state changes; the price button is
+ * redone only when the price or the busy state changes.
  */
 export class ContinueButtons {
   /** Both buttons, for the window to place. */
@@ -134,8 +134,6 @@ export class ContinueButtons {
       fill: PALETTE.accentSecondary,
       layout: btn,
       font: btn.font,
-      // "Continue for N" is long: it shrinks to the room the ad caption has, never past the plate.
-      maxWidth: adLabelWidth,
       keyPrefix: 'ui_continue_berry_button',
       onPay: this.actions.onPayBerries,
       onShort: this.actions.onShort,
