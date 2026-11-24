@@ -9,8 +9,11 @@ import {
   type Pt,
 } from '../common/plain-style';
 
-/** Key of the gold star of the score tile; not meant for tinting. */
-export const SCORE_STAR_KEY = 'tr_score_star';
+/**
+ * Key of the gold star of the score tile; not meant for tinting. It keeps a texture of its own
+ * (no `tr_` prefix): it shows only on the results, and the shared atlas is kept for the run.
+ */
+export const SCORE_STAR_KEY = 'ui_score_star';
 
 const ROUND_STEPS = 4;
 

@@ -98,6 +98,22 @@ export const MENU = {
         drop: 0.06,
         gloss: { insetX: 18, insetY: 8, height: 40, share: 0.3, alpha: 0.42 },
       },
+      /**
+       * The title tab of a frame: the look of a chip, but a kind of its own, so its picture keeps a
+       * texture of its own instead of a place on the shared atlas (`ui_plate_chip`), which is kept for the run.
+       */
+      tab: {
+        radius: 30,
+        outline: 5,
+        rimWidth: 6,
+        bevel: 7,
+        shadowOffset: 6,
+        shadowBlur: 10,
+        shadowAlpha: 0.3,
+        lift: 0.3,
+        drop: 0.08,
+        gloss: { insetX: 16, insetY: 6, height: 16, share: 0.3, alpha: 0.42 },
+      },
       /** A flat tile inside a frame: a thin outline, no bevel, no shadow, no gloss. */
       tile: {
         radius: 34,

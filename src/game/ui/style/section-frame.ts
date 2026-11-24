@@ -22,8 +22,8 @@ export class SectionFrame extends Phaser.GameObjects.Container {
     super(scene, 0, 0);
     const label = createOutlinedText(scene, 0, 0, title, cfg.font);
     const width = label.width + cfg.padX * 2;
-    const plate = createPlate(scene, 'chip', 0, 0, width, cfg.height, { fill: cfg.fill });
-    label.setY(faceOffsetY('chip'));
+    const plate = createPlate(scene, 'tab', 0, 0, width, cfg.height, { fill: cfg.fill });
+    label.setY(faceOffsetY('tab'));
     fitText(label, width - cfg.padX);
     this.tab = new Phaser.GameObjects.Container(scene, 0, 0, [plate, label]);
     this.content = new Phaser.GameObjects.Container(scene, 0, 0);
