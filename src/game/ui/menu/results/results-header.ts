@@ -49,7 +49,7 @@ export class ResultsHeader {
     this.roll.set(result.height);
     const rows: Row[] = [
       { obj: title, height: MENU.style.ribbon.height * ribbonScale },
-      { obj: this.value, height: look.heightFont * cfg.lineHeight },
+      { obj: this.value, height: look.heightFont * cfg.header.heightLine },
     ];
     for (const line of lines) {
       const text = createOutlinedText(scene, 0, 0, line.text, look.lineFont, TONE_COLOR[line.tone]);

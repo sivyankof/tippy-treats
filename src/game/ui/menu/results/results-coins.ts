@@ -144,6 +144,27 @@ export class ResultsCoins {
     markAdUnavailable(this.button, this.buttonLabel, adRoom, cfg.adDisabledAlpha);
   }
 
+  /** The paid button gives way to a green "Doubled!" plate in its place that takes no taps. */
+  private showDoubled(): void {
+    const old = this.button;
+    if (!old) return;
+    const { button, label } = createTextButton(this.scene, {
+      text: t('results.doubled'),
+      font: cfg.adButton.font,
+      maxLabelWidth: adRoom,
+      fill: PALETTE.success,
+      layout: cfg.adButton,
+      keyPrefix: 'ui_results_doubled',
+      onClick: () => {},
+      x: old.x,
+      y: old.y,
+    });
+    plainAdLabel(label, adRoom);
+    button.setEnabled(false);
+    old.parentContainer?.add(button);
+    old.setVisible(false);
+  }
+
   private async watchAd(): Promise<void> {
     if (this.busy || !this.button) return;
     this.busy = true;
@@ -157,8 +178,7 @@ export class ResultsCoins {
         return;
       }
       this.roll.set(this.earned * 2);
-      this.buttonLabel?.setText(t('results.doubled'));
-      if (this.buttonLabel) plainAdLabel(this.buttonLabel, adRoom);
+      this.showDoubled();
       services.audio.coin();
       return;
     }

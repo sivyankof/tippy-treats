@@ -158,7 +158,7 @@ export function headerHeight(lines: number, compact: boolean): number {
   const h = cfg.header;
   const look = compact ? h.compact : h;
   const ribbon = MENU.style.ribbon.height * (compact ? h.compact.ribbonScale : 1);
-  const rows = [ribbon, look.heightFont * cfg.lineHeight];
+  const rows = [ribbon, look.heightFont * h.heightLine];
   for (let i = 0; i < lines; i++) rows.push(look.lineFont * cfg.lineHeight);
   return rows.reduce((sum, r) => sum + r, 0) + cfg.rowGap * (rows.length - 1);
 }
@@ -228,7 +228,8 @@ export interface ResultsPlaces {
 
 /**
  * The buttons stand at the bottom; the header and the panel above them share the free room
- * evenly, never closer than `sectionGap` to each other or to the buttons.
+ * evenly. The panel keeps at least `buttonsGap` above the buttons and `sectionGap` under the
+ * header; when the room runs short the air above the header goes first.
  */
 export function placeResults(
   frameHeight: number,
@@ -239,17 +240,28 @@ export function placeResults(
   const buttonsY = frameHeight - cfg.buttonsBottom - buttons / 2;
   const bottom = buttonsY - buttons / 2;
   const free = bottom - cfg.top - header - panel;
-  let gap = free / 3;
-  let top = cfg.top + gap;
-  if (gap < cfg.sectionGap) {
-    // The air under the panel is kept first; what is left goes above the header.
-    gap = cfg.sectionGap;
-    top = cfg.top + Math.max(0, free - cfg.sectionGap * 2);
+  const even = free / 3;
+  if (even >= cfg.buttonsGap) {
+    return {
+      headerY: cfg.top + even + header / 2,
+      panelTop: cfg.top + even * 2 + header,
+      buttonsY,
+    };
   }
-  return { headerY: top + header / 2, panelTop: top + header + gap, buttonsY };
+  // The air above the buttons is kept first, then the air under the header; the rest goes above.
+  const rest = free - cfg.buttonsGap;
+  const between = Math.max(cfg.sectionGap, rest / 2);
+  const above = Math.max(0, rest - between);
+  return {
+    headerY: cfg.top + above + header / 2,
+    panelTop: cfg.top + above + header + between,
+    buttonsY,
+  };
 }
 
 /** Height left for the panel under the header and above the buttons, with the air between. */
 export function panelRoom(frameHeight: number, header: number, buttons: number): number {
-  return frameHeight - cfg.buttonsBottom - buttons - cfg.top - header - cfg.sectionGap * 3;
+  return (
+    frameHeight - cfg.buttonsBottom - buttons - cfg.top - header - cfg.sectionGap - cfg.buttonsGap
+  );
 }

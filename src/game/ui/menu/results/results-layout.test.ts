@@ -111,7 +111,7 @@ describe('results layout', () => {
         expect(places.headerY + header / 2 + cfg.sectionGap).toBeLessThanOrEqual(
           places.panelTop + 0.5,
         );
-        expect(panelBottom + cfg.sectionGap).toBeLessThanOrEqual(buttonsTop + 0.5);
+        expect(panelBottom + cfg.buttonsGap).toBeLessThanOrEqual(buttonsTop + 0.5);
         plan.frames.forEach((frame, i) => {
           // The frames do not overlap each other (a tab rises above its frame).
           const next = plan.frames[i + 1];
@@ -177,9 +177,10 @@ describe('results layout', () => {
   });
 
   it('keeps the minimum air above the buttons when the room runs out', () => {
-    // 40 of free room: less than three gaps of 16, so the air above the header gives way first.
-    const places = placeResults(1000, 200, 250, 300);
-    expect(places.panelTop + 250 + cfg.sectionGap).toBeLessThanOrEqual(places.buttonsY - 150 + 0.5);
+    // 60 of free room: less than three even gaps of 40, so the air above the header gives way first.
+    const places = placeResults(1000, 200, 230, 300);
+    expect(places.panelTop + 230 + cfg.buttonsGap).toBeLessThanOrEqual(places.buttonsY - 150 + 0.5);
+    expect(places.panelTop - (places.headerY + 100)).toBeGreaterThanOrEqual(cfg.sectionGap - 0.5);
     expect(places.headerY - 100 + 0.5).toBeGreaterThanOrEqual(cfg.top);
   });
 

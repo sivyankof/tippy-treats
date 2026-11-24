@@ -148,7 +148,7 @@ export const MENU = {
      * tapped, which stays undimmed. A tap anywhere closes it.
      */
     callout: {
-      dimAlpha: 0.45,
+      dimAlpha: 0.6,
       depth: 650,
       fill: 0xfffdf8,
       padX: 34,
@@ -1058,6 +1058,8 @@ export const MENU = {
      * never come closer to "Play again"); on a taller screen they spread out.
      */
     sectionGap: 16,
+    /** The frames keep at least this much air above "Play again" (more than `sectionGap`). */
+    buttonsGap: 40,
     /** The dev-only plate over a run that is not saved. */
     debugPlate: { width: 900, height: 84, font: 38 },
     /** Line height of a text, as a share of its font size. */
@@ -1071,6 +1073,8 @@ export const MENU = {
      */
     header: {
       heightFont: 200,
+      /** Line height of the big height: digits have no descenders, so its row is tighter than text. */
+      heightLine: 1.05,
       lineFont: 46,
       compactBelow: 2200,
       compact: { heightFont: 160, lineFont: 42, ribbonScale: 0.85 },
@@ -1081,7 +1085,7 @@ export const MENU = {
      * the rows stand `rowGap` apart, `padTop` under the tab and `padBottom` above the plate's
      * bevel; the frames stand `gap` apart. Padding and gaps are the spacing that shrinks first.
      */
-    frames: { width: 1000, padX: 34, padTop: 28, padBottom: 18, rowGap: 22, gap: 40 },
+    frames: { width: 1000, padX: 34, padTop: 28, padBottom: 18, rowGap: 22, gap: 36 },
     /**
      * When the frames do not fit above the buttons, these steps are taken in order until they do:
      * `ovenLine` hides "The fresh oven lights up again tomorrow!", `teamRow` folds the Team frame
@@ -1140,6 +1144,8 @@ export const MENU = {
       comboFont: 60,
       iconSize: 88,
       countFont: 40,
+      /** The dashed line between the combo and the creatures. */
+      divider: { width: 4, dash: 12, gap: 9, inset: 14, color: 0xe3cdb6 },
       /** The folded row inside Rewards. */
       row: { height: 64, font: 38, iconSize: 58, iconGap: 6, itemGap: 22, comboGap: 34 },
     },

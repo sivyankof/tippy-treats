@@ -37,6 +37,13 @@ export function createTeamContent(
   row.add([fitText(label, cfg.comboWidth), fitText(value, cfg.comboWidth)]);
   if (triggered.length === 0) return row;
   const left = -width / 2 + cfg.comboWidth;
+  // A dashed line between the combo and the creatures, drawn once.
+  const d = cfg.divider;
+  const line = scene.add.graphics().fillStyle(d.color, 1);
+  for (let y = -cfg.height / 2 + d.inset; y < cfg.height / 2 - d.inset; y += d.dash + d.gap) {
+    line.fillRect(left - d.width / 2, y, d.width, Math.min(d.dash, cfg.height / 2 - d.inset - y));
+  }
+  row.add(line);
   const step = (width - cfg.comboWidth) / triggered.length;
   // Icons shrink together when many creatures share the row.
   const size = Math.min(cfg.iconSize, step * 0.9);
