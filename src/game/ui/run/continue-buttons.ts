@@ -134,6 +134,8 @@ export class ContinueButtons {
       fill: PALETTE.accentSecondary,
       layout: btn,
       font: btn.font,
+      // "Continue for N" is long: it shrinks to the room the ad caption has, never past the plate.
+      maxWidth: adLabelWidth,
       keyPrefix: 'ui_continue_berry_button',
       onPay: this.actions.onPayBerries,
       onShort: this.actions.onShort,
