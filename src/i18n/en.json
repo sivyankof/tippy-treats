@@ -559,7 +559,7 @@
     "level": "Level {n} in the team of the day"
   },
   "resultsDaily": {
-    "tier": "Daily reward for {n} layers",
+    "tier": "Reward for height {n}",
     "back": "Back to daily",
     "attempt": "This attempt: tier {n}",
     "attemptNone": "one=This attempt fell short of {n} layer|other=This attempt fell short of {n} layers",
