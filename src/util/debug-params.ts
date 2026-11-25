@@ -14,6 +14,7 @@ import { isWeatherId, type WeatherId } from '../data/weather/weather';
 import { isResultsDemoCase, type ResultsDemoCase } from '../data/debug/results-demo';
 import { UINT32_RANGE } from './math';
 import { DEBUG_TOOLS } from './build-kind';
+import { parseSafeInsets } from './boot/boot-screen';
 
 export interface DebugParams {
   debug: boolean;
@@ -86,17 +87,6 @@ function parseTeam(raw: string | null): Array<CreatureId | null> | undefined {
   return slots.slice(0, BALANCE.team.slots);
 }
 
-const MAX_SAFE_INSET = 200;
-
-/** `?safe=top,bottom`: two whole CSS px values from 0 to 200. */
-function parseSafe(raw: string | null): { top: number; bottom: number } | undefined {
-  const match = raw === null ? null : /^(\d{1,3}),(\d{1,3})$/.exec(raw.trim());
-  if (!match) return undefined;
-  const top = Number(match[1]);
-  const bottom = Number(match[2]);
-  return top <= MAX_SAFE_INSET && bottom <= MAX_SAFE_INSET ? { top, bottom } : undefined;
-}
-
 function parseLevel(raw: string | null): number | undefined {
   const level = parseUint(raw);
   return level !== undefined && level >= 1 && level <= MAX_CREATURE_LEVEL ? level : undefined;
@@ -136,7 +126,7 @@ export function parseDebugParams(search: string): DebugParams {
   if (isWeatherId(weather)) result.weather = weather;
   const place = params.get('place');
   if (isStartPlaceId(place)) result.place = place;
-  const safe = parseSafe(params.get('safe'));
+  const safe = parseSafeInsets(params.get('safe'));
   if (safe) result.safe = safe;
   return result;
 }

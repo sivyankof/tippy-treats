@@ -15,6 +15,7 @@ import { bindSaveFlush } from './state/page-lifecycle';
 import { followEffectsLevelDensity } from './game/app/follow-density';
 import { dropFramebufferHandlesOnLoss } from './game/app/lost-context-watch';
 import { bindNativeShell } from './game/app/native-shell';
+import { closeBootScreen, closeBootScreenOnFirstScreen } from './game/app/boot/boot-screen-close';
 import { bindPlayDays } from './game/app/play-days';
 import { bindNotifSchedule } from './game/app/notif-schedule';
 import { realNow } from './util/clock';
@@ -97,6 +98,7 @@ async function start(): Promise<void> {
     if (traceBoard || new URLSearchParams(window.location.search).get('soundboard') === '1') {
       const board = await import('./game/debug/soundboard');
       board.showSoundboard();
+      closeBootScreen();
       if (traceBoard)
         void import('./game/debug/soundboard-trace').then((t) => t.runSoundboardTrace());
       bootStage('started');
@@ -114,6 +116,7 @@ async function start(): Promise<void> {
   const game = new Phaser.Game(createGameConfig(parent));
   dropFramebufferHandlesOnLoss(game);
   bindCrashScenes(game);
+  closeBootScreenOnFirstScreen(game);
   perfDirector?.startPerfDirector(game);
   // The benchmark's `&dpr=` sets its own cap, to compare the variants.
   if (perf?.densityCap === undefined) followEffectsLevelDensity(game);

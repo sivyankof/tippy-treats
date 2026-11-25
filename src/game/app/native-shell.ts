@@ -3,7 +3,7 @@ import { APP_SHELL } from '../../data/app/app-shell';
 import type { AppShellService } from '../../services/app-shell/types';
 import type { AudioService } from '../../services/audio/types';
 import { handleBack } from './back-stack';
-import { SCENES } from './scene-keys';
+import { onFirstScreen } from './boot/first-screen';
 import { followStatusBar } from './status-bar';
 import { audioLog } from '../../services/audio/audio-log';
 
@@ -21,8 +21,8 @@ interface Flushable {
  * at once (`audio.resume('app')`); the service then checks the context by its clock and mends it
  * step by step (`services/audio/context-health.ts`). The app may play sound without a gesture, so
  * the audio starts right away, and the playlist with the first screen if that screen asked for no
- * music itself. The launch splash goes away after the first
- * frame of a screen of the game. The Android back goes to the topmost screen or window that takes it
+ * music itself. The boot screen of index.html takes the launch splash away once it is painted; the
+ * shell hides it again after the first frame of a screen of the game, in case the page could not. The Android back goes to the topmost screen or window that takes it
  * (`back-stack.ts`: a window closes, a run pauses, a menu screen goes home); when none does (Home),
  * the app goes to the background. The status bar icons follow the screen (`status-bar.ts`). Does
  * nothing in a browser.
@@ -64,23 +64,6 @@ export function bindNativeShell(
   hideSplashOnFirstScreen(game, shell);
   startMusicOnFirstScreen(game, audio);
   followStatusBar(shell);
-}
-
-/** Calls `call` once, after the first frame of a screen of the game (not of the boot scene); returns the function that calls it at once instead. */
-function onFirstScreen(game: Phaser.Game, call: () => void): () => void {
-  let called = false;
-  function shown(): void {
-    const screen = game.scene.getScenes(true).some((scene) => scene.scene.key !== SCENES.boot);
-    if (screen) now();
-  }
-  function now(): void {
-    if (called) return;
-    called = true;
-    game.events.off(Phaser.Core.Events.POST_RENDER, shown);
-    call();
-  }
-  game.events.on(Phaser.Core.Events.POST_RENDER, shown);
-  return now;
 }
 
 function hideSplashOnFirstScreen(game: Phaser.Game, shell: AppShellService): void {

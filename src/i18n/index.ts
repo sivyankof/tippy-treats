@@ -1,5 +1,6 @@
 import en from './en.json';
 import ru from './ru.json';
+import { langOfChoice, langOfLocales } from '../util/boot/boot-screen';
 
 export type Lang = 'en' | 'ru';
 
@@ -9,14 +10,14 @@ export const DICTIONARIES: Record<Lang, Dictionary> = { en, ru };
 
 let current: Lang = 'en';
 
-/** Russian when the system (first) locale is Russian, English otherwise. */
+/** Russian when the system (first) locale is Russian, English otherwise (the boot screen picks the same way). */
 export function detectLang(locales: readonly string[]): Lang {
-  return locales[0]?.toLowerCase().startsWith('ru') ? 'ru' : 'en';
+  return langOfLocales(locales);
 }
 
 /** The language a saved choice stands for: `auto` follows the system locales. */
 export function resolveLang(choice: Lang | 'auto', locales: readonly string[]): Lang {
-  return choice === 'auto' ? detectLang(locales) : choice;
+  return langOfChoice(choice, locales);
 }
 
 export function setLang(lang: Lang): void {
