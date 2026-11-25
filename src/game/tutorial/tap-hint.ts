@@ -6,7 +6,7 @@ import { oscillate01, sineWave } from '../../util/math';
 import { FLYING_REACH } from '../run/camera-layout';
 import { GlyphText, prepareGlyphs } from '../ui/common/glyph-text';
 import { tapGlyphStyle } from '../ui/run/run-volume-styles';
-import { HAND, HAND_TOP_ORIGIN, HINT_TEXTURES } from './hint-textures';
+import { HAND, HAND_ORIGIN, HINT_TEXTURES } from './hint-textures';
 
 const tap = TUTORIAL_ANIM.tap;
 const CAPTION_HUD_GAP = TUTORIAL_ANIM.caption.hudGap;
@@ -32,7 +32,7 @@ export class TapHint {
       .setAlpha(0);
     this.hand = scene.add
       .image(0, 0, HINT_TEXTURES.hand)
-      .setOrigin(0.5, HAND_TOP_ORIGIN)
+      .setOrigin(HAND_ORIGIN[0], HAND_ORIGIN[1])
       .setAlpha(0);
     this.setVisible(false);
   }

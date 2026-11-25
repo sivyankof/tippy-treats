@@ -20,6 +20,33 @@ export const TUTORIAL_ANIM = {
     fadeInMs: 250,
     fadeOutMs: 200,
   },
+  /**
+   * The chubby glove that taps (`game/tutorial/hand-shape.ts`): a short thick finger, two round
+   * knuckles, a thumb, a palm and a soft cuff, drawn after a sketch in units of its own and
+   * scaled by `scale`. The picture is tilted as a whole.
+   */
+  hand: {
+    scale: 0.78,
+    tiltDeg: -10,
+    /** The tone the outline is darkened from: a warm tan, since a darkened cream would turn grey. */
+    outlineBase: 0xd88a5e,
+    /** The cuff and its shadow tone. */
+    cuffColor: 0xff8fb0,
+    cuffShadow: 0xe0668f,
+    /** Sketch units cut off the lit palm on the right and at the bottom: the shadow band. */
+    palmShadowRight: 14,
+    palmShadowBottom: 34,
+    /** Sketch units cut off the lit cuff on the right and at the bottom. */
+    cuffShadowRight: 8,
+    cuffShadowBottom: 14,
+    glossAlpha: 0.95,
+    cuffGlossAlpha: 0.6,
+    /** The cuff's own outline over the palm is this thick, logical pixels. */
+    cuffRim: 4,
+    /** Knuckle creases: stroke width in sketch units and opacity. */
+    creaseWidth: 6,
+    creaseAlpha: 0.8,
+  },
   /** The first perfect drop of a session. */
   firstPerfect: {
     /** Gap between the bottom of the text and the top of the flying row. */
