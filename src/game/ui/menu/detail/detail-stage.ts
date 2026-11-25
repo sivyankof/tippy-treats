@@ -6,6 +6,7 @@ import { shade } from '../../../../util/color';
 import { hasNewLook, isMaster } from '../../../../core/creatures/mastery';
 import { CreaturePortrait } from '../../../objects/creatures/creature-portrait';
 import { bakeTexture } from '../../common/bake-texture';
+import { attachFrameSparkle } from '../../creatures/frame-sparkle';
 import { bakeMasteryFrame } from '../../creatures/mastery-frame';
 import { createIconButton } from '../widgets/icon-button';
 import { VolumePlate } from '../../style/volume';
@@ -97,11 +98,16 @@ export class DetailStage extends Phaser.GameObjects.Container {
       level === null ? null : new LevelStars(scene, 0, stage.starsY, level, cfg.starsScale);
     this.add([plate, glow, pedestal, this.portrait]);
     if (this.stars) this.add(this.stars);
+    const body = { width, height: stage.height };
     this.frame =
       level !== null && isMaster(level)
-        ? scene.add.image(0, 0, bakeMasteryFrame(scene, { width, height: stage.height }))
+        ? scene.add.image(0, 0, bakeMasteryFrame(scene, body))
         : null;
-    if (this.frame) this.add(this.frame);
+    if (this.frame) {
+      this.add(this.frame);
+      // The glint skips a frame that is hidden, so it stays off during the master transformation.
+      attachFrameSparkle(scene, this, body, this.frame);
+    }
     if (onAbout) {
       const { size, inset } = cfg.about;
       this.add(

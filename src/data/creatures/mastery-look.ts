@@ -282,4 +282,24 @@ export const MASTERY_FRAME = {
   windowCrown: { r: 44, lift: 9, inset: 62 },
   /** Fine highlight along the top of the band: height, inset from corners. */
   shine: { height: 3, inset: 54, alpha: 0.8 },
+  /**
+   * The running sparkle of a level-5 frame (docs/06): about once every `periodMs` one frame on the screen
+   * sends a glint once round its band in `runMs`, starting and ending under the crown. `firstDelayMs` is the wait
+   * after the screen opens. The head is the shared thin diamond (`fx_spark`) lying along the way, stretched by
+   * `head`, with a small cross glint over it (`cross`, a share of the head) and `trail` fading copies behind
+   * (`spacing` as a share of the way, each `fade` times fainter and smaller than the one before). `plateScale`
+   * enlarges everything on plates other than the card (the creature window is shown larger). `edge` is the share
+   * of the run over which the glint fades in and out.
+   */
+  sparkle: {
+    periodMs: 5000,
+    runMs: 2000,
+    firstDelayMs: 1500,
+    tint: '#fff3b0',
+    head: { scaleX: 1.5, scaleY: 1.3, alpha: 1 },
+    cross: { scale: 0.7, alpha: 0.85 },
+    trail: { count: 2, spacing: 0.012, fade: 0.55 },
+    plateScale: 1.5,
+    edge: 0.08,
+  },
 } as const;
