@@ -5,6 +5,8 @@ import { textPadding } from '../../../util/text-padding';
 import { bakeTexture } from './bake-texture';
 import { FONT_FAMILY, FONT_WEIGHT } from './fonts';
 import { glyphBoxWidth, glyphChars, glyphKey, glyphStrokeKey, layoutGlyphs } from './glyph-layout';
+import { VOLUME_TEXT } from '../../../data/common/volume-text-look';
+import { paintVolumeBack, paintVolumeFace, volumeSpecId, type VolumeSpec } from './volume-text';
 
 /**
  * Text drawn from pictures of its glyphs on the shared atlas. A Phaser `Text` is a texture of its
@@ -17,6 +19,10 @@ import { glyphBoxWidth, glyphChars, glyphKey, glyphStrokeKey, layoutGlyphs } fro
  * Every glyph has two pictures, its outline and its fill, and a text draws all the outlines before
  * any fill (as a Text strokes the whole line and then fills it), so the outline of a glyph never
  * covers the fill of the one before it.
+ *
+ * A style with `volume` draws the glyphs in the volume look (`volume-text.ts`): the outline picture
+ * is the contour with its step of shadow, the fill picture is the face with its band and gloss. The
+ * box is that of `createOutlinedText` (the padding takes the step too).
  */
 
 /** The look of a glyph text: the font size, the outline and the two colours. */
@@ -25,6 +31,8 @@ export interface GlyphStyle {
   strokeWidth: number;
   color: number;
   strokeColor: number;
+  /** Draws the volume look instead of a flat fill and outline (the colours above are then unused). */
+  volume?: VolumeSpec;
 }
 
 /** The style of a light HUD text with the dark outline (what `createStrokedText` makes). */
@@ -32,9 +40,21 @@ export function hudGlyphStyle(fontSize: number, strokeWidth: number): GlyphStyle
   return { fontSize, strokeWidth, color: PALETTE.textLight, strokeColor: PALETTE.textDark };
 }
 
+/** The style of a volume text of the run: the contour and step of `VOLUME_TEXT`, the face of `spec`. */
+export function volumeGlyphStyle(fontSize: number, spec: VolumeSpec): GlyphStyle {
+  return {
+    fontSize,
+    strokeWidth: VOLUME_TEXT.contour,
+    color: VOLUME_TEXT.faces[spec.face].color,
+    strokeColor: VOLUME_TEXT.contourColor,
+    volume: spec,
+  };
+}
+
 function styleId(style: GlyphStyle): string {
-  const { fontSize, strokeWidth, color, strokeColor } = style;
-  return `${fontSize}_${strokeWidth}_${color.toString(16)}_${strokeColor.toString(16)}`;
+  const { fontSize, strokeWidth, color, strokeColor, volume } = style;
+  const flat = `${fontSize}_${strokeWidth}_${color.toString(16)}_${strokeColor.toString(16)}`;
+  return volume ? `${flat}_v${volumeSpecId(volume)}` : flat;
 }
 
 function fontOf(style: GlyphStyle): string {
@@ -69,7 +89,7 @@ function styleMetrics(scene: Phaser.Scene, style: GlyphStyle): StyleMetrics {
   const id = styleId(style);
   const known = metricsOf.get(id);
   if (known) return known;
-  const pad = textPadding(style.strokeWidth, 0, 0);
+  const pad = textPadding(style.strokeWidth, 0, style.volume ? VOLUME_TEXT.step : 0);
   const probe = scene.make.text({
     x: 0,
     y: 0,
@@ -123,6 +143,13 @@ function bakeGlyphLayer(
     m.height,
     () => undefined,
     (context) => {
+      if (style.volume) {
+        const canvas = { context, width, height: m.height, font: fontOf(style) };
+        const pen = { x: left, baseline };
+        if (layer === 'stroke') paintVolumeBack(canvas, char, pen);
+        else paintVolumeFace(canvas, char, pen, style.volume);
+        return;
+      }
       context.font = fontOf(style);
       context.textBaseline = 'alphabetic';
       context.lineJoin = 'round';

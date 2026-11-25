@@ -4,7 +4,8 @@ import { TUTORIAL_ANIM } from '../../data/tutorial/tutorial-anim';
 import { t } from '../../i18n';
 import { oscillate01, sineWave } from '../../util/math';
 import { FLYING_REACH } from '../run/camera-layout';
-import { createOutlinedText } from '../ui/common/outlined-text';
+import { GlyphText, prepareGlyphs } from '../ui/common/glyph-text';
+import { tapGlyphStyle } from '../ui/run/run-volume-styles';
 import { HAND, HAND_TOP_ORIGIN, HINT_TEXTURES } from './hint-textures';
 
 const tap = TUTORIAL_ANIM.tap;
@@ -16,13 +17,19 @@ const CAPTION_HUD_GAP = TUTORIAL_ANIM.caption.hudGap;
  */
 export class TapHint {
   private readonly hand: Phaser.GameObjects.Image;
-  private readonly label: Phaser.GameObjects.Text;
+  private readonly label: GlyphText;
   private alpha = 0;
   private handY = 0;
   private screenWidth = 0;
 
   constructor(scene: Phaser.Scene) {
-    this.label = createOutlinedText(scene, 0, 0, t('tutorial.tap'), tap.fontSize).setAlpha(0);
+    // Baked here, when the hint is made in the current language, never during the run.
+    const text = t('tutorial.tap');
+    const style = tapGlyphStyle(text);
+    prepareGlyphs(scene, style, [text]);
+    this.label = new GlyphText(scene, 0, 0, style, 0.5, 0.5, Array.from(text).length)
+      .setText(text)
+      .setAlpha(0);
     this.hand = scene.add
       .image(0, 0, HINT_TEXTURES.hand)
       .setOrigin(0.5, HAND_TOP_ORIGIN)

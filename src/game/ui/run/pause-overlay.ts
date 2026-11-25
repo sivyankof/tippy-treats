@@ -5,7 +5,8 @@ import { PALETTE } from '../../../data/common/palette';
 import { t } from '../../../i18n';
 import { createTextButton, type Button } from '../common/button';
 import { createToggleRows, soundSettingRows } from '../menu/settings/setting-toggles';
-import { createOutlinedText } from '../common/outlined-text';
+import { GlyphText, prepareGlyphs } from '../common/glyph-text';
+import { COUNTDOWN_DIGITS, COUNTDOWN_GLYPH_STYLE } from './run-volume-styles';
 import { PopupWindow } from '../style/dialog-window';
 import type { ToggleSwitch } from '../style/toggle-switch';
 import { leaveScreen } from '../common/transition';
@@ -26,7 +27,7 @@ export interface PauseHandlers {
  * Restart, Home and the sound, music, vibration and "fewer effects" switches.
  */
 export class PauseOverlay {
-  private readonly countdown: Phaser.GameObjects.Text;
+  private readonly countdown: GlyphText;
   private popup: PopupWindow | null = null;
   private controls: Array<Button | ToggleSwitch> = [];
   private countdownTimer: Phaser.Time.TimerEvent | null = null;
@@ -35,7 +36,9 @@ export class PauseOverlay {
     private readonly scene: Phaser.Scene,
     private readonly handlers: PauseHandlers,
   ) {
-    this.countdown = createOutlinedText(scene, 0, 0, '', PAUSE.countdownFont, PALETTE.gold)
+    // The digits are baked now, with the HUD, so the countdown over the paused run bakes nothing.
+    prepareGlyphs(scene, COUNTDOWN_GLYPH_STYLE, [COUNTDOWN_DIGITS]);
+    this.countdown = new GlyphText(scene, 0, 0, COUNTDOWN_GLYPH_STYLE, 0.5, 0.5, 1)
       .setDepth(PAUSE.countdownDepth)
       .setVisible(false);
   }

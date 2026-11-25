@@ -41,6 +41,8 @@ export const HUD_LAYOUT = {
   /** Line height of the label font, as a share of its size (what the plate wraps around). */
   labelLineHeight: 1.4,
   heightFont: 150,
+  /** Glyph pictures made up front for the height number ("1 234 567" has seven). */
+  heightGlyphCapacity: 8,
   scoreFont: 60,
   /** "Demo: <name>" label of a creature demo, this far above the bottom of the screen. */
   demoLabelBottom: 150,

@@ -1,8 +1,5 @@
-import type * as Phaser from 'phaser';
 import { IDLE_MOTION, IDLE_PHASE } from '../../../data/common/idle-motion';
-import { applyIdlePose, idlePose, type IdlePose } from '../common/idle-motion';
-
-type Text = Phaser.GameObjects.Text;
+import { applyIdlePose, idlePose, type IdlePose, type Swayable } from '../common/idle-motion';
 
 /**
  * The height and score numbers breathe and tilt a hair, so the top of the HUD is never still.
@@ -12,8 +9,8 @@ export class HudNumbersIdle {
   private readonly pose: IdlePose = { scaleX: 1, scaleY: 1, angle: 0, bob: 0 };
 
   constructor(
-    private readonly height: Text,
-    private readonly score: Text,
+    private readonly height: Swayable,
+    private readonly score: Swayable,
   ) {}
 
   update(timeMs: number): void {
