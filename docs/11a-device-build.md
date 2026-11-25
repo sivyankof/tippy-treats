@@ -296,11 +296,11 @@ base64 -w0 android/app/google-services.json | gh secret set FIREBASE_ANDROID_JSO
 
 ### 6.6. Сборки 1.0.2
 
-Версия 1.0.2 (раздел 0), номера 13 и 14 одинаковые для обеих платформ. Журнал GitHub обеих iOS-сборок: «Keys of this build: ADMOB_APP_ID_IOS ADMOB_REWARDED_ID_IOS ADMOB_INTERSTITIAL_ID_IOS REVENUECAT_API_KEY_IOS FIREBASE_IOS_PLIST», «Not set (sample ad ids or the stub instead): none», `privacy manifests: ok` (23 манифеста, у всех `NSPrivacyTracking=false` без доменов). Android: подпись ключом загрузки (`CN=Tippy Treats`, SHA-256 `FA:B8:02:34:…:8C:9E:F7:A1`), в манифесте пакета `versionName` 1.0.2, `versionCode` 13 и 14, `targetSdkVersion` 36; во внутренней сборке есть отладочное меню, в выпускной его нет. iOS-сборки в TestFlight, на проверку Apple не отправлены. Android 1.0.2 в Google Play не загружается до окончания закрытого теста (около 5 декабря).
+Версия 1.0.2 (раздел 0), номера 15 и 16 одинаковые для обеих платформ. Журнал GitHub обеих iOS-сборок: «Keys of this build: ADMOB_APP_ID_IOS ADMOB_REWARDED_ID_IOS ADMOB_INTERSTITIAL_ID_IOS REVENUECAT_API_KEY_IOS FIREBASE_IOS_PLIST», «Not set (sample ad ids or the stub instead): none», `privacy manifests: ok` (23 манифеста, у всех `NSPrivacyTracking=false` без доменов). Android: подпись ключом загрузки (`CN=Tippy Treats`, SHA-256 `FA:B8:02:34:…:8C:9E:F7:A1`), в манифесте пакета `versionName` 1.0.2, `versionCode` 15 и 16, `targetSdkVersion` 36; во внутренней сборке есть отладочное меню, в выпускной его нет. iOS-сборки в TestFlight, на проверку Apple не отправлены. Android 1.0.2 в Google Play не загружается до окончания закрытого теста (около 5 декабря).
 
 | Сборка | Где | Что внутри |
 |---|---|---|
-| iOS 1.0.2 (13), внутренняя | TestFlight (запуск 45583274460) | отладочное меню; тестовая реклама Google; RevenueCat; Firebase |
-| iOS 1.0.2 (14), выпускная | TestFlight (запуск 45585238023) | без отладочного меню; идентификаторы AdMob из секретов; RevenueCat; Firebase. Её отправлять на проверку |
-| Android 1.0.2 (13), внутренняя | `tippy-treats-store-assets\builds\tippy-treats-1.0.2-13-internal.aab` | отладочное меню; тестовые идентификаторы Google; RevenueCat; Firebase |
-| Android 1.0.2 (14), выпускная | `tippy-treats-store-assets\builds\tippy-treats-1.0.2-14-store.aab` | без отладочного меню; идентификатор приложения и блоки AdMob из `.env`; RevenueCat; Firebase |
+| iOS 1.0.2 (15), внутренняя | TestFlight (запуск 45604806859) | отладочное меню; тестовая реклама Google; RevenueCat; Firebase |
+| iOS 1.0.2 (16), выпускная | TestFlight (запуск 45606348401) | без отладочного меню; идентификаторы AdMob из секретов; RevenueCat; Firebase. Её отправлять на проверку |
+| Android 1.0.2 (15), внутренняя | `tippy-treats-store-assets\builds\tippy-treats-1.0.2-15-internal.aab` | отладочное меню; тестовые идентификаторы Google; RevenueCat; Firebase |
+| Android 1.0.2 (16), выпускная | `tippy-treats-store-assets\builds\tippy-treats-1.0.2-16-store.aab` | без отладочного меню; идентификатор приложения и блоки AdMob из `.env`; RevenueCat; Firebase |
