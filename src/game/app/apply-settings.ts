@@ -4,6 +4,7 @@ import { services } from '../../services';
 import { gameState } from '../../state';
 import { effectsMode } from './effects-mode';
 import { askNotifPermission } from './ask-notif-permission';
+import { rememberBootPrefs } from './boot/boot-screen-close';
 
 /** Puts the saved settings into the services and the effects mode; called once at start-up. */
 export function applySavedSettings(): void {
@@ -13,6 +14,7 @@ export function applySavedSettings(): void {
   services.audio.setMusicEnabled(music);
   services.haptics.setEnabled(haptics);
   effectsMode.setChoice(reducedFx);
+  rememberBootPrefs(lang, reducedFx);
 }
 
 /** The sound switch of the pause window: the service follows at once, the save with its delay. */
@@ -40,12 +42,14 @@ export function setReducedFxOn(on: boolean): void {
   const setting = on ? 'on' : 'off';
   effectsMode.setChoice(setting);
   gameState.updateSettings({ reducedFx: setting });
+  rememberBootPrefs(gameState.settings.lang, setting);
 }
 
 /** The language switch of the settings: the save and the texts follow at once (`auto` is the system's). */
 export function setLanguage(lang: Lang): void {
   gameState.updateSettings({ lang });
   setLang(resolveLang(lang, navigator.languages));
+  rememberBootPrefs(lang, gameState.settings.reducedFx);
 }
 
 export type NotificationKind = keyof Save['settings']['notifications'];

@@ -2,6 +2,9 @@ import { normalizePath, type Plugin } from 'vite';
 import { defineConfig } from 'vitest/config';
 import { storeVersion } from './scripts/native/app-version.cjs';
 import { cleanBuildHash, formatBuildStamp, formatBuildTime } from './src/util/build-stamp.ts';
+import { APP_SHELL } from './src/data/app/app-shell.ts';
+import { BOOT_SCREEN } from './src/data/app/boot-screen.ts';
+import { bootPhrasesOf, bootScript, injectBoot } from './scripts/boot-screen-html.ts';
 
 /** Node global; the project does not pull in the Node type definitions. */
 declare const process: {
@@ -18,10 +21,14 @@ declare const process: {
   };
 };
 
+/** Reads a file of the repository as text. */
+function readText(path: string): string {
+  return process.getBuiltinModule('node:fs').readFileSync(path, 'utf-8');
+}
+
 /** The `version` of package.json: the one source of the version (the game shows it as `storeVersion`). */
 function packageVersion(): string {
-  const text = process.getBuiltinModule('node:fs').readFileSync('./package.json', 'utf-8');
-  return (JSON.parse(text) as { version: string }).version;
+  return (JSON.parse(readText('./package.json')) as { version: string }).version;
 }
 
 /** The version the game shows: the store version; a pre-release (1.1.0-rc.1) as it is, so dev and tests still start. */
@@ -158,6 +165,36 @@ function buildStampInHtml(stamp: () => string): Plugin {
   };
 }
 
+/**
+ * The boot screen of index.html (src/util/boot/boot-screen.ts): its logic goes in as an inline
+ * script with the numbers of `BOOT_SCREEN`, and its phrases in both languages come from src/i18n.
+ * `debug` turns on its URL parameters (dev server and internal build); a build squeezes the markup.
+ */
+function bootScreenInHtml(debug: boolean, compact: boolean): Plugin {
+  return {
+    name: 'boot-screen',
+    transformIndexHtml: {
+      order: 'pre',
+      handler: async (html) => {
+        const script = await bootScript(readText('./src/util/boot/boot-screen.ts'), {
+          storageKey: BOOT_SCREEN.storageKey,
+          minShowMs: BOOT_SCREEN.minShowMs,
+          maxShowMs: APP_SHELL.splashMaxMs,
+          fadeOutMs: BOOT_SCREEN.fadeOutMs,
+          fontWaitMs: BOOT_SCREEN.fontWaitMs,
+          splashFadeMs: BOOT_SCREEN.splashFadeMs,
+          debug,
+        });
+        const phrases = bootPhrasesOf({
+          ru: JSON.parse(readText('./src/i18n/ru.json')) as unknown,
+          en: JSON.parse(readText('./src/i18n/en.json')) as unknown,
+        });
+        return injectBoot(html, script, phrases, compact);
+      },
+    },
+  };
+}
+
 export default defineConfig(({ command, mode }) => {
   const devServer = command === 'serve' && mode !== 'test';
   // `vite build --mode internal`: the internal build of the apps (debug menu, URL debug parameters,
@@ -176,6 +213,7 @@ export default defineConfig(({ command, mode }) => {
       __FIREBASE_ANDROID__: JSON.stringify(hasFile(FIREBASE_FILES.android)),
     },
     plugins: [
+      bootScreenInHtml(devServer || process.env.VITE_INTERNAL_BUILD === '1', command === 'build'),
       buildStampInHtml(
         devServer
           ? () => `${formatBuildStamp(gitHash(), formatBuildTime(new Date()))} (page load)`

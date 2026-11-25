@@ -5,6 +5,8 @@ import { textPadding } from '../../../util/text-padding';
 import { bakeTexture } from './bake-texture';
 import { FONT_FAMILY, FONT_WEIGHT } from './fonts';
 import { glyphBoxWidth, glyphChars, glyphKey, glyphStrokeKey, layoutGlyphs } from './glyph-layout';
+import { VOLUME_TEXT } from '../../../data/common/volume-text-look';
+import { paintVolumeBack, paintVolumeFace, volumeSpecId, type VolumeSpec } from './volume-text';
 
 /**
  * Text drawn from pictures of its glyphs on the shared atlas. A Phaser `Text` is a texture of its
@@ -17,6 +19,10 @@ import { glyphBoxWidth, glyphChars, glyphKey, glyphStrokeKey, layoutGlyphs } fro
  * Every glyph has two pictures, its outline and its fill, and a text draws all the outlines before
  * any fill (as a Text strokes the whole line and then fills it), so the outline of a glyph never
  * covers the fill of the one before it.
+ *
+ * A style with `volume` draws the glyphs in the volume look (`volume-text.ts`): the outline picture
+ * is the contour with its step of shadow, the fill picture is the face with its band and gloss. The
+ * box is that of `createOutlinedText` (the padding takes the step too).
  */
 
 /** The look of a glyph text: the font size, the outline and the two colours. */
@@ -25,6 +31,13 @@ export interface GlyphStyle {
   strokeWidth: number;
   color: number;
   strokeColor: number;
+  /** Draws the volume look instead of a flat fill and outline (the colours above are then unused). */
+  volume?: VolumeSpec;
+  /**
+   * The glyphs keep textures of their own instead of cells of the shared atlas: for big glyphs shown
+   * alone (one tall shelf of the atlas page each), where one more draw does not matter.
+   */
+  ownTextures?: boolean;
 }
 
 /** The style of a light HUD text with the dark outline (what `createStrokedText` makes). */
@@ -32,9 +45,22 @@ export function hudGlyphStyle(fontSize: number, strokeWidth: number): GlyphStyle
   return { fontSize, strokeWidth, color: PALETTE.textLight, strokeColor: PALETTE.textDark };
 }
 
+/** The style of a volume text of the run: the contour and step of `VOLUME_TEXT`, the face of `spec`. */
+export function volumeGlyphStyle(fontSize: number, spec: VolumeSpec): GlyphStyle {
+  return {
+    fontSize,
+    strokeWidth: VOLUME_TEXT.contour,
+    color: VOLUME_TEXT.faces[spec.face].color,
+    strokeColor: VOLUME_TEXT.contourColor,
+    volume: spec,
+  };
+}
+
 function styleId(style: GlyphStyle): string {
-  const { fontSize, strokeWidth, color, strokeColor } = style;
-  return `${fontSize}_${strokeWidth}_${color.toString(16)}_${strokeColor.toString(16)}`;
+  const { fontSize, strokeWidth, color, strokeColor, volume } = style;
+  const flat = `${fontSize}_${strokeWidth}_${color.toString(16)}_${strokeColor.toString(16)}`;
+  const id = volume ? `${flat}_v${volumeSpecId(volume)}` : flat;
+  return style.ownTextures ? `${id}_own` : id;
 }
 
 function fontOf(style: GlyphStyle): string {
@@ -69,7 +95,7 @@ function styleMetrics(scene: Phaser.Scene, style: GlyphStyle): StyleMetrics {
   const id = styleId(style);
   const known = metricsOf.get(id);
   if (known) return known;
-  const pad = textPadding(style.strokeWidth, 0, 0);
+  const pad = textPadding(style.strokeWidth, 0, style.volume ? VOLUME_TEXT.step : 0);
   const probe = scene.make.text({
     x: 0,
     y: 0,
@@ -123,6 +149,13 @@ function bakeGlyphLayer(
     m.height,
     () => undefined,
     (context) => {
+      if (style.volume) {
+        const canvas = { context, width, height: m.height, font: fontOf(style) };
+        const pen = { x: left, baseline };
+        if (layer === 'stroke') paintVolumeBack(canvas, char, pen);
+        else paintVolumeFace(canvas, char, pen, style.volume);
+        return;
+      }
       context.font = fontOf(style);
       context.textBaseline = 'alphabetic';
       context.lineJoin = 'round';
@@ -135,6 +168,56 @@ function bakeGlyphLayer(
         context.fillStyle = cssColor(style.color);
         context.fillText(char, left, baseline);
       }
+    },
+  );
+}
+
+/**
+ * Bakes a whole line of `text` in `style` as one picture of its own, in the box of the same Text: for
+ * a text that shows alone and never changes in a run (one draw, no cells of the shared atlas). The
+ * whole outline goes down before the face, as on a Text. Call it while a scene loads.
+ */
+export function bakeGlyphLine(
+  scene: Phaser.Scene,
+  style: GlyphStyle,
+  text: string,
+  key: string,
+): void {
+  const m = styleMetrics(scene, style);
+  const width = glyphBoxWidth(measureIn(style, text), style.strokeWidth, m.padX);
+  const pen = {
+    x: m.padX + style.strokeWidth / 2,
+    baseline: m.padY + style.strokeWidth / 2 + m.ascent,
+  };
+  const font = fontOf(style);
+  bakeTexture(
+    scene,
+    key,
+    width,
+    m.height,
+    () => undefined,
+    (context) => {
+      const { width: w, height: h } = context.canvas;
+      if (!style.volume) {
+        context.font = font;
+        context.textBaseline = 'alphabetic';
+        context.lineJoin = 'round';
+        context.lineWidth = style.strokeWidth;
+        context.strokeStyle = cssColor(style.strokeColor);
+        context.strokeText(text, pen.x, pen.baseline);
+        context.fillStyle = cssColor(style.color);
+        context.fillText(text, pen.x, pen.baseline);
+        return;
+      }
+      paintVolumeBack({ context, width: w, height: h, font }, text, pen);
+      // The face keeps its band and gloss to itself on a canvas of its own, then lies on the outline.
+      const face = document.createElement('canvas');
+      face.width = w;
+      face.height = h;
+      const faceContext = face.getContext('2d');
+      if (!faceContext) return;
+      paintVolumeFace({ context: faceContext, width: w, height: h, font }, text, pen, style.volume);
+      context.drawImage(face, 0, 0);
     },
   );
 }
@@ -161,8 +244,9 @@ export function prepareGlyphs(
   };
   bakedOf.set(id, baked);
   for (const char of glyphChars(strings)) {
-    bakeGlyphLayer(scene, style, glyphStrokeKey(id, char), char, 'stroke');
-    bakeGlyphLayer(scene, style, glyphKey(id, char), char, 'fill');
+    const shared = !style.ownTextures;
+    bakeGlyphLayer(scene, style, glyphStrokeKey(id, char, shared), char, 'stroke');
+    bakeGlyphLayer(scene, style, glyphKey(id, char, shared), char, 'fill');
     baked.chars.add(char);
   }
 }
@@ -178,7 +262,8 @@ export function rebakeGlyphsOnFontLoad(): void {
   metricsOf.clear();
   for (const [id, { style, chars, textures }] of stale) {
     for (const char of chars) {
-      for (const key of [glyphKey(id, char), glyphStrokeKey(id, char)]) {
+      const shared = !style.ownTextures;
+      for (const key of [glyphKey(id, char, shared), glyphStrokeKey(id, char, shared)]) {
         if (textures.exists(key)) textures.remove(key);
       }
     }
@@ -244,8 +329,11 @@ export class GlyphText extends Phaser.GameObjects.Container {
     this.setSize(width, m.height);
     layout.glyphs.forEach((glyph, i) => {
       const [stroke, fill] = this.glyphImages(i);
-      stroke.setTexture(glyphStrokeKey(this.id, glyph.char)).setPosition(left + glyph.x, top);
-      fill.setTexture(glyphKey(this.id, glyph.char)).setPosition(left + glyph.x, top);
+      const shared = !style.ownTextures;
+      stroke
+        .setTexture(glyphStrokeKey(this.id, glyph.char, shared))
+        .setPosition(left + glyph.x, top);
+      fill.setTexture(glyphKey(this.id, glyph.char, shared)).setPosition(left + glyph.x, top);
       stroke.setVisible(true);
       fill.setVisible(true);
     });

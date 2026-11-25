@@ -57,11 +57,19 @@ export function pluralFormTexts(entry: string): string[] {
 }
 
 /** Texture key of the fill picture of one glyph of a style. */
-export function glyphKey(styleId: string, char: string): string {
-  return `ui_hud_glyph_${styleId}_${(char.codePointAt(0) ?? 0).toString(16)}`;
+export function glyphKey(styleId: string, char: string, shared = true): string {
+  return `${glyphPrefix(shared)}glyph_${styleId}_${(char.codePointAt(0) ?? 0).toString(16)}`;
 }
 
 /** Texture key of the outline picture of one glyph of a style. */
-export function glyphStrokeKey(styleId: string, char: string): string {
-  return `ui_hud_glyphs_${styleId}_${(char.codePointAt(0) ?? 0).toString(16)}`;
+export function glyphStrokeKey(styleId: string, char: string, shared = true): string {
+  return `${glyphPrefix(shared)}glyphs_${styleId}_${(char.codePointAt(0) ?? 0).toString(16)}`;
+}
+
+/**
+ * Glyph pictures go on the shared atlas (`ui_hud_` is one of its prefixes) unless their style keeps
+ * textures of their own (`ui_` alone is not an atlas prefix).
+ */
+function glyphPrefix(shared: boolean): string {
+  return shared ? 'ui_hud_' : 'ui_';
 }

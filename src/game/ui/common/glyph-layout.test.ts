@@ -63,5 +63,8 @@ describe('glyph helpers', () => {
 
   it('keys a glyph by its code point', () => {
     expect(glyphKey('52_8', '5')).toBe('ui_hud_glyph_52_8_35');
+    // Glyphs with textures of their own stay off the shared atlas prefix.
+    expect(glyphKey('52_8', '5', false)).toBe('ui_glyph_52_8_35');
+    expect(glyphStrokeKey('52_8', '5', false).startsWith('ui_hud_')).toBe(false);
   });
 });

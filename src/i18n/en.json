@@ -790,5 +790,19 @@
     "musicMemory": "Decoded music in memory: {now} MB now, {peak} MB at most · tracks sounding: {decks}",
     "playlist": "Playlist",
     "nextTrack": "Next playlist track"
+  },
+  "boot": {
+    "tower": {
+      "1": "Whipping the cream…",
+      "2": "Waking the cake layers…",
+      "3": "Finding the cherry…",
+      "4": "Counting the crumbs…"
+    },
+    "oven": {
+      "1": "Warming up the oven…",
+      "2": "Letting the dough rise…",
+      "3": "Waiting for a golden crust…",
+      "4": "Smells like vanilla…"
+    }
   }
 }
