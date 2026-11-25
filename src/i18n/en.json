@@ -386,6 +386,7 @@
     },
     "doubleLeft": "×2 · {n} left",
     "doubled": "Doubled!",
+    "doubledLine": "Doubled +{n}",
     "xp": "+{n} XP",
     "abilityCount": "×{n}",
     "tile": {

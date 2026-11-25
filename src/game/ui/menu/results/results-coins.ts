@@ -40,6 +40,8 @@ export class ResultsCoins {
   private buttonEnabled = true;
   private busy = false;
   private adGone = false;
+  /** The ad paid: the coins are doubled. */
+  private doubled = false;
 
   constructor(
     private readonly scene: Phaser.Scene,
@@ -76,7 +78,13 @@ export class ResultsCoins {
       resetAdLabel(label, adRoom);
       watchAdState(button, (state) => this.followAd(state));
     }
-    scene.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.callout?.close());
+    // The callout stands where the tile stood: a new screen size closes it rather than leave it behind.
+    const closeCallout = (): void => this.callout?.close();
+    scene.scale.on(Phaser.Scale.Events.RESIZE, closeCallout);
+    scene.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      scene.scale.off(Phaser.Scale.Events.RESIZE, closeCallout);
+      closeCallout();
+    });
     this.update(0);
   }
 
@@ -108,14 +116,19 @@ export class ResultsCoins {
       this.callout.close();
       return;
     }
-    const breakdown = createBreakdown(this.scene, this.lines, this.earned);
-    this.callout = new Callout(this.scene, {
+    const extra = this.doubled ? this.earned : 0;
+    const breakdown = createBreakdown(this.scene, this.lines, this.earned + extra, extra);
+    const callout = new Callout(this.scene, {
       lift: this.tile,
       width: cfg.breakdown.width,
       content: breakdown.content,
       contentHeight: breakdown.height,
-      onClosed: () => this.tile.setOpen(false),
+      // A callout opened again during this one's fade keeps its ▲.
+      onClosed: () => {
+        if (this.callout === callout) this.tile.setOpen(false);
+      },
     });
+    this.callout = callout;
     this.tile.setOpen(true);
   }
 
@@ -177,6 +190,7 @@ export class ResultsCoins {
         this.markAdGone();
         return;
       }
+      this.doubled = true;
       this.roll.set(this.earned * 2);
       this.showDoubled();
       services.audio.coin();

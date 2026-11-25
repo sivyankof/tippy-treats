@@ -31,16 +31,17 @@ export interface ResultsLines {
 }
 
 /**
- * Where the lines of the results go (docs/07-ui-screens.md, section 6). Under the height stands
- * one line by priority: the record, the checkpoint start, the daily attempt, or the layers to the
+ * Where the lines of the results go (docs/07-ui-screens.md, section 6). Under the height stand
+ * the record, the checkpoint start (under a record too), the daily attempt, or the layers to the
  * record. The "so close" line goes to the bottom of the Missions frame; without that frame it
  * stands under the height too.
  */
 export function resultsLines(input: LinesInput): ResultsLines {
   const header: ResultsLine[] = [];
   if (input.record) header.push({ text: input.record, tone: 'record' });
-  else if (input.started) header.push({ text: input.started, tone: 'plain' });
-  else if (input.daily) header.push({ text: input.daily, tone: 'plain' });
+  // The start line stays after a checkpoint start, under a record too: the score counts only the placed layers.
+  if (input.started) header.push({ text: input.started, tone: 'plain' });
+  else if (input.daily && !input.record) header.push({ text: input.daily, tone: 'plain' });
   const { hint } = input;
   if (!hint) return { header, missionHint: null };
   if (hint.towardRecord && header.length === 0) {

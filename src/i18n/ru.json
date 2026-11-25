@@ -386,6 +386,7 @@
     },
     "doubleLeft": "×2 · ещё {n}",
     "doubled": "Удвоено!",
+    "doubledLine": "Удвоение +{n}",
     "xp": "+{n} опыта",
     "abilityCount": "×{n}",
     "tile": {

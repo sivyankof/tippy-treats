@@ -40,6 +40,20 @@ describe('resultsLines', () => {
     expect(lines.missionHint).toBe('to record');
   });
 
+  it('keeps the start line under a record set after a checkpoint start', () => {
+    const lines = resultsLines({
+      ...BASE,
+      record: 'New record!',
+      started: 'Started at 20',
+      hint: { text: 'almost', towardRecord: false },
+    });
+    expect(lines.header).toEqual([
+      { text: 'New record!', tone: 'record' },
+      { text: 'Started at 20', tone: 'plain' },
+    ]);
+    expect(lines.missionHint).toBe('almost');
+  });
+
   it('puts the daily attempt under the height and the progress of the day in the frame', () => {
     const lines = resultsLines({
       ...BASE,

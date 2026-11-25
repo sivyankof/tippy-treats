@@ -11,28 +11,28 @@ const CALLOUT = MENU.style.callout;
 const COLUMNS = 2;
 
 /**
- * The coin breakdown of the callout: "Source +amount" in two columns, a dashed line and
- * "Total N". The content's (0, 0) is its top-centre; `height` is what it takes.
+ * The coin breakdown of the callout: "Source +amount" in two columns (after an ad that doubled
+ * the coins, "Doubled +N" last), a dashed line and "Total N". The content's (0, 0) is its top-centre; `height` is what it takes.
  */
 export function createBreakdown(
   scene: Phaser.Scene,
   lines: readonly CoinLine[],
   total: number,
+  /** Coins the ad added (0 when the coins were not doubled). */
+  doubled = 0,
 ): { content: Phaser.GameObjects.Container; height: number } {
   const content = scene.add.container(0, 0);
   const inner = cfg.width - CALLOUT.padX * 2;
   const column = (inner - cfg.columnGap) / COLUMNS;
-  const rows = Math.ceil(lines.length / COLUMNS);
-  lines.forEach((line, i) => {
+  const texts = lines.map(
+    (line) => `${t(`results.source.${line.source}`)} +${formatNumber(line.amount)}`,
+  );
+  if (doubled > 0) texts.push(t('results.doubledLine', { n: formatNumber(doubled) }));
+  const rows = Math.ceil(texts.length / COLUMNS);
+  texts.forEach((label, i) => {
     const left = -inner / 2 + (i % COLUMNS) * (column + cfg.columnGap);
     const y = Math.floor(i / COLUMNS) * cfg.rowHeight + cfg.rowHeight / 2;
-    const text = createOutlinedText(
-      scene,
-      left,
-      y,
-      `${t(`results.source.${line.source}`)} +${formatNumber(line.amount)}`,
-      cfg.font,
-    ).setOrigin(0, 0.5);
+    const text = createOutlinedText(scene, left, y, label, cfg.font).setOrigin(0, 0.5);
     content.add(fitText(text, column));
   });
   let y = rows * cfg.rowHeight + cfg.totalGap;
