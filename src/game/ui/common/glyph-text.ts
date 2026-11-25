@@ -172,6 +172,56 @@ function bakeGlyphLayer(
   );
 }
 
+/**
+ * Bakes a whole line of `text` in `style` as one picture of its own, in the box of the same Text: for
+ * a text that shows alone and never changes in a run (one draw, no cells of the shared atlas). The
+ * whole outline goes down before the face, as on a Text. Call it while a scene loads.
+ */
+export function bakeGlyphLine(
+  scene: Phaser.Scene,
+  style: GlyphStyle,
+  text: string,
+  key: string,
+): void {
+  const m = styleMetrics(scene, style);
+  const width = glyphBoxWidth(measureIn(style, text), style.strokeWidth, m.padX);
+  const pen = {
+    x: m.padX + style.strokeWidth / 2,
+    baseline: m.padY + style.strokeWidth / 2 + m.ascent,
+  };
+  const font = fontOf(style);
+  bakeTexture(
+    scene,
+    key,
+    width,
+    m.height,
+    () => undefined,
+    (context) => {
+      const { width: w, height: h } = context.canvas;
+      if (!style.volume) {
+        context.font = font;
+        context.textBaseline = 'alphabetic';
+        context.lineJoin = 'round';
+        context.lineWidth = style.strokeWidth;
+        context.strokeStyle = cssColor(style.strokeColor);
+        context.strokeText(text, pen.x, pen.baseline);
+        context.fillStyle = cssColor(style.color);
+        context.fillText(text, pen.x, pen.baseline);
+        return;
+      }
+      paintVolumeBack({ context, width: w, height: h, font }, text, pen);
+      // The face keeps its band and gloss to itself on a canvas of its own, then lies on the outline.
+      const face = document.createElement('canvas');
+      face.width = w;
+      face.height = h;
+      const faceContext = face.getContext('2d');
+      if (!faceContext) return;
+      paintVolumeFace({ context: faceContext, width: w, height: h, font }, text, pen, style.volume);
+      context.drawImage(face, 0, 0);
+    },
+  );
+}
+
 function fontAvailable(style: GlyphStyle): boolean {
   return typeof document === 'undefined' || !document.fonts || document.fonts.check(fontOf(style));
 }

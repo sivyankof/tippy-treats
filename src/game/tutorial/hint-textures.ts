@@ -13,12 +13,21 @@ import {
 import { bakePadded, bakeTexture } from '../ui/common/bake-texture';
 import { buildHand } from './hand-shape';
 
-/** Both pictures of the tap hand sit on the shared atlas (the `fx_` prefix), so showing them adds no draw call. */
+/**
+ * The small ray sits on the shared atlas (the `fx_` prefix); the hand and the caption of the tap hint
+ * keep textures of their own (one draw each, as before): the hint is made in every run, and on the
+ * atlas they would take shelves the run needs, for a picture shown only in the first run.
+ */
 export const HINT_TEXTURES = {
-  hand: 'fx_tap_hand',
+  hand: 'tutorial_tap_hand',
   ray: 'fx_tap_ray',
   arrow: 'tutorial_arrow',
 } as const;
+
+/** Key of the baked caption of the tap hint («Нажми!» / «Tap!») in a language. */
+export function tapLabelKey(lang: string): string {
+  return `tutorial_tap_label_${lang}`;
+}
 
 const HAND_LOOK = TUTORIAL_ANIM.hand;
 const HAND_SHAPE = buildHand(HAND_LOOK);

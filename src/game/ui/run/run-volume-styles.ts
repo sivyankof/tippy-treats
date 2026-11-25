@@ -3,7 +3,13 @@ import { HUD_LAYOUT, PAUSE } from '../../../data/run/hud-layout';
 import { ANIM } from '../../../data/common/anim';
 import { TUTORIAL_ANIM } from '../../../data/tutorial/tutorial-anim';
 import { getLang, setLang, t, type Lang } from '../../../i18n';
-import { prepareGlyphs, volumeGlyphStyle, type GlyphStyle } from '../common/glyph-text';
+import {
+  bakeGlyphLine,
+  prepareGlyphs,
+  volumeGlyphStyle,
+  type GlyphStyle,
+} from '../common/glyph-text';
+import { tapLabelKey } from '../../tutorial/hint-textures';
 import { numberGlyphTexts } from '../common/number-glyphs';
 
 /** Digits of the height number in the run HUD: white face, volume look. */
@@ -42,7 +48,7 @@ export function bakeRunVolumeGlyphs(scene: Phaser.Scene): void {
     setLang(l);
     prepareGlyphs(scene, HEIGHT_GLYPH_STYLE, numberGlyphTexts());
     const hint = t('tutorial.tap');
-    prepareGlyphs(scene, tapGlyphStyle(hint), [hint]);
+    bakeGlyphLine(scene, tapGlyphStyle(hint), hint, tapLabelKey(l));
   }
   setLang(lang);
 }

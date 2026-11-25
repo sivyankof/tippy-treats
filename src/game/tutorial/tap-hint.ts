@@ -1,14 +1,14 @@
 import * as Phaser from 'phaser';
 import { HUD_LAYOUT } from '../../data/run/hud-layout';
 import { TUTORIAL_ANIM } from '../../data/tutorial/tutorial-anim';
-import { t } from '../../i18n';
+import { getLang, t } from '../../i18n';
 import { effectsMode } from '../app/effects-mode';
 import { fxGuard } from '../common/fx-guard';
 import { oscillate01, sineWave } from '../../util/math';
 import { FLYING_REACH } from '../run/camera-layout';
-import { GlyphText, prepareGlyphs } from '../ui/common/glyph-text';
+import { bakeGlyphLine } from '../ui/common/glyph-text';
 import { tapGlyphStyle } from '../ui/run/run-volume-styles';
-import { HAND, HAND_ORIGIN, HINT_TEXTURES, RAY_ORIGIN } from './hint-textures';
+import { HAND, HAND_ORIGIN, HINT_TEXTURES, RAY_ORIGIN, tapLabelKey } from './hint-textures';
 import { pressAgeMs, rayAngles, rayPose } from './tap-rays';
 
 const tap = TUTORIAL_ANIM.tap;
@@ -22,7 +22,7 @@ const RAY_ANGLES = rayAngles(rays.count, rays.spreadDeg);
  */
 export class TapHint {
   private readonly hand: Phaser.GameObjects.Image;
-  private readonly label: GlyphText;
+  private readonly label: Phaser.GameObjects.Image;
   /** The rays of a press: made with the hint, only shown and moved afterwards. */
   private readonly rays: Phaser.GameObjects.Image[];
   private alpha = 0;
@@ -30,13 +30,12 @@ export class TapHint {
   private screenWidth = 0;
 
   constructor(scene: Phaser.Scene) {
-    // Baked here, when the hint is made in the current language, never during the run.
+    // Baked here, when the hint is made in the current language, never during the run: one picture
+    // of its own, as the Text was (its glyphs on the shared atlas would take a whole shelf).
     const text = t('tutorial.tap');
-    const style = tapGlyphStyle(text);
-    prepareGlyphs(scene, style, [text]);
-    this.label = new GlyphText(scene, 0, 0, style, 0.5, 0.5, Array.from(text).length)
-      .setText(text)
-      .setAlpha(0);
+    const key = tapLabelKey(getLang());
+    bakeGlyphLine(scene, tapGlyphStyle(text), text, key);
+    this.label = scene.add.image(0, 0, key).setAlpha(0);
     this.hand = scene.add
       .image(0, 0, HINT_TEXTURES.hand)
       .setOrigin(HAND_ORIGIN[0], HAND_ORIGIN[1])
@@ -97,30 +96,26 @@ export class TapHint {
       this.hideRays();
       return;
     }
-    fxGuard.run(
-      'tap-rays',
-      () => {
-        const age = pressAgeMs(timeMs, tap.periodMs);
-        const x = this.screenWidth / 2;
-        const pose = rayPose(age, rays);
-        this.rays.forEach((ray, i) => {
-          if (!pose) {
-            ray.setVisible(false);
-            return;
-          }
-          const angle = RAY_ANGLES[i] ?? 0;
-          ray
-            .setVisible(true)
-            .setPosition(
-              x + Math.cos(angle) * pose.radius,
-              this.handY + Math.sin(angle) * pose.radius,
-            )
-            .setScale(pose.scale)
-            .setAlpha(pose.alpha * this.alpha);
-        });
-      },
-      () => this.hideRays(),
-    );
+    if (!fxGuard.call('tap-rays', this, this.placeRays, timeMs))
+      fxGuard.cleanup('tap-rays', this, this.hideRays);
+  }
+
+  private placeRays(timeMs: number): void {
+    const age = pressAgeMs(timeMs, tap.periodMs);
+    const x = this.screenWidth / 2;
+    const pose = rayPose(age, rays);
+    this.rays.forEach((ray, i) => {
+      if (!pose) {
+        ray.setVisible(false);
+        return;
+      }
+      const angle = RAY_ANGLES[i] ?? 0;
+      ray
+        .setVisible(true)
+        .setPosition(x + Math.cos(angle) * pose.radius, this.handY + Math.sin(angle) * pose.radius)
+        .setScale(pose.scale)
+        .setAlpha(pose.alpha * this.alpha);
+    });
   }
 
   private hideRays(): void {
