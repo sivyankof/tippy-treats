@@ -9,7 +9,6 @@ import { createOutlinedText } from '../../common/outlined-text';
 import { fitText } from '../widgets/fit-text';
 import { justCompleted, movedMissions } from '../missions/missions-model';
 import { ProgressBar } from '../widgets/progress-bar';
-import { stackRows, type Row } from './results-layout';
 
 const cfg = MENU.results.missions;
 
@@ -60,20 +59,17 @@ function createRow(
 }
 
 /**
- * The missions this run moved: a title and up to three compact rows, each with a bar that fills
- * from where the run began to where it ended and a "Done!" mark on a mission it completed.
- * `height` is 0 when the run moved none (nothing to add to the screen then).
+ * The missions this run moved, the rows of the Missions frame: up to three compact rows, each with
+ * a bar that fills from where the run began to where it ended and a "Done!" mark on a mission it
+ * completed. `count` is 0 when the run moved none (no Missions frame then).
  */
 export class ResultsMissions {
-  readonly container: Phaser.GameObjects.Container;
-  /** Height of the block; 0 when it is empty. */
-  height: number;
-  /** What the block takes less when folded into one line (0: nothing to fold). */
-  readonly foldSaving: number;
-  private readonly full: Phaser.GameObjects.Container;
+  /** The rows on show, top to bottom: the full ones, or the one folded row. */
+  rows: Phaser.GameObjects.Container[] = [];
+  private fullRowObjects: Phaser.GameObjects.Container[] = [];
   private readonly moved: ReadonlyArray<{ before: MissionProgress; after: MissionProgress }>;
   private fullRows: MissionRow[] = [];
-  private rows: MissionRow[] = [];
+  private bars: MissionRow[] = [];
   private folded: FoldedLine | null = null;
   private elapsedMs = 0;
   private started = false;
@@ -84,48 +80,29 @@ export class ResultsMissions {
     after: readonly MissionProgress[],
     rowLimit: number,
   ) {
-    this.container = scene.add.container(0, 0);
-    this.full = scene.add.container(0, 0);
-    this.container.add(this.full);
     const moved = movedMissions(before, after).slice(0, rowLimit);
     this.moved = moved;
-    if (moved.length === 0) {
-      this.height = 0;
-      this.foldSaving = 0;
-      this.container.setVisible(false);
-      return;
-    }
-    const list: Row[] = [
-      {
-        obj: createOutlinedText(
-          scene,
-          0,
-          0,
-          t('resultsMissions.title'),
-          cfg.titleFont,
-          PALETTE.gold,
-        ),
-        height: cfg.titleFont * MENU.results.lineHeight,
-      },
-    ];
     for (const { before: from, after: to } of moved) {
       const { row, bar } = createRow(scene, t(`mission.${to.id}`, { n: formatNumber(to.target) }));
       this.fullRows.push({ bar, from, to, done: false });
       this.show(this.fullRows[this.fullRows.length - 1], 0);
-      list.push({ obj: row, height: cfg.rowHeight });
+      this.fullRowObjects.push(row);
     }
-    this.rows = this.fullRows;
-    this.height = stackRows(this.full, list, cfg.rowGap);
-    // One line is not worth it when the block already is one row.
-    this.foldSaving = moved.length > 1 ? this.height - cfg.rowHeight : 0;
+    this.bars = this.fullRows;
+    this.rows = this.fullRowObjects;
+  }
+
+  /** How many missions the run moved (the rows of the full block). */
+  get count(): number {
+    return this.moved.length;
   }
 
   /**
    * Folds the block into one line ("Missions: N/M" and the bar of the most advanced mission that
-   * is not done yet) for a short screen; `height` becomes one row. Call before the screen is shown.
+   * is not done yet) for a short screen. Call before the screen is shown.
    */
   fold(scene: Phaser.Scene): void {
-    if (this.foldSaving <= 0 || this.rows !== this.fullRows) return;
+    if (this.moved.length <= 1 || this.bars !== this.fullRows) return;
     const open = this.moved.filter(({ after }) => !isComplete(after));
     const pick = open.reduce<MissionProgress | null>((best, { after }) => {
       const better = !best || share(after) > share(best);
@@ -141,13 +118,13 @@ export class ResultsMissions {
       t('resultsMissions.folded', { done: base, total: this.moved.length }),
       PALETTE.gold,
     );
-    this.container.add(row);
-    this.full.setVisible(false);
+    for (const full of this.fullRowObjects) full.destroy();
+    this.fullRowObjects = [];
+    this.rows = [row];
     this.folded = { label: text, base, gained, marked: 0 };
     // The bar's own "Done!" feedback is left to the folded line, which marks every completed mission.
-    this.rows = [{ bar, from: shown.before, to: shown.after, done: true }];
-    this.show(this.rows[0], 0);
-    this.height = cfg.rowHeight;
+    this.bars = [{ bar, from: shown.before, to: shown.after, done: true }];
+    this.show(this.bars[0], 0);
   }
 
   /** The bars begin to fill (after the screen is in). */
@@ -156,11 +133,11 @@ export class ResultsMissions {
   }
 
   update(dtMs: number): void {
-    if (!this.started || this.rows.length === 0) return;
+    if (!this.started || this.bars.length === 0) return;
     this.elapsedMs += dtMs;
     const share = Math.max(0, Math.min(1, (this.elapsedMs - cfg.delayMs) / cfg.fillMs));
     const eased = easeOut(share);
-    for (const row of this.rows) this.show(row, eased);
+    for (const row of this.bars) this.show(row, eased);
     this.markFolded(eased);
     if (share >= 1) this.started = false;
   }

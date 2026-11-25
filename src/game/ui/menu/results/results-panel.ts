@@ -1,51 +1,58 @@
 import type * as Phaser from 'phaser';
 import { MENU } from '../../../../data/common/menu-layout';
-import { createPlate, type VolumePlate } from '../../style/volume';
+import { t } from '../../../../i18n';
 import type { Movable } from '../../common/transition';
+import { SectionFrame } from '../../style/section-frame';
+import type { StatTile } from '../../style/stat-tile';
 import type { ResultsCoins } from './results-coins';
-import { fitPanel, spreadBlocks } from './results-layout';
 import type { ResultsMissions } from './results-missions';
-import type { ResultsTiers } from './results-tiers';
+import {
+  FRAME_INNER,
+  planResults,
+  type FrameKind,
+  type ResultsContent,
+  type ResultsPlan,
+  type RowKind,
+} from './results-model';
+import { createTileRow } from './results-tiles';
 import type { ResultsXp } from './results-xp';
 
 const cfg = MENU.results;
 
-type BlockObject = Phaser.GameObjects.Container | Phaser.GameObjects.Text;
-
-interface PanelBlock {
-  obj: BlockObject;
-  height: number;
-}
-
-/** A block of the screen that takes part in the vertical layout. */
-interface Placed {
-  container: Phaser.GameObjects.Container;
-  height: number;
-}
-
-/** The blocks that stand on the panel, top to bottom. */
+/** The pieces that stand in the frames. */
 export interface PanelParts {
+  content: ResultsContent;
   /** The dev-only "not saved" plate, `null` for a normal run. */
-  debugPlate: PanelBlock | null;
-  stats: PanelBlock;
+  debugPlate: Phaser.GameObjects.Container | null;
   coins: ResultsCoins;
-  tiers: ResultsTiers;
-  xp: ResultsXp;
+  /** The XP tile, bar and status line; null for a run that did not reach the save. */
+  xp: ResultsXp | null;
+  scoreTile: StatTile;
+  tileWidth: number;
+  tierRows: Phaser.GameObjects.Container[];
+  /** The Team frame content and the same in one row; the panel keeps the one the fit chose. */
+  team: Phaser.GameObjects.Container;
+  teamRow: Phaser.GameObjects.Container;
   missions: ResultsMissions;
-  /** The "so close" line. */
-  hint: Phaser.GameObjects.Text;
-  /** The run reached the save: the XP block and the hint are shown. */
-  recorded: boolean;
+  /** The hint line at the bottom of the Missions frame. */
+  missionHint: Phaser.GameObjects.Text | null;
 }
+
+const TITLES: Record<FrameKind, string> = {
+  rewards: 'results.frame.rewards',
+  team: 'results.frame.team',
+  missions: 'results.frame.missions',
+};
 
 /**
- * The window plate under the results blocks, with the blocks on it. All of it lives in one
- * container (`root`, centred on the plate), so a short screen scales the plate and the blocks
- * together (docs/07-ui-screens.md, section 6).
+ * The frames under the header ("Rewards", "Team", "Missions") with their rows, fitted to the room
+ * above the buttons (docs/07-ui-screens.md, section 6). They all live in one container (`root`,
+ * its origin at the top centre of the panel), so a short screen scales them together.
  */
 export class ResultsPanel {
   readonly root: Phaser.GameObjects.Container;
-  private plate: VolumePlate | null = null;
+  private plan: ResultsPlan | null = null;
+  private frames: SectionFrame[] = [];
 
   constructor(
     private readonly scene: Phaser.Scene,
@@ -59,82 +66,81 @@ export class ResultsPanel {
 
   /** Height the panel takes on the screen, scale included. */
   get height(): number {
-    return (this.plate?.bodyHeight ?? 0) * this.root.scaleY;
+    return (this.plan?.height ?? 0) * this.root.scaleY;
   }
 
-  /** The blocks on the panel, top to bottom; empty ones are left out. */
-  blocks(): PanelBlock[] {
-    const { debugPlate, stats, coins, tiers, xp, missions, hint, recorded } = this.parts;
-    const all: PanelBlock[] = [
-      ...(debugPlate ? [debugPlate] : []),
-      stats,
-      { obj: coins.container, height: coins.height },
-      { obj: tiers.container, height: tiers.height },
-      { obj: xp.container, height: recorded ? xp.height : 0 },
-      { obj: missions.container, height: missions.height },
-      {
-        obj: hint,
-        height: recorded ? cfg.nearMissFont * cfg.lineHeight * hint.text.split('\n').length : 0,
-      },
-    ];
-    return all.filter((b) => b.height > 0);
-  }
-
-  /** What slides in and out with the screen: the plate and the blocks, top to bottom. */
+  /** What slides in and out with the screen: the dev plate and the frames, top to bottom. */
   content(): Movable[] {
-    return [...(this.plate ? [this.plate] : []), ...this.blocks().map((b) => b.obj)];
+    return [...(this.parts.debugPlate ? [this.parts.debugPlate] : []), ...this.frames];
   }
 
-  /**
-   * Chooses the spacing, the scale and the fold of the missions so that the header and the panel
-   * fit above the buttons (with a gap above and below the pair), builds the plate and stands the
-   * blocks on it.
-   */
-  fit(screenHeight: number, headerHeight: number, buttonsHeight: number): void {
-    const room = screenHeight - cfg.buttonsBottom - buttonsHeight - cfg.top - cfg.sectionGap * 2;
-    const { padY, gap } = cfg.panel;
-    const { missions } = this.parts;
-    const before = this.blocks();
-    const fit = fitPanel({
-      blocksHeight: before.reduce((total, b) => total + b.height, 0),
-      foldSaving: missions.foldSaving,
-      spacing: gap * Math.max(0, before.length - 1) + padY * 2,
-      headerHeight,
-      room,
-      minShare: cfg.panelMinSpacing,
-      minScale: cfg.panelMinScale,
-      floorScale: cfg.panelFloorScale,
-    });
-    if (fit.fold) missions.fold(this.scene);
-    const blocks = this.blocks();
-    const sum = blocks.reduce((total, b) => total + b.height, 0);
-    const pad = padY * fit.share;
-    const between = gap * fit.share;
-    const height = sum + between * Math.max(0, blocks.length - 1) + pad * 2;
-    this.plate?.destroy();
-    this.plate = createPlate(this.scene, 'window', 0, 0, cfg.panel.width, height);
-    this.root.add(this.plate);
-    let y = -this.plate.bodyHeight / 2 + pad;
-    for (const b of blocks) {
-      this.root.add(b.obj);
-      b.obj.setPosition(0, y + b.height / 2);
-      y += b.height + between;
+  /** Chooses the folds, the spacing and the scale for `room`, then builds the frames and puts the rows in. */
+  fit(room: number): void {
+    const { parts } = this;
+    const plan = planResults(parts.content, room);
+    this.plan = plan;
+    if (plan.folds.has('missions')) parts.missions.fold(this.scene);
+    parts.xp?.showOvenLine(!plan.folds.has('ovenLine'));
+    const objects = this.rowObjects(plan);
+    if (parts.debugPlate && plan.debugY !== null) {
+      this.root.add(parts.debugPlate.setPosition(0, plan.debugY));
     }
-    this.root.setScale(fit.scale);
+    for (const frame of plan.frames) {
+      const view = new SectionFrame(this.scene, t(TITLES[frame.kind]));
+      view.setBody(cfg.frames.width, frame.height).setPosition(0, frame.y);
+      for (const row of frame.rows) {
+        const obj = objects.get(row.kind)?.shift();
+        if (!obj) continue;
+        obj.setPosition(obj.x, row.y);
+        view.content.add(obj);
+      }
+      this.root.add(view);
+      this.frames.push(view);
+    }
+    // What the plan left out (a status line with nothing to say) stays hidden.
+    for (const left of objects.values()) for (const obj of left) obj.setVisible(false);
+    this.root.setScale(plan.scale);
   }
 
-  /** Buttons stand at the bottom; the header and the panel above them share the free room evenly. */
-  layout(width: number, height: number, header: Placed, buttons: Placed): void {
-    const cx = width / 2;
-    const buttonsY = height - cfg.buttonsBottom - buttons.height / 2;
-    const [headerY = 0, panelY = 0] = spreadBlocks(
-      [header.height, this.height],
-      cfg.top,
-      buttonsY - buttons.height / 2,
-      cfg.sectionGap,
-    );
-    header.container.setPosition(cx, headerY);
-    this.root.setPosition(cx, panelY);
-    buttons.container.setPosition(cx, buttonsY);
+  /** Puts the panel's top centre at (x, y). */
+  setTop(x: number, y: number): void {
+    this.root.setPosition(x, y);
+  }
+
+  /** The objects of each row kind, in the order the plan places them; the unused ones are gone. */
+  private rowObjects(
+    plan: ResultsPlan,
+  ): Map<RowKind, Array<Phaser.GameObjects.Container | Phaser.GameObjects.Text>> {
+    const { parts } = this;
+    const tiles = [parts.coins.tile, ...(parts.xp ? [parts.xp.tile] : []), parts.scoreTile];
+    const map = new Map<RowKind, Array<Phaser.GameObjects.Container | Phaser.GameObjects.Text>>();
+    map.set('tiles', [createTileRow(this.scene, tiles, parts.tileWidth)]);
+    if (parts.xp) {
+      map.set('level', [this.levelRow(parts.xp)]);
+      map.set('status', [parts.xp.status]);
+    }
+    map.set('tier', [...parts.tierRows]);
+    const folded = plan.folds.has('teamRow');
+    map.set(folded ? 'teamRow' : 'team', [folded ? parts.teamRow : parts.team]);
+    (folded ? parts.team : parts.teamRow).destroy();
+    map.set('mission', [...parts.missions.rows]);
+    if (parts.missionHint) map.set('hint', [parts.missionHint]);
+    return map;
+  }
+
+  /** "Lv N" with the XP bar across the frame and, when there is one, the "x2" button at the right. */
+  private levelRow(xp: ResultsXp): Phaser.GameObjects.Container {
+    const row = this.scene.add.container(0, 0, [xp.bar]);
+    const button = this.parts.coins.button;
+    const left = -FRAME_INNER / 2 + cfg.levelRow.labelRoom;
+    const right = button
+      ? FRAME_INNER / 2 - cfg.adButton.width - cfg.levelRow.gap
+      : FRAME_INNER / 2;
+    xp.bar.setX((left + right) / 2);
+    if (button) {
+      button.setPosition(FRAME_INNER / 2 - cfg.adButton.width / 2, 0);
+      row.add(button);
+    }
+    return row;
   }
 }

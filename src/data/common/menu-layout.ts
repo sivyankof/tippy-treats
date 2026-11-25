@@ -98,6 +98,85 @@ export const MENU = {
         drop: 0.06,
         gloss: { insetX: 18, insetY: 8, height: 40, share: 0.3, alpha: 0.42 },
       },
+      /**
+       * The title tab of a frame: the look of a chip, but a kind of its own, so its picture keeps a
+       * texture of its own instead of a place on the shared atlas (`ui_plate_chip`), which is kept for the run.
+       */
+      tab: {
+        radius: 30,
+        outline: 5,
+        rimWidth: 6,
+        bevel: 7,
+        shadowOffset: 6,
+        shadowBlur: 10,
+        shadowAlpha: 0.3,
+        lift: 0.3,
+        drop: 0.08,
+        gloss: { insetX: 16, insetY: 6, height: 16, share: 0.3, alpha: 0.42 },
+      },
+      /** A flat tile inside a frame: a thin outline, no bevel, no shadow, no gloss. */
+      tile: {
+        radius: 34,
+        outline: 3,
+        rimWidth: 0,
+        bevel: 0,
+        shadowOffset: 0,
+        shadowBlur: 0,
+        shadowAlpha: 0,
+        lift: 0.12,
+        drop: 0.03,
+        gloss: { insetX: 0, insetY: 0, height: 0, share: 0, alpha: 0 },
+      },
+      /** A tile that answers a tap: a soft raised button with a rim and a step along the bottom. */
+      tileButton: {
+        radius: 34,
+        outline: 4,
+        rimWidth: 7,
+        bevel: 12,
+        shadowOffset: 4,
+        shadowBlur: 8,
+        shadowAlpha: 0.22,
+        lift: 0.3,
+        drop: 0.04,
+        gloss: { insetX: 18, insetY: 6, height: 24, share: 0.2, alpha: 0.5 },
+      },
+    },
+    /**
+     * A frame of a screen (`SectionFrame`): a window plate with its title on a small tab across
+     * the top edge. The tab is a chip of the kit; its middle stands on the frame's top edge.
+     */
+    frame: {
+      tab: { height: 62, font: 36, padX: 34, fill: 0xc98d62 },
+    },
+    /**
+     * A tile of numbers (`StatTile`): an icon, a big value and a caption, top to bottom. Flat
+     * tiles only show; a button tile is lighter, with a gold rim and a step, and answers a tap.
+     */
+    tile: {
+      fill: 0xf6e7d6,
+      buttonFill: 0xfff4e2,
+      buttonRim: 0xf1cf8a,
+      /** The small plate behind the ▼ / ▲ mark of a button tile. */
+      mark: { width: 46, height: 40, radius: 12, pad: 4, gap: 10, fill: 0xf1cf8a, glyph: 22 },
+    },
+    /**
+     * A hint over a dimmed screen (`Callout`): a card plate with an arrow pointing at what was
+     * tapped, which stays undimmed. A tap anywhere closes it.
+     */
+    callout: {
+      dimAlpha: 0.6,
+      depth: 650,
+      fill: 0xfffdf8,
+      padX: 34,
+      padY: 26,
+      arrow: { width: 52, height: 26 },
+      /** Room between what was tapped and the arrow tip. */
+      gap: 18,
+      /** The hint keeps this far from the screen sides. */
+      screenMargin: 50,
+      openMs: 160,
+      openScale: 0.92,
+      closeMs: 120,
     },
     /** The ribbon of a screen title: a plate with folded tails at both ends. */
     ribbon: {
@@ -990,81 +1069,123 @@ export const MENU = {
   results: {
     /** Free space above the first block. */
     top: 40,
-    /** The header and the panel keep at least this much air between them; on a taller screen they spread out. */
-    sectionGap: 16,
     /**
-     * The window plate of the kit under the blocks from the stats down to the "almost" line: the
-     * blocks stand `gap` apart inside it, `padY` from its top and bottom edges.
+     * The header, the frames and the buttons keep at least this much air between them (the frames
+     * never come closer to "Play again"); on a taller screen they spread out.
      */
-    panel: { width: 1000, padY: 40, gap: 24 },
-    /** On a short screen the panel's padding and gaps shrink to this share at the least. */
-    panelMinSpacing: 0.3,
-    /**
-     * When even that is not enough the whole panel (plate and blocks) scales down uniformly, first
-     * to `panelMinScale`; the missions then fold into one line and the scale is chosen again, and
-     * only after that may it go below `panelMinScale`, never below `panelFloorScale`.
-     */
-    panelMinScale: 0.85,
-    panelFloorScale: 0.6,
+    sectionGap: 28,
+    /** The frames keep at least this much air above "Play again" (more than `sectionGap`). */
+    buttonsGap: 40,
     /** The dev-only plate over a run that is not saved. */
     debugPlate: { width: 900, height: 84, font: 38 },
-    heightFont: 200,
-    recordFont: 48,
     /** Line height of a text, as a share of its font size. */
     lineHeight: 1.3,
+    /** Between the rows of the header. */
     rowGap: 8,
-    labelFont: 34,
-    statFont: 56,
-    statColumns: 3,
-    /** Width a stat label may take before it shrinks. */
-    statWidth: 300,
-    /** Room kept free at each side of the stats row, so its outer texts and their strokes stay off the panel edge. */
-    statEdgePad: 36,
-    /** The abilities tile is wider; its creature icons with their counts stand in a row. */
-    abilityCellWidth: 470,
-    abilityIconSize: 72,
-    abilityIconGap: 6,
-    abilityItemGap: 26,
-    /** Size of the count beside an icon, as a share of the stat font. */
-    abilityCountScale: 0.75,
-    coinTotalFont: 84,
-    /** The coin icon beside the total: its size as a share of the font, and the gap to the number. */
-    coinIconScale: 1,
-    coinIconGap: 16,
-    breakdownFont: 36,
-    breakdownColumns: 2,
-    breakdownColumnWidth: 440,
-    breakdownRowHeight: 56,
-    adButton: { width: 580, height: 104, radius: 36, shadowOffset: 8, font: 44 },
-    adTextPadding: 40,
+    /**
+     * The header: the ribbon, the height and up to two lines under it ("New record!", "Only 7
+     * layers to your record!", "Started at layer N", the daily attempt). Below `compactBelow`
+     * (height of the safe frame) the height and the lines are smaller and the ribbon scales down.
+     */
+    header: {
+      heightFont: 200,
+      /** Line height of the big height: digits have no descenders, so its row is tighter than text. */
+      heightLine: 1.05,
+      lineFont: 46,
+      compactBelow: 2200,
+      compact: { heightFont: 160, lineFont: 42, ribbonScale: 0.85 },
+      lineWidth: 960,
+    },
+    /**
+     * The frames under the header (`SectionFrame`): "Rewards", "Team", "Missions". Inside a frame
+     * the rows stand `rowGap` apart, `padTop` under the tab and `padBottom` above the plate's
+     * bevel; the frames stand `gap` apart. Padding and gaps are the spacing that shrinks first.
+     */
+    frames: { width: 1000, padX: 34, padTop: 28, padBottom: 18, rowGap: 22, gap: 36 },
+    /**
+     * When the frames do not fit above the buttons, these steps are taken in order until they do:
+     * `ovenLine` hides "The fresh oven lights up again tomorrow!", `teamRow` folds the Team frame
+     * into one row inside Rewards, `spacing` shrinks the padding and gaps down to `minShare`,
+     * `scale` scales the frames down to `minScale`, `missions` folds the missions into one row.
+     * After the last step the scale may go on down to `floorScale`.
+     */
+    fit: {
+      steps: ['ovenLine', 'teamRow', 'spacing', 'scale', 'missions'] as const,
+      minShare: 0.3,
+      minScale: 0.85,
+      floorScale: 0.6,
+    },
+    /** The three tiles of Rewards: coins (a button), XP, score. */
+    tiles: {
+      height: 236,
+      gap: 22,
+      padX: 14,
+      iconSize: 76,
+      valueFont: 68,
+      labelFont: 34,
+      iconY: -64,
+      valueY: 10,
+      labelY: 74,
+    },
+    /** "Lv N" with the XP bar and, at the right, the "x2" button. */
+    levelRow: {
+      height: 96,
+      gap: 22,
+      levelFont: 42,
+      barHeight: 46,
+      barFont: 32,
+      /** Room at the left for "Lv N" and the gap to the bar. */
+      labelRoom: 150,
+    },
+    adButton: { width: 340, height: 96, radius: 34, shadowOffset: 8, font: 38 },
     adDisabledAlpha: 0.5,
-    xpFont: 52,
-    /** The oven mark beside the XP line (icon and chip), and the message when a run emptied the oven. */
-    ovenMark: { height: 64, iconScale: 0.4, font: 40, gap: 14 },
-    ovenMessageFont: 34,
-    ovenMessageWidth: 900,
-    nearMissFont: 40,
-    nearMissWidth: 900,
-    /** The missions block: a title and compact rows of the missions this run moved. */
+    /** "New level!" or "The fresh oven lights up again tomorrow!" under the level row. */
+    statusFont: 36,
+    statusHeight: 48,
+    /** The coin breakdown in a callout: two columns, a dashed line, "Total N". */
+    breakdown: {
+      width: 940,
+      font: 36,
+      rowHeight: 52,
+      columnGap: 40,
+      totalFont: 38,
+      totalGap: 18,
+      dash: { width: 14, gap: 10, thickness: 4, color: 0xd9c6b3 },
+    },
+    /** The Team frame: "Combo xN" at the left, the creatures that triggered with their counts. */
+    team: {
+      height: 130,
+      comboWidth: 200,
+      comboLabelFont: 34,
+      comboFont: 60,
+      iconSize: 88,
+      countFont: 40,
+      /** The dashed line between the combo and the creatures. */
+      divider: { width: 4, dash: 12, gap: 9, inset: 14, color: 0xe3cdb6 },
+      /** The folded row inside Rewards. */
+      row: { height: 64, font: 38, iconSize: 58, iconGap: 6, itemGap: 22, comboGap: 34 },
+    },
+    /** The Missions frame: compact rows and the hint line under them. */
     missions: {
       /** At most this many rows are shown. */
       maxRows: 3,
-      titleFont: 40,
-      rowHeight: 64,
-      rowGap: 8,
+      rowHeight: 58,
+      rowGap: 12,
       textFont: 34,
-      textWidth: 510,
+      textWidth: 540,
       barWidth: 360,
       barHeight: 44,
       barFont: 28,
-      width: 900,
+      width: 932,
+      hintFont: 34,
+      hintHeight: 46,
       fillMs: 900,
       delayMs: 500,
       doneScale: 1.18,
       doneMs: 220,
     },
-    /** The daily tiers paid by a daily run: one compact row each. */
-    tiers: { rowHeight: 56, rowGap: 6, font: 36, width: 900, rewardFont: 40 },
+    /** The daily tiers paid by a daily run and the new-lap line: one compact row each. */
+    tiers: { rowHeight: 56, rowGap: 6, font: 36, width: 932, rewardFont: 40 },
     /** The XP bar fills this long per whole level, at least `xpMinMs` per piece. */
     xpFillMs: 1400,
     xpMinMs: 350,

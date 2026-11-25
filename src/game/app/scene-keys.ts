@@ -68,6 +68,10 @@ export interface ResultsData {
   checkpoint: CheckpointHeight | null;
   /** Instead of the save's checkpoints (only the `?resultsDemo` screens set it). */
   startOffer?: StartOffer;
+  /** Where the XP bar ends instead of the save's level (only the `?resultsDemo` screens set it). */
+  xpEnd?: { level: number; xp: number };
+  /** The best daily attempt instead of the save's (only the `?resultsDemo` screens set it). */
+  dailyBest?: number;
 }
 
 /** Screens a creature card can return to (equal to the keys of the collection and team scenes). */

@@ -115,7 +115,7 @@ export class ResultsStart implements ExtraButtons {
         return;
       }
       // The caption hangs under the price button, in the same row.
-      const note = createAdsSpentNote(this.scene, 0, 0, cfg.panel.width - cfg.buttonTextPadding);
+      const note = createAdsSpentNote(this.scene, 0, 0, cfg.frames.width - cfg.buttonTextPadding);
       const total = layout.height + note.height + cfg.rowGap;
       const box = this.scene.add.container(0, 0, [price, note]);
       price.setY(-total / 2 + layout.height / 2);

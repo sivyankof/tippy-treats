@@ -2,26 +2,23 @@ import * as Phaser from 'phaser';
 import { xpToNext } from '../../../../core/progression/progression';
 import { MENU } from '../../../../data/common/menu-layout';
 import { PALETTE } from '../../../../data/common/palette';
+import { OVEN } from '../../../../data/progression/progression';
 import { formatNumber, t } from '../../../../i18n';
+import { cssColor } from '../../../../util/color';
 import { services } from '../../../../services';
 import type { LevelUp, RunSummary } from '../../../../state/game-state';
+import { effectsMode } from '../../../app/effects-mode';
+import { OVEN_PICTURE_HEIGHT } from '../../../fx/economy/oven-texture';
 import { createOutlinedText } from '../../common/outlined-text';
+import { StatTile } from '../../style/stat-tile';
+import { OvenPicture } from '../oven/oven-picture';
 import { fitText } from '../widgets/fit-text';
-import { LevelUpPanel } from './level-up-panel';
-import { OvenMark } from '../oven/oven-mark';
-import { stackRows, type Row } from './results-layout';
-import { xpSegments } from './results-text';
 import { XpBar } from '../widgets/xp-bar';
+import { LevelUpPanel } from './level-up-panel';
+import { xpSegments } from './results-text';
+import { tileLook } from './results-tiles';
 
 const cfg = MENU.results;
-/** From the bar line up to the top of its frame. */
-const BAR_TOP = MENU.xpBar.height / 2 + MENU.xpBar.border;
-/** Frame, gap and the numbers line below the bar. */
-const BAR_BLOCK =
-  BAR_TOP +
-  MENU.xpBar.height +
-  MENU.xpBar.labelGap +
-  (MENU.xpBar.font * MENU.xpBar.numbersScale) / 2;
 
 /** Fractional level of a save position (level 6 with half its XP is 6.5). */
 function progressOf(level: number, xp: number): number {
@@ -29,15 +26,16 @@ function progressOf(level: number, xp: number): number {
 }
 
 /**
- * "+N XP" and the XP bar. `start` fills the bar from where the run began to where it ended;
- * on every level reached the bar flashes, the level-up window opens, and the fill goes on
- * from zero after the window closes.
+ * The XP of the run: the XP tile ("+N", "XP x6" with a fresh oven), the level bar of the level row
+ * and the status line under it. `start` fills the bar from where the run began to where it ended;
+ * on every level reached the bar flashes, the status line says "New level!", the level-up window
+ * opens, and the fill goes on from zero after the window closes.
  */
 export class ResultsXp {
-  readonly container: Phaser.GameObjects.Container;
-  /** Height of the block. */
-  readonly height: number;
-  private readonly bar: XpBar;
+  readonly tile: StatTile;
+  readonly bar: XpBar;
+  /** "New level!" or "The fresh oven lights up again tomorrow!"; empty until there is something to say. */
+  readonly status: Phaser.GameObjects.Text;
   private readonly from: number;
   private readonly to: number;
   private panel: LevelUpPanel | null = null;
@@ -47,42 +45,37 @@ export class ResultsXp {
     private readonly scene: Phaser.Scene,
     private readonly summary: RunSummary,
     end: { level: number; xp: number },
+    tileWidth: number,
+    barWidth: number,
   ) {
-    this.container = scene.add.container(0, 0);
     this.from = progressOf(summary.before.level, summary.before.xp);
     this.to = progressOf(end.level, end.xp);
-    const gain = createOutlinedText(
-      scene,
-      0,
-      0,
-      t('results.xp', { n: formatNumber(summary.xpGained) }),
-      cfg.xpFont,
-      PALETTE.gold,
+    const fresh = (summary.oven?.fresh ?? 0) > 0;
+    const icon = new OvenPicture(scene, 0, 0, { state: 'lit', face: false }).setScale(
+      cfg.tiles.iconSize / OVEN_PICTURE_HEIGHT,
     );
-    this.bar = new XpBar(scene, 0, 0).show(summary.before.level, summary.before.xp);
-    const rows: Row[] = [{ obj: gain, height: cfg.xpFont * cfg.lineHeight }];
-    const oven = summary.oven;
-    if (oven && oven.fresh > 0) {
-      rows.push({ obj: new OvenMark(scene), height: cfg.ovenMark.height });
-    }
-    rows.push({ obj: this.bar, height: BAR_BLOCK });
-    if (oven) {
-      if (oven.ranOut) {
-        const message = createOutlinedText(
-          scene,
-          0,
-          0,
-          t('oven.ranOut'),
-          cfg.ovenMessageFont,
-          PALETTE.gold,
-        );
-        fitText(message, cfg.ovenMessageWidth);
-        rows.push({ obj: message, height: cfg.ovenMessageFont * cfg.lineHeight });
-      }
-    }
-    this.height = stackRows(this.container, rows, cfg.rowGap);
-    // The bar's origin is the bar line; the row spans the frame above it and the numbers below.
-    this.bar.y += BAR_TOP - BAR_BLOCK / 2;
+    this.tile = new StatTile(scene, {
+      ...tileLook(tileWidth),
+      icon,
+      label: fresh ? t('results.tile.xpOven', { n: OVEN.layersPerXp }) : t('results.tile.xp'),
+    }).setValue(`+${formatNumber(summary.xpGained)}`);
+    const row = cfg.levelRow;
+    this.bar = new XpBar(scene, 0, 0, barWidth, {
+      barHeight: row.barHeight,
+      levelFont: row.levelFont,
+      insideFont: row.barFont,
+    }).show(summary.before.level, summary.before.xp);
+    this.status = createOutlinedText(scene, 0, 0, '', cfg.statusFont, PALETTE.gold);
+  }
+
+  /** The XP fill reaches a whole level: the status line will say "New level!". */
+  get reachesLevel(): boolean {
+    return xpSegments(this.from, this.to).some((piece) => piece.reaches !== null);
+  }
+
+  /** The oven line shows until a level is reached (when the run emptied the oven and there is room). */
+  showOvenLine(show: boolean): void {
+    if (show && this.summary.oven?.ranOut) this.setStatus(t('oven.ranOut'), PALETTE.gold);
   }
 
   /** Runs the fill and the level-up windows; `onDone` follows the last of them. */
@@ -122,11 +115,27 @@ export class ResultsXp {
     this.panel?.tick(dtMs);
   }
 
-  /** The bar flashes, then the window of that level opens (when the run recorded one). */
+  private setStatus(text: string, color: number): void {
+    this.status.setText(text).setColor(cssColor(color));
+    fitText(this.status, cfg.frames.width - cfg.frames.padX * 2);
+  }
+
+  /** The bar flashes and "New level!" pops up, then the window of that level opens (when the run recorded one). */
   private levelReached(level: number, then: () => void): void {
     if (this.stopped) return;
     services.audio.coin();
+    this.setStatus(t('results.newLevel'), PALETTE.accent);
     const { scale, ms, holdMs } = cfg.levelFlash;
+    if (!effectsMode.reduced) {
+      const rest = this.status.scale;
+      this.status.setScale(rest * scale);
+      this.scene.tweens.add({
+        targets: this.status,
+        scale: rest,
+        duration: ms * 2,
+        ease: 'Back.easeOut',
+      });
+    }
     this.scene.tweens.add({
       targets: this.bar,
       scale,

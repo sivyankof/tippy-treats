@@ -4,7 +4,17 @@ import type { CreatureId } from '../creatures/creatures';
  * Synthetic runs for `?resultsDemo=<case>` (dev builds only): the results screen with every block
  * filled, to check how it fits short screens (docs/07-ui-screens.md, section 6).
  */
-export const RESULTS_DEMO_CASES = ['normal', 'checkpoint', 'record', 'daily', 'lap'] as const;
+export const RESULTS_DEMO_CASES = [
+  'normal',
+  'checkpoint',
+  'record',
+  'daily',
+  'lap',
+  'levelup',
+  'longest',
+  'dailyLevelup',
+  'checkpointLap',
+] as const;
 
 export type ResultsDemoCase = (typeof RESULTS_DEMO_CASES)[number];
 
@@ -44,6 +54,12 @@ export const RESULTS_DEMO = {
   previousRecordBeaten: 31,
   checkpoint: { start: 20 as const, height: 58 },
   record: { height: 52 },
+  /** The bar fills from `before` to `after` by `xpGained` (the save is not touched). */
+  xp: { before: { level: 1, xp: 0 }, after: { level: 1, xp: 140 } },
+  /** A run that reaches a level: the same `xpGained` from `before` crosses into level 2. */
+  levelUp: { before: { level: 1, xp: 130 }, after: { level: 2, xp: 120 } },
+  /** A start from the highest checkpoint into new Space laps. */
+  checkpointLap: { start: 100 as const, height: 165 },
   /** A Classic run into new Space laps: `height` reached for the first time, the best lap before was `bestLap`. */
   lap: { height: 165, bestLap: 1 },
   daily: {

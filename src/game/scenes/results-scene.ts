@@ -1,6 +1,5 @@
 import * as Phaser from 'phaser';
 import { ANIM } from '../../data/common/anim';
-import { t } from '../../i18n';
 import { services } from '../../services';
 import { RecordCelebration } from '../fx/run/record-celebration';
 import { leaveResultsAds, type RunExit } from '../economy/interstitial-flow';
@@ -11,16 +10,17 @@ import { createDimOverlay } from '../ui/common/dim-overlay';
 import { enterScreen, leaveScreen, type Movable } from '../ui/common/transition';
 import { bindResultsBack, ResultsButtons } from '../ui/menu/results/results-buttons';
 import { ResultsCoins } from '../ui/menu/results/results-coins';
-import { createResultsBlocks, createResultsFoot } from '../ui/menu/results/results-build';
-import { ResultsHeader, createStats } from '../ui/menu/results/results-header';
+import { createResultsParts, resultsLinesFor } from '../ui/menu/results/results-build';
+import { ResultsHeader } from '../ui/menu/results/results-header';
+import type { ResultsLines } from '../ui/menu/results/results-lines';
+import { isCompactHeader, panelRoom, placeResults } from '../ui/menu/results/results-model';
 import { createResultsStart } from '../ui/menu/results/results-start';
-import { startedLine } from '../ui/menu/results/results-start-model';
 import { shareResult } from '../ui/menu/results/results-share';
 import { ResultsMissions } from '../ui/menu/results/results-missions';
 import { ResultsPanel, type PanelParts } from '../ui/menu/results/results-panel';
 import { resultsFlow } from '../ui/menu/results/results-flow';
 import { presentedCreatures } from '../ui/menu/results/results-text';
-import { ResultsXp } from '../ui/menu/results/results-xp';
+import type { ResultsXp } from '../ui/menu/results/results-xp';
 import { askForRatingOnResults } from '../ui/menu/results/results-rating';
 import { cueMusic } from '../audio/music-cues';
 import { safeBand } from '../app/safe-area';
@@ -34,14 +34,16 @@ import { frameOf, safeFrame } from '../ui/common/safe-frame';
 export class ResultsScene extends Phaser.Scene {
   private run!: ResultsData;
   private dim!: Phaser.GameObjects.Rectangle;
-  /** The window plate of the kit with the blocks below the header. */
+  /** The frames below the header. */
   private panel!: ResultsPanel;
   private header!: ResultsHeader;
   private coins!: ResultsCoins;
   private missions!: ResultsMissions;
-  private xp!: ResultsXp;
+  /** Null for a run that did not reach the save (no XP). */
+  private xp: ResultsXp | null = null;
   private buttons!: ResultsButtons;
-  private parts: Partial<PanelParts> = {};
+  private lines!: ResultsLines;
+  private parts!: PanelParts;
   /** The pieces are built and placed. */
   private built = false;
   private celebration: RecordCelebration | null = null;
@@ -76,11 +78,10 @@ export class ResultsScene extends Phaser.Scene {
     this.shown = false;
     this.built = false;
     this.celebration = null;
-    this.parts = {};
+    this.xp = null;
     this.steps = [
       () => this.buildTop(),
       () => this.buildBlocks(),
-      () => this.buildFoot(),
       () => this.buildButtons(),
       () => this.buildPanel(),
     ];
@@ -114,44 +115,29 @@ export class ResultsScene extends Phaser.Scene {
     }
     this.header.update(delta);
     this.coins.update(delta);
-    this.xp.update(delta);
+    this.xp?.update(delta);
     this.missions.update(delta);
     this.celebration?.update(delta);
   }
 
-  /** The dim veil, the header and the stats. */
+  /** The dim veil and the header with the lines under the height. */
   private buildTop(): void {
-    const { result, summary, tally } = this.run;
     const { width, height } = this.scale.gameSize;
     // The veil covers the canvas, the insets too: it ignores the scroll by the top inset.
     this.dim = createDimOverlay(this, ANIM.results.overlayAlpha, width, height)
       .setInteractive()
       .setScrollFactor(0);
-    const started =
-      this.run.checkpoint === null ? null : startedLine(this.run.startHeight, result.height);
-    this.header = new ResultsHeader(
-      this,
-      result,
-      summary.isRecord,
-      started && t('results.startedAt', started),
-    );
-    this.parts.stats = createStats(this, result, tally, width);
+    this.lines = resultsLinesFor(this.run);
+    const compact = isCompactHeader(safeFrame(height).height);
+    this.header = new ResultsHeader(this, this.run.result, this.lines.header, compact);
   }
 
-  /** The coins, the daily tiers and the missions. */
+  /** The tiles, the level row, the reward rows, the team and the missions. */
   private buildBlocks(): void {
-    const blocks = createResultsBlocks(this, this.run);
-    this.coins = blocks.coins;
-    this.missions = blocks.missions;
-    Object.assign(this.parts, blocks);
-  }
-
-  /** The XP bar, the dev plate and the "so close" line. */
-  private buildFoot(): void {
-    const foot = createResultsFoot(this, this.run);
-    this.xp = foot.xp;
-    this.parts.recorded = this.run.recorded;
-    Object.assign(this.parts, foot);
+    this.parts = createResultsParts(this, this.run, this.lines);
+    this.coins = this.parts.coins;
+    this.missions = this.parts.missions;
+    this.xp = this.parts.xp;
   }
 
   /** The buttons and the way on: what each of them does. */
@@ -190,16 +176,12 @@ export class ResultsScene extends Phaser.Scene {
     this.lock(true);
   }
 
-  /** The plate with the blocks on it, fitted to the screen, and everything put in place. */
+  /** The frames with their rows, fitted to the screen, and everything put in place. */
   private buildPanel(): void {
-    // The plate and the blocks go under the header and the buttons; the record ribbon, made last,
-    // draws over all of them.
-    this.panel = new ResultsPanel(this, this.parts as PanelParts, this.header.container);
-    this.panel.fit(
-      safeFrame(this.scale.gameSize.height).height,
-      this.header.height,
-      this.buttons.height,
-    );
+    // The frames go under the header and the buttons; the record ribbon, made last, draws over all of them.
+    this.panel = new ResultsPanel(this, this.parts, this.header.container);
+    const frame = safeFrame(this.scale.gameSize.height).height;
+    this.panel.fit(panelRoom(frame, this.header.height, this.buttons.height));
     if (this.run.summary.isRecord) this.celebration = new RecordCelebration(this);
     this.built = true;
     this.layout();
@@ -231,7 +213,7 @@ export class ResultsScene extends Phaser.Scene {
       this.coins.setEnabled(true);
       // Play again and Home wait for the XP fill and every level-up window.
       this.missions.start();
-      this.xp.start(() => {
+      const xpDone = (): void => {
         if (!this.leaving) this.buttons.setEnabled(true);
         // After every animation of the results: the system may ask for a rating.
         askForRatingOnResults(this, {
@@ -239,7 +221,9 @@ export class ResultsScene extends Phaser.Scene {
           daily: this.run.result.mode === 'daily',
           busy: () => this.leaving || this.sharing || this.coins.inProgress,
         });
-      });
+      };
+      if (this.xp) this.xp.start(xpDone);
+      else xpDone();
     });
   }
 
@@ -264,7 +248,16 @@ export class ResultsScene extends Phaser.Scene {
     const band = safeBand();
     this.cameras.main.setScroll(0, -band.top);
     this.dim.setSize(width, height);
-    this.panel.layout(width, frameOf(height, band).height, this.header, this.buttons);
+    const places = placeResults(
+      frameOf(height, band).height,
+      this.header.height,
+      this.panel.height,
+      this.buttons.height,
+    );
+    const cx = width / 2;
+    this.header.container.setPosition(cx, places.headerY);
+    this.panel.setTop(cx, places.panelTop);
+    this.buttons.container.setPosition(cx, places.buttonsY);
   }
 
   /** Every way out and the doubling answer no taps (while a start is paid for, while leaving). */
@@ -289,7 +282,7 @@ export class ResultsScene extends Phaser.Scene {
   private leave(then: () => void): void {
     if (this.leaving) return;
     this.leaving = true;
-    this.xp.stop();
+    this.xp?.stop();
     this.lock(true);
     const slideAway = (): void => leaveScreen(this, this.content(), then);
     void leaveResultsAds(this.runExit).then(slideAway, slideAway);
