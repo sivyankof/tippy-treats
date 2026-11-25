@@ -17,11 +17,15 @@ export const COUNTDOWN_DIGITS = Array.from({ length: ANIM.hud.countdownSteps }, 
   String(ANIM.hud.countdownSteps - i),
 ).join('');
 
-/** The 3-2-1 after a pause: gold face; the band is measured on the digits it shows. */
-export const COUNTDOWN_GLYPH_STYLE = volumeGlyphStyle(PAUSE.countdownFont, {
-  face: 'gold',
-  refText: COUNTDOWN_DIGITS,
-});
+/**
+ * The 3-2-1 after a pause: gold face; the band is measured on the digits it shows. Its glyphs keep
+ * textures of their own: at 320 px each takes a shelf of about a ninth of the atlas page, and the
+ * countdown runs over a stopped run, so its two extra draws cost nothing.
+ */
+export const COUNTDOWN_GLYPH_STYLE: GlyphStyle = {
+  ...volumeGlyphStyle(PAUSE.countdownFont, { face: 'gold', refText: COUNTDOWN_DIGITS }),
+  ownTextures: true,
+};
 
 /** The tutorial tap hint in the current language: white face, the band measured on its own letters. */
 export function tapGlyphStyle(text: string): GlyphStyle {
