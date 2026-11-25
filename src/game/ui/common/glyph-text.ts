@@ -6,12 +6,7 @@ import { bakeTexture } from './bake-texture';
 import { FONT_FAMILY, FONT_WEIGHT } from './fonts';
 import { glyphBoxWidth, glyphChars, glyphKey, glyphStrokeKey, layoutGlyphs } from './glyph-layout';
 import { VOLUME_TEXT } from '../../../data/common/volume-text-look';
-import {
-  paintVolumeBack,
-  paintVolumeFace,
-  volumeSpecId,
-  type VolumeSpec,
-} from './volume-text';
+import { paintVolumeBack, paintVolumeFace, volumeSpecId, type VolumeSpec } from './volume-text';
 
 /**
  * Text drawn from pictures of its glyphs on the shared atlas. A Phaser `Text` is a texture of its
