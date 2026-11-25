@@ -21,8 +21,8 @@ import { paintVolumeBack, paintVolumeFace, volumeSpecId, type VolumeSpec } from 
  * covers the fill of the one before it.
  *
  * A style with `volume` draws the glyphs in the volume look (`volume-text.ts`): the outline picture
- * is the contour with its step of shadow, the fill picture is the face with its band and gloss. The
- * box is that of `createOutlinedText` (the padding takes the step too).
+ * is the contour with its step of shadow, the fill picture is the face with its blend, inner shade
+ * and gloss. The box is that of `createOutlinedText` (the padding takes the step too).
  */
 
 /** The look of a glyph text: the font size, the outline and the two colours. */
@@ -150,7 +150,13 @@ function bakeGlyphLayer(
     () => undefined,
     (context) => {
       if (style.volume) {
-        const canvas = { context, width, height: m.height, font: fontOf(style) };
+        const canvas = {
+          context,
+          width,
+          height: m.height,
+          font: fontOf(style),
+          fontSize: style.fontSize,
+        };
         const pen = { x: left, baseline };
         if (layer === 'stroke') paintVolumeBack(canvas, char, pen);
         else paintVolumeFace(canvas, char, pen, style.volume);
@@ -209,14 +215,15 @@ export function bakeGlyphLine(
         context.fillText(text, pen.x, pen.baseline);
         return;
       }
-      paintVolumeBack({ context, width: w, height: h, font }, text, pen);
-      // The face keeps its band and gloss to itself on a canvas of its own, then lies on the outline.
+      const volume = { width: w, height: h, font, fontSize: style.fontSize };
+      paintVolumeBack({ context, ...volume }, text, pen);
+      // The face keeps its shade and gloss to itself on a canvas of its own, then lies on the outline.
       const face = document.createElement('canvas');
       face.width = w;
       face.height = h;
       const faceContext = face.getContext('2d');
       if (!faceContext) return;
-      paintVolumeFace({ context: faceContext, width: w, height: h, font }, text, pen, style.volume);
+      paintVolumeFace({ context: faceContext, ...volume }, text, pen, style.volume);
       context.drawImage(face, 0, 0);
     },
   );
