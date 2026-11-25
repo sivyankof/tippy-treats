@@ -41,6 +41,7 @@ import { bakeTongue } from '../objects/glaze/tongue-view';
 import { bakeStripTextures } from '../objects/glaze/tongue-strip-texture';
 import { bakeMasteryFrame } from '../ui/creatures/mastery-frame';
 import { bakeHudGlyphs } from '../ui/creatures/hud-glyphs';
+import { bakeRunVolumeGlyphs } from '../ui/run/run-volume-styles';
 import { bakeScoreStar } from '../fx/economy/score-star-texture';
 import { bakeTileMark } from '../ui/style/stat-tile';
 import { bakeCalloutArrow } from '../ui/style/callout';
@@ -65,6 +66,7 @@ const PRIME_STEPS: ReadonlyArray<(scene: Phaser.Scene) => void> = [
   createGrownCreatureIconTextures,
   bakeMasteryFrame,
   bakeHudGlyphs,
+  bakeRunVolumeGlyphs,
   bakeSharedArt,
   bakeAllFarArt,
   bakeSpaceVisitors,
