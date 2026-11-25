@@ -134,12 +134,10 @@ function sceneRota(scene: Phaser.Scene): FrameSparkleRota {
   if (known) return known;
   const made = new FrameSparkleRota(look, () => effectsMode.reduced);
   rotas.set(scene, made);
-  const step = (_time: number, delta: number): void =>
-    fxGuard.run(
-      'frame_sparkle',
-      () => made.update(delta),
-      () => made.clear(),
-    );
+  const step = (_time: number, delta: number): void => {
+    if (!fxGuard.call('frame_sparkle', made, made.update, delta))
+      fxGuard.cleanup('frame_sparkle', made, made.clear);
+  };
   const drop = (): void => {
     scene.events.off(Phaser.Scenes.Events.UPDATE, step);
     scene.events.off(Phaser.Scenes.Events.SHUTDOWN, drop);

@@ -46,7 +46,8 @@ export class FrameSparkleRota {
     if (i < 0) return;
     this.frames.splice(i, 1);
     if (i <= this.last) this.last--;
-    if (this.running === frame) this.running = null;
+    // A frame gone mid-run (its card destroyed) still keeps the pause before the next one.
+    if (this.running === frame) this.finish(frame);
   }
 
   /** The frame that runs its sparkle now. */

@@ -4,13 +4,9 @@ import en from '../src/i18n/en.json';
 import ru from '../src/i18n/ru.json';
 import type { BootConfig } from '../src/util/boot/boot-screen';
 import { bootPhrasesOf, bootScript, injectBoot, phrasesHtml } from './boot-screen-html';
+import { nodeFs } from './node-env';
 
-declare const process: {
-  getBuiltinModule(id: 'node:fs'): { readFileSync(path: string, encoding: 'utf-8'): string };
-};
-
-const read = (path: string): string =>
-  process.getBuiltinModule('node:fs').readFileSync(path, 'utf-8');
+const read = (path: string): string => nodeFs().readFileSync(path, 'utf8');
 
 const CONFIG: BootConfig = {
   storageKey: BOOT_SCREEN.storageKey,

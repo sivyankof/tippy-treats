@@ -21,10 +21,14 @@ declare const process: {
   };
 };
 
+/** Reads a file of the repository as text. */
+function readText(path: string): string {
+  return process.getBuiltinModule('node:fs').readFileSync(path, 'utf-8');
+}
+
 /** The `version` of package.json: the one source of the version (the game shows it as `storeVersion`). */
 function packageVersion(): string {
-  const text = process.getBuiltinModule('node:fs').readFileSync('./package.json', 'utf-8');
-  return (JSON.parse(text) as { version: string }).version;
+  return (JSON.parse(readText('./package.json')) as { version: string }).version;
 }
 
 /** The version the game shows: the store version; a pre-release (1.1.0-rc.1) as it is, so dev and tests still start. */
@@ -159,11 +163,6 @@ function buildStampInHtml(stamp: () => string): Plugin {
     name: 'build-stamp-in-html',
     transformIndexHtml: (html) => html.replaceAll('%BUILD_STAMP%', stamp()),
   };
-}
-
-/** Reads a file of the repository as text. */
-function readText(path: string): string {
-  return process.getBuiltinModule('node:fs').readFileSync(path, 'utf-8');
 }
 
 /**

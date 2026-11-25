@@ -115,13 +115,15 @@ describe('frame sparkle rota', () => {
     expect(frames.some((f) => f.running)).toBe(false);
   });
 
-  it('forgets a frame that leaves, even while it runs', () => {
+  it('forgets a frame that leaves, even while it runs, and keeps the pause before the next', () => {
     const { rota, frames, run } = setup(2);
     run(1100);
     const first = frames[0];
     if (first) rota.unregister(first);
     expect(rota.active).toBeNull();
-    run(6000);
+    run(TIMING.periodMs - TIMING.runMs - 100);
+    expect(frames[1]?.running).toBe(false);
+    run(200);
     expect(frames[1]?.running).toBe(true);
   });
 
