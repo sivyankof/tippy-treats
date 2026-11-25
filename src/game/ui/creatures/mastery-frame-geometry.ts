@@ -52,3 +52,78 @@ export function masteryFramePad(): number {
   ];
   return Math.ceil(Math.max(outerRimReach(), ...crowns));
 }
+
+/** A point on the centre line of the gold band, as an offset from the plate centre, with the direction of travel. */
+export interface PerimeterPoint {
+  x: number;
+  y: number;
+  /** Direction of travel (clockwise), radians. */
+  angle: number;
+}
+
+/** The centre line of the gold band: a rounded rectangle half-size and corner radius. */
+function bandLine(body: FrameBody): { hw: number; hh: number; r: number } {
+  const f = MASTERY_FRAME;
+  const inset = f.outline + f.band / 2;
+  return {
+    hw: body.width / 2 - inset,
+    hh: body.height / 2 - inset,
+    r: Math.max(0, f.radius - inset),
+  };
+}
+
+/** Where the sparkle starts and ends on the top edge (x offset from the plate centre): under the crown. */
+export function sparkleStartX(body: FrameBody): number {
+  const { hw, r } = bandLine(body);
+  const straight = hw - r;
+  return Math.max(-straight, Math.min(straight, crownSpot(body).cx - body.width / 2));
+}
+
+/**
+ * The point at share `t` of the way once round the centre line of the gold band, clockwise from the top edge at
+ * `startX`. The speed is the same on the straight edges and the corner arcs; `t` wraps, so 0 and 1 are the same point.
+ */
+export function framePerimeterPoint(body: FrameBody, t: number, startX = 0): PerimeterPoint {
+  const { hw, hh, r } = bandLine(body);
+  const a = 2 * (hw - r);
+  const b = 2 * (hh - r);
+  const arc = (Math.PI / 2) * r;
+  const total = 2 * a + 2 * b + 4 * arc;
+  const from = Math.max(-(hw - r), Math.min(hw - r, startX)) + (hw - r);
+  let d = (((from + t * total) % total) + total) % total;
+  // Pieces in travel order from the top-left end of the top edge: edge, corner, edge, corner...
+  const lengths = [a, arc, b, arc, a, arc, b, arc];
+  const half = Math.PI / 2;
+  for (let i = 0; i < lengths.length; i++) {
+    const len = lengths[i] ?? 0;
+    if (d > len && i < lengths.length - 1) {
+      d -= len;
+      continue;
+    }
+    const u = len > 0 ? Math.min(1, d / len) : 0;
+    switch (i) {
+      case 0:
+        return { x: -(hw - r) + d, y: -hh, angle: 0 };
+      case 1:
+        return arcPoint(hw - r, -(hh - r), r, -half + u * half);
+      case 2:
+        return { x: hw, y: -(hh - r) + d, angle: half };
+      case 3:
+        return arcPoint(hw - r, hh - r, r, u * half);
+      case 4:
+        return { x: hw - r - d, y: hh, angle: Math.PI };
+      case 5:
+        return arcPoint(-(hw - r), hh - r, r, half + u * half);
+      case 6:
+        return { x: -hw, y: hh - r - d, angle: -half };
+      default:
+        return arcPoint(-(hw - r), -(hh - r), r, Math.PI + u * half);
+    }
+  }
+  return { x: 0, y: -hh, angle: 0 };
+}
+
+/** A point on a corner arc at polar angle `phi` around (cx, cy); the direction of travel is a quarter turn ahead. */
+function arcPoint(cx: number, cy: number, r: number, phi: number): PerimeterPoint {
+  return { x: cx + Math.cos(phi) * r, y: cy + Math.sin(phi) * r, angle: phi + Math.PI / 2 };
+}
