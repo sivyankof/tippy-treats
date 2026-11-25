@@ -13,7 +13,9 @@ export const TUTORIAL_ANIM = {
     /** The hand taps down and back up with this period. */
     periodMs: 800,
     tapDistance: 36,
-    tapScale: 0.12,
+    /** At the press the hand is wider and shorter by these shares (the fingertip stays on the touch point). */
+    squashX: 0.1,
+    squashY: 0.14,
     /** The text breathes. */
     textScale: 0.06,
     textPeriodMs: 1100,
@@ -46,6 +48,25 @@ export const TUTORIAL_ANIM = {
     /** Knuckle creases: stroke width in sketch units and opacity. */
     creaseWidth: 6,
     creaseAlpha: 0.8,
+  },
+  /** Gold rays that fly out of the fingertip at each press (not on minimal effects). */
+  rays: {
+    count: 6,
+    /** The rays are spread over this angle around straight up, degrees. */
+    spreadDeg: 150,
+    /** Length and thickness of one ray picture, logical pixels. */
+    length: 26,
+    thick: 11,
+    /** Outline of a ray, logical pixels. */
+    outline: 2.5,
+    /** Distance of the inner end from the touch point at the start, and how far a ray travels. */
+    startRadius: 22,
+    travel: 24,
+    /** How long a ray lives after the press, ms, and the share of it after which it fades. */
+    lifeMs: 420,
+    fadeFrom: 0.4,
+    /** The ray ends up this much shorter. */
+    shrink: 0.45,
   },
   /** The first perfect drop of a session. */
   firstPerfect: {

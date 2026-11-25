@@ -2,14 +2,19 @@ import * as Phaser from 'phaser';
 import { HUD_LAYOUT } from '../../data/run/hud-layout';
 import { TUTORIAL_ANIM } from '../../data/tutorial/tutorial-anim';
 import { t } from '../../i18n';
+import { effectsMode } from '../app/effects-mode';
+import { fxGuard } from '../common/fx-guard';
 import { oscillate01, sineWave } from '../../util/math';
 import { FLYING_REACH } from '../run/camera-layout';
 import { GlyphText, prepareGlyphs } from '../ui/common/glyph-text';
 import { tapGlyphStyle } from '../ui/run/run-volume-styles';
-import { HAND, HAND_ORIGIN, HINT_TEXTURES } from './hint-textures';
+import { HAND, HAND_ORIGIN, HINT_TEXTURES, RAY_ORIGIN } from './hint-textures';
+import { pressAgeMs, rayAngles, rayPose } from './tap-rays';
 
 const tap = TUTORIAL_ANIM.tap;
 const CAPTION_HUD_GAP = TUTORIAL_ANIM.caption.hudGap;
+const rays = TUTORIAL_ANIM.rays;
+const RAY_ANGLES = rayAngles(rays.count, rays.spreadDeg);
 
 /**
  * A hand that taps and "Tap!" over the play area. It is only a picture: taps go through it
@@ -18,6 +23,8 @@ const CAPTION_HUD_GAP = TUTORIAL_ANIM.caption.hudGap;
 export class TapHint {
   private readonly hand: Phaser.GameObjects.Image;
   private readonly label: GlyphText;
+  /** The rays of a press: made with the hint, only shown and moved afterwards. */
+  private readonly rays: Phaser.GameObjects.Image[];
   private alpha = 0;
   private handY = 0;
   private screenWidth = 0;
@@ -34,6 +41,13 @@ export class TapHint {
       .image(0, 0, HINT_TEXTURES.hand)
       .setOrigin(HAND_ORIGIN[0], HAND_ORIGIN[1])
       .setAlpha(0);
+    this.rays = RAY_ANGLES.map((angle) =>
+      scene.add
+        .image(0, 0, HINT_TEXTURES.ray)
+        .setOrigin(RAY_ORIGIN[0], RAY_ORIGIN[1])
+        .setRotation(angle)
+        .setVisible(false),
+    );
     this.setVisible(false);
   }
 
@@ -65,18 +79,57 @@ export class TapHint {
     this.setVisible(visible);
     if (!visible) return;
     this.place(towerTopY);
-    // The hand presses up into the text and back, and shrinks a little at the press.
+    // The hand presses up into the text and back; at the press the finger squashes, the fingertip
+    // staying on the touch point.
     const press = oscillate01(timeMs, tap.periodMs);
     this.hand
       .setAlpha(this.alpha)
       .setY(this.handY + tap.tapDistance * (1 - press))
-      .setScale(1 - tap.tapScale * press);
+      .setScale(1 + tap.squashX * press, 1 - tap.squashY * press);
+    this.updateRays(timeMs);
     const breath = 1 + tap.textScale * sineWave(timeMs, tap.textPeriodMs);
     this.label.setAlpha(this.alpha).setScale(breath);
+  }
+
+  /** Gold rays fly out of the touch point after each press; none on minimal effects. */
+  private updateRays(timeMs: number): void {
+    if (effectsMode.reduced) {
+      this.hideRays();
+      return;
+    }
+    fxGuard.run(
+      'tap-rays',
+      () => {
+        const age = pressAgeMs(timeMs, tap.periodMs);
+        const x = this.screenWidth / 2;
+        const pose = rayPose(age, rays);
+        this.rays.forEach((ray, i) => {
+          if (!pose) {
+            ray.setVisible(false);
+            return;
+          }
+          const angle = RAY_ANGLES[i] ?? 0;
+          ray
+            .setVisible(true)
+            .setPosition(
+              x + Math.cos(angle) * pose.radius,
+              this.handY + Math.sin(angle) * pose.radius,
+            )
+            .setScale(pose.scale)
+            .setAlpha(pose.alpha * this.alpha);
+        });
+      },
+      () => this.hideRays(),
+    );
+  }
+
+  private hideRays(): void {
+    for (const ray of this.rays) ray.setVisible(false);
   }
 
   private setVisible(visible: boolean): void {
     this.hand.setVisible(visible);
     this.label.setVisible(visible);
+    if (!visible) this.hideRays();
   }
 }

@@ -3,13 +3,20 @@ import { TUTORIAL_ANIM } from '../../data/tutorial/tutorial-anim';
 import { PALETTE } from '../../data/common/palette';
 import { FIELD_PAD } from '../../data/common/picture-fields';
 import { paddedOrigin } from '../../util/field-pad';
-import { fillPolygon, OUTLINE_SHARE, outlineColor, type Pt } from '../fx/common/plain-style';
+import {
+  fillPolygon,
+  OUTLINE_SHARE,
+  outlineColor,
+  roundRectPoints,
+  type Pt,
+} from '../fx/common/plain-style';
 import { bakePadded, bakeTexture } from '../ui/common/bake-texture';
 import { buildHand } from './hand-shape';
 
-/** The tap hand sits on the shared atlas (the `fx_` prefix), so showing it adds no draw call. */
+/** Both pictures of the tap hand sit on the shared atlas (the `fx_` prefix), so showing them adds no draw call. */
 export const HINT_TEXTURES = {
   hand: 'fx_tap_hand',
+  ray: 'fx_tap_ray',
   arrow: 'tutorial_arrow',
 } as const;
 
@@ -31,6 +38,16 @@ export const HAND_ORIGIN = paddedOrigin(
   HAND_FIELD,
 );
 
+const RAYS = TUTORIAL_ANIM.rays;
+const RAY_OUTLINE = RAYS.outline;
+const RAY_FIELD = FIELD_PAD.tapRay;
+/** Origin of the ray picture: the inner end of the ray, in the middle of its thickness. */
+export const RAY_ORIGIN = paddedOrigin(
+  [RAY_OUTLINE / (RAYS.length + RAY_OUTLINE * 2), 0.5],
+  RAYS.length + RAY_OUTLINE * 2,
+  RAYS.thick + RAY_OUTLINE * 2,
+  RAY_FIELD,
+);
 const ARROW = TUTORIAL_ANIM.arrow;
 const { width: ARROW_W, height: ARROW_H } = ARROW;
 const ARROW_OUTLINE = ARROW_H * OUTLINE_SHARE;
@@ -99,6 +116,35 @@ function bakeHand(scene: Phaser.Scene): void {
   );
 }
 
+/** A short gold stroke with the warm outline, pointing right from its inner end: one ray of the press. */
+function bakeRay(scene: Phaser.Scene): void {
+  const { length, thick } = RAYS;
+  bakePadded(
+    scene,
+    HINT_TEXTURES.ray,
+    length + RAY_OUTLINE * 2,
+    thick + RAY_OUTLINE * 2,
+    RAY_FIELD,
+    (g) => {
+      const half = thick / 2;
+      g.translateCanvas(RAY_OUTLINE, RAY_OUTLINE);
+      g.fillStyle(outlineColor(PALETTE.gold), 1);
+      fillPolygon(
+        g,
+        roundRectPoints(
+          length / 2,
+          half,
+          length / 2 + RAY_OUTLINE,
+          half + RAY_OUTLINE,
+          half + RAY_OUTLINE,
+        ),
+      );
+      g.fillStyle(PALETTE.gold, 1);
+      fillPolygon(g, roundRectPoints(length / 2, half, length / 2, half, half));
+    },
+  );
+}
+
 /** A fat arrow that points down, drawn as stem and head: outline first, then the fill. */
 function bakeArrow(scene: Phaser.Scene): void {
   const pad = ARROW_OUTLINE + ARROW_FIELD;
@@ -126,5 +172,6 @@ function bakeArrow(scene: Phaser.Scene): void {
 /** Bakes the pictures of the hints once. */
 export function bakeHintTextures(scene: Phaser.Scene): void {
   bakeHand(scene);
+  bakeRay(scene);
   bakeArrow(scene);
 }
