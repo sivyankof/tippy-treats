@@ -13,12 +13,60 @@ export const TUTORIAL_ANIM = {
     /** The hand taps down and back up with this period. */
     periodMs: 800,
     tapDistance: 36,
-    tapScale: 0.12,
+    /** At the press the hand is wider and shorter by these shares (the fingertip stays on the touch point). */
+    squashX: 0.1,
+    squashY: 0.14,
     /** The text breathes. */
     textScale: 0.06,
     textPeriodMs: 1100,
     fadeInMs: 250,
     fadeOutMs: 200,
+  },
+  /**
+   * The chubby glove that taps (`game/tutorial/hand-shape.ts`): a short thick finger, two round
+   * knuckles, a thumb, a palm and a soft cuff, drawn after a sketch in units of its own and
+   * scaled by `scale`. The picture is tilted as a whole.
+   */
+  hand: {
+    scale: 0.78,
+    tiltDeg: -10,
+    /** The tone the outline is darkened from: a warm tan, since a darkened cream would turn grey. */
+    outlineBase: 0xd88a5e,
+    /** The cuff and its shadow tone. */
+    cuffColor: 0xff8fb0,
+    cuffShadow: 0xe0668f,
+    /** Sketch units cut off the lit palm on the right and at the bottom: the shadow band. */
+    palmShadowRight: 14,
+    palmShadowBottom: 34,
+    /** Sketch units cut off the lit cuff on the right and at the bottom. */
+    cuffShadowRight: 8,
+    cuffShadowBottom: 14,
+    glossAlpha: 0.95,
+    cuffGlossAlpha: 0.6,
+    /** The cuff's own outline over the palm is this thick, logical pixels. */
+    cuffRim: 4,
+    /** Knuckle creases: stroke width in sketch units and opacity. */
+    creaseWidth: 6,
+    creaseAlpha: 0.8,
+  },
+  /** Gold rays that fly out of the fingertip at each press (not on minimal effects). */
+  rays: {
+    count: 6,
+    /** The rays are spread over this angle around straight up, degrees. */
+    spreadDeg: 150,
+    /** Length and thickness of one ray picture, logical pixels. */
+    length: 26,
+    thick: 11,
+    /** Outline of a ray, logical pixels. */
+    outline: 2.5,
+    /** Distance of the inner end from the touch point at the start, and how far a ray travels. */
+    startRadius: 22,
+    travel: 24,
+    /** How long a ray lives after the press, ms, and the share of it after which it fades. */
+    lifeMs: 420,
+    fadeFrom: 0.4,
+    /** The ray ends up this much shorter. */
+    shrink: 0.45,
   },
   /** The first perfect drop of a session. */
   firstPerfect: {
