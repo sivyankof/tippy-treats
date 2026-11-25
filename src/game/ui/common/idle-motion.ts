@@ -32,7 +32,7 @@ export function idlePose(
 }
 
 /** The parts of a display object an idle pose drives. */
-interface Swayable {
+export interface Swayable {
   setScale(x: number, y: number): unknown;
   setAngle(degrees: number): unknown;
 }

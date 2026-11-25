@@ -14,6 +14,9 @@ import type { Button } from '../ui/common/button';
 import { createIconButton } from '../ui/menu/widgets/icon-button';
 import { NumberRoll } from '../ui/common/number-roll';
 import { createOutlinedText } from '../ui/common/outlined-text';
+import { GlyphText, prepareGlyphs } from '../ui/common/glyph-text';
+import { numberGlyphTexts } from '../ui/common/number-glyphs';
+import { HEIGHT_GLYPH_STYLE } from '../ui/run/run-volume-styles';
 import { PauseOverlay } from '../ui/run/pause-overlay';
 import { bindHudInput } from '../ui/run/hud-input';
 import { EffectBadges } from '../ui/creatures/effect-badges';
@@ -42,7 +45,7 @@ import type { GameScene } from './game-scene';
 const { pauseSize, pauseMargin } = HUD_LAYOUT;
 
 export class HudScene extends Phaser.Scene {
-  private heightText!: Phaser.GameObjects.Text;
+  private heightText!: GlyphText;
   private scoreText!: Phaser.GameObjects.Text;
   private wobbleBar!: WobbleBar;
   private pauseButton!: Button;
@@ -77,13 +80,17 @@ export class HudScene extends Phaser.Scene {
     this.heightRoll = new NumberRoll();
     this.scoreRoll = new NumberRoll();
 
-    this.heightText = createOutlinedText(
+    // The glyphs are baked before the first frame; the number rolls over them without baking.
+    prepareGlyphs(this, HEIGHT_GLYPH_STYLE, numberGlyphTexts());
+    this.heightText = new GlyphText(
       this,
       width / 2,
       HUD_LAYOUT.heightY,
-      formatNumber(0),
-      HUD_LAYOUT.heightFont,
-    );
+      HEIGHT_GLYPH_STYLE,
+      0.5,
+      0.5,
+      HUD_LAYOUT.heightGlyphCapacity,
+    ).setText(formatNumber(0));
     this.scoreText = createOutlinedText(
       this,
       width / 2,
