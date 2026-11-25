@@ -21,7 +21,10 @@ export function resultsLinesOf(data: ResultsData, missionsFrame: boolean): Resul
       : t('results.startedAt', startedLine(data.startHeight, result.height));
   let hint: { text: string; towardRecord: boolean } | null = null;
   if (data.recorded && daily && !summary.dailyStale) {
-    hint = { text: dailyProgressText(gameState.dailyInfo().best, true), towardRecord: false };
+    hint = {
+      text: dailyProgressText(data.dailyBest ?? gameState.dailyInfo().best, true),
+      towardRecord: false,
+    };
   } else if (data.recorded && !daily) {
     const miss = nearMiss({
       height: result.height,
@@ -38,11 +41,13 @@ export function resultsLinesOf(data: ResultsData, missionsFrame: boolean): Resul
   return resultsLines({
     record: summary.isRecord ? t('run.newRecord') : null,
     started,
-    daily: daily
-      ? summary.dailyStale
-        ? t('resultsDaily.stale')
-        : dailyAttemptText(result.height)
-      : null,
+    // A daily attempt that did not reach the save counted for nothing: no line about it.
+    daily:
+      daily && data.recorded
+        ? summary.dailyStale
+          ? t('resultsDaily.stale')
+          : dailyAttemptText(result.height)
+        : null,
     hint,
     missionsFrame,
   });

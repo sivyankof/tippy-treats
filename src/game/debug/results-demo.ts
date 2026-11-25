@@ -47,6 +47,11 @@ function reachesLevel(kind: ResultsDemoCase): boolean {
   return kind === 'levelup' || kind === 'longest' || kind === 'dailyLevelup';
 }
 
+/** Where the XP bar starts and ends: across a level for the level-up cases. */
+function xpFill(kind: ResultsDemoCase): typeof RESULTS_DEMO.xp {
+  return reachesLevel(kind) ? RESULTS_DEMO.levelUp : RESULTS_DEMO.xp;
+}
+
 /** The cases that set a new record. */
 function isRecordCase(kind: ResultsDemoCase): boolean {
   return kind === 'record' || kind === 'longest';
@@ -75,7 +80,6 @@ function demoTally(): RunTally {
 }
 
 function demoSummary(kind: ResultsDemoCase): RunSummary {
-  const { bakerLevel: level, bakerXp: xp } = gameState.data;
   const items = RESULTS_DEMO.missions.map(({ id, group, target, before, after }) => ({
     before: { id, group, target, progress: before, claimed: false },
     after: { id, group, target, progress: after, claimed: false },
@@ -86,8 +90,8 @@ function demoSummary(kind: ResultsDemoCase): RunSummary {
     ...EMPTY_SUMMARY,
     isRecord: record,
     previousRecord: record ? RESULTS_DEMO.previousRecordBeaten : RESULTS_DEMO.previousRecord,
-    // The bar stands where the save is (the demo does not change the save), unless it reaches a level.
-    before: reachesLevel(kind) ? { ...RESULTS_DEMO.levelUp.before } : { level, xp },
+    // The bar fills by the XP of the run; the demo does not change the save.
+    before: { ...xpFill(kind).before },
     xpGained: RESULTS_DEMO.xpGained,
     oven: { ...RESULTS_DEMO.oven },
     missions: { before: items.map((m) => m.before), after: items.map((m) => m.after) },
@@ -112,7 +116,9 @@ export function resultsDemoData(kind: ResultsDemoCase): ResultsData {
     tower: { layers: [], cuts: [] },
     startHeight: checkpoint ?? 0,
     checkpoint,
-    ...(reachesLevel(kind) ? { xpEnd: { ...RESULTS_DEMO.levelUp.after } } : {}),
+    xpEnd: { ...xpFill(kind).after },
+    // The best attempt of the day is this one at least (the demo does not record it).
+    ...(isDaily(kind) ? { dailyBest: demoResult(kind).height } : {}),
     startOffer: {
       opened,
       rows: (adReady) =>
