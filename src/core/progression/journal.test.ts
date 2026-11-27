@@ -13,8 +13,8 @@ describe('tierPlace', () => {
 
   it('starts a tier exactly at its threshold', () => {
     expect(tierPlace(49, TIERS).index).toBe(0);
-    expect(tierPlace(50, TIERS)).toEqual({ index: 1, from: 50, next: 500, share: 0 });
-    expect(tierPlace(275, TIERS).share).toBe(0.5);
+    expect(tierPlace(50, TIERS)).toEqual({ index: 1, from: 50, next: 500, share: 0.1 });
+    expect(tierPlace(250, TIERS).share).toBe(0.5);
   });
 
   it('fills the bar on the top tier, however far above it', () => {

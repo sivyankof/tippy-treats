@@ -10,7 +10,7 @@ export interface TierPlace {
   from: number;
   /** Where the next tier starts; `null` on the top tier. */
   next: number | null;
-  /** Share of the way from `from` to `next`, 0..1; 1 on the top tier. */
+  /** Share of the way from 0 to `next`, 0..1, as the bar text "value / next" reads; 1 on the top tier. */
   share: number;
 }
 
@@ -22,7 +22,7 @@ export function tierPlace(value: number, tiers: readonly { from: number }[]): Ti
   }
   const from = tiers[index]?.from ?? 0;
   const next = tiers[index + 1]?.from ?? null;
-  const share = next === null ? 1 : Math.min(1, Math.max(0, (value - from) / (next - from)));
+  const share = next === null ? 1 : Math.min(1, Math.max(0, value / next));
   return { index, from, next, share };
 }
 
