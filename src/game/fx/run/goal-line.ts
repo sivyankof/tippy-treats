@@ -6,7 +6,6 @@ import { CONTINUE_ANIM } from '../../../data/run/continue-anim';
 import { GOAL_LINE } from '../../../data/run/goal-line';
 import { BALANCE } from '../../../data/tower/balance';
 import { formatNumber, t } from '../../../i18n';
-import { mixColor } from '../../../util/color';
 import { effectsMode } from '../../app/effects-mode';
 import { DEPTH } from '../../common/depth';
 import type { TowerView } from '../../objects/tower/tower-view';
@@ -14,13 +13,7 @@ import { bakePadded, bakeTexture } from '../../ui/common/bake-texture';
 import { createOutlinedText } from '../../ui/common/outlined-text';
 import { MENU } from '../../../data/common/menu-layout';
 import { shade } from '../../../util/color';
-import {
-  bakeVolume,
-  drawVolume,
-  lookOf,
-  shadowMargin,
-  type VolumeArt,
-} from '../../ui/style/volume';
+import { drawVolume, lookOf, shadowMargin } from '../../ui/style/volume';
 import type { Particles } from '../common/particles';
 import { starBurst } from '../common/sparkle-fx';
 import { freeRoom, pennantSide } from './pennant-side';
@@ -89,62 +82,80 @@ export function bakeGoalLine(scene: Phaser.Scene): void {
 }
 
 /** A baked pennant and where the middle of its body lies in the picture. */
-export interface PlateArt extends VolumeArt {
+export interface PlateArt {
+  key: string;
   /** Origin that puts the middle of the body at the image position. */
   originX: number;
   originY: number;
 }
 
-const tail = plate.tail;
-
-/** Bakes the pennant `width` wide in light neutral tones (the tint gives it its colour). */
-export function bakeGoalPlate(scene: Phaser.Scene, width: number): PlateArt {
-  const art = bakeVolume(scene, `fx_goal_pennant_${width}`, width, plate.height, PLATE_LOOK, {
-    fill: plate.face,
-  });
-  return {
-    ...art,
-    originX: (art.left + width / 2) / art.textureWidth,
-    originY: (art.top + plate.height / 2) / art.textureHeight,
-  };
+/** A label drawn once onto a pennant: the canvas of a temporary text and the size it takes. */
+export interface PlateLabel {
+  text: string;
+  canvas: HTMLCanvasElement;
+  width: number;
+  height: number;
 }
 
-/** The same pennant with a small pointer on its top edge, for the time it waits under the HUD away from its line. */
-export function bakeGoalPlateTail(scene: Phaser.Scene, width: number): PlateArt {
+const tail = plate.tail;
+
+/**
+ * Bakes a pennant `width` wide in the colour `fill`, with a small pointer on its top edge when
+ * `pointer` is set (the pennant waits under the HUD, away from its line), and `label` drawn on it
+ * (one picture, so the pennant is a single image). Its own texture, not on the shared atlas.
+ */
+export function bakeGoalPlate(
+  scene: Phaser.Scene,
+  width: number,
+  fill: number,
+  pointer: boolean,
+  label?: PlateLabel,
+): PlateArt {
   const look = PLATE_LOOK;
   const m = shadowMargin(look);
-  const key = `fx_goal_pennant_tail_${width}`;
-  const art: VolumeArt = {
+  const top = m.top + (pointer ? tail.height : 0);
+  const textureWidth = width + m.side * 2;
+  const textureHeight = plate.height + top + m.bottom;
+  const key = `fx_goal_pennant_${pointer ? 'p' : 'n'}_${width}_${fill.toString(16)}${label ? `_${label.text}` : ''}`;
+  const art: PlateArt = {
     key,
-    textureWidth: width + m.side * 2,
-    textureHeight: plate.height + m.top + m.bottom + tail.height,
-    left: m.side,
-    top: m.top + tail.height,
+    originX: (m.side + width / 2) / textureWidth,
+    originY: (top + plate.height / 2) / textureHeight,
   };
-  bakeTexture(scene, key, art.textureWidth, art.textureHeight, (g) => {
-    drawVolume(g, art.left, art.top, width, plate.height, look, { fill: plate.face });
-    // The pointer: a dark triangle, then a lighter one inside it, its base sunk into the body so no seam shows.
-    const cx = art.left + width / 2;
-    const base = art.top + look.outline;
-    const half = tail.width / 2;
-    g.fillStyle(shade(plate.face, S_OUTLINE_SHADE), 1);
-    g.fillTriangle(cx - half, base + 1, cx + half, base + 1, cx, art.top - tail.height);
-    const inset = look.outline * 1.6;
-    g.fillStyle(plate.face, 1);
-    g.fillTriangle(
-      cx - half + inset,
-      base + 2,
-      cx + half - inset,
-      base + 2,
-      cx,
-      art.top - tail.height + inset * 1.6,
-    );
-  });
-  return {
-    ...art,
-    originX: (art.left + width / 2) / art.textureWidth,
-    originY: (art.top + plate.height / 2) / art.textureHeight,
-  };
+  bakeTexture(
+    scene,
+    key,
+    textureWidth,
+    textureHeight,
+    (g) => {
+      drawVolume(g, m.side, top, width, plate.height, look, { fill });
+      if (!pointer) return;
+      // The pointer: a dark triangle, then a lighter one inside it, its base sunk into the body so no seam shows.
+      const cx = m.side + width / 2;
+      const base = top + look.outline;
+      const half = tail.width / 2;
+      g.fillStyle(shade(fill, S_OUTLINE_SHADE), 1);
+      g.fillTriangle(cx - half, base + 1, cx + half, base + 1, cx, top - tail.height);
+      const inset = look.outline * 1.6;
+      g.fillStyle(fill, 1);
+      g.fillTriangle(
+        cx - half + inset,
+        base + 2,
+        cx + half - inset,
+        base + 2,
+        cx,
+        top - tail.height + inset * 1.6,
+      );
+    },
+    label
+      ? (context) => {
+          const x = m.side + (width - label.width) / 2;
+          const y = top + (plate.height - look.bevel - label.height) / 2;
+          context.drawImage(label.canvas, x, y, label.width, label.height);
+        }
+      : undefined,
+  );
+  return art;
 }
 
 /**
@@ -154,12 +165,13 @@ export function bakeGoalPlateTail(scene: Phaser.Scene, width: number): PlateArt 
  */
 export class GoalLine {
   private readonly line: Phaser.GameObjects.Image;
-  private readonly pennant: Phaser.GameObjects.Container;
-  private readonly plateImage: Phaser.GameObjects.Image;
-  private readonly plainArt: PlateArt;
-  private readonly tailArt: PlateArt;
+  /** The pennant: one image, its picture swapped per goal and per pointer. */
+  private readonly pennant: Phaser.GameObjects.Image;
+  /** Pictures of each goal: with and without the pointer. */
+  private readonly arts: Array<{ plain: PlateArt; pointer: PlateArt }>;
   private waiting = false;
-  private readonly labels: Phaser.GameObjects.Text[];
+  private shownArt: RunGoal | null = null;
+  private flashing = false;
   private readonly plateWidth: number;
   private readonly seq: GoalSequence;
   private shown: RunGoal | null = null;
@@ -174,23 +186,33 @@ export class GoalLine {
     startHeight: number,
   ) {
     bakeGoalLine(scene);
-    this.labels = goals.map((goal) =>
+    // The labels are drawn once into the pennant pictures with a temporary text each.
+    const texts = goals.map((goal) =>
       createOutlinedText(
         scene,
         0,
-        -PLATE_LOOK.bevel / 2,
+        0,
         t(`run.goal.${goal.kind}`, { n: formatNumber(goal.height) }),
         plate.font,
-      ).setVisible(false),
+      ),
     );
-    const widest = Math.max(...this.labels.map((label) => label.width));
+    const widest = Math.max(...texts.map((text) => text.width));
     this.plateWidth = Math.ceil(widest + plate.padX * 2);
-    this.plainArt = bakeGoalPlate(scene, this.plateWidth);
-    this.tailArt = bakeGoalPlateTail(scene, this.plateWidth);
-    this.plateImage = new Phaser.GameObjects.Image(scene, 0, 0, this.plainArt.key).setOrigin(
-      this.plainArt.originX,
-      this.plainArt.originY,
-    );
+    this.arts = goals.map((goal, i) => {
+      const text = texts[i] as Phaser.GameObjects.Text;
+      const label = {
+        text: text.text,
+        canvas: text.canvas,
+        width: text.width,
+        height: text.height,
+      };
+      const fill = GOAL_LINE.colors[goal.kind].plate;
+      return {
+        plain: bakeGoalPlate(scene, this.plateWidth, fill, false, label),
+        pointer: bakeGoalPlate(scene, this.plateWidth, fill, true, label),
+      };
+    });
+    for (const text of texts) text.destroy();
     this.line = scene.add
       .image(-GOAL_LINE.linePad, 0, LINE_TEXTURE)
       .setOrigin(
@@ -200,8 +222,10 @@ export class GoalLine {
       .setDepth(DEPTH.recordFlag)
       .setVisible(false);
     // The pennant is its own object: the line stays behind the tower, the pennant reads over it.
+    const first = (this.arts[0] as { plain: PlateArt }).plain;
     this.pennant = scene.add
-      .container(0, 0, [this.plateImage, ...this.labels])
+      .image(0, 0, first.key)
+      .setOrigin(first.originX, first.originY)
       .setDepth(DEPTH.recordPennant)
       .setVisible(false);
     this.seq = new GoalSequence(goals, startHeight);
@@ -225,19 +249,18 @@ export class GoalLine {
     const y = this.tower.trayTopY - (goal.height - state.bonusHeight) * BALANCE.layer.height;
     this.side = pennantSide(this.side, freeRoom(state, goal.height));
     const sway = swayView(timeMs, level);
-    const colors = GOAL_LINE.colors[goal.kind];
     let alpha: number;
     let lineAlpha: number;
     let scale: number;
     let hopY = 0;
-    let tint: number = colors.plate;
+    let flash = 0;
     if (this.seq.passing) {
       const pass = passView(this.seq.ageMs, goal.kind, level);
       alpha = pass.alpha;
       lineAlpha = pass.alpha;
       scale = pass.scale;
       hopY = pass.hopY;
-      tint = mixColor(colors.plate, plate.flashTint, pass.tintMix);
+      flash = pass.tintMix;
     } else {
       const appear = appearView(this.seq.ageMs, level);
       alpha = appear.plateAlpha;
@@ -253,8 +276,8 @@ export class GoalLine {
     // A swollen pennant grows towards the middle of the screen, so it never leaves the screen edge.
     const x =
       pennantX(this.side, this.plateWidth) - (this.side * this.plateWidth * (scale - 1)) / 2;
-    this.plateImage.setTint(tint);
-    this.showTail(pennantWaits(y - scrollY, plate.height));
+    this.showFlash(flash);
+    this.showPicture(goal, pennantWaits(y - scrollY, plate.height));
     this.pennant
       .setPosition(x, pennantY + hopY)
       .setAngle(sway.wave * flag.waveDeg * this.side)
@@ -274,19 +297,33 @@ export class GoalLine {
     }
   }
 
-  /** Swaps the picture of the pennant between the plain one and the one with the pointer (no new objects). */
-  private showTail(waiting: boolean): void {
-    if (waiting === this.waiting) return;
-    this.waiting = waiting;
-    const art = waiting ? this.tailArt : this.plainArt;
-    this.plateImage.setTexture(art.key).setOrigin(art.originX, art.originY);
+  /** The flash lightens the pennant: an additive tint of grey, the plain tint (nothing) otherwise. */
+  private showFlash(mix: number): void {
+    if (mix <= 0) {
+      if (!this.flashing) return;
+      this.flashing = false;
+      this.pennant.setTintMode(Phaser.TintModes.MULTIPLY).setTint(0xffffff);
+      return;
+    }
+    this.flashing = true;
+    const level = Math.round(plate.flashAdd * mix);
+    this.pennant.setTintMode(Phaser.TintModes.ADD).setTint((level << 16) | (level << 8) | level);
   }
 
-  /** Puts the label and the colours of `goal` on the line. */
+  /** Swaps the picture of the pennant between the plain one and the one with the pointer (no new objects). */
+  private showPicture(goal: RunGoal, waiting: boolean): void {
+    const index = this.goals.indexOf(goal);
+    if (waiting === this.waiting && goal === this.shownArt) return;
+    this.waiting = waiting;
+    this.shownArt = goal;
+    const arts = this.arts[index] as { plain: PlateArt; pointer: PlateArt };
+    const art = waiting ? arts.pointer : arts.plain;
+    this.pennant.setTexture(art.key).setOrigin(art.originX, art.originY);
+  }
+
+  /** Puts the colour of `goal` on the line. */
   private show(goal: RunGoal): void {
     this.shown = goal;
-    const index = this.goals.indexOf(goal);
-    this.labels.forEach((label, i) => label.setVisible(i === index));
     this.line.setTint(GOAL_LINE.colors[goal.kind].line);
   }
 }

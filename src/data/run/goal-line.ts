@@ -37,11 +37,10 @@ export const GOAL_LINE = {
     dailyBest: { line: PALETTE.panel, plate: PALETTE.accentSecondary },
   },
   /**
-   * The pennant is baked in light neutral tones and tinted per kind: the face is this grey (so the
-   * gloss, pure white, stays lighter than the face after the tint) and the outline a dark grey.
+   * The pennant of each goal is baked in the colour of its kind with the label on it (one picture);
+   * the dark outline and the pale gloss come from the volume style.
    */
   plate: {
-    face: 0xe6e6e6,
     height: 78,
     radius: 26,
     /** Room left and right of the widest label inside the plate. */
@@ -51,8 +50,8 @@ export const GOAL_LINE = {
     sheetWidth: 330,
     /** The pointer on the top edge of the pennant while it waits under the HUD, towards its line. */
     tail: { width: 46, height: 24 },
-    /** Pennant colour of the flash: the tint moves towards this at the peak. */
-    flashTint: 0xffffff,
+    /** The flash adds this grey (per channel, 0-255) to the pennant at its peak. */
+    flashAdd: 112,
   },
   appear: {
     /** The line and the pennant fade in over this time. */
