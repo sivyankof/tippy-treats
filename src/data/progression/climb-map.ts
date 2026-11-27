@@ -28,12 +28,14 @@ export const CLIMB_MAP = {
     /** Free room kept between the texts and the tower. */
     towerGap: 24,
     nameFont: 42,
+    /** Height of one line of the name as a share of its font size (a second line pushes the rows apart by the rest). */
+    lineHeight: 1.4,
     rangeFont: 34,
     lockedFont: 46,
     lockedColor: 0xe4dcf2,
     rows: { plain: [-27, 27], lap: [-80, -32, 46] },
     /** The label of the best lap: a star and a small text. */
-    bestLap: { font: 30, star: 40, gap: 8 },
+    bestLap: { font: 34, star: 40, gap: 8 },
   },
   /** The silhouette of a shut band: the colours of its sky and the tint of the picture. */
   locked: { sky: [0xc9c2d8, 0xa9a1bd], tint: 0x6e6a8c, pictureAlpha: 0.92 },
@@ -45,13 +47,13 @@ export const CLIMB_MAP = {
     lineShade: -0.35,
     topLight: 0.18,
     topLightHeight: 8,
-    /** The part of the zone sky (0 top, 1 bottom) a band shows, where the whole sky would look like its neighbour. */
-    range: { roof: [0.4, 1] } as Partial<Record<ZoneId, readonly [number, number]>>,
+    /** Zones whose band takes its own two colours (top, bottom) instead of the zone sky, where the sky would look like its neighbour: Rooftop is a lilac dusk. */
+    own: { roof: [0xa58ae0, 0xffcfa6] } as Partial<Record<ZoneId, readonly [number, number]>>,
   },
   /** The tower column: a picture of 20 layers drawn at `texScale` times the size it shows. */
   tower: {
-    x: 14,
-    width: 148,
+    x: 22,
+    width: 164,
     texScale: 2,
     /** Every drawn layer stands for this many real ones: fewer, thicker layers read better than a barcode. */
     perLayer: 2,
@@ -59,7 +61,11 @@ export const CLIMB_MAP = {
     wobble: 14,
     glazeShare: 0.44,
     /** The top cake has less glaze, so its face has room. */
-    topGlazeShare: 0.34,
+    topGlazeShare: 0.3,
+    /** The top cake is this many drawn layers tall, so its face reads at phone size. */
+    topHeight: 1.8,
+    /** The column stops this many real layers under the top of the cake, so no sliver of it shows above the cake. */
+    topOverlap: 0.5,
     outline: 4.4,
     glazeOutline: 3,
     band: 0.14,
@@ -72,12 +78,12 @@ export const CLIMB_MAP = {
     /** The face of the top cake, shares of the layer height. */
     face: {
       eyeY: 0,
-      eyeSpacing: 0.5,
-      eyeRadius: 0.07,
+      eyeSpacing: 0.42,
+      eyeRadius: 0.1,
       smileY: 0.2,
-      smileRadius: 0.15,
+      smileRadius: 0.17,
       smileSpanDeg: 110,
-      smileThick: 0.045,
+      smileThick: 0.06,
     },
     /** Layer `i` takes the plain pair `i * pairStep` of the run (the step is prime to the pair count, so neighbours differ). */
     pairStep: 5,
@@ -90,8 +96,8 @@ export const CLIMB_MAP = {
     poleShade: -0.18,
     knob: 32,
     clothHeight: 72,
-    clothPadX: 16,
-    clothMaxWidth: 244,
+    clothPadX: 12,
+    clothMaxWidth: 232,
     /** Free pole between the foot of the flag and the bottom of the cloth. */
     rise: 22,
     /** Clear space between the edge of the tower and the edge of a pole, on both sides. */

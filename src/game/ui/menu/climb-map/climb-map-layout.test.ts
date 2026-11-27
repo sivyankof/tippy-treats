@@ -8,6 +8,7 @@ import {
   layersInBand,
   offsetForCentre,
   ribbonHeight,
+  roomScale,
   spreadMarks,
   visibleSlice,
   windowContentHeight,
@@ -78,5 +79,15 @@ describe('climb map layout', () => {
     expect(ribbonHeight(1500)).toBe(1500 - goal.height - goal.gap);
     expect(ribbonHeight(1500, [100])).toBe(1500 - goal.height - goal.gap - 100 - goal.gap);
     expect(ribbonHeight(50)).toBe(0);
+  });
+
+  it('fits a text to its room with no lower bound, however long it is', () => {
+    expect(roomScale(0, 100)).toBe(1);
+    expect(roomScale(80, 100)).toBe(1);
+    expect(roomScale(200, 100)).toBe(0.5);
+    // A very long name still ends inside the room: 1000 px of text in 184 px.
+    const scale = roomScale(1000, 184);
+    expect(scale * 1000).toBeCloseTo(184);
+    expect(roomScale(50, -10)).toBe(0);
   });
 });

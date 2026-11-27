@@ -16,7 +16,7 @@ import {
 } from '../../../fx/zones/climb-map-textures';
 import { createOutlinedText } from '../../common/outlined-text';
 import { ScrollPhysics } from '../../style/scroll-physics';
-import { fitText } from '../widgets/fit-text';
+import { onFontRefresh } from '../widgets/fit-text';
 import { bandName } from './climb-map-text';
 import { createFlag, swayFlag, type Flag, type FlagKind } from './climb-map-flag';
 import {
@@ -25,12 +25,23 @@ import {
   heightToY,
   layersInBand,
   offsetForCentre,
+  roomScale,
   spreadMarks,
   visibleSlice,
   type Span,
 } from './climb-map-layout';
 
 const cfg = CLIMB_MAP;
+
+/**
+ * Shrinks a one-line text to fit `room`, with no lower bound (the shared `fitText` stops at 0.8 and
+ * lets a long English name run into the tower); it fits again after a late font load.
+ */
+function fitInRoom<T extends Phaser.GameObjects.Text>(text: T, room: number): T {
+  onFontRefresh(text, () => fitInRoom(text, room));
+  text.setScale(roomScale(text.setScale(1).width, room));
+  return text;
+}
 
 /** An object that fades near the edges of the ribbon: it stands on the strip over `span`. */
 interface Fading {
@@ -219,11 +230,20 @@ export class ClimbMapRibbon {
     holder.add(art);
     const row = (y: number, label: string, font: number, color?: number): void => {
       const item = createOutlinedText(scene, textX, y, label, font, color).setOrigin(0, 0.5);
-      holder.add(fitText(item, room));
+      holder.add(fitInRoom(item, room));
     };
     if (band.open) {
-      row(rows[0] ?? 0, bandName(band), text.nameFont);
-      row(rows[1] ?? 0, t('climbMap.range', { from: band.from, to: band.to }), text.rangeFont);
+      // A name too wide for the room wraps to two lines at full size (the lines then push apart); only a word wider than the room shrinks.
+      const name = createOutlinedText(scene, textX, 0, bandName(band), text.nameFont);
+      name.setOrigin(0, 0.5).setWordWrapWidth(room);
+      const extra = name.height - text.nameFont * text.lineHeight;
+      name.setY((rows[0] ?? 0) - Math.max(0, extra) / 2);
+      holder.add(fitInRoom(name, room));
+      row(
+        (rows[1] ?? 0) + Math.max(0, extra) / 2,
+        t('climbMap.range', { from: band.from, to: band.to }),
+        text.rangeFont,
+      );
     } else {
       art.setTint(cfg.locked.tint).setAlpha(cfg.locked.pictureAlpha);
       row(0, t('climbMap.locked'), text.lockedFont, text.lockedColor);
@@ -241,7 +261,7 @@ export class ClimbMapRibbon {
       ).setOrigin(0, 0.5);
       const labelRoom = room - text.bestLap.star - text.bestLap.gap;
       label.setWordWrapWidth(labelRoom);
-      holder.add([star, fitText(label, labelRoom)]);
+      holder.add([star, fitInRoom(label, labelRoom)]);
     }
     this.strip.add(holder);
     const half = Math.max(picture.size / 2, ...rows.map((y) => Math.abs(y) + text.nameFont * 0.6));
@@ -329,7 +349,7 @@ export class ClimbMapRibbon {
       if (slice)
         sky.setCrop(0, slice.top - span.top, cfg.sky.textureWidth, slice.bottom - slice.top);
       if (!column) continue;
-      const filled = layersInBand(band, this.towerTop) * LAYER_PX;
+      const filled = layersInBand(band, this.towerTop - cfg.tower.topOverlap) * LAYER_PX;
       const grown: Span = {
         top: span.bottom - filled - (filled > 0 ? padDisp : 0),
         bottom: span.bottom + padDisp,
@@ -361,7 +381,9 @@ export class ClimbMapRibbon {
     const ts = cfg.tower.texScale;
     const size = climbTopSize();
     const padDisp = climbTowerSize().pad / ts;
-    const bottom = heightToY(this.towerTop - cfg.tower.perLayer, this.map.totalLayers) + padDisp;
+    const bottom =
+      heightToY(this.towerTop - cfg.tower.perLayer * cfg.tower.topHeight, this.map.totalLayers) +
+      padDisp;
     const imageTop = bottom - size.height / ts;
     const shown = this.towerTop > 0 ? visibleSlice({ top: imageTop, bottom }, view) : null;
     top.setVisible(shown !== null).setY(bottom);

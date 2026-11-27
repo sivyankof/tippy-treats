@@ -74,3 +74,9 @@ export function ribbonHeight(contentHeight: number, extraRows: readonly number[]
   const below = [goal.height, ...extraRows].reduce((sum, h) => sum + h + goal.gap, 0);
   return Math.max(0, contentHeight - below);
 }
+
+/** The scale that makes a text `width` wide fit `room` pixels: 1 when it fits, never a floor above what is needed (a long name just gets smaller). */
+export function roomScale(width: number, room: number): number {
+  if (width <= 0) return 1;
+  return Math.min(1, Math.max(0, room) / width);
+}
