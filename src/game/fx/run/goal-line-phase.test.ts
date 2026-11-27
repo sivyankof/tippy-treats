@@ -4,6 +4,7 @@ import { CONTINUE_ANIM } from '../../../data/run/continue-anim';
 import { GOAL_LINE } from '../../../data/run/goal-line';
 import {
   appearView,
+  lineHudAlpha,
   pennantOffset,
   pennantWaits,
   passDurationMs,
@@ -123,5 +124,15 @@ describe('pennantWaits', () => {
     expect(pennantWaits(GOAL_LINE.hud.clearY + height * 2, height)).toBe(false);
     expect(pennantWaits(GOAL_LINE.hud.clearY, height)).toBe(true);
     expect(pennantWaits(-300, height)).toBe(true);
+  });
+});
+
+describe('lineHudAlpha', () => {
+  it('hides the line in the HUD band and fades it in below', () => {
+    const { clearY, lineFadeBand } = GOAL_LINE.hud;
+    expect(lineHudAlpha(-100)).toBe(0);
+    expect(lineHudAlpha(clearY)).toBe(0);
+    expect(lineHudAlpha(clearY + lineFadeBand / 2)).toBeCloseTo(0.5);
+    expect(lineHudAlpha(clearY + lineFadeBand * 2)).toBe(1);
   });
 });

@@ -107,3 +107,9 @@ export function pennantOffset(lineY: number, plateHeight: number): number {
 export function pennantWaits(lineY: number, plateHeight: number): boolean {
   return pennantOffset(lineY, plateHeight) > -(plateHeight / 2 + flag.lineHeight);
 }
+
+/** Opacity factor of the dashed line at screen y `lineY`: hidden in the HUD band, fading in under it. */
+export function lineHudAlpha(lineY: number): number {
+  const { clearY, lineFadeBand } = GOAL_LINE.hud;
+  return clamp01((lineY - clearY) / lineFadeBand);
+}

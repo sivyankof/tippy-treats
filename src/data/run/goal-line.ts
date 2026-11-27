@@ -25,10 +25,16 @@ export const GOAL_LINE = {
     shadow: { offset: 5, spread: 3, steps: 3, alpha: 0.4 },
   },
   /**
-   * The pennant stays out from under the HUD: its top never goes above `clearY` (screen y, under the
+   * The line hides in the HUD band (above `clearY`), the pennant stays out from under the HUD: its top never goes above `clearY` (screen y, under the
    * next creature chip, the lowest plate at its side) plus `gap`; a higher goal is labelled there.
    */
-  hud: { clearY: HUD_LAYOUT.nextPlate.y + HUD_LAYOUT.nextPlate.height, gap: 16 },
+  hud: {
+    clearY: HUD_LAYOUT.nextPlate.y + HUD_LAYOUT.nextPlate.height,
+    /** The pointer (`plate.tail.height`) of a waiting pennant ends about 8 screen px (22 logical) under the chip. */
+    gap: 46,
+    /** The dashes fade in over this many px under `clearY`; above it they are hidden, so they never cross the HUD digits. */
+    lineFadeBand: 60,
+  },
   /** Colour of the dashes and of the pennant by kind of goal. */
   colors: {
     record: { line: PALETTE.gold, plate: PALETTE.accent },
