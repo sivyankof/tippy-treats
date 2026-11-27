@@ -470,6 +470,17 @@ export function bakePlanet(scene: Phaser.Scene, id: SpacePlanetId): void {
   );
 }
 
+/** Paints a planet with the given colours into a graphics whose (0, 0) is the top left of the planet's picture (the climb map draws them unmuted). */
+export function paintPlanet(g: Graphics, id: SpacePlanetId, colors: PlanetColors): void {
+  PAINTERS[id].paint(g, colors);
+}
+
+/** The middle of the picture of a planet. */
+export function planetCentre(id: SpacePlanetId): { x: number; y: number } {
+  const { cx, cy } = PAINTERS[id].canvas;
+  return { x: cx, y: cy };
+}
+
 /** Bakes all nine (the art sheet shows them). */
 export function bakeAllPlanets(scene: Phaser.Scene): void {
   for (const id of SPACE_PLANET_IDS) bakePlanet(scene, id);

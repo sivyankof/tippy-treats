@@ -1,5 +1,4 @@
 import { PALETTE } from '../common/palette';
-import type { ZoneId } from '../zones/zones';
 
 /**
  * Numbers of the climb map (docs/07-ui-screens.md, section 2.3): the ribbon inside the window,
@@ -20,35 +19,16 @@ export const CLIMB_MAP = {
   },
   /** The goal row under the ribbon, on a light card. */
   goal: { height: 120, gap: 24, font: 44 },
-  /** The picture of a zone on the left of a band. */
-  picture: { size: 100, left: 12 },
-  /** Texts of a band: the gap after the picture, the fonts and the rows (offsets from the middle of the band). */
+  /** Texts on the sign of a band: the fonts and the best lap label (the sign itself is `CLIMB_LANDSCAPE.sign`). */
   text: {
-    gap: 10,
     /** Free room kept between the texts and the tower. */
     towerGap: 24,
     nameFont: 42,
-    /** Height of one line of the name as a share of its font size (a second line pushes the rows apart by the rest). */
-    lineHeight: 1.4,
     rangeFont: 34,
     lockedFont: 46,
     lockedColor: 0xe4dcf2,
-    rows: { plain: [-27, 27], lap: [-80, -32, 46] },
     /** The label of the best lap: a star and a small text. */
     bestLap: { font: 34, star: 40, gap: 8 },
-  },
-  /** The silhouette of a shut band: the colours of its sky and the tint of the picture. */
-  locked: { sky: [0xc9c2d8, 0xa9a1bd], tint: 0x6e6a8c, pictureAlpha: 0.92 },
-  /** Sky of a band: a strip of this width stretches to the ribbon; the foot of the band has a ledge. */
-  sky: {
-    textureWidth: 8,
-    ledge: 12,
-    ledgeShade: -0.2,
-    lineShade: -0.35,
-    topLight: 0.18,
-    topLightHeight: 8,
-    /** Zones whose band takes its own two colours (top, bottom) instead of the zone sky, where the sky would look like its neighbour: Rooftop is a lilac dusk. */
-    own: { roof: [0xa58ae0, 0xffcfa6] } as Partial<Record<ZoneId, readonly [number, number]>>,
   },
   /** The tower column: a picture of 20 layers drawn at `texScale` times the size it shows. */
   tower: {
