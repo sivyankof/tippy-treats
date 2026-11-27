@@ -366,7 +366,20 @@ async function icon(src: string, size: number): Promise<Composed> {
   return { width: size, height: size, rgba: pixels(ctx), fit: null };
 }
 
+/**
+ * The faces of the game's font are declared in the game's page (index.html, for its boot screen),
+ * not in a stylesheet: this page takes the same `@font-face` rules from there.
+ */
+async function adoptGameFonts(): Promise<void> {
+  const html = await (await fetch('/index.html')).text();
+  const rules = html.match(/@font-face\s*\{[^}]*\}/g) ?? [];
+  const style = document.createElement('style');
+  style.textContent = rules.join('\n');
+  document.head.append(style);
+}
+
 async function fontsReady(): Promise<void> {
+  await adoptGameFonts();
   // Latin and Cyrillic live in separate files of the font: load both before measuring. A face that
   // does not load leaves an empty list, not an error, and the captions would get another font.
   for (const sample of ['A', 'Ж']) {

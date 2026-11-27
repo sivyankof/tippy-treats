@@ -175,7 +175,10 @@ function bootScreenInHtml(debug: boolean, compact: boolean): Plugin {
     name: 'boot-screen',
     transformIndexHtml: {
       order: 'pre',
-      handler: async (html) => {
+      handler: async (html, { path }) => {
+        // Only the game's page has the boot screen; the dev server also serves the pages of the
+        // scripts (scripts/store/compose.html).
+        if (path !== '/index.html') return html;
         const script = await bootScript(readText('./src/util/boot/boot-screen.ts'), {
           storageKey: BOOT_SCREEN.storageKey,
           minShowMs: BOOT_SCREEN.minShowMs,
