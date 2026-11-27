@@ -1047,7 +1047,7 @@ export const MENU = {
     fill: 0x3f9be0,
     padX: 40,
     /** The square trophy button next to Play on the daily screen: its side, the gap to Play, the shown trophy. */
-    square: { size: 150, radius: 44, shadowOffset: 10, gap: 24, icon: 96 },
+    square: { size: 150, radius: 44, shadowOffset: 10, gap: 24, icon: 128 },
   },
   /** The progress bar of missions (window and results); the look follows `xpBar`. */
   progressBar: { radius: 18, border: 3 },

@@ -20,7 +20,7 @@ const C = {
  */
 export const TROPHY_ART = {
   /** Baked size, texture pixels. */
-  size: 96,
+  size: 128,
   parts: [
     {
       shape: { kind: 'round', radius: 0.5 },
