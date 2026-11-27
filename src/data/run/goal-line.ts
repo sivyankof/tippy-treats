@@ -67,10 +67,10 @@ export const GOAL_LINE = {
     flashMs: 300,
     flashScale: 1.4,
     /** The pennant hops this high over `hopMs` (full and lite). */
-    hopMs: 520,
-    hopHeight: 96,
+    hopMs: 600,
+    hopHeight: 170,
     /** After this time the line and the pennant fade out over `fadeMs`; then the next goal appears. */
-    fadeStartMs: 420,
+    fadeStartMs: 460,
     fadeMs: 380,
   },
   /** The short joy of a pass on the full level: golden sparkles above the pennant. */
