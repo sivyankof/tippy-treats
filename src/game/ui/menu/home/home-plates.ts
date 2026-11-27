@@ -26,7 +26,7 @@ export function createLevelPlate(
 }
 
 /** A disabled plate ignores taps (the screen is moving or leaving). */
-export function setLevelPlateEnabled(plate: Phaser.GameObjects.Container, enabled: boolean): void {
+export function setPlateEnabled(plate: Phaser.GameObjects.Container, enabled: boolean): void {
   if (plate.input) plate.input.enabled = enabled;
 }
 
@@ -36,15 +36,20 @@ export function refreshLevelPlate(plate: Phaser.GameObjects.Container): void {
   if (bar instanceof XpBar) bar.show(gameState.data.bakerLevel, gameState.data.bakerXp);
 }
 
-/** The best height ("Record: 42") or the first-tower call, in gold on a purple plate. */
-export function createRecordPlate(scene: Phaser.Scene): Phaser.GameObjects.Container {
+/** The best height ("Record: 42") or the first-tower call, in gold on a purple plate. A tap runs `onTap` (the climb map). */
+export function createRecordPlate(
+  scene: Phaser.Scene,
+  onTap: () => void,
+): Phaser.GameObjects.Container {
   const best = gameState.recordHeight;
   const text = best === null ? t('home.noRecord') : t('home.record', { n: formatNumber(best) });
   const label = createOutlinedText(scene, 0, 0, text, record.font, PALETTE.gold);
   const plate = new VolumePlate(scene, 'chip', record.height, { fill: record.fill });
   plate.setBodyWidth(label.width + record.padX * 2);
   label.setY(faceOffsetY('chip'));
-  return scene.add.container(0, 0, [plate, label]);
+  const box = scene.add.container(0, 0, [plate, label]);
+  makeTappable(box, plate.bodyWidth, record.height, onTap);
+  return box;
 }
 
 /** A ring around Play that grows and fades again and again, until Play is pressed. */
