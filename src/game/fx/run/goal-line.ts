@@ -16,7 +16,7 @@ import { bakeVolume, lookOf, type VolumeArt } from '../../ui/style/volume';
 import type { Particles } from '../common/particles';
 import { starBurst } from '../common/sparkle-fx';
 import { freeRoom, pennantSide } from './pennant-side';
-import { appearView, hudClearAlpha, passView, pennantX, swayView } from './goal-line-phase';
+import { appearView, passView, pennantSpot, pennantX, swayView } from './goal-line-phase';
 import { GoalSequence } from './goal-sequence';
 
 const flag = CONTINUE_ANIM.flag;
@@ -149,7 +149,8 @@ export class GoalLine {
       .setPosition(-GOAL_LINE.linePad, y)
       .setAlpha((low + (high - low) * sway.pulse) * lineAlpha)
       .setVisible(true);
-    const pennantY = y - plate.height / 2 - flag.lineHeight + sway.bob * flag.bobDistance;
+    const spot = pennantSpot(y - scrollY, plate.height);
+    const pennantY = y + spot.offsetY + sway.bob * flag.bobDistance;
     // A swollen pennant grows towards the middle of the screen, so it never leaves the screen edge.
     const x =
       pennantX(this.side, this.plateWidth) - (this.side * this.plateWidth * (scale - 1)) / 2;
@@ -158,7 +159,7 @@ export class GoalLine {
       .setPosition(x, pennantY + hopY)
       .setAngle(sway.wave * flag.waveDeg * this.side)
       .setScale(scale, scale * (1 + flag.waveStretch * sway.wave))
-      .setAlpha(alpha * hudClearAlpha(pennantY - plate.height / 2 - scrollY))
+      .setAlpha(alpha * spot.alpha)
       .setVisible(true);
     if (passedNow && level === 'full' && goal.kind !== 'record') {
       starBurst(

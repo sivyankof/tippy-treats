@@ -5,6 +5,7 @@ import { GOAL_LINE } from '../../../data/run/goal-line';
 import {
   appearView,
   hudClearAlpha,
+  pennantSpot,
   passDurationMs,
   passView,
   pennantX,
@@ -99,5 +100,30 @@ describe('hudClearAlpha', () => {
     expect(hudClearAlpha(clearY - 50)).toBe(0);
     expect(hudClearAlpha(clearY + fadeBand / 2)).toBeCloseTo(0.5);
     expect(hudClearAlpha(clearY + fadeBand * 3)).toBe(1);
+  });
+});
+
+describe('pennantSpot', () => {
+  const h = GOAL_LINE.plate.height;
+  const reach = h / 2 + CONTINUE_ANIM.flag.lineHeight;
+  const { clearY, fadeBand } = GOAL_LINE.hud;
+
+  it('stands above a line low on the screen', () => {
+    expect(pennantSpot(clearY + reach + h + fadeBand * 2, h)).toEqual({ offsetY: -reach, alpha: 1 });
+  });
+
+  it('hangs below a line just under the HUD, still shown', () => {
+    const spot = pennantSpot(clearY + fadeBand, h);
+    expect(spot.offsetY).toBe(reach);
+    expect(spot.alpha).toBe(1);
+  });
+
+  it('slides over the line between the two places', () => {
+    const spot = pennantSpot(clearY + reach + h / 2 + fadeBand / 2, h);
+    expect(spot.offsetY).toBeCloseTo(0);
+  });
+
+  it('hides only when the line itself is under the HUD', () => {
+    expect(pennantSpot(clearY - reach - fadeBand, h).alpha).toBe(0);
   });
 });
