@@ -78,6 +78,14 @@ export class MenuScenery {
     this.resize(width, height);
   }
 
+  /** Hides or shows the whole backdrop (a full-size window stands over the screen). */
+  setVisible(visible: boolean): void {
+    this.scenery.root.setVisible(visible);
+    this.veil.setVisible(visible);
+    this.top.setVisible(visible);
+    this.bottom.setVisible(visible);
+  }
+
   resize(width: number, height: number): void {
     this.ctx.width = width;
     this.ctx.height = height;

@@ -63,4 +63,15 @@ export const CLIP_ALLOWED: readonly ClipAllowance[] = [
     reason:
       'a rounded corner larger than the picture, cropped to the band on purpose (the picture is a cut of a bigger shape)',
   },
+  {
+    match: /^climb_map_(sky_|frame_)/,
+    reason:
+      'the sky strip of a band of the climb map and the rim round its ribbon fill their picture to the edge on purpose: the strip is stretched to the ribbon, the rim is the outer outline of the ribbon',
+  },
+  {
+    match: /^climb_map_pole$/,
+    sides: ['top', 'bottom'],
+    reason:
+      'a shaft that is stretched to the length of the pole: its ends are hidden under the knob and the foot',
+  },
 ];

@@ -42,7 +42,7 @@
 | `debug` | инструменты разработки и замера (в `data/`; в `game/` это папки `game/debug/` и `game/perf/`) |
 | `common` | общее для слоя, что не относится ни к одной теме (кнопка, текст с обводкой, атлас, кривые, частицы) |
 
-В `game/ui/menu/` подпапки по экранам и окнам: `home`, `collection`, `detail`, `team`, `daily`, `shop`, `results`, `streak`, `missions`, `oven`, `new-creature`, `settings`, `checkpoint`, `journal`, `widgets` (общие виджеты меню).
+В `game/ui/menu/` подпапки по экранам и окнам: `home`, `collection`, `detail`, `team`, `daily`, `shop`, `results`, `streak`, `missions`, `oven`, `new-creature`, `settings`, `checkpoint`, `journal`, `climb-map`, `widgets` (общие виджеты меню).
 
 Правила:
 - Новый файл кладётся в папку своей темы внутри слоя. Если файл подходит двум темам, он идёт туда, откуда его чаще импортируют.

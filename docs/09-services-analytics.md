@@ -155,6 +155,7 @@ export interface AnalyticsService {
 | `ad_rewarded_show`, `ad_rewarded_result` | `showRewarded`, каждое место показа |
 | `ad_interstitial_show` | `GameState.noteInterstitialShown` |
 | `shop_open` | `ShopScene.create`: `source` = `home` (кнопка Дома) или `return` (возврат с экрана нового существа) |
+| `map_open` | `openMapFromHome` (`game/ui/menu/climb-map/climb-map-window.ts`, событие в `climb-map-telemetry.ts`): касание плашки рекорда на Home |
 | `journal_open` | `openJournalFromHome` (`game/ui/menu/journal/journal-window.ts`, событие в `journal-telemetry.ts`): касание плашки уровня на Home; возврат в журнал из окна мушек или окна сравнения события не шлёт, сами эти окна тоже |
 | `iap_start`, `iap_result` | `buyProduct` (`game/economy/purchases.ts`): `product` = ключ товара (`remove_ads`…), не идентификатор магазина; `result` = `purchased`/`cancelled`/`failed`/`pending` |
 | `currency_earn` | `GameState` при любом начислении от крупного источника: от 100 монет или от 1 ягоды (`TELEMETRY.earnMin`); не `debug` и не ягоды, подобранные в забеге (их сумма в `run_end`) |
@@ -202,6 +203,7 @@ export interface AnalyticsService {
 | `ad_interstitial_show` | — | Показана межстраничная |
 | `shop_open` | `source` | Открыт магазин |
 | `journal_open` | — | Открыт журнал пекаря |
+| `map_open` | — | Открыта карта подъёма |
 | `iap_start` | `product` | Нажата покупка |
 | `iap_result` | `product`, `result` | Итог покупки |
 | `currency_spend` | `currency`, `amount`, `item` | Трата |

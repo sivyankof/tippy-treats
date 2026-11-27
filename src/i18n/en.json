@@ -810,6 +810,22 @@
       "4": "Smells like vanilla…"
     }
   },
+  "climbMap": {
+    "title": "Climb map",
+    "locked": "? ? ?",
+    "record": "Record {n}",
+    "today": "Today {n}",
+    "bestLap": "Best lap",
+    "range": "{from}–{to}",
+    "goal": {
+      "showcase": "one={n} layer to Shop Window|other={n} layers to Shop Window",
+      "roof": "one={n} layer to Rooftop|other={n} layers to Rooftop",
+      "clouds": "one={n} layer to Clouds|other={n} layers to Clouds",
+      "stars": "one={n} layer to Stars|other={n} layers to Stars",
+      "space": "one={n} layer to Space|other={n} layers to Space",
+      "lap": "one={n} layer to lap {lap}|other={n} layers to lap {lap}"
+    }
+  },
   "journal": {
     "title": "Baker's Journal",
     "topTier": "Top tier",
