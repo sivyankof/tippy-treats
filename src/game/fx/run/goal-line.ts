@@ -29,7 +29,8 @@ import { GoalSequence } from './goal-sequence';
 
 const flag = CONTINUE_ANIM.flag;
 const plate = GOAL_LINE.plate;
-const LINE_TEXTURE = 'fx_goal_line';
+/** The keys stay out of the shared atlas prefixes (`fx_`): the pictures keep their own textures. */
+const LINE_TEXTURE = 'goal_line';
 const PLATE_LOOK = lookOf('button', plate.radius);
 const S_OUTLINE_SHADE = MENU.style.outlineShade;
 
@@ -116,7 +117,7 @@ export function bakeGoalPlate(
   const top = m.top + (pointer ? tail.height : 0);
   const textureWidth = width + m.side * 2;
   const textureHeight = plate.height + top + m.bottom;
-  const key = `fx_goal_pennant_${pointer ? 'p' : 'n'}_${width}_${fill.toString(16)}${label ? `_${label.text}` : ''}`;
+  const key = `goal_pennant_${pointer ? 'p' : 'n'}_${width}_${fill.toString(16)}${label ? `_${label.text}` : ''}`;
   const art: PlateArt = {
     key,
     originX: (m.side + width / 2) / textureWidth,
