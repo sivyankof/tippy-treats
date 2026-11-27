@@ -54,7 +54,7 @@ export class RecordMoment {
     this.beaten = true;
     this.glow.flash();
     this.particleFx.confetti(cam.width, cam.height);
-    const lineY = this.tower.trayTopY - (best - state.bonusHeight) * BALANCE.layer.height;
+    const lineY = this.tower.heightY(best, state.bonusHeight);
     this.landing.text.showLabel(
       BALANCE.tray.centerX,
       lineY - flag.popLiftY,

@@ -1,5 +1,6 @@
 import { BALANCE } from '../../../../data/tower/balance';
 import { CLIMB_MAP } from '../../../../data/progression/climb-map';
+import { popupRoom } from '../../style/window-fit';
 import { MENU } from '../../../../data/common/menu-layout';
 
 /** Pixels of one layer on the ribbon. */
@@ -62,9 +63,7 @@ export function layersInBand(band: { from: number; to: number }, towerTop: numbe
  */
 export function windowContentHeight(frameHeight: number, frameTop: number): number {
   const popup = MENU.popup;
-  const ribbonHalf = MENU.style.ribbon.height / 2;
-  const reserve = frameTop > 0 ? ribbonHalf : ribbonHalf * 2;
-  const room = frameHeight - popup.screenMargin * 2 - reserve;
+  const room = popupRoom(frameHeight, frameTop);
   return Math.max(popup.minContentHeight, Math.floor(room - popup.titleSpace - popup.padBottom));
 }
 

@@ -1,7 +1,7 @@
 import * as Phaser from 'phaser';
 import type { ClimbBand, ClimbMap } from '../../../../core/progression/climb-map';
 import { CLIMB_MAP } from '../../../../data/progression/climb-map';
-import { t } from '../../../../i18n';
+import { formatNumber, t } from '../../../../i18n';
 import { effectsMode } from '../../../app/effects-mode';
 import { checkpointZoneTexture } from '../../../fx/zones/checkpoint-textures';
 import {
@@ -153,7 +153,10 @@ export class ClimbMapRibbon {
   /** Starts the opening animation (call when the window is fully open). */
   start(): void {
     if (this.stopped || this.towerTop >= this.record) return;
-    this.timer = this.scene.time.delayedCall(cfg.anim.startDelayMs, () => this.run());
+    this.timer = this.scene.time.delayedCall(cfg.anim.startDelayMs, () => {
+      this.timer = null;
+      this.run();
+    });
   }
 
   /** Stops every tween and listener of the ribbon (the window is closing or gone). */
@@ -241,7 +244,7 @@ export class ClimbMapRibbon {
       holder.add(fitInRoom(name, room));
       row(
         (rows[1] ?? 0) + Math.max(0, extra) / 2,
-        t('climbMap.range', { from: band.from, to: band.to }),
+        t('climbMap.range', { from: formatNumber(band.from), to: formatNumber(band.to) }),
         text.rangeFont,
       );
     } else {
@@ -288,8 +291,10 @@ export class ClimbMapRibbon {
         const kind = mark.kind as FlagKind;
         const label =
           kind === 'checkpoint'
-            ? String(mark.value)
-            : t(kind === 'record' ? 'climbMap.record' : 'climbMap.today', { n: mark.value });
+            ? formatNumber(mark.value)
+            : t(kind === 'record' ? 'climbMap.record' : 'climbMap.today', {
+                n: formatNumber(mark.value),
+              });
         const room =
           side === 1
             ? this.stripWidth / 2 - cfg.bar.inset - cfg.bar.width - 6 - (x + f.poleWidth / 2)

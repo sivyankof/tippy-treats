@@ -12,3 +12,8 @@ export interface VeilHandover {
 export function closeSteps(keepVeil: boolean): ReadonlyArray<'destroy' | 'onClosed'> {
   return keepVeil ? ['onClosed', 'destroy'] : ['destroy', 'onClosed'];
 }
+
+/** A release counts as a tap on the veil only when the same press went down on it (`downTime` of the pointer). */
+export function pressBeganHere(downAtHere: number, pressDownTime: number): boolean {
+  return downAtHere >= 0 && downAtHere === pressDownTime;
+}

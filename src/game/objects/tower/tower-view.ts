@@ -143,6 +143,11 @@ export class TowerView {
     return this.trayTopY - (index + 0.5) * BALANCE.layer.height;
   }
 
+  /** World y of the run height `height`: `bonusHeight` of it is height that is not a layer of its own (twins count as two). */
+  heightY(height: number, bonusHeight: number): number {
+    return this.trayTopY - (height - bonusHeight) * BALANCE.layer.height;
+  }
+
   /** World y of the top surface of the tower. */
   topY(): number {
     return this.trayTopY - this.layerCount * BALANCE.layer.height;

@@ -4,7 +4,6 @@ import type { TowerState } from '../../../core/tower/tower-sim';
 import { LOGICAL_SIZE } from '../../../data/app/screen';
 import { CONTINUE_ANIM } from '../../../data/run/continue-anim';
 import { GOAL_LINE } from '../../../data/run/goal-line';
-import { BALANCE } from '../../../data/tower/balance';
 import { formatNumber, t } from '../../../i18n';
 import { effectsMode } from '../../app/effects-mode';
 import { DEPTH } from '../../common/depth';
@@ -292,8 +291,10 @@ export class GoalLine {
     // They lie behind the tower; the pennant is almost always above its top.
     this.root = scene.add.container(0, 0, [this.line, this.pennant]).setDepth(DEPTH.goalLine);
     this.seq = new GoalSequence(goals, startHeight);
+    // The picture holds this run's labels: the next run bakes its own, so this one goes with the scene.
     scene.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       this.root.destroy();
+      scene.textures.remove(art.key);
     });
   }
 
@@ -308,7 +309,7 @@ export class GoalLine {
       return;
     }
     if (goal !== this.shown) this.show(goal);
-    const y = this.tower.trayTopY - (goal.height - state.bonusHeight) * BALANCE.layer.height;
+    const y = this.tower.heightY(goal.height, state.bonusHeight);
     this.side = pennantSide(this.side, freeRoom(state, goal.height));
     const sway = swayView(timeMs, level);
     let alpha: number;

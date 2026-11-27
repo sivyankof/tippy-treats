@@ -27,8 +27,7 @@ import { OvenPlate } from '../ui/menu/oven/oven-plate';
 import { openOvenWindow } from '../ui/menu/oven/oven-window';
 import { HomeShelf } from '../ui/menu/home/home-shelf';
 import { openGiftWindow } from '../ui/menu/home/gift-window';
-import { openMapFromHome } from '../ui/menu/climb-map/climb-map-window';
-import { ScreenCover } from '../ui/menu/climb-map/screen-cover';
+import { HomeMapOpener } from '../ui/menu/climb-map/home-map-opener';
 import { openJournalFromHome } from '../ui/menu/journal/journal-window';
 import { openMissionsWindow } from '../ui/menu/missions/missions-window';
 import { openSettingsWindow } from '../ui/menu/settings/settings-window';
@@ -66,8 +65,7 @@ export class HomeScene extends Phaser.Scene {
   private highlightPlay = false;
   private settings: PopupWindow | null = null;
   private journalOpen = false;
-  private mapOpen = false;
-  private cover = new ScreenCover();
+  private map!: HomeMapOpener;
 
   constructor() {
     super(SCENES.home);
@@ -77,8 +75,6 @@ export class HomeScene extends Phaser.Scene {
     this.leaving = false;
     this.settings = null;
     this.journalOpen = false;
-    this.mapOpen = false;
-    this.cover = new ScreenCover();
     this.highlightPlay = data?.highlightPlay ?? false;
     gameState.refreshDay();
     this.hint = null;
@@ -92,8 +88,11 @@ export class HomeScene extends Phaser.Scene {
       },
     });
     this.scenery = new MenuScenery(this, 'home');
+    this.map = new HomeMapOpener(this, () => this.content(), this.scenery);
     this.shelf = new HomeShelf(this, () => this.goTo(() => openScreen(this, SCENES.team)));
-    this.record = createRecordPlate(this, () => this.openMap());
+    this.record = createRecordPlate(this, () => {
+      if (!this.leaving) this.map.show();
+    });
     this.nav = new HomeNav(this, {
       shop: () => this.goTo(() => openScreen(this, SCENES.shop, { source: 'home' })),
       collection: () => this.goTo(() => openScreen(this, SCENES.collection)),
@@ -183,26 +182,6 @@ export class HomeScene extends Phaser.Scene {
     if (this.leaving || this.journalOpen) return;
     this.journalOpen = true;
     openJournalFromHome(this, () => (this.journalOpen = false));
-  }
-
-  /** A tap on the record plate (or the first-tower call): the climb map; Home is not drawn while the window stands fully open. */
-  private openMap(): void {
-    if (this.leaving || this.mapOpen) return;
-    this.mapOpen = true;
-    openMapFromHome(
-      this,
-      () => {
-        this.mapOpen = false;
-        this.coverScreen(false);
-      },
-      (covered) => this.coverScreen(covered),
-    );
-  }
-
-  private coverScreen(covered: boolean): void {
-    if (covered) this.cover.hide(this.content());
-    else this.cover.restore();
-    this.scenery.setVisible(!covered);
   }
 
   /** Everything that slides with the screen; the scenery stays. */

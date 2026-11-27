@@ -8,7 +8,8 @@ import { safeFrame } from '../common/safe-frame';
 import { createIconButton } from '../menu/widgets/icon-button';
 import { openPopup } from '../common/transition';
 import { TitleRibbon } from './title-ribbon';
-import { closeSteps, type VeilHandover } from './veil-handover';
+import { closeSteps, pressBeganHere, type VeilHandover } from './veil-handover';
+import { popupReserve, popupRoom } from './window-fit';
 import { VolumePlate } from './volume';
 
 const cfg = MENU.popup;
@@ -96,8 +97,17 @@ export class PopupWindow {
     this.dim = createDimOverlay(scene, cfg.dimAlpha, width, height)
       .setInteractive()
       .setDepth(depth);
-    if (options.closeOnVeil ?? closable)
-      this.dim.on(Phaser.Input.Events.POINTER_UP, this.close, this);
+    if (options.closeOnVeil ?? closable) {
+      // Only a tap on the veil closes: a drag that began inside the window (a scrolling list) and
+      // ends over the veil must not.
+      let veilDownAt = -1;
+      this.dim.on(Phaser.Input.Events.POINTER_DOWN, (pointer: Phaser.Input.Pointer) => {
+        veilDownAt = pointer.downTime;
+      });
+      this.dim.on(Phaser.Input.Events.POINTER_UP, (pointer: Phaser.Input.Pointer) => {
+        if (pressBeganHere(veilDownAt, pointer.downTime)) this.close();
+      });
+    }
     this.content = scene.add.container(0, 0);
     this.ribbon = new TitleRibbon(scene, 0, 0, options.title);
     this.body = scene.add.container(0, 0);
@@ -218,11 +228,11 @@ export class PopupWindow {
     // Where the window stays centred, the ribbon sticks out above it by `ribbonHalf` and the window has
     // to leave the same room below, so the ribbon never reaches the screen edge; under an island the
     // window moves down by the overhang instead.
-    const reserve = frame.top > 0 ? overhang : ribbonHalf * 2;
+    const reserve = popupReserve(frame.top);
     const fit = Math.min(
       1,
       (width - cfg.screenMargin * 2) / cfg.width,
-      (frame.height - cfg.screenMargin * 2) / (this.height + reserve),
+      (popupRoom(frame.height, frame.top) + reserve) / (this.height + reserve),
     );
     this.root.setPosition(
       cam.scrollX + width / 2,
