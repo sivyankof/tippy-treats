@@ -16,7 +16,7 @@ import { bakeVolume, lookOf, type VolumeArt } from '../../ui/style/volume';
 import type { Particles } from '../common/particles';
 import { starBurst } from '../common/sparkle-fx';
 import { freeRoom, pennantSide } from './pennant-side';
-import { appearView, passView, pennantX, swayView } from './goal-line-phase';
+import { appearView, hudClearAlpha, passView, pennantX, swayView } from './goal-line-phase';
 import { GoalSequence } from './goal-sequence';
 
 const flag = CONTINUE_ANIM.flag;
@@ -27,13 +27,22 @@ const PLATE_LOOK = lookOf('button', plate.radius);
 /** Bakes the dashed line, white so the kind of goal tints it. */
 export function bakeGoalLine(scene: Phaser.Scene): void {
   bakePadded(scene, LINE_TEXTURE, LOGICAL_SIZE.width, flag.lineHeight, GOAL_LINE.linePad, (g) => {
-    g.fillStyle(0xffffff, 1);
+    const { width, color } = GOAL_LINE.lineRim;
     for (
       let x = 0;
       x + flag.dashLength <= LOGICAL_SIZE.width;
       x += flag.dashLength + flag.dashGap
     ) {
+      g.fillStyle(color, 1);
       g.fillRoundedRect(x, 0, flag.dashLength, flag.lineHeight, flag.lineHeight / 2);
+      g.fillStyle(0xffffff, 1);
+      g.fillRoundedRect(
+        x + width,
+        width,
+        flag.dashLength - width * 2,
+        flag.lineHeight - width * 2,
+        (flag.lineHeight - width * 2) / 2,
+      );
     }
   });
 }
@@ -103,7 +112,7 @@ export class GoalLine {
   }
 
   /** `dtMs` is visual time; `timeMs` drives the waves. */
-  update(dtMs: number, timeMs: number, state: Readonly<TowerState>): void {
+  update(dtMs: number, timeMs: number, state: Readonly<TowerState>, scrollY: number): void {
     const level = effectsMode.level;
     const passedNow = this.seq.update(dtMs, state.height, level);
     const goal = this.seq.goal;
@@ -115,7 +124,6 @@ export class GoalLine {
     if (goal !== this.shown) this.show(goal);
     const y = this.tower.trayTopY - (goal.height - state.bonusHeight) * BALANCE.layer.height;
     this.side = pennantSide(this.side, freeRoom(state, goal.height));
-    const x = pennantX(this.side, this.plateWidth);
     const sway = swayView(timeMs, level);
     const colors = GOAL_LINE.colors[goal.kind];
     let alpha: number;
@@ -142,12 +150,15 @@ export class GoalLine {
       .setAlpha((low + (high - low) * sway.pulse) * lineAlpha)
       .setVisible(true);
     const pennantY = y - plate.height / 2 - flag.lineHeight + sway.bob * flag.bobDistance;
+    // A swollen pennant grows towards the middle of the screen, so it never leaves the screen edge.
+    const x =
+      pennantX(this.side, this.plateWidth) - (this.side * this.plateWidth * (scale - 1)) / 2;
     this.plateImage.setTint(tint);
     this.pennant
       .setPosition(x, pennantY + hopY)
       .setAngle(sway.wave * flag.waveDeg * this.side)
       .setScale(scale, scale * (1 + flag.waveStretch * sway.wave))
-      .setAlpha(alpha)
+      .setAlpha(alpha * hudClearAlpha(pennantY - plate.height / 2 - scrollY))
       .setVisible(true);
     if (passedNow && level === 'full' && goal.kind !== 'record') {
       starBurst(

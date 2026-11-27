@@ -398,7 +398,8 @@ export class RunFx {
     fxGuard.call('ability-fx', this, this.updateAbilityFx, visualMs, timeMs, state, mods, cam);
     fxGuard.call('kick', this.kick, this.kick.update, visualMs);
     const goalLine = this.goalLine;
-    if (goalLine) fxGuard.call('goal-line', goalLine, goalLine.update, visualMs, timeMs, state);
+    if (goalLine)
+      fxGuard.call('goal-line', goalLine, goalLine.update, visualMs, timeMs, state, cam.scrollY);
     const record = this.recordMoment;
     fxGuard.call('record-moment', record, record.update, state, cam);
     fxGuard.call('glow-zone', this, this.dimGlowByZone);

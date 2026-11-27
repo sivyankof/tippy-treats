@@ -1,3 +1,4 @@
+import { HUD_LAYOUT } from './hud-layout';
 import { PALETTE } from '../common/palette';
 import { ANIM } from '../common/anim';
 import { TREASURE } from '../economy/treasure-anim';
@@ -12,6 +13,13 @@ export const GOAL_LINE = {
   minRunsBefore: 2,
   /** Free field around the dashed line in its picture, px (the clip guard asks for 3). */
   linePad: 4,
+  /** Dark rim around each dash (baked grey, tinted with the line) so a pale line reads on a pale wall, px and grey. */
+  lineRim: { width: 2, color: 0x707070 },
+  /**
+   * The pennant stays out from under the HUD: while its top is above `clearY` (screen y, under the
+   * next creature chip, the lowest plate at its side) it is hidden, and it fades in over `fadeBand` below it.
+   */
+  hud: { clearY: HUD_LAYOUT.nextPlate.y + HUD_LAYOUT.nextPlate.height, fadeBand: 40 },
   /** Colour of the dashes and of the pennant by kind of goal. */
   colors: {
     record: { line: PALETTE.gold, plate: PALETTE.accent },

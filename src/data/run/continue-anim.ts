@@ -92,7 +92,7 @@ export const CONTINUE_ANIM = {
   },
   flag: {
     /** The line of a goal: dashes across the tray; the pennant of its label stands at the screen edge. */
-    lineHeight: 10,
+    lineHeight: 12,
     dashLength: 36,
     dashGap: 22,
     lineAlpha: [0.55, 0.9],

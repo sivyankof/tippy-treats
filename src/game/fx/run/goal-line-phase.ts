@@ -90,3 +90,9 @@ export function pennantX(side: 1 | -1, width: number): number {
     ? LOGICAL_SIZE.width - flag.labelInset - width / 2
     : flag.labelInset + width / 2;
 }
+
+/** Opacity of a pennant whose top is at screen y `top`: hidden above the HUD, fading in below it. */
+export function hudClearAlpha(top: number): number {
+  const { clearY, fadeBand } = GOAL_LINE.hud;
+  return clamp01((top - clearY) / fadeBand);
+}

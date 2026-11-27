@@ -2,7 +2,14 @@ import { describe, expect, it } from 'vitest';
 import { LOGICAL_SIZE } from '../../../data/app/screen';
 import { CONTINUE_ANIM } from '../../../data/run/continue-anim';
 import { GOAL_LINE } from '../../../data/run/goal-line';
-import { appearView, passDurationMs, passView, pennantX, swayView } from './goal-line-phase';
+import {
+  appearView,
+  hudClearAlpha,
+  passDurationMs,
+  passView,
+  pennantX,
+  swayView,
+} from './goal-line-phase';
 
 const { appear, pass } = GOAL_LINE;
 
@@ -83,5 +90,14 @@ describe('pennantX', () => {
     const inset = CONTINUE_ANIM.flag.labelInset;
     expect(pennantX(1, 200)).toBe(LOGICAL_SIZE.width - inset - 100);
     expect(pennantX(-1, 200)).toBe(inset + 100);
+  });
+});
+
+describe('hudClearAlpha', () => {
+  it('hides the pennant under the HUD and fades it in below', () => {
+    const { clearY, fadeBand } = GOAL_LINE.hud;
+    expect(hudClearAlpha(clearY - 50)).toBe(0);
+    expect(hudClearAlpha(clearY + fadeBand / 2)).toBeCloseTo(0.5);
+    expect(hudClearAlpha(clearY + fadeBand * 3)).toBe(1);
   });
 });
