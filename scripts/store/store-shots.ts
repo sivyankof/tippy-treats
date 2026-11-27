@@ -63,7 +63,7 @@ const IOS_ICON_FILE = 'tippy-icon-ios-1024.png';
 /** Browser locale of each language of the interface. */
 const LOCALES: Readonly<Record<StoreLang, string>> = { en: 'en-US', ru: 'ru-RU' };
 /** GPU flags of the game: without them the software GL drops triangles of rotated pictures (docs/08, section 9). */
-const BROWSER_ARGS = ['--use-angle=d3d11', '--ignore-gpu-blocklist'];
+const BROWSER_ARGS = tools.gpuArgs();
 /** The compose page draws on the CPU: a GPU canvas blurs the shadows a little differently each run. */
 const COMPOSE_ARGS = ['--disable-gpu', '--disable-accelerated-2d-canvas'];
 /** Real time to wait between looks while the page loads files (the game clock stands still meanwhile). */

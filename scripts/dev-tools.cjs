@@ -128,4 +128,14 @@ function hasChromium(dir) {
   }
 }
 
-module.exports = { parseArgs, freePort, startVite, findPlaywright };
+/**
+ * Chromium flags that put the game on the real GPU of this computer: the software GL drops
+ * triangles of rotated pictures. The ANGLE backend is named per system (Direct3D on Windows,
+ * Metal on macOS); elsewhere Chromium picks its own.
+ */
+function gpuArgs() {
+  const backend = { win32: 'd3d11', darwin: 'metal' }[process.platform];
+  return [...(backend ? [`--use-angle=${backend}`] : []), '--ignore-gpu-blocklist'];
+}
+
+module.exports = { parseArgs, freePort, startVite, findPlaywright, gpuArgs };

@@ -12,6 +12,8 @@
  */
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const { chromium } = require(process.env.PLAYWRIGHT_PATH || 'playwright');
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const { gpuArgs } = require('./dev-tools.cjs');
 
 const IPHONE_UA =
   'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1';
@@ -54,11 +56,7 @@ async function main() {
   const minutes = Number(arg('minutes', 10));
   const rich = arg('rich', false) === true;
   const browser = await chromium.launch({
-    args: [
-      '--use-angle=d3d11',
-      '--ignore-gpu-blocklist',
-      '--autoplay-policy=no-user-gesture-required',
-    ],
+    args: [...gpuArgs(), '--autoplay-policy=no-user-gesture-required'],
   });
   const page = await browser.newPage({
     viewport: { width: 390, height: 844 },

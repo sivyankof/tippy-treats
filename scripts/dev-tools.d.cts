@@ -5,3 +5,4 @@ export function parseArgs(
 export function freePort(): Promise<number>;
 export function startVite(): Promise<{ url: string; stop: () => void }>;
 export function findPlaywright(given?: string): string | null;
+export function gpuArgs(): string[];
