@@ -8,6 +8,8 @@ import { createOutlinedText } from '../../common/outlined-text';
 import { PopupWindow } from '../../style/dialog-window';
 import { faceOffsetY, VolumePlate } from '../../style/volume';
 import { fitText } from '../widgets/fit-text';
+import { createGamesButton } from '../widgets/games-button';
+import { gamesShown, openAchievements } from '../../../games/games-actions';
 import { makeTappable } from '../home/home-badges';
 import { openJournalDetail } from './journal-detail';
 import { logJournalOpen } from './journal-telemetry';
@@ -106,7 +108,7 @@ export function openJournalFromHome(scene: Phaser.Scene, onClosed: () => void): 
 /**
  * The baker's journal (docs/07-ui-screens.md, section 2.2): the fly bar and a row per counter,
  * stacked in one column at one gap, so an item appended to the column only makes the window
- * taller. A tap on the bar or a row puts its detail window in place of the journal; closing that
+ * taller; the last item is "Achievements" where the game services are. A tap on the bar or a row puts its detail window in place of the journal; closing that
  * brings the journal back. The veil stays dark through both swaps: only the window changes.
  * `onClosed` runs when the journal itself is closed; `veilShown` is set on the way back.
  */
@@ -121,7 +123,17 @@ export function openJournalWindow(
     onClosed,
     veil: { in: veilShown ? 'shown' : 'fade' },
   });
-  const column = stackColumn([cfg.barHeight, ...JOURNAL_ROW_IDS.map(() => cfg.rowHeight)], cfg.gap);
+  // "Achievements" is the last item of the column, only where the game services are.
+  const achievements = gamesShown();
+  const buttonHeight = MENU.gamesButton.height;
+  const column = stackColumn(
+    [
+      cfg.barHeight,
+      ...JOURNAL_ROW_IDS.map(() => cfg.rowHeight),
+      ...(achievements ? [buttonHeight] : []),
+    ],
+    cfg.gap,
+  );
   // The detail takes the place of the journal under the same dark veil: it opens first, then the
   // journal goes at once, so there is never a frame with no veil or with two.
   const show = (id: JournalRowId | 'flies'): void => {
@@ -141,6 +153,18 @@ export function openJournalWindow(
       createRow(scene, id, centre(i + 1, cfg.rowHeight), popup.innerWidth, counts, () => show(id)),
     );
   });
+  if (achievements) {
+    const index = JOURNAL_ROW_IDS.length + 1;
+    popup.content.add(
+      createGamesButton(
+        scene,
+        t('games.achievements'),
+        popup.innerWidth,
+        centre(index, buttonHeight),
+        () => openAchievements(scene),
+      ),
+    );
+  }
   popup.setContentHeight(column.height);
   return popup;
 }

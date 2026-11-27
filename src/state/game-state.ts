@@ -126,6 +126,7 @@ export class GameState {
   private readonly hints = new Hints();
   /** UTC day the running daily attempt started on; memory only, a closed page forgets it. */
   private dailyAttemptDay = '';
+  private readonly runListeners = new Set<(save: Readonly<Save>) => void>();
 
   constructor(private readonly deps: GameStateDeps) {
     const properties = deps.telemetry ? new UserPropertySync(deps.telemetry) : null;
@@ -231,7 +232,17 @@ export class GameState {
     const before = this.store.save;
     this.progress(next);
     this.emit(runEvents(before, next, result, summary, extras));
+    this.tellRunListeners();
     return summary;
+  }
+
+  /**
+   * Calls `listener` with the save after every run that reached it (the game services send the
+   * scores from here); returns the unsubscribe. A listener that throws never reaches the save.
+   */
+  onRunRecorded(listener: (save: Readonly<Save>) => void): () => void {
+    this.runListeners.add(listener);
+    return () => this.runListeners.delete(listener);
   }
 
   // --- Checkpoints ---
@@ -786,6 +797,16 @@ export class GameState {
     this.deps.tally?.addWalletChange(source, before, next);
     this.progress(next);
     this.emit(earnEvents(before, next, source));
+  }
+
+  private tellRunListeners(): void {
+    for (const listener of [...this.runListeners]) {
+      try {
+        listener(this.store.save);
+      } catch {
+        // The game services are a decoration of the run: their failure is not the save's.
+      }
+    }
   }
 
   /** Sends events to the analytics; a failure there never reaches the save. */
