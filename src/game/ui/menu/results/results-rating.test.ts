@@ -48,6 +48,34 @@ function fakeScene() {
   };
 }
 
+/** The "x2" ad of the screen, switched by hand. */
+function fakeAd() {
+  let on = false;
+  let closed: (() => void) | null = null;
+  return {
+    port: {
+      showing: () => on,
+      onceClosed: (callback: () => void) => {
+        closed = callback;
+      },
+    },
+    open: () => {
+      on = true;
+    },
+    close: () => {
+      on = false;
+      const callback = closed;
+      closed = null;
+      callback?.();
+    },
+    get waiting() {
+      return closed !== null;
+    },
+  };
+}
+
+const quiet = () => fakeAd().port;
+
 function fakeDeps(over: Partial<RatingDeps> = {}) {
   const calls: string[] = [];
   const deps: RatingDeps = {
@@ -65,7 +93,11 @@ describe('askForRatingOnResults', () => {
   it('waits after the animations, then notes the request and asks the system, in that order', () => {
     const screen = fakeScene();
     const { deps, calls } = fakeDeps();
-    askForRatingOnResults(screen.scene, { exit: EXIT, daily: false, busy: () => false }, deps);
+    askForRatingOnResults(
+      screen.scene,
+      { exit: EXIT, daily: false, busy: () => false, ad: quiet() },
+      deps,
+    );
     expect(screen.delay).toBe(REVIEW.afterAnimationsMs);
     expect(calls).toEqual([]);
     screen.fire();
@@ -82,7 +114,11 @@ describe('askForRatingOnResults', () => {
   it('does nothing when the rules say no', () => {
     const screen = fakeScene();
     const { deps, calls } = fakeDeps({ canAsk: () => false });
-    askForRatingOnResults(screen.scene, { exit: EXIT, daily: false, busy: () => false }, deps);
+    askForRatingOnResults(
+      screen.scene,
+      { exit: EXIT, daily: false, busy: () => false, ad: quiet() },
+      deps,
+    );
     screen.fire();
     expect(calls).toEqual([]);
   });
@@ -90,7 +126,11 @@ describe('askForRatingOnResults', () => {
   it('tells the rules about an interstitial that is due', () => {
     const screen = fakeScene();
     const { deps } = fakeDeps({ interstitialDue: () => true });
-    askForRatingOnResults(screen.scene, { exit: EXIT, daily: false, busy: () => false }, deps);
+    askForRatingOnResults(
+      screen.scene,
+      { exit: EXIT, daily: false, busy: () => false, ad: quiet() },
+      deps,
+    );
     screen.fire();
     expect(deps.canAsk).toHaveBeenCalledWith(
       APP_VERSION,
@@ -103,7 +143,11 @@ describe('askForRatingOnResults', () => {
     let windows = 1;
     const screen = fakeScene();
     const { deps } = fakeDeps({ windowCount: () => windows });
-    askForRatingOnResults(screen.scene, { exit: EXIT, daily: false, busy: () => leaving }, deps);
+    askForRatingOnResults(
+      screen.scene,
+      { exit: EXIT, daily: false, busy: () => leaving, ad: quiet() },
+      deps,
+    );
     leaving = true;
     screen.fire();
     expect(deps.canAsk).toHaveBeenLastCalledWith(
@@ -122,7 +166,11 @@ describe('askForRatingOnResults', () => {
   it('does not ask after the screen is gone or for a run that was not saved', () => {
     const gone = fakeScene();
     const first = fakeDeps();
-    askForRatingOnResults(gone.scene, { exit: EXIT, daily: false, busy: () => false }, first.deps);
+    askForRatingOnResults(
+      gone.scene,
+      { exit: EXIT, daily: false, busy: () => false, ad: quiet() },
+      first.deps,
+    );
     gone.leave();
     gone.fire();
     expect(first.deps.canAsk).not.toHaveBeenCalled();
@@ -131,33 +179,108 @@ describe('askForRatingOnResults', () => {
     const second = fakeDeps();
     askForRatingOnResults(
       unsaved.scene,
-      { exit: { ...EXIT, recorded: false }, daily: false, busy: () => false },
+      { exit: { ...EXIT, recorded: false }, daily: false, busy: () => false, ad: quiet() },
       second.deps,
     );
     unsaved.fire();
     expect(second.deps.canAsk).not.toHaveBeenCalled();
   });
 
-  // Why the request does not come after "x2 coins" on the results (kept as it is). The rules
-  // are looked at once, `REVIEW.afterAnimationsMs` after the animations; the "x2" button is live
-  // from the same moment, and its ad runs far longer than that, so a tap on it within the wait
-  // makes the one check see `busy`, and nothing looks again once the ad has paid.
-  it('skips these results for good when the x2 ad is on at the one check', () => {
-    let adOn = false;
+  /** The rules as they are on `busy`: no request next to an ad or a way out. */
+  const realBusy = () => vi.fn((_version: string, facts: { busy: boolean }) => !facts.busy);
+
+  it('asks once more after the x2 ad closes when the ad was on at the check', () => {
+    const ad = fakeAd();
     const screen = fakeScene();
-    // The real rule on `busy`: no request next to an ad.
-    const canAsk = vi.fn((_version: string, facts: { busy: boolean }) => !facts.busy);
-    const { deps, calls } = fakeDeps({ canAsk });
-    askForRatingOnResults(screen.scene, { exit: EXIT, daily: false, busy: () => adOn }, deps);
-    adOn = true;
+    const { deps, calls } = fakeDeps({ canAsk: realBusy() });
+    askForRatingOnResults(
+      screen.scene,
+      { exit: EXIT, daily: false, busy: () => false, ad: ad.port },
+      deps,
+    );
+    ad.open();
     screen.fire();
     expect(deps.canAsk).toHaveBeenLastCalledWith(
       APP_VERSION,
       expect.objectContaining({ busy: true, newRecord: true }),
     );
     expect(calls).toEqual([]);
-    adOn = false;
     expect(screen.timers).toBe(1);
+    ad.close();
+    // After the ad, the screen waits as after its animations, then asks the rules again.
+    expect(screen.timers).toBe(2);
+    expect(screen.delay).toBe(REVIEW.afterAnimationsMs);
+    expect(calls).toEqual([]);
+    screen.fire();
+    expect(deps.canAsk).toHaveBeenCalledTimes(2);
+    expect(deps.canAsk).toHaveBeenLastCalledWith(
+      APP_VERSION,
+      expect.objectContaining({ busy: false, newRecord: true }),
+    );
+    expect(calls).toEqual(['note', 'request']);
+  });
+
+  it('asks again only once, even when the ad is on again at the second check', () => {
+    const ad = fakeAd();
+    const screen = fakeScene();
+    const { deps, calls } = fakeDeps({ canAsk: realBusy() });
+    askForRatingOnResults(
+      screen.scene,
+      { exit: EXIT, daily: false, busy: () => false, ad: ad.port },
+      deps,
+    );
+    ad.open();
+    screen.fire();
+    ad.close();
+    ad.open();
+    screen.fire();
+    expect(ad.waiting).toBe(false);
+    ad.close();
+    expect(screen.timers).toBe(2);
+    expect(deps.canAsk).toHaveBeenCalledTimes(2);
+    expect(calls).toEqual([]);
+  });
+
+  it('does not wait for the ad when the first check asked or was stopped by something else', () => {
+    const shown = fakeAd();
+    const first = fakeScene();
+    const asked = fakeDeps();
+    askForRatingOnResults(
+      first.scene,
+      { exit: EXIT, daily: false, busy: () => false, ad: shown.port },
+      asked.deps,
+    );
+    first.fire();
+    expect(asked.calls).toEqual(['note', 'request']);
+    expect(shown.waiting).toBe(false);
+
+    const leaving = fakeAd();
+    const second = fakeScene();
+    const left = fakeDeps({ canAsk: realBusy() });
+    askForRatingOnResults(
+      second.scene,
+      { exit: EXIT, daily: false, busy: () => true, ad: leaving.port },
+      left.deps,
+    );
+    second.fire();
+    expect(leaving.waiting).toBe(false);
+    expect(second.timers).toBe(1);
+  });
+
+  it('does not ask after the ad when the screen is gone by then', () => {
+    const ad = fakeAd();
+    const screen = fakeScene();
+    const { deps, calls } = fakeDeps({ canAsk: realBusy() });
+    askForRatingOnResults(
+      screen.scene,
+      { exit: EXIT, daily: false, busy: () => false, ad: ad.port },
+      deps,
+    );
+    ad.open();
+    screen.fire();
+    ad.close();
+    screen.leave();
+    screen.fire();
     expect(deps.canAsk).toHaveBeenCalledTimes(1);
     expect(calls).toEqual([]);
   });

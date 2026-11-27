@@ -11,8 +11,15 @@ export interface RatingInput {
   exit: RunExit;
   /** The results of a daily tower run: the request never comes there. */
   daily: boolean;
-  /** The player is leaving, sharing, or an ad of the screen is on. */
+  /** The player is leaving or sharing. */
   busy: () => boolean;
+  /** The "x2 coins" ad of the screen. */
+  ad: {
+    /** The ad is on the screen now. */
+    showing: () => boolean;
+    /** Calls `callback` once, when the ad now showing has closed, whatever it gave. */
+    onceClosed: (callback: () => void) => void;
+  };
 }
 
 /** What the request touches outside the screen (injected in tests). */
@@ -38,10 +45,11 @@ const LIVE: RatingDeps = {
 /**
  * Asks the system for a rating on the results of a run, once the animations of the screen are
  * over (docs/04-meta-retention.md, section 10): waits `REVIEW.afterAnimationsMs`, then asks the
- * rules once more with what is true by then. A window opened in the meantime (a purchase, a
- * start from a checkpoint) or a way out already taken stops it; the timer belongs to the scene,
- * so leaving the screen cancels it. The request is noted in the save before the system is asked.
- * Call it when the screen has played everything.
+ * rules with what is true by then. A window opened in the meantime (a purchase, a start from a
+ * checkpoint) or a way out already taken stops it. When the "x2" ad was on at that check, the
+ * rules are asked once more, `REVIEW.afterAnimationsMs` after the ad has closed. The timers belong
+ * to the scene, so leaving the screen cancels them. The request is noted in the save before the
+ * system is asked. Call it when the screen has played everything.
  */
 export function askForRatingOnResults(
   scene: Phaser.Scene,
@@ -50,17 +58,26 @@ export function askForRatingOnResults(
 ): void {
   // The windows that were open when the screen finished its animations belong to the screen.
   const baseline = deps.windowCount();
-  scene.time.delayedCall(REVIEW.afterAnimationsMs, () => {
+  const check = (again: boolean): void => {
     if (!scene.scene.isActive() || !input.exit.recorded) return;
+    const adOn = input.ad.showing();
     const due = deps.canAsk(APP_VERSION, {
       daily: input.daily,
       newRecord: input.exit.newRecord,
       newCreature: input.exit.newCreature,
       interstitialDue: deps.interstitialDue(input.exit),
-      busy: input.busy() || deps.windowCount() > baseline,
+      busy: adOn || input.busy() || deps.windowCount() > baseline,
     });
-    if (!due) return;
-    deps.noteAsked(APP_VERSION);
-    deps.request();
-  });
+    if (due) {
+      deps.noteAsked(APP_VERSION);
+      deps.request();
+      return;
+    }
+    if (adOn && !again) {
+      input.ad.onceClosed(() =>
+        scene.time.delayedCall(REVIEW.afterAnimationsMs, () => check(true)),
+      );
+    }
+  };
+  scene.time.delayedCall(REVIEW.afterAnimationsMs, () => check(false));
 }

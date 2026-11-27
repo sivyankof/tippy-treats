@@ -6,6 +6,7 @@ import { formatNumber, t } from '../../../../i18n';
 import { services } from '../../../../services';
 import { gameState } from '../../../../state';
 import type { AdState } from '../../../economy/ad-caption';
+import type { RewardedResult } from '../../../../services/rewarded-video/types';
 import { showRewarded } from '../../../economy/rewarded';
 import { TREASURE_TEXTURES, createTreasureTextures } from '../../../fx/economy/treasure-textures';
 import { createTextButton, type Button } from '../../common/button';
@@ -39,6 +40,8 @@ export class ResultsCoins {
   private callout: Callout | null = null;
   private buttonEnabled = true;
   private busy = false;
+  private showing = false;
+  private adClosed: (() => void) | null = null;
   private adGone = false;
   /** The ad paid: the coins are doubled. */
   private doubled = false;
@@ -93,9 +96,14 @@ export class ResultsCoins {
     if (this.button && !this.adGone && !services.ads.isRewardedReady()) this.markAdGone();
   }
 
-  /** The doubling ad is being shown or paid out. */
-  get inProgress(): boolean {
-    return this.busy;
+  /** The doubling ad is on the screen now. */
+  get adShowing(): boolean {
+    return this.showing;
+  }
+
+  /** Calls `callback` once, when the doubling ad now showing has closed and its result is in. */
+  onceAdClosed(callback: () => void): void {
+    this.adClosed = callback;
   }
 
   /** The tile and the button are live only while the screen is in; going off closes the breakdown. */
@@ -181,9 +189,19 @@ export class ResultsCoins {
   private async watchAd(): Promise<void> {
     if (this.busy || !this.button) return;
     this.busy = true;
+    this.showing = true;
     this.button.setEnabled(false);
     const result = await showRewarded('double_coins');
+    this.showing = false;
+    const closed = this.adClosed;
+    this.adClosed = null;
+    // The screen is gone: nothing to show and nothing to tell.
     if (!this.tile.active) return;
+    this.applyAd(result);
+    closed?.();
+  }
+
+  private applyAd(result: RewardedResult): void {
     if (result === 'rewarded') {
       if (!gameState.claimDoubleCoins(this.earned)) {
         // The daily limit ran out meanwhile: nothing was paid, so nothing is shown as doubled.
@@ -202,6 +220,6 @@ export class ResultsCoins {
       return;
     }
     this.busy = false;
-    this.button.setEnabled(this.buttonEnabled);
+    this.button?.setEnabled(this.buttonEnabled);
   }
 }
