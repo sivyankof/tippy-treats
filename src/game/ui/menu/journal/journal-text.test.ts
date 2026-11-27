@@ -50,6 +50,12 @@ describe('journal texts in Russian', () => {
       '1,5 литра глазури. Пока на донышке кружки',
     );
     expect(journalPhrase('glaze', counts({ glaze: 150 }))).toBe('150 литров глазури. Это ванна');
+    expect(journalPhrase('glaze', counts({ glaze: 11.4 }))).toBe(
+      '11 литров глазури. Это целое ведро',
+    );
+    expect(journalPhrase('glaze', counts({ glaze: 21.2 }))).toBe(
+      '21 литр глазури. Это целое ведро',
+    );
   });
 
   it('writes metres, kilometres and litres', () => {

@@ -8,10 +8,10 @@ import {
   type JournalPart,
 } from '../../../data/progression/journal-art';
 import { FIELD_PAD } from '../../../data/common/picture-fields';
-import { paddedScale } from '../../../util/field-pad';
 import { shade } from '../../../util/color';
-import { TWO_PI } from '../../../util/math';
 import { bakePadded } from '../../ui/common/bake-texture';
+import { starPoints } from '../../objects/creatures/creature-art/rainbow-geometry';
+import { rotatePoints } from '../../objects/creatures/creature-art/rainbow-idle-geometry';
 import {
   ellipsePoints,
   fillOutlinedPolygon,
@@ -29,29 +29,21 @@ export const journalIconKey = (id: JournalIconId): string => `journal_icon_${id}
 export const journalDishKey = (index: number): string => `journal_dish_${index}`;
 export const JOURNAL_CHEVRON_KEY = 'journal_chevron';
 
-/** How many times bigger a picture is than its drawing; show it this much bigger to keep the drawing at size. */
-export const JOURNAL_ICON_FIELD_SCALE = paddedScale(art.iconSize, FIELD_PAD.journal);
-export const JOURNAL_DISH_FIELD_SCALE = paddedScale(art.dishSize, FIELD_PAD.journal);
-
-function rotate(points: Pt[], cx: number, cy: number, deg: number): Pt[] {
-  if (deg === 0) return points;
-  const a = (deg * Math.PI) / 180;
-  const cos = Math.cos(a);
-  const sin = Math.sin(a);
-  return points.map((p) => ({
-    x: cx + (p.x - cx) * cos - (p.y - cy) * sin,
-    y: cy + (p.x - cx) * sin + (p.y - cy) * cos,
-  }));
+/** A star `tips` points round, stretched to `rx` by `ry` (the shared outline is a circle of radius 1). */
+function ellipseStar(
+  cx: number,
+  cy: number,
+  rx: number,
+  ry: number,
+  tips: number,
+  inner: number,
+): Pt[] {
+  return starPoints(0, 0, 1, inner, tips).map((p) => ({ x: cx + p.x * rx, y: cy + p.y * ry }));
 }
 
-function starPoints(cx: number, cy: number, rx: number, ry: number, tips: number, inner: number) {
-  const points: Pt[] = [];
-  for (let i = 0; i < tips * 2; i++) {
-    const reach = i % 2 === 0 ? 1 : inner;
-    const a = (TWO_PI * i) / (tips * 2) - Math.PI / 2;
-    points.push({ x: cx + Math.cos(a) * rx * reach, y: cy + Math.sin(a) * ry * reach });
-  }
-  return points;
+/** `points` turned `deg` degrees about (`cx`, `cy`). */
+function rotate(points: Pt[], cx: number, cy: number, deg: number): Pt[] {
+  return deg === 0 ? points : rotatePoints(points, cx, cy, (deg * Math.PI) / 180);
 }
 
 /** The outline of a part for a picture `size` wide; `grow` fattens it, `lit` makes the smaller lit copy. */
@@ -68,7 +60,7 @@ function outlineOf(part: JournalPart, size: number, grow: number, lit: number): 
     case 'ellipse':
       return ellipsePoints(cx, cy, rx, ry, (turn * Math.PI) / 180);
     case 'star':
-      return rotate(starPoints(cx, cy, rx, ry, shape.tips, shape.inner), cx, cy, turn);
+      return rotate(ellipseStar(cx, cy, rx, ry, shape.tips, shape.inner), cx, cy, turn);
     case 'poly': {
       // Scaled about the middle of the points; the lit copy also slides up and to the left.
       const mid = { x: part.x * size, y: part.y * size };

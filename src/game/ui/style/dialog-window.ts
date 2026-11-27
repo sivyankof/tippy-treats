@@ -120,6 +120,11 @@ export class PopupWindow {
     return this.root;
   }
 
+  /** The window is going away (closing or gone): its content must not act any more. */
+  get leaving(): boolean {
+    return this.closing || this.gone;
+  }
+
   /** Total height of the window body. */
   get height(): number {
     return cfg.titleSpace + this.contentHeight + cfg.padBottom;

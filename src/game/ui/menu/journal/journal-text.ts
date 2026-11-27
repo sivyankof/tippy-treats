@@ -10,11 +10,12 @@ import { formatDecimal, formatNumber, t, tn } from '../../../../i18n';
 
 export type JournalCounter = JournalRowId | 'flies';
 
-/** One decimal below `JOURNAL.decimalsBelow`, whole numbers above. */
-function sized(value: number): string {
-  const rounded = value < JOURNAL.decimalsBelow ? Math.round(value * 10) / 10 : Math.round(value);
-  return formatDecimal(rounded);
+/** The number as it is shown: one decimal below `JOURNAL.decimalsBelow`, whole above. */
+function shown(value: number): number {
+  return value < JOURNAL.decimalsBelow ? Math.round(value * 10) / 10 : Math.round(value);
 }
+
+const sized = (value: number): string => formatDecimal(shown(value));
 
 /** A number of a counter as the row shows it: plain, metres (km from `kmFromM`) or litres. */
 export function journalAmount(id: JournalCounter, value: number): string {
@@ -39,7 +40,8 @@ export function journalPhrase(id: JournalCounter, counts: JournalCounts): string
   const key =
     id === 'flies' ? `journal.flies.phrase.${index}` : `journal.rows.${id}.phrase.${index}`;
   if (id === 'height') return t(key, { amount: journalAmount(id, value) });
-  if (id === 'glaze') return tn(key, Math.round(value * 10) / 10, { amount: sized(value) });
+  // The word agrees with the number printed, not with the exact litres.
+  if (id === 'glaze') return tn(key, shown(value), { amount: sized(value) });
   return tn(key, value, { amount: formatNumber(value) });
 }
 

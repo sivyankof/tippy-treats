@@ -108,6 +108,8 @@ export function openJournalWindow(scene: Phaser.Scene, onClosed?: () => void): P
   const column = stackColumn([cfg.barHeight, ...JOURNAL_ROW_IDS.map(() => cfg.rowHeight)], cfg.gap);
   // The detail takes the place of the journal: no second veil, so this one goes away at once.
   const show = (id: JournalRowId | 'flies'): void => {
+    // A tap during the close animation lets the journal close as asked.
+    if (popup.leaving) return;
     popup.destroy();
     openJournalDetail(scene, id, () => openJournalWindow(scene, onClosed));
   };
