@@ -290,7 +290,7 @@ export class GoalLine {
       .setVisible(false);
     // The line and the pennant are drawn in turn at one depth with the same picture: one batch.
     // They lie behind the tower; the pennant is almost always above its top.
-    this.root = scene.add.container(0, 0, [this.line, this.pennant]).setDepth(DEPTH.recordFlag);
+    this.root = scene.add.container(0, 0, [this.line, this.pennant]).setDepth(DEPTH.goalLine);
     this.seq = new GoalSequence(goals, startHeight);
     scene.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       this.root.destroy();

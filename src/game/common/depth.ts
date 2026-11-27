@@ -3,11 +3,16 @@ export const DEPTH = {
   background: 0,
   /** The worktop under the tray, its mug and steam: behind the combo halo. */
   counter: 4,
+  /**
+   * The goal line and its pennant (one picture of their own, one batch): over the worktop, behind the
+   * halo, the tray and the tower. The halo, the tray and the tower lie on the shared atlas and draw as
+   * one batch; the line sits before them, where the picture changes anyway, so it costs one draw call
+   * and never splits that batch (between the tray and the tower it cost two).
+   */
+  goalLine: 4.5,
   /** Soft glow behind the tower at a high combo. */
   halo: 5,
   tray: 10,
-  /** The goal line and its pennant (one batch, drawn in turn): behind the tower, over the backdrop and the tray. */
-  recordFlag: 12,
   /** The translucent chocolate of the brownie's bubble: behind the tower, so it does not muddy the top layer. */
   bubbleBack: 15,
   tower: 20,
