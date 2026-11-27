@@ -21,11 +21,13 @@ function fakeScene() {
   let pending: (() => void) | null = null;
   let delay = -1;
   let active = true;
+  let timers = 0;
   const scene = {
     time: {
       delayedCall: (ms: number, callback: () => void) => {
         delay = ms;
         pending = callback;
+        timers += 1;
       },
     },
     scene: { isActive: () => active },
@@ -35,6 +37,10 @@ function fakeScene() {
     fire: () => pending?.(),
     get delay() {
       return delay;
+    },
+    /** How many timers the screen set. */
+    get timers() {
+      return timers;
     },
     leave: () => {
       active = false;
@@ -130,5 +136,29 @@ describe('askForRatingOnResults', () => {
     );
     unsaved.fire();
     expect(second.deps.canAsk).not.toHaveBeenCalled();
+  });
+
+  // Why the request does not come after "x2 coins" on the results (kept as it is). The rules
+  // are looked at once, `REVIEW.afterAnimationsMs` after the animations; the "x2" button is live
+  // from the same moment, and its ad runs far longer than that, so a tap on it within the wait
+  // makes the one check see `busy`, and nothing looks again once the ad has paid.
+  it('skips these results for good when the x2 ad is on at the one check', () => {
+    let adOn = false;
+    const screen = fakeScene();
+    // The real rule on `busy`: no request next to an ad.
+    const canAsk = vi.fn((_version: string, facts: { busy: boolean }) => !facts.busy);
+    const { deps, calls } = fakeDeps({ canAsk });
+    askForRatingOnResults(screen.scene, { exit: EXIT, daily: false, busy: () => adOn }, deps);
+    adOn = true;
+    screen.fire();
+    expect(deps.canAsk).toHaveBeenLastCalledWith(
+      APP_VERSION,
+      expect.objectContaining({ busy: true, newRecord: true }),
+    );
+    expect(calls).toEqual([]);
+    adOn = false;
+    expect(screen.timers).toBe(1);
+    expect(deps.canAsk).toHaveBeenCalledTimes(1);
+    expect(calls).toEqual([]);
   });
 });
