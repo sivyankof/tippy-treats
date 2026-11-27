@@ -2,10 +2,7 @@ import type * as Phaser from 'phaser';
 import { BALANCE } from '../../../data/tower/balance';
 import { CLIMB_MAP } from '../../../data/progression/climb-map';
 import { PLAIN_PAIRS, SPONGES } from '../../../data/tower/plain-layers';
-import { ZONE_SKY } from '../../../data/backdrop/backdrop-colors';
-import type { ZoneId } from '../../../data/zones/zones';
-import { mixColor, shade } from '../../../util/color';
-import { gradientColorAt } from '../../objects/backdrop/common/sky-gradient';
+import { shade } from '../../../util/color';
 import { starPoints } from '../../objects/creatures/creature-art/rainbow-geometry';
 import { bakeTexture } from '../../ui/common/bake-texture';
 import {
@@ -29,11 +26,6 @@ export const CLIMB_KNOB_KEY = 'climb_map_knob';
 export const CLIMB_STAR_KEY = 'climb_map_star';
 export const CLIMB_BAR_KEY = 'climb_map_bar';
 export const CLIMB_TOP_KEY = 'climb_map_top';
-
-/** Key of the sky strip of a band: the zone sky, or the shut one. */
-export function climbSkyKey(zone: ZoneId | 'locked'): string {
-  return `climb_map_sky_${zone}`;
-}
 
 /** Size of the tower picture: its width, its height and the free field above and under the layers. */
 export function climbTowerSize(): { width: number; height: number; layer: number; pad: number } {
@@ -179,34 +171,6 @@ function bakeTop(scene: Phaser.Scene): void {
   });
 }
 
-/** The sky strip of a band: gradient, a light line on top and the ledge the band stands on. */
-function bakeSky(scene: Phaser.Scene, key: string, colorAt: (t: number) => number): void {
-  const s = cfg.sky;
-  const h = cfg.bandHeight;
-  const row = 4;
-  bakeTexture(scene, key, s.textureWidth, h, (g) => {
-    for (let y = 0; y < h; y += row) {
-      g.fillStyle(colorAt((y + row / 2) / h), 1).fillRect(0, y, s.textureWidth, row + 1);
-    }
-    g.fillStyle(0xffffff, s.topLight).fillRect(0, 0, s.textureWidth, s.topLightHeight);
-    const foot = colorAt(1);
-    g.fillStyle(shade(foot, s.ledgeShade), 1).fillRect(0, h - s.ledge, s.textureWidth, s.ledge);
-    g.fillStyle(shade(foot, s.lineShade), 1).fillRect(0, h - s.ledge, s.textureWidth, 3);
-  });
-}
-
-function bakeSkies(scene: Phaser.Scene): void {
-  for (const zone of Object.keys(ZONE_SKY) as ZoneId[]) {
-    const stops = ZONE_SKY[zone];
-    const own = cfg.sky.own[zone];
-    bakeSky(scene, climbSkyKey(zone), (t) =>
-      own ? mixColor(own[0], own[1], t) : gradientColorAt(stops, t),
-    );
-  }
-  const [from, to] = cfg.locked.sky;
-  bakeSky(scene, climbSkyKey('locked'), (t) => mixColor(from, to, t));
-}
-
 /** A round body in two tones with an outline (the knob of a pole). */
 function bakeKnob(scene: Phaser.Scene): void {
   const size = cfg.flag.knob * 2;
@@ -304,7 +268,6 @@ function bakeBar(scene: Phaser.Scene): void {
 export function bakeClimbMapTextures(scene: Phaser.Scene): void {
   bakeTower(scene);
   bakeTop(scene);
-  bakeSkies(scene);
   bakeKnob(scene);
   bakePole(scene);
   bakeStar(scene);

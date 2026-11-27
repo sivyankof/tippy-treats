@@ -3,21 +3,19 @@ import type { ClimbBand, ClimbMap } from '../../../../core/progression/climb-map
 import { CLIMB_MAP } from '../../../../data/progression/climb-map';
 import { formatNumber, t } from '../../../../i18n';
 import { effectsMode } from '../../../app/effects-mode';
-import { checkpointZoneTexture } from '../../../fx/zones/checkpoint-textures';
 import {
   CLIMB_BAR_KEY,
-  CLIMB_STAR_KEY,
   CLIMB_TOP_KEY,
   CLIMB_TOWER_KEY,
   climbTopSize,
   bakeClimbFrame,
-  climbSkyKey,
   climbTowerSize,
 } from '../../../fx/zones/climb-map-textures';
-import { createOutlinedText } from '../../common/outlined-text';
+import { bakeFogEdges, bakeLandscape } from '../../../fx/climb-map/landscape-chunks';
+import { fogBoundary, firstShutBand, landscapeKind } from '../../../fx/climb-map/landscape-math';
+import { ClimbFogEdge } from './climb-map-fog';
+import { createBandLabel } from './climb-map-label';
 import { ScrollPhysics } from '../../style/scroll-physics';
-import { onFontRefresh } from '../widgets/fit-text';
-import { bandName } from './climb-map-text';
 import { createFlag, swayFlag, type Flag, type FlagKind } from './climb-map-flag';
 import {
   LAYER_PX,
@@ -25,23 +23,12 @@ import {
   heightToY,
   layersInBand,
   offsetForCentre,
-  roomScale,
   spreadMarks,
   visibleSlice,
   type Span,
 } from './climb-map-layout';
 
 const cfg = CLIMB_MAP;
-
-/**
- * Shrinks a one-line text to fit `room`, with no lower bound (the shared `fitText` stops at 0.8 and
- * lets a long English name run into the tower); it fits again after a late font load.
- */
-function fitInRoom<T extends Phaser.GameObjects.Text>(text: T, room: number): T {
-  onFontRefresh(text, () => fitInRoom(text, room));
-  text.setScale(roomScale(text.setScale(1).width, room));
-  return text;
-}
 
 /** An object that fades near the edges of the ribbon: it stands on the strip over `span`. */
 interface Fading {
@@ -52,7 +39,8 @@ interface Fading {
 interface BandView {
   band: ClimbBand;
   span: Span;
-  sky: Phaser.GameObjects.Image;
+  /** The picture of the band: its part of the landscape. */
+  land: Phaser.GameObjects.Image;
   /** The column of the tower in this band; null above the record. */
   tower: Phaser.GameObjects.Image | null;
 }
@@ -91,6 +79,7 @@ export class ClimbMapRibbon {
   private readonly startOffset: number;
   private readonly endOffset: number;
   private nextFlagAt = 0;
+  private fog: ClimbFogEdge | null = null;
   private swaying: Phaser.Tweens.Tween | null = null;
   private running: { state: { p: number }; tween: Phaser.Tweens.Tween } | null = null;
   private timer: Phaser.Time.TimerEvent | null = null;
@@ -147,6 +136,7 @@ export class ClimbMapRibbon {
     input.on(Phaser.Input.Events.POINTER_WHEEL, this.onWheel, this);
     scene.events.on(Phaser.Scenes.Events.UPDATE, this.onUpdate, this);
     this.refresh();
+    this.fog?.start();
     if (!animated) this.startSway();
   }
 
@@ -174,6 +164,7 @@ export class ClimbMapRibbon {
     this.running = null;
     this.swaying?.remove();
     this.swaying = null;
+    this.fog?.stop();
     for (const placed of this.flags) this.scene.tweens.killTweensOf(placed.flag.inner);
   }
 
@@ -184,15 +175,28 @@ export class ClimbMapRibbon {
     const count = map.bands.length;
     const bestLap = map.marks.find((m) => m.kind === 'bestLap');
     const tower = climbTowerSize();
+    const shut = firstShutBand(map.bands);
     map.bands.forEach((band, i) => {
       const top = (count - 1 - i) * cfg.bandHeight;
       const span = { top, bottom: top + cfg.bandHeight };
-      const sky = this.scene.add
-        .image(0, top, climbSkyKey(band.open ? band.zone : 'locked'))
+      const land = this.scene.add
+        .image(
+          0,
+          top,
+          bakeLandscape(this.scene, landscapeKind(band), band.lap, !band.open, i === shut),
+        )
         .setOrigin(0.5, 0)
         .setDisplaySize(stripWidth, cfg.bandHeight);
-      this.strip.add(sky);
-      this.buildLabel(band, top + cfg.bandHeight / 2, bestLap?.band === i ? bestLap.value : 0);
+      this.strip.add(land);
+      const label = createBandLabel(
+        this.scene,
+        band,
+        top,
+        stripWidth,
+        bestLap?.band === i ? bestLap.value : 0,
+      );
+      this.strip.add(label.holder);
+      this.fadings.push({ holder: label.holder, span: label.span });
       let column: Phaser.GameObjects.Image | null = null;
       if (band.from <= this.record) {
         column = this.scene.add
@@ -201,11 +205,17 @@ export class ClimbMapRibbon {
           .setScale(1 / cfg.tower.texScale);
         this.strip.add(column);
       }
-      this.bands.push({ band, span, sky, tower: column });
+      this.bands.push({ band, span, land, tower: column });
     });
-    // The labels were added before the towers: put the towers under them, over the skies.
+    // The fog stands over the first band the record has not reached, on the foot of it.
+    if (shut < count) {
+      bakeFogEdges(this.scene);
+      this.fog = new ClimbFogEdge(this.scene, this.strip, fogBoundary(shut - 1, count), this.level);
+    }
+    // The labels were added before the towers: put the towers under them, over the pictures and the fog.
     for (const view of this.bands) if (view.tower) this.strip.sendToBack(view.tower);
-    for (const view of this.bands) this.strip.sendToBack(view.sky);
+    this.fog?.sendToBack();
+    for (const view of this.bands) this.strip.sendToBack(view.land);
   }
 
   /** The top cake with its face, above the columns. */
@@ -216,59 +226,6 @@ export class ClimbMapRibbon {
       .setOrigin(0.5, 1)
       .setScale(1 / cfg.tower.texScale);
     this.strip.add(this.top);
-  }
-
-  /** The picture of the zone, its name and layers (or the shut band's "? ? ?"), and the star of the best lap. */
-  private buildLabel(band: ClimbBand, centreY: number, bestLap: number): void {
-    const { picture, text } = cfg;
-    const scene = this.scene;
-    const left = -this.stripWidth / 2 + picture.left;
-    const textX = left + picture.size + text.gap;
-    const room = cfg.tower.x - cfg.tower.width / 2 - text.towerGap - textX;
-    const rows = bestLap > 0 ? text.rows.lap : text.rows.plain;
-    const holder = scene.add.container(0, centreY);
-    const art = scene.add
-      .image(left + picture.size / 2, 0, checkpointZoneTexture(band.zone))
-      .setDisplaySize(picture.size, picture.size);
-    holder.add(art);
-    const row = (y: number, label: string, font: number, color?: number): void => {
-      const item = createOutlinedText(scene, textX, y, label, font, color).setOrigin(0, 0.5);
-      holder.add(fitInRoom(item, room));
-    };
-    if (band.open) {
-      // A name too wide for the room wraps to two lines at full size (the lines then push apart); only a word wider than the room shrinks.
-      const name = createOutlinedText(scene, textX, 0, bandName(band), text.nameFont);
-      name.setOrigin(0, 0.5).setWordWrapWidth(room);
-      const extra = name.height - text.nameFont * text.lineHeight;
-      name.setY((rows[0] ?? 0) - Math.max(0, extra) / 2);
-      holder.add(fitInRoom(name, room));
-      row(
-        (rows[1] ?? 0) + Math.max(0, extra) / 2,
-        t('climbMap.range', { from: formatNumber(band.from), to: formatNumber(band.to) }),
-        text.rangeFont,
-      );
-    } else {
-      art.setTint(cfg.locked.tint).setAlpha(cfg.locked.pictureAlpha);
-      row(0, t('climbMap.locked'), text.lockedFont, text.lockedColor);
-    }
-    if (bestLap > 0) {
-      const star = scene.add
-        .image(textX + text.bestLap.star / 2, rows[2] ?? 0, CLIMB_STAR_KEY)
-        .setDisplaySize(text.bestLap.star, text.bestLap.star);
-      const label = createOutlinedText(
-        scene,
-        textX + text.bestLap.star + text.bestLap.gap,
-        rows[2] ?? 0,
-        t('climbMap.bestLap'),
-        text.bestLap.font,
-      ).setOrigin(0, 0.5);
-      const labelRoom = room - text.bestLap.star - text.bestLap.gap;
-      label.setWordWrapWidth(labelRoom);
-      holder.add([star, fitInRoom(label, labelRoom)]);
-    }
-    this.strip.add(holder);
-    const half = Math.max(picture.size / 2, ...rows.map((y) => Math.abs(y) + text.nameFont * 0.6));
-    this.fadings.push({ holder, span: { top: centreY - half, bottom: centreY + half } });
   }
 
   private buildFlags(animated: boolean): void {
@@ -348,11 +305,10 @@ export class ClimbMapRibbon {
     const tower = climbTowerSize();
     const ts = cfg.tower.texScale;
     const padDisp = tower.pad / ts;
-    for (const { band, span, sky, tower: column } of this.bands) {
+    for (const { band, span, land, tower: column } of this.bands) {
       const slice = visibleSlice(span, view);
-      sky.setVisible(slice !== null);
-      if (slice)
-        sky.setCrop(0, slice.top - span.top, cfg.sky.textureWidth, slice.bottom - slice.top);
+      land.setVisible(slice !== null);
+      if (slice) land.setCrop(0, slice.top - span.top, land.width, slice.bottom - slice.top);
       if (!column) continue;
       const filled = layersInBand(band, this.towerTop - cfg.tower.topOverlap) * LAYER_PX;
       const grown: Span = {
@@ -372,6 +328,7 @@ export class ClimbMapRibbon {
       }
     }
     this.placeTop(view);
+    this.fog?.refresh(view);
     for (const { holder, span } of this.fadings) {
       const alpha = edgeAlpha(span, view, cfg.anim.edgeFade);
       holder.setAlpha(alpha).setVisible(alpha > 0);

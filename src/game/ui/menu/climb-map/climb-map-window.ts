@@ -4,7 +4,6 @@ import { ANIM } from '../../../../data/common/anim';
 import { CLIMB_MAP } from '../../../../data/progression/climb-map';
 import { t } from '../../../../i18n';
 import { gameState } from '../../../../state';
-import { bakeCheckpointTextures } from '../../../fx/zones/checkpoint-textures';
 import { bakeClimbMapTextures } from '../../../fx/zones/climb-map-textures';
 import { createOutlinedText } from '../../common/outlined-text';
 import { safeFrame } from '../../common/safe-frame';
@@ -78,7 +77,6 @@ export function openMapWindow(
   scene.events.on(Phaser.Scenes.Events.UPDATE, watch);
   scene.events.once(Phaser.Scenes.Events.SHUTDOWN, release);
 
-  bakeCheckpointTextures(scene);
   bakeClimbMapTextures(scene);
   const map = climbMap({
     record: gameState.recordHeight,

@@ -5,6 +5,7 @@ import { TOWER_GUESTS } from '../../data/guests/tower-guest';
 import { createAbilityTextures } from '../fx/abilities/ability-textures';
 import { bakeCheckpointTextures } from '../fx/zones/checkpoint-textures';
 import { bakeClimbFrame, bakeClimbMapTextures } from '../fx/zones/climb-map-textures';
+import { bakeLandscapeSheet } from '../fx/climb-map/landscape-chunks';
 import { bakeJournalDishes, bakeJournalIcons } from '../fx/journal/journal-textures';
 import { bakeOfflineIcon } from '../fx/economy/offline-icon-texture';
 import { bakeVideoIcon } from '../fx/economy/video-icon-texture';
@@ -88,6 +89,7 @@ const PRIME_STEPS: ReadonlyArray<(scene: Phaser.Scene) => void> = [
   bakeChestTextures,
   bakeCheckpointTextures,
   bakeClimbMapTextures,
+  bakeLandscapeSheet,
   (scene) => bakeClimbFrame(scene, 804, 600),
   bakeOfflineIcon,
   bakeJournalIcons,
