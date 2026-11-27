@@ -16,12 +16,13 @@ export interface QuitSource {
 /** Reads the run counters the result does not carry at the moment of recording. */
 export type ExtrasSource = () => RunExtras;
 
-/** The counters of the run tally that the missions need. */
+/** The counters of the run tally that the missions and the baker's journal need. */
 export function extrasOf(tally: RunTally): RunExtras {
   return {
     floatingCoins: tally.coins.floating,
     abilities: tally.abilities,
     maxWobble: tally.maxWobble,
+    flies: tally.flies,
     coinSources: { ...tally.coins },
   };
 }

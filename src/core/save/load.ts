@@ -8,6 +8,7 @@ import { xpToNext } from '../progression/progression';
 import { pickTeam } from '../creatures/team';
 import { createDefaultSave } from './defaults';
 import { migrate } from './migrations';
+import { NEVER_SYNCED } from './sync';
 import type { Lang, MissionGroup, MissionProgress, ReducedFxSetting, Save } from './schema';
 
 export type SaveSource = 'primary' | 'backup' | 'new';
@@ -139,12 +140,15 @@ function normalize(raw: Obj, d: Save): Save {
       classicHeight,
       classicScore: uint(records.classicScore, 0),
       bestCombo: uint(records.bestCombo, 0),
+      // A missing best of all time starts from today's best, as the migration does.
+      dailyBest: uint(records.dailyBest, uint(daily.best, 0)),
     },
     stats: {
       runs: uint(stats.runs, 0),
       totalLayers: uint(stats.totalLayers, 0),
       perfects: uint(stats.perfects, 0),
       adsWatched: uint(stats.adsWatched, 0),
+      flies: uint(stats.flies, 0),
     },
     streak: {
       count: uint(streak.count, 0),
@@ -154,6 +158,7 @@ function normalize(raw: Obj, d: Save): Save {
       claimedDay: day(streak.claimedDay),
     },
     today: { day: day(today.day), bestHeight: uint(today.bestHeight, 0) },
+    prevDay: normalizeDayBest(raw.prevDay),
     missions: {
       day: day(missions.day),
       items: normalizeMissions(missions.items),
@@ -228,7 +233,36 @@ function normalize(raw: Obj, d: Save): Save {
       lastPlayDay: day(review.lastPlayDay),
     },
     notif: { giftDay: day(obj(raw.notif).giftDay) },
+    sync: normalizeSync(raw.sync),
   };
+}
+
+/** A best height of a day; one without a valid day is no day at all. */
+function normalizeDayBest(value: unknown): Save['prevDay'] {
+  const source = obj(value);
+  const dayOf = day(source.day);
+  return dayOf === ''
+    ? { day: '', bestHeight: 0 }
+    : { day: dayOf, bestHeight: uint(source.bestHeight, 0) };
+}
+
+/**
+ * The cloud copy the device knows. Its number and id only mean something together, so a sync
+ * with any field missing or of the wrong type counts as never synced (its progress as changed).
+ */
+function normalizeSync(value: unknown): Save['sync'] {
+  const source = obj(value);
+  const { cloudRev, cloudId, dirty } = source;
+  if (
+    typeof cloudRev !== 'number' ||
+    !Number.isFinite(cloudRev) ||
+    cloudRev < 0 ||
+    typeof cloudId !== 'string' ||
+    typeof dirty !== 'boolean'
+  ) {
+    return { ...NEVER_SYNCED };
+  }
+  return { cloudRev: Math.floor(cloudRev), cloudId, dirty };
 }
 
 interface Parsed {

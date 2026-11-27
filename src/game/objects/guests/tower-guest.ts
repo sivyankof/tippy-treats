@@ -415,6 +415,7 @@ export class TowerGuest {
 
   /** A layer landed on the guest: it is tied to the new layer's lower edge and squashes. */
   private startSplat(index: number, pose: LayerPose): void {
+    this.cues.swatted();
     this.press.start(this.look, this.pos.x, index, pose);
     this.anchor = { index, edge: 'bottom', dx: this.press.slide.from };
     this.shy.cancel();

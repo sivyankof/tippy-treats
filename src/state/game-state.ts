@@ -87,6 +87,7 @@ import {
 } from './streak';
 import { withBakerLevel, withBakerLevelBumped, withCreaturesBumped } from './debug-grants';
 import { withProgressReset } from './reset';
+import { withProgressChanged } from '../core/save/sync';
 import {
   earnEvents,
   levelUpEvents,
@@ -116,7 +117,8 @@ export type SettingsPatch = Partial<
 /**
  * The only owner of the save while the game runs (docs/08-architecture.md, section 5): the
  * rest of the game reads it here and changes it through these methods. Each method calls a pure
- * rule over the save and stores the result; the `SaveStore` marks it dirty and writes it
+ * rule over the save and stores the result (a change of the progress through `progress`, which
+ * sets `sync.dirty`; `state/sync-dirty.test.ts` sorts every method into one of the two); the `SaveStore` marks it dirty and writes it
  * `SAVE_WRITE_DEBOUNCE_MS` later, or at once on `flush()`.
  */
 export class GameState {
@@ -227,7 +229,7 @@ export class GameState {
     };
     this.noteRun(this.store.save, next, summary, extras);
     const before = this.store.save;
-    this.store.replace(next);
+    this.progress(next);
     this.emit(runEvents(before, next, result, summary, extras));
     return summary;
   }
@@ -262,7 +264,7 @@ export class GameState {
       this.clockBehind,
     );
     if (!next) return false;
-    this.store.replace(next);
+    this.progress(next);
     return true;
   }
 
@@ -385,7 +387,7 @@ export class GameState {
     const before = this.store.save;
     const next = withStreakRestored(before, this.today(), this.clockBehind, payment);
     if (!next) return false;
-    this.store.replace(next);
+    this.progress(next);
     this.emit([
       { name: 'streak_restore', params: { method: payment } },
       ...spendEvents(before, next, 'streak_restore'),
@@ -398,7 +400,7 @@ export class GameState {
     const before = this.store.save;
     const next = withStreakDeclined(before, this.today());
     if (next === before) return;
-    this.store.replace(next);
+    this.progress(next);
     this.emit([{ name: 'streak_lost', params: { count: before.streak.count } }]);
   }
 
@@ -430,7 +432,7 @@ export class GameState {
   rerollMission(index: number): boolean {
     const next = withMissionRerolled(this.store.save, index, this.today());
     if (!next) return false;
-    this.store.replace(next);
+    this.progress(next);
     return true;
   }
 
@@ -456,7 +458,7 @@ export class GameState {
     const next = withAttemptStarted(this.store.save, day);
     if (!next) return false;
     this.dailyAttemptDay = day;
-    this.store.replace(next);
+    this.progress(next);
     return true;
   }
 
@@ -464,7 +466,7 @@ export class GameState {
   addDailyAttempt(): boolean {
     const next = withAttemptAdded(this.store.save, this.utcToday());
     if (!next) return false;
-    this.store.replace(next);
+    this.progress(next);
     return true;
   }
 
@@ -496,30 +498,30 @@ export class GameState {
 
   /** Dev soak only: sets the baker level, which opens the shop, the upgrades and the team slots. */
   debugSetBakerLevel(level: number): void {
-    this.store.replace(withBakerLevel(this.store.save, level));
+    this.progress(withBakerLevel(this.store.save, level));
   }
 
   /** Dev soak only: sets the finished run count, so Home shows what it shows after the first runs. */
   debugSetRuns(runs: number): void {
     const save = this.store.save;
-    this.store.replace({ ...save, stats: { ...save.stats, runs: Math.max(0, Math.floor(runs)) } });
+    this.progress({ ...save, stats: { ...save.stats, runs: Math.max(0, Math.floor(runs)) } });
   }
 
   /** Dev only: baker level +1, level XP reset, no reward. */
   debugBumpBakerLevel(): void {
-    this.store.replace(withBakerLevelBumped(this.store.save));
+    this.progress(withBakerLevelBumped(this.store.save));
   }
 
   /** Dev only: every creature +1 level up to the max; creatures not owned yet become level 1. */
   debugBumpCreatures(): void {
-    this.store.replace(withCreaturesBumped(this.store.save));
+    this.progress(withCreaturesBumped(this.store.save));
   }
 
   /** Saves the team; creatures the player does not own and repeats become empty slots. */
   setTeam(team: TeamIds): void {
     const before = this.store.save;
     const next = withTeam(before, team);
-    this.store.replace(next);
+    this.progress(next);
     this.emit(teamEvents(before, next));
   }
 
@@ -527,7 +529,7 @@ export class GameState {
     const before = this.store.save;
     const result = withCreatureBought(before, id, currency);
     if (!result.ok) return result;
-    this.store.replace(result.value);
+    this.progress(result.value);
     this.emit([
       ...spendEvents(before, result.value, `creature_${id}`),
       ...unlockEvents(before, result.value, () => `shop_${currency}`),
@@ -539,7 +541,7 @@ export class GameState {
     const before = this.store.save;
     const result = withCreatureUpgraded(before, id);
     if (!result.ok) return result;
-    this.store.replace(result.value.save);
+    this.progress(result.value.save);
     this.emit([
       ...spendEvents(before, result.value.save, `upgrade_${id}`),
       { name: 'creature_upgrade', params: { creature: id, level: result.value.level } },
@@ -608,7 +610,7 @@ export class GameState {
   spend(cost: Cost): boolean {
     const paid = spend(this.store.save, cost);
     if (!paid) return false;
-    this.store.replace(paid);
+    this.progress(paid);
     return true;
   }
 
@@ -644,7 +646,7 @@ export class GameState {
   /** The starter pack button has just appeared on Home: its window starts now if it has not yet. */
   noteStarterPackShown(): void {
     const next = withStarterPackShown(this.store.save, (this.deps.now ?? now)());
-    if (next !== this.store.save) this.store.replace(next);
+    if (next !== this.store.save) this.progress(next);
   }
 
   /** Free-coin ads left today (local day). */
@@ -704,7 +706,7 @@ export class GameState {
   restorePurchases(owned: readonly ProductKey[]): boolean {
     const next = withPurchasesRestored(this.store.save, owned);
     if (next === this.store.save) return false;
-    this.store.replace(next);
+    this.progress(next);
     return true;
   }
 
@@ -763,8 +765,16 @@ export class GameState {
 
   /** Wipes the progress (a new save as at the first launch) and writes it at once; see `withProgressReset`. */
   resetProgress(): void {
-    this.store.replace(withProgressReset(this.store.save, this.deps.realNow()));
+    this.progress(withProgressReset(this.store.save, this.deps.realNow()));
     this.store.flush();
+  }
+
+  /**
+   * Swaps in a save whose progress changed: `sync.dirty` is set, so the cloud copy is known to
+   * be behind (docs/08-architecture.md, section 5). Every other change goes through `store.replace`.
+   */
+  private progress(next: Save): void {
+    this.store.replace(withProgressChanged(next));
   }
 
   /**
@@ -774,7 +784,7 @@ export class GameState {
   private commit(next: Save, source: CreditSource): void {
     const before = this.store.save;
     this.deps.tally?.addWalletChange(source, before, next);
-    this.store.replace(next);
+    this.progress(next);
     this.emit(earnEvents(before, next, source));
   }
 

@@ -540,7 +540,7 @@ export interface Modifiers {
 
 ```ts
 // core/save/schema.ts
-// Текущая версия 10. Версия 2: streak.claimedToday заменён на claimedDay, добавлено today.
+// Текущая версия 11. Версия 2: streak.claimedToday заменён на claimedDay, добавлено today.
 // Версия 3: в ads добавлен offerDay (день последнего показа предложения «Без рекламы»).
 // Версия 4: в ads добавлены shownDay и shownToday (дневной счётчик межстраничной рекламы).
 // Версия 5: добавлены oven (счётчик «Свежей печи») и doubles (счётчик «×2 монеты» за день); bakerXp пересчитан под новую кривую.
@@ -549,8 +549,11 @@ export interface Modifiers {
 // Версия 7: добавлены checkpoints (открытые контрольные точки) и checkpointAds (старты за рекламу за местный день); миграция 6 → 7 открывает точки по рекорду.
 // Версия 9: в shop добавлен starterPackShownAt (первый показ кнопки стартового набора на Home, начало 7-дневного окна; 0 — ещё не показывали); миграция 8 → 9 ставит момент миграции, если набор не куплен и завершено ≥ 10 забегов (порог заморожен в `frozen-v9.ts`).
 // Версия 10 (этап M8): добавлены iap.processedTx (последние 50 оплаченных транзакций стора, защита от двойной выдачи), review (последняя системная просьба об оценке: версия игры и момент; число местных дней игры и последний из них) и notif.giftDay (местный день последнего пришедшего уведомления «Подарок готов»: записывается при следующем открытии, если его момент прошёл, `04-meta-retention.md`, раздел 7); миграция 9 → 10 заполняет их пустыми. Сброс прогресса их сохраняет.
-export interface SaveV10 {
-  version: 10;
+// Версия 11 (выпуск 1.1, все новые поля выпуска разом): stats.flies (прихлопнутые мушки), records.dailyBest (лучшая высота башни дня за всё время),
+// prevDay (лучшая высота Классики за день игры перед today.day), sync (облачная копия: номер, id, «менялся ли прогресс после неё»); миграция 10 → 11:
+// flies = 0, dailyBest = daily.best, prevDay пустой, sync = { 0, '', true }.
+export interface SaveV11 {
+  version: 11;
   installId: string;             // random uuid, for mission seed & support
   createdAt: number;             // epoch ms
   lastSeenAt: number;
@@ -560,10 +563,11 @@ export interface SaveV10 {
   bakerXp: number;
   creatures: Partial<Record<CreatureId, { level: number }>>;
   team: [CreatureId | null, CreatureId | null, CreatureId | null];
-  records: { classicHeight: number; classicScore: number; bestCombo: number };
-  stats: { runs: number; totalLayers: number; perfects: number; adsWatched: number };
+  records: { classicHeight: number; classicScore: number; bestCombo: number; dailyBest: number };   // dailyBest: лучшая высота башни дня за всё время
+  stats: { runs: number; totalLayers: number; perfects: number; adsWatched: number; flies: number };   // flies: прихлопнутые мушки, копятся с версии 11
   streak: { count: number; best: number; lastDay: string; cycle: number; claimedDay: string };
   today: { day: string; bestHeight: number };   // лучшая высота Классики за местный день
+  prevDay: { day: string; bestHeight: number }; // то же за день игры перед today.day; '' и 0 — нет
   missions: { day: string; items: MissionProgress[]; rerollUsed: boolean; chestClaimed: boolean };
   daily: { day: string; attemptsUsed: number; extraAttemptUsed: boolean; best: number; claimedTiers: number[] };
   gift: { nextAt: number };
@@ -582,6 +586,7 @@ export interface SaveV10 {
   iap: { processedTx: string[] };                          // ид. транзакций стора, уже выданных игроку, новые в конце, не больше IAP_RULES.processedTxKeep (50)
   review: { askedVersion: string; askedAt: number; playDays: number; lastPlayDay: string };   // просьба об оценке: версия и epoch ms последней ('' и 0 — не просили); местных дней игры и последний из них
   notif: { giftDay: string };                              // местный день последнего пришедшего уведомления «Подарок готов», '' — не было
+  sync: { cloudRev: number; cloudId: string; dirty: boolean };   // облачная копия, которую это устройство последним отправило или приняло (0 и '' — ни разу); dirty: прогресс менялся после неё
 }
 
 interface MissionProgress { id: string; group: 'easy' | 'medium' | 'hard'; target: number; progress: number; claimed: boolean }
@@ -595,6 +600,9 @@ interface MissionProgress { id: string; group: 'easy' | 'medium' | 'hard'; targe
 - Ожидание загрузки ограничено: `gameState.load({ timeoutMs })` (`main.ts` передаёт `BOOT.saveWaitMs`, 2 с) возвращает `{ status: 'loaded', source, ... }`, `{ status: 'timeout' }` или `{ status: 'read_failed' }`. `read_failed` значит, что `storage.get` бросил исключение или отклонён (это не то же самое, что «ключа нет»: пустой ключ даёт новое сохранение). При `timeout` и `read_failed` игра идёт на новом сохранении в памяти, и в хранилище в эту загрузку страницы ничего не пишется (`flush` и отложенная запись отключены), иначе незаконченное чтение могло бы затереть настоящее сохранение. Поздний результат чтения (и запись `save_corrupt_*`) отбрасывается, состояние посреди игры не подменяется, в консоль выводится предупреждение. Прогресс такой сессии не сохраняется.
 - Нормализация: числа целые и неотрицательные; уровни существ 1..5; команда состоит из существ, которыми игрок владеет (иначе `null`), без повторов; неизвестные существа отбрасываются; дни `YYYY-MM-DD` или пустая строка; стартовые существа (`SAVE_DEFAULTS.startCreatures`) всегда во владении, а пустая команда получает первое из них в слот 0; `bakerLevel` не выше `MAX_BAKER_LEVEL`, `bakerXp` меньше порога следующего уровня (иначе подделанное число зависило бы первый же забег на миллионах повышений).
 - Хранится две копии: `save` и `save_backup` (предыдущая успешная запись). Запись: через 500 мс после первого изменения серии (`SAVE_WRITE_DEBOUNCE_MS`), сразу при `visibilitychange: hidden` и `pagehide`. Если запись не удалась, состояние остаётся «грязным» и повтор назначается не раньше чем через `SAVE_RETRY_MS` (5 с). `lastSeenAt` и проверка «часы переведены назад» идут по настоящим системным часам (`realNow`), а не по часам со сдвигом `?dayOffset=`, иначе после dev-запуска со сдвигом обычный запуск считал бы часы отставшими.
+- **Поля версии 11.** `records.dailyBest` растёт при записи забега башни дня, который засчитан (`max` с `daily.best` после записи, `state/run-progress.ts`). `stats.flies` растёт на число мушек забега: мушка прихлопывается в отрисовке (`TowerGuest`, на всех уровнях эффектов), поэтому счёт идёт в сохранение через `RunExtras.flies`, как `abilities`. `prevDay`: `today` сменяется только при записи забега Классики, поэтому во время первого забега нового дня в `today` ещё лежит прошлый день. Когда записывается забег Классики в день позже `today.day`, прежний `today` уходит в `prevDay`; день раньше `today.day` (часы переведены назад) `prevDay` не трогает (`withDayBest`, `core/progression/prev-day.ts`). Читает лучший результат прошлого дня игры чистая функция `previousDayBest(save, localToday)` там же: если `today.day` раньше `localToday`, прошлый день — это `today`, иначе `prevDay`. Нормализация: отсутствующий `records.dailyBest` берётся из `daily.best`; `prevDay` с неверным днём становится `{ '', 0 }`; `sync` с отсутствующим или неверного типа полем целиком становится `{ 0, '', true }`.
+- **`sync.dirty`** ставят только методы `GameState`, меняющие прогресс (`withProgressChanged`, `core/save/sync.ts`): запись забега, оплата старта с точки, награда, восстановление и отказ от серии, задания (награда, замена, сундук), попытки башни дня, подарок, бригада, покупка и прокачка существ, начисление, трата и обмен валют, выдача и восстановление покупок, бесплатные монеты, показ стартового набора, отладочные выдачи уровня, забегов и существ, сброс. Не ставят: начало сессии, отметки межстраничной рекламы и предложения «Без рекламы», день игры, просьба об оценке, смена дня, счётчик просмотренной рекламы, согласия, день уведомления о подарке, подсказки обучения, настройки, обновление `lastSeenAt` и чтение. Причина: сохранение меняется при каждом запуске, и общий флаг был бы взведён всегда. Тест `state/sync-dirty.test.ts` перечисляет все методы и свойства `GameState` и относит каждый к одной из двух групп, поэтому новый метод обязан выбрать.
+- **Сброс прогресса** (`withProgressReset`) обнуляет `stats`, `records`, `prevDay` вместе с остальным прогрессом; `sync.cloudRev` и `sync.cloudId` остаются, `sync.dirty` = `true`, иначе следующий запуск предложил бы восстановить только что стёртое.
 - Валюты никогда не уходят в минус: `core/economy/economy.ts` `spend` возвращает новый кошелёк или `null` (отрицательная и нечисловая цена отклоняются, дробная округляется вверх; `earn` берёт только целые неотрицательные суммы); `gameState.spend/spendBerries` возвращают `false`. Покупки и прокачка возвращают `{ ok: true, value } | { ok: false, reason }` (тип `EconomyResult`).
 - Монеты забега попадают в сохранение, когда забег кончился (при любом исходе, `gameState.recordRun`); ягоды сразу, как только заработаны (`addBerries`), поэтому `recordRun` их не прибавляет. Если игрок уходит из идущего забега (кнопка «Заново» в паузе, перезапуск из панели отладки, любой другой выход со сцены забега), сцена закрывает забег сама: `TowerSim.quitResult()` собирает `RunResult` с `endReason: 'quit'` из текущего состояния (забег не меняется), `game/run/run-recorder.ts` (`RunRecorder`) записывает его через `recordRun` ровно один раз. Закрытие или перезагрузка страницы посреди забега (`pagehide`) тоже считается выходом из него: сцена забега подписывается в `create` (`state/page-lifecycle.ts`, `bindPageLeave`), записывает забег через `RunRecorder` и сразу сбрасывает сохранение на диск, отписывается на `SHUTDOWN`. Уход в фон (`visibilitychange: hidden`) выходом не считается, это пауза. Если после такого `pagehide` страница вернулась из кэша «назад/вперёд» (`pageshow` с `persisted`), старый забег уже записан, поэтому сцена начинает новый (`launchRun`): монеты не считаются дважды и не теряются. Забег, который уже кончился и записан, повторно не записывается. Бонус за высоту (`payHeightBonus`) платится только когда забег заканчивается сам, у `quit` его нет. Забег, в котором ничего не заработано (высота не выше стартовой, ноль очков, монет и ягод), забегом не считается (`isEmptyRun`): сохранять нечего, а счётчик забегов не должен расти от повторных «Заново». Первый забег игрока за всё время рекордом не бывает, дальше сравнение с сохранённым лучшим результатом.
 - Отладочные подмены (`?tutorial=`, `?team=`, `?dayOffset=`) действуют до перезагрузки страницы и не сохраняются. Забеги с `?bot=` и `?start=` искусственные и в сохранение не пишутся вообще (ни монеты, ни ягоды, ни XP: `RunRecorder` выключен, решает `savesRun` в `util/debug-params.ts`); забеги с `?team=` и `?level=` пишутся как обычные, чтобы владелец проверял существ по-настоящему.

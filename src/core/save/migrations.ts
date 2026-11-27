@@ -142,6 +142,26 @@ export function migrateV9(raw: RawSave): RawSave {
   };
 }
 
+/**
+ * 10 -> 11: no fly was counted before, the best daily height of all time starts from today's
+ * best, no earlier play day is known, and the device never synced (its progress counts as
+ * changed). A damaged stats or records object stays as it is, so the loader can still tell.
+ */
+export function migrateV10(raw: RawSave): RawSave {
+  const next: RawSave = {
+    ...raw,
+    prevDay: { day: '', bestHeight: 0 },
+    sync: { cloudRev: 0, cloudId: '', dirty: true },
+  };
+  if (isRecord(raw.stats)) next.stats = { ...raw.stats, flies: 0 };
+  if (isRecord(raw.records)) {
+    const daily = isRecord(raw.daily) ? raw.daily : {};
+    const best = typeof daily.best === 'number' && Number.isFinite(daily.best) ? daily.best : 0;
+    next.records = { ...raw.records, dailyBest: best };
+  }
+  return next;
+}
+
 /** Hands over creatures whose record way (as of version 5) the best classic height already reached. */
 function withRecordCreatures(raw: RawSave): RawSave {
   const height = rawClassicHeight(raw);
@@ -169,6 +189,7 @@ export const MIGRATIONS: MigrationChain = {
   7: migrateV7,
   8: migrateV8,
   9: migrateV9,
+  10: migrateV10,
 };
 
 /**

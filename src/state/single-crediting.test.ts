@@ -144,7 +144,7 @@ describe('missions and the chest', () => {
   /** Completes every mission with big runs, then returns the missions of the day. */
   function completeAll(state: ReturnType<typeof createTestState>): void {
     state.refreshDay();
-    const extras = { floatingCoins: 100, abilities: 10, maxWobble: 0 };
+    const extras = { floatingCoins: 100, abilities: 10, maxWobble: 0, flies: 0 };
     const big = { height: 200, score: 9000, perfects: 40, bestCombo: 40, coins: 1000 };
     for (let i = 0; i < 6; i++) state.recordRun(run(big), 0, extras);
     state.recordRun(run({ ...big, mode: 'daily' }), 0, extras);

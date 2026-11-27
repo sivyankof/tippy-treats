@@ -71,6 +71,7 @@ describe('the tally in GameState', () => {
       floatingCoins: 0,
       abilities: 0,
       maxWobble: 0,
+      flies: 0,
       coinSources: { floating: 20, height: 10 },
     });
     const totals = tally.snapshot();

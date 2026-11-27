@@ -99,8 +99,8 @@ export const STORE_SAVE = {
     rainbow: 5,
   } as Readonly<Partial<Record<CreatureId, number>>>,
   team: ['rainbow', 'honey', 'jelly'] as readonly [CreatureId, CreatureId, CreatureId],
-  records: { classicHeight: 148, classicScore: 21_450, bestCombo: 23 },
-  stats: { runs: 64, totalLayers: 4210, perfects: 912, adsWatched: 9 },
+  records: { classicHeight: 148, classicScore: 21_450, bestCombo: 23, dailyBest: 52 },
+  stats: { runs: 64, totalLayers: 4210, perfects: 912, adsWatched: 9, flies: 30 },
   streak: { count: 6, best: 9 },
   daily: { attemptsUsed: 1, best: 37 },
   /** Finished interstitial-free sessions, so no first-session rule changes a screen. */

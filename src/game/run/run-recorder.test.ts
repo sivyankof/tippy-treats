@@ -58,12 +58,14 @@ describe('RunRecorder', () => {
     tally.coins.floating = 7;
     tally.abilities = 2;
     tally.maxWobble = 31;
+    tally.flies = 3;
     const recorder = new RunRecorder(sink, 0, true, () => extrasOf(tally));
     recorder.recordOver(run({ endReason: 'miss' }));
     expect(sink.recordRun).toHaveBeenCalledWith(expect.anything(), 0, {
       floatingCoins: 7,
       abilities: 2,
       maxWobble: 31,
+      flies: 3,
       coinSources: expect.objectContaining({ floating: 7 }),
     });
   });

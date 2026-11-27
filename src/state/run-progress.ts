@@ -14,11 +14,13 @@ export interface RunExtras {
   floatingCoins: number;
   abilities: number;
   maxWobble: number;
+  /** Flies the layers swatted (drawn by the run, so the simulation result has none). */
+  flies: number;
   /** Coins of the run by source, for the dev tally only. */
   coinSources?: Partial<Record<CoinSource, number>>;
 }
 
-export const NO_EXTRAS: RunExtras = { floatingCoins: 0, abilities: 0, maxWobble: 0 };
+export const NO_EXTRAS: RunExtras = { floatingCoins: 0, abilities: 0, maxWobble: 0, flies: 0 };
 
 export interface RunProgress {
   save: Save;
@@ -44,9 +46,10 @@ export function statsOf(result: RunResult, extras: RunExtras, startHeight = 0): 
 }
 
 /**
- * Counts the finished run for the streak (local `today`), the missions and, for a daily run,
- * the daily tower (`attemptDay` is the UTC day the attempt was started on, `utcDay` today's). The missions and
- * the daily slice must already be refreshed for today.
+ * Counts the finished run for the streak (local `today`), the missions, the swatted flies and,
+ * for a daily run, the daily tower and its best of all time (`attemptDay` is the UTC day the
+ * attempt was started on, `utcDay` today's). The missions and the daily slice must already be
+ * refreshed for today.
  */
 export function applyRunProgress(
   save: Save,
@@ -61,6 +64,8 @@ export function applyRunProgress(
   const before = save.missions.items;
   let next = withRunDayCounted(save, today, clockBack);
   next = withMissionStats(next, statsOf(result, extras, startHeight));
+  const flies = Math.max(0, Math.floor(extras.flies));
+  if (flies > 0) next = { ...next, stats: { ...next.stats, flies: next.stats.flies + flies } };
   let dailyTiers: DailyPayout[] = [];
   let dailyStale = false;
   if (result.mode === 'daily') {
@@ -68,6 +73,10 @@ export function applyRunProgress(
     dailyStale = !recorded.counted && dailyTowerChanged(attemptDay, utcDay);
     next = recorded.save;
     dailyTiers = recorded.paid;
+    const dailyBest = Math.max(next.records.dailyBest, next.daily.best);
+    if (dailyBest !== next.records.dailyBest) {
+      next = { ...next, records: { ...next.records, dailyBest } };
+    }
   }
   return { save: next, missions: { before, after: next.missions.items }, dailyTiers, dailyStale };
 }

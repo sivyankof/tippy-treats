@@ -579,7 +579,12 @@ describe('migration 6 to 7', () => {
 });
 
 describe('checkpoint fields of the loader', () => {
-  const record = (classicHeight: number) => ({ classicHeight, classicScore: 0, bestCombo: 0 });
+  const record = (classicHeight: number) => ({
+    classicHeight,
+    classicScore: 0,
+    bestCombo: 0,
+    dailyBest: 0,
+  });
 
   it('starts a new save with nothing opened', () => {
     const save = fresh();

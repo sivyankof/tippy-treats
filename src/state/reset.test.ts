@@ -16,6 +16,10 @@ describe('withProgressReset', () => {
       settings: { ...old.settings, sfx: false, lang: 'ru', reducedFx: 'on' },
       iap: { processedTx: ['tx-1', 'tx-2'] },
       review: { askedVersion: '0.1.0', askedAt: 4000, playDays: 4, lastPlayDay: '2026-11-20' },
+      stats: { ...old.stats, runs: 30, flies: 12 },
+      records: { ...old.records, classicHeight: 60, dailyBest: 44 },
+      prevDay: { day: '2026-11-19', bestHeight: 33 },
+      sync: { cloudRev: 5, cloudId: 'cloud-5', dirty: false },
     };
     const next = withProgressReset(played, 5000);
     expect(next).toEqual({
@@ -23,7 +27,11 @@ describe('withProgressReset', () => {
       settings: played.settings,
       iap: played.iap,
       review: played.review,
+      sync: { cloudRev: 5, cloudId: 'cloud-5', dirty: true },
     });
+    expect(next.stats.flies).toBe(0);
+    expect(next.records.dailyBest).toBe(0);
+    expect(next.prevDay).toEqual({ day: '', bestHeight: 0 });
     expect(next.tutorial.hintsShown).toEqual([]);
     expect(next.purchases.removeAds).toBe(false);
   });

@@ -31,7 +31,7 @@ describe('starter pack offer', () => {
     starterPackShownAt: shownAt,
   });
   const withRuns = (runs: number, over: Partial<Save> = {}): Save =>
-    save({ stats: { runs, totalLayers: 0, perfects: 0, adsWatched: 0 }, ...over });
+    save({ stats: { runs, totalLayers: 0, perfects: 0, adsWatched: 0, flies: 0 }, ...over });
 
   it('keeps Home without the pack until the 10th finished run', () => {
     expect(starterPackOnHome(withRuns(0), T0)).toBe(false);

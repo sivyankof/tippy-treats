@@ -36,7 +36,7 @@ async function veteran(classicHeight: number, over: Record<string, unknown> = {}
     {
       ...base,
       stats: { ...base.stats, runs: 3 },
-      records: { classicHeight, classicScore: 0, bestCombo: 0 },
+      records: { classicHeight, classicScore: 0, bestCombo: 0, dailyBest: 0 },
       tutorial: { firstRunDone: true, hintsShown: ['tutorial', 'firstResults'] },
       ...over,
     },

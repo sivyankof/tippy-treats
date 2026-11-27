@@ -47,7 +47,7 @@ describe('events of the game state', () => {
   it('a finished run tells run_end with its parameters, and the first one ends the tutorial', () => {
     const rec = recorder();
     const state = createTestState({ ms: T0 }, new MemoryStorage(), undefined, rec.service);
-    state.recordRun(run(), 0, { floatingCoins: 0, abilities: 2, maxWobble: 0 });
+    state.recordRun(run(), 0, { floatingCoins: 0, abilities: 2, maxWobble: 0, flies: 0 });
     expect(rec.names()).toContain('run_end');
     expect(rec.find('run_end')).toMatchObject({ mode: 'classic', height: 30, abilities_used: 2 });
     expect(rec.find('tutorial_complete')).toEqual({ height: 30 });

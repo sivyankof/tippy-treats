@@ -102,6 +102,8 @@ export class RunFx {
   private readonly topperFx: TopperFx;
   /** The master effects that acted, for the captions of the HUD. */
   readonly masterFeed = new MasterFeed();
+  /** A layer swatted the guest of the tower: the scene counts it in the run tally. */
+  onFlySwatted: (() => void) | null = null;
   /** The latest frame's inputs, for the debug hook. */
   private lastFrame: {
     state: Readonly<TowerState>;
@@ -153,6 +155,7 @@ export class RunFx {
       buzz: () => services.audio.guestBuzz(),
       giggle: () => services.audio.guestGiggle(),
       kick: (mul) => this.kick.kick(ANIM.cameraKick.drop * mul, ANIM.cameraKick.durationMs),
+      swatted: () => this.onFlySwatted?.(),
     });
     this.topperFx = new TopperFx(scene, this.tower, this.landingFx.particles, () =>
       services.audio.topperHop(),

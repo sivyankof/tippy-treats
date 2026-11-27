@@ -6,6 +6,7 @@ import { bakeLayers } from '../core/economy/oven';
 import { runLayers } from '../core/progression/progression';
 import { recordCreaturesReached } from '../core/progression/record-unlocks';
 import { lapRewardBerries, spaceLap } from '../core/zones/space-laps';
+import { withDayBest } from '../core/progression/prev-day';
 import type { RunResult } from '../core/run/run-result';
 import type { MissionProgress, Save } from '../core/save/schema';
 import type { CreatureId } from '../data/creatures/creatures';
@@ -105,10 +106,9 @@ export function applyRun(
     tutorial: { ...before.tutorial, firstRunDone: true },
   };
   if (classic) {
-    const todayBest = before.today.day === day ? before.today.bestHeight : 0;
     next = {
       ...next,
-      today: { day, bestHeight: Math.max(todayBest, result.height) },
+      ...withDayBest(before, day, result.height),
       // Only a tower built from zero opens checkpoints (its full height); a run from a checkpoint
       // opens nothing new, though its height still counts for the record below.
       bestLap: Math.max(before.bestLap, spaceLap(result.height)),
@@ -117,6 +117,7 @@ export function applyRun(
         classicHeight: Math.max(before.records.classicHeight, result.height),
         classicScore: Math.max(before.records.classicScore, result.score),
         bestCombo: Math.max(before.records.bestCombo, result.bestCombo),
+        dailyBest: before.records.dailyBest,
       },
     };
   }

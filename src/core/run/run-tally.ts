@@ -10,6 +10,8 @@ export interface RunTally {
   abilityByCreature: Partial<Record<CreatureId, number>>;
   /** Highest wobble the tower reached during the run. */
   maxWobble: number;
+  /** Flies a layer swatted: the guest of the tower is drawn, so the run counts them, not the sim. */
+  flies: number;
 }
 
 export function emptyTally(): RunTally {
@@ -18,6 +20,7 @@ export function emptyTally(): RunTally {
     abilities: 0,
     abilityByCreature: {},
     maxWobble: 0,
+    flies: 0,
   };
 }
 

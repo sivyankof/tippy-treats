@@ -1,6 +1,6 @@
 import type { CreatureId } from '../../data/creatures/creatures';
 
-export const SAVE_VERSION = 10;
+export const SAVE_VERSION = 11;
 
 export type MissionGroup = 'easy' | 'medium' | 'hard';
 
@@ -182,5 +182,24 @@ export interface SaveV10 extends Omit<SaveV9, 'version'> {
   notif: { giftDay: string };
 }
 
+/**
+ * Version 11 (release 1.1, every new field of the release at once). `stats.flies` counts the
+ * swatted flies (from this version on); `records.dailyBest` keeps the best daily tower height of
+ * all time (`daily.best` starts over every UTC day); `prevDay` the best Classic height of the
+ * play day before `today.day`; `sync` the cloud copy this device last sent or took.
+ */
+export interface SaveV11 extends Omit<SaveV10, 'version' | 'stats' | 'records'> {
+  version: 11;
+  stats: SaveV10['stats'] & { flies: number };
+  records: SaveV10['records'] & { dailyBest: number };
+  /** Best Classic height of the play day before `today.day`; '' and 0 while there is none. */
+  prevDay: { day: string; bestHeight: number };
+  /**
+   * `cloudRev` and `cloudId`: number and random id of the cloud copy this device last sent or
+   * took (0 and '' when never); `dirty`: the progress changed after it (`core/save/sync.ts`).
+   */
+  sync: { cloudRev: number; cloudId: string; dirty: boolean };
+}
+
 /** The current save version. */
-export type Save = SaveV10;
+export type Save = SaveV11;

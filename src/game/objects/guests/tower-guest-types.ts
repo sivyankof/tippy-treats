@@ -18,6 +18,8 @@ export interface GuestCues {
   giggle: () => void;
   /** Kicks the camera `mul` times a normal landing. */
   kick: (mul: number) => void;
+  /** A layer landed on the guest (every effects level): the run counts the fly for the journal. */
+  swatted: () => void;
 }
 
 /** Style of one flight: zigzag turns, an optional reel, and how far up it climbs when it leaves. */

@@ -134,7 +134,12 @@ describe('missions', () => {
   it('applies a finished run and reports the missions before and after', () => {
     const { state } = setup();
     state.refreshDay();
-    const summary = state.recordRun(run(), 0, { floatingCoins: 5, abilities: 1, maxWobble: 10 });
+    const summary = state.recordRun(run(), 0, {
+      floatingCoins: 5,
+      abilities: 1,
+      maxWobble: 10,
+      flies: 0,
+    });
     const sum = (items: readonly { progress: number }[]): number =>
       items.reduce((total, item) => total + item.progress, 0);
     expect(summary.missions.before).toHaveLength(3);
@@ -273,5 +278,56 @@ describe('gift', () => {
     expect(state.msUntilGift).toBe(GIFT.intervalMs);
     clock.ms += GIFT.intervalMs;
     expect(state.giftReady).toBe(true);
+  });
+});
+
+describe('counters of version 11', () => {
+  const extras = (flies: number) => ({ floatingCoins: 0, abilities: 0, maxWobble: 0, flies });
+
+  it('adds the swatted flies of each run, of either mode', async () => {
+    const state = await loadTestState(
+      { ...createDefaultSave(T0, 'abc'), bakerLevel: 5 },
+      { ms: T0 },
+    );
+    state.recordRun(run(), 0, extras(2));
+    state.recordRun(run(), 0, extras(0));
+    expect(state.startDailyAttempt()).toBe(true);
+    state.recordRun(run({ mode: 'daily' }), 0, extras(1));
+    expect(state.data.stats.flies).toBe(3);
+  });
+
+  it('keeps the best daily height of all time across UTC days', async () => {
+    const clock = { ms: T0 };
+    const state = await loadTestState({ ...createDefaultSave(T0, 'abc'), bakerLevel: 5 }, clock);
+    expect(state.startDailyAttempt()).toBe(true);
+    state.recordRun(run({ mode: 'daily', height: 41, coins: 0 }));
+    expect(state.data.records.dailyBest).toBe(41);
+    clock.ms += MS_PER_DAY;
+    expect(state.startDailyAttempt()).toBe(true);
+    state.recordRun(run({ mode: 'daily', height: 12, coins: 0 }));
+    expect(state.dailyInfo().best).toBe(12);
+    expect(state.data.records.dailyBest).toBe(41);
+    state.recordRun(run({ height: 90 }));
+    expect(state.data.records.dailyBest).toBe(41);
+  });
+
+  it('does not count a daily run whose tower changed for the best of all time', async () => {
+    const clock = { ms: T0 };
+    const state = await loadTestState({ ...createDefaultSave(T0, 'abc'), bakerLevel: 5 }, clock);
+    expect(state.startDailyAttempt()).toBe(true);
+    clock.ms += MS_PER_DAY;
+    state.recordRun(run({ mode: 'daily', height: 100, coins: 0 }));
+    expect(state.data.records.dailyBest).toBe(0);
+  });
+
+  it('moves the best of the last play day to prevDay on the first Classic run of a later day', () => {
+    const { state, clock } = setup();
+    state.recordRun(run({ height: 34 }));
+    clock.ms += 3 * MS_PER_DAY;
+    state.recordRun(run({ mode: 'daily', height: 50 }));
+    expect(state.data.prevDay).toEqual({ day: '', bestHeight: 0 });
+    state.recordRun(run({ height: 8 }));
+    expect(state.data.prevDay).toEqual({ day: localDay(T0), bestHeight: 34 });
+    expect(state.data.today).toEqual({ day: localDay(clock.ms), bestHeight: 8 });
   });
 });

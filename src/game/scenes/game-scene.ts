@@ -157,6 +157,9 @@ export class GameScene extends Phaser.Scene {
     this.fx = new RunFx(this, TRAY_TOP_Y, this.seed, look.weather);
     this.weather = new RunWeather(this, look.weather, this.seed, this.background, this.fx.tower);
     this.fx.setBackdrop(this.background);
+    this.fx.onFlySwatted = () => {
+      this.tally.flies += 1;
+    };
     watchRunSky(this, () => this.background.topSkyColor());
     if (import.meta.env.DEV) installSquashDebug(this, this.sim, this.fx.tower);
     this.camera = new RunCamera(this, this.fx, this.background, TRAY_TOP_Y);

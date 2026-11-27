@@ -76,6 +76,7 @@ function demoTally(): RunTally {
     abilities,
     abilityByCreature,
     maxWobble: RESULTS_DEMO.maxWobble,
+    flies: 0,
   };
 }
 

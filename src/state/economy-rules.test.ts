@@ -83,7 +83,7 @@ describe('XP of missions', () => {
   it('pays the XP of the group with the coins when a mission is claimed', () => {
     const state = createTestState({ ms: T0 });
     state.refreshDay();
-    const extras = { floatingCoins: 100, abilities: 10, maxWobble: 0 };
+    const extras = { floatingCoins: 100, abilities: 10, maxWobble: 0, flies: 0 };
     const big = { height: 200, score: 9000, perfects: 40, bestCombo: 40, coins: 1000 };
     for (let i = 0; i < 6; i++) state.recordRun(run(big), 0, extras);
     state.recordRun(run({ ...big, mode: 'daily' }), 0, extras);

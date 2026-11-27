@@ -1,5 +1,6 @@
 import { SAVE_DEFAULTS } from '../../data/app/save-defaults';
 import { SAVE_VERSION, type Save } from './schema';
+import { NEVER_SYNCED } from './sync';
 
 /** A fresh save: the tutorial creature owned, everything else empty. */
 export function createDefaultSave(nowMs: number, installId: string): Save {
@@ -18,10 +19,11 @@ export function createDefaultSave(nowMs: number, installId: string): Save {
     bakerXp: SAVE_DEFAULTS.bakerXp,
     creatures,
     team: [SAVE_DEFAULTS.startCreatures[0] ?? null, null, null],
-    records: { classicHeight: 0, classicScore: 0, bestCombo: 0 },
-    stats: { runs: 0, totalLayers: 0, perfects: 0, adsWatched: 0 },
+    records: { classicHeight: 0, classicScore: 0, bestCombo: 0, dailyBest: 0 },
+    stats: { runs: 0, totalLayers: 0, perfects: 0, adsWatched: 0, flies: 0 },
     streak: { count: 0, best: 0, lastDay: '', cycle: 0, claimedDay: '' },
     today: { day: '', bestHeight: 0 },
+    prevDay: { day: '', bestHeight: 0 },
     missions: { day: '', items: [], rerollUsed: false, chestClaimed: false },
     daily: { day: '', attemptsUsed: 0, extraAttemptUsed: false, best: 0, claimedTiers: [] },
     gift: { nextAt: 0 },
@@ -53,5 +55,6 @@ export function createDefaultSave(nowMs: number, installId: string): Save {
     iap: { processedTx: [] },
     review: { askedVersion: '', askedAt: 0, playDays: 0, lastPlayDay: '' },
     notif: { giftDay: '' },
+    sync: { ...NEVER_SYNCED },
   };
 }

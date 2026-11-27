@@ -354,7 +354,12 @@ describe('GameState runs', () => {
     state.recordRun(run({ height: 12, score: 300, perfects: 4, bestCombo: 6 }));
     state.recordRun(run({ height: 8, score: 500, perfects: 1, bestCombo: 2 }));
     expect(state.data.stats).toMatchObject({ runs: 2, totalLayers: 20, perfects: 5 });
-    expect(state.data.records).toEqual({ classicHeight: 12, classicScore: 500, bestCombo: 6 });
+    expect(state.data.records).toEqual({
+      classicHeight: 12,
+      classicScore: 500,
+      bestCombo: 6,
+      dailyBest: 0,
+    });
     expect(state.data.tutorial.firstRunDone).toBe(true);
   });
 

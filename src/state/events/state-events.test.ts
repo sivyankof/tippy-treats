@@ -38,7 +38,9 @@ function result(over: Partial<RunResult> = {}): RunResult {
 
 describe('runEndParams', () => {
   it('carries every parameter of the table', () => {
-    expect(runEndParams(result(), { floatingCoins: 0, abilities: 3, maxWobble: 0 })).toEqual({
+    expect(
+      runEndParams(result(), { floatingCoins: 0, abilities: 3, maxWobble: 0, flies: 0 }),
+    ).toEqual({
       mode: 'classic',
       height: 40,
       score: 900,
@@ -55,7 +57,7 @@ describe('runEndParams', () => {
 });
 
 describe('runEvents', () => {
-  const extras = { floatingCoins: 0, abilities: 0, maxWobble: 0 };
+  const extras = { floatingCoins: 0, abilities: 0, maxWobble: 0, flies: 0 };
   const names = (events: Array<{ name: string }>): string[] => events.map((e) => e.name);
 
   it('tells the run end, the large coin credit and nothing else for a plain run', () => {

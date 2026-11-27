@@ -20,7 +20,7 @@ describe('userPropertiesOf', () => {
   it('buckets the best height', () => {
     const at = (classicHeight: number) =>
       userPropertiesOf(
-        { ...fresh(), records: { classicHeight, classicScore: 0, bestCombo: 0 } },
+        { ...fresh(), records: { classicHeight, classicScore: 0, bestCombo: 0, dailyBest: 0 } },
         T0,
       ).best_height_bucket;
     expect([at(19), at(20), at(49), at(50), at(99), at(100), at(500)]).toEqual([
