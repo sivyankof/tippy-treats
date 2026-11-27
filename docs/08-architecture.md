@@ -35,6 +35,7 @@
 | `economy` | монеты, ягоды, магазин, подарок, печь, сокровища, реклама за награду, покупки |
 | `progression` | уровни, задания, серия, башня дня, рекорды, коллекция, журнал пекаря |
 | `journal` | картинки журнала пекаря (значки, посуда; только в `game/fx/`) |
+| `games` | игровые сервисы платформы: таблицы рекордов и достижения Game Center (`data/games/`: идентификаторы и пороги; `game/games/`: отправка счёта и достижений, действия кнопок) |
 | `run` | запуск и завершение забега, камера, «Продолжить?», итоги, старт с точки, HUD забега |
 | `audio` | звук и музыка вне `services/` |
 | `app` | конфигурация, ключи сцен, настройки, жизненный цикл, рендерер, экран |
@@ -128,6 +129,8 @@ tippy-treats/
     │   │   ├── daily.ts            башня дня: зерно, бригада, попытки, ступени наград, `recordDailyRun`
     │   │   ├── day-count.ts        счётчик одного местного дня
     │   │   ├── record-unlocks.ts   существа за рекорд высоты
+    │   │   ├── achievements.ts     проценты достижений Game Center по сохранению, только выросшие (`achievementPercents`, `risenAchievements`)
+    │   │   ├── leaderboards.ts     счёт таблиц рекордов по сохранению: таблица дня только сегодняшняя, верхняя граница (`boardScores`, `newScores`)
     │   │   └── collection.ts       способ получения закрытого существа, счётчик коллекции
     │   ├── run/
     │   │   ├── run-result.ts       итог забега
@@ -166,6 +169,7 @@ tippy-treats/
     │   ├── audio/              sfx.ts, sfx-life.ts, audio-mix.ts, music.ts, sound-trim.ts, weather-bed.ts
     │   ├── app/                screen.ts, effect-levels.ts, storage.ts (ключи хранилища, задержка записи), save-defaults.ts (начальное состояние
     │   │                       нового сохранения), clock.ts (допуск перевода часов), boot.ts, app-info.ts, haptics.ts
+    │   ├── games/              boards.ts (идентификаторы таблиц и верхняя граница счёта), achievements.ts (29 достижений: идентификаторы, пороги, очки)
     │   ├── tutorial/           tutorial-anim.ts (вид и время подсказок обучения)
     │   ├── debug/              perf.ts, soak.ts, art-sheet.ts, clip-guard.ts, fps-meter.ts, lineup.ts, results-demo.ts, sim-teams.ts
     │   └── common/             anim.ts, palette.ts, idle-motion.ts (правило «нет неподвижных объектов»), menu-layout.ts (раскладка экранов меню),
@@ -183,6 +187,7 @@ tippy-treats/
     │   ├── economy/            purchases.ts, rewarded.ts, interstitial-flow.ts, ad-caption.ts, treasure-events.ts
     │   ├── audio/              audio-lifecycle.ts, audio-unlock.ts, music-cues.ts, fx-sound.ts, weather-bed.ts
     │   ├── weather/            run-look-choice.ts
+    │   ├── games/              games-sync.ts (отправка счёта и достижений при входе и после забега), games-actions.ts (вход по кнопке, окна таблиц и достижений, тихий вход на Home), games-telemetry.ts
     │   ├── common/             fx-guard.ts (страховочная обёртка декораций), per-scene.ts (`PerScene`: объект на один запуск сцены),
     │   │                       dev-warn.ts (предупреждение только в разработке), depth.ts (порядок отрисовки), clip-guard.ts (страж обрезки)
     │   ├── tutorial/           обучение: `tutorial-director.ts` (когда что показывать), `timeline.ts`, подсказки
@@ -278,6 +283,7 @@ tippy-treats/
     │   ├── notifications/      локальные уведомления: `types.ts`, `web.ts`, `native.ts`
     │   ├── consent/            согласия (UMP, ATT): `types.ts`, `web.ts`, `native.ts`
     │   ├── rating/             системное окно оценки: `types.ts` (`RatingService`), `web.ts`, `native.ts`
+    │   ├── games/              Game Center: `types.ts` (`GamesService`), `web.ts` (заглушка с режимами `?games=`), `native.ts` (плагин `TippyGames`), `status-hub.ts` (состояние входа и подписчики)
     │   ├── share/              `types.ts`, `web.ts` (`navigator.share` или скачивание PNG)
     │   ├── common/             `fire-and-forget.ts` (вызов плагина без ожидания, сбой не доходит до игры)
     │   └── index.ts            выбор реализации по платформе
@@ -647,6 +653,7 @@ interface MissionProgress { id: string; group: 'easy' | 'medium' | 'hard'; targe
 | haptics | `navigator.vibrate`, если есть |
 | notifications | Печатает расписание в консоль |
 | consent | Сразу возвращает «согласие получено» |
+| games | `services/games/web.ts`: «недоступно» (кнопок игровых сервисов нет). В разработке и внутренней сборке параметр `?games=signed_in`, `signed_out`, `refused` (вход не выполнен, и вход отказывает, как после отказа игрока) или `unavailable` изображает сервис после тихого входа на Home; вход из `signed_out` удаётся сразу; все вызовы пишутся в консоль строкой `[games] …` |
 | share | `services/share/web.ts`: `navigator.share` с файлом PNG, если `navigator.canShare({files})` разрешает, иначе скачивание PNG через ссылку `download`. Результат: `shared`, `downloaded`, `cancelled` или `failed` |
 
 Детали нативных реализаций в `09-services-analytics.md`.

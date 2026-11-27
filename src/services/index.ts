@@ -62,6 +62,9 @@ import { NativeStorage } from './storage/native';
 import type { NotificationsService } from './notifications/types';
 import { WebNotifications } from './notifications/web';
 import { NativeNotifications } from './notifications/native';
+import type { GamesService } from './games/types';
+import { WebGames } from './games/web';
+import { NativeGames, type GamesPlugin } from './games/native';
 import { t } from '../i18n';
 
 /** Everything the game asks of the device. Scenes use these and never pick an implementation. */
@@ -84,6 +87,8 @@ export interface Services {
   appShell: AppShellService;
   /** The system's rating window; a stub in the browser. */
   rating: RatingService;
+  /** Game Center on iOS; unavailable on Android (stage 1.1-A) and in the browser (`?games=` plays it in dev). */
+  games: GamesService;
 }
 
 /** Inside the iOS or Android app (Capacitor); false in any browser. */
@@ -226,6 +231,13 @@ export const services: Services = {
   notifications: native
     ? new NativeNotifications(LocalNotifications, (key) => t(key))
     : new WebNotifications(import.meta.env.DEV),
+  games:
+    native && platform === 'ios'
+      ? new NativeGames(registerPlugin<GamesPlugin>('TippyGames'))
+      : new WebGames(
+          native || typeof window === 'undefined' ? 'unavailable' : readDebugParams().games,
+          DEBUG_TOOLS ? (line) => console.info(line) : null,
+        ),
 };
 
 /** Dev switch of the ad stub (debug panel). Not part of the services: native ads have none. */

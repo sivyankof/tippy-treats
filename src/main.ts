@@ -15,6 +15,7 @@ import { bindSaveFlush } from './state/page-lifecycle';
 import { followEffectsLevelDensity } from './game/app/follow-density';
 import { dropFramebufferHandlesOnLoss } from './game/app/lost-context-watch';
 import { bindNativeShell } from './game/app/native-shell';
+import { bindGames } from './game/games/games-actions';
 import { closeBootScreen, closeBootScreenOnFirstScreen } from './game/app/boot/boot-screen-close';
 import { bindPlayDays } from './game/app/play-days';
 import { bindNotifSchedule } from './game/app/notif-schedule';
@@ -123,6 +124,7 @@ async function start(): Promise<void> {
   bindLogicalResize(game, parent);
   refreshTextsOnFontLoad(game);
   bindNativeShell(game, services.appShell, services.audio, gameState);
+  bindGames();
   // The debug test notification (menu button) joins the plan; the store build never loads it.
   const notifTest =
     import.meta.env.DEV || import.meta.env.VITE_INTERNAL_BUILD === '1'

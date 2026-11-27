@@ -1035,6 +1035,11 @@ export const MENU = {
       lineSpacing: 8,
     },
   },
+  /**
+   * A button of the game services (docs/07-ui-screens.md, sections 2.2, 2.3 and 10): "Leaderboard"
+   * on the climb map, "Achievements" in the journal, "Daily leaderboard" on the daily screen.
+   */
+  gamesButton: { height: 110, radius: 38, shadowOffset: 9, font: 44, fill: 0x3f9be0, padX: 40 },
   /** The progress bar of missions (window and results); the look follows `xpBar`. */
   progressBar: { radius: 18, border: 3 },
   /** The missions window (docs/07-ui-screens.md, section 11). Positions are relative to a card centre. */

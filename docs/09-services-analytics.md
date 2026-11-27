@@ -19,6 +19,7 @@
 | Аналитика и сбои | `@capacitor-firebase/analytics`, `@capacitor-firebase/crashlytics` 8.6.0 (поставлены; работают, только если в проекте есть файл настроек Firebase) | M8 |
 | Запрос отслеживания (iOS) и форма согласия UMP | входят в плагин AdMob (`requestTrackingAuthorization`, `requestConsentInfo`, `showConsentForm`, `showPrivacyOptionsForm`) | M8 |
 | Системная просьба оценить игру | `@capacitor-community/in-app-review` 8.0.0 (поставлен, одобрен владельцем 2026-11-20; StoreKit и Play In-App Review) | M8 |
+| Таблицы рекордов и достижения (iOS) | свой плагин проекта `TippyGames` на системном GameKit, без npm-зависимостей (решение владельца, раздел 13); Android — этап 1.1-A | 1.1 |
 
 ## 2. Хранилище
 
@@ -204,6 +205,9 @@ export interface AnalyticsService {
 | `shop_open` | `source` | Открыт магазин |
 | `journal_open` | — | Открыт журнал пекаря |
 | `map_open` | — | Открыта карта подъёма |
+| `games_sign_in` | `source` (`board`/`achievements`/`settings`: откуда игрок попросил вход), `result` (`ok`/`fail`) | Итог входа в Game Center по нажатию игрока (тихий вход при запуске не пишется) |
+| `games_board_open` | `board` (`classic_height`/`daily_height`) | Открыта таблица рекордов Game Center |
+| `games_achievements_open` | — | Открыт список достижений Game Center |
 | `iap_start` | `product` | Нажата покупка |
 | `iap_result` | `product`, `result` | Итог покупки |
 | `currency_spend` | `currency`, `amount`, `item` | Трата |
@@ -265,6 +269,8 @@ export interface NotificationsService {
 - в разделе «Безопасность данных» в Google Play;
 - в файле манифеста конфиденциальности iOS `ios/App/App/PrivacyInfo.xcprivacy` (этап M8, лежит в ресурсах приложения). Каждый SDK приносит свой манифест со своими доменами отслеживания; манифест приложения — их объединение для отчёта о конфиденциальности App Store: `NSPrivacyTracking` = нет и пустой `NSPrivacyTrackingDomains` (ITMS-91064: при `true` нужен хотя бы один домен отслеживания, а запросы к таким доменам при отказе от ATT не проходят; сама игра доменов отслеживания не вызывает, а Google Mobile Ads в своём манифесте тоже ставит `false` и доменов не перечисляет, `11a-device-build.md`, раздел 2.1), собираемые данные: рекламный идентификатор (сторонняя реклама, аналитика; отслеживание), взаимодействие с продуктом и рекламные данные (аналитика, реклама), примерное местоположение по IP (реклама), сбои, производительность и прочая диагностика (работа приложения), история покупок (работа приложения, аналитика); ничего не привязано к личности, аккаунтов нет. Из API с обязательной причиной сама игра использует только `UserDefaults` (сохранение через `@capacitor/preferences`, причина `CA92.1`). Сверять таблицу с `11-release-store.md`, раздел 3, при каждом новом SDK.
 
+**Game Center (1.1).** Данные Game Center (вход игрока, счёт таблиц, проценты достижений) собирает Apple через свой системный GameKit; игра их никуда, кроме GameKit, не отправляет и обратно на свой сервер не получает (своего сервера нет). По правилам раздела «Конфиденциальность приложения» Apple за данные, которые собирает сама Apple, разработчик не отчитывается («You are not responsible for disclosing data collected by Apple», страница App Privacy Details), поэтому ярлыки конфиденциальности от Game Center не меняются. GameKit не входит в API с обязательной причиной, и `PrivacyInfo.xcprivacy` не меняется. События `games_*` (раздел 6) идут в Firebase вместе с остальными и личных данных не несут. В политику конфиденциальности на сайте добавляется строка о Game Center (действие владельца).
+
 Перечень в `11-release-store.md`.
 
 ## 12. Оценка игры и сведения об устройстве (M8)
@@ -272,4 +278,21 @@ export interface NotificationsService {
 **Оценка.** Сервис `services/rating/` (`types.ts`, `web.ts`, `native.ts`; выбор в `services/index.ts`): один метод `requestReview()`. В приложении он зовёт `InAppReview.requestReview()` из `@capacitor-community/in-app-review` 8.0.0 (системное окно: StoreKit на iOS, Play In-App Review на Android; системные квоты у них свои, окно может не показаться, приложение этого не узнаёт). Ошибка плагина глотается. В браузере заглушка: в разработке строка в консоль, в игровой сборке ничего. Своего окна, вопроса «Нравится ли игра?» и кнопки «Оцените нас» нет. Когда просить и как это записывается в сохранение (`review.*`) — `04-meta-retention.md`, раздел 10. Аналитики у просьбы пока нет.
 
 **Сведения об устройстве.** `AppShellService.deviceInfo(): Promise<{ model: string; os: string }>` и `AppShellService.appBuild(): Promise<string | null>` нужны одному месту: письму «Написать нам» (`07-ui-screens.md`, раздел 13). В браузере модель и ОС разбираются из `navigator.userAgent` (`services/app-shell/device-info.ts`, по возможности: «iPhone / iOS 18.1», «Pixel 7 / Android 15»). В приложении `deviceInfo` зовёт собственный плагин проекта `TippyDevice` (`registerPlugin('TippyDevice')`, метод `get(): Promise<{ model: string; osVersion: string; platform: string }>`; нативная часть на Swift и Java лежит в `ios/` и `android/`), при ошибке плагина падает обратно на разбор user agent. `appBuild` в приложении берёт номер сборки из `App.getInfo().build` (`@capacitor/app`), в браузере `null`. Идентификаторов устройства (IDFA, IDFV, серийных) плагин не читает: модель и версия системы.
+
+## 13. Игровые сервисы: Game Center (1.1)
+
+Правила таблиц и достижений — `04-meta-retention.md`, раздел 13; кнопки — `07-ui-screens.md`.
+
+**Сервис** `services/games/` (`types.ts`, `web.ts`, `native.ts`, `status-hub.ts`; выбор в `services/index.ts`): состояние `unavailable` / `signed_out` / `signed_in` и подписка на его смену, `start()` (тихо, без системных окон, повторный вызов ничего не делает), `signIn()` (по нажатию игрока, может открыть системное окно), `submitScore`, `showBoard`, `reportAchievements`, `showAchievements`. Ни один метод не бросает исключений: пропавший плагин или его отказ дают `unavailable`, сбой отправки при выполненном входе молча пропускается (таблица хранит лучшее, следующая отправка догонит). На iOS — `NativeGames` над плагином `TippyGames`, на Android в 1.1 и в браузере — `WebGames` в состоянии `unavailable` (в разработке режимы `?games=`, `08-architecture.md`, раздел 8). До `start()` состояние `unavailable`, поэтому кнопки появляются в окнах, открытых после тихого входа на Home.
+
+**Плагин `TippyGames`** (`ios/App/App/TippyGamesPlugin.swift`, регистрируется в `GameViewController.swift` рядом с `TippyDevice`; возможность Game Center записана в `ios/App/App/App.entitlements` (`com.apple.developer.game-center`) и в проект Xcode):
+- `start` ставит `GKLocalPlayer.local.authenticateHandler` и отвечает после первого ответа GameKit. Если GameKit отдаёт окно входа, оно не показывается, а запоминается до `signIn`; без окна и без входа (игрок раньше отказался) — `signed_out`, а `signIn` отвечает `false`; ошибка «не поддерживается» — `unavailable`. GameKit зовёт обработчик и позже (игрок вошёл через Настройки, пока игра была в фоне): плагин посылает событие `status`. Плавающая кнопка Game Center (`GKAccessPoint`) не показывается: она перекрыла бы HUD.
+- `signIn` показывает запомненное окно входа и отвечает, когда GameKit ответит снова (не дольше 180 с, затем «не вошёл»).
+- `submitScore` загружает таблицу (`GKLeaderboard.loadLeaderboards`) и отправляет счёт через её объект: для повторяющейся таблицы так счёт попадает в идущий период (документация Apple).
+- `reportAchievements` читает, что уже хранит Game Center (`GKAchievement.loadAchievements`), и отправляет только выросшие проценты (`GKAchievement.report`, баннер получения показывает система).
+- `showBoard` и `showAchievements`: на iOS 26 и новее через `GKAccessPoint.shared.trigger(…)` (окно `GKGameCenterViewController` там устарело), на iOS 15–25 через `GKGameCenterViewController`. Обработчик закрытия у `trigger` по известной ошибке GameKit может не прийти, поэтому плагин ни на что после показа не ждёт.
+
+**Отправка** — `game/games/games-sync.ts`: при переходе в `signed_in` и после каждого забега, дошедшего до сохранения (`gameState.onRunRecorded`), отправляются выросшие с прошлой отправки этого запуска счёт (`boardScores`, `newScores`) и проценты (`achievementPercents`, `risenAchievements`). Связка ставится один раз при запуске (`bindGames` в `main.ts`) и не ставится, пока действует отладочная подмена, которая пишет в сохранение (`overridesSave`: `?dayOffset=`, `?team=`, `?level=`). Тихий вход — `startGamesOnHome` после входа на Home, если `tutorial.firstRunDone`.
+
+**Пределы Game Center** (App Store Connect, справка Apple): до 100 достижений, до 100 очков на одно и 1000 на игру; картинка достижения 1024×1024 PNG или JPEG, RGB; до 100 таблиц без наборов; идентификаторы постоянные, до 100 знаков; очки и идентификаторы после выхода не меняются, вышедшее достижение нельзя удалить; повторяющаяся таблица задаётся началом (UTC) и длительностью; счёт — 64-битное целое. Таблицы и достижения проходят проверку Apple вместе с версией.
 

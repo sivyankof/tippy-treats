@@ -915,5 +915,13 @@
       "km": "{amount} km",
       "l": "{amount} L"
     }
+  },
+  "games": {
+    "board": "Leaderboard",
+    "dailyBoard": "Daily leaderboard",
+    "achievements": "Achievements",
+    "signIn": "Sign in to Game Center",
+    "signedIn": "Game Center: signed in",
+    "signInHint": "Sign in under Settings › Game Center"
   }
 }

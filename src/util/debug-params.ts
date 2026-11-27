@@ -15,6 +15,7 @@ import { isResultsDemoCase, type ResultsDemoCase } from '../data/debug/results-d
 import { UINT32_RANGE } from './math';
 import { DEBUG_TOOLS } from './build-kind';
 import { parseSafeInsets } from './boot/boot-screen';
+import { isWebGamesMode, type WebGamesMode } from '../services/games/web';
 
 export interface DebugParams {
   debug: boolean;
@@ -50,6 +51,8 @@ export interface DebugParams {
   place?: StartPlaceId;
   /** `?safe=59,34` stands in for the top and bottom safe-area insets (CSS px), to see the layout of a phone with an island in a browser. */
   safe?: { top: number; bottom: number };
+  /** `?games=signed_in|signed_out|refused|unavailable` plays Game Center in the browser (the stub is unavailable without it). */
+  games?: WebGamesMode;
 }
 
 const UINT32_MAX = UINT32_RANGE - 1;
@@ -126,6 +129,8 @@ export function parseDebugParams(search: string): DebugParams {
   if (isWeatherId(weather)) result.weather = weather;
   const place = params.get('place');
   if (isStartPlaceId(place)) result.place = place;
+  const games = params.get('games');
+  if (isWebGamesMode(games)) result.games = games;
   const safe = parseSafeInsets(params.get('safe'));
   if (safe) result.safe = safe;
   return result;
@@ -246,6 +251,16 @@ export function savesRun(params: DebugParams): boolean {
     params.level === undefined &&
     params.weather === undefined &&
     params.place === undefined
+  );
+}
+
+/**
+ * Whether a debug override that writes into the save is on (`?dayOffset=`, `?team=`, `?level=`):
+ * then nothing goes to Game Center, or a shifted day would reach the real daily board.
+ */
+export function overridesSave(params: DebugParams): boolean {
+  return (
+    params.dayOffset !== undefined || params.team !== undefined || params.level !== undefined
   );
 }
 

@@ -7,6 +7,8 @@ import { showRewarded } from '../economy/rewarded';
 import { DAILY_RUN } from '../run/run-request';
 import { openScreen, SCENES, startRunFrom } from '../app/scene-keys';
 import { DailyAttempts } from '../ui/menu/daily/daily-attempts';
+import { DailyBoard } from '../ui/menu/daily/daily-board';
+import { gamesShown } from '../games/games-actions';
 import { DailyDate } from '../ui/menu/daily/daily-date';
 import { DailyIntroLine, openDailyIntro } from '../ui/menu/daily/daily-intro';
 import { DailyLock } from '../ui/menu/daily/daily-lock';
@@ -77,6 +79,8 @@ export class DailyScene extends Phaser.Scene {
     } else {
       this.sections.push(new DailyLock(this));
     }
+    // The Game Center board of the day, only where the game services are.
+    if (gamesShown()) this.sections.push(new DailyBoard(this));
     this.refresh();
     this.showTime(info.msUntilNext);
 

@@ -30,6 +30,9 @@ import { openConfirmWindow } from './confirm-window';
 import { fitText, fitTextGroup, wrapWithoutLoneWord } from '../widgets/fit-text';
 import { openSupportMail, shortInstallId } from '../../../app/support-contact';
 import { createToggleRows, soundSettingRows, type ToggleRowSpec } from './setting-toggles';
+import { createLinkButton } from './link-button';
+import { createGamesRow } from './games-row';
+import { gamesShown } from '../../../games/games-actions';
 
 const cfg = MENU.settings;
 const NOTIFY_KINDS: readonly NotificationKind[] = ['gift', 'streak', 'daily', 'comeback'];
@@ -129,6 +132,9 @@ export function openSettingsWindow(scene: Phaser.Scene, handlers: SettingsHandle
       })
     : null;
   if (privacy) y += cfg.links.gap + cfg.links.height;
+  // Game Center: a row of the same kind right under them, only where the game services are.
+  const games = gamesShown() ? createGamesRow(scene, width, y + cfg.links.gap) : null;
+  if (games) y += cfg.links.gap + cfg.links.height;
   y += cfg.blockGap;
 
   // The credits line may wrap onto a second line; the lines under it move down by what it took.
@@ -168,6 +174,7 @@ export function openSettingsWindow(scene: Phaser.Scene, handlers: SettingsHandle
     result,
     ...links,
     ...(privacy ? [privacy] : []),
+    ...(games ? [games] : []),
     credits,
     ...info,
     reset,
@@ -264,27 +271,6 @@ function createSiteLinks(
     () => void openSupportMail(),
   );
   return [...links.map((link) => link.button), contact];
-}
-
-/** A full-width button of the link style (height, font and fill of the site links) with its top edge at `top`. */
-function createLinkButton(
-  scene: Phaser.Scene,
-  label: string,
-  width: number,
-  top: number,
-  onClick: () => void,
-): Phaser.GameObjects.Container {
-  const { height, radius, shadowOffset, font, fill } = cfg.links;
-  return createTextButton(scene, {
-    text: label,
-    font,
-    maxLabelWidth: width - radius * 2,
-    fill,
-    layout: { width, height, radius, shadowOffset },
-    keyPrefix: 'ui_settings_link_wide',
-    y: top + height / 2,
-    onClick,
-  }).button;
 }
 
 /** "Language" and the two buttons; the chosen one is lit and cannot be pressed again. */

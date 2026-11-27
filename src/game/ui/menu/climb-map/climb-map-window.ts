@@ -10,6 +10,9 @@ import { safeFrame } from '../../common/safe-frame';
 import { PopupWindow } from '../../style/dialog-window';
 import { faceOffsetY, VolumePlate } from '../../style/volume';
 import { fitText } from '../widgets/fit-text';
+import { createGamesButton } from '../widgets/games-button';
+import { gamesShown, openBoard } from '../../../games/games-actions';
+import { MENU } from '../../../../data/common/menu-layout';
 import { ribbonHeight, windowContentHeight } from './climb-map-layout';
 import { ClimbMapRibbon } from './climb-map-ribbon';
 import { logMapOpen } from './climb-map-telemetry';
@@ -34,7 +37,7 @@ export function openMapFromHome(
  * The climb map (docs/07-ui-screens.md, section 2.3): a tall window with the ribbon of bands, the
  * tower and the flags, and the goal row under it. Content, top to bottom: the ribbon, then rows
  * at the same gap (`CLIMB_MAP.goal.gap`); a row appended under the goal takes its height from the
- * ribbon (`ribbonHeight`). While the window is fully open (after its pop-in) `cover(true)` lets
+ * ribbon (`ribbonHeight`): "Leaderboard" where the game services are. While the window is fully open (after its pop-in) `cover(true)` lets
  * the screen under it hide; `cover(false)` comes when the window starts to go, or is gone.
  */
 export function openMapWindow(
@@ -84,10 +87,22 @@ export function openMapWindow(
     checkpoints: gameState.checkpoints,
     bestLap: gameState.data.bestLap,
   });
-  const height = ribbonHeight(contentHeight);
+  // "Leaderboard" under the goal, only where the game services are: the ribbon gives up its room.
+  const board = gamesShown();
+  const buttonHeight = MENU.gamesButton.height;
+  const height = ribbonHeight(contentHeight, board ? [buttonHeight] : []);
   ribbon = new ClimbMapRibbon(scene, { width: popup.innerWidth, height }, map);
   popup.content.add(ribbon.root);
-  popup.content.add(createGoalRow(scene, popup.innerWidth, height + cfg.goal.gap, goalText(map)));
+  const goalTop = height + cfg.goal.gap;
+  popup.content.add(createGoalRow(scene, popup.innerWidth, goalTop, goalText(map)));
+  if (board) {
+    const top = goalTop + cfg.goal.height + cfg.goal.gap;
+    popup.content.add(
+      createGamesButton(scene, t('games.board'), popup.innerWidth, top + buttonHeight / 2, () =>
+        openBoard(scene, 'classic_height'),
+      ),
+    );
+  }
   popup.setContentHeight(contentHeight);
   return popup;
 }
