@@ -20,6 +20,7 @@ import { freeRoom, pennantSide } from './pennant-side';
 import {
   appearView,
   passView,
+  lineHudAlpha,
   pennantOffset,
   pennantWaits,
   pennantX,
@@ -331,7 +332,7 @@ export class GoalLine {
     const [low, high] = flag.lineAlpha;
     this.line
       .setPosition(-GOAL_LINE.linePad, y)
-      .setAlpha((low + (high - low) * sway.pulse) * lineAlpha)
+      .setAlpha((low + (high - low) * sway.pulse) * lineAlpha * lineHudAlpha(y - scrollY))
       .setVisible(true);
     const pennantY = y + pennantOffset(y - scrollY, plate.height) + sway.bob * flag.bobDistance;
     // A swollen pennant grows towards the middle of the screen, so it never leaves the screen edge.
