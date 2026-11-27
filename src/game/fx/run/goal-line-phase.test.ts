@@ -4,8 +4,7 @@ import { CONTINUE_ANIM } from '../../../data/run/continue-anim';
 import { GOAL_LINE } from '../../../data/run/goal-line';
 import {
   appearView,
-  hudClearAlpha,
-  pennantSpot,
+  pennantOffset,
   passDurationMs,
   passView,
   pennantX,
@@ -94,36 +93,24 @@ describe('pennantX', () => {
   });
 });
 
-describe('hudClearAlpha', () => {
-  it('hides the pennant under the HUD and fades it in below', () => {
-    const { clearY, fadeBand } = GOAL_LINE.hud;
-    expect(hudClearAlpha(clearY - 50)).toBe(0);
-    expect(hudClearAlpha(clearY + fadeBand / 2)).toBeCloseTo(0.5);
-    expect(hudClearAlpha(clearY + fadeBand * 3)).toBe(1);
-  });
-});
-
-describe('pennantSpot', () => {
+describe('pennantOffset', () => {
   const h = GOAL_LINE.plate.height;
-  const reach = h / 2 + CONTINUE_ANIM.flag.lineHeight;
-  const { clearY, fadeBand } = GOAL_LINE.hud;
+  const above = -(h / 2 + CONTINUE_ANIM.flag.lineHeight);
+  const lowestTop = GOAL_LINE.hud.clearY + GOAL_LINE.hud.gap;
 
   it('stands above a line low on the screen', () => {
-    expect(pennantSpot(clearY + reach + h + fadeBand * 2, h)).toEqual({ offsetY: -reach, alpha: 1 });
+    expect(pennantOffset(lowestTop + h * 3, h)).toBe(above);
   });
 
-  it('hangs below a line just under the HUD, still shown', () => {
-    const spot = pennantSpot(clearY + fadeBand, h);
-    expect(spot.offsetY).toBe(reach);
-    expect(spot.alpha).toBe(1);
+  it('waits under the HUD while the line is high or off the screen', () => {
+    for (const lineY of [lowestTop, 0, -500]) {
+      expect(lineY + pennantOffset(lineY, h) - h / 2).toBe(lowestTop);
+    }
   });
 
-  it('slides over the line between the two places', () => {
-    const spot = pennantSpot(clearY + reach + h / 2 + fadeBand / 2, h);
-    expect(spot.offsetY).toBeCloseTo(0);
-  });
-
-  it('hides only when the line itself is under the HUD', () => {
-    expect(pennantSpot(clearY - reach - fadeBand, h).alpha).toBe(0);
+  it('moves without a jump where the two places meet', () => {
+    const meet = lowestTop + h - above - h / 2;
+    expect(pennantOffset(meet, h)).toBeCloseTo(above);
+    expect(pennantOffset(meet - 1, h)).toBeCloseTo(above + 1);
   });
 });

@@ -16,10 +16,10 @@ export const GOAL_LINE = {
   /** Dark rim around each dash (baked grey, tinted with the line) so a pale line reads on a pale wall, px and grey. */
   lineRim: { width: 2, color: 0x707070 },
   /**
-   * The pennant stays out from under the HUD: while its top is above `clearY` (screen y, under the
-   * next creature chip, the lowest plate at its side) it is hidden, and it fades in over `fadeBand` below it.
+   * The pennant stays out from under the HUD: its top never goes above `clearY` (screen y, under the
+   * next creature chip, the lowest plate at its side) plus `gap`; a higher goal is labelled there.
    */
-  hud: { clearY: HUD_LAYOUT.nextPlate.y + HUD_LAYOUT.nextPlate.height, fadeBand: 40 },
+  hud: { clearY: HUD_LAYOUT.nextPlate.y + HUD_LAYOUT.nextPlate.height, gap: 16 },
   /** Colour of the dashes and of the pennant by kind of goal. */
   colors: {
     record: { line: PALETTE.gold, plate: PALETTE.accent },

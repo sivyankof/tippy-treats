@@ -91,30 +91,14 @@ export function pennantX(side: 1 | -1, width: number): number {
     : flag.labelInset + width / 2;
 }
 
-/** Opacity of a pennant whose top is at screen y `top`: hidden above the HUD, fading in below it. */
-export function hudClearAlpha(top: number): number {
-  const { clearY, fadeBand } = GOAL_LINE.hud;
-  return clamp01((top - clearY) / fadeBand);
-}
-
-/** Where the pennant stands by a line at screen y `lineY`: the centre's offset from the line and its opacity. */
-export interface PennantSpot {
-  offsetY: number;
-  alpha: number;
-}
-
 /**
- * The pennant stands above its line; when there is no room above it under the HUD (the line high on
- * the screen, as at the start of a run) it slides over the line and hangs below it, so the line is
- * never left without its label. Only a line that is under the HUD itself hides the pennant.
+ * Offset of the pennant's centre from its line at screen y `lineY`. It stands above the line; when
+ * there is no room above it under the HUD (the goal is still high on the screen, or above it) the
+ * pennant waits just under the HUD, so the goal is always labelled, and rides on the line again
+ * once the line comes down to it. Continuous: no jump between the two places.
  */
-export function pennantSpot(lineY: number, plateHeight: number): PennantSpot {
-  const reach = plateHeight / 2 + flag.lineHeight;
-  const above = -reach;
-  const below = reach;
-  const towardsAbove = hudClearAlpha(lineY + above - plateHeight / 2);
-  return {
-    offsetY: below + (above - below) * towardsAbove,
-    alpha: hudClearAlpha(lineY + below - plateHeight / 2),
-  };
+export function pennantOffset(lineY: number, plateHeight: number): number {
+  const above = -(plateHeight / 2 + flag.lineHeight);
+  const lowestTop = GOAL_LINE.hud.clearY + GOAL_LINE.hud.gap;
+  return Math.max(above, lowestTop + plateHeight / 2 - lineY);
 }
