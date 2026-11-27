@@ -1,4 +1,5 @@
 import { PALETTE } from '../common/palette';
+import type { ZoneId } from '../zones/zones';
 
 /**
  * Numbers of the climb map (docs/07-ui-screens.md, section 2.3): the ribbon inside the window,
@@ -20,17 +21,19 @@ export const CLIMB_MAP = {
   /** The goal row under the ribbon, on a light card. */
   goal: { height: 120, gap: 24, font: 44 },
   /** The picture of a zone on the left of a band. */
-  picture: { size: 132, left: 18 },
+  picture: { size: 100, left: 12 },
   /** Texts of a band: the gap after the picture, the fonts and the rows (offsets from the middle of the band). */
   text: {
-    gap: 14,
+    gap: 10,
+    /** Free room kept between the texts and the tower. */
+    towerGap: 24,
     nameFont: 42,
     rangeFont: 34,
     lockedFont: 46,
     lockedColor: 0xe4dcf2,
-    rows: { plain: [-27, 27], lap: [-58, -4, 52] },
+    rows: { plain: [-27, 27], lap: [-80, -32, 46] },
     /** The label of the best lap: a star and a small text. */
-    bestLap: { font: 26, star: 44, gap: 8 },
+    bestLap: { font: 30, star: 40, gap: 8 },
   },
   /** The silhouette of a shut band: the colours of its sky and the tint of the picture. */
   locked: { sky: [0xc9c2d8, 0xa9a1bd], tint: 0x6e6a8c, pictureAlpha: 0.92 },
@@ -42,48 +45,68 @@ export const CLIMB_MAP = {
     lineShade: -0.35,
     topLight: 0.18,
     topLightHeight: 8,
+    /** The part of the zone sky (0 top, 1 bottom) a band shows, where the whole sky would look like its neighbour. */
+    range: { roof: [0.4, 1] } as Partial<Record<ZoneId, readonly [number, number]>>,
   },
   /** The tower column: a picture of 20 layers drawn at `texScale` times the size it shows. */
   tower: {
-    x: 98,
-    width: 116,
+    x: 14,
+    width: 148,
     texScale: 2,
+    /** Every drawn layer stands for this many real ones: fewer, thicker layers read better than a barcode. */
+    perLayer: 2,
     /** Layers of the column wobble in width by this many pixels (of the picture) so the tower is not a ruler. */
-    wobble: 12,
-    glazeShare: 0.46,
-    outline: 3.2,
+    wobble: 14,
+    glazeShare: 0.44,
+    /** The top cake has less glaze, so its face has room. */
+    topGlazeShare: 0.34,
+    outline: 4.4,
+    glazeOutline: 3,
     band: 0.14,
     shadowShade: -0.16,
-    dripWidth: 12,
-    dripLength: 11,
+    dripWidth: 20,
+    dripLength: 17,
+    poreSize: 3.6,
+    /** The soft dark strip down the right side of every layer. */
+    sideShadow: 0.14,
+    /** The face of the top cake, shares of the layer height. */
+    face: {
+      eyeY: 0,
+      eyeSpacing: 0.5,
+      eyeRadius: 0.07,
+      smileY: 0.2,
+      smileRadius: 0.15,
+      smileSpanDeg: 110,
+      smileThick: 0.045,
+    },
     /** Layer `i` takes the plain pair `i * pairStep` of the run (the step is prime to the pair count, so neighbours differ). */
     pairStep: 5,
     /** Free field round the drawing, pixels of the picture. */
-    pad: 6,
+    pad: 8,
   },
   /** A flag on a pole. */
   flag: {
-    poleWidth: 12,
+    poleWidth: 16,
     poleShade: -0.18,
-    knob: 22,
-    clothHeight: 64,
-    clothPadX: 20,
-    clothMaxWidth: 214,
+    knob: 32,
+    clothHeight: 72,
+    clothPadX: 16,
+    clothMaxWidth: 244,
     /** Free pole between the foot of the flag and the bottom of the cloth. */
-    rise: 20,
-    /** The pole stands this far from the tower on each side. */
-    towerGap: 10,
+    rise: 22,
+    /** Clear space between the edge of the tower and the edge of a pole, on both sides. */
+    towerGap: 16,
     /** Flags nearer than this (pixels, cloth to cloth) are moved up. */
-    markGap: 84,
-    font: 32,
-    checkpointFont: 30,
-    checkpointWidth: 92,
+    markGap: 96,
+    font: 34,
+    checkpointFont: 34,
+    checkpointWidth: 104,
     fills: {
       record: { fill: 0x7b4fd6, rim: PALETTE.gold },
       today: { fill: 0xff8a3d, rim: 0xffe2b8 },
       checkpoint: { fill: 0x3dc46b, rim: 0xd2f7de },
     },
-    footRadius: 13,
+    footRadius: 16,
     footColor: 0xb57a52,
   },
   /** The star of the best lap. */

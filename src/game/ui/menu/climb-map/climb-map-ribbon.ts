@@ -7,7 +7,9 @@ import { checkpointZoneTexture } from '../../../fx/zones/checkpoint-textures';
 import {
   CLIMB_BAR_KEY,
   CLIMB_STAR_KEY,
+  CLIMB_TOP_KEY,
   CLIMB_TOWER_KEY,
+  climbTopSize,
   bakeClimbFrame,
   climbSkyKey,
   climbTowerSize,
@@ -67,6 +69,8 @@ export class ClimbMapRibbon {
   private readonly fadings: Fading[] = [];
   private readonly flags: PlacedFlag[] = [];
   private readonly thumb: Phaser.GameObjects.NineSlice;
+  /** The cake with a face on top of the tower; null for a newcomer. */
+  private top: Phaser.GameObjects.Image | null = null;
   private readonly stripWidth: number;
   private readonly viewHeight: number;
   private readonly stripHeight: number;
@@ -109,6 +113,7 @@ export class ClimbMapRibbon {
     this.physics.jump(animated ? this.startOffset : this.endOffset);
 
     this.buildBands();
+    this.buildTop();
     this.buildFlags(animated);
     const frame = scene.add.image(
       0,
@@ -189,13 +194,23 @@ export class ClimbMapRibbon {
     for (const view of this.bands) this.strip.sendToBack(view.sky);
   }
 
+  /** The top cake with its face, above the columns. */
+  private buildTop(): void {
+    if (this.record <= 0) return;
+    this.top = this.scene.add
+      .image(cfg.tower.x, 0, CLIMB_TOP_KEY)
+      .setOrigin(0.5, 1)
+      .setScale(1 / cfg.tower.texScale);
+    this.strip.add(this.top);
+  }
+
   /** The picture of the zone, its name and layers (or the shut band's "? ? ?"), and the star of the best lap. */
   private buildLabel(band: ClimbBand, centreY: number, bestLap: number): void {
     const { picture, text } = cfg;
     const scene = this.scene;
     const left = -this.stripWidth / 2 + picture.left;
     const textX = left + picture.size + text.gap;
-    const room = cfg.tower.x - cfg.tower.width / 2 - 12 - textX;
+    const room = cfg.tower.x - cfg.tower.width / 2 - text.towerGap - textX;
     const rows = bestLap > 0 ? text.rows.lap : text.rows.plain;
     const holder = scene.add.container(0, centreY);
     const art = scene.add
@@ -224,7 +239,9 @@ export class ClimbMapRibbon {
         t('climbMap.bestLap'),
         text.bestLap.font,
       ).setOrigin(0, 0.5);
-      holder.add([star, fitText(label, room - text.bestLap.star - text.bestLap.gap)]);
+      const labelRoom = room - text.bestLap.star - text.bestLap.gap;
+      label.setWordWrapWidth(labelRoom);
+      holder.add([star, fitText(label, labelRoom)]);
     }
     this.strip.add(holder);
     const half = Math.max(picture.size / 2, ...rows.map((y) => Math.abs(y) + text.nameFont * 0.6));
@@ -237,8 +254,8 @@ export class ClimbMapRibbon {
     const towerLeft = cfg.tower.x - cfg.tower.width / 2;
     const towerRight = cfg.tower.x + cfg.tower.width / 2;
     const sides: Array<{ side: 1 | -1; kinds: readonly string[]; x: number }> = [
-      { side: 1, kinds: ['record', 'today'], x: towerRight + f.towerGap },
-      { side: -1, kinds: ['checkpoint'], x: towerLeft - f.towerGap },
+      { side: 1, kinds: ['record', 'today'], x: towerRight + f.towerGap + f.poleWidth / 2 },
+      { side: -1, kinds: ['checkpoint'], x: towerLeft - f.towerGap - f.poleWidth / 2 },
     ];
     for (const { side, kinds, x } of sides) {
       const marks = this.map.marks.filter((m) => kinds.includes(m.kind));
@@ -255,7 +272,7 @@ export class ClimbMapRibbon {
             : t(kind === 'record' ? 'climbMap.record' : 'climbMap.today', { n: mark.value });
         const room =
           side === 1
-            ? this.stripWidth / 2 - cfg.bar.inset - cfg.bar.width - x - 8
+            ? this.stripWidth / 2 - cfg.bar.inset - cfg.bar.width - 6 - (x + f.poleWidth / 2)
             : f.checkpointWidth;
         const flag = createFlag(
           this.scene,
@@ -329,11 +346,29 @@ export class ClimbMapRibbon {
         );
       }
     }
+    this.placeTop(view);
     for (const { holder, span } of this.fadings) {
       const alpha = edgeAlpha(span, view, cfg.anim.edgeFade);
       holder.setAlpha(alpha).setVisible(alpha > 0);
     }
     this.placeThumb();
+  }
+
+  /** The top cake stands on the tower, the height of one drawn layer under its top, cropped at the edges of the view. */
+  private placeTop(view: Span): void {
+    const { top } = this;
+    if (!top) return;
+    const ts = cfg.tower.texScale;
+    const size = climbTopSize();
+    const padDisp = climbTowerSize().pad / ts;
+    const bottom = heightToY(this.towerTop - cfg.tower.perLayer, this.map.totalLayers) + padDisp;
+    const imageTop = bottom - size.height / ts;
+    const shown = this.towerTop > 0 ? visibleSlice({ top: imageTop, bottom }, view) : null;
+    top.setVisible(shown !== null).setY(bottom);
+    if (!shown) return;
+    const whole = shown.top <= imageTop && shown.bottom >= bottom;
+    if (whole) top.setCrop();
+    else top.setCrop(0, (shown.top - imageTop) * ts, size.width, (shown.bottom - shown.top) * ts);
   }
 
   private placeThumb(): void {
