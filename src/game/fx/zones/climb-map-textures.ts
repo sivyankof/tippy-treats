@@ -64,6 +64,7 @@ function drawTowerLayer(
   i: number,
   bottom: number,
   face = false,
+  heightMul = 1,
 ): void {
   const t = cfg.tower;
   const size = climbTowerSize();
@@ -74,8 +75,8 @@ function drawTowerLayer(
   const half = (size.width - size.pad * 2) / 2 - grow - t.wobble;
   const rx = half + (wobbleAt(i, 1) - 0.5) * t.wobble;
   const cx = size.width / 2 + (wobbleAt(i, 2) - 0.5) * t.wobble * 0.5;
-  const ry = size.layer / 2 - 1;
-  const cy = bottom - size.layer / 2;
+  const ry = (size.layer * heightMul) / 2 - 1;
+  const cy = bottom - (size.layer * heightMul) / 2;
   drawTwoToneBody(g, roundShape(0.5), cx, cy, rx, ry, {
     base: sponge.cake,
     shadow: shade(sponge.cake, t.shadowShade),
@@ -89,7 +90,7 @@ function drawTowerLayer(
     fillPolygon(g, ellipsePoints(px, cy + ry * 0.62, t.poreSize * 1.4, t.poreSize, 0));
   }
   // The glaze: a cap along the top with a wavy lower edge and two drips, outline pass first.
-  const glazeH = size.layer * (face ? t.topGlazeShare : t.glazeShare);
+  const glazeH = size.layer * heightMul * (face ? t.topGlazeShare : t.glazeShare);
   const top = cy - ry;
   const edge = top + glazeH * 0.62;
   const bumps = 6;
@@ -133,7 +134,15 @@ function drawTowerLayer(
   g.fillStyle(0x000000, t.sideShadow);
   fillPolygon(g, roundRectPoints(cx + rx * 0.86, cy, rx * 0.14, ry * 0.92, rx * 0.14));
   if (face) {
-    drawFace(g, size.layer, cx, cy + ry * 0.42, t.face, shade(sponge.outline, -0.5));
+    const spread = (size.layer * heightMul * t.face.eyeSpacing) / 2;
+    g.fillStyle(0xff7a9a, 0.55);
+    for (const side of [-1, 1]) {
+      fillPolygon(
+        g,
+        ellipsePoints(cx + side * (spread + ry * 0.35), cy + ry * 0.62, ry * 0.2, ry * 0.12, 0),
+      );
+    }
+    drawFace(g, size.layer * heightMul, cx, cy + ry * 0.4, t.face, shade(sponge.outline, -0.5));
   }
   drawGlossMark(g, {
     x: cx - rx * 0.5,
@@ -158,7 +167,7 @@ function bakeTower(scene: Phaser.Scene): void {
 /** Size of the top cake picture: one layer of the column with the field round it. */
 export function climbTopSize(): { width: number; height: number } {
   const size = climbTowerSize();
-  return { width: size.width, height: size.layer + size.pad * 2 };
+  return { width: size.width, height: size.layer * cfg.tower.topHeight + size.pad * 2 };
 }
 
 /** The cake on top of the tower at the record height: one more layer, with a small face. */
@@ -166,7 +175,7 @@ function bakeTop(scene: Phaser.Scene): void {
   const size = climbTowerSize();
   const top = climbTopSize();
   bakeTexture(scene, CLIMB_TOP_KEY, top.width, top.height, (g) => {
-    drawTowerLayer(g, 0, top.height - size.pad, true);
+    drawTowerLayer(g, 0, top.height - size.pad, true, cfg.tower.topHeight);
   });
 }
 
@@ -189,8 +198,10 @@ function bakeSky(scene: Phaser.Scene, key: string, colorAt: (t: number) => numbe
 function bakeSkies(scene: Phaser.Scene): void {
   for (const zone of Object.keys(ZONE_SKY) as ZoneId[]) {
     const stops = ZONE_SKY[zone];
-    const [from, to] = cfg.sky.range[zone] ?? [0, 1];
-    bakeSky(scene, climbSkyKey(zone), (t) => gradientColorAt(stops, from + (to - from) * t));
+    const own = cfg.sky.own[zone];
+    bakeSky(scene, climbSkyKey(zone), (t) =>
+      own ? mixColor(own[0], own[1], t) : gradientColorAt(stops, t),
+    );
   }
   const [from, to] = cfg.locked.sky;
   bakeSky(scene, climbSkyKey('locked'), (t) => mixColor(from, to, t));
