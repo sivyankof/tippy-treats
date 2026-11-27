@@ -5,9 +5,9 @@ import type { AchievementReport, BoardId, GamesService, GamesStatus } from './ty
 export interface GamesPlugin {
   start(): Promise<{ status: string }>;
   signIn(): Promise<{ signedIn: boolean; status: string }>;
-  submitScore(options: { board: string; value: number }): Promise<void>;
+  submitScore(options: { board: string; value: number }): Promise<{ ok: boolean }>;
   showBoard(options: { board: string }): Promise<void>;
-  reportAchievements(options: { items: AchievementReport[] }): Promise<void>;
+  reportAchievements(options: { items: AchievementReport[] }): Promise<{ ok: boolean }>;
   showAchievements(): Promise<void>;
   addListener(
     event: 'status',
@@ -57,17 +57,17 @@ export class NativeGames implements GamesService {
     }
   }
 
-  submitScore(board: BoardId, value: number): Promise<void> {
-    return this.whenSignedIn(() => this.plugin.submitScore({ board, value }));
+  submitScore(board: BoardId, value: number): Promise<boolean> {
+    return this.delivered(() => this.plugin.submitScore({ board, value }));
   }
 
   showBoard(board: BoardId): Promise<void> {
     return this.whenSignedIn(() => this.plugin.showBoard({ board }));
   }
 
-  reportAchievements(items: readonly AchievementReport[]): Promise<void> {
-    if (items.length === 0) return Promise.resolve();
-    return this.whenSignedIn(() => this.plugin.reportAchievements({ items: [...items] }));
+  reportAchievements(items: readonly AchievementReport[]): Promise<boolean> {
+    if (items.length === 0) return Promise.resolve(true);
+    return this.delivered(() => this.plugin.reportAchievements({ items: [...items] }));
   }
 
   showAchievements(): Promise<void> {
@@ -90,7 +90,17 @@ export class NativeGames implements GamesService {
     try {
       await call();
     } catch {
-      // Game Center may be offline; the board keeps the best score, the next send catches up.
+      // A system window that fails to open is not the game's problem.
+    }
+  }
+
+  /** A send that says whether Game Center took it; any failure is `false`, never a throw. */
+  private async delivered(call: () => Promise<{ ok: boolean }>): Promise<boolean> {
+    if (this.hub.status !== 'signed_in') return false;
+    try {
+      return (await call()).ok === true;
+    } catch {
+      return false;
     }
   }
 }

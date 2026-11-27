@@ -99,7 +99,7 @@ export function openMapWindow(
     const top = goalTop + cfg.goal.height + cfg.goal.gap;
     popup.content.add(
       createGamesButton(scene, t('games.board'), popup.innerWidth, top + buttonHeight / 2, () =>
-        openBoard(scene, 'classic_height'),
+        popup.leaving ? Promise.resolve() : openBoard(scene, 'classic_height'),
       ),
     );
   }

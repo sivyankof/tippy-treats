@@ -8,6 +8,7 @@ import {
   LAND_H,
   climbStripWidth,
   landscapeKey,
+  lapLook,
   puffLayout,
   skyColorAt,
   type Puff,
@@ -77,7 +78,9 @@ export function bakeLandscape(
   shut: boolean,
 ): string {
   const key = landscapeKey(kind, lap, shut);
-  const band = bandOf(kind, lap);
+  // Laps share their picture with the lap nine below (`lapLook`): draw the look, not the lap.
+  const look = kind === 'lap' ? lapLook(lap) : lap;
+  const band = bandOf(kind, look);
   bakeTexture(scene, key, climbStripWidth(), LAND_H, (g) => {
     const ctx: LandCtx = {
       g,
@@ -89,7 +92,7 @@ export function bakeLandscape(
       g.fillStyle(L.fog.tone, 1);
       g.fillRect(0, 0, ctx.width, ctx.height);
     } else drawSky(ctx, band);
-    drawScene(ctx, kind, lap);
+    drawScene(ctx, kind, look);
     drawSign(ctx, kind, shut);
   });
   return key;
@@ -113,8 +116,9 @@ function puffRow(seed: number, width: number): Puff[] {
 function dips(row: readonly Puff[]): Puff[] {
   return row.slice(1).map((b, i) => {
     const a = row[i] as Puff;
-    const r = Math.min(a.r, b.r) * 0.58;
-    return { x: (a.x + b.x) / 2, y: Math.max(a.y, b.y) + Math.min(a.r, b.r) * 0.62, r };
+    const small = Math.min(a.r, b.r);
+    const { radius, drop } = L.fog.dip;
+    return { x: (a.x + b.x) / 2, y: Math.max(a.y, b.y) + small * drop, r: small * radius };
   });
 }
 
@@ -158,8 +162,8 @@ function bakeFogEdge(scene: Phaser.Scene, key: string, seed: number, tone: numbe
       g.fillEllipse(
         rng.range(0, width),
         rng.range(topBase, fringeBase),
-        rng.range(70, 160),
-        rng.range(26, 56),
+        rng.range(...f.patches.width),
+        rng.range(...f.patches.height),
       );
     }
     g.fillStyle(0xffffff, 0.5);

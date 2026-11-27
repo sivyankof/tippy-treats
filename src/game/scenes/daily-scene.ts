@@ -80,7 +80,7 @@ export class DailyScene extends Phaser.Scene {
       this.sections.push(new DailyLock(this));
     }
     // The Game Center board of the day, only where the game services are.
-    if (gamesShown()) this.sections.push(new DailyBoard(this));
+    if (gamesShown()) this.sections.push(new DailyBoard(this, () => this.leaving));
     this.refresh();
     this.showTime(info.msUntilNext);
 

@@ -55,9 +55,9 @@ export class WebGames implements GamesService {
     return Promise.resolve(this.hub.status === 'signed_in');
   }
 
-  submitScore(board: BoardId, value: number): Promise<void> {
+  submitScore(board: BoardId, value: number): Promise<boolean> {
     this.note(`submitScore ${board} ${value}`);
-    return Promise.resolve();
+    return Promise.resolve(this.hub.status === 'signed_in');
   }
 
   showBoard(board: BoardId): Promise<void> {
@@ -65,9 +65,9 @@ export class WebGames implements GamesService {
     return Promise.resolve();
   }
 
-  reportAchievements(items: readonly AchievementReport[]): Promise<void> {
+  reportAchievements(items: readonly AchievementReport[]): Promise<boolean> {
     this.note(`reportAchievements ${items.map((i) => `${i.id}=${i.percent}`).join(', ')}`);
-    return Promise.resolve();
+    return Promise.resolve(this.hub.status === 'signed_in');
   }
 
   showAchievements(): Promise<void> {

@@ -21,9 +21,19 @@ export function landscapeKind(band: ClimbBand): LandscapeKind {
   return band.kind === 'lap' ? 'lap' : (band.zone as Exclude<LandscapeKind, 'lap'>);
 }
 
-/** Cache key of a picture: a shut one is a different picture, and every lap has its own. */
+/**
+ * The look a lap of Space takes: the laps walk the nine planets in turn, and lap 10 looks like lap
+ * 1 again. Neighbouring laps always differ, while a strong player's map holds no more than nine
+ * lap pictures however high the record is.
+ */
+export function lapLook(lap: number): number {
+  const n = SPACE_PLANET_IDS.length;
+  return ((((Math.max(1, Math.floor(lap)) - 1) % n) + n) % n) + 1;
+}
+
+/** Cache key of a picture: a shut one is a different picture, and every look of a lap has its own. */
 export function landscapeKey(kind: LandscapeKind, lap: number, shut: boolean): string {
-  const name = kind === 'lap' ? `lap${lap}` : kind;
+  const name = kind === 'lap' ? `lap${lapLook(lap)}` : kind;
   return `climb_map_land_${name}${shut ? '_fog' : ''}`;
 }
 

@@ -6,7 +6,10 @@ import { GamesSync } from './games-sync';
 
 const DAY = '2026-11-28';
 
-function setup(mode: 'signed_in' | 'signed_out' | 'unavailable' | 'refused' = 'signed_in') {
+function setup(
+  mode: 'signed_in' | 'signed_out' | 'unavailable' | 'refused' = 'signed_in',
+  blocked = () => false,
+) {
   const games = new WebGames(mode);
   const submit = vi.spyOn(games, 'submitScore');
   const report = vi.spyOn(games, 'reportAchievements');
@@ -23,6 +26,7 @@ function setup(mode: 'signed_in' | 'signed_out' | 'unavailable' | 'refused' = 's
       return () => (runListener = () => undefined);
     },
     utcToday: () => DAY,
+    blocked,
   });
   return { games, submit, report, save, sync, run: () => runListener() };
 }
@@ -83,5 +87,46 @@ describe('GamesSync', () => {
     s.save.records.classicHeight = 60;
     s.run();
     expect(s.submit).not.toHaveBeenCalled();
+  });
+
+  it('tries a failed send again with the next push', async () => {
+    const t = setup();
+    await t.games.start();
+    t.submit.mockResolvedValueOnce(false).mockResolvedValueOnce(false);
+    t.report.mockResolvedValueOnce(false);
+    t.sync.bind();
+    await Promise.resolve();
+    await Promise.resolve();
+    t.submit.mockClear();
+    t.report.mockClear();
+    t.run();
+    expect(t.submit.mock.calls).toEqual([
+      ['classic_height', 25],
+      ['daily_height', 18],
+    ]);
+    expect(t.report).toHaveBeenCalledTimes(1);
+  });
+
+  it('sends everything again to an account that signs in after a sign-out', async () => {
+    const t = setup();
+    await t.games.start();
+    t.sync.bind();
+    await Promise.resolve();
+    t.submit.mockClear();
+    const hub = (t.games as unknown as { hub: { set(s: string): void } }).hub;
+    hub.set('signed_out');
+    hub.set('signed_in');
+    expect(t.submit).toHaveBeenCalledTimes(2);
+  });
+
+  it('sends nothing while blocked by a debug writer', async () => {
+    let blocked = false;
+    const t = setup('signed_in', () => blocked);
+    await t.games.start();
+    blocked = true;
+    t.sync.bind();
+    t.run();
+    expect(t.submit).not.toHaveBeenCalled();
+    expect(t.report).not.toHaveBeenCalled();
   });
 });

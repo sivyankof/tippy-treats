@@ -187,6 +187,7 @@ const KEEPS_CLEAN: Record<string, Case | 'private'> = {
   tutorialRunPending: { act: (s) => s.tutorialRunPending },
   hasHint: { act: (s) => s.hasHint('oven') },
   onRunRecorded: { act: (s) => s.onRunRecorded(() => undefined) },
+  debugTouched: { act: (s) => s.debugTouched },
   emit: 'private',
   tellRunListeners: 'private',
   noteRun: 'private',

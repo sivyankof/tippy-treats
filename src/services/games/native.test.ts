@@ -6,9 +6,9 @@ function plugin(over: Partial<GamesPlugin> = {}) {
   const p: GamesPlugin = {
     start: vi.fn(() => Promise.resolve({ status: 'signed_out' })),
     signIn: vi.fn(() => Promise.resolve({ signedIn: true, status: 'signed_in' })),
-    submitScore: vi.fn(() => Promise.resolve()),
+    submitScore: vi.fn(() => Promise.resolve({ ok: true })),
     showBoard: vi.fn(() => Promise.resolve()),
-    reportAchievements: vi.fn(() => Promise.resolve()),
+    reportAchievements: vi.fn(() => Promise.resolve({ ok: true })),
     showAchievements: vi.fn(() => Promise.resolve()),
     addListener: vi.fn((_event, listener) => {
       emit = listener;
@@ -47,7 +47,7 @@ describe('NativeGames', () => {
     await games.start();
     expect(games.status()).toBe('unavailable');
     expect(await games.signIn()).toBe(false);
-    await expect(games.submitScore('classic_height', 5)).resolves.toBeUndefined();
+    await expect(games.submitScore('classic_height', 5)).resolves.toBe(false);
     expect(p.submitScore).not.toHaveBeenCalled();
   });
 
@@ -71,14 +71,14 @@ describe('NativeGames', () => {
     });
     const games = new NativeGames(p);
     await games.start();
-    await games.submitScore('classic_height', 5);
+    expect(await games.submitScore('classic_height', 5)).toBe(false);
     expect(p.submitScore).not.toHaveBeenCalled();
     emit('signed_in');
-    await expect(games.submitScore('classic_height', 5)).resolves.toBeUndefined();
+    await expect(games.submitScore('classic_height', 5)).resolves.toBe(false);
     expect(p.submitScore).toHaveBeenCalledWith({ board: 'classic_height', value: 5 });
     await games.reportAchievements([]);
     expect(p.reportAchievements).not.toHaveBeenCalled();
-    await games.reportAchievements([{ id: 'runs_1', percent: 10 }]);
+    expect(await games.reportAchievements([{ id: 'runs_1', percent: 10 }])).toBe(true);
     expect(p.reportAchievements).toHaveBeenCalledWith({ items: [{ id: 'runs_1', percent: 10 }] });
     expect(games.status()).toBe('signed_in');
   });

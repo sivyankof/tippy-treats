@@ -7,6 +7,7 @@ import {
   firstShutBand,
   fogBoundary,
   landscapeKey,
+  lapLook,
   lapPlanet,
   planetSpot,
   puffLayout,
@@ -48,6 +49,16 @@ describe('landscapeKey', () => {
       landscapeKey('lap', 2, true),
     ];
     expect(new Set(keys).size).toBe(keys.length);
+  });
+});
+
+describe('lapLook', () => {
+  it('walks the nine planets so neighbours differ and the pictures stay at nine', () => {
+    const looks = Array.from({ length: 40 }, (_, i) => lapLook(i + 1));
+    expect(new Set(looks).size).toBe(SPACE_PLANET_IDS.length);
+    for (let i = 1; i < looks.length; i++) expect(looks[i]).not.toBe(looks[i - 1]);
+    expect(lapLook(10)).toBe(lapLook(1));
+    expect(landscapeKey('lap', 10, false)).toBe(landscapeKey('lap', 1, false));
   });
 });
 

@@ -27,11 +27,12 @@ export interface GamesService {
    * declined: then only Settings › Game Center helps).
    */
   signIn(): Promise<boolean>;
-  submitScore(board: BoardId, value: number): Promise<void>;
+  /** True when Game Center took the score; false when signed out or the send failed. */
+  submitScore(board: BoardId, value: number): Promise<boolean>;
   /** The system window of a leaderboard. */
   showBoard(board: BoardId): Promise<void>;
-  /** Progress of achievements; the platform keeps the highest it was told. */
-  reportAchievements(items: readonly AchievementReport[]): Promise<void>;
+  /** Progress of achievements; the platform keeps the highest it was told. True when it took them. */
+  reportAchievements(items: readonly AchievementReport[]): Promise<boolean>;
   /** The system window of the achievements. */
   showAchievements(): Promise<void>;
 }

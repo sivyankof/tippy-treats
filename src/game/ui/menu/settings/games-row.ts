@@ -5,6 +5,8 @@ import { services } from '../../../../services';
 import { ensureSignedIn } from '../../../games/games-actions';
 import { createOutlinedText } from '../../common/outlined-text';
 import { fitText } from '../widgets/fit-text';
+import { guardBusy } from '../widgets/games-button';
+import type { Button } from '../../common/button';
 import { createLinkButton } from './link-button';
 
 const cfg = MENU.settings;
@@ -24,16 +26,16 @@ export function createGamesRow(
     createOutlinedText(scene, 0, 0, t('games.signedIn'), cfg.links.font),
     width,
   );
-  let busy = false;
-  const button = createLinkButton(scene, t('games.signIn'), width, -cfg.links.height / 2, () => {
-    if (busy) return;
-    busy = true;
-    button.setEnabled(false);
-    void ensureSignedIn(scene, 'settings').finally(() => {
-      busy = false;
-      if (button.active) button.setEnabled(true);
-    });
-  });
+  const button: Button = createLinkButton(
+    scene,
+    t('games.signIn'),
+    width,
+    -cfg.links.height / 2,
+    guardBusy(
+      () => button,
+      () => ensureSignedIn(scene, 'settings'),
+    ),
+  );
   const row = scene.add.container(0, centre, [button, line]);
   const show = (): void => {
     const signedIn = services.games.status() === 'signed_in';

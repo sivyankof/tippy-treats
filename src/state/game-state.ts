@@ -127,6 +127,8 @@ export class GameState {
   /** UTC day the running daily attempt started on; memory only, a closed page forgets it. */
   private dailyAttemptDay = '';
   private readonly runListeners = new Set<(save: Readonly<Save>) => void>();
+  /** A debug writer changed the progress in this launch (memory only). */
+  private debugWritten = false;
 
   constructor(private readonly deps: GameStateDeps) {
     const properties = deps.telemetry ? new UserPropertySync(deps.telemetry) : null;
@@ -507,24 +509,33 @@ export class GameState {
     return runTeam(save.team, save.creatures, save.bakerLevel);
   }
 
+  /** A debug writer (level, runs, creatures) changed the progress in this launch: the game services get nothing then. */
+  get debugTouched(): boolean {
+    return this.debugWritten;
+  }
+
   /** Dev soak only: sets the baker level, which opens the shop, the upgrades and the team slots. */
   debugSetBakerLevel(level: number): void {
+    this.debugWritten = true;
     this.progress(withBakerLevel(this.store.save, level));
   }
 
   /** Dev soak only: sets the finished run count, so Home shows what it shows after the first runs. */
   debugSetRuns(runs: number): void {
+    this.debugWritten = true;
     const save = this.store.save;
     this.progress({ ...save, stats: { ...save.stats, runs: Math.max(0, Math.floor(runs)) } });
   }
 
   /** Dev only: baker level +1, level XP reset, no reward. */
   debugBumpBakerLevel(): void {
+    this.debugWritten = true;
     this.progress(withBakerLevelBumped(this.store.save));
   }
 
   /** Dev only: every creature +1 level up to the max; creatures not owned yet become level 1. */
   debugBumpCreatures(): void {
+    this.debugWritten = true;
     this.progress(withCreaturesBumped(this.store.save));
   }
 

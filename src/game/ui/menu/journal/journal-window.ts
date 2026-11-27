@@ -161,7 +161,8 @@ export function openJournalWindow(
         t('games.achievements'),
         popup.innerWidth,
         centre(index, buttonHeight),
-        () => openAchievements(scene),
+        // A tap during the close animation lets the journal close as asked.
+        () => (popup.leaving ? Promise.resolve() : openAchievements(scene)),
       ),
     );
   }

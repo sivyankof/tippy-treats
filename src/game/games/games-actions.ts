@@ -28,13 +28,19 @@ export function bindGames(): void {
     save: () => gameState.data,
     onRun: (listener) => gameState.onRunRecorded(listener),
     utcToday: () => utcDay(now()),
+    blocked: () => gameState.debugTouched,
   });
   sync.bind();
 }
 
-/** The quiet sign-in, on Home once the first run is over: nothing covers the first launch and the tutorial. */
+/**
+ * The quiet sign-in, on Home once the first run is over: nothing covers the first launch and the
+ * tutorial. Every visit of Home also sends what grew outside a run (a creature bought or raised).
+ */
 export function startGamesOnHome(): void {
-  if (gameState.data.tutorial.firstRunDone) void services.games.start();
+  if (!gameState.data.tutorial.firstRunDone) return;
+  void services.games.start();
+  sync?.push();
 }
 
 /** The buttons of the game services are there unless the services are unavailable. */

@@ -10,13 +10,14 @@ export class DailyBoard implements DailySection {
   readonly root: Phaser.GameObjects.Container;
   readonly height = MENU.gamesButton.height;
 
-  constructor(scene: Phaser.Scene) {
+  /** `leaving`: the screen is going; a tap then does nothing. */
+  constructor(scene: Phaser.Scene, leaving: () => boolean) {
     const button = createGamesButton(
       scene,
       t('games.dailyBoard'),
       MENU.daily.caption.width,
       this.height / 2,
-      () => openBoard(scene, 'daily_height'),
+      () => (leaving() ? Promise.resolve() : openBoard(scene, 'daily_height')),
     );
     this.root = scene.add.container(0, 0, [button]);
   }

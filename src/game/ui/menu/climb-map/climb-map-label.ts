@@ -58,8 +58,8 @@ export function createBandLabel(
     holder.add(fitInRoom(item, room));
   };
   if (shut) {
-    const x = left + sign.lockRoom + (rect.width - sign.lockRoom) / 2 - 6;
-    const room = rect.width - sign.lockRoom - 28;
+    const x = left + sign.lockRoom + (rect.width - sign.lockRoom) / 2 + sign.lockTextDx;
+    const room = rect.width - sign.lockRoom - sign.lockTextPad;
     add(
       createOutlinedText(
         scene,
@@ -98,18 +98,19 @@ export function createBandLabel(
   if (bestLap > 0) {
     const y = bottom + sign.bestLapGap;
     const bl = text.bestLap;
+    const starLeft = left + sign.bestLapInset;
     const star = scene.add
-      .image(left + 4 + bl.star / 2, y, CLIMB_STAR_KEY)
+      .image(starLeft + bl.star / 2, y, CLIMB_STAR_KEY)
       .setDisplaySize(bl.star, bl.star);
     const label = createOutlinedText(
       scene,
-      left + 4 + bl.star + bl.gap,
+      starLeft + bl.star + bl.gap,
       y,
       t('climbMap.bestLap'),
       bl.font,
     ).setOrigin(0, 0.5);
     const labelRoom =
-      cfg.tower.x - cfg.tower.width / 2 - cfg.text.towerGap - (left + 4 + bl.star + bl.gap);
+      cfg.tower.x - cfg.tower.width / 2 - cfg.text.towerGap - (starLeft + bl.star + bl.gap);
     holder.add([star, fitInRoom(label, labelRoom)]);
     bottom = y + bl.star / 2;
   }

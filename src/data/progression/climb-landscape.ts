@@ -120,6 +120,11 @@ export const CLIMB_LANDSCAPE = {
     textPad: { wood: 16, cloud: 44, star: 20 } as Record<SignKind, number>,
     /** The lock of a shut sign takes this much of its width on the left. */
     lockRoom: 84,
+    /** "? ? ?" of a shut sign: shifted this much from the middle of the room right of the lock, and kept this much narrower than that room. */
+    lockTextDx: -6,
+    lockTextPad: 28,
+    /** The star of the best lap stands this far right of the sign's left edge. */
+    bestLapInset: 4,
     /** The best lap label sits this far under the bottom of the sign. */
     bestLapGap: 38,
   },
@@ -145,7 +150,9 @@ export const CLIMB_LANDSCAPE = {
     dropEvery: 3,
     dropExtra: 22,
     /** Soft patches over the body so its tint is not flat: count, alpha. */
-    patches: { count: 12, alpha: 0.4, shade: 0.05 },
+    patches: { count: 12, alpha: 0.4, shade: 0.05, width: [70, 160] as const, height: [26, 56] as const },
+    /** The small puffs in the dips between two big ones: their radius and drop, shares of the smaller neighbour. */
+    dip: { radius: 0.58, drop: 0.62 },
     /** The slow breathing of the two edge pictures (full level only). */
     breath: { ms: 3600, ease: 'Sine.easeInOut', rise: 7, scale: 0.035, backPhase: 0.5 },
     lock: { size: 64 },

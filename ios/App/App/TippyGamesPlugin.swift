@@ -22,6 +22,10 @@ public class TippyGamesPlugin: CAPPlugin, CAPBridgedPlugin, GKGameCenterControll
 
     /// A sign-in the player started that GameKit has not answered after this long is taken as declined.
     private static let signInTimeout: TimeInterval = 180
+    /// How often a running sign-in looks whether its window was closed, and how long GameKit then
+    /// has to answer before the sign-in ends with what the player state says.
+    private static let signInPoll: TimeInterval = 1
+    private static let signInGrace: TimeInterval = 1.5
 
     /// `unavailable` until GameKit answers the first time, then `signed_out` or `signed_in`.
     private var status = "unavailable"
@@ -70,9 +74,24 @@ public class TippyGamesPlugin: CAPPlugin, CAPBridgedPlugin, GKGameCenterControll
             self.signInController = nil
             self.pendingSignIn = call
             host.present(controller, animated: true)
-            DispatchQueue.main.asyncAfter(deadline: .now() + Self.signInTimeout) {
-                guard self.pendingSignIn === call else { return }
+            self.watchSignIn(call, controller, since: Date())
+        }
+    }
+
+    /// Ends a sign-in whose window was closed without an answer of GameKit (some iOS versions do not
+    /// call the handler again on a swipe-down), or that ran too long.
+    private func watchSignIn(_ call: CAPPluginCall, _ controller: UIViewController, since start: Date) {
+        DispatchQueue.main.asyncAfter(deadline: .now() + Self.signInPoll) {
+            guard self.pendingSignIn === call else { return }
+            if Date().timeIntervalSince(start) > Self.signInTimeout {
                 self.finishSignIn(GKLocalPlayer.local.isAuthenticated)
+            } else if controller.presentingViewController == nil {
+                DispatchQueue.main.asyncAfter(deadline: .now() + Self.signInGrace) {
+                    guard self.pendingSignIn === call else { return }
+                    self.finishSignIn(GKLocalPlayer.local.isAuthenticated)
+                }
+            } else {
+                self.watchSignIn(call, controller, since: start)
             }
         }
     }
@@ -116,17 +135,17 @@ public class TippyGamesPlugin: CAPPlugin, CAPBridgedPlugin, GKGameCenterControll
     @objc func submitScore(_ call: CAPPluginCall) {
         guard let board = call.getString("board"), let value = call.getInt("value"),
               GKLocalPlayer.local.isAuthenticated else {
-            call.resolve()
+            call.resolve(["ok": false])
             return
         }
         // A recurring board takes the score through its loaded object, so it lands in the running occurrence.
         GKLeaderboard.loadLeaderboards(IDs: [board]) { boards, _ in
             guard let leaderboard = boards?.first else {
-                call.resolve()
+                call.resolve(["ok": false])
                 return
             }
-            leaderboard.submitScore(value, context: 0, player: GKLocalPlayer.local) { _ in
-                call.resolve()
+            leaderboard.submitScore(value, context: 0, player: GKLocalPlayer.local) { error in
+                call.resolve(["ok": error == nil])
             }
         }
     }
@@ -135,10 +154,15 @@ public class TippyGamesPlugin: CAPPlugin, CAPBridgedPlugin, GKGameCenterControll
     @objc func reportAchievements(_ call: CAPPluginCall) {
         let items = (call.getArray("items") as? [[String: Any]]) ?? []
         guard GKLocalPlayer.local.isAuthenticated, !items.isEmpty else {
-            call.resolve()
+            call.resolve(["ok": items.isEmpty])
             return
         }
-        GKAchievement.loadAchievements { existing, _ in
+        GKAchievement.loadAchievements { existing, loadError in
+            // Without the stored progress a lower percent could go out: nothing is sent then.
+            if loadError != nil {
+                call.resolve(["ok": false])
+                return
+            }
             var known: [String: Double] = [:]
             for achievement in existing ?? [] { known[achievement.identifier] = achievement.percentComplete }
             let risen: [GKAchievement] = items.compactMap { item in
@@ -151,10 +175,10 @@ public class TippyGamesPlugin: CAPPlugin, CAPBridgedPlugin, GKGameCenterControll
                 return achievement
             }
             if risen.isEmpty {
-                call.resolve()
+                call.resolve(["ok": true])
                 return
             }
-            GKAchievement.report(risen) { _ in call.resolve() }
+            GKAchievement.report(risen) { error in call.resolve(["ok": error == nil]) }
         }
     }
 

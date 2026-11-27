@@ -5,9 +5,23 @@ import { createTextButton, type Button } from '../../common/button';
 const cfg = MENU.gamesButton;
 
 /**
- * A wide button of the game services: `width` wide, its centre at (0, `y`). While its action runs
- * (a sign-in may take a while) it stays pressed-out, so a second tap does nothing.
+ * Runs `action` on a tap, one at a time: while it runs (a sign-in may take a while) the button is
+ * disabled and a second tap does nothing. Returns the tap handler.
  */
+export function guardBusy(button: () => Button, action: () => Promise<unknown>): () => void {
+  let busy = false;
+  return () => {
+    if (busy) return;
+    busy = true;
+    button().setEnabled(false);
+    void action().finally(() => {
+      busy = false;
+      if (button().active) button().setEnabled(true);
+    });
+  };
+}
+
+/** A wide button of the game services: `width` wide, its centre at (0, `y`), its action one at a time (`guardBusy`). */
 export function createGamesButton(
   scene: Phaser.Scene,
   label: string,
@@ -15,7 +29,6 @@ export function createGamesButton(
   y: number,
   action: () => Promise<void>,
 ): Button {
-  let busy = false;
   const button: Button = createTextButton(scene, {
     text: label,
     font: cfg.font,
@@ -24,15 +37,7 @@ export function createGamesButton(
     layout: { width, height: cfg.height, radius: cfg.radius, shadowOffset: cfg.shadowOffset },
     keyPrefix: `ui_games_${width}`,
     y,
-    onClick: () => {
-      if (busy) return;
-      busy = true;
-      button.setEnabled(false);
-      void action().finally(() => {
-        busy = false;
-        if (button.active) button.setEnabled(true);
-      });
-    },
+    onClick: guardBusy(() => button, action),
   }).button;
   return button;
 }
