@@ -804,5 +804,95 @@
       "3": "Waiting for a golden crust…",
       "4": "Smells like vanilla…"
     }
+  },
+  "journal": {
+    "title": "Baker's Journal",
+    "topTier": "Top tier",
+    "flies": {
+      "title": "Flies",
+      "rank": {
+        "0": "Fly Spotter",
+        "1": "Swatter",
+        "2": "Fly Terror",
+        "3": "Bug's Nightmare",
+        "4": "Swat Master",
+        "5": "Kitchen Legend"
+      },
+      "dish": {
+        "1": "{amount} flies: one full glass",
+        "2": "{amount} flies: a whole jar",
+        "3": "{amount} flies: a soup pot",
+        "4": "{amount} flies: a bucket",
+        "5": "{amount} flies: a bathtub"
+      },
+      "phrase": {
+        "0": "one={amount} fly. Just warming up the wrist|other={amount} flies. Just warming up the wrist",
+        "1": "one={amount} fly. The jam jar says thank you|other={amount} flies. The jam jar says thank you",
+        "2": "one={amount} fly. Picnics feel safe again|other={amount} flies. Picnics feel safe again",
+        "3": "one={amount} fly. Flies now take the long way round|other={amount} flies. Flies now take the long way round",
+        "4": "one={amount} fly. Baby flies hear scary stories about you|other={amount} flies. Baby flies hear scary stories about you",
+        "5": "one={amount} fly. Your swatter belongs in a museum|other={amount} flies. Your swatter belongs in a museum"
+      }
+    },
+    "rows": {
+      "layers": {
+        "label": "Layers",
+        "phrase": {
+          "0": "one={amount} layer. Enough for a family tea party|other={amount} layers. Enough for a family tea party",
+          "1": "one={amount} layer. The whole school gets dessert|other={amount} layers. The whole school gets dessert",
+          "2": "one={amount} layer. A whole village could have seconds|other={amount} layers. A whole village could have seconds",
+          "3": "one={amount} layer. Dessert for a packed stadium|other={amount} layers. Dessert for a packed stadium",
+          "4": "one={amount} layer. A whole city says thank you|other={amount} layers. A whole city says thank you"
+        }
+      },
+      "height": {
+        "label": "All towers stacked",
+        "phrase": {
+          "0": "All your towers stacked: {amount}. A giraffe still looks down on you",
+          "1": "Stacked up, your towers look down on a giraffe",
+          "2": "Stacked up, your towers could ring a ninth-floor doorbell",
+          "3": "Stacked up, your towers peek over the Eiffel Tower",
+          "4": "Stacked up, your towers poke through the clouds",
+          "5": "Stacked up, your towers leave Everest behind",
+          "6": "Stacked up, your towers reach orbit. Wave to the astronauts!"
+        }
+      },
+      "glaze": {
+        "label": "Glaze",
+        "phrase": {
+          "0": "{amount} L of glaze. Barely covers the bottom of a mug",
+          "1": "{amount} L of glaze. Enough to fill a kettle. Please don't",
+          "2": "{amount} L of glaze. A full bucket of sticky joy",
+          "3": "{amount} L of glaze. Time for a very sweet bath",
+          "4": "{amount} L of glaze. A paddling pool nobody wants to leave",
+          "5": "{amount} L of glaze. A whole tanker truck. Honk honk!"
+        }
+      },
+      "perfects": {
+        "label": "Perfect drops",
+        "phrase": {
+          "0": "one={amount} perfect drop. Steady does it|other={amount} perfect drops. Steady does it",
+          "1": "one={amount} perfect drop. Surgeons are taking notes|other={amount} perfect drops. Surgeons are taking notes",
+          "2": "one={amount} perfect drop. Your hand has never heard of wobbling|other={amount} perfect drops. Your hand has never heard of wobbling",
+          "3": "one={amount} perfect drop. Watchmakers want your secret|other={amount} perfect drops. Watchmakers want your secret",
+          "4": "one={amount} perfect drop. Is that a hand or a laser?|other={amount} perfect drops. Is that a hand or a laser?"
+        }
+      },
+      "runs": {
+        "label": "Towers toppled",
+        "phrase": {
+          "0": "one={amount} tower toppled. The floor is still spotless|other={amount} towers toppled. The floor is still spotless",
+          "1": "one={amount} tower toppled. The cat doesn't even flinch now|other={amount} towers toppled. The cat doesn't even flinch now",
+          "2": "one={amount} tower toppled. The cleaner knows you by name|other={amount} towers toppled. The cleaner knows you by name",
+          "3": "one={amount} tower toppled. The mop has asked for a holiday|other={amount} towers toppled. The mop has asked for a holiday",
+          "4": "one={amount} tower toppled. The neighbours downstairs bought earplugs|other={amount} towers toppled. The neighbours downstairs bought earplugs"
+        }
+      }
+    },
+    "unit": {
+      "m": "{amount} m",
+      "km": "{amount} km",
+      "l": "{amount} L"
+    }
   }
 }
