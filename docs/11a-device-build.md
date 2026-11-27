@@ -10,9 +10,9 @@
 | Проект Android | `android/` |
 | Настройки оболочки (идентификатор `app.tippytreats.game`, цвета заставки, системные панели) | `capacitor.config.json` |
 | Сборки в GitHub | вкладка **Actions** репозитория: процессы **iOS** и **Android**, запускаются только вручную |
-| Иконки (исходники) | `C:\Users\Artem\Documents\my-projects\tippy-treats-store-assets\` (вне репозитория), все размеры генерирует `scripts/native/make-icons.ps1` |
-| Ключ подписи Android | `C:\Users\Artem\Documents\my-projects\tippy-treats-store-assets\android-signing\` (вне репозитория) |
-| Готовые файлы (отладочный APK, подписанный AAB) | `C:\Users\Artem\Documents\my-projects\tippy-treats-store-assets\builds\` (вне репозитория) |
+| Иконки (исходники) | `../tippy-treats-store-assets/` (папка рядом с репозиторием, вне git), все размеры генерирует `scripts/native/make-icons.ps1` (Windows PowerShell 5.1 и `System.Drawing`: запускается только на Windows, нужен при смене иконок) |
+| Ключ подписи Android | `../tippy-treats-store-assets/android-signing/` (вне репозитория) |
+| Готовые файлы (отладочный APK, подписанный AAB) | `../tippy-treats-store-assets/builds/` (вне репозитория) |
 
 Версия, которую видит игрок, одна на всё: она выводится из `version` в `package.json` (сейчас 1.0.2, с 2026-11-25; правило отдаёт ровно «1.0.2»; в неё вошли этапы 1.0.2–1.0.4 дорожной карты, сборки этого выпуска называются 1.0.2) правилом `scripts/native/app-version.cjs`: нулевой третий номер отбрасывается (1.0.0 → **1.0**, 1.2.0 → 1.2, 1.0.3 → 1.0.3). Эту версию показывает окно настроек, она уходит в `CFBundleShortVersionString` iPhone (`MARKETING_VERSION`: его пишет `scripts/native/native-ids.cjs` в `ios/App/ids.local.xcconfig`, сборка в GitHub передаёт его и в `xcodebuild`) и в `versionName` Android (Gradle сам спрашивает `node scripts/native/app-version.cjs` при каждой сборке, поэтому версия не отстаёт от `package.json`). Предварительная версия (`1.1.0-rc.1`) в магазины не уходит: правило её не принимает, игра в разработке показывает её как есть.
 
@@ -39,15 +39,15 @@
 
 ### 1.2. Сертификат распространения из EAS (уже есть)
 
-Сертификат уже выгружен и стоит в секретах GitHub (раздел 1.4). По шагам выгрузки `credentials.json` (путь к `.p12` и его пароль) и папка `credentials/` кладутся в `C:\Users\Artem\Documents\keys\arcanum-eas\`. Понадобится снова после продления сертификата (август 2027); шаги выгрузки — `_archive/11a-history.md`, раздел «1.2».
+Сертификат уже выгружен и стоит в секретах GitHub (раздел 1.4). По шагам выгрузки `credentials.json` (путь к `.p12` и его пароль) и папка `credentials/` кладутся в `~/Documents/keys/arcanum-eas/`. Понадобится снова после продления сертификата (август 2027); шаги выгрузки — `_archive/11a-history.md`, раздел «1.2».
 
 ### 1.3. Профиль App Store для Tippy Treats (новый, один раз)
 
-Профиль «Tippy Treats App Store» лежит в `C:\Users\Artem\Documents\keys\Tippy_Treats_App_Store.mobileprovision` и действует до 27.08.2027. Выпустить его заново понадобится при продлении сертификата (август 2027); шаги — `_archive/11a-history.md`, раздел «1.3».
+Профиль «Tippy Treats App Store» лежит в `~/Documents/keys/Tippy_Treats_App_Store.mobileprovision` и действует до 27.08.2027. Выпустить его заново понадобится при продлении сертификата (август 2027); шаги — `_archive/11a-history.md`, раздел «1.3».
 
 ### 1.4. Семь секретов
 
-Готовые команды с точными путями и значениями сессия выдаёт в отчёте, их нужно выполнить в Git Bash. `gh` уже вошёл в аккаунт `sivyankof` с правом на репозиторий. Значение секрета нигде не печатается: файлы и пароль передаются в `gh` напрямую. Вид команд:
+Готовые команды с точными путями и значениями сессия выдаёт в отчёте, их нужно выполнить в терминале (на Windows — Git Bash). `gh` уже вошёл в аккаунт `sivyankof` с правом на репозиторий. Значение секрета нигде не печатается: файлы и пароль передаются в `gh` напрямую. Вид команд:
 
 | Секрет | Откуда |
 |---|---|
@@ -57,9 +57,9 @@
 | `APPLE_TEAM_ID` | `gh secret set APPLE_TEAM_ID --repo sivyankof/tippy-treats --body "<Team ID>"` |
 | `APPLE_DIST_CERT_P12` | `.p12` из `credentials.json` в base64 (команда в отчёте) |
 | `APPLE_DIST_CERT_PASSWORD` | пароль из `credentials.json` (команда в отчёте) |
-| `APPLE_PROFILE` | `base64 -w0 <путь к .mobileprovision> \| gh secret set APPLE_PROFILE --repo sivyankof/tippy-treats` |
+| `APPLE_PROFILE` | `base64 < <путь к .mobileprovision> \| tr -d '\n' \| gh secret set APPLE_PROFILE --repo sivyankof/tippy-treats` |
 
-Без `gh` то же делается на сайте: репозиторий → **Settings** → **Secrets and variables** → **Actions** → **New repository secret**, имя в **Name**, значение в **Secret**, **Add secret** (для `.p12` и профиля значение — их base64, его даёт `base64 -w0 <файл>` в Git Bash).
+Без `gh` то же делается на сайте: репозиторий → **Settings** → **Secrets and variables** → **Actions** → **New repository secret**, имя в **Name**, значение в **Secret**, **Add secret** (для `.p12` и профиля значение — их base64, его даёт `base64 < <файл> \| tr -d '\n'`).
 
 Проверка: `gh secret list --repo sivyankof/tippy-treats` показывает семь имён (значения GitHub не показывает никому). После этого напишите в сессию «секреты внесены»: первую сборку в TestFlight запустит сессия разработки.
 
@@ -91,7 +91,7 @@
 
 ### 3.2. Памятка другу с Android-телефоном
 
-Перешлите ему файл `tippy-treats-<версия>-<сборка>-debug.apk` из папки `tippy-treats-store-assets\builds\` (Telegram, WhatsApp, почта, Google Диск) и текст ниже.
+Перешлите ему файл `tippy-treats-<версия>-<сборка>-debug.apk` из папки `../tippy-treats-store-assets/builds/` (Telegram, WhatsApp, почта, Google Диск) и текст ниже.
 
 > **Как поставить.** Открой присланный файл `.apk` на телефоне. Android спросит разрешение на установку из этого приложения (Telegram, Файлы, Chrome — откуда открываешь): нажми **Настройки** → включи **Разрешить из этого источника** → вернись назад → **Установить**. Если Google Play Защита скажет, что приложение неизвестно, нажми **Подробнее** → **Всё равно установить**. Это отладочная сборка игры, не из магазина.
 >
@@ -109,17 +109,13 @@
 
 Подписанный пакет делается только на вашем компьютере: в публичном репозитории его нельзя выкладывать файлом.
 
-**Инструменты** (уже стоят, сессия 8, 2026-11-20). Android Studio не нужна: в `C:\Users\Artem\android-tools\` лежат переносные копии без установщиков и без правки системных настроек:
-- `jdk-21.0.13+9` — JDK 21 Eclipse Temurin (Adoptium), архив `OpenJDK21U-jdk_x64_windows_hotspot_21.0.13_9.zip`, SHA-256 `a4dbaa05…832004f9` совпал с api.adoptium.net;
-- `sdk` — инструменты командной строки Android SDK 23.0 (`commandlinetools-win-16111833_latest.zip` с dl.google.com, SHA-1 `57d04f2d…8a07e830` совпал с `repository2-3.xml` Google), в них поставлены `platforms/android-36`, `build-tools/35.0.0`, `platform-tools`.
-
-Удалить их — просто удалить папку. Переменные среды не нужны: скрипт сборки находит папку сам (другое место — переменная `TIPPY_ANDROID_TOOLS` или `JAVA_HOME` и `ANDROID_HOME`).
+**Инструменты.** Android Studio не нужна. Нужны JDK 21 и инструменты командной строки Android SDK с пакетами `platforms/android-36`, `build-tools/35.0.0`, `platform-tools`. Скрипт сборки ищет их в папке `~/android-tools/` (`jdk-21*` и `sdk`); другое место задаётся переменной `TIPPY_ANDROID_TOOLS` или парой `JAVA_HOME` и `ANDROID_HOME`. Архивы брать с api.adoptium.net (Eclipse Temurin) и dl.google.com, контрольные суммы сверять с сайтом. На новом компьютере папку нужно собрать заново: копии с другой системы не подходят.
 
 **Ключ подписи** (один раз; его создаёт сессия разработки, когда вы назовёте пароль):
 ```
 TIPPY_KEY_PASSWORD='ваш пароль' bash scripts/native/make-upload-key.sh
 ```
-Скрипт создаёт `android-signing\tippy-upload.p12` (ключ загрузки, псевдоним `upload`, на 30 лет) и локальный файл `android\keystore.properties`, которого нет в git. Пароль храните сами (менеджер паролей). **Ключ и пароль нельзя терять**: с Google Play App Signing потерянный ключ загрузки можно заменить только через поддержку Google, это неделя-две без обновлений. Сделайте копию папки `android-signing` на другой диск.
+Скрипт создаёт `android-signing/tippy-upload.p12` (ключ загрузки, псевдоним `upload`, на 30 лет) и локальный файл `android/keystore.properties`, которого нет в git (в нём `storeFile` — полный путь к файлу ключа на этом компьютере; после переноса проекта на другой компьютер путь поправить). Пароль храните сами (менеджер паролей). **Ключ и пароль нельзя терять**: с Google Play App Signing потерянный ключ загрузки можно заменить только через поддержку Google, это неделя-две без обновлений. Сделайте копию папки `android-signing` на другой диск.
 
 Пароль — только латиница, цифры и знаки ASCII: Java (Gradle, `jarsigner`) не принимает пароль хранилища PKCS12 с другими буквами, а OpenSSL в Git Bash на Windows читает кириллицу в кодировке 1251. Скрипт такой пароль отклоняет.
 
@@ -127,9 +123,9 @@ TIPPY_KEY_PASSWORD='ваш пароль' bash scripts/native/make-upload-key.sh
 - `tippy-upload.p12` — исходный файл, не тронут; открывается только `openssl` и прежним паролем (он же записан в `keystore.properties` строкой `originalStorePassword`);
 - `tippy-upload-v2.p12` — тот же ключ и тот же сертификат (SHA-256 `FA:B8:02:34:…:8C:9E:F7:A1`, как у `tippy-upload-certificate.pem`) под новым паролем из латиницы и цифр (`storePassword` в `keystore.properties`). Им подписываются сборки.
 
-Перенесите новый пароль из `android\keystore.properties` в менеджер паролей и сделайте копию папки `android-signing` заново: в ней теперь два файла ключа.
+Перенесите новый пароль из `android/keystore.properties` в менеджер паролей и сделайте копию папки `android-signing` заново: в ней теперь два файла ключа.
 
-**Сборка AAB** (Git Bash в папке проекта; номер сборки — первый параметр):
+**Сборка AAB** (терминал в папке проекта, на Windows — Git Bash; номер сборки — первый параметр):
 ```
 bash scripts/native/build-aab.sh 4            # внутренняя сборка (отладочное меню)
 bash scripts/native/build-aab.sh 4 --store    # сборка для игроков (M9)
@@ -140,7 +136,7 @@ bash scripts/native/build-aab.sh 4 --store    # сборка для игроко
 
 Ориентация (M8, 2026-11-20): игра только вертикальная (`screenOrientation="portrait"`), из-за этого Google Play сам добавлял требование `android.hardware.screen.portrait` и предупреждал при отправке, что приложение недоступно устройствам без вертикального экрана. В манифесте оно объявлено необязательным (`<uses-feature android:name="android.hardware.screen.portrait" android:required="false" />`), предупреждения больше нет; на телефонах игра по-прежнему только вертикальная.
 
-Скрипт собирает веб-часть, переносит её в `android/`, собирает подписанный пакет, кладёт его в `tippy-treats-store-assets\builds\tippy-treats-<версия>-<номер>-<internal|store>.aab` и проверяет подпись (`jarsigner -verify`: «jar verified», подписант `CN=Tippy Treats`, отпечаток SHA-256 — тот же, что у `tippy-upload-certificate.pem`). Каждый следующий AAB для Google Play — с номером больше всех загруженных раньше: Play не примет номер, который уже был.
+Скрипт собирает веб-часть, переносит её в `android/`, собирает подписанный пакет, кладёт его в `../tippy-treats-store-assets/builds/tippy-treats-<версия>-<номер>-<internal|store>.aab` и проверяет подпись (`jarsigner -verify`: «jar verified», подписант `CN=Tippy Treats`, отпечаток SHA-256 — тот же, что у `tippy-upload-certificate.pem`). Каждый следующий AAB для Google Play — с номером больше всех загруженных раньше: Play не примет номер, который уже был.
 
 **Загрузка во внутреннее тестирование:**
 1. https://play.google.com/console → Tippy Treats → слева **Тестирование** (Testing) → **Внутреннее тестирование** (Internal testing).
@@ -237,12 +233,12 @@ bash scripts/native/build-aab.sh 4 --store    # сборка для игроко
 
 Идентификатор приложения AdMob попадает в `Info.plist` и манифест Android не напрямую: `npm run app:sync` запускает `scripts/native/native-ids.cjs`, который пишет его из `.env` в `ios/App/ids.local.xcconfig` и `android/ids.local.properties` (оба файла не в git). Внутренняя сборка (`app:sync:internal`) всегда получает тестовые идентификаторы Google, даже если в `.env` есть настоящие: нажимать на свою боевую рекламу нельзя. Скрипт печатает только, откуда взят идентификатор (`google sample` или `.env`), но не сам идентификатор.
 
-**В GitHub** (сборки iOS и Android в Actions) — те же значения секретами репозитория, все необязательны: `ADMOB_APP_ID_IOS`, `ADMOB_REWARDED_ID_IOS`, `ADMOB_INTERSTITIAL_ID_IOS`, `REVENUECAT_API_KEY_IOS`, `FIREBASE_IOS_PLIST` (base64 файла `GoogleService-Info.plist`), и то же для Android: `ADMOB_APP_ID_ANDROID`, `ADMOB_REWARDED_ID_ANDROID`, `ADMOB_INTERSTITIAL_ID_ANDROID`, `REVENUECAT_API_KEY_ANDROID`, `FIREBASE_ANDROID_JSON` (base64 файла `google-services.json`). Команды Git Bash (значение не печатается, файл передаётся напрямую):
+**В GitHub** (сборки iOS и Android в Actions) — те же значения секретами репозитория, все необязательны: `ADMOB_APP_ID_IOS`, `ADMOB_REWARDED_ID_IOS`, `ADMOB_INTERSTITIAL_ID_IOS`, `REVENUECAT_API_KEY_IOS`, `FIREBASE_IOS_PLIST` (base64 файла `GoogleService-Info.plist`), и то же для Android: `ADMOB_APP_ID_ANDROID`, `ADMOB_REWARDED_ID_ANDROID`, `ADMOB_INTERSTITIAL_ID_ANDROID`, `REVENUECAT_API_KEY_ANDROID`, `FIREBASE_ANDROID_JSON` (base64 файла `google-services.json`). Команды (значение не печатается, файл передаётся напрямую):
 
 ```
 gh secret set ADMOB_APP_ID_IOS --repo sivyankof/tippy-treats          # спросит значение, вставьте его
-base64 -w0 ios/App/App/GoogleService-Info.plist | gh secret set FIREBASE_IOS_PLIST --repo sivyankof/tippy-treats
-base64 -w0 android/app/google-services.json | gh secret set FIREBASE_ANDROID_JSON --repo sivyankof/tippy-treats
+base64 < ios/App/App/GoogleService-Info.plist | tr -d '\n' | gh secret set FIREBASE_IOS_PLIST --repo sivyankof/tippy-treats
+base64 < android/app/google-services.json | tr -d '\n' | gh secret set FIREBASE_ANDROID_JSON --repo sivyankof/tippy-treats
 ```
 
 Шаг сборки `scripts/native/ci-keys.sh` кладёт их в `.env` и в папки проектов перед `npm run app:sync` и печатает только имена найденных и недостающих секретов.
@@ -281,14 +277,14 @@ base64 -w0 android/app/google-services.json | gh secret set FIREBASE_ANDROID_JSO
 
 ### 6.5. Сборки 1.0.1
 
-Версия 1.0.1 (раздел 0), номера 11 и 12 одинаковые для обеих платформ (в Google Play выше всех прежних, последний был 8). Журнал GitHub обеих iOS-сборок: «Keys of this build: ADMOB_APP_ID_IOS ADMOB_REWARDED_ID_IOS ADMOB_INTERSTITIAL_ID_IOS REVENUECAT_API_KEY_IOS FIREBASE_IOS_PLIST», «Not set: none», `privacy manifests: ok`. Android: подпись ключом загрузки (`CN=Tippy Treats`, SHA-256 `FA:B8:02:34:…:8C:9E:F7:A1`), `versionName` 1.0.1 в манифесте пакета. iOS 1.0.1 (12) отправлена в Apple 2026-11-22 без проверки на телефоне (решение владельца), выпуск автоматический после одобрения. Android 1.0.1 (12) в Google Play не загружается до окончания закрытого теста (около 5 декабря); до выхода в рабочую версию вписать адрес сайта в карточку Google Play.
+Версия 1.0.1 (раздел 0), номера 11 и 12 одинаковые для обеих платформ (в Google Play выше всех прежних, последний был 8). Журнал GitHub обеих iOS-сборок: «Keys of this build: ADMOB_APP_ID_IOS ADMOB_REWARDED_ID_IOS ADMOB_INTERSTITIAL_ID_IOS REVENUECAT_API_KEY_IOS FIREBASE_IOS_PLIST», «Not set: none», `privacy manifests: ok`. Android: подпись ключом загрузки (`CN=Tippy Treats`, SHA-256 `FA:B8:02:34:…:8C:9E:F7:A1`), `versionName` 1.0.1 в манифесте пакета. iOS 1.0.1 (12) отправлена в Apple 2026-11-22 без проверки на телефоне (решение владельца) и вышла в App Store; её сменила 1.0.2 (раздел 6.6). Android 1.0.1 в Google Play не загружалась: после закрытого теста (около 5 декабря) туда идёт сразу 1.0.2; до выхода в рабочую версию вписать адрес сайта в карточку Google Play.
 
 | Сборка | Где | Что внутри |
 |---|---|---|
 | iOS 1.0.1 (11), внутренняя | TestFlight (запуск 44995347323) | отладочное меню; тестовая реклама Google; RevenueCat; Firebase |
-| iOS 1.0.1 (12), выпускная | TestFlight (запуск 44995354502) | без отладочного меню; идентификаторы AdMob из секретов; RevenueCat; Firebase. Её отправлять на проверку |
-| Android 1.0.1 (11), внутренняя | `tippy-treats-store-assets\builds\tippy-treats-1.0.1-11-internal.aab` | отладочное меню; тестовые идентификаторы Google; RevenueCat; Firebase |
-| Android 1.0.1 (12), выпускная | `tippy-treats-store-assets\builds\tippy-treats-1.0.1-12-store.aab` | без отладочного меню; идентификатор приложения и блоки AdMob из `.env`; RevenueCat; Firebase |
+| iOS 1.0.1 (12), выпускная | TestFlight (запуск 44995354502) | без отладочного меню; идентификаторы AdMob из секретов; RevenueCat; Firebase. Вышла в App Store |
+| Android 1.0.1 (11), внутренняя | `../tippy-treats-store-assets/builds/tippy-treats-1.0.1-11-internal.aab` | отладочное меню; тестовые идентификаторы Google; RevenueCat; Firebase |
+| Android 1.0.1 (12), выпускная | `../tippy-treats-store-assets/builds/tippy-treats-1.0.1-12-store.aab` | без отладочного меню; идентификатор приложения и блоки AdMob из `.env`; RevenueCat; Firebase |
 
 Нажимать на рекламу в выпускной сборке нельзя (боевая реклама, блокировка AdMob); рекламу проверять во внутренней.
 
@@ -296,11 +292,11 @@ base64 -w0 android/app/google-services.json | gh secret set FIREBASE_ANDROID_JSO
 
 ### 6.6. Сборки 1.0.2
 
-Версия 1.0.2 (раздел 0), номера 15 и 16 одинаковые для обеих платформ. Журнал GitHub обеих iOS-сборок: «Keys of this build: ADMOB_APP_ID_IOS ADMOB_REWARDED_ID_IOS ADMOB_INTERSTITIAL_ID_IOS REVENUECAT_API_KEY_IOS FIREBASE_IOS_PLIST», «Not set (sample ad ids or the stub instead): none», `privacy manifests: ok` (23 манифеста, у всех `NSPrivacyTracking=false` без доменов). Android: подпись ключом загрузки (`CN=Tippy Treats`, SHA-256 `FA:B8:02:34:…:8C:9E:F7:A1`), в манифесте пакета `versionName` 1.0.2, `versionCode` 15 и 16, `targetSdkVersion` 36; во внутренней сборке есть отладочное меню, в выпускной его нет. iOS-сборки в TestFlight, на проверку Apple не отправлены. Android 1.0.2 в Google Play не загружается до окончания закрытого теста (около 5 декабря).
+Версия 1.0.2 (раздел 0), номера 15 и 16 одинаковые для обеих платформ. Журнал GitHub обеих iOS-сборок: «Keys of this build: ADMOB_APP_ID_IOS ADMOB_REWARDED_ID_IOS ADMOB_INTERSTITIAL_ID_IOS REVENUECAT_API_KEY_IOS FIREBASE_IOS_PLIST», «Not set (sample ad ids or the stub instead): none», `privacy manifests: ok` (23 манифеста, у всех `NSPrivacyTracking=false` без доменов). Android: подпись ключом загрузки (`CN=Tippy Treats`, SHA-256 `FA:B8:02:34:…:8C:9E:F7:A1`), в манифесте пакета `versionName` 1.0.2, `versionCode` 15 и 16, `targetSdkVersion` 36; во внутренней сборке есть отладочное меню, в выпускной его нет. iOS 1.0.2 (16) отправлена в Apple 2026-11-25 и в тот же день вышла в App Store (выпуск автоматический после одобрения; состояние версии в App Store Connect — «Готово к распространению»). Android 1.0.2 в Google Play не загружается до окончания закрытого теста (около 5 декабря); страницы игры в Google Play для всех пока нет.
 
 | Сборка | Где | Что внутри |
 |---|---|---|
 | iOS 1.0.2 (15), внутренняя | TestFlight (запуск 45604806859) | отладочное меню; тестовая реклама Google; RevenueCat; Firebase |
-| iOS 1.0.2 (16), выпускная | TestFlight (запуск 45606348401) | без отладочного меню; идентификаторы AdMob из секретов; RevenueCat; Firebase. Её отправлять на проверку |
-| Android 1.0.2 (15), внутренняя | `tippy-treats-store-assets\builds\tippy-treats-1.0.2-15-internal.aab` | отладочное меню; тестовые идентификаторы Google; RevenueCat; Firebase |
-| Android 1.0.2 (16), выпускная | `tippy-treats-store-assets\builds\tippy-treats-1.0.2-16-store.aab` | без отладочного меню; идентификатор приложения и блоки AdMob из `.env`; RevenueCat; Firebase |
+| iOS 1.0.2 (16), выпускная | TestFlight (запуск 45606348401) | без отладочного меню; идентификаторы AdMob из секретов; RevenueCat; Firebase. Она в App Store |
+| Android 1.0.2 (15), внутренняя | `../tippy-treats-store-assets/builds/tippy-treats-1.0.2-15-internal.aab` | отладочное меню; тестовые идентификаторы Google; RevenueCat; Firebase |
+| Android 1.0.2 (16), выпускная | `../tippy-treats-store-assets/builds/tippy-treats-1.0.2-16-store.aab` | без отладочного меню; идентификатор приложения и блоки AdMob из `.env`; RevenueCat; Firebase |
