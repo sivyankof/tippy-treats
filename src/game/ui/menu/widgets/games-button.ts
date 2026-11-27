@@ -1,6 +1,7 @@
 import type * as Phaser from 'phaser';
 import { MENU } from '../../../../data/common/menu-layout';
-import { createTextButton, type Button } from '../../common/button';
+import { createLabelButton, createTextButton, type Button } from '../../common/button';
+import { bakeTrophy, TROPHY_KEY } from '../../../fx/games/trophy-texture';
 
 const cfg = MENU.gamesButton;
 
@@ -39,5 +40,28 @@ export function createGamesButton(
     y,
     onClick: guardBusy(() => button, action),
   }).button;
+  return button;
+}
+
+/** A square button with the trophy (the daily leaderboard next to Play), its centre at (`x`, `y`). */
+export function createTrophyButton(
+  scene: Phaser.Scene,
+  x: number,
+  y: number,
+  action: () => Promise<void>,
+): Button {
+  const sq = cfg.square;
+  bakeTrophy(scene);
+  const icon = scene.add.image(0, 0, TROPHY_KEY).setDisplaySize(sq.icon, sq.icon);
+  const button: Button = createLabelButton(
+    scene,
+    x,
+    y,
+    icon,
+    cfg.fill,
+    { width: sq.size, height: sq.size, radius: sq.radius, shadowOffset: sq.shadowOffset },
+    'ui_games_square',
+    guardBusy(() => button, action),
+  );
   return button;
 }

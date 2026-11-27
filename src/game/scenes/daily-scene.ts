@@ -8,7 +8,7 @@ import { DAILY_RUN } from '../run/run-request';
 import { openScreen, SCENES, startRunFrom } from '../app/scene-keys';
 import { DailyAttempts } from '../ui/menu/daily/daily-attempts';
 import { DailyBoard } from '../ui/menu/daily/daily-board';
-import { gamesShown } from '../games/games-actions';
+import { gamesShown, openBoard } from '../games/games-actions';
 import { DailyDate } from '../ui/menu/daily/daily-date';
 import { DailyIntroLine, openDailyIntro } from '../ui/menu/daily/daily-intro';
 import { DailyLock } from '../ui/menu/daily/daily-lock';
@@ -70,17 +70,19 @@ export class DailyScene extends Phaser.Scene {
     ];
     if (info.unlocked) {
       this.attempts = new DailyAttempts(this, () => this.watchAd());
+      // The daily leaderboard: a trophy next to Play where the game services are.
       this.play = new DailyPlay(
         this,
         () => this.startRun(),
         () => this.watchAd(),
+        gamesShown() ? () => this.openBoard() : undefined,
       );
       this.sections.push(this.attempts, this.play);
     } else {
       this.sections.push(new DailyLock(this));
+      // Before the tower opens there is no Play: the board of the day is a row of its own.
+      if (gamesShown()) this.sections.push(new DailyBoard(this, () => this.leaving));
     }
-    // The Game Center board of the day, only where the game services are.
-    if (gamesShown()) this.sections.push(new DailyBoard(this, () => this.leaving));
     this.refresh();
     this.showTime(info.msUntilNext);
 
@@ -153,6 +155,10 @@ export class DailyScene extends Phaser.Scene {
     this.play?.play.setEnabled(false);
     this.disableAds();
     leaveScreen(this, this.content(), () => startRunFrom(this, DAILY_RUN));
+  }
+
+  private openBoard(): Promise<void> {
+    return this.leaving ? Promise.resolve() : openBoard(this, 'daily_height');
   }
 
   private leave(key: typeof SCENES.home): void {

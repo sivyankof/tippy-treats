@@ -98,7 +98,13 @@ function drawPart(g: Phaser.GameObjects.Graphics, part: JournalPart, size: numbe
   fillPolygon(g, outlineOf(part, size, 0, art.band));
 }
 
-function bake(scene: Phaser.Scene, key: string, size: number, parts: readonly JournalPart[]): void {
+/** Bakes a picture of parts in the journal manner (`size` square, the journal's field); also used by the trophy of the game services. */
+export function bakeParts(
+  scene: Phaser.Scene,
+  key: string,
+  size: number,
+  parts: readonly JournalPart[],
+): void {
   bakePadded(scene, key, size, size, FIELD_PAD.journal, (g) => {
     for (const part of parts) drawPart(g, part, size);
   });
@@ -107,7 +113,7 @@ function bake(scene: Phaser.Scene, key: string, size: number, parts: readonly Jo
 /** The icons of the fly bar and of the five rows (lazy: only what is missing is drawn). */
 export function bakeJournalIcons(scene: Phaser.Scene): void {
   for (const id of JOURNAL_ICON_IDS)
-    bake(scene, journalIconKey(id), art.iconSize, JOURNAL_ICONS[id]);
+    bakeParts(scene, journalIconKey(id), art.iconSize, JOURNAL_ICONS[id]);
   const size = art.chevronSize;
   bakePadded(scene, JOURNAL_CHEVRON_KEY, size, size, FIELD_PAD.journal, (g) => {
     const points = JOURNAL_CHEVRON.map(([x, y]) => ({ x: x * size, y: y * size }));
@@ -124,7 +130,7 @@ export function bakeJournalIcons(scene: Phaser.Scene): void {
 /** The picture of one dish, 1..5 (glass, jar, pot, bucket, bathtub). */
 export function bakeJournalDish(scene: Phaser.Scene, index: number): void {
   const parts = JOURNAL_DISHES[index];
-  if (parts) bake(scene, journalDishKey(index), art.dishSize, parts);
+  if (parts) bakeParts(scene, journalDishKey(index), art.dishSize, parts);
 }
 
 /** All five dishes (for the art sheet). */

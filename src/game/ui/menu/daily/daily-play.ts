@@ -9,6 +9,7 @@ import { DailyAdButton } from './daily-ad-button';
 import type { DailySection } from './daily-section';
 import { fitText } from '../widgets/fit-text';
 import { formatTimeLeft } from '../widgets/time-text';
+import { createTrophyButton } from '../widgets/games-button';
 
 const cfg = MENU.daily;
 const out = cfg.outOfAttempts;
@@ -16,6 +17,8 @@ const out = cfg.outOfAttempts;
 /**
  * The bottom slot of the daily screen: the Play button while attempts are left; once they ran
  * out, the time to the next tower and, while it is unused, the "+1 attempt for an ad" button.
+ * With `board` (the game services are there) a square trophy button for the daily leaderboard
+ * stands at the right edge of the slot and the rest moves left to make room for it.
  */
 export class DailyPlay implements DailySection {
   readonly root: Phaser.GameObjects.Container;
@@ -25,7 +28,15 @@ export class DailyPlay implements DailySection {
   private readonly timer: Phaser.GameObjects.Text;
   private shown = '';
 
-  constructor(scene: Phaser.Scene, onPlay: () => void, onAd: () => void) {
+  constructor(
+    scene: Phaser.Scene,
+    onPlay: () => void,
+    onAd: () => void,
+    board?: () => Promise<void>,
+  ) {
+    const sq = MENU.gamesButton.square;
+    // The trophy takes its side and a gap at the right edge; the rest stands centred in what is left.
+    const shift = board ? -(sq.size + sq.gap) / 2 : 0;
     const { button } = createTextButton(scene, {
       text: t('daily.play'),
       font: cfg.play.font,
@@ -34,11 +45,11 @@ export class DailyPlay implements DailySection {
       layout: cfg.play,
       keyPrefix: 'ui_daily_play',
       onClick: onPlay,
-      x: 0,
+      x: shift,
       y: this.height / 2,
     });
     this.play = button.breathe();
-    this.timer = createOutlinedText(scene, 0, out.timerY, '', out.timerFont, out.timerColor);
+    this.timer = createOutlinedText(scene, shift, out.timerY, '', out.timerFont, out.timerColor);
     this.ad = new DailyAdButton(
       scene,
       out.ad,
@@ -46,8 +57,12 @@ export class DailyPlay implements DailySection {
       'ui_daily_ad_out',
       onAd,
     );
-    this.ad.button.setPosition(0, out.adY);
+    this.ad.button.setPosition(shift, out.adY);
     this.root = scene.add.container(0, 0, [this.play, this.timer, this.ad.button]);
+    if (board) {
+      const x = cfg.caption.width / 2 - sq.size / 2;
+      this.root.add(createTrophyButton(scene, x, this.height / 2, board));
+    }
   }
 
   /** Play while attempts are left, otherwise the timer and the ad button. */
@@ -65,6 +80,6 @@ export class DailyPlay implements DailySection {
     if (text === this.shown) return;
     this.shown = text;
     this.timer.setText(text);
-    fitText(this.timer, cfg.caption.width);
+    fitText(this.timer, cfg.caption.width + this.timer.x * 2);
   }
 }

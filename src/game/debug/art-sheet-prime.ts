@@ -7,6 +7,7 @@ import { bakeCheckpointTextures } from '../fx/zones/checkpoint-textures';
 import { bakeClimbFrame, bakeClimbMapTextures } from '../fx/zones/climb-map-textures';
 import { bakeLandscapeSheet } from '../fx/climb-map/landscape-chunks';
 import { bakeJournalDishes, bakeJournalIcons } from '../fx/journal/journal-textures';
+import { bakeTrophy } from '../fx/games/trophy-texture';
 import { bakeOfflineIcon } from '../fx/economy/offline-icon-texture';
 import { bakeVideoIcon } from '../fx/economy/video-icon-texture';
 import { bakeChestTextures } from '../fx/economy/chest-texture';
@@ -94,6 +95,7 @@ const PRIME_STEPS: ReadonlyArray<(scene: Phaser.Scene) => void> = [
   bakeOfflineIcon,
   bakeJournalIcons,
   bakeJournalDishes,
+  bakeTrophy,
   bakeVideoIcon,
   bakeScoreStar,
   bakeTileMark,
