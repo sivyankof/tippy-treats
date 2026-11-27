@@ -180,11 +180,7 @@ export class ClimbMapRibbon {
       const top = (count - 1 - i) * cfg.bandHeight;
       const span = { top, bottom: top + cfg.bandHeight };
       const land = this.scene.add
-        .image(
-          0,
-          top,
-          bakeLandscape(this.scene, landscapeKind(band), band.lap, !band.open, i === shut),
-        )
+        .image(0, top, bakeLandscape(this.scene, landscapeKind(band), band.lap, !band.open))
         .setOrigin(0.5, 0)
         .setDisplaySize(stripWidth, cfg.bandHeight);
       this.strip.add(land);

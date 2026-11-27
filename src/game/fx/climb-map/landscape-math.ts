@@ -21,15 +21,10 @@ export function landscapeKind(band: ClimbBand): LandscapeKind {
   return band.kind === 'lap' ? 'lap' : (band.zone as Exclude<LandscapeKind, 'lap'>);
 }
 
-/** Cache key of a picture: a shut one is a different picture (`foot`: the lowest shut one, which melts into plain fog where the edge stands), and every lap has its own. */
-export function landscapeKey(
-  kind: LandscapeKind,
-  lap: number,
-  shut: boolean,
-  foot = false,
-): string {
+/** Cache key of a picture: a shut one is a different picture, and every lap has its own. */
+export function landscapeKey(kind: LandscapeKind, lap: number, shut: boolean): string {
   const name = kind === 'lap' ? `lap${lap}` : kind;
-  return `climb_map_land_${name}${shut ? (foot ? '_fogfoot' : '_fog') : ''}`;
+  return `climb_map_land_${name}${shut ? '_fog' : ''}`;
 }
 
 /** The dessert planet of a lap of Space: the laps walk the nine planets in turn. */
@@ -116,4 +111,39 @@ export function puffLayout(
       r,
     };
   });
+}
+
+/** Where the planet of a lap stands: its centre and scale. */
+export interface PlanetSpot {
+  x: number;
+  y: number;
+  scale: number;
+}
+
+/**
+ * The spot of the planet of `lap` in the left column: a scale from the lap's seeded stream, then a centre that keeps the whole
+ * picture (`width` x `height` px at scale 1) inside the box. Every lap gets its own size and place.
+ */
+export function planetSpot(
+  lap: number,
+  width: number,
+  height: number,
+  ringed: boolean,
+  comet: boolean,
+): PlanetSpot {
+  const p = L.lap.planet;
+  const rng = new Rng(300 + Math.max(1, lap) * 17);
+  const fits = (p.box.bottom - p.box.top) / height;
+  const top = Math.min(fits, ringed ? p.ringedMaxScale : p.scale[1]);
+  const scale = rng.range(p.scale[0], Math.max(p.scale[0], top));
+  const halfW = (width * scale) / 2;
+  const halfH = (height * scale) / 2;
+  const right = comet ? p.rightWithComet : p.right;
+  const xLo = p.box.left + halfW;
+  const yLo = p.box.top + halfH;
+  return {
+    x: rng.range(xLo, Math.max(xLo, right - halfW)),
+    y: rng.range(yLo, Math.max(yLo, p.box.bottom - halfH)),
+    scale,
+  };
 }

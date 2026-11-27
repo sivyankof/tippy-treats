@@ -4,7 +4,15 @@ import { mixColor, shade } from '../../../util/color';
 import { bakeTexture } from '../../ui/common/bake-texture';
 import { drawKitchen, drawRoof, drawShowcase } from './landscape-house';
 import type { LandCtx } from './landscape-kit';
-import { LAND_H, climbStripWidth, landscapeKey, puffLayout, skyColorAt } from './landscape-math';
+import {
+  LAND_H,
+  climbStripWidth,
+  landscapeKey,
+  puffLayout,
+  skyColorAt,
+  type Puff,
+} from './landscape-math';
+import { Rng } from '../../../core/common/rng';
 import { drawSign } from './landscape-signs';
 import { drawClouds, drawCloudsScene, drawLapScene, drawStarsScene } from './landscape-sky';
 
@@ -37,18 +45,6 @@ function drawSky(ctx: LandCtx, band: number): void {
   }
 }
 
-/** A shut picture melts into plain fog towards its foot, where the edge of the fog stands. */
-function drawFootFade(ctx: LandCtx): void {
-  const rows = Math.ceil(L.fog.footFade / L.skyRow);
-  const start = ctx.height - L.fog.solidFoot - L.fog.footFade;
-  for (let i = 0; i < rows; i++) {
-    ctx.g.fillStyle(L.fog.tone, (i + 1) / rows);
-    ctx.g.fillRect(0, start + i * L.skyRow, ctx.width, L.skyRow + 1);
-  }
-  ctx.g.fillStyle(L.fog.tone, 1);
-  ctx.g.fillRect(0, ctx.height - L.fog.solidFoot, ctx.width, L.fog.solidFoot);
-}
-
 /** Draws the scene of a kind into `ctx` (the sky is already there). */
 function drawScene(ctx: LandCtx, kind: LandscapeKind, lap: number): void {
   switch (kind) {
@@ -79,9 +75,8 @@ export function bakeLandscape(
   kind: LandscapeKind,
   lap: number,
   shut: boolean,
-  foot = false,
 ): string {
-  const key = landscapeKey(kind, lap, shut, foot);
+  const key = landscapeKey(kind, lap, shut);
   const band = bandOf(kind, lap);
   bakeTexture(scene, key, climbStripWidth(), LAND_H, (g) => {
     const ctx: LandCtx = {
@@ -95,7 +90,6 @@ export function bakeLandscape(
       g.fillRect(0, 0, ctx.width, ctx.height);
     } else drawSky(ctx, band);
     drawScene(ctx, kind, lap);
-    if (shut && foot) drawFootFade(ctx);
     drawSign(ctx, kind, shut);
   });
   return key;
@@ -104,37 +98,76 @@ export function bakeLandscape(
 export const FOG_FRONT_KEY = 'climb_map_fog_front';
 export const FOG_BACK_KEY = 'climb_map_fog_back';
 
-/** The puffs along the edge of the fog: a plain body above, round puffs hanging under it. */
+/** A row of puffs for the top or the fringe of the bank: the two ends stand on the frame so the bank ends round. */
+function puffRow(seed: number, width: number): Puff[] {
+  const f = L.fog;
+  const row = puffLayout(seed, width, f.puffs.count, f.puffs.radius);
+  const first = row[0];
+  const last = row[row.length - 1];
+  if (first) first.x = 0;
+  if (last) last.x = width;
+  return row;
+}
+
+/** Small puffs that fill the dips between the big ones. */
+function dips(row: readonly Puff[]): Puff[] {
+  return row.slice(1).map((b, i) => {
+    const a = row[i] as Puff;
+    const r = Math.min(a.r, b.r) * 0.58;
+    return { x: (a.x + b.x) / 2, y: Math.max(a.y, b.y) + Math.min(a.r, b.r) * 0.62, r };
+  });
+}
+
+/**
+ * One bank of the fog edge: a bumpy top, a body with soft patches and a fringe of puffs hanging
+ * lower here and there. The ends stand on the frame. One picture, drawn once.
+ */
 function bakeFogEdge(scene: Phaser.Scene, key: string, seed: number, tone: number): void {
-  const body = L.fog.tone;
   const f = L.fog;
   const width = climbStripWidth();
-  const row = puffLayout(seed, width, f.puffs.count, f.puffs.radius);
-  // Small puffs fill the dips between the big ones, so the edge is not a row of arcs.
-  const puffs = [
-    ...row,
-    ...row.slice(1).map((b, i) => {
-      const a = row[i] as (typeof row)[number];
-      const r = Math.min(a.r, b.r) * 0.58;
-      return { x: (a.x + b.x) / 2, y: Math.max(a.y, b.y) + Math.min(a.r, b.r) * 0.62, r };
-    }),
-  ];
-  const widest = f.puffs.radius[1];
-  const base = f.edgeHeight - widest * 1.25;
-  bakeTexture(scene, key, width, f.edgeHeight, (g) => {
+  const height = f.edgeHeight;
+  const topBase = f.topBase;
+  const fringeBase = height - f.fringeInset;
+  const topRow = puffRow(seed + 3, width).map((p) => ({ ...p, y: p.y * 0.6 }));
+  const fringe = puffRow(seed, width).map((p, i) =>
+    i % f.dropEvery === 1 ? { ...p, y: p.y + f.dropExtra, r: p.r + 4 } : p,
+  );
+  const bottom = [...fringe, ...dips(fringe)];
+  const rng = new Rng(seed + 29);
+  bakeTexture(scene, key, width, height, (g) => {
     const outline = shade(tone, -0.16);
+    const rows = [
+      { base: topBase, puffs: topRow },
+      { base: fringeBase, puffs: bottom },
+    ];
     g.fillStyle(outline, 1);
-    for (const p of puffs) g.fillCircle(p.x, base + p.y, p.r + 4);
+    for (const { base, puffs } of rows)
+      for (const p of puffs) g.fillCircle(p.x, base + p.y, p.r + 4);
     g.fillStyle(shade(tone, -0.07), 1);
-    for (const p of puffs) g.fillCircle(p.x, base + p.y, p.r);
+    for (const { base, puffs } of rows) for (const p of puffs) g.fillCircle(p.x, base + p.y, p.r);
     g.fillStyle(tone, 1);
-    for (const p of puffs) g.fillCircle(p.x - p.r * 0.07, base + p.y - p.r * 0.1, p.r * 0.9);
-    // The body joins the puffs: it covers their tops, so the outline shows only on the hanging part.
-    g.fillStyle(body, 1);
-    g.fillRect(0, 0, width, base);
+    for (const { base, puffs } of rows) {
+      for (const p of puffs) g.fillCircle(p.x - p.r * 0.07, base + p.y - p.r * 0.1, p.r * 0.9);
+    }
+    // The body joins the two rows: it covers the lower halves of the top bumps and the upper halves of the fringe.
+    g.fillStyle(tone, 1);
+    g.fillRect(0, topBase, width, fringeBase - topBase);
+    // Soft patches, so the body is not one flat tint.
+    for (let i = 0; i < f.patches.count; i++) {
+      g.fillStyle(shade(tone, i % 2 === 0 ? f.patches.shade : -f.patches.shade), f.patches.alpha);
+      g.fillEllipse(
+        rng.range(0, width),
+        rng.range(topBase, fringeBase),
+        rng.range(70, 160),
+        rng.range(26, 56),
+      );
+    }
     g.fillStyle(0xffffff, 0.5);
-    for (const p of puffs.filter((_, i) => i % 2 === 0)) {
-      g.fillEllipse(p.x - p.r * 0.35, base + p.y + p.r * 0.2, p.r * 0.34, p.r * 0.16);
+    for (const p of topRow.filter((_, i) => i % 2 === 0)) {
+      g.fillEllipse(p.x - p.r * 0.38, topBase + p.y - p.r * 0.45, p.r * 0.34, p.r * 0.16);
+    }
+    for (const p of fringe.filter((_, i) => i % 2 === 1)) {
+      g.fillEllipse(p.x - p.r * 0.35, fringeBase + p.y + p.r * 0.2, p.r * 0.34, p.r * 0.16);
     }
   });
 }
@@ -150,11 +183,9 @@ export function bakeLandscapeSheet(scene: Phaser.Scene): void {
   const kinds = ['kitchen', 'showcase', 'roof', 'clouds', 'stars'] as const;
   for (const kind of kinds) {
     bakeLandscape(scene, kind, 0, false);
-    bakeLandscape(scene, kind, 0, true, true);
     bakeLandscape(scene, kind, 0, true);
   }
   for (const lap of [1, 2, 3]) bakeLandscape(scene, 'lap', lap, false);
-  bakeLandscape(scene, 'lap', 1, true, true);
   bakeLandscape(scene, 'lap', 2, true);
   bakeFogEdges(scene);
 }

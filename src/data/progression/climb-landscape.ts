@@ -47,7 +47,7 @@ export const CLIMB_LANDSCAPE = {
   house: {
     inset: 30,
     slab: 22,
-    ground: 30,
+    ground: 12,
     wall: 0xfbd3b0,
     wallDark: 0xe9b38d,
     beam: 0x9c6a44,
@@ -96,7 +96,7 @@ export const CLIMB_LANDSCAPE = {
   /** The sign of a zone: its size and where its centre sits in the band (offset from the middle of the band), per kind. */
   sign: {
     left: 28,
-    width: 240,
+    width: 280,
     height: 118,
     wood: { fill: 0xc98d62, plank: 0xd9a066, nail: 0x6b4a32 },
     cloud: { fill: 0xffffff, shade: 0xd9d2f0 },
@@ -108,16 +108,16 @@ export const CLIMB_LANDSCAPE = {
       number
     >,
     /** The roof sign stands further in: the roof is narrower at its top. */
-    leftDx: { roof: 28 } as Partial<Record<LandscapeKind, number>>,
+    leftDx: { roof: 8 } as Partial<Record<LandscapeKind, number>>,
     /** The same for a shut sign (lock and "? ? ?"): kept above the fog edge, which hides the foot of the band under the record. */
-    shutDy: { kitchen: -10, showcase: -46, roof: -10, clouds: -4, stars: 4, lap: -10 } as Record<
+    shutDy: { kitchen: -10, showcase: -52, roof: -44, clouds: -44, stars: -44, lap: -44 } as Record<
       LandscapeKind,
       number
     >,
     /** Offsets of the two text rows from the sign centre. */
     rows: [-27, 27] as const,
     /** Padding of the text inside the sign, each side, by sign kind (a cloud is rounder inside). */
-    textPad: { wood: 22, cloud: 42, star: 26 } as Record<SignKind, number>,
+    textPad: { wood: 16, cloud: 44, star: 20 } as Record<SignKind, number>,
     /** The lock of a shut sign takes this much of its width on the left. */
     lockRoom: 84,
     /** The best lap label sits this far under the bottom of the sign. */
@@ -131,31 +131,50 @@ export const CLIMB_LANDSCAPE = {
     mix: 0.68,
     /** The silhouette is darkened by this much before it goes into the fog. */
     sink: -0.12,
-    /** The edge: a picture of puffs, its height, how far its puffs hang into the band of the record, and the seeds. */
-    edgeHeight: 132,
+    /** The edge: a bank of puffs with a bumpy top and a hanging fringe; its height, how far the fringe hangs into the band of the record, and the seeds of the front and back rows. */
+    edgeHeight: 214,
     overlap: 46,
-    puffs: { count: 9, radius: [32, 64] as const, seed: 7 },
+    puffs: { count: 9, radius: [34, 60] as const, seed: 7 },
     /** The back row is lighter, has puffs of its own and stands this much higher. */
-    backRise: 24,
+    backRise: 30,
     backSeed: 19,
-    /** A shut picture fades into plain fog over this many pixels at its foot, so the edge picture joins it. */
-    footFade: 120,
-    /** Below this many pixels from the foot a shut picture is plain fog (the edge pictures start there). */
-    solidFoot: 116,
+    /** Where the centres of the top bumps and of the fringe puffs stand in the picture (from its top, and from its bottom). */
+    topBase: 74,
+    fringeInset: 78,
+    /** Every this many puffs of the fringe hangs lower by `dropExtra`. */
+    dropEvery: 3,
+    dropExtra: 22,
+    /** Soft patches over the body so its tint is not flat: count, alpha. */
+    patches: { count: 12, alpha: 0.4, shade: 0.05 },
     /** The slow breathing of the two edge pictures (full level only). */
     breath: { ms: 3600, ease: 'Sine.easeInOut', rise: 7, scale: 0.035, backPhase: 0.5 },
     lock: { size: 64 },
   },
   /** Space laps: how a lap draws its planet and the stars. */
   lap: {
-    planetScale: 0.34,
     stars: 26,
-    /** Centres (x, y share of the band) of the planet per lap parity: odd laps on the left above the sign, even on the right. */
-    planetAt: [
-      { x: 0.22, y: 0.24 },
-      { x: 0.78, y: 0.55 },
-    ] as const,
-    nebula: [C.space.nebulaA, C.space.nebulaB, C.space.nebulaC] as readonly number[],
+    /**
+     * The planet of a lap stands in the left column above the sign (the right is the lane of the record flags):
+     * scale range (a ringed planet is capped), the box it must fit in, and the right limit when a comet crosses the top.
+     */
+    planet: {
+      scale: [0.28, 0.4] as const,
+      ringedMaxScale: 0.3,
+      box: { left: 10, top: 8, bottom: 170 },
+      right: 262,
+      rightWithComet: 215,
+    },
+    /** The comet of every third lap: its head and the length of its tail (kept clear of the tower column). */
+    comet: { x: 300, y: 40, tail: 64 },
+    /** Soft nebulae: how many, the stacked layers of each and the alpha of one layer. */
+    nebula: {
+      count: 2,
+      layers: 8,
+      layerAlpha: 0.022,
+      width: [380, 520] as const,
+      height: [150, 220] as const,
+    },
+    colors: [C.space.nebulaA, C.space.nebulaB, C.space.nebulaC] as readonly number[],
   },
   star: { gold: 0xffe27a, white: 0xffffff },
 } as const;

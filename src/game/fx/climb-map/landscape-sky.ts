@@ -7,7 +7,11 @@ import {
   type SpacePlanetId,
 } from '../../../data/zones/space-planets';
 import { shade } from '../../../util/color';
-import { paintPlanet, planetCentre } from '../../objects/backdrop/space/dessert-planets';
+import {
+  paintPlanet,
+  planetCentre,
+  planetSize,
+} from '../../objects/backdrop/space/dessert-planets';
 import {
   box,
   disc,
@@ -19,7 +23,7 @@ import {
   ovalPart,
   type LandCtx,
 } from './landscape-kit';
-import { LAND_H, lapPlanet } from './landscape-math';
+import { LAND_H, lapPlanet, planetSpot } from './landscape-math';
 
 const L = CLIMB_LANDSCAPE;
 const C = BACKDROP_COLORS;
@@ -110,7 +114,7 @@ function drawBalloon(ctx: LandCtx, cx: number, cy: number, s: number): void {
 export function drawCloudsScene(ctx: LandCtx, band: number): void {
   drawStars(ctx, 31, 7, 14, 120);
   drawClouds(ctx, band);
-  drawBalloon(ctx, ctx.width - 118, 112, 0.95);
+  drawBalloon(ctx, 170, 62, 0.55);
 }
 
 /** A moon with a sleepy face. */
@@ -140,7 +144,7 @@ function drawMoon(ctx: LandCtx, cx: number, cy: number, r: number): void {
 /** The Stars picture: many stars and a moon. */
 export function drawStarsScene(ctx: LandCtx): void {
   drawStars(ctx, 41, L.lap.stars + 14);
-  drawMoon(ctx, ctx.width - 122, 112, 46);
+  drawMoon(ctx, 150, 68, 44);
 }
 
 /** The colours of a planet seen through the filter of the picture. */
@@ -167,44 +171,64 @@ function drawComet(ctx: LandCtx, x: number, y: number, len: number): void {
   drawBody(ctx, disc(x, y, 8), C.space.cometHead, 2.5);
 }
 
-/** A lap of Space: night sky with a dusting of stars, a few colour clouds and the planet of the lap. */
+/** A soft nebula: stacked flat ellipses, each a little smaller, so the middle is the brightest. */
+function drawNebula(
+  ctx: LandCtx,
+  cx: number,
+  cy: number,
+  w: number,
+  h: number,
+  color: number,
+): void {
+  const n = L.lap.nebula;
+  for (let i = 0; i < n.layers; i++) {
+    const k = 1 - i / n.layers;
+    ctx.g.fillStyle(ctx.c(color), n.layerAlpha);
+    ctx.g.fillEllipse(cx, cy, w * k, h * k);
+  }
+}
+
+/** A lap of Space: night sky with a dusting of stars, soft nebulae and the planet of the lap in the left column. */
 export function drawLapScene(ctx: LandCtx, lap: number): void {
   const rng = new Rng(97 + lap * 13);
   const { g, c } = ctx;
-  for (let i = 0; i < 3; i++) {
-    const color = L.lap.nebula[(lap + i) % L.lap.nebula.length] ?? C.space.nebulaA;
-    g.fillStyle(c(color), 0.13);
-    g.fillEllipse(
-      rng.range(120, ctx.width - 120),
-      rng.range(60, LAND_H - 60),
-      rng.range(220, 360),
-      rng.range(70, 130),
+  const n = L.lap.nebula;
+  for (let i = 0; i < n.count; i++) {
+    const color = L.lap.colors[(lap + i) % L.lap.colors.length] ?? C.space.nebulaA;
+    drawNebula(
+      ctx,
+      rng.range(260, ctx.width - 120),
+      rng.range(70, LAND_H - 70),
+      rng.range(...n.width),
+      rng.range(...n.height),
+      color,
     );
   }
   drawStars(ctx, 211 + lap * 7, L.lap.stars);
   const id = lapPlanet(lap);
-  const at = L.lap.planetAt[(lap + 1) % 2] ?? L.lap.planetAt[0];
+  const extra = lap % 3;
+  const size = planetSize(id);
+  const spot = planetSpot(
+    lap,
+    size.width,
+    size.height,
+    PLANET_COLORS[id].ring !== undefined,
+    extra === 0,
+  );
   const centre = planetCentre(id);
-  const s = L.lap.planetScale;
-  const tx = (at?.x ?? 0.2) * ctx.width;
-  const ty = (at?.y ?? 0.3) * LAND_H;
   g.save();
-  g.translateCanvas(tx - centre.x * s, ty - centre.y * s);
-  g.scaleCanvas(s, s);
+  g.translateCanvas(spot.x - centre.x * spot.scale, spot.y - centre.y * spot.scale);
+  g.scaleCanvas(spot.scale, spot.scale);
   paintPlanet(g, id, planetColors(id, c));
   g.restore();
-  // Each lap keeps one more detail of its own.
-  const extra = lap % 3;
-  if (extra === 0)
-    drawComet(ctx, ctx.width * (at && at.x < 0.5 ? 0.7 : 0.3), 56 + rng.range(0, 30), 120);
+  // Each lap keeps one more detail of its own, in the left column or just left of the tower.
+  const k = L.lap.comet;
+  if (extra === 0) drawComet(ctx, k.x, k.y, k.tail);
   else if (extra === 1) {
-    const left = !!at && at.x < 0.5;
-    const mx = ctx.width * (left ? 0.8 : 0.2);
-    const my = left ? 310 : 56;
-    drawBody(ctx, disc(mx, my, 16), shade(0xc9b8ff, -0.05));
-    drawBody(ctx, disc(mx + 34, my + 18, 8), 0xffe3a8, 3);
+    drawBody(ctx, disc(294, 74, 14), shade(0xc9b8ff, -0.05));
+    drawBody(ctx, disc(313, 98, 7), 0xffe3a8, 3);
   } else {
-    drawSparkle(ctx, ctx.width * (at && at.x < 0.5 ? 0.7 : 0.3), 90, 20, C.stars.warm);
-    drawSparkle(ctx, ctx.width * (at && at.x < 0.5 ? 0.76 : 0.38), 130, 12, C.stars.star);
+    drawSparkle(ctx, 290, 60, 18, C.stars.warm);
+    drawSparkle(ctx, 306, 104, 11, C.stars.star);
   }
 }

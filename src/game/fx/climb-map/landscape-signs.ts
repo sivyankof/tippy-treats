@@ -53,7 +53,7 @@ function drawWood(ctx: LandCtx, x: number, y: number, w: number, h: number): voi
 /** A little cloud as a plate. */
 function drawCloudSign(ctx: LandCtx, x: number, y: number, w: number, h: number): void {
   const k = S.cloud;
-  const s = w / 196;
+  const s = Math.min(w / 196, h / 92);
   const cx = x + w / 2;
   const cy = y + h * 0.5 + 6;
   const parts: Part[] = cloudParts(cx, cy, s);

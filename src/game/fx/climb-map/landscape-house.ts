@@ -59,15 +59,12 @@ function drawWall(ctx: LandCtx, color: number): void {
   flat(ctx, H.inset + 8, 0, ctx.width - (H.inset + 8) * 2, ctx.height, color);
 }
 
-/** The grass and earth the house stands on, with the sky margins beside it. */
+/** The grass and earth the house stands on, with the sky margins beside it: a low strip, so the tower stands on the line of the floor. */
 function drawGround(ctx: LandCtx): void {
   const y = ctx.height - H.ground;
-  flat(ctx, 0, y - 4, ctx.width, 4, 0x8a5a3c);
+  flat(ctx, 0, y - 3, ctx.width, 3, 0x8a5a3c);
   flat(ctx, 0, y, ctx.width, H.ground, 0xc9a07a);
-  flat(ctx, 0, y, ctx.width, 7, 0x8fcf7a);
-  for (let x = 14; x < ctx.width; x += 46) {
-    drawBody(ctx, disc(x, y + 2, 9), 0x8fcf7a, 2.5);
-  }
+  flat(ctx, 0, y, ctx.width, 5, 0x8fcf7a);
 }
 
 /** A jar, a pot or a mug: a body with a lid band and a gloss. */

@@ -8,6 +8,7 @@ import {
   fogBoundary,
   landscapeKey,
   lapPlanet,
+  planetSpot,
   puffLayout,
   signRect,
   skyColorAt,
@@ -82,5 +83,32 @@ describe('puffLayout', () => {
     expect(a[0]?.x).toBeLessThan(80);
     expect(a[6]?.x).toBeGreaterThan(620);
     for (const p of a) expect(p.r).toBeGreaterThanOrEqual(50);
+  });
+});
+
+describe('planetSpot', () => {
+  it('keeps the planet inside the left column box, clear of the comet when there is one', () => {
+    for (let lap = 1; lap <= 12; lap++) {
+      for (const [w, h, ringed] of [
+        [440, 440, false],
+        [646, 440, true],
+      ] as const) {
+        const comet = lap % 3 === 0;
+        const s = planetSpot(lap, w, h, ringed, comet);
+        const p = CLIMB_LANDSCAPE.lap.planet;
+        expect(s.x - (w * s.scale) / 2).toBeGreaterThanOrEqual(p.box.left - 0.01);
+        expect(s.y - (h * s.scale) / 2).toBeGreaterThanOrEqual(p.box.top - 0.01);
+        expect(s.y + (h * s.scale) / 2).toBeLessThanOrEqual(p.box.bottom + 0.01);
+        expect(s.x + (w * s.scale) / 2).toBeLessThanOrEqual(comet ? p.rightWithComet : p.right);
+        if (ringed) expect(s.scale).toBeLessThanOrEqual(p.ringedMaxScale);
+      }
+    }
+  });
+  it('differs from lap to lap and repeats for the same lap', () => {
+    expect(planetSpot(2, 440, 440, false, false)).toEqual(planetSpot(2, 440, 440, false, false));
+    const spots = new Set(
+      [1, 2, 3, 4, 5].map((lap) => JSON.stringify(planetSpot(lap, 440, 440, false, false))),
+    );
+    expect(spots.size).toBe(5);
   });
 });
