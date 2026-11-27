@@ -32,14 +32,12 @@ describe('withDayBest', () => {
     });
   });
 
-  it('does not move anything when the clock went back a day', () => {
+  it('changes nothing when the clock went back a day', () => {
     const before = days(
       { day: '2026-11-27', bestHeight: 34 },
       { day: '2026-11-26', bestHeight: 9 },
     );
-    const next = withDayBest(before, '2026-11-26', 5);
-    expect(next.prevDay).toEqual({ day: '2026-11-26', bestHeight: 9 });
-    expect(next.today).toEqual({ day: '2026-11-26', bestHeight: 5 });
+    expect(withDayBest(before, '2026-11-25', 50)).toEqual(before);
   });
 
   it('does not change the save it was given', () => {

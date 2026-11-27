@@ -7,7 +7,7 @@ export type DayBest = Save['today'];
  * `today` and `prevDay` after a Classic run of height `height` on the local day `day`. `today` only
  * changes when a Classic run is recorded, so during the first run of a new day it still holds the
  * last play day: a run on a later day moves it to `prevDay` first. A run on an earlier day (the
- * clock was set back) leaves `prevDay` alone; `today` then starts on that day as before.
+ * clock was set back) changes neither, so the bests of the real days are not lost.
  */
 export function withDayBest(
   save: Pick<Save, 'today' | 'prevDay'>,
@@ -15,6 +15,7 @@ export function withDayBest(
   height: number,
 ): Pick<Save, 'today' | 'prevDay'> {
   const { today } = save;
+  if (today.day !== '' && day < today.day) return { today, prevDay: save.prevDay };
   const later = today.day !== '' && day > today.day;
   const best = today.day === day ? today.bestHeight : 0;
   return {
