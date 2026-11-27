@@ -102,3 +102,8 @@ export function pennantOffset(lineY: number, plateHeight: number): number {
   const lowestTop = GOAL_LINE.hud.clearY + GOAL_LINE.hud.gap;
   return Math.max(above, lowestTop + plateHeight / 2 - lineY);
 }
+
+/** The pennant hangs under the HUD, away from its line (`pennantOffset` is below the normal place above the line): it shows its pointer up. */
+export function pennantWaits(lineY: number, plateHeight: number): boolean {
+  return pennantOffset(lineY, plateHeight) > -(plateHeight / 2 + flag.lineHeight);
+}
