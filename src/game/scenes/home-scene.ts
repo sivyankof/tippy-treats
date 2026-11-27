@@ -27,6 +27,7 @@ import { OvenPlate } from '../ui/menu/oven/oven-plate';
 import { openOvenWindow } from '../ui/menu/oven/oven-window';
 import { HomeShelf } from '../ui/menu/home/home-shelf';
 import { openGiftWindow } from '../ui/menu/home/gift-window';
+import { logJournalOpen } from '../ui/menu/journal/journal-telemetry';
 import { openJournalWindow } from '../ui/menu/journal/journal-window';
 import { openMissionsWindow } from '../ui/menu/missions/missions-window';
 import { openSettingsWindow } from '../ui/menu/settings/settings-window';
@@ -176,6 +177,7 @@ export class HomeScene extends Phaser.Scene {
   private openJournal(): void {
     if (this.leaving || this.journalOpen) return;
     this.journalOpen = true;
+    logJournalOpen();
     openJournalWindow(this, () => (this.journalOpen = false));
   }
 

@@ -155,6 +155,7 @@ export interface AnalyticsService {
 | `ad_rewarded_show`, `ad_rewarded_result` | `showRewarded`, каждое место показа |
 | `ad_interstitial_show` | `GameState.noteInterstitialShown` |
 | `shop_open` | `ShopScene.create`: `source` = `home` (кнопка Дома) или `return` (возврат с экрана нового существа) |
+| `journal_open` | `HomeScene.openJournal` (`game/ui/menu/journal/journal-telemetry.ts`): касание плашки уровня на Home; возврат в журнал из окна мушек или окна сравнения события не шлёт, сами эти окна тоже |
 | `iap_start`, `iap_result` | `buyProduct` (`game/economy/purchases.ts`): `product` = ключ товара (`remove_ads`…), не идентификатор магазина; `result` = `purchased`/`cancelled`/`failed`/`pending` |
 | `currency_earn` | `GameState` при любом начислении от крупного источника: от 100 монет или от 1 ягоды (`TELEMETRY.earnMin`); не `debug` и не ягоды, подобранные в забеге (их сумма в `run_end`) |
 | `notif_permission` | `ensureNotifPermission` в `game/app/notif-permission.ts`, на каждый ответ системного запроса |
@@ -200,6 +201,7 @@ export interface AnalyticsService {
 | `ad_rewarded_result` | `placement`, `result`, `reason` (только при `unavailable` и когда сервис назвал причину: `offline`/`no_fill`) | Итог показа |
 | `ad_interstitial_show` | — | Показана межстраничная |
 | `shop_open` | `source` | Открыт магазин |
+| `journal_open` | — | Открыт журнал пекаря |
 | `iap_start` | `product` | Нажата покупка |
 | `iap_result` | `product`, `result` | Итог покупки |
 | `currency_spend` | `currency`, `amount`, `item` | Трата |
