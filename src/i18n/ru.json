@@ -16,7 +16,12 @@
     "sounds": "Звуки",
     "reducedFx": "Меньше эффектов",
     "vibration": "Вибрация",
-    "record": "Рекорд",
+    "goal": {
+      "yesterday": "Вчера: {n}",
+      "lastTime": "В прошлый раз: {n}",
+      "record": "Рекорд: {n}",
+      "dailyBest": "Лучшая: {n}"
+    },
     "recordPop": "Рекорд!",
     "home": "Домой",
     "demo": "Демо: {name}"

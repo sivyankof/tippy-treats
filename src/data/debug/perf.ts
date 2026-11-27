@@ -2,6 +2,7 @@ import type { CreatureId } from '../creatures/creatures';
 import type { CutVariantName } from '../cuts/cut-look';
 import { MASTERY } from '../creatures/mastery';
 import type { WeatherId } from '../weather/weather';
+import type { GOAL_LINE } from '../run/goal-line';
 
 /**
  * The `?perf=1` benchmark: an automatic run through fixed scenes with a fixed seed, measuring the
@@ -308,6 +309,15 @@ export const PERF = {
   seed: 20261115,
   /** How long the director waits for a run to become ready, or for the results screen, before it gives up on the segment. */
   readyTimeoutMs: 15000,
+  /**
+   * The goal lines of every segment, as layers above the start height: the first stands on the
+   * screen in each measured window of the quiet segments, the bots climb past some of them.
+   */
+  goalLine: [
+    { kind: 'yesterday', offset: 3 },
+    { kind: 'lastTime', offset: 6 },
+    { kind: 'record', offset: 10 },
+  ] as const satisfies ReadonlyArray<{ kind: keyof typeof GOAL_LINE.colors; offset: number }>,
   /** `&still=` names: each one plays that segment and freezes the game at a fixed point. */
   stills: { tower: 'tower', tongue: 'lick-big', arc: 'rainbow' } as Readonly<
     Record<string, PerfSegmentId>

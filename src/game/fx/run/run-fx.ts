@@ -32,6 +32,8 @@ import { FlyingFx } from '../tower/flying-fx';
 import { LapEdges } from '../zones/lap-edges';
 import { LandingFx } from '../tower/landing-fx';
 import { MaterialFx } from '../creatures/material-fx';
+import type { RunGoal } from '../../../core/run/result-goal';
+import { GoalLine } from './goal-line';
 import { RecordMoment } from './record-moment';
 import { heartPop } from '../common/sparkle-fx';
 import { cuesForEvents, playCues } from '../audio/run-cues';
@@ -86,6 +88,8 @@ export class RunFx {
   private readonly flyingFx: FlyingFx;
   private readonly lapEdges: LapEdges;
   private readonly recordMoment: RecordMoment;
+  /** The line of the player's own result; absent when the run has no goals. */
+  private readonly goalLine: GoalLine | null;
   private readonly guest: TowerGuest;
   private readonly sparkles: TowerSparkles;
   /** Refilled for the sparkles every frame. */
@@ -124,7 +128,14 @@ export class RunFx {
   private resultsDelivered = false;
 
   /** `seed` is the run seed: the sparkles take their random draws from its cosmetic stream. */
-  constructor(scene: Phaser.Scene, trayTopY: number, seed: number, weather: WeatherId) {
+  constructor(
+    scene: Phaser.Scene,
+    trayTopY: number,
+    seed: number,
+    weather: WeatherId,
+    goals: readonly RunGoal[] = [],
+    startHeight = 0,
+  ) {
     this.sparkles = new TowerSparkles(scene, new Rng(seed).fork('sparkles'));
     this.tower = new TowerView(scene, trayTopY);
     this.flyingView = new FlyingLayerView(scene, this.tower);
@@ -142,8 +153,11 @@ export class RunFx {
       weather,
     );
     this.lapEdges = new LapEdges(scene, this.tower);
+    this.goalLine =
+      goals.length > 0
+        ? new GoalLine(scene, this.tower, this.landingFx.particles, goals, startHeight)
+        : null;
     this.recordMoment = new RecordMoment(
-      scene,
       this.tower,
       this.landingFx,
       this.glow,
@@ -383,8 +397,10 @@ export class RunFx {
     fxGuard.call('material-fx', this.materialFx, this.materialFx.update, visualMs, state.wobble);
     fxGuard.call('ability-fx', this, this.updateAbilityFx, visualMs, timeMs, state, mods, cam);
     fxGuard.call('kick', this.kick, this.kick.update, visualMs);
+    const goalLine = this.goalLine;
+    if (goalLine) fxGuard.call('goal-line', goalLine, goalLine.update, visualMs, timeMs, state);
     const record = this.recordMoment;
-    fxGuard.call('record-moment', record, record.update, visualMs, timeMs, state, cam);
+    fxGuard.call('record-moment', record, record.update, state, cam);
     fxGuard.call('glow-zone', this, this.dimGlowByZone);
     fxGuard.call('glow', this, this.placeGlow, timeMs, cam);
     fxGuard.call('sparkles', this, this.updateSparkles, visualMs, state, cam);
