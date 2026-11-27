@@ -13,8 +13,17 @@ export const GOAL_LINE = {
   minRunsBefore: 2,
   /** Free field around the dashed line in its picture, px (the clip guard asks for 3). */
   linePad: 4,
-  /** Dark rim around each dash (baked grey, tinted with the line) so a pale line reads on a pale wall, px and grey. */
-  lineRim: { width: 2, color: 0x707070 },
+  /**
+   * The dash is a small volumetric body: a dark rim, a light face (grey, so the tint of the kind
+   * colours it and the gloss stripe stays lighter), a gloss stripe on top and a soft dark shadow
+   * under it, all baked into the one line picture. Sizes in px.
+   */
+  lineLook: {
+    rim: { width: 3, color: 0x4a4a4a },
+    face: 0xe4e4e4,
+    gloss: { inset: 7, height: 3, color: 0xffffff },
+    shadow: { offset: 5, spread: 3, steps: 3, alpha: 0.4 },
+  },
   /**
    * The pennant stays out from under the HUD: its top never goes above `clearY` (screen y, under the
    * next creature chip, the lowest plate at its side) plus `gap`; a higher goal is labelled there.
@@ -40,6 +49,8 @@ export const GOAL_LINE = {
     font: 44,
     /** Width the art sheet bakes the pennant at (a run bakes it as wide as its widest label). */
     sheetWidth: 330,
+    /** The pointer on the top edge of the pennant while it waits under the HUD, towards its line. */
+    tail: { width: 46, height: 24 },
     /** Pennant colour of the flash: the tint moves towards this at the peak. */
     flashTint: 0xffffff,
   },
@@ -54,21 +65,29 @@ export const GOAL_LINE = {
   /** A goal is passed (the line and the pennant at the old height). */
   pass: {
     /** Flash: the pennant swells to this scale and turns light, then settles. */
-    flashMs: 260,
-    flashScale: 1.35,
+    flashMs: 300,
+    flashScale: 1.4,
     /** The pennant hops this high over `hopMs` (full and lite). */
-    hopMs: 420,
-    hopHeight: 44,
+    hopMs: 520,
+    hopHeight: 96,
     /** After this time the line and the pennant fade out over `fadeMs`; then the next goal appears. */
-    fadeStartMs: 260,
+    fadeStartMs: 420,
     fadeMs: 380,
   },
   /** The short joy of a pass on the full level: golden sparkles above the pennant. */
   joy: {
-    sparkles: 7,
+    sparkles: 14,
     /** Lift of the sparkle origin above the pennant centre. */
-    lift: 30,
-    tints: TREASURE.colors.sparkle,
-    style: { ...ANIM.perfect.sparkStyle, spreadDeg: 120 },
+    lift: 64,
+    tints: [0xffffff, TREASURE.colors.goldLight, PALETTE.gold],
+    style: {
+      ...ANIM.perfect.sparkStyle,
+      speed: [420, 760],
+      scale: [1.6, 2.6],
+      scaleTo: 0.5,
+      holdShare: 0.5,
+      lifeMs: [550, 800],
+      spreadDeg: 150,
+    },
   },
 } as const;

@@ -39,7 +39,7 @@ import { ensureSleepTexture } from '../objects/creatures/sleep-silhouette';
 import { bakeGuestFlat } from '../objects/guests/tower-guest-art';
 import { bakeTopperTextures } from '../fx/toppers/topper-texture';
 import { bakeHintTextures } from '../tutorial/hint-textures';
-import { bakeGoalLine, bakeGoalPlate } from '../fx/run/goal-line';
+import { bakeGoalLine, bakeGoalPlate, bakeGoalPlateTail } from '../fx/run/goal-line';
 import { GOAL_LINE } from '../../data/run/goal-line';
 import { bakeTongue } from '../objects/glaze/tongue-view';
 import { bakeStripTextures } from '../objects/glaze/tongue-strip-texture';
@@ -99,6 +99,7 @@ const PRIME_STEPS: ReadonlyArray<(scene: Phaser.Scene) => void> = [
   bakeGoalLine,
   (scene) => {
     bakeGoalPlate(scene, GOAL_LINE.plate.sheetWidth);
+    bakeGoalPlateTail(scene, GOAL_LINE.plate.sheetWidth);
   },
   (scene) => bakeShadeTextures(scene),
   bakeTopperTextures,

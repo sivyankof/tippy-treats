@@ -5,6 +5,7 @@ import { GOAL_LINE } from '../../../data/run/goal-line';
 import {
   appearView,
   pennantOffset,
+  pennantWaits,
   passDurationMs,
   passView,
   pennantX,
@@ -112,5 +113,15 @@ describe('pennantOffset', () => {
     const meet = lowestTop + h - above - h / 2;
     expect(pennantOffset(meet, h)).toBeCloseTo(above);
     expect(pennantOffset(meet - 1, h)).toBeCloseTo(above + 1);
+  });
+});
+
+describe('pennantWaits', () => {
+  const height = GOAL_LINE.plate.height;
+  it('is false while the pennant rides on its line and true while it waits under the HUD', () => {
+    expect(pennantWaits(1500, height)).toBe(false);
+    expect(pennantWaits(GOAL_LINE.hud.clearY + height * 2, height)).toBe(false);
+    expect(pennantWaits(GOAL_LINE.hud.clearY, height)).toBe(true);
+    expect(pennantWaits(-300, height)).toBe(true);
   });
 });
