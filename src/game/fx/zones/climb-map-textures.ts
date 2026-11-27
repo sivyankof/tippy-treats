@@ -9,6 +9,7 @@ import { gradientColorAt } from '../../objects/backdrop/common/sky-gradient';
 import { starPoints } from '../../objects/creatures/creature-art/rainbow-geometry';
 import { bakeTexture } from '../../ui/common/bake-texture';
 import {
+  drawFace,
   drawGlossMark,
   drawTwoToneBody,
   ellipsePoints,
@@ -19,13 +20,15 @@ import {
 } from '../common/plain-style';
 
 const cfg = CLIMB_MAP;
-const LAYERS = BALANCE.zones.length;
+/** Layers of a band as the column draws them: every drawn layer stands for `tower.perLayer` real ones. */
+const LAYERS = BALANCE.zones.length / cfg.tower.perLayer;
 
 export const CLIMB_TOWER_KEY = 'climb_map_tower';
 export const CLIMB_POLE_KEY = 'climb_map_pole';
 export const CLIMB_KNOB_KEY = 'climb_map_knob';
 export const CLIMB_STAR_KEY = 'climb_map_star';
 export const CLIMB_BAR_KEY = 'climb_map_bar';
+export const CLIMB_TOP_KEY = 'climb_map_top';
 
 /** Key of the sky strip of a band: the zone sky, or the shut one. */
 export function climbSkyKey(zone: ZoneId | 'locked'): string {
@@ -56,7 +59,12 @@ function wobbleAt(i: number, k: number): number {
 }
 
 /** One small cake layer of the column, drawn like the plain layers of the run: crust, sponge, wavy glaze, drips, gloss. */
-function drawTowerLayer(g: Phaser.GameObjects.Graphics, i: number): void {
+function drawTowerLayer(
+  g: Phaser.GameObjects.Graphics,
+  i: number,
+  bottom: number,
+  face = false,
+): void {
   const t = cfg.tower;
   const size = climbTowerSize();
   const pair = PLAIN_PAIRS[(i * t.pairStep) % PLAIN_PAIRS.length] ?? PLAIN_PAIRS[0];
@@ -66,7 +74,6 @@ function drawTowerLayer(g: Phaser.GameObjects.Graphics, i: number): void {
   const half = (size.width - size.pad * 2) / 2 - grow - t.wobble;
   const rx = half + (wobbleAt(i, 1) - 0.5) * t.wobble;
   const cx = size.width / 2 + (wobbleAt(i, 2) - 0.5) * t.wobble * 0.5;
-  const bottom = size.height - size.pad - i * size.layer;
   const ry = size.layer / 2 - 1;
   const cy = bottom - size.layer / 2;
   drawTwoToneBody(g, roundShape(0.5), cx, cy, rx, ry, {
@@ -77,15 +84,15 @@ function drawTowerLayer(g: Phaser.GameObjects.Graphics, i: number): void {
   });
   // The pores: three small dots of the pore tone on the lower sponge.
   g.fillStyle(sponge.pore, 0.85);
-  for (let k = 0; k < 3; k++) {
+  for (let k = 0; k < (face ? 0 : 3); k++) {
     const px = cx + (wobbleAt(i, 10 + k) - 0.5) * rx * 1.5;
-    fillPolygon(g, ellipsePoints(px, cy + ry * 0.45, 3.2, 2.2, 0));
+    fillPolygon(g, ellipsePoints(px, cy + ry * 0.62, t.poreSize * 1.4, t.poreSize, 0));
   }
   // The glaze: a cap along the top with a wavy lower edge and two drips, outline pass first.
-  const glazeH = size.layer * t.glazeShare;
+  const glazeH = size.layer * (face ? t.topGlazeShare : t.glazeShare);
   const top = cy - ry;
   const edge = top + glazeH * 0.62;
-  const bumps = 5;
+  const bumps = 6;
   const parts = [
     roundRectPoints(cx, top + glazeH * 0.36, rx * 0.99, glazeH * 0.36, glazeH * 0.34),
     ...Array.from({ length: bumps }, (_, k) => {
@@ -107,7 +114,10 @@ function drawTowerLayer(g: Phaser.GameObjects.Graphics, i: number): void {
     });
     fillPolygon(
       g,
-      part.map((p) => ({ x: p.x + Math.sign(p.x - c.x) * 2, y: p.y + Math.sign(p.y - c.y) * 2 })),
+      part.map((p) => ({
+        x: p.x + Math.sign(p.x - c.x) * t.glazeOutline,
+        y: p.y + Math.sign(p.y - c.y) * t.glazeOutline,
+      })),
     );
   }
   g.fillStyle(shade(pair.glaze, -0.14), 1);
@@ -118,6 +128,12 @@ function drawTowerLayer(g: Phaser.GameObjects.Graphics, i: number): void {
       g,
       part.map((p) => ({ x: p.x - 0.8, y: p.y - 1.2 })),
     );
+  }
+  // A soft shadow down the right side, then the face of the top cake.
+  g.fillStyle(0x000000, t.sideShadow);
+  fillPolygon(g, roundRectPoints(cx + rx * 0.86, cy, rx * 0.14, ry * 0.92, rx * 0.14));
+  if (face) {
+    drawFace(g, size.layer, cx, cy + ry * 0.42, t.face, shade(sponge.outline, -0.5));
   }
   drawGlossMark(g, {
     x: cx - rx * 0.5,
@@ -135,7 +151,22 @@ function drawTowerLayer(g: Phaser.GameObjects.Graphics, i: number): void {
 function bakeTower(scene: Phaser.Scene): void {
   const size = climbTowerSize();
   bakeTexture(scene, CLIMB_TOWER_KEY, size.width, size.height, (g) => {
-    for (let i = 0; i < LAYERS; i++) drawTowerLayer(g, i);
+    for (let i = 0; i < LAYERS; i++) drawTowerLayer(g, i, size.height - size.pad - i * size.layer);
+  });
+}
+
+/** Size of the top cake picture: one layer of the column with the field round it. */
+export function climbTopSize(): { width: number; height: number } {
+  const size = climbTowerSize();
+  return { width: size.width, height: size.layer + size.pad * 2 };
+}
+
+/** The cake on top of the tower at the record height: one more layer, with a small face. */
+function bakeTop(scene: Phaser.Scene): void {
+  const size = climbTowerSize();
+  const top = climbTopSize();
+  bakeTexture(scene, CLIMB_TOP_KEY, top.width, top.height, (g) => {
+    drawTowerLayer(g, 0, top.height - size.pad, true);
   });
 }
 
@@ -158,7 +189,8 @@ function bakeSky(scene: Phaser.Scene, key: string, colorAt: (t: number) => numbe
 function bakeSkies(scene: Phaser.Scene): void {
   for (const zone of Object.keys(ZONE_SKY) as ZoneId[]) {
     const stops = ZONE_SKY[zone];
-    bakeSky(scene, climbSkyKey(zone), (t) => gradientColorAt(stops, t));
+    const [from, to] = cfg.sky.range[zone] ?? [0, 1];
+    bakeSky(scene, climbSkyKey(zone), (t) => gradientColorAt(stops, from + (to - from) * t));
   }
   const [from, to] = cfg.locked.sky;
   bakeSky(scene, climbSkyKey('locked'), (t) => mixColor(from, to, t));
@@ -260,6 +292,7 @@ function bakeBar(scene: Phaser.Scene): void {
 /** Bakes every picture of the climb map that does not depend on the window size (lazy: only the first call draws). */
 export function bakeClimbMapTextures(scene: Phaser.Scene): void {
   bakeTower(scene);
+  bakeTop(scene);
   bakeSkies(scene);
   bakeKnob(scene);
   bakePole(scene);
