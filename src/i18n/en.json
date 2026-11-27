@@ -16,7 +16,12 @@
     "sounds": "Sounds",
     "reducedFx": "Fewer effects",
     "vibration": "Vibration",
-    "record": "Record",
+    "goal": {
+      "yesterday": "Yesterday: {n}",
+      "lastTime": "Last time: {n}",
+      "record": "Record: {n}",
+      "dailyBest": "Best today: {n}"
+    },
     "recordPop": "Record!",
     "home": "Home",
     "demo": "Demo: {name}"

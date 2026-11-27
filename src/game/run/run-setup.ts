@@ -7,6 +7,7 @@ import {
 import { dailySeed, dailyTeam } from '../../core/progression/daily';
 import type { RunLook } from '../../core/weather/run-look';
 import type { RunMode } from '../../core/run/run-result';
+import type { RunGoal } from '../../core/run/result-goal';
 import type { TeamSlot } from '../../core/tower/sim-types';
 import { DEMO } from '../../data/run/demo';
 import { gameState } from '../../state';
@@ -18,6 +19,7 @@ import { hasDebugTeam, resolveRunTeam } from '../debug/debug-team';
 import type { DropDriver } from '../perf/perf-drivers';
 import { perfRunSetup, perfSession } from '../perf/perf-session';
 import { chooseRunLook } from '../weather/run-look-choice';
+import { goalsFromSave } from './run-goals';
 import { demoTeam, type RunRequest } from './run-request';
 import { TUTORIAL_TEAM } from '../tutorial/tutorial-team';
 
@@ -44,6 +46,8 @@ export interface RunSetup {
   noContinue: boolean;
   /** Timing deviation of the dev bot player, if one plays. */
   bot: number | undefined;
+  /** The result lines the run shows, ascending; empty for the tutorial, the first runs and demos. */
+  goals: RunGoal[];
   /** Weather and start place of the run: cosmetic only, never saved. */
   look: RunLook;
   /** Drops the layers of a `?perf=1` benchmark run (it replaces the bot); absent in every other run. */
@@ -69,6 +73,11 @@ export function setupRun(request: RunRequest): RunSetup {
       seed: daySeed,
       look: chooseRunLook({ seed: daySeed, daily: true, debug }),
       startHeight: 0,
+      goals: goalsFromSave(gameState.data, now(), {
+        mode: 'daily',
+        tutorial: false,
+        startHeight: 0,
+      }),
       checkpoint: null,
       paidByAd: false,
       team: dailyTeam(day),
@@ -87,6 +96,7 @@ export function setupRun(request: RunRequest): RunSetup {
       seed,
       look: chooseRunLook({ seed, debug }),
       startHeight: DEMO.startHeight,
+      goals: [],
       checkpoint: null,
       paidByAd: false,
       team: demoTeam(request.creature, request.level),
@@ -105,12 +115,18 @@ export function setupRun(request: RunRequest): RunSetup {
     ? [...TUTORIAL_TEAM]
     : resolveRunTeam(gameState.data.team, gameState.runTeam());
   const checkpoint = chosenCheckpoint(request, tutorialRun);
+  const startHeight = checkpoint ?? debug.start ?? 0;
   return {
     request,
     mode: 'classic',
     seed,
     look: chooseRunLook({ seed, tutorial: tutorialRun, debug }),
-    startHeight: checkpoint ?? debug.start ?? 0,
+    startHeight,
+    goals: goalsFromSave(gameState.data, now(), {
+      mode: 'classic',
+      tutorial: tutorialRun,
+      startHeight,
+    }),
     // A debug start at a checkpoint height looks exactly like a checkpoint start.
     startWidth:
       checkpoint === null ? debugStartWidth(debug.start) : checkpointStartWidth(checkpoint),

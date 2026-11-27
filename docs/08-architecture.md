@@ -161,7 +161,7 @@ tippy-treats/
     │   │                       first-runs.ts, treasure-anim.ts (монеты, ягоды, счётчики, золотой слой), treasure-piles.ts и вид наград
     │   │                       (berry-look, chest-look, gift-look, oven-look, reward-look, video-icon-look, offline-look)
     │   ├── progression/        progression.ts (XP за уровень, награды уровней), missions.ts, streak.ts, daily.ts
-    │   ├── run/                continue-anim.ts (замедление промаха, окно «Продолжить?», флажок рекорда), hud-layout.ts (раскладка HUD),
+    │   ├── run/                continue-anim.ts (замедление промаха, окно «Продолжить?», пунктир и вымпелы линии рекорда), hud-layout.ts (раскладка HUD),
     │   │                       demo.ts (демо «Попробовать»), share.ts
     │   ├── audio/              sfx.ts, sfx-life.ts, audio-mix.ts, music.ts, sound-trim.ts, weather-bed.ts
     │   ├── app/                screen.ts, effect-levels.ts, storage.ts (ключи хранилища, задержка записи), save-defaults.ts (начальное состояние
@@ -175,7 +175,7 @@ tippy-treats/
     │   │                       apply-settings.ts (сохранённые настройки в сервисы и режим эффектов), effects-mode.ts, frame-work.ts,
     │   │                       webgl-renderer.ts, render-density.ts, follow-density.ts, safe-sides.ts
     │   ├── run/                run-request.ts (обычный забег, башня дня или демо: `CLASSIC_RUN`, `DAILY_RUN`, `demoRun`), run-setup.ts (бригада,
-    │   │                       зерно, обучение и запись забега), run-recorder.ts (запись забега один раз, `extrasOf`), run-info.ts (снимок для
+    │   │                       зерно, обучение и запись забега), run-goals.ts (цели линии своего результата из сохранения), run-recorder.ts (запись забега один раз, `extrasOf`), run-info.ts (снимок для
     │   │                       HUD и отладки), run-camera.ts (следование за башней, вход мира сверху), camera-layout.ts (математика прокрутки:
     │   │                       trayScrollY, targetScrollY, FLYING_REACH), continue-flow.ts (ход после промаха: окно, реклама, оплата, отказ),
     │   │                       continue-input.ts, run-exit.ts (куда уходит забег без результатов), run-restart.ts, results-data.ts,
@@ -234,7 +234,7 @@ tippy-treats/
     │   │   ├── toppers/            украшения и их придавливание, кремовый валик
     │   │   ├── zones/              визуал правил зон (rule-fx.ts, rule-state.ts, rush-outline.ts, speed-streaks.ts, cloud-cover.ts), края витков, картинки контрольных точек
     │   │   ├── economy/            монеты и золотой слой (coin-fx.ts, coin-flight-math.ts, golden-fx.ts), выплаты, картинки наград и сокровищ
-    │   │   ├── run/                run-fx.ts (замедление промаха `timeScale`), record-moment.ts (линия и флажок рекорда, конфетти), вход забега, итоги
+    │   │   ├── run/                run-fx.ts (замедление промаха `timeScale`), goal-line.ts (линия своего результата, вымпел), record-moment.ts (праздник рекорда: конфетти), вход забега, итоги
     │   │   ├── audio/              звуковые подсказки эффектов (*-cues.ts, cue-sounds.ts)
     │   │   ├── app/                работа кадра для уровня эффектов (frame-work-*.ts)
     │   │   └── abilities/          анимации способностей: в корне общий шаблон и помощники (ability-fx.ts, kit.ts, sprite-*.ts,

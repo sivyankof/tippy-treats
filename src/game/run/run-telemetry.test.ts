@@ -13,6 +13,7 @@ function setupOf(over: Partial<RunSetup>): RunSetup {
     seed: 1,
     look: { weather: 'clear', place: 'kitchen', planetSeed: 0 },
     startHeight: 0,
+    goals: [],
     checkpoint: null,
     paidByAd: false,
     team: [],

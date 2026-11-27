@@ -95,6 +95,7 @@ export function perfRunSetup(request: RunRequest): RunSetup | null {
       perf: def.weather ? { ...session.params, weather: def.weather } : session.params,
     }),
     startHeight: def.start,
+    goals: PERF.goalLine.map((goal) => ({ kind: goal.kind, height: def.start + goal.offset })),
     startWidth: isCheckpointHeight(def.start) ? checkpointStartWidth(def.start) : undefined,
     checkpoint: null,
     paidByAd: false,

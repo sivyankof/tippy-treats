@@ -91,17 +91,12 @@ export const CONTINUE_ANIM = {
     hitHeight: 96,
   },
   flag: {
-    /** The record line: dashes across the tray, and a label on a small pennant. */
-    lineHeight: 10,
+    /** The line of a goal: dashes across the tray; the pennant of its label stands at the screen edge. */
+    lineHeight: 12,
     dashLength: 36,
     dashGap: 22,
-    lineColor: PALETTE.gold,
     lineAlpha: [0.55, 0.9],
     pulseMs: 1300,
-    labelFont: 44,
-    labelWidth: 230,
-    labelHeight: 78,
-    labelRadius: 24,
     /** Distance of the pennant from the screen edge it stands at. */
     labelInset: 30,
     /**
@@ -112,9 +107,6 @@ export const CONTINUE_ANIM = {
     waveDeg: 4,
     /** The pennant stretches by this share of the wave. */
     waveStretch: 0.04,
-    pennantDarken: -0.3,
-    /** Border width of the pennant. */
-    outline: 6,
     wavePeriodMs: 1700,
     bobDistance: 6,
     bobPeriodMs: 2100,
