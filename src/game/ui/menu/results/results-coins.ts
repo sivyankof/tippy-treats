@@ -21,6 +21,7 @@ import {
   watchAdState,
 } from '../widgets/ad-unavailable';
 import { createBreakdown } from './results-coin-breakdown';
+import { ScreenAdWatch } from './screen-ad';
 import { tileLook } from './results-tiles';
 import type { CoinLine } from './results-text';
 
@@ -39,9 +40,9 @@ export class ResultsCoins {
   private readonly roll = new NumberRoll();
   private callout: Callout | null = null;
   private buttonEnabled = true;
+  /** The "x2" ad while it shows, for the rating request. */
+  readonly ad = new ScreenAdWatch();
   private busy = false;
-  private showing = false;
-  private adClosed: (() => void) | null = null;
   private adGone = false;
   /** The ad paid: the coins are doubled. */
   private doubled = false;
@@ -94,16 +95,6 @@ export class ResultsCoins {
   /** The screen is about to show: an ad that is not ready by now greys the button out. */
   refreshAd(): void {
     if (this.button && !this.adGone && !services.ads.isRewardedReady()) this.markAdGone();
-  }
-
-  /** The doubling ad is on the screen now. */
-  get adShowing(): boolean {
-    return this.showing;
-  }
-
-  /** Calls `callback` once, when the doubling ad now showing has closed and its result is in. */
-  onceAdClosed(callback: () => void): void {
-    this.adClosed = callback;
   }
 
   /** The tile and the button are live only while the screen is in; going off closes the breakdown. */
@@ -189,16 +180,12 @@ export class ResultsCoins {
   private async watchAd(): Promise<void> {
     if (this.busy || !this.button) return;
     this.busy = true;
-    this.showing = true;
     this.button.setEnabled(false);
-    const result = await showRewarded('double_coins');
-    this.showing = false;
-    const closed = this.adClosed;
-    this.adClosed = null;
-    // The screen is gone: nothing to show and nothing to tell.
-    if (!this.tile.active) return;
-    this.applyAd(result);
-    closed?.();
+    await this.ad.run(
+      () => showRewarded('double_coins'),
+      () => this.tile.active,
+      (result) => this.applyAd(result),
+    );
   }
 
   private applyAd(result: RewardedResult): void {

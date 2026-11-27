@@ -10,6 +10,7 @@ import { faceOffsetY, VolumePlate } from '../../style/volume';
 import { fitText } from '../widgets/fit-text';
 import { makeTappable } from '../home/home-badges';
 import { openJournalDetail } from './journal-detail';
+import { logJournalOpen } from './journal-telemetry';
 import { stackColumn } from './journal-layout';
 import { createChevron, createJournalIcon, createTierBar } from './journal-parts';
 import { fliesRank, journalAmount, journalLabel } from './journal-text';
@@ -94,6 +95,12 @@ function createRow(
     createChevron(scene, chevronX, dy),
   ]);
   return box;
+}
+
+/** The journal opened from the level plate of Home: the only opening that sends `journal_open`. */
+export function openJournalFromHome(scene: Phaser.Scene, onClosed: () => void): PopupWindow {
+  logJournalOpen();
+  return openJournalWindow(scene, onClosed);
 }
 
 /**

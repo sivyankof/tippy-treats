@@ -4,6 +4,7 @@ import { APP_VERSION } from '../../../../data/app/app-info';
 import { REVIEW } from '../../../../data/app/review';
 import type { RunExit } from '../../../economy/interstitial-flow';
 import { askForRatingOnResults, type RatingDeps } from './results-rating';
+import type { ScreenAd } from './screen-ad';
 
 // The real flow pulls in the scenes (Phaser needs a window); only its type is used here.
 vi.mock('../../../economy/interstitial-flow', () => ({ interstitialDue: () => false }));
@@ -52,13 +53,14 @@ function fakeScene() {
 function fakeAd() {
   let on = false;
   let closed: (() => void) | null = null;
-  return {
-    port: {
-      showing: () => on,
-      onceClosed: (callback: () => void) => {
-        closed = callback;
-      },
+  const port: ScreenAd = {
+    showing: () => on,
+    onceClosed: (callback: () => void) => {
+      closed = callback;
     },
+  };
+  return {
+    port,
     open: () => {
       on = true;
     },

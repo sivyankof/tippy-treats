@@ -5,6 +5,7 @@ import { services } from '../../../../services';
 import { gameState } from '../../../../state';
 import { backHandlerCount } from '../../../app/back-stack';
 import { interstitialDue, type RunExit } from '../../../economy/interstitial-flow';
+import type { ScreenAd } from './screen-ad';
 
 /** What the request looks at on the results screen. */
 export interface RatingInput {
@@ -14,12 +15,7 @@ export interface RatingInput {
   /** The player is leaving or sharing. */
   busy: () => boolean;
   /** The "x2 coins" ad of the screen. */
-  ad: {
-    /** The ad is on the screen now. */
-    showing: () => boolean;
-    /** Calls `callback` once, when the ad now showing has closed, whatever it gave. */
-    onceClosed: (callback: () => void) => void;
-  };
+  ad: ScreenAd;
 }
 
 /** What the request touches outside the screen (injected in tests). */

@@ -220,10 +220,7 @@ export class ResultsScene extends Phaser.Scene {
           exit: this.runExit,
           daily: this.run.result.mode === 'daily',
           busy: () => this.leaving || this.sharing,
-          ad: {
-            showing: () => this.coins.adShowing,
-            onceClosed: (callback) => this.coins.onceAdClosed(callback),
-          },
+          ad: this.coins.ad,
         });
       };
       if (this.xp) this.xp.start(xpDone);

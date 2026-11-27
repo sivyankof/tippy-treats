@@ -27,8 +27,7 @@ import { OvenPlate } from '../ui/menu/oven/oven-plate';
 import { openOvenWindow } from '../ui/menu/oven/oven-window';
 import { HomeShelf } from '../ui/menu/home/home-shelf';
 import { openGiftWindow } from '../ui/menu/home/gift-window';
-import { logJournalOpen } from '../ui/menu/journal/journal-telemetry';
-import { openJournalWindow } from '../ui/menu/journal/journal-window';
+import { openJournalFromHome } from '../ui/menu/journal/journal-window';
 import { openMissionsWindow } from '../ui/menu/missions/missions-window';
 import { openSettingsWindow } from '../ui/menu/settings/settings-window';
 import { ScreenHeader } from '../ui/menu/widgets/screen-header';
@@ -177,8 +176,7 @@ export class HomeScene extends Phaser.Scene {
   private openJournal(): void {
     if (this.leaving || this.journalOpen) return;
     this.journalOpen = true;
-    logJournalOpen();
-    openJournalWindow(this, () => (this.journalOpen = false));
+    openJournalFromHome(this, () => (this.journalOpen = false));
   }
 
   /** Everything that slides with the screen; the scenery stays. */
