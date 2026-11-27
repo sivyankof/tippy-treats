@@ -20,4 +20,5 @@ export const FIELD_PAD = {
   videoIcon: 4,
   rewardTower: 4,
   grownBee: 4,
+  journal: 6,
 } as const;

@@ -21,11 +21,13 @@ import {
   createPlayRing,
   createRecordPlate,
   refreshLevelPlate,
+  setLevelPlateEnabled,
 } from '../ui/menu/home/home-plates';
 import { OvenPlate } from '../ui/menu/oven/oven-plate';
 import { openOvenWindow } from '../ui/menu/oven/oven-window';
 import { HomeShelf } from '../ui/menu/home/home-shelf';
 import { openGiftWindow } from '../ui/menu/home/gift-window';
+import { openJournalWindow } from '../ui/menu/journal/journal-window';
 import { openMissionsWindow } from '../ui/menu/missions/missions-window';
 import { openSettingsWindow } from '../ui/menu/settings/settings-window';
 import { ScreenHeader } from '../ui/menu/widgets/screen-header';
@@ -61,6 +63,7 @@ export class HomeScene extends Phaser.Scene {
   /** Kept so a language restart redraws the ring on Play. */
   private highlightPlay = false;
   private settings: PopupWindow | null = null;
+  private journalOpen = false;
 
   constructor() {
     super(SCENES.home);
@@ -69,6 +72,7 @@ export class HomeScene extends Phaser.Scene {
   create(data?: HomeData): void {
     this.leaving = false;
     this.settings = null;
+    this.journalOpen = false;
     this.highlightPlay = data?.highlightPlay ?? false;
     gameState.refreshDay();
     this.hint = null;
@@ -98,7 +102,7 @@ export class HomeScene extends Phaser.Scene {
       gift: () => openGiftWindow(this, () => this.refreshMarks(), this.header.wallet),
       settings: () => this.openSettings(),
     });
-    this.level = createLevelPlate(this);
+    this.level = createLevelPlate(this, () => this.openJournal());
     this.oven = new OvenPlate(this, () => this.openOven());
     this.showOven();
     this.header = new ScreenHeader(this, '', null);
@@ -168,6 +172,13 @@ export class HomeScene extends Phaser.Scene {
     openOvenWindow(this);
   }
 
+  /** A tap on the level plate: the baker's journal (one at a time, also while it is closing). */
+  private openJournal(): void {
+    if (this.leaving || this.journalOpen) return;
+    this.journalOpen = true;
+    openJournalWindow(this, () => (this.journalOpen = false));
+  }
+
   /** Everything that slides with the screen; the scenery stays. */
   private content(): Movable[] {
     const items: Movable[] = [
@@ -217,6 +228,7 @@ export class HomeScene extends Phaser.Scene {
     this.hint?.setEnabled(enabled);
     this.starter.setEnabled(enabled);
     this.oven.setEnabled(enabled);
+    setLevelPlateEnabled(this.level, enabled);
   }
 
   /** Leaves the screen once (no double taps), then runs `next`. */

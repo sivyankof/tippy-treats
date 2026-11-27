@@ -4,6 +4,7 @@ import { CREATURE_IDS } from '../../data/creatures/creatures';
 import { TOWER_GUESTS } from '../../data/guests/tower-guest';
 import { createAbilityTextures } from '../fx/abilities/ability-textures';
 import { bakeCheckpointTextures } from '../fx/zones/checkpoint-textures';
+import { bakeJournalDishes, bakeJournalIcons } from '../fx/journal/journal-textures';
 import { bakeOfflineIcon } from '../fx/economy/offline-icon-texture';
 import { bakeVideoIcon } from '../fx/economy/video-icon-texture';
 import { bakeChestTextures } from '../fx/economy/chest-texture';
@@ -84,6 +85,8 @@ const PRIME_STEPS: ReadonlyArray<(scene: Phaser.Scene) => void> = [
   bakeChestTextures,
   bakeCheckpointTextures,
   bakeOfflineIcon,
+  bakeJournalIcons,
+  bakeJournalDishes,
   bakeVideoIcon,
   bakeScoreStar,
   bakeTileMark,

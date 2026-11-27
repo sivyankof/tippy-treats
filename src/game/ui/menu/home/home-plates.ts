@@ -6,17 +6,28 @@ import { gameState } from '../../../../state';
 import { createOutlinedText } from '../../common/outlined-text';
 import { faceOffsetY, VolumePlate } from '../../style/volume';
 import { XpBar } from '../widgets/xp-bar';
+import { makeTappable } from './home-badges';
 
 const { levelPlate, record, highlightRing } = MENU.home;
 
-/** Baker level and XP on a cream plate; the container is placed at the plate centre. */
-export function createLevelPlate(scene: Phaser.Scene): Phaser.GameObjects.Container {
+/** Baker level and XP on a cream plate; the container is placed at the plate centre. A tap runs `onTap` (the journal). */
+export function createLevelPlate(
+  scene: Phaser.Scene,
+  onTap: () => void,
+): Phaser.GameObjects.Container {
   const plate = new VolumePlate(scene, 'window', levelPlate.height).setBodyWidth(levelPlate.width);
   const bar = new XpBar(scene, levelPlate.barX, levelPlate.barY, levelPlate.barWidth).show(
     gameState.data.bakerLevel,
     gameState.data.bakerXp,
   );
-  return scene.add.container(0, 0, [plate, bar]);
+  const box = scene.add.container(0, 0, [plate, bar]);
+  makeTappable(box, levelPlate.width, levelPlate.height, onTap);
+  return box;
+}
+
+/** A disabled plate ignores taps (the screen is moving or leaving). */
+export function setLevelPlateEnabled(plate: Phaser.GameObjects.Container, enabled: boolean): void {
+  if (plate.input) plate.input.enabled = enabled;
 }
 
 /** Shows the level and XP of the save again (a mission paid XP while the screen stood). */

@@ -994,6 +994,47 @@ export const MENU = {
     },
   },
   /** Rewards flying from a window to the counters of the screen. */
+  /**
+   * The baker's journal window and its detail windows (docs/07-ui-screens.md, section 2.2): one
+   * column of items (the fly bar, a row per counter, later the achievements button) at one gap.
+   */
+  journal: {
+    /** The fly bar plate on top, and a counter row (not lower than 88). */
+    barHeight: 220,
+    rowHeight: 124,
+    /** Gap between items of the column. */
+    gap: 22,
+    padX: 32,
+    /** Side of the drawn icon of a row and of the fly bar, and the gap after it. */
+    rowIcon: 92,
+    barIcon: 140,
+    iconGap: 26,
+    /** Side of the chevron and the room kept for it at the right edge. */
+    chevron: 40,
+    chevronGap: 22,
+    rankFont: 46,
+    /** The fly bar: the rank sits this far above the middle, the bar this far below. */
+    rankY: -50,
+    barY: 46,
+    barHeightPx: 58,
+    barFont: 34,
+    rowFont: 44,
+    valueFont: 46,
+    /** Gap between the row label and its number. */
+    valueGap: 24,
+    /** The window of the flies and of a row: picture, texts, bar, one column. */
+    detail: {
+      dish: 380,
+      icon: 300,
+      gap: 34,
+      captionFont: 40,
+      phraseFont: 46,
+      barWidth: 680,
+      barHeight: 64,
+      barFont: 36,
+      lineSpacing: 8,
+    },
+  },
   /** The progress bar of missions (window and results); the look follows `xpBar`. */
   progressBar: { radius: 18, border: 3 },
   /** The missions window (docs/07-ui-screens.md, section 11). Positions are relative to a card centre. */
