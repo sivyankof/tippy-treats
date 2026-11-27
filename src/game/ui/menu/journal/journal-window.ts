@@ -106,19 +106,29 @@ export function openJournalFromHome(scene: Phaser.Scene, onClosed: () => void): 
 /**
  * The baker's journal (docs/07-ui-screens.md, section 2.2): the fly bar and a row per counter,
  * stacked in one column at one gap, so an item appended to the column only makes the window
- * taller. A tap on the bar or a row closes the journal and opens its detail window; closing that
- * opens the journal again. `onClosed` runs when the journal itself is closed.
+ * taller. A tap on the bar or a row puts its detail window in place of the journal; closing that
+ * brings the journal back. The veil stays dark through both swaps: only the window changes.
+ * `onClosed` runs when the journal itself is closed; `veilShown` is set on the way back.
  */
-export function openJournalWindow(scene: Phaser.Scene, onClosed?: () => void): PopupWindow {
+export function openJournalWindow(
+  scene: Phaser.Scene,
+  onClosed?: () => void,
+  veilShown = false,
+): PopupWindow {
   const counts = journalCounts(gameState.data.stats);
-  const popup = new PopupWindow(scene, { title: t('journal.title'), onClosed });
+  const popup = new PopupWindow(scene, {
+    title: t('journal.title'),
+    onClosed,
+    veil: { in: veilShown ? 'shown' : 'fade' },
+  });
   const column = stackColumn([cfg.barHeight, ...JOURNAL_ROW_IDS.map(() => cfg.rowHeight)], cfg.gap);
-  // The detail takes the place of the journal: no second veil, so this one goes away at once.
+  // The detail takes the place of the journal under the same dark veil: it opens first, then the
+  // journal goes at once, so there is never a frame with no veil or with two.
   const show = (id: JournalRowId | 'flies'): void => {
     // A tap during the close animation lets the journal close as asked.
     if (popup.leaving) return;
+    openJournalDetail(scene, id, () => openJournalWindow(scene, onClosed, true));
     popup.destroy();
-    openJournalDetail(scene, id, () => openJournalWindow(scene, onClosed));
   };
   const centre = (index: number, height: number): number => (column.tops[index] ?? 0) + height / 2;
   popup.content.add(

@@ -85,14 +85,16 @@ export function enterWorld(scene: Phaser.Scene): WorldEntry {
   return entry;
 }
 
-/** A popup window: the dim veil fades in and the window pops from small to full size. */
+/** A popup window: the dim veil fades in (or stands dark when `dimShown`) and the window pops from small to full size. */
 export function openPopup(
   scene: Phaser.Scene,
   dim: Movable,
   panel: { setScale(scale: number): unknown },
+  dimShown = false,
 ): void {
-  dim.setAlpha(0);
-  scene.tweens.add({ targets: dim, alpha: 1, duration: popup.dimMs });
+  // A window taking the place of another one finds the veil already dark: it does not fade in again.
+  dim.setAlpha(dimShown ? 1 : 0);
+  if (!dimShown) scene.tweens.add({ targets: dim, alpha: 1, duration: popup.dimMs });
   panel.setScale(popup.fromScale);
   scene.tweens.add({
     targets: panel,

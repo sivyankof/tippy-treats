@@ -29,8 +29,8 @@ function paragraph(
 /**
  * The window of the flies (`'flies'`: the dish of the tier and its caption) or the comparison of a
  * row (its big icon). Both end with the phrase of the tier and the bar to the next one. It opens
- * in place of the journal; `onBack` opens the journal again once this window is closed (cross,
- * veil, Android back).
+ * in place of the journal under its dark veil; `onBack` opens the journal again once this window
+ * has shrunk away (cross, veil, Android back), and the veil stays dark meanwhile.
  */
 export function openJournalDetail(
   scene: Phaser.Scene,
@@ -41,6 +41,7 @@ export function openJournalDetail(
   const popup = new PopupWindow(scene, {
     title: id === 'flies' ? t('journal.flies.title') : journalLabel(id),
     onClosed: onBack,
+    veil: { in: 'shown', out: 'keep' },
   });
   const width = popup.innerWidth;
   const dish = id === 'flies' ? fliesDish(counts) : null;

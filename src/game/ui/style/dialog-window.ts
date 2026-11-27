@@ -8,6 +8,7 @@ import { safeFrame } from '../common/safe-frame';
 import { createIconButton } from '../menu/widgets/icon-button';
 import { openPopup } from '../common/transition';
 import { TitleRibbon } from './title-ribbon';
+import { closeSteps, type VeilHandover } from './veil-handover';
 import { VolumePlate } from './volume';
 
 const cfg = MENU.popup;
@@ -31,6 +32,12 @@ export interface PopupOptions {
    * a closable window, `hold` otherwise.
    */
   back?: 'close' | 'hold' | 'pass';
+  /**
+   * How the veil comes and goes when one window takes the place of another (the journal and its
+   * windows): `in: 'shown'` starts at full darkness, `out: 'keep'` leaves it dark while the window
+   * shrinks and opens the next window (`onClosed`) before this one is gone. Default: both fade.
+   */
+  veil?: VeilHandover;
 }
 
 /**
@@ -112,7 +119,7 @@ export class PopupWindow {
     this.layout();
     scene.scale.on(Phaser.Scale.Events.RESIZE, this.layout, this);
     scene.events.once(Phaser.Scenes.Events.SHUTDOWN, this.destroy, this);
-    openPopup(scene, this.dim, this.root);
+    openPopup(scene, this.dim, this.root, options.veil?.in === 'shown');
   }
 
   /** The window without its veil: what slides away when the whole screen leaves (`leaveScreen`). */
@@ -144,7 +151,8 @@ export class PopupWindow {
     if (this.closing || this.gone) return;
     this.closing = true;
     this.dim.disableInteractive();
-    this.scene.tweens.add({ targets: this.dim, alpha: 0, duration: cfg.closeMs });
+    const keep = this.options.veil?.out === 'keep';
+    if (!keep) this.scene.tweens.add({ targets: this.dim, alpha: 0, duration: cfg.closeMs });
     this.scene.tweens.add({
       targets: this.root,
       scale: cfg.closeScale,
@@ -152,8 +160,10 @@ export class PopupWindow {
       duration: cfg.closeMs,
       ease: 'Sine.easeIn',
       onComplete: () => {
-        this.destroy();
-        this.options.onClosed?.();
+        for (const step of closeSteps(keep)) {
+          if (step === 'destroy') this.destroy();
+          else this.options.onClosed?.();
+        }
       },
     });
   };
