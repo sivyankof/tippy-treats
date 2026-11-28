@@ -141,7 +141,7 @@ export function openSettingsWindow(scene: Phaser.Scene, handlers: SettingsHandle
 
   // The iCloud line sits above the credits, only where the cloud copy exists.
   const cloud = cloudSync().status !== 'unsupported' ? createCloudRow(scene, width, y) : null;
-  if (cloud) y += cfg.infoLine;
+  if (cloud) y += cfg.infoLine + cfg.cloudGap;
 
   // The credits line may wrap onto a second line; the lines under it move down by what it took.
   const credits = createOutlinedText(scene, 0, 0, t('settings.musicCredits'), cfg.infoFont)

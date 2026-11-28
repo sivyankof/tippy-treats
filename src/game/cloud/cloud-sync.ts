@@ -69,6 +69,8 @@ export class CloudSync {
   private savedAt_: number | null = null;
   private readonly listeners = new Set<() => void>();
   private started = false;
+  /** When the cloud started in this launch: a save created later counts from here (`firstWriteDue`). */
+  private startedAt = 0;
   /** The cloud as last read; null while unknown (never read, or the read failed). */
   private cloud: UsableCloud | null = null;
   private cloudText: string | null = null;
@@ -111,6 +113,7 @@ export class CloudSync {
   start(): void {
     if (this.started) return;
     this.started = true;
+    this.startedAt = this.deps.now();
     this.deps.service.onRemoteChange(() => {
       this.notified = true;
       this.sync();
@@ -162,6 +165,7 @@ export class CloudSync {
    * under `save_replaced_*` first), then the purchase check.
    */
   takeCloud(copy: CloudCopy, keepLocal: boolean): Promise<void> {
+    let taken = false;
     // In the queue: a pass on its way never mixes with the take.
     this.queue = this.queue
       .then(async () => {
@@ -171,26 +175,25 @@ export class CloudSync {
           const now = this.cloud ? decide(state.data as Save, this.cloud) : null;
           if (now?.kind !== 'adopt' || now.copy.id !== copy.id) return;
         } else if (!(await this.inTime(state.keepReplaced(state.data), false))) {
-          // The losing save could not be kept: nothing is replaced, Home asks again.
-          this.setStatus('error');
+          // The losing save could not be kept: nothing is replaced, and Home asks again.
           return;
         }
         state.adopt(copy);
+        taken = true;
         this.cloud = { kind: 'copy', copy };
         this.cloudText = serializeCopy(copy);
-        this.savedAt_ = copy.savedAt;
-        this.setStatus('saved');
+        this.setSaved(copy.savedAt);
       })
       .catch((error: unknown) => console.warn('Taking the cloud copy failed', error));
-    return this.queue.then(() => this.deps.afterAdopt?.().catch(() => undefined));
+    return this.queue.then(() =>
+      taken ? this.deps.afterAdopt?.().catch(() => undefined) : undefined,
+    );
   }
 
   /** The player keeps the local save: the copy's save is kept aside, then the local one goes over the cloud at once. */
   async keepLocal(copy: CloudCopy): Promise<void> {
-    if (!(await this.inTime(this.deps.state.keepReplaced(copy.save), false))) {
-      this.setStatus('error');
-      return;
-    }
+    // The losing save could not be kept: nothing is written, and Home asks again.
+    if (!(await this.inTime(this.deps.state.keepReplaced(copy.save), false))) return;
     await this.sync({ over: copy.id, immediate: true });
   }
 
@@ -227,12 +230,13 @@ export class CloudSync {
         this.setStatus('update');
         break;
       case 'none':
-        if (read.kind === 'copy') this.savedAt_ = read.copy.savedAt;
-        this.setStatus('saved');
+        if (read.kind === 'copy') this.setSaved(read.copy.savedAt);
+        else this.setStatus('saved');
         break;
       case 'wait':
-        if (firstWriteDue(local, this.notified, this.deps.now())) await this.send(immediate);
-        else this.waitForFirstWrite(local);
+        if (firstWriteDue(local, this.notified, this.deps.now(), this.startedAt)) {
+          await this.send(immediate);
+        } else this.waitForFirstWrite(local);
         break;
       case 'send':
         await this.send(immediate);
@@ -242,6 +246,14 @@ export class CloudSync {
         this.setStatus('waiting');
     }
     this.settle();
+  }
+
+  /** The cloud now holds the copy `id`. */
+  private async landed(id: string): Promise<boolean> {
+    const text = await this.read();
+    if (text === undefined) return false;
+    const read = readCloudText(text, this.deps.now());
+    return read.kind === 'copy' && read.copy.id === id;
   }
 
   /** The cloud text; undefined when the read failed or took too long. */
@@ -273,7 +285,7 @@ export class CloudSync {
         this.writeTimer = null;
         void this.sync();
       }, dueAt - nowMs);
-      if (this.savedAt_ === null) this.setStatus('waiting');
+      if (this.status_ !== 'saved' || this.savedAt_ === null) this.setStatus('waiting');
       return;
     }
     const { state, service } = this.deps;
@@ -286,32 +298,32 @@ export class CloudSync {
       this.setStatus('error');
       return;
     }
-    // The copy of another device goes to the second key: a way back by hand.
-    const previous =
-      over !== null && over.writer !== local.installId && this.cloudText !== null
-        ? this.cloudText
-        : undefined;
+    // A copy this device did not write last (another device's, or one it never knew) goes to
+    // the second key: a way back by hand.
+    const foreign =
+      over !== null && (over.writer !== local.installId || over.id !== local.sync.cloudId);
+    const previous = foreign && this.cloudText !== null ? this.cloudText : undefined;
     this.lastWriteAt = nowMs;
-    if (!(await this.inTime(service.write(text, previous), false))) {
+    // A write that answered late (or not at all) may still have landed: the cloud tells.
+    const ok =
+      (await this.inTime(service.write(text, previous), false)) || (await this.landed(copy.id));
+    if (!ok) {
       this.setStatus('error');
       return;
     }
     state.markCloudSent(copy.rev, copy.id, mark);
     this.cloud = { kind: 'copy', copy };
     this.cloudText = text;
-    this.savedAt_ = copy.savedAt;
-    this.setStatus('saved');
+    this.setSaved(copy.savedAt);
   }
 
   /** The first write of a device that never synced waits; a pass comes again when the wait ends. */
   private waitForFirstWrite(local: Save): void {
     this.setStatus('waiting');
     if (this.waitTimer !== null) return;
-    // A save created "in the future" (a clock put back) waits no longer than a fresh one.
-    const left = Math.min(
-      CLOUD.firstWriteWaitMs,
-      local.createdAt + CLOUD.firstWriteWaitMs - this.deps.now(),
-    );
+    // A save created "in the future" (a clock put back) counts from the start, like `firstWriteDue`.
+    const left =
+      Math.min(local.createdAt, this.startedAt) + CLOUD.firstWriteWaitMs - this.deps.now();
     this.waitTimer = this.deps.scheduler.set(
       () => {
         this.waitTimer = null;
@@ -327,9 +339,21 @@ export class CloudSync {
     this.answer();
   }
 
+  /** A copy was written or taken at `at`: the line moves even when the status stays `saved`. */
+  private setSaved(at: number): void {
+    const moved = at !== this.savedAt_;
+    this.savedAt_ = at;
+    if (this.status_ !== 'saved') this.setStatus('saved');
+    else if (moved) this.notify();
+  }
+
   private setStatus(next: CloudStatus): void {
     if (next === this.status_) return;
     this.status_ = next;
+    this.notify();
+  }
+
+  private notify(): void {
     for (const listener of [...this.listeners]) {
       try {
         listener();

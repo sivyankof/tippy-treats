@@ -4,7 +4,8 @@ import { makeInstallId } from '../util/install-id';
 import { GameState, type Scheduler } from './game-state';
 import { SessionTally } from './session-tally';
 
-const timers: Scheduler = {
+/** Page timers for the state and the cloud. */
+export const timers: Scheduler = {
   set: (callback, delayMs) => setTimeout(callback, delayMs),
   clear: (handle) => clearTimeout(handle as ReturnType<typeof setTimeout>),
 };

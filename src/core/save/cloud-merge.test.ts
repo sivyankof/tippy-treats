@@ -266,6 +266,12 @@ describe('firstWriteDue', () => {
     expect(firstWriteDue(save, true, T0)).toBe(true);
   });
 
+  it('counts a save created in the future from the start of the cloud', () => {
+    const ahead = fresh({ createdAt: T0 + 5 * 24 * 3600_000 });
+    expect(firstWriteDue(ahead, false, T0 + CLOUD.firstWriteWaitMs - 1, T0)).toBe(false);
+    expect(firstWriteDue(ahead, false, T0 + CLOUD.firstWriteWaitMs, T0)).toBe(true);
+  });
+
   it('lets an old save (an update from 1.0) write at once', () => {
     const old = fresh({ createdAt: T0 - 30 * 24 * 3600_000 });
     expect(firstWriteDue(old, false, T0)).toBe(true);

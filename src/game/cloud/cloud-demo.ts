@@ -1,9 +1,7 @@
 import type * as Phaser from 'phaser';
 import type { SaveSummary } from './cloud-summary';
+import { MS_PER_DAY, MS_PER_HOUR } from '../../data/app/clock';
 import { openChoiceWindow, openFoundWindow } from '../ui/menu/cloud/cloud-windows';
-
-const HOUR_MS = 3_600_000;
-const DAY_MS = 24 * HOUR_MS;
 
 const CLOUD_SAMPLE: SaveSummary = {
   bakerLevel: 12,
@@ -11,7 +9,7 @@ const CLOUD_SAMPLE: SaveSummary = {
   creatures: 9,
   coins: 123_450,
   berries: 1_280,
-  savedAt: Date.now() - DAY_MS,
+  savedAt: Date.now() - MS_PER_DAY,
 };
 const LOCAL_SAMPLE: SaveSummary = {
   bakerLevel: 4,
@@ -19,7 +17,7 @@ const LOCAL_SAMPLE: SaveSummary = {
   creatures: 3,
   coins: 2_300,
   berries: 35,
-  savedAt: Date.now() - HOUR_MS,
+  savedAt: Date.now() - MS_PER_HOUR,
 };
 
 const log = (what: string) => () => console.info(`[cloud demo] ${what}`);

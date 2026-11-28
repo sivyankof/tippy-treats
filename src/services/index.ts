@@ -165,6 +165,9 @@ const ads: AdsService = native
     )
   : webAds;
 
+/** Dev and internal builds: the browser stubs write their calls to the console. */
+const debugLog = DEBUG_TOOLS ? (line: string): void => console.info(line) : null;
+
 /** `TippyGames` (`ios/App/App/TippyGamesPlugin.swift`): Game Center and the iCloud key-value store. */
 const tippyGames =
   native && platform === 'ios' ? registerPlugin<GamesPlugin & CloudPlugin>('TippyGames') : null;
@@ -250,20 +253,18 @@ export const services: Services = {
   appShell: native
     ? new NativeAppShell(App, SplashScreen, SystemBars, undefined, tippyDevice)
     : new WebAppShell(),
-  rating: native
-    ? new NativeRating(InAppReview)
-    : new WebRating(DEBUG_TOOLS ? (line) => console.info(line) : null),
+  rating: native ? new NativeRating(InAppReview) : new WebRating(debugLog),
   notifications: native
     ? new NativeNotifications(LocalNotifications, (key) => t(key))
     : new WebNotifications(import.meta.env.DEV),
   cloudSave: tippyGames
     ? new NativeCloudSave(tippyGames)
-    : new WebCloudSave(webCloudMode, DEBUG_TOOLS ? (line) => console.info(line) : null),
+    : new WebCloudSave(webCloudMode, debugLog),
   games: tippyGames
     ? new NativeGames(tippyGames)
     : new WebGames(
         native || typeof window === 'undefined' ? 'unavailable' : readDebugParams().games,
-        DEBUG_TOOLS ? (line) => console.info(line) : null,
+        debugLog,
       ),
 };
 

@@ -132,10 +132,16 @@ export function decide(local: Save, cloud: UsableCloud): CloudDecision {
 
 /**
  * The first write of a device that never synced, over an empty cloud, waits for the store's
- * first change notification or until the save is `CLOUD.firstWriteWaitMs` old.
+ * first change notification or until the save is `CLOUD.firstWriteWaitMs` old. A save created
+ * "in the future" (a clock set back since) counts from `sinceMs`, the start of the cloud in this launch.
  */
-export function firstWriteDue(save: Save, notified: boolean, nowMs: number): boolean {
-  return notified || nowMs - save.createdAt >= CLOUD.firstWriteWaitMs;
+export function firstWriteDue(
+  save: Save,
+  notified: boolean,
+  nowMs: number,
+  sinceMs: number = nowMs,
+): boolean {
+  return notified || nowMs - Math.min(save.createdAt, sinceMs) >= CLOUD.firstWriteWaitMs;
 }
 
 /**

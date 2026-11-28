@@ -1,7 +1,6 @@
 // The cloud copy of the save (docs/08-architecture.md, section 5, "Облачная копия"; iCloud limits:
 // docs/09-services-analytics.md, section 14).
-
-const MINUTE_MS = 60_000;
+import { MS_PER_MINUTE } from './clock';
 
 export const CLOUD = {
   /** Keys of the cloud store: the copy, and the copy of another device it replaced (never read by the game). */
@@ -9,12 +8,12 @@ export const CLOUD = {
   /** Longest wait for the first cloud read; Home holds its own windows no longer than this. */
   readTimeoutMs: 3000,
   /** Cloud writes come at most this often (iCloud takes "several updates per minute"). */
-  writeIntervalMs: MINUTE_MS,
+  writeIntervalMs: MS_PER_MINUTE,
   /**
    * A device that never synced writes over an empty cloud only after the store's first change
    * notification, or once its save is this old: right after an install the store is still empty.
    */
-  firstWriteWaitMs: 10 * MINUTE_MS,
+  firstWriteWaitMs: 10 * MS_PER_MINUTE,
   /** Ids of the earlier copies a copy remembers (`lineage`), newest last. */
   lineageKeep: 50,
   /** "Almost empty" local progress (the "Progress found" window): finished runs at most. */

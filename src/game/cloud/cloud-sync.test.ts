@@ -389,7 +389,57 @@ describe('CloudSync', () => {
     expect(state.data.coins).toBe(700);
     await sync.keepLocal(decision.copy);
     expect(cloud.service.write).not.toHaveBeenCalled();
-    expect(sync.status).toBe('error');
+    // Home asks again on its next entry.
+    expect(sync.homeDecision()?.kind).toBe('choose');
+  });
+
+  it('a write that answered too late but landed counts as sent', async () => {
+    const { sync, cloud, state, t } = await setup(player(true));
+    const write = cloud.service.write;
+    cloud.service.write = vi.fn((text: string) => {
+      cloud.store.text = text;
+      return new Promise<boolean>(() => undefined);
+    });
+    sync.start();
+    await settle();
+    t.advance(CLOUD.readTimeoutMs);
+    await settle();
+    expect(sync.status).toBe('saved');
+    expect(state.data.sync).toMatchObject({ cloudId: 'n1', dirty: false });
+    cloud.service.write = write;
+  });
+
+  it('keeps the copy it writes over in the second key when it is not the one this device last knew', async () => {
+    const ownOld = foreign({ writer: 'device-a', id: 'a9', lineage: ['x1'] });
+    const { sync, cloud } = await setup(player(true), serializeCopy(ownOld));
+    sync.start();
+    await settle();
+    const decision = sync.homeDecision();
+    if (decision?.kind !== 'choose') throw new Error('expected choose');
+    await sync.keepLocal(decision.copy);
+    expect(cloud.store.previous).toBe(serializeCopy(ownOld));
+  });
+
+  it('tells a new write to the line even when the status stays saved', async () => {
+    const { sync, state, t } = await setup(player(true));
+    sync.start();
+    await settle();
+    let calls = 0;
+    sync.onStatus(() => (calls += 1));
+    state.addCoins(1);
+    t.advance(CLOUD.writeIntervalMs);
+    await sync.sync();
+    expect(sync.savedAt).toBe(T0 + CLOUD.writeIntervalMs);
+    expect(calls).toBeGreaterThan(0);
+  });
+
+  it('counts the first-write wait of a save created in the future from the start', async () => {
+    const { sync, cloud, t } = await setup({ ...fresh(), createdAt: T0 + 3 * DAY });
+    sync.start();
+    await settle();
+    t.advance(CLOUD.firstWriteWaitMs);
+    await settle();
+    expect(written(cloud.store.text).rev).toBe(1);
   });
 
   it('a store that never answers does not hold later passes', async () => {
