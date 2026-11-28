@@ -25,6 +25,7 @@ export const HINT_IDS = [
   'cloud',
   'oven',
   'dailyIntro',
+  'homeSeen',
 ] as const;
 export type HintId = (typeof HINT_IDS)[number];
 
