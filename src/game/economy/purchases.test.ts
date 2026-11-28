@@ -6,6 +6,8 @@ const h = vi.hoisted(() => ({
   report: { result: 'purchased', transactionIds: ['tx-1'] } as PurchaseReport,
   transactions: [] as StoreTransaction[],
   owned: [] as string[],
+  /** What only a restore brings back (purchases of another store user); `owned` when null. */
+  restoreOwned: null as string[] | null,
   /** Holds the store's answer about owned products until released (a slow network at launch). */
   gate: null as Promise<void> | null,
   fail: false,
@@ -31,7 +33,8 @@ vi.mock('../../services', () => {
     init: () => Promise.resolve(),
     getProducts: () => Promise.resolve([]),
     purchase: () => (h.fail ? Promise.reject(new Error('x')) : Promise.resolve(h.report)),
-    restore: () => (h.restoreFails ? Promise.reject(new Error('x')) : Promise.resolve(h.owned)),
+    restore: () =>
+      h.restoreFails ? Promise.reject(new Error('x')) : Promise.resolve(h.restoreOwned ?? h.owned),
     ownedNonConsumables: () => (h.gate ?? Promise.resolve()).then(() => h.owned),
     completedTransactions: () =>
       h.fail ? Promise.reject(new Error('x')) : Promise.resolve(h.transactions),
@@ -61,6 +64,7 @@ describe('purchases', () => {
     h.transactions = [];
     h.owned = [];
     h.gate = null;
+    h.restoreOwned = null;
   });
 
   it('pays a consumable only once for the same transaction', async () => {
@@ -185,6 +189,18 @@ describe('purchases', () => {
     const [a, b] = await Promise.all([restorePurchases(), restorePurchases()]);
     expect([a, b]).toEqual(['restored', 'restored']);
     expect(state.berries).toBe(before + 500);
+  });
+
+  it('a restore tapped during the launch check still asks the store to restore', async () => {
+    let release: () => void = () => undefined;
+    h.gate = new Promise((resolve) => (release = resolve));
+    h.restoreOwned = ['tippy_remove_ads'];
+    const launch = syncPurchases();
+    const tapped = restorePurchases();
+    release();
+    await launch;
+    expect(await tapped).toBe('restored');
+    expect(state.data.purchases.removeAds).toBe(true);
   });
 
   it('survives a store that cannot be asked at launch', async () => {

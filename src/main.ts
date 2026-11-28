@@ -66,7 +66,7 @@ async function loadSave(): Promise<void> {
     if (result.status === 'loaded' && result.source !== 'primary')
       console.warn(`Save loaded from: ${result.source}`);
     // A run the system unloaded in the background goes into the save before the cloud sees it.
-    if (result.status === 'loaded' && (await gameState.recoverRunDraft())) {
+    if (result.status === 'loaded' && (await gameState.recoverRunDraft(BOOT.saveWaitMs))) {
       console.warn('A run left in the background was recorded');
     }
     // The reset is done: a reload (or a dev server full reload) must not wipe the save again.
@@ -134,7 +134,8 @@ async function start(): Promise<void> {
   const game = new Phaser.Game(createGameConfig(parent));
   dropFramebufferHandlesOnLoss(game);
   bindCrashScenes(game);
-  watchFrameLoop(game);
+  // A fullscreen ad may hold the frames of the web view under it: not a dead loop.
+  watchFrameLoop(game, () => services.ads.isShowing());
   closeBootScreenOnFirstScreen(game);
   perfDirector?.startPerfDirector(game);
   // The benchmark's `&dpr=` sets its own cap, to compare the variants.

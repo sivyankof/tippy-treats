@@ -23,6 +23,8 @@ export interface AdsService {
   /** Call after consent. */
   init(): Promise<void>;
   isRewardedReady(): boolean;
+  /** A fullscreen ad is on show (the page may get no frames meanwhile). */
+  isShowing(): boolean;
   /**
    * Null while a rewarded ad is ready or another one shows; otherwise why it is not. `offline`
    * wins over `loading`; `loading` only while the load request itself runs (not in the waits
@@ -30,11 +32,13 @@ export interface AdsService {
    */
   rewardedUnavailableReason(): RewardedUnavailableReason | null;
   /**
-   * Starts loading again when no ad is ready and none is loading: the failure count starts over
-   * and a waiting retry is replaced. Called when the app returns, the network comes back or a
-   * screen with an ad button opens. Does nothing otherwise.
+   * Starts loading again a load that gave up after its retries (no ad ready, none loading, no
+   * retry waiting, the last failure at least `AD_LOAD.wakeGapMs` ago): the failure count starts
+   * over. Called when the app returns, a screen with an ad button opens or a run starts.
+   * `networkBack`: the network came back, so a waiting retry is replaced and the gap is not
+   * waited for. The interstitial is not loaded for a player with "No ads".
    */
-  wake(): void;
+  wake(networkBack?: boolean): void;
   showRewarded(placement: RewardedPlacement): Promise<RewardedResult>;
   /**
    * Shows one interstitial and resolves when it is closed; true when an ad was shown. It knows no

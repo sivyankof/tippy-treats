@@ -44,6 +44,9 @@ export interface CloudSyncDeps {
   afterAdopt?: () => Promise<void>;
 }
 
+/** How a copy is taken: `silent` by the merge table, `chosen` by the player. */
+export type TakeHow = 'silent' | 'chosen';
+
 /** A decision that needs Home: a silent take or one of the two windows. */
 export type HomeDecision = Extract<CloudDecision, { kind: 'adopt' | 'found' | 'choose' }>;
 
@@ -166,7 +169,7 @@ export class CloudSync {
    * aside first); `chosen`: the player chose it, and the local save is kept aside first. The
    * local save is kept under `save_replaced_*`; when that fails, nothing is replaced.
    */
-  takeCloud(copy: CloudCopy, how: 'silent' | 'chosen'): Promise<void> {
+  takeCloud(copy: CloudCopy, how: TakeHow): Promise<void> {
     let taken = false;
     // In the queue: a pass on its way never mixes with the take.
     this.queue = this.queue

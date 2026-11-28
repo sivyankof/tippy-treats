@@ -30,6 +30,12 @@ export const AD_LOAD = {
    * slower one is reported as `no_fill`, though the load itself goes on.
    */
   loadingCaptionMaxMs: 10000,
+  /**
+   * A wake (the app's return, a screen with an ad button, a run start) restarts a load that gave
+   * up only this long after its last failure: on a steady no-fill a run every 30–60 s must not
+   * send a request each time. The network coming back wakes at once.
+   */
+  wakeGapMs: 60000,
 } as const;
 
 /** How the open rewarded-ad buttons follow the ad service. */

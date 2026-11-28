@@ -43,7 +43,7 @@ import {
 import type { ProductKey } from '../data/economy/shop';
 import type { TeamSlot } from '../core/tower/sim-types';
 import { runTeam, type TeamIds } from '../core/creatures/team';
-import type { HintId, Save } from '../core/save/schema';
+import { UNTRACKED_HINTS, type HintId, type Save } from '../core/save/schema';
 import type { CreatureId } from '../data/creatures/creatures';
 import type { CalendarCell, StreakEntry } from '../core/progression/streak';
 import { now } from '../util/clock';
@@ -274,25 +274,29 @@ export class GameState {
   /**
    * At launch, after the save was read: records as a quit the run a draft left (the app was
    * unloaded in the background), if the draft still belongs to this save; true when it did. The
-   * draft is removed either way.
+   * draft is removed either way, also when recording it failed, and the removal is not waited
+   * for. A storage that does not answer within `timeoutMs` leaves the draft for the next launch:
+   * the start never waits longer.
    */
-  async recoverRunDraft(): Promise<boolean> {
-    const text = await this.store.readAside(STORAGE_KEYS.runDraft);
+  async recoverRunDraft(timeoutMs?: number): Promise<boolean> {
+    const text = await this.store.readAside(STORAGE_KEYS.runDraft, timeoutMs);
     if (text === null) return false;
     const draft = readRunDraft(text);
     let recorded = false;
-    if (draft !== null && draftMatches(draft, this.store.save)) {
-      const attemptDay = this.dailyAttemptDay;
-      this.dailyAttemptDay = draft.attemptDay;
-      try {
+    const attemptDay = this.dailyAttemptDay;
+    try {
+      if (draft !== null && draftMatches(draft, this.store.save)) {
+        this.dailyAttemptDay = draft.attemptDay;
         this.recordRun(draft.result, draft.startHeight, draft.extras);
         recorded = true;
-      } finally {
-        this.dailyAttemptDay = attemptDay;
+        this.store.flush();
       }
-      this.store.flush();
+    } catch (error) {
+      console.warn('The run draft could not be recorded', error);
+    } finally {
+      this.dailyAttemptDay = attemptDay;
+      void this.dropRunDraft();
     }
-    await this.dropRunDraft();
     return recorded;
   }
 
@@ -823,7 +827,7 @@ export class GameState {
     const next = this.hints.mark(this.store.save, id);
     if (next === null) return;
     this.store.replace(next);
-    this.emit([{ name: 'tutorial_step', params: { step: id } }]);
+    if (!UNTRACKED_HINTS.includes(id)) this.emit([{ name: 'tutorial_step', params: { step: id } }]);
   }
 
   // --- Notifications ---
