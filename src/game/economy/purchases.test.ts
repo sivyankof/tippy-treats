@@ -9,6 +9,7 @@ const h = vi.hoisted(() => ({
   /** Holds the store's answer about owned products until released (a slow network at launch). */
   gate: null as Promise<void> | null,
   fail: false,
+  restoreFails: false,
   setRemoveAds: vi.fn(),
   play: vi.fn(),
   clock: { ms: 1_700_000_000_000 },
@@ -30,7 +31,7 @@ vi.mock('../../services', () => {
     init: () => Promise.resolve(),
     getProducts: () => Promise.resolve([]),
     purchase: () => (h.fail ? Promise.reject(new Error('x')) : Promise.resolve(h.report)),
-    restore: () => Promise.resolve(h.owned),
+    restore: () => (h.restoreFails ? Promise.reject(new Error('x')) : Promise.resolve(h.owned)),
     ownedNonConsumables: () => (h.gate ?? Promise.resolve()).then(() => h.owned),
     completedTransactions: () =>
       h.fail ? Promise.reject(new Error('x')) : Promise.resolve(h.transactions),
@@ -144,6 +145,46 @@ describe('purchases', () => {
     await syncPurchases();
     expect(await restorePurchases()).toBe('restored');
     expect(takeLaunchRestored()).toEqual([]);
+  });
+
+  it('restore pays a purchase the store completed but never paid, exactly once', async () => {
+    state.resetProgress();
+    takeLaunchRestored();
+    const { coins, berries } = state;
+    h.owned = ['tippy_starter_pack'];
+    h.transactions = [
+      { productId: 'tippy_starter_pack', transactionId: 'lost-1', purchasedAt: clock.ms + 10 },
+    ];
+    expect(await restorePurchases()).toBe('restored');
+    const paidCoins = state.coins;
+    const paidBerries = state.berries;
+    expect(paidCoins).toBeGreaterThan(coins);
+    expect(paidBerries).toBeGreaterThan(berries);
+    expect(await restorePurchases()).toBe('restored');
+    await syncPurchases();
+    expect([state.coins, state.berries]).toEqual([paidCoins, paidBerries]);
+  });
+
+  it('restore counts a payout as restored even when the store cannot restore', async () => {
+    const before = state.berries;
+    h.transactions = [
+      { productId: 'tippy_berries_500', transactionId: 'lost-2', purchasedAt: clock.ms + 10 },
+    ];
+    h.restoreFails = true;
+    expect(await restorePurchases()).toBe('restored');
+    expect(state.berries).toBe(before + 500);
+    expect(await restorePurchases()).toBe('failed');
+    h.restoreFails = false;
+  });
+
+  it('a second reconcile during one that runs gets its result and pays nothing twice', async () => {
+    const before = state.berries;
+    h.transactions = [
+      { productId: 'tippy_berries_500', transactionId: 'lost-3', purchasedAt: clock.ms + 10 },
+    ];
+    const [a, b] = await Promise.all([restorePurchases(), restorePurchases()]);
+    expect([a, b]).toEqual(['restored', 'restored']);
+    expect(state.berries).toBe(before + 500);
   });
 
   it('survives a store that cannot be asked at launch', async () => {
