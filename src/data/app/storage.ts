@@ -2,6 +2,8 @@
 export const STORAGE_KEYS = {
   save: 'save',
   backup: 'save_backup',
+  /** The draft of a run left in the background (`state/run/run-draft.ts`). */
+  runDraft: 'run_draft',
   /** A text that could not be read is kept under `save_corrupt_<time>` for support. */
   corruptPrefix: 'save_corrupt_',
   /** Suffix of the corrupt copy that came from `save_backup`. */

@@ -23,7 +23,7 @@ import { trimHudPlates } from '../ui/style/hud-plate';
 import { RunCamera } from '../run/run-camera';
 import { ContinueFlow } from '../run/continue-flow';
 import { beginRunRewardedMemo, rewardedAds } from '../economy/rewarded';
-import { extrasOf, RunRecorder } from '../run/run-recorder';
+import { bindRunDraft, extrasOf, RunRecorder } from '../run/run-recorder';
 import { FlyingTracker } from '../fx/tower/flying-follow';
 import { placeTutorialTarget } from '../fx/run/tutorial-target';
 import { driveContinue } from '../objects/run/continue-driver';
@@ -176,15 +176,24 @@ export class GameScene extends Phaser.Scene {
       // Back from the page cache: that run is already recorded, so start a new one.
       () => restartRun(this, this.request),
     );
+    // The system may unload the app in the background without a page close: a draft keeps the run.
+    const unbindDraft = bindRunDraft(
+      this.game.events,
+      { hidden: Phaser.Core.Events.HIDDEN, visible: Phaser.Core.Events.VISIBLE },
+      () => this.recorder,
+      () => this.sim,
+    );
     const freezeBackdrop = (): void => this.background.freeze();
     this.events.on(RESULTS_SETTLED, freezeBackdrop);
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       trimHudPlates(this);
       this.events.off(RESULTS_SETTLED, freezeBackdrop);
       unbindLeave();
+      unbindDraft();
       this.scale.off(Phaser.Scale.Events.RESIZE, this.onResize, this);
       this.continueFlow?.dispose();
       this.recorder.recordQuit(this.sim);
+      this.recorder.dropDraft();
       dropHeldResults(this);
     });
 

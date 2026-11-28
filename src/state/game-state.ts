@@ -92,6 +92,8 @@ import type { CloudCopy } from '../core/save/cloud-merge';
 import { serializeSave } from '../core/save/load';
 import { REPLACED_SAVE_PREFIX } from '../data/app/cloud';
 import { withProgressChanged } from '../core/save/sync';
+import { STORAGE_KEYS } from '../data/app/storage';
+import { draftMatches, makeRunDraft, readRunDraft } from './run/run-draft';
 import {
   earnEvents,
   levelUpEvents,
@@ -135,6 +137,8 @@ export class GameState {
   private debugWritten = false;
   /** Changes of the progress in this launch (memory only): a cloud write tells by it whether the progress moved meanwhile. */
   private progressCount = 0;
+  /** A run draft was written in this launch and not removed yet (memory only). */
+  private draftKept = false;
 
   constructor(private readonly deps: GameStateDeps) {
     const properties = deps.telemetry ? new UserPropertySync(deps.telemetry) : null;
@@ -241,7 +245,55 @@ export class GameState {
     this.progress(next);
     this.emit(runEvents(before, next, result, summary, extras));
     this.tellRunListeners();
+    // The run is in the save now: its draft goes, once the save is on its way to the disk.
+    if (this.draftKept) {
+      this.store.flush();
+      void this.dropRunDraft();
+    }
     return summary;
+  }
+
+  // --- Run draft (docs/08-architecture.md, section 5) ---
+
+  /**
+   * Keeps the running run beside the save while the app is in the background, where the system
+   * may unload it without a page close: `recoverRunDraft` records it at the next launch.
+   */
+  async keepRunDraft(result: RunResult, startHeight: number, extras: RunExtras): Promise<void> {
+    const draft = makeRunDraft(this.store.save, result, startHeight, extras, this.dailyAttemptDay);
+    this.draftKept = true;
+    await this.store.keepAside(STORAGE_KEYS.runDraft, JSON.stringify(draft));
+  }
+
+  /** The app is back with the run alive, or the run was recorded: its draft goes. */
+  async dropRunDraft(): Promise<void> {
+    this.draftKept = false;
+    await this.store.dropAside(STORAGE_KEYS.runDraft);
+  }
+
+  /**
+   * At launch, after the save was read: records as a quit the run a draft left (the app was
+   * unloaded in the background), if the draft still belongs to this save; true when it did. The
+   * draft is removed either way.
+   */
+  async recoverRunDraft(): Promise<boolean> {
+    const text = await this.store.readAside(STORAGE_KEYS.runDraft);
+    if (text === null) return false;
+    const draft = readRunDraft(text);
+    let recorded = false;
+    if (draft !== null && draftMatches(draft, this.store.save)) {
+      const attemptDay = this.dailyAttemptDay;
+      this.dailyAttemptDay = draft.attemptDay;
+      try {
+        this.recordRun(draft.result, draft.startHeight, draft.extras);
+        recorded = true;
+      } finally {
+        this.dailyAttemptDay = attemptDay;
+      }
+      this.store.flush();
+    }
+    await this.dropRunDraft();
+    return recorded;
   }
 
   /**

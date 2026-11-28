@@ -62,6 +62,10 @@ async function loadSave(): Promise<void> {
     const result = outcome;
     if (result.status === 'loaded' && result.source !== 'primary')
       console.warn(`Save loaded from: ${result.source}`);
+    // A run the system unloaded in the background goes into the save before the cloud sees it.
+    if (result.status === 'loaded' && (await gameState.recoverRunDraft())) {
+      console.warn('A run left in the background was recorded');
+    }
     // The reset is done: a reload (or a dev server full reload) must not wipe the save again.
     if (reset) window.history.replaceState(window.history.state, '', withoutReset(location.href));
   } catch (error) {
