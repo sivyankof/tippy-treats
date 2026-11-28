@@ -1,4 +1,5 @@
 import type * as Phaser from 'phaser';
+import { backHandlerCount } from '../../../app/back-stack';
 import { gameState } from '../../../../state';
 import type { StreakClaim } from '../../../../state/game-state';
 import { prepareRemoveAdsOffer } from '../../../economy/interstitial-flow';
@@ -42,8 +43,12 @@ export function openDayWindow(
   if (picked === 'streak') openStreakEntry(scene, hooks.wallet, hooks.onStreak);
   else if (picked === 'oven') openOvenWindow(scene);
   else if (picked === 'offer') {
+    // The price may come late: by then the player may have opened a window (it registers its
+    // back) or left. Then the offer waits for another entry instead of covering that window.
+    const windows = backHandlerCount();
     void offer.ready.then(() => {
-      if (!hooks.isLeaving()) offer.open(scene);
+      if (hooks.isLeaving() || !scene.sys.isActive() || backHandlerCount() !== windows) return;
+      offer.open(scene);
     });
   }
 }

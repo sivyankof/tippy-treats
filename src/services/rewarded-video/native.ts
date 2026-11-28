@@ -14,6 +14,8 @@ interface Slot {
   loadStartedAt: number;
   failures: number;
   retry: unknown;
+  /** When the last load failed (`now()`). */
+  failedAt: number;
 }
 
 const newSlot = (unit: string | undefined): Slot => ({
@@ -23,6 +25,7 @@ const newSlot = (unit: string | undefined): Slot => ({
   loadStartedAt: 0,
   failures: 0,
   retry: null,
+  failedAt: 0,
 });
 
 /**
@@ -76,6 +79,10 @@ export class NativeAds implements AdsService {
     return this.inited && this.rewarded.ready && this.settleRewarded === null;
   }
 
+  isShowing(): boolean {
+    return this.settleRewarded !== null || this.settleInterstitial !== null;
+  }
+
   rewardedUnavailableReason(): RewardedUnavailableReason | null {
     if (this.isRewardedReady() || this.settleRewarded !== null) return null;
     if (!this.isOnline()) return 'offline';
@@ -84,9 +91,9 @@ export class NativeAds implements AdsService {
     return slot.loading && fresh ? 'loading' : 'no_fill';
   }
 
-  wake(): void {
-    this.kick(this.rewarded, 'rewarded');
-    this.kick(this.interstitial, 'interstitial');
+  wake(networkBack = false): void {
+    this.wakeSlot(this.rewarded, 'rewarded', networkBack);
+    if (!this.removed) this.wakeSlot(this.interstitial, 'interstitial', networkBack);
   }
 
   async showRewarded(): Promise<RewardedResult> {
@@ -170,9 +177,25 @@ export class NativeAds implements AdsService {
    * Starts a load for an ad that is not there and not coming: the failure count starts over and a
    * waiting retry is dropped (its timer then does nothing), so loads never pile up.
    */
+  /**
+   * An ad was asked for and none is there: a load that is not under way or waiting for a retry
+   * starts now, its failure count over.
+   */
   private kick(slot: Slot, kind: 'rewarded' | 'interstitial'): void {
-    if (!this.inited || slot.ready || slot.loading) return;
+    if (!this.inited || slot.ready || slot.loading || slot.retry !== null) return;
     slot.failures = 0;
+    this.load(kind);
+  }
+
+  /** See `wake`: a load that gave up starts over, not sooner than `AD_LOAD.wakeGapMs` after it failed. */
+  private wakeSlot(slot: Slot, kind: 'rewarded' | 'interstitial', networkBack: boolean): void {
+    if (!this.inited || slot.ready || slot.loading) return;
+    if (!networkBack) {
+      if (slot.retry !== null) return;
+      if (slot.failures > 0 && this.now() - slot.failedAt < AD_LOAD.wakeGapMs) return;
+    }
+    slot.failures = 0;
+    // A waiting retry is taken over: its timer finds another handle and does nothing.
     slot.retry = null;
     this.load(kind);
   }
@@ -199,6 +222,7 @@ export class NativeAds implements AdsService {
         },
         () => {
           slot.loading = false;
+          slot.failedAt = this.now();
           const delay = AD_LOAD.retryDelaysMs[slot.failures];
           slot.failures += 1;
           if (delay === undefined) return;

@@ -175,3 +175,38 @@ describe('readRunDraft', () => {
     expect(readRunDraft(JSON.stringify(plain))?.extras).toEqual(NO_EXTRAS);
   });
 });
+
+describe('run draft at launch, when something goes wrong', () => {
+  it('a storage that does not answer leaves the draft and does not hold the start', async () => {
+    const storage = new MemoryStorage();
+    await storage.set(STORAGE_KEYS.save, serializeSave(createDefaultSave(T0, 'device-a')));
+    const due: Array<() => void> = [];
+    const state = new GameState({
+      storage,
+      realNow: () => T0,
+      now: () => T0,
+      makeInstallId: () => 'device-a',
+      scheduler: { set: (run) => due.push(run), clear: () => undefined },
+    });
+    await state.load();
+    storage.get = () => new Promise(() => undefined);
+    const recovery = state.recoverRunDraft(2000);
+    for (const run of due) run();
+    expect(await recovery).toBe(false);
+  });
+
+  it('a draft whose recording throws is still removed', async () => {
+    const storage = new MemoryStorage();
+    const base = createDefaultSave(T0, 'device-a');
+    await storage.set(STORAGE_KEYS.save, serializeSave(base));
+    const draft = makeRunDraft(base, run(), 0, EXTRAS, '');
+    await storage.set(STORAGE_KEYS.runDraft, JSON.stringify(draft));
+    const state = await launch(storage);
+    state.recordRun = () => {
+      throw new Error('broken');
+    };
+    expect(await state.recoverRunDraft()).toBe(false);
+    await Promise.resolve();
+    expect(await storage.get(STORAGE_KEYS.runDraft)).toBeNull();
+  });
+});

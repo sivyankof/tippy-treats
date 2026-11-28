@@ -7,9 +7,10 @@ import { LoopWatch } from './loop-watch';
  * Starts the watchdog of the frame loop: one uncaught error in a scene step, a tween end or a
  * delayed call stops Phaser's loop for good (the next frame is asked for only after a good step).
  * It runs on its own timer, not in a frame, and is not behind `fxGuard`: its errors stay visible.
- * Returns the function that stops it.
+ * `paused`: something outside the page holds the frames on purpose (a fullscreen ad: the web view
+ * under it may get no frames while the page still counts as visible). Returns the function that stops it.
  */
-export function watchFrameLoop(game: Phaser.Game): () => void {
+export function watchFrameLoop(game: Phaser.Game, paused: () => boolean = () => false): () => void {
   const watch = new LoopWatch();
   let held = false;
   const hold = (): void => {
@@ -23,7 +24,8 @@ export function watchFrameLoop(game: Phaser.Game): () => void {
   game.events.on(Phaser.Core.Events.VISIBLE, release);
   const timer = window.setInterval(() => {
     const loop = game.loop;
-    const active = document.visibilityState === 'visible' && !held && loop.started && loop.running;
+    const active =
+      document.visibilityState === 'visible' && !held && !paused() && loop.started && loop.running;
     const verdict = watch.check(performance.now(), loop.frame, active);
     if (verdict === 'restart') {
       crashReporter.reportLoopStall('restart');

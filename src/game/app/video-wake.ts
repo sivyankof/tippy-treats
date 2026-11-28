@@ -1,11 +1,7 @@
+import type { AppShellService } from '../../services/app-shell/types';
 /** What waking the ads needs of the ad service. */
 interface Wakeable {
-  wake(): void;
-}
-
-/** What it needs of the shell: the app coming back to the front. */
-interface ActiveSource {
-  onActiveChange(callback: (active: boolean) => void): () => void;
+  wake(networkBack?: boolean): void;
 }
 
 /**
@@ -15,11 +11,11 @@ interface ActiveSource {
  */
 export function bindVideoWake(
   ads: Wakeable,
-  shell: ActiveSource,
+  shell: Pick<AppShellService, 'onActiveChange'>,
   win: Pick<Window, 'addEventListener'> = window,
 ): void {
   shell.onActiveChange((active) => {
     if (active) ads.wake();
   });
-  win.addEventListener('online', () => ads.wake());
+  win.addEventListener('online', () => ads.wake(true));
 }

@@ -121,6 +121,8 @@ describe('events of the game state', () => {
     state.updateSettings({ music: false });
     state.markHint('tap');
     state.markHint('tap');
+    // A mark that is not a tutorial step is kept without an event.
+    state.markHint('homeSeen');
     state.noteInterstitialShown();
     expect(rec.events).toContainEqual(['settings_change', { key: 'music', value: 0 }]);
     expect(rec.events.filter(([name]) => name === 'tutorial_step')).toEqual([

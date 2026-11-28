@@ -179,13 +179,22 @@ export class SaveStore {
     }
   }
 
-  /** A text kept beside the save under its own key; null when there is none, it cannot be read, or this page load does not touch the storage. */
-  async readAside(key: string): Promise<string | null> {
+  /**
+   * A text kept beside the save under its own key; null when there is none, it cannot be read,
+   * the storage did not answer within `timeoutMs`, or this page load does not touch the storage.
+   */
+  async readAside(key: string, timeoutMs?: number): Promise<string | null> {
     if (!this.persist) return null;
+    let handle: unknown = null;
+    const late = new Promise<null>((resolve) => {
+      if (timeoutMs !== undefined) handle = this.deps.scheduler.set(() => resolve(null), timeoutMs);
+    });
     try {
-      return await this.deps.storage.get(key);
+      return await Promise.race([this.deps.storage.get(key), late]);
     } catch {
       return null;
+    } finally {
+      if (handle !== null) this.deps.scheduler.clear(handle);
     }
   }
 

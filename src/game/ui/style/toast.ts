@@ -9,30 +9,34 @@ import { pinToCanvas } from '../common/pin-canvas';
 
 const cfg = MENU.style.toast;
 
-/** Where a notice stands for the tapped `button`: its centre on the canvas, clamped to the screen sides. */
+/**
+ * Where a notice stands for the tapped `button`: on its row (the button's centre height), its
+ * centre clamped to the screen sides. The plate is never taller than the button, so a button
+ * narrower than the plate (a square one next to Play) has only its own row under the plate, never
+ * the row above it, whose height on a short screen is not known here.
+ */
 function spotOnButton(
   scene: Phaser.Scene,
   button: Phaser.GameObjects.Container,
   screenWidth: number,
-): { x: number; y: number } {
+): { x: number; y: number; scale: number } {
   const cam = scene.cameras.main;
   const m = button.getWorldTransformMatrix();
-  const half = cfg.width / 2 + cfg.onButton.margin;
-  const x = Math.min(Math.max(m.tx - cam.scrollX, half), screenWidth - half);
-  const y = m.ty - cam.scrollY;
-  // A button narrower than the plate would leave its neighbours under the plate: the plate goes above it.
-  if (button.width >= cfg.width) return { x, y };
+  // A window shrunk to fit a short screen shrinks its buttons: the plate takes their scale.
+  const scale = Math.min(1, m.scaleX);
+  const half = (cfg.width / 2 + cfg.onButton.margin) * scale;
   return {
-    x,
-    y: y - button.height / 2 - cfg.onButton.gap - Math.min(cfg.height, button.height) / 2,
+    x: Math.min(Math.max(m.tx - cam.scrollX, half), screenWidth - half),
+    y: m.ty - cam.scrollY,
+    scale,
   };
 }
 
 /**
  * A short notice on a plate of the kit: it slides up from the bottom edge, stays for a moment
  * and goes away. It draws above whatever the scene shows. With `over` (the button just tapped,
- * inside a window or not) it stands on that button instead and covers nothing else: on a button
- * as wide as the plate, above it on a narrower one (a square button next to Play).
+ * inside a window or not) it stands on that button's row instead and covers nothing outside it:
+ * the button itself, and on a narrower button (a square one next to Play) its row as well.
  */
 export function showToast(
   scene: Phaser.Scene,
@@ -55,6 +59,7 @@ export function showToast(
   const toast = scene.add
     .container(spot?.x ?? width / 2, y + (spot ? cfg.onButton.rise : cfg.height), [plate, label])
     .setDepth(cfg.depth)
+    .setScale(spot?.scale ?? 1)
     .setAlpha(0);
   // It stands on the canvas, also on a scene whose camera scrolls by the top inset (results).
   pinToCanvas(toast);

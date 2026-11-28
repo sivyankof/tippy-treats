@@ -271,7 +271,7 @@ describe('NativeAds', () => {
     ]);
   });
 
-  it('wake replaces a waiting retry: the old timer does nothing', async () => {
+  it('the network back replaces a waiting retry: the old timer does nothing', async () => {
     const { ads, plugin, timers } = setup();
     plugin.loadFails = 2;
     await ads.init();
@@ -279,12 +279,63 @@ describe('NativeAds', () => {
     const before = plugin.prepared.length;
     ads.wake();
     await flush();
+    // A plain wake leaves the waiting retry to its timer.
+    expect(plugin.prepared.length).toBe(before);
+    ads.wake(true);
+    await flush();
     expect(ads.isRewardedReady()).toBe(true);
     const loaded = plugin.prepared.length;
     expect(loaded).toBeGreaterThan(before);
     for (const timer of timers.splice(0)) timer.run();
     await flush();
     expect(plugin.prepared.length).toBe(loaded);
+  });
+
+  it('a wake after the retries gave up waits the gap since the last failure', async () => {
+    const { ads, plugin, timers, clock } = setup();
+    plugin.loadFails = 100;
+    await ads.init();
+    await flush();
+    for (let i = 0; i < AD_LOAD.retryDelaysMs.length * 3; i++) {
+      timers.shift()?.run();
+      await flush();
+    }
+    const gaveUp = plugin.prepared.length;
+    ads.wake();
+    await flush();
+    expect(plugin.prepared.length).toBe(gaveUp);
+    clock.ms += AD_LOAD.wakeGapMs;
+    ads.wake();
+    await flush();
+    expect(plugin.prepared.length).toBeGreaterThan(gaveUp);
+  });
+
+  it('a wake never loads an interstitial for a player with "No ads"', async () => {
+    const { ads, plugin, timers, clock } = setup();
+    plugin.loadFails = 100;
+    await ads.init();
+    await flush();
+    ads.setRemoveAds(true);
+    for (let i = 0; i < AD_LOAD.retryDelaysMs.length * 3; i++) {
+      timers.shift()?.run();
+      await flush();
+    }
+    clock.ms += AD_LOAD.wakeGapMs;
+    const before = plugin.prepared.filter((unit) => unit === 'i').length;
+    ads.wake(true);
+    await flush();
+    expect(plugin.prepared.filter((unit) => unit === 'i').length).toBe(before);
+  });
+
+  it('tells when a fullscreen ad is on show', async () => {
+    const { ads } = setup();
+    await ads.init();
+    await flush();
+    expect(ads.isShowing()).toBe(false);
+    const shown = ads.showRewarded();
+    expect(ads.isShowing()).toBe(true);
+    await shown;
+    expect(ads.isShowing()).toBe(false);
   });
 
   it('waits the configured delay before a retry', async () => {

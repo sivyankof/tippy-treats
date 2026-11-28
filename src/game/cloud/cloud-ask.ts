@@ -4,10 +4,11 @@ import { gameState } from '../../state';
 import type { HomeAsk } from '../ui/menu/home/home-asks';
 import { openChoiceWindow, openFoundWindow } from '../ui/menu/cloud/cloud-windows';
 import { cloudSync } from './cloud-actions';
+import type { TakeHow } from './cloud-sync';
 import { summarize } from './cloud-summary';
 
 /** Home is built again on the taken save; no taps in between. */
-function takeAndRebuild(scene: Phaser.Scene, copy: CloudCopy, how: 'silent' | 'chosen'): void {
+function takeAndRebuild(scene: Phaser.Scene, copy: CloudCopy, how: TakeHow): void {
   scene.input.enabled = false;
   void cloudSync()
     .takeCloud(copy, how)

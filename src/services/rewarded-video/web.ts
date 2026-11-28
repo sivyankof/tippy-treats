@@ -98,6 +98,10 @@ export class WebAds implements AdsService, AdsDevControl {
     // The stub has nothing to load again.
   }
 
+  isShowing(): boolean {
+    return this.busy;
+  }
+
   showRewarded(): Promise<RewardedResult> {
     if (!this.isRewardedReady()) return Promise.resolve('unavailable');
     this.busy = true;

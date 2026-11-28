@@ -21,5 +21,6 @@ describe('bindVideoWake', () => {
     onActive(true);
     handlers.get('online')?.();
     expect(wake).toHaveBeenCalledTimes(2);
+    expect(wake).toHaveBeenLastCalledWith(true);
   });
 });

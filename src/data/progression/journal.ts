@@ -33,7 +33,10 @@ export const JOURNAL = {
     /** Layers of all runs (`stats.totalLayers`); one layer is about one serving. */
     layers: [
       { from: 0, basis: 'a family tea party' },
-      { from: 1000, basis: 'achievement "Feed the School" I; a big school is about 1 000 children' },
+      {
+        from: 1000,
+        basis: 'achievement "Feed the School" I; a big school is about 1 000 children',
+      },
       { from: 10000, basis: 'achievement "Feed the School" II; a village of about 10 000 people' },
       { from: 50000, basis: 'achievement "Feed the School" III; a stadium of about 50 000 seats' },
       { from: 100000, basis: 'a city of about 100 000 people' },

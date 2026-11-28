@@ -29,6 +29,9 @@ export const HINT_IDS = [
 ] as const;
 export type HintId = (typeof HINT_IDS)[number];
 
+/** Marks kept with the hints that are not steps of the tutorial: no `tutorial_step` event for them. */
+export const UNTRACKED_HINTS: readonly HintId[] = ['homeSeen'];
+
 export type Lang = 'en' | 'ru' | 'auto';
 
 /** `auto` means the player has not chosen: the system setting and the automatic switch decide. */

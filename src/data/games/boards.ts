@@ -18,6 +18,7 @@ export const BOARD_MAX: Record<BoardId, { max: number; basis: string }> = {
   },
   daily_height: {
     max: 1500,
-    basis: 'strong bot, best of 3 attempts over 1000 days: best 673 (p99 407); about 2.2 times that',
+    basis:
+      'strong bot, best of 3 attempts over 1000 days: best 673 (p99 407); about 2.2 times that',
   },
 };

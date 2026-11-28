@@ -190,7 +190,13 @@ export async function syncPurchases(): Promise<void> {
  * could not be asked and nothing was paid.
  */
 export async function restorePurchases(): Promise<RestoreOutcome> {
-  const { paid, synced } = await reconcile(() => services.iap.restore());
+  // A reconcile already under way (the launch, the app's return) only read what the store knows
+  // without asking it to restore: the button runs its own once that one is over.
+  let paidBefore = false;
+  while (reconciling) paidBefore = (await reconciling).paid || paidBefore;
+  const result = await reconcile(() => services.iap.restore());
+  const paid = result.paid || paidBefore;
+  const { synced } = result;
   untold.clear();
   if (paid) return 'restored';
   if (synced === null) return 'failed';
