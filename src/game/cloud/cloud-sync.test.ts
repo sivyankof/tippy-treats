@@ -284,6 +284,24 @@ describe('CloudSync', () => {
       expect(sync.homeDecision()).toMatchObject({ kind: 'adopt', keepLocal: true });
     });
 
+    it('takes nothing when the progress changed while the local save was kept aside', async () => {
+      const { sync, state, storage } = await setup(player(false), serializeCopy(far()));
+      sync.start();
+      await settle();
+      const decision = sync.homeDecision();
+      if (decision?.kind !== 'adopt') throw new Error('expected adopt');
+      const set = storage.set.bind(storage);
+      storage.set = (key: string, text: string) => {
+        // A payout at launch lands while the losing save is on its way to the storage.
+        if (key.startsWith(REPLACED_SAVE_PREFIX)) state.addCoins(5);
+        return set(key, text);
+      };
+      await sync.takeCloud(decision.copy, 'silent');
+      expect(state.data.coins).toBe(705);
+      expect(state.data.sync.cloudId).toBe('c3');
+      expect(sync.homeDecision()?.kind).toBe('choose');
+    });
+
     it('with a change here it is the window with both saves', async () => {
       const { sync } = await setup(player(true), serializeCopy(far()));
       sync.start();

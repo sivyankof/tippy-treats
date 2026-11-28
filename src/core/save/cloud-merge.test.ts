@@ -203,6 +203,14 @@ describe('decide', () => {
       });
     });
 
+    it('takes a copy one write past half the lineage', () => {
+      const far = ahead({ rev: 3 + CLOUD.lineageKeep / 2 + 1 });
+      expect(decide(local({ cloudId: 'c3' }), inCloud(far))).toMatchObject({
+        kind: 'adopt',
+        keepLocal: true,
+      });
+    });
+
     it('a copy grown from ours is still the plain silent take', () => {
       const far = ahead({ lineage: [...cut(CLOUD.lineageKeep - 1), 'c3'] });
       expect(decide(local({ cloudId: 'c3' }), inCloud(far))).toEqual({
@@ -217,6 +225,9 @@ describe('decide', () => {
       ['a rev not above ours', { cloudRev: 300 }, { rev: 300 }],
       ['a rev below ours', { cloudRev: 300 }, { rev: 299 }],
       ['a lineage one short of the limit', {}, { lineage: cut(CLOUD.lineageKeep - 1) }],
+      // Another branch after many writes in all: the lineage is full, but ours would still be in it.
+      ['a rev one above ours (another branch)', {}, { rev: 4 }],
+      ['a rev half the lineage above ours', {}, { rev: 3 + CLOUD.lineageKeep / 2 }],
       ['an empty lineage', {}, { lineage: [] }],
     ])('is a choice with %s', (_name, sync, over) => {
       const far = ahead(over);

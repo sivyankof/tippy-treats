@@ -116,12 +116,16 @@ export function almostEmpty(save: Save): boolean {
 /**
  * The cloud went on far past the copy this device knew and nothing changed here: the copy is
  * newer by number and its lineage is cut to `CLOUD.lineageKeep`, so our copy may have dropped out.
+ * A write adds at most two ids to the lineage (the copy it replaces and the writer's last one) and
+ * at least one to the number: a copy grown from ours is still there `lineageKeep / 2` writes later,
+ * so a closer copy without it comes from another branch (a full lineage alone tells nothing after
+ * `lineageKeep` writes in all).
  */
 function farAhead(sync: Save['sync'], copy: CloudCopy): boolean {
   return (
     !sync.dirty &&
     sync.cloudId !== '' &&
-    copy.rev > sync.cloudRev &&
+    copy.rev - sync.cloudRev > CLOUD.lineageKeep / 2 &&
     copy.lineage.length >= CLOUD.lineageKeep
   );
 }
