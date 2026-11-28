@@ -112,6 +112,12 @@ const SETS_DIRTY: Record<string, Case | 'private'> = {
   claimFreeCoins: { act: (s) => s.claimFreeCoins() },
   noteStarterPackShown: { act: (s) => s.noteStarterPackShown() },
   resetProgress: { act: (s) => s.resetProgress() },
+  recoverRunDraft: {
+    act: async (s) => {
+      await s.keepRunDraft(run(), 0, { floatingCoins: 0, abilities: 0, maxWobble: 0, flies: 0 });
+      return s.recoverRunDraft();
+    },
+  },
   progress: 'private',
   commit: 'private',
 };
@@ -192,6 +198,11 @@ const KEEPS_CLEAN: Record<string, Case | 'private'> = {
   adopt: { act: (s) => s.adopt({ rev: 9, id: 'c9', save: s.data }) },
   markCloudSent: { act: (s) => s.markCloudSent(2, 'c2', s.progressMark) },
   keepReplaced: { act: (s) => s.keepReplaced(s.data) },
+  keepRunDraft: {
+    act: (s) =>
+      s.keepRunDraft(run(), 0, { floatingCoins: 0, abilities: 0, maxWobble: 0, flies: 0 }),
+  },
+  dropRunDraft: { act: (s) => s.dropRunDraft() },
   emit: 'private',
   tellRunListeners: 'private',
   noteRun: 'private',

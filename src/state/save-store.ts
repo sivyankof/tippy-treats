@@ -179,6 +179,26 @@ export class SaveStore {
     }
   }
 
+  /** A text kept beside the save under its own key; null when there is none, it cannot be read, or this page load does not touch the storage. */
+  async readAside(key: string): Promise<string | null> {
+    if (!this.persist) return null;
+    try {
+      return await this.deps.storage.get(key);
+    } catch {
+      return null;
+    }
+  }
+
+  /** Removes a text kept beside the save; nothing when this page load does not touch the storage. */
+  async dropAside(key: string): Promise<void> {
+    if (!this.persist) return;
+    try {
+      await this.deps.storage.remove(key);
+    } catch (error) {
+      console.warn(`Could not remove ${key}`, error);
+    }
+  }
+
   /** Writes now if anything changed. Also called when the page goes to the background. */
   flush(): void {
     this.clearTimer();

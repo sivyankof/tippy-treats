@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import type { RunResult } from '../../core/run/run-result';
 import { emptyTally } from '../../core/run/run-tally';
-import { extrasOf, RunRecorder } from './run-recorder';
+import { bindRunDraft, extrasOf, RunRecorder } from './run-recorder';
 import { EMPTY_SUMMARY } from '../../state/game-state';
 
 function run(over: Partial<RunResult> = {}): RunResult {
@@ -24,9 +24,67 @@ function run(over: Partial<RunResult> = {}): RunResult {
 
 function setup(result: RunResult | null) {
   const summary = { ...EMPTY_SUMMARY, xpGained: 4 };
-  const sink = { recordRun: vi.fn(() => summary) };
+  const sink = {
+    recordRun: vi.fn(() => summary),
+    keepRunDraft: vi.fn(() => Promise.resolve()),
+    dropRunDraft: vi.fn(() => Promise.resolve()),
+  };
   return { sink, summary, sim: { quitResult: () => result } };
 }
+
+describe('RunRecorder drafts', () => {
+  it('keeps the run as a quit in the background and drops it when the app is back', () => {
+    const { sink, sim } = setup(run());
+    const recorder = new RunRecorder(sink, 0, true, () => ({
+      ...extrasOf(emptyTally()),
+      flies: 2,
+    }));
+    recorder.keepDraft(sim);
+    expect(sink.keepRunDraft).toHaveBeenCalledWith(run(), 0, expect.objectContaining({ flies: 2 }));
+    recorder.dropDraft();
+    recorder.dropDraft();
+    expect(sink.dropRunDraft).toHaveBeenCalledTimes(1);
+    expect(sink.recordRun).not.toHaveBeenCalled();
+  });
+
+  it('keeps no draft for a disabled, recorded or empty run', () => {
+    const off = setup(run());
+    new RunRecorder(off.sink, 0, false).keepDraft(off.sim);
+    expect(off.sink.keepRunDraft).not.toHaveBeenCalled();
+
+    const done = setup(run());
+    const recorded = new RunRecorder(done.sink, 0);
+    recorded.recordOver(run({ endReason: 'miss' }));
+    recorded.keepDraft(done.sim);
+    expect(done.sink.keepRunDraft).not.toHaveBeenCalled();
+
+    const empty = setup(run({ height: 0, score: 0, coins: 0, berries: 0 }));
+    new RunRecorder(empty.sink, 0).keepDraft(empty.sim);
+    expect(empty.sink.keepRunDraft).not.toHaveBeenCalled();
+  });
+
+  it('follows the background and the return of the app until unbound', () => {
+    const { sink, sim } = setup(run());
+    const recorder = new RunRecorder(sink, 0);
+    const handlers = new Map<string, () => void>();
+    const events = {
+      on: (name: string, fn: () => void) => handlers.set(name, fn),
+      off: (name: string) => handlers.delete(name),
+    };
+    const unbind = bindRunDraft(
+      events,
+      { hidden: 'h', visible: 'v' },
+      () => recorder,
+      () => sim,
+    );
+    handlers.get('h')?.();
+    handlers.get('v')?.();
+    expect(sink.keepRunDraft).toHaveBeenCalledTimes(1);
+    expect(sink.dropRunDraft).toHaveBeenCalledTimes(1);
+    unbind();
+    expect(handlers.size).toBe(0);
+  });
+});
 
 describe('RunRecorder', () => {
   it('writes nothing when it is disabled', () => {
