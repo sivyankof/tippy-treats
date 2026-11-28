@@ -190,9 +190,24 @@ export class HudScene extends Phaser.Scene {
       );
       this.nextBadge.update(info.height, info.team, isCompactNext(badges.count));
       fxGuard.call('hud-next-idle', this.nextBadge, this.nextBadge.idle, time);
-      this.updateMasterCaptions(info.team, delta);
-      this.tempoChip.update(info.tempoLeft, time, delta);
-      this.treasure.update(info, time, delta, this.gameScene()?.continueFlow?.isOpen === true);
+      fxGuard.call('hud-captions-update', this, this.updateMasterCaptions, info.team, delta);
+      fxGuard.call(
+        'hud-tempo-chip',
+        this.tempoChip,
+        this.tempoChip.update,
+        info.tempoLeft,
+        time,
+        delta,
+      );
+      fxGuard.call(
+        'hud-treasure',
+        this.treasure,
+        this.treasure.update,
+        info,
+        time,
+        delta,
+        this.gameScene()?.continueFlow?.isOpen === true,
+      );
     }
     fxGuard.call('hud-numbers-idle', this.numbersIdle, this.numbersIdle.update, time);
     this.tutorialHints.update(

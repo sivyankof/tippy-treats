@@ -23,6 +23,7 @@ import { bindPlayDays } from './game/app/play-days';
 import { bindNotifSchedule } from './game/app/notif-schedule';
 import { realNow } from './util/clock';
 import { bindCrashScenes, installCrashReporting } from './game/app/crash-reporting';
+import { watchFrameLoop } from './game/app/loop-watch-bind';
 import { services } from './services';
 import { beginPerfSession } from './game/perf/perf-session';
 import { readDebugParams, readPerfParams, showsFpsMeter, withoutReset } from './util/debug-params';
@@ -125,6 +126,7 @@ async function start(): Promise<void> {
   const game = new Phaser.Game(createGameConfig(parent));
   dropFramebufferHandlesOnLoss(game);
   bindCrashScenes(game);
+  watchFrameLoop(game);
   closeBootScreenOnFirstScreen(game);
   perfDirector?.startPerfDirector(game);
   // The benchmark's `&dpr=` sets its own cap, to compare the variants.
