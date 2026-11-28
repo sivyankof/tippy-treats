@@ -11,6 +11,7 @@ import type { RunInfo } from '../run/run-info';
 import { adsDev, iapDev } from '../../services';
 import { gameState, sessionTally } from '../../state';
 import { openCheckpointDemo } from './checkpoint-demo';
+import { openCloudDemo } from '../cloud/cloud-demo';
 import { cycleDebugLevel, cycleDebugSlot, getDebugTeam } from './debug-team';
 import {
   SQUASH_BUTTON_KINDS,
@@ -41,6 +42,7 @@ const DEBUG_COINS = 500;
 const BAKER_LABEL = 'baker +1';
 const CREATURES_LABEL = 'creatures +1';
 const CHECKPOINT_LABEL = 'Checkpoint window';
+const CLOUD_LABEL = 'Cloud windows';
 const RESET_PURCHASES_LABEL = 'Reset stub purchases';
 /** Prefixes of the buttons that start an effect in the run (there is no console on a phone). */
 const CUT_PREFIX = 'cut';
@@ -68,6 +70,7 @@ export class DebugPanel {
   private readonly creaturesEntry: Phaser.GameObjects.Text;
   private readonly adsEntry: Phaser.GameObjects.Text;
   private readonly checkpointEntry: Phaser.GameObjects.Text;
+  private readonly cloudEntry: Phaser.GameObjects.Text;
   private readonly purchasesEntry: Phaser.GameObjects.Text;
   private readonly effectEntries: Phaser.GameObjects.Text[] = [];
   private readonly entries: Phaser.GameObjects.Text[];
@@ -139,6 +142,7 @@ export class DebugPanel {
     this.checkpointEntry = entry(() => openCheckpointDemo(scene), PALETTE.panel).setText(
       CHECKPOINT_LABEL,
     );
+    this.cloudEntry = entry(() => openCloudDemo(scene), PALETTE.panel).setText(CLOUD_LABEL);
     this.purchasesEntry = entry(() => iapDev?.resetPurchases(), PALETTE.panel).setText(
       RESET_PURCHASES_LABEL,
     );
@@ -166,6 +170,7 @@ export class DebugPanel {
       this.creaturesEntry,
       this.adsEntry,
       this.checkpointEntry,
+      this.cloudEntry,
       this.purchasesEntry,
       ...this.effectEntries,
       this.applyEntry,

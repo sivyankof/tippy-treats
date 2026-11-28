@@ -1,13 +1,14 @@
 import type * as Phaser from 'phaser';
 import { consentAsk } from '../consent/consent-ask';
 import { notifAsk } from './notif-ask';
+import { cloudAsk } from '../../../cloud/cloud-ask';
 
 /**
- * A one-time question the game asks on entering Home after some finished runs (stage M8): the
- * consent flow after the first run (UMP, the tracking explainer and ATT), the notification
- * permission after the third (docs/09-services-analytics.md, sections 4 and 8). At most one is
- * asked per entry, before the windows of the day (streak, oven, "No ads" offer), so windows never
- * stack.
+ * A question the game asks on entering Home: the cloud save decision first (docs/07-ui-screens.md,
+ * section 2.4), then the one-time questions after some finished runs (stage M8): the consent flow
+ * after the first run (UMP, the tracking explainer and ATT), the notification permission after
+ * the third (docs/09-services-analytics.md, sections 4 and 8). At most one is asked per entry,
+ * before the windows of the day (streak, oven, "No ads" offer), so windows never stack.
  */
 export interface HomeAsk {
   /** For logs and tests. */
@@ -22,7 +23,7 @@ export interface HomeAsk {
 }
 
 /** The questions in the order they are asked. */
-export const HOME_ASKS: readonly HomeAsk[] = [consentAsk, notifAsk];
+export const HOME_ASKS: readonly HomeAsk[] = [cloudAsk, consentAsk, notifAsk];
 
 /**
  * Runs the due questions in order until one shows a window, then `then`; a question that showed

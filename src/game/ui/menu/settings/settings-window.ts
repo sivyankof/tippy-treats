@@ -33,6 +33,8 @@ import { createToggleRows, soundSettingRows, type ToggleRowSpec } from './settin
 import { createLinkButton } from './link-button';
 import { createGamesRow } from './games-row';
 import { gamesShown } from '../../../games/games-actions';
+import { cloudAfterReset, cloudSync } from '../../../cloud/cloud-actions';
+import { createCloudRow } from './cloud-row';
 
 const cfg = MENU.settings;
 const NOTIFY_KINDS: readonly NotificationKind[] = ['gift', 'streak', 'daily', 'comeback'];
@@ -137,6 +139,10 @@ export function openSettingsWindow(scene: Phaser.Scene, handlers: SettingsHandle
   if (games) y += cfg.links.gap + cfg.links.height;
   y += cfg.blockGap;
 
+  // The iCloud line sits above the credits, only where the cloud copy exists.
+  const cloud = cloudSync().status !== 'unsupported' ? createCloudRow(scene, width, y) : null;
+  if (cloud) y += cfg.infoLine + cfg.cloudGap;
+
   // The credits line may wrap onto a second line; the lines under it move down by what it took.
   const credits = createOutlinedText(scene, 0, 0, t('settings.musicCredits'), cfg.infoFont)
     .setAlign('center')
@@ -175,6 +181,7 @@ export function openSettingsWindow(scene: Phaser.Scene, handlers: SettingsHandle
     ...links,
     ...(privacy ? [privacy] : []),
     ...(games ? [games] : []),
+    ...(cloud ? [cloud] : []),
     credits,
     ...info,
     reset,
@@ -320,9 +327,11 @@ function createLanguageRow(
 
 /** Two confirmations one after the other; only the second one wipes the progress. */
 function askReset(scene: Phaser.Scene, onReset: () => void): void {
+  const status = cloudSync().status;
+  const cloudOn = status !== 'unsupported' && status !== 'off';
   openConfirmWindow(scene, {
     title: t('settings.resetAsk.title'),
-    text: t('settings.resetAsk.text'),
+    text: t(cloudOn ? 'settings.resetAsk.textCloud' : 'settings.resetAsk.text'),
     cancelLabel: t('settings.resetAsk.cancel'),
     confirmLabel: t('settings.resetAsk.next'),
     confirmFill: PALETTE.accentSecondary,
@@ -335,6 +344,7 @@ function askReset(scene: Phaser.Scene, onReset: () => void): void {
         confirmFill: PALETTE.danger,
         onConfirm: () => {
           gameState.resetProgress();
+          cloudAfterReset();
           onReset();
         },
       }),

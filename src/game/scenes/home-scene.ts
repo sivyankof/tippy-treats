@@ -29,6 +29,7 @@ import { HomeShelf } from '../ui/menu/home/home-shelf';
 import { openGiftWindow } from '../ui/menu/home/gift-window';
 import { HomeMapOpener } from '../ui/menu/climb-map/home-map-opener';
 import { startGamesOnHome } from '../games/games-actions';
+import { waitCloudOnHome } from '../cloud/cloud-actions';
 import { openJournalFromHome } from '../ui/menu/journal/journal-window';
 import { openMissionsWindow } from '../ui/menu/missions/missions-window';
 import { openSettingsWindow } from '../ui/menu/settings/settings-window';
@@ -149,10 +150,14 @@ export class HomeScene extends Phaser.Scene {
     this.layout();
     this.setEnabled(false);
     enterScreen(this, this.content(), () => {
-      this.setEnabled(true);
-      startGamesOnHome();
-      if (data?.reopenSettings) this.openSettings();
-      else runHomeAsks(this, () => this.showDayEntry());
+      // The buttons and the windows wait for the first cloud answer (a few seconds at most).
+      void waitCloudOnHome().then(() => {
+        if (!this.sys.isActive() || this.leaving) return;
+        this.setEnabled(true);
+        startGamesOnHome();
+        if (data?.reopenSettings) this.openSettings();
+        else runHomeAsks(this, () => this.showDayEntry());
+      });
     });
   }
 

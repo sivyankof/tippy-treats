@@ -16,6 +16,7 @@ import { UINT32_RANGE } from './math';
 import { DEBUG_TOOLS } from './build-kind';
 import { parseSafeInsets } from './boot/boot-screen';
 import { isWebGamesMode, type WebGamesMode } from '../services/games/web';
+import { isWebCloudMode, type WebCloudMode } from '../services/cloud-save/web';
 
 export interface DebugParams {
   debug: boolean;
@@ -53,6 +54,10 @@ export interface DebugParams {
   safe?: { top: number; bottom: number };
   /** `?games=signed_in|signed_out|refused|unavailable` plays Game Center in the browser (the stub is unavailable without it). */
   games?: WebGamesMode;
+  /** `?cloud=on|off|fail|slow` plays the iCloud save in the browser (no cloud without it). */
+  cloud?: WebCloudMode;
+  /** `?device=b` (letters and digits): the browser keeps a save of its own under that name, so two tabs play two devices of the cloud stub. */
+  device?: string;
 }
 
 const UINT32_MAX = UINT32_RANGE - 1;
@@ -131,6 +136,10 @@ export function parseDebugParams(search: string): DebugParams {
   if (isStartPlaceId(place)) result.place = place;
   const games = params.get('games');
   if (isWebGamesMode(games)) result.games = games;
+  const cloud = params.get('cloud');
+  if (isWebCloudMode(cloud)) result.cloud = cloud;
+  const device = params.get('device');
+  if (device !== null && /^[a-z0-9]{1,12}$/i.test(device)) result.device = device;
   const safe = parseSafeInsets(params.get('safe'));
   if (safe) result.safe = safe;
   return result;
@@ -259,9 +268,7 @@ export function savesRun(params: DebugParams): boolean {
  * then nothing goes to Game Center, or a shifted day would reach the real daily board.
  */
 export function overridesSave(params: DebugParams): boolean {
-  return (
-    params.dayOffset !== undefined || params.team !== undefined || params.level !== undefined
-  );
+  return params.dayOffset !== undefined || params.team !== undefined || params.level !== undefined;
 }
 
 /** The address with `?reset=1` taken out, so a reload does not reset the save again. */

@@ -702,6 +702,10 @@ export const MENU = {
     /** Install id is shown by its first characters only. */
     installIdChars: 8,
     infoAlpha: 0.85,
+    /** How often the "saved N min ago" text of the iCloud row is rewritten. */
+    /** Space between the iCloud line and the credits under it, so the status does not read as a credits line. */
+    cloudGap: 18,
+    cloudAgoRefreshMs: 30_000,
   },
   /** The confirmation windows of "Reset progress": the text, a gap and two buttons one under the other. */
   confirm: {

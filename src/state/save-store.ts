@@ -164,6 +164,21 @@ export class SaveStore {
     };
   }
 
+  /**
+   * Keeps a text beside the save under its own key (a save that lost a choice). False when the
+   * storage refused it, or when this page load writes nothing (the save was not read).
+   */
+  async keepAside(key: string, text: string): Promise<boolean> {
+    if (!this.persist) return false;
+    try {
+      await this.deps.storage.set(key, text);
+      return true;
+    } catch (error) {
+      console.warn(`Could not keep ${key}`, error);
+      return false;
+    }
+  }
+
   /** Writes now if anything changed. Also called when the page goes to the background. */
   flush(): void {
     this.clearTimer();

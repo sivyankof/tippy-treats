@@ -672,6 +672,7 @@
     "resetAsk": {
       "title": "Reset progress?",
       "text": "All creatures, coins, berries, records and your streak will be erased from this device. There is no cloud save, so the progress cannot be brought back. Paid purchases return through the store.",
+      "textCloud": "All creatures, coins, berries, records and your streak will be erased from this device and from iCloud, on all your devices. The progress cannot be brought back. Paid purchases return through the store.",
       "next": "Continue",
       "cancel": "Cancel"
     },
@@ -923,5 +924,45 @@
     "signIn": "Sign in to Game Center",
     "signedIn": "Game Center: signed in",
     "signInHint": "Sign in: iPhone Settings › Game Center"
+  },
+  "cloud": {
+    "found": {
+      "title": "Progress found",
+      "text": "There is a save of this game in iCloud. Restore it?",
+      "restore": "Restore",
+      "startOver": "Start over"
+    },
+    "startOverSure": {
+      "title": "Start over?",
+      "text": "The progress in iCloud will be replaced by this new game on every device with your Apple Account.",
+      "cancel": "Cancel",
+      "confirm": "Start over"
+    },
+    "choice": {
+      "title": "Two saves",
+      "text": "This device and iCloud have different progress. Which save do you keep? The other one is replaced.",
+      "device": "This device",
+      "cloud": "iCloud",
+      "keep": "Keep"
+    },
+    "summary": {
+      "level": "Level {n}",
+      "record": "Best {n}",
+      "creatures": "Creatures: {n}",
+      "date": "{date}"
+    },
+    "status": {
+      "saved": "iCloud: saved {ago}",
+      "waiting": "iCloud: waiting to sync",
+      "off": "iCloud is off",
+      "update": "Update the game to sync",
+      "error": "iCloud unavailable, progress kept on device"
+    },
+    "ago": {
+      "now": "just now",
+      "min": "{n} min ago",
+      "h": "{n} h ago",
+      "d": "{n} d ago"
+    }
   }
 }
