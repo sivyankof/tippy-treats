@@ -26,6 +26,18 @@ describe('CrashReporter', () => {
     });
   });
 
+  it('reports a loop stall with its own kind, even twice', () => {
+    const { recordError, reporter } = make();
+    reporter.reportLoopStall('restart');
+    reporter.reportLoopStall('restart');
+    reporter.reportLoopStall('give-up');
+    expect(recordError.mock.calls.map((call) => call[1].kind)).toEqual([
+      'loop-stall',
+      'loop-stall',
+      'loop-stall-gave-up',
+    ]);
+  });
+
   it('does not report the same failure twice', () => {
     const { recordError, reporter } = make();
     reporter.reportFailure(errorWithStack('same', 1), 'error');

@@ -225,7 +225,9 @@ export class GameScene extends Phaser.Scene {
       dropMods = this.sim.flyingModifiers();
       events.push(...this.sim.drop());
     }
-    if (this.sim.state.phase === 'flying') this.results.bakeStep();
+    if (this.sim.state.phase === 'flying') {
+      fxGuard.call('run-bake-step', this.results, this.results.bakeStep);
+    }
     this.fx.tower.prepareLanding(this.sim);
     this.tutorial?.observe(events, this.sim.state);
     driveContinue(

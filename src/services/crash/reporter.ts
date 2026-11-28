@@ -48,6 +48,19 @@ export class CrashReporter {
     }
   }
 
+  /** The frame loop watchdog's report: the loop stopped and was restarted, or the restarts ran out. */
+  reportLoopStall(outcome: 'restart' | 'give-up'): void {
+    if (this.sent >= CRASH.sessionMax) return;
+    this.sent++;
+    const restarted = outcome === 'restart';
+    this.deliver(
+      new Error(
+        restarted ? 'Frame loop stalled and was restarted' : 'Frame loop stalled, restarts ran out',
+      ),
+      restarted ? 'loop-stall' : 'loop-stall-gave-up',
+    );
+  }
+
   /** The debug menu's test: a report that skips the duplicate check and the limits. */
   reportTest(): void {
     this.deliver(new Error('Test non-fatal from the debug menu'), 'test');
