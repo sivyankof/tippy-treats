@@ -33,9 +33,9 @@ export const JOURNAL = {
     /** Layers of all runs (`stats.totalLayers`); one layer is about one serving. */
     layers: [
       { from: 0, basis: 'a family tea party' },
-      { from: 500, basis: 'achievement "Feed the School" I; a school is about 500 children' },
-      { from: 5000, basis: 'achievement "Feed the School" II; a village of about 5 000 people' },
-      { from: 25000, basis: 'achievement "Feed the School" III; a stadium of about 25 000 seats' },
+      { from: 1000, basis: 'achievement "Feed the School" I; a big school is about 1 000 children' },
+      { from: 10000, basis: 'achievement "Feed the School" II; a village of about 10 000 people' },
+      { from: 50000, basis: 'achievement "Feed the School" III; a stadium of about 50 000 seats' },
       { from: 100000, basis: 'a city of about 100 000 people' },
     ],
     /** All towers stacked, metres (`stats.totalLayers` x `layerHeightM`). */
@@ -60,10 +60,10 @@ export const JOURNAL = {
     /** Perfect drops (`stats.perfects`). */
     perfects: [
       { from: 0, basis: 'start' },
-      { from: 100, basis: 'achievement "Steady Hand" I' },
-      { from: 1000, basis: 'achievement "Steady Hand" II' },
-      { from: 5000, basis: 'achievement "Steady Hand" III' },
-      { from: 20000, basis: 'beyond the achievements' },
+      { from: 500, basis: 'achievement "Steady Hand" I' },
+      { from: 5000, basis: 'achievement "Steady Hand" II' },
+      { from: 25000, basis: 'achievement "Steady Hand" III' },
+      { from: 100000, basis: 'beyond the achievements' },
     ],
     /** Toppled towers: every run ends with one (`stats.runs`, daily and quit runs included). */
     runs: [

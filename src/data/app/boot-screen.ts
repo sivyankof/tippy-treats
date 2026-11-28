@@ -6,7 +6,7 @@ export const BOOT_SCREEN = {
    * The screen stays at least this long after its first paint: the title has hopped in by then, so
    * a quick phone does not only flash it.
    */
-  minShowMs: 1200,
+  minShowMs: 700,
   /** The dissolve once the first frame of a screen of the game is drawn. */
   fadeOutMs: 300,
   /** The title waits this long at most for the Nunito files, then hops in with the fallback font. */

@@ -82,7 +82,7 @@ describe('achievementPercents', () => {
   it('reads every counter from its own field', () => {
     const save = fresh();
     save.stats.flies = 250;
-    save.stats.perfects = 1000;
+    save.stats.perfects = 2500;
     save.stats.runs = 10;
     save.stats.totalLayers = 2500;
     save.records.bestCombo = 15;
@@ -94,10 +94,10 @@ describe('achievementPercents', () => {
     expect(p.get('flies_1')).toBe(100);
     expect(p.get('flies_2')).toBe(50);
     expect(p.get('flies_3')).toBe(25);
-    expect(p.get('perfects_2')).toBe(100);
+    expect(p.get('perfects_2')).toBe(50);
     expect(p.get('runs_1')).toBe(100);
     expect(p.get('runs_2')).toBe(10);
-    expect(p.get('layers_2')).toBe(50);
+    expect(p.get('layers_2')).toBe(25);
     expect(p.get('combo_1')).toBe(100);
     expect(p.get('combo_2')).toBe(75);
     expect(p.get('streak_1')).toBe(100);

@@ -42,9 +42,9 @@ describe('journal tiers', () => {
         .slice(1, 4)
         .map((tier) => tier.from);
     expect(firstThree('flies')).toEqual([50, 500, 1000]);
-    expect(firstThree('perfects')).toEqual([100, 1000, 5000]);
+    expect(firstThree('perfects')).toEqual([500, 5000, 25000]);
     expect(firstThree('runs')).toEqual([10, 100, 500]);
-    expect(firstThree('layers')).toEqual([500, 5000, 25000]);
+    expect(firstThree('layers')).toEqual([1000, 10000, 50000]);
   });
 
   it('has five dishes for the flies, from the glass to the bathtub', () => {

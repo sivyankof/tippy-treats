@@ -29,8 +29,8 @@ describe('journal texts in Russian', () => {
     expect(journalPhrase('height', counts({ height: 27 }))).toBe(
       'Все твои башни вместе выше девятиэтажки',
     );
-    expect(nb(journalPhrase('perfects', counts({ perfects: 1200 })))).toBe(
-      'Рука не дрогнула 1 200 раз',
+    expect(nb(journalPhrase('perfects', counts({ perfects: 6200 })))).toBe(
+      'Рука не дрогнула 6 200 раз',
     );
     expect(journalPhrase('runs', counts({ runs: 340 }))).toBe(
       'Уронено 340 башен. Уборщица передаёт привет',

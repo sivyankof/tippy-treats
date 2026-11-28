@@ -15,7 +15,7 @@ import {
 
 const CONFIG: BootConfig = {
   storageKey: 'boot',
-  minShowMs: 1200,
+  minShowMs: 700,
   maxShowMs: 8000,
   fadeOutMs: 300,
   fontWaitMs: 1000,

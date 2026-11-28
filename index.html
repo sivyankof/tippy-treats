@@ -165,8 +165,9 @@
       }
       #boot .title span {
         display: inline-block;
-        animation: bt-pop 0.55s cubic-bezier(0.3, 1.6, 0.5, 1) both;
-        animation-delay: calc(var(--i) * 55ms + 80ms);
+        /* Eleven letters: the last one has landed at 50 + 10 x 24 + 400 = 690 ms, before the screen may go. */
+        animation: bt-pop 0.4s cubic-bezier(0.3, 1.6, 0.5, 1) both;
+        animation-delay: calc(var(--i) * 24ms + 50ms);
       }
       #boot .title .a {
         color: #ff5c8a;

@@ -9,6 +9,7 @@ import { openScreen, SCENES, startRunFrom } from '../app/scene-keys';
 import { DailyAttempts } from '../ui/menu/daily/daily-attempts';
 import { DailyBoard } from '../ui/menu/daily/daily-board';
 import { gamesShown, openBoard } from '../games/games-actions';
+import type { Button } from '../ui/common/button';
 import { DailyDate } from '../ui/menu/daily/daily-date';
 import { DailyIntroLine, openDailyIntro } from '../ui/menu/daily/daily-intro';
 import { DailyLock } from '../ui/menu/daily/daily-lock';
@@ -75,7 +76,7 @@ export class DailyScene extends Phaser.Scene {
         this,
         () => this.startRun(),
         () => this.watchAd(),
-        gamesShown() ? () => this.openBoard() : undefined,
+        gamesShown() ? (button) => this.openBoard(button) : undefined,
       );
       this.sections.push(this.attempts, this.play);
     } else {
@@ -157,8 +158,8 @@ export class DailyScene extends Phaser.Scene {
     leaveScreen(this, this.content(), () => startRunFrom(this, DAILY_RUN));
   }
 
-  private openBoard(): Promise<void> {
-    return this.leaving ? Promise.resolve() : openBoard(this, 'daily_height');
+  private openBoard(button: Button): Promise<void> {
+    return this.leaving ? Promise.resolve() : openBoard(this, 'daily_height', button);
   }
 
   private leave(key: typeof SCENES.home): void {

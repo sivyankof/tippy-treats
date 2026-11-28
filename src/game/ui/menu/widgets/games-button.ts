@@ -7,15 +7,19 @@ const cfg = MENU.gamesButton;
 
 /**
  * Runs `action` on a tap, one at a time: while it runs (a sign-in may take a while) the button is
- * disabled and a second tap does nothing. Returns the tap handler.
+ * disabled and a second tap does nothing. The action gets the button, so a notice can stand on it.
+ * Returns the tap handler.
  */
-export function guardBusy(button: () => Button, action: () => Promise<unknown>): () => void {
+export function guardBusy(
+  button: () => Button,
+  action: (button: Button) => Promise<unknown>,
+): () => void {
   let busy = false;
   return () => {
     if (busy) return;
     busy = true;
     button().setEnabled(false);
-    void action().finally(() => {
+    void action(button()).finally(() => {
       busy = false;
       if (button().active) button().setEnabled(true);
     });
@@ -28,7 +32,7 @@ export function createGamesButton(
   label: string,
   width: number,
   y: number,
-  action: () => Promise<void>,
+  action: (button: Button) => Promise<void>,
 ): Button {
   const button: Button = createTextButton(scene, {
     text: label,
@@ -48,7 +52,7 @@ export function createTrophyButton(
   scene: Phaser.Scene,
   x: number,
   y: number,
-  action: () => Promise<void>,
+  action: (button: Button) => Promise<void>,
 ): Button {
   const sq = cfg.square;
   bakeTrophy(scene);

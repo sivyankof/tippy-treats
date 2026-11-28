@@ -1,4 +1,5 @@
 import type * as Phaser from 'phaser';
+import type { Button } from '../ui/common/button';
 import type { BoardId } from '../../data/games/boards';
 import { t } from '../../i18n';
 import { services } from '../../services';
@@ -50,28 +51,37 @@ export function gamesShown(): boolean {
 
 /**
  * Signs in on the player's tap if needed. When the system offers no window any more (the
- * player once declined), a notice tells where to sign in.
+ * player once declined), a notice tells where to sign in; it stands on the tapped `button`, so
+ * it never covers the rest of the window.
  */
-export async function ensureSignedIn(scene: Phaser.Scene, source: SignInSource): Promise<boolean> {
+export async function ensureSignedIn(
+  scene: Phaser.Scene,
+  source: SignInSource,
+  button?: Button,
+): Promise<boolean> {
   const games = services.games;
   if (games.status() === 'signed_in') return true;
   if (games.status() === 'unavailable') return false;
   const ok = await games.signIn();
   logGamesSignIn(source, ok);
-  if (!ok && scene.sys.isActive()) showToast(scene, t('games.signInHint'));
+  if (!ok && scene.sys.isActive()) showToast(scene, t('games.signInHint'), button);
   return ok;
 }
 
 /** The system window of a leaderboard, after a sign-in when needed. */
-export async function openBoard(scene: Phaser.Scene, board: BoardId): Promise<void> {
-  if (!(await ensureSignedIn(scene, 'board'))) return;
+export async function openBoard(
+  scene: Phaser.Scene,
+  board: BoardId,
+  button?: Button,
+): Promise<void> {
+  if (!(await ensureSignedIn(scene, 'board', button))) return;
   logBoardOpen(board);
   await services.games.showBoard(board);
 }
 
 /** The system window of the achievements, after a sign-in when needed. */
-export async function openAchievements(scene: Phaser.Scene): Promise<void> {
-  if (!(await ensureSignedIn(scene, 'achievements'))) return;
+export async function openAchievements(scene: Phaser.Scene, button?: Button): Promise<void> {
+  if (!(await ensureSignedIn(scene, 'achievements', button))) return;
   logAchievementsOpen();
   await services.games.showAchievements();
 }

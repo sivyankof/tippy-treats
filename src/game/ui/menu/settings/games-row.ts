@@ -33,7 +33,7 @@ export function createGamesRow(
     -cfg.links.height / 2,
     guardBusy(
       () => button,
-      () => ensureSignedIn(scene, 'settings'),
+      (tapped) => ensureSignedIn(scene, 'settings', tapped),
     ),
   );
   const row = scene.add.container(0, centre, [button, line]);
