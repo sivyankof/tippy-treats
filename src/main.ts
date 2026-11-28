@@ -11,6 +11,8 @@ import { applySavedSettings } from './game/app/apply-settings';
 import { detectLang, setLang } from './i18n';
 import { syncPurchases } from './game/economy/purchases';
 import { gameState } from './state';
+import type { LoadOutcome } from './state/game-state';
+import { bindCloud } from './game/cloud/cloud-actions';
 import { bindSaveFlush } from './state/page-lifecycle';
 import { followEffectsLevelDensity } from './game/app/follow-density';
 import { dropFramebufferHandlesOnLoss } from './game/app/lost-context-watch';
@@ -53,9 +55,11 @@ async function loadFonts(): Promise<void> {
 
 /** Reads the save; a storage that fails or stalls never blocks the start (a new save is used, and a stalled one is never written). */
 async function loadSave(): Promise<void> {
+  let outcome: LoadOutcome | null = null;
   try {
     const reset = readDebugParams().reset === true;
-    const result = await gameState.load({ reset, timeoutMs: BOOT.saveWaitMs });
+    outcome = await gameState.load({ reset, timeoutMs: BOOT.saveWaitMs });
+    const result = outcome;
     if (result.status === 'loaded' && result.source !== 'primary')
       console.warn(`Save loaded from: ${result.source}`);
     // The reset is done: a reload (or a dev server full reload) must not wipe the save again.
@@ -69,6 +73,10 @@ async function loadSave(): Promise<void> {
   applySavedSettings();
   // Never blocks the start for long: on a slow network the check finishes in the background.
   await withTimeout(syncPurchases(), BOOT.purchasesWaitMs).catch(() => undefined);
+  // The cloud is read in the background; Home waits for its first answer, not the start.
+  bindCloud(outcome, () =>
+    withTimeout(syncPurchases(), BOOT.purchasesWaitMs).catch(() => undefined),
+  );
 }
 
 async function start(): Promise<void> {

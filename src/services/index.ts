@@ -59,12 +59,16 @@ import { NativeCrash, type CrashPlugin } from './crash/native';
 import type { StorageService } from './storage/types';
 import { WebStorage } from './storage/web';
 import { NativeStorage } from './storage/native';
+import { PrefixedStorage } from './storage/prefixed';
 import type { NotificationsService } from './notifications/types';
 import { WebNotifications } from './notifications/web';
 import { NativeNotifications } from './notifications/native';
 import type { GamesService } from './games/types';
 import { WebGames } from './games/web';
 import { NativeGames, type GamesPlugin } from './games/native';
+import type { CloudSaveService } from './cloud-save/types';
+import { WebCloudSave } from './cloud-save/web';
+import { NativeCloudSave, type CloudPlugin } from './cloud-save/native';
 import { t } from '../i18n';
 
 /** Everything the game asks of the device. Scenes use these and never pick an implementation. */
@@ -89,6 +93,8 @@ export interface Services {
   rating: RatingService;
   /** Game Center on iOS; unavailable on Android (stage 1.1-A) and in the browser (`?games=` plays it in dev). */
   games: GamesService;
+  /** The cloud copy of the save: iCloud on iOS; no cloud on Android (stage 1.1-A) and in the browser (`?cloud=` plays it in dev). */
+  cloudSave: CloudSaveService;
 }
 
 /** Inside the iOS or Android app (Capacitor); false in any browser. */
@@ -159,6 +165,25 @@ const ads: AdsService = native
     )
   : webAds;
 
+/** `TippyGames` (`ios/App/App/TippyGamesPlugin.swift`): Game Center and the iCloud key-value store. */
+const tippyGames =
+  native && platform === 'ios' ? registerPlugin<GamesPlugin & CloudPlugin>('TippyGames') : null;
+
+/** `localStorage`; under `?device=` (dev) a save of that name, so two tabs play two devices. */
+function browserStorage(): StorageService {
+  const device = typeof window === 'undefined' ? undefined : readDebugParams().device;
+  return device === undefined
+    ? new WebStorage()
+    : new PrefixedStorage(new WebStorage(), `device_${device}:`);
+}
+
+/** The browser stub's mode; `none` (no cloud) in the store build, on Android and without `?cloud=`. */
+const webCloudMode =
+  native || typeof window === 'undefined' ? 'none' : (readDebugParams().cloud ?? 'none');
+
+/** The platform has a cloud save at all (iOS, or the browser stub in a debug mode): the settings show its line. */
+export const cloudSaveShown = tippyGames !== null || webCloudMode !== 'none';
+
 /** The app's own plugin (`ios/App/App/TippyDevicePlugin.swift`, `android/.../TippyDevicePlugin.java`). */
 const tippyDevice = registerPlugin<DevicePlugin & ConsentSignalsPlugin>('TippyDevice');
 
@@ -216,7 +241,7 @@ export const services: Services = {
   ads,
   consent,
   iap,
-  storage: native ? new NativeStorage(Preferences) : new WebStorage(),
+  storage: native ? new NativeStorage(Preferences) : browserStorage(),
   share: new WebShare(),
   telemetry: createTelemetry(consent),
   crash: firebaseOn
@@ -231,13 +256,15 @@ export const services: Services = {
   notifications: native
     ? new NativeNotifications(LocalNotifications, (key) => t(key))
     : new WebNotifications(import.meta.env.DEV),
-  games:
-    native && platform === 'ios'
-      ? new NativeGames(registerPlugin<GamesPlugin>('TippyGames'))
-      : new WebGames(
-          native || typeof window === 'undefined' ? 'unavailable' : readDebugParams().games,
-          DEBUG_TOOLS ? (line) => console.info(line) : null,
-        ),
+  cloudSave: tippyGames
+    ? new NativeCloudSave(tippyGames)
+    : new WebCloudSave(webCloudMode, DEBUG_TOOLS ? (line) => console.info(line) : null),
+  games: tippyGames
+    ? new NativeGames(tippyGames)
+    : new WebGames(
+        native || typeof window === 'undefined' ? 'unavailable' : readDebugParams().games,
+        DEBUG_TOOLS ? (line) => console.info(line) : null,
+      ),
 };
 
 /** Dev switch of the ad stub (debug panel). Not part of the services: native ads have none. */

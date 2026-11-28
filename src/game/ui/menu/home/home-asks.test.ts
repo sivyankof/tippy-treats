@@ -6,6 +6,9 @@ import { runHomeAsks, type HomeAsk } from './home-asks';
 vi.mock('./notif-ask', () => ({
   notifAsk: { name: 'notifications', due: () => false, run: vi.fn() },
 }));
+vi.mock('../../../cloud/cloud-ask', () => ({
+  cloudAsk: { name: 'cloud', due: () => false, run: vi.fn() },
+}));
 
 const scene = {} as Phaser.Scene;
 

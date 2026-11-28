@@ -5,6 +5,7 @@ import { services } from '../../services';
 import type { PurchaseReport, PurchaseResult } from '../../services/iap/types';
 import { gameState } from '../../state';
 import { logIapResult, logIapStart } from './economy-telemetry';
+import { requestCloudWrite } from '../cloud/cloud-actions';
 
 /**
  * How a purchase ended: the store's result (`PurchaseResult`, what `iap_result` logs) plus
@@ -75,6 +76,7 @@ export async function buyProduct(key: ProductKey): Promise<BuyOutcome> {
   gameState.grantProduct(key, report.transactionIds);
   applyRemoveAds();
   gameState.flush();
+  requestCloudWrite();
   // One reward sound for every successful purchase, whichever screen it was made on.
   services.audio.play('purchase');
   return 'purchased';
@@ -107,6 +109,7 @@ async function syncOwned(
     const before = gameState.data;
     if (!gameState.restorePurchases(owned)) return { owned, restored: [] };
     gameState.flush();
+    requestCloudWrite();
     const restored = owned.filter(
       (key) => !productOwned(before, key) && productOwned(gameState.data, key),
     );
@@ -135,7 +138,10 @@ async function payUnpaidTransactions(): Promise<void> {
     for (const tx of gameState.unpaidTransactions(known)) {
       paid = gameState.grantProduct(tx.key, [tx.transactionId]) || paid;
     }
-    if (paid) gameState.flush();
+    if (paid) {
+      gameState.flush();
+      requestCloudWrite();
+    }
   } catch {
     // The store cannot be asked now; the next launch tries again.
   }

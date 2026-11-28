@@ -87,6 +87,10 @@ import {
 } from './streak';
 import { withBakerLevel, withBakerLevelBumped, withCreaturesBumped } from './debug-grants';
 import { withProgressReset } from './reset';
+import { withCloudAdopted, withCloudSent } from './cloud/cloud-adopt';
+import type { CloudCopy } from '../core/save/cloud-merge';
+import { serializeSave } from '../core/save/load';
+import { REPLACED_SAVE_PREFIX } from '../data/app/cloud';
 import { withProgressChanged } from '../core/save/sync';
 import {
   earnEvents,
@@ -129,6 +133,8 @@ export class GameState {
   private readonly runListeners = new Set<(save: Readonly<Save>) => void>();
   /** A debug writer changed the progress in this launch (memory only). */
   private debugWritten = false;
+  /** Changes of the progress in this launch (memory only): a cloud write tells by it whether the progress moved meanwhile. */
+  private progressCount = 0;
 
   constructor(private readonly deps: GameStateDeps) {
     const properties = deps.telemetry ? new UserPropertySync(deps.telemetry) : null;
@@ -791,11 +797,41 @@ export class GameState {
     this.store.flush();
   }
 
+  // --- Cloud copy (docs/08-architecture.md, section 5, "Облачная копия") ---
+
+  /** A mark of the progress now; `markCloudSent` compares it to tell a change made while a copy was on its way. */
+  get progressMark(): number {
+    return this.progressCount;
+  }
+
+  /**
+   * Takes the cloud copy instead of the local save (see `withCloudAdopted`) and writes it at once.
+   * The caller then checks the purchases and builds Home again.
+   */
+  adopt(copy: Pick<CloudCopy, 'rev' | 'id' | 'save'>): void {
+    this.progressCount += 1;
+    this.store.replace(withCloudAdopted(this.store.save, copy));
+    this.store.flush();
+  }
+
+  /** The copy `rev`/`id` built at `mark` reached the cloud; the progress counts as changed if it moved since. */
+  markCloudSent(rev: number, id: string, mark: number): void {
+    this.store.replace(withCloudSent(this.store.save, rev, id, mark !== this.progressCount));
+    this.store.flush();
+  }
+
+  /** Keeps a save that lost a choice on the device, under `save_replaced_<time>`. */
+  keepReplaced(save: Readonly<Save>): Promise<boolean> {
+    const key = `${REPLACED_SAVE_PREFIX}${this.deps.realNow()}`;
+    return this.store.keepAside(key, serializeSave(save as Save));
+  }
+
   /**
    * Swaps in a save whose progress changed: `sync.dirty` is set, so the cloud copy is known to
    * be behind (docs/08-architecture.md, section 5). Every other change goes through `store.replace`.
    */
   private progress(next: Save): void {
+    this.progressCount += 1;
     this.store.replace(withProgressChanged(next));
   }
 

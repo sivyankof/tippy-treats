@@ -265,7 +265,7 @@ function normalizeSync(value: unknown): Save['sync'] {
   return { cloudRev: Math.floor(cloudRev), cloudId, dirty };
 }
 
-interface Parsed {
+export interface Parsed {
   save: Save;
   /** The key fields are all present with the right types; false means field-by-field recovery was needed. */
   intact: boolean;
@@ -290,11 +290,21 @@ function hasKeyFields(raw: Obj): boolean {
 /** Parses, migrates and normalizes one stored text; null when it cannot be used. */
 function parseSave(text: string, defaults: Save, nowMs: number): Parsed | null {
   try {
-    const migrated = migrate(JSON.parse(text) as unknown, nowMs) as unknown as Obj;
-    return { save: normalize(migrated, defaults), intact: hasKeyFields(migrated) };
+    return readStoredSave(JSON.parse(text) as unknown, defaults, nowMs);
   } catch {
     return null;
   }
+}
+
+/**
+ * One stored save object (already parsed from its text): migrated through the chain and
+ * normalized over `defaults`. Throws a `SaveError` when it cannot be migrated (not an object, no
+ * valid version, a newer version than this game knows). `intact` is false when a key field had
+ * to be filled in, so the caller can tell a damaged save from a whole one.
+ */
+export function readStoredSave(raw: unknown, defaults: Save, nowMs: number): Parsed {
+  const migrated = migrate(raw, nowMs) as unknown as Obj;
+  return { save: normalize(migrated, defaults), intact: hasKeyFields(migrated) };
 }
 
 const isStored = (text: string | null): text is string => text !== null && text !== '';

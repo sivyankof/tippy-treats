@@ -6,7 +6,11 @@ import UIKit
 /// section 13): the quiet sign-in at launch, the sign-in on the player's tap, scores, achievements
 /// and the system windows. The sign-in window of the system never shows by itself: GameKit hands
 /// it over in `authenticateHandler`, it is kept and shown only from `signIn`. The floating access
-/// point is never shown (it would cover the HUD). Every method resolves; nothing rejects.
+/// point is never shown (it would cover the HUD). Every Game Center method resolves; nothing rejects.
+///
+/// The same plugin holds the iCloud key-value store of the save (`src/services/cloud-save/native.ts`,
+/// docs/09-services-analytics.md, section 14): read and write one key, and the store's change
+/// notifications as the `cloudChange` event, kept until the game listens.
 @objc(TippyGamesPlugin)
 public class TippyGamesPlugin: CAPPlugin, CAPBridgedPlugin, GKGameCenterControllerDelegate {
     public let identifier = "TippyGamesPlugin"
@@ -17,7 +21,10 @@ public class TippyGamesPlugin: CAPPlugin, CAPBridgedPlugin, GKGameCenterControll
         CAPPluginMethod(name: "submitScore", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "showBoard", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "reportAchievements", returnType: CAPPluginReturnPromise),
-        CAPPluginMethod(name: "showAchievements", returnType: CAPPluginReturnPromise)
+        CAPPluginMethod(name: "showAchievements", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "cloudAvailable", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "cloudRead", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "cloudWrite", returnType: CAPPluginReturnPromise)
     ]
 
     /// A sign-in the player started that GameKit has not answered after this long is taken as declined.
@@ -36,6 +43,76 @@ public class TippyGamesPlugin: CAPPlugin, CAPBridgedPlugin, GKGameCenterControll
     /// The sign-in window GameKit offered; shown only when the player taps "Sign in".
     private var signInController: UIViewController?
     private var pendingSignIn: CAPPluginCall?
+
+    // MARK: - iCloud key-value store
+
+    private var cloudStore: NSUbiquitousKeyValueStore { NSUbiquitousKeyValueStore.default }
+
+    /// Apple: register for the change notification shortly after launch, then synchronize; again
+    /// when the app comes back to the foreground.
+    override public func load() {
+        let center = NotificationCenter.default
+        center.addObserver(
+            self, selector: #selector(cloudChanged(_:)),
+            name: NSUbiquitousKeyValueStore.didChangeExternallyNotification, object: cloudStore)
+        center.addObserver(
+            self, selector: #selector(cloudForeground),
+            name: UIApplication.willEnterForegroundNotification, object: nil)
+        cloudStore.synchronize()
+    }
+
+    @objc private func cloudForeground() {
+        cloudStore.synchronize()
+    }
+
+    /// Another device changed the copy, the first download came, or the account changed: the game
+    /// reads again. A quota violation is only logged. The event waits for a listener if none yet.
+    @objc private func cloudChanged(_ notification: Notification) {
+        let reason = (notification.userInfo?[NSUbiquitousKeyValueStoreChangeReasonKey] as? NSNumber)?.intValue ?? -1
+        let name: String
+        switch reason {
+        case NSUbiquitousKeyValueStoreServerChange: name = "server"
+        case NSUbiquitousKeyValueStoreInitialSyncChange: name = "initial"
+        case NSUbiquitousKeyValueStoreAccountChange: name = "account"
+        case NSUbiquitousKeyValueStoreQuotaViolationChange:
+            CAPLog.print("TippyGames: iCloud key-value quota exceeded")
+            return
+        default: name = "unknown"
+        }
+        notifyListeners("cloudChange", data: ["reason": name], retainUntilConsumed: true)
+    }
+
+    /// iCloud is signed in. The store also works without an account (changes stay on the device),
+    /// but such a write saves nothing, so the game treats it as iCloud off.
+    @objc func cloudAvailable(_ call: CAPPluginCall) {
+        call.resolve(["available": FileManager.default.ubiquityIdentityToken != nil])
+    }
+
+    @objc func cloudRead(_ call: CAPPluginCall) {
+        guard let key = call.getString("key") else {
+            call.reject("key missing")
+            return
+        }
+        if let text = cloudStore.string(forKey: key) {
+            call.resolve(["text": text])
+        } else {
+            call.resolve([:])
+        }
+    }
+
+    /// Writes the copy (and first the replaced copy of another device under `previousKey`);
+    /// `ok` is what `synchronize()` says (false without the store's entitlement).
+    @objc func cloudWrite(_ call: CAPPluginCall) {
+        guard let key = call.getString("key"), let text = call.getString("text") else {
+            call.resolve(["ok": false])
+            return
+        }
+        if let previousKey = call.getString("previousKey"), let previous = call.getString("previous") {
+            cloudStore.set(previous, forKey: previousKey)
+        }
+        cloudStore.set(text, forKey: key)
+        call.resolve(["ok": cloudStore.synchronize()])
+    }
 
     // MARK: - Sign-in
 
