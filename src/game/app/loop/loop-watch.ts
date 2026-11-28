@@ -1,4 +1,4 @@
-import { LOOP_WATCH } from '../../data/app/loop-watch';
+import { LOOP_WATCH } from '../../../data/app/loop-watch';
 
 /** What the watchdog decides at a check. */
 export type LoopVerdict = 'ok' | 'restart' | 'give-up';

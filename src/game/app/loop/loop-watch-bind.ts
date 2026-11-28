@@ -1,6 +1,6 @@
 import * as Phaser from 'phaser';
-import { LOOP_WATCH } from '../../data/app/loop-watch';
-import { crashReporter } from './crash-reporting';
+import { LOOP_WATCH } from '../../../data/app/loop-watch';
+import { crashReporter } from '../crash-reporting';
 import { LoopWatch } from './loop-watch';
 
 /**

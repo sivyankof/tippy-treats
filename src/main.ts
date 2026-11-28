@@ -25,7 +25,7 @@ import { bindVideoWake } from './game/app/video-wake';
 import { bindNotifSchedule } from './game/app/notif-schedule';
 import { realNow } from './util/clock';
 import { bindCrashScenes, installCrashReporting } from './game/app/crash-reporting';
-import { watchFrameLoop } from './game/app/loop-watch-bind';
+import { watchFrameLoop } from './game/app/loop/loop-watch-bind';
 import { services } from './services';
 import { beginPerfSession } from './game/perf/perf-session';
 import { readDebugParams, readPerfParams, showsFpsMeter, withoutReset } from './util/debug-params';
