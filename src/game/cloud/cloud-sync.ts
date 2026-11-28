@@ -161,19 +161,25 @@ export class CloudSync {
   }
 
   /**
-   * Takes the copy (silently, or by the player's choice: then the local save is kept aside
-   * under `save_replaced_*` first), then the purchase check.
+   * Takes the copy, then the purchase check. `silent`: the merge table took it, and the take
+   * holds only while it still does (a copy whose kinship cannot be told keeps the local save
+   * aside first); `chosen`: the player chose it, and the local save is kept aside first. The
+   * local save is kept under `save_replaced_*`; when that fails, nothing is replaced.
    */
-  takeCloud(copy: CloudCopy, keepLocal: boolean): Promise<void> {
+  takeCloud(copy: CloudCopy, how: 'silent' | 'chosen'): Promise<void> {
     let taken = false;
     // In the queue: a pass on its way never mixes with the take.
     this.queue = this.queue
       .then(async () => {
         const { state } = this.deps;
-        if (!keepLocal) {
+        if (how === 'silent') {
           // A silent take holds only while nothing changed here since it was decided.
-          const now = this.cloud ? decide(state.data as Save, this.cloud) : null;
-          if (now?.kind !== 'adopt' || now.copy.id !== copy.id) return;
+          const decided = this.silentTake(copy);
+          if (decided === null) return;
+          if (decided.keepLocal) {
+            if (!(await this.inTime(state.keepReplaced(state.data), false))) return;
+            if (this.silentTake(copy) === null) return;
+          }
         } else if (!(await this.inTime(state.keepReplaced(state.data), false))) {
           // The losing save could not be kept: nothing is replaced, and Home asks again.
           return;
@@ -188,6 +194,12 @@ export class CloudSync {
     return this.queue.then(() =>
       taken ? this.deps.afterAdopt?.().catch(() => undefined) : undefined,
     );
+  }
+
+  /** The silent take of `copy` the merge table gives now; null when it gives anything else. */
+  private silentTake(copy: CloudCopy): Extract<CloudDecision, { kind: 'adopt' }> | null {
+    const now = this.cloud ? decide(this.deps.state.data as Save, this.cloud) : null;
+    return now?.kind === 'adopt' && now.copy.id === copy.id ? now : null;
   }
 
   /** The player keeps the local save: the copy's save is kept aside, then the local one goes over the cloud at once. */
