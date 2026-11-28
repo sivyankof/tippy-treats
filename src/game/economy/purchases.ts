@@ -126,7 +126,7 @@ async function syncOwned(
  * purchase cut off between the store's answer and the payout. Only recent transactions not older
  * than the save, once each (`unpaidTransactions`); a one-time product already owned is skipped.
  */
-async function payUnpaidTransactions(): Promise<void> {
+async function payUnpaidTransactions(): Promise<boolean> {
   try {
     const known = (await services.iap.completedTransactions()).flatMap((tx) => {
       const key = productIds.keyOf(tx.productId);
@@ -142,24 +142,57 @@ async function payUnpaidTransactions(): Promise<void> {
       gameState.flush();
       requestCloudWrite();
     }
+    return paid;
   } catch {
-    // The store cannot be asked now; the next launch tries again.
+    // The store cannot be asked now; the next reconcile tries again.
+    return false;
   }
 }
 
-/** At launch: reconciles the store's one-time purchases with the save, pays unpaid consumables, switches ads off if owned. */
+/** What one reconcile did: whether goods were paid out, and what the store said is owned (null: not asked). */
+interface Reconciled {
+  paid: boolean;
+  synced: { owned: ProductKey[]; restored: ProductKey[] } | null;
+}
+
+/** The reconcile under way; a call during it gets its result. */
+let reconciling: Promise<Reconciled> | null = null;
+
+/**
+ * The one reconcile of the store with the save, for the launch, "Restore purchases" and the app
+ * coming back to the front: first pays what the store completed but was never paid here, then
+ * puts the owned one-time products into the save and switches ads off if owned. One at a time:
+ * a call made while another runs waits for it and gets its result.
+ */
+function reconcile(fetchOwned: () => Promise<string[]>): Promise<Reconciled> {
+  reconciling ??= (async () => {
+    try {
+      // The payout goes first: a starter pack approved later is paid in full, not taken for a
+      // restore (which gives back the creature only).
+      const paid = await payUnpaidTransactions();
+      return { paid, synced: await syncOwned(fetchOwned) };
+    } finally {
+      reconciling = null;
+    }
+  })();
+  return reconciling;
+}
+
+/** At launch and when the app returns to the front: reconciles the store with the save. */
 export async function syncPurchases(): Promise<void> {
-  // The payout goes first: a starter pack approved later is paid in full, not taken for a
-  // restore (which gives back the creature only).
-  await payUnpaidTransactions();
-  const synced = await syncOwned(() => services.iap.ownedNonConsumables());
+  const { synced } = await reconcile(() => services.iap.ownedNonConsumables());
   for (const key of synced?.restored ?? []) untold.add(key);
 }
 
-/** The "Restore purchases" button. */
+/**
+ * The "Restore purchases" button: the same reconcile, asking the store to restore. `restored`
+ * when something was paid out or the store names a one-time product; `failed` when the store
+ * could not be asked and nothing was paid.
+ */
 export async function restorePurchases(): Promise<RestoreOutcome> {
-  const synced = await syncOwned(() => services.iap.restore());
-  if (synced === null) return 'failed';
+  const { paid, synced } = await reconcile(() => services.iap.restore());
   untold.clear();
+  if (paid) return 'restored';
+  if (synced === null) return 'failed';
   return synced.owned.length > 0 ? 'restored' : 'nothing';
 }

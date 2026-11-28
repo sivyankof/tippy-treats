@@ -94,6 +94,10 @@ export class WebAds implements AdsService, AdsDevControl {
     if (this.current === 'loading') this.loadedAt = Date.now() + STUB_ADS.loadingMs;
   }
 
+  wake(): void {
+    // The stub has nothing to load again.
+  }
+
   showRewarded(): Promise<RewardedResult> {
     if (!this.isRewardedReady()) return Promise.resolve('unavailable');
     this.busy = true;

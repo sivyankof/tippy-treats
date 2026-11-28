@@ -7,6 +7,7 @@ import { AD_BUTTON_WATCH } from '../../../../data/economy/rewarded-video';
 import { VIDEO_CAPTION_LAYOUT } from '../../../../data/economy/video-icon-look';
 import { cssColor } from '../../../../util/color';
 import { t } from '../../../../i18n';
+import { services } from '../../../../services';
 import {
   currentAdCaption,
   currentAdState,
@@ -190,6 +191,8 @@ export function watchAdState(
   owner: Phaser.GameObjects.GameObject,
   onChange: (state: AdState) => boolean | void,
 ): void {
+  // A screen with an ad button opens: an ad that gave up loading tries again.
+  services.ads.wake();
   let shown = currentAdState();
   const timer = owner.scene.time.addEvent({
     delay: AD_BUTTON_WATCH.pollMs,
