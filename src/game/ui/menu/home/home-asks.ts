@@ -8,7 +8,7 @@ import { cloudAsk } from '../../../cloud/cloud-ask';
  * section 2.4), then the one-time questions after some finished runs (stage M8): the consent flow
  * after the first run (UMP, the tracking explainer and ATT), the notification permission after
  * the third (docs/09-services-analytics.md, sections 4 and 8). At most one is asked per entry,
- * before the windows of the day (streak, oven, "No ads" offer), so windows never stack.
+ * and an entry that showed one has no window of the day (`day-window.ts`), so windows never stack.
  */
 export interface HomeAsk {
   /** For logs and tests. */
@@ -26,17 +26,17 @@ export interface HomeAsk {
 export const HOME_ASKS: readonly HomeAsk[] = [cloudAsk, consentAsk, notifAsk];
 
 /**
- * Runs the due questions in order until one shows a window, then `then`; a question that showed
- * nothing (the silent consent refresh) does not use up the slot. With nothing due, `then` runs at once.
+ * Runs the due questions in order until one shows a window, then `then(true)`; a question that showed
+ * nothing (the silent consent refresh) does not use up the slot. With nothing shown, `then(false)`.
  */
 export function runHomeAsks(
   scene: Phaser.Scene,
-  then: () => void,
+  then: (shown: boolean) => void,
   asks: readonly HomeAsk[] = HOME_ASKS,
 ): void {
   const ask = asks.find((candidate) => candidate.due());
   if (ask === undefined) {
-    then();
+    then(false);
     return;
   }
   const rest = asks.slice(asks.indexOf(ask) + 1);
@@ -44,7 +44,7 @@ export function runHomeAsks(
   ask.run(scene, (shown) => {
     if (finished) return;
     finished = true;
-    if (shown) then();
+    if (shown) then(true);
     else runHomeAsks(scene, then, rest);
   });
 }

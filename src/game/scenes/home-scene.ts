@@ -5,7 +5,6 @@ import { MENU } from '../../data/common/menu-layout';
 import { PALETTE } from '../../data/common/palette';
 import { t } from '../../i18n';
 import { gameState } from '../../state';
-import { prepareRemoveAdsOffer } from '../economy/interstitial-flow';
 import { syncPurchases } from '../economy/purchases';
 import type { RunRequest } from '../run/run-request';
 import { startRunFrom, openScreen, SCENES, type HomeData } from '../app/scene-keys';
@@ -34,7 +33,8 @@ import { openJournalFromHome } from '../ui/menu/journal/journal-window';
 import { openMissionsWindow } from '../ui/menu/missions/missions-window';
 import { openSettingsWindow } from '../ui/menu/settings/settings-window';
 import { ScreenHeader } from '../ui/menu/widgets/screen-header';
-import { openStreakCalendar, openStreakEntry } from '../ui/menu/streak/streak-windows';
+import { openStreakCalendar } from '../ui/menu/streak/streak-windows';
+import { openDayWindow, takeFirstHome } from '../ui/menu/home/day-entry';
 import { runHomeAsks } from '../ui/menu/home/home-asks';
 import type { StreakClaim } from '../../state/game-state';
 import { MenuScenery } from '../ui/style/menu-scenery';
@@ -156,7 +156,21 @@ export class HomeScene extends Phaser.Scene {
         this.setEnabled(true);
         startGamesOnHome();
         if (data?.reopenSettings) this.openSettings();
-        else runHomeAsks(this, () => this.showDayEntry());
+        else {
+          const firstHome = takeFirstHome();
+          // At most one window of the day per entry (docs/07-ui-screens.md, section 2).
+          runHomeAsks(this, (askShown) =>
+            openDayWindow(
+              this,
+              { firstHome, askShown },
+              {
+                wallet: this.header.wallet,
+                isLeaving: () => this.leaving,
+                onStreak: (claim) => this.afterStreak(claim),
+              },
+            ),
+          );
+        }
       });
     });
   }
@@ -282,19 +296,6 @@ export class HomeScene extends Phaser.Scene {
     this.setEnabled(false);
     await syncPurchases();
     leaveScreen(this, [], () => startRunFrom(this));
-  }
-
-  /** Every entry: the threat window and the streak calendar (first of the day), then the "No ads" offer when it is due. */
-  private showDayEntry(): void {
-    if (this.leaving) return;
-    const offer = prepareRemoveAdsOffer();
-    openStreakEntry(this, this.header.wallet, (claim) => {
-      this.afterStreak(claim);
-      if (this.leaving) return;
-      // The oven explainer comes once, first; the offer follows when it closes.
-      if (gameState.hasHint('oven')) offer.open(this);
-      else openOvenWindow(this, () => offer.open(this));
-    });
   }
 
   /** A creature of the calendar (day 7) is shown on its own screen, then Home comes back. */

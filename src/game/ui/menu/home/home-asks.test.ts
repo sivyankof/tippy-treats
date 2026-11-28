@@ -29,6 +29,7 @@ describe('runHomeAsks', () => {
     const then = vi.fn();
     runHomeAsks(scene, then, []);
     expect(then).toHaveBeenCalledOnce();
+    expect(then).toHaveBeenCalledWith(false);
   });
 
   it('asks only the first due question, then goes on once', () => {
@@ -37,6 +38,7 @@ describe('runHomeAsks', () => {
     runHomeAsks(scene, then, [ask('a', false, log), ask('b', true, log), ask('c', true, log)]);
     expect(log).toEqual(['b']);
     expect(then).toHaveBeenCalledOnce();
+    expect(then).toHaveBeenCalledWith(true);
   });
 
   it('goes on to the next due question when the previous showed no window', () => {
@@ -49,6 +51,7 @@ describe('runHomeAsks', () => {
     ]);
     expect(log).toEqual(['a', 'b']);
     expect(then).toHaveBeenCalledOnce();
+    expect(then).toHaveBeenCalledWith(true);
   });
 
   it('goes on once when every due question stayed silent', () => {
@@ -57,5 +60,6 @@ describe('runHomeAsks', () => {
     runHomeAsks(scene, then, [ask('a', true, log, false), ask('b', true, log, false)]);
     expect(log).toEqual(['a', 'b']);
     expect(then).toHaveBeenCalledOnce();
+    expect(then).toHaveBeenCalledWith(false);
   });
 });

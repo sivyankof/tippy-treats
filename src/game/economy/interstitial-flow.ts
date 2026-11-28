@@ -24,6 +24,8 @@ export interface RunExit {
 
 /** The "No ads" offer of one Home entry: its price is asked for at once, the window opens later. */
 export interface RemoveAdsOffer {
+  /** The offer is due at this Home entry (its price may still be on the way). */
+  readonly due: boolean;
   /** Settles when the price has come (or the offer is not due). */
   readonly ready: Promise<void>;
   /**
@@ -38,12 +40,14 @@ export interface RemoveAdsOffer {
 /** Starts the offer of a Home entry: call it as Home appears, `open` once the day windows are closed. */
 export function prepareRemoveAdsOffer(): RemoveAdsOffer {
   let price: string | undefined;
-  const ready = gameState.removeAdsOfferDue(session.shown)
+  const due = gameState.removeAdsOfferDue(session.shown);
+  const ready = due
     ? loadPrices().then((prices) => {
         price = prices.remove_ads;
       })
     : Promise.resolve();
   return {
+    due,
     ready,
     open(scene: Phaser.Scene): void {
       if (price === undefined || !scene.scene.isActive()) return;
