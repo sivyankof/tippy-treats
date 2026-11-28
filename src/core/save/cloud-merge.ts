@@ -86,7 +86,8 @@ export function readCloudText(text: string | null, nowMs: number): CloudRead {
 
 /**
  * What to do with the cloud: `blocked` (a newer game wrote it: neither take nor write);
- * `send` the local save; `wait` before the first write; `none`; `adopt` the copy silently;
+ * `send` the local save; `wait` before the first write; `none`; `adopt` the copy silently
+ * (`keepLocal`: the local save is kept aside first, the kinship of the copies cannot be told);
  * `found` (the "Progress found" window); `choose` (the window with both saves).
  */
 export type CloudDecision =
@@ -94,22 +95,38 @@ export type CloudDecision =
   | { kind: 'send' }
   | { kind: 'wait' }
   | { kind: 'none' }
-  | { kind: 'adopt'; copy: CloudCopy }
+  | { kind: 'adopt'; copy: CloudCopy; keepLocal: boolean }
   | { kind: 'found'; copy: CloudCopy }
   | { kind: 'choose'; copy: CloudCopy };
 
 /**
  * Next to nothing here that a player would miss: never synced, baker level 1, at most
- * `CLOUD.almostEmptyRuns` runs, nothing bought.
+ * `CLOUD.almostEmptyRuns` runs, nothing paid out on this device. What the store gave back
+ * ("No ads", the starter pack as owned) does not count: it comes back on every device by itself.
  */
 export function almostEmpty(save: Save): boolean {
   return (
     save.sync.cloudRev === 0 &&
     save.bakerLevel === 1 &&
     save.stats.runs <= CLOUD.almostEmptyRuns &&
-    !save.purchases.removeAds &&
-    !save.purchases.starterPack &&
     save.iap.processedTx.length === 0
+  );
+}
+
+/**
+ * The cloud went on far past the copy this device knew and nothing changed here: the copy is
+ * newer by number and its lineage is cut to `CLOUD.lineageKeep`, so our copy may have dropped out.
+ * A write adds at most two ids to the lineage (the copy it replaces and the writer's last one) and
+ * at least one to the number: a copy grown from ours is still there `lineageKeep / 2` writes later,
+ * so a closer copy without it comes from another branch (a full lineage alone tells nothing after
+ * `lineageKeep` writes in all).
+ */
+function farAhead(sync: Save['sync'], copy: CloudCopy): boolean {
+  return (
+    !sync.dirty &&
+    sync.cloudId !== '' &&
+    copy.rev - sync.cloudRev > CLOUD.lineageKeep / 2 &&
+    copy.lineage.length >= CLOUD.lineageKeep
   );
 }
 
@@ -124,8 +141,9 @@ export function decide(local: Save, cloud: UsableCloud): CloudDecision {
   const { copy } = cloud;
   if (copy.id === sync.cloudId) return sync.dirty ? { kind: 'send' } : { kind: 'none' };
   if (sync.cloudId !== '' && copy.lineage.includes(sync.cloudId) && !sync.dirty) {
-    return { kind: 'adopt', copy };
+    return { kind: 'adopt', copy, keepLocal: false };
   }
+  if (farAhead(sync, copy)) return { kind: 'adopt', copy, keepLocal: true };
   if (almostEmpty(local)) return { kind: 'found', copy };
   return { kind: 'choose', copy };
 }

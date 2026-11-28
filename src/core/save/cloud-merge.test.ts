@@ -175,6 +175,7 @@ describe('decide', () => {
     expect(decide(local({ cloudId: 'c3' }), inCloud(grown))).toEqual({
       kind: 'adopt',
       copy: grown,
+      keepLocal: false,
     });
   });
 
@@ -186,12 +187,75 @@ describe('decide', () => {
     });
   });
 
-  it('row 7: an almost empty device is offered the copy', () => {
+  describe('row 7: a copy far ahead of ours, nothing changed here', () => {
+    /** A lineage cut to the limit that no longer holds `c3`. */
+    const cut = (length: number = CLOUD.lineageKeep): string[] =>
+      Array.from({ length }, (_, i) => `x${i}`);
+    const ahead = (over: Partial<CloudCopy> = {}): CloudCopy =>
+      copy({ rev: 3 + CLOUD.lineageKeep + 5, id: 'far', lineage: cut(), ...over });
+
+    it('is taken silently, the local save kept aside first', () => {
+      const far = ahead();
+      expect(decide(local({ cloudId: 'c3' }), inCloud(far))).toEqual({
+        kind: 'adopt',
+        copy: far,
+        keepLocal: true,
+      });
+    });
+
+    it('takes a copy one write past half the lineage', () => {
+      const far = ahead({ rev: 3 + CLOUD.lineageKeep / 2 + 1 });
+      expect(decide(local({ cloudId: 'c3' }), inCloud(far))).toMatchObject({
+        kind: 'adopt',
+        keepLocal: true,
+      });
+    });
+
+    it('a copy grown from ours is still the plain silent take', () => {
+      const far = ahead({ lineage: [...cut(CLOUD.lineageKeep - 1), 'c3'] });
+      expect(decide(local({ cloudId: 'c3' }), inCloud(far))).toEqual({
+        kind: 'adopt',
+        copy: far,
+        keepLocal: false,
+      });
+    });
+
+    it.each<[string, Partial<Save['sync']>, Partial<CloudCopy>]>([
+      ['a change here', { dirty: true }, {}],
+      ['a rev not above ours', { cloudRev: 300 }, { rev: 300 }],
+      ['a rev below ours', { cloudRev: 300 }, { rev: 299 }],
+      ['a lineage one short of the limit', {}, { lineage: cut(CLOUD.lineageKeep - 1) }],
+      // Another branch after many writes in all: the lineage is full, but ours would still be in it.
+      ['a rev one above ours (another branch)', {}, { rev: 4 }],
+      ['a rev half the lineage above ours', {}, { rev: 3 + CLOUD.lineageKeep / 2 }],
+      ['an empty lineage', {}, { lineage: [] }],
+    ])('is a choice with %s', (_name, sync, over) => {
+      const far = ahead(over);
+      expect(decide(local({ cloudId: 'c3', ...sync }), inCloud(far))).toEqual({
+        kind: 'choose',
+        copy: far,
+      });
+    });
+
+    it('needs a copy this device knew: a device that never synced is not taken over', () => {
+      const far = ahead();
+      const never = local({ cloudRev: 0, cloudId: '', dirty: false });
+      expect(decide(never, inCloud(far)).kind).toBe('choose');
+      expect(
+        decide(fresh({ sync: { cloudRev: 0, cloudId: '', dirty: false } }), inCloud(far)),
+      ).toEqual({
+        kind: 'found',
+        copy: far,
+      });
+    });
+  });
+
+  it('row 8: an almost empty device is offered the copy', () => {
     const found = copy();
     expect(decide(fresh(), inCloud(found))).toEqual({ kind: 'found', copy: found });
   });
 
-  it('row 8: changes on both sides are a choice', () => {
+  it('row 9: changes on both sides are a choice', () => {
     const other = copy({ lineage: ['x1', 'x2'] });
     expect(decide(local({ cloudId: 'c3', dirty: true }), inCloud(other))).toEqual({
       kind: 'choose',
@@ -203,7 +267,7 @@ describe('decide', () => {
     });
   });
 
-  it('row 8: two devices that wrote the same rev offline are a choice', () => {
+  it('row 9: two devices that wrote the same rev offline are a choice', () => {
     const theirs = copy({ rev: 4, id: 'b4', lineage: ['c1', 'c2'] });
     expect(decide(local({ cloudRev: 4, cloudId: 'a4', dirty: false }), inCloud(theirs))).toEqual({
       kind: 'choose',
@@ -211,7 +275,7 @@ describe('decide', () => {
     });
   });
 
-  it('row 8: a cloud rev below ours is a choice, never a silent take', () => {
+  it('row 9: a cloud rev below ours is a choice, never a silent take', () => {
     const behind = copy({ rev: 2, id: 'c2', lineage: ['c1'] });
     expect(decide(local({ cloudRev: 3, cloudId: 'c3' }), inCloud(behind))).toEqual({
       kind: 'choose',
@@ -219,7 +283,7 @@ describe('decide', () => {
     });
   });
 
-  it('row 8: a device that never synced but played is a choice', () => {
+  it('row 9: a device that never synced but played is a choice', () => {
     const theirs = copy();
     const played = local({ cloudRev: 0, cloudId: '', dirty: true });
     expect(decide(played, inCloud(theirs))).toEqual({ kind: 'choose', copy: theirs });
@@ -246,11 +310,19 @@ describe('almostEmpty', () => {
     expect(almostEmpty(past)).toBe(false);
   });
 
+  it('still holds with "No ads" and the starter pack the store gave back', () => {
+    const reinstalled = fresh({ purchases: { removeAds: true, starterPack: true } });
+    expect(almostEmpty(reinstalled)).toBe(true);
+    expect(decide(reinstalled, inCloud(copy())).kind).toBe('found');
+  });
+
   it.each<[string, Partial<Save>]>([
     ['a baker level above 1', { bakerLevel: 2 }],
-    ['"No ads"', { purchases: { removeAds: true, starterPack: false } }],
-    ['the starter pack', { purchases: { removeAds: false, starterPack: true } }],
-    ['a paid transaction', { iap: { processedTx: ['tx1'] } }],
+    ['a transaction paid out here', { iap: { processedTx: ['tx1'] } }],
+    [
+      'a purchase paid out here',
+      { purchases: { removeAds: true, starterPack: false }, iap: { processedTx: ['tx1'] } },
+    ],
     ['a sync before', { sync: { cloudRev: 1, cloudId: 'c1', dirty: true } }],
   ])('does not hold with %s', (_name, over) => {
     expect(almostEmpty(fresh(over))).toBe(false);
@@ -328,6 +400,10 @@ describe('nextCopy', () => {
     if (read.kind !== 'copy') return;
     expect(decide(after, read)).toEqual({ kind: 'none' });
     // A device that synced with the replaced copy and changed nothing takes it silently.
-    expect(decide(local({ cloudId: 'c3' }), read)).toEqual({ kind: 'adopt', copy: sent });
+    expect(decide(local({ cloudId: 'c3' }), read)).toEqual({
+      kind: 'adopt',
+      copy: sent,
+      keepLocal: false,
+    });
   });
 });

@@ -14,8 +14,11 @@ export const CLOUD = {
    * notification, or once its save is this old: right after an install the store is still empty.
    */
   firstWriteWaitMs: 10 * MS_PER_MINUTE,
-  /** Ids of the earlier copies a copy remembers (`lineage`), newest last. */
-  lineageKeep: 50,
+  /**
+   * Ids of the earlier copies a copy remembers (`lineage`), newest last. A write goes out after
+   * every run: 200 covers weeks of play on another device; a copy of about 12 KB (docs/09, section 14).
+   */
+  lineageKeep: 200,
   /** "Almost empty" local progress (the "Progress found" window): finished runs at most. */
   almostEmptyRuns: 3,
   /** A copy text above this is not sent (the store keeps 1 MB for all keys of the app). */

@@ -108,7 +108,6 @@ const SETS_DIRTY: Record<string, Case | 'private'> = {
   spendBerries: { act: (s) => s.spendBerries(1) },
   exchangeBerries: { act: (s) => s.exchangeBerries(10) },
   grantProduct: { act: (s) => s.grantProduct('berries_80', ['tx-1']) },
-  restorePurchases: { act: (s) => s.restorePurchases(['remove_ads']) },
   claimFreeCoins: { act: (s) => s.claimFreeCoins() },
   noteStarterPackShown: { act: (s) => s.noteStarterPackShown() },
   resetProgress: { act: (s) => s.resetProgress() },
@@ -149,6 +148,8 @@ const KEEPS_CLEAN: Record<string, Case | 'private'> = {
   updateSettings: { act: (s) => s.updateSettings({ music: false }) },
   markHint: { act: (s) => s.markHint('oven') },
   beginRun: { act: (s) => s.beginRun() },
+  // The store gives the ownership back on every device by itself; a creature it gives is progress (below).
+  restorePurchases: { act: (s) => s.restorePurchases(['remove_ads']) },
   // Reading.
   data: { act: (s) => s.data },
   coins: { act: (s) => s.coins },
@@ -235,6 +236,21 @@ describe('sync.dirty', () => {
     const state = await stateFor(c);
     await c.act(state);
     expect(state.data.sync.dirty).toBe(false);
+  });
+
+  it('a restored starter pack that gives its creature sets the flag; one already owned does not', async () => {
+    const gives = await stateFor({ act: () => undefined });
+    expect(gives.restorePurchases(['starter_pack'])).toBe(true);
+    expect(gives.data.sync.dirty).toBe(true);
+
+    const clock = { ms: T0 };
+    const owned = await clean(
+      { ...richSave(clock), creatures: { ...richSave(clock).creatures, ...gives.data.creatures } },
+      clock,
+    );
+    expect(owned.restorePurchases(['starter_pack', 'remove_ads'])).toBe(true);
+    expect(owned.data.purchases).toEqual({ removeAds: true, starterPack: true });
+    expect(owned.data.sync.dirty).toBe(false);
   });
 
   it('keeps the cloud copy on a reset and marks the progress changed', async () => {

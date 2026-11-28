@@ -186,3 +186,18 @@ describe('GameState cloud copy', () => {
     expect(await state.keepReplaced(cloudSave())).toBe(false);
   });
 });
+
+describe('withCloudAdopted and "No ads"', () => {
+  it('keeps "No ads" of this device on and takes the starter pack from the copy', () => {
+    const here = { ...device(), purchases: { removeAds: true, starterPack: true } };
+    const copy = { ...cloudSave(), purchases: { removeAds: false, starterPack: false } };
+    const taken = withCloudAdopted(here, { rev: 5, id: 'c5', save: copy });
+    expect(taken.purchases).toEqual({ removeAds: true, starterPack: false });
+  });
+
+  it('keeps "No ads" of the copy when this device has none', () => {
+    const copy = { ...cloudSave(), purchases: { removeAds: true, starterPack: true } };
+    const taken = withCloudAdopted(device(), { rev: 5, id: 'c5', save: copy });
+    expect(taken.purchases).toEqual({ removeAds: true, starterPack: true });
+  });
+});

@@ -730,11 +730,18 @@ export class GameState {
     return unpaidTransactions(this.store.save, transactions, this.deps.realNow());
   }
 
-  /** Brings the save in line with the one-time products the store says are owned; true when it changed. */
+  /**
+   * Brings the save in line with the one-time products the store says are owned; true when it
+   * changed. The ownership alone is not progress (the store gives it back on every device, and
+   * a second device would otherwise lose the silent cloud take): only a creature it gives sets
+   * `sync.dirty`.
+   */
   restorePurchases(owned: readonly ProductKey[]): boolean {
-    const next = withPurchasesRestored(this.store.save, owned);
-    if (next === this.store.save) return false;
-    this.progress(next);
+    const before = this.store.save;
+    const next = withPurchasesRestored(before, owned);
+    if (next === before) return false;
+    if (next.creatures !== before.creatures) this.progress(next);
+    else this.store.replace(next);
     return true;
   }
 

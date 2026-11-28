@@ -235,13 +235,96 @@ describe('CloudSync', () => {
     const decision = sync.homeDecision();
     expect(decision?.kind).toBe('adopt');
     if (decision?.kind !== 'adopt') return;
-    await sync.takeCloud(decision.copy, false);
+    await sync.takeCloud(decision.copy, 'silent');
     expect(state.data.coins).toBe(3000);
     expect(state.data.installId).toBe('device-a');
     expect(state.data.sync).toEqual({ cloudRev: 4, cloudId: 'b4', dirty: false });
     expect(afterAdopt).toHaveBeenCalledTimes(1);
     expect(sync.homeDecision()).toBeNull();
     expect(sync.status).toBe('saved');
+  });
+
+  describe('a device left far behind, nothing changed here', () => {
+    /** Another device wrote more than `lineageKeep` times since this one synced `c3`. */
+    const far = (): CloudCopy =>
+      foreign({
+        rev: 3 + CLOUD.lineageKeep + 20,
+        id: 'far',
+        lineage: Array.from({ length: CLOUD.lineageKeep }, (_, i) => `b${i}`),
+      });
+
+    it('takes the copy silently and keeps the local save aside first', async () => {
+      const { sync, cloud, state, storage, afterAdopt } = await setup(
+        player(false),
+        serializeCopy(far()),
+      );
+      sync.start();
+      await settle();
+      expect(cloud.service.write).not.toHaveBeenCalled();
+      const decision = sync.homeDecision();
+      expect(decision).toMatchObject({ kind: 'adopt', keepLocal: true });
+      if (decision?.kind !== 'adopt') return;
+      await sync.takeCloud(decision.copy, 'silent');
+      expect(state.data.coins).toBe(3000);
+      expect(state.data.sync).toEqual({ cloudRev: far().rev, cloudId: 'far', dirty: false });
+      expect(await storage.get(`${REPLACED_SAVE_PREFIX}${T0}`)).toContain('"coins":700');
+      expect(afterAdopt).toHaveBeenCalledTimes(1);
+      expect(sync.homeDecision()).toBeNull();
+    });
+
+    it('takes nothing when the local save cannot be kept aside', async () => {
+      const { sync, state, storage } = await setup(player(false), serializeCopy(far()));
+      sync.start();
+      await settle();
+      const decision = sync.homeDecision();
+      if (decision?.kind !== 'adopt') throw new Error('expected adopt');
+      storage.set = () => Promise.reject(new Error('full'));
+      await sync.takeCloud(decision.copy, 'silent');
+      expect(state.data.coins).toBe(700);
+      expect(sync.homeDecision()).toMatchObject({ kind: 'adopt', keepLocal: true });
+    });
+
+    it('takes nothing when the progress changed while the local save was kept aside', async () => {
+      const { sync, state, storage } = await setup(player(false), serializeCopy(far()));
+      sync.start();
+      await settle();
+      const decision = sync.homeDecision();
+      if (decision?.kind !== 'adopt') throw new Error('expected adopt');
+      const set = storage.set.bind(storage);
+      storage.set = (key: string, text: string) => {
+        // A payout at launch lands while the losing save is on its way to the storage.
+        if (key.startsWith(REPLACED_SAVE_PREFIX)) state.addCoins(5);
+        return set(key, text);
+      };
+      await sync.takeCloud(decision.copy, 'silent');
+      expect(state.data.coins).toBe(705);
+      expect(state.data.sync.cloudId).toBe('c3');
+      expect(sync.homeDecision()?.kind).toBe('choose');
+    });
+
+    it('with a change here it is the window with both saves', async () => {
+      const { sync } = await setup(player(true), serializeCopy(far()));
+      sync.start();
+      await settle();
+      expect(sync.homeDecision()?.kind).toBe('choose');
+    });
+  });
+
+  it('a second device that got "No ads" back from the store still takes the copy silently', async () => {
+    const { sync, state } = await setup(player(false), serializeCopy(foreign()));
+    expect(state.restorePurchases(['remove_ads'])).toBe(true);
+    expect(state.data.sync.dirty).toBe(false);
+    sync.start();
+    await settle();
+    expect(sync.homeDecision()).toMatchObject({ kind: 'adopt', keepLocal: false });
+  });
+
+  it('a reinstall with "No ads" back from the store is offered "Progress found"', async () => {
+    const { sync, state } = await setup(fresh(), serializeCopy(foreign()));
+    state.restorePurchases(['remove_ads', 'starter_pack']);
+    sync.start();
+    await settle();
+    expect(sync.homeDecision()?.kind).toBe('found');
   });
 
   it('"Progress found": nothing is written before the answer; "Start over" keeps the copy aside and writes over it', async () => {
@@ -271,7 +354,7 @@ describe('CloudSync', () => {
     await settle();
     const decision = sync.homeDecision();
     if (decision?.kind !== 'found') throw new Error('expected found');
-    await sync.takeCloud(decision.copy, true);
+    await sync.takeCloud(decision.copy, 'chosen');
     expect(state.data.bakerLevel).toBe(12);
     expect(await storage.get(`${REPLACED_SAVE_PREFIX}${T0}`)).toContain('"installId":"device-new"');
   });
@@ -292,7 +375,7 @@ describe('CloudSync', () => {
     await settle();
     const other = keepCloud.sync.homeDecision();
     if (other?.kind !== 'choose') throw new Error('expected choose');
-    await keepCloud.sync.takeCloud(other.copy, true);
+    await keepCloud.sync.takeCloud(other.copy, 'chosen');
     expect(keepCloud.state.data.coins).toBe(3000);
     expect(await keepCloud.storage.get(`${REPLACED_SAVE_PREFIX}${T0}`)).toContain('"coins":700');
   });
@@ -370,7 +453,7 @@ describe('CloudSync', () => {
     const decision = sync.homeDecision();
     if (decision?.kind !== 'adopt') throw new Error('expected adopt');
     state.addCoins(1);
-    await sync.takeCloud(decision.copy, false);
+    await sync.takeCloud(decision.copy, 'silent');
     expect(state.data.coins).toBe(701);
     expect(sync.homeDecision()?.kind).toBe('choose');
   });
@@ -385,7 +468,7 @@ describe('CloudSync', () => {
     const decision = sync.homeDecision();
     if (decision?.kind !== 'choose') throw new Error('expected choose');
     storage.set = () => Promise.reject(new Error('full'));
-    await sync.takeCloud(decision.copy, true);
+    await sync.takeCloud(decision.copy, 'chosen');
     expect(state.data.coins).toBe(700);
     await sync.keepLocal(decision.copy);
     expect(cloud.service.write).not.toHaveBeenCalled();
@@ -506,7 +589,7 @@ describe('CloudSync', () => {
     const theirs = nextCopy({ ...ours.save, coins: 9000, installId: 'device-b' }, ours, 'b9', T0);
     cloud.remote(serializeCopy(theirs));
     await settle();
-    expect(sync.homeDecision()).toEqual({ kind: 'adopt', copy: theirs });
+    expect(sync.homeDecision()).toEqual({ kind: 'adopt', copy: theirs, keepLocal: false });
   });
 
   it('answers first after the first pass, or at the timeout', async () => {
