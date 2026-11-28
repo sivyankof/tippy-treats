@@ -17,7 +17,7 @@ export const MENU = {
       bottom: 80,
       textPadding: 50,
       /** A notice standing on a button: it rises this far, keeps this gap above a button narrower than the plate and this margin from the screen sides. */
-      onButton: { rise: 24, gap: 12, margin: 16 },
+      onButton: { rise: 24, margin: 16 },
       inMs: 220,
       holdMs: 1800,
       outMs: 300,
