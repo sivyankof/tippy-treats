@@ -17,7 +17,7 @@ export class DailyBoard implements DailySection {
       t('games.dailyBoard'),
       MENU.daily.caption.width,
       this.height / 2,
-      () => (leaving() ? Promise.resolve() : openBoard(scene, 'daily_height')),
+      (button) => (leaving() ? Promise.resolve() : openBoard(scene, 'daily_height', button)),
     );
     this.root = scene.add.container(0, 0, [button]);
   }

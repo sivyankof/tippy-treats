@@ -32,7 +32,7 @@ export class DailyPlay implements DailySection {
     scene: Phaser.Scene,
     onPlay: () => void,
     onAd: () => void,
-    board?: () => Promise<void>,
+    board?: (button: Button) => Promise<void>,
   ) {
     const sq = MENU.gamesButton.square;
     // The trophy takes its side and a gap at the right edge; the rest stands centred in what is left.
