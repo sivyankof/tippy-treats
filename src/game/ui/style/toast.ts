@@ -19,13 +19,16 @@ function spotOnButton(
   scene: Phaser.Scene,
   button: Phaser.GameObjects.Container,
   screenWidth: number,
-): { x: number; y: number } {
+): { x: number; y: number; scale: number } {
   const cam = scene.cameras.main;
   const m = button.getWorldTransformMatrix();
-  const half = cfg.width / 2 + cfg.onButton.margin;
+  // A window shrunk to fit a short screen shrinks its buttons: the plate takes their scale.
+  const scale = Math.min(1, m.scaleX);
+  const half = (cfg.width / 2 + cfg.onButton.margin) * scale;
   return {
     x: Math.min(Math.max(m.tx - cam.scrollX, half), screenWidth - half),
     y: m.ty - cam.scrollY,
+    scale,
   };
 }
 
@@ -56,6 +59,7 @@ export function showToast(
   const toast = scene.add
     .container(spot?.x ?? width / 2, y + (spot ? cfg.onButton.rise : cfg.height), [plate, label])
     .setDepth(cfg.depth)
+    .setScale(spot?.scale ?? 1)
     .setAlpha(0);
   // It stands on the canvas, also on a scene whose camera scrolls by the top inset (results).
   pinToCanvas(toast);
