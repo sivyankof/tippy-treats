@@ -98,8 +98,13 @@ export function openMapWindow(
   if (board) {
     const top = goalTop + cfg.goal.height + cfg.goal.gap;
     popup.content.add(
-      createGamesButton(scene, t('games.board'), popup.innerWidth, top + buttonHeight / 2, (button) =>
-        popup.leaving ? Promise.resolve() : openBoard(scene, 'classic_height', button),
+      createGamesButton(
+        scene,
+        t('games.board'),
+        popup.innerWidth,
+        top + buttonHeight / 2,
+        (button) =>
+          popup.leaving ? Promise.resolve() : openBoard(scene, 'classic_height', button),
       ),
     );
   }

@@ -150,7 +150,13 @@ export const CLIMB_LANDSCAPE = {
     dropEvery: 3,
     dropExtra: 22,
     /** Soft patches over the body so its tint is not flat: count, alpha. */
-    patches: { count: 12, alpha: 0.4, shade: 0.05, width: [70, 160] as const, height: [26, 56] as const },
+    patches: {
+      count: 12,
+      alpha: 0.4,
+      shade: 0.05,
+      width: [70, 160] as const,
+      height: [26, 56] as const,
+    },
     /** The small puffs in the dips between two big ones: their radius and drop, shares of the smaller neighbour. */
     dip: { radius: 0.58, drop: 0.62 },
     /** The slow breathing of the two edge pictures (full level only). */

@@ -22,10 +22,7 @@ export function createGamesRow(
   top: number,
 ): Phaser.GameObjects.Container {
   const centre = top + cfg.links.height / 2;
-  const line = fitText(
-    createOutlinedText(scene, 0, 0, t('games.signedIn'), cfg.links.font),
-    width,
-  );
+  const line = fitText(createOutlinedText(scene, 0, 0, t('games.signedIn'), cfg.links.font), width);
   const button: Button = createLinkButton(
     scene,
     t('games.signIn'),
