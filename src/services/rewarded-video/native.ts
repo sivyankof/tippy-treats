@@ -28,7 +28,7 @@ const newSlot = (unit: string | undefined): Slot => ({
 /**
  * The ads of the phone (AdMob, docs/09-services-analytics.md, section 3). One rewarded and one
  * interstitial ad are loaded ahead; after each show the next one loads. A failed load is retried
- * after the waits of `AD_LOAD.retryDelaysMs`, then it waits until an ad is asked for. Before
+ * after the waits of `AD_LOAD.retryDelaysMs`, then it waits until an ad is asked for or `wake()` is called. Before
  * `init()` (the consent is not done yet) and without a unit id nothing is available. Nothing here
  * throws: a blocked ad domain or a failing plugin means `unavailable`.
  */
@@ -82,6 +82,11 @@ export class NativeAds implements AdsService {
     const slot = this.rewarded;
     const fresh = this.now() - slot.loadStartedAt < AD_LOAD.loadingCaptionMaxMs;
     return slot.loading && fresh ? 'loading' : 'no_fill';
+  }
+
+  wake(): void {
+    this.kick(this.rewarded, 'rewarded');
+    this.kick(this.interstitial, 'interstitial');
   }
 
   async showRewarded(): Promise<RewardedResult> {
@@ -161,10 +166,14 @@ export class NativeAds implements AdsService {
     settle?.(shown);
   }
 
-  /** Asking for an ad that is not there starts a load when none is under way and the retries ran out. */
+  /**
+   * Starts a load for an ad that is not there and not coming: the failure count starts over and a
+   * waiting retry is dropped (its timer then does nothing), so loads never pile up.
+   */
   private kick(slot: Slot, kind: 'rewarded' | 'interstitial'): void {
-    if (!this.inited || slot.ready || slot.loading || slot.retry !== null) return;
+    if (!this.inited || slot.ready || slot.loading) return;
     slot.failures = 0;
+    slot.retry = null;
     this.load(kind);
   }
 
@@ -193,10 +202,13 @@ export class NativeAds implements AdsService {
           const delay = AD_LOAD.retryDelaysMs[slot.failures];
           slot.failures += 1;
           if (delay === undefined) return;
-          slot.retry = this.schedule(() => {
+          const handle: unknown = this.schedule(() => {
+            // A kick in between took this retry over.
+            if (slot.retry !== handle) return;
             slot.retry = null;
             this.load(kind);
           }, delay);
+          slot.retry = handle;
         },
       );
   }

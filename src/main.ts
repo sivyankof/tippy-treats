@@ -20,6 +20,7 @@ import { bindNativeShell } from './game/app/native-shell';
 import { bindGames } from './game/games/games-actions';
 import { closeBootScreen, closeBootScreenOnFirstScreen } from './game/app/boot/boot-screen-close';
 import { bindPlayDays } from './game/app/play-days';
+import { bindVideoWake } from './game/app/video-wake';
 import { bindNotifSchedule } from './game/app/notif-schedule';
 import { realNow } from './util/clock';
 import { bindCrashScenes, installCrashReporting } from './game/app/crash-reporting';
@@ -70,6 +71,7 @@ async function loadSave(): Promise<void> {
   gameState.beginSession();
   bindSaveFlush(gameState);
   bindPlayDays(gameState, services.appShell);
+  bindVideoWake(services.ads, services.appShell);
   applySavedSettings();
   // Never blocks the start for long: on a slow network the check finishes in the background.
   await withTimeout(syncPurchases(), BOOT.purchasesWaitMs).catch(() => undefined);

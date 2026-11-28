@@ -104,6 +104,8 @@ export class GameScene extends Phaser.Scene {
   /** `data` is the run request; Phaser hands an empty object when there is none. */
   create(data?: Partial<RunRequest>): void {
     this.tweens.timeScale = 1;
+    // The continue offer at the end of the run needs an ad: one that gave up loading tries again now.
+    services.ads.wake();
     fxGuard.reset();
     this.request = data && 'kind' in data ? (data as RunRequest) : CLASSIC_RUN;
     const setup = setupRun(this.request);

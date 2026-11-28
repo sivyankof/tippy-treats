@@ -234,6 +234,59 @@ describe('NativeAds', () => {
     expect(ads.isRewardedReady()).toBe(true);
   });
 
+  it('wakes after the retries gave up: the network is back after 10 minutes', async () => {
+    const { ads, plugin, timers, net, clock } = setup();
+    plugin.loadFails = 100;
+    net.online = false;
+    await ads.init();
+    await flush();
+    for (let i = 0; i < AD_LOAD.retryDelaysMs.length * 3; i++) {
+      timers.shift()?.run();
+      await flush();
+    }
+    expect(timers).toHaveLength(0);
+    expect(ads.isRewardedReady()).toBe(false);
+    clock.ms += 10 * 60 * 1000;
+    net.online = true;
+    plugin.loadFails = 0;
+    ads.wake();
+    await flush();
+    expect(ads.isRewardedReady()).toBe(true);
+  });
+
+  it('wake starts no parallel load and restarts the count of failures', async () => {
+    const { ads, plugin, timers } = setup();
+    plugin.hold = true;
+    await ads.init();
+    await flush();
+    const loads = plugin.prepared.length;
+    ads.wake();
+    ads.wake();
+    expect(plugin.prepared.length).toBe(loads);
+    plugin.answer(false);
+    await flush();
+    expect(timers.map((timer) => timer.delay)).toEqual([
+      AD_LOAD.retryDelaysMs[0],
+      AD_LOAD.retryDelaysMs[0],
+    ]);
+  });
+
+  it('wake replaces a waiting retry: the old timer does nothing', async () => {
+    const { ads, plugin, timers } = setup();
+    plugin.loadFails = 2;
+    await ads.init();
+    await flush();
+    const before = plugin.prepared.length;
+    ads.wake();
+    await flush();
+    expect(ads.isRewardedReady()).toBe(true);
+    const loaded = plugin.prepared.length;
+    expect(loaded).toBeGreaterThan(before);
+    for (const timer of timers.splice(0)) timer.run();
+    await flush();
+    expect(plugin.prepared.length).toBe(loaded);
+  });
+
   it('waits the configured delay before a retry', async () => {
     const { ads, plugin, timers } = setup();
     plugin.loadFails = 1;
