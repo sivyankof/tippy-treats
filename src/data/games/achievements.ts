@@ -58,9 +58,9 @@ export const CREW_ALL_1_1 = 12;
 export const ACHIEVEMENTS: readonly AchievementDef[] = [
   // Thresholds of the flies are the owner's; the rest are the plan of 1.1 (checked against the sim, docs/04, section 13).
   ...tiers('flies', 'flies', [50, 500, 1000], TIER_POINTS.three),
-  ...tiers('perfects', 'perfects', [100, 1000, 5000], TIER_POINTS.three),
+  ...tiers('perfects', 'perfects', [500, 5000, 25000], TIER_POINTS.three),
   ...tiers('runs', 'runs', [10, 100, 500], TIER_POINTS.three),
-  ...tiers('layers', 'layers', [500, 5000, 25000], TIER_POINTS.three),
+  ...tiers('layers', 'layers', [1000, 10000, 50000], TIER_POINTS.three),
   ...tiers('combo', 'combo', [10, 20, 30], TIER_POINTS.three),
   ...tiers('streak', 'streak', [7, 30], TIER_POINTS.two),
   ...tiers('creatures', 'creatures', [6, CREW_ALL_1_1], TIER_POINTS.two),
